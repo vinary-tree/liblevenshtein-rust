@@ -50,7 +50,7 @@ This glossary covers implementation details, performance optimizations, data str
 **Definition:** Optimization technique using `Arc<Vec<T>>` to share path data between dictionary nodes without cloning, eliminating expensive allocation during tree traversal.
 
 **Benefits:**
-- Eliminates `$\mathcal{O}(\text{depth})$` cloning overhead
+- Eliminates $`\mathcal{O}(\text{depth})`$ cloning overhead
 - Reduces memory allocations by ~90%
 - Improves cache locality
 
@@ -143,7 +143,7 @@ if CHECK[result] == state: valid transition
 ```
 
 **Benefits:**
-- `$\mathcal{O}(1)$` state transitions via array indexing
+- $`\mathcal{O}(1)`$ state transitions via array indexing
 - Compact representation (~8 bytes per state)
 - Excellent cache locality
 
@@ -394,7 +394,7 @@ if CHECK[result] == state: valid transition
 ### Double-Array Trie (DAT)
 **Categories:** [Data Structure], [Algorithm], [Performance]
 
-**Definition:** Trie implementation using two parallel arrays (BASE and CHECK) for `$\mathcal{O}(1)$` state transitions with excellent cache locality.
+**Definition:** Trie implementation using two parallel arrays (BASE and CHECK) for $`\mathcal{O}(1)`$ state transitions with excellent cache locality.
 
 **Structure:**
 - BASE[s] stores base index for state s
@@ -403,7 +403,7 @@ if CHECK[result] == state: valid transition
 
 **Benefits:**
 - **Fastest queries:** 3x faster than DAWG, 10x faster than PathMap
-- **`$\mathcal{O}(1)$` transitions:** Array indexing, no pointer chasing
+- **$`\mathcal{O}(1)`$ transitions:** Array indexing, no pointer chasing
 - **Compact:** ~8 bytes per state
 - **Cache-friendly:** Sequential array access
 
@@ -615,7 +615,7 @@ From Function: can see parameter, result, std::vector, std::string (NOT local_va
 **Definition:** Technique from Chapter 6 of Schulz & Mihov ([2002](https://doi.org/10.1007/s10032-002-0082-8)) paper that simulates Levenshtein automaton LEV_n(W) without explicit construction, generating states on-demand during dictionary traversal.
 
 **Benefits:**
-- `$\mathcal{O}(\lvert W\rvert)$` space instead of potentially `$\mathcal{O}(4^{n})$` for materialized automaton
+- $`\mathcal{O}(\lvert W\rvert)`$ space instead of potentially $`\mathcal{O}(4^{n})`$ for materialized automaton
 - Lazy evaluation - only compute states actually needed
 - No preprocessing phase
 
@@ -679,7 +679,7 @@ From Function: can see parameter, result, std::vector, std::string (NOT local_va
 **Definition:** Evaluation strategy where query results are computed on-demand as the iterator is consumed, rather than materializing all results upfront.
 
 **Benefits:**
-- Constant memory usage (`$\mathcal{O}(1)$` for iterator state)
+- Constant memory usage ($`\mathcal{O}(1)`$ for iterator state)
 - Early termination possible (stop after first N results)
 - No wasted work for unused results
 
@@ -843,7 +843,7 @@ for each dict_edge in dictionary:
         yield current_word
 ```
 
-**Complexity:** `$\mathcal{O}(\lvert D\rvert)$` where `$\lvert D\rvert$` is total dictionary edges
+**Complexity:** $`\mathcal{O}(\lvert D\rvert)`$ where $`\lvert D\rvert`$ is total dictionary edges
 
 **Code:** [`src/transducer/query.rs`](../src/transducer/query.rs)
 
@@ -901,9 +901,9 @@ RUSTFLAGS="-C profile-use=/tmp/pgo -C llvm-args=-pgo-warn-missing-function" carg
 ### Position Subsumption
 **Categories:** [Algorithm], [SIMD]
 
-**Definition:** SIMD-accelerated operation checking if one position subsumes another (`$i\#e \sqsubseteq j\#f$`), processing multiple positions in parallel.
+**Definition:** SIMD-accelerated operation checking if one position subsumes another ($`i\#e \sqsubseteq j\#f`$), processing multiple positions in parallel.
 
-**Subsumption Rule:** `$i\#e \sqsubseteq j\#f \iff (e < f) \land (\lvert j-i\rvert \le f-e)$`
+**Subsumption Rule:** $`i\#e \sqsubseteq j\#f \iff (e < f) \land (\lvert j-i\rvert \le f-e)`$
 
 **Vectorization:** Load 4-8 positions, perform parallel comparisons
 
@@ -945,7 +945,7 @@ RUSTFLAGS="-C profile-use=/tmp/pgo -C llvm-args=-pgo-warn-missing-function" carg
 - `query_with_distance(term, distance)` → includes distance in results
 - `query_ordered(term, distance)` → sorted results
 
-**Performance:** `$\mathcal{O}(\lvert D\rvert)$` traversal, constant memory
+**Performance:** $`\mathcal{O}(\lvert D\rvert)`$ traversal, constant memory
 
 **Code:** [`src/transducer/query.rs`](../src/transducer/query.rs)
 
@@ -1073,7 +1073,7 @@ Query in function: sees function + global (NOT block)
 **Configuration:** `SmallVec<[T; N]>` where N is inline capacity
 
 **Benefits:**
-- Zero allocations for size `$\le N$`
+- Zero allocations for size $`\le N`$
 - Better cache locality (stack storage)
 - Reduced allocator pressure
 
@@ -1394,11 +1394,11 @@ transducer.query("var", 1).filter(|t| visible_scopes.contains(&t.scope))
 ### Wagner-Fischer Algorithm
 **Categories:** [Algorithm]
 
-**Definition:** Dynamic programming algorithm for computing Levenshtein distance using a `$(\lvert W\rvert+1) \times (\lvert V\rvert+1)$` matrix where cell `$[i,j]$` contains distance between `$W[0..i]$` and `$V[0..j]$`.
+**Definition:** Dynamic programming algorithm for computing Levenshtein distance using a $`(\lvert W\rvert+1) \times (\lvert V\rvert+1)`$ matrix where cell $`[i,j]`$ contains distance between $`W[0..i]`$ and $`V[0..j]`$.
 
-**Complexity:** `$\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)$` time, `$\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)$` space (`$\mathcal{O}(\min(\lvert W\rvert, \lvert V\rvert))$` with optimization)
+**Complexity:** $`\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)`$ time, $`\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)`$ space ($`\mathcal{O}(\min(\lvert W\rvert, \lvert V\rvert))`$ with optimization)
 
-**Relation to Project:** Levenshtein automata achieve `$\mathcal{O}(\lvert D\rvert)$` by avoiding per-word distance computation
+**Relation to Project:** Levenshtein automata achieve $`\mathcal{O}(\lvert D\rvert)`$ by avoiding per-word distance computation
 
 **Code:** Not directly implemented (automata approach avoids this)
 
@@ -1456,7 +1456,7 @@ transducer.query("var", 1).filter(|t| visible_scopes.contains(&t.scope))
 - **Focus:** Current position in tree
 - **Context:** Path from root with unvisited siblings
 - **Referentially transparent:** Operations return new zippers
-- **Efficient:** `$\mathcal{O}(1)$` navigation operations
+- **Efficient:** $`\mathcal{O}(1)`$ navigation operations
 
 **Variants in Project:**
 - **DictZipper / ValuedDictZipper:** Dictionary navigation
@@ -1488,14 +1488,14 @@ The terms below cover subsystems introduced or substantially expanded after the
 #### Parameterized (Lazy) Automaton
 **Categories:** [Algorithm]
 
-**Definition:** The default query engine. It *simulates* the Levenshtein automaton `$A(W, k)$` whose states are reduced *sets* of positions `$\langle i, e\rangle$`, materialising each state on first visit during the dictionary walk — there is no precompiled DFA. Equivalent to the academic "parameterized automaton" / Schulz–Mihov imitation method.
+**Definition:** The default query engine. It *simulates* the Levenshtein automaton $`A(W, k)`$ whose states are reduced *sets* of positions $`\langle i, e\rangle`$, materialising each state on first visit during the dictionary walk — there is no precompiled DFA. Equivalent to the academic "parameterized automaton" / Schulz–Mihov imitation method.
 
 **Code:** [`src/transducer/{query,state,transition,pool}.rs`](../src/transducer/) · **See also:** Imitation Method, Universal Levenshtein Automaton, Generalized Automaton, Characteristic Vector
 
 #### Universal Levenshtein Automaton
 **Categories:** [Algorithm]
 
-**Definition:** A parameter-free deterministic automaton precomputed once for a fixed `$k$` and reused for any query word (Mitankin 2005). The crate offers it as an eager alternative to the lazy engine when `$k$` is fixed and queries are numerous.
+**Definition:** A parameter-free deterministic automaton precomputed once for a fixed $`k`$ and reused for any query word (Mitankin 2005). The crate offers it as an eager alternative to the lazy engine when $`k`$ is fixed and queries are numerous.
 
 **Code:** [`src/transducer/universal/`](../src/transducer/universal/) · **See also:** Parameterized Automaton, Subsumption
 
@@ -1516,14 +1516,14 @@ The terms below cover subsystems introduced or substantially expanded after the
 #### Myers Bit-Parallel Distance
 **Categories:** [Algorithm], [Performance]
 
-**Definition:** Myers' (1999) bit-vector dynamic-programming algorithm computing edit distance in `$\mathcal{O}(\lceil m/w\rceil \cdot n)$` for machine word width `$w$`. `standard_distance` dispatches to it for short (`$\le 64$`-byte) ASCII inputs.
+**Definition:** Myers' (1999) bit-vector dynamic-programming algorithm computing edit distance in $`\mathcal{O}(\lceil m/w\rceil \cdot n)`$ for machine word width $`w`$. `standard_distance` dispatches to it for short ($`\le 64`$-byte) ASCII inputs.
 
 **Code:** [`src/distance/myers.rs`](../src/distance/myers.rs) · **DOI:** [10.1145/316542.316550](https://doi.org/10.1145/316542.316550) · **See also:** SIMD, Scalar Fallback
 
 #### WallBreaker / Pigeonhole Filter
 **Categories:** [Algorithm]
 
-**Definition:** A strategy for large error bounds (`$k \ge 5$`): split the query into `$k + 1$` pieces; by the pigeonhole principle at least one piece is error-free, so it can be located exactly via the SCDAWG and extended/verified. Avoids the state-space blow-up of large-`$k$` automata.
+**Definition:** A strategy for large error bounds ($`k \ge 5`$): split the query into $`k + 1`$ pieces; by the pigeonhole principle at least one piece is error-free, so it can be located exactly via the SCDAWG and extended/verified. Avoids the state-space blow-up of large-$`k`$ automata.
 
 **Code:** [`src/wallbreaker/`](../src/wallbreaker/) · **See also:** SCDAWG
 
@@ -1564,17 +1564,17 @@ The terms below cover subsystems introduced or substantially expanded after the
 
 **See also:** Phonetic Normalization
 
-#### NFA Product (Phonetic `$\cap$` Levenshtein)
+#### NFA Product (Phonetic $`\cap`$ Levenshtein)
 **Categories:** [Algorithm]
 
-**Definition:** The product automaton of a phonetic-pattern NFA (built by Thompson construction) with the Levenshtein automaton `$A(W, k)$`; running it against the dictionary yields candidates that match the pattern *and* lie within edit distance `$k$`.
+**Definition:** The product automaton of a phonetic-pattern NFA (built by Thompson construction) with the Levenshtein automaton $`A(W, k)`$; running it against the dictionary yields candidates that match the pattern *and* lie within edit distance $`k`$.
 
 **Code:** [`src/phonetic/nfa/product.rs`](../src/phonetic/nfa/product.rs) · **See also:** Thompson Construction, `.llre`
 
 #### Thompson Construction
 **Categories:** [Algorithm]
 
-**Definition:** The classical construction of an `$\varepsilon$`-NFA from a regular expression by structural induction (concatenation, alternation, Kleene star). Because the result is an NFA simulated in linear time, the `.llre` engine is **ReDoS-resistant by construction**.
+**Definition:** The classical construction of an $`\varepsilon`$-NFA from a regular expression by structural induction (concatenation, alternation, Kleene star). Because the result is an NFA simulated in linear time, the `.llre` engine is **ReDoS-resistant by construction**.
 
 **Code:** [`src/phonetic/nfa/thompson.rs`](../src/phonetic/nfa/thompson.rs) · **See also:** `.llre`, NFA Product
 
@@ -1606,7 +1606,7 @@ The terms below cover subsystems introduced or substantially expanded after the
 #### MSM (Move–Split–Merge)
 **Categories:** [Algorithm]
 
-**Definition:** A metric for real-valued time series built from three unit-cost-parameterized edits — **Move** (change a value, cost `$\lvert x_i - y\rvert$`), **Split** (one value → two), and **Merge** (two adjacent values → one). Unlike DTW, MSM is a true metric (satisfies the triangle inequality), enabling lower-bound pruning.
+**Definition:** A metric for real-valued time series built from three unit-cost-parameterized edits — **Move** (change a value, cost $`\lvert x_i - y\rvert`$), **Split** (one value → two), and **Merge** (two adjacent values → one). Unlike DTW, MSM is a true metric (satisfies the triangle inequality), enabling lower-bound pruning.
 
 **Code:** [`src/time_series/msm.rs`](../src/time_series/msm.rs) · **DOI:** [10.1109/TKDE.2012.88](https://doi.org/10.1109/TKDE.2012.88) · **See also:** TimeSeriesIndex, DTW
 

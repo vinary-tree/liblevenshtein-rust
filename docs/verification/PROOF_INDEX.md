@@ -27,9 +27,9 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | **trace_cost_lower_bound** | `LowerBound/MainTheorem.v:42` | Any valid trace with NoDup and monotonicity has cost >= lev_distance. The fundamental lower bound theorem. |
 | **lev_distance_identity** | `Core/MetricProperties.v:21` | d(A, A) = 0. A string has zero distance to itself. |
 | **lev_distance_symmetry** | `Core/MetricProperties.v:41` | d(A, B) = d(B, A). Edit distance is symmetric. |
-| **lev_distance_triangle_inequality** | `Triangle/TriangleInequality.v:145`  | `$d(A, C) \le  d(A, B) + d(B, C).$` Triangle inequality for edit distance. |
+| **lev_distance_triangle_inequality** | `Triangle/TriangleInequality.v:145`  | $`d(A, C) \le  d(A, B) + d(B, C).`$ Triangle inequality for edit distance. |
 | **lev_distance_upper_bound** | `Core/MetricProperties.v:92` | d(A, B) <= max(\|A\|, \|B\|). Distance bounded by longer string. |
-| **trace_composition_cost_bound** | `Composition/CostBounds.v:1313` | `$\mathrm{cost}(T_1 \circ T_2) \le \mathrm{cost}(T_1) + \mathrm{cost}(T_2)$`. Key lemma for triangle inequality. |
+| **trace_composition_cost_bound** | `Composition/CostBounds.v:1313` | $`\mathrm{cost}(T_1 \circ T_2) \le \mathrm{cost}(T_1) + \mathrm{cost}(T_2)`$. Key lemma for triangle inequality. |
 | **distance_equals_min_trace_cost** | `Distance.v.bak:7876` | Distance equals minimum trace cost over all valid traces. |
 
 ### Phonetic Verification - Position Skipping Optimization
@@ -103,7 +103,7 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | incl_length_NoDup | Lemma | `Cardinality/NoDupInclusion.v:50` | Inclusion with NoDup implies length ordering |
 | NoDup_list_inter | Lemma | `Cardinality/NoDupInclusion.v:132` | NoDup preserved by list_inter |
 | list_inter_length_bound | Lemma | `Cardinality/NoDupInclusion.v:143` | Length of intersection is bounded |
-| NoDup_incl_exclusion | Lemma | `Cardinality/NoDupInclusion.v:155` | Inclusion-exclusion: \|l1\| + \|l2\ | `$\le  n +$` \ | `$l1 \cap  l2$`\| |
+| NoDup_incl_exclusion | Lemma | `Cardinality/NoDupInclusion.v:155` | Inclusion-exclusion: $`\lvert l1\rvert + \lvert l2\rvert \le n + \lvert l1 \cap l2\rvert`$ |
 
 ### Tier 6.5: Trace Composition Infrastructure
 

@@ -95,7 +95,7 @@ New tree (after adding "team"):
 Nodes marked "Shared" are reused, not copied
 ```
 
-**Memory**: Only `$\mathcal{O}(m)$` new nodes for m-character insert
+**Memory**: Only $`\mathcal{O}(m)`$ new nodes for m-character insert
 
 ## PathMap Library
 
@@ -163,7 +163,7 @@ PathMapDictionary is a thin wrapper that:
 
 **Per-node overhead**: ~32 bytes (HashMap-based)
 
-**Example**: 10,000-term dictionary `$\approx$` 320 KB
+**Example**: 10,000-term dictionary $`\approx`$ 320 KB
 
 ### Clone Behavior & Memory Semantics
 
@@ -188,8 +188,8 @@ assert_eq!(dict2.len(), Some(3));  // Same count
 
 | Property | Behavior | Impact |
 |----------|----------|--------|
-| **Time Complexity** | `$\mathcal{O}(1)$` | One atomic increment |
-| **Space Complexity** | `$\mathcal{O}(1)$` | ~8 bytes (one Arc pointer) |
+| **Time Complexity** | $`\mathcal{O}(1)`$ | One atomic increment |
+| **Space Complexity** | $`\mathcal{O}(1)`$ | ~8 bytes (one Arc pointer) |
 | **Data Sharing** | ✅ Complete | All clones share PathMap + term count |
 | **Mutation Visibility** | ✅ Global | Changes via any clone affect all |
 | **Thread Safety** | ✅ Lock-free | Readers never block; writers swap atomically |
@@ -383,20 +383,20 @@ let dict2: PathMapDictionary<V> = PathMapDictionary::from_terms_with_values(entr
 
 | Method | Time | Space | Independence |
 |--------|------|-------|--------------|
-| `.clone()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | ❌ Shared |
-| Serialize/Deserialize | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | ✅ Full |
-| Rebuild from terms | `$\mathcal{O}(n \cdot \log m)$` | `$\mathcal{O}(n)$` | ✅ Full |
-| Rebuild with values | `$\mathcal{O}(n \cdot \log m)$` | `$\mathcal{O}(n)$` | ✅ Full |
+| `.clone()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | ❌ Shared |
+| Serialize/Deserialize | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ | ✅ Full |
+| Rebuild from terms | $`\mathcal{O}(n \cdot \log m)`$ | $`\mathcal{O}(n)`$ | ✅ Full |
+| Rebuild with values | $`\mathcal{O}(n \cdot \log m)`$ | $`\mathcal{O}(n)`$ | ✅ Full |
 
 #### Comparison with Other Dictionaries
 
 | Dictionary | Arc Count | Clone Cost | Shared Data? |
 |------------|-----------|------------|--------------|
-| **PathMapDictionary** | 1 (state) | `$\mathcal{O}(1)$` | ✅ Yes |
-| **DynamicDawg** | 1 (inner) | `$\mathcal{O}(1)$` | ✅ Yes |
-| **DynamicDawgChar** | 1 (inner) | `$\mathcal{O}(1)$` | ✅ Yes |
-| **DoubleArrayTrie** | 0 (no Arc) | `$\mathcal{O}(n)$` | ❌ No |
-| **DoubleArrayTrieChar** | 0 (no Arc) | `$\mathcal{O}(n)$` | ❌ No |
+| **PathMapDictionary** | 1 (state) | $`\mathcal{O}(1)`$ | ✅ Yes |
+| **DynamicDawg** | 1 (inner) | $`\mathcal{O}(1)`$ | ✅ Yes |
+| **DynamicDawgChar** | 1 (inner) | $`\mathcal{O}(1)`$ | ✅ Yes |
+| **DoubleArrayTrie** | 0 (no Arc) | $`\mathcal{O}(n)`$ | ❌ No |
+| **DoubleArrayTrieChar** | 0 (no Arc) | $`\mathcal{O}(n)`$ | ❌ No |
 
 **Key differences:**
 - PathMapDictionary: One Arc increment (single lock-free state snapshot)
@@ -446,11 +446,11 @@ let writer = {
 
 **Key Takeaways:**
 1. 🔗 `.clone()` creates **shallow copy** with one Arc increment (state snapshot)
-2. 🚀 **`$\mathcal{O}(1)$`** time and space - just atomic reference counting
+2. 🚀 **$`\mathcal{O}(1)`$** time and space - just atomic reference counting
 3. 🔄 **Mutations visible** across all clones (Arc-based sharing)
 4. 🌳 **Structural sharing** is separate (PathMap's persistent trie optimization)
 5. 🔒 **Thread-safe** via a single lock-free atomic snapshot (readers never block)
-6. 📊 For **independence**, use serialization or rebuild from terms (`$\mathcal{O}(n)$` cost)
+6. 📊 For **independence**, use serialization or rebuild from terms ($`\mathcal{O}(n)`$ cost)
 
 ## Construction Methods
 
@@ -460,13 +460,13 @@ PathMapDictionary provides constructors optimized for simple use cases and rapid
 
 | Constructor | Complexity | Use Case | Thread-Safe |
 |-------------|-----------|----------|-------------|
-| `new()` | `$\mathcal{O}(1)$` | Empty start | ✅ |
-| `from_terms()` | `$\mathcal{O}(n \cdot \log m)$` | Simple list | ✅ |
-| `from_terms_with_values()` | `$\mathcal{O}(n \cdot \log m)$` | With metadata | ✅ |
+| `new()` | $`\mathcal{O}(1)`$ | Empty start | ✅ |
+| `from_terms()` | $`\mathcal{O}(n \cdot \log m)`$ | Simple list | ✅ |
+| `from_terms_with_values()` | $`\mathcal{O}(n \cdot \log m)`$ | With metadata | ✅ |
 
 Where n = number of terms, m = dictionary size (grows with insertions)
 
-**Note**: PathMapDictionary uses `insert()` internally which is `$\mathcal{O}(\log m)$`, making bulk construction `$\mathcal{O}(n \cdot \log m)$` vs `$\mathcal{O}(n \cdot m)$` for DAWG variants.
+**Note**: PathMapDictionary uses `insert()` internally which is $`\mathcal{O}(\log m)`$, making bulk construction $`\mathcal{O}(n \cdot \log m)`$ vs $`\mathcal{O}(n \cdot m)`$ for DAWG variants.
 
 ### Empty Dictionary
 
@@ -489,7 +489,7 @@ valued_dict.insert_with_value("banana", 200);
 ```
 
 **Characteristics:**
-- **Time**: `$\mathcal{O}(1)$` - Minimal initialization
+- **Time**: $`\mathcal{O}(1)`$ - Minimal initialization
 - **Memory**: ~80 bytes (one Arc pointer + empty PathMap + term count)
 - **Simplicity**: Easiest to use, minimal boilerplate
 
@@ -516,7 +516,7 @@ let dict = PathMapDictionary::from_terms(term_set);
 ```
 
 **Characteristics:**
-- **Time**: `$\mathcal{O}(n \cdot \log m)$` where m grows from 0 to n
+- **Time**: $`\mathcal{O}(n \cdot \log m)`$ where m grows from 0 to n
 - **Memory**: ~32 bytes per node (HashMap-based)
 - **Structural sharing**: Minimal (PathMap not optimized for bulk insert)
 
@@ -692,10 +692,10 @@ PathMapDictionary accessor methods have **simpler** implementations but **slower
 
 | Method | PathMapDictionary | DynamicDawg | Performance Impact |
 |--------|-------------------|-------------|---------------------|
-| `contains(term)` | `$\mathcal{O}(m \cdot \log k)$` | `$\mathcal{O}(m)$` | ~2-3× slower |
-| `get_value(term)` | `$\mathcal{O}(m \cdot \log k)$` | `$\mathcal{O}(m)$` | ~2-3× slower |
-| `term_count()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Similar |
-| `len()` / `is_empty()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Similar |
+| `contains(term)` | $`\mathcal{O}(m \cdot \log k)`$ | $`\mathcal{O}(m)`$ | ~2-3× slower |
+| `get_value(term)` | $`\mathcal{O}(m \cdot \log k)`$ | $`\mathcal{O}(m)`$ | ~2-3× slower |
+| `term_count()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | Similar |
+| `len()` / `is_empty()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | Similar |
 
 *Where*: `m` = term length, `k` = average branching factor (~26 for English)
 
@@ -845,10 +845,10 @@ where
 5. Publish the updated `PathMapState` (map + term count) with an atomic compare-and-swap (retry on contention)
 
 **Complexity**:
-- **Time**: `$\mathcal{O}(n \cdot \log m)$` where n = terms in `other`, m = terms in `self`
-  - `$\mathcal{O}(n)$` for iteration over `other`
-  - `$\mathcal{O}(\log m)$` per PathMap insertion/lookup
-- **Space**: `$\mathcal{O}(\log m)$` for PathMap tree height (structural sharing reduces actual allocation)
+- **Time**: $`\mathcal{O}(n \cdot \log m)`$ where n = terms in `other`, m = terms in `self`
+  - $`\mathcal{O}(n)`$ for iteration over `other`
+  - $`\mathcal{O}(\log m)`$ per PathMap insertion/lookup
+- **Space**: $`\mathcal{O}(\log m)`$ for PathMap tree height (structural sharing reduces actual allocation)
 
 ### Why Iteration Instead of PathMap's join()?
 
@@ -860,9 +860,9 @@ pub fn join_into<V: Lattice>(&mut self, other: &PathMap<V>) { ... }
 ```
 
 **Limitation**: The `Lattice` trait requires specific algebraic properties:
-- Commutative: `$a \sqcup b = b \sqcup a$`
-- Associative: `$(a \sqcup b) \sqcup c = a \sqcup (b \sqcup c)$`
-- Idempotent: `$a \sqcup a = a$`
+- Commutative: $`a \sqcup b = b \sqcup a`$
+- Associative: $`(a \sqcup b) \sqcup c = a \sqcup (b \sqcup c)`$
+- Idempotent: $`a \sqcup a = a`$
 
 **Our approach**: Uses **arbitrary merge functions** without algebraic constraints:
 - ✅ Supports non-commutative merges: `(old, new) → new` (last-writer-wins)
@@ -1049,10 +1049,10 @@ fn union_with<F>(&self, other: &Self, merge_fn: F) -> usize {
 
 | Operation | Time Complexity | Space Complexity | Typical Performance (10K terms) |
 |-----------|----------------|------------------|--------------------------------|
-| `union_with()` | `$\mathcal{O}(n \cdot \log m)$` | `$\mathcal{O}(\log m)$` | ~80ms |
-| `union_replace()` | `$\mathcal{O}(n \cdot \log m)$` | `$\mathcal{O}(\log m)$` | ~80ms |
-| Iteration | `$\mathcal{O}(n)$` | `$\mathcal{O}(1)$` | ~15ms |
-| Per-term insertion | `$\mathcal{O}(\log m)$` | `$\mathcal{O}(\log m)$` | ~5-8µs |
+| `union_with()` | $`\mathcal{O}(n \cdot \log m)`$ | $`\mathcal{O}(\log m)`$ | ~80ms |
+| `union_replace()` | $`\mathcal{O}(n \cdot \log m)`$ | $`\mathcal{O}(\log m)`$ | ~80ms |
+| Iteration | $`\mathcal{O}(n)`$ | $`\mathcal{O}(1)`$ | ~15ms |
+| Per-term insertion | $`\mathcal{O}(\log m)`$ | $`\mathcal{O}(\log m)`$ | ~5-8µs |
 
 **Variables**:
 - n = number of terms in source dictionary
@@ -1123,7 +1123,7 @@ dict1.union_with(&dict2, |a, b| a + b);
 **Benefits**:
 - 💾 **Memory efficient**: Only delta nodes allocated
 - 🔒 **Safe snapshots**: Old version still accessible
-- 🚀 **Fast clones**: `$\mathcal{O}(1)$` shallow copy of Arc
+- 🚀 **Fast clones**: $`\mathcal{O}(1)`$ shallow copy of Arc
 
 **Caveats**:
 - Lock contention on write during union
@@ -1330,10 +1330,10 @@ prototype_fuzzy_matcher(
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Insert** | `$\mathcal{O}(m \log n)$` | m = term length, n = dict size |
-| **Remove** | `$\mathcal{O}(m \log n)$` | HashMap operations |
-| **Contains** | `$\mathcal{O}(m \log n)$` | Tree traversal + lookups |
-| **Fuzzy search** | `$\mathcal{O}(m \times d^{2} \times b \times \log n)$` | Additional log factor |
+| **Insert** | $`\mathcal{O}(m \log n)`$ | m = term length, n = dict size |
+| **Remove** | $`\mathcal{O}(m \log n)`$ | HashMap operations |
+| **Contains** | $`\mathcal{O}(m \log n)`$ | Tree traversal + lookups |
+| **Fuzzy search** | $`\mathcal{O}(m \times d^{2} \times b \times \log n)`$ | Additional log factor |
 
 ### Benchmark Results
 

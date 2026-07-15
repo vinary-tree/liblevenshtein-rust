@@ -109,7 +109,7 @@ fn reduce(p: &Process) -> Option<Process> {
 
 ## Overview
 
-The `$\rho$`-calculus (Meredith & Radestock, 2005) is a **reflective higher-order process
+The $`\rho`$-calculus (Meredith & Radestock, 2005) is a **reflective higher-order process
 calculus** that:
 
 1. Provides a **closed theory of processes** - names arise from processes themselves
@@ -118,9 +118,9 @@ calculus** that:
 
 ### Key Innovation
 
-Unlike `$\pi$`-calculus where names are primitive, in `$\rho$`-calculus:
+Unlike $`\pi`$-calculus where names are primitive, in $`\rho`$-calculus:
 
-> **Names are quoted processes**: `$x = \lceil P \rceil$`
+> **Names are quoted processes**: $`x = \lceil P \rceil`$
 
 This reflection mechanism enables:
 - Self-referential processes
@@ -153,10 +153,10 @@ x, y ::= ⌈P⌉         ; Quote: the code of process P as a name
 |-----------|---------|-------------|
 | `0` | "zero" or "nil" | Does nothing, terminated process |
 | `x(y).P` | "input y on x then P" | Waits for a message on channel x |
-| `$x\langle\lvert P\rvert\rangle$` | "lift P on x" | Sends the code of P on channel x |
-| `$\lfloor x\rfloor$` | "drop x" | Runs the process whose code is x |
+| $`x\langle\lvert P\rvert\rangle`$ | "lift P on x" | Sends the code of P on channel x |
+| $`\lfloor x\rfloor`$ | "drop x" | Runs the process whose code is x |
 | `P \| Q` | "P par Q" | Runs P and Q concurrently |
-| `$\lceil P\rceil$` | "quote P" | The name (code) of process P |
+| $`\lceil P\rceil`$ | "quote P" | The name (code) of process P |
 
 ### Binding Structure
 
@@ -176,7 +176,7 @@ The input construct `x(y).P` binds the name `y` in the body `P`. Free names are:
 
 ## Structural Congruence
 
-Structural congruence (`$\equiv$`) identifies processes that differ only in structure:
+Structural congruence ($`\equiv`$) identifies processes that differ only in structure:
 
 ### Parallel Composition Axioms
 
@@ -196,7 +196,7 @@ x(y).P \equiv x(z).P\{z/y\} \qquad \text{(rename the bound variable; } z \text{ 
 
 ### Name Equivalence
 
-Names have their own equivalence `$\equiv_N$` based on quotation:
+Names have their own equivalence $`\equiv_N`$ based on quotation:
 
 ```math
 \lceil P\rceil \equiv_N \lceil Q\rceil \quad\text{iff}\quad P \equiv Q \qquad \text{(quoted processes are equal iff their bodies are congruent)}
@@ -208,7 +208,7 @@ The key identity is **quote-drop**:
 \lceil\lfloor x\rfloor\rceil \equiv_N x \qquad \text{(quote of drop is the identity on names)}
 ```
 
-This means `$x = \lceil\lfloor x\rfloor\rceil$` - every name is the code of some process (namely, its drop).
+This means $`x = \lceil\lfloor x\rfloor\rceil`$ - every name is the code of some process (namely, its drop).
 
 ---
 
@@ -224,12 +224,12 @@ The fundamental reduction rule is communication:
 
 **Reading**: If a lift on channel x₀ meets an input on channel x₁, and these channels
 are name-equivalent, then:
-- The input receives the **quoted** sender process `$\lceil Q\rceil$`
+- The input receives the **quoted** sender process $`\lceil Q\rceil`$
 - Substituted into the continuation P
 
 ### Important: What Gets Sent
 
-The receiver gets `$\lceil Q\rceil$` (the **code** of Q), not Q itself. To run Q, the receiver
+The receiver gets $`\lceil Q\rceil`$ (the **code** of Q), not Q itself. To run Q, the receiver
 must drop it:
 
 ```
@@ -256,7 +256,7 @@ And under parallel contexts:
 
 The quote-drop mechanism is the heart of RHO calculus.
 
-### Quote: `$\lceil P\rceil$`
+### Quote: $`\lceil P\rceil`$
 
 **Quote** reifies a process as a name (its "code"):
 
@@ -268,7 +268,7 @@ The quote-drop mechanism is the heart of RHO calculus.
 
 Quoting is **syntactic** - it captures the structure of P, not its behavior.
 
-### Drop: `$\lfloor x\rfloor$`
+### Drop: $`\lfloor x\rfloor`$
 
 **Drop** executes a name (runs its code):
 
@@ -278,7 +278,7 @@ Quoting is **syntactic** - it captures the structure of P, not its behavior.
 
 Drop is the inverse of quote on well-formed names.
 
-### Lift: `$x\langle\lvert P\rvert\rangle$`
+### Lift: $`x\langle\lvert P\rvert\rangle`$
 
 **Lift** is output with implicit quotation, but susceptible to substitution:
 
@@ -286,7 +286,7 @@ Drop is the inverse of quote on well-formed names.
 x⟨|P|⟩          ; Output the code of P on channel x
 ```
 
-The difference from standard output `$x\langle\lceil P\rceil\rangle$` is that lift's body can contain free
+The difference from standard output $`x\langle\lceil P\rceil\rangle`$ is that lift's body can contain free
 variables that are substituted:
 
 ```math
@@ -318,12 +318,12 @@ The paper parameterizes bisimulation by a set N of **observable names**:
 
 **Definition (N-Barb)**: Process P has an N-barb at name x, written P ↓_N x, if:
 - P can input or output on x
-- `$x \in N$` (the name is observable)
+- $`x \in N`$ (the name is observable)
 
 **Definition (N-Barbed Bisimulation)**: A relation R is an N-barbed bisimulation if
 whenever P R Q:
 
-1. **Reduction closure**: If `$P \to P'$` then `$\exists Q'.\; Q \to^{*} Q'$` and `$P' \mathrel{R} Q'$`
+1. **Reduction closure**: If $`P \to P'`$ then $`\exists Q'.\; Q \to^{*} Q'`$ and $`P' \mathrel{R} Q'`$
 2. **Barb preservation**: If P ↓_N x then Q ⇓_N x (weak barb)
 3. **Symmetry**: The same conditions hold with P and Q swapped
 
@@ -345,15 +345,15 @@ safe(α) := P where FN(P) ⊆ α ∧ P ↓_N x ⟹ x ∈ α
 sole.in(α) := νX. (in(α, N → X) | P) ∧ ¬[in(¬[α], N → P) | P]
 ```
 
-This type says: "Can input on channels in `$\alpha$` and cannot input on `$\lnot\alpha$`."
+This type says: "Can input on channels in $`\alpha`$ and cannot input on $`\lnot\alpha`$."
 
 ---
 
 ## Derived Constructs
 
-### Private Names (`$\nu$`)
+### Private Names ($`\nu`$)
 
-Unlike `$\pi$`-calculus, RHO doesn't need primitive `$\nu$` (new name). It's derived:
+Unlike $`\pi`$-calculus, RHO doesn't need primitive $`\nu`$ (new name). It's derived:
 
 ```
 (νx)P := P{⌈0⌉/x}     ; Use a fresh quoted process
@@ -411,8 +411,8 @@ MeTTa also has quotation (terms as data). The correspondence:
 
 | RHO Calculus | MeTTa |
 |--------------|-------|
-| `$\lceil P\rceil$` (quote) | `(quote P)` |
-| `$\lfloor x\rfloor$` (drop) | `(eval x)` or unquote |
+| $`\lceil P\rceil`$ (quote) | `(quote P)` |
+| $`\lfloor x\rfloor`$ (drop) | `(eval x)` or unquote |
 | P \| Q | Parallel in knowledge base |
 | x(y).P | Pattern matching with binding |
 

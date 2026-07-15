@@ -118,9 +118,9 @@ for match in transducer.query("conection", 2) {  // typo
 | **Matching Type** | Prefix (whole words) | Substring (anywhere) |
 | **Use Case** | Spell check, completion | Full-text search, pattern finding |
 | **Index Input** | Word list | Text corpus |
-| **Space (`$n$` chars)** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` states, `$\mathcal{O}(n)$` edges |
-| **Construction** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` online |
-| **Query** | `$\mathcal{O}(m + k)$` | `$\mathcal{O}(m + k)$` where `$m$` = query, `$k$` = results |
+| **Space ($`n`$ chars)** | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ states, $`\mathcal{O}(n)`$ edges |
+| **Construction** | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ online |
+| **Query** | $`\mathcal{O}(m + k)`$ | $`\mathcal{O}(m + k)`$ where $`m`$ = query, $`k`$ = results |
 | **Dynamic Updates** | Yes (DynamicDawg) | **Yes (proposed)** |
 | **Example Query** | "test" → "test", "testing" | "test" → "contest", "retest", "testing" |
 
@@ -135,8 +135,8 @@ A **suffix automaton** is a minimal deterministic finite automaton (DFA) that ac
 #### Core Properties
 
 1. **Substring Recognition**: Any path from the root represents a substring of the indexed text
-2. **Minimality**: Fewest possible states (typically `$2n-1$` for string of length `$n$`)
-3. **Online Construction**: Characters can be added one at a time in `$\mathcal{O}(1)$` amortized
+2. **Minimality**: Fewest possible states (typically $`2n-1`$ for string of length $`n`$)
+3. **Online Construction**: Characters can be added one at a time in $`\mathcal{O}(1)`$ amortized
 4. **Endpos Equivalence**: States group substrings by their ending positions
 
 #### Example Construction
@@ -151,7 +151,7 @@ For string `"abcbc"`:
 - `"c"` (from positions 2 and 4)
 - `""` (empty)
 
-**Automaton states** group these by equivalence classes, resulting in ~9 states instead of storing all suffixes separately (which would need `$\mathcal{O}(n^2)$` space).
+**Automaton states** group these by equivalence classes, resulting in ~9 states instead of storing all suffixes separately (which would need $`\mathcal{O}(n^2)`$ space).
 
 ### Generalized Suffix Automaton
 
@@ -159,13 +159,13 @@ For **multiple strings** (e.g., indexing a document collection):
 
 1. **Concatenation Method**: Join strings with unique separators (`$1`, `$2`, etc.)
 2. **Direct Construction**: Maintain string IDs at final states
-3. **Space Complexity**: Still `$\mathcal{O}(n)$` for total characters across all strings
+3. **Space Complexity**: Still $`\mathcal{O}(n)`$ for total characters across all strings
 
 ### Dynamic Operations
 
 **Insertion (Standard):**
 - Suffix automaton naturally supports **online character insertion** at the end
-- `$\mathcal{O}(1)$` amortized per character
+- $`\mathcal{O}(1)`$ amortized per character
 - Algorithm: Create new state, update suffix links, clone states if needed
 
 **Deletion (Challenging):**
@@ -378,7 +378,7 @@ Positions map:
 9 -> [(0, 4)]  // string_id=0, position=4 (end of "abcbc")
 ```
 
-**Space:** ~9 states for 5 characters = `$\mathcal{O}(n)$`
+**Space:** ~9 states for 5 characters = $`\mathcal{O}(n)`$
 
 ---
 
@@ -459,8 +459,8 @@ fn extend(&mut self, ch: u8) {
 ```
 
 **Complexity:**
-- **Time:** `$\mathcal{O}(1)$` amortized per character (proven by Blumer et al.)
-- **Space:** Adds 1 state, possibly 1 clone = `$\mathcal{O}(1)$` amortized
+- **Time:** $`\mathcal{O}(1)`$ amortized per character (proven by Blumer et al.)
+- **Space:** Adds 1 state, possibly 1 clone = $`\mathcal{O}(1)`$ amortized
 
 ### 2. Insert String
 
@@ -497,8 +497,8 @@ pub fn insert(&self, text: &str) -> bool {
 ```
 
 **Complexity:**
-- **Time:** `$\mathcal{O}(n)$` where `$n$` = text length
-- **Space:** `$\mathcal{O}(n)$` new states (amortized)
+- **Time:** $`\mathcal{O}(n)`$ where $`n`$ = text length
+- **Space:** $`\mathcal{O}(n)`$ new states (amortized)
 
 ### 3. Remove String (Reference Counting)
 
@@ -545,8 +545,8 @@ pub fn remove(&self, text: &str) -> bool {
 ```
 
 **Complexity:**
-- **Time:** `$\mathcal{O}(m)$` where `$m$` = text length
-- **Space:** `$\mathcal{O}(1)$`
+- **Time:** $`\mathcal{O}(m)`$ where $`m`$ = text length
+- **Space:** $`\mathcal{O}(1)`$
 - **Note:** May leave unreachable states; call `compact()` periodically
 
 ### 4. Compaction (Garbage Collection)
@@ -615,8 +615,8 @@ pub fn compact(&self) {
 ```
 
 **Complexity:**
-- **Time:** `$\mathcal{O}(\text{states} + \text{edges})$` = `$\mathcal{O}(n)$` where `$n$` = total indexed characters
-- **Space:** `$\mathcal{O}(n)$` temporary
+- **Time:** $`\mathcal{O}(\text{states} + \text{edges})`$ = $`\mathcal{O}(n)`$ where $`n`$ = total indexed characters
+- **Space:** $`\mathcal{O}(n)`$ temporary
 - **Frequency:** Recommended after every `N` deletions or when memory pressure detected
 
 ---
@@ -964,18 +964,18 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Operation | Time Complexity | Space Complexity |
 |-----------|----------------|------------------|
-| **Construction (`$n$` chars)** | `$\mathcal{O}(n)$` amortized | `$\mathcal{O}(n)$` states |
-| **Insert string (`$m$` chars)** | `$\mathcal{O}(m)$` | `$\mathcal{O}(m)$` states |
-| **Remove string (`$m$` chars)** | `$\mathcal{O}(m)$` | `$\mathcal{O}(1)$` |
-| **Compact** | `$\mathcal{O}(\text{states} + \text{edges})$` | `$\mathcal{O}(n)$` temporary |
-| **Query (`$m$` chars, `$k$` results)** | `$\mathcal{O}(m \times \text{max\_distance} + k)$` | `$\mathcal{O}(m \times \text{max\_distance})$` |
-| **Contains (`$m$` chars)** | `$\mathcal{O}(m)$` | `$\mathcal{O}(1)$` |
+| **Construction ($`n`$ chars)** | $`\mathcal{O}(n)`$ amortized | $`\mathcal{O}(n)`$ states |
+| **Insert string ($`m`$ chars)** | $`\mathcal{O}(m)`$ | $`\mathcal{O}(m)`$ states |
+| **Remove string ($`m`$ chars)** | $`\mathcal{O}(m)`$ | $`\mathcal{O}(1)`$ |
+| **Compact** | $`\mathcal{O}(\text{states} + \text{edges})`$ | $`\mathcal{O}(n)`$ temporary |
+| **Query ($`m`$ chars, $`k`$ results)** | $`\mathcal{O}(m \times \text{max\_distance} + k)`$ | $`\mathcal{O}(m \times \text{max\_distance})`$ |
+| **Contains ($`m`$ chars)** | $`\mathcal{O}(m)`$ | $`\mathcal{O}(1)`$ |
 
 ### Space Analysis
 
 **Suffix Automaton:**
-- States: `$\le 2n - 1$` for string of length `$n$`
-- Edges: `$\le 3n - 4$`
+- States: $`\le 2n - 1`$ for string of length $`n`$
+- Edges: $`\le 3n - 4`$
 - Per-state overhead: ~40 bytes (Vec, Option, usize fields)
 - Total: ~`80n - 160` bytes (worst case)
 
@@ -989,7 +989,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 ### Benchmark Estimates
 
 **Construction (1 MB text):**
-- Estimated: 50-100 ms (online algorithm, `$\mathcal{O}(n)$`)
+- Estimated: 50-100 ms (online algorithm, $`\mathcal{O}(n)`$)
 - Compared to: PathMap ~20-30 ms (simpler structure)
 
 **Query ("algorithm", distance 2):**
@@ -1092,7 +1092,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 ### 1. Incremental Compaction
 
-**Problem:** Current compaction is stop-the-world `$\mathcal{O}(n)$`
+**Problem:** Current compaction is stop-the-world $`\mathcal{O}(n)`$
 
 **Solution:** Generational GC or incremental marking
 - Track "dirty" regions after deletions
@@ -1160,11 +1160,11 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Feature | Suffix Automaton | Suffix Tree |
 |---------|------------------|-------------|
-| **States** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` |
-| **Edges** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` |
-| **Construction** | `$\mathcal{O}(n)$` online | `$\mathcal{O}(n)$` (Ukkonen) |
-| **Space (practical)** | `$2n$` states, `$3n$` edges | `$n$` nodes, `$2n$` edges |
-| **Substring query** | `$\mathcal{O}(m)$` | `$\mathcal{O}(m)$` |
+| **States** | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ |
+| **Edges** | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ |
+| **Construction** | $`\mathcal{O}(n)`$ online | $`\mathcal{O}(n)`$ (Ukkonen) |
+| **Space (practical)** | $`2n`$ states, $`3n`$ edges | $`n`$ nodes, $`2n`$ edges |
+| **Substring query** | $`\mathcal{O}(m)`$ | $`\mathcal{O}(m)`$ |
 | **Online insert** | ✅ Yes (natural) | ⚠️ Complex (Ukkonen) |
 | **Dynamic delete** | ⚠️ Via compaction | ⚠️ Via rebuild |
 | **Implementation** | Simpler (DFA) | More complex |
@@ -1175,9 +1175,9 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 | Feature | Suffix Automaton | Suffix Array |
 |---------|------------------|-------------|
-| **Space** | `$\mathcal{O}(n)$` states + edges | `$\mathcal{O}(n)$` integers |
-| **Construction** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n \log n)$` or `$\mathcal{O}(n)$` |
-| **Substring query** | `$\mathcal{O}(m)$` | `$\mathcal{O}(m \log n)$` |
+| **Space** | $`\mathcal{O}(n)`$ states + edges | $`\mathcal{O}(n)`$ integers |
+| **Construction** | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n \log n)`$ or $`\mathcal{O}(n)`$ |
+| **Substring query** | $`\mathcal{O}(m)`$ | $`\mathcal{O}(m \log n)`$ |
 | **Approx. matching** | ✅ Native (Levenshtein) | ⚠️ Requires extensions |
 | **Dynamic insert** | ✅ Yes | ❌ Requires rebuild |
 | **Memory** | Higher | Lower |
@@ -1196,7 +1196,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
    DOI: [10.1016/0304-3975(85)90157-4](https://doi.org/10.1016/0304-3975(85)90157-4)
    - **Foundational paper** introducing suffix automata
    - First linear-time construction algorithm
-   - Proves minimality properties and space bounds (`$\le 2n-1$` states)
+   - Proves minimality properties and space bounds ($`\le 2n-1`$ states)
    - 357+ citations (Semantic Scholar)
 
 2. **Crochemore, M. (1986)**
@@ -1221,8 +1221,8 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
    Theoretical Computer Science, 410(37), 3553-3562.
    DOI: [10.1016/j.tcs.2009.03.034](https://doi.org/10.1016/j.tcs.2009.03.034)
    - **Generalized suffix automata for multiple strings**
-   - Improved space bounds: `$\le 2Q - 2$` states (`$Q$` = prefix tree nodes)
-   - Better than Blumer's bound (`$2\lVert U\rVert - 1$`) for multiple strings
+   - Improved space bounds: $`\le 2Q - 2`$ states ($`Q`$ = prefix tree nodes)
+   - Better than Blumer's bound ($`2\lVert U\rVert - 1`$) for multiple strings
    - Direct relevance to our multi-document indexing use case
 
 5. **Inenaga, S., Hoshino, H., Shinohara, A., Takeda, M., Arikawa, S., Mauri, G., & Pavesi, G. (2001)**
@@ -1351,7 +1351,7 @@ This design proposes a **comprehensive suffix automaton implementation** for lib
 4. ✅ **Maintains thread safety** - Lock-free `ArcSwap` pattern matching other dictionaries
 5. ✅ **Provides rich API** - Construction, mutation, metadata, serialization
 
-The implementation follows established patterns from `DynamicDawg` and leverages proven algorithms (Blumer et al., 1985) with `$\mathcal{O}(n)$` construction and space complexity.
+The implementation follows established patterns from `DynamicDawg` and leverages proven algorithms (Blumer et al., 1985) with $`\mathcal{O}(n)`$ construction and space complexity.
 
 **Estimated Effort:** 5-6 weeks for complete implementation including tests, documentation, and benchmarks.
 

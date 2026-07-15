@@ -265,9 +265,9 @@ Where rank_i = rank of ground truth in top-K results
 - **Time**: Lattice construction time vs. input length
 
 **Expected**:
-- Completeness: 100% for `$d \le  3$`
+- Completeness: 100% for $`d \le  3`$
 - Soundness: 100%
-- Time: `$\mathcal{O}(n \times  d^{2})$` (linear in n for fixed d)
+- Time: $`\mathcal{O}(n \times  d^{2})`$ (linear in n for fixed d)
 - Lattice size: ~1000 nodes for n=50, d=2
 
 **Implementation** (Rust + Criterion):
@@ -462,16 +462,16 @@ cargo bench --bench e2e_fast -- --save-baseline fast_mode
 
 **Benchmark**: `bench_latency_scaling`
 
-**Test**: Fix input length at `$n \in$` {10, 50, 100, 500, 1000} LOC
+**Test**: Fix input length at $`n \in`$ {10, 50, 100, 500, 1000} LOC
 
 **Measure**: Median latency for each n
 
 **Expected Complexity**:
-- Layer 1: `$\mathcal{O}(n)$`
-- Layer 2: `$\mathcal{O}(n)$` (incremental parsing)
-- Layer 3: `$\mathcal{O}(n)$`
-- Layer 4: `$\mathcal{O}(n^{2})$` (dataflow analysis)
-- Layer 5: `$\mathcal{O}(n^{2})$` (graph analysis)
+- Layer 1: $`\mathcal{O}(n)`$
+- Layer 2: $`\mathcal{O}(n)`$ (incremental parsing)
+- Layer 3: $`\mathcal{O}(n)`$
+- Layer 4: $`\mathcal{O}(n^{2})`$ (dataflow analysis)
+- Layer 5: $`\mathcal{O}(n^{2})`$ (graph analysis)
 
 **Plot**: Latency (ms) vs. LOC (log-log scale)
 
@@ -481,7 +481,7 @@ cargo bench --bench e2e_fast -- --save-baseline fast_mode
 
 **Benchmark**: `bench_throughput_beam`
 
-**Test**: Fix beam width `$k \in$` {1, 5, 10, 20, 50, 100}
+**Test**: Fix beam width $`k \in`$ {1, 5, 10, 20, 50, 100}
 
 **Measure**: Corrections/sec for each k
 
@@ -734,7 +734,7 @@ n=500:   950ms
 n=1000:  2100ms
 ```
 
-**Fit**: ~`$\mathcal{O}(n^1.2)$` (subquadratic, better than naive `$\mathcal{O}(n^{2})$`)
+**Fit**: ~$`\mathcal{O}(n^1.2)`$ (subquadratic, better than naive $`\mathcal{O}(n^{2})`$)
 
 ---
 

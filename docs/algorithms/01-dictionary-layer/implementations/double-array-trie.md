@@ -74,7 +74,7 @@ CHECK[t] = s       (verify that state t came from state s)
 ```
 
 **Advantages**:
-1. Constant-time transitions: `$\mathcal{O}(1)$`
+1. Constant-time transitions: $`\mathcal{O}(1)`$
 2. Sequential memory layout: cache-friendly
 3. Predictable access patterns: CPU prefetcher-friendly
 4. Compact representation: ~8 bytes per state
@@ -201,7 +201,7 @@ For a dictionary with N states:
 
 *When V=(), `Option<()>` is zero-sized
 
-**Example**: 50,000-term dictionary `$\approx$` 500KB
+**Example**: 50,000-term dictionary $`\approx`$ 500KB
 
 ### Cache Efficiency
 
@@ -343,13 +343,13 @@ impl<V: DictionaryValue> DoubleArrayTrieBuilder<V> {
 
 ### Complexity Analysis
 
-- **Time**: `$\mathcal{O}(N \times L \times M)$` where:
+- **Time**: $`\mathcal{O}(N \times L \times M)`$ where:
   - N = number of terms
   - L = average term length
   - M = average branching factor (~2-3 for natural language)
 
-- **Space**: `$\mathcal{O}(S)$` where S = number of states
-  - Typically `$S \approx 0.5N$` to `$2N$` depending on prefix sharing
+- **Space**: $`\mathcal{O}(S)`$ where S = number of states
+  - Typically $`S \approx 0.5N`$ to $`2N`$ depending on prefix sharing
 
 ### Optimization: Sorted Insertion
 
@@ -394,7 +394,7 @@ fn contains(&self, term: &str) -> bool {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(L)$` where L = term length
+**Complexity**: $`\mathcal{O}(L)`$ where L = term length
 
 **Performance**: ~6.6µs for 10,000-term dictionary
 
@@ -414,7 +414,7 @@ let results: Vec<String> = automaton.query(&dict).collect();
 // Returns: ["test"] (transposition distance = 1)
 ```
 
-**Complexity**: `$\mathcal{O}(L \times D \times B)$` where:
+**Complexity**: $`\mathcal{O}(L \times D \times B)`$ where:
 - L = query length
 - D = max distance
 - B = average branching factor
@@ -770,8 +770,8 @@ Dictionary Size  │  Construction  │  Query Time  │  Memory
 ```
 
 **Observations**:
-- Construction: `$\mathcal{O}(N \log N)$` due to sorting
-- Query: `$\mathcal{O}(L)$` - independent of dictionary size!
+- Construction: $`\mathcal{O}(N \log N)`$ due to sorting
+- Query: $`\mathcal{O}(L)`$ - independent of dictionary size!
 - Memory: Linear with term count
 
 ### CPU Cache Impact

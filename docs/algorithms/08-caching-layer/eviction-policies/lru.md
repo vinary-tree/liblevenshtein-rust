@@ -53,7 +53,7 @@ impl<D: MappedDictionary<V>, V> MappedDictionary<V> for Lru<D> {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(1)$` metadata update + `$\mathcal{O}(d)$` inner lookup
+**Complexity**: $`\mathcal{O}(1)`$ metadata update + $`\mathcal{O}(d)`$ inner lookup
 
 ### Finding LRU Entry
 
@@ -73,7 +73,7 @@ impl<D> Lru<D> {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(n)$` where n = number of candidates
+**Complexity**: $`\mathcal{O}(n)`$ where n = number of candidates
 
 ## Usage Examples
 
@@ -217,9 +217,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Operation | Complexity | Notes |
 |-----------|------------|-------|
-| get_value | `$\mathcal{O}(d)$` + `$\mathcal{O}(1)$` | Dictionary lookup + metadata update |
-| contains | `$\mathcal{O}(d)$` + `$\mathcal{O}(1)$` | Dictionary check + metadata update |
-| find_lru | `$\mathcal{O}(n)$` | Linear scan of candidates |
+| get_value | $`\mathcal{O}(d)`$ + $`\mathcal{O}(1)`$ | Dictionary lookup + metadata update |
+| contains | $`\mathcal{O}(d)`$ + $`\mathcal{O}(1)`$ | Dictionary check + metadata update |
+| find_lru | $`\mathcal{O}(n)`$ | Linear scan of candidates |
 
 Where:
 - `d` = inner dictionary operation complexity
@@ -265,7 +265,7 @@ Where:
 ✅ **Good For**:
 - Code completion (recent identifiers)
 - General-purpose caching
-- Temporal locality (recent `$\approx$` likely to reuse)
+- Temporal locality (recent $`\approx`$ likely to reuse)
 - Session management
 
 ❌ **Not Ideal For**:

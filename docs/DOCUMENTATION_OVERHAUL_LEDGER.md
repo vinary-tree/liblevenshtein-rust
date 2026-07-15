@@ -564,3 +564,56 @@ must be in scope — proof that the compile gate earns its keep.
 | #7 rustdoc | ✅ 0 `missing_docs` |
 
 **No deferrals remain.**
+
+---
+
+## Correction — 2026-07-15: inline-math delimiters were transposed campaign-wide
+
+**Defect.** The 2026-07-13 converter (`scripts/doc-math-convert.raku`) emitted inline math with its
+delimiters **transposed** — a backtick code span whose *content* is dollar-delimited, instead of a
+dollar-delimited span whose *content* is a backtick code span:
+
+```
+  WRONG  (GitHub renders it as literal monospace text, e.g. "$W$"):   `$…$`    ← backticks outside
+  RIGHT  (GitHub renders it as MathJax):                              $`…`$    ← dollars outside
+
+  converter emission, per site:   WRONG  '`$' ~ … ~ '$`'        RIGHT  '$`' ~ … ~ '`$'
+```
+
+So **every inline formula across the living docs was broken**. The lint scanner shared the same
+inverted model (its kind-e "hygiene" rule even treated the backtick-then-dollar sequence as the
+*opening* delimiter), so it never flagged the form. Root cause: all five emission sites in the
+converter. Blast radius: **3,804 spans across 148 documents**, including `README.md`.
+
+**Symptom fix.** New idempotent, fence- and tokenizer-aware repair `scripts/doc-math-transpose.raku`
+transposed all 3,804 spans (backticks-outside → dollars-outside). The tokenizer (shared with the
+scanner) guarantees it never matches the glue between two already-correct adjacent spans and is a
+no-op on a second run. This ledger's 4 illustrative meta-examples of the broken form are guarded
+and preserved.
+
+**Secondary defect — swallowed markdown.** The same converter's span-bounding logic had also
+**absorbed adjacent markdown into the math**: bold `**`, list bullets (`- ` / `N. `), and table
+`|` delimiters ended up *inside* the math spans (94 lines). New conservative repair
+`scripts/doc-math-fix-boundaries.raku` hoists those tokens back out (gated: table pipes only on
+pipe-leading rows, bullets only on line-start spans), bailing on tangled multi-cell or
+`**`-embedded spans; the ~8 irregular cases (Rholang-parallel associativity table, `[π]↑e`,
+`β|N/A` cell, `i#e` split, two bold-embedded labels) were hand-reconstructed.
+
+**Root-cause + prevention.**
+- `scripts/doc-math-convert.raku` — all 5 emission sites corrected (dollars now emitted outside the
+  backtick span); header and hygiene comments corrected.
+- `scripts/doc-math-prescan.raku` — added `code-wrapped-dollar-math` (detects the transposed form),
+  fixed the inverted kind-e opener, and added `table-column-mismatch` (flags **unescaped `|` in
+  table cells** — the failure that swallowed pipes into math; counts delimiters with code spans
+  blanked and `\|` neutralised, flagging rows with more cells than the `|---|` separator). Fixed the
+  2 Bucket-A table rows it surfaced (`TCS_2011_PAPER_ANALYSIS.md`, `PROOF_INDEX.md`).
+
+**Residual (intentional).** Three Bucket-B append-only records still carry unescaped-`|` table rows
+(`archive/theory/scdawg/02-suffix-automaton.md`, `research/wallbreaker/scientific-ledger.md`,
+`verification/FINDINGS_LEDGER.md`); the linter now flags them but, per the append-only rule, they
+are left frozen.
+
+**Verification.** `scripts/doc-mathlint.sh` → ✅ PASS (0 constructs across 248 living docs; the pass
+message now correctly describes the dollars-outside form). Tokenizer re-scan: 0 residual
+backticks-outside spans, 0 bold-in-span, 0 swallowed bullets, 0 trapped table pipes (excluding the
+guarded ledger examples). Both repair scripts are idempotent (second `--dry` run = 0 changes).

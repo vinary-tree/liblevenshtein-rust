@@ -49,12 +49,12 @@ A **Levenshtein automaton** for string `w` and distance `n` is a finite-state au
 For query term `w` of length `m` and maximum distance `n`, the Levenshtein automaton `A(w, n)` is defined as:
 
 - **States:** Tuples `(i, e)` where:
-  - `$i$` = position in query term (`$0 \le i \le m$`)
-  - `$e$` = accumulated errors (`$0 \le e \le n$`)
+  - $`i`$ = position in query term ($`0 \le i \le m`$)
+  - $`e`$ = accumulated errors ($`0 \le e \le n`$)
 
 - **Initial state:** `(0, 0)` - start of term, no errors
 
-- **Final states:** `$\{(m, e) \mid 0 \le e \le n\}$` - reached end of term within max distance
+- **Final states:** $`\{(m, e) \mid 0 \le e \le n\}`$ - reached end of term within max distance
 
 - **Transitions:** Based on edit operations (insert, delete, substitute)
 
@@ -62,14 +62,14 @@ For query term `w` of length `m` and maximum distance `n`, the Levenshtein autom
 
 **Naive Representation:**
 - Store all reachable `(i, e)` tuples explicitly
-- State count: `$\mathcal{O}((n+1) \times (m+1))$` = `$\mathcal{O}(n \times m)$`
+- State count: $`\mathcal{O}((n+1) \times (m+1))`$ = $`\mathcal{O}(n \times m)`$
 - For query length `m=10`, distance `n=2`: ~33 possible positions
 
 **Key Observation (Schulz & Mihov):**
 At any point in dictionary traversal, all active positions lie within a **characteristic vector** of length `2n+1`:
 - Given current offset `k` in query
-- Active positions: `$\{(i, e) \mid k-n \le i \le k+n, e \le n\}$`
-- This bounds the state space to `$\mathcal{O}(n^2)$` per traversal step
+- Active positions: $`\{(i, e) \mid k-n \le i \le k+n, e \le n\}`$
+- This bounds the state space to $`\mathcal{O}(n^2)`$ per traversal step
 
 **Position Subsumption (Optimization):**
 
@@ -106,8 +106,8 @@ CV(a) = vector indicating which query positions match character 'a'
 3. Result: Transition function depends only on CV, not explicit query comparison
 
 **Complexity:**
-- Without CV: `$\mathcal{O}(m)$` comparisons per transition (check each query position)
-- With CV: `$\mathcal{O}(1)$` lookup + `$\mathcal{O}(\text{active positions})$` = `$\mathcal{O}(n^2)$` per transition
+- Without CV: $`\mathcal{O}(m)`$ comparisons per transition (check each query position)
+- With CV: $`\mathcal{O}(1)`$ lookup + $`\mathcal{O}(\text{active positions})`$ = $`\mathcal{O}(n^2)`$ per transition
 
 **Note:** Our implementation uses direct query comparison for simplicity, but could be optimized with characteristic vectors for very large alphabets or long queries.
 
@@ -126,11 +126,11 @@ This allows **on-the-fly** construction during dictionary traversal without pre-
 
 **Standard Acceptance:** Word accepted if:
 - All query characters consumed (term_index == query.len())
-- Final state distance `$\le$` max_distance
+- Final state distance $`\le`$ max_distance
 
 **Prefix Matching Acceptance:** Word accepted if:
 - Dictionary node is final (marks complete word)
-- **Any** state position with `$\text{term\_index} \in [0, \text{query.len()}]$` and `$\text{num\_errors} \le \text{max\_distance}$`
+- **Any** state position with $`\text{term\_index} \in [0, \text{query.len()}]`$ and $`\text{num\_errors} \le \text{max\_distance}`$
 - Remaining query characters can be deleted within budget
 
 **Modification:**
@@ -223,7 +223,7 @@ Dictionary DFA × Levenshtein NFA → Acceptance paths
 1. Start at dictionary root and Levenshtein initial state
 2. Simultaneously traverse both:
    - Dictionary transitions on edge labels
-   - Levenshtein transitions on same labels + `$\varepsilon$`-transitions
+   - Levenshtein transitions on same labels + $`\varepsilon`$-transitions
 3. Accept path when:
    - Dictionary node is final (valid word)
    - Levenshtein state is final (within max distance)
@@ -537,7 +537,7 @@ fn transition_standard(
 }
 ```
 
-**`$\varepsilon$`-Transitions (processed before consuming dict char):**
+**$`\varepsilon`$-Transitions (processed before consuming dict char):**
 
 ```rust
 fn epsilon_transitions_standard(
@@ -1036,7 +1036,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
    Journal of the ACM, 21(1), 168-173.
    DOI: [10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
    - Dynamic programming algorithm for edit distance
-   - `$\mathcal{O}(mn)$` time complexity
+   - $`\mathcal{O}(mn)`$ time complexity
 
 5. **Mihov, S., & Schulz, K. U. (2004)**
    *"Fast approximate search in large dictionaries"*
@@ -1060,7 +1060,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
    Blog post: [https://julesjacobs.com/2015/06/17/disqus-levenshtein-simple-and-fast.html](https://julesjacobs.com/2015/06/17/disqus-levenshtein-simple-and-fast.html)
    - Simplified implementation
    - Characteristic vector optimization
-   - Complexity analysis: `$\mathcal{O}(D^2 N)$` where `$D$` = distance, `$N$` = query length
+   - Complexity analysis: $`\mathcal{O}(D^2 N)`$ where $`D`$ = distance, $`N`$ = query length
 
 8. **Bergroth, L., Hakonen, H., & Raita, T. (2000)**
    *"A survey of longest common subsequence algorithms"*
@@ -1108,26 +1108,26 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Construction** | `$\mathcal{O}(1)$` | Lazy construction during traversal |
-| **Query (worst case)** | `$\mathcal{O}(m \times n^d \times \lvert\Sigma\rvert^d)$` | `$m$` = query length, `$n$` = max distance, `$\Sigma$` = alphabet, `$d$` = dictionary depth |
-| **Query (typical)** | `$\mathcal{O}(m \times k)$` | `$k$` = result count (with pruning) |
-| **Per-transition** | `$\mathcal{O}(\text{positions})$` | Typically 10-50 positions for distance 2 |
-| **Subsumption check** | `$\mathcal{O}(\text{positions}^2)$` | ~`$\mathcal{O}(p)$` amortized with sorted positions |
+| **Construction** | $`\mathcal{O}(1)`$ | Lazy construction during traversal |
+| **Query (worst case)** | $`\mathcal{O}(m \times n^d \times \lvert\Sigma\rvert^d)`$ | $`m`$ = query length, $`n`$ = max distance, $`\Sigma`$ = alphabet, $`d`$ = dictionary depth |
+| **Query (typical)** | $`\mathcal{O}(m \times k)`$ | $`k`$ = result count (with pruning) |
+| **Per-transition** | $`\mathcal{O}(\text{positions})`$ | Typically 10-50 positions for distance 2 |
+| **Subsumption check** | $`\mathcal{O}(\text{positions}^2)`$ | ~$`\mathcal{O}(p)`$ amortized with sorted positions |
 
 ### Space Complexity
 
 | Component | Complexity | Typical Size |
 |-----------|-----------|--------------|
 | **Position** | 17 bytes | Fixed |
-| **State** | `$\mathcal{O}(\text{positions})$` | Vec<Position> |
-| **StatePool** | `$\mathcal{O}(\text{states})$` | ~1-5 MB (reusable) |
-| **Active stack** | `$\mathcal{O}(\text{depth} \times \text{branching})$` | ~10-100 KB |
-| **Path nodes** | `$\mathcal{O}(\text{depth} \times \text{results})$` | ~16 bytes each |
+| **State** | $`\mathcal{O}(\text{positions})`$ | Vec<Position> |
+| **StatePool** | $`\mathcal{O}(\text{states})`$ | ~1-5 MB (reusable) |
+| **Active stack** | $`\mathcal{O}(\text{depth} \times \text{branching})`$ | ~10-100 KB |
+| **Path nodes** | $`\mathcal{O}(\text{depth} \times \text{results})`$ | ~16 bytes each |
 
 ### State Space Bounds
 
 **Without pruning:**
-- Standard (distance `$n$`): `$\mathcal{O}((n+1)^{(m+1)})$` states
+- Standard (distance $`n`$): $`\mathcal{O}((n+1)^{(m+1)})`$ states
 - Example: query length 10, distance 2 → ~60K states
 
 **With subsumption pruning:**
@@ -1147,7 +1147,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 |---------|----------|--------------|---------------|
 | **Operations** | Insert, Delete, Substitute | + Transpose | + Merge, Split |
 | **Typical Use** | General spell check | Typo correction | OCR errors, ligatures |
-| **State complexity** | `$\mathcal{O}(n \times m)$` | `$\mathcal{O}(n \times m)$` | `$\mathcal{O}(n \times m^2)$` |
+| **State complexity** | $`\mathcal{O}(n \times m)`$ | $`\mathcal{O}(n \times m)`$ | $`\mathcal{O}(n \times m^2)`$ |
 | **Example** | "tset" → "test" (2 edits) | "tset" → "test" (1 edit) | "æ" ↔ "ae" (1 edit) |
 | **Performance** | Baseline | +10-20% overhead | +30-50% overhead |
 
@@ -1166,7 +1166,7 @@ for candidate in transducer.query_ordered("tset", 2).take(3) {
 - [✅] Standard algorithm (insert, delete, substitute)
 - [✅] Transposition algorithm
 - [✅] MergeAndSplit algorithm
-- [✅] `$\varepsilon$`-transition handling
+- [✅] $`\varepsilon`$-transition handling
 
 **Query Infrastructure (Implemented ✅):**
 - [✅] QueryIterator (lazy evaluation)

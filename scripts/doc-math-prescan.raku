@@ -3,11 +3,13 @@
 # doc-math-prescan.raku — fence-aware MathJax-conformance scanner for the liblevenshtein docs.
 #
 # The documentation house style requires MathJax LaTeX for all mathematical prose:
-#   * inline math  = a backtick code span whose content is dollar-delimited, e.g.
-#                    `$\mathcal{O}(\lvert W\rvert)$`
+#   * inline math  = a dollar-delimited span whose content is a backtick code span, e.g.
+#                    $`\mathcal{O}(\lvert W\rvert)`$   (dollars OUTSIDE the backtick span)
 #   * display math = a fenced block whose info-string is `math`
 # and forbids (a) Unicode-literal formulae (`𝒪(∣W∣)`, `⟨i,e⟩`, `≤` …) whether backticked or
-# bare, (b) bare undelimited big-O (`O(n)`) in prose, and (c) bare `$…$` / `$$…$$`.
+# bare, (b) bare undelimited big-O (`O(n)`) in prose, (c) bare `$…$` / `$$…$$`, and (d) the
+# TRANSPOSED nesting `` `$…$` `` (dollars INSIDE the backticks) — GitHub renders that as literal
+# monospace text, not math; the dollars must sit OUTSIDE, as `` $`…`$ ``.
 #
 # This scanner reports what still needs converting. It NEVER edits anything.
 #
@@ -73,7 +75,7 @@ my constant %KEY = (
 my constant \MATH = %KEY.keys.Set;
 
 sub print-key() {
-    say "Unicode -> LaTeX conversion key (wrap the result in an inline backtick-dollar span or a fenced math block):";
+    say "Unicode -> LaTeX conversion key (wrap the result in an inline dollar-backtick span \$`…`\$ or a fenced math block):";
     for %KEY.sort(*.key) -> $p {
         my $u = 'U+' ~ $p.key.ord.base(16).fmt('%04s');
         say "  $u  {$p.key}  ->  {$p.value}";
@@ -98,11 +100,34 @@ sub split-code-spans(Str $line) {
 
 sub has-math(Str $s --> Bool) { so $s.comb.any ∈ MATH }
 
+# ── Markdown-table column accounting (for the unescaped-pipe check) ──────────────────────
+# A GFM table cell may contain a literal `|` only when it is escaped (`\|`) or sits inside a
+# code span (`` `…` `` — which includes inline math `$`…`$`); an unescaped bare pipe is parsed
+# as an extra column delimiter and silently corrupts the row. `table-cell-count` returns a
+# row's delimiter-cell count with code spans blanked and `\|` neutralised (or -1 if the line
+# is not a table row); `is-separator` recognises the `|---|:--:|` alignment row.
+sub table-cell-count(Str $row --> Int) {
+    my $s = $row.trim;
+    return -1 unless $s.contains('|');
+    $s = $s.subst(/ ('`'+) .*? $0 /, -> $m { '#' x $m.Str.chars }, :g);   # blank code spans
+    $s ~~ s:g/ \\ '|' /##/;                                                # neutralise escaped \|
+    return -1 unless $s.contains('|');
+    $s ~~ s/ ^ \s* '|' //;                                                 # strip leading delimiter
+    $s ~~ s/ '|' \s* $ //;                                                 # strip trailing delimiter
+    return $s.split('|').elems;
+}
+sub is-separator(Str $row --> Bool) {
+    my $s = $row.trim;
+    so $s ~~ / ^ <[ | \- : \s ]>+ $ / && $s.contains('-') && $s.contains('|');
+}
+
 # ── Scan one file ───────────────────────────────────────────────────────────────────────
 sub scan-file(Str $path) {
     my @findings;                      # (line-no, kind, excerpt)
     my $in-fence = False;
     my $fence-marker = '';
+    my $prev-row = Str;                 # previous non-fence line (candidate table header)
+    my $tbl-cols = 0;                   # expected column count of the current table (0 = none)
     my @lines = $path.IO.lines;
     for @lines.kv -> $i, $line {
         my $lno = $i + 1;
@@ -126,6 +151,11 @@ sub scan-file(Str $path) {
         for @spans -> $s {
             next if $s ~~ / ^ <[ \x[0391]..\x[03A9] \x[03B1]..\x[03C9] ]> '-' <[A..Za..z]>+ $ /;
             @findings.push([$lno, 'backticked-unicode-math', "`$s`"]) if has-math($s);
+            # (a2) TRANSPOSED inline math: a code span whose content is itself dollar-delimited
+            # (`$…$`) has the delimiters nested the wrong way — GitHub renders it literally. The
+            # correct form puts the dollars OUTSIDE the backtick span ($`…`$). Flag it.
+            @findings.push([$lno, 'code-wrapped-dollar-math', "`$s`"])
+                if $s.chars >= 3 && $s.starts-with('$') && $s.ends-with('$');
         }
         # (b) bare Unicode math glyph in prose (display math written as plain text). Blank the same
         # Greek-hyphen-word terminology before the check so a bare `λ-calculus` is not flagged.
@@ -143,10 +173,33 @@ sub scan-file(Str $path) {
         if $prose ~~ / '$' <-[$]>* '\\' <[a..zA..Z]>+ <-[$]>* '$' / {
             @findings.push([$lno, 'leaked-dollar-latex', ~$/]);
         }
-        # (e) target-form hygiene: an ASCII word char abutting a `$ opening delimiter
-        if $line ~~ / <[0..9A..Za..z]> '`$' / {
+        # (e) target-form hygiene: an ASCII word char abutting the '$`' opening delimiter. A letter
+        #     directly before `$`` can suppress GitHub's math parse — keep a space/punctuation there.
+        if $line ~~ / <[0..9A..Za..z]> '$`' / {
             @findings.push([$lno, 'letter-abuts-open', ~$/]);
         }
+        # (f) markdown-table column consistency. An unescaped bare `|` in a cell (not `\|`, not in
+        #     a code/math span) is parsed as a delimiter and adds a phantom column — the exact
+        #     failure that produced the swallowed-pipe corruption, and it silently TRUNCATES the
+        #     overflow cell on GitHub. Flag any header/body row with MORE cells than the table's
+        #     separator (`|---|`) row. (Under-count rows are padded by GFM and are not flagged.)
+        if is-separator($line) {
+            my $cols = table-cell-count($line);
+            with $prev-row {
+                my $hc = table-cell-count($_);
+                @findings.push([$lno - 1, 'table-column-mismatch', $_.trim])
+                    if $hc > $cols;
+            }
+            $tbl-cols = $cols;
+        }
+        elsif $tbl-cols > 0 {
+            my $cc = table-cell-count($line);
+            if $cc <= 0 { $tbl-cols = 0 }                    # blank / pipe-free line ends the table
+            elsif $cc > $tbl-cols {
+                @findings.push([$lno, 'table-column-mismatch', $line.trim]);
+            }
+        }
+        $prev-row = $line;
     }
     return @findings;
 }

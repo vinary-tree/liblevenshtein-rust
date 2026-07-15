@@ -61,19 +61,19 @@ Error Model (WFST) ∘ Dictionary (WFST)
 
 ### 1.2 WFST Fundamentals
 
-A WFST `$T = (\Sigma , \Delta , Q, I, F, E, \lambda , \rho )$` consists of:
-- `$\Sigma$`: Input alphabet
-- `$\Delta$`: Output alphabet
+A WFST $`T = (\Sigma , \Delta , Q, I, F, E, \lambda , \rho )`$ consists of:
+- $`\Sigma`$: Input alphabet
+- $`\Delta`$: Output alphabet
 - `Q`: Finite set of states
-- `$I \subseteq  Q$`: Initial states
-- `$F \subseteq  Q$`: Final states
-- `$E \subseteq  Q \times  (\Sigma  \cup  {\varepsilon }) \times  (\Delta  \cup  {\varepsilon }) \times  \mathbb{R} ^{+} \times  Q$`: Edges with weights
-- `$\lambda : I \to  \mathbb{R} ^{+}$`: Initial weights
-- `$\rho : F \to  \mathbb{R} ^{+}$`: Final weights
+- $`I \subseteq  Q`$: Initial states
+- $`F \subseteq  Q`$: Final states
+- $`E \subseteq  Q \times  (\Sigma  \cup  {\varepsilon }) \times  (\Delta  \cup  {\varepsilon }) \times  \mathbb{R} ^{+} \times  Q`$: Edges with weights
+- $`\lambda : I \to  \mathbb{R} ^{+}`$: Initial weights
+- $`\rho : F \to  \mathbb{R} ^{+}`$: Final weights
 
 **Operations**:
-- **Composition** (`$\circ$`): Cascades two transducers
-- **Union** (`$\cup$`): Combines alternative paths
+- **Composition** ($`\circ`$): Cascades two transducers
+- **Union** ($`\cup`$): Combines alternative paths
 - **Concatenation** (·): Sequences transductions
 - **Kleene Star** (*): Allows repetition
 
@@ -216,16 +216,16 @@ Generate candidate corrections within edit distance `d` from input.
 ### 4.2 Construction
 
 **States**: `q_{i,e}` = (position `i`, errors consumed `e`)
-- `$i \in  [0, n]$` where `n = |input|`
-- `$e \in  [0, d]$` where `d = max edit distance`
+- $`i \in  [0, n]`$ where `n = |input|`
+- $`e \in  [0, d]`$ where `d = max edit distance`
 
 **Transitions**:
 | Operation | From | To | Input | Output | Weight |
 |-----------|------|-----|-------|--------|--------|
-| Match | `q_{i,e}` | `q_{i+1,e}` | `$\sigma$` | `$\sigma$` | 0 |
-| Subst | `q_{i,e}` | `q_{i+1,e+1}` | `$\sigma$` | `$\tau$` | `$\text{cost}_\text{sub}(\sigma ,\tau )$` |
-| Delete | `q_{i,e}` | `q_{i+1,e+1}` | `$\sigma$` | `$\varepsilon$` | `cost_del` |
-| Insert | `q_{i,e}` | `q_{i,e+1}` | `$\varepsilon$` | `$\tau$` | `cost_ins` |
+| Match | `q_{i,e}` | `q_{i+1,e}` | $`\sigma`$ | $`\sigma`$ | 0 |
+| Subst | `q_{i,e}` | `q_{i+1,e+1}` | $`\sigma`$ | $`\tau`$ | $`\text{cost}_\text{sub}(\sigma ,\tau )`$ |
+| Delete | `q_{i,e}` | `q_{i+1,e+1}` | $`\sigma`$ | $`\varepsilon`$ | `cost_del` |
+| Insert | `q_{i,e}` | `q_{i,e+1}` | $`\varepsilon`$ | $`\tau`$ | `cost_ins` |
 
 **Example** (max distance = 1):
 ```
@@ -239,12 +239,12 @@ Paths generating "let":
 
 ### 4.3 Weighted Variants
 
-**Keyboard Distance**: `$\text{cost}_\text{sub}(\sigma ,\tau ) = \text{keyboard}_\text{dist}(\sigma ,\tau )$`
+**Keyboard Distance**: $`\text{cost}_\text{sub}(\sigma ,\tau ) = \text{keyboard}_\text{dist}(\sigma ,\tau )`$
 - Adjacent keys: cost = 0.5
 - Same row: cost = 1.0
 - Different row: cost = 2.0
 
-**Phonetic Similarity**: `$\text{cost}_\text{sub}(\sigma ,\tau ) = \text{phonetic}_\text{dist}(\sigma ,\tau )$`
+**Phonetic Similarity**: $`\text{cost}_\text{sub}(\sigma ,\tau ) = \text{phonetic}_\text{dist}(\sigma ,\tau )`$
 - Soundex/Metaphone encoding
 - Silent letters have low deletion cost
 
@@ -259,10 +259,10 @@ Only keeps paths producing valid keywords/identifiers.
 
 ### 4.5 Complexity
 
-- **States**: `$\mathcal{O}(n \times  d)$`
-- **Edges**: `$\mathcal{O}(n \times  d \times  \lvert \Sigma \rvert)$`
-- **Time**: `$\mathcal{O}(n \times  d^{2} \times  \lvert \Sigma \rvert)$` for construction
-- **Space**: `$\mathcal{O}(n \times  d)$`
+- **States**: $`\mathcal{O}(n \times  d)`$
+- **Edges**: $`\mathcal{O}(n \times  d \times  \lvert \Sigma \rvert)`$
+- **Time**: $`\mathcal{O}(n \times  d^{2} \times  \lvert \Sigma \rvert)`$ for construction
+- **Space**: $`\mathcal{O}(n \times  d)`$
 
 ---
 
@@ -274,15 +274,15 @@ Accept only candidate strings that parse according to language grammar.
 
 ### 5.2 Construction from CFG
 
-Given grammar `$G = (N, \Sigma , P, S)$`:
+Given grammar $`G = (N, \Sigma , P, S)`$:
 - `N`: Non-terminals
-- `$\Sigma$`: Terminals
+- $`\Sigma`$: Terminals
 - `P`: Production rules
 - `S`: Start symbol
 
 **Convert to WFST**:
 1. Each non-terminal → sub-WFST
-2. Production `$A \to  \alpha$` becomes path through `T_A`
+2. Production $`A \to  \alpha`$ becomes path through `T_A`
 3. Terminals = input/output symbols
 4. Non-terminals = ε-transitions to sub-WFSTs
 
@@ -346,7 +346,7 @@ Ensure type consistency across program.
 
 ### 6.2 Construction
 
-**States** encode typing context `$\Gamma$`:
+**States** encode typing context $`\Gamma`$:
 ```
 Γ = {x₁: τ₁, x₂: τ₂, ...}
 ```
@@ -365,13 +365,13 @@ let y: String = x;   // Type error! i32 ≠ String
 **WFST Representation**:
 | From State | Input | Output | To State | Weight |
 |------------|-------|--------|----------|--------|
-`$| \Gamma  |$` `let x: i32 = 42` | `let x: i32 = 42` `$| \Gamma  \cup$` {x: i32} | 1.0 |
-`$| \Gamma  \cup$` {x: i32} | `let y: String = x` | ERROR `$| \Gamma  \cup$` {x: i32} | 0.01 |
+| $`\Gamma`$ | `let x: i32 = 42` | `let x: i32 = 42` | $`\Gamma  \cup`$ {x: i32} | 1.0 |
+| $`\Gamma  \cup`$ {x: i32} | `let y: String = x` | ERROR | $`\Gamma  \cup`$ {x: i32} | 0.01 |
 
 ### 6.3 Type Inference Integration
 
 For languages with type inference (Rust, ML):
-- States also include **type variables** `$\alpha , \beta , ...$`
+- States also include **type variables** $`\alpha , \beta , ...`$
 - Unification constraints as WFST edges
 - Multiple type assignments = multiple paths (lattice)
 
@@ -398,10 +398,10 @@ let y = id(42);      // T = i32
 
 ### 6.5 Complexity
 
-**Challenge**: Typing context `$\Gamma$` can be unbounded.
+**Challenge**: Typing context $`\Gamma`$ can be unbounded.
 
 **Solutions**:
-1. **Approximate states**: Hash `$\Gamma ,$` merge similar contexts
+1. **Approximate states**: Hash $`\Gamma ,`$ merge similar contexts
 2. **Lazy expansion**: Only expand states reached during search
 3. **Type-directed pruning**: Drop paths with irreconcilable type errors
 
@@ -543,7 +543,7 @@ T_server = ?Int; !String; end
 **WFST Encoding**:
 - States = positions in protocol
 - Transitions = send (!) or receive (?)
-- Composition: `$T_\text{client} \circ T_\text{server}$` must be compatible (dual)
+- Composition: $`T_\text{client} \circ T_\text{server}`$ must be compatible (dual)
 
 **Duality Check**:
 ```
@@ -578,7 +578,7 @@ T_final = T_L1 ∘ T_L2 ∘ T_L3 ∘ T_L4 ∘ T_L5
 
 **Problem**: Composition is associative but **not commutative**. Order matters!
 
-**Complexity**: `$\mathcal{O}(\lvert Q_{1}\rvert \times  \lvert Q_{2}\rvert \times  ... \times  \lvert Q_{5}\rvert)$` states (exponential blowup)
+**Complexity**: $`\mathcal{O}(\lvert Q_{1}\rvert \times  \lvert Q_{2}\rvert \times  ... \times  \lvert Q_{5}\rvert)`$ states (exponential blowup)
 
 ### 9.2 On-the-Fly Composition
 
@@ -652,7 +652,7 @@ After forward pass, propagate scores backward:
 Score_L1(path) += α × Score_L2(path) + β × Score_L3(path) + ...
 ```
 
-**Coefficients** `$(\alpha , \beta , ...)$` learned from training data.
+**Coefficients** $`(\alpha , \beta , ...)`$ learned from training data.
 
 ---
 
@@ -711,7 +711,7 @@ struct LatticeEdge {
 - Viterbi algorithm for lattices
 
 **Top-K Paths**:
-- Eppstein's algorithm: `$\mathcal{O}(m + n \log  n + K \log  K)$`
+- Eppstein's algorithm: $`\mathcal{O}(m + n \log  n + K \log  K)`$
 
 ### 10.3 Caching and Memoization
 
@@ -748,16 +748,16 @@ let results: Vec<Correction> = candidates
 
 | Component | Time Complexity | Space Complexity |
 |-----------|-----------------|------------------|
-| Layer 1 (Levenshtein) | `$\mathcal{O}(n \times  d^{2} \times  \\lvert \Sigma \\rvert)$` | `$\mathcal{O}(n \times  d)$` |
-| Layer 2 (Parsing) | `$\mathcal{O}(n^{3})$` (CYK) or `$\mathcal{O}(n)$` (GLR) | `$\mathcal{O}(n^{2})$` |
-| Layer 3 (Type Checking) | `$\mathcal{O}(n \times  \\lvert \Gamma \\rvert)$` | `$\mathcal{O}(\\lvert \Gamma \\rvert)$` |
-| Layer 4 (Semantic) | `$\mathcal{O}(n \times  2^k)$` (k = repair complexity) | `$\mathcal{O}(2^k)$` |
-| Layer 5 (Process Calc) | `$\mathcal{O}(V + E)$` (graph analysis) | `$\mathcal{O}(V)$` |
-| **Total (Sequential)** | `$\mathcal{O}(n^{3} + n \times  2^k)$` | `$\mathcal{O}(n^{2} + 2^k)$` |
+| Layer 1 (Levenshtein) | $`\mathcal{O}(n \times  d^{2} \times  \\lvert \Sigma \\rvert)`$ | $`\mathcal{O}(n \times  d)`$ |
+| Layer 2 (Parsing) | $`\mathcal{O}(n^{3})`$ (CYK) or $`\mathcal{O}(n)`$ (GLR) | $`\mathcal{O}(n^{2})`$ |
+| Layer 3 (Type Checking) | $`\mathcal{O}(n \times  \\lvert \Gamma \\rvert)`$ | $`\mathcal{O}(\\lvert \Gamma \\rvert)`$ |
+| Layer 4 (Semantic) | $`\mathcal{O}(n \times  2^k)`$ (k = repair complexity) | $`\mathcal{O}(2^k)`$ |
+| Layer 5 (Process Calc) | $`\mathcal{O}(V + E)`$ (graph analysis) | $`\mathcal{O}(V)`$ |
+| **Total (Sequential)** | $`\mathcal{O}(n^{3} + n \times  2^k)`$ | $`\mathcal{O}(n^{2} + 2^k)`$ |
 
 **With Beam Search** (width = K):
-- Time: `$\mathcal{O}(K \times  n^{3})$`
-- Space: `$\mathcal{O}(K \times  n^{2})$`
+- Time: $`\mathcal{O}(K \times  n^{3})`$
+- Space: $`\mathcal{O}(K \times  n^{2})`$
 
 ### 11.2 Empirical Performance
 
@@ -774,7 +774,7 @@ let results: Vec<Correction> = candidates
 ### 11.3 Bottlenecks
 
 **Layer 2 (Parsing)**:
-- Tree-sitter GLR parser: `$\mathcal{O}(n)$` amortized
+- Tree-sitter GLR parser: $`\mathcal{O}(n)`$ amortized
 - But parse forest can be large (exponential in ambiguity)
 
 **Layer 4 (Semantic Repair)**:

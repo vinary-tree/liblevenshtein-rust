@@ -536,7 +536,7 @@ impl FuzzySource for PathMap<Vec<u8>, Vec<u8>> {
 ### PhoneticNormalizedDictionary Features
 
 - **Automatic normalization**: Terms normalized at build time using phonetic rules
-- **FuzzyMultiMap acceleration**: `$\mathcal{O}(k \log  n)$` fuzzy queries via Levenshtein automaton pruning
+- **FuzzyMultiMap acceleration**: $`\mathcal{O}(k \log  n)`$ fuzzy queries via Levenshtein automaton pruning
 - **Thread-local buffers**: Optimized for concurrent queries (H3 optimization)
 - **Pre-compiled rules**: `english::zompist()`, `english::homophones()`, `english::text_speak()`, `english::combined()`
 

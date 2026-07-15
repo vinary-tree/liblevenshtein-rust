@@ -697,7 +697,7 @@ fn bench_query_with_drafts(b: &mut Bencher) {
 **Fusion overhead:**
 - Finalized query: Uses existing Transducer (baseline)
 - Draft scan: Linear in number of visible drafts (typically < 100)
-- Union + dedup: `$\mathcal{O}(n \log  n)$` where `n` = total results (typically < 1000)
+- Union + dedup: $`\mathcal{O}(n \log  n)`$ where `n` = total results (typically < 1000)
 
 **Expected impact:**
 - Best case (no drafts): 0% overhead

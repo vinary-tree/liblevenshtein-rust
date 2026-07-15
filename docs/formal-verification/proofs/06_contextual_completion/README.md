@@ -79,7 +79,7 @@ These theorems **unblock** formal verification of:
 | **2** | [Draft Buffer Consistency](02_draft_consistency.md) | Insert/delete maintain valid UTF-8 boundaries | 🚧 Documenting | 3 |
 | **3** | [Checkpoint Stack Correctness](03_checkpoint_stack.md) | Undo restores exact previous state | 🚧 Documenting | 3 |
 | **4** | [Query Fusion Completeness](04_query_fusion.md) | `complete()` returns union of draft + finalized | 🚧 Documenting | 4 |
-| **5** | [Levenshtein Distance Correctness](05_distance_correctness.md) | Naive `$\mathcal{O}(n\cdot m)$` matches formal definition | 🚧 Documenting | 5 |
+| **5** | [Levenshtein Distance Correctness](05_distance_correctness.md) | Naive $`\mathcal{O}(n\cdot m)`$ matches formal definition | 🚧 Documenting | 5 |
 | **6** | [Hierarchical Visibility Soundness](06_hierarchical_visibility.md) | Children see parents, parents don't see children | 🚧 Documenting | 3 |
 | **7** | [Finalization Atomicity](07_finalization.md) | Draft→dictionary is all-or-nothing | 🚧 Documenting | 4 |
 

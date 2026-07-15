@@ -385,9 +385,9 @@ impl SuffixAutomaton {
 
 | Backend | Insert | Lookup | Memory | Best For |
 |---------|--------|--------|--------|----------|
-| DynamicDawg | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | Medium | General purpose |
-| DoubleArrayTrie | N/A | `$\mathcal{O}(n)$` | Low | Static dictionaries |
-| SuffixAutomaton | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | High | Substring search |
+| DynamicDawg | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ | Medium | General purpose |
+| DoubleArrayTrie | N/A | $`\mathcal{O}(n)`$ | Low | Static dictionaries |
+| SuffixAutomaton | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ | High | Substring search |
 
 ---
 

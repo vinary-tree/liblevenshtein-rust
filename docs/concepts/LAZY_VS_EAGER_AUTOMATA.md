@@ -10,9 +10,9 @@ implementation makes the edit operations configurable at run time.
 
 ![The three automaton implementations — lazy/parameterized (default), universal/eager, and generalized/runtime — sharing one position model.](../diagrams/automata/automaton-implementations.svg)
 
-A **Levenshtein automaton** `$A(W, k)$` for a query word `$W$` and error bound `$k$`
-accepts exactly the strings within edit distance `$k$` of `$W$`. Its states are
-*sets* of **positions** `$\langle i, e\rangle$` (`$i$` characters of `$W$` consumed, `$e$` edits used),
+A **Levenshtein automaton** $`A(W, k)`$ for a query word $`W`$ and error bound $`k`$
+accepts exactly the strings within edit distance $`k`$ of $`W`$. Its states are
+*sets* of **positions** $`\langle i, e\rangle`$ ($`i`$ characters of $`W`$ consumed, $`e`$ edits used),
 kept minimal by **subsumption** (a partial order that drops dominated positions).
 
 ## Terminology
@@ -24,11 +24,11 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
 **Key Characteristic:** States are constructed **lazily** (on-demand) during dictionary traversal — there is no precompiled automaton.
 
 - **Construction**: happens at query time, specific to each query word.
-- **State space**: minimal — only states that are actually reachable are created; only `$\mathcal{O}(\lvert W\rvert)$` distinct states arise for fixed `$k$`.
+- **State space**: minimal — only states that are actually reachable are created; only $`\mathcal{O}(\lvert W\rvert)`$ distinct states arise for fixed $`k`$.
 - **Positions**: concrete indices into the query word.
 - **Dictionary integration**: fully integrated with the DAWG traversal (the lock-step walk).
 - **Location**: `src/transducer/`.
-- **Performance**: `$\mathcal{O}(\log n)$` effective dictionary complexity (DAWG pruning).
+- **Performance**: $`\mathcal{O}(\log n)`$ effective dictionary complexity (DAWG pruning).
 - **Memory**: a fixed `StatePool` + the query-specific states.
 
 **Analogy:** like a JIT (just-in-time) compiler — compiles only what is needed, when it is needed.
@@ -41,13 +41,13 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
 
 **Key Characteristic:** the entire automaton structure is constructed **eagerly** (upfront) before any queries.
 
-- **Construction**: happens once for a given `max_distance` (`$k$`).
+- **Construction**: happens once for a given `max_distance` ($`k`$).
 - **State space**: complete — all possible states for that distance.
 - **Positions**: abstract **I-type** / **M-type** positions. An *I-type* position is measured relative to the abstract *start* parameter and an *M-type* position relative to the abstract *end* parameter, which is what makes the automaton **parameter-free** (independent of the concrete word).
 - **Dictionary integration**: standalone (accepts word pairs).
 - **Location**: `src/transducer/universal/`.
-- **Performance**: `$\mathcal{O}(n)$` for a linear dictionary scan (currently).
-- **Memory**: `$\mathcal{O}(n^2)$` states for distance `$n$`.
+- **Performance**: $`\mathcal{O}(n)`$ for a linear dictionary scan (currently).
+- **Memory**: $`\mathcal{O}(n^2)`$ states for distance $`n`$.
 
 **Analogy:** like an AOT (ahead-of-time) compiler — prepares everything upfront, reuses across inputs.
 
@@ -67,7 +67,7 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
 | **Dictionary Integration** | ✅ Fully integrated | ❌ Standalone primitive |
 | **Performance (dict query)** | **2-10× faster** | Slower (linear scan) |
 | **Performance (primitive)** | N/A | **339-490ns** |
-| **Memory Footprint** | StatePool + states | `$\mathcal{O}(n^2)$` automaton |
+| **Memory Footprint** | StatePool + states | $`\mathcal{O}(n^2)`$ automaton |
 | **Best Use Case** | Production queries | Oracle testing, primitives |
 
 ---
@@ -78,7 +78,7 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
 
 ✅ **Production dictionary queries** (primary use case)
 - 2-10× faster than eager for dictionary operations
-- `$\mathcal{O}(\log n)$` complexity from DAWG integration
+- $`\mathcal{O}(\log n)`$ complexity from DAWG integration
 - Optimized with StatePool, SIMD, subsumption
 
 ✅ **Large dictionaries** (>1K terms)
@@ -129,7 +129,7 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
 
 **Batch Throughput:** 3.9-4.1 Kelem/s (consistent)
 
-**Dictionary Scaling:** `$\mathcal{O}(\log n)$`
+**Dictionary Scaling:** $`\mathcal{O}(\log n)`$
 - 100 terms: 49µs
 - 1K terms: 258µs
 - 10K terms: 1.03ms
@@ -148,7 +148,7 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
 - 1K terms: 799µs
 - 10K terms: 7.83ms
 
-**Growth Rate:** Linear `$\mathcal{O}(n)$`
+**Growth Rate:** Linear $`\mathcal{O}(n)`$
 
 **Distance Scaling:** Predictable
 - d=1 → d=2: 1.24× increase
@@ -167,7 +167,7 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
    - Tracks error count and special states
 
 2. **State**: `SmallVec<[Position; 8]>`
-   - Stack-allocated for `$\le 8$` positions
+   - Stack-allocated for $`\le 8`$ positions
    - Online subsumption maintains anti-chain
 
 3. **StatePool**: Preallocated buffer for state reuse
@@ -193,8 +193,8 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
    - M-type: Relative to abstract end parameter
    - Parameter-free (works for any word)
 
-2. **CharacteristicVector**: `$\beta(x, w)$`
-   - Encodes which positions in word `$w$` match character `$x$`
+2. **CharacteristicVector**: $`\beta(x, w)`$
+   - Encodes which positions in word $`w`$ match character $`x`$
    - Enables parameter-free transitions (see the [characteristic-vector diagram](../diagrams/automata/characteristic-vector.svg))
 
 3. **State**: `SmallVec<[UniversalPosition; 8]>`
@@ -207,7 +207,7 @@ kept minimal by **subsumption** (a partial order that drops dominated positions)
 
 **Key Properties:**
 - Parameter-free: One automaton for all words
-- Precomputed: `$\mathcal{O}(n^2)$` state space
+- Precomputed: $`\mathcal{O}(n^2)`$ state space
 - Reusable: Same automaton across queries
 
 ---
@@ -268,7 +268,7 @@ proptest! {
 ### For Eager Automata
 
 1. **Dictionary Integration** (planned)
-   - Eliminate `$\mathcal{O}(n)$` linear scan
+   - Eliminate $`\mathcal{O}(n)`$ linear scan
    - Achieve parity with lazy for queries
    - Maintain parameter-free benefits
 

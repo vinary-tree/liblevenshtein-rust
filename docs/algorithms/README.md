@@ -162,7 +162,7 @@ let results: Vec<String> = dict
 - State Composition: SmallVec optimization
 
 **Performance:**
-- Online subsumption: `$\mathcal{O}(kn)$` vs `$\mathcal{O}(n^{2})$` batch
+- Online subsumption: $`\mathcal{O}(kn)`$ vs $`\mathcal{O}(n^{2})`$ batch
 - SIMD acceleration: 3-4x on characteristic vector
 
 ---
@@ -197,7 +197,7 @@ let results: Vec<String> = dict
 **Purpose:** Direct string distance computation (non-automaton approach)
 
 **Algorithms:**
-- [Iterative DP](04-distance-calculation/algorithms/iterative-dp.md): 2-row optimization, `$\mathcal{O}(mn)$` time, `$\mathcal{O}(\min(m,n))$` space
+- [Iterative DP](04-distance-calculation/algorithms/iterative-dp.md): 2-row optimization, $`\mathcal{O}(mn)`$ time, $`\mathcal{O}(\min(m,n))`$ space
 - [Recursive + Memoization](04-distance-calculation/algorithms/recursive-memoization.md): C++-style with caching
 - [Optimizations](04-distance-calculation/algorithms/optimizations.md): Prefix/suffix stripping, early termination
 
@@ -218,7 +218,7 @@ let results: Vec<String> = dict
   - 3-4x speedup in automaton transitions
 - **Distance Matrix**
   - Vectorized DP row updates
-  - 20-30% speedup for strings `$\ge 16$` chars
+  - 20-30% speedup for strings $`\ge 16`$ chars
 - **Edge Lookup**
   - Optimal for exactly 4 edges
 
@@ -335,7 +335,7 @@ Example:
 | Component | Scalar | AVX2 | Speedup |
 |-----------|--------|------|---------|
 | Characteristic Vector | 100% | 3-4x | 300-400% |
-| Distance Matrix (`$\ge 16$` chars) | 100% | 1.2-1.3x | 20-30% |
+| Distance Matrix ($`\ge 16`$ chars) | 100% | 1.2-1.3x | 20-30% |
 | Overall Workload | 100% | 1.2-1.64x | 20-64% |
 
 ### Value Filtering Speedup

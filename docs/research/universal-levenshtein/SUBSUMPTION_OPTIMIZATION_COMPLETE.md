@@ -18,7 +18,7 @@ This document summarizes the complete analysis of subsumption optimizations acro
 - Changed `HashSet<UniversalPosition>` → `BTreeSet<UniversalPosition>`
 - Added custom `Ord` implementation sorting by `(errors, offset)`
 - Used `take_while()` for error-based early termination
-- Reduced subsumption checks from `$\mathcal{O}(n)$` to `$\mathcal{O}(k)$` where k << n
+- Reduced subsumption checks from $`\mathcal{O}(n)`$ to $`\mathcal{O}(k)`$ where k << n
 
 **Files Modified**:
 - `src/transducer/universal/state.rs`: State with BTreeSet
@@ -49,20 +49,20 @@ This document summarizes the complete analysis of subsumption optimizations acro
 
 **Java Analysis**:
 - **Data structure**: Singly-linked list with head pointer
-- **Sorting**: Explicit `$\mathcal{O}(n \log  n)$` merge sort
+- **Sorting**: Explicit $`\mathcal{O}(n \log  n)`$ merge sort
 - **Unsubsumption**: Batch approach with nested iteration
 - **Early termination**: Explicit break when errors increase
 
 **Rust Analysis**:
 - **Data structure**: BTreeSet with automatic sorting
-- **Sorting**: Integrated during insertion (`$\mathcal{O}(\log  n)$` per insert)
+- **Sorting**: Integrated during insertion ($`\mathcal{O}(\log  n)`$ per insert)
 - **Unsubsumption**: Online during each position insertion
 - **Early termination**: `take_while()` iterator combinator
 
 **Conclusion**: **Functionally equivalent** with different trade-offs
 - Java: Better for batch operations (single sort + sequential access)
 - Rust: Simpler code, maintains sorted invariant continuously
-- Both: `$\mathcal{O}(k)$` subsumption checks with early termination (k << n)
+- Both: $`\mathcal{O}(k)`$ subsumption checks with early termination (k << n)
 
 **Documentation**:
 - `docs/research/universal-levenshtein/SUBSUMPTION_COMPARISON_JAVA_VS_RUST.md`
@@ -74,7 +74,7 @@ This document summarizes the complete analysis of subsumption optimizations acro
 **Analysis**:
 - Reviewed existing optimization report from 2025-10-29
 - Current SmallVec implementation already **3.3x faster** than batch approaches
-- 90% of states have `$\le 8$` positions (stack-allocated)
+- 90% of states have $`\le 8`$ positions (stack-allocated)
 - BTreeSet would add heap overhead without performance benefit
 
 **Conclusion**: **No optimization needed**
@@ -98,12 +98,12 @@ This document summarizes the complete analysis of subsumption optimizations acro
 **Optimization Benefits**:
 1. ✅ Positions sorted by `(errors, offset)` automatically
 2. ✅ Early termination via `take_while()` on error count
-3. ✅ `$\mathcal{O}(k)$` subsumption checks where k << n
+3. ✅ $`\mathcal{O}(k)`$ subsumption checks where k << n
 4. ✅ Always maintains sorted invariant
 5. ✅ Cleaner than manual sorting
 
 **Trade-offs**:
-- ⚠️ `$\mathcal{O}(\log  n)$` insert vs `$\mathcal{O}(1)$` for HashSet
+- ⚠️ $`\mathcal{O}(\log  n)`$ insert vs $`\mathcal{O}(1)`$ for HashSet
 - ⚠️ Heap allocation for all positions
 - ✅ But subsumption savings dominate
 
@@ -116,11 +116,11 @@ This document summarizes the complete analysis of subsumption optimizations acro
 **State Structure**: SmallVec<[Position; 8]>
 
 **Current Benefits**:
-1. ✅ Stack allocation for 90% of states (`$\le 8$` positions)
+1. ✅ Stack allocation for 90% of states ($`\le 8`$ positions)
 2. ✅ Excellent cache locality (contiguous memory)
 3. ✅ Online subsumption (3.3x faster than batch)
 4. ✅ Simple Vec-like API
-5. ✅ `$\mathcal{O}(\text{kn})$` average complexity with early exit
+5. ✅ $`\mathcal{O}(\text{kn})`$ average complexity with early exit
 
 **Alternative (BTreeSet) Downsides**:
 - ❌ Heap allocation overhead
@@ -137,13 +137,13 @@ This document summarizes the complete analysis of subsumption optimizations acro
 ### Universal Transducers
 
 **Before optimization** (HashSet):
-- `$\mathcal{O}(n)$` subsumption checks for all n positions
+- $`\mathcal{O}(n)`$ subsumption checks for all n positions
 - No early termination possible
 
 **After optimization** (BTreeSet):
-- `$\mathcal{O}(k)$` subsumption checks where k << n
+- $`\mathcal{O}(k)`$ subsumption checks where k << n
 - Early termination when errors increase
-- Typical `$k \approx  n/3$` for sparse error distributions
+- Typical $`k \approx  n/3`$ for sparse error distributions
 
 **Expected improvement**: ~3x fewer subsumption checks
 
@@ -159,7 +159,7 @@ This document summarizes the complete analysis of subsumption optimizations acro
 | n=200 | ~4.3µs | - |
 
 **vs Batch unsubsumption**: **3.3x faster**
-**vs BTreeSet**: **No improvement expected** (same `$\mathcal{O}(\text{kn})$`, worse constants)
+**vs BTreeSet**: **No improvement expected** (same $`\mathcal{O}(\text{kn})`$, worse constants)
 
 ---
 
@@ -180,10 +180,10 @@ This document summarizes the complete analysis of subsumption optimizations acro
 ### Cross-Implementation Validation
 
 **Java vs Rust (Universal)**:
-- ✅ Same subsumption formula: `$\lvert j - i\rvert \le (f - e)$`
+- ✅ Same subsumption formula: $`\lvert j - i\rvert \le (f - e)`$
 - ✅ Same early termination strategy
 - ✅ Functionally equivalent implementations
-- ✅ Both achieve `$\mathcal{O}(k)$` subsumption checks
+- ✅ Both achieve $`\mathcal{O}(k)`$ subsumption checks
 
 **Universal vs Parameterized (Rust)**:
 - ✅ Cross-validation tests confirm agreement
@@ -203,7 +203,7 @@ This document summarizes the complete analysis of subsumption optimizations acro
 4. Heap allocation acceptable given early termination benefits
 
 **Parameterized transducers benefit from SmallVec because**:
-1. Small state sizes dominate (90% `$\le 8$` positions)
+1. Small state sizes dominate (90% $`\le 8`$ positions)
 2. Stack allocation eliminates heap overhead for typical case
 3. Contiguous memory provides excellent cache locality
 4. Online subsumption already optimal (3.3x faster than batch)
@@ -324,7 +324,7 @@ The right data structure depends on:
    - **Status**: Not needed for typical use cases
 
 2. **Hybrid approach** (Parameterized transducers)
-   - SmallVec for `$n \le  8$` (current)
+   - SmallVec for $`n \le  8`$ (current)
    - Switch to different structure for n > 8
    - **Status**: Premature (only 10% of states)
 
@@ -343,7 +343,7 @@ The subsumption optimization work is **complete and validated**:
 
 1. ✅ **Universal transducers** use BTreeSet with error-first sorting
    - Enables powerful early termination
-   - `$\mathcal{O}(k)$` subsumption checks (k << n)
+   - $`\mathcal{O}(k)`$ subsumption checks (k << n)
    - Functionally equivalent to Java implementation
    - All tests passing
 

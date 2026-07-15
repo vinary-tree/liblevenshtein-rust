@@ -20,7 +20,7 @@ Can a general algebra, calculus, or set of rules be derived to support:
 **For Weighted Transitions:**
 - ✅ **YES with discretization**: Costs rounded to fixed precision work within the framework
 - ❌ **NO for continuous costs**: True continuous costs break fundamental assumptions
-- **Complexity**: `$\mathcal{O}(|W| \times  \max _\text{cost}/\text{precision})$` vs `$\mathcal{O}(|W|)$` for uniform costs
+- **Complexity**: $`\mathcal{O}(|W| \times  \max _\text{cost}/\text{precision})`$ vs $`\mathcal{O}(|W|)`$ for uniform costs
 
 **For Extensible Operations:**
 - ✅ **YES**: Clear methodology exists for deriving new operation types
@@ -46,7 +46,7 @@ Can a general algebra, calculus, or set of rules be derived to support:
 
 ### 2. Why Uniform Cost = 1 Is Fundamental
 
-**The `$\mathcal{O}(|W|)$` guarantee relies on:**
+**The $`\mathcal{O}(|W|)`$ guarantee relies on:**
 
 ```
 Uniform cost → Bounded positions per state (≤ n+1)
@@ -63,13 +63,13 @@ Variable costs → Infinite possible accumulated costs
 ```
 
 **Critical dependencies:**
-- **Subsumption formula** `$|j-i| \le  f-e$` assumes each move costs 1
+- **Subsumption formula** $`|j-i| \le  f-e`$ assumes each move costs 1
 - **State types** depend on discrete error counts
 - **Precomputed tables** T_n rely on fixed degree n
 
 ### 3. The Discretization Solution
 
-**Key Idea**: Round costs to fixed precision `$\varepsilon$`
+**Key Idea**: Round costs to fixed precision $`\varepsilon`$
 
 ```rust
 struct WeightedPosition {
@@ -79,14 +79,14 @@ struct WeightedPosition {
 ```
 
 **Advantages:**
-- Finite state space: `$\mathcal{O}(|W| \times  \lceil \max _\text{cost}/\varepsilon \rceil)$`
+- Finite state space: $`\mathcal{O}(|W| \times  \lceil \max _\text{cost}/\varepsilon \rceil)`$
 - Preserves core structure (positions, transitions, subsumption)
 - User-configurable precision/performance trade-off
 
 **Complexity:**
-- Construction: `$\mathcal{O}(|W| \times  \max _\text{cost}/\varepsilon)$`
-- Query: `$\mathcal{O}(|D| \times  \max _\text{cost}/\varepsilon)$`
-- **For fixed max_cost/`$\varepsilon$`**: Still `$\mathcal{O}(|W|)$` and `$\mathcal{O}(|D|)$` ✓
+- Construction: $`\mathcal{O}(|W| \times  \max _\text{cost}/\varepsilon)`$
+- Query: $`\mathcal{O}(|D| \times  \max _\text{cost}/\varepsilon)`$
+- **For fixed max_cost/$`\varepsilon`$**: Still $`\mathcal{O}(|W|)`$ and $`\mathcal{O}(|D|)`$ ✓
 
 **Example - Keyboard Distance:**
 ```rust
@@ -153,13 +153,13 @@ Position π = (i, e)
 ```
 
 **Invariants Maintained:**
-1. **Admissibility**: From i#e, can accept any V with d_L(W[i+1:`$|W|], V) \le  n-e$`
+1. **Admissibility**: From i#e, can accept any V with d_L(W[i+1:$`|W|], V) \le  n-e`$
 2. **Monotonicity**: i only increases (no backtracking)
-3. **Bounded**: `$0 \le  i \le  |W|, 0 \le  e \le  n$`
+3. **Bounded**: $`0 \le  i \le  |W|, 0 \le  e \le  n`$
 
 ### How Subsumption Was Derived
 
-**Formula**: i#`$e \sqsubseteq  j$`#f iff `$(e < f) \land  (|j-i| \le  f-e)$`
+**Formula**: i#$`e \sqsubseteq  j`$#f iff $`(e < f) \land  (|j-i| \le  f-e)`$
 
 **Geometric Reasoning** (Edit Graph):
 
@@ -232,16 +232,16 @@ W[2:5] = "ello"
 
 **From DP to Transitions**:
 
-For position `$\pi  = i$`#e reading character x:
+For position $`\pi  = i`$#e reading character x:
 
-**Case 1**: `$\chi = \langle 1, \dots\rangle$` (immediate match)
+**Case 1**: $`\chi = \langle 1, \dots\rangle`$ (immediate match)
 ```
 W[i+1] = x
   → DP: M[i+1,j+1] = M[i,j] (no error)
   → Automaton: (i+1)#e
 ```
 
-**Case 2**: `$\chi  = \langle 0,...,0,1,...\rangle$` at position j (match later)
+**Case 2**: $`\chi  = \langle 0,...,0,1,...\rangle`$ at position j (match later)
 ```
 Three DP operations possible:
 1. Insert x: Stay at i, consume x from dict
@@ -256,7 +256,7 @@ Three DP operations possible:
 
 **Optimization**: Instead of creating intermediate positions for each substitution, jump directly to match point!
 
-**Case 3**: `$\chi = \langle 0,\dots,0\rangle$` (no match)
+**Case 3**: $`\chi = \langle 0,\dots,0\rangle`$ (no match)
 ```
 Only insert/delete:
   → {i#(e+1), (i+1)#(e+1)}
@@ -269,7 +269,7 @@ Note: Substitution would give (i+1)#(e+1), same as delete
 
 **Solution Strategy**:
 
-1. **Add Flag**: i#e_t where `$t \in$` {0,1}
+1. **Add Flag**: i#e_t where $`t \in`$ {0,1}
    - t=0: regular position
    - t=1: transposition in progress
 
@@ -349,12 +349,12 @@ Via induction on word length
 ### Required Properties for Operations
 
 **Property 1: Locality**
-- Decision uses only `$\mathcal{O}(n)$` lookahead in W
+- Decision uses only $`\mathcal{O}(n)`$ lookahead in W
 - Enables finite state representation
 
 **Property 2: Bounded Cost**
 - Uniform: cost = 1
-- Weighted: `$c_\text{min} \le c(\text{op}) \le c_\text{max}$` with bounded ratio
+- Weighted: $`c_\text{min} \le c(\text{op}) \le c_\text{max}`$ with bounded ratio
 
 **Property 3: Composability**
 - Can be inserted, deleted, substituted/transformed
@@ -403,9 +403,9 @@ impl WeightedPosition {
 ```
 
 **State Space**:
-- Before: `$\mathcal{O}(|W| \times  n)$`
-- After: `$\mathcal{O}(|W| \times  \lceil \max _\text{cost}/\varepsilon \rceil)$`
-- For fixed max_cost/`$\varepsilon$`: Still `$\mathcal{O}(|W|)$` ✓
+- Before: $`\mathcal{O}(|W| \times  n)`$
+- After: $`\mathcal{O}(|W| \times  \lceil \max _\text{cost}/\varepsilon \rceil)`$
+- For fixed max_cost/$`\varepsilon`$: Still $`\mathcal{O}(|W|)`$ ✓
 
 #### Subsumption: Does It Generalize?
 
@@ -568,7 +568,7 @@ fn keyboard_distance_cost(c1: char, c2: char) -> f64 {
 }
 ```
 
-**Discretization** `$(\varepsilon  = 0.1)$`:
+**Discretization** $`(\varepsilon  = 0.1)`$:
 ```
 Costs:        0.5  1.0  1.5
 Units (×10):   5   10   15
@@ -641,14 +641,14 @@ States: O(|W| × max_cost/`$\varepsilon$`)
 
 **Precision vs Performance:**
 
-| Precision `$(\varepsilon )$` |  State Multiplier | Use Case |
+| Precision $`(\varepsilon )`$ |  State Multiplier | Use Case |
 |---------------|------------------|----------|
 | 1.0 (integer) | 1-5× | Coarse costs, fast queries |
 | 0.1 | 10-50× | Keyboard/OCR distances |
 | 0.01 | 100-500× | High-precision scientific |
 | 0.001 | 1000-5000× | Impractical |
 
-**Recommendation**: Start with `$\varepsilon =0.1,$` allow user configuration
+**Recommendation**: Start with $`\varepsilon =0.1,`$ allow user configuration
 
 ---
 
@@ -701,14 +701,14 @@ When θ/ε and c_max/c_min are O(1): Still O(|W|) and O(|D|)
 
 ### Current Limitations
 
-1. **Discretization Error**: `$\varepsilon  > 0$` introduces approximation
+1. **Discretization Error**: $`\varepsilon  > 0`$ introduces approximation
 2. **Context Sensitivity**: Costs can't easily depend on position history
-3. **Non-Local Operations**: Operations must examine only `$\mathcal{O}(n)$` window
-4. **Bounded Costs**: Ratio c_max/c_min must be constant for `$\mathcal{O}(|W|)$`
+3. **Non-Local Operations**: Operations must examine only $`\mathcal{O}(n)`$ window
+4. **Bounded Costs**: Ratio c_max/c_min must be constant for $`\mathcal{O}(|W|)`$
 
 ### Future Research Directions
 
-1. **Adaptive Precision**: Coarser `$\varepsilon$` far from solution, finer near matches
+1. **Adaptive Precision**: Coarser $`\varepsilon`$ far from solution, finer near matches
 2. **Hybrid Approaches**: Combine restricted substitutions + weighted ops
 3. **Approximate Algorithms**: Beam search for faster queries with quality guarantees
 4. **Learning Costs**: Automatically learn operation costs from data
@@ -747,14 +747,14 @@ When θ/ε and c_max/c_min are O(1): Still O(|W|) and O(|D|)
 **Answer: YES, via discretization**
 
 The Schulz/Mihov/Mitankin methodology CAN be extended to weighted costs by:
-1. Discretizing costs to fixed precision `$\varepsilon$`
+1. Discretizing costs to fixed precision $`\varepsilon`$
 2. Tracking (position, discretized_cost) instead of (position, error_count)
 3. Modifying subsumption for cost comparison
 4. Adding cost to transitions
 
-The resulting complexity `$\mathcal{O}(|W| \times  \max _\text{cost}/\varepsilon)$` remains `$\mathcal{O}(|W|)$` when cost range and precision are fixed.
+The resulting complexity $`\mathcal{O}(|W| \times  \max _\text{cost}/\varepsilon)`$ remains $`\mathcal{O}(|W|)`$ when cost range and precision are fixed.
 
-**The methodology is extensible** but requires accepting precision-performance trade-offs. For most practical applications, **Universal LA (binary restrictions)** or **coarse discretization `$(\varepsilon =0.1-1.0)**$` provides the best balance of expressiveness and performance.
+**The methodology is extensible** but requires accepting precision-performance trade-offs. For most practical applications, **Universal LA (binary restrictions)** or **coarse discretization $`(\varepsilon =0.1-1.0)`$** provides the best balance of expressiveness and performance.
 
 ---
 

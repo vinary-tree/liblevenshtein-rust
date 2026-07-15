@@ -27,18 +27,18 @@
 
 ## Executive Summary
 
-**PrefixZipper** is a trait-based extension for dictionary zippers that enables **`$\mathcal{O}(k + m)$`** exact prefix matching, where:
-- `$k$` = prefix length (typically 2-5 characters)
-- `$m$` = number of terms matching the prefix
-- **Independent of** total dictionary size `$n$`
+**PrefixZipper** is a trait-based extension for dictionary zippers that enables **$`\mathcal{O}(k + m)`$** exact prefix matching, where:
+- $`k`$ = prefix length (typically 2-5 characters)
+- $`m`$ = number of terms matching the prefix
+- **Independent of** total dictionary size $`n`$
 
-This provides **5-10× speedup** for selective prefixes compared to `$\mathcal{O}(n)$` full iteration with `.starts_with()` filtering.
+This provides **5-10× speedup** for selective prefixes compared to $`\mathcal{O}(n)`$ full iteration with `.starts_with()` filtering.
 
 ### Key Features
 
 - **Trait-based design**: Works uniformly across all 6 dictionary backends via blanket implementation
-- **Zero-copy navigation**: `$\mathcal{O}(k)$` prefix traversal without allocating intermediate results
-- **Lazy iteration**: Results yielded on-demand with `$\mathcal{O}(1)$` amortized per-result cost
+- **Zero-copy navigation**: $`\mathcal{O}(k)`$ prefix traversal without allocating intermediate results
+- **Lazy iteration**: Results yielded on-demand with $`\mathcal{O}(1)`$ amortized per-result cost
 - **Type-safe**: Compile-time enforcement of backend compatibility
 - **Unicode support**: Works with both byte-level (`u8`) and character-level (`char`) dictionaries
 - **Valued dictionaries**: Separate trait for dictionaries with associated values
@@ -78,15 +78,15 @@ let matches: Vec<_> = dict
     .collect();
 ```
 
-For large dictionaries (`$n$` = 100K+ terms) where only a few terms match (`$m$` = 10-100), this wastes 99.9% of the work iterating non-matching terms.
+For large dictionaries ($`n`$ = 100K+ terms) where only a few terms match ($`m`$ = 10-100), this wastes 99.9% of the work iterating non-matching terms.
 
-### Solution: `$\mathcal{O}(k + m)$` Prefix Navigation
+### Solution: $`\mathcal{O}(k + m)`$ Prefix Navigation
 
 PrefixZipper leverages the trie structure of dictionaries:
 
-1. **Navigate** directly to the prefix node: `$\mathcal{O}(k)$`
-2. **Iterate** only the subtree under that node: `$\mathcal{O}(m)$`
-3. **Total**: `$\mathcal{O}(k + m) \ll \mathcal{O}(n)$` when `$m \ll n$`
+1. **Navigate** directly to the prefix node: $`\mathcal{O}(k)`$
+2. **Iterate** only the subtree under that node: $`\mathcal{O}(m)`$
+3. **Total**: $`\mathcal{O}(k + m) \ll \mathcal{O}(n)`$ when $`m \ll n`$
 
 ### Real-World Applications
 
@@ -152,7 +152,7 @@ impl IncrementalSearch {
 - **Fuzzy matching**: Use Levenshtein automata instead (tolerates typos)
 - **Full-text search**: Use inverted index instead (substring matching)
 - **Empty prefix**: Just use `dict.iter()` directly (equivalent performance)
-- **Very common prefixes**: When `$m \approx n$`, `$\mathcal{O}(k + m) \approx \mathcal{O}(n)$` (no advantage)
+- **Very common prefixes**: When $`m \approx n`$, $`\mathcal{O}(k + m) \approx \mathcal{O}(n)`$ (no advantage)
 
 ---
 
@@ -187,7 +187,7 @@ impl<Z: DictZipper> PrefixZipper for Z {}
 
 **Responsibilities**:
 - Validate prefix exists in dictionary
-- Navigate to prefix position: `$\mathcal{O}(k)$`
+- Navigate to prefix position: $`\mathcal{O}(k)`$
 - Return iterator if prefix valid, `None` otherwise
 
 #### 2. `PrefixIterator<Z>` Struct
@@ -204,7 +204,7 @@ pub struct PrefixIterator<Z: DictZipper> {
 **Responsibilities**:
 - Depth-first traversal of subtree under prefix
 - Yield `(path, zipper)` for each final node
-- `$\mathcal{O}(1)$` amortized per-result iteration
+- $`\mathcal{O}(1)`$ amortized per-result iteration
 
 #### 3. `ValuedPrefixZipper` Trait
 
@@ -243,7 +243,7 @@ impl<Z: ValuedDictZipper> Iterator for ValuedPrefixIterator<Z> {
 
 | Backend | Byte-level | Char-level | Valued | Notes |
 |---------|-----------|-----------|--------|-------|
-| **DoubleArrayTrie** | ✅ | ✅ | ✅ | Fastest navigation (`$\mathcal{O}(1)$` transitions) |
+| **DoubleArrayTrie** | ✅ | ✅ | ✅ | Fastest navigation ($`\mathcal{O}(1)`$ transitions) |
 | **DynamicDawg** | ✅ | ✅ | ✅ | Comparable performance to DAT |
 | **PathMapDictionary** | ✅ | ❌ | ✅ | Byte-level only |
 | **SuffixAutomaton** | ✅ | ✅ | ✅ | Slower for short prefixes |
@@ -285,8 +285,8 @@ where
 - `None` - If no terms with this prefix exist in the dictionary
 
 **Complexity**:
-- **Time**: `$\mathcal{O}(k)$` where `$k$` = prefix length
-- **Space**: `$\mathcal{O}(1)$` - no allocations during navigation
+- **Time**: $`\mathcal{O}(k)`$ where $`k`$ = prefix length
+- **Space**: $`\mathcal{O}(1)`$ - no allocations during navigation
 
 **Example**:
 
@@ -336,9 +336,9 @@ impl<Z: DictZipper> Iterator for PrefixIterator<Z> {
 - `Z` - Zipper positioned at the final node (useful for querying values or further navigation)
 
 **Complexity**:
-- **Per-result**: `$\mathcal{O}(1)$` amortized
-- **Total iteration**: `$\mathcal{O}(m)$` where `$m$` = number of matching terms
-- **Memory**: `$\mathcal{O}(d)$` where `$d$` = maximum depth of matching terms
+- **Per-result**: $`\mathcal{O}(1)`$ amortized
+- **Total iteration**: $`\mathcal{O}(m)`$ where $`m`$ = number of matching terms
+- **Memory**: $`\mathcal{O}(d)`$ where $`d`$ = maximum depth of matching terms
 
 **Example**:
 
@@ -395,7 +395,7 @@ where
 - `Some(ValuedPrefixIterator<Self>)` - If at least one term with this prefix exists
 - `None` - If no terms with this prefix exist
 
-**Complexity**: Same as `PrefixZipper::with_prefix()`: `$\mathcal{O}(k)$` navigation + `$\mathcal{O}(m)$` iteration
+**Complexity**: Same as `PrefixZipper::with_prefix()`: $`\mathcal{O}(k)`$ navigation + $`\mathcal{O}(m)`$ iteration
 
 **Example**:
 
@@ -480,17 +480,17 @@ assert_eq!(ap_fruits, vec![
 
 | Operation | Complexity | Description |
 |-----------|-----------|-------------|
-| **Navigation** (`with_prefix`) | `$\mathcal{O}(k)$` | `$k$` = prefix length |
-| **Iterator creation** | `$\mathcal{O}(1)$` | Just stack initialization |
-| **Per-result** | `$\mathcal{O}(1)$` amortized | DFS with pre-allocated stack |
-| **Total iteration** | `$\mathcal{O}(m)$` | `$m$` = number of matching terms |
-| **Overall** | **`$\mathcal{O}(k + m)$`** | Independent of dictionary size `$n$` |
+| **Navigation** (`with_prefix`) | $`\mathcal{O}(k)`$ | $`k`$ = prefix length |
+| **Iterator creation** | $`\mathcal{O}(1)`$ | Just stack initialization |
+| **Per-result** | $`\mathcal{O}(1)`$ amortized | DFS with pre-allocated stack |
+| **Total iteration** | $`\mathcal{O}(m)`$ | $`m`$ = number of matching terms |
+| **Overall** | **$`\mathcal{O}(k + m)`$** | Independent of dictionary size $`n`$ |
 
 **Comparison to alternatives**:
-- **Full iteration + filter**: `$\mathcal{O}(n)$` - must visit every term
-- **Speedup**: `$\mathcal{O}(n) / \mathcal{O}(k + m) \approx n / m$` when `$k \ll n$`
+- **Full iteration + filter**: $`\mathcal{O}(n)`$ - must visit every term
+- **Speedup**: $`\mathcal{O}(n) / \mathcal{O}(k + m) \approx n / m`$ when $`k \ll n`$
 
-For selective prefixes where `$m \ll n$`:
+For selective prefixes where $`m \ll n`$:
 - 100K dictionary, 100 matches: **1000× faster in theory**
 - Real-world: **5-10× faster** (accounting for constant factors)
 
@@ -519,7 +519,7 @@ For selective prefixes where `$m \ll n$`:
 | 10,000 terms | 12.08 | +1.1% |
 | 100,000 terms | 12.31 | +3.0% |
 
-**Key finding**: Near-constant time across 100× dictionary size increase, confirming `$\mathcal{O}(k + m)$` independence from `$n$`.
+**Key finding**: Near-constant time across 100× dictionary size increase, confirming $`\mathcal{O}(k + m)`$ independence from $`n`$.
 
 #### Backend Comparison (10K dictionary, 100 matches)
 
@@ -622,7 +622,7 @@ See full optimization log: [`docs/optimization/prefix_zipper_optimization_log.md
 #### When to Use Which Backend
 
 **DoubleArrayTrie** (recommended default):
-- ✅ Best navigation performance (`$\mathcal{O}(1)$` transitions)
+- ✅ Best navigation performance ($`\mathcal{O}(1)`$ transitions)
 - ✅ Compact memory representation
 - ✅ Cache-friendly layout
 - ❌ Immutable (rebuild required for updates)
@@ -1013,7 +1013,7 @@ fn next(&mut self) -> Option<Self::Item> {
 ```
 
 **Why DFS vs BFS?**
-- **Memory**: `$\mathcal{O}(d)$` vs `$\mathcal{O}(b^d)$` where `$d$` = depth, `$b$` = branching factor
+- **Memory**: $`\mathcal{O}(d)`$ vs $`\mathcal{O}(b^d)`$ where $`d`$ = depth, $`b`$ = branching factor
 - **Cache locality**: Stack access is more cache-friendly than queue
 - **Simplicity**: Vec-based stack vs VecDeque-based queue
 
@@ -1146,9 +1146,9 @@ let matches: Vec<_> = dict
 
 | Aspect | PrefixZipper | Full Iteration |
 |--------|-------------|----------------|
-| **Complexity** | `$\mathcal{O}(k + m)$` | `$\mathcal{O}(n)$` |
+| **Complexity** | $`\mathcal{O}(k + m)`$ | $`\mathcal{O}(n)`$ |
 | **100K dict, 100 matches** | ~12 µs | ~200 µs (17× slower) |
-| **Memory** | `$\mathcal{O}(d)$` | `$\mathcal{O}(1)$` during iteration |
+| **Memory** | $`\mathcal{O}(d)`$ | $`\mathcal{O}(1)`$ during iteration |
 | **Code clarity** | Explicit intent | Generic pattern |
 
 **When to use full iteration**: Never for prefix matching - always use PrefixZipper.
@@ -1166,7 +1166,7 @@ let matches: Vec<_> = dict
 | Aspect | PrefixZipper | Levenshtein Prefix |
 |--------|-------------|-------------------|
 | **Match type** | Exact prefix | Fuzzy prefix (tolerates typos) |
-| **Complexity** | `$\mathcal{O}(k + m)$` | `$\mathcal{O}(k \times m \times d)$` where `$d$` = edit distance |
+| **Complexity** | $`\mathcal{O}(k + m)`$ | $`\mathcal{O}(k \times m \times d)`$ where $`d`$ = edit distance |
 | **Performance** | ~12 µs | ~150 µs (12× slower) |
 | **Use case** | Known correct prefix | User input with typos |
 
@@ -1185,9 +1185,9 @@ struct PrefixIndex {
 
 | Aspect | PrefixZipper | HashMap Index |
 |--------|-------------|---------------|
-| **Memory** | `$\mathcal{O}(n)$` (trie storage) | `$\mathcal{O}(n \times \text{avg\_prefix\_len})$` (duplicated prefixes) |
-| **Build time** | `$\mathcal{O}(n \times k)$` (trie construction) | `$\mathcal{O}(n \times k)$` (index construction) |
-| **Query time** | `$\mathcal{O}(k + m)$` | `$\mathcal{O}(1)$` lookup + `$\mathcal{O}(m)$` iteration |
+| **Memory** | $`\mathcal{O}(n)`$ (trie storage) | $`\mathcal{O}(n \times \text{avg\_prefix\_len})`$ (duplicated prefixes) |
+| **Build time** | $`\mathcal{O}(n \times k)`$ (trie construction) | $`\mathcal{O}(n \times k)`$ (index construction) |
+| **Query time** | $`\mathcal{O}(k + m)`$ | $`\mathcal{O}(1)`$ lookup + $`\mathcal{O}(m)`$ iteration |
 | **Flexibility** | Any prefix length | Fixed prefix lengths |
 
 **When to use HashMap**: When prefix lengths are fixed and known (e.g., always 3 characters).

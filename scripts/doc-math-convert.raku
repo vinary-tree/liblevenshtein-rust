@@ -10,7 +10,8 @@
 #
 # It converts, inside a backtick code span that contains at least one clearly-math glyph, every
 # math glyph to LaTeX (pairing ∣…∣ / |…| → \lvert…\rvert, grouping sub/superscripts, − → -), and
-# rewrites the span as `$…$`. Separately, bare `O(args)` in prose → `$\mathcal{O}(args)$`.
+# rewrites the span as `$`…`$` (dollars OUTSIDE the backtick span — the form GitHub renders as
+# MathJax). Separately, bare `O(args)` in prose → `$`\mathcal{O}(args)`$`.
 # GUARDS (never touched): fenced code blocks; `µ` U+00B5; the glyph set excludes it; MeTTa `$var`
 # and currency `$` are never introduced/removed; table `|` outside a math span is left.
 
@@ -132,7 +133,7 @@ sub wrap-bare-math(Str $prose) {
                     || ($tj < $n-1  && ('{}^_' ~ $LETTERS).contains(@c[$tj+1]));
         if $has-trigger && !$embedded {
             @out.push(@c[$start ..^ $ts].join) if $ts > $start;              # trimmed lead
-            @out.push('`$' ~ convert-content(@c[$ts .. $tj].join) ~ '$`');   # wrapped core
+            @out.push('$`' ~ convert-content(@c[$ts .. $tj].join) ~ '`$');   # wrapped core
             @out.push(@c[($tj+1) .. $j].join) if $tj < $j;                   # trimmed tail
         } else {
             @out.push(@c[$start..$j].join);
@@ -151,7 +152,7 @@ sub convert-line(Str $line) {
         / ('`'+) ( .*? ) $0 /,
         -> $m {
             my $v = (!$BARE-ONLY && $m[0].Str.chars == 1 && has-math($m[1].Str))
-                ?? '`$' ~ convert-content($m[1].Str) ~ '$`'
+                ?? '$`' ~ convert-content($m[1].Str) ~ '`$'
                 !! $m.Str;                                   # code / multi-backtick: leave as-is
             @spans.push($v);
             "\x[FDD0]{@spans.end}\x[FDD1]"                    # noncharacter placeholder
@@ -160,7 +161,7 @@ sub convert-line(Str $line) {
     );
     # 2. Bare O(...) complexity in prose → protected `$\mathcal{O}(…)$`.
     $prose ~~ s:g/ << 'O(' (<-[)]>+) ')' /{
-        @spans.push('`$\mathcal{O}(' ~ convert-content($0.Str) ~ ')$`');
+        @spans.push('$`\mathcal{O}(' ~ convert-content($0.Str) ~ ')`$');
         "\x[FDD0]{@spans.end}\x[FDD1]"
     }/;
     # 2.5 Math-identifier expressions with ASCII super/subscripts — X^{…}_n(…), d^χ_L(…), d²_L,
@@ -174,7 +175,7 @@ sub convert-line(Str $line) {
         # carries and what UPPER_SNAKE_CASE pseudocode (ELEMENTARY_TRANSITION) lacks — so we never
         # sweep up a snake_case identifier that merely has a Unicode param in its (…) args.
         if $mm.contains('^') {
-            @spans.push('`$' ~ convert-content($mm) ~ '$`');
+            @spans.push('$`' ~ convert-content($mm) ~ '`$');
             "\x[FDD0]{@spans.end}\x[FDD1]"
         } else { $mm }
     }/;
@@ -182,7 +183,7 @@ sub convert-line(Str $line) {
     $prose ~~ s:g/ '{' (<-[{}]>*) '}' /{
         my $c = $0.Str;
         if so $c.comb.grep(*.ord > 127) {
-            @spans.push('`$\{' ~ convert-content($c) ~ '\}$`');
+            @spans.push('$`\{' ~ convert-content($c) ~ '\}`$');
             "\x[FDD0]{@spans.end}\x[FDD1]"
         } else { '{' ~ $c ~ '}' }
     }/;

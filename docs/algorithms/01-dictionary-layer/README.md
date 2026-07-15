@@ -303,7 +303,7 @@ Start: What do you need?
 | **Insert** | ✅ Append | ✅ Append | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
 | **Remove** | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | **Union** | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
-| **Clone Cost** | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | N/A |
+| **Clone Cost** | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | N/A |
 | **Clone Sharing** | ❌ Deep | ❌ Deep | ✅ Arc | ✅ Arc | ✅ Arc×2 | N/A |
 | **Unicode** | Byte | ✅ Char | Byte | ✅ Char | Byte | Byte |
 | **Thread-Safe** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

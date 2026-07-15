@@ -209,7 +209,7 @@ pub struct DoubleArrayTrieZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `u8` (byte-level)
 - **Memory**: ~24 bytes base + path length
-- **Performance**: `$\mathcal{O}(1)$` descend, `$\mathcal{O}(E)$` children (E = edge count)
+- **Performance**: $`\mathcal{O}(1)`$ descend, $`\mathcal{O}(E)`$ children (E = edge count)
 
 **Example**:
 ```rust
@@ -247,7 +247,7 @@ pub struct DoubleArrayTrieCharZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `char` (Unicode code points)
 - **Memory**: ~24 bytes base + path length × 4
-- **Performance**: `$\mathcal{O}(1)$` descend, `$\mathcal{O}(E)$` children
+- **Performance**: $`\mathcal{O}(1)`$ descend, $`\mathcal{O}(E)`$ children
 
 **Example**:
 ```rust
@@ -285,7 +285,7 @@ pub struct PathMapZipper<V: DictionaryValue = ()> {
 **Characteristics**:
 - **Unit**: `u8` (byte-level)
 - **Memory**: ~24 bytes + path + Arc overhead
-- **Performance**: `$\mathcal{O}(\log N)$` descend (HashMap lookup)
+- **Performance**: $`\mathcal{O}(\log N)`$ descend (HashMap lookup)
 
 **When to use**: When using PathMapDictionary backend.
 
@@ -293,9 +293,9 @@ pub struct PathMapZipper<V: DictionaryValue = ()> {
 
 | Zipper | Unit | Backend | Descend | Children | Memory | Unicode |
 |--------|------|---------|---------|----------|--------|---------|
-| **DATZipper** | `u8` | DoubleArrayTrie | `$\mathcal{O}(1)$` | `$\mathcal{O}(E)$` | Low | Byte |
-| **DATCharZipper** | `char` | DoubleArrayTrieChar | `$\mathcal{O}(1)$` | `$\mathcal{O}(E)$` | Medium | ✅ |
-| **PathMapZipper** | `u8` | PathMapDict | `$\mathcal{O}(\log N)$` | `$\mathcal{O}(E)$` | Medium | Byte |
+| **DATZipper** | `u8` | DoubleArrayTrie | $`\mathcal{O}(1)`$ | $`\mathcal{O}(E)`$ | Low | Byte |
+| **DATCharZipper** | `char` | DoubleArrayTrieChar | $`\mathcal{O}(1)`$ | $`\mathcal{O}(E)`$ | Medium | ✅ |
+| **PathMapZipper** | `u8` | PathMapDict | $`\mathcal{O}(\log N)`$ | $`\mathcal{O}(E)`$ | Medium | Byte |
 
 E = average edge count per node (~2-3 for natural language)
 N = total dictionary size
@@ -723,18 +723,18 @@ let z1 = root.descend('a');  // Clone shared Arc: O(1)
 let z2 = z1.clone();          // Clone again: O(1) + path copy
 ```
 
-**Cost**: `$\mathcal{O}(1)$` for Arc clone + `$\mathcal{O}(P)$` for path copy (P = path length)
+**Cost**: $`\mathcal{O}(1)`$ for Arc clone + $`\mathcal{O}(P)`$ for path copy (P = path length)
 
 ### Operation Complexity
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| `new_from_dict()` | `$\mathcal{O}(1)$` | Initialize at root |
-| `is_final()` | `$\mathcal{O}(1)$` | Array lookup |
-| `descend(label)` | `$\mathcal{O}(1)$` | BASE/CHECK lookup |
-| `children()` | `$\mathcal{O}(E)$` | Iterate precomputed edges |
-| `path()` | `$\mathcal{O}(P)$` | Clone path vector |
-| `value()` | `$\mathcal{O}(1)$` | Array lookup |
+| `new_from_dict()` | $`\mathcal{O}(1)`$ | Initialize at root |
+| `is_final()` | $`\mathcal{O}(1)`$ | Array lookup |
+| `descend(label)` | $`\mathcal{O}(1)`$ | BASE/CHECK lookup |
+| `children()` | $`\mathcal{O}(E)`$ | Iterate precomputed edges |
+| `path()` | $`\mathcal{O}(P)`$ | Clone path vector |
+| `value()` | $`\mathcal{O}(1)`$ | Array lookup |
 
 E = average edge count (~2-3)
 P = path length

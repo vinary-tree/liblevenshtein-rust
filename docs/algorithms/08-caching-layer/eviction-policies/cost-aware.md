@@ -4,7 +4,7 @@
 
 The CostAware eviction policy balances age, size, and hit count to make intelligent cost-benefit eviction decisions. It computes a cost score that identifies entries with poor value-to-cost ratios.
 
-**Formula**: Cost score = `$(\text{age} \times \text{size}) / (\text{hits} + 1)$`
+**Formula**: Cost score = $`(\text{age} \times \text{size}) / (\text{hits} + 1)`$
 
 **Eviction Strategy**: Highest score evicted first (old + large + unpopular).
 
@@ -74,7 +74,7 @@ impl<D> CostAware<D> {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(n)$` where n = number of candidates
+**Complexity**: $`\mathcal{O}(n)`$ where n = number of candidates
 
 ## Usage Examples
 
@@ -244,8 +244,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Operation | Complexity | Notes |
 |-----------|------------|-------|
-| get_value | `$\mathcal{O}(1)$` + `$\mathcal{O}(d)$` | Metadata update + inner lookup |
-| find_highest_cost | `$\mathcal{O}(n)$` | Linear scan of candidates |
+| get_value | $`\mathcal{O}(1)`$ + $`\mathcal{O}(d)`$ | Metadata update + inner lookup |
+| find_highest_cost | $`\mathcal{O}(n)`$ | Linear scan of candidates |
 
 ### Space Complexity
 

@@ -75,7 +75,7 @@ pub type ContextId = u32;
 
 **Design Rationale**:
 
-- **HashMap-based**: `$\mathcal{O}(1)$` parent lookup, efficient for sparse IDs
+- **HashMap-based**: $`\mathcal{O}(1)`$ parent lookup, efficient for sparse IDs
 - **Inverse mapping** (child → parent): Optimizes visibility computation (common operation)
 - **Option<ContextId>**: `None` indicates root context
 - **u32 for IDs**: 4 billion unique contexts (sufficient for any realistic application)
@@ -107,8 +107,8 @@ pub fn create_child(&mut self, id: ContextId, parent_id: ContextId)
 ```
 
 **Complexity**:
-- `create_root()`: `$\mathcal{O}(1)$` - HashMap insert
-- `create_child()`: `$\mathcal{O}(1)$` - HashMap lookup + insert
+- `create_root()`: $`\mathcal{O}(1)`$ - HashMap insert
+- `create_child()`: $`\mathcal{O}(1)`$ - HashMap lookup + insert
 
 **Example**:
 
@@ -135,7 +135,7 @@ pub fn parent(&self, id: ContextId) -> Option<ContextId>;
 - `Some(parent_id)` if context has a parent
 - `None` if context is root or doesn't exist
 
-**Complexity**: `$\mathcal{O}(1)$` - HashMap lookup
+**Complexity**: $`\mathcal{O}(1)`$ - HashMap lookup
 
 **Example**:
 
@@ -162,7 +162,7 @@ pub fn visible_contexts(&self, id: ContextId) -> Vec<ContextId>;
 2. Walk up parent chain until reaching a root (parent = None)
 3. Collect all contexts encountered
 
-**Complexity**: `$\mathcal{O}(\text{depth})$` where depth is distance from root (typically `$\le 5$` for code)
+**Complexity**: $`\mathcal{O}(\text{depth})`$ where depth is distance from root (typically $`\le 5`$ for code)
 
 **Example**:
 
@@ -186,7 +186,7 @@ pub fn depth(&self, id: ContextId) -> Option<usize>;
 - `Some(depth)` where root = 0, children = 1, etc.
 - `None` if context doesn't exist
 
-**Complexity**: `$\mathcal{O}(\text{depth})$` - Walk parent chain
+**Complexity**: $`\mathcal{O}(\text{depth})`$ - Walk parent chain
 
 **Example**:
 
@@ -210,7 +210,7 @@ pub fn is_descendant(&self, child_id: ContextId, ancestor_id: ContextId) -> bool
 2. If `ancestor_id` encountered, return true
 3. If root reached without finding ancestor, return false
 
-**Complexity**: `$\mathcal{O}(\text{depth})$`
+**Complexity**: $`\mathcal{O}(\text{depth})`$
 
 **Example**:
 
@@ -240,7 +240,7 @@ pub fn remove(&mut self, id: ContextId) -> bool;
 2. Remove target context from HashMap
 3. Remove all descendants from HashMap
 
-**Complexity**: `$\mathcal{O}(n)$` where n is total number of contexts (must check all for descendants)
+**Complexity**: $`\mathcal{O}(n)`$ where n is total number of contexts (must check all for descendants)
 
 **Example**:
 
@@ -300,13 +300,13 @@ Result: [100, 10, 1, 0]
 
 ### Complexity Analysis
 
-**Time Complexity**: `$\mathcal{O}(d)$` where d = depth from root
+**Time Complexity**: $`\mathcal{O}(d)`$ where d = depth from root
 
-- Best case: `$\mathcal{O}(1)$` - querying root context
-- Worst case: `$\mathcal{O}(d)$` - deeply nested context
-- Typical case: `$\mathcal{O}(3-5)$` - practical code has 3-5 nesting levels
+- Best case: $`\mathcal{O}(1)`$ - querying root context
+- Worst case: $`\mathcal{O}(d)`$ - deeply nested context
+- Typical case: $`\mathcal{O}(3-5)`$ - practical code has 3-5 nesting levels
 
-**Space Complexity**: `$\mathcal{O}(d)$` - result vector size
+**Space Complexity**: $`\mathcal{O}(d)`$ - result vector size
 
 **Real-World Depth**:
 
@@ -517,15 +517,15 @@ assert_eq!(tree.len(), 100);
 
 | Operation | Time Complexity | Space Complexity | Notes |
 |-----------|----------------|------------------|-------|
-| `create_root()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | HashMap insert |
-| `create_child()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | HashMap lookup + insert |
-| `parent()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | HashMap lookup |
-| `contains()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | HashMap lookup |
-| `is_root()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | HashMap lookup + match |
-| `visible_contexts()` | `$\mathcal{O}(d)$` | `$\mathcal{O}(d)$` | d = depth from root |
-| `depth()` | `$\mathcal{O}(d)$` | `$\mathcal{O}(1)$` | d = depth from root |
-| `is_descendant()` | `$\mathcal{O}(d)$` | `$\mathcal{O}(1)$` | d = depth from root |
-| `remove()` | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | n = total contexts, must find descendants |
+| `create_root()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | HashMap insert |
+| `create_child()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | HashMap lookup + insert |
+| `parent()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | HashMap lookup |
+| `contains()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | HashMap lookup |
+| `is_root()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | HashMap lookup + match |
+| `visible_contexts()` | $`\mathcal{O}(d)`$ | $`\mathcal{O}(d)`$ | d = depth from root |
+| `depth()` | $`\mathcal{O}(d)`$ | $`\mathcal{O}(1)`$ | d = depth from root |
+| `is_descendant()` | $`\mathcal{O}(d)`$ | $`\mathcal{O}(1)`$ | d = depth from root |
+| `remove()` | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ | n = total contexts, must find descendants |
 
 ### Benchmarks
 
@@ -571,7 +571,7 @@ assert_eq!(tree.len(), 100);
 **Reasons**:
 - Sparse ID space: Context IDs may have large gaps (e.g., [0, 1, 100, 1000])
 - Wasted memory: Vec would allocate for all IDs from 0 to max(ID)
-- HashMap provides `$\mathcal{O}(1)$` operations with minimal waste
+- HashMap provides $`\mathcal{O}(1)`$ operations with minimal waste
 
 **Example**:
 ```
@@ -612,18 +612,18 @@ Cascading removal requires finding all descendants. Two approaches:
 
 **Approach 1: Store bi-directional links** (parent → children, child → parent)
 - Memory: 2× storage
-- Removal: `$\mathcal{O}(\text{descendants})$` direct lookup
+- Removal: $`\mathcal{O}(\text{descendants})`$ direct lookup
 - Query: Unchanged
 
 **Approach 2: Store parent only, scan on removal** (current implementation)
 - Memory: 1× storage
-- Removal: `$\mathcal{O}(\text{total}_\text{contexts})$` scan
+- Removal: $`\mathcal{O}(\text{total}_\text{contexts})`$ scan
 - Query: Unchanged
 
 **Decision**: Approach 2 (current) because:
 - Context removal is rare (typically only on file close in LSP)
 - Queries (visibility) vastly more frequent
-- Memory savings worth occasional `$\mathcal{O}(n)$` scan
+- Memory savings worth occasional $`\mathcal{O}(n)`$ scan
 
 ### Thread Safety Considerations
 

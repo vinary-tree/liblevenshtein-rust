@@ -71,7 +71,7 @@ The verification is organized into three main categories:
   - `layer1_completeness`: All strings within distance are included
   - `layer1_soundness`: All paths respect distance bound
   - `layer1_optimality`: Optimal paths exist
-- **Performance**: Candidate count bounded by `$\mathcal{O}(n^d \times  \sigma ^d)$`
+- **Performance**: Candidate count bounded by $`\mathcal{O}(n^d \times  \sigma ^d)`$
 - **Features**: Transposition support, phonetic similarity, keyboard distance
 
 **Layer 2: `Layer2.v`** (Tree-sitter Parsing)

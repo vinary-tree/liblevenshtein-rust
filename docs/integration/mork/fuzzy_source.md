@@ -33,9 +33,9 @@ PhoneticNormalizedDictionary<V, D>
 
 **Key Optimizations:**
 - **Exact match fast path (d=0)**: Direct trie lookup is **100-300× faster** than automaton traversal
-- **FuzzyMultiMap**: `$\mathcal{O}(k \log n)$` fuzzy queries via Levenshtein automaton pruning
+- **FuzzyMultiMap**: $`\mathcal{O}(k \log n)`$ fuzzy queries via Levenshtein automaton pruning
 - **Thread-local NormalizeBuffers (H3)**: Reuses buffers to reduce allocations
-- **`$\mathcal{O}(1)$` vowel classification**: Bitmask lookup instead of linear array search
+- **$`\mathcal{O}(1)`$ vowel classification**: Bitmask lookup instead of linear array search
 
 ### Building a Dictionary
 
@@ -1132,7 +1132,7 @@ The `FuzzyDictionaryView::new()` function iterates over all values under a prefi
 Target: <10ms for typical queries (1-3 terms, distance 1-2, dictionary size <100K).
 
 Factors affecting latency:
-- Dictionary size: `$\mathcal{O}(n)$` iteration to find all candidates
+- Dictionary size: $`\mathcal{O}(n)`$ iteration to find all candidates
 - Max distance: Higher distance = more candidates to check
 - Algorithm: Transposition slightly slower than Standard
 

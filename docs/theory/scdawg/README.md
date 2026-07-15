@@ -12,13 +12,13 @@
 ## What it is (in one paragraph)
 
 An **SCDAWG** (also *C2S*, Compact Symmetric) is the most space-efficient index that supports
-substring queries over a fixed text in `$\mathcal{O}(\lvert P\rvert)$` time for a pattern `$P$`,
-**plus bidirectional navigation**: from the locus of a substring `$V$` it can extend to the right
-(`$V\sigma$`) *or* to the left (`$\sigma V$`) by one symbol `$\sigma$`, and enumerate every
+substring queries over a fixed text in $`\mathcal{O}(\lvert P\rvert)`$ time for a pattern $`P`$,
+**plus bidirectional navigation**: from the locus of a substring $`V`$ it can extend to the right
+($`V\sigma`$) *or* to the left ($`\sigma V`$) by one symbol $`\sigma`$, and enumerate every
 occurrence. It refines the suffix automaton / CDAWG of Blumer et al. [[1]](#references) with reverse
-(left-extension) edges (Inenaga et al. [[2]](#references)). For a text of length `$n$` it has at
-most `$n+1$` states and `$4n-4$` transitions in `$\mathcal{O}(n)$` space, all queries running in
-`$\mathcal{O}(m)$` for a pattern of length `$m$`.
+(left-extension) edges (Inenaga et al. [[2]](#references)). For a text of length $`n`$ it has at
+most $`n+1`$ states and $`4n-4`$ transitions in $`\mathcal{O}(n)`$ space, all queries running in
+$`\mathcal{O}(m)`$ for a pattern of length $`m`$.
 
 ## Why liblevenshtein needs it
 
@@ -28,9 +28,9 @@ Two liblevenshtein capabilities rest on the SCDAWG, exposed through the `Scdawg`
 - **Substring / infix fuzzy search.** Unlike a prefix trie, the SCDAWG indexes *all* substrings, so
   a query can match anywhere inside a dictionary term.
 - **WallBreaker (large error bounds).** The [WallBreaker](../../../README.md#wallbreaker-large-error-bounds)
-  filter splits a long pattern into `$k+1$` (Standard) or `$2k+1$` (Transposition / MergeAndSplit)
+  filter splits a long pattern into $`k+1`$ (Standard) or $`2k+1`$ (Transposition / MergeAndSplit)
   disjoint pieces; by the pigeonhole principle at least one piece survives error-free, is located
-  exactly in `$\mathcal{O}(\lvert \text{piece}\rvert)$`, and is then **grown left and right** into a
+  exactly in $`\mathcal{O}(\lvert \text{piece}\rvert)`$, and is then **grown left and right** into a
   candidate. That left-and-right growth is exactly the SCDAWG's bidirectional-extension property —
   no other index in the toolbox provides it in both directions.
 
@@ -48,7 +48,7 @@ Two liblevenshtein capabilities rest on the SCDAWG, exposed through the `Scdawg`
                                  results
 ```
 
-The bidirectional-growth soundness (the `$k+1$` / `$2k+1$` piece counts) is machine-checked,
+The bidirectional-growth soundness (the $`k+1`$ / $`2k+1`$ piece counts) is machine-checked,
 admit-free, in `docs/verification/wallbreaker/.../WallBreakerPigeonhole.v`.
 
 ## Further reading

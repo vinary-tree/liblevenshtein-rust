@@ -51,7 +51,7 @@ Finding correction candidates for garbled input words appears in numerous applic
 **Dictionary Partitioning Methods**:
 - Divide dictionary into blocks based on word properties (length, first letter, etc.)
 - Compute Levenshtein distance only within relevant blocks
-- **Problem**: Still requires `$\mathcal{O}(\lvert block\rvert \times \lvert W\rvert \times \lvert V\rvert)$` distance computations
+- **Problem**: Still requires $`\mathcal{O}(\lvert block\rvert \times \lvert W\rvert \times \lvert V\rvert)`$ distance computations
 
 **Oflazer's Approach** (1996):
 - Use finite state transducers to represent edit operations
@@ -64,7 +64,7 @@ This paper presents **two methods** based on Levenshtein automata:
 **Method 1: Explicit Construction** (Chapter 3-5)
 - Build deterministic automaton LEV_n(W) that accepts exactly L_Lev(n,W)
 - Traverse dictionary and automaton in parallel
-- Construction in `$\mathcal{O}(\lvert W\rvert)$` time for fixed n
+- Construction in $`\mathcal{O}(\lvert W\rvert)`$ time for fixed n
 
 **Method 2: Imitation** (Chapter 6)
 - Avoid building LEV_n(W) explicitly
@@ -73,7 +73,7 @@ This paper presents **two methods** based on Levenshtein automata:
 
 ### Key Advantage
 
-**Amortized Efficiency**: Once LEV_n(W) is constructed (or simulated), finding all matching dictionary words requires only `$\mathcal{O}(\lvert D\rvert)$` time where |D| is dictionary size (measured as total edges in trie representation).
+**Amortized Efficiency**: Once LEV_n(W) is constructed (or simulated), finding all matching dictionary words requires only $`\mathcal{O}(\lvert D\rvert)`$ time where |D| is dictionary size (measured as total edges in trie representation).
 
 ### Extensions Discussed
 
@@ -89,14 +89,14 @@ The paper shows how to extend the approach to handle additional edit operations:
 
 ### Finite State Automata
 
-**Definition 2.0.0**: A finite state automaton `$A = (Q, \Sigma, \delta, q_0, F)$` where:
-- `$Q$`: finite set of states
-- `$\Sigma$`: alphabet
-- `$\delta: Q \times \Sigma \to Q$` (transition function)
-- `$q_0 \in Q$`: initial state
-- `$F \subseteq Q$`: set of final states
+**Definition 2.0.0**: A finite state automaton $`A = (Q, \Sigma, \delta, q_0, F)`$ where:
+- $`Q`$: finite set of states
+- $`\Sigma`$: alphabet
+- $`\delta: Q \times \Sigma \to Q`$ (transition function)
+- $`q_0 \in Q`$: initial state
+- $`F \subseteq Q`$: set of final states
 
-**Language**: `$L(A) = \{w \in \Sigma^* \mid \delta^*(q_0, w) \in F\}$`
+**Language**: $`L(A) = \{w \in \Sigma^* \mid \delta^*(q_0, w) \in F\}`$
 
 ### Levenshtein Distance
 
@@ -136,7 +136,7 @@ M[i,j] = 1 + min(M[i-1,j-1],  # substitution
                   M[i,j-1])    # insertion       if W[i] ≠ V[j]
 ```
 
-**Complexity**: `$\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)$` time and space
+**Complexity**: $`\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)`$ time and space
 
 **Problem**: For large dictionaries, computing this for every word is expensive.
 
@@ -195,8 +195,8 @@ L(A) = L_Lev(n,W)
 ### Correction Algorithm
 
 **Input**: 
-- Dictionary automaton `$A^D = (Q^D, \Sigma, \delta^D, q_0^D, F^D)$`
-- Levenshtein automaton `$A^W = (Q^W, \Sigma, \delta^W, q_0^W, F^W)$` for query word W
+- Dictionary automaton $`A^D = (Q^D, \Sigma, \delta^D, q_0^D, F^D)`$
+- Levenshtein automaton $`A^W = (Q^W, \Sigma, \delta^W, q_0^W, F^W)`$ for query word W
 
 **Algorithm**: Parallel traversal with backtracking
 
@@ -219,8 +219,8 @@ While stack not empty:
 ```
 
 **Complexity**: 
-- `$\mathcal{O}(\lvert W\rvert)$` to construct A^W (proven in Chapter 5)
-- `$\mathcal{O}(\lvert D\rvert)$` for parallel traversal where |D| = number of edges in dictionary
+- $`\mathcal{O}(\lvert W\rvert)`$ to construct A^W (proven in Chapter 5)
+- $`\mathcal{O}(\lvert D\rvert)`$ for parallel traversal where |D| = number of edges in dictionary
 
 **Key Insight**: The automaton guides the search, avoiding distance computation for each dictionary word.
 
@@ -234,11 +234,11 @@ This is the **core theoretical chapter** defining the construction of LEV_n(W).
 
 ### 4.1: Profile Sequences
 
-**Definition 4.0.6**: For word `$U = z_1 \ldots z_u$`, the **profile** `$\mathrm{Pr}(U)$` is a sequence `$\langle n_1, \ldots, n_u\rangle$` where:
-- `$n_1 := 1$`
-- For `$k > 1$`:
-  - `$n_{k+1} := n_i$` if `$z_{k+1} = z_i$` for some `$i \le k$` (character seen before)
-  - `$n_{k+1} := \max\{n_i \mid 1 \le i \le k\} + 1$` otherwise (new character)
+**Definition 4.0.6**: For word $`U = z_1 \ldots z_u`$, the **profile** $`\mathrm{Pr}(U)`$ is a sequence $`\langle n_1, \ldots, n_u\rangle`$ where:
+- $`n_1 := 1`$
+- For $`k > 1`$:
+  - $`n_{k+1} := n_i`$ if $`z_{k+1} = z_i`$ for some $`i \le k`$ (character seen before)
+  - $`n_{k+1} := \max\{n_i \mid 1 \le i \le k\} + 1`$ otherwise (new character)
 
 **Example**:
 ```
@@ -255,13 +255,13 @@ Pr("hello") = ⟨1, 2, 3, 3, 4⟩
 
 ### 4.2: k-Profile Sequences
 
-**Definition 4.0.8**: For word U and integer `$k \ge 0$`, the **k-profile** `$\mathrm{Pr}_k(U)$` is the sequence `$\mathrm{Pr}(U)[1:\min(k,\lvert U\rvert)]$`.
+**Definition 4.0.8**: For word U and integer $`k \ge 0`$, the **k-profile** $`\mathrm{Pr}_k(U)`$ is the sequence $`\mathrm{Pr}(U)[1:\min(k,\lvert U\rvert)]`$.
 
 **Significance**: k-profiles characterize the "relevant" structure of a word for distance bound n.
 
 ### 4.3: Characteristic Vectors
 
-**Definition 4.0.10**: For character x and word `$V = y_1 \ldots y_v$`, the **characteristic vector** `$\chi(x,V)$` is the bit-vector `$\langle b_1, \ldots, b_v\rangle$` where:
+**Definition 4.0.10**: For character x and word $`V = y_1 \ldots y_v`$, the **characteristic vector** $`\chi(x,V)`$ is the bit-vector $`\langle b_1, \ldots, b_v\rangle`$ where:
 ```
 b_j = 1  if y_j = x
 b_j = 0  if y_j ≠ x
@@ -279,8 +279,8 @@ b_j = 0  if y_j ≠ x
 ### 4.4: Positions
 
 **Definition 4.0.12**: A **position** is an expression i#e where:
-- `$0 \le i \le \lvert W\rvert$` (index into input word W)
-- `$0 \le e \le n$` (error count)
+- $`0 \le i \le \lvert W\rvert`$ (index into input word W)
+- $`0 \le e \le n`$ (error count)
 
 **Intuition**: Position i#e represents "having matched i characters of W with e errors accumulated".
 
@@ -292,7 +292,7 @@ b_j = 0  if y_j ≠ x
 
 ### 4.5: Language of a Position
 
-**Proposition 4.0.31**: For position `$\pi$` = i#e:
+**Proposition 4.0.31**: For position $`\pi`$ = i#e:
 ```
 L({i#e}) = L_Lev(n-e, W[i+1:|W|])
 ```
@@ -304,27 +304,27 @@ L({i#e}) = L_Lev(n-e, W[i+1:|W|])
 
 ### 4.6: Subsumption
 
-**Definition 4.0.15**: Position i#e **subsumes** position j#f (written i#e `$\sqsubseteq$` j#f) if:
-1. `$e < f$` (strictly fewer errors), AND
-2. `$\lvert j-i\rvert \le f-e$` (j is reachable from i within error budget)
+**Definition 4.0.15**: Position i#e **subsumes** position j#f (written i#e $`\sqsubseteq`$ j#f) if:
+1. $`e < f`$ (strictly fewer errors), AND
+2. $`\lvert j-i\rvert \le f-e`$ (j is reachable from i within error budget)
 
-**Lemma 4.0.17**: If i#e `$\sqsubseteq$` j#f, then L({j#f}) `$\subseteq$` L({i#e}).
+**Lemma 4.0.17**: If i#e $`\sqsubseteq`$ j#f, then L({j#f}) $`\subseteq`$ L({i#e}).
 
-**Significance**: If `$\pi$` subsumes `$\pi'$`, then `$\pi'$` is redundant (any word accepted from `$\pi'$` is also accepted from `$\pi$`).
+**Significance**: If $`\pi`$ subsumes $`\pi'`$, then $`\pi'`$ is redundant (any word accepted from $`\pi'`$ is also accepted from $`\pi`$).
 
 **Example**: For n = 2:
-- 3#0 `$\sqsubseteq$` 4#1? Check: `$0 < 1$` ✓ and `$\lvert 4-3\rvert = 1 \le 1-0 = 1$` ✓ → YES
-- 3#1 `$\sqsubseteq$` 3#2? Check: `$1 < 2$` ✓ and `$\lvert 3-3\rvert = 0 \le 2-1 = 1$` ✓ → YES
-- 3#1 `$\sqsubseteq$` 5#2? Check: `$1 < 2$` ✓ and `$\lvert 5-3\rvert = 2 \le 2-1 = 1$` ✗ → NO
+- 3#0 $`\sqsubseteq`$ 4#1? Check: $`0 < 1`$ ✓ and $`\lvert 4-3\rvert = 1 \le 1-0 = 1`$ ✓ → YES
+- 3#1 $`\sqsubseteq`$ 3#2? Check: $`1 < 2`$ ✓ and $`\lvert 3-3\rvert = 0 \le 2-1 = 1`$ ✓ → YES
+- 3#1 $`\sqsubseteq`$ 5#2? Check: $`1 < 2`$ ✓ and $`\lvert 5-3\rvert = 2 \le 2-1 = 1`$ ✗ → NO
 
 ### 4.7: Relevant Subword
 
-**Definition 4.0.16**: For position `$\pi$` = i#e, the **relevant subword** `$W[\pi]$` is:
+**Definition 4.0.16**: For position $`\pi`$ = i#e, the **relevant subword** $`W[\pi]`$ is:
 ```
 W[π] = W[i+1:i+k]  where k = min(n-e+1, |W|-i)
 ```
 
-**Purpose**: Only this subword affects transition behavior from `$\pi$` (characters beyond k cannot be reached with remaining error budget).
+**Purpose**: Only this subword affects transition behavior from $`\pi`$ (characters beyond k cannot be reached with remaining error budget).
 
 ### 4.8: States
 
@@ -346,19 +346,19 @@ W[π] = W[i+1:i+k]  where k = min(n-e+1, |W|-i)
 
 ### 4.9: Elementary Transitions
 
-**Definition 4.0.24**: For position `$\pi$` = i#e and character x, the **elementary transition** `$\delta(\pi,x)$` is the set of positions reachable from `$\pi$` by reading x.
+**Definition 4.0.24**: For position $`\pi`$ = i#e and character x, the **elementary transition** $`\delta(\pi,x)`$ is the set of positions reachable from $`\pi`$ by reading x.
 
 **Table 4.1: Elementary Transition Rules**
 
-Let `$\pi$` = i#e and `$\chi(x, W[\pi]) = \langle b_1, \ldots, b_k\rangle$` where `$k = \min(n-e+1, \lvert W\rvert-i)$`.
+Let $`\pi`$ = i#e and $`\chi(x, W[\pi]) = \langle b_1, \ldots, b_k\rangle`$ where $`k = \min(n-e+1, \lvert W\rvert-i)`$.
 
-**Case 1**: `$b_1 = 1$` (first character of `$W[\pi]$` matches x)
+**Case 1**: $`b_1 = 1`$ (first character of $`W[\pi]`$ matches x)
 ```
 δ(π,x) = {(i+1)#e}
 ```
 → Match without error
 
-**Case 2**: `$b_1 = 0$`, but `$b_j = 1$` for some `$j > 1$` (match later in `$W[\pi]$`)
+**Case 2**: $`b_1 = 0`$, but $`b_j = 1`$ for some $`j > 1`$ (match later in $`W[\pi]`$)
 ```
 δ(π,x) = {i#(e+1), (i+1)#(e+1), (i+j)#(e+j-1)}
 ```
@@ -367,7 +367,7 @@ Let `$\pi$` = i#e and `$\chi(x, W[\pi]) = \langle b_1, \ldots, b_k\rangle$` wher
   - (i+1)#(e+1): Delete W[i+1] (advance in W, not in input)
   - (i+j)#(e+j-1): Substitute W[i+1:i+j-1] for x, match W[i+j]
 
-**Case 3**: All `$b_j = 0$` (no match in `$W[\pi]$`)
+**Case 3**: All $`b_j = 0`$ (no match in $`W[\pi]`$)
 ```
 δ(π,x) = {i#(e+1), (i+1)#(e+1)}
 ```
@@ -375,22 +375,22 @@ Let `$\pi$` = i#e and `$\chi(x, W[\pi]) = \langle b_1, \ldots, b_k\rangle$` wher
   - i#(e+1): Insert x
   - (i+1)#(e+1): Substitute W[i+1] for x (or delete W[i+1] + insert x)
 
-**Example**: W = "hello", `$\pi$` = 2#0 (base at index 2), n = 2
+**Example**: W = "hello", $`\pi`$ = 2#0 (base at index 2), n = 2
 
-`$W[\pi]$` = "llo" (relevant subword: up to 3 characters since `$n-e+1 = 3$`)
+$`W[\pi]`$ = "llo" (relevant subword: up to 3 characters since $`n-e+1 = 3`$)
 
-- `$\delta$`(2#0, 'l'): `$\chi(\text{'l'}, \text{"llo"}) = \langle 1,1,0\rangle$` → Case 1 → {3#0}
-- `$\delta$`(2#0, 'o'): `$\chi(\text{'o'}, \text{"llo"}) = \langle 0,0,1\rangle$` → Case 2 (j=3) → {2#1, 3#1, 5#2}
-- `$\delta$`(2#0, 'x'): `$\chi(\text{'x'}, \text{"llo"}) = \langle 0,0,0\rangle$` → Case 3 → {2#1, 3#1}
+- $`\delta`$(2#0, 'l'): $`\chi(\text{'l'}, \text{"llo"}) = \langle 1,1,0\rangle`$ → Case 1 → {3#0}
+- $`\delta`$(2#0, 'o'): $`\chi(\text{'o'}, \text{"llo"}) = \langle 0,0,1\rangle`$ → Case 2 (j=3) → {2#1, 3#1, 5#2}
+- $`\delta`$(2#0, 'x'): $`\chi(\text{'x'}, \text{"llo"}) = \langle 0,0,0\rangle`$ → Case 3 → {2#1, 3#1}
 
 ### 4.10: State Transitions
 
-**Definition 4.0.28**: For state M and character x, the **state transition** `$\Delta(M,x)$` is:
+**Definition 4.0.28**: For state M and character x, the **state transition** $`\Delta(M,x)`$ is:
 ```
 Δ(M,x) = ⊔_{π∈M} δ(π,x)
 ```
 
-where `$\sqcup$` is the **join operation**: union of sets, then remove subsumed positions.
+where $`\sqcup`$ is the **join operation**: union of sets, then remove subsumed positions.
 
 **Example**: M = {2#0, 3#1}, x = 'l', W = "hello", n = 2
 
@@ -403,17 +403,17 @@ where `$\sqcup$` is the **join operation**: union of sets, then remove subsumed 
 
 ### 4.11: Raised Positions and States
 
-**Definition 4.0.26**: For position i#e and integer `$k \ge 0$`:
+**Definition 4.0.26**: For position i#e and integer $`k \ge 0`$:
 ```
 [i#e]↑k = (i+k)#(e+k)
 ```
 
-For state M = {i#0, `$\pi_1, \ldots, \pi_m$`}:
+For state M = {i#0, $`\pi_1, \ldots, \pi_m`$}:
 ```
 [M]↑k = {(i+k)#0, [π₁]↑k,...,[π_m]↑k}
 ```
 
-**Raising Lemma 4.0.27**: For `$n > 0$` and `$1 \le e \le n$`:
+**Raising Lemma 4.0.27**: For $`n > 0`$ and $`1 \le e \le n`$:
 ```
 δ^(n)([π]↑e, x) = [δ^(n-e)(π, x)]↑e
 ```
@@ -422,23 +422,23 @@ For state M = {i#0, `$\pi_1, \ldots, \pi_m$`}:
 
 ### 4.12: LEV_n(W) Definition
 
-**Definition 4.0.28**: The **Levenshtein automaton of degree n for W** is `$\mathrm{LEV}_n(W) = (Q, \Sigma, \Delta, q_0, F)$` where:
+**Definition 4.0.28**: The **Levenshtein automaton of degree n for W** is $`\mathrm{LEV}_n(W) = (Q, \Sigma, \Delta, q_0, F)`$ where:
 
-- **`$Q$`**: Set of all valid states
-- **`$\Sigma$`**: Alphabet
-- **`$\Delta$`**: State transition function (as defined above)
-- **`$q_0$`** = {0#0}: Initial state
-- **`$F$`**: Set of all states M such that M `$\cap$` {i#e | `$i = \lvert W\rvert$`, `$0 \le e \le n$`} `$\ne \emptyset$`
-  - I.e., states containing at least one position i#e where `$i = \lvert W\rvert$`
+- **$`Q`$**: Set of all valid states
+- **$`\Sigma`$**: Alphabet
+- **$`\Delta`$**: State transition function (as defined above)
+- **$`q_0`$** = {0#0}: Initial state
+- **$`F`$**: Set of all states M such that M $`\cap`$ {i#e | $`i = \lvert W\rvert`$, $`0 \le e \le n`$} $`\ne \emptyset`$
+  - I.e., states containing at least one position i#e where $`i = \lvert W\rvert`$
 
 **Theorem 4.0.32 (Main Theorem)**: 
 1. LEV_n(W) is a deterministic and acyclic Levenshtein automaton of degree n for W
 2. For fixed degree n, the size of LEV_n(W) is linear in |W|
 
 **Proof Sketch**:
-- Deterministic: State transition `$\Delta$` is a function (not a relation)
+- Deterministic: State transition $`\Delta`$ is a function (not a relation)
 - Acyclic: States are characterized by base position i which only increases
-- Linear size: Number of distinct states bounded by `$\mathcal{O}(\lvert W\rvert)$` for fixed n
+- Linear size: Number of distinct states bounded by $`\mathcal{O}(\lvert W\rvert)`$ for fixed n
 - Language: Accepts L_Lev(n,W) by construction (follows from elementary transitions)
 
 ---
@@ -447,13 +447,13 @@ For state M = {i#0, `$\pi_1, \ldots, \pi_m$`}:
 
 **Pages**: 27-32
 
-This chapter shows how to **construct LEV_n(W) in `$\mathcal{O}(\lvert W\rvert)$` time** using parametric tables.
+This chapter shows how to **construct LEV_n(W) in $`\mathcal{O}(\lvert W\rvert)`$ time** using parametric tables.
 
 ### 5.1: Construction for Degree n=1
 
 **Key Insight**: For fixed n, the structure of states depends only on:
 - Base position index i
-- Characteristic vectors `$\chi(x, W[i])$`
+- Characteristic vectors $`\chi(x, W[i])`$
 
 **Parametric States for n=1** (Table 5.1):
 
@@ -473,8 +473,8 @@ For each state type and each possible characteristic vector, table specifies nex
 
 **Example transitions** from A_i:
 
-- `$\chi(x, W[i+1:i+2]) = \langle 1\rangle \to A_{i+1}$` (match)
-- `$\chi(x, W[i+1:i+2]) = \langle 0\rangle \to E_{i+1}$` (mismatch, use 1 error)
+- $`\chi(x, W[i+1:i+2]) = \langle 1\rangle \to A_{i+1}`$ (match)
+- $`\chi(x, W[i+1:i+2]) = \langle 0\rangle \to E_{i+1}`$ (mismatch, use 1 error)
 
 **Construction Algorithm**:
 
@@ -495,24 +495,24 @@ Output: LEV_1(W)
    and transitions from step 3
 ```
 
-**Complexity**: `$\mathcal{O}(\lvert W\rvert \times \lvert \Sigma\rvert)$` preprocessing + `$\mathcal{O}(\lvert W\rvert)$` automaton construction
+**Complexity**: $`\mathcal{O}(\lvert W\rvert \times \lvert \Sigma\rvert)`$ preprocessing + $`\mathcal{O}(\lvert W\rvert)`$ automaton construction
 
 ### 5.2: Extension to Higher Degrees
 
-**Theorem 5.2.1**: For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time and space `$\mathcal{O}(\lvert W\rvert)$`.
+**Theorem 5.2.1**: For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 **Approach**:
 1. Use raising lemma to build table T_n from T_{n-1}
 2. Number of state types grows with n, but remains constant for fixed n
-3. Table T_n has size `$\mathcal{O}(1)$` for fixed n
+3. Table T_n has size $`\mathcal{O}(1)`$ for fixed n
 
-**Corollary 5.2.2**: For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space `$\mathcal{O}(\lvert W\rvert)$`.
+**Corollary 5.2.2**: For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 **Practical Impact**: 
 - For n=1: ~5 state types
 - For n=2: ~20 state types
 - For n=3: ~80 state types
-- Pattern: `$\mathcal{O}(4^n)$` state types, but constant for fixed n
+- Pattern: $`\mathcal{O}(4^n)`$ state types, but constant for fixed n
 
 ---
 
@@ -520,7 +520,7 @@ Output: LEV_1(W)
 
 **Pages**: 33-34
 
-**Motivation**: Even with `$\mathcal{O}(\lvert W\rvert)$` construction, explicitly building LEV_n(W) has overhead. Can we avoid it?
+**Motivation**: Even with $`\mathcal{O}(\lvert W\rvert)`$ construction, explicitly building LEV_n(W) has overhead. Can we avoid it?
 
 ### Imitation Method
 
@@ -555,7 +555,7 @@ While stack not empty:
 **Advantages**:
 1. **No upfront construction**: States generated on-demand
 2. **Space efficient**: Only active states in memory
-3. **Same time complexity**: Still `$\mathcal{O}(\lvert W\rvert)$` + `$\mathcal{O}(\lvert D\rvert)$`
+3. **Same time complexity**: Still $`\mathcal{O}(\lvert W\rvert)`$ + $`\mathcal{O}(\lvert D\rvert)`$
 
 **Characteristic Vector Computation**:
 
@@ -581,9 +581,9 @@ Damerau-Levenshtein distance includes transposition as a primitive operation.
 ### 7.1: t-Positions and t-States
 
 **Definition 7.1.1**: A **t-position** has the form i#e_t where:
-- `$i$`: index
-- `$e$`: error count
-- `$t \in \{0,1\}$`: transposition flag
+- $`i`$: index
+- $`e`$: error count
+- $`t \in \{0,1\}`$: transposition flag
 
 **Meaning**:
 - i#e_0: Regular position (no transposition in progress)
@@ -610,7 +610,7 @@ Additional condition: regular position can subsume special position, but not vic
 **New cases** beyond Table 4.1:
 
 **From regular position i#e_0**:
-- If `$W[i+1] \ne x$` but `$W[i+2] = x$` and `$e < n$`:
+- If $`W[i+1] \ne x`$ but $`W[i+2] = x`$ and $`e < n`$:
   - Add position (i)#(e+1)_1 to handle potential transposition
 
 **From special position i#e_1**:
@@ -619,7 +619,7 @@ Additional condition: regular position can subsume special position, but not vic
 
 **Example**: W = "hello", position 1#0_0 (expecting "e"), input 'l':
 
-Regular transition: `$\chi(\text{'l'}, \text{"el"}) = \langle 0,1\rangle$` → {1#1, 2#1, 3#1}
+Regular transition: $`\chi(\text{'l'}, \text{"el"}) = \langle 0,1\rangle`$ → {1#1, 2#1, 3#1}
 Transposition: W[2] = 'e', W[3] = 'l' → Also add {1#1_1}
 
 ### 7.4: Construction Algorithm
@@ -634,7 +634,7 @@ Similar to Table 5.1, but with t-positions:
 
 **Tables 7.2 and 7.3** (pages 40-41): Transition tables for transposition variant
 
-**Theorem 7.2.4**: For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space `$\mathcal{O}(\lvert W\rvert)$`.
+**Theorem 7.2.4**: For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 **State Count**: Approximately double the standard variant (due to transposition flag).
 
@@ -653,9 +653,9 @@ Also relevant for handwriting recognition and biological sequences.
 ### 8.1: s-Positions and s-States
 
 **Definition 8.1.1**: An **s-position** has the form i#e_s where:
-- `$i$`: index
-- `$e$`: error count
-- `$s \in \{0,1\}$`: merge/split flag
+- $`i`$: index
+- $`e`$: error count
+- $`s \in \{0,1\}`$: merge/split flag
 
 **Meaning**:
 - i#e_0: Regular position
@@ -707,7 +707,7 @@ Also relevant for handwriting recognition and biological sequences.
 **Observations**:
 - Linear growth with word length (as predicted)
 - German lexicon slower (larger, more candidates)
-- Sub-second queries for `$n \le 2$` on 6M word dictionary!
+- Sub-second queries for $`n \le 2`$ on 6M word dictionary!
 
 **Tables 8.6-8.9**: Results with transpositions and merge/split
 
@@ -725,7 +725,7 @@ Also relevant for handwriting recognition and biological sequences.
 
 ### Summary of Contributions
 
-1. **Deterministic Levenshtein Automata**: Construction in `$\mathcal{O}(\lvert W\rvert)$` time for fixed error bound n
+1. **Deterministic Levenshtein Automata**: Construction in $`\mathcal{O}(\lvert W\rvert)`$ time for fixed error bound n
 
 2. **Parametric Tables**: Precomputed tables T_n enable efficient construction
 
@@ -737,11 +737,11 @@ Also relevant for handwriting recognition and biological sequences.
 
 ### Side Results
 
-**Lemma 9.0.2**: For any fixed n, given two words W and V of length w and v, it is decidable in time `$\mathcal{O}(\max(w,v))$` if the Levenshtein-distance between W and V is `$\le n$`.
+**Lemma 9.0.2**: For any fixed n, given two words W and V of length w and v, it is decidable in time $`\mathcal{O}(\max(w,v))`$ if the Levenshtein-distance between W and V is $`\le n`$.
 
-**Proof Idea**: Construct LEV_n(W) in `$\mathcal{O}(w)$` time, check if V is accepted in `$\mathcal{O}(v)$` time.
+**Proof Idea**: Construct LEV_n(W) in $`\mathcal{O}(w)`$ time, check if V is accepted in $`\mathcal{O}(v)`$ time.
 
-**Lemma 9.0.3**: For a fixed alphabet `$\Sigma$` and fixed n, there exists a finite number of minimal Levenshtein-automata of degree n.
+**Lemma 9.0.3**: For a fixed alphabet $`\Sigma`$ and fixed n, there exists a finite number of minimal Levenshtein-automata of degree n.
 
 ### Related Work
 
@@ -761,7 +761,7 @@ Also relevant for handwriting recognition and biological sequences.
 3. **Restricted Substitution Sets**: Only certain character pairs allowed (→ Universal LA paper!)
 4. **Approximate Matching with Wildcards**: Combine with regular expressions
 5. **Phonetic Distance**: Integrate phonetic similarity
-6. **Optimization**: Further reduce constants in `$\mathcal{O}(\lvert W\rvert)$` complexity
+6. **Optimization**: Further reduce constants in $`\mathcal{O}(\lvert W\rvert)`$ complexity
 
 **Note**: Several of these directions have been pursued in subsequent work, including the Universal Levenshtein Automata paper (documented in `/docs/research/universal-levenshtein/`).
 
@@ -773,28 +773,28 @@ Also relevant for handwriting recognition and biological sequences.
 LEV_n(W) is a deterministic and acyclic Levenshtein automaton of degree n for W. For fixed degree n, the size of LEV_n(W) is linear in |W|.
 
 ### Theorem 5.2.1 (Construction Complexity)
-For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time and space `$\mathcal{O}(\lvert W\rvert)$`.
+For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 ### Corollary 5.2.2 (Minimality)
-For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space `$\mathcal{O}(\lvert W\rvert)$`.
+For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 ### Theorem 7.2.4 (Transposition Variant)
-For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space `$\mathcal{O}(\lvert W\rvert)$`.
+For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 ### Lemma 2.0.2 (Suffix Independence)
 If W = UW' and V = UV', then d_L(V,W) = d_L(V',W').
 
 ### Lemma 4.0.17 (Subsumption Soundness)
-If i#e `$\sqsubseteq$` j#f, then L({j#f}) `$\subseteq$` L({i#e}).
+If i#e $`\sqsubseteq`$ j#f, then L({j#f}) $`\subseteq`$ L({i#e}).
 
 ### Lemma 4.0.27 (Raising Lemma)
-For `$n > 0$` and `$1 \le e \le n$`: `$\delta^{(n)}([\pi]{\uparrow}e, x) = [\delta^{(n-e)}(\pi, x)]{\uparrow}e$`
+For $`n > 0`$ and $`1 \le e \le n`$: $`\delta^{(n)}([\pi]{\uparrow}e, x) = [\delta^{(n-e)}(\pi, x)]{\uparrow}e`$
 
 ### Proposition 4.0.31 (Position Language)
 L({i#e}) = L_Lev(n-e, W[i+1:|W|])
 
 ### Lemma 9.0.2 (Distance Decision)
-For any fixed n, given two words W and V of length w and v, it is decidable in time `$\mathcal{O}(\max(w,v))$` if the Levenshtein-distance between W and V is `$\le n$`.
+For any fixed n, given two words W and V of length w and v, it is decidable in time $`\mathcal{O}(\max(w,v))`$ if the Levenshtein-distance between W and V is $`\le n`$.
 
 ---
 
@@ -820,13 +820,13 @@ For any fixed n, given two words W and V of length w and v, it is decidable in t
 - Uses table-driven approach
 
 **Characteristic Vectors** → `/src/transducer/position.rs`
-- Computation functions for `$\chi(x, W[i:j])$`
+- Computation functions for $`\chi(x, W[i:j])`$
 
 ### Algorithmic Guarantees
 
 The implementation inherits theoretical guarantees from the paper:
 - ✅ **Correctness**: Accepts exactly L_Lev(n,W)
-- ✅ **Efficiency**: `$\mathcal{O}(\lvert W\rvert)$` construction + `$\mathcal{O}(\lvert D\rvert)$` query
+- ✅ **Efficiency**: $`\mathcal{O}(\lvert W\rvert)`$ construction + $`\mathcal{O}(\lvert D\rvert)`$ query
 - ✅ **Optimality**: Minimal automaton for fixed n
 - ✅ **Practical**: Demonstrated on millions of entries
 

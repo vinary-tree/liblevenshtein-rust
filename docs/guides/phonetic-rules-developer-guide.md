@@ -45,7 +45,7 @@ Output (matches with original forms)
 - Formally verified for termination and bounded expansion
 - Both ASCII (byte-level) and Unicode (character-level) support
 
-> **Terminology.** A **phoneme** is a contrastive unit of sound. A **distinctive (articulatory) feature** is one dimension of a sound — its *place of articulation* (where the vocal tract is constricted), its *manner of articulation* (how airflow is shaped, e.g. *stop*, *fricative*, *nasal*), or its *voicing* (whether the vocal folds vibrate). The **International Phonetic Alphabet (IPA)** assigns one symbol per sound; symbols such as ʃ ("sh"), &#952; ("th" in *thin*), ŋ ("ng"), ɲ (palatal nasal), and ʎ (palatal lateral) appear in the rules below. The empty string is written `$\varepsilon$`. See [`../../docs/GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
+> **Terminology.** A **phoneme** is a contrastive unit of sound. A **distinctive (articulatory) feature** is one dimension of a sound — its *place of articulation* (where the vocal tract is constricted), its *manner of articulation* (how airflow is shaped, e.g. *stop*, *fricative*, *nasal*), or its *voicing* (whether the vocal folds vibrate). The **International Phonetic Alphabet (IPA)** assigns one symbol per sound; symbols such as ʃ ("sh"), &#952; ("th" in *thin*), ŋ ("ng"), ɲ (palatal nasal), and ʎ (palatal lateral) appear in the rules below. The empty string is written $`\varepsilon`$. See [`../../docs/GLOSSARY.md`](../GLOSSARY.md) for fuller definitions.
 
 The LLev → NFA compilation pipeline these rules drive is shown below:
 
@@ -375,14 +375,14 @@ Feature bundles allow you to specify the **intersection** of multiple phonetic f
 
 | Syntax | Meaning | Result |
 |--------|---------|--------|
-| `[:a b:]` | `$a \cap b$` | Characters with BOTH features |
-| `[:!a:]` | `$\lnot a$` | Characters WITHOUT feature a |
-| `[:!a b:]` | `$(\lnot a) \cap b$` | Characters with b but NOT a |
-| `[[:a:][:b:]]` | `$a \cup b$` | Characters with EITHER feature (union) |
+| `[:a b:]` | $`a \cap b`$ | Characters with BOTH features |
+| `[:!a:]` | $`\lnot a`$ | Characters WITHOUT feature a |
+| `[:!a b:]` | $`(\lnot a) \cap b`$ | Characters with b but NOT a |
+| `[[:a:][:b:]]` | $`a \cup b`$ | Characters with EITHER feature (union) |
 
 **Why Feature Bundles Matter:**
 
-The nested bracket syntax `[[^[:nasal:]][:stop:]]` creates a **union**: `$(\lnot \text{nasal}) \cup \text{stop}$` = almost everything. Feature bundles with space separation create an **intersection**: `[:!nasal stop:]` = `$(\lnot \text{nasal}) \cap \text{stop}$` = only oral stops.
+The nested bracket syntax `[[^[:nasal:]][:stop:]]` creates a **union**: $`(\lnot \text{nasal}) \cup \text{stop}`$ = almost everything. Feature bundles with space separation create an **intersection**: `[:!nasal stop:]` = $`(\lnot \text{nasal}) \cap \text{stop}`$ = only oral stops.
 
 **Practical Examples:**
 
@@ -418,13 +418,13 @@ Negation follows De Morgan's laws for properly nested classes:
 | Pattern | Equivalent | Description |
 |---------|------------|-------------|
 | `[^[:vowel:]]` | all non-vowels | Simple negation |
-| `[^[:vowel:][:voiced:]]` | `$\lnot(\text{vowel} \cup \text{voiced})$` | Negate the union |
+| `[^[:vowel:][:voiced:]]` | $`\lnot(\text{vowel} \cup \text{voiced})`$ | Negate the union |
 | `[^[^[:vowel:]]]` | `[:vowel:]` | Double negation cancels out |
-| `[:!nasal stop:]` | `$(\lnot \text{nasal}) \cap \text{stop}$` | Inner negation with intersection |
+| `[:!nasal stop:]` | $`(\lnot \text{nasal}) \cap \text{stop}`$ | Inner negation with intersection |
 
 **De Morgan's Laws:**
-- `$\lnot(A \cup B) = \lnot A \cap \lnot B$`
-- `$\lnot(A \cap B) = \lnot A \cup \lnot B$`
+- $`\lnot(A \cup B) = \lnot A \cap \lnot B`$
+- $`\lnot(A \cap B) = \lnot A \cup \lnot B`$
 
 For feature bundles, `!` inside the bundle negates individual features before intersection:
 - `[:!nasal stop:]` = (NOT nasal) AND (stop) = oral stops only
@@ -523,7 +523,7 @@ let result = ruleset.apply_with_fuel("enough", 100);
 
 **Verified Properties:**
 1. **Termination** - Always reaches a fixed point
-2. **Bounded Expansion** - Output `$\le$` input + 20 characters
+2. **Bounded Expansion** - Output $`\le`$ input + 20 characters
 3. **Idempotence** - Reapplication produces same result
 
 ### Loading from Files
@@ -1224,7 +1224,7 @@ assert!(pattern.accepts("aaaa"));
 | `single_char(c)` | Single character | `c` |
 | `literal(s)` | Literal string | `abc` |
 | `char_class(cc)` | Character class | `[abc]` |
-| `epsilon()` | Empty match | `$\varepsilon$` |
+| `epsilon()` | Empty match | $`\varepsilon`$ |
 | `concatenate(a, b)` | Sequence | `ab` |
 | `alternation(a, b)` | Choice | `a\|b` |
 | `kleene_star(a)` | Zero or more | `a*` |

@@ -29,7 +29,7 @@ The taxonomy below groups the available backends by their core data structure an
 
 **Characteristics:**
 - **Construction**: Medium (conflict resolution)
-- **Query**: Excellent (`$\mathcal{O}(1)$` transitions, excellent cache locality)
+- **Query**: Excellent ($`\mathcal{O}(1)`$ transitions, excellent cache locality)
 - **Memory**: Minimal
 - **Updates**: No (immutable after construction)
 - **Unicode**: Use `DoubleArrayTrieChar` variant
@@ -260,13 +260,13 @@ for term in transducer.query("test", 1) {
 
 **Characteristics:**
 - **Construction**: Medium (builds suffix automaton per term)
-- **Query**: Excellent for substring (`$\mathcal{O}(\lvert pattern\rvert)$`)
+- **Query**: Excellent for substring ($`\mathcal{O}(\lvert pattern\rvert)`$)
 - **Memory**: Moderate
 - **Updates**: No (immutable after construction)
 - **Special**: True suffix automaton indexing ALL substrings with bidirectional edges; backs the **WallBreaker** large-`k` query splitter
 
 **When to use:**
-- Need `$\mathcal{O}(\lvert pattern\rvert)$` substring search
+- Need $`\mathcal{O}(\lvert pattern\rvert)`$ substring search
 - Bidirectional pattern traversal (left/right extensions)
 - Text indexing with substring frequency queries
 - WallBreaker pattern splitting algorithm
@@ -411,7 +411,7 @@ The flowchart below distills the prose decision criteria into a single path from
 - ✅ Text indexing applications
 
 ### Choose Scdawg when:
-- ✅ Need `$\mathcal{O}(\lvert pattern\rvert)$` substring search
+- ✅ Need $`\mathcal{O}(\lvert pattern\rvert)`$ substring search
 - ✅ Bidirectional pattern traversal required
 - ✅ Pattern splitting (WallBreaker algorithm)
 - ✅ Substring frequency queries

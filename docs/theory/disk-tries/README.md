@@ -14,7 +14,7 @@
 When a dictionary exceeds available RAM, liblevenshtein reaches for a **disk-persisted** backend.
 The **PersistentARTrie** (`libdictenstein`) is a hybrid of the **Adaptive Radix Tree** (ART) of
 Leis et al. [[2]](#references) — whose adaptive `Node4/16/48/256` layout keeps exact lookup at
-`$\mathcal{O}(m)$` for a term of length `$m$` — with **B-trie**-style bucket storage on disk
+$`\mathcal{O}(m)`$ for a term of length $`m`$ — with **B-trie**-style bucket storage on disk
 (Askitis & Zobel [[1]](#references)), memory-mapped and reached through a **lock-free CAS overlay**.
 "Persistent" here means *non-volatile* (durable on SSD/HDD), **not** immutable: the
 `Persistent*` family is fully **dynamic**, supporting atomic concurrent insert/remove.
@@ -25,20 +25,20 @@ liblevenshtein's transducer walks *any* `Dictionary` in lock-step with a simulat
 automaton. When the backend is a `PersistentARTrie` (or the disk-persisted `PersistentScdawg`,
 `PersistentSuffixAutomaton`, `PersistentSuffixTree`, `PersistentVocabARTrie`), that lock-step walk
 runs directly over the **memory-mapped, lock-free** structure — so a dictionary far larger than RAM
-is fuzzy-searched with the same `$\mathcal{O}(\lvert W\rvert)$` per-query setup and `$\mathcal{O}(k)$`
+is fuzzy-searched with the same $`\mathcal{O}(\lvert W\rvert)`$ per-query setup and $`\mathcal{O}(k)`$
 per-transition cost as an in-memory backend, the difference being page-cache-bounded disk I/O rather
 than resident memory. The ART node handles are the disk analogue of the in-memory `TrieRef` snapshot
-that makes traversal `$\mathcal{O}(1)$` per byte from the focus (see
+that makes traversal $`\mathcal{O}(1)`$ per byte from the focus (see
 [`docs/design/pathmap-trieref-rework.md`](../../design/pathmap-trieref-rework.md)).
 
 | Operation (PersistentARTrie) | Time | Disk I/Os (typical) |
 |---|---|---|
-| Exact lookup | `$\mathcal{O}(m)$` | 2–4 |
-| Insert | `$\mathcal{O}(m + \log B)$` amortized | 2–4 + 1 write |
-| Prefix search | `$\mathcal{O}(m + r)$` | depends on `$r$` |
-| Levenshtein (`$k = 1, 2$`) | `$\mathcal{O}(n \cdot m \cdot k^{2})$` before pruning | varies with pruning |
+| Exact lookup | $`\mathcal{O}(m)`$ | 2–4 |
+| Insert | $`\mathcal{O}(m + \log B)`$ amortized | 2–4 + 1 write |
+| Prefix search | $`\mathcal{O}(m + r)`$ | depends on $`r`$ |
+| Levenshtein ($`k = 1, 2`$) | $`\mathcal{O}(n \cdot m \cdot k^{2})`$ before pruning | varies with pruning |
 
-where `$m$` = term length, `$B$` = bucket size (~100–500), `$r$` = result count, `$n$` = dictionary size.
+where $`m`$ = term length, $`B`$ = bucket size (~100–500), $`r`$ = result count, $`n`$ = dictionary size.
 
 ## Further reading
 

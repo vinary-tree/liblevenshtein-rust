@@ -16,13 +16,13 @@ The automaton-based approach has a precise cost model — the whole reason it sc
 
 | Operation | Complexity |
 |---|---|
-| Per-query setup | `$\mathcal{O}(\lvert W\rvert)$` — linear in query length |
-| Per-symbol transition | `$\mathcal{O}(k)$` — constant for fixed `$k$` |
-| Traversal | `$\mathcal{O}(\lvert D\rvert)$` worst case — pruned to the near-match frontier in practice |
-| Live state space | `$\mathcal{O}(\lvert W\rvert)$` for fixed `$k$` |
+| Per-query setup | $`\mathcal{O}(\lvert W\rvert)`$ — linear in query length |
+| Per-symbol transition | $`\mathcal{O}(k)`$ — constant for fixed $`k`$ |
+| Traversal | $`\mathcal{O}(\lvert D\rvert)`$ worst case — pruned to the near-match frontier in practice |
+| Live state space | $`\mathcal{O}(\lvert W\rvert)`$ for fixed $`k`$ |
 
-> Terms recalled. `$\lvert W\rvert$` = query length, `$k$` = error bound, `$\lvert D\rvert$` = number of dictionary
-> edges. Because each automaton step is `$\mathcal{O}(k)$` and dead branches are pruned immediately,
+> Terms recalled. $`\lvert W\rvert`$ = query length, $`k`$ = error bound, $`\lvert D\rvert`$ = number of dictionary
+> edges. Because each automaton step is $`\mathcal{O}(k)`$ and dead branches are pruned immediately,
 > total work tracks the *explored near-match frontier* — not the dictionary size.
 
 ### Backend choice dominates fuzzy throughput
@@ -39,7 +39,7 @@ Measured on a 10,000-word dictionary (AMD Ryzen Threadripper PRO 5975WX,
 
 For *static* dictionaries `DoubleArrayTrie` is the clear leader — here 38–175× faster
 fuzzy matching than the dynamic alternatives — because its two-array packing gives
-`$\mathcal{O}(1)$` transitions with cache-friendly, branch-light access. The dynamic backends trade
+$`\mathcal{O}(1)`$ transitions with cache-friendly, branch-light access. The dynamic backends trade
 some of that for runtime mutability; bloom-filter pre-filtering and runtime SIMD
 (AVX2/SSE4.1, auto-detected — no feature flag) narrow the gap.
 
@@ -89,7 +89,7 @@ println!("Built in {:?}, {} terms", start.elapsed(), real_dat.len().unwrap_or(0)
 
 ### 2 · Time exact membership
 
-`contains` is the exact-match (`$k = 0$`) fast path. The benchmark hammers it 100×
+`contains` is the exact-match ($`k = 0`$) fast path. The benchmark hammers it 100×
 over 10,000 words and reports microseconds *per call*:
 
 ```rust
@@ -154,8 +154,8 @@ methodology and ledgers live in [`docs/benchmarks/`](../../benchmarks/README.md)
 
 ## Key takeaways
 
-- Query cost is `$\mathcal{O}(\lvert W\rvert)$` setup + `$\mathcal{O}(k)$` per step, pruned to the near-match frontier — it
-  scales with **matches, not `$\lvert D\rvert$`**.
+- Query cost is $`\mathcal{O}(\lvert W\rvert)`$ setup + $`\mathcal{O}(k)`$ per step, pruned to the near-match frontier — it
+  scales with **matches, not $`\lvert D\rvert`$**.
 - For static dictionaries, **`DoubleArrayTrie`** is the fuzzy-match leader (38–175× over
   the dynamic backends in the cited run); dynamic backends add mutability and lean on
   bloom filters + runtime SIMD.

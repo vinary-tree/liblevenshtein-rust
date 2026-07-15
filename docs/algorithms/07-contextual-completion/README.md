@@ -247,10 +247,10 @@ Global Scope (context 0)
 When completing in context `C`:
 
 1. **Compute visible contexts**: `V = visible_contexts(C)` (ancestor chain)
-2. **Query finalized terms**: Get all dictionary terms where `$\text{term}.\text{contexts} \cap  V \ne  \emptyset$`
+2. **Query finalized terms**: Get all dictionary terms where $`\text{term}.\text{contexts} \cap  V \ne  \emptyset`$
 3. **Query draft terms**: Get all draft buffers for contexts in `V`
 4. **Merge results**: Union finalized + drafts, mark drafts with `is_draft = true`
-5. **Fuzzy match**: Filter by Levenshtein distance `$\le$` `max_distance`
+5. **Fuzzy match**: Filter by Levenshtein distance $`\le`$ `max_distance`
 6. **Sort**: By distance → term (lexicographic)
 
 **Example**:

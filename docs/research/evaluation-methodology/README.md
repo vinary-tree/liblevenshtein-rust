@@ -674,8 +674,8 @@ MergeAndSplit:   15.82 µs  (+25%)
 **Naive Algorithm**: Compute Levenshtein distance for every dictionary word
 
 **Complexity**:
-- Time: `$\mathcal{O}(\lvert D\rvert \times \lvert W\rvert \times \lvert V\rvert)$` where `$V$` = average word length
-- Space: `$\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)$` for DP matrix
+- Time: $`\mathcal{O}(\lvert D\rvert \times \lvert W\rvert \times \lvert V\rvert)`$ where $`V`$ = average word length
+- Space: $`\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)`$ for DP matrix
 
 **Comparison** (10,000 words, distance=2):
 
@@ -823,9 +823,9 @@ fn bench_scalability(c: &mut Criterion) {
 ```
 
 **Expected Behavior**:
-- Construction: Linear with size `$\mathcal{O}(\lvert D\rvert)$`
-- Query: Linear with edges `$\mathcal{O}(\lvert D\rvert)$`
-- Memory: Linear with size `$\mathcal{O}(\lvert D\rvert)$`
+- Construction: Linear with size $`\mathcal{O}(\lvert D\rvert)`$
+- Query: Linear with edges $`\mathcal{O}(\lvert D\rvert)`$
+- Memory: Linear with size $`\mathcal{O}(\lvert D\rvert)`$
 
 ---
 
@@ -1141,11 +1141,11 @@ perf report
 
 **Micro-Benchmarks** (10 files):
 - `state_operations_benchmarks.rs` - Position creation, subsumption
-- `transition_benchmarks.rs` - Elementary transition functions (`$\delta$`)
+- `transition_benchmarks.rs` - Elementary transition functions ($`\delta`$)
 - `subsumption_benchmarks.rs` - Subsumption relation checking
 - `distance_benchmarks.rs` - Levenshtein distance variants
 - `position_benchmarks.rs` - Position structure operations
-- `characteristic_vector_benchmarks.rs` - `$\chi(x,V)$` computation
+- `characteristic_vector_benchmarks.rs` - $`\chi(x,V)`$ computation
 - `unicode_benchmarks.rs` - UTF-8 vs char operations
 - `hash_benchmarks.rs` - Hash function performance
 - `pool_benchmarks.rs` - State pool allocation
@@ -1411,7 +1411,7 @@ fn bench_large_scale(c: &mut Criterion) {
 ```
 
 **Expected Impact**:
-- Validates `$\mathcal{O}(\lvert D\rvert)$` scaling
+- Validates $`\mathcal{O}(\lvert D\rvert)`$ scaling
 - Identifies memory bottlenecks
 - Confidence for large deployments
 
@@ -1569,7 +1569,7 @@ impl<D> BatchQuery for Transducer<D> {
 
 This evaluation framework provides:
 
-1. **Algorithmic Validation** - Verifies `$\mathcal{O}(\lvert W\rvert)$` and `$\mathcal{O}(\lvert D\rvert)$` complexity
+1. **Algorithmic Validation** - Verifies $`\mathcal{O}(\lvert W\rvert)`$ and $`\mathcal{O}(\lvert D\rvert)`$ complexity
 2. **Performance Measurement** - Latency, throughput, memory across 6 backends
 3. **Quality Assurance** - Completeness, precision, ranking metrics
 4. **Comparative Analysis** - vs Baselines, variants, backends

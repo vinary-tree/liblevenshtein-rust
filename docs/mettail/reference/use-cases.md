@@ -72,10 +72,10 @@ Collection Types:
 
 | Notation | Meaning |
 |----------|---------|
-| `$\Gamma  \vdash  P : T$` | In context `$\Gamma ,$` process P has type T |
-| `$[\text{Judgment}] \vdash  \text{Judgment}$` | Horizontal inference rule |
-| `$\vdash  J$` | Axiom (no premises) |
-| `$\Gamma , \Delta$` | Context concatenation |
+| $`\Gamma  \vdash  P : T`$ | In context $`\Gamma ,`$ process P has type T |
+| $`[\text{Judgment}] \vdash  \text{Judgment}`$ | Horizontal inference rule |
+| $`\vdash  J`$ | Axiom (no premises) |
+| $`\Gamma , \Delta`$ | Context concatenation |
 | `T \| U` | Parallel composition type |
 | `@T` | Quote of process type |
 | `*N` | Dereference of name type |
@@ -394,14 +394,14 @@ Guarantee that a process only communicates on channels within a trusted namespac
 
 ### RHO Calculus Type
 
-From the OSLF paper (`$\rho\pi$`-calculus example):
+From the OSLF paper ($`\rho\pi`$-calculus example):
 
 ```
 ; Type for processes that only input on namespace α
 sole.in(α) := νX. (in(α, N → X) | P) ∧ ¬[in(¬[α], N → P) | P]
 ```
 
-**Reading**: Can input on channels in type `$\alpha ,$` cannot input on `$\lnot \alpha ,$` and continues
+**Reading**: Can input on channels in type $`\alpha ,`$ cannot input on $`\lnot \alpha ,`$ and continues
 with this property.
 
 ### Spatial-Behavioral Formulation
@@ -990,8 +990,8 @@ Each use case maps directly to OSLF constructs:
 |------|-------|-------------|
 | Ground types | Bool, String, Int | Literal values |
 | Collections | List, Tuple, Set, Map | Compound data |
-| For-comprehension | `$\langle(TT \leftarrow V)\rangle T$` | Input/receive |
-| Reflection  | `$\langle$`?`$V\rangleT$` |  Queries |
+| For-comprehension | $`\langle(TT \leftarrow V)\rangle T`$ | Input/receive |
+| Reflection  | $`\langle`$?$`V\rangleT`$ |  Queries |
 | Parallel | T \| U | Concurrency |
 | Quote/Deref | @T, *N | Reflection |
 | Lifted redex | Comm, Eval, Par | Behavioral |

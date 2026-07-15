@@ -6,7 +6,7 @@ The Distance Calculation layer provides direct computation of edit distances bet
 
 This layer implements multiple algorithmic approaches and distance variants, each optimized for different use cases.
 
-Throughout this layer, `$m$` and `$n$` denote the lengths (in characters) of the two strings being compared.
+Throughout this layer, $`m`$ and $`n`$ denote the lengths (in characters) of the two strings being compared.
 
 ![Distance dispatch: how a requested algorithm (standard, transposition, merge-and-split) selects the matching edit-distance routine](../../diagrams/distance/distance-dispatch.svg)
 
@@ -25,7 +25,7 @@ assert_eq!(standard_distance("kitten", "sitting"), 3);
 // Edits: k→s, e→i, insert g
 ```
 
-**Complexity**: `$\mathcal{O}(mn)$` time, `$\mathcal{O}(\min(m,n))$` space
+**Complexity**: $`\mathcal{O}(mn)`$ time, $`\mathcal{O}(\min(m,n))`$ space
 
 ### Damerau-Levenshtein Distance (Transposition)
 
@@ -42,7 +42,7 @@ assert_eq!(standard_distance("test", "tset"), 2);
 // Two substitutions required
 ```
 
-**Complexity**: `$\mathcal{O}(mn)$` time, `$\mathcal{O}(\min(m,n))$` space (3 rows)
+**Complexity**: $`\mathcal{O}(mn)`$ time, $`\mathcal{O}(\min(m,n))`$ space (3 rows)
 
 ### Merge-and-Split Distance
 
@@ -60,7 +60,7 @@ assert_eq!(merge_and_split_distance("m", "rn", &cache), 1);
 assert_eq!(merge_and_split_distance("rn", "m", &cache), 1);
 ```
 
-**Complexity**: `$\mathcal{O}(mn)$` time with memoization
+**Complexity**: $`\mathcal{O}(mn)`$ time with memoization
 
 ## Implementation Approaches
 
@@ -69,8 +69,8 @@ assert_eq!(merge_and_split_distance("rn", "m", &cache), 1);
 Space-optimized DP using 2-3 row vectors instead of full matrix.
 
 **Pros**:
-- Predictable performance: `$\mathcal{O}(mn)$` always
-- Low memory footprint: `$\mathcal{O}(\min(m,n))$`
+- Predictable performance: $`\mathcal{O}(mn)`$ always
+- Low memory footprint: $`\mathcal{O}(\min(m,n))`$
 - No recursion stack overhead
 - Cache-friendly sequential access
 
@@ -194,7 +194,7 @@ pub fn strip_common_affixes(a: &str, b: &str) -> (usize, usize, usize) {
 
 ### 2. Space Optimization (Row-Based DP)
 
-Use 2-3 row vectors instead of full `$m \times n$` matrix.
+Use 2-3 row vectors instead of full $`m \times n`$ matrix.
 
 ```
 Traditional:  O(m×n) space → Full matrix
@@ -502,10 +502,10 @@ fn main() {
 
 | Implementation | Space Complexity | 1000×1000 Strings |
 |----------------|------------------|-------------------|
-| Full matrix DP | `$\mathcal{O}(mn)$` | ~4 MB |
-| 2-row optimized | `$\mathcal{O}(\min(m,n))$` | ~4 KB |
-| 3-row (transposition) | `$\mathcal{O}(3\min(m,n))$` | ~12 KB |
-| Recursive + cache | `$\mathcal{O}(\text{depth} + \text{cache})$` | ~24 KB (1000 cached pairs) |
+| Full matrix DP | $`\mathcal{O}(mn)`$ | ~4 MB |
+| 2-row optimized | $`\mathcal{O}(\min(m,n))`$ | ~4 KB |
+| 3-row (transposition) | $`\mathcal{O}(3\min(m,n))`$ | ~12 KB |
+| Recursive + cache | $`\mathcal{O}(\text{depth} + \text{cache})`$ | ~24 KB (1000 cached pairs) |
 
 ## Integration with Other Layers
 

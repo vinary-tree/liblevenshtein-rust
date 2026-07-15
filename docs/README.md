@@ -22,7 +22,7 @@ index maps everything else.
 
 - **Math** is written as **MathJax LaTeX**, never as Unicode literals. Inline math is a
   backtick code span whose content is dollar-delimited — `` `$\mathcal{O}(\lvert W\rvert)$` ``
-  renders as `$\mathcal{O}(\lvert W\rvert)$` — and display math is a fenced block whose
+  renders as $`\mathcal{O}(\lvert W\rvert)`$ — and display math is a fenced block whose
   info-string is `math`. We never use *bare* dollar-delimited math (dollars without the
   enclosing backticks): GitHub's CommonMark pass strips backslash escapes before MathJax
   parses them. Cardinality and absolute-value bars are `\lvert … \rvert`; a literal ASCII

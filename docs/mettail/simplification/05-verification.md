@@ -788,12 +788,12 @@ This section integrates type checking with behavioral verification for improved 
 
 ### Theorem: Well-Typed Congruence Implies Behavioral Preservation
 
-**Statement**: If `$\Gamma  \vdash  P : T$` and `$\Gamma  \vdash  Q : T$` and `$P \equiv  Q$` (structural congruence), then `$P \approx  Q$` (behavioral equivalence).
+**Statement**: If $`\Gamma  \vdash  P : T`$ and $`\Gamma  \vdash  Q : T`$ and $`P \equiv  Q`$ (structural congruence), then $`P \approx  Q`$ (behavioral equivalence).
 
 **Proof**:
 1. **Type Preservation Lemma**: Structural congruence laws preserve types
-   - Nil identity: `$\Gamma  \vdash  P | 0 : T$` implies `$\Gamma  \vdash  P : T$`
-   - Commutativity: `$\Gamma  \vdash  P | Q : T$` implies `$\Gamma  \vdash  Q | P : T$`
+   - Nil identity: $`\Gamma  \vdash  P | 0 : T`$ implies $`\Gamma  \vdash  P : T`$
+   - Commutativity: $`\Gamma  \vdash  P | Q : T`$ implies $`\Gamma  \vdash  Q | P : T`$
    - (Similarly for all congruence laws)
 
 2. **Congruence-Bisimilarity**: Each structural congruence implies bisimilarity
@@ -802,13 +802,13 @@ This section integrates type checking with behavioral verification for improved 
 3. **Transitivity**: Well-typed congruence ⟹ type preservation + bisimilarity ⟹ behavioral equivalence
 
 **Implication**: For well-typed simplifications using only structural congruence:
-1. Check types once (`$\mathcal{O}(n)$` complexity)
+1. Check types once ($`\mathcal{O}(n)`$ complexity)
 2. Apply structural congruence rules (no bisim check needed per rule)
 3. Final result is guaranteed bisimilar to original
 
 ### Optimization: Skip Bisimulation for Well-Typed Congruence
 
-When simplification is derivable entirely by structural congruence on well-typed terms, we can skip the expensive `$\mathcal{O}(n^{2})$` bisimulation check:
+When simplification is derivable entirely by structural congruence on well-typed terms, we can skip the expensive $`\mathcal{O}(n^{2})`$ bisimulation check:
 
 ```rust
 /// Evidence types for verification
@@ -917,10 +917,10 @@ pub fn verify_simplification_optimized(
 
 | Scenario | Complexity | When Used |
 |----------|------------|-----------|
-| Typed congruence | `$\mathcal{O}(n)$` | Well-typed programs, congruence-only rules |
-| Normalized equivalence | `$\mathcal{O}(n \log  n)$` | Programs normalize to same form |
-| Up-to bisimulation | `$\mathcal{O}(k^{2})$` | General case with up-to techniques |
-| Full bisimulation | `$\mathcal{O}(n^{2})$` | Fallback (rarely needed) |
+| Typed congruence | $`\mathcal{O}(n)`$ | Well-typed programs, congruence-only rules |
+| Normalized equivalence | $`\mathcal{O}(n \log  n)`$ | Programs normalize to same form |
+| Up-to bisimulation | $`\mathcal{O}(k^{2})`$ | General case with up-to techniques |
+| Full bisimulation | $`\mathcal{O}(n^{2})`$ | Fallback (rarely needed) |
 
 Where:
 - n = AST size

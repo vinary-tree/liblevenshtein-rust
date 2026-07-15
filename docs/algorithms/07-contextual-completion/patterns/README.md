@@ -66,9 +66,9 @@ Static pre-built dictionary (e.g., stdlib)?
 
 **→ [Full Guide](parallel-workspace-indexing.md)**
 
-**Problem**: Sequential construction and merging of dictionaries for multi-document workspaces is `$\mathcal{O}(N^{2}\cdot n\cdot m)$`, becoming prohibitively slow beyond ~10 documents.
+**Problem**: Sequential construction and merging of dictionaries for multi-document workspaces is $`\mathcal{O}(N^{2}\cdot n\cdot m)`$, becoming prohibitively slow beyond ~10 documents.
 
-**Solution**: Parallel construction using Rayon + binary tree reduction achieves `$\mathcal{O}(n\cdot m\cdot \log  N)$` with ~150× speedup for 100 documents.
+**Solution**: Parallel construction using Rayon + binary tree reduction achieves $`\mathcal{O}(n\cdot m\cdot \log  N)`$ with ~150× speedup for 100 documents.
 
 **When to Use**:
 - LSP servers indexing multiple source files
@@ -310,8 +310,8 @@ let results = engine.complete(user_ctx, "std", 1);
 
 | Approach | Construction Time | Query Time (dist=1) | Memory Overhead | Scalability |
 |----------|-------------------|---------------------|-----------------|-------------|
-| **Sequential + PathMap** | ~50s | 11.5µs | Low | Poor (`$\mathcal{O}(N^{2})$`) |
-| **Parallel Workspace + DynamicDawg** | **0.3s** | **4.1µs** | Low | Excellent (`$\mathcal{O}(\log  N)$`) |
+| **Sequential + PathMap** | ~50s | 11.5µs | Low | Poor ($`\mathcal{O}(N^{2})`$) |
+| **Parallel Workspace + DynamicDawg** | **0.3s** | **4.1µs** | Low | Excellent ($`\mathcal{O}(\log  N)`$) |
 | **Static + DoubleArrayTrie** | ~1s (build) + 0.1s (load) | **0.96µs** | Lowest | N/A (pre-built) |
 
 **Key Takeaways**:

@@ -245,7 +245,7 @@
 
 1. **Determinism is achievable** but requires engineering (tie-breaking, fixed seeds)
 2. **Correctness is guaranteed syntactically**; semantic correctness requires verification
-3. **Optimality does NOT compose**: layer-wise optimal `$\ne$` globally optimal
+3. **Optimality does NOT compose**: layer-wise optimal $`\ne`$ globally optimal
 4. **Joint optimization is intractable**: exponential search space
 5. **Most layers are decidable and efficient**: lexical, grammar, semantic validation, session types
 6. **Practical performance is acceptable**: 450ms for 100 tokens

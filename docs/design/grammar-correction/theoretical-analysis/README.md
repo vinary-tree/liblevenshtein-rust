@@ -160,11 +160,11 @@ This directory contains a comprehensive theoretical analysis of the multi-layer 
 
 | Layer | Determinism | Correctness | Optimality | Complexity | Decidability |
 |-------|-------------|-------------|------------|------------|--------------|
-| **1. Lexical** | ✓ (with tie-breaking) | ✓ (within distance d) | ✓ (top-k by distance) | `$\mathcal{O}(n \times  d)$` | ✓ Yes |
-| **2. Grammar** | ~ (requires unambiguous grammar) | ✓ (syntactically valid) | ~ (BFS: uniform cost only) | `$\mathcal{O}(k \times  d \times  n \times  p)$` beam | ✓ Yes |
-| **3. Semantic Validation** | ✓ (with deterministic fresh vars) | ✓ (only well-typed pass) | ✓ (perfect filter) | `$\mathcal{O}(n \log  n)$` avg | ✓ Yes |
+| **1. Lexical** | ✓ (with tie-breaking) | ✓ (within distance d) | ✓ (top-k by distance) | $`\mathcal{O}(n \times  d)`$ | ✓ Yes |
+| **2. Grammar** | ~ (requires unambiguous grammar) | ✓ (syntactically valid) | ~ (BFS: uniform cost only) | $`\mathcal{O}(k \times  d \times  n \times  p)`$ beam | ✓ Yes |
+| **3. Semantic Validation** | ✓ (with deterministic fresh vars) | ✓ (only well-typed pass) | ✓ (perfect filter) | $`\mathcal{O}(n \log  n)`$ avg | ✓ Yes |
 | **4. Semantic Repair** | ~ (requires deterministic solver) | ✓ (syntactic) ~ (semantic) | ✗ (undecidable) | NP-hard (SMT) | ~ Conditional |
-| **5. Process Verification** | ✓ | ✓ (session type safety) | N/A (verification) | `$\mathcal{O}(n)$` to `$\mathcal{O}(n^k)$` | ✓ Yes (restricted) |
+| **5. Process Verification** | ✓ | ✓ (session type safety) | N/A (verification) | $`\mathcal{O}(n)`$ to $`\mathcal{O}(n^k)`$ | ✓ Yes (restricted) |
 | **Composition** | ~ (depends on all layers) | ✓ (syntactic) | ✗ (greedy suboptimal) | Sum of layers | ✓ Yes (restricted) |
 
 **Legend**: ✓ = Always holds, ~ = Conditional, ✗ = Does not hold
@@ -175,7 +175,7 @@ This directory contains a comprehensive theoretical analysis of the multi-layer 
 
 2. **Correctness is guaranteed syntactically** at each layer. Semantic correctness (preserving programmer intent) is harder.
 
-3. **Optimality does not compose**: Layer-wise optimal `$\ne$` globally optimal. Use approximations (beam search, Pareto).
+3. **Optimality does not compose**: Layer-wise optimal $`\ne`$ globally optimal. Use approximations (beam search, Pareto).
 
 4. **Joint optimization is intractable**: Exponential search space. Practical systems need heuristics.
 
@@ -269,7 +269,7 @@ Fix: Add domain constraints ("balance must be Int")
 5. Train ranking model on correction corpus
 
 ### For Performance
-1. Use Tree-sitter incremental parsing (`$\mathcal{O}(\log  n)$` per edit)
+1. Use Tree-sitter incremental parsing ($`\mathcal{O}(\log  n)`$ per edit)
 2. Cache Levenshtein automata and parse states
 3. Parallelize independent candidates
 4. Set timeouts: SMT 2s, type inference 1s

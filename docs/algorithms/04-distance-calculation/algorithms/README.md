@@ -12,9 +12,9 @@ matching, see [Layer 2](../../02-levenshtein-automata/README.md) instead.
 
 | Document | Purpose |
 |----------|---------|
-| [iterative-dp.md](iterative-dp.md) | Iterative dynamic-programming edit distance with the 2-row optimization: `$\mathcal{O}(mn)$` time, `$\mathcal{O}(\min(m,n))$` space. |
+| [iterative-dp.md](iterative-dp.md) | Iterative dynamic-programming edit distance with the 2-row optimization: $`\mathcal{O}(mn)`$ time, $`\mathcal{O}(\min(m,n))`$ space. |
 | [recursive-memoization.md](recursive-memoization.md) | Recursive edit distance with memoization (C++-style caching) and its trade-offs versus the iterative form. |
-| [optimizations.md](optimizations.md) | Distance-calculation optimizations: common prefix/suffix stripping, early termination, and bounded-`$k$` cutoffs. |
+| [optimizations.md](optimizations.md) | Distance-calculation optimizations: common prefix/suffix stripping, early termination, and bounded-$`k`$ cutoffs. |
 
 **Status: Living reference.**
 

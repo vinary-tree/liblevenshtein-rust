@@ -15,7 +15,7 @@ Complete reference list for MeTTaIL semantic type checking documentation.
 arXiv:2305.17218.
 
 - **Summary**: Defines MeTTa as a state machine with rewrite rules
-- **Key contribution**: State tuple `$\langle i, k, w, o\rangle$` and five core rules
+- **Key contribution**: State tuple $`\langle i, k, w, o\rangle`$ and five core rules
 - **Relevance**: Foundation for formalizing MeTTa as a λ-theory
 - **Section 8**: Explicitly recommends OSLF for deriving type systems
 - **DOI**: [10.48550/arXiv.2305.17218](https://doi.org/10.48550/arXiv.2305.17218)
@@ -393,7 +393,7 @@ Local research papers and working documents providing theoretical foundations.
 - **Key contribution**: Multi-sorted, graph-structured, magmal, lambda theories
 - **Key concepts**:
   - Generating sorts: List of sort names
-  - Interaction: Magmal operation `$F^T$` on sorts
+  - Interaction: Magmal operation $`F^T`$ on sorts
   - Morphisms: Function symbol (name, domain sorts, codomain sort)
   - Equations: Equivalence classes on terms
 - **Relevance**: Simpler path to semantic types when binding eliminated via reflection
@@ -427,9 +427,9 @@ Local research papers and working documents providing theoretical foundations.
   GT ::= Bool | String | Int | C
   ```
 - **Key inference rules**:
-  - `for-comprehension`: `$\Gamma \vdash \text{for}(t \leftarrow x)P : \langle(TT \to V)\rangle T$`
-  - `parallel`: `$\Gamma  \vdash  P|Q$` : T | U
-  - `quote/deref`: `$\Gamma  \vdash$` @P : @T and `$\Gamma  \vdash  *x$` : *V
+  - `for-comprehension`: $`\Gamma \vdash \text{for}(t \leftarrow x)P : \langle(TT \to V)\rangle T`$
+  - `parallel`: $`\Gamma  \vdash  P|Q`$ : T | U
+  - `quote/deref`: $`\Gamma  \vdash`$ @P : @T and $`\Gamma  \vdash  *x`$ : *V
 - **Relevance**: Actionable type rules for Rholang semantic checking
 
 ### MeTTa Calculus

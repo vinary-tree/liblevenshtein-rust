@@ -9,7 +9,7 @@
 
 ## Overview
 
-This theorem establishes that the naive `$\mathcal{O}(n\cdot m)$` dynamic programming implementation of Levenshtein distance correctly computes the minimum edit distance between two strings, matching the formal Wagner-Fischer recurrence relation.
+This theorem establishes that the naive $`\mathcal{O}(n\cdot m)`$ dynamic programming implementation of Levenshtein distance correctly computes the minimum edit distance between two strings, matching the formal Wagner-Fischer recurrence relation.
 
 ### Why This Matters
 
@@ -167,7 +167,7 @@ dp_matrix[i, j] = min3(
 = lev_distance (take i s1) (take j s2)
 ```
 
-**Therefore**: DP matrix computes exact same values as recursive definition. `$\blacksquare$`
+**Therefore**: DP matrix computes exact same values as recursive definition. $`\blacksquare`$
 
 ### Part 2: Triangle Inequality
 
@@ -181,7 +181,7 @@ dp_matrix[i, j] = min3(
 3. Concatenate: `e12 ++ e23` is a valid edit sequence `s1 → s3`
 4. Length: `|e12 ++ e23| = |e12| + |e23| = lev_distance s1 s2 + lev_distance s2 s3`
 5. But `lev_distance s1 s3` is the **minimum** length edit sequence
-6. Therefore: `lev_distance s1 s3 <= |e12 ++ e23| = lev_distance s1 s2 + lev_distance s2 s3` `$\blacksquare$`
+6. Therefore: `lev_distance s1 s3 <= |e12 ++ e23| = lev_distance s1 s2 + lev_distance s2 s3` $`\blacksquare`$
 
 ### Part 3: Symmetry
 
@@ -191,7 +191,7 @@ dp_matrix[i, j] = min3(
 - `insert(c)` ↔ `delete(c)`
 - `substitute(c1, c2)` ↔ `substitute(c2, c1)`
 
-For any edit sequence `s1 → s2`, the reversed sequence of inverse operations is `s2 → s1` with the same length. `$\blacksquare$`
+For any edit sequence `s1 → s2`, the reversed sequence of inverse operations is `s2 → s1` with the same length. $`\blacksquare`$
 
 ### Part 4: Identity
 
@@ -201,13 +201,13 @@ For any edit sequence `s1 → s2`, the reversed sequence of inverse operations i
 - **Base case**: `lev_distance [] [] = 0` (by definition)
 - **Inductive step**:
   - Assume `lev_distance rest rest = 0`
-  - Then `lev_distance (c::rest) (c::rest) = min3(lev_distance rest (c::rest) + 1, lev_distance (c::rest) rest + 1, lev_distance rest rest + 0) = min3(IH+1, IH+1, 0) = 0` `$\blacksquare$`
+  - Then `lev_distance (c::rest) (c::rest) = min3(lev_distance rest (c::rest) + 1, lev_distance (c::rest) rest + 1, lev_distance rest rest + 0) = min3(IH+1, IH+1, 0) = 0` $`\blacksquare`$
 
 ### Part 5: Non-Negativity
 
 **Claim**: `lev_distance s1 s2 >= 0`
 
-**Proof**: By definition, `lev_distance` returns a `nat` (natural number), which is always `$\ge 0$`. `$\blacksquare$`
+**Proof**: By definition, `lev_distance` returns a `nat` (natural number), which is always $`\ge 0`$. $`\blacksquare`$
 
 ### Part 6: Upper Bound
 
@@ -216,7 +216,7 @@ For any edit sequence `s1 → s2`, the reversed sequence of inverse operations i
 **Proof**: Worst-case strategy - delete all of `s1`, then insert all of `s2`:
 - Cost: `length s1 + length s2`
 - But we can do better: delete `min(length s1, length s2)` and insert `|length s2 - length s1|`
-- This gives: `lev_distance s1 s2 <= max(length s1, length s2)` `$\blacksquare$`
+- This gives: `lev_distance s1 s2 <= max(length s1, length s2)` $`\blacksquare`$
 
 ---
 
@@ -335,8 +335,8 @@ fn levenshtein_distance(s1: &str, s2: &str) -> usize {
 - **Result** (line 1253) → `dp_matrix[len1][len2]`
 
 **Complexity**:
-- **Time**: `$\mathcal{O}(n\cdot m)$` where n = `|s1|`, m = `|s2|`
-- **Space**: `$\mathcal{O}(n\cdot m)$` for matrix (could be optimized to `$\mathcal{O}(\min (n, m)$`) using rolling arrays)
+- **Time**: $`\mathcal{O}(n\cdot m)`$ where n = `|s1|`, m = `|s2|`
+- **Space**: $`\mathcal{O}(n\cdot m)`$ for matrix (could be optimized to $`\mathcal{O}(\min (n, m)`$) using rolling arrays)
 
 ---
 

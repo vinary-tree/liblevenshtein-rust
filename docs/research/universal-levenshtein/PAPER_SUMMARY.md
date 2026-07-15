@@ -41,17 +41,17 @@ This document provides a complete, detailed analysis of Mitankin's master's thes
 
 ### Overview
 
-The thesis presents a formal treatment of **universal Levenshtein automata** `$A^\forall,\chi _n$` that can recognize whether any pair of words (w, v) has Levenshtein distance `$\le  n,$` without being specialized to a fixed word w.
+The thesis presents a formal treatment of **universal Levenshtein automata** $`A^\forall,\chi _n`$ that can recognize whether any pair of words (w, v) has Levenshtein distance $`\le  n,`$ without being specialized to a fixed word w.
 
 ### Main Motivation (Page 2)
 
-The universal Levenshtein automaton `$A^\forall,\chi _n$` is designed to:
+The universal Levenshtein automaton $`A^\forall,\chi _n`$ is designed to:
 
-1. **Recognize bit vector sequences**: Accept i(w, v) iff `$d^\chi _L(w, v)$` `$\le  n$`
-2. **Enable efficient dictionary fuzzy search**: When a dictionary D is represented as a finite automaton, traverse `$A^\forall,\chi _n$` and D in parallel
+1. **Recognize bit vector sequences**: Accept i(w, v) iff $`d^\chi _L(w, v)`$ $`\le  n`$
+2. **Enable efficient dictionary fuzzy search**: When a dictionary D is represented as a finite automaton, traverse $`A^\forall,\chi _n`$ and D in parallel
 3. **Amortize construction cost**: Build one automaton for all words, not one per query word
 
-**Key advantage**: For fuzzy dictionary search, build `$A^\forall,\chi _n$` once, then for each query word w, traverse it in parallel with the dictionary automaton.
+**Key advantage**: For fuzzy dictionary search, build $`A^\forall,\chi _n`$ once, then for each query word w, traverse it in parallel with the dictionary automaton.
 
 ### Relationship to Prior Work (Page 2)
 
@@ -62,14 +62,14 @@ This thesis reviews and extends the deterministic and universal Levenshtein auto
 **Contributions**:
 - Strict formal proofs of all results
 - Detailed exposition with additional figures
-- Three distance variants: Standard `$(\chi  = \varepsilon ),$` with Transposition `$(\chi  = t),$` with Merge/Split `$(\chi  =$` ms)
+- Three distance variants: Standard $`(\chi  = \varepsilon ),`$ with Transposition $`(\chi  = t),`$ with Merge/Split $`(\chi  =`$ ms)
 - Complete building algorithms
 - Minimality proofs
 - Additional properties
 
 ### ⚠️ CRITICAL WARNING: Triangle Inequality Violation (Page 2)
 
-**IMPORTANT**: Although the term "Levenshtein distance" is used for all three variants (d²_L, `$d^t_L$`, `$d^\text{ms}_L$`), the variant **with transposition does NOT satisfy the triangle inequality**:
+**IMPORTANT**: Although the term "Levenshtein distance" is used for all three variants (d²_L, $`d^t_L`$, $`d^\text{ms}_L`$), the variant **with transposition does NOT satisfy the triangle inequality**:
 
 **Counterexample**:
 ```
@@ -82,9 +82,9 @@ d^t_L(abdc, bdac) = 2  (two operations)
 d^t_L(abcd, bdac) = 4  (NOT ≤ 1 + 2 = 3)
 ```
 
-This violates: `$d^t_L(w_{1}, w_{3})$` `$\le$` `$d^t_L(w_{1}, w_{2})$` + `$d^t_L(w_{2}, w_{3})$`
+This violates: $`d^t_L(w_{1}, w_{3})`$ $`\le`$ $`d^t_L(w_{1}, w_{2})`$ + $`d^t_L(w_{2}, w_{3})`$
 
-**Implication**: `$d^t_L$` is technically not a proper metric! This affects subsumption logic and must be carefully handled in implementation.
+**Implication**: $`d^t_L`$ is technically not a proper metric! This affects subsumption logic and must be carefully handled in implementation.
 
 ---
 
@@ -92,25 +92,25 @@ This violates: `$d^t_L(w_{1}, w_{3})$` `$\le$` `$d^t_L(w_{1}, w_{2})$` + `$d^t_L
 
 This section defines three variants of Levenshtein distance and establishes their fundamental properties.
 
-### Notation: Metasymbol `$\chi$`
+### Notation: Metasymbol $`\chi`$
 
-Throughout the thesis, `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$` is used as a metasymbol where:
-`$- \chi  = \varepsilon$` (or `$\chi  = ^{2})$`: Standard Levenshtein distance d²_L
-`$- \chi  = t$`: With transposition `$d^t_L$`
-`$- \chi  =$` ms: With merge and split `$d^\text{ms}_L$`
+Throughout the thesis, $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$ is used as a metasymbol where:
+- $`\chi  = \varepsilon`$ (or $`\chi  = ^{2})`$: Standard Levenshtein distance d²_L
+- $`\chi  = t`$: With transposition $`d^t_L`$
+- $`\chi  =`$ ms: With merge and split $`d^\text{ms}_L`$
 
 ### Definition 1: Standard Levenshtein Distance d²_L (Page 3)
 
-**Function**: d²_L : `$\Sigma$`* `$\times  \Sigma$`* `$\to  \mathbb{N}$`
+**Function**: d²_L : $`\Sigma`$* $`\times  \Sigma`$* $`\to  \mathbb{N}`$
 
-Let `$v, w, v', w' \in  \Sigma$`* and `$a, b \in  \Sigma .$`
+Let $`v, w, v', w' \in  \Sigma`$* and $`a, b \in  \Sigma .`$
 
-**Base Case**: `$v = \varepsilon$` or `$w = \varepsilon$`
+**Base Case**: $`v = \varepsilon`$ or $`w = \varepsilon`$
 ```
 d²_L(v, w) = max(|v|, |w|)
 ```
 
-**Recursive Case**: `$|v| \ge  1$` and `$|w| \ge  1$`
+**Recursive Case**: $`|v| \ge  1`$ and $`|w| \ge  1`$
 
 Let v = av' and w = bw', then:
 ```
@@ -137,9 +137,9 @@ d²_L("cat", "dog") = 3
 
 ### Definition 2': Notation ↪ (Suffix Operator) (Page 4)
 
-**Function**: ↪ : `$\Sigma$`* `$\times  \mathbb{N}  \to  \Sigma$`*
+**Function**: ↪ : $`\Sigma`$* $`\times  \mathbb{N}  \to  \Sigma`$*
 
-Let `$k \in  \mathbb{N} , x_{1}, x_{2}, ..., x_{k} \in  \Sigma$` and `$t \in  \mathbb{N} .$`
+Let $`k \in  \mathbb{N} , x_{1}, x_{2}, ..., x_{k} \in  \Sigma`$ and $`t \in  \mathbb{N} .`$
 
 ```
 x₁x₂...xₖ ↪ t = {
@@ -157,18 +157,18 @@ x₁x₂...xₖ ↪ t = {
 "hello" ↪ 0 = "hello"
 ```
 
-### Definition 2: Levenshtein Distance with Transposition `$d^t_L$` (Page 4)
+### Definition 2: Levenshtein Distance with Transposition $`d^t_L`$ (Page 4)
 
-**Function**: `$d^t_L$` : `$\Sigma$`* `$\times  \Sigma$`* `$\to  \mathbb{N}$`
+**Function**: $`d^t_L`$ : $`\Sigma`$* $`\times  \Sigma`$* $`\to  \mathbb{N}`$
 
-Let `$v, w, v', w' \in  \Sigma$`* and `$a, b, a_{1}, b_{1} \in  \Sigma .$`
+Let $`v, w, v', w' \in  \Sigma`$* and $`a, b, a_{1}, b_{1} \in  \Sigma .`$
 
-**Base Case**: `$v = \varepsilon$` or `$w = \varepsilon$`
+**Base Case**: $`v = \varepsilon`$ or $`w = \varepsilon`$
 ```
 d^t_L(v, w) = max(|v|, |w|)
 ```
 
-**Recursive Case**: `$|v| \ge  1$` and `$|w| \ge  1$`
+**Recursive Case**: $`|v| \ge  1`$ and $`|w| \ge  1`$
 
 Let v = av' and w = bw', then:
 ```
@@ -196,18 +196,18 @@ d^t_L("form", "from") = 1
 - Transposition: ro ↔ or
 ```
 
-### Definition 3: Levenshtein Distance with Merge and Split `$d^\text{ms}_L$` (Page 5)
+### Definition 3: Levenshtein Distance with Merge and Split $`d^\text{ms}_L`$ (Page 5)
 
-**Function**: `$d^\text{ms}_L$` : `$\Sigma$`* `$\times  \Sigma$`* `$\to  \mathbb{N}$`
+**Function**: $`d^\text{ms}_L`$ : $`\Sigma`$* $`\times  \Sigma`$* $`\to  \mathbb{N}`$
 
-Let `$v, w, v', w' \in  \Sigma$`* and `$a, b \in  \Sigma .$`
+Let $`v, w, v', w' \in  \Sigma`$* and $`a, b \in  \Sigma .`$
 
-**Base Case**: `$v = \varepsilon$` or `$w = \varepsilon$`
+**Base Case**: $`v = \varepsilon`$ or $`w = \varepsilon`$
 ```
 d^ms_L(v, w) = max(|v|, |w|)
 ```
 
-**Recursive Case**: `$|v| \ge  1$` and `$|w| \ge  1$`
+**Recursive Case**: $`|v| \ge  1`$ and $`|w| \ge  1`$
 
 Let v = av' and w = bw', then:
 ```
@@ -236,18 +236,18 @@ d^ms_L("night", "nite") = 1
 
 ### Proposition 1: Identity Property (Page 5)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$` and `$v, w \in  \Sigma$`*. Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$ and $`v, w \in  \Sigma`$*. Then:
 ```
 d^χ_L(v, w) = 0 ⇔ v = w
 ```
 
 **Proof Sketch**:
-- (⇐) By induction on |x|: `$d^\chi _L(x, x)$` = 0 for all x
-- (⇒) By induction on |v|: If `$d^\chi _L(v, w)$` = 0, then v must equal w (any operation would cost `$\ge  1)$`
+- (⇐) By induction on |x|: $`d^\chi _L(x, x)`$ = 0 for all x
+- (⇒) By induction on |v|: If $`d^\chi _L(v, w)`$ = 0, then v must equal w (any operation would cost $`\ge  1)`$
 
 ### Proposition 2: Symmetry (Page 5)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$` and `$v, w \in  \Sigma$`*. Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$ and $`v, w \in  \Sigma`$*. Then:
 ```
 d^χ_L(v, w) = d^χ_L(w, v)
 ```
@@ -263,13 +263,13 @@ d^χ_L(v, w) ≤ d^χ_L(v, x) + d^χ_L(x, w)
 
 **Reason**: Not needed for the constructions in this thesis.
 
-**Critical Note**: As shown in Section 1, `$d^t_L$` **violates** the triangle inequality, so this property would be false for `$\chi  = t$` anyway.
+**Critical Note**: As shown in Section 1, $`d^t_L`$ **violates** the triangle inequality, so this property would be false for $`\chi  = t`$ anyway.
 
 ### Definition 4: Levenshtein Language (Page 6)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`.
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$.
 
-**Function**: `$L^\chi _\text{Lev}$` : `$\mathbb{N}  \times  \Sigma$`* `$\to  \mathcal{P}(\Sigma$`*)
+**Function**: $`L^\chi _\text{Lev}`$ : $`\mathbb{N}  \times  \Sigma`$* $`\to  \mathcal{P}(\Sigma`$*)
 
 ```
 L^χ_Lev(n, w) = {v | d^χ_L(v, w) ≤ n}
@@ -289,7 +289,7 @@ L²_Lev(1, "cat") = {
 
 ### Proposition 3: Extension Property (Page 6)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$a \in  \Sigma , v, w \in  \Sigma$`*. Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`a \in  \Sigma , v, w \in  \Sigma`$*. Then:
 ```
 d^χ_L(v, w) = k ⇒ d^χ_L(av, w) ≤ k + 1
 ```
@@ -298,7 +298,7 @@ d^χ_L(v, w) = k ⇒ d^χ_L(av, w) ≤ k + 1
 
 ### Proposition 4: Prepend Property (Page 6)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$a, w_{1} \in  \Sigma , v, w \in  \Sigma$`*. Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`a, w_{1} \in  \Sigma , v, w \in  \Sigma`$*. Then:
 ```
 d^χ_L(v, w) = k ⇒ d^χ_L(av, w₁w) ≤ k + 1
 ```
@@ -307,7 +307,7 @@ d^χ_L(v, w) = k ⇒ d^χ_L(av, w₁w) ≤ k + 1
 
 ### Proposition 5: Corollary (Page 6)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w_{1} \in  \Sigma , v, w \in  \Sigma$`*. Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w_{1} \in  \Sigma , v, w \in  \Sigma`$*. Then:
 ```
 d^χ_L(v, w) = k ⇒ d^χ_L(v, w₁w) ≤ k + 1
 ```
@@ -316,7 +316,7 @@ d^χ_L(v, w) = k ⇒ d^χ_L(v, w₁w) ≤ k + 1
 
 ### Proposition 6: Prefix Preservation (Page 7)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w_{1} \in  \Sigma , v, w \in  \Sigma$`*. Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w_{1} \in  \Sigma , v, w \in  \Sigma`$*. Then:
 ```
 d^χ_L(v, w) = k ⇒ d^χ_L(w₁v, w₁w) ≤ k
 ```
@@ -325,7 +325,7 @@ d^χ_L(v, w) = k ⇒ d^χ_L(w₁v, w₁w) ≤ k
 
 ### Proposition 7: Recursive Structure (Page 7)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, w = w_{1}w_{2}...w_p, p \ge  1, n > 0.$` Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, w = w_{1}w_{2}...w_p, p \ge  1, n > 0.`$ Then:
 ```
 L^χ_Lev(n, w) ⊇ Σ·L^χ_Lev(n-1, w) ∪
                 Σ·L^χ_Lev(n-1, w₂w₃...w_p) ∪
@@ -341,15 +341,15 @@ L^χ_Lev(n, w) ⊇ Σ·L^χ_Lev(n-1, w) ∪
 
 **Significance**: This forms the basis for the nondeterministic automaton construction.
 
-### Definition 5: Extension `$R^\chi$` (Page 7-8)
+### Definition 5: Extension $`R^\chi`$ (Page 7-8)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`.
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$.
 
-**Function**: `$R^\chi$` : `$\mathbb{N} ^{+} \times  \Sigma ^{+} \to  \mathcal{P}(\Sigma$`*)
+**Function**: $`R^\chi`$ : $`\mathbb{N} ^{+} \times  \Sigma ^{+} \to  \mathcal{P}(\Sigma`$*)
 
-Let `$w \in  \Sigma$`*`$, w = w_{1}w_{2}...w_p, p \ge  1, n \ge  1.$`
+Let $`w \in  \Sigma`$*$`, w = w_{1}w_{2}...w_p, p \ge  1, n \ge  1.`$
 
-**For `$\chi  = \varepsilon$` (Standard)**:
+**For $`\chi  = \varepsilon`$ (Standard)**:
 ```
 R²(n, w) = Σ·L²_Lev(n-1, w) ∪                    // insertion
            Σ·L²_Lev(n-1, w₂w₃...w_p) ∪          // deletion
@@ -357,7 +357,7 @@ R²(n, w) = Σ·L²_Lev(n-1, w) ∪                    // insertion
            w₁·L²_Lev(n, w₂w₃...w_p)             // match
 ```
 
-**For `$\chi  = t$` (With Transposition)**:
+**For $`\chi  = t`$ (With Transposition)**:
 ```
 R^t(n, w) = Σ·L^t_Lev(n-1, w) ∪                  // insertion
             Σ·L^t_Lev(n-1, w₂w₃...w_p) ∪        // deletion
@@ -366,7 +366,7 @@ R^t(n, w) = Σ·L^t_Lev(n-1, w) ∪                  // insertion
             if(|w| ≥ 2, w₂w₁·L^t_Lev(n-1, w₃...w_p), ∅)  // transposition
 ```
 
-**For `$\chi  =$` ms (With Merge/Split)**:
+**For $`\chi  =`$ ms (With Merge/Split)**:
 ```
 R^ms(n, w) = Σ·L^ms_Lev(n-1, w) ∪               // insertion
              Σ·L^ms_Lev(n-1, w₂w₃...w_p) ∪      // deletion
@@ -378,14 +378,14 @@ R^ms(n, w) = Σ·L^ms_Lev(n-1, w) ∪               // insertion
 
 ### Proposition 8: Key Equality (Page 8)
 
-Let `$w \in  \Sigma$`*`$, w = w_{1}w_{2}...w_p, p \ge  1, n \ge  1.$` Then:
+Let $`w \in  \Sigma`$*$`, w = w_{1}w_{2}...w_p, p \ge  1, n \ge  1.`$ Then:
 ```
 L^χ_Lev(n, w) = R^χ(n, w)
 ```
 
 **Proof Outline**:
-`$- (\supseteq )$` Follows from Proposition 7 and additional analysis for transposition/merge/split
-`$- (\subseteq )$` By case analysis on the first operation in the minimum-cost sequence
+- $`(\supseteq )`$ Follows from Proposition 7 and additional analysis for transposition/merge/split
+- $`(\subseteq )`$ By case analysis on the first operation in the minimum-cost sequence
 
 **Significance**: This equality shows that the recursive decomposition is complete - every word in the language can be obtained by the recursive construction.
 
@@ -393,25 +393,25 @@ L^χ_Lev(n, w) = R^χ(n, w)
 
 ## Section 3: Nondeterministic Finite Levenshtein Automata for Fixed Word (Pages 8-13)
 
-This section constructs nondeterministic automata `$A^\text{ND},\chi _n(w)$` that recognize `$L^\chi _\text{Lev}(n, w)$`.
+This section constructs nondeterministic automata $`A^\text{ND},\chi _n(w)`$ that recognize $`L^\chi _\text{Lev}(n, w)`$.
 
 ### Position Notation (Page 8)
 
-**Standard Notation**: Tuples like `$\langle \langle i, 0\rangle, e\rangle, \langle \langle i, 1\rangle, e\rangle, \langle \langle i, 2\rangle, e\rangle$`
+**Standard Notation**: Tuples like $`\langle \langle i, 0\rangle, e\rangle, \langle \langle i, 1\rangle, e\rangle, \langle \langle i, 2\rangle, e\rangle`$
 
 **Abbreviated Notation** (used throughout):
-- `i#e` denotes `$\langle \langle i, 0\rangle, e\rangle$` (standard position)
-- `i#e_t` denotes `$\langle \langle i, 1\rangle, e\rangle$` (transposition position)
-- `i#e_s` denotes `$\langle \langle i, 2\rangle, e\rangle$` (merge/split position)
+- `i#e` denotes $`\langle \langle i, 0\rangle, e\rangle`$ (standard position)
+- `i#e_t` denotes $`\langle \langle i, 1\rangle, e\rangle`$ (transposition position)
+- `i#e_s` denotes $`\langle \langle i, 2\rangle, e\rangle`$ (merge/split position)
 
 **Interpretation**:
-- i: Position in word `$w (0 \le  i \le  |w|)$`
-- e: Number of errors consumed so far `$(0 \le  e \le  n)$`
+- i: Position in word $`w (0 \le  i \le  |w|)`$
+- e: Number of errors consumed so far $`(0 \le  e \le  n)`$
 - Type flag (0, 1, 2): Indicates whether this is standard, transposition, or merge/split
 
-### Definition 6: Nondeterministic Levenshtein Automaton `$A^\text{ND}$`,`$\chi _n(w)$` (Page 9)
+### Definition 6: Nondeterministic Levenshtein Automaton $`A^\text{ND}`$,$`\chi _n(w)`$ (Page 9)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, n \in  \mathbb{N} .$`
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, n \in  \mathbb{N} .`$
 
 **General Form**:
 ```
@@ -420,7 +420,7 @@ A^ND,χ_n(w) = ⟨Σ, Q^ND,χ_n, I^ND,χ, F^ND,χ_n*, δ^ND,χ_n⟩
 
 Let |w| = p and w = w₁w₂...w_p.
 
-#### For `$\chi  = \varepsilon$` (Standard)
+#### For $`\chi  = \varepsilon`$ (Standard)
 
 **States**:
 ```
@@ -437,7 +437,7 @@ I^ND,ε = {0#0}
 F^ND,ε_n* = {p#e | 0 ≤ e ≤ n}
 ```
 
-**Transition Function**: Let `$a \in  \Sigma  \cup$` `$\{\varepsilon\}$` and `$q_{1}, q_{2} \in$` `$Q^\text{ND},\varepsilon _n.$`
+**Transition Function**: Let $`a \in  \Sigma  \cup`$ $`\{\varepsilon\}`$ and $`q_{1}, q_{2} \in`$ $`Q^\text{ND},\varepsilon _n.`$
 
 ```
 ⟨q₁, a, q₂⟩ ∈ δ^ND,ε_n ⇔
@@ -449,15 +449,15 @@ F^ND,ε_n* = {p#e | 0 ≤ e ≤ n}
 
 **Note**: Match and substitution are combined in the last two rules - if a = w_{i+1}, it's a match (no error); otherwise, it's a substitution (one error).
 
-**Figure 1** (Page 9): Shows the automaton structure for `$A^\text{ND},\varepsilon _2(w_{1}w_{2}...w_{5})$` as a grid with:
+**Figure 1** (Page 9): Shows the automaton structure for $`A^\text{ND},\varepsilon _2(w_{1}w_{2}...w_{5})`$ as a grid with:
 - Horizontal axis: word positions (0 to 5)
 - Vertical axis: error count (0 to 2)
 - Diagonal transitions: matches
 - Horizontal transitions: deletions
-- Vertical `$\varepsilon$`-transitions: insertions
+- Vertical $`\varepsilon`$-transitions: insertions
 - Diagonal with error: substitutions
 
-#### For `$\chi  = t$` (With Transposition)
+#### For $`\chi  = t`$ (With Transposition)
 
 **States**:
 ```
@@ -474,7 +474,7 @@ I^ND,t = {0#0}
 F^ND,t_n* = F^ND,ε_n* = {p#e | 0 ≤ e ≤ n}
 ```
 
-**Transition Function**: Let `$a \in  \Sigma  \cup$` `$\{\varepsilon\}$` and `$q_{1}, q_{2} \in$` `$Q^\text{ND}$`,t_n.
+**Transition Function**: Let $`a \in  \Sigma  \cup`$ $`\{\varepsilon\}`$ and $`q_{1}, q_{2} \in`$ $`Q^\text{ND}`$,t_n.
 
 ```
 ⟨q₁, a, q₂⟩ ∈ δ^ND,t_n ⇔
@@ -492,9 +492,9 @@ F^ND,t_n* = F^ND,ε_n* = {p#e | 0 ≤ e ≤ n}
 - Read 'a' (= w_{i+1}): Transition to i+2#e
 - Total cost: 1 error
 
-**Figure 2** (Page 10): Shows `$A^\text{ND}$`,t_2(w₁w₂...w₅) with additional transposition states i#e_t.
+**Figure 2** (Page 10): Shows $`A^\text{ND}`$,t_2(w₁w₂...w₅) with additional transposition states i#e_t.
 
-#### For `$\chi  =$` ms (With Merge/Split)
+#### For $`\chi  =`$ ms (With Merge/Split)
 
 **States**:
 ```
@@ -511,7 +511,7 @@ I^ND,ms = {0#0}
 F^ND,ms_n* = F^ND,ε_n* = {p#e | 0 ≤ e ≤ n}
 ```
 
-**Transition Function**: Let `$a \in  \Sigma  \cup$` `$\{\varepsilon\}$` and `$q_{1}, q_{2} \in$` `$Q^\text{ND}$`,ms_n.
+**Transition Function**: Let $`a \in  \Sigma  \cup`$ $`\{\varepsilon\}`$ and $`q_{1}, q_{2} \in`$ $`Q^\text{ND}`$,ms_n.
 
 ```
 ⟨q₁, a, q₂⟩ ∈ δ^ND,ms_n ⇔
@@ -525,9 +525,9 @@ F^ND,ms_n* = F^ND,ε_n* = {p#e | 0 ≤ e ≤ n}
 - **Merge**: From i#e, reading any character, jump to i+2#e+1 (skip two characters in w, cost 1)
 - **Split**: From i#e, reading any character, move to i+1#e_s, then to i+1#e (read two characters to match one in w)
 
-**Figure 3** (Page 10): Shows `$A^\text{ND}$`,ms_2(w₁w₂...w₅) with merge/split states i#e_s.
+**Figure 3** (Page 10): Shows $`A^\text{ND}`$,ms_2(w₁w₂...w₅) with merge/split states i#e_s.
 
-### `$\varepsilon$`-Closure Definition (Page 11)
+### $`\varepsilon`$-Closure Definition (Page 11)
 
 **For a single state**:
 ```
@@ -541,11 +541,11 @@ Clε(q) = {q} ∪ {π | ∃k≥0 ∃η₁,η₂,...,ηₖ (
 Clε(A) = ⋃_{π∈A} Clε(π)
 ```
 
-**Interpretation**: All states reachable from q (or set A) via zero or more `$\varepsilon$`-transitions.
+**Interpretation**: All states reachable from q (or set A) via zero or more $`\varepsilon`$-transitions.
 
-### Extended Transition Function `$\delta ^\text{ND}$`,`$\chi _n$`* (Page 11)
+### Extended Transition Function $`\delta ^\text{ND}`$,$`\chi _n`$* (Page 11)
 
-Let `$v \in  \Sigma$`* and `$a \in  \Sigma .$`
+Let $`v \in  \Sigma`$* and $`a \in  \Sigma .`$
 
 **Base case**:
 ```
@@ -562,7 +562,7 @@ Let `$v \in  \Sigma$`* and `$a \in  \Sigma .$`
 }
 ```
 
-**Interpretation**: Standard NFA semantics with `$\varepsilon$`-closure after each character.
+**Interpretation**: Standard NFA semantics with $`\varepsilon`$-closure after each character.
 
 ### Language of a State (Page 12)
 
@@ -570,11 +570,11 @@ Let `$v \in  \Sigma$`* and `$a \in  \Sigma .$`
 L(π) = {w | ∃π' ∈ F^ND,χ_n (⟨π, w, π'⟩ ∈ δ^ND,χ_n*)}
 ```
 
-The set of words accepted starting from state `$\pi .$`
+The set of words accepted starting from state $`\pi .`$
 
 ### Proposition 9: Key Correctness Theorem for NFA (Page 12)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$n \in  \mathbb{N} , w \in  \Sigma$`*, i#`$e \in$` `$Q^\text{ND},\chi _n.$` Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`n \in  \mathbb{N} , w \in  \Sigma`$*, i#$`e \in`$ $`Q^\text{ND},\chi _n.`$ Then:
 ```
 L(i#e) = L^χ_Lev(n - e, w_{i+1}...w_p)
 ```
@@ -586,10 +586,10 @@ L(i#e) = L^χ_Lev(n - e, w_{i+1}...w_p)
 2. Secondary induction on e (from n down to 0)
 
 **Base cases**:
-- i = p: L(p#e) = `$\{\varepsilon\}$` if `$e \ge  0$` (can delete remaining errors)
+- i = p: L(p#e) = $`\{\varepsilon\}`$ if $`e \ge  0`$ (can delete remaining errors)
 - e = n: L(i#n) = {w_{i+1}...w_p} (no errors left, must match exactly)
 
-**Inductive steps**: Use Definition 5 (`$R^\chi$`) to show the recursive structure holds.
+**Inductive steps**: Use Definition 5 ($`R^\chi`$) to show the recursive structure holds.
 
 ### Corollary (Page 13)
 
@@ -603,7 +603,7 @@ L(A^ND,χ_n(w)) = L(0#0) = L^χ_Lev(n, w)
 
 ## Section 4: Deterministic Finite Levenshtein Automata for Fixed Word (Pages 13-28)
 
-This section shows how to determinize `$A^\text{ND},\chi _n(w)$` using subsumption to create `$A^D,\chi _n(w).$`
+This section shows how to determinize $`A^\text{ND},\chi _n(w)`$ using subsumption to create $`A^D,\chi _n(w).`$
 
 ### Extended State Space (Page 13)
 
@@ -615,15 +615,15 @@ Q^ND,t = Q^ND,ε ∪ {i#e_t | i, e ∈ ℤ}
 Q^ND,ms = Q^ND,ε ∪ {i#e_s | i, e ∈ ℤ}
 ```
 
-### Definition 7: Function of Elementary Transitions `$\delta ^D,\chi _e$` (Page 14)
+### Definition 7: Function of Elementary Transitions $`\delta ^D,\chi _e`$ (Page 14)
 
-**Function**: `$\delta ^D,\chi _e$` : `$Q^\text{ND},\chi  \times$` {0,1}* `$\to  \mathcal{P}(Q^\text{ND},\chi )$`
+**Function**: $`\delta ^D,\chi _e`$ : $`Q^\text{ND},\chi  \times`$ {0,1}* $`\to  \mathcal{P}(Q^\text{ND},\chi )`$
 
-Let `$b \in$` {0,1}*`$, k \in  \mathbb{N} , b = b_{1}b_{2}...b_{k}.$`
+Let $`b \in`$ {0,1}*$`, k \in  \mathbb{N} , b = b_{1}b_{2}...b_{k}.`$
 
 **Purpose**: Given a position and a bit vector b, compute the set of positions reachable.
 
-#### For `$\chi  = \varepsilon$` (Standard) (Page 14)
+#### For $`\chi  = \varepsilon`$ (Standard) (Page 14)
 
 ```
 δ^D,ε_e(i#e, b) = {
@@ -635,7 +635,7 @@ Let `$b \in$` {0,1}*`$, k \in  \mathbb{N} , b = b_{1}b_{2}...b_{k}.$`
 }
 ```
 
-where `$\mu z[A]$` denotes "the minimum z such that A holds".
+where $`\mu z[A]`$ denotes "the minimum z such that A holds".
 
 **Interpretation of bit vector b**:
 - b_j = 1: The j-th character of the relevant subword matches the input
@@ -650,9 +650,9 @@ where `$\mu z[A]$` denotes "the minimum z such that A holds".
    - Delete: i#e+1
    - Insert and advance: i+1#e+1
    - Skip to match at position j via deletions: i+j#e+j-1
-4. **`$b = \varepsilon$`**: Empty (edge case), can delete if errors remain
+4. **$`b = \varepsilon`$**: Empty (edge case), can delete if errors remain
 
-#### For `$\chi  = t$` (With Transposition) (Page 15)
+#### For $`\chi  = t`$ (With Transposition) (Page 15)
 
 ```
 δ^D,t_e(i#e, b) = {
@@ -676,7 +676,7 @@ where `$\mu z[A]$` denotes "the minimum z such that A holds".
 
 From i#e_t, if input matches (1 < b), complete transposition: i+2#e
 
-#### For `$\chi  =$` ms (With Merge/Split) (Page 16)
+#### For $`\chi  =`$ ms (With Merge/Split) (Page 16)
 
 ```
 δ^D,ms_e(i#e, b) = {
@@ -696,17 +696,17 @@ From i#e_t, if input matches (1 < b), complete transposition: i+2#e
 
 From i#e_s, always move to i+1#e (complete split).
 
-### Definition 8: Relevant Subword `$w[\pi ]$` (Page 17)
+### Definition 8: Relevant Subword $`w[\pi ]`$ (Page 17)
 
-Let w = w₁w₂...w_p and `$\pi  \in$` `$Q^\text{ND},\chi _n.$`
+Let w = w₁w₂...w_p and $`\pi  \in`$ $`Q^\text{ND},\chi _n.`$
 
-**For `$\pi  = i$`#e**:
+**For $`\pi  = i`$#e**:
 ```
 w[i#e] = w_{i+1}w_{i+2}...w_{i+k}
 where k = min(n - e + 1, p - i)
 ```
 
-**For `$\pi  = i$`#e_t** or **`$\pi  = i$`#e_s**:
+**For $`\pi  = i`$#e_t** or **$`\pi  = i`$#e_s**:
 ```
 w[i#e_t] = w[i#e]
 w[i#e_s] = w[i#e]
@@ -716,9 +716,9 @@ w[i#e_s] = w[i#e]
 
 **Significance**: This is the portion of w we need to check for matches when processing input character x.
 
-### Definition 9: Characteristic Vector `$\beta$` (Page 17)
+### Definition 9: Characteristic Vector $`\beta`$ (Page 17)
 
-**Function**: `$\beta$` : `$\Sigma  \times  \Sigma$`* → {0,1}*
+**Function**: $`\beta`$ : $`\Sigma  \times  \Sigma`$* → {0,1}*
 
 ```
 β(x, w₁w₂...w_p) = b₁b₂...b_p where b_i = (1 if x = w_i else 0)
@@ -735,7 +735,7 @@ w[i#e_s] = w[i#e]
 
 ### Definition 10: Transition with Character (Page 18)
 
-**Function**: `$\delta ^D,\chi _e$` : `$Q^\text{ND},\chi _n \times  \Sigma  \to  \mathcal{P}(Q^\text{ND},\chi _n)$`
+**Function**: $`\delta ^D,\chi _e`$ : $`Q^\text{ND},\chi _n \times  \Sigma  \to  \mathcal{P}(Q^\text{ND},\chi _n)`$
 
 ```
 δ^D,χ_e(π, x) = δ^D,χ_e(π, β(x, w[π]))
@@ -743,11 +743,11 @@ w[i#e_s] = w[i#e]
 
 **Interpretation**: Apply elementary transition function using the characteristic vector of x against the relevant subword.
 
-### Definition 11: Subsumption Relation `$\le ^\chi _s$` (Page 18)
+### Definition 11: Subsumption Relation $`\le ^\chi _s`$ (Page 18)
 
 **Purpose**: Determine when one position "subsumes" another (recognizes a superset of the language).
 
-#### For `$\chi  = \varepsilon$` (Standard) (Page 18)
+#### For $`\chi  = \varepsilon`$ (Standard) (Page 18)
 
 ```
 i#e ≤^ε_s j#f ⇔ f > e ∧ |j - i| ≤ f - e
@@ -757,9 +757,9 @@ i#e ≤^ε_s j#f ⇔ f > e ∧ |j - i| ≤ f - e
 1. f > e (j#f has more errors available)
 2. The position difference (|j - i|) can be covered by the error difference (f - e)
 
-**Example**: 3#`$1 \le ^\varepsilon _s 5$`#3 because 3 > 1 and `$|5 - 3| = 2 \le  3 - 1 = 2$`
+**Example**: 3#$`1 \le ^\varepsilon _s 5`$#3 because 3 > 1 and $`|5 - 3| = 2 \le  3 - 1 = 2`$
 
-#### For `$\chi  = t$` (With Transposition) (Page 19)
+#### For $`\chi  = t`$ (With Transposition) (Page 19)
 
 ```
 i#e ≤^t_s j#f      ⇔ i#e ≤^ε_s j#f
@@ -772,7 +772,7 @@ i#e_t ⊀^t_s π      (for any π)
 - Standard can subsume transposition positions (with adjusted distance)
 - Transposition positions do not subsume anything (by design choice)
 
-#### For `$\chi  =$` ms (With Merge/Split) (Page 19)
+#### For $`\chi  =`$ ms (With Merge/Split) (Page 19)
 
 ```
 i#e ≤^ms_s j#f     ⇔ i#e ≤^ε_s j#f
@@ -784,42 +784,42 @@ i#e_s ⊀^ms_s π     (for any π)
 
 ### Remark on Transposition/Split Positions (Page 19)
 
-The thesis notes that `$i\#e_t \nprec^t_s \pi$` and `$i\#e_s \nprec^{ms}_s \pi$` for any `$\pi$` is intentional.
+The thesis notes that $`i\#e_t \nprec^t_s \pi`$ and $`i\#e_s \nprec^{ms}_s \pi`$ for any $`\pi`$ is intentional.
 
 **Justification**: Any "good" definition would require:
-- i#`$e_t \le ^t_s \pi  \Rightarrow  i+1$`#`$e \le ^t_s \pi$`
-- `$i\#e_s \le^{ms}_s \pi \Rightarrow i\#e \le^{ms}_s \pi$`
+- i#$`e_t \le ^t_s \pi  \Rightarrow  i+1`$#$`e \le ^t_s \pi`$
+- $`i\#e_s \le^{ms}_s \pi \Rightarrow i\#e \le^{ms}_s \pi`$
 
 And since:
-- i#`$e_t \in  \delta ^D,t_e(A, x) \Rightarrow  i+1$`#`$e \in  \delta ^D,t_e(A, x)$`
-- i#`$e_s \in  \delta ^D$`,ms_e(A, x) ⇒ i#`$e \in  \delta ^D$`,ms_e(A, x)
+- i#$`e_t \in  \delta ^D,t_e(A, x) \Rightarrow  i+1`$#$`e \in  \delta ^D,t_e(A, x)`$
+- i#$`e_s \in  \delta ^D`$,ms_e(A, x) ⇒ i#$`e \in  \delta ^D`$,ms_e(A, x)
 
 The choice doesn't affect minimality of the final automaton.
 
 ### Figure 4 (Page 20)
 
-Shows the set `$\{\pi  | \pi  \in  ﷐0﷑﷐1﷑#0 \le ^\varepsilon _s \pi\}$` - all positions subsumed by 3#0.
+Shows the set $`\{\pi  | \pi  \in  ﷐0﷑﷐1﷑#0 \le ^\varepsilon _s \pi\}`$ - all positions subsumed by 3#0.
 
 The figure depicts a grid where positions (i, e) satisfying the subsumption condition are highlighted. This forms a diagonal region.
 
 ### Proposition 10: Partial Order (Page 20)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`. Then `$\le ^\chi _s$` is a partial order on `$Q^\text{ND},\chi _n.$`
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$. Then $`\le ^\chi _s`$ is a partial order on $`Q^\text{ND},\chi _n.`$
 
 **Proof**: Show three properties:
-1. **Reflexivity**: `$\pi  \le ^\chi _s \pi$` (holds)
-2. **Antisymmetry**: `$\pi _{1} \le ^\chi _s \pi _{2} \land  \pi _{2} \le ^\chi _s \pi _{1} \Rightarrow  \pi _{1} = \pi _{2}$` (holds from definitions)
-3. **Transitivity**: `$\pi _{1} \le ^\chi _s \pi _{2} \land  \pi _{2} \le ^\chi _s \pi _{3} \Rightarrow  \pi _{1} \le ^\chi _s \pi _{3}$` (holds by arithmetic)
+1. **Reflexivity**: $`\pi  \le ^\chi _s \pi`$ (holds)
+2. **Antisymmetry**: $`\pi _{1} \le ^\chi _s \pi _{2} \land  \pi _{2} \le ^\chi _s \pi _{1} \Rightarrow  \pi _{1} = \pi _{2}`$ (holds from definitions)
+3. **Transitivity**: $`\pi _{1} \le ^\chi _s \pi _{2} \land  \pi _{2} \le ^\chi _s \pi _{3} \Rightarrow  \pi _{1} \le ^\chi _s \pi _{3}`$ (holds by arithmetic)
 
-### Definition 12: Subsumption Closure `$\sqcup$` (Page 21)
+### Definition 12: Subsumption Closure $`\sqcup`$ (Page 21)
 
-**Function**: `$\sqcup$` : `$\mathcal{P}(\mathcal{P}(Q^\text{ND},\chi _n)) \to  \mathcal{P}(Q^\text{ND},\chi _n)$`
+**Function**: $`\sqcup`$ : $`\mathcal{P}(\mathcal{P}(Q^\text{ND},\chi _n)) \to  \mathcal{P}(Q^\text{ND},\chi _n)`$
 
 ```
 ⊔A = {π | π ∈ ⋃A ∧ ¬∃π' ∈ ⋃A (π' <^χ_s π)}
 ```
 
-**Interpretation**: Remove all subsumed elements from a set. Keep only maximal elements under `$\le ^\chi _s.$`
+**Interpretation**: Remove all subsumed elements from a set. Keep only maximal elements under $`\le ^\chi _s.`$
 
 **Example**:
 ```
@@ -828,7 +828,7 @@ Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`. Then `$\le ^\chi _s$` is a
 
 ### Proposition 11: Alternative Final States (Page 21)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, |w| = p, n \in  \mathbb{N} .$` Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, |w| = p, n \in  \mathbb{N} .`$ Then:
 ```
 L(A^ND,χ_n(w)) = L(⟨Σ, Q^ND,χ_n, I^ND,χ, F^ND,χ_n, δ^ND,χ_n⟩)
 ```
@@ -844,13 +844,13 @@ F^ND,χ_n = {i#e | p - i ≤ n - e}
 
 ### Definition 13: State with Base Position (Page 22)
 
-Let `$M \subseteq$` `$Q^\text{ND},\chi _n$` and `$\pi  \in$` `$Q^\text{ND},\varepsilon _n. M$` is called a **state with base position `$\pi$`** iff:
+Let $`M \subseteq`$ $`Q^\text{ND},\chi _n`$ and $`\pi  \in`$ $`Q^\text{ND},\varepsilon _n. M`$ is called a **state with base position $`\pi`$** iff:
 ```
 ∀π' ∈ M (π ≤^χ_s π') ∧ ∀π₁, π₂ ∈ M (π₁ ⊀^χ_s π₂)
 ```
 
 **Requirements**:
-1. All elements in M are at or "above" the base position `$\pi$`
+1. All elements in M are at or "above" the base position $`\pi`$
 2. No element in M subsumes another (anti-chain property)
 
 **Example**:
@@ -859,7 +859,7 @@ M = {3#0, 4#1, 5#2} with base 3#0
 If 3#0 ≤^ε_s 4#1 and 3#0 ≤^ε_s 5#2 and 4#1 ⊀ 5#2 and 5#2 ⊀ 4#1
 ```
 
-### Definition 14: Deterministic Levenshtein Automaton `$A^D$`,`$\chi _n(w)$` (Page 23)
+### Definition 14: Deterministic Levenshtein Automaton $`A^D`$,$`\chi _n(w)`$ (Page 23)
 
 **Complete Definition**:
 ```
@@ -868,7 +868,7 @@ A^D,χ_n(w) = ⟨Σ, Q^D,χ_n, I^D,χ, F^D,χ_n, δ^D,χ_n⟩
 
 Let |w| = p and w = w₁w₂...w_p.
 
-**Function `$\rho$`**: Maps base positions to sets of states
+**Function $`\rho`$**: Maps base positions to sets of states
 ```
 ρ : [0, p] → 𝒫(𝒫(Q^ND,χ_n))
 ρ(i) = {M | M is a state with base position i#0}
@@ -891,7 +891,7 @@ I^D,χ = {0#0}
 F^D,χ_n = {M | M ∈ Q^D,χ_n ∧ ∃π ∈ M (π ∈ F^ND,χ_n)}
 ```
 
-where `$F^\text{ND},\chi _n =$` `$\{i#e | p - i \le  n - e\}$` (from Proposition 11).
+where $`F^\text{ND},\chi _n =`$ $`\{i#e | p - i \le  n - e\}`$ (from Proposition 11).
 
 **Transition Function**:
 ```
@@ -904,29 +904,29 @@ where `$F^\text{ND},\chi _n =$` `$\{i#e | p - i \le  n - e\}$` (from Proposition
 ```
 
 **Interpretation**:
-1. Apply elementary transition `$\delta ^D,\chi _e$` to each position in M
+1. Apply elementary transition $`\delta ^D,\chi _e`$ to each position in M
 2. Take the union of results
-3. Apply subsumption closure `$\sqcup$` to remove subsumed positions
+3. Apply subsumption closure $`\sqcup`$ to remove subsumed positions
 4. If result is empty, transition is undefined
 
 ### Correctness of Definition (Pages 24-25)
 
 The thesis proves several lemmas to show this definition is well-formed:
 
-**Lemma 1**: If `$M \in  \rho (i)$` and `$0 \le  i \le  p-1$` and `$x \in  \Sigma ,$` then for all `$\pi  \in  M$`:
+**Lemma 1**: If $`M \in  \rho (i)`$ and $`0 \le  i \le  p-1`$ and $`x \in  \Sigma ,`$ then for all $`\pi  \in  M`$:
 ```
 δ^D,χ_e(π, x) ⊆ ⋃_{j=i+1} ρ(j)
 ```
 
 **Lemma 2**: States with base position p#e transition to states with base position p#e+1 (or undefined).
 
-**Lemma 3**: `$\sqcup A$` is a state with base position i#e if `$A \subseteq$` {states with base position i#e}.
+**Lemma 3**: $`\sqcup A`$ is a state with base position i#e if $`A \subseteq`$ {states with base position i#e}.
 
-**Conclusion**: `$\delta ^D,\chi _n$` is well-defined - it always produces valid states or undefined.
+**Conclusion**: $`\delta ^D,\chi _n`$ is well-defined - it always produces valid states or undefined.
 
 ### Proposition 12: Final State Subsumption (Page 25)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, |w| = p, n \in  \mathbb{N} .$` Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, |w| = p, n \in  \mathbb{N} .`$ Then:
 ```
 i#e ∈ F^ND,χ_n ∧ π ≤^χ_s i#e ⇒ π ∈ F^ND,χ_n
 ```
@@ -937,9 +937,9 @@ i#e ∈ F^ND,χ_n ∧ π ≤^χ_s i#e ⇒ π ∈ F^ND,χ_n
 
 ### Proposition 13: Path Through Transposition/Split States (Page 26)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, |w| = p, n \in  \mathbb{N} , x \in  \Sigma , s \in  \mathbb{N} .$`
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, |w| = p, n \in  \mathbb{N} , x \in  \Sigma , s \in  \mathbb{N} .`$
 
-Let `$\xi _{0} = j$`#f_(s) (where (s) means either _t or _s depending on `$\chi ),$` and `$\xi _{1}, \xi _{2}, ..., \xi _s, \eta '_{2} \in$` `$Q^\text{ND},\chi _n.$`
+Let $`\xi _{0} = j`$#f_(s) (where (s) means either _t or _s depending on $`\chi ),`$ and $`\xi _{1}, \xi _{2}, ..., \xi _s, \eta '_{2} \in`$ $`Q^\text{ND},\chi _n.`$
 
 Then:
 ```
@@ -949,15 +949,15 @@ j < p ∧
 ⇒ j+1#f ≤^χ_s η'₂
 ```
 
-**Interpretation**: After a sequence of `$\varepsilon$`-transitions and one character transition from a transposition/split position, the result subsumes j+1#f.
+**Interpretation**: After a sequence of $`\varepsilon`$-transitions and one character transition from a transposition/split position, the result subsumes j+1#f.
 
-**Note**: Does NOT hold for `$\xi _{0} = j$`#f_t (transposition positions excluded).
+**Note**: Does NOT hold for $`\xi _{0} = j`$#f_t (transposition positions excluded).
 
 ### Proposition 14: Key Subsumption Preservation (Page 26)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, n \in  \mathbb{N} , \eta _{1}, \eta _{2} \in$` `$Q^\text{ND},\chi _n, x \in  \Sigma .$`
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, n \in  \mathbb{N} , \eta _{1}, \eta _{2} \in`$ $`Q^\text{ND},\chi _n, x \in  \Sigma .`$
 
-Let `$s \in  \mathbb{N} , \xi _{0} = \eta _{2}, \xi _{1}, \xi _{2}, ..., \xi _s, \eta '_{2} \in$` `$Q^\text{ND},\chi _n.$`
+Let $`s \in  \mathbb{N} , \xi _{0} = \eta _{2}, \xi _{1}, \xi _{2}, ..., \xi _s, \eta '_{2} \in`$ $`Q^\text{ND},\chi _n.`$
 
 Then:
 ```
@@ -967,7 +967,7 @@ Then:
 ⇒ ∃η'₁ ∈ δ^D,χ_e(η₁, x) (η'₁ ≤^χ_s η'₂)
 ```
 
-**Interpretation**: If `$\eta _{1}$` subsumes `$\eta _{2},$` then after processing character x (possibly through `$\varepsilon$`-transitions from `$\eta _{2}),$` there exists a successor of `$\eta _{1}$` that subsumes the successor of `$\eta _{2}.$`
+**Interpretation**: If $`\eta _{1}`$ subsumes $`\eta _{2},`$ then after processing character x (possibly through $`\varepsilon`$-transitions from $`\eta _{2}),`$ there exists a successor of $`\eta _{1}`$ that subsumes the successor of $`\eta _{2}.`$
 
 **Significance**: Subsumption is preserved through transitions - this is the key property that makes subsumption-based state reduction correct.
 
@@ -975,20 +975,20 @@ Then:
 
 ### Proposition 15: Soundness (Page 27)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, n \in  \mathbb{N} .$` Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, n \in  \mathbb{N} .`$ Then:
 ```
 L(A^ND,χ_n(w)) ⊆ L(A^D,χ_n(w))
 ```
 
 **Proof Sketch**: By induction on the length of the input word v.
-- **Base**: `$\varepsilon$` is accepted by NFA iff initial state is final iff DFA initial state is final
+- **Base**: $`\varepsilon`$ is accepted by NFA iff initial state is final iff DFA initial state is final
 - **Inductive step**: If v = xa is accepted by NFA from state set S, show it's accepted by DFA
   - Use Proposition 14 to show subsumption preservation
   - Show that DFA state after processing v contains representatives for all NFA states
 
 ### Proposition 16: Transition Correspondence (Page 27)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, n \in  \mathbb{N} , \pi  \in$` `$Q^\text{ND},\chi _n, x \in  \Sigma , q \in  \delta ^D,\chi _e(\pi , x).$` Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, n \in  \mathbb{N} , \pi  \in`$ $`Q^\text{ND},\chi _n, x \in  \Sigma , q \in  \delta ^D,\chi _e(\pi , x).`$ Then:
 ```
 ∃s ∈ ℕ ∃η₀η₁...η_s ∈ Q^ND,χ_n (
     η₀ = π ∧
@@ -997,13 +997,13 @@ Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, n \i
 )
 ```
 
-**Interpretation**: Every transition in the deterministic elementary function corresponds to a path (possibly through `$\varepsilon$`-transitions) in the NFA.
+**Interpretation**: Every transition in the deterministic elementary function corresponds to a path (possibly through $`\varepsilon`$-transitions) in the NFA.
 
 **Figure 7** (Page 28): Diagram illustrating Proposition 16.
 
 ### Proposition 17: Completeness (Page 28)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, n \in  \mathbb{N} .$` Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, n \in  \mathbb{N} .`$ Then:
 ```
 L(A^ND,χ_n(w)) ⊇ L(A^D,χ_n(w))
 ```
@@ -1014,7 +1014,7 @@ L(A^ND,χ_n(w)) ⊇ L(A^D,χ_n(w))
 
 ### Corollary: Main Correctness Result (Page 28)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, n \in  \mathbb{N} .$` Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, n \in  \mathbb{N} .`$ Then:
 ```
 L^χ_Lev(n, w) = L(A^ND,χ_n(w)) = L(A^D,χ_n(w))
 ```
@@ -1023,7 +1023,7 @@ L^χ_Lev(n, w) = L(A^ND,χ_n(w)) = L(A^D,χ_n(w))
 
 ### Proposition 18: Shift Invariance (Page 28)
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$n \in  \mathbb{N} , b \in$` {0,1}*. Then:
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`n \in  \mathbb{N} , b \in`$ {0,1}*. Then:
 
 **1)** For standard positions:
 ```
@@ -1050,15 +1050,15 @@ Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$n \in  \mathbb{N} , b \i
 
 **THIS IS THE CORE CONTRIBUTION OF THE THESIS**
 
-This section constructs universal Levenshtein automata `$A^\forall,\chi _n$` that work for ALL words, not just a fixed word w.
+This section constructs universal Levenshtein automata $`A^\forall,\chi _n`$ that work for ALL words, not just a fixed word w.
 
 ### Main Idea (Page 28)
 
-Instead of building `$A^D,\chi _n(w)$` for each specific word w, build ONE automaton `$A^\forall,\chi _n$` that:
+Instead of building $`A^D,\chi _n(w)`$ for each specific word w, build ONE automaton $`A^\forall,\chi _n`$ that:
 
 1. **Works for any word pair (w, v)**
 2. **Input alphabet**: Bit vectors (sequences from {0,1}*)
-3. **Key property**: Recognizes encoding h_n(w, v) iff `$d^\chi _L(w, v)$` `$\le  n$`
+3. **Key property**: Recognizes encoding h_n(w, v) iff $`d^\chi _L(w, v)`$ $`\le  n`$
 
 ### Universal vs Fixed-Word Positions (Page 29)
 
@@ -1076,16 +1076,16 @@ Instead of building `$A^D,\chi _n(w)$` for each specific word w, build ONE autom
 ### Notation for Universal Positions (Page 29)
 
 The thesis uses compact notation:
-- **I + i#e** denotes `$\langle \langle \lambda I.I+i, 0\rangle, e\rangle$` (non-final standard position)
-- **It + i#e** denotes `$\langle \langle \lambda I.I+i, 1\rangle, e\rangle$` (non-final transposition position)
-- **Is + i#e** denotes `$\langle \langle \lambda I.I+i, 2\rangle, e\rangle$` (non-final split position)
-- **M + i#e** denotes `$\langle \langle \lambda M.M+i, 3\rangle, e\rangle$` (final standard position)
-- **Mt + i#e** denotes `$\langle \langle \lambda M.M+i, 4\rangle, e\rangle$` (final transposition position)
-- **Ms + i#e** denotes `$\langle \langle \lambda M.M+i, 5\rangle, e\rangle$` (final split position)
+- **I + i#e** denotes $`\langle \langle \lambda I.I+i, 0\rangle, e\rangle`$ (non-final standard position)
+- **It + i#e** denotes $`\langle \langle \lambda I.I+i, 1\rangle, e\rangle`$ (non-final transposition position)
+- **Is + i#e** denotes $`\langle \langle \lambda I.I+i, 2\rangle, e\rangle`$ (non-final split position)
+- **M + i#e** denotes $`\langle \langle \lambda M.M+i, 3\rangle, e\rangle`$ (final standard position)
+- **Mt + i#e** denotes $`\langle \langle \lambda M.M+i, 4\rangle, e\rangle`$ (final transposition position)
+- **Ms + i#e** denotes $`\langle \langle \lambda M.M+i, 5\rangle, e\rangle`$ (final split position)
 
-Where `$\lambda I.I+i$` means "the function that takes I and returns I+i".
+Where $`\lambda I.I+i`$ means "the function that takes I and returns I+i".
 
-### Definition 15: Universal Levenshtein Automaton `$A^\forall$`,`$\chi _n$` (Page 30)
+### Definition 15: Universal Levenshtein Automaton $`A^\forall`$,$`\chi _n`$ (Page 30)
 
 **Complete Definition**:
 ```
@@ -1099,9 +1099,9 @@ A^∀,χ_n = ⟨Σ^∀_n, Q^∀,χ_n, I^∀,χ, F^∀,χ_n, δ^∀,χ_n⟩
 
 Bit vectors of length at most 2n + 2.
 
-### Non-Final Position Sets `$I^\chi _s$` (Page 30)
+### Non-Final Position Sets $`I^\chi _s`$ (Page 30)
 
-#### For `$\chi  = \varepsilon$` (Standard) (Page 30)
+#### For $`\chi  = \varepsilon`$ (Standard) (Page 30)
 
 ```
 I^ε_s = {I + t#k | |t| ≤ k ∧ -n ≤ t ≤ n ∧ 0 ≤ k ≤ n}
@@ -1110,11 +1110,11 @@ I^ε_s = {I + t#k | |t| ≤ k ∧ -n ≤ t ≤ n ∧ 0 ≤ k ≤ n}
 **Conditions**:
 - t ranges from -n to n (relative position)
 - k ranges from 0 to n (error count)
-`$- |t| \le  k$` (accumulated errors must cover position offset)
+- $`|t| \le  k`$ (accumulated errors must cover position offset)
 
-**Figures 8** (Page 31): Shows `$I^\varepsilon _s$` for n = 2 as a lattice diagram.
+**Figures 8** (Page 31): Shows $`I^\varepsilon _s`$ for n = 2 as a lattice diagram.
 
-#### For `$\chi  = t$` (With Transposition) (Page 31)
+#### For $`\chi  = t`$ (With Transposition) (Page 31)
 
 ```
 I^t_s = I^ε_s ∪ {It + t#k | |t+1| + 1 ≤ k ∧ -n ≤ t ≤ n-2 ∧ 1 ≤ k ≤ n}
@@ -1122,9 +1122,9 @@ I^t_s = I^ε_s ∪ {It + t#k | |t+1| + 1 ≤ k ∧ -n ≤ t ≤ n-2 ∧ 1 ≤ k 
 
 **Additional transposition positions**: It + t#k with adjusted conditions.
 
-**Figure 9** (Page 32): Shows `$I^t_s$` for n = 2.
+**Figure 9** (Page 32): Shows $`I^t_s`$ for n = 2.
 
-#### For `$\chi  =$` ms (With Merge/Split) (Page 32)
+#### For $`\chi  =`$ ms (With Merge/Split) (Page 32)
 
 ```
 I^ms_s = I^ε_s ∪ {Is + t#k | |t+1| + 1 ≤ k ∧ -n ≤ t ≤ n-2 ∧ 1 ≤ k ≤ n}
@@ -1132,11 +1132,11 @@ I^ms_s = I^ε_s ∪ {Is + t#k | |t+1| + 1 ≤ k ∧ -n ≤ t ≤ n-2 ∧ 1 ≤ k
 
 **Additional split positions**: Is + t#k.
 
-**Figure 10** (Page 32): Shows `$I^\text{ms}_s$` for n = 2.
+**Figure 10** (Page 32): Shows $`I^\text{ms}_s`$ for n = 2.
 
-### Final Position Sets `$M^\chi _s$` (Page 33)
+### Final Position Sets $`M^\chi _s`$ (Page 33)
 
-#### For `$\chi  = \varepsilon$` (Standard) (Page 33)
+#### For $`\chi  = \varepsilon`$ (Standard) (Page 33)
 
 ```
 M^ε_s = {M + t#k | k ≥ -t - n ∧ -2n ≤ t ≤ 0 ∧ 0 ≤ k ≤ n}
@@ -1144,29 +1144,29 @@ M^ε_s = {M + t#k | k ≥ -t - n ∧ -2n ≤ t ≤ 0 ∧ 0 ≤ k ≤ n}
 
 **Conditions**:
 - t ranges from -2n to 0 (final positions are "past" the word)
-`$- k \ge  -t - n$` ensures position is reachable
+- $`k \ge  -t - n`$ ensures position is reachable
 
-**Figure 11** (Page 34): Shows `$M^\varepsilon _s$` for n = 2.
+**Figure 11** (Page 34): Shows $`M^\varepsilon _s`$ for n = 2.
 
-#### For `$\chi  = t$` (With Transposition) (Page 34)
+#### For $`\chi  = t`$ (With Transposition) (Page 34)
 
 ```
 M^t_s = M^ε_s ∪ {Mt + t#k | k ≥ -t - n ∧ -2n ≤ t ≤ -2 ∧ 1 ≤ k ≤ n}
 ```
 
-**Figure 12** (Page 35): Shows `$M^t_s$` for n = 2.
+**Figure 12** (Page 35): Shows $`M^t_s`$ for n = 2.
 
-#### For `$\chi  =$` ms (With Merge/Split) (Page 35)
+#### For $`\chi  =`$ ms (With Merge/Split) (Page 35)
 
 ```
 M^ms_s = M^ε_s ∪ {Ms + t#k | k ≥ -t - n ∧ -2n ≤ t ≤ -1 ∧ 1 ≤ k ≤ n}
 ```
 
-**Figure 13** (Page 36): Shows `$M^\text{ms}_s$` for n = 2.
+**Figure 13** (Page 36): Shows $`M^\text{ms}_s`$ for n = 2.
 
-### Subsumption for Universal Positions `$<^\chi _s$` (Page 36)
+### Subsumption for Universal Positions $`<^\chi _s`$ (Page 36)
 
-#### For `$\chi  = \varepsilon$` (Page 36)
+#### For $`\chi  = \varepsilon`$ (Page 36)
 
 ```
 I + i#e <^ε_s I + j#f  ⇔ i#e <^ε_s j#f
@@ -1175,7 +1175,7 @@ M + i#e <^ε_s M + j#f  ⇔ i#e <^ε_s j#f
 
 Same conditions as fixed-word subsumption.
 
-#### For `$\chi  = t$` (Page 37)
+#### For $`\chi  = t`$ (Page 37)
 
 ```
 I + i#e <^t_s I + j#f   ⇔ i#e <^t_s j#f
@@ -1184,7 +1184,7 @@ M + i#e <^t_s M + j#f   ⇔ i#e <^t_s j#f
 M + i#e <^t_s Mt + j#f  ⇔ i#e <^t_s j#f_t
 ```
 
-#### For `$\chi  =$` ms (Page 37)
+#### For $`\chi  =`$ ms (Page 37)
 
 ```
 I + i#e <^ms_s I + j#f   ⇔ i#e <^ms_s j#f
@@ -1225,7 +1225,7 @@ F^∀,χ_n = M^χ_states
 
 ### Function r_n: Relevant Subvector (Page 39)
 
-**Function**: r_n : (`$I^\chi _s$` `$\cup$` `$M^\chi _s) \times  \Sigma ^\forall _n \to$` {0,1}*
+**Function**: r_n : ($`I^\chi _s`$ $`\cup`$ $`M^\chi _s) \times  \Sigma ^\forall _n \to`$ {0,1}*
 
 Given a universal position S and input x = x₁x₂...xₖ:
 
@@ -1259,7 +1259,7 @@ where h = min(n - e + 1, -i)
 
 **Figures 14, 15** (Pages 40-41): Illustrate r_n for specific examples with n = 5.
 
-### Extended Position Sets `$P^\chi$` (Page 41)
+### Extended Position Sets $`P^\chi`$ (Page 41)
 
 ```
 P^ε = {I + i#e | i,e ∈ ℤ} ∪ {M + i#e | i,e ∈ ℤ}
@@ -1271,9 +1271,9 @@ All possible universal positions (including those with any integer offsets).
 
 ### Function m_n: Conversion Between I and M Types (Page 42)
 
-**Function**: m_n : `$P^\chi$` `$\times  \mathbb{N}  \to$` `$P^\chi$`
+**Function**: m_n : $`P^\chi`$ $`\times  \mathbb{N}  \to`$ $`P^\chi`$
 
-#### For `$\chi  = \varepsilon$` (Page 42)
+#### For $`\chi  = \varepsilon`$ (Page 42)
 
 ```
 m_n(S, k) = {
@@ -1282,7 +1282,7 @@ m_n(S, k) = {
 }
 ```
 
-#### For `$\chi  = t$` (Page 42)
+#### For $`\chi  = t`$ (Page 42)
 
 ```
 m_n(S, k) = {
@@ -1293,7 +1293,7 @@ m_n(S, k) = {
 }
 ```
 
-#### For `$\chi  =$` ms (Page 42)
+#### For $`\chi  =`$ ms (Page 42)
 
 ```
 m_n(S, k) = {
@@ -1313,7 +1313,7 @@ m_n(A, x) = {m_n(a, x) | a ∈ A}
 
 ### Function f_n: Diagonal Check (Page 43)
 
-**Function**: f_n : (`$I^\chi _s$` `$\cup$` `$M^\chi _s) \times  \mathbb{N}  \to$` {true, false}
+**Function**: f_n : ($`I^\chi _s`$ $`\cup`$ $`M^\chi _s) \times  \mathbb{N}  \to`$ {true, false}
 
 #### For S = I + i#e (or It + i#e or Is + i#e) (Page 43)
 
@@ -1337,49 +1337,49 @@ f_n(S, k) = {
 
 **Significance**: This determines when we cross from non-final to final states (or vice versa) based on the input length.
 
-### Conversion Functions `$I^\chi$` and `$M^\chi$` (Page 44)
+### Conversion Functions $`I^\chi`$ and $`M^\chi`$ (Page 44)
 
-Map from concrete positions `$Q^\text{ND},\chi$` to universal positions `$P^\chi$`:
+Map from concrete positions $`Q^\text{ND},\chi`$ to universal positions $`P^\chi`$:
 
-#### `$I^\chi$` : `$\mathcal{P}(Q^\text{ND},\chi ) \to  \mathcal{P}(P^\chi$`) (Page 44)
+#### $`I^\chi`$ : $`\mathcal{P}(Q^\text{ND},\chi ) \to  \mathcal{P}(P^\chi`$) (Page 44)
 
-**For `$\chi  = \varepsilon$`**:
+**For $`\chi  = \varepsilon`$**:
 ```
 I^ε(A) = {I + (i - 1)#e | i#e ∈ A}
 ```
 
-**For `$\chi  = t$`**:
+**For $`\chi  = t`$**:
 ```
 I^t(A) = {I + (i - 1)#e | i#e ∈ A} ∪ {It + (i - 1)#e | i#e_t ∈ A}
 ```
 
-**For `$\chi  =$` ms**:
+**For $`\chi  =`$ ms**:
 ```
 I^ms(A) = {I + (i - 1)#e | i#e ∈ A} ∪ {Is + (i - 1)#e | i#e_s ∈ A}
 ```
 
-#### `$M^\chi$` : `$\mathcal{P}(Q^\text{ND},\chi ) \to  \mathcal{P}(P^\chi$`) (Page 44)
+#### $`M^\chi`$ : $`\mathcal{P}(Q^\text{ND},\chi ) \to  \mathcal{P}(P^\chi`$) (Page 44)
 
-**For `$\chi  = \varepsilon$`**:
+**For $`\chi  = \varepsilon`$**:
 ```
 M^ε(A) = {M + i#e | i#e ∈ A}
 ```
 
-**For `$\chi  = t$`**:
+**For $`\chi  = t`$**:
 ```
 M^t(A) = {M + i#e | i#e ∈ A} ∪ {Mt + i#e | i#e_t ∈ A}
 ```
 
-**For `$\chi  =$` ms**:
+**For $`\chi  =`$ ms**:
 ```
 M^ms(A) = {M + i#e | i#e ∈ A} ∪ {Ms + i#e | i#e_s ∈ A}
 ```
 
-**Purpose**: Convert sets of concrete positions (from `$A^D,\chi _n(w))$` to universal positions.
+**Purpose**: Convert sets of concrete positions (from $`A^D,\chi _n(w))`$ to universal positions.
 
 ### Function rm: Right-Most Element (Page 45)
 
-**Function**: rm : `$I^\chi _\text{states}$` `$\cup$` `$M^\chi _\text{states}$` → `$I^\varepsilon _s$` `$\cup$` `$M^\varepsilon _s$`
+**Function**: rm : $`I^\chi _\text{states}`$ $`\cup`$ $`M^\chi _\text{states}`$ → $`I^\varepsilon _s`$ $`\cup`$ $`M^\varepsilon _s`$
 
 ```
 rm(A) = {
@@ -1392,9 +1392,9 @@ rm(A) = {
 
 **Key Property**: For checking diagonal crossing with f_n, it suffices to check f_n(rm(A), k).
 
-### Function `$\delta ^\forall ,\chi _e$`: Elementary Transitions for Universal Automaton (Page 46)
+### Function $`\delta ^\forall ,\chi _e`$: Elementary Transitions for Universal Automaton (Page 46)
 
-**Function**: `$\delta ^\forall ,\chi _e$` : (`$I^\chi _s$` `$\cup$` `$M^\chi _s) \times  \Sigma ^\forall _n \to$` `$I^\chi _\text{states}$` `$\cup$` `$M^\chi _\text{states}$` `$\cup$` `$\{\emptyset\}$`
+**Function**: $`\delta ^\forall ,\chi _e`$ : ($`I^\chi _s`$ $`\cup`$ $`M^\chi _s) \times  \Sigma ^\forall _n \to`$ $`I^\chi _\text{states}`$ $`\cup`$ $`M^\chi _\text{states}`$ $`\cup`$ $`\{\emptyset\}`$
 
 #### For S = I + i#e (or It + i#e or Is + i#e) (Page 46)
 
@@ -1420,10 +1420,10 @@ rm(A) = {
 
 **Process**:
 1. Extract relevant subvector using r_n
-2. Apply fixed-word elementary transition `$\delta ^D,\chi _e$`
-3. Convert result back to universal positions using `$I^\chi$` or `$M^\chi$`
+2. Apply fixed-word elementary transition $`\delta ^D,\chi _e`$
+3. Convert result back to universal positions using $`I^\chi`$ or $`M^\chi`$
 
-### Subsumption Closure `$\sqcup$` (Page 47)
+### Subsumption Closure $`\sqcup`$ (Page 47)
 
 ```
 ⊔ : 𝒫(𝒫(I^χ_s)) ∪ 𝒫(𝒫(M^χ_s)) → 𝒫(I^χ_s) ∪ 𝒫(M^χ_s)
@@ -1434,23 +1434,23 @@ Same as for fixed-word automata - remove subsumed positions.
 
 ### Function ▽_a: Allowed Lengths (Page 47)
 
-**Function**: ▽_a : `$I^\chi _\text{states}$` `$\cup$` `$M^\chi _\text{states}$` `$\to  \mathcal{P}(\mathbb{N} )$`
+**Function**: ▽_a : $`I^\chi _\text{states}`$ $`\cup`$ $`M^\chi _\text{states}`$ $`\to  \mathcal{P}(\mathbb{N} )`$
 
-#### For `$Q \in$` `$I^\chi _\text{states}$` (Page 47)
+#### For $`Q \in`$ $`I^\chi _\text{states}`$ (Page 47)
 
 **Case 1**: Q = {I#0}
 ```
 ▽_a(Q) = {k | n ≤ k ≤ 2n + 2}
 ```
 
-**Case 2**: `$Q \ne$` {I#0}
+**Case 2**: $`Q \ne`$ {I#0}
 
 Let rm(Q) = I + i#e, then:
 ```
 ▽_a(Q) = {k | 2n + i - e + 1 ≤ k ≤ 2n + 2}
 ```
 
-#### For `$Q \in$` `$M^\chi _\text{states}$` (Page 47)
+#### For $`Q \in`$ $`M^\chi _\text{states}`$ (Page 47)
 
 ```
 ▽_a(Q) = {k ∈ ℕ | ∀π ∈ Q (if(k < n, M#(n-k), M + (n - k)#0) ≤^χ_s π)} \ {0}
@@ -1460,25 +1460,25 @@ Let rm(Q) = I + i#e, then:
 
 **Figures 16, 17** (Pages 47-48): Illustrate ▽_a for specific states with n = 5.
 
-### Transition Function `$\delta ^\forall ,\chi _n$`: Main Universal Transition (Page 48)
+### Transition Function $`\delta ^\forall ,\chi _n`$: Main Universal Transition (Page 48)
 
-**Function**: `$\delta ^\forall ,\chi _n$` : `$Q^\forall,\chi _n \times  \Sigma ^\forall _n \to$` `$Q^\forall,\chi _n$`
+**Function**: $`\delta ^\forall ,\chi _n`$ : $`Q^\forall,\chi _n \times  \Sigma ^\forall _n \to`$ $`Q^\forall,\chi _n`$
 
-Let `$Q \in$` `$Q^\forall,\chi _n$` and `$x \in  \Sigma ^\forall _n.$`
+Let $`Q \in`$ $`Q^\forall,\chi _n`$ and $`x \in  \Sigma ^\forall _n.`$
 
-**Case 1**: `$|x| \notin$` ▽_a(Q)
+**Case 1**: $`|x| \notin`$ ▽_a(Q)
 ```
 ¬!δ^∀,χ_n(Q, x)
 ```
 
-**Case 2**: `$|x| \in$` ▽`$_a(Q) \land  \bigcup _\{q\in Q\}$` `$\delta ^\forall ,\chi _e(q, x) = \emptyset$`
+**Case 2**: $`|x| \in`$ ▽$`_a(Q) \land  \bigcup _\{q\in Q\}`$ $`\delta ^\forall ,\chi _e(q, x) = \emptyset`$
 ```
 ¬!δ^∀,χ_n(Q, x)
 ```
 
-**Case 3**: `$|x| \in$` ▽`$_a(Q) \land  \bigcup _\{q\in Q\}$` `$\delta ^\forall ,\chi _e(q, x) \ne  \emptyset$`
+**Case 3**: $`|x| \in`$ ▽$`_a(Q) \land  \bigcup _\{q\in Q\}`$ $`\delta ^\forall ,\chi _e(q, x) \ne  \emptyset`$
 
-Let `$\Delta  = \sqcup _\{q\in Q\}$` `$\delta ^\forall ,\chi _e(q, x),$` then:
+Let $`\Delta  = \sqcup _\{q\in Q\}`$ $`\delta ^\forall ,\chi _e(q, x),`$ then:
 ```
 δ^∀,χ_n(Q, x) = {
     Δ               if f_n(rm(Δ), |x|) = false
@@ -1486,7 +1486,7 @@ Let `$\Delta  = \sqcup _\{q\in Q\}$` `$\delta ^\forall ,\chi _e(q, x),$` then:
 }
 ```
 
-**Key Insight**: When `$f_n(\text{rm}(\Delta), \lvert x\rvert) = \text{true}$`, the state has crossed the diagonal, so convert:
+**Key Insight**: When $`f_n(\text{rm}(\Delta), \lvert x\rvert) = \text{true}`$, the state has crossed the diagonal, so convert:
 - I-type positions to M-type positions (entering final states), or
 - M-type positions to I-type positions (leaving final states)
 
@@ -1500,7 +1500,7 @@ M^χ_states = {A | ∃x ∈ (Σ^∀_n)* (δ^∀,χ_n*(I^∀,χ, x) = A) ∧ A �
 
 ### Figures 18, 19, 20 (Pages 48-50)
 
-Show the complete automata `$A^\forall,\varepsilon _1,$` `$A^\forall$`,t_1, and `$A^\forall$`,ms_1.
+Show the complete automata $`A^\forall,\varepsilon _1,`$ $`A^\forall`$,t_1, and $`A^\forall`$,ms_1.
 
 **Note**: These are complex diagrams showing:
 - States as sets of universal positions
@@ -1515,11 +1515,11 @@ Show the complete automata `$A^\forall,\varepsilon _1,$` `$A^\forall$`,t_1, and 
 
 ### Connection to Fixed-Word Automata (Pages 50-56)
 
-This subsection shows how `$A^\forall,\chi _n$` simulates `$A^D,\chi _n(w)$` when given the appropriate bit vector encoding.
+This subsection shows how $`A^\forall,\chi _n`$ simulates $`A^D,\chi _n(w)`$ when given the appropriate bit vector encoding.
 
 ### Definition 16: Special Symbol and Padding (Page 50)
 
-Let `$n \in  \mathbb{N}$` and $ `$\notin  \Sigma .$`
+Let $`n \in  \mathbb{N}`$ and $ $`\notin  \Sigma .`$
 ```
 w_{-n+1} = w_{-n+2} = ... = w_0 = $
 ```
@@ -1528,7 +1528,7 @@ Pad the word w with n special symbols $ at the beginning.
 
 ### Function s_n: Relevant Subword for Position i (Page 51)
 
-**Function**: s_n : `$\Sigma$`* `$\times  \mathbb{N} ^{+} \to  (\Sigma  \cup$` {$})*
+**Function**: s_n : $`\Sigma`$* $`\times  \mathbb{N} ^{+} \to  (\Sigma  \cup`$ {$})*
 
 ```
 s_n(w, i) = {
@@ -1543,7 +1543,7 @@ where v = min(|w|, i + n + 1)
 
 ### Function h_n: Encoding of Word Pair (Page 51)
 
-**Function**: h_n : `$\Sigma$`* `$\times  \Sigma ^{+} \to  (\Sigma ^\forall _n)$`*
+**Function**: h_n : $`\Sigma`$* $`\times  \Sigma ^{+} \to  (\Sigma ^\forall _n)`$*
 
 ```
 h_n(w, x₁x₂...x_t) = {
@@ -1555,10 +1555,10 @@ h_n(w, x₁x₂...x_t) = {
 **Process**:
 1. For each character x_i in the input word
 2. Compute the relevant subword s_n(w, i) around position i in w
-3. Compute the characteristic vector `$\beta (x_i, s_n(w, i))$`
+3. Compute the characteristic vector $`\beta (x_i, s_n(w, i))`$
 4. Concatenate all characteristic vectors
 
-**This converts the pair (w, x) into a sequence of bit vectors suitable for `$A^\forall,\chi _n$`!**
+**This converts the pair (w, x) into a sequence of bit vectors suitable for $`A^\forall,\chi _n`$!**
 
 ### Example: Encoding h_3(w, x) (Page 52)
 
@@ -1566,19 +1566,19 @@ Let w = "abcabb" and x = "dacab". Find b = h_3(w, x):
 
 **Step by step**:
 1. s_3(w, 1) = "$$$abcab" (padded with 3 $'s)
-   `$- \beta (d,$` "$$$abcab") = "00000000"
+   - $`\beta (d,`$ "$$$abcab") = "00000000"
 
 2. s_3(w, 2) = "$$abcabb" (shifted window)
-   `$- \beta (a,$` "$$abcabb") = "00100100"
+   - $`\beta (a,`$ "$$abcabb") = "00100100"
 
 3. s_3(w, 3) = "$abcabb"
-   `$- \beta (c,$` "$abcabb") = "0001000"
+   - $`\beta (c,`$ "$abcabb") = "0001000"
 
 4. s_3(w, 4) = "abcabb"
-   `$- \beta (a,$` "abcabb") = "100100"
+   - $`\beta (a,`$ "abcabb") = "100100"
 
 5. s_3(w, 5) = "bcabb"
-   `$- \beta (b,$` "bcabb") = "10011"
+   - $`\beta (b,`$ "bcabb") = "10011"
 
 **Result**: b = ("00000000", "00100100", "0001000", "100100", "10011")
 
@@ -1593,11 +1593,11 @@ This is the **MOST IMPORTANT THEOREM** in the thesis.
 
 **Statement** (Page 52):
 
-Let `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`, `$w \in  \Sigma$`*`$, x \in  \Sigma ^{+}, n \in  \mathbb{N} ^{+}.$`
+Let $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$, $`w \in  \Sigma`$*$`, x \in  \Sigma ^{+}, n \in  \mathbb{N} ^{+}.`$
 
 Assume !h_n(w, x), let b = h_n(w, x), |b| = |x| = t, |w| = p.
 
-Define states for `$A^\forall,\chi _n$`:
+Define states for $`A^\forall,\chi _n`$:
 ```
 q^∀,χ_0 = {I#0}
 q^∀,χ_{i+1} = {
@@ -1607,7 +1607,7 @@ q^∀,χ_{i+1} = {
 for 0 ≤ i ≤ t-1
 ```
 
-Define position function s: `$[0, t] \to  \mathbb{N}$`:
+Define position function s: $`[0, t] \to  \mathbb{N}`$:
 ```
 s(i) = {
     p  if q^∀,χ_i ∈ F^∀,χ_n (final state)
@@ -1615,7 +1615,7 @@ s(i) = {
 }
 ```
 
-Define states for `$A^D,\chi _n(w)$`:
+Define states for $`A^D,\chi _n(w)`$:
 ```
 q^D,χ_0 = {0#0}
 q^D,χ_{i+1} = {
@@ -1625,15 +1625,15 @@ q^D,χ_{i+1} = {
 for 0 ≤ i ≤ t-1
 ```
 
-Define mapping d: (`$I^\chi _s$` `$\cup$` `$M^\chi _s) \times  \mathbb{N}  \to$` `$Q^\text{ND},\chi$`:
+Define mapping d: ($`I^\chi _s`$ $`\cup`$ $`M^\chi _s) \times  \mathbb{N}  \to`$ $`Q^\text{ND},\chi`$:
 
-**For `$\chi  = \varepsilon$`**:
+**For $`\chi  = \varepsilon`$**:
 ```
 d(I + i#e, z) = (z + i)#e
 d(M + i#e, z) = (z + i)#e
 ```
 
-**For `$\chi  = t$`**:
+**For $`\chi  = t`$**:
 ```
 d(I + i#e, z) = (z + i)#e
 d(M + i#e, z) = (z + i)#e
@@ -1641,7 +1641,7 @@ d(It + i#e, z) = (z + i)#e_t
 d(Mt + i#e, z) = (z + i)#e_t
 ```
 
-**For `$\chi  =$` ms**:
+**For $`\chi  =`$ ms**:
 ```
 d(I + i#e, z) = (z + i)#e
 d(M + i#e, z) = (z + i)#e
@@ -1649,7 +1649,7 @@ d(Is + i#e, z) = (z + i)#e_s
 d(Ms + i#e, z) = (z + i)#e_s
 ```
 
-For sets: d(A, z) = `$\{d(\pi , z) | \pi  \in  A\}$`
+For sets: d(A, z) = $`\{d(\pi , z) | \pi  \in  A\}`$
 
 **Then**:
 
@@ -1670,13 +1670,13 @@ For sets: d(A, z) = `$\{d(\pi , z) | \pi  \in  A\}$`
 
 **Interpretation**:
 
-The universal automaton `$A^\forall,\chi _n$` correctly simulates `$A^D,\chi _n(w)$` when given the encoding h_n(w, x):
+The universal automaton $`A^\forall,\chi _n`$ correctly simulates $`A^D,\chi _n(w)`$ when given the encoding h_n(w, x):
 
 1. **Definedness**: Both automata are defined or undefined on the same inputs
 2. **State correspondence**: At each step, the universal state corresponds to the fixed-word state by substituting I → s(i) or M → s(i)
 3. **Acceptance**: The universal automaton accepts iff the fixed-word automaton accepts
 
-**Significance**: This proves that `$A^\forall,\chi _n$` is correct - it recognizes h_n(w, x) if and only if `$d^\chi _L(w, x)$` `$\le  n.$`
+**Significance**: This proves that $`A^\forall,\chi _n`$ is correct - it recognizes h_n(w, x) if and only if $`d^\chi _L(w, x)`$ $`\le  n.`$
 
 **Proof** (Pages 53-56): The proof is lengthy and proceeds by double induction:
 1. Outer induction on i (position in input)
@@ -1688,7 +1688,7 @@ The proof uses extensive case analysis and relies on all the helper functions (r
 
 ## Section 6: Building Universal Automata (Pages 48-59)
 
-This section provides algorithms for constructing `$A^\forall,\chi _n.$`
+This section provides algorithms for constructing $`A^\forall,\chi _n.`$
 
 ### 6.1 Summarized Pseudo Code (Page 48)
 
@@ -1715,7 +1715,7 @@ end;
 
 **Strategy**: Breadth-first search starting from {I#0}.
 - For each state, try all valid input symbols (bit vectors of allowed lengths)
-- Compute transitions using `$\delta ^\forall ,\chi _n$`
+- Compute transitions using $`\delta ^\forall ,\chi _n`$
 - Add new states to queue if not seen before
 
 **Complexity**: Depends on the number of states and transitions (analyzed in 6.3).
@@ -1731,7 +1731,7 @@ This section provides extensive implementation details with types and API functi
 type STATE = set of POSITION
 ```
 
-**2. POSITION**: Tuple `$\langle \text{parameter}, \text{type}, X, Y\rangle$`
+**2. POSITION**: Tuple $`\langle \text{parameter}, \text{type}, X, Y\rangle`$
 ```
 type POSITION = record
     parameter: {I, M}      // 0 = I (non-final), 1 = M (final)
@@ -1746,7 +1746,7 @@ end
 type SET_OF_POINTS = set of POINT
 ```
 
-**4. POINT**: Tuple `$\langle \text{type}, X, Y\rangle$`
+**4. POINT**: Tuple $`\langle \text{type}, X, Y\rangle`$
 ```
 type POINT = record
     type: {usual, t, s}
@@ -1785,9 +1785,9 @@ end
 15. `POINTS_FROM_STATE(st: STATE): SET_OF_POINTS`
 
 **Elementary Transition**:
-16. `$\text{ELEMENTARY\_TRANSITION}(\text{pt}: \text{POINT}, b: \text{BIT\_VECTOR}, \chi: \{\varepsilon, t, \text{ms}\}): \text{SET\_OF\_POINTS}$`
+16. $`\text{ELEMENTARY\_TRANSITION}(\text{pt}: \text{POINT}, b: \text{BIT\_VECTOR}, \chi: \{\varepsilon, t, \text{ms}\}): \text{SET\_OF\_POINTS}`$
 
-Implements `$\delta ^D,\chi _e$` for concrete positions.
+Implements $`\delta ^D,\chi _e`$ for concrete positions.
 
 **State Construction**:
 17. `CONSTRUCT_STATE(param: {I,M}, pts: SET_OF_POINTS): STATE`
@@ -1795,17 +1795,17 @@ Implements `$\delta ^D,\chi _e$` for concrete positions.
 Converts points back to positions with given parameter.
 
 **Subsumption**:
-18. `$\text{SUBSUMPTION\_CLOSURE}(\text{pts}: \text{SET\_OF\_POINTS}, \chi: \{\varepsilon, t, \text{ms}\}): \text{SET\_OF\_POINTS}$`
+18. $`\text{SUBSUMPTION\_CLOSURE}(\text{pts}: \text{SET\_OF\_POINTS}, \chi: \{\varepsilon, t, \text{ms}\}): \text{SET\_OF\_POINTS}`$
 
-Implements `$\sqcup .$`
+Implements $`\sqcup .`$
 
 **Transition Computation**:
-19. `$\text{COMPUTE\_NEXT\_STATE}(\text{st}: \text{STATE}, b: \text{BIT\_VECTOR}, n: \text{INTEGER}, \chi: \{\varepsilon, t, \text{ms}\}): \text{STATE}$`
+19. $`\text{COMPUTE\_NEXT\_STATE}(\text{st}: \text{STATE}, b: \text{BIT\_VECTOR}, n: \text{INTEGER}, \chi: \{\varepsilon, t, \text{ms}\}): \text{STATE}`$
 
-Implements `$\delta ^\forall ,\chi _n.$`
+Implements $`\delta ^\forall ,\chi _n.`$
 
 **Length Checking**:
-20. `$\text{ALLOWED\_LENGTHS}(\text{st}: \text{STATE}, n: \text{INTEGER}, \chi: \{\varepsilon, t, \text{ms}\}): \text{SET\_OF\_INTEGERS}$`
+20. $`\text{ALLOWED\_LENGTHS}(\text{st}: \text{STATE}, n: \text{INTEGER}, \chi: \{\varepsilon, t, \text{ms}\}): \text{SET\_OF\_INTEGERS}`$
 
 Implements ▽_a.
 
@@ -1818,11 +1818,11 @@ Implements ▽_a.
 
 **Space Complexity**:
 
-**Theorem**: The number of states in `$A^{\forall,\varepsilon}_n$` is `$\mathcal{O}(n^2)$`.
+**Theorem**: The number of states in $`A^{\forall,\varepsilon}_n`$ is $`\mathcal{O}(n^2)`$.
 
 **Proof Sketch**:
 - Each state is a set of positions I + i#e or M + i#e
-- Positions satisfy constraints: `$\lvert i\rvert \le \mathcal{O}(n), e \le n$`
+- Positions satisfy constraints: $`\lvert i\rvert \le \mathcal{O}(n), e \le n`$
 - Each state is an anti-chain under subsumption
 - Anti-chain property limits the number of positions per state
 - Total number of reachable states is polynomial in n
@@ -1832,17 +1832,17 @@ Implements ▽_a.
 **Time Complexity**:
 
 Building the automaton:
-- States: `$\mathcal{O}(n^2)$` states
-- Transitions per state: `$\mathcal{O}(2^{2n+2})$` in worst case (trying all bit vectors)
-- Total: `$\mathcal{O}(n^2 \cdot 2^{2n+2})$`
+- States: $`\mathcal{O}(n^2)`$ states
+- Transitions per state: $`\mathcal{O}(2^{2n+2})`$ in worst case (trying all bit vectors)
+- Total: $`\mathcal{O}(n^2 \cdot 2^{2n+2})`$
 
 In practice, many bit vectors don't produce valid transitions, so actual time is much better.
 
 ### 6.4 Some Final Results (Page 59)
 
-**Table**: Number of states and transitions for `$A^\forall,\chi _n$` at various n values.
+**Table**: Number of states and transitions for $`A^\forall,\chi _n`$ at various n values.
 
-| n | States `$(\varepsilon )$` |  Transitions `$(\varepsilon )$` |  States (t) | Transitions (t) | States (ms) | Transitions (ms) |
+| n | States $`(\varepsilon )`$ |  Transitions $`(\varepsilon )`$ |  States (t) | Transitions (t) | States (ms) | Transitions (ms) |
 |---|------------|-----------------|------------|-----------------|-------------|------------------|
 | 1 | 6          | 15              | 8          | 21              | 9           | 25               |
 | 2 | 18         | 84              | 28         | 148             | 35          | 196              |
@@ -1859,13 +1859,13 @@ In practice, many bit vectors don't produce valid transitions, so actual time is
 
 ## Section 7: Minimality (Pages 59-72)
 
-**Goal**: Prove that the constructed universal automata `$A^{\forall,\varepsilon_n}$`, `$A^{\forall,t_n}$`, and `$A^{\forall,ms_n}$` are minimal — no equivalent automaton with fewer states exists.
+**Goal**: Prove that the constructed universal automata $`A^{\forall,\varepsilon_n}`$, $`A^{\forall,t_n}`$, and $`A^{\forall,ms_n}`$ are minimal — no equivalent automaton with fewer states exists.
 
 ### Approach (Page 59)
 
 To prove minimality, show that **no two distinct states are equivalent**:
 
-For any two distinct states `$Q_{1}, Q_{2} \in$` `$Q^\forall,\chi _n,$` there exists an input sequence that:
+For any two distinct states $`Q_{1}, Q_{2} \in`$ $`Q^\forall,\chi _n,`$ there exists an input sequence that:
 - Is accepted from Q₁ but not Q₂, or
 - Is accepted from Q₂ but not Q₁
 
@@ -1876,27 +1876,27 @@ For any two distinct states `$Q_{1}, Q_{2} \in$` `$Q^\forall,\chi _n,$` there ex
 
 ### Main Theorem (Page 60)
 
-**Theorem**: `$A^\forall,\varepsilon _n,$` `$A^\forall$`,t_n, and `$A^\forall$`,ms_n are minimal.
+**Theorem**: $`A^\forall,\varepsilon _n,`$ $`A^\forall`$,t_n, and $`A^\forall`$,ms_n are minimal.
 
 **Proof Outline**:
 
 **Part 1**: Show distinct non-final states (I-type) are distinguishable.
 
-Let `$Q_{1}, Q_{2} \in$` `$I^\chi _\text{states}$` with `$Q_{1} \ne  Q_{2}.$`
+Let $`Q_{1}, Q_{2} \in`$ $`I^\chi _\text{states}`$ with $`Q_{1} \ne  Q_{2}.`$
 
 **Case Analysis**:
-1. If `$\text{rm}(Q_1) \ne \text{rm}(Q_2)$`, construct distinguishing word based on right-most element difference
-2. If rm(Q₁) = rm(Q₂) but Q₁ \ `$Q_{2} \ne  \emptyset ,$` use subsumption properties to distinguish
+1. If $`\text{rm}(Q_1) \ne \text{rm}(Q_2)`$, construct distinguishing word based on right-most element difference
+2. If rm(Q₁) = rm(Q₂) but Q₁ \ $`Q_{2} \ne  \emptyset ,`$ use subsumption properties to distinguish
 
 **Part 2**: Show distinct final states (M-type) are distinguishable.
 
-Similar analysis for `$M^\chi _\text{states}$`.
+Similar analysis for $`M^\chi _\text{states}`$.
 
 **Part 3**: Show I-type and M-type states are distinguishable.
 
-Any I-type state is non-final, any M-type state is final → distinguishable by `$\varepsilon .$`
+Any I-type state is non-final, any M-type state is final → distinguishable by $`\varepsilon .`$
 
-**Detailed Proofs** (Pages 60-72): The proof is technical and involves careful case analysis for all three variants `$(\varepsilon , t,$` ms). Each case considers different structural properties of states and constructs specific distinguishing sequences.
+**Detailed Proofs** (Pages 60-72): The proof is technical and involves careful case analysis for all three variants $`(\varepsilon , t,`$ ms). Each case considers different structural properties of states and constructs specific distinguishing sequences.
 
 ### Key Lemmas (Pages 61-70)
 
@@ -1916,7 +1916,7 @@ Since no two distinct states are equivalent, the automata are minimal. This prov
 
 ## Section 8: Properties (Pages 72-77)
 
-This section presents additional theoretical properties of the universal automaton `$A^{\forall,\varepsilon_n}$`.
+This section presents additional theoretical properties of the universal automaton $`A^{\forall,\varepsilon_n}`$.
 
 ### Properties Covered (Page 72-77)
 
@@ -1949,23 +1949,23 @@ Final observations about:
 
 ### Main Contributions
 
-1. **Three Levenshtein Distances**: d²_L (standard), `$d^t_L$` (transposition), `$d^\text{ms}_L$` (merge/split)
+1. **Three Levenshtein Distances**: d²_L (standard), $`d^t_L`$ (transposition), $`d^\text{ms}_L`$ (merge/split)
 
-2. **⚠️ Triangle Inequality Violation**: `$d^t_L$` is not a proper metric
+2. **⚠️ Triangle Inequality Violation**: $`d^t_L`$ is not a proper metric
 
-3. **Nondeterministic Automata**: `$A^\text{ND},\chi _n(w)$` for fixed word w
+3. **Nondeterministic Automata**: $`A^\text{ND},\chi _n(w)`$ for fixed word w
 
-4. **Deterministic Automata**: `$A^D,\chi _n(w)$` using subsumption-based state construction
+4. **Deterministic Automata**: $`A^D,\chi _n(w)`$ using subsumption-based state construction
 
-5. **Universal Automata**: `$A^\forall,\chi _n$` for ALL words using bit vector encoding
+5. **Universal Automata**: $`A^\forall,\chi _n`$ for ALL words using bit vector encoding
 
-6. **Correctness**: Proposition 19 proves `$A^\forall,\chi _n$` correctly simulates `$A^D,\chi _n(w)$`
+6. **Correctness**: Proposition 19 proves $`A^\forall,\chi _n`$ correctly simulates $`A^D,\chi _n(w)`$
 
-7. **Construction**: Breadth-first search algorithm builds `$A^\forall,\chi _n$`
+7. **Construction**: Breadth-first search algorithm builds $`A^\forall,\chi _n`$
 
-8. **Minimality**: `$A^\forall,\chi _n$` is minimal (Section 7)
+8. **Minimality**: $`A^\forall,\chi _n`$ is minimal (Section 7)
 
-9. **Practical Application**: Parallel traversal of `$A^\forall,\chi _n$` and dictionary automaton for fast fuzzy search
+9. **Practical Application**: Parallel traversal of $`A^\forall,\chi _n`$ and dictionary automaton for fast fuzzy search
 
 ### Key Innovations
 
@@ -1979,22 +1979,22 @@ Final observations about:
 
 ### Complexity Results
 
-- **States**: `$\mathcal{O}(n^2)$` for all three variants
+- **States**: $`\mathcal{O}(n^2)`$ for all three variants
 - **Construction**: Polynomial time in n
-- **Query**: Traverse automaton in `$\mathcal{O}(\lvert x\rvert \cdot 2n)$` time
+- **Query**: Traverse automaton in $`\mathcal{O}(\lvert x\rvert \cdot 2n)`$ time
 
 ### Notation Reference
 
-- **`$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`**: Distance variant
+- **$`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$**: Distance variant
 - **i#e**: Concrete position
 - **I + i#e**: Universal non-final position
 - **M + i#e**: Universal final position
-- **`$\beta (x, w)$`**: Characteristic vector
+- **$`\beta (x, w)`$**: Characteristic vector
 - **h_n(w, x)**: Bit vector encoding
-- **`$\le ^\chi _s$`**: Subsumption relation
-- **`$\sqcup$`**: Subsumption closure
-- **`$\delta ^D,\chi _e$`**: Elementary transition
-- **`$\delta ^\forall ,\chi _n$`**: Universal transition
+- **$`\le ^\chi _s`$**: Subsumption relation
+- **$`\sqcup`$**: Subsumption closure
+- **$`\delta ^D,\chi _e`$**: Elementary transition
+- **$`\delta ^\forall ,\chi _n`$**: Universal transition
 - **r_n**: Relevant subvector
 - **m_n**: I/M conversion
 - **f_n**: Diagonal check
@@ -2006,7 +2006,7 @@ Final observations about:
 
 ### For liblevenshtein-rust
 
-1. **Priority**: Implement standard variant `$(\chi  = \varepsilon )$` first
+1. **Priority**: Implement standard variant $`(\chi  = \varepsilon )`$ first
 2. **State representation**: Needs efficient set operations for positions
 3. **Bit vector encoding**: Critical for performance
 4. **Subsumption**: Essential for compact state space
@@ -2014,17 +2014,17 @@ Final observations about:
 
 ### Performance Considerations
 
-1. **Pre-build `$A^\forall,\chi _n$`**: One-time cost, amortized over all queries
+1. **Pre-build $`A^\forall,\chi _n`$**: One-time cost, amortized over all queries
 2. **Dictionary parallel traversal**: Main performance benefit
 3. **Bit vector computation**: Should be fast (table lookup?)
 4. **State caching**: May benefit from memoization
 
 ### Testing Strategy
 
-1. **Correctness**: Verify against existing `$A^D,\chi _n(w)$` implementation
+1. **Correctness**: Verify against existing $`A^D,\chi _n(w)`$ implementation
 2. **Proposition 19**: Key test - ensure correspondence holds
 3. **Edge cases**: Empty word, distance 0, maximum distance
-4. **Triangle inequality**: Remember `$d^t_L$` violates it!
+4. **Triangle inequality**: Remember $`d^t_L`$ violates it!
 
 ---
 

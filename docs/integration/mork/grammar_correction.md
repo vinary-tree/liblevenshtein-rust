@@ -94,7 +94,7 @@ Phase D proposes extending to grammar correction via MORK pattern matching.
 |--------------|------------------------|
 | `match2()` | Recursive structural matching of AST nodes |
 | `unify()` | Variable binding for feature agreement |
-| `query_multi_i()` | `$\mathcal{O}(K \times N)$` lattice processing (not `$\mathcal{O}(K^N)$`) |
+| `query_multi_i()` | $`\mathcal{O}(K \times N)`$ lattice processing (not $`\mathcal{O}(K^N)`$) |
 | `transform_multi_multi_()` | Apply pattern→template corrections |
 | De Bruijn indices | Feature propagation without name lookup |
 | PathMap backend | Efficient rule storage and lookup |
@@ -675,11 +675,11 @@ for correction in result.corrections {
 
 ### Efficiency
 
-MORK's `query_multi_i()` provides **`$\mathcal{O}(K \times N)$`** complexity where:
+MORK's `query_multi_i()` provides **$`\mathcal{O}(K \times N)`$** complexity where:
 - K = average candidates per position
 - N = number of positions
 
-This avoids the **`$\mathcal{O}(K^N)$`** path enumeration of naive approaches.
+This avoids the **$`\mathcal{O}(K^N)`$** path enumeration of naive approaches.
 
 ### Optimization Strategies
 

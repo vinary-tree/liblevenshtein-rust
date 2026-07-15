@@ -148,7 +148,7 @@ fn dfs_traverse(node: DictNode, auto: AutomatonZipper) -> Vec<String> {
 ```
 
 **Advantages**:
-- Memory efficient: `$\mathcal{O}(\text{depth})$` stack space
+- Memory efficient: $`\mathcal{O}(\text{depth})`$ stack space
 - Simple implementation
 - Good cache locality (explores nearby terms)
 
@@ -185,7 +185,7 @@ fn bfs_traverse(root: DictNode, initial_auto: AutomatonZipper) -> Vec<String> {
 - Better for interactive use (show results incrementally)
 
 **Disadvantages**:
-- Higher memory usage: `$\mathcal{O}(\text{branching}^{\text{depth}})$`
+- Higher memory usage: $`\mathcal{O}(\text{branching}^{\text{depth}})`$
 
 ### 3. Priority Queue (Best-First)
 
@@ -413,17 +413,17 @@ for term in automaton.query(&dict) {
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Single transition** | `$\mathcal{O}(D^{2})$` | `$D$` = max distance |
-| **Total traversal** | `$\mathcal{O}(M \times D^{2} \times B \times L)$` | `$M$` = query len, `$B$` = branching, `$L$` = avg depth |
-| **With early termination** | `$\mathcal{O}(M \times D \times B \times L)$` | Typically 30-70% reduction |
+| **Single transition** | $`\mathcal{O}(D^{2})`$ | $`D`$ = max distance |
+| **Total traversal** | $`\mathcal{O}(M \times D^{2} \times B \times L)`$ | $`M`$ = query len, $`B`$ = branching, $`L`$ = avg depth |
+| **With early termination** | $`\mathcal{O}(M \times D \times B \times L)`$ | Typically 30-70% reduction |
 
 ### Space Complexity
 
 | Component | Complexity | Notes |
 |-----------|-----------|-------|
-| **Call stack (DFS)** | `$\mathcal{O}(L)$` | `$L$` = max dictionary depth |
-| **Automaton state** | `$\mathcal{O}(M \times D)$` | Per recursion level |
-| **Results buffer** | `$\mathcal{O}(K \times L)$` | `$K$` = number of matches |
+| **Call stack (DFS)** | $`\mathcal{O}(L)`$ | $`L`$ = max dictionary depth |
+| **Automaton state** | $`\mathcal{O}(M \times D)`$ | Per recursion level |
+| **Results buffer** | $`\mathcal{O}(K \times L)`$ | $`K`$ = number of matches |
 
 ### Benchmark Results
 

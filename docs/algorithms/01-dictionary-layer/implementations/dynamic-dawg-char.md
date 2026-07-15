@@ -196,8 +196,8 @@ assert_eq!(dict2.len(), Some(3));  // Same count
 
 | Property | Behavior | Impact |
 |----------|----------|--------|
-| **Time Complexity** | `$\mathcal{O}(1)$` | Single atomic increment |
-| **Space Complexity** | `$\mathcal{O}(1)$` | ~16 bytes (Arc pointer only) |
+| **Time Complexity** | $`\mathcal{O}(1)`$ | Single atomic increment |
+| **Space Complexity** | $`\mathcal{O}(1)`$ | ~16 bytes (Arc pointer only) |
 | **Data Sharing** | ✅ Complete | All clones share same node graph |
 | **Mutation Visibility** | ✅ Global | Changes via any clone affect all |
 | **Thread Safety** | ✅ Lock-free | Readers never block; writers publish via CAS |
@@ -205,7 +205,7 @@ assert_eq!(dict2.len(), Some(3));  // Same count
 
 #### Unicode Considerations
 
-Clone behavior is **independent of Unicode complexity**. Whether working with ASCII, multi-byte characters, emoji, or combining diacritics, the clone operation remains `$\mathcal{O}(1)$`:
+Clone behavior is **independent of Unicode complexity**. Whether working with ASCII, multi-byte characters, emoji, or combining diacritics, the clone operation remains $`\mathcal{O}(1)`$:
 
 ```rust
 // Simple ASCII
@@ -310,9 +310,9 @@ let dict2 = DynamicDawgChar::from_iter(terms);
 
 | Method | Time | Space | Notes |
 |--------|------|-------|-------|
-| `.clone()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | Regardless of character encoding |
-| Serialize/Deserialize | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | Includes Unicode normalization overhead |
-| Rebuild from terms | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(n)$` | m = average chars per term (not bytes!) |
+| `.clone()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | Regardless of character encoding |
+| Serialize/Deserialize | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ | Includes Unicode normalization overhead |
+| Rebuild from terms | $`\mathcal{O}(n \cdot m)`$ | $`\mathcal{O}(n)`$ | m = average chars per term (not bytes!) |
 
 **Important:** Rebuilding from terms with DynamicDawgChar is faster than DynamicDawg for the same visual length because it operates on character boundaries, not byte boundaries.
 
@@ -321,7 +321,7 @@ let dict2 = DynamicDawgChar::from_iter(terms);
 | Aspect | DynamicDawg (byte) | DynamicDawgChar (char) |
 |--------|-------------------|------------------------|
 | **Clone type** | Shallow (Arc) | Shallow (Arc) - **identical** |
-| **Clone cost** | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` - **identical** |
+| **Clone cost** | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ - **identical** |
 | **Data sharing** | ✅ Yes | ✅ Yes - **identical** |
 | **Memory per node** | ~25 bytes | ~49 bytes (char vs u8 labels) |
 | **Use case** | ASCII, raw bytes | Unicode, multi-language |
@@ -363,7 +363,7 @@ let writer = {
 
 **Key Takeaways:**
 1. 🔗 Clone behavior is **identical** to byte-level DynamicDawg
-2. 🚀 **`$\mathcal{O}(1)$`** regardless of Unicode complexity (ASCII, CJK, emoji, etc.)
+2. 🚀 **$`\mathcal{O}(1)`$** regardless of Unicode complexity (ASCII, CJK, emoji, etc.)
 3. 🔄 **Mutations visible** across all clones for all character types
 4. 🌍 **Unicode-safe** lock-free thread synchronization (ArcSwap snapshots, CAS writes)
 5. 📊 For **independence**, use serialization or rebuild (same as byte-level)
@@ -376,10 +376,10 @@ DynamicDawgChar provides the same constructors as `DynamicDawg`, with identical 
 
 | Constructor | Complexity | Use Case | Unicode-Safe |
 |-------------|-----------|----------|--------------|
-| `new()` | `$\mathcal{O}(1)$` | Empty start | ✅ |
-| `from_iter()` | `$\mathcal{O}(n \cdot m)$` | Bulk load | ✅ |
-| `from_terms()` | `$\mathcal{O}(n \cdot m)$` | Simple list | ✅ |
-| `insert_with_value()` | `$\mathcal{O}(m)$` amortized | Per-term values | ✅ |
+| `new()` | $`\mathcal{O}(1)`$ | Empty start | ✅ |
+| `from_iter()` | $`\mathcal{O}(n \cdot m)`$ | Bulk load | ✅ |
+| `from_terms()` | $`\mathcal{O}(n \cdot m)`$ | Simple list | ✅ |
+| `insert_with_value()` | $`\mathcal{O}(m)`$ amortized | Per-term values | ✅ |
 
 Where n = number of terms, m = average **character** count (not bytes!)
 
@@ -405,7 +405,7 @@ valued_dict.insert_with_value("résumé", 200);
 ```
 
 **Characteristics:**
-- **Time**: `$\mathcal{O}(1)$` - Same as byte-level variant
+- **Time**: $`\mathcal{O}(1)`$ - Same as byte-level variant
 - **Memory**: ~48 bytes initial allocation
 - **Unicode handling**: Automatic - no normalization needed
 
@@ -787,7 +787,7 @@ The `union_with()` and `union_replace()` methods enable **merging two DynamicDaw
 - 🔒 **Thread-safe**: Lock-free reads; writers publish via CAS
 - 💾 **DAWG-preserving**: Maintains minimization through `insert_with_value()`
 - 🌐 **Unicode-correct**: Operates on `char` (Unicode code points), not bytes
-- ⚡ **Efficient**: `$\mathcal{O}(n \cdot m)$` traversal with minimal memory overhead
+- ⚡ **Efficient**: $`\mathcal{O}(n \cdot m)`$ traversal with minimal memory overhead
 - 🎯 **Flexible**: Custom merge functions for value conflicts
 
 ### union_with() - Merge with Custom Logic
@@ -824,10 +824,10 @@ where
 - Result: Proper handling of multi-byte Unicode sequences (emoji, diacritics, etc.)
 
 **Complexity**:
-- **Time**: `$\mathcal{O}(n \cdot m)$` where n = terms in `other`, m = average term length **in characters**
-  - `$\mathcal{O}(n \cdot m)$` for DFS traversal
-  - `$\mathcal{O}(m)$` per term for `insert_with_value()`
-- **Space**: `$\mathcal{O}(d)$` where d = maximum trie depth (characters, not bytes)
+- **Time**: $`\mathcal{O}(n \cdot m)`$ where n = terms in `other`, m = average term length **in characters**
+  - $`\mathcal{O}(n \cdot m)`$ for DFS traversal
+  - $`\mathcal{O}(m)`$ per term for `insert_with_value()`
+- **Space**: $`\mathcal{O}(d)`$ where d = maximum trie depth (characters, not bytes)
   - DFS stack size proportional to deepest path
   - Constant additional memory
 
@@ -1059,10 +1059,10 @@ Same rationale as byte-level variant:
 
 | Operation | Time Complexity | Space Complexity | Typical Performance (10K terms) |
 |-----------|----------------|------------------|--------------------------------|
-| `union_with()` | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(d)$` | ~52ms |
-| `union_replace()` | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(d)$` | ~52ms |
-| DFS traversal | `$\mathcal{O}(n)$` | `$\mathcal{O}(d)$` | ~22ms |
-| Per-term insertion | `$\mathcal{O}(m)$` | `$\mathcal{O}(1)$` amortized | ~2-6µs |
+| `union_with()` | $`\mathcal{O}(n \cdot m)`$ | $`\mathcal{O}(d)`$ | ~52ms |
+| `union_replace()` | $`\mathcal{O}(n \cdot m)`$ | $`\mathcal{O}(d)`$ | ~52ms |
+| DFS traversal | $`\mathcal{O}(n)`$ | $`\mathcal{O}(d)`$ | ~22ms |
+| Per-term insertion | $`\mathcal{O}(m)`$ | $`\mathcal{O}(1)`$ amortized | ~2-6µs |
 
 **Variables**:
 - n = number of terms in source dictionary
@@ -1351,11 +1351,11 @@ Same as DynamicDawg:
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Insert** | `$\mathcal{O}(m)$` | m = term length (characters) |
-| **Remove** | `$\mathcal{O}(m)$` | Plus ref count updates |
-| **Contains** | `$\mathcal{O}(m)$` | With Bloom filter: `$\mathcal{O}(1)$` rejection |
-| **Compact** | `$\mathcal{O}(n)$` | n = total nodes |
-| **Query (fuzzy)** | `$\mathcal{O}(m \times d^{2} \times b)$` | d = distance, b = branching |
+| **Insert** | $`\mathcal{O}(m)`$ | m = term length (characters) |
+| **Remove** | $`\mathcal{O}(m)`$ | Plus ref count updates |
+| **Contains** | $`\mathcal{O}(m)`$ | With Bloom filter: $`\mathcal{O}(1)`$ rejection |
+| **Compact** | $`\mathcal{O}(n)`$ | n = total nodes |
+| **Query (fuzzy)** | $`\mathcal{O}(m \times d^{2} \times b)`$ | d = distance, b = branching |
 
 ### Benchmark Results
 

@@ -72,9 +72,9 @@ Definition i_invariant (p : Position) : Prop :=
 
 The constructor checks **exactly** the conditions required by the invariant. If the checks pass:
 1. Variant is set to `VarINonFinal` (first conjunct satisfied)
-2. Conditional ensures `$|\text{offset}| \le  \text{errors}$` (second conjunct)
-3. Conditional ensures `$-n \le  \text{offset} \le  n$` (third conjunct)
-4. Conditional ensures `$\text{errors} \le  n$` (fourth conjunct)
+2. Conditional ensures $`|\text{offset}| \le  \text{errors}`$ (second conjunct)
+3. Conditional ensures $`-n \le  \text{offset} \le  n`$ (third conjunct)
+4. Conditional ensures $`\text{errors} \le  n`$ (fourth conjunct)
 
 Therefore, success guarantees validity.
 
@@ -89,8 +89,8 @@ Therefore, success guarantees validity.
    - If any is false → discriminate (contradiction with `Some p`)
    - All true → extract position from `Some`
 4. Extract boolean conditions as Prop using reflection lemmas:
-   - `Z.leb_le`: `$(a <=? b) = \text{true} \to  a \le  b$`
-   - `Nat.leb_le`: `$(m <=? n) = \text{true} \to  m \le  n$`
+   - `Z.leb_le`: $`(a <=? b) = \text{true} \to  a \le  b`$
+   - `Nat.leb_le`: $`(m <=? n) = \text{true} \to  m \le  n`$
 5. Construct proof of all four invariant conjuncts
 
 ### Coq Proof (Annotated)
@@ -165,8 +165,8 @@ Theorem new_m_correct : forall offset errors max_distance p,
 ```
 
 **Key difference**: M-type has different geometric constraints:
-- `$\text{errors} \ge  -\text{offset} - n$` (can reach end from position)
-- `$-2n \le  \text{offset} \le  0$` (past term end, bounded)
+- $`\text{errors} \ge  -\text{offset} - n`$ (can reach end from position)
+- $`-2n \le  \text{offset} \le  0`$ (past term end, bounded)
 
 **Proof**: Similar structure, uses `lia` to flip `>=` inequality for proper direction.
 
@@ -306,13 +306,13 @@ Lemma i_zero_errors_on_diagonal : forall p,
 **Intuition**: If no errors remaining, position must be on diagonal (perfect match).
 
 **Proof**:
-1. From `i_invariant`: `$Z.\text{abs} (\text{offset} p) \le  Z.\text{of}_\text{nat} (\text{errors} p)$`
-2. Substitute `errors p = 0`: `$Z.\text{abs} (\text{offset} p) \le  0$`
-3. Absolute value is always non-negative: `$0 \le  Z.\text{abs} (\text{offset} p)$`
+1. From `i_invariant`: $`Z.\text{abs} (\text{offset} p) \le  Z.\text{of}_\text{nat} (\text{errors} p)`$
+2. Substitute `errors p = 0`: $`Z.\text{abs} (\text{offset} p) \le  0`$
+3. Absolute value is always non-negative: $`0 \le  Z.\text{abs} (\text{offset} p)`$
 4. Combined: `Z.abs (offset p) = 0`
 5. Case split via `Z.abs_spec`:
-   - If `$\text{offset} p \ge  0$`: `|offset p| = offset p`, so `$\text{offset} p \le  0$` → `offset p = 0`
-   - If `offset p < 0`: `|offset p| = -offset p`, so `$-\text{offset} p \le  0$` → `offset p = 0`
+   - If $`\text{offset} p \ge  0`$: `|offset p| = offset p`, so $`\text{offset} p \le  0`$ → `offset p = 0`
+   - If `offset p < 0`: `|offset p| = -offset p`, so $`-\text{offset} p \le  0`$ → `offset p = 0`
 
 **Key technique**: `Z.abs_spec` provides case analysis on sign, enabling `lia` to solve each case.
 
@@ -360,8 +360,8 @@ Lemma m_zero_errors_at_end : forall p,
 | I-type checks | `new_i` conditions | `new_i()` error checks | ✅ Exact |
 | M-type checks | `new_m` conditions | `new_m()` error checks | ✅ Exact |
 | Entry char required | `Some entry_char` | `entry_char: char` | ✅ Type enforced |
-| Error bounds | `$\text{errors} \le  \max _\text{distance}$` | Checked at construction | ✅ Verified |
-| Offset bounds | `$-n \le  \text{offset} \le  n$` | `i32` range + checks | ✅ Verified |
+| Error bounds | $`\text{errors} \le  \max _\text{distance}`$ | Checked at construction | ✅ Verified |
+| Offset bounds | $`-n \le  \text{offset} \le  n`$ | `i32` range + checks | ✅ Verified |
 
 ---
 
@@ -384,7 +384,7 @@ Lemma m_zero_errors_at_end : forall p,
 
 **Deliverables**:
 - Transposition entry/completion protocol
-- Merge operation `$(\langle 2,1\rangle$` direct)
+- Merge operation $`(\langle 2,1\rangle`$ direct)
 - Correctness proofs
 
 **Defer**: Split operations (phonetic, fractional weights) to Phase 8+
@@ -409,7 +409,7 @@ Lemma m_zero_errors_at_end : forall p,
 ### Coq Libraries
 
 - `Z.abs_spec`: Case analysis on sign for absolute value proofs
-- `Z.leb_le`: Boolean to Prop reflection for `$\le$`
+- `Z.leb_le`: Boolean to Prop reflection for $`\le`$
 - `Nat.leb_le`: Natural number boolean reflection
 - `andb_true_iff`: Conjunction reflection
 - `lia`: Linear integer arithmetic solver

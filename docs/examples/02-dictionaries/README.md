@@ -27,7 +27,7 @@ runtime):
 
 > Terms defined. **DAWG** = *Directed Acyclic Word Graph*, a trie whose equivalent
 > suffixes are shared, shrinking the node count. **DAT** = *Double-Array Trie*, a trie
-> packed into two integer arrays giving `$\mathcal{O}(1)$` lookups per transition. "Static" here
+> packed into two integer arrays giving $`\mathcal{O}(1)`$ lookups per transition. "Static" here
 > means *read-only once built* — not *compile-time*; you still build it at runtime from a
 > word list.
 

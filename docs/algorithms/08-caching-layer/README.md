@@ -243,7 +243,7 @@ assert_eq!(lfu_entry, Some("rare".to_string()));
 
 #### CostAware
 
-Balances age, size, and hit count using formula: `$(\text{age} \times \text{size}) / (\text{hits} + 1)$`
+Balances age, size, and hit count using formula: $`(\text{age} \times \text{size}) / (\text{hits} + 1)`$
 
 ```rust
 use liblevenshtein::cache::eviction::CostAware;
@@ -274,7 +274,7 @@ assert_eq!(high_cost, Some("large_cold".to_string()));
 - `access_count: usize`
 - `size: usize`
 
-**Eviction Criterion**: Highest `$(\text{age} \times \text{size}) / (\text{hits} + 1)$`
+**Eviction Criterion**: Highest $`(\text{age} \times \text{size}) / (\text{hits} + 1)`$
 
 **Use Cases**:
 - Memory-constrained systems
@@ -283,7 +283,7 @@ assert_eq!(high_cost, Some("large_cold".to_string()));
 
 #### MemoryPressure
 
-Memory-aware eviction using formula: `$\text{size} / (\text{hit\_rate} + 0.1)$`
+Memory-aware eviction using formula: $`\text{size} / (\text{hit\_rate} + 0.1)`$
 
 ```rust
 use liblevenshtein::cache::eviction::MemoryPressure;
@@ -314,7 +314,7 @@ assert_eq!(high_pressure, Some("wasteful".to_string()));
 - `total_accesses: usize`
 - `hits: usize`
 
-**Eviction Criterion**: Highest `$\text{size} / (\text{hit\_rate} + 0.1)$`
+**Eviction Criterion**: Highest $`\text{size} / (\text{hit\_rate} + 0.1)`$
 
 **Use Cases**:
 - Low-memory environments
@@ -411,9 +411,9 @@ Lru::new(LazyInitDefault::new())
 
 | Operation | Noop | Metadata Wrappers |
 |-----------|------|-------------------|
-| get_value | `$\mathcal{O}(d)$` | `$\mathcal{O}(d)$` + `$\mathcal{O}(1)$` metadata update |
-| contains | `$\mathcal{O}(d)$` | `$\mathcal{O}(d)$` + `$\mathcal{O}(1)$` metadata update |
-| find_lru/lfu | N/A | `$\mathcal{O}(n)$` scan |
+| get_value | $`\mathcal{O}(d)`$ | $`\mathcal{O}(d)`$ + $`\mathcal{O}(1)`$ metadata update |
+| contains | $`\mathcal{O}(d)`$ | $`\mathcal{O}(d)`$ + $`\mathcal{O}(1)`$ metadata update |
+| find_lru/lfu | N/A | $`\mathcal{O}(n)`$ scan |
 
 Where:
 - `d` = dictionary operation complexity

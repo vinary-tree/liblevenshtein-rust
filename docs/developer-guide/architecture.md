@@ -148,7 +148,7 @@ pub struct Transducer<D: Dictionary, P: SubstitutionPolicy = Unrestricted> {
 }
 ```
 
-A query **lazily simulates** the Levenshtein automaton `$A(W, k)$` and intersects it
+A query **lazily simulates** the Levenshtein automaton $`A(W, k)`$ and intersects it
 with the dictionary in one depth-first walk — see
 [Lazy vs. Eager Automata](../concepts/LAZY_VS_EAGER_AUTOMATA.md). Key methods:
 `query`, `query_with_distance`, `query_ordered`/`query_ranked`, and the value-aware
@@ -223,7 +223,7 @@ the heap only when they outgrow their inline capacity.
 ### 4 · Lazy evaluation
 
 Queries are iterators that generate results on demand, enabling early termination
-and composition with iterator adapters with `$\mathcal{O}(1)$` iterator state.
+and composition with iterator adapters with $`\mathcal{O}(1)`$ iterator state.
 
 ### 5 · Feature gates
 
@@ -246,7 +246,7 @@ The full graph is shown in the [feature-flag DAG](../diagrams/architectures/feat
 
 Optimizations are layered from the algorithm down to the compiler:
 
-- **Algorithm** — lazy simulation (only `$\mathcal{O}(\lvert W\rvert)$` distinct states for fixed `$k$`),
+- **Algorithm** — lazy simulation (only $`\mathcal{O}(\lvert W\rvert)`$ distinct states for fixed $`k`$),
   subsumption pruning, ordered/priority iteration, value-scope pruning.
 - **Distance** — `standard_distance` dispatches to Myers bit-parallel for short
   ASCII inputs and AVX2/SSE4.1 SIMD otherwise, with a scalar fallback. See the

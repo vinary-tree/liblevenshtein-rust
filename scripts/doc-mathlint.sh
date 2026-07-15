@@ -75,7 +75,7 @@ set -e
 
 if [[ $status -eq 0 ]]; then
   echo "✅ PASS — 0 old-style math constructs across ${#present[@]} living document(s)."
-  echo "         (all inline math is \`\$…\$\`; display math is \`\`\`math; no bare O(...) in prose.)"
+  echo "         (all inline math is \$\`…\`\$; display math is \`\`\`math; no bare O(...) in prose.)"
   exit 0
 else
   echo "$violations"

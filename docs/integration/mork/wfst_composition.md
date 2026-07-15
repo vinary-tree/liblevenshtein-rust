@@ -168,7 +168,7 @@ pub trait Semiring: Clone + Copy + PartialEq + Sized {
 
 ### Tropical Semiring
 
-The **tropical semiring** `$(\mathbb{R} \cup \{\infty\}, \min, +, \infty, 0)$` is used for shortest-path problems:
+The **tropical semiring** $`(\mathbb{R} \cup \{\infty\}, \min, +, \infty, 0)`$ is used for shortest-path problems:
 
 ```rust
 /// Tropical semiring weight (min, +).
@@ -1070,7 +1070,7 @@ for candidate in composed.query("phone", 2) {
 
 ### Composition Complexity
 
-- NFA × Levenshtein: `$\mathcal{O}(\lvert\mathrm{NFA}\rvert \times \lvert\text{LEV states}\rvert)$`
+- NFA × Levenshtein: $`\mathcal{O}(\lvert\mathrm{NFA}\rvert \times \lvert\text{LEV states}\rvert)`$
 - Practical limit: ~1000 NFA states, ~10 Levenshtein states
 - Memoization helps for repeated queries
 

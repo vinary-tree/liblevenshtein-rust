@@ -646,11 +646,11 @@ pub struct DawgNode<V: DictionaryValue = ()> {
 
 | Dictionary | Storage Location | Memory Overhead | Access Time | Notes |
 |------------|------------------|-----------------|-------------|-------|
-| DoubleArrayTrie | State-indexed array | 8-16 bytes/state | `$\mathcal{O}(1)$` | Arena-allocated, cache-friendly |
-| DoubleArrayTrieChar | State-indexed array | 8-16 bytes/state | `$\mathcal{O}(1)$` | Same as byte variant |
-| DynamicDawg | Per-node field | 8-16 bytes/node | `$\mathcal{O}(1)$` | More flexible |
-| DynamicDawgChar | Per-node field | 8-16 bytes/node | `$\mathcal{O}(1)$` | Unicode support |
-| PathMap | Persistent structure | Variable | `$\mathcal{O}(1)$` | Structural sharing |
+| DoubleArrayTrie | State-indexed array | 8-16 bytes/state | $`\mathcal{O}(1)`$ | Arena-allocated, cache-friendly |
+| DoubleArrayTrieChar | State-indexed array | 8-16 bytes/state | $`\mathcal{O}(1)`$ | Same as byte variant |
+| DynamicDawg | Per-node field | 8-16 bytes/node | $`\mathcal{O}(1)`$ | More flexible |
+| DynamicDawgChar | Per-node field | 8-16 bytes/node | $`\mathcal{O}(1)`$ | Unicode support |
+| PathMap | Persistent structure | Variable | $`\mathcal{O}(1)`$ | Structural sharing |
 
 ---
 

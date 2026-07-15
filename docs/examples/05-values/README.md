@@ -14,7 +14,7 @@ diagram.
 
 ### From fuzzy set to fuzzy map
 
-A plain dictionary answers *"is `$s$` within distance `$k$` of `$W$`?"*. A **fuzzy map**
+A plain dictionary answers *"is $`s`$ within distance $`k`$ of $`W`$?"*. A **fuzzy map**
 additionally stores a value `V` per term, so a match returns *both* the term and its
 payload. `PathMapDictionary<V>` (feature `pathmap-backend`) is one such backend: it maps
 each term to a value of your choosing (here `u32` scope IDs) and is built with

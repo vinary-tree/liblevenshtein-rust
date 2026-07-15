@@ -34,7 +34,7 @@ This theorem establishes the correctness of the checkpoint/undo system, proving 
 
 **Performance Impact**: Lightweight checkpoints enable:
 - **8 bytes per undo level** (vs 100s of bytes for full buffer copy)
-- **`$\mathcal{O}(1)$` save/restore** operations
+- **$`\mathcal{O}(1)`$ save/restore** operations
 - **50+ undo levels** with <500 bytes overhead
 
 ### Real-World Example
@@ -266,9 +266,9 @@ Theorem checkpoint_stack_correctness :
 ### Termination
 
 All operations terminate trivially:
-- `from_buffer`: Reads buffer length (`$\mathcal{O}(1)$`)
-- `restore`: Calls `take` (`$\mathcal{O}(n)$` but finite)
-- `push`/`pop`: List operations (`$\mathcal{O}(1)$`)
+- `from_buffer`: Reads buffer length ($`\mathcal{O}(1)`$)
+- `restore`: Calls `take` ($`\mathcal{O}(n)`$ but finite)
+- `push`/`pop`: List operations ($`\mathcal{O}(1)`$)
 
 ---
 
@@ -410,11 +410,11 @@ Why this works:
 ### Performance Characteristics
 
 **Time Complexity**:
-- `from_buffer()`: `$\mathcal{O}(1)$` - just reads length
-- `restore()`: `$\mathcal{O}(n)$` - truncates buffer (n = chars removed)
-- `push()`: `$\mathcal{O}(1)$` amortized
-- `pop()`: `$\mathcal{O}(1)$` exact
-- `peek()`: `$\mathcal{O}(1)$` exact
+- `from_buffer()`: $`\mathcal{O}(1)`$ - just reads length
+- `restore()`: $`\mathcal{O}(n)`$ - truncates buffer (n = chars removed)
+- `push()`: $`\mathcal{O}(1)`$ amortized
+- `pop()`: $`\mathcal{O}(1)`$ exact
+- `peek()`: $`\mathcal{O}(1)`$ exact
 
 **Space Complexity**:
 - Per checkpoint: 8 bytes (just a `usize`)

@@ -109,9 +109,9 @@ PhoneticNormalizedDictionary<V, D>
 
 **Key Optimizations:**
 - **Exact match fast path (d=0)**: Direct trie lookup is **100-300× faster** than automaton traversal
-- **FuzzyMultiMap**: `$\mathcal{O}(k \log n)$` fuzzy queries via Levenshtein automaton pruning
+- **FuzzyMultiMap**: $`\mathcal{O}(k \log n)`$ fuzzy queries via Levenshtein automaton pruning
 - **Thread-local NormalizeBuffers (H3)**: Reuses buffers to reduce allocations
-- **`$\mathcal{O}(1)$` vowel classification**: Bitmask lookup instead of linear array search
+- **$`\mathcal{O}(1)`$ vowel classification**: Bitmask lookup instead of linear array search
 
 ### Basic Usage
 
@@ -408,7 +408,7 @@ WITH FuzzySource (single MORK query):
 | **Query execution** | Single pass | Multiple round-trips |
 | **Ranking** | Native (distance in results) | Must be reconstructed |
 | **Optimization** | MORK optimizer sees full query | Each sub-query optimized separately |
-| **Lattice efficiency** | `$\mathcal{O}(K \times N)$` edge processing | `$\mathcal{O}(K^N)$` path enumeration |
+| **Lattice efficiency** | $`\mathcal{O}(K \times N)`$ edge processing | $`\mathcal{O}(K^N)`$ path enumeration |
 | **Variable binding** | Unified across constraints | Per-query, then merged |
 
 ---
@@ -489,7 +489,7 @@ WITH FuzzySource (single MORK query):
 - `liblevenshtein-rust/src/wfst/mod.rs` - WFST module root
 - `liblevenshtein-rust/src/wfst/weight.rs` - Tropical semiring weights
 - `liblevenshtein-rust/src/wfst/nfa.rs` - Phonetic NFA (Thompson's)
-- `liblevenshtein-rust/src/wfst/composition.rs` - `$\mathrm{FST} \circ \mathrm{FST}$` composition
+- `liblevenshtein-rust/src/wfst/composition.rs` - $`\mathrm{FST} \circ \mathrm{FST}`$ composition
 - `MORK/kernel/src/fuzzy_source.rs` - Add WFST support
 
 **Example Usage**:
@@ -604,7 +604,7 @@ MORK's `transform_multi_multi_()` (space.rs:1221) is designed exactly for this p
 ### Efficient Lattice Processing
 
 MORK's `query_multi_i()` handles lattice inputs efficiently:
-- **`$\mathcal{O}(K \times N)$`** edge processing instead of **`$\mathcal{O}(K^N)$`** path enumeration
+- **$`\mathcal{O}(K \times N)`$** edge processing instead of **$`\mathcal{O}(K^N)`$** path enumeration
 - Native PathMap storage with trie-based memoization
 - Variable binding via De Bruijn levels for feature propagation
 
@@ -748,7 +748,7 @@ Phase D (Grammar)
   - Added `fuzzy-phonetic` MeTTa syntax for phonetic-aware matching
   - Updated Data Flow diagram to show PhoneticNormalizedDictionary.query()
   - Marked Phonetic Matching as [CURRENT] (no longer Phase C)
-  - Added key optimizations: exact match fast path (100-300× faster), `$\mathcal{O}(1)$` vowel classification
+  - Added key optimizations: exact match fast path (100-300× faster), $`\mathcal{O}(1)`$ vowel classification
 - **2025-12-21**: Updated for v0.8.0 APIs
   - Added v0.8.0 API Highlights section (llre!/llev!, ProductAutomatonChar, english::*)
   - Added [CURRENT] vs [PROPOSED] markers throughout document

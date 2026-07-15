@@ -229,7 +229,7 @@ checkpoints.get_mut(&context).map(|stack| stack.clear());
    - "Draft cleared but term not in dictionary" → Impossible (draft lock held until clear completes)
    - "Term in dictionary but draft still exists" → Impossible (draft cleared before dictionary insert)
 
-4. Therefore: `observed_during state state' obs_state -> obs_state = state \/ obs_state = state'` ✓ `$\blacksquare$`
+4. Therefore: `observed_during state state' obs_state -> obs_state = state \/ obs_state = state'` ✓ $`\blacksquare`$
 
 ---
 

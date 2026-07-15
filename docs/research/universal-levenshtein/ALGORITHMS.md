@@ -3,7 +3,7 @@
 # Universal Levenshtein Automata - Algorithms
 
 **Source**: "Universal Levenshtein Automata - Building and Properties" (Petar Mitankin, 2005), Master's Thesis, Sofia University "St. Kliment Ohridski"
-**Section**: 6 - Building of `$A^\forall ,\varepsilon _n, A^\forall ,t_n$` and `$A^\forall$`,ms_n (Pages 48-59)
+**Section**: 6 - Building of $`A^\forall ,\varepsilon _n, A^\forall ,t_n`$ and $`A^\forall`$,ms_n (Pages 48-59)
 
 This document extracts the complete algorithmic content from Section 6, including all pseudocode, type definitions, API functions, complexity analysis, and results tables.
 
@@ -37,8 +37,8 @@ Section 6 presents the complete construction algorithm for Universal Levenshtein
 
 - **Uses breadth-first search (BFS)** to generate all states
 - **Handles cycles** using HAS_NEVER_BEEN_PUSHED to avoid revisiting states
-- **Builds `$A^\forall ,\chi _n**$` for all three distance variants: `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`
-- **Achieves `$\mathcal{O}(n^{2})$` states** with polynomial construction time
+- **Builds $`A^\forall ,\chi _n`$** for all three distance variants: $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$
+- **Achieves $`\mathcal{O}(n^{2})`$ states** with polynomial construction time
 
 **Key Insight**: The universal automaton is parameter-free and works for any word length by using parametric positions (I, M) instead of concrete word indices.
 
@@ -75,14 +75,14 @@ end;
 1. Initialize queue with start state {I#0}
 2. While queue not empty:
    - Pop current state `st`
-   - For each bit vector `b` `$\in  \Sigma ^\forall _n$` (strings of length 1 to 2n+2):
-     - Check if `$\text{LENGTH}(b) \in  \nabla _a(\text{st})$` (length covers all positions)
-     - Compute next state: `$\text{nextSt} := \delta ^\forall ,\chi _n(\text{st}, b)$`
+   - For each bit vector `b` $`\in  \Sigma ^\forall _n`$ (strings of length 1 to 2n+2):
+     - Check if $`\text{LENGTH}(b) \in  \nabla _a(\text{st})`$ (length covers all positions)
+     - Compute next state: $`\text{nextSt} := \delta ^\forall ,\chi _n(\text{st}, b)`$
      - If nextSt non-empty and never seen before:
        - Add to queue
        - Add transition <st, b, nextSt>
 
-**Critical Function**: `HAS_NEVER_BEEN_PUSHED(nextSt)` ensures each state is generated exactly once (handles cycles in `$A^\forall ,\chi _n).$`
+**Critical Function**: `HAS_NEVER_BEEN_PUSHED(nextSt)` ensures each state is generated exactly once (handles cycles in $`A^\forall ,\chi _n).`$
 
 ---
 
@@ -124,7 +124,7 @@ end;
 ```
 
 **Key Distinction**:
-- **POSITION**: Universal position with parameter (I or M) - used in `$A^\forall ,\chi _n$`
+- **POSITION**: Universal position with parameter (I or M) - used in $`A^\forall ,\chi _n`$
 - **POINT**: Fixed-word position without parameter - used in intermediate computations
 
 ---
@@ -229,7 +229,7 @@ end;
 
 ### Build_Automaton
 
-**Main construction procedure** - builds `$A^\forall ,\chi _n$` using BFS.
+**Main construction procedure** - builds $`A^\forall ,\chi _n`$ using BFS.
 
 ```pascal
 procedure Build_Automaton( n : INTEGER );
@@ -261,20 +261,20 @@ end;
 - **Line 1**: Start with initial state {I#0} (single position: I + 0#0)
 - **Line 2-15**: BFS loop
 - **Line 3**: Pop next state to process
-- **Line 4**: Iterate over all bit vectors `$b \in$` {0,1}^+ with `$1 \le  |b| \le  2n+2$`
-- **Line 5**: Check if `$|b| \in  \nabla _a$`(st) (length compatibility check)
-- **Line 6**: Compute successor state via `$\delta ^\forall ,\chi _n$`
+- **Line 4**: Iterate over all bit vectors $`b \in`$ {0,1}^+ with $`1 \le  |b| \le  2n+2`$
+- **Line 5**: Check if $`|b| \in  \nabla _a`$(st) (length compatibility check)
+- **Line 6**: Compute successor state via $`\delta ^\forall ,\chi _n`$
 - **Line 7-12**: If non-empty successor:
   - **Line 8-10**: Add to queue if first time seeing it
   - **Line 11**: Add transition regardless (may have multiple edges to same state)
 
-**Input Alphabet**: `$\Sigma^\forall_n = \{b \in \{0,1\}^+ \mid 1 \le \lvert b\rvert \le 2n+2\}$`
+**Input Alphabet**: $`\Sigma^\forall_n = \{b \in \{0,1\}^+ \mid 1 \le \lvert b\rvert \le 2n+2\}`$
 
 ---
 
 ### Length_Covers_All_The_Positions
 
-**Checks if bit vector length `$k \in  \nabla _a$`(st)** - i.e., whether k "covers" all positions in state st.
+**Checks if bit vector length $`k \in  \nabla _a`$(st)** - i.e., whether k "covers" all positions in state st.
 
 ```pascal
 function Length_Covers_All_The_Positions( n : INTEGER;
@@ -320,20 +320,20 @@ end;
 
 **Logic**:
 
-**Case 1: I-type state** (st `$\subseteq  I^\chi _s)$`
+**Case 1: I-type state** (st $`\subseteq  I^\chi _s)`$
   - **Subcase 1.1**: Initial state {I#0}
-    - Require: `$k \ge  n$` (bit vector must be at least length n)
+    - Require: $`k \ge  n`$ (bit vector must be at least length n)
   - **Subcase 1.2**: General I-type state
-    - For all positions pi `$\in$` st:
-      - Require: `$k \ge  2n + X$`(pi) - Y(pi) + 1
+    - For all positions pi $`\in`$ st:
+      - Require: $`k \ge  2n + X`$(pi) - Y(pi) + 1
     - If any position fails, return false
 
-**Case 2: M-type state** (st `$\subseteq  M^\chi _s)$`
+**Case 2: M-type state** (st $`\subseteq  M^\chi _s)`$
   - Construct reference position q:
     - If k < n: q = M + 0#(n-k)
     - Otherwise: q = M + (n-k)#0
-  - For all positions pi `$\in$` st:
-    - Check: pi = q OR `$q <^\chi _s$` pi
+  - For all positions pi $`\in`$ st:
+    - Check: pi = q OR $`q <^\chi _s`$ pi
     - If not, return false
 
 **Returns**: true if all checks pass, false otherwise
@@ -342,7 +342,7 @@ end;
 
 ### Delta
 
-**Computes `$\delta ^\forall ,\chi _n$`(st, b)** - the transition function of `$A^\forall ,\chi _n.$`
+**Computes $`\delta ^\forall ,\chi _n`$(st, b)** - the transition function of $`A^\forall ,\chi _n.`$
 
 ```pascal
 function Delta( n : INTEGER; st : STATE; b : STRING ) : STATE;
@@ -392,23 +392,23 @@ end;
 
 **Algorithm**:
 1. **Initialize**: nextSt := {}
-2. **For each position `$q \in$` st**:
-   - Compute deltaE :`$= \delta ^\forall ,\chi _e(q, b)$`
-   - For each resulting position pi `$\in$` deltaE:
+2. **For each position $`q \in`$ st**:
+   - Compute deltaE :$`= \delta ^\forall ,\chi _e(q, b)`$
+   - For each resulting position pi $`\in`$ deltaE:
      - Try to add pi to nextSt, maintaining subsumption closure
-     - Remove any `$p \in$` nextSt subsumed by pi
-     - Don't add pi if it's subsumed by or equal to any `$p \in$` nextSt
+     - Remove any $`p \in`$ nextSt subsumed by pi
+     - Don't add pi if it's subsumed by or equal to any $`p \in`$ nextSt
 3. **Diagonal crossing check**: If f_n(rm(nextSt), |b|) is true:
    - Apply m_n conversion: nextSt := m_n(nextSt, |b|)
-4. **Return**: nextSt (with subsumption closure `$\sqcup$` applied)
+4. **Return**: nextSt (with subsumption closure $`\sqcup`$ applied)
 
-**Key Insight**: This implements the subsumption closure operator `$\sqcup$` to keep states minimal (anti-chains).
+**Key Insight**: This implements the subsumption closure operator $`\sqcup`$ to keep states minimal (anti-chains).
 
 ---
 
 ### Less_Than_Subsume
 
-**Checks `$q1 <^\chi _s q2** -$` the strict subsumption relation.
+**Checks $`q1 <^\chi _s q2`$** - the strict subsumption relation.
 
 ```pascal
 function Less_Than_Subsume( q1 : POSITION; q2 : POSITION ) : BOOLEAN;
@@ -437,7 +437,7 @@ end;
 
 **Subsumption Rules** (from Definition 11):
 
-**For `$\varepsilon$` (standard Levenshtein)**:
+**For $`\varepsilon`$ (standard Levenshtein)**:
 ```
 i#e <^ε_s j#f  ⇔  f > e  ∧  |j - i| ≤ f - e
 ```
@@ -462,14 +462,14 @@ i#e_s <^ms_s j#f_s  ⇔  false (different types)
 1. **Prerequisite checks**:
    - q1 must be "usual" type (not t or s)
    - Y(q2) > Y(q1) (error count must be strictly greater)
-2. **Compute distance**: `$m = |X(q2) \pm  \delta  - X(q1)|$` where `$\delta  = 1$` if q2 is type t, else 0
-3. **Check subsumption**: `$m \le  Y(q2) - Y(q1)$`
+2. **Compute distance**: $`m = |X(q2) \pm  \delta  - X(q1)|`$ where $`\delta  = 1`$ if q2 is type t, else 0
+3. **Check subsumption**: $`m \le  Y(q2) - Y(q1)`$
 
 ---
 
 ### Delta_E
 
-**Computes `$\delta ^\forall ,\chi _e(q, b)** -$` elementary transition for a single universal position.
+**Computes $`\delta ^\forall ,\chi _e(q, b)`$** - elementary transition for a single universal position.
 
 ```pascal
 function Delta_E( n : INTEGER; q : POSITION; b : STRING ) : STATE;
@@ -516,7 +516,7 @@ end;
 **Algorithm**:
 1. **Convert to POINT**: Extract (type, X, Y) from POSITION q
 2. **Compute r_n(q, b)**: Extract relevant substring from bit vector b
-3. **Apply `$\delta ^D,\chi _e**$`: deltaED := `$\delta ^D,\chi _e$`(point, r_n(q, b))
+3. **Apply $`\delta ^D,\chi _e`$**: deltaED := $`\delta ^D,\chi _e`$(point, r_n(q, b))
 4. **Convert back to POSITIONs**:
    - If q is I-type: Shift X by -1 (accounts for parameter offset)
    - If q is M-type: Keep X unchanged
@@ -524,7 +524,7 @@ end;
 
 **Key Functions**:
 - **R(n, q, b)**: Extracts substring of b (implements r_n)
-- **Delta_E_D**: Applies deterministic elementary transition (implements `$\delta ^D,\chi _e)$`
+- **Delta_E_D**: Applies deterministic elementary transition (implements $`\delta ^D,\chi _e)`$
 
 ---
 
@@ -577,7 +577,7 @@ Mt + i#e ↦  It + (i - n - 1 + k)#e
 Ms + i#e ↦  Is + (i - n - 1 + k)#e
 ```
 
-**Purpose**: Allows positions to "cross the diagonal" when transitioning from `$I^\chi _s$` states to `$M^\chi _s$` states (and vice versa).
+**Purpose**: Allows positions to "cross the diagonal" when transitioning from $`I^\chi _s`$ states to $`M^\chi _s`$ states (and vice versa).
 
 ---
 
@@ -615,7 +615,7 @@ end;
 
 **Definition** (from Section 5, Definition 16):
 
-For position `$q \in  I^\chi _s \cup  M^\chi _s$` and bit vector b of length k:
+For position $`q \in  I^\chi _s \cup  M^\chi _s`$ and bit vector b of length k:
 
 **I-type**: r_n(I + i#e, b) = b[n + i + 1 ... min(n + i + (n - e + 1), k)]
 **M-type**: r_n(M + i#e, b) = b[k + i + 1 ... min(k + i + (n - e + 1), k)]
@@ -659,7 +659,7 @@ end;
 
 **Definition** (from Section 4.2):
 
-For state `$A \subseteq$` positions:
+For state $`A \subseteq`$ positions:
 ```
 rm(A) = argmax_{π ∈ A, π is usual type} (X(π) - Y(π))
 ```
@@ -708,9 +708,9 @@ f_n(q, k) = {
 
 ### Delta_E_D
 
-**Implements `$\delta ^D,\chi _e$`(pt, h)** - deterministic elementary transition on POINTs.
+**Implements $`\delta ^D,\chi _e`$(pt, h)** - deterministic elementary transition on POINTs.
 
-This is the **longest and most complex function**, implementing all three distance variants `$(\varepsilon , t,$` ms).
+This is the **longest and most complex function**, implementing all three distance variants $`(\varepsilon , t,`$ ms).
 
 ```pascal
 function Delta_E_D( n : INTEGER; pt : POINT; h : STRING ) : SET_OF_POINTS;
@@ -872,7 +872,7 @@ end;
 
 **Complexity**: This function has **variant-specific logic**:
 
-### Variant: `$\varepsilon$` (Standard Levenshtein)
+### Variant: $`\varepsilon`$ (Standard Levenshtein)
 
 **Cases**:
 1. **|h| = 0**: No matches available
@@ -882,7 +882,7 @@ end;
 3. **|h| = 1, h[1] = 0**: Single mismatch
    - Substitution: x#(y+1)
    - Insertion: (x+1)#(y+1)
-`$4. **|h| \ge  2, h[1] = 0**$`: Look for first match at position j
+4. **$`|h| \ge  2, h[1] = 0`$**: Look for first match at position j
    - **If no match**: Substitution + Insertion
    - **If match at j**: Substitution + Insertion + (Deletion × (j-1) + Match)
 
@@ -894,9 +894,9 @@ end;
   - Otherwise: Fail
 
 **Cases** (for regular positions):
-1-4. Same as `$\varepsilon$`
+1-4. Same as $`\varepsilon`$
 5. **h = 0 1 ...**: Transposition opportunity
-   - Substitution, Insertion, Deletion (same as `$\varepsilon )$`
+   - Substitution, Insertion, Deletion (same as $`\varepsilon )`$
    - **Transposition**: Enter type t state at x#(y+1)_t
 
 ### Variant: ms (With Merge/Split)
@@ -906,9 +906,9 @@ end;
   - Always: (x+1)#y (consume one character)
 
 **Cases** (for regular positions):
-1-3. Same as `$\varepsilon$`
-`$4. **|h| \ge  2**$`:
-   - Substitution, Insertion (same as `$\varepsilon )$`
+1-3. Same as $`\varepsilon`$
+4. **$`|h| \ge  2`$**:
+   - Substitution, Insertion (same as $`\varepsilon )`$
    - **Merge**: (x+2)#(y+1) (consume 2 characters for 1 edit)
    - **Split**: Enter type s state at x#(y+1)_s
 
@@ -918,7 +918,7 @@ end;
 
 ### State Count
 
-#### For `$\chi  = \varepsilon$` (Standard Levenshtein)
+#### For $`\chi  = \varepsilon`$ (Standard Levenshtein)
 
 **I-type states** (non-final):
 
@@ -933,7 +933,7 @@ Then construct:
 g: I^ε_states → {0,1,...,2n+1}^(2n+1)
 ```
 
-Where for each state `$A \in$` `$I^\varepsilon _\text{states}$`:
+Where for each state $`A \in`$ $`I^\varepsilon _\text{states}`$:
 ```
 g(A)_j = {
   0           if A ∩ A_j = ∅
@@ -941,7 +941,7 @@ g(A)_j = {
 }
 ```
 
-With A_j = `$\{I - n + j - 1 - t#(n-t) | 0 \le  t \le  n\}$`.
+With A_j = $`\{I - n + j - 1 - t#(n-t) | 0 \le  t \le  n\}`$.
 
 **Key property**: g(A) is a strictly increasing sequence (excluding 0s).
 
@@ -990,7 +990,7 @@ A_k = {A | A ∈ M^ε_states ∧ ∃t(0 ≤ t ≤ k ∧ rm(A) = M - k + t#t)}
 
 **Properties**:
 - |A_k| < |A_n| for all k < n
-- |A_n| < |`$I^\varepsilon _\text{states}$`|
+- |A_n| < |$`I^\varepsilon _\text{states}`$|
 - |A_0| = 1
 
 **Result**:
@@ -1006,9 +1006,9 @@ A_k = {A | A ∈ M^ε_states ∧ ∃t(0 ≤ t ≤ k ∧ rm(A) = M - k + t#t)}
             = O(4^{2n} × √n)
 ```
 
-#### For `$\chi  = t$` or `$\chi  =$` ms
+#### For $`\chi  = t`$ or $`\chi  =`$ ms
 
-**Same asymptotic complexity** as `$\varepsilon$` variant:
+**Same asymptotic complexity** as $`\varepsilon`$ variant:
 ```
 |I^{t}_states|  = O(2^{4n - log_2(√(2n+1))})
 |M^{t}_states|  = O(n × 2^{4n - log_2(√(2n+1))})
@@ -1022,9 +1022,9 @@ A_k = {A | A ∈ M^ε_states ∧ ∃t(0 ≤ t ≤ k ∧ rm(A) = M - k + t#t)}
 ### Time Complexity
 
 **Construction**:
-- **States**: `$\mathcal{O}(n \times  4^{2n})$`
-- **Alphabet size**: |`$\Sigma ^\forall _n$`| = 2^{2n+2} - 2 (bit vectors of length 1 to 2n+2)
-- **Transitions per state**: At most `$|\Sigma ^\forall _n|$`
+- **States**: $`\mathcal{O}(n \times  4^{2n})`$
+- **Alphabet size**: |$`\Sigma ^\forall _n`$| = 2^{2n+2} - 2 (bit vectors of length 1 to 2n+2)
+- **Transitions per state**: At most $`|\Sigma ^\forall _n|`$
 - **Transition computation**: Polynomial in n (subsumption checks)
 
 **Total construction time**:
@@ -1034,19 +1034,19 @@ O(states × alphabet × poly(n))
 = O(n^k × 4^{4n})  for some constant k
 ```
 
-**Query time** (given `$A^\forall ,\chi _n$` and concrete word w):
+**Query time** (given $`A^\forall ,\chi _n`$ and concrete word w):
 - **Word length**: p = |w|
-- **Bit vector encoding**: h_n(w, x) computed in `$\mathcal{O}(p)$` per character x
-- **Traversal**: `$\mathcal{O}(\lvert x\rvert)$` characters × `$\mathcal{O}(2n)$` transitions per character
-- **Total**: `$\mathcal{O}(\lvert x\rvert \times  2n)$` = `$\mathcal{O}(\lvert x\rvert \times  n)$`
+- **Bit vector encoding**: h_n(w, x) computed in $`\mathcal{O}(p)`$ per character x
+- **Traversal**: $`\mathcal{O}(\lvert x\rvert)`$ characters × $`\mathcal{O}(2n)`$ transitions per character
+- **Total**: $`\mathcal{O}(\lvert x\rvert \times  2n)`$ = $`\mathcal{O}(\lvert x\rvert \times  n)`$
 
 ### Space Complexity
 
 **Storage**:
-- **States**: `$\mathcal{O}(n \times  4^{2n})$`
-- **Transitions**: `$\mathcal{O}(n \times  4^{2n} \times  2^{2n+2})$` = `$\mathcal{O}(n \times  4^{4n})$`
-- **Each state**: Set of at most `$\mathcal{O}(n^{2})$` positions (from `$I^\chi _s \cup  M^\chi _s)$`
-- **Each position**: `$\mathcal{O}(\log  n)$` bits
+- **States**: $`\mathcal{O}(n \times  4^{2n})`$
+- **Transitions**: $`\mathcal{O}(n \times  4^{2n} \times  2^{2n+2})`$ = $`\mathcal{O}(n \times  4^{4n})`$
+- **Each state**: Set of at most $`\mathcal{O}(n^{2})`$ positions (from $`I^\chi _s \cup  M^\chi _s)`$
+- **Each position**: $`\mathcal{O}(\log  n)`$ bits
 
 **Total space**:
 ```
@@ -1059,11 +1059,11 @@ O(states × positions_per_state × bits_per_position)
 
 ## 6.4 Experimental Results
 
-**Note**: Section 6.4 contains tables showing actual state counts for `$A^\forall ,\chi _n$` at various n values. The thesis pages 58-59 have these tables, but they're primarily empirical data rather than algorithmic content.
+**Note**: Section 6.4 contains tables showing actual state counts for $`A^\forall ,\chi _n`$ at various n values. The thesis pages 58-59 have these tables, but they're primarily empirical data rather than algorithmic content.
 
 **Key observations from results**:
-1. State counts grow exponentially but remain tractable for `$n \le  3$`
-2. Transposition (t) and merge/split (ms) variants have slightly more states than standard `$(\varepsilon )$`
+1. State counts grow exponentially but remain tractable for $`n \le  3`$
+2. Transposition (t) and merge/split (ms) variants have slightly more states than standard $`(\varepsilon )`$
 3. Precomputation is feasible for small n, enabling fast queries
 
 ---
@@ -1073,19 +1073,19 @@ O(states × positions_per_state × bits_per_position)
 ### Critical Implementation Details
 
 1. **State Representation**:
-   - Use hash set for STATE (efficient `$\in , \cup ,$` \`$, \cap$` operations)
+   - Use hash set for STATE (efficient $`\in , \cup ,`$ \$`, \cap`$ operations)
    - Use hash set for tracking visited states (HAS_NEVER_BEEN_PUSHED)
    - Implement proper equality and hashing for POSITION tuples
 
 2. **Subsumption Closure**:
-   - Delta function must maintain `$\sqcup$` (anti-chain property)
+   - Delta function must maintain $`\sqcup`$ (anti-chain property)
    - Two-phase: remove subsumed, add if not subsumed
    - Critical for keeping states minimal
 
 3. **Bit Vector Encoding**:
-   - Input alphabet `$\Sigma ^\forall _n =$` {0,1}^{1 to 2n+2}
-   - For concrete word w: `$h_n(w, x) = \beta (x, s_n(w, 1))...\beta (x, s_n(w, |x|))$`
-   - Precompute characteristic vectors `$\beta (x, w)$` for efficiency
+   - Input alphabet $`\Sigma ^\forall _n =`$ {0,1}^{1 to 2n+2}
+   - For concrete word w: $`h_n(w, x) = \beta (x, s_n(w, 1))...\beta (x, s_n(w, |x|))`$
+   - Precompute characteristic vectors $`\beta (x, w)`$ for efficiency
 
 4. **Diagonal Crossing**:
    - Check f_n(rm(nextSt), |b|) after each transition
@@ -1100,29 +1100,29 @@ O(states × positions_per_state × bits_per_position)
 ### Optimization Opportunities
 
 1. **Precomputation**:
-   - Build `$A^\forall ,\chi _n$` offline for small `$n (n \le  3)$`
+   - Build $`A^\forall ,\chi _n`$ offline for small $`n (n \le  3)`$
    - Serialize to disk for fast loading
-   - Amortizes `$\mathcal{O}(4^{4n})$` construction cost
+   - Amortizes $`\mathcal{O}(4^{4n})`$ construction cost
 
 2. **Caching**:
-   - Cache `$\delta ^\forall ,\chi _e$` results for common (q, b) pairs
+   - Cache $`\delta ^\forall ,\chi _e`$ results for common (q, b) pairs
    - Cache subsumption checks
    - Cache r_n(q, b) extractions
 
 3. **Bit Vector Operations**:
-   - Use bitwise operations for `$\beta (x, w)$` computation
+   - Use bitwise operations for $`\beta (x, w)`$ computation
    - SIMD for parallel bit vector processing
    - Lazy bit vector generation during traversal
 
 4. **State Minimization**:
-   - Subsumption closure `$\sqcup$` already minimizes states
-   - No further DFA minimization needed `$(A^\forall ,\chi _n$` is already minimal per Section 7)
+   - Subsumption closure $`\sqcup`$ already minimizes states
+   - No further DFA minimization needed $`(A^\forall ,\chi _n`$ is already minimal per Section 7)
 
 ### Testing Strategies
 
 1. **Correctness**:
-   - Test against reference DFA construction: `$A^D,\chi _n(w)$` for concrete w
-   - Property: `$L(A^\forall ,\chi _n(w)) = L(A^D,\chi _n(w))$` for all w
+   - Test against reference DFA construction: $`A^D,\chi _n(w)`$ for concrete w
+   - Property: $`L(A^\forall ,\chi _n(w)) = L(A^D,\chi _n(w))`$ for all w
    - Verify subsumption invariant: all states are anti-chains
 
 2. **Completeness**:
@@ -1139,16 +1139,16 @@ O(states × positions_per_state × bits_per_position)
 
 | Algorithm Component | Theoretical Definition | Section |
 |---------------------|------------------------|---------|
-| `Build_Automaton` | Construction of `$A^\forall ,\chi _n$` |  Def. 15 |
-| `Delta`  | `$\delta ^\forall ,\chi _n$` transition function | Def. 15 |
-| `Delta_E`  | `$\delta ^\forall ,\chi _e$` elementary transition | Def. 16 |
-| `Delta_E_D`  | `$\delta ^D,\chi _e$` deterministic elementary | Def. 7 |
-| `Less_Than_Subsume`  | `$<^\chi _s$` subsumption relation | Def. 11 |
+| `Build_Automaton` | Construction of $`A^\forall ,\chi _n`$ |  Def. 15 |
+| `Delta`  | $`\delta ^\forall ,\chi _n`$ transition function | Def. 15 |
+| `Delta_E`  | $`\delta ^\forall ,\chi _e`$ elementary transition | Def. 16 |
+| `Delta_E_D`  | $`\delta ^D,\chi _e`$ deterministic elementary | Def. 7 |
+| `Less_Than_Subsume`  | $`<^\chi _s`$ subsumption relation | Def. 11 |
 | `M` | m_n diagonal crossing | Def. 17 |
 | `F` | f_n crossing predicate | Def. 17 |
 | `R` | r_n substring extraction | Def. 16 |
 | `RM` | rm rightmost position | Def. 12 |
-| `Length_Covers_All_The_Positions`  | `$k \in  \nabla _a$`(st) length check | Def. 15 |
+| `Length_Covers_All_The_Positions`  | $`k \in  \nabla _a`$(st) length check | Def. 15 |
 
 ---
 
@@ -1159,12 +1159,12 @@ Section 6 provides a **complete, executable specification** for building Univers
 **Key Achievements**:
 1. ✅ **BFS construction** with cycle handling
 2. ✅ **Subsumption closure** for state minimization
-3. ✅ **All three variants** `$(\varepsilon , t,$` ms) supported
+3. ✅ **All three variants** $`(\varepsilon , t,`$ ms) supported
 4. ✅ **Polynomial construction time** (though exponential in n)
-5. ✅ **`$\mathcal{O}(\lvert x\rvert \times  n)$` query time** for word x
+5. ✅ **$`\mathcal{O}(\lvert x\rvert \times  n)`$ query time** for word x
 
 **Practical Considerations**:
-- Feasible for **`$n \le  3$`** (real-world edit distances)
+- Feasible for **$`n \le  3`$** (real-world edit distances)
 - Precomputation recommended
 - Critical for parameter-free fuzzy matching
 
@@ -1179,7 +1179,7 @@ Section 6 provides a **complete, executable specification** for building Univers
 **See Also**:
 - [PAPER_SUMMARY.md](PAPER_SUMMARY.md) - Complete theoretical foundations
 - [GLOSSARY.md](GLOSSARY.md) - Notation reference
-- Section 7 (Minimality) - Proof that `$A^\forall ,\chi _n$` is minimal
+- Section 7 (Minimality) - Proof that $`A^\forall ,\chi _n`$ is minimal
 - Section 8 (Properties) - Additional theoretical properties
 
 ---

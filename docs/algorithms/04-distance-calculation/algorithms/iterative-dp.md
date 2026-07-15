@@ -2,7 +2,7 @@
 
 ## Overview
 
-The iterative dynamic programming (DP) approach is the default implementation for computing Levenshtein distance. It uses a bottom-up tabulation method with space optimization, achieving `$\mathcal{O}(mn)$` time complexity with only `$\mathcal{O}(\min(m,n))$` space.
+The iterative dynamic programming (DP) approach is the default implementation for computing Levenshtein distance. It uses a bottom-up tabulation method with space optimization, achieving $`\mathcal{O}(mn)`$ time complexity with only $`\mathcal{O}(\min(m,n))`$ space.
 
 This is the Wagner-Fischer algorithm with memory optimization.
 
@@ -10,7 +10,7 @@ This is the Wagner-Fischer algorithm with memory optimization.
 
 ### Standard Levenshtein Distance
 
-The classic DP recurrence relation, for `$1 \le i \le m$` and `$1 \le j \le n$`:
+The classic DP recurrence relation, for $`1 \le i \le m`$ and $`1 \le j \le n`$:
 
 ```math
 dp[i][j] = \min \begin{cases}
@@ -20,15 +20,15 @@ dp[i][j] = \min \begin{cases}
 \end{cases}
 ```
 
-where `$\mathrm{cost} = 0$` when the `$i$`-th source character equals the `$j$`-th target character, and `$1$` otherwise.
+where $`\mathrm{cost} = 0`$ when the $`i`$-th source character equals the $`j`$-th target character, and $`1`$ otherwise.
 
 **Base cases**:
-- `$dp[0][j] = j$` (insert `$j$` characters)
-- `$dp[i][0] = i$` (delete `$i$` characters)
+- $`dp[0][j] = j`$ (insert $`j`$ characters)
+- $`dp[i][0] = i`$ (delete $`i`$ characters)
 
 ### Space-Optimized Implementation
 
-Instead of storing the full `$m \times n$` matrix, we only keep two rows:
+Instead of storing the full $`m \times n`$ matrix, we only keep two rows:
 - `prev_row`: Previous row (i-1)
 - `curr_row`: Current row (i)
 
@@ -207,27 +207,27 @@ pub fn transposition_distance(source: &str, target: &str) -> usize {
 
 | Operation | Complexity | Explanation |
 |-----------|------------|-------------|
-| Standard distance | `$\mathcal{O}(mn)$` | Fill `$m \times n$` DP table |
-| Transposition distance | `$\mathcal{O}(mn)$` | Same, with extra transposition check |
-| Character comparison | `$\mathcal{O}(1)$` | Direct equality check |
-| Min of 3 values | `$\mathcal{O}(1)$` | Constant-time comparison |
+| Standard distance | $`\mathcal{O}(mn)`$ | Fill $`m \times n`$ DP table |
+| Transposition distance | $`\mathcal{O}(mn)`$ | Same, with extra transposition check |
+| Character comparison | $`\mathcal{O}(1)`$ | Direct equality check |
+| Min of 3 values | $`\mathcal{O}(1)`$ | Constant-time comparison |
 
-**Total**: `$\mathcal{O}(mn)$` for strings of length `$m$` and `$n$`
+**Total**: $`\mathcal{O}(mn)`$ for strings of length $`m`$ and $`n`$
 
 ### Space Complexity
 
 | Implementation | Space | Explanation |
 |----------------|-------|-------------|
-| Full matrix | `$\mathcal{O}(mn)$` | Store entire DP table |
-| Two-row optimization | `$\mathcal{O}(n)$` | Only prev_row + curr_row |
-| Three-row (transposition) | `$\mathcal{O}(n)$` | two_ago + prev_row + curr_row |
-| Character vectors | `$\mathcal{O}(m + n)$` | SmallVec for source/target |
+| Full matrix | $`\mathcal{O}(mn)`$ | Store entire DP table |
+| Two-row optimization | $`\mathcal{O}(n)`$ | Only prev_row + curr_row |
+| Three-row (transposition) | $`\mathcal{O}(n)`$ | two_ago + prev_row + curr_row |
+| Character vectors | $`\mathcal{O}(m + n)`$ | SmallVec for source/target |
 
 **Total**:
-- Standard: `$\mathcal{O}(m + n + 2n) = \mathcal{O}(m + 3n)$`
-- Transposition: `$\mathcal{O}(m + n + 3n) = \mathcal{O}(m + 4n)$`
+- Standard: $`\mathcal{O}(m + n + 2n) = \mathcal{O}(m + 3n)`$
+- Transposition: $`\mathcal{O}(m + n + 3n) = \mathcal{O}(m + 4n)`$
 
-For `$m \approx n$`: **`$\mathcal{O}(n)$`** space
+For $`m \approx n`$: **$`\mathcal{O}(n)`$** space
 
 ## Worked Example
 
@@ -322,7 +322,7 @@ let target_chars: SmallVec<[char; 32]> = target.chars().collect();
 ```
 
 **Benefits**:
-- Stack allocation for short strings (`$\le 32$` chars)
+- Stack allocation for short strings ($`\le 32`$ chars)
 - Heap allocation only for longer strings
 - Character-level (not byte-level) indexing for Unicode correctness
 
@@ -334,7 +334,7 @@ Uses `std::mem::swap` for efficient row rotation without copying:
 std::mem::swap(&mut prev_row, &mut curr_row);
 ```
 
-**Cost**: `$\mathcal{O}(1)$` pointer swap, not `$\mathcal{O}(n)$` vector copy
+**Cost**: $`\mathcal{O}(1)`$ pointer swap, not $`\mathcal{O}(n)`$ vector copy
 
 ### Edge Case Handling
 
@@ -376,8 +376,8 @@ Measured on Intel Core i7-9750H (2.6 GHz):
 
 ### Advantages
 
-1. **Predictable Performance**: `$\mathcal{O}(mn)$` always, no best/worst case variance
-2. **Low Memory**: `$\mathcal{O}(n)$` space vs `$\mathcal{O}(mn)$` for full matrix
+1. **Predictable Performance**: $`\mathcal{O}(mn)`$ always, no best/worst case variance
+2. **Low Memory**: $`\mathcal{O}(n)`$ space vs $`\mathcal{O}(mn)`$ for full matrix
 3. **No Recursion**: No stack overflow risk
 4. **Cache-Friendly**: Sequential memory access pattern
 5. **Simple Implementation**: Easy to understand and debug
@@ -392,9 +392,9 @@ Measured on Intel Core i7-9750H (2.6 GHz):
 
 | Aspect | Iterative DP | Recursive + Memo |
 |--------|--------------|------------------|
-| Time (first query) | `$\mathcal{O}(mn)$` | `$\mathcal{O}(mn)$` |
-| Time (repeated query) | `$\mathcal{O}(mn)$` | `$\mathcal{O}(1)$` (cache hit) |
-| Space | `$\mathcal{O}(n)$` | `$\mathcal{O}(\text{depth} + \text{cache})$` |
+| Time (first query) | $`\mathcal{O}(mn)`$ | $`\mathcal{O}(mn)`$ |
+| Time (repeated query) | $`\mathcal{O}(mn)`$ | $`\mathcal{O}(1)`$ (cache hit) |
+| Space | $`\mathcal{O}(n)`$ | $`\mathcal{O}(\text{depth} + \text{cache})`$ |
 | Common prefix optimization | ✗ | ✓ |
 | Early exit optimization | ✗ | ✓ |
 | Stack overflow risk | ✗ | ✓ (mitigated) |
@@ -405,7 +405,7 @@ Measured on Intel Core i7-9750H (2.6 GHz):
 ### When to Use Iterative DP
 
 - **One-off distance queries**: No benefit from caching
-- **Memory-constrained environments**: `$\mathcal{O}(n)$` space
+- **Memory-constrained environments**: $`\mathcal{O}(n)`$ space
 - **Predictable latency requirements**: No cache variance
 - **Short strings**: No recursion overhead
 

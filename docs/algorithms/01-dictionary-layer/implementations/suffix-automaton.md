@@ -21,8 +21,8 @@
 ### Key Advantages
 
 - 🔍 **Substring matching**: Find patterns anywhere, not just at word boundaries
-- 💾 **Space-efficient**: `$\le 2n-1$` states for `$n$` characters
-- ⚡ **Fast construction**: `$\mathcal{O}(n)$` online construction
+- 💾 **Space-efficient**: $`\le 2n-1`$ states for $`n`$ characters
+- ⚡ **Fast construction**: $`\mathcal{O}(n)`$ online construction
 - 🔄 **Dynamic updates**: Insert and remove text at runtime
 - 📍 **Position tracking**: Know where matches occur in source text
 
@@ -124,7 +124,7 @@ Substrings ending at position 5 (all suffixes):
 States in suffix automaton ≈ equivalence classes of endpos sets
 ```
 
-**Minimality**: This grouping ensures `$\le 2n-1$` states for `$n$` characters.
+**Minimality**: This grouping ensures $`\le 2n-1`$ states for $`n`$ characters.
 
 ### Suffix Links
 
@@ -234,10 +234,10 @@ struct SuffixNode {
 ```
 
 **For text of n characters**:
-- States: `$\le 2n-1$` (typically `$\approx 1.5n$`)
+- States: $`\le 2n-1`$ (typically $`\approx 1.5n`$)
 - Total memory: ~85n bytes
 
-**Example**: 10,000-character document `$\approx$` 850 KB
+**Example**: 10,000-character document $`\approx`$ 850 KB
 
 ## Construction Algorithm
 
@@ -292,7 +292,7 @@ fn extend(&mut self, byte: u8) {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(1)$` amortized per character
+**Complexity**: $`\mathcal{O}(1)`$ amortized per character
 
 ### From Multiple Texts
 
@@ -519,11 +519,11 @@ if dict.text_count() > 1000 && dict.needs_compaction() {
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Construction** | `$\mathcal{O}(n)$` | n = text length |
-| **Insert character** | `$\mathcal{O}(1)$` amortized | Online construction |
-| **Contains (exact)** | `$\mathcal{O}(m)$` | m = query length |
-| **Fuzzy search** | `$\mathcal{O}(m \times d^{2} \times b)$` | d = distance, b = branching |
-| **Compact** | `$\mathcal{O}(s)$` | s = number of states |
+| **Construction** | $`\mathcal{O}(n)`$ | n = text length |
+| **Insert character** | $`\mathcal{O}(1)`$ amortized | Online construction |
+| **Contains (exact)** | $`\mathcal{O}(m)`$ | m = query length |
+| **Fuzzy search** | $`\mathcal{O}(m \times d^{2} \times b)`$ | d = distance, b = branching |
+| **Compact** | $`\mathcal{O}(s)`$ | s = number of states |
 
 ### Benchmark Results
 

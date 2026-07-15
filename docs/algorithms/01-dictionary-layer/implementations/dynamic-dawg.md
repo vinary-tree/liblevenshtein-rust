@@ -126,7 +126,7 @@ fn insert(&self, term: &str) {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(m)$` where m = term length
+**Complexity**: $`\mathcal{O}(m)`$ where m = term length
 
 ### Deletion Algorithm
 
@@ -169,7 +169,7 @@ fn remove(&self, term: &str) -> bool {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(m)$`
+**Complexity**: $`\mathcal{O}(m)`$
 
 ### Compaction
 
@@ -194,7 +194,7 @@ pub fn compact(&self) {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(n)$` where n = total nodes
+**Complexity**: $`\mathcal{O}(n)`$ where n = total nodes
 
 **When to compact**:
 - After many deletions (10%+ of dictionary removed)
@@ -234,7 +234,7 @@ type DynamicDawgInner<V = ()> = LockFreeDawg<u8, V>;
 └─────────────────┴─────────────┴────────────────┘
 ```
 
-**Example**: 10,000-term dictionary `$\approx$` 250KB (nodes) + 32KB (suffix cache)
+**Example**: 10,000-term dictionary $`\approx`$ 250KB (nodes) + 32KB (suffix cache)
 
 ### Clone Behavior & Memory Semantics
 
@@ -259,8 +259,8 @@ assert_eq!(dict2.len(), Some(3));  // Same count
 
 | Property | Behavior | Impact |
 |----------|----------|--------|
-| **Time Complexity** | `$\mathcal{O}(1)$` | Single atomic increment |
-| **Space Complexity** | `$\mathcal{O}(1)$` | ~16 bytes (Arc pointer only) |
+| **Time Complexity** | $`\mathcal{O}(1)`$ | Single atomic increment |
+| **Space Complexity** | $`\mathcal{O}(1)`$ | ~16 bytes (Arc pointer only) |
 | **Data Sharing** | ✅ Complete | All clones share same node graph |
 | **Mutation Visibility** | ✅ Global | Changes via any clone affect all |
 | **Thread Safety** | ✅ Lock-free | Readers never block; writers publish via CAS |
@@ -391,9 +391,9 @@ let dict2 = DynamicDawg::from_iter(terms);
 
 | Method | Time | Space | Independence |
 |--------|------|-------|--------------|
-| `.clone()` | `$\mathcal{O}(1)$` | `$\mathcal{O}(1)$` | ❌ Shared |
-| Serialize/Deserialize | `$\mathcal{O}(n)$` | `$\mathcal{O}(n)$` | ✅ Full |
-| Rebuild from terms | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(n)$` | ✅ Full |
+| `.clone()` | $`\mathcal{O}(1)`$ | $`\mathcal{O}(1)`$ | ❌ Shared |
+| Serialize/Deserialize | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ | ✅ Full |
+| Rebuild from terms | $`\mathcal{O}(n \cdot m)`$ | $`\mathcal{O}(n)`$ | ✅ Full |
 
 #### Comparison with Other Dictionaries
 
@@ -401,11 +401,11 @@ Different dictionary implementations have different clone semantics:
 
 | Dictionary | Clone Type | Cost | Shared Data? |
 |------------|------------|------|--------------|
-| **DynamicDawg** | Shallow (Arc) | `$\mathcal{O}(1)$` | ✅ Yes |
-| **DynamicDawgChar** | Shallow (Arc) | `$\mathcal{O}(1)$` | ✅ Yes |
-| **PathMapDictionary** | Shallow (Arc) | `$\mathcal{O}(1)$` | ✅ Yes |
-| **DoubleArrayTrie** | Deep copy | `$\mathcal{O}(n)$` | ❌ No |
-| **DoubleArrayTrieChar** | Deep copy | `$\mathcal{O}(n)$` | ❌ No |
+| **DynamicDawg** | Shallow (Arc) | $`\mathcal{O}(1)`$ | ✅ Yes |
+| **DynamicDawgChar** | Shallow (Arc) | $`\mathcal{O}(1)`$ | ✅ Yes |
+| **PathMapDictionary** | Shallow (Arc) | $`\mathcal{O}(1)`$ | ✅ Yes |
+| **DoubleArrayTrie** | Deep copy | $`\mathcal{O}(n)`$ | ❌ No |
+| **DoubleArrayTrieChar** | Deep copy | $`\mathcal{O}(n)`$ | ❌ No |
 
 **Why the difference?**
 - **Mutable dictionaries** (DynamicDawg, PathMap) use Arc for shared ownership with interior mutability
@@ -453,16 +453,16 @@ let writer = {
 
 **Key Takeaways:**
 1. 🔗 `.clone()` creates a **shallow copy** - all clones share the same data
-2. 🚀 **`$\mathcal{O}(1)$`** time and space - just increments atomic reference count
+2. 🚀 **$`\mathcal{O}(1)`$** time and space - just increments atomic reference count
 3. 🔄 **Mutations are visible** across all clones (by design)
 4. 🔒 **Thread-safe and lock-free** — readers never block; writers publish via `compare_exchange` (CAS)
-5. 📊 For **independence**, use serialization or rebuild from terms (`$\mathcal{O}(n)$` cost)
+5. 📊 For **independence**, use serialization or rebuild from terms ($`\mathcal{O}(n)`$ cost)
 
 ### Optimizations
 
 #### 1. SmallVec for Edges
 
-Most nodes have `$\le 4$` edges. `SmallVec` avoids heap allocation:
+Most nodes have $`\le 4`$ edges. `SmallVec` avoids heap allocation:
 
 ```rust
 // Inline storage for ≤4 edges (stack allocated)
@@ -534,7 +534,7 @@ if nodes.len() > last_minimized * auto_minimize_threshold {
 }
 ```
 
-**Impact**: Amortizes `$\mathcal{O}(n)$` cost over many insertions
+**Impact**: Amortizes $`\mathcal{O}(n)`$ cost over many insertions
 
 ## Construction Methods
 
@@ -544,10 +544,10 @@ DynamicDawg provides multiple constructors for different initialization patterns
 
 | Constructor | Complexity | Use Case | Thread-Safe |
 |-------------|-----------|----------|-------------|
-| `new()` | `$\mathcal{O}(1)$` | Empty start, incremental | ✅ |
-| `from_iter()` | `$\mathcal{O}(n \cdot m)$` | Bulk load from iterator | ✅ |
-| `from_terms()` | `$\mathcal{O}(n \cdot m)$` | Simple term list | ✅ |
-| `insert_with_value()` | `$\mathcal{O}(m)$` amortized | Per-term values | ✅ |
+| `new()` | $`\mathcal{O}(1)`$ | Empty start, incremental | ✅ |
+| `from_iter()` | $`\mathcal{O}(n \cdot m)`$ | Bulk load from iterator | ✅ |
+| `from_terms()` | $`\mathcal{O}(n \cdot m)`$ | Simple term list | ✅ |
+| `insert_with_value()` | $`\mathcal{O}(m)`$ amortized | Per-term values | ✅ |
 
 Where n = number of terms, m = average term length
 
@@ -572,7 +572,7 @@ valued_dict.insert_with_value("world", 200);
 ```
 
 **Characteristics:**
-- **Time**: `$\mathcal{O}(1)$` - Allocates minimal structure
+- **Time**: $`\mathcal{O}(1)`$ - Allocates minimal structure
 - **Memory**: small fixed allocation (Arc + empty lock-free DynamicDawgInner)
 - **Use case**: Real-time incremental updates, streaming input
 
@@ -607,7 +607,7 @@ let dict = DynamicDawg::from_iter(lines);
 ```
 
 **Characteristics:**
-- **Time**: `$\mathcal{O}(n \cdot m)$` where n=terms, m=avg length
+- **Time**: $`\mathcal{O}(n \cdot m)`$ where n=terms, m=avg length
 - **Memory**: Linear with term count (~250KB for 10K terms)
 - **Optimization**: Pre-sorting terms improves cache locality
 
@@ -772,14 +772,14 @@ DynamicDawg provides comprehensive methods for querying dictionary contents and 
 
 | Method | Returns | Complexity | Thread-Safe | Description |
 |--------|---------|------------|-------------|-------------|
-| `contains(term)` | `bool` | `$\mathcal{O}(m)$` | ✅ Yes | Check if term exists |
-| `get_value(term)` | `Option<V>` | `$\mathcal{O}(m)$` | ✅ Yes | Retrieve associated value |
-| `len()` | `Option<usize>` | `$\mathcal{O}(1)$` | ✅ Yes | Get term count (Dictionary trait) |
-| `is_empty()` | `bool` | `$\mathcal{O}(1)$` | ✅ Yes | Check if empty (Dictionary trait) |
-| `term_count()` | `usize` | `$\mathcal{O}(1)$` | ✅ Yes | Get exact term count |
-| `node_count()` | `usize` | `$\mathcal{O}(1)$` | ✅ Yes | Get internal node count |
-| `needs_compaction()` | `bool` | `$\mathcal{O}(1)$` | ✅ Yes | Check if compaction recommended |
-| `root()` | `DynamicDawgNode` | `$\mathcal{O}(1)$` | ✅ Yes | Get root node for traversal |
+| `contains(term)` | `bool` | $`\mathcal{O}(m)`$ | ✅ Yes | Check if term exists |
+| `get_value(term)` | `Option<V>` | $`\mathcal{O}(m)`$ | ✅ Yes | Retrieve associated value |
+| `len()` | `Option<usize>` | $`\mathcal{O}(1)`$ | ✅ Yes | Get term count (Dictionary trait) |
+| `is_empty()` | `bool` | $`\mathcal{O}(1)`$ | ✅ Yes | Check if empty (Dictionary trait) |
+| `term_count()` | `usize` | $`\mathcal{O}(1)`$ | ✅ Yes | Get exact term count |
+| `node_count()` | `usize` | $`\mathcal{O}(1)`$ | ✅ Yes | Get internal node count |
+| `needs_compaction()` | `bool` | $`\mathcal{O}(1)`$ | ✅ Yes | Check if compaction recommended |
+| `root()` | `DynamicDawgNode` | $`\mathcal{O}(1)`$ | ✅ Yes | Get root node for traversal |
 
 *Note*: `m` = term length (in bytes).
 
@@ -795,7 +795,7 @@ pub fn contains(&self, term: &str) -> bool
 ```
 
 **Performance**:
-- **Complexity**: `$\mathcal{O}(m)$` where m is term length
+- **Complexity**: $`\mathcal{O}(m)`$ where m is term length
 - **Optimizations**: Bloom filter for fast negative lookups (~100× faster rejection)
 - **Concurrency**: Lock-free read (no reader lock)
 
@@ -865,7 +865,7 @@ where
 - `None` if term doesn't exist or has no value
 
 **Performance**:
-- **Complexity**: `$\mathcal{O}(m)$` where m is term length
+- **Complexity**: $`\mathcal{O}(m)`$ where m is term length
 - **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
@@ -921,7 +921,7 @@ fn is_empty(&self) -> bool      // Dictionary trait
 - `is_empty()`: `true` if no terms, `false` otherwise
 
 **Performance**:
-- **Complexity**: `$\mathcal{O}(1)$` - stored counter
+- **Complexity**: $`\mathcal{O}(1)`$ - stored counter
 - **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
@@ -955,7 +955,7 @@ pub fn term_count(&self) -> usize
 ```
 
 **Performance**:
-- **Complexity**: `$\mathcal{O}(1)$` - stored counter
+- **Complexity**: $`\mathcal{O}(1)`$ - stored counter
 - **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
@@ -990,7 +990,7 @@ pub fn node_count(&self) -> usize
 **Returns**: Total number of DAWG nodes (including non-final nodes)
 
 **Performance**:
-- **Complexity**: `$\mathcal{O}(1)$` - stored counter
+- **Complexity**: $`\mathcal{O}(1)`$ - stored counter
 - **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
@@ -1014,7 +1014,7 @@ assert_eq!(removed, 0); // Already minimal
 
 **Interpretation**:
 - Higher node count → More memory usage
-- `node_count()` `$\approx$` `term_count()` → Good compression (lots of sharing)
+- `node_count()` $`\approx`$ `term_count()` → Good compression (lots of sharing)
 - `node_count()` >> `term_count()` → Poor compression (deletions without compaction)
 
 **Monitoring Example**:
@@ -1048,7 +1048,7 @@ pub fn needs_compaction(&self) -> bool
 - `false` if structure is minimal or only insertions occurred
 
 **Performance**:
-- **Complexity**: `$\mathcal{O}(1)$` - flag check
+- **Complexity**: $`\mathcal{O}(1)`$ - flag check
 - **Concurrency**: Lock-free read (no reader lock)
 
 **Example**:
@@ -1082,7 +1082,7 @@ if dict.needs_compaction() {
 ```
 
 **Performance Guidance**:
-- Compaction is `$\mathcal{O}(n)$` where n = total characters
+- Compaction is $`\mathcal{O}(n)`$ where n = total characters
 - Compact periodically, not after every deletion
 - Typical trigger: After removing >10% of terms
 
@@ -1100,7 +1100,7 @@ fn root(&self) -> DynamicDawgNode // From Dictionary trait
 **Returns**: Node at root of DAWG (entry point for traversal)
 
 **Performance**:
-- **Complexity**: `$\mathcal{O}(1)$`
+- **Complexity**: $`\mathcal{O}(1)`$
 - **Concurrency**: Lock-free traversal (per-node `ArcSwap` snapshot)
 
 **Example**:
@@ -1279,7 +1279,7 @@ The `union_with()` and `union_replace()` methods enable **merging two DynamicDaw
 **Key Characteristics**:
 - 🔒 **Thread-safe**: Lock-free reads; writers publish via CAS
 - 💾 **DAWG-preserving**: Maintains minimization through `insert_with_value()`
-- ⚡ **Efficient**: `$\mathcal{O}(n \cdot m)$` traversal with minimal memory overhead
+- ⚡ **Efficient**: $`\mathcal{O}(n \cdot m)`$ traversal with minimal memory overhead
 - 🎯 **Flexible**: Custom merge functions for value conflicts
 
 ### union_with() - Merge with Custom Logic
@@ -1311,10 +1311,10 @@ where
 5. Repeat until stack empty
 
 **Complexity**:
-- **Time**: `$\mathcal{O}(n \cdot m)$` where n = terms in `other`, m = average term length
-  - `$\mathcal{O}(n \cdot m)$` for DFS traversal
-  - `$\mathcal{O}(m)$` per term for `insert_with_value()`
-- **Space**: `$\mathcal{O}(d)$` where d = maximum trie depth (typically < 50)
+- **Time**: $`\mathcal{O}(n \cdot m)`$ where n = terms in `other`, m = average term length
+  - $`\mathcal{O}(n \cdot m)`$ for DFS traversal
+  - $`\mathcal{O}(m)`$ per term for `insert_with_value()`
+- **Space**: $`\mathcal{O}(d)`$ where d = maximum trie depth (typically < 50)
   - DFS stack size proportional to deepest path
   - Constant additional memory
 
@@ -1527,7 +1527,7 @@ fn union_with<F>(&self, other: &Self, merge_fn: F) -> usize {
 
 **Why Iterative DFS?**
 - ✅ **No stack overflow**: Handles very deep tries (e.g., long terms)
-- ✅ **Memory efficient**: `$\mathcal{O}(d)$` space vs `$\mathcal{O}(n)$` for recursion
+- ✅ **Memory efficient**: $`\mathcal{O}(d)`$ space vs $`\mathcal{O}(n)`$ for recursion
 - ✅ **Consistent ordering**: Reversed edges ensure predictable traversal
 - ✅ **Debuggable**: Explicit stack state visible at each step
 
@@ -1546,10 +1546,10 @@ The implementation delegates to `insert_with_value()` rather than manipulating n
 
 | Operation | Time Complexity | Space Complexity | Typical Performance (10K terms) |
 |-----------|----------------|------------------|--------------------------------|
-| `union_with()` | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(d)$` | ~50ms |
-| `union_replace()` | `$\mathcal{O}(n \cdot m)$` | `$\mathcal{O}(d)$` | ~50ms |
-| DFS traversal | `$\mathcal{O}(n)$` | `$\mathcal{O}(d)$` | ~20ms |
-| Per-term insertion | `$\mathcal{O}(m)$` | `$\mathcal{O}(1)$` amortized | ~2-5µs |
+| `union_with()` | $`\mathcal{O}(n \cdot m)`$ | $`\mathcal{O}(d)`$ | ~50ms |
+| `union_replace()` | $`\mathcal{O}(n \cdot m)`$ | $`\mathcal{O}(d)`$ | ~50ms |
+| DFS traversal | $`\mathcal{O}(n)`$ | $`\mathcal{O}(d)`$ | ~20ms |
+| Per-term insertion | $`\mathcal{O}(m)`$ | $`\mathcal{O}(1)`$ amortized | ~2-5µs |
 
 **Variables**:
 - n = number of terms in source dictionary
@@ -1778,11 +1778,11 @@ println!("{:?}", results);  // ["test", "tester"]
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Insert** | `$\mathcal{O}(m)$` | m = term length |
-| **Remove** | `$\mathcal{O}(m)$` | Plus ref count updates |
-| **Contains** | `$\mathcal{O}(m)$` | With Bloom filter: `$\mathcal{O}(1)$` rejection |
-| **Compact** | `$\mathcal{O}(n)$` | n = total nodes |
-| **Query (fuzzy)** | `$\mathcal{O}(m \times d^{2} \times b)$` | d = distance, b = branching |
+| **Insert** | $`\mathcal{O}(m)`$ | m = term length |
+| **Remove** | $`\mathcal{O}(m)`$ | Plus ref count updates |
+| **Contains** | $`\mathcal{O}(m)`$ | With Bloom filter: $`\mathcal{O}(1)`$ rejection |
+| **Compact** | $`\mathcal{O}(n)`$ | n = total nodes |
+| **Query (fuzzy)** | $`\mathcal{O}(m \times d^{2} \times b)`$ | d = distance, b = branching |
 
 ### Benchmark Results
 

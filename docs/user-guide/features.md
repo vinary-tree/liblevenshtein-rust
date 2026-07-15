@@ -131,7 +131,7 @@ for candidate in transducer.query_ordered("aple", 1) {
 
 #### Filtering and Prefix Matching (v0.4.0)
 - **Custom filters**: Apply arbitrary predicates to results
-- **Prefix mode**: Match only terms starting with query `$\pm$` edits
+- **Prefix mode**: Match only terms starting with query $`\pm`$ edits
 - **Optimized**: Bitmap masking for efficient context filtering
 - **Usage**:
 ```rust
@@ -292,8 +292,8 @@ RUSTFLAGS="-C target-cpu=native" cargo bench
 
 ### Memory Usage
 
-- **PathMap**: `$\sim\mathcal{O}(n)$` for `$n$` unique prefixes
-- **DAWG**: `$\sim\mathcal{O}(m)$` for `$m$` unique substrings (shares prefixes and suffixes)
+- **PathMap**: $`\sim\mathcal{O}(n)`$ for $`n`$ unique prefixes
+- **DAWG**: $`\sim\mathcal{O}(m)`$ for $`m`$ unique substrings (shares prefixes and suffixes)
 - **Position**: 17 bytes (Copy semantics, no heap allocation)
 - **State pooling**: Reuses allocations, LIFO for cache locality
 

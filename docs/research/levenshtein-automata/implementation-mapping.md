@@ -27,10 +27,10 @@ This document provides a detailed mapping between concepts, algorithms, and stru
 | Paper Concept | Code Location | Type |
 |---------------|---------------|------|
 | Position i#e | `/src/transducer/position.rs:11-35` | Struct |
-| Subsumption `$\sqsubseteq$` |  `/src/transducer/position.rs:231-269` | Method |
-| Characteristic Vector `$\chi$` |  `/src/transducer/position.rs` | Function |
-| Elementary Transition `$\delta$` |  `/src/transducer/transition.rs:119-438` | Function |
-| State Transition `$\Delta$` |  `/src/transducer/query.rs` | Method |
+| Subsumption $`\sqsubseteq`$ |  `/src/transducer/position.rs:231-269` | Method |
+| Characteristic Vector $`\chi`$ |  `/src/transducer/position.rs` | Function |
+| Elementary Transition $`\delta`$ |  `/src/transducer/transition.rs:119-438` | Function |
+| State Transition $`\Delta`$ |  `/src/transducer/query.rs` | Method |
 | Algorithm Variants | `/src/transducer/algorithm.rs` | Enum |
 | LEV_n(W) Construction | `/src/transducer/builder.rs` | Builder |
 | Imitation Method | `/src/transducer/query.rs:86-188` | Iterator |
@@ -41,7 +41,7 @@ This document provides a detailed mapping between concepts, algorithms, and stru
 
 ### Position (Definition 4.0.12)
 
-**Paper Definition**: i#e where `$0 \le  i \le  |W|, 0 \le  e \le  n$`
+**Paper Definition**: i#e where $`0 \le  i \le  |W|, 0 \le  e \le  n`$
 
 **Code**: `/src/transducer/position.rs`
 
@@ -82,7 +82,7 @@ let pos = Position::new(3, 1, false);  // Represents 3#1 from paper
 
 ## Subsumption Relation (Definition 4.0.15)
 
-**Paper Definition**: i#`$e \sqsubseteq  j$`#f if `$(e < f) \land  (|j-i| \le  f-e)$`
+**Paper Definition**: i#$`e \sqsubseteq  j`$#f if $`(e < f) \land  (|j-i| \le  f-e)`$
 
 **Code**: `/src/transducer/position.rs` (subsumption logic)
 
@@ -113,7 +113,7 @@ impl Position {
 
 ## Characteristic Vectors (Definition 4.0.10)
 
-**Paper Definition**: `$\chi (x,V) = \langle b_{1},...,b_v\rangle$` where b_j = 1 if V[j] = x
+**Paper Definition**: $`\chi (x,V) = \langle b_{1},...,b_v\rangle`$ where b_j = 1 if V[j] = x
 
 **Code**: `/src/transducer/position.rs` (characteristic vector functions)
 
@@ -121,7 +121,7 @@ impl Position {
 
 **Implementation**:
 - Likely uses bit-vectors or boolean arrays
-- Computed for relevant subword `$W[\pi ]$`
+- Computed for relevant subword $`W[\pi ]`$
 - Used in elementary transition logic
 
 **Example from Paper**:
@@ -140,7 +140,7 @@ fn characteristic_vector(ch: char, word: &[char]) -> Vec<bool> {
 
 ## Elementary Transitions (Table 4.1, 7.1, 8.1)
 
-**Paper**: Defines transition from single position `$\pi$` under character x
+**Paper**: Defines transition from single position $`\pi`$ under character x
 
 **Code**: `/src/transducer/transition.rs`
 
@@ -157,13 +157,13 @@ pub(crate) fn standard_transition(
 ```
 
 **Implements**:
-- **Case 1**: First character matches `$(\chi  = \langle 1,...\rangle)$`
+- **Case 1**: First character matches $`(\chi  = \langle 1,...\rangle)`$
   - Return {(i+1)#e}
   
-- **Case 2**: Match later `$(\chi  = \langle 0,...,0,1,...\rangle$` at position j)
+- **Case 2**: Match later $`(\chi  = \langle 0,...,0,1,...\rangle`$ at position j)
   - Return {i#(e+1), (i+1)#(e+1), (i+j)#(e+j-1)}
   
-- **Case 3**: No match `$(\chi  = \langle 0,...,0\rangle)$`
+- **Case 3**: No match $`(\chi  = \langle 0,...,0\rangle)`$
   - Return {i#(e+1), (i+1)#(e+1)}
 
 **Code Structure**:
@@ -201,7 +201,7 @@ for position in curr_state {
 
 **Additional Logic**:
 - Handles `is_special` flag (t in paper)
-- Detects potential transpositions `$(W[i+1] \ne  x$` but W[i+2] = x)
+- Detects potential transpositions $`(W[i+1] \ne  x`$ but W[i+2] = x)
 - Completes transposition when special position matches expected character
 
 **Code Pattern**:
@@ -322,7 +322,7 @@ impl<D> Iterator for QueryIterator<D> {
 
 ## Transition Function Dispatch
 
-**Paper**: `$\Delta (M,x)$` uses algorithm-specific elementary transitions
+**Paper**: $`\Delta (M,x)`$ uses algorithm-specific elementary transitions
 
 **Code**: `/src/transducer/query.rs` (transition dispatch logic)
 
@@ -364,7 +364,7 @@ impl QueryIterator {
 
 ## Dictionary Integration
 
-**Paper**: Dictionary automaton `$A^D$` traversed in parallel with LEV_n(W)
+**Paper**: Dictionary automaton $`A^D`$ traversed in parallel with LEV_n(W)
 
 **Code**: Dictionary implementations live in the `libdictenstein` crate (the dictionary family was extracted from `liblevenshtein-rust` into its own crate; see the project's dictionary-family layout). Only `src/dictionary/mod.rs` and `src/dictionary/phonetic_normalized.rs` remain in this crate as the integration surface.
 
@@ -415,35 +415,35 @@ for ch in input_chars {
 - Logic: Implements Cases 1-3 from Table 4.1 (and extensions for Tables 7.1, 8.1)
 
 **Trade-off**:
-- Paper's table approach: `$\mathcal{O}(1)$` lookup, `$\mathcal{O}(4^n)$` preprocessing
-- Code's on-demand approach: `$\mathcal{O}(\text{state} \text{size})$` computation, no preprocessing
+- Paper's table approach: $`\mathcal{O}(1)`$ lookup, $`\mathcal{O}(4^n)`$ preprocessing
+- Code's on-demand approach: $`\mathcal{O}(\text{state} \text{size})`$ computation, no preprocessing
 
-Both have `$\mathcal{O}(\lvert W\rvert)$` total complexity for constructing LEV_n(W).
+Both have $`\mathcal{O}(\lvert W\rvert)`$ total complexity for constructing LEV_n(W).
 
 ---
 
 ## Complexity Verification
 
-### Construction Time: `$\mathcal{O}(\lvert W\rvert)$`
+### Construction Time: $`\mathcal{O}(\lvert W\rvert)`$
 
 **Paper**: Theorem 5.2.1
 
 **Code**: 
-- Builder creates query iterator: `$\mathcal{O}(\lvert W\rvert)$` to store query characters
-- State initialization: `$\mathcal{O}(1)$`
-- Per-transition computation: `$\mathcal{O}(\text{state} \text{size})$` = `$\mathcal{O}(1)$` for fixed n
+- Builder creates query iterator: $`\mathcal{O}(\lvert W\rvert)`$ to store query characters
+- State initialization: $`\mathcal{O}(1)`$
+- Per-transition computation: $`\mathcal{O}(\text{state} \text{size})`$ = $`\mathcal{O}(1)`$ for fixed n
 
-**Total**: `$\mathcal{O}(\lvert W\rvert)$` ✓
+**Total**: $`\mathcal{O}(\lvert W\rvert)`$ ✓
 
-### Query Time: `$\mathcal{O}(\lvert D\rvert)$`
+### Query Time: $`\mathcal{O}(\lvert D\rvert)`$
 
 **Paper**: Chapter 3, parallel traversal
 
 **Code**:
-- Traverse dictionary edges: `$\mathcal{O}(\lvert D\rvert)$`
-- Compute transitions: `$\mathcal{O}(\lvert D\rvert \times  \text{state} \text{size})$` = `$\mathcal{O}(\lvert D\rvert)$` for fixed n
+- Traverse dictionary edges: $`\mathcal{O}(\lvert D\rvert)`$
+- Compute transitions: $`\mathcal{O}(\lvert D\rvert \times  \text{state} \text{size})`$ = $`\mathcal{O}(\lvert D\rvert)`$ for fixed n
 
-**Total**: `$\mathcal{O}(\lvert D\rvert)$` ✓
+**Total**: $`\mathcal{O}(\lvert D\rvert)`$ ✓
 
 ---
 
@@ -483,7 +483,7 @@ if i < query_chars.len() {
 **Validation Against Paper**:
 - Compare results with known Levenshtein distances
 - Verify automaton accepts L_Lev(n,W)
-- Check performance matches `$\mathcal{O}(\lvert W\rvert)$` + `$\mathcal{O}(\lvert D\rvert)$` complexity
+- Check performance matches $`\mathcal{O}(\lvert W\rvert)`$ + $`\mathcal{O}(\lvert D\rvert)`$ complexity
 
 ---
 
@@ -511,7 +511,7 @@ if i < query_chars.len() {
 1. Define extended positions (i#e_flag)
 2. Define extended subsumption
 3. Create transition table
-4. Prove `$\mathcal{O}(\lvert W\rvert)$` complexity
+4. Prove $`\mathcal{O}(\lvert W\rvert)`$ complexity
 
 **Code Approach**:
 1. Add flag to `Position` struct
@@ -584,7 +584,7 @@ Modify transition logic to check substitution validity.
 
 **Check**:
 1. Subsumption removing redundant positions
-2. State size not growing beyond `$\mathcal{O}(n)$` positions
+2. State size not growing beyond $`\mathcal{O}(n)`$ positions
 3. Dictionary traversal efficient
 
 **Tool**: Profile transition function calls, measure state sizes

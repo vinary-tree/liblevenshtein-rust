@@ -138,7 +138,7 @@ For details, see [`theoretical-analysis/quick-reference.md`](theoretical-analysi
 
 **Layer 1: Lexical** - Fixes character-level typos
 - Example: `prnt` → `print`
-- Algorithm: Levenshtein automata (`$\mathcal{O}(n)$` recognition)
+- Algorithm: Levenshtein automata ($`\mathcal{O}(n)`$ recognition)
 - Status: Implemented in liblevenshtein
 
 **Layer 2: Grammar** - Fixes syntax errors

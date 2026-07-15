@@ -45,10 +45,10 @@
 
 **What changed.** `PathMapNode` / `PathMapNodeChar` / `PathMapZipper` are now
 thin, lock-free handles over pathmap `TrieRef` nodes
-(`libdictenstein::pathmap::core`). Descending one byte is `$\mathcal{O}(1)$` from the focus —
+(`libdictenstein::pathmap::core`). Descending one byte is $`\mathcal{O}(1)`$ from the focus —
 no per-operation lock and no replay of the path from the root. `root()` takes an
-`$\mathcal{O}(1)$` copy-on-write snapshot, so queries run lock-free over a consistent view
-(snapshot isolation), replacing the former `$\mathcal{O}(n^2)$`-per-walk path-replay node.
+$`\mathcal{O}(1)`$ copy-on-write snapshot, so queries run lock-free over a consistent view
+(snapshot isolation), replacing the former $`\mathcal{O}(n^2)`$-per-walk path-replay node.
 
 **Zero-plumbing entry points (MORK).** A caller already holding a bare `PathMap`
 can fuzzy-query it with no copy and no lock:
@@ -56,7 +56,7 @@ can fuzzy-query it with no copy and no lock:
 | Entry point | Cost | Use |
 |-------------|------|-----|
 | `PathMapRef::from_map(&space.btm)` | zero-copy borrow | query the live map |
-| `PathMapSnapshot::from_map_ref(&space.btm)` | `$\mathcal{O}(1)$` CoW | decouple from later writes |
+| `PathMapSnapshot::from_map_ref(&space.btm)` | $`\mathcal{O}(1)`$ CoW | decouple from later writes |
 | `PathMapRef::from_trie_ref(space.btm.trie_ref_at_path(prefix))` | zero-copy | scope to a subtrie |
 
 ```rust
@@ -128,9 +128,9 @@ PhoneticNormalizedDictionary<V, D>
 
 **Key Optimizations:**
 - **Exact match fast path (d=0)**: Direct trie lookup is **100-300× faster** than automaton traversal
-- **FuzzyMultiMap**: `$\mathcal{O}(k \log n)$` fuzzy queries via Levenshtein automaton pruning
+- **FuzzyMultiMap**: $`\mathcal{O}(k \log n)`$ fuzzy queries via Levenshtein automaton pruning
 - **Thread-local NormalizeBuffers (H3)**: Reuses buffers to reduce allocations
-- **`$\mathcal{O}(1)$` vowel classification**: Bitmask lookup instead of linear array search
+- **$`\mathcal{O}(1)`$ vowel classification**: Bitmask lookup instead of linear array search
 
 ### Building a Dictionary
 
@@ -223,9 +223,9 @@ src/phonetic/
 
 | Query Type | Complexity | Notes |
 |------------|------------|-------|
-| Exact (d=0) | `$\mathcal{O}(k)$` | Direct trie lookup, 100-300× faster |
-| Fuzzy (`$d \ge 1$`) | `$\mathcal{O}(k \log n)$` | Levenshtein automaton pruning |
-| Regex | `$\mathcal{O}(n \times k)$` | Scans normalized forms |
+| Exact (d=0) | $`\mathcal{O}(k)`$ | Direct trie lookup, 100-300× faster |
+| Fuzzy ($`d \ge 1`$) | $`\mathcal{O}(k \log n)`$ | Levenshtein automaton pruning |
+| Regex | $`\mathcal{O}(n \times k)`$ | Scans normalized forms |
 
 Where k = query length, n = dictionary size.
 
@@ -907,9 +907,9 @@ Uncompressed trie:    Prefix-compressed PathMap:
 
 | Operation | Complexity | Typical Latency |
 |-----------|------------|-----------------|
-| Exact lookup | `$\mathcal{O}(k)$` | <1 µs |
-| Prefix scan | `$\mathcal{O}(k + m)$` | <10 µs |
-| Fuzzy query (d=2) | `$\mathcal{O}(k \times 3^d)$` | <100 µs |
+| Exact lookup | $`\mathcal{O}(k)`$ | <1 µs |
+| Prefix scan | $`\mathcal{O}(k + m)`$ | <10 µs |
+| Fuzzy query (d=2) | $`\mathcal{O}(k \times 3^d)`$ | <100 µs |
 
 Where:
 - k = key length

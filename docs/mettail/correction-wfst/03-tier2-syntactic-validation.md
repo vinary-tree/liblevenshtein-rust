@@ -211,7 +211,7 @@ function usage, see [Phase D: Grammar Correction](../../integration/mork/grammar
 |----------|----------|---------|
 | `match2()` | expr/src/lib.rs:921 | Recursive structural matching |
 | `unify()` | expr/src/lib.rs:1849 | Variable binding + constraints |
-| `query_multi_i()` | kernel/src/space.rs:992 | `$\mathcal{O}(K\times N)$` lattice queries |
+| `query_multi_i()` | kernel/src/space.rs:992 | $`\mathcal{O}(K\times N)`$ lattice queries |
 | `transform_multi_multi_()` | kernel/src/space.rs:1221 | Pattern→template application |
 
 ### Storage Schema

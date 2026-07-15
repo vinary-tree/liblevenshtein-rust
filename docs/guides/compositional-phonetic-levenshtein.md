@@ -51,7 +51,7 @@ If we're in state 2 and see "t", we move to state 3 (accepting). If we see anyth
 A **Deterministic Finite Automaton (DFA)** has exactly one next state for each input character. A **Non-deterministic Finite Automaton (NFA)** can have:
 
 - **Multiple transitions** on the same character (try all paths)
-- **Epsilon (`$\varepsilon$`) transitions**: Move without consuming input
+- **Epsilon ($`\varepsilon`$) transitions**: Move without consuming input
 
 ```
 Example: NFA that accepts "phone" OR "fone"
@@ -689,11 +689,11 @@ For detailed documentation on articulatory distance computation and configuratio
 
 #### 5.4.1 The Substitution Cost Model
 
-Let `$a$` be the query symbol and `$b$` the pattern symbol at a substitution transition. Define:
+Let $`a`$ be the query symbol and $`b`$ the pattern symbol at a substitution transition. Define:
 
-- `$\beta_{\mathrm{sub}}$` — the **base** substitution cost (the unit cost of a plain edit; `$1.0$` by default),
-- `$w \in [0, 1]$` — the **articulation weight** (how much phonetic similarity is allowed to discount an edit),
-- `$d_{\mathrm{art}}(a, b) \in [0, 1]$` — the **articulatory distance**, a feature-space (IPA) distance between the two sounds (`$0$` = identical articulation, `$1$` = maximally different).
+- $`\beta_{\mathrm{sub}}`$ — the **base** substitution cost (the unit cost of a plain edit; $`1.0`$ by default),
+- $`w \in [0, 1]`$ — the **articulation weight** (how much phonetic similarity is allowed to discount an edit),
+- $`d_{\mathrm{art}}(a, b) \in [0, 1]`$ — the **articulatory distance**, a feature-space (IPA) distance between the two sounds ($`0`$ = identical articulation, $`1`$ = maximally different).
 
 The articulatory substitution cost blends the base cost with the feature distance:
 
@@ -701,7 +701,7 @@ The articulatory substitution cost blends the base cost with the feature distanc
 c_{\mathrm{sub}}(a, b) = \beta_{\mathrm{sub}}\,(1 - w) \;+\; d_{\mathrm{art}}(a, b)\,w, \qquad c_{\mathrm{sub}}(a, b) \in [0,\ \beta_{\mathrm{sub}}].
 ```
 
-Because `$c_{\mathrm{sub}} \le \beta_{\mathrm{sub}}$` and every other edit operation costs `$\beta_{\mathrm{sub}} = 1$`, a substitution is only ever *discounted* — never inflated — relative to the unit-cost model. (Near-identical sounds below a *free-substitution* threshold are discounted almost to zero.)
+Because $`c_{\mathrm{sub}} \le \beta_{\mathrm{sub}}`$ and every other edit operation costs $`\beta_{\mathrm{sub}} = 1`$, a substitution is only ever *discounted* — never inflated — relative to the unit-cost model. (Near-identical sounds below a *free-substitution* threshold are discounted almost to zero.)
 
 #### 5.4.2 Least-Cost Alignment: `min_cost`
 
@@ -711,7 +711,7 @@ The integer acceptance test (`accepts`) and the integer edit distance (`min_dist
 \mathrm{min\_cost}(q) \;=\; \min_{\text{alignments } \pi \text{ of } q}\ \sum_{i} c_{\mathrm{op}_i}(\pi),
 ```
 
-a uniform-cost (Dijkstra) search over product states `$(\text{position},\ \text{NFA state set})$` where every edit edge carries a non-negative cost, so the first accepting configuration popped from the min-priority frontier is provably optimal. Since each operation's cost is `$\le$` its unit-cost counterpart,
+a uniform-cost (Dijkstra) search over product states $`(\text{position},\ \text{NFA state set})`$ where every edit edge carries a non-negative cost, so the first accepting configuration popped from the min-priority frontier is provably optimal. Since each operation's cost is $`\le`$ its unit-cost counterpart,
 
 ```math
 \mathrm{min\_cost}(q) \;\le\; \mathrm{min\_distance}(q).
@@ -721,11 +721,11 @@ a uniform-cost (Dijkstra) search over product states `$(\text{position},\ \text{
 
 `PhoneticTransducerChar::with_articulatory_costs` builds the query on the articulatory product and reports, for every candidate:
 
-- `edit_distance` `$= \mathrm{min\_distance}(q)$` — the integer operation count,
-- `total_cost` `$= \mathrm{min\_cost}(q)$` — the articulatory-weighted alignment cost (the **ranking key**),
-- `phonetic_cost` `$= \mathrm{min\_cost}(q) - \mathrm{min\_distance}(q) \le 0$` — the articulatory **discount** a sound-alike alignment earns, so that the candidate constructor's invariant `total_cost = edit_distance + phonetic_cost` holds.
+- `edit_distance` $`= \mathrm{min\_distance}(q)`$ — the integer operation count,
+- `total_cost` $`= \mathrm{min\_cost}(q)`$ — the articulatory-weighted alignment cost (the **ranking key**),
+- `phonetic_cost` $`= \mathrm{min\_cost}(q) - \mathrm{min\_distance}(q) \le 0`$ — the articulatory **discount** a sound-alike alignment earns, so that the candidate constructor's invariant `total_cost = edit_distance + phonetic_cost` holds.
 
-For an exact match, `$\mathrm{min\_cost} = \mathrm{min\_distance} = 0$`, so `phonetic_cost` is `$0.0$`; the default (non-articulatory) path leaves `phonetic_cost` at `$0.0$` for every candidate, preserving byte-for-byte backward compatibility.
+For an exact match, $`\mathrm{min\_cost} = \mathrm{min\_distance} = 0`$, so `phonetic_cost` is $`0.0`$; the default (non-articulatory) path leaves `phonetic_cost` at $`0.0`$ for every candidate, preserving byte-for-byte backward compatibility.
 
 ```rust
 use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
@@ -748,9 +748,9 @@ for c in transducer.query_sorted("pat") {
 // cat  edit=1 phonetic=-0.06 total=0.94   ← p→c (distant)          : nearly a full edit
 ```
 
-Both `bat` and `cat` are edit distance `$1$`, yet the articulatory `total_cost` ranks the sound-alike `bat` (`$0.01$`) far ahead of the phonetically distant `cat` (`$0.94$`) — exactly the behaviour a phonetic corrector wants.
+Both `bat` and `cat` are edit distance $`1`$, yet the articulatory `total_cost` ranks the sound-alike `bat` ($`0.01`$) far ahead of the phonetically distant `cat` ($`0.94`$) — exactly the behaviour a phonetic corrector wants.
 
-> **Byte-level note.** Articulatory features are defined over *phonemes* (`char`s), and the byte NFA's transition label exposes no "expected byte" to weight against, so byte-level phonetic matching (`PhoneticTransducer`, `PhoneticCandidateByte`) is integer edit distance only: `phonetic_cost` is always `$0.0$` there. Use the character-level transducer for the articulatory path.
+> **Byte-level note.** Articulatory features are defined over *phonemes* (`char`s), and the byte NFA's transition label exposes no "expected byte" to weight against, so byte-level phonetic matching (`PhoneticTransducer`, `PhoneticCandidateByte`) is integer edit distance only: `phonetic_cost` is always $`0.0`$ there. Use the character-level transducer for the articulatory path.
 
 #### 5.4.4 Value-Returning Phonetic Queries
 
@@ -769,7 +769,7 @@ for c in transducer.query_values("phone") {
 // phones -> id 200 (distance 1)
 ```
 
-This is the phonetic half of the upstream contract for word-level correction: `$T_{\mathrm{lex}}$` maps a token's characters to candidate term-ids with a combined edit + phonetic cost. The word-level half — correcting *sequences* of term-ids — is covered in [Chapter 8](#chapter-8-word-level-correction-over-a-term-id-alphabet-u64).
+This is the phonetic half of the upstream contract for word-level correction: $`T_{\mathrm{lex}}`$ maps a token's characters to candidate term-ids with a combined edit + phonetic cost. The word-level half — correcting *sequences* of term-ids — is covered in [Chapter 8](#chapter-8-word-level-correction-over-a-term-id-alphabet-u64).
 
 ### 5.5 Visual Walkthrough
 
@@ -871,7 +871,7 @@ A dictionary word is accepted if:
 
 1. We've consumed all characters in the word
 2. The NFA can reach an accepting state
-3. Total distance `$\le$` `max_distance`
+3. Total distance $`\le`$ `max_distance`
 
 But wait—what if we've consumed the whole dictionary word but the NFA still needs more characters?
 
@@ -1091,13 +1091,13 @@ class PhoneticTransducer:
 
 | Metric | Approach 1 | Approach 2 | Approach 3 |
 |--------|-----------|-----------|-----------|
-| Build Time | `$\mathcal{O}(D \cdot L \cdot R)$` | `$\mathcal{O}(D \cdot V \cdot L)$` | `$\mathcal{O}(D \cdot L)$` |
-| Memory | `$\mathcal{O}(D \cdot L)$` | `$\mathcal{O}(D \cdot V \cdot L)$` | `$\mathcal{O}(D \cdot L)$` |
-| Query Time | `$\mathcal{O}(m \cdot R + m \cdot n \cdot L)$` | `$\mathcal{O}(V_q \cdot m \cdot n \cdot L)$` | `$\mathcal{O}(\lvert NFA\rvert \cdot n \cdot m \cdot L)$` |
+| Build Time | $`\mathcal{O}(D \cdot L \cdot R)`$ | $`\mathcal{O}(D \cdot V \cdot L)`$ | $`\mathcal{O}(D \cdot L)`$ |
+| Memory | $`\mathcal{O}(D \cdot L)`$ | $`\mathcal{O}(D \cdot V \cdot L)`$ | $`\mathcal{O}(D \cdot L)`$ |
+| Query Time | $`\mathcal{O}(m \cdot R + m \cdot n \cdot L)`$ | $`\mathcal{O}(V_q \cdot m \cdot n \cdot L)`$ | $`\mathcal{O}(\lvert NFA\rvert \cdot n \cdot m \cdot L)`$ |
 | Flexibility | Low | Medium | High |
 | Cost Decomposition | No | Yes | Yes |
 
-Where: D=dictionary size, L=avg word length, R=rules, V=variants/word, m=query length, n=max distance, `$\lvert NFA\rvert$`=NFA states
+Where: D=dictionary size, L=avg word length, R=rules, V=variants/word, m=query length, n=max distance, $`\lvert NFA\rvert`$=NFA states
 
 ### 6.3 Memory vs Speed Trade-off
 
@@ -1250,11 +1250,11 @@ The product automaton in liblevenshtein supports transposition. Extend the pseud
 
 ## Chapter 8: Word-Level Correction over a Term-ID Alphabet (`u64`)
 
-Everything so far has corrected the *characters* of a word. But the Levenshtein engine is **unit-generic**: its state, position, and transition machinery never inspect what a "symbol" *is* — they only test symbols for equality. The same automaton that corrects `c-a-t` → `b-a-t` can therefore correct a *sentence* `the-quick-fox` → `the-quick-dog`, once each word is mapped to an integer **term-id**. This is the word-level (`$T_{\mathrm{gram}}$`) half of the correction architecture whose phonetic half (`$T_{\mathrm{lex}}$`) was introduced in [§5.4.4](#544-value-returning-phonetic-queries).
+Everything so far has corrected the *characters* of a word. But the Levenshtein engine is **unit-generic**: its state, position, and transition machinery never inspect what a "symbol" *is* — they only test symbols for equality. The same automaton that corrects `c-a-t` → `b-a-t` can therefore correct a *sentence* `the-quick-fox` → `the-quick-dog`, once each word is mapped to an integer **term-id**. This is the word-level ($`T_{\mathrm{gram}}`$) half of the correction architecture whose phonetic half ($`T_{\mathrm{lex}}`$) was introduced in [§5.4.4](#544-value-returning-phonetic-queries).
 
 ### 8.1 The Insight: Same Automaton, Integer Alphabet
 
-Fix a vocabulary and assign each word a unique term-id. A sentence becomes a sequence over the alphabet `$\Sigma = \{0, 1, \dots, 2^{64}-1\}$` (`u64`). An **n-gram dictionary** stores known term-id sequences; correcting a corrupted sequence is then exactly a Levenshtein query — insertion, deletion, substitution, and transposition now act on *whole words*, not letters.
+Fix a vocabulary and assign each word a unique term-id. A sentence becomes a sequence over the alphabet $`\Sigma = \{0, 1, \dots, 2^{64}-1\}`$ (`u64`). An **n-gram dictionary** stores known term-id sequences; correcting a corrupted sequence is then exactly a Levenshtein query — insertion, deletion, substitution, and transposition now act on *whole words*, not letters.
 
 ```
 character level:   c · a · t          →  edit ops act on letters
@@ -1269,14 +1269,14 @@ The string entry point (`Transducer::query(&str, k)`) is a trap for a term-id al
 
 ### 8.3 The Query Surface
 
-Let `$q$` be the query sequence and `$\lvert q\rvert$` its length; each method is lazy and completes a dictionary walk in `$\mathcal{O}(\lvert q\rvert)$` per matched node.
+Let $`q`$ be the query sequence and $`\lvert q\rvert`$ its length; each method is lazy and completes a dictionary walk in $`\mathcal{O}(\lvert q\rvert)`$ per matched node.
 
 | Method | Prunes on | Yields per match |
 |--------|-----------|------------------|
-| `query_units(q, k)` | integer edit distance `$\le k$` | `Vec<u64>` (the corrected sequence) |
-| `query_units_with_distance(q, k)` | integer edit distance `$\le k$` | `UnitCandidate { term, distance }` |
-| `query_units_weighted(q, max_cost, costs)` | weighted `$f64$` cost `$\le$` `max_cost` | `UnitCandidateF64 { term, distance }` |
-| `query_units_values(q, k)` | integer edit distance `$\le k$` | `(Vec<u64>, distance, value)` |
+| `query_units(q, k)` | integer edit distance $`\le k`$ | `Vec<u64>` (the corrected sequence) |
+| `query_units_with_distance(q, k)` | integer edit distance $`\le k`$ | `UnitCandidate { term, distance }` |
+| `query_units_weighted(q, max_cost, costs)` | weighted $`f64`$ cost $`\le`$ `max_cost` | `UnitCandidateF64 { term, distance }` |
+| `query_units_values(q, k)` | integer edit distance $`\le k`$ | `(Vec<u64>, distance, value)` |
 
 The weighted variant charges each edit a real-valued `OperationCostsF64` and prunes on the accumulated total,
 
@@ -1284,7 +1284,7 @@ The weighted variant charges each edit a real-valued `OperationCostsF64` and pru
 \mathrm{cost}(w) = \sum_{i} c_{\mathrm{op}_i}, \qquad c_{\mathrm{op}_i} \in \mathbb{R}_{\ge 0},
 ```
 
-so a language-model weight (e.g. a `$-\log P$` per-word score, which is non-negative and additive) can rank one correction ahead of another *within* the same integer-distance ball, or prune an expensive edit the integer search would have accepted.
+so a language-model weight (e.g. a $`-\log P`$ per-word score, which is non-negative and additive) can rank one correction ahead of another *within* the same integer-distance ball, or prune an expensive edit the integer search would have accepted.
 
 The value-returning variant (`query_units_values`) requires only that the dictionary be a `MappedDictionary` whose nodes are `MappedDictionaryNode`s; it is not coupled to any particular backend, working equally over the in-memory, lock-free `DynamicDawgU64` and the disk-backed `PersistentARTrieU64`.
 
@@ -1331,7 +1331,7 @@ A runnable version is in [`examples/u64_word_correction.rs`](../../examples/u64_
 
 ### 8.5 Composing the Two Halves
 
-`query_units_values` gives `$T_{\mathrm{gram}}$` a corrected term-id sequence **and** its stored per-sequence score in one pass, while the phonetic `query_values` of [§5.4.4](#544-value-returning-phonetic-queries) gives `$T_{\mathrm{lex}}$` a `(term_id, cost)` mapping from a token's characters. Composing `$T_{\mathrm{lex}}$` with `$T_{\mathrm{gram}}$` — combining their costs under a `$-\log P$` semiring — yields end-to-end sentence correction. That composition lives downstream (in the libgrammstein layer); this library supplies the two building blocks.
+`query_units_values` gives $`T_{\mathrm{gram}}`$ a corrected term-id sequence **and** its stored per-sequence score in one pass, while the phonetic `query_values` of [§5.4.4](#544-value-returning-phonetic-queries) gives $`T_{\mathrm{lex}}`$ a `(term_id, cost)` mapping from a token's characters. Composing $`T_{\mathrm{lex}}`$ with $`T_{\mathrm{gram}}`$ — combining their costs under a $`-\log P`$ semiring — yields end-to-end sentence correction. That composition lives downstream (in the libgrammstein layer); this library supplies the two building blocks.
 
 ---
 

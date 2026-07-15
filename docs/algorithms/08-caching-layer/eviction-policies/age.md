@@ -56,7 +56,7 @@ fn record_access(&self, term: &str) {
 
 **Key Insight**: Unlike LRU, insertion time is **never updated** on subsequent accesses.
 
-**Complexity**: `$\mathcal{O}(1)$` metadata check + `$\mathcal{O}(d)$` inner lookup
+**Complexity**: $`\mathcal{O}(1)`$ metadata check + $`\mathcal{O}(d)`$ inner lookup
 
 ### Finding Oldest Entry
 
@@ -73,7 +73,7 @@ impl<D> Age<D> {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(n)$` where n = number of candidates
+**Complexity**: $`\mathcal{O}(n)`$ where n = number of candidates
 
 ### Eviction with Cleanup
 
@@ -413,10 +413,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Operation | Complexity | Notes |
 |-----------|------------|-------|
-| get_value | `$\mathcal{O}(1)$` + `$\mathcal{O}(d)$` | Metadata check + inner lookup |
-| find_oldest | `$\mathcal{O}(n)$` | Linear scan of candidates |
-| evict_oldest | `$\mathcal{O}(n)$` + `$\mathcal{O}(1)$` | Find oldest + remove metadata |
-| age | `$\mathcal{O}(1)$` | Read metadata |
+| get_value | $`\mathcal{O}(1)`$ + $`\mathcal{O}(d)`$ | Metadata check + inner lookup |
+| find_oldest | $`\mathcal{O}(n)`$ | Linear scan of candidates |
+| evict_oldest | $`\mathcal{O}(n)`$ + $`\mathcal{O}(1)`$ | Find oldest + remove metadata |
+| age | $`\mathcal{O}(1)`$ | Read metadata |
 
 Where:
 - `d` = inner dictionary operation complexity

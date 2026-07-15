@@ -295,8 +295,8 @@ let engine = DynamicContextualCompletionEngine::with_dictionary(dict, Algorithm:
 
 | Pattern | Time (100 docs, 1K terms/doc) | Notes |
 |---------|-------------------------------|-------|
-| Sequential merge | ~50s | `$\mathcal{O}(N^{2}\cdot n\cdot m)$` - avoid! |
-| Binary tree parallel merge | ~0.3s | `$\mathcal{O}(n\cdot m\cdot \log  N)$` with parallelism |
+| Sequential merge | ~50s | $`\mathcal{O}(N^{2}\cdot n\cdot m)`$ - avoid! |
+| Binary tree parallel merge | ~0.3s | $`\mathcal{O}(n\cdot m\cdot \log  N)`$ with parallelism |
 | Direct injection | <1ms | Zero overhead constructor |
 
 **→ See**: [Parallel Workspace Indexing Pattern](../patterns/parallel-workspace-indexing.md) for complete production-ready implementation with benchmarks and best practices.

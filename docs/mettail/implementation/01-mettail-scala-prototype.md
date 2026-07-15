@@ -163,8 +163,8 @@ version by introducing type indices.
 ### The Idea
 
 Given an untyped theory T, the hypercube H(T) has:
-- For each sort S in T, a family of sorts `$S[\tau ]$` indexed by types
-- For each constructor f : A → B, a family `$f[\tau ]$` : `$A[\tau ] \to  B[\tau ]$`
+- For each sort S in T, a family of sorts $`S[\tau ]`$ indexed by types
+- For each constructor f : A → B, a family $`f[\tau ]`$ : $`A[\tau ] \to  B[\tau ]`$
 - Preservation of equations at each type level
 
 ### Example: Untyped to Typed Lambda Calculus
@@ -297,7 +297,7 @@ To implement full OSLF, MeTTaIL Scala would need:
    - Generate type formation rules
 
 3. **Predicate language**
-   - Define predicates `$\varphi$` : `$A \to  \Omega$`
+   - Define predicates $`\varphi`$ : $`A \to  \Omega`$
    - Support quantification and substitution
 
 4. **Behavioral types**

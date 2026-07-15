@@ -4,7 +4,7 @@
 
 The MemoryPressure eviction policy balances memory consumption with cache effectiveness. It tracks entry size and hit rate to identify large, underutilized entries for eviction.
 
-**Formula**: Memory pressure score = `$\text{size} / (\text{hit\_rate} + 0.1)$`
+**Formula**: Memory pressure score = $`\text{size} / (\text{hit\_rate} + 0.1)`$
 
 **Eviction Strategy**: Highest score evicted first (large size + low hit rate).
 
@@ -76,7 +76,7 @@ impl<D> MemoryPressure<D> {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(n)$` where n = number of candidates
+**Complexity**: $`\mathcal{O}(n)`$ where n = number of candidates
 
 ## Usage Examples
 
@@ -231,8 +231,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Operation | Complexity | Notes |
 |-----------|------------|-------|
-| get_value | `$\mathcal{O}(1)$` + `$\mathcal{O}(d)$` | Metadata update + inner lookup |
-| find_highest_pressure | `$\mathcal{O}(n)$` | Linear scan of candidates |
+| get_value | $`\mathcal{O}(1)`$ + $`\mathcal{O}(d)`$ | Metadata update + inner lookup |
+| find_highest_pressure | $`\mathcal{O}(n)`$ | Linear scan of candidates |
 
 ### Space Complexity
 
@@ -257,7 +257,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Aspect | MemoryPressure | CostAware | LRU |
 |--------|----------------|-----------|-----|
-| **Metric** | `$\text{size} / \text{hit\_rate}$` | `$(\text{age} \times \text{size}) / \text{hits}$` | Recency |
+| **Metric** | $`\text{size} / \text{hit\_rate}`$ | $`(\text{age} \times \text{size}) / \text{hits}`$ | Recency |
 | **Size-aware** | ✓ | ✓ | ✗ |
 | **Time-aware** | ✗ | ✓ | ✓ |
 | **Hit-aware** | ✓ | ✓ | ✗ |
@@ -296,7 +296,7 @@ impl DictionaryValue for MyStruct {
 
 ### Pressure Score Tuning
 
-**Formula**: `$\text{size} / (\text{hit\_rate} + \varepsilon)$`
+**Formula**: $`\text{size} / (\text{hit\_rate} + \varepsilon)`$
 
 **Epsilon (0.1)**:
 - Prevents division by zero

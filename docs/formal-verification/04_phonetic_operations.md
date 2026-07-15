@@ -103,7 +103,7 @@ The proof process revealed two essential preconditions not obvious from informal
 
 **Why Needed**: Entry decrements offset by 1. Without this bound:
 - offset = -n → offset - 1 = -n - 1 (OUT OF BOUNDS)
-- Violates I-splitting invariant: `$-n \le  \text{offset} \le  n$`
+- Violates I-splitting invariant: $`-n \le  \text{offset} \le  n`$
 
 **Discovery**: Proof attempt failed with goal:
 ```coq
@@ -116,9 +116,9 @@ When precondition only had `offset >= -n`, equality case violated the goal.
 #### 2. Fractional Cost Budget: `split_cost = 0 → |offset| < errors`
 
 **Why Needed**: For fractional costs (0.15 truncates to 0), need reachability:
-- Require: `$|\text{offset} - 1| \le  \text{errors} + \text{cost}$`
+- Require: $`|\text{offset} - 1| \le  \text{errors} + \text{cost}`$
 - For cost = 0, offset = 0, errors = 0:
-  - `$|-1| = 1 \le  0$` (FAILS)
+  - $`|-1| = 1 \le  0`$ (FAILS)
 
 **Discovery**: Proof attempt with case analysis on cost:
 ```coq
@@ -196,13 +196,13 @@ Theorem i_split_entry_preserves_invariant : forall p entry_char cost p',
   i_splitting_invariant p'.
 ```
 
-**Proof Strategy**: Case analysis on cost (0 vs `$\ge 1)$`
+**Proof Strategy**: Case analysis on cost (0 vs $`\ge 1)`$
 - **cost = 0**: Use fractional budget precondition `|offset| < errors`
-  - Need: `$|\text{offset} - 1| \le  \text{errors}$`
+  - Need: $`|\text{offset} - 1| \le  \text{errors}`$
   - Have: `|offset| < errors`
-  - Conclude: `$|\text{offset} - 1| \le  |\text{offset}| + 1 < \text{errors} + 1$`, so `$|\text{offset} - 1| \le  \text{errors}$` ✓
-- **cost `$\ge  1**$`: Standard arithmetic
-  - `$|\text{offset} - 1| \le  |\text{offset}| + 1 \le  \text{errors} + 1 \le  \text{errors} + \text{cost}$` ✓
+  - Conclude: $`|\text{offset} - 1| \le  |\text{offset}| + 1 < \text{errors} + 1`$, so $`|\text{offset} - 1| \le  \text{errors}`$ ✓
+- **cost $`\ge  1`$**: Standard arithmetic
+  - $`|\text{offset} - 1| \le  |\text{offset}| + 1 \le  \text{errors} + 1 \le  \text{errors} + \text{cost}`$ ✓
 
 **Line Reference**: PhoneticOperations.v:220-248
 
@@ -272,8 +272,8 @@ Inductive m_phonetic_split : Position -> ascii -> nat -> Position -> Prop :=
 ```
 
 **Note**: M-type doesn't need the critical preconditions because:
-- Offset already bounded: `$\text{offset} \le  0$`, so `offset > -2n` is always satisfied
-- Reachability uses different formula: `$\text{errors} \ge  -\text{offset} - n$` (looser than `$|\text{offset}| \le  \text{errors}$`)
+- Offset already bounded: $`\text{offset} \le  0`$, so `offset > -2n` is always satisfied
+- Reachability uses different formula: $`\text{errors} \ge  -\text{offset} - n`$ (looser than $`|\text{offset}| \le  \text{errors}`$)
 
 ## Invariant Definitions
 
@@ -321,8 +321,8 @@ offset > -Z.of_nat n  (* Strict inequality *)
 
 ### 2. Case Analysis on Cost Reveals Edge Cases
 
-The `$\text{cost}=0$` case has fundamentally different requirements than `$\text{cost} \ge 1$`:
-- **cost `$\ge  1**$`: Budget naturally covers offset adjustment
+The $`\text{cost}=0`$ case has fundamentally different requirements than $`\text{cost} \ge 1`$:
+- **cost $`\ge  1`$**: Budget naturally covers offset adjustment
 - **cost = 0**: Need extra positional flexibility (strict inequality)
 
 This pattern likely applies to other fractional-cost operations.

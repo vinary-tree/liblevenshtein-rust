@@ -34,7 +34,7 @@ impl<V: PositionVariant> Ord for UniversalPosition<V> {
 ## Subsumption Rule Reminder
 Position `i#e` subsumes `j#f` if:
 1. `f > e` (subsumed position has MORE errors)
-2. `$|j - i| \le  f - e$` (offset distance is within error difference)
+2. $`|j - i| \le  f - e`$ (offset distance is within error difference)
 
 ## Optimization Benefits
 
@@ -45,7 +45,7 @@ When adding position `pos` with `errors=e`, only positions with `errors > e` can
 ```rust
 self.positions.retain(|p| !subsumes(&pos, p, self.max_distance));
 ```
-- Complexity: `$\mathcal{O}(n)$` - checks ALL n positions
+- Complexity: $`\mathcal{O}(n)`$ - checks ALL n positions
 
 **After (BTreeSet with early termination)**:
 ```rust
@@ -57,8 +57,8 @@ self.positions.retain(|p| {
     }
 });
 ```
-- Complexity: `$\mathcal{O}(k)$` where k = positions with errors > e
-- Early termination: Skips all positions with errors `$\le  e$`
+- Complexity: $`\mathcal{O}(k)`$ where k = positions with errors > e
+- Early termination: Skips all positions with errors $`\le  e`$
 
 ### Step 2: Checking if New Position is Subsumed
 When checking if `pos` is subsumed, only positions with `errors < e` can subsume it.
@@ -69,7 +69,7 @@ if !self.positions.iter().any(|p| subsumes(p, &pos, self.max_distance)) {
     self.positions.insert(pos);
 }
 ```
-- Complexity: `$\mathcal{O}(n)$` - checks ALL n positions
+- Complexity: $`\mathcal{O}(n)`$ - checks ALL n positions
 
 **After (BTreeSet with early termination)**:
 ```rust
@@ -77,16 +77,16 @@ let is_subsumed = self.positions.iter()
     .take_while(|p| p.errors() < pos_errors)  // Early termination!
     .any(|p| subsumes(p, &pos, self.max_distance));
 ```
-- Complexity: `$\mathcal{O}(k)$` where k = positions with errors < e
-- Early termination: Stops at first position with errors `$\ge  e$`
+- Complexity: $`\mathcal{O}(k)`$ where k = positions with errors < e
+- Early termination: Stops at first position with errors $`\ge  e`$
 
 ## Performance Analysis
 
 ### Typical State Sizes
-From the thesis, states have `$\mathcal{O}(n^{2})$` positions maximum, where n is max_distance.
-- n=1: `$\le  1$` position
-- n=2: `$\le  4$` positions
-- n=3: `$\le  9$` positions
+From the thesis, states have $`\mathcal{O}(n^{2})`$ positions maximum, where n is max_distance.
+- n=1: $`\le  1`$ position
+- n=2: $`\le  4`$ positions
+- n=3: $`\le  9`$ positions
 
 ### Error Distribution
 Positions tend to have sparse error distributions:
@@ -102,22 +102,22 @@ Positions tend to have sparse error distributions:
 
 | Operation | HashSet (unordered) | BTreeSet (sorted) |
 |-----------|---------------------|-------------------|
-| Check Step 1 | `$\mathcal{O}(n)$` | `$\mathcal{O}(k_{1})$` where k₁ = positions with errors > e |
-| Check Step 2 | `$\mathcal{O}(n)$` | `$\mathcal{O}(k_{2})$` where k₂ = positions with errors < e |
-| Insert | `$\mathcal{O}(1)$` expected | `$\mathcal{O}(\log  n)$` |
-| Total per add_position | `$\mathcal{O}(n)$` | `$\mathcal{O}(k_{1} + k_{2} + \log  n)$` |
+| Check Step 1 | $`\mathcal{O}(n)`$ | $`\mathcal{O}(k_{1})`$ where k₁ = positions with errors > e |
+| Check Step 2 | $`\mathcal{O}(n)`$ | $`\mathcal{O}(k_{2})`$ where k₂ = positions with errors < e |
+| Insert | $`\mathcal{O}(1)`$ expected | $`\mathcal{O}(\log  n)`$ |
+| Total per add_position | $`\mathcal{O}(n)`$ | $`\mathcal{O}(k_{1} + k_{2} + \log  n)`$ |
 
 **Key insight**: k₁ + k₂ << n in practice due to sparse error distribution!
 
 ### Expected Speedup
 For typical states with mixed error levels:
 - **Before**: Check all n positions twice → 2n comparisons
-- **After**: Check ~n/2 positions per step → ~n comparisons + `$\mathcal{O}(\log  n)$` insert
+- **After**: Check ~n/2 positions per step → ~n comparisons + $`\mathcal{O}(\log  n)`$ insert
 - **Speedup**: ~2× fewer subsumption checks
 
 For best case (inserting position with minimum errors):
 - **Before**: 2n comparisons
-- **After**: 0 comparisons (early termination) + `$\mathcal{O}(\log  n)$` insert
+- **After**: 0 comparisons (early termination) + $`\mathcal{O}(\log  n)`$ insert
 - **Speedup**: Eliminates all subsumption checks!
 
 ## Trade-offs
@@ -130,10 +130,10 @@ For best case (inserting position with minimum errors):
 - ✅ Maintains deterministic iteration order
 
 **Cons**:
-- ⚠️ Insert is `$\mathcal{O}(\log  n)$` instead of `$\mathcal{O}(1)$`
+- ⚠️ Insert is $`\mathcal{O}(\log  n)`$ instead of $`\mathcal{O}(1)`$
 - ⚠️ Slightly higher memory overhead per node
 
-**Verdict**: Benefits outweigh costs for typical small state sizes `$(n \le  9$` positions).
+**Verdict**: Benefits outweigh costs for typical small state sizes $`(n \le  9`$ positions).
 
 ## Validation
 
@@ -154,8 +154,8 @@ The optimization is **semantically transparent**:
 Yes, pre-sorting positions by `(errors, offset)` **significantly** reduces subsumption comparisons through early termination:
 
 1. **Positions sorted by errors** enable skipping positions that cannot participate in subsumption
-2. **Early termination** reduces average comparisons from `$\mathcal{O}(n)$` to `$\mathcal{O}(k)$` where k << n
-3. **BTreeSet** provides this ordering with minimal overhead (`$\mathcal{O}(\log  n)$` insert)
+2. **Early termination** reduces average comparisons from $`\mathcal{O}(n)`$ to $`\mathcal{O}(k)`$ where k << n
+3. **BTreeSet** provides this ordering with minimal overhead ($`\mathcal{O}(\log  n)`$ insert)
 4. **All tests pass**, confirming correctness
 
 The optimization is a clear win for typical workloads with small, sparse error distributions.

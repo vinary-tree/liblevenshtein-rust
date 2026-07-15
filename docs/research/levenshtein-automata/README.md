@@ -13,7 +13,7 @@ This directory contains comprehensive documentation for the paper **"Fast String
 
 ### What This Paper Provides
 
-The paper addresses efficient approximate string matching using deterministic finite automata. The key innovation is showing how to construct, for any input word W and error bound n, a deterministic Levenshtein automaton that accepts exactly all words within Levenshtein distance n from W, in time **`$\mathcal{O}(\lvert W\rvert)$`** for fixed n.
+The paper addresses efficient approximate string matching using deterministic finite automata. The key innovation is showing how to construct, for any input word W and error bound n, a deterministic Levenshtein automaton that accepts exactly all words within Levenshtein distance n from W, in time **$`\mathcal{O}(\lvert W\rvert)`$** for fixed n.
 
 ---
 
@@ -60,12 +60,12 @@ In many applications, we need to find "similar" words in a dictionary:
 ### The Challenge
 
 **Naive Approach**: For each dictionary word, compute Levenshtein distance to input word
-- **Problem**: `$\mathcal{O}(\lvert D\rvert \times \lvert W\rvert \times \lvert V\rvert)$` where `$\lvert D\rvert$` = dictionary size, `$\lvert W\rvert$` = input word length, `$\lvert V\rvert$` = dictionary word length
+- **Problem**: $`\mathcal{O}(\lvert D\rvert \times \lvert W\rvert \times \lvert V\rvert)`$ where $`\lvert D\rvert`$ = dictionary size, $`\lvert W\rvert`$ = input word length, $`\lvert V\rvert`$ = dictionary word length
 - **Impractical**: For dictionaries with millions of entries
 
 **Better Approach**: Use automata to avoid computing distance for each word
 - **This Paper's Solution**: Construct a Levenshtein automaton that encodes all valid matches
-- **Complexity**: `$\mathcal{O}(\lvert W\rvert)$` automaton construction + `$\mathcal{O}(\lvert D\rvert)$` dictionary traversal
+- **Complexity**: $`\mathcal{O}(\lvert W\rvert)`$ automaton construction + $`\mathcal{O}(\lvert D\rvert)`$ dictionary traversal
 
 ---
 
@@ -74,9 +74,9 @@ In many applications, we need to find "similar" words in a dictionary:
 ### 1. Deterministic Levenshtein Automata
 
 **Theorem (Main Result)**: For any fixed degree n, there exists a family of deterministic Levenshtein automata where:
-- **Construction time**: `$\mathcal{O}(\lvert W\rvert)$` for input word W
-- **Automaton size**: Linear in `$\lvert W\rvert$`
-- **Language accepted**: Exactly `$L_{\mathrm{Lev}}(n,W) = \{V \mid d_L(W,V) \le n\}$`
+- **Construction time**: $`\mathcal{O}(\lvert W\rvert)`$ for input word W
+- **Automaton size**: Linear in $`\lvert W\rvert`$
+- **Language accepted**: Exactly $`L_{\mathrm{Lev}}(n,W) = \{V \mid d_L(W,V) \le n\}`$
 
 ### 2. Parametric Construction Algorithm
 
@@ -102,7 +102,7 @@ In many applications, we need to find "similar" words in a dictionary:
 - **Merges** (Chapter 8): Two characters → one (e.g., "rn" → "m")
 - **Splits** (Chapter 8): One character → two (e.g., "m" → "rn")
 
-**Result**: `$\mathcal{O}(\lvert W\rvert)$` construction complexity maintained for all variants
+**Result**: $`\mathcal{O}(\lvert W\rvert)`$ construction complexity maintained for all variants
 
 ---
 
@@ -159,7 +159,7 @@ In many applications, we need to find "similar" words in a dictionary:
 - Parametric state lists
 - Transition tables
 - Extension to higher degrees
-- **Complexity Result**: `$\mathcal{O}(\lvert W\rvert)$` algorithm
+- **Complexity Result**: $`\mathcal{O}(\lvert W\rvert)`$ algorithm
 
 ### Chapter 6: String Correction Using Imitation of Levenshtein-Automata (pages 33-34)
 - Table-based simulation method
@@ -213,7 +213,7 @@ The liblevenshtein-rust codebase implements the algorithms from this paper:
 
 The paper provides proofs that the implementation:
 - ✅ **Correct**: Accepts exactly L_Lev(n,W) (Theorem 4.0.32)
-- ✅ **Efficient**: `$\mathcal{O}(\lvert W\rvert)$` construction for fixed n (Theorem 5.2.1)
+- ✅ **Efficient**: $`\mathcal{O}(\lvert W\rvert)`$ construction for fixed n (Theorem 5.2.1)
 - ✅ **Optimal**: Minimal deterministic automaton (Corollary 5.2.2)
 - ✅ **Practical**: Demonstrated on dictionaries with millions of entries (Chapter 8.3)
 
@@ -268,23 +268,23 @@ d_L("kitten", "sitting") = 3
 
 A finite state automaton that accepts all words within Levenshtein distance n from a given word W.
 
-**Formal Definition**: `$\mathrm{LEV}_n(W)$` is a deterministic automaton such that:
-- `$L(\mathrm{LEV}_n(W)) = L_{\mathrm{Lev}}(n,W)$`
-- `$L_{\mathrm{Lev}}(n,W) = \{V \mid d_L(W,V) \le n\}$`
+**Formal Definition**: $`\mathrm{LEV}_n(W)`$ is a deterministic automaton such that:
+- $`L(\mathrm{LEV}_n(W)) = L_{\mathrm{Lev}}(n,W)`$
+- $`L_{\mathrm{Lev}}(n,W) = \{V \mid d_L(W,V) \le n\}`$
 
 ### Position
 
 An expression i#e where:
-- i = index into input word W (`$0 \le i \le \lvert W\rvert$`)
-- e = number of errors accumulated (`$0 \le e \le n$`)
+- i = index into input word W ($`0 \le i \le \lvert W\rvert`$)
+- e = number of errors accumulated ($`0 \le e \le n`$)
 
 **Intuition**: Position i#e represents "having matched i characters of W with e errors so far"
 
 ### Characteristic Vector
 
-A bit-vector `$\chi(x, W[i])$` indicating where character x appears in the relevant subword of W starting at index i.
+A bit-vector $`\chi(x, W[i])`$ indicating where character x appears in the relevant subword of W starting at index i.
 
-**Example**: For W = "hello", `$\chi(\text{'l'}, W[2]) = \langle 1,1,0\rangle$` because:
+**Example**: For W = "hello", $`\chi(\text{'l'}, W[2]) = \langle 1,1,0\rangle`$ because:
 - W[3] = 'l' → 1
 - W[4] = 'l' → 1
 - W[5] = 'o' → 0
@@ -292,10 +292,10 @@ A bit-vector `$\chi(x, W[i])$` indicating where character x appears in the relev
 ### Subsumption
 
 Position i#e **subsumes** position j#f if:
-- `$e < f$` (fewer errors)
-- `$\lvert j-i\rvert \le f-e$` (within reachable range)
+- $`e < f`$ (fewer errors)
+- $`\lvert j-i\rvert \le f-e`$ (within reachable range)
 
-**Intuition**: If `$\pi$` subsumes `$\pi'$`, then any word accepted from `$\pi'$` is also accepted from `$\pi$`, so `$\pi'$` is redundant.
+**Intuition**: If $`\pi`$ subsumes $`\pi'`$, then any word accepted from $`\pi'`$ is also accepted from $`\pi`$, so $`\pi'`$ is redundant.
 
 ---
 
@@ -317,12 +317,12 @@ Position i#e **subsumes** position j#f if:
 3. **Set final states**: States containing positions i#e where i = |W|
 
 4. **Define transitions**: Use table T_n and characteristic vectors
-   - `$\Delta(M, y) = \bigsqcup_{\pi\in M} \delta(\pi, y)$`
-   - `$\delta(\pi, y)$` uses elementary transition table
+   - $`\Delta(M, y) = \bigsqcup_{\pi\in M} \delta(\pi, y)`$
+   - $`\delta(\pi, y)`$ uses elementary transition table
 
 5. **Optimize**: Remove subsumed positions from states
 
-**Complexity**: `$\mathcal{O}(\lvert W\rvert)$` time and space for fixed n
+**Complexity**: $`\mathcal{O}(\lvert W\rvert)`$ time and space for fixed n
 
 ### Imitation Algorithm (Chapter 6)
 
@@ -382,8 +382,8 @@ The **Universal Levenshtein Automata** paper (documented in `/docs/research/univ
 
 The paper relates to classical Levenshtein distance computation:
 
-- **Wagner-Fischer**: `$\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)$` time to compute `$d_L(W,V)$`
-- **This paper**: `$\mathcal{O}(\lvert W\rvert)$` to build automaton accepting all `$V$` with `$d_L(W,V) \le n$`
+- **Wagner-Fischer**: $`\mathcal{O}(\lvert W\rvert \times \lvert V\rvert)`$ time to compute $`d_L(W,V)`$
+- **This paper**: $`\mathcal{O}(\lvert W\rvert)`$ to build automaton accepting all $`V`$ with $`d_L(W,V) \le n`$
 - **Advantage**: Amortized efficiency for multiple queries
 
 ---
@@ -393,14 +393,14 @@ The paper relates to classical Levenshtein distance computation:
 **See [glossary.md](./glossary.md) for complete notation reference**
 
 Common symbols:
-- **`$\Sigma$`**: Alphabet
-- **`$d_L(W,V)$`**: Levenshtein distance between words W and V
-- **`$L_{\mathrm{Lev}}(n,W)$`**: Language of words within distance n from W
-- **`$\chi(x,V)$`**: Characteristic vector of character x in word V
+- **$`\Sigma`$**: Alphabet
+- **$`d_L(W,V)`$**: Levenshtein distance between words W and V
+- **$`L_{\mathrm{Lev}}(n,W)`$**: Language of words within distance n from W
+- **$`\chi(x,V)`$**: Characteristic vector of character x in word V
 - **i#e**: Position with index i and error count e
-- **`$\sqsubseteq$`**: Subsumption relation
-- **`$\sqcup$`**: Join operation on states
-- **`$\Delta$`**: Transition function
+- **$`\sqsubseteq`$**: Subsumption relation
+- **$`\sqcup`$**: Join operation on states
+- **$`\Delta`$**: Transition function
 
 ---
 
@@ -410,7 +410,7 @@ Common symbols:
 
 **Answer**: Deterministic automata enable efficient traversal with no backtracking, crucial for large dictionaries.
 
-### Why `$\mathcal{O}(\lvert W\rvert)$` construction?
+### Why $`\mathcal{O}(\lvert W\rvert)`$ construction?
 
 **Answer**: For fixed error bound n, the number of distinct states is bounded by a constant times |W|.
 
@@ -424,7 +424,7 @@ Common symbols:
 
 ### Can I use this for DNA sequences?
 
-**Answer**: Yes! The algorithms work for any alphabet `$\Sigma$`. See extended operations (Chapter 8) for biological applications.
+**Answer**: Yes! The algorithms work for any alphabet $`\Sigma`$. See extended operations (Chapter 8) for biological applications.
 
 ---
 

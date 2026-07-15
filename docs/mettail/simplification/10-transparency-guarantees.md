@@ -29,7 +29,7 @@ In other words, a transparent context doesn't "absorb" transitions - it passes t
 
 **Definition**: A simplification rule `r: P ↦ Q` is **transparent** if:
 
-1. **Preservation**: For all non-reactive contexts C: `$C[P] \approx  C[Q]$`
+1. **Preservation**: For all non-reactive contexts C: $`C[P] \approx  C[Q]`$
 2. **Interface stability**: The rule doesn't change the observable interface (channels, I/O behavior)
 3. **Compositionality**: Composition with other transparent rules yields a transparent transformation
 
@@ -57,9 +57,9 @@ The simplification transpiler has 4 layers:
 - It does not modify the program AST
 - No transformations occur
 
-Therefore, `P_out = P_in`, and `$P_\text{in} \approx  P_\text{out}$` trivially.
+Therefore, `P_out = P_in`, and $`P_\text{in} \approx  P_\text{out}`$ trivially.
 
-**Transparency**: Trivially satisfied since no transformation occurs. `$\blacksquare$`
+**Transparency**: Trivially satisfied since no transformation occurs. $`\blacksquare`$
 
 ### Layer 2: Rule Application Phase
 
@@ -69,23 +69,23 @@ Therefore, `P_out = P_in`, and `$P_\text{in} \approx  P_\text{out}$` trivially.
 
 Each rule `r: pattern → template` is proven bisimilarity-preserving in [09-rpo-congruence-proofs.md](09-rpo-congruence-proofs.md). The key properties:
 
-1. **Individual rule transparency**: For rule r with `$P \equiv  Q$`:
-   - `$P \approx  Q$` (bisimilarity, proven via RPO)
-   - For any context C: `$C[P] \approx  C[Q]$` (congruence)
+1. **Individual rule transparency**: For rule r with $`P \equiv  Q`$:
+   - $`P \approx  Q`$ (bisimilarity, proven via RPO)
+   - For any context C: $`C[P] \approx  C[Q]`$ (congruence)
 
-2. **Sequential composition**: If `$P \approx  Q$` and `$Q \approx  R$`, then `$P \approx  R$` by transitivity
+2. **Sequential composition**: If $`P \approx  Q`$ and $`Q \approx  R`$, then $`P \approx  R`$ by transitivity
 
 3. **Rule application order**: The strategy layer ensures termination, but any valid ordering preserves bisimilarity
 
 **Formal Statement**:
 
-Let `apply_rules(P)` be the result of exhaustively applying rules in the Rule Application phase. If every rule `r_i` satisfies `$P \approx  r_i(P)$` when applicable, then:
+Let `apply_rules(P)` be the result of exhaustively applying rules in the Rule Application phase. If every rule `r_i` satisfies $`P \approx  r_i(P)`$ when applicable, then:
 
 ```
 P ≈ apply_rules(P)
 ```
 
-**Proof**: By induction on the number of rule applications. Each step preserves bisimilarity, and transitivity gives the final result. `$\blacksquare$`
+**Proof**: By induction on the number of rule applications. Each step preserves bisimilarity, and transitivity gives the final result. $`\blacksquare`$
 
 ### Layer 3: Strategy Selection Phase
 
@@ -103,7 +103,7 @@ The strategy layer is a **meta-level controller**:
 
 The strategy layer affects **when** transformations happen, not **what** they are.
 
-**Transparency**: Satisfied because it's a control layer, not a transformation layer. `$\blacksquare$`
+**Transparency**: Satisfied because it's a control layer, not a transformation layer. $`\blacksquare`$
 
 ### Layer 4: Verification Phase
 
@@ -120,7 +120,7 @@ The verification phase does not modify the program. It either:
 
 In both cases, the output is behaviorally equivalent to some valid program state.
 
-**Transparency**: Trivially satisfied since no transformation occurs. `$\blacksquare$`
+**Transparency**: Trivially satisfied since no transformation occurs. $`\blacksquare`$
 
 ---
 
@@ -145,17 +145,17 @@ Let `P₀` be the input program. Define:
 - `P₄ = Verification(P₃)` (either P₃ or rollback to P₀)
 
 **Case 1**: Verification accepts P₃
-- `$P_{0} \approx  P_{1}$` (trivial, same program)
-- `$P_{1} \approx  P_{2}$` (Layer 2 transparency)
-- `$P_{2} \approx  P_{3}$` (trivial, same program)
-- `$P_{3} \approx  P_{4}$` (trivial, same program)
-- By transitivity: `$P_{0} \approx  P_{4}$` ✓
+- $`P_{0} \approx  P_{1}`$ (trivial, same program)
+- $`P_{1} \approx  P_{2}`$ (Layer 2 transparency)
+- $`P_{2} \approx  P_{3}`$ (trivial, same program)
+- $`P_{3} \approx  P_{4}`$ (trivial, same program)
+- By transitivity: $`P_{0} \approx  P_{4}`$ ✓
 
 **Case 2**: Verification rejects P₃
 - Output is P₀ (rollback)
-- `$P_{0} \approx  P_{0}$` trivially ✓
+- $`P_{0} \approx  P_{0}`$ trivially ✓
 
-**Conclusion**: `$P_{0} \approx  \text{simplify}(P_{0})$` in all cases. `$\blacksquare$`
+**Conclusion**: $`P_{0} \approx  \text{simplify}(P_{0})`$ in all cases. $`\blacksquare`$
 
 ---
 
@@ -178,7 +178,7 @@ The factorization through subcontexts is consistent.
 **Evidence**:
 
 1. **Nil Identity** (`P | 0 → P`):
-   - Context: `$[- | 0]$`
+   - Context: $`[- | 0]`$
    - IPO factorization: Transitions pass through unchanged
    - Uniform: Yes
 
@@ -192,7 +192,7 @@ The factorization through subcontexts is consistent.
    - IPO factorization: Associative
    - Uniform: Yes
 
-4. **Scope Extrusion** (`new x.(P | Q) → (new x.P) | Q` when `$x \notin  \text{FV}(Q)$`):
+4. **Scope Extrusion** (`new x.(P | Q) → (new x.P) | Q` when $`x \notin  \text{FV}(Q)`$):
    - Context: Scope-restricted tensor
    - IPO factorization: Independent sublists
    - Uniform: Yes (given the constraint)
@@ -209,7 +209,7 @@ If every context is either **reactive** or **IPO uniform**, then weak bisimilari
 
 The ρ-calculus (and Rholang) satisfies this condition:
 
-1. **Reactive contexts**: `$\text{out}(n,-) | \text{in}(n,\lambda x.-)$` (communication pairs)
+1. **Reactive contexts**: $`\text{out}(n,-) | \text{in}(n,\lambda x.-)`$ (communication pairs)
 2. **Non-reactive contexts**: All structural contexts (Par, New, etc.)
 
 For non-reactive contexts, we've shown:
@@ -224,9 +224,9 @@ For non-reactive contexts, we've shown:
 
 ### For Simplification Correctness
 
-1. **Each rule can be verified independently**: Prove `$P \approx  r(P)$` once
+1. **Each rule can be verified independently**: Prove $`P \approx  r(P)`$ once
 2. **Composition is automatic**: Sequential rule application preserves bisimilarity
-3. **Context doesn't matter**: If `$P \approx  Q$`, then `$C[P] \approx  C[Q]$` for all C
+3. **Context doesn't matter**: If $`P \approx  Q`$, then $`C[P] \approx  C[Q]`$ for all C
 
 ### For Implementation
 
@@ -323,7 +323,7 @@ For rules r₁, r₂, ..., rₙ applied in sequence:
 P ≈ r₁(P) ≈ r₂(r₁(P)) ≈ ... ≈ rₙ(...r₁(P)...)
 ```
 
-**Proof**: By induction on n, using transitivity of `$\approx .$`
+**Proof**: By induction on n, using transitivity of $`\approx .`$
 
 ### Corollary: Order Independence (for Commuting Rules)
 
@@ -341,11 +341,11 @@ This enables parallel rule application when rules don't interfere.
 
 ### Lambda-Abstracted Processes
 
-For rules involving lambda-abstracted continuations (e.g., `$\text{in}(x, \lambda y.P)$`):
+For rules involving lambda-abstracted continuations (e.g., $`\text{in}(x, \lambda y.P)`$):
 
 1. **Alpha-equivalence**: Bound variable names don't affect behavior
-2. **Beta-reduction**: `$(\lambda x.P) v \approx  P[v/x]$` preserves bisimilarity
-3. **Eta-equivalence**: `$\lambda x.P x \approx  P$` when `$x \notin  \text{FV}(P)$`
+2. **Beta-reduction**: $`(\lambda x.P) v \approx  P[v/x]`$ preserves bisimilarity
+3. **Eta-equivalence**: $`\lambda x.P x \approx  P`$ when $`x \notin  \text{FV}(P)`$
 
 These higher-order rules are also transparent when applied correctly:
 - Alpha: Syntactic renaming, no behavioral change
@@ -354,9 +354,9 @@ These higher-order rules are also transparent when applied correctly:
 
 ### Meta-Context Formalism
 
-Following Definition 1 (Behavior Paper), meta-contexts `$\langle -\rangle : T \to  T$` are generated by:
-- `$- \times  X$` (product on the left)
-- `$[X \to  -]$` (exponential)
+Following Definition 1 (Behavior Paper), meta-contexts $`\langle -\rangle : T \to  T`$ are generated by:
+- $`- \times  X`$ (product on the left)
+- $`[X \to  -]`$ (exponential)
 
 Transparency of higher-order rules follows from the fibered structure:
 - Rules in the fiber over a type are transparent within that fiber

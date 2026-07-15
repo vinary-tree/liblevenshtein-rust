@@ -27,7 +27,7 @@ wrong answers for any non-unit insertion/deletion cost. Both are covered by regr
 |---|---|
 | `q`, `t` | the query term and a dictionary term, of lengths `m` and `n` |
 | position `(i, e)` | an automaton state having consumed `i` query characters at accumulated cost `e` |
-| `term_index` (`i`) | characters consumed from the query term; invariant `$0 \le  i \le  m$` |
+| `term_index` (`i`) | characters consumed from the query term; invariant $`0 \le  i \le  m`$ |
 | `accumulated_cost` (`e`) | total weighted cost of the edit operations taken to reach a position |
 | `OperationCostsF64` | per-operation weights: `match_cost` (always `0`), `substitution`, `insertion`, `deletion`, `transposition`, `split`, `merge` |
 | subsumption | `p1` *subsumes* `p2` when every acceptance reachable from `p2` is reachable from `p1` at no greater cost; the subsumed position is pruned |
@@ -50,7 +50,7 @@ length computations use `checked_*`/`saturating_*`/`try_reserve_exact`; the surv
 capacity sites are constant (`HEADER_SIZE + 1024`, `BITSET_CAPACITY + 1`).
 
 Verification: `cargo clippy --all-features -- -D warnings`; boundary unit tests on the shared
-conversion helpers (`usize::MAX`, `i64::MAX`, `$\pm \infty$`, `NaN`, huge-finite inputs).
+conversion helpers (`usize::MAX`, `i64::MAX`, $`\pm \infty`$, `NaN`, huge-finite inputs).
 
 ---
 
@@ -68,13 +68,13 @@ because the existing tests only ever used unit `insertion = deletion = 1`.
 e ≤ f + ε   ∧   |i − j| · max(insertion, deletion) ≤ (f − e) + ε
 ```
 
-The `$|i - j|$` term is the number of index-realignment steps `p1` must spend to cover `p2`.
+The $`|i - j|`$ term is the number of index-realignment steps `p1` must spend to cover `p2`.
 Each such step costs at least one insertion or deletion, so the **worst-case** per-step cost is
 `max(insertion, deletion)`. Using the maximum is *conservative and sound*: subsumption fires only
-when even the most expensive realignment fits in the cost slack `$(f - e)$`, so a position leading
+when even the most expensive realignment fits in the cost slack $`(f - e)`$, so a position leading
 to the sole in-budget match is never pruned.
 
-The naive unit-cost bound `$|i - j| \le  f - e$` is only correct when `$\max (\text{insertion}, \text{deletion}) \le  1$`;
+The naive unit-cost bound $`|i - j| \le  f - e`$ is only correct when $`\max (\text{insertion}, \text{deletion}) \le  1`$;
 with e.g. `insertion = deletion = 2` it over-prunes and drops real matches (worked example: with
 `p1 = (2, 0)`, `p2 = (0, 2)`, budget `2`, the unit bound wrongly subsumes `p2`, but `p1` needs two
 insertions at cost `2` each `= 4 > 2`). The cost is threaded through
@@ -90,14 +90,14 @@ distance = min over accepting positions (i, e) with i ≤ m  of  e + (m − i) �
 
 (`StateF64::infer_distance`). Two prior defects:
 
-1. the `$(m - i)$` trailing query characters that must be deleted to reach acceptance were charged
+1. the $`(m - i)`$ trailing query characters that must be deleted to reach acceptance were charged
    at a hard-coded unit cost instead of `· deletion`; and
 2. a padded look-ahead window let the transition emit a spurious position with `term_index = m + 1`
    (a substitution/match *one past the query end*); `saturating_sub` masked it (remaining `→ 0`) so
    its cheaper substitution cost was reported via the `min` instead of the true trailing-insertion
    cost.
 
-The fix charges `$(m - i) \cdot  \text{deletion}$` **and** restricts acceptance to positions with `$i \le  m$`
+The fix charges $`(m - i) \cdot  \text{deletion}`$ **and** restricts acceptance to positions with $`i \le  m`$
 (over-advanced positions are transition artifacts, never valid final states). Substring mode
 (`min_distance`) is unaffected: the `prefix_mode` guard in `transition_position_f64` short-circuits
 before generating such positions.
@@ -108,13 +108,13 @@ before generating such positions.
 `total_cmp`/`to_bits`; `GeneralizedPosition::Ord` tiebreaks on `entry_char` (which the derived
 `Eq`/`Hash` include for the Splitting variants). This is required by `binary_search` and any
 ordered/hashed container. Note these are *dedup/ordering* contracts and are **independent** of the
-`$\varepsilon$`-tolerant `msm_subsumes` pruning relation, which is unchanged.
+$`\varepsilon`$-tolerant `msm_subsumes` pruning relation, which is unchanged.
 
 ### Verification methodology — reference-DP property oracle
 
 `tests/weighted_subsumption_soundness.rs` cross-checks the weighted automaton against an independent
 reference weighted-Levenshtein dynamic program over 1200+ deterministically-fuzzed cases (small
-alphabet, lengths `0..=5`, `$\text{insertion} = \text{deletion} \in  {1, 1.5, 2, 3}$`, random substitution), plus the
+alphabet, lengths `0..=5`, $`\text{insertion} = \text{deletion} \in  {1, 1.5, 2, 3}`$, random substitution), plus the
 exact audit counterexample. For every dictionary term whose true distance is within budget it asserts
 **completeness** (the term is returned) and **exactness** (the reported distance equals the DP), and
 for every returned candidate it asserts soundness. This oracle both guards W1 and *discovered* W2.
@@ -130,28 +130,28 @@ for every returned candidate it asserts soundness. This oracle both guards W1 an
   metric and deliberately more permissive than plain Levenshtein (the purpose of merge/split); it never
   misses a match. A character-*constrained* variant (e.g. an OCR/phonetic confusion table such as
   `rn`↔`m`) would be a separate feature requiring a merge-relation map.
-- **`phonetic_weight` is reserved, not applied.** The parameter is stored (clamped `$\ge  0$` to preserve
+- **`phonetic_weight` is reserved, not applied.** The parameter is stored (clamped $`\ge  0`$ to preserve
   monotone-cost pruning) but not yet applied to matching cost; `PhoneticCandidate::phonetic_cost` is
   always `0.0`. Docstrings were corrected to remove the earlier false "added to total cost" claim.
-- **`OperationCostsF64::is_valid`** now also requires finiteness (`$+\infty$` previously passed and would
+- **`OperationCostsF64::is_valid`** now also requires finiteness ($`+\infty`$ previously passed and would
   break monotone pruning); automaton constructors `debug_assert!` validity.
 
 ---
 
 ## 4. Time-series correctness (Phase 3)
 
-- **Invariant T1 — every pruning lower bound is admissible.** The length lower bound `$|m - n| \cdot  c$`
+- **Invariant T1 — every pruning lower bound is admissible.** The length lower bound $`|m - n| \cdot  c`$
   and the interval-MSM bounds (`msm_interval.rs`) are true lower bounds; the interval bounds are in
   fact the *exact per-interval minima*, cross-checked by brute force (`merge_lb_is_min_over_c`,
   `split_lb_is_min_over_box`, `prop_range_exact`, `prop_knn_exact`). The non-admissible Euclidean/L1
   heuristics are structurally gated behind an opt-in `LengthOnly` default and are never used on an
   exact path. Non-finite query values are rejected before any interval call.
-- **Invariant T2 — tie ordering is deterministic.** `search_empty_query` (`$\tau  = +\infty$`),
+- **Invariant T2 — tie ordering is deterministic.** `search_empty_query` ($`\tau  = +\infty`$),
   `search_non_finite_query`, and `HybridSearchIndex::search_brute_force` iterate the deterministic
   `buckets` (via `ids_in_bucket_order`) instead of the randomized `HashMap`, so equal-distance ties
   emerge in a reproducible order across runs.
 - **Invariant T3 — quantization is total.** `quantize`/`quantize_u8`/`quantize_u16` clamp
-  `NaN`/`$\pm \infty$`/out-of-range to valid bins; SAX `zscore_to_symbol` maps `NaN → 0` for parity.
+  `NaN`/$`\pm \infty`$/out-of-range to valid bins; SAX `zscore_to_symbol` maps `NaN → 0` for parity.
 
 ---
 

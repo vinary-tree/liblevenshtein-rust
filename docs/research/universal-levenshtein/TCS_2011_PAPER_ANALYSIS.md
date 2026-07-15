@@ -20,7 +20,7 @@ This 2011 TCS paper **significantly extends** the 2005 Mitankin thesis work (see
 1. **Generalized Operation Framework** (Section 3): Type-based system supporting arbitrary edit operations beyond Levenshtein
 2. **Bounded Diagonal Property** (Section 8): Necessary and sufficient conditions for UNA existence
 3. **Matrix-State Construction** (Section 9): Explicit algorithmic framework with extensors
-4. **Preprocessing Functions** (Section 9.2): Formal `$\chi$`[Op,r] characteristic vector construction
+4. **Preprocessing Functions** (Section 9.2): Formal $`\chi`$[Op,r] characteristic vector construction
 5. **Empirical Evaluation** (Section 11): **2.77-5× speedup** over dynamic programming
 6. **Bridges to Theory** (Sections 4-6): Connections to dynamic programming, synchronized transducers
 
@@ -51,13 +51,13 @@ where:
 
 | Operation | Type | Description |
 |-----------|------|-------------|
-| Match  | `$\langle 1,1,0\rangle$` |  Identity (free operation) |
-| Substitution  | `$\langle 1,1,1\rangle$` |  Replace one char with another |
-| Insertion  | `$\langle 0,1,1\rangle$` |  Insert a character |
-| Deletion  | `$\langle 1,0,1\rangle$` |  Delete a character |
-| Transposition  | `$\langle 2,2,1\rangle$` |  Swap adjacent characters |
-| Merge `$(2\to 1)$` | `$\langle 2,1,1\rangle$` |  Two chars become one |
-| Split `$(1\to 2)$` | `$\langle 1,2,1\rangle$` |  One char becomes two |
+| Match  | $`\langle 1,1,0\rangle`$ |  Identity (free operation) |
+| Substitution  | $`\langle 1,1,1\rangle`$ |  Replace one char with another |
+| Insertion  | $`\langle 0,1,1\rangle`$ |  Insert a character |
+| Deletion  | $`\langle 1,0,1\rangle`$ |  Delete a character |
+| Transposition  | $`\langle 2,2,1\rangle`$ |  Swap adjacent characters |
+| Merge $`(2\to 1)`$ | $`\langle 2,1,1\rangle`$ |  Two chars become one |
+| Split $`(1\to 2)`$ | $`\langle 1,2,1\rangle`$ |  One char becomes two |
 
 ### 1.2 Operation Instances
 
@@ -113,7 +113,7 @@ pub enum AlgorithmVariant {
 }
 ```
 
-**Gap**: Hardcoded operation sets. Paper's framework allows **arbitrary** operation types defined via `$\Upsilon .$`
+**Gap**: Hardcoded operation sets. Paper's framework allows **arbitrary** operation types defined via $`\Upsilon .`$
 
 **Enhancement Opportunity**:
 
@@ -141,7 +141,7 @@ pub struct OperationSet {
 
 1. R[Op,r] has bounded length difference
 2. There exists constant c such that every Op instance satisfies c-bounded diagonal property
-3. **Every zero-weighted type in `$\Upsilon$` is length preserving**
+3. **Every zero-weighted type in $`\Upsilon`$ is length preserving**
 
 ### 2.2 Definitions
 
@@ -205,8 +205,8 @@ pub struct UniversalState<V: PositionVariant> {
 
 For n=2, c=2:
 - Diagonal band has 5 diagonals
-- Each diagonal at input position k has `$\le  5$` positions
-- With subsumption, typical states have `$\le  8$` positions
+- Each diagonal at input position k has $`\le  5`$ positions
+- With subsumption, typical states have $`\le  8`$ positions
 - **This is GUARANTEED by bounded diagonal property, not coincidence!**
 
 **Validation**:
@@ -237,7 +237,7 @@ n=4 → c=4 → (2c+1)=9 diagonals → ~20 positions typical (definitely heap al
 
 ### 3.1 State Structure
 
-**Definition 9.7** (Pages 2349-2350): States in `$A^\forall [\Upsilon ,r]$` have the form:
+**Definition 9.7** (Pages 2349-2350): States in $`A^\forall [\Upsilon ,r]`$ have the form:
 
 ```
 q = ⟨m, ⟨e₁, e₂, ..., e_d⟩⟩
@@ -325,13 +325,13 @@ pub struct UniversalState<V: PositionVariant> {
 
 ---
 
-## 4. Preprocessing Function `$\chi$`[Op,r] (Section 9.2)
+## 4. Preprocessing Function $`\chi`$[Op,r] (Section 9.2)
 
-### 4.1 Symbol Applicability Function `$\xi$`
+### 4.1 Symbol Applicability Function $`\xi`$
 
 **Definition 9.9, Step 1** (Page 2351):
 
-Define `$\xi[\text{Op}]: \Sigma_{c+d-1,0,c+d-1,0} \to \Sigma^\forall[\Upsilon,r]$`
+Define $`\xi[\text{Op}]: \Sigma_{c+d-1,0,c+d-1,0} \to \Sigma^\forall[\Upsilon,r]`$
 
 ```
 For each type t_n ∈ Υ and position ⟨i,j⟩:
@@ -373,9 +373,9 @@ impl CharacteristicVector {
 }
 ```
 
-**Gap**: Your implementation hardcodes for Levenshtein identity check `$(\langle 1,1,0\rangle).$`
+**Gap**: Your implementation hardcodes for Levenshtein identity check $`(\langle 1,1,0\rangle).`$
 
-Paper's `$\xi$` function encodes **applicability of EACH operation type**, not just identity.
+Paper's $`\xi`$ function encodes **applicability of EACH operation type**, not just identity.
 
 **Enhancement for Generalized Operations**:
 
@@ -456,7 +456,7 @@ O(|Υ| × (2c+1))
 ```
 
 For each input character:
-1. Look up `$|\Upsilon |$` operation types
+1. Look up $`|\Upsilon |`$ operation types
 2. Update (2c+1) extensor entries
 
 **Total for Words of Length m**:
@@ -465,7 +465,7 @@ For each input character:
 O(m × |Υ| × c)
 ```
 
-**For Standard Levenshtein** `$(|\Upsilon |=4, c=2)$`:
+**For Standard Levenshtein** $`(|\Upsilon |=4, c=2)`$:
 
 ```
 O(m × 4 × 2) = O(8m) = O(m)
@@ -490,11 +490,11 @@ M[i,j] = min{
 }
 ```
 
-**Complexity**: `$\mathcal{O}(\lvert w\rvert \times  \lvert v\rvert \times  \lvert \text{Op}\rvert)$`
+**Complexity**: $`\mathcal{O}(\lvert w\rvert \times  \lvert v\rvert \times  \lvert \text{Op}\rvert)`$
 
 **Ukkonen's Optimization** (Section 4, Page 2343):
 
-Compute only `$|i-j| \le  r$` entries → (2r+1)-diagonal band
+Compute only $`|i-j| \le  r`$ entries → (2r+1)-diagonal band
 
 ```
 Time: O(r × min(|w|, |v|))
@@ -542,7 +542,7 @@ If R has bounded length difference → R is synchronized rational
 
 **Critical Property** (Pages 2340-2341):
 
-Universal automata have **fixed alphabet** `$\Sigma ^\forall$` independent of input alphabet:
+Universal automata have **fixed alphabet** $`\Sigma ^\forall`$ independent of input alphabet:
 
 ```
 Σ^∀[Υ,r] = ({0,1}^{2c+1})^|Υ| × {-1, 0, 1}
@@ -550,7 +550,7 @@ Universal automata have **fixed alphabet** `$\Sigma ^\forall$` independent of in
 
 **Alphabet Size Comparison** (Table 2, Page 2353):
 
-| Input Alphabet  | `$\Sigma$` |  |  Synchronized States | Universal States |
+| Input Alphabet $`\lvert\Sigma\rvert`$ | Synchronized States | Universal States |
 |------------------|---------------------|------------------|
 | 2                | 14                  | 14               |
 | 2                | 187                 | 90               |
@@ -577,13 +577,13 @@ pub struct CharacteristicVector {
 
 The following are **equivalent**:
 
-1. R[Op,r] has bounded length difference for each Op instance of `$\Upsilon$`
+1. R[Op,r] has bounded length difference for each Op instance of $`\Upsilon`$
 2. There exists constant c such that every Op satisfies c-bounded diagonal property
-3. Every zero-weighted type in `$\Upsilon$` is length preserving
-4. There exists a universal neighborhood automaton `$A^\forall [\Upsilon ,r]$`
-5. There exists a universal language `$U[\Upsilon ,r]$`
+3. Every zero-weighted type in $`\Upsilon`$ is length preserving
+4. There exists a universal neighborhood automaton $`A^\forall [\Upsilon ,r]`$
+5. There exists a universal language $`U[\Upsilon ,r]`$
 
-**Additionally, if tid `$= \langle 1,1,0\rangle \in  \Upsilon **$`: All 5 properties are equivalent.
+**Additionally, if tid $`= \langle 1,1,0\rangle \in  \Upsilon`$**: All 5 properties are equivalent.
 
 ### Implications for Implementation
 
@@ -596,11 +596,11 @@ Zero-weighted operations MUST be length preserving
 
 **Your Operations**:
 
-- Standard match: `$\langle 1,1,0\rangle \to$` Length preserving ✓
-- Substitution: `$\langle 1,1,1\rangle \to$` Non-zero weight (no constraint)
-- Insertion: `$\langle 0,1,1\rangle \to$` Non-zero weight (no constraint)
-- Deletion: `$\langle 1,0,1\rangle \to$` Non-zero weight (no constraint)
-- Transposition: `$\langle 2,2,1\rangle \to$` Length preserving, non-zero weight ✓
+- Standard match: $`\langle 1,1,0\rangle \to`$ Length preserving ✓
+- Substitution: $`\langle 1,1,1\rangle \to`$ Non-zero weight (no constraint)
+- Insertion: $`\langle 0,1,1\rangle \to`$ Non-zero weight (no constraint)
+- Deletion: $`\langle 1,0,1\rangle \to`$ Non-zero weight (no constraint)
+- Transposition: $`\langle 2,2,1\rangle \to`$ Length preserving, non-zero weight ✓
 
 **Conclusion**: Your implementation satisfies Theorem 10.1's conditions.
 
@@ -710,7 +710,7 @@ where op^r ⊆ Σ^{op^x} × Σ^{op^y}
 
 **Implementation Path**:
 
-Your planned `SubstitutionSet` directly corresponds to paper's `$\text{op}^r$`:
+Your planned `SubstitutionSet` directly corresponds to paper's $`\text{op}^r`$:
 
 ```rust
 pub struct RestrictedSubstitution {
@@ -755,7 +755,7 @@ pub struct WeightedOperationType {
 }
 ```
 
-Use threshold-based acceptance: `$\text{cumulative}_\text{weight} \le  \text{threshold}$`
+Use threshold-based acceptance: $`\text{cumulative}_\text{weight} \le  \text{threshold}`$
 
 ### 9.3 Multicharacter Operations (LOW PRIORITY)
 
@@ -769,14 +769,14 @@ Trigram: ⟨3,3,1⟩  (three-char operations)
 
 **Use Cases**:
 
-- Unicode composition: `$\langle 2,1,0\rangle (e +$` ́ → é)
-- Ligature handling: `$\langle 1,2,0\rangle ($`æ → ae)
-- Context-sensitive operations: `$\langle 3,3,1\rangle$` (abc → xyz)
+- Unicode composition: $`\langle 2,1,0\rangle (e +`$ ́ → é)
+- Ligature handling: $`\langle 1,2,0\rangle (`$æ → ae)
+- Context-sensitive operations: $`\langle 3,3,1\rangle`$ (abc → xyz)
 
 **Your Current Support**:
 
 - `AlgorithmVariant::MergeAndSplit` already exists
-- Can extend to arbitrary (`$t^x$`, `$t^y$`) pairs
+- Can extend to arbitrary ($`t^x`$, $`t^y`$) pairs
 
 ---
 
@@ -796,7 +796,7 @@ Can universal concepts combine with lazy evaluation?
 **Universal Automata** (`src/transducer/universal/`):
 - **Word-agnostic states**: Fixed state space independent of w
 - **Precomputed transitions**: All transitions known in advance
-- **Alphabet independent**: Fixed size regardless of `$|\Sigma |$`
+- **Alphabet independent**: Fixed size regardless of $`|\Sigma |`$
 
 ### Hybrid Approach Feasibility
 
@@ -878,18 +878,18 @@ Update `README.md` in `docs/research/universal-levenshtein/`:
 
 | Paper Concept | Definition | Your Implementation | Status |
 |---------------|------------|---------------------|--------|
-| **Operation Type** `$t = \langle t^x, t^y, t^w\rangle$` |  Section 3.1 | `AlgorithmVariant` (hardcoded) | 🟡 Enhance |
-| **Operation Set** `$\Upsilon$` |  Section 3.4 | `AlgorithmVariant` enum | 🟡 Enhance |
-| **Replacement Relation** `$\text{op}^r$` | Section 3.2 | Planned `SubstitutionSet` | 🚧 Design |
+| **Operation Type** $`t = \langle t^x, t^y, t^w\rangle`$ |  Section 3.1 | `AlgorithmVariant` (hardcoded) | 🟡 Enhance |
+| **Operation Set** $`\Upsilon`$ |  Section 3.4 | `AlgorithmVariant` enum | 🟡 Enhance |
+| **Replacement Relation** $`\text{op}^r`$ | Section 3.2 | Planned `SubstitutionSet` | 🚧 Design |
 | **Bounded Diagonal** c | Theorem 8.2 | Implicit in `max_distance` | 📄 Document |
 | **Length Difference** m | Section 9.1 | `UniversalState::length_diff` | ✅ Done |
 | **Extensor** e_k | Definition 9.3 | Implicit in positions | 🟡 Consider |
-| **State** `$\langle m, \langle e_{1},...,e_d\rangle\rangle$` |  Definition 9.7 | `UniversalState` | 🟡 Enhance |
-| **Characteristic Vector** `$\chi$`[Op,r] | Definition 9.9 | `CharacteristicVector` | ✅ Done |
-| **Symbol Applicability** `$\xi$` |  Definition 9.9 | `CharacteristicVector::new` | 🟡 Generalize |
-| **Universal Language** `$U[\Upsilon ,r]$` |  Definition 7.4 | Implicit in automaton | ✅ Done |
+| **State** $`\langle m, \langle e_{1},...,e_d\rangle\rangle`$ |  Definition 9.7 | `UniversalState` | 🟡 Enhance |
+| **Characteristic Vector** $`\chi`$[Op,r] | Definition 9.9 | `CharacteristicVector` | ✅ Done |
+| **Symbol Applicability** $`\xi`$ |  Definition 9.9 | `CharacteristicVector::new` | 🟡 Generalize |
+| **Universal Language** $`U[\Upsilon ,r]`$ |  Definition 7.4 | Implicit in automaton | ✅ Done |
 | **Alphabet Independence** | Section 7 | Bit vectors | ✅ Done |
-| **Subsumption** `$\sqcup$` |  Implicit | `UniversalState::add_position` | ✅ Done |
+| **Subsumption** $`\sqcup`$ |  Implicit | `UniversalState::add_position` | ✅ Done |
 | **Anti-chain Property** | Implicit | Subsumption logic | ✅ Done |
 | **Diagonal Crossing** f_n, m_n | Section 9.2 | `transition_with_consumption()` | ✅ Done |
 | **Acceptance Criterion** | Proposition 11 | `is_match` method | ✅ Done |
@@ -931,7 +931,7 @@ Update `README.md` in `docs/research/universal-levenshtein/`:
    - API design for custom operations
 
 5. **Implement Restricted Substitutions**
-   - Enhance `SubstitutionSet` with paper's `$\text{op}^r$`
+   - Enhance `SubstitutionSet` with paper's $`\text{op}^r`$
    - Add presets: keyboard, OCR, phonetic
    - Type-aware characteristic vectors
 
@@ -965,12 +965,12 @@ Update `README.md` in `docs/research/universal-levenshtein/`:
 
 3. **Generalization Path Clear**
    - Type-based operation framework enables powerful extensions
-   - Restricted substitutions directly map to `$\text{op}^r$`
+   - Restricted substitutions directly map to $`\text{op}^r`$
    - Weighted operations supported by paper's framework
 
 4. **Performance Validated**
    - Paper's evaluation shows 2.77-5× speedup over DP
-   - Alphabet independence crucial for large `$|\Sigma |$`
+   - Alphabet independence crucial for large $`|\Sigma |`$
    - Your SmallVec optimization amplifies gains
 
 ### This Paper's Value

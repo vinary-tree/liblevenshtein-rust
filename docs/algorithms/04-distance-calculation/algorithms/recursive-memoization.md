@@ -14,7 +14,7 @@ The recursive memoization approach implements Levenshtein distance computation u
 
 ### Recursive Definition
 
-Writing `$s_0$` for the first character of `$s$` and `$s_{1..}$` for its remaining suffix, the edit distance satisfies the recurrence
+Writing $`s_0`$ for the first character of $`s`$ and $`s_{1..}`$ for its remaining suffix, the edit distance satisfies the recurrence
 
 ```math
 \mathrm{distance}(s, t) = \begin{cases}
@@ -25,7 +25,7 @@ Writing `$s_0$` for the first character of `$s$` and `$s_{1..}$` for its remaini
 \end{cases}
 ```
 
-The three arguments to `$\min$` are the costs of **deletion** (advance `$s$`), **insertion** (advance `$t$`), and **substitution** (advance both), respectively.
+The three arguments to $`\min`$ are the costs of **deletion** (advance $`s`$), **insertion** (advance $`t`$), and **substitution** (advance both), respectively.
 
 ### Implementation with Optimizations
 
@@ -136,7 +136,7 @@ pub fn standard_distance_recursive(source: &str, target: &str, cache: &MemoCache
 
 ### SymmetricPair Design
 
-Exploits the symmetric property: `$d(a,b) = d(b,a)$`
+Exploits the symmetric property: $`d(a,b) = d(b,a)`$
 
 ```rust
 struct SymmetricPair {
@@ -298,22 +298,22 @@ let d2 = standard_distance_recursive("testing", "tested", &cache);
 
 | Scenario | Complexity | Explanation |
 |----------|------------|-------------|
-| Worst case (cold cache) | `$\mathcal{O}(mn)$` | Explore all subproblems |
-| Best case (cache hit) | `$\mathcal{O}(1)$` | Instant lookup |
-| Common prefix (80% overlap) | `$\mathcal{O}(kl)$` | `$k, l$` = remaining lengths after stripping |
-| Early exit (identical strings) | `$\mathcal{O}(\text{prefix length})$` | Linear scan for prefix |
+| Worst case (cold cache) | $`\mathcal{O}(mn)`$ | Explore all subproblems |
+| Best case (cache hit) | $`\mathcal{O}(1)`$ | Instant lookup |
+| Common prefix (80% overlap) | $`\mathcal{O}(kl)`$ | $`k, l`$ = remaining lengths after stripping |
+| Early exit (identical strings) | $`\mathcal{O}(\text{prefix length})`$ | Linear scan for prefix |
 
 ### Space Complexity
 
 | Component | Space | Explanation |
 |-----------|-------|-------------|
-| Recursion stack | `$\mathcal{O}(\max(m,n))$` | Worst case depth |
-| Cache entries | `$\mathcal{O}(\lvert \text{unique pairs}\rvert)$` | ~24 bytes per pair |
-| Character vectors | `$\mathcal{O}(m + n)$` | Temporary for each call |
+| Recursion stack | $`\mathcal{O}(\max(m,n))`$ | Worst case depth |
+| Cache entries | $`\mathcal{O}(\lvert \text{unique pairs}\rvert)`$ | ~24 bytes per pair |
+| Character vectors | $`\mathcal{O}(m + n)`$ | Temporary for each call |
 
-**Total**: `$\mathcal{O}(\max(m,n) + \text{cache size})$`
+**Total**: $`\mathcal{O}(\max(m,n) + \text{cache size})`$
 
-With prefix stripping: **`$\mathcal{O}(\max(k,l) + \text{cache size})$`** where `$k, l \ll m, n$`
+With prefix stripping: **$`\mathcal{O}(\max(k,l) + \text{cache size})`$** where $`k, l \ll m, n`$
 
 ## Worked Example
 
@@ -482,7 +482,7 @@ pub fn transposition_distance_recursive(source: &str, target: &str, cache: &Memo
 
 1. **Cache Overhead**: ~16-24 bytes per unique pair
 2. **Cold Cache Penalty**: 1.05× slower than iterative (cold cache)
-3. **Recursion Stack**: `$\mathcal{O}(\text{depth})$` stack frames (mitigated by prefix stripping)
+3. **Recursion Stack**: $`\mathcal{O}(\text{depth})`$ stack frames (mitigated by prefix stripping)
 4. **Cache Contention**: Lock overhead in high-concurrency scenarios (RwLock only)
 
 ## Usage Guidelines

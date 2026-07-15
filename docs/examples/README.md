@@ -22,7 +22,7 @@ embeds the relevant architecture diagrams.
 |---|---|---|---|
 | 01 | [Getting Started](01-getting-started/README.md) | Build a spell checker from a dictionary + algorithm + transducer; `query` vs `query_with_distance` | `spell_checker.rs` |
 | 02 | [Dictionaries](02-dictionaries/README.md) | Pick a backend for your access pattern; mutate a `DynamicDawg` at runtime; serialize to disk | `dynamic_dictionary.rs`, `serialization.rs` |
-| 03 | [Algorithms & Ordering](03-algorithms/README.md) | `Standard` / `Transposition` / `MergeAndSplit`; distance-first ordered results and lazy top-`$k$` | `ordered_query_demo.rs` |
+| 03 | [Algorithms & Ordering](03-algorithms/README.md) | `Standard` / `Transposition` / `MergeAndSplit`; distance-first ordered results and lazy top-$`k`$ | `ordered_query_demo.rs` |
 | 04 | [Queries & Unicode](04-queries/README.md) | Unicode matching and zero-cost custom substitutions (diacritics, case-folding, kana) | `unicode_diacritics.rs` |
 | 05 | [Values & Fuzzy Maps](05-values/README.md) | Attach values to terms; filter, prioritize, and prune by value during traversal | `fuzzy_maps_code_completion.rs` |
 | 06 | [Contextual Completion](06-contextual/README.md) | Incremental drafts, checkpoints/undo, and hierarchical scope visibility | `contextual_completion.rs` |
@@ -65,7 +65,7 @@ Cargo packages or analysis harnesses rather than library demos — noted in thei
 
 | Example | Purpose | Features |
 |---|---|---|
-| [`ordered_query_demo.rs`](../../examples/ordered_query_demo.rs) | `query_ordered`: distance-first, lexicographic results; lazy top-`$k$` and distance-bounded queries | — |
+| [`ordered_query_demo.rs`](../../examples/ordered_query_demo.rs) | `query_ordered`: distance-first, lexicographic results; lazy top-$`k`$ and distance-bounded queries | — |
 | [`ordered_query_benchmark.rs`](../../examples/ordered_query_benchmark.rs) | Micro-benchmark: ordered vs unordered query iterators | — |
 | [`unicode_diacritics.rs`](../../examples/unicode_diacritics.rs) | `SubstitutionSetChar` presets (Latin diacritics, Greek/Cyrillic case-fold, kana) + custom sets | — |
 | [`custom_substitutions.rs`](../../examples/custom_substitutions.rs) | Build and combine byte-level `SubstitutionSet`s for domain-specific matching | — |

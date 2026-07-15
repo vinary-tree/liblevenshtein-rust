@@ -51,7 +51,7 @@ impl<D: MappedDictionary<V>, V> MappedDictionary<V> for Lfu<D> {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(1)$` metadata update + `$\mathcal{O}(d)$` inner lookup
+**Complexity**: $`\mathcal{O}(1)`$ metadata update + $`\mathcal{O}(d)`$ inner lookup
 
 ### Finding LFU Entry
 
@@ -71,7 +71,7 @@ impl<D> Lfu<D> {
 }
 ```
 
-**Complexity**: `$\mathcal{O}(n)$` where n = number of candidates
+**Complexity**: $`\mathcal{O}(n)`$ where n = number of candidates
 
 ## Usage Examples
 
@@ -242,9 +242,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Operation | Complexity | Notes |
 |-----------|------------|-------|
-| get_value | `$\mathcal{O}(1)$` + `$\mathcal{O}(d)$` | Counter increment + inner lookup |
-| contains | `$\mathcal{O}(1)$` + `$\mathcal{O}(d)$` | Counter increment + inner check |
-| find_lfu | `$\mathcal{O}(n)$` | Linear scan of candidates |
+| get_value | $`\mathcal{O}(1)`$ + $`\mathcal{O}(d)`$ | Counter increment + inner lookup |
+| contains | $`\mathcal{O}(1)`$ + $`\mathcal{O}(d)`$ | Counter increment + inner check |
+| find_lfu | $`\mathcal{O}(n)`$ | Linear scan of candidates |
 
 ### Space Complexity
 

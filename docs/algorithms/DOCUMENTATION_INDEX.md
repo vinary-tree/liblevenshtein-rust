@@ -157,7 +157,7 @@ Comprehensive implementation for IDE-style code completion in [docs/design](../d
   - Online construction algorithm
   - Endpos equivalence and suffix links
   - 8 usage examples (code search, log analysis, DNA sequences)
-  - `$\le 2n-1$` states for `$n$`-character text
+  - $`\le 2n-1`$ states for $`n`$-character text
 
 - SuffixAutomatonChar (📝 Planned, ~1100 lines)
   - Character-level (Unicode) substring matching

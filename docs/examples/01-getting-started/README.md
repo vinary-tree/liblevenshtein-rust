@@ -15,34 +15,34 @@ difference between the `query` and `query_with_distance` result iterators.
 
 **Approximate string matching** (a.k.a. *fuzzy matching*) answers the question
 *"which dictionary words are close to what the user typed?"* "Close" is made precise
-by the **Levenshtein (edit) distance** `$d(W, s)$`: the minimum number of single-character
-**insertions**, **deletions**, and **substitutions** that turn the query `$W$` into a
-candidate string `$s$`. For example `$d(\texttt{aple}, \texttt{apple}) = 1$` (insert one `p`), and
-`$d(\texttt{wrld}, \texttt{world}) = 2$` (insert `o`, then `l`… or insert `o` and substitute — either
+by the **Levenshtein (edit) distance** $`d(W, s)`$: the minimum number of single-character
+**insertions**, **deletions**, and **substitutions** that turn the query $`W`$ into a
+candidate string $`s`$. For example $`d(\texttt{aple}, \texttt{apple}) = 1`$ (insert one `p`), and
+$`d(\texttt{wrld}, \texttt{world}) = 2`$ (insert `o`, then `l`… or insert `o` and substitute — either
 way, two edits).
 
 ### How does `liblevenshtein` do it without scanning the whole dictionary?
 
-A naïve checker computes `$d(W, s)$` against *every* entry `$s$`, costing
-`$\mathcal{O}(\lvert D\rvert \cdot \lvert W\rvert \cdot \lvert s\rvert)$` — you re-pay the query-length factor `$\lvert W\rvert$` once per word. Instead,
-`liblevenshtein` represents the query `$W$` and the error bound `$k$` as a **Levenshtein
-automaton**: the set of still-viable `$\langle \text{position}, \text{errors}\rangle$` states that together accept
-*exactly* the strings within distance `$k$` of `$W$`. It then walks that automaton
+A naïve checker computes $`d(W, s)`$ against *every* entry $`s`$, costing
+$`\mathcal{O}(\lvert D\rvert \cdot \lvert W\rvert \cdot \lvert s\rvert)`$ — you re-pay the query-length factor $`\lvert W\rvert`$ once per word. Instead,
+`liblevenshtein` represents the query $`W`$ and the error bound $`k`$ as a **Levenshtein
+automaton**: the set of still-viable $`\langle \text{position}, \text{errors}\rangle`$ states that together accept
+*exactly* the strings within distance $`k`$ of $`W`$. It then walks that automaton
 **in lock-step** with the dictionary trie — advancing both one symbol at a time and
 **pruning** a branch the instant no automaton state survives. The automaton is
 *simulated on the fly*, never compiled into a standalone table, so per-query setup is
-`$\mathcal{O}(\lvert W\rvert)$` and each automaton step costs `$\mathcal{O}(k)$` (a constant for fixed `$k$`). The total
-work tracks the explored near-match frontier, not `$\lvert D\rvert$`.
+$`\mathcal{O}(\lvert W\rvert)`$ and each automaton step costs $`\mathcal{O}(k)`$ (a constant for fixed $`k`$). The total
+work tracks the explored near-match frontier, not $`\lvert D\rvert`$.
 
-> Terms defined: `$W$` = the query string, `$\lvert W\rvert$` = its length, `$s$` = a candidate from the
-> dictionary, `$D$` = the dictionary, `$\lvert D\rvert$` = its number of edges, `$k$` = the maximum edit
-> distance (error bound), and a **position** `$\langle i, e\rangle$` = an automaton state meaning
-> "`$i$` characters of `$W$` consumed, `$e$` edits spent, with `$e \le k$`".
+> Terms defined: $`W`$ = the query string, $`\lvert W\rvert`$ = its length, $`s`$ = a candidate from the
+> dictionary, $`D`$ = the dictionary, $`\lvert D\rvert`$ = its number of edges, $`k`$ = the maximum edit
+> distance (error bound), and a **position** $`\langle i, e\rangle`$ = an automaton state meaning
+> "$`i`$ characters of $`W`$ consumed, $`e`$ edits spent, with $`e \le k`$".
 
 ### Why three objects?
 
 The library cleanly separates *what you search* (the **dictionary** — here a static,
-read-only `DoubleArrayTrie`, a trie packed into two integer arrays for `$\mathcal{O}(1)$`-per-edge
+read-only `DoubleArrayTrie`, a trie packed into two integer arrays for $`\mathcal{O}(1)`$-per-edge
 lookups), *how edits are counted* (the **`Algorithm`** — `Standard` counts insert /
 delete / substitute; `Transposition` additionally counts an adjacent swap as one edit),
 and *the engine that runs one against the other* (the **`Transducer`**, which yields
@@ -78,7 +78,7 @@ ownership of the dictionary and the chosen algorithm.
 ### 2 · Query for terms, ignoring the distance
 
 `transducer.query(W, k)` returns an iterator over just the matching **terms** within
-distance `$k$`. Collecting it materializes the suggestions:
+distance $`k`$. Collecting it materializes the suggestions:
 
 ```rust
 let matches: Vec<_> = transducer.query("aple", 1).collect();
@@ -90,7 +90,7 @@ for term in transducer.query("tset", 1) {   // transposition of "test"
 ```
 
 With `Algorithm::Standard`, `"tset"` → `"test"` costs two edits (delete `s`, insert `s`),
-so at `$k = 1$` it is *not* matched — which motivates the algorithm comparison below.
+so at $`k = 1`$ it is *not* matched — which motivates the algorithm comparison below.
 
 ### 3 · Query *with* the edit distance attached
 
@@ -137,7 +137,7 @@ cargo run --example spell_checker
 
 You should see suggestions for each typo, a "Query with Distances" section, and an
 "Algorithm Comparison" showing `Transposition` recovering `"test"` from `"tset"` at
-`$k = 1$` where `Standard` cannot.
+$`k = 1`$ where `Standard` cannot.
 
 ---
 

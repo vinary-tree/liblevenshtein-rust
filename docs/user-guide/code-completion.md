@@ -122,8 +122,8 @@ query.prefix().take_while(|c| c.distance <= 1)
 | Strategy | Best For | Setup Cost | Query Speed | Memory |
 |----------|----------|------------|-------------|---------|
 | **Post-Filtering** | Small dicts (<1K) | None | Baseline | Low |
-| **Bitmap Masking** | Medium dicts, moderate filtering | `$\mathcal{O}(n)$` | 2-5x faster | Medium |
-| **Sub-Trie** | Large dicts, restrictive filtering | `$\mathcal{O}(n \log n)$` | 10-200x faster | High |
+| **Bitmap Masking** | Medium dicts, moderate filtering | $`\mathcal{O}(n)`$ | 2-5x faster | Medium |
+| **Sub-Trie** | Large dicts, restrictive filtering | $`\mathcal{O}(n \log n)`$ | 10-200x faster | High |
 
 See [Contextual Filtering Optimization](../archive/performance/CONTEXTUAL_FILTERING_OPTIMIZATION.md) for detailed analysis.
 
@@ -186,7 +186,7 @@ impl IDECompletion {
 **Performance:**
 - Context switch: ~10ms (once per scope change)
 - Query: ~0.5ms (every keystroke)
-- Total for 100 keystrokes in same scope: `$10\text{ms} + (100 \times 0.5\text{ms}) = 60\text{ms}$`
+- Total for 100 keystrokes in same scope: $`10\text{ms} + (100 \times 0.5\text{ms}) = 60\text{ms}`$
 
 ### Example 2: API Documentation Search
 
@@ -229,7 +229,7 @@ impl APISearch {
 **Performance:**
 - First query per module: ~50ms (builds sub-trie)
 - Subsequent queries: ~0.05ms (cached sub-trie)
-- 1000 queries across 10 modules: `$500\text{ms} + (990 \times 0.05\text{ms}) \approx 550\text{ms}$`
+- 1000 queries across 10 modules: $`500\text{ms} + (990 \times 0.05\text{ms}) \approx 550\text{ms}`$
 
 ### Example 3: Command-Line Autocomplete
 
@@ -345,7 +345,7 @@ fn test_code_completion() {
 transducer.query_ordered("x", 5).prefix().take(10)
 ```
 
-**Solution**: Keep distance `$\le 2$` for large dictionaries
+**Solution**: Keep distance $`\le 2`$ for large dictionaries
 
 ### ❌ Pitfall 2: Expensive filters in hot path
 

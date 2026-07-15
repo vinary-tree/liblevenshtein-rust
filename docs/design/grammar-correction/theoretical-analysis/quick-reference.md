@@ -12,11 +12,11 @@ See `complete-analysis.md` for full analysis with proofs.
 
 | Layer | Determinism | Correctness | Optimality | Complexity |
 |-------|-------------|-------------|------------|------------|
-| **1. Lexical** | ✓ (with tie-breaking) | ✓ (all candidates within distance d) | ✓ (top-k by distance) | `$\mathcal{O}(n \times  d)$` |
-| **2. Grammar** | ~ (requires unambiguous grammar) | ✓ (syntactically valid) | ~ (BFS optimal for uniform cost) | `$\mathcal{O}(k \times  d \times  n \times  p)$` beam |
-| **3. Semantic Validation** | ✓ (with deterministic fresh vars) | ✓ (only well-typed pass) | ✓ (perfect filter) | `$\mathcal{O}(n \log  n)$` avg |
+| **1. Lexical** | ✓ (with tie-breaking) | ✓ (all candidates within distance d) | ✓ (top-k by distance) | $`\mathcal{O}(n \times  d)`$ |
+| **2. Grammar** | ~ (requires unambiguous grammar) | ✓ (syntactically valid) | ~ (BFS optimal for uniform cost) | $`\mathcal{O}(k \times  d \times  n \times  p)`$ beam |
+| **3. Semantic Validation** | ✓ (with deterministic fresh vars) | ✓ (only well-typed pass) | ✓ (perfect filter) | $`\mathcal{O}(n \log  n)`$ avg |
 | **4. Semantic Repair** | ~ (requires deterministic solver) | ✓ (syntactic) ~ (semantic) | ✗ (undecidable) | NP-hard (SMT) |
-| **5. Process Verification** | ✓ | ✓ (session type safety) | N/A (verification only) | `$\mathcal{O}(n)$` to `$\mathcal{O}(n^k)$` |
+| **5. Process Verification** | ✓ | ✓ (session type safety) | N/A (verification only) | $`\mathcal{O}(n)`$ to $`\mathcal{O}(n^k)`$ |
 | **Composition** | ~ (depends on all layers) | ✓ (syntactic) | ✗ (greedy suboptimal) | Sum of layers |
 
 **Legend**: ✓ = Yes, ~ = Conditional, ✗ = No, N/A = Not applicable
@@ -65,23 +65,23 @@ See `complete-analysis.md` for full analysis with proofs.
 
 ### Complexity
 
-**Theorem (Lexical Complexity)**: `$\mathcal{O}(n \times  d)$` construction, `$\mathcal{O}(\lvert V\rvert)$` query per word, `$\mathcal{O}(n \times  d)$` space.
+**Theorem (Lexical Complexity)**: $`\mathcal{O}(n \times  d)`$ construction, $`\mathcal{O}(\lvert V\rvert)`$ query per word, $`\mathcal{O}(n \times  d)`$ space.
 
-**Theorem (Grammar Complexity - Pure BFS)**: `$\mathcal{O}(\lvert \text{Grammar}\rvert^d \times  n \times  p)$` worst-case (exponential in d).
+**Theorem (Grammar Complexity - Pure BFS)**: $`\mathcal{O}(\lvert \text{Grammar}\rvert^d \times  n \times  p)`$ worst-case (exponential in d).
 
-**Theorem (Grammar Complexity - Beam BFS)**: `$\mathcal{O}(k \times  d \times  n \times  p)$` (tractable for k = 20-100).
+**Theorem (Grammar Complexity - Beam BFS)**: $`\mathcal{O}(k \times  d \times  n \times  p)`$ (tractable for k = 20-100).
 
-**Theorem (Type Inference Complexity)**: `$\mathcal{O}(n \log  n)$` average case, exponential worst case (rare in practice).
+**Theorem (Type Inference Complexity)**: $`\mathcal{O}(n \log  n)`$ average case, exponential worst case (rare in practice).
 
 **Theorem (SMT Repair Complexity)**: MaxSMT is NP-hard.
 
-**Theorem (Session Types Complexity)**: `$\mathcal{O}(n)$` for linear session types, `$\mathcal{O}(n^k)$` for non-linear.
+**Theorem (Session Types Complexity)**: $`\mathcal{O}(n)`$ for linear session types, $`\mathcal{O}(n^k)`$ for non-linear.
 
 ### Decidability
 
 **Theorem (Regular Language Decidability)**: Lexical correction is decidable (finite automata).
 
-**Theorem (CFG Parsing Decidability)**: Grammar correction is decidable (`$\mathcal{O}(n^{3})$` worst-case parsing).
+**Theorem (CFG Parsing Decidability)**: Grammar correction is decidable ($`\mathcal{O}(n^{3})`$ worst-case parsing).
 
 **Theorem (Type Inference Decidability)**: Hindley-Milner type inference is decidable (Algorithm W always terminates).
 
@@ -257,7 +257,7 @@ For full references with details, see `complete-analysis.md`.
 
 **Error Localization**: Zhang et al. 2015 (SHErrLoc), Lerner et al. 2007 (type error search)
 
-**SMT**: Nieuwenhuis & Oliveras 2006 (MaxSMT), Bjørner et al. 2015 (`$\nu Z$` optimizer)
+**SMT**: Nieuwenhuis & Oliveras 2006 (MaxSMT), Bjørner et al. 2015 ($`\nu Z`$ optimizer)
 
 **Process Calculi**: Honda et al. 1998 (session types), Wadler 2012 (propositions as sessions)
 

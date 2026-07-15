@@ -207,8 +207,8 @@ Common type-theoretic notation used throughout these documents:
 
 | Symbol | Name | Meaning | Example |
 |--------|------|---------|---------|
-| `$\vdash$` | Turnstile | "derives" or "proves" | `$\Gamma  \vdash  M : A$` means "`$\Gamma$` proves M has type A" |
-| `$\Gamma$` | Context | Type assumptions in scope | `x: Int, y: Bool` |
+| $`\vdash`$ | Turnstile | "derives" or "proves" | $`\Gamma  \vdash  M : A`$ means "$`\Gamma`$ proves M has type A" |
+| $`\Gamma`$ | Context | Type assumptions in scope | `x: Int, y: Bool` |
 | `:` | Type ascription | "has type" | `M : A` means "M has type A" |
 | `→` | Function type | Functions from A to B | `A → B` |
 | `×` | Product type | Pairs of A and B | `A × B` |

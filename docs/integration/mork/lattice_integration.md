@@ -1170,9 +1170,9 @@ for path in lattice.k_best_paths(10) {
 
 ### Lattice Size
 
-- **Nodes**: `$\mathcal{O}(n+1)$` where `$n$` = number of tokens
-- **Edges**: `$\mathcal{O}(n \times k)$` where `$k$` = average candidates per token
-- **Paths**: `$\mathcal{O}(k^n)$` worst case (exponential)
+- **Nodes**: $`\mathcal{O}(n+1)`$ where $`n`$ = number of tokens
+- **Edges**: $`\mathcal{O}(n \times k)`$ where $`k`$ = average candidates per token
+- **Paths**: $`\mathcal{O}(k^n)`$ worst case (exponential)
 
 ### Memory Optimization
 
@@ -1182,7 +1182,7 @@ for path in lattice.k_best_paths(10) {
 
 ### K-Best Extraction
 
-- **Dijkstra-based**: `$\mathcal{O}(k \times \log(E))$` where `$E$` = number of edges
+- **Dijkstra-based**: $`\mathcal{O}(k \times \log(E))`$ where $`E`$ = number of edges
 - **Avoids path explosion**: Only materializes top-k paths
 
 ---

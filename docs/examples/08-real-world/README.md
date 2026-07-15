@@ -15,7 +15,7 @@ Cargo project under `examples/phonetic_spellcheck/`.
 ### Why phonetics on top of edit distance?
 
 Edit distance alone struggles with English spelling: `philosophy` vs `filosofy` is four
-edits, well past a typical `$k$`, yet they *sound identical*. The fix is to **normalize**
+edits, well past a typical $`k`$, yet they *sound identical*. The fix is to **normalize**
 both the query and the dictionary by a set of **phonetic rewrite rules** before comparing,
 so look-alike/sound-alike spellings collapse to a shared canonical form and then a *small*
 edit budget suffices.
@@ -29,14 +29,14 @@ edit budget suffices.
 > - **Homophones** — distinct spellings pronounced alike (`their`/`there`/`they're`).
 > - **Text speak** — informal abbreviations (`u → you`, `thru → through`, `nite → night`).
 > - **BK-tree** — a metric tree (Burkhard–Keller) that indexes points by distance so a
->   range query touches `$\mathcal{O}(k \cdot \log n)$` nodes instead of all `$n$`.
+>   range query touches $`\mathcal{O}(k \cdot \log n)`$ nodes instead of all $`n`$.
 
 ### How `PhoneticNormalizedDictionary` is built
 
 `PhoneticNormalizedDictionary<V>` (features `phonetic-rules`, `pathmap-backend`,
 `embedded-rules`) is a **dual-index** structure:
 
-1. a map from each **normalized form** back to the original term(s) for `$\mathcal{O}(1)$` exact
+1. a map from each **normalized form** back to the original term(s) for $`\mathcal{O}(1)`$ exact
    lookups, and
 2. a **BK-tree** over the normalized forms for accelerated fuzzy (range) queries.
 
@@ -58,7 +58,7 @@ The demo merges three `.llev` rule sets into one (`base` + `homophones` + `text_
 
 ### Why this design
 
-A normalized index turns an otherwise `$\mathcal{O}(\lvert D\rvert)$` phonetic scan into an exact-map hit plus a
+A normalized index turns an otherwise $`\mathcal{O}(\lvert D\rvert)`$ phonetic scan into an exact-map hit plus a
 bounded BK-tree range query, and storing *both* indices means the same dictionary answers
 exact, fuzzy, and **regex** queries. The rules being formally proven (see below) means
 normalization is guaranteed to terminate and stay bounded.
@@ -178,7 +178,7 @@ cargo run --release
 ## Formal verification
 
 The phonetic rules are proven correct in Coq/Rocq with five theorems —
-**well-formedness**, **bounded expansion** (output `$\le$` input + 20 chars), **non-confluence**
+**well-formedness**, **bounded expansion** (output $`\le`$ input + 20 chars), **non-confluence**
 (rule order matters, shown constructively), **termination** (sequential application always
 halts), and **idempotence** (fixed points are stable). The complete proofs live under
 [`docs/verification/phonetic/`](../../verification/phonetic/README.md). This is what lets the
@@ -200,7 +200,7 @@ dictionary treat normalization as a total, bounded function.
 ## Key takeaways
 
 - Phonetic spellcheck = **normalize then edit-match**: rewrite query and dictionary to a
-  pronunciation key so sound-alikes collapse and a small `$k$` suffices.
+  pronunciation key so sound-alikes collapse and a small $`k`$ suffices.
 - **`PhoneticNormalizedDictionary`** is a dual index (exact map + BK-tree over normalized
   forms) answering `query`, `query_regex`, `normalize`, and `expand_to_phonetic_pattern`.
 - Combine `english::base()` + `homophones()` + `text_speak()` (117 `.llev` rules) for

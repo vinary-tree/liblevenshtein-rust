@@ -827,8 +827,8 @@ if let Some(iter) = zipper.with_prefix_values(b"app") {
 **A**: Unlimited (bounded only by dictionary structure). However:
 
 - **Practical limit**: Longest term in dictionary
-- **Performance**: Still `$\mathcal{O}(k)$` for any `$k$`
-- **Memory**: `$\mathcal{O}(1)$` during navigation
+- **Performance**: Still $`\mathcal{O}(k)`$ for any $`k`$
+- **Memory**: $`\mathcal{O}(1)`$ during navigation
 
 ### Q: Can I modify the dictionary while iterating?
 

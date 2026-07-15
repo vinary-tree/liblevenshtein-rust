@@ -16,7 +16,7 @@
 
 ## Overview
 
-The Levenshtein Automata Layer provides **finite state machines** for computing approximate string matches efficiently. Instead of comparing every dictionary term individually (`$\mathcal{O}(N)$` operations, where `$N$` is the dictionary size), these automata traverse the dictionary graph once, finding all matches within a distance threshold.
+The Levenshtein Automata Layer provides **finite state machines** for computing approximate string matches efficiently. Instead of comparing every dictionary term individually ($`\mathcal{O}(N)`$ operations, where $`N`$ is the dictionary size), these automata traverse the dictionary graph once, finding all matches within a distance threshold.
 
 ![Levenshtein NFA for a query term and error bound k, with match, insertion, deletion, and substitution transitions between positions](../../diagrams/automata/levenshtein-nfa.svg)
 
@@ -85,7 +85,7 @@ The **Levenshtein distance** (edit distance) between two strings is the minimum 
 
 ### Dynamic Programming Algorithm
 
-Classic DP computes distance in `$\mathcal{O}(M \times N)$` time (`$M$`, `$N$` the two string lengths):
+Classic DP computes distance in $`\mathcal{O}(M \times N)`$ time ($`M`$, $`N`$ the two string lengths):
 
 ```
      ""  c  a  f  e
@@ -109,9 +109,9 @@ D[i][j] = min(
 
 ### Limitations of DP for Fuzzy Search
 
-For fuzzy dictionary search with `$N$` terms:
-- **Time**: `$\mathcal{O}(N \times M \times L)$` where `$M$` = query length, `$L$` = average term length
-- **Space**: `$\mathcal{O}(M \times L)$` per comparison
+For fuzzy dictionary search with $`N`$ terms:
+- **Time**: $`\mathcal{O}(N \times M \times L)`$ where $`M`$ = query length, $`L`$ = average term length
+- **Space**: $`\mathcal{O}(M \times L)`$ per comparison
 - **Problem**: Wasteful for large dictionaries!
 
 ## Finite Automata Approach
@@ -160,9 +160,9 @@ The automaton tracks **all possible ways** the query could align with the input,
 
 | Aspect | Dynamic Programming | Levenshtein Automaton |
 |--------|---------------------|----------------------|
-| **Dictionary traversal** | `$\mathcal{O}(N)$` separate DPs | `$\mathcal{O}(1)$` shared traversal |
-| **Duplicate prefixes** | Recomputed `$N$` times | Computed once |
-| **Memory** | `$\mathcal{O}(M \times L)$` per term | `$\mathcal{O}(M \times D)$` for all terms |
+| **Dictionary traversal** | $`\mathcal{O}(N)`$ separate DPs | $`\mathcal{O}(1)`$ shared traversal |
+| **Duplicate prefixes** | Recomputed $`N`$ times | Computed once |
+| **Memory** | $`\mathcal{O}(M \times L)`$ per term | $`\mathcal{O}(M \times D)`$ for all terms |
 | **Dictionary size** | Linear impact | No impact |
 
 **Example**: For dictionary with 100K terms sharing prefix "test", DP computes "test" 100K times, automaton computes once.
@@ -232,7 +232,7 @@ let automaton = LevenshteinAutomaton::new("test", 2, Algorithm::MergeAndSplit);
 | **Transpositions** | ❌ (cost 2) | ✅ (cost 1) | ❌ (cost 2) |
 | **Adjacent merges** | ❌ | ❌ | ✅ (cost 1) |
 | **Character splits** | ❌ | ❌ | ✅ (cost 1) |
-| **Complexity** | `$\mathcal{O}(M \times D)$` states | `$\mathcal{O}(M \times D^{2})$` states | `$\mathcal{O}(M \times D^{3})$` states |
+| **Complexity** | $`\mathcal{O}(M \times D)`$ states | $`\mathcal{O}(M \times D^{2})`$ states | $`\mathcal{O}(M \times D^{3})`$ states |
 | **Use case** | General fuzzy search | Spell checking | OCR errors |
 
 **Legend**: I=Insert, D=Delete, S=Substitute, T=Transpose, M=Merge, Sp=Split
@@ -475,18 +475,18 @@ println!("Transposition distance 1: {:?}", results_trans);
 
 | Operation | Complexity | Notes |
 |-----------|-----------|-------|
-| **Automaton construction** | `$\mathcal{O}(M \times D)$` | `$M$` = query length, `$D$` = max distance |
-| **Single transition** | `$\mathcal{O}(D^{2})$` | Process `$D^{2}$` state components |
-| **Query traversal** | `$\mathcal{O}(M \times D^{2} \times B)$` | `$B$` = avg branching factor |
-| **Total query** | `$\mathcal{O}(M \times D^{2} \times B)$` | **Independent of dictionary size!** |
+| **Automaton construction** | $`\mathcal{O}(M \times D)`$ | $`M`$ = query length, $`D`$ = max distance |
+| **Single transition** | $`\mathcal{O}(D^{2})`$ | Process $`D^{2}`$ state components |
+| **Query traversal** | $`\mathcal{O}(M \times D^{2} \times B)`$ | $`B`$ = avg branching factor |
+| **Total query** | $`\mathcal{O}(M \times D^{2} \times B)`$ | **Independent of dictionary size!** |
 
 ### Space Complexity
 
 | Component | Complexity | Notes |
 |-----------|-----------|-------|
-| **State size** | `$\mathcal{O}(M \times D)$` | Position-distance pairs |
-| **Automaton cache** | `$\mathcal{O}(1)$` | Reused across queries |
-| **Query results** | `$\mathcal{O}(K)$` | `$K$` = number of matches |
+| **State size** | $`\mathcal{O}(M \times D)`$ | Position-distance pairs |
+| **Automaton cache** | $`\mathcal{O}(1)`$ | Reused across queries |
+| **Query results** | $`\mathcal{O}(K)`$ | $`K`$ = number of matches |
 
 ### Benchmark Results
 

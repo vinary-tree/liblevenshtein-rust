@@ -42,7 +42,7 @@ d^t_L(v, x) = 2  (ac → aa requires 2 substitutions)
 BUT: d^t_L(v, x) = 2 > d^t_L(v, w) + d^t_L(w, x) = 1 + 1 = 2
 ```
 
-**Implication**: Cannot use triangle inequality for pruning or optimization with `$d^t_L$`.
+**Implication**: Cannot use triangle inequality for pruning or optimization with $`d^t_L`$.
 
 ---
 
@@ -71,7 +71,7 @@ d²_L(av', bw') = min(
 
 ---
 
-### Definition 2: With Transposition `$d^t_L$`
+### Definition 2: With Transposition $`d^t_L`$
 
 Extends d²_L with transposition operation:
 
@@ -96,7 +96,7 @@ where T^t(av', bw') = {
 
 ---
 
-### Definition 3: With Merge/Split `$d^{\text{ms}}_L$`
+### Definition 3: With Merge/Split $`d^{\text{ms}}_L`$
 
 Extends d²_L with merge and split operations:
 
@@ -133,9 +133,9 @@ T^{ms}_s(av', bw') = {
 ∀v, w ∈ Σ*: d^χ_L(v, w) = d^χ_L(w, v)
 ```
 
-for `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`.
+for $`\chi  \in`$ $`\{\varepsilon , t, \text{ms}\}`$.
 
-**Proof**: By structural induction on min(|v|, |w|). The recursive definitions are symmetric in v and `$w. \blacksquare$`
+**Proof**: By structural induction on min(|v|, |w|). The recursive definitions are symmetric in v and $`w. \blacksquare`$
 
 ---
 
@@ -147,12 +147,12 @@ for `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`.
 ```
 
 **Proof**: By induction on |w|.
-- Base: `$d^\chi _L(\varepsilon , \varepsilon ) = 0$` by definition
-- Step: `$d^\chi _L(\text{aw}', \text{aw}')$` = min(..., if(a = a, `$d^\chi _L(w', w'), \infty ), ...) =$` `$d^\chi _L(w', w')$` = 0 by IH. `$\blacksquare$`
+- Base: $`d^\chi _L(\varepsilon , \varepsilon ) = 0`$ by definition
+- Step: $`d^\chi _L(\text{aw}', \text{aw}')`$ = min(..., if(a = a, $`d^\chi _L(w', w'), \infty ), ...) =`$ $`d^\chi _L(w', w')`$ = 0 by IH. $`\blacksquare`$
 
 ---
 
-### Proposition 3: Triangle Inequality (for d²_L and `$d^{\text{ms}}_L$` only!)
+### Proposition 3: Triangle Inequality (for d²_L and $`d^{\text{ms}}_L`$ only!)
 
 **Statement**:
 ```
@@ -160,9 +160,9 @@ for `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`.
 ∀u, v, w ∈ Σ*: d^{ms}_L(u, w) ≤ d^{ms}_L(u, v) + d^{ms}_L(v, w)
 ```
 
-**Does NOT hold for `$d^t_L$`!** (See counterexample above)
+**Does NOT hold for $`d^t_L`$!** (See counterexample above)
 
-**Proof sketch** (for d²_L): Any transformation u → v → w can be composed into a transformation u → w of cost `$\le$` sum of intermediate costs. `$\blacksquare$`
+**Proof sketch** (for d²_L): Any transformation u → v → w can be composed into a transformation u → w of cost $`\le`$ sum of intermediate costs. $`\blacksquare`$
 
 ---
 
@@ -175,19 +175,19 @@ for `$\chi  \in$` `$\{\varepsilon , t, \text{ms}\}$`.
   d^χ_L(v, aw) ≥ d^χ_L(v, w) - 1
 ```
 
-**Proof**: Deleting 'a' from av costs at most 1, so `$d^\chi _L(\text{av}, w)$` `$\ge$` `$d^\chi _L(v, w)$` - 1. Symmetrically for aw. `$\blacksquare$`
+**Proof**: Deleting 'a' from av costs at most 1, so $`d^\chi _L(\text{av}, w)`$ $`\ge`$ $`d^\chi _L(v, w)`$ - 1. Symmetrically for aw. $`\blacksquare`$
 
 ---
 
 ### Proposition 5: Edit Sequence Correspondence
 
-**Statement**: For each finite edit distance `$d^\chi _L(v, w) = k,$` there exists an edit sequence E of length k transforming v into w.
+**Statement**: For each finite edit distance $`d^\chi _L(v, w) = k,`$ there exists an edit sequence E of length k transforming v into w.
 
-**Proof**: By construction from recursive definition. `$\blacksquare$`
+**Proof**: By construction from recursive definition. $`\blacksquare`$
 
 ---
 
-### Definition 4: Language `$L^\chi _{\text{Lev}}(n, w)$`
+### Definition 4: Language $`L^\chi _{\text{Lev}}(n, w)`$
 
 **Levenshtein neighborhood**:
 
@@ -209,7 +209,7 @@ L^ε_{Lev}(1, "cat") = {
 
 ---
 
-### Definition 5: Language `$R^\chi (n, w)$`
+### Definition 5: Language $`R^\chi (n, w)`$
 
 **Reverse Levenshtein language**:
 
@@ -217,7 +217,7 @@ L^ε_{Lev}(1, "cat") = {
 R^χ(n, w) = {x^R | x ∈ L^χ_{Lev}(n, w^R)}
 ```
 
-where `$x^R$` denotes the reverse of string x.
+where $`x^R`$ denotes the reverse of string x.
 
 **Purpose**: Used in constructing automata that read input left-to-right.
 
@@ -230,7 +230,7 @@ where `$x^R$` denotes the reverse of string x.
 (R^χ(n, w))^R = L^χ_{Lev}(n, w^R)
 ```
 
-**Proof**: Direct from definition. `$\blacksquare$`
+**Proof**: Direct from definition. $`\blacksquare`$
 
 ---
 
@@ -241,15 +241,15 @@ where `$x^R$` denotes the reverse of string x.
 x ∈ R^χ(n, w) ⇔ ∃k (0 ≤ k ≤ n): x ∈ R^χ(k, w_{|w|-k+1}...w_{|w|})
 ```
 
-**Interpretation**: String x is in `$R^\chi (n, w)$` iff it matches some suffix of w within `$k \le  n$` errors.
+**Interpretation**: String x is in $`R^\chi (n, w)`$ iff it matches some suffix of w within $`k \le  n`$ errors.
 
-**Proof**: By analyzing edit sequences. `$\blacksquare$`
+**Proof**: By analyzing edit sequences. $`\blacksquare`$
 
 ---
 
 ### Proposition 8: Prefix Extension
 
-**Statement**: If `$x \in$` `$R^\chi (k, w_\text{suffix})$` then xa `$\in$` `$R^\chi (k', w_\text{longer}_\text{suffix})$` for appropriate k'.
+**Statement**: If $`x \in`$ $`R^\chi (k, w_\text{suffix})`$ then xa $`\in`$ $`R^\chi (k', w_\text{longer}_\text{suffix})`$ for appropriate k'.
 
 **Purpose**: Foundation for incremental automaton construction.
 
@@ -257,7 +257,7 @@ x ∈ R^χ(n, w) ⇔ ∃k (0 ≤ k ≤ n): x ∈ R^χ(k, w_{|w|-k+1}...w_{|w|})
 
 ## Section 3: Nondeterministic Automata
 
-### Definition 6: `$A^{\text{ND},\chi }_n(w)$`
+### Definition 6: $`A^{\text{ND},\chi }_n(w)`$
 
 **Nondeterministic Levenshtein Automaton**:
 
@@ -281,13 +281,13 @@ where p = |w|.
 
 **Initial state**: q_0 = 0#0
 
-**Final states**: `$F^{\text{ND},\chi }_n$` = `$\{i#e | i = p \land  e \le  n\}$`
+**Final states**: $`F^{\text{ND},\chi }_n`$ = $`\{i#e | i = p \land  e \le  n\}`$
 
 ---
 
-### Transition Function `$\delta ^{\text{ND},\varepsilon }_n$` (Standard)
+### Transition Function $`\delta ^{\text{ND},\varepsilon }_n`$ (Standard)
 
-**For position i#`$e** (0 \le  i < p, e < n)$`:
+**For position i#e** ($`0 \le  i < p, e < n`$):
 
 ```
 δ^{ND,ε}_n(i#e, a) = {
@@ -313,9 +313,9 @@ where p = |w|.
 
 ---
 
-### Transition Function `$\delta ^{\text{ND},t}_n$` (With Transposition)
+### Transition Function $`\delta ^{\text{ND},t}_n`$ (With Transposition)
 
-Extends `$\delta ^{\text{ND},\varepsilon }_n$` with transposition states:
+Extends $`\delta ^{\text{ND},\varepsilon }_n`$ with transposition states:
 
 **Regular states** i#e:
 ```
@@ -347,9 +347,9 @@ Path: 0#0 --b--> 0#0_t (detected ba vs ab)
 
 ---
 
-### Transition Function `$\delta ^{\text{ND},\text{ms}}_n$` (With Merge/Split)
+### Transition Function $`\delta ^{\text{ND},\text{ms}}_n`$ (With Merge/Split)
 
-Extends `$\delta ^{\text{ND},\varepsilon }_n$` with merge and split:
+Extends $`\delta ^{\text{ND},\varepsilon }_n`$ with merge and split:
 
 **Regular states** i#e:
 ```
@@ -371,7 +371,7 @@ where T^{ms}_n(i#e, a) = {
 
 ### Proposition 9: NFA Correctness ⭐
 
-**Statement**: For position i#e in `$A^{\text{ND},\chi }_n(w)$`:
+**Statement**: For position i#e in $`A^{\text{ND},\chi }_n(w)`$:
 
 ```
 L(i#e) = L^χ_{Lev}(n - e, w_{i+1}...w_p)
@@ -380,12 +380,12 @@ L(i#e) = L^χ_{Lev}(n - e, w_{i+1}...w_p)
 **Interpretation**: The language accepted from state i#e is exactly the set of strings within (n - e) errors of the remaining suffix w_{i+1}...w_p.
 
 **Proof Sketch**:
-1. **Forward direction**: If `$x \in  L(i$`#e), show `$d^\chi _L(x, w_{i+1}...w_p)$` `$\le  n - e$`
+1. **Forward direction**: If $`x \in  L(i`$#e), show $`d^\chi _L(x, w_{i+1}...w_p)`$ $`\le  n - e`$
    - By induction on |x|
    - Each transition corresponds to an edit operation
    - Error budget decreases appropriately
 
-2. **Reverse direction**: If `$d^\chi _L(x, w_{i+1}...w_p)$` `$\le  n - e,$` show `$x \in  L(i$`#e)
+2. **Reverse direction**: If $`d^\chi _L(x, w_{i+1}...w_p)`$ $`\le  n - e,`$ show $`x \in  L(i`$#e)
    - Construct accepting path from edit sequence
    - Each edit operation has corresponding transition
 
@@ -394,7 +394,7 @@ L(i#e) = L^χ_{Lev}(n - e, w_{i+1}...w_p)
 L(A^{ND,χ}_n(w)) = L(0#0) = L^χ_{Lev}(n, w_1...w_p) = L^χ_{Lev}(n, w)
 ```
 
-`$\blacksquare$`
+$`\blacksquare`$
 
 ---
 
@@ -425,7 +425,7 @@ w = "banana"
 
 ---
 
-### Definition 7: Elementary Transition `$\delta ^{D,\varepsilon }_e$`
+### Definition 7: Elementary Transition $`\delta ^{D,\varepsilon }_e`$
 
 **Processes single bit vector** for standard Levenshtein:
 
@@ -447,7 +447,7 @@ w = "banana"
 ```
 
 **Interpretation**:
-- **`$\varepsilon$` (empty)**: Only substitution possible (if errors remain)
+- **$`\varepsilon`$ (empty)**: Only substitution possible (if errors remain)
 - **1b (match)**: Advance position, no error
 - **0b (mismatch)**: Try substitution, insertion, or deletion until match
 
@@ -469,29 +469,29 @@ s_n(w, i) = w[max(1, i-n) ... min(|w|, i+n)]
 
 ---
 
-### Definition 9: Deterministic Automaton `$A^{D,\chi }_n(w)$`
+### Definition 9: Deterministic Automaton $`A^{D,\chi }_n(w)`$
 
 ```
 A^{D,χ}_n(w) = (Q^{D,χ}_n, Σ, δ^{D,χ}_n, q_0, F^{D,χ}_n)
 ```
 
-**States**: `$Q^{D,\chi }_n$` `$\subseteq  P(\mathbb{Z}  \times  \mathbb{N} )$` (sets of positions)
+**States**: $`Q^{D,\chi }_n`$ $`\subseteq  P(\mathbb{Z}  \times  \mathbb{N} )`$ (sets of positions)
 
-**Transition**: `$\delta ^{D,\chi }_n(q, a)$` = `$\sqcup  (\bigcup _\{\pi  \in  q\}$` `$\delta ^{D,\chi }_e(\pi , \beta (a, s_n(w, i))))$`
+**Transition**: $`\delta ^{D,\chi }_n(q, a)`$ = $`\sqcup  (\bigcup _\{\pi  \in  q\}`$ $`\delta ^{D,\chi }_e(\pi , \beta (a, s_n(w, i))))`$
 
-where `$\sqcup$` denotes subsumption closure (remove subsumed positions).
+where $`\sqcup`$ denotes subsumption closure (remove subsumed positions).
 
 **Initial state**: q_0 = {0#0}
 
-**Final states**: `$F^{D,\chi }_n$` = `$\{q | \exists \pi  \in  q: ﷐1﷑#n\}$`
+**Final states**: $`F^{D,\chi }_n`$ = $`\{q | \exists \pi  \in  q: ﷐1﷑#n\}`$
 
 ---
 
 ### Definition 10: Elementary Transitions for t and ms
 
-**For transposition** `$\delta ^{D,t}_e$`:
+**For transposition** $`\delta ^{D,t}_e`$:
 
-Extends `$\delta ^{D,\varepsilon }_e$` with:
+Extends $`\delta ^{D,\varepsilon }_e`$ with:
 ```
 δ^{D,t}_e(i#e_t, 1b) = {i+2#e}      // complete transposition
 δ^{D,t}_e(i#e_t, 0b) = ∅            // must match to complete
@@ -500,9 +500,9 @@ Extends `$\delta ^{D,\varepsilon }_e$` with:
 δ^{D,t}_e(i#e, 0 1 b) = ... ∪ {i#(e+1)_t}
 ```
 
-**For merge/split** `$\delta ^{D,\text{ms}}_e$`:
+**For merge/split** $`\delta ^{D,\text{ms}}_e`$:
 
-Extends `$\delta ^{D,\varepsilon }_e$` with:
+Extends $`\delta ^{D,\varepsilon }_e`$ with:
 ```
 δ^{D,ms}_e(i#e_s, b) = {i+1#e}      // complete split
 
@@ -512,7 +512,7 @@ Extends `$\delta ^{D,\varepsilon }_e$` with:
 
 ---
 
-### Definition 11: Subsumption Relation `$\le ^\chi _s$`
+### Definition 11: Subsumption Relation $`\le ^\chi _s`$
 
 **Standard Levenshtein**:
 ```
@@ -539,7 +539,7 @@ i#e_s ≤^{ms}_s j#f_s ⇔  false
 
 ---
 
-### Definition 12: Subsumption Closure `$\sqcup$`
+### Definition 12: Subsumption Closure $`\sqcup`$
 
 For set of positions A:
 ```
@@ -595,11 +595,11 @@ L(A^{D,χ}_n(w)) = L^χ_{Lev}(n, w)
 ```
 
 **Proof**: By showing:
-1. Every path in `$A^{D,\chi }_n(w)$` corresponds to an edit sequence
+1. Every path in $`A^{D,\chi }_n(w)`$ corresponds to an edit sequence
 2. Every edit sequence has a corresponding path
 3. Subsumption preserves language (subsumed states are redundant)
 
-`$\blacksquare$`
+$`\blacksquare`$
 
 ---
 
@@ -607,17 +607,17 @@ L(A^{D,χ}_n(w)) = L^χ_{Lev}(n, w)
 
 **Statement**: Subsumption closure reduces state count without changing the accepted language.
 
-**Proof**: If `$\pi  <^\chi _s \pi ',$` then `$L(\pi ) \subseteq  L(\pi '),$` so removing `$\pi$` doesn't change `$\bigcup  L$`(positions). `$\blacksquare$`
+**Proof**: If $`\pi  <^\chi _s \pi ',`$ then $`L(\pi ) \subseteq  L(\pi '),`$ so removing $`\pi`$ doesn't change $`\bigcup  L`$(positions). $`\blacksquare`$
 
 ---
 
 ## Section 5: Universal Automata
 
-This is the **core contribution** of the thesis. The universal automaton `$A^{\forall ,\chi }_n$` works for **any word** by using parametric positions.
+This is the **core contribution** of the thesis. The universal automaton $`A^{\forall ,\chi }_n`$ works for **any word** by using parametric positions.
 
 ### Definition 15: Universal Position Sets
 
-**Non-final positions** `$I^\chi _s$`:
+**Non-final positions** $`I^\chi _s`$:
 
 ```
 I^ε_s = {I + t#k | |t| ≤ k ∧ -n ≤ t ≤ n ∧ 0 ≤ k ≤ n}
@@ -629,7 +629,7 @@ I^{ms}_s = I^ε_s ∪ {Is + t#k | |t| ≤ k ∧ -n ≤ t ≤ n ∧ 0 ≤ k ≤ n
 
 **Notation**: I + t#k represents position (I + t, k) where I is a parameter.
 
-**Final positions** `$M^\chi _s$`:
+**Final positions** $`M^\chi _s`$:
 
 ```
 M^ε_s = {M + t#k | k ≥ -t - n ∧ -2n ≤ t ≤ 0 ∧ 0 ≤ k ≤ n}
@@ -641,9 +641,9 @@ M^{ms}_s = M^ε_s ∪ {Ms + t#k | k ≥ -t - n ∧ -2n ≤ t ≤ 0 ∧ 0 ≤ k �
 
 ---
 
-### Definition 16: Universal Transition Function `$\delta ^{\forall ,\chi }_n$`
+### Definition 16: Universal Transition Function $`\delta ^{\forall ,\chi }_n`$
 
-**Elementary transition** `$\delta ^{\forall ,\chi }_e$` operates on universal positions using:
+**Elementary transition** $`\delta ^{\forall ,\chi }_e`$ operates on universal positions using:
 
 ```
 r_n(I + t#e, b) = b[n + t + 1 ... min(n + t + (n - e + 1), |b|)]
@@ -701,7 +701,7 @@ d(Ms + t#e, p) = (p + t)#e_s
 
 **THE MOST IMPORTANT THEOREM IN THE THESIS**
 
-**Statement**: For any word w of length p, universal automaton `$A^{\forall ,\chi }_n$` correctly simulates deterministic automaton `$A^{D,\chi }_n(w)$`.
+**Statement**: For any word w of length p, universal automaton $`A^{\forall ,\chi }_n`$ correctly simulates deterministic automaton $`A^{D,\chi }_n(w)`$.
 
 Formally, for all input strings x:
 
@@ -726,16 +726,16 @@ III) q^{∀,χ}_i ∈ F^{∀,χ}_n ⇔ q^{D,χ}_i ∈ F^{D,χ}_n
 **Proof Strategy**: By induction on i (input position).
 
 **Base case** (i = 0):
-- `$q^{\forall ,\chi }_0$` = {I#0}
-- `$q^{D,\chi }_0$` = {0#0} = {d(I#0, 0)}
+- $`q^{\forall ,\chi }_0`$ = {I#0}
+- $`q^{D,\chi }_0`$ = {0#0} = {d(I#0, 0)}
 - ✓ Correspondence holds
 
 **Inductive step**: Assume holds for i, prove for i+1.
 
 **Key lemmas** (proved in thesis):
-1. **Lemma A**: `$r_n(q, b_{i+1}) = \beta(x_{i+1}, w[d(q, s(i))])$`
+1. **Lemma A**: $`r_n(q, b_{i+1}) = \beta(x_{i+1}, w[d(q, s(i))])`$
    - The extracted substring from bit vector matches the characteristic vector
-2. **Lemma B**: `$\delta ^{\forall ,\chi }_e(q, b_{i+1})$` `$\ne  \emptyset  \Leftrightarrow$` `$\delta ^{D,\chi }_e$`(d(q, s(i)), x_{i+1}) `$\ne  \emptyset$`
+2. **Lemma B**: $`\delta ^{\forall ,\chi }_e(q, b_{i+1})`$ $`\ne  \emptyset  \Leftrightarrow`$ $`\delta ^{D,\chi }_e`$(d(q, s(i)), x_{i+1}) $`\ne  \emptyset`$
    - Transitions are defined in lockstep
 3. **Lemma C**: Subsumption is preserved under d
 4. **Lemma D**: Diagonal crossing happens simultaneously
@@ -745,42 +745,42 @@ III) q^{∀,χ}_i ∈ F^{∀,χ}_n ⇔ q^{D,χ}_i ∈ F^{D,χ}_n
 L(A^{∀,χ}_n, w) = L(A^{D,χ}_n(w)) = L^χ_{Lev}(n, w)
 ```
 
-`$\blacksquare$`
+$`\blacksquare`$
 
-**Significance**: This theorem proves that `$A^{\forall ,\chi }_n$` is truly **universal** - it works correctly for any word w without modification.
+**Significance**: This theorem proves that $`A^{\forall ,\chi }_n`$ is truly **universal** - it works correctly for any word w without modification.
 
 ---
 
 ## Section 7: Minimality
 
-### Theorem 1: `$A^{\forall ,\varepsilon }_n$` is Minimal
+### Theorem 1: $`A^{\forall ,\varepsilon }_n`$ is Minimal
 
-**Statement**: `$A^{\forall ,\varepsilon }_n$` has the minimum number of states among all automata that are:
+**Statement**: $`A^{\forall ,\varepsilon }_n`$ has the minimum number of states among all automata that are:
 1. Parameter-free (work for any word length)
-2. Accept `$L^\varepsilon _{\text{Lev}}(n, w)$` for all words w
+2. Accept $`L^\varepsilon _{\text{Lev}}(n, w)`$ for all words w
 
 **Proof Outline**:
 1. Show no two states are equivalent (Nerode equivalence)
 2. For each pair of distinct states q₁, q₂, construct distinguishing word pair (w, x)
 3. Use subsumption anti-chain property to show all states are necessary
 
-`$\blacksquare$`
+$`\blacksquare`$
 
 ---
 
-### Theorem 2: `$A^{\forall ,t}_n$` is Minimal
+### Theorem 2: $`A^{\forall ,t}_n`$ is Minimal
 
 Similar to Theorem 1, but accounting for transposition states.
 
-`$\blacksquare$`
+$`\blacksquare`$
 
 ---
 
-### Theorem 3: `$A^{\forall ,\text{ms}}_n$` is Minimal
+### Theorem 3: $`A^{\forall ,\text{ms}}_n`$ is Minimal
 
 Similar to Theorem 1, but accounting for merge/split states.
 
-`$\blacksquare$`
+$`\blacksquare`$
 
 ---
 
@@ -801,34 +801,34 @@ Total: O(n × 4^{2n} / √(2n+1))
 
 ### Property 2: Construction Complexity
 
-**Time**: `$\mathcal{O}(|\text{states}| \times  |\text{alphabet}| \times  \text{poly}(n)$`)
-**Space**: `$\mathcal{O}(\lvert \text{states}\rvert \times  n^{2})$`
+**Time**: $`\mathcal{O}(|\text{states}| \times  |\text{alphabet}| \times  \text{poly}(n)`$)
+**Space**: $`\mathcal{O}(\lvert \text{states}\rvert \times  n^{2})`$
 
 ---
 
 ### Property 3: Query Complexity
 
-**Given `$A^{\forall ,\chi }_n$` and word w**:
+**Given $`A^{\forall ,\chi }_n`$ and word w**:
 
-**Time**: `$\mathcal{O}(\lvert x\rvert \times  n)$` to check if `$x \in$` `$L^\chi _{\text{Lev}}(n, w)$`
+**Time**: $`\mathcal{O}(\lvert x\rvert \times  n)`$ to check if $`x \in`$ $`L^\chi _{\text{Lev}}(n, w)`$
 
 **Process**:
-1. Compute h_n(w, x) incrementally: `$\mathcal{O}(\lvert x\rvert \times  n)$`
-2. Traverse `$A^{\forall ,\chi }_n$`: `$\mathcal{O}(\lvert x\rvert)$` transitions
-3. Check final state: `$\mathcal{O}(1)$`
+1. Compute h_n(w, x) incrementally: $`\mathcal{O}(\lvert x\rvert \times  n)`$
+2. Traverse $`A^{\forall ,\chi }_n`$: $`\mathcal{O}(\lvert x\rvert)`$ transitions
+3. Check final state: $`\mathcal{O}(1)`$
 
-**Space**: `$\mathcal{O}(n)$` for current state
+**Space**: $`\mathcal{O}(n)`$ for current state
 
 ---
 
 ### Property 4: Applicability
 
 **Works for**:
-- Any alphabet `$\Sigma$`
+- Any alphabet $`\Sigma`$
 - Any word length |w|
 - Any maximum distance n
 
-**Limitation**: Exponential state count in n limits practical use to small n (typically `$n \le  3).$`
+**Limitation**: Exponential state count in n limits practical use to small n (typically $`n \le  3).`$
 
 ---
 
@@ -838,15 +838,15 @@ Total: O(n × 4^{2n} / √(2n+1))
 
 | Concept | Definition | Page | Section |
 |---------|-----------|------|---------|
-`$| d^\chi _L |$` Def. 1-3 | 3-5 | 2 |
-| `$L^\chi _{\text{Lev}}(n,w)$` | Def. 4 | 6 | 2 |
-| `$A^{\text{ND},\chi }_n(w)$` | Def. 6 | 9 | 3 |
-`$| \beta (x, w) |$` Def. 7 | 17 | 4 |
-| `$\delta ^{D,\chi }_e$` | Def. 7 | 14 | 4 |
-`$| \le ^\chi _s |$` Def. 11 | 18 | 4 |
-`$| \sqcup A |$` Def. 12 | 21 | 4 |
-| `$A^{\forall ,\chi }_n$` | Def. 15 | 29 | 5 |
-`$| I^\chi _s, M^\chi _s |$` Def. 15 | 30-33 | 5 |
+| $`d^\chi _L`$ | Def. 1-3 | 3-5 | 2 |
+| $`L^\chi _{\text{Lev}}(n,w)`$ | Def. 4 | 6 | 2 |
+| $`A^{\text{ND},\chi }_n(w)`$ | Def. 6 | 9 | 3 |
+| $`\beta (x, w)`$ | Def. 7 | 17 | 4 |
+| $`\delta ^{D,\chi }_e`$ | Def. 7 | 14 | 4 |
+| $`\le ^\chi _s`$ | Def. 11 | 18 | 4 |
+| $`\sqcup A`$ | Def. 12 | 21 | 4 |
+| $`A^{\forall ,\chi }_n`$ | Def. 15 | 29 | 5 |
+| $`I^\chi _s, M^\chi _s`$ | Def. 15 | 30-33 | 5 |
 | r_n, f_n, m_n | Def. 16-17 | 40-42 | 5 |
 
 ### Key Theorems
@@ -863,7 +863,7 @@ Total: O(n × 4^{2n} / √(2n+1))
 
 The theoretical foundations establish:
 
-1. ✅ **Distance definitions** for three variants `$(\varepsilon , t,$` ms)
+1. ✅ **Distance definitions** for three variants $`(\varepsilon , t,`$ ms)
 2. ✅ **NFA construction** with correctness proof
 3. ✅ **DFA construction** using bit vector encoding
 4. ✅ **Subsumption relation** for state minimization
@@ -872,9 +872,9 @@ The theoretical foundations establish:
 7. ✅ **Minimality proofs** (Section 7)
 8. ✅ **Complexity analysis** (asymptotic and concrete)
 
-**Critical warning**: Triangle inequality fails for `$d^t_L$`!
+**Critical warning**: Triangle inequality fails for $`d^t_L`$!
 
-**Main achievement**: `$A^{\forall ,\chi }_n$` is a **parameter-free, minimal, universal** automaton for fuzzy string matching.
+**Main achievement**: $`A^{\forall ,\chi }_n`$ is a **parameter-free, minimal, universal** automaton for fuzzy string matching.
 
 ---
 
