@@ -77,8 +77,19 @@ crate = "epub"
 allow = ["GPL-3.0"]
 
 [bans]
-# "warn" for now: this tree carries many transitive duplicates that cannot be
-# resolved from here. Ratchet to "deny" once the list is empty.
+# "warn", and deliberately so -- this is a settled decision, not a pending ratchet.
+#
+# libdictenstein sets this to "deny" with an enumerated skip list, because it has
+# only a handful of duplicates and they are stable. That does not transfer here:
+# this tree's duplicates are dominated by proc-macro ecosystem churn (syn, quote,
+# proc-macro2, shlex, rustc-hash) plus transitive pins in upstream crates, none of
+# which are resolvable from this manifest. A skip list would need an entry per
+# duplicate and an edit on every routine dependency bump -- maintenance friction
+# that buys no additional safety, since a genuinely new duplicate would simply be
+# appended to it by whoever hit the failure.
+#
+# Change this to "deny" if and when the duplicate count falls to a handful that
+# stays stable across updates, as it did for libdictenstein.
 multiple-versions = "warn"
 wildcards = "deny"
 
