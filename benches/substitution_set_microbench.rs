@@ -21,8 +21,8 @@ fn generate_byte_pairs(count: usize, seed: u64) -> Vec<(u8, u8)> {
     let mut rng = StdRng::seed_from_u64(seed);
     (0..count)
         .map(|_| {
-            let a = rng.gen_range(b'a'..=b'z');
-            let b = rng.gen_range(b'a'..=b'z');
+            let a = rng.random_range(b'a'..=b'z');
+            let b = rng.random_range(b'a'..=b'z');
             (a, b)
         })
         .collect()
@@ -36,8 +36,8 @@ fn generate_char_pairs(count: usize, seed: u64) -> Vec<(char, char)> {
         .collect();
     (0..count)
         .map(|_| {
-            let a = chars[rng.gen_range(0..chars.len())];
-            let b = chars[rng.gen_range(0..chars.len())];
+            let a = chars[rng.random_range(0..chars.len())];
+            let b = chars[rng.random_range(0..chars.len())];
             (a, b)
         })
         .collect()

@@ -9,7 +9,7 @@
 #[cfg(feature = "rand")]
 use rand::rngs::StdRng;
 #[cfg(feature = "rand")]
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 #[cfg(feature = "rand")]
 use rand::{Rng, SeedableRng};
 
@@ -169,11 +169,11 @@ impl TypoGenerator {
 
     fn apply_random_edit(&mut self, word: &str) -> String {
         if word.is_empty() {
-            return self.alphabet[self.rng.gen_range(0..self.alphabet.len())].to_string();
+            return self.alphabet[self.rng.random_range(0..self.alphabet.len())].to_string();
         }
 
         let chars: Vec<char> = word.chars().collect();
-        let edit_type = self.rng.gen_range(0..4);
+        let edit_type = self.rng.random_range(0..4);
 
         match edit_type {
             0 => self.apply_deletion(&chars),
@@ -188,15 +188,15 @@ impl TypoGenerator {
             return String::new();
         }
 
-        let pos = self.rng.gen_range(0..chars.len());
+        let pos = self.rng.random_range(0..chars.len());
         let mut result = chars.to_vec();
         result.remove(pos);
         result.iter().collect()
     }
 
     fn apply_insertion(&mut self, chars: &[char]) -> String {
-        let pos = self.rng.gen_range(0..=chars.len());
-        let new_char = self.alphabet[self.rng.gen_range(0..self.alphabet.len())];
+        let pos = self.rng.random_range(0..=chars.len());
+        let new_char = self.alphabet[self.rng.random_range(0..self.alphabet.len())];
 
         let mut result = chars.to_vec();
         result.insert(pos, new_char);
@@ -208,8 +208,8 @@ impl TypoGenerator {
             return String::new();
         }
 
-        let pos = self.rng.gen_range(0..chars.len());
-        let new_char = self.alphabet[self.rng.gen_range(0..self.alphabet.len())];
+        let pos = self.rng.random_range(0..chars.len());
+        let new_char = self.alphabet[self.rng.random_range(0..self.alphabet.len())];
 
         let mut result = chars.to_vec();
         result[pos] = new_char;
@@ -221,7 +221,7 @@ impl TypoGenerator {
             return chars.iter().collect();
         }
 
-        let pos = self.rng.gen_range(0..chars.len() - 1);
+        let pos = self.rng.random_range(0..chars.len() - 1);
         let mut result = chars.to_vec();
         result.swap(pos, pos + 1);
         result.iter().collect()
@@ -299,7 +299,7 @@ impl QueryWorkload {
         let mut queries = Vec::with_capacity(num_queries);
 
         for _ in 0..num_queries {
-            let sample = rng.gen_range(0..sampling_total);
+            let sample = rng.random_range(0..sampling_total);
             let idx = cumulative.partition_point(|&(_, cum)| cum <= sample);
 
             let word = cumulative[idx].0;

@@ -1,0 +1,94 @@
+# cargo-deny configuration for liblevenshtein.
+#
+# Added 2026-07 after a fleet-wide OSV sweep found five advisories in this locked
+# tree, including two denial-of-service issues in quick-xml that arrived through a
+# pinned transitive dependency rather than anything declared here. Nothing was
+# checking, so nothing noticed.
+#
+#     cargo deny check
+#
+# Mirrors the configuration in the libdictenstein repository; keep them in step.
+
+[graph]
+# The optional document-format stack (calamine, docx-rs, epub, pdf-extract, lopdf)
+# is where the parser advisories live, so a default-features-only check would miss
+# exactly the interesting part of this tree.
+all-features = true
+
+[advisories]
+yanked = "deny"
+
+# Every entry MUST carry a reason and a REVIEW-BY date. An advisory with no fixed
+# version is a standing risk to re-evaluate, not something to mute permanently.
+ignore = [
+  { id = "RUSTSEC-2025-0141", reason = "REVIEW-BY 2026-10-31. bincode is unmaintained with no fixed version; 3.0.0 is a tombstone release containing only a compiler error, so upgrading is impossible. Pinned `<3` here and in libdictenstein. Migration to the maintained bincode-next fork is planned fleet-wide." },
+  { id = "RUSTSEC-2026-0192", reason = "REVIEW-BY 2026-10-31. ttf-parser is unmaintained with no fixed version. Reached only transitively via pdf-extract, under the optional `pdf` document-format feature, and only when parsing local files the caller already chose to open. Re-evaluate if pdf-extract gains a replacement font parser." },
+]
+
+[licenses]
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "BSL-1.0",
+  "MPL-2.0",
+  "CC0-1.0",
+  "Unlicense",
+  # libbz2-rs-sys. The bzip2 licence is a permissive BSD-style licence despite the
+  # non-standard SPDX identifier.
+  "bzip2-1.0.6",
+]
+confidence-threshold = 0.9
+unused-allowed-license = "allow"
+
+# ---------------------------------------------------------------------------
+# ⚠ COPYLEFT EXPOSURE — needs an owner decision, recorded here rather than hidden.
+# ---------------------------------------------------------------------------
+# `epub` 2.1.5 is licensed **GPL-3.0**, a strong copyleft licence, while this crate
+# ships Apache-2.0. Apache-2.0 is only one-way compatible with GPL-3.0: Apache code
+# may be incorporated into a GPL-3.0 work, but a distributed binary that links
+# GPL-3.0 code must itself be licensed GPL-3.0. Anyone distributing a build with
+# this dependency enabled therefore inherits GPL-3.0 obligations for the combined
+# work, which is almost certainly not the intent of an Apache-2.0 library.
+#
+# Scoped rather than eliminated because the exposure is already bounded: `epub` is
+# optional and reached only through the `grep-epub` feature (and `grep-documents`,
+# which includes it). Default builds, and every other feature combination, are
+# unaffected.
+#
+# Options, for whoever picks this up:
+#   1. Leave as-is and document that `grep-epub` produces a GPL-3.0 binary.
+#   2. Replace `epub` with a permissively-licensed EPUB reader (an EPUB is a ZIP of
+#      XHTML; the existing zip + quick-xml dependencies already cover the parts
+#      needed for text extraction).
+#   3. Drop the feature.
+#
+# This entry allows the licence for that one crate only, so any *other* copyleft
+# dependency still fails the gate.
+[licenses.private]
+ignore = false
+
+[[licenses.exceptions]]
+crate = "epub"
+allow = ["GPL-3.0"]
+
+[bans]
+# "warn" for now: this tree carries many transitive duplicates that cannot be
+# resolved from here. Ratchet to "deny" once the list is empty.
+multiple-versions = "warn"
+wildcards = "deny"
+
+deny = [
+  { crate = "bincode:>=3.0.0", reason = "bincode 3.0.0 is a deliberate tombstone release and does not compile" },
+  { crate = "paste", reason = "unmaintained (RUSTSEC-2024-0436); use `pastey`" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

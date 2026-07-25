@@ -7,7 +7,10 @@ resolver = "2"
 name = "liblevenshtein"
 version = "0.9.1"
 edition = "2021"
-rust-version = "1.70"
+# Matches the libdictenstein path dependency, whose --all-features floor is set by
+# sysinfo 0.39 (1.95). The previous 1.70 was already false: libdictenstein pulls
+# pathmap 0.2.2 (1.88) and bincode 2.0.1 / lru 0.18 (1.85).
+rust-version = "1.95"
 authors = ["Dylon Edwards <dylon.devo@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/vinary-tree/liblevenshtein-rust"
@@ -42,7 +45,10 @@ parking_lot = { version = "0.12", optional = true }
 dashmap = { version = "6.1", optional = true }
 # Serialization support (optional)
 serde = { version = "1.0", features = ["derive", "rc"], optional = true }
-bincode = { version = "2.0", features = ["serde"], optional = true }
+# Pinned below 3.0: bincode 3.0.0 is a tombstone release shipping only a README and
+# a lib.rs containing a compiler error (the crate was abandoned). RUSTSEC-2025-0141
+# records it as unmaintained; there is no fixed version.
+bincode = { version = ">=2.0, <3", features = ["serde"], optional = true }
 serde_json = { version = "1.0", optional = true }
 prost = { version = "0.14", optional = true }
 bytes = { version = "1.5", optional = true }
@@ -54,7 +60,9 @@ rustyline = { version = "18.0", optional = true }
 colored = { version = "3.0", optional = true }
 dirs = { version = "6.0", optional = true }
 # Random number generation for corpus utilities (test/benchmark use)
-rand = { version = "0.8", optional = true }
+# 0.9.3 is the floor for RUSTSEC-2026-0097 (unsound with a custom logger using
+# `rand::rng()`). 0.9 rather than 0.10 so this shares proptest's copy.
+rand = { version = "0.9.3", optional = true }
 # Parallel grep support (optional)
 rayon = { version = "1.11", optional = true }
 # Compression formats for grep (optional)
@@ -72,7 +80,10 @@ globset = { version = "0.4", optional = true }
 pdf-extract = { version = "0.12", optional = true }
 # Suppress stdout during PDF extraction (to hide pdf-extract warnings)
 gag = { version = "1.0", optional = true }
-calamine = { version = "0.35", optional = true }
+# 0.36 moves to quick-xml 0.41, clearing RUSTSEC-2026-0194 (quadratic run time on
+# duplicate attribute names) and RUSTSEC-2026-0195 (unbounded namespace allocation),
+# both of which reached us only through calamine 0.35's pinned quick-xml 0.39.
+calamine = { version = "0.36", optional = true }
 docx-rs = { version = "0.4", optional = true }
 epub = { version = "2.1", optional = true }
 quick-xml = { version = "0.41", optional = true }
@@ -81,7 +92,8 @@ tempfile = { version = "3.8", optional = true }
 # Unicode normalization for accent-insensitive matching and (?u:NFC) flag
 unicode-normalization = { version = "0.1", optional = true }
 # Memory-mapped I/O for persistent data structures
-memmap2 = { version = "0.9", optional = true }
+# Floor 0.9.11 excludes RUSTSEC-2026-0186 (unchecked pointer offset).
+memmap2 = { version = "0.9.11", optional = true }
 # SIMD optimization uses std::arch (no external dependencies needed)
 
 # WASM bindings (optional, for browser/Node.js targets)
