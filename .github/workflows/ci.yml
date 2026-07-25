@@ -193,6 +193,29 @@ jobs:
   #       # cargo clippy --no-deps --all-features -- -D warnings
   #       cargo clippy --no-deps -- -D warnings
 
+  # ---------------------------------------------------------------------
+  # Supply-chain gate: published advisories, licence compatibility, banned
+  # crates, and permitted sources. Configured in deny.toml.
+  #
+  # Added after a fleet-wide OSV sweep (2026-07) found five advisories in the
+  # locked tree -- including two quick-xml denial-of-service issues that
+  # arrived pinned inside document-format dependencies rather than through
+  # anything declared in Cargo.toml, so reading our own manifest would never
+  # have revealed them.
+  #
+  # This job can fail on a commit that changes nothing, because advisories are
+  # published against code that is already merged. That is the point.
+  # ---------------------------------------------------------------------
+  supply-chain:
+    name: Supply chain (cargo-deny)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: EmbarkStudios/cargo-deny-action@v2
+      with:
+        command: check advisories bans sources licenses
+
   wasm:
     name: WASM Build Check
     runs-on: ubuntu-latest
