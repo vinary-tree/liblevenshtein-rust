@@ -21,7 +21,6 @@ yanked = "deny"
 # Every entry MUST carry a reason and a REVIEW-BY date. An advisory with no fixed
 # version is a standing risk to re-evaluate, not something to mute permanently.
 ignore = [
-  { id = "RUSTSEC-2025-0141", reason = "REVIEW-BY 2026-10-31. bincode is unmaintained with no fixed version; 3.0.0 is a tombstone release containing only a compiler error, so upgrading is impossible. Pinned `<3` here and in libdictenstein. Migration to the maintained bincode-next fork is planned fleet-wide." },
   { id = "RUSTSEC-2026-0192", reason = "REVIEW-BY 2026-10-31. ttf-parser is unmaintained with no fixed version. Reached only transitively via pdf-extract, under the optional `pdf` document-format feature, and only when parsing local files the caller already chose to open. Re-evaluate if pdf-extract gains a replacement font parser." },
 ]
 
@@ -84,7 +83,10 @@ multiple-versions = "warn"
 wildcards = "deny"
 
 deny = [
-  { crate = "bincode:>=3.0.0", reason = "bincode 3.0.0 is a deliberate tombstone release and does not compile" },
+  # The abandoned crate itself, at any version. We use `bincode-next`, the
+  # maintained fork, declared under the name `bincode` via a package rename --
+  # so this ban catches a transitive dependency dragging the real one back in.
+  { crate = "bincode", reason = "unmaintained (RUSTSEC-2025-0141); 3.0.0 is a tombstone containing only a compiler error. Use the maintained `bincode-next` fork." },
   { crate = "paste", reason = "unmaintained (RUSTSEC-2024-0436); use `pastey`" },
 ]
 
