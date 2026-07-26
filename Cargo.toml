@@ -89,7 +89,6 @@ gag = { version = "1.0", optional = true }
 # both of which reached us only through calamine 0.35's pinned quick-xml 0.39.
 calamine = { version = "0.36", optional = true }
 docx-rs = { version = "0.4", optional = true }
-epub = { version = "2.1", optional = true }
 quick-xml = { version = "0.41", optional = true }
 leptess = { version = "0.14", optional = true }
 tempfile = { version = "3.8", optional = true }
@@ -423,7 +422,9 @@ grep-pdf = ["pdf-extract", "gag"]
 grep-pdf-ocr = ["grep-pdf", "leptess", "tempfile"]
 grep-docx = ["docx-rs"]
 grep-xlsx = ["calamine"]
-grep-epub = ["epub"]
+# Uses `zip` + `quick-xml` directly rather than the `epub` crate, which is GPL-3.0
+# and would impose copyleft on any binary built with this feature.
+grep-epub = ["quick-xml", "zip"]
 grep-odt = ["quick-xml", "zip"]
 grep-documents = ["grep-pdf", "grep-docx", "grep-xlsx", "grep-epub", "grep-odt"]
 
