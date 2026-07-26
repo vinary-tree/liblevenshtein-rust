@@ -134,7 +134,7 @@ jobs:
           7z a ../${{ matrix.platform.artifact_name }}.zip *
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.platform.artifact_name }}
           path: |
@@ -198,7 +198,7 @@ jobs:
         run: cargo deb --no-build --no-strip
 
       - name: Upload .deb package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: debian-package
           path: target/debian/*.deb
@@ -267,7 +267,7 @@ jobs:
         run: cargo generate-rpm
 
       - name: Upload .rpm package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rpm-package
           path: target/generate-rpm/*.rpm
@@ -382,7 +382,7 @@ jobs:
           echo "=== End package list ==="
 
       - name: Upload Arch package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: arch-package-${{ matrix.arch.name }}
           path: output/*.pkg.tar.zst
