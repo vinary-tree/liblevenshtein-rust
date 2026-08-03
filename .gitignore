@@ -1,5 +1,6 @@
 # Rust
 /target/
+/liblevenshtein-macros/target/
 **/*.rs.bk
 *.pdb
 
