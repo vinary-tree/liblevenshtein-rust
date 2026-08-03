@@ -1,1238 +1,456 @@
-# Generalized Operation Type System Design
+# Generalized operation sets
 
-[← Documentation Index](../README.md)
+**Status:** implemented · **Audience:** API users, maintainers, and verifier
+authors · **Persistence:** bincode or Protocol Buffers, optionally wrapped in
+gzip
 
-**Date**: 2025-11-12
-**Status**: 📋 **DESIGN PHASE** - Not yet implemented
-**Applies To**: Both lazy and universal Levenshtein automata
-**Estimated Effort**: 2-3 weeks implementation + 1 week testing
+`OperationSet` is the shipped runtime grammar for generalized edit distance.
+It describes which source/target slices an alignment may consume and what each
+step costs. `GeneralizedAutomaton` validates that grammar and evaluates it on an
+exact, sparse alignment grid.
 
----
+This document is the reconstructible design reference for the public model,
+its execution boundary, and its persistence contract. The detailed traversal
+proof argument lives in the
+[generalized-automaton repair](generalized-automaton-repair.md), and executable
+pseudocode lives in the
+[exact generalized-operation grid](../algorithms/14-generalized-operation-grid/README.md).
 
-## Executive Summary
+![Generalized operations become costed edges in an exact sparse alignment grid.](../diagrams/automata/generalized-operation-grid.svg)
 
-This document proposes a generalized operation type system to replace the current hardcoded `Algorithm` enum with a flexible, data-driven framework based on the TCS 2011 paper (Section 3). This will enable:
+## 1. Scope and architectural boundary
 
-- **Custom operation types** beyond standard Levenshtein (Unicode normalization, case folding, etc.)
-- **Weighted operations** with different costs (confidence-scored OCR corrections)
-- **Restricted substitutions** (keyboard proximity, phonetic matching)
-- **Backward compatibility** with existing Standard/Transposition/MergeAndSplit algorithms
+The runtime system consists of four layers:
 
-**Key Benefits**:
-- Extensibility without modifying core automaton code
-- Data-driven operation definitions (no recompilation needed)
-- Supports domain-specific edit distances (NLP, bioinformatics, spell checking)
-- Maintains performance through static dispatch where possible
+| Layer | Public type | Responsibility |
+|---|---|---|
+| Rule | `OperationType` | Consumption arity, exact persisted weight, applicability, and diagnostic name |
+| Grammar | `OperationSet` | Ordered rule collection, validation, presets, and persistence |
+| Cost domain | `CostScale` | Exact integer representation of the configured decimal weights |
+| Evaluator | `GeneralizedAutomaton` | Least-cost bounded alignment over Unicode scalar positions |
 
----
+This API does not replace every use of `Algorithm`. The `Algorithm` enum still
+selects fixed unit-cost dictionary-query behavior, and `UniversalAutomaton`
+still provides compile-time-specialized position variants. `OperationSet` plus
+`GeneralizedAutomaton` is the runtime-configurable correctness path for
+fractional weights, restricted pairs, and arbitrary non-zero source/target
+arities.
 
-## Table of Contents
+That distinction prevents a runtime grammar from being silently approximated
+by a fixed unit-cost state machine. In particular, the operation-complete grid
+handles merge, split, digraph, and other multi-scalar rules directly. The
+legacy streaming `GeneralizedState` types remain public for compatibility but
+report unsupported arities rather than ignoring them.
 
-1. [Problem Statement](#1-problem-statement)
-2. [Theoretical Foundation](#2-theoretical-foundation)
-3. [Proposed API Design](#3-proposed-api-design)
-4. [Migration Strategy](#4-migration-strategy)
-5. [Performance Considerations](#5-performance-considerations)
-6. [Use Case Examples](#6-use-case-examples)
-7. [Implementation Phases](#7-implementation-phases)
-8. [Testing Strategy](#8-testing-strategy)
-9. [Backward Compatibility](#9-backward-compatibility)
-10. [Future Extensions](#10-future-extensions)
+## 2. Semantic model
 
----
+Let `$`x`$` be the source or dictionary word and `$`y`$` the target or query.
+Lengths and consumption counts are numbers of Unicode scalar values. The
+semantic part of an operation is:
 
-## 1. Problem Statement
+```math
+t=\langle t^x,t^y,t^w,a\rangle,
+```
 
-### Current Limitations
+where:
 
-**File**: `src/transducer/algorithm.rs`
+- `$`t^x`$` is the number of source scalars consumed;
+- `$`t^y`$` is the number of target scalars consumed;
+- `$`t^w\ge 0`$` is the operation cost; and
+- `$`a`$` is the applicability predicate for the two consumed slices.
+
+The stored name is intentionally outside this tuple. It exists for diagnostics
+and profiling; renaming an operation cannot change acceptance or distance.
+
+An alignment cell `$`(i,j)`$` has consumed the first `$`i`$` source scalars and
+the first `$`j`$` target scalars. An applicable rule creates the edge:
+
+```math
+(i,j)\longrightarrow(i+t^x,j+t^y)
+```
+
+with cost `$`t^w`$`. Acceptance means reaching `$`(|x|,|y|)`$` without
+exceeding the integer budget configured on `GeneralizedAutomaton`.
+
+### 2.1 Applicability is explicit
+
+`OperationApplicability` has four shipped variants:
+
+| Variant | Rule |
+|---|---|
+| `Any` | Every pair of slices with the declared scalar arity is eligible. |
+| `Equal` | The complete source and target slices must be equal; validation requires equal arity. |
+| `AdjacentTranspose` | Exactly two source and two target scalars are consumed, and the target pair reverses the source pair. |
+| `Listed(SubstitutionSet)` | The exact directional source/target pair must occur in the restriction set. |
+
+`OperationType::new` selects `Equal` for a zero-cost operation and `Any` for a
+positive-cost operation. Use `with_restriction`, `adjacent_transposition`, or
+`with_applicability` when the operation has narrower semantics. Do not encode
+behavior in a name such as `"transpose"`; only the applicability discriminator
+controls behavior.
+
+Listed substitutions are directional. To admit both `"ph" -> "f"` and
+`"f" -> "ph"`, insert both pairs, normally as separate operations because
+their declared arities differ.
+
+### 2.2 Unicode and raw-byte restrictions
+
+`can_apply_str` is the evaluator-facing predicate. It checks declared arity in
+Unicode scalars and then tests the exact UTF-8 slices. Consequently `"é"` is
+one consumed scalar even though it occupies two UTF-8 bytes. The library does
+not normalize strings or combine grapheme clusters automatically.
+
+`SubstitutionSet` also retains raw single-byte pairs for byte-oriented callers
+and lossless persistence. Such pairs are distinct from UTF-8 string pairs.
+Applications must choose and document normalization before evaluation if
+canonical-equivalence or grapheme semantics are required.
+
+### 2.3 Exact weights and bounded results
+
+`CostScale` converts every configured finite decimal weight to a common integer
+domain. It interprets the shortest round-tripping decimal representation of
+the `f64`, reduces the value as a rational, and derives the least common
+denominator. For denominator `$`q`$`, the public integer budget `$`k`$` becomes
+`$`kq`$` and a rule weight `$`w`$` becomes an exact integer
+`$`\operatorname{scaled}(w)`$`.
+
+The recurrence is therefore integer-exact:
+
+```math
+D[i+t^x,j+t^y]
+=\min\left(D[i+t^x,j+t^y],
+           D[i,j]+\operatorname{scaled}(t^w)\right).
+```
+
+`scaled_distance` returns `Some(cost)` only when the least configured alignment
+fits the automaton's budget; it is not an unbounded distance function. Convert
+the returned numerator for display with `CostScale::from_scaled`. NaN,
+infinity, negative values, unrepresentable denominators, and checked-arithmetic
+overflow are errors rather than rounded costs.
+
+## 3. Construction and validation
+
+The builder is deliberately mechanical: it preserves insertion order and
+returns the collected rules. The checked construction boundary is
+`GeneralizedAutomaton::try_with_operations`, which calls
+`OperationSet::validate` before deriving a cost scale.
+
+Order is observable through iteration and persistence, but the evaluator
+relaxes each destination by minimum cost, so reordering otherwise identical
+rules cannot change the least distance.
 
 ```rust
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Algorithm {
-    Standard,        // Hardcoded: match, insert, delete, substitute
-    Transposition,   // Hardcoded: + transpose
-    MergeAndSplit,   // Hardcoded: + merge, split
-}
-```
-
-**Problems**:
-
-1. **Not Extensible**: Adding new operation types requires:
-   - Modifying the enum
-   - Updating match arms in transition logic
-   - Recompiling the library
-
-2. **No Custom Costs**: All operations have weight 1.0 (except match = 0.0)
-   - Cannot model confidence scores
-   - Cannot prioritize certain operations
-
-3. **No Restricted Substitutions**: Cannot limit which character pairs can be substituted
-   - Cannot model keyboard proximity (q↔w but not q↔z)
-   - Cannot model phonetic similarity (f↔ph)
-
-4. **Hardcoded Logic**: Operation definitions embedded in code, not data
-   - Cannot load custom operations from config
-   - Cannot experiment with new operations without recompilation
-
-### Real-World Use Cases Blocked
-
-#### Use Case 1: OCR Correction with Confidence Scores
-```
-Problem: OCR engine confuses 'O' with '0', 'I' with '1', 'l' with 'I'
-Desired: Weight substitutions by confusion probability
-- O↔0: weight 0.2 (common confusion, low cost)
-- I↔1: weight 0.3
-- arbitrary: weight 1.0 (standard cost)
-```
-
-**Blocked**: No way to specify per-operation weights.
-
-#### Use Case 2: Unicode Normalization
-```
-Problem: Query "café" should match "cafe" in dictionary
-Desired: Custom operation: é → e (decompose diacritic) with weight 0.1
-```
-
-**Blocked**: No way to define custom operations.
-
-#### Use Case 3: Keyboard Proximity Spell Checking
-```
-Problem: QWERTY typos "nane" → "name" (m/n adjacent) more likely than "pane" → "name"
-Desired: Weight substitutions by keyboard distance
-- Adjacent keys: weight 0.3
-- Nearby keys: weight 0.6
-- Distant keys: weight 1.0
-```
-
-**Blocked**: No per-pair substitution weights.
-
-#### Use Case 4: Phonetic Matching
-```
-Problem: "ph" sounds like "f", "c" sounds like "k" or "s"
-Desired: ph↔f with weight 0.2, c↔k/c↔s with weight 0.3
-```
-
-**Blocked**: No multi-character operations with custom weights.
-
----
-
-## 2. Theoretical Foundation
-
-![Operation sets: how the Standard, Transposition, and Merge-and-Split presets compose edit operations from operation triples (characters consumed from the first word, characters consumed from the second word, and a weight), and how restricted substitution sets layer onto them.](../diagrams/automata/operation-sets.svg)
-
-### From TCS 2011 Paper (Section 3, Pages 2341-2342)
-
-**Operation Type**: A triple $`t = \langle t^x, t^y, t^w\rangle`$ where:
-- `t^x`: Number of characters consumed from first word
-- `t^y`: Number of characters consumed from second word
-- `t^w`: Operation weight/cost
-
-**Standard Levenshtein Operations**:
-```
-Match:         ⟨1, 1, 0⟩  (consume both, no cost)
-Substitution:  ⟨1, 1, 1⟩  (consume both, cost 1)
-Insertion:     ⟨0, 1, 1⟩  (consume second only, cost 1)
-Deletion:      ⟨1, 0, 1⟩  (consume first only, cost 1)
-Transposition: ⟨2, 2, 1⟩  (consume 2 from each, cost 1)
-```
-
-**Restricted Operations**: $`op = \langle op^x, op^y, op^r, op^w\rangle`$ where:
-- $`op^r \subseteq \Sigma^{op^x} \times \Sigma^{op^y}`$: Allowed character pair replacements ($`\Sigma`$ denotes the alphabet)
-
-**Examples**:
-```
-Keyboard QWERTY proximity:
-  op^r = {(q,w), (q,a), (w,e), (w,q), (w,s), ...}
-
-OCR confusion sets:
-  op^r = {(O,0), (0,O), (I,1), (1,I), (l,I), ...}
-
-Phonetic similarity:
-  op^r = {(f,ph), (ph,f), (c,k), (c,s), ...}
-```
-
-### Bounded Diagonal Property (Theorem 8.2)
-
-**Constraint**: For universal automata to exist:
-- All **zero-weighted** operations must be **length-preserving**
-- i.e., if `t^w = 0`, then `t^x = t^y`
-
-**Implication**: Match operation must consume same characters from both words ($`\langle 1,1,0\rangle`$).
-
-### Operation Set Requirements
-
-An operation set `Op` must satisfy:
-1. **Contains match**: $`\langle 1, 1, 0\rangle \in Op`$ (required for bounded diagonal)
-2. **Finite**: $`\lvert Op\rvert < \infty`$
-3. **Bounded consumption**: $`\max(t^x, t^y) \le k`$ for some constant $`k`$
-
----
-
-## 3. Proposed API Design
-
-### Core Types
-
-**File**: `src/transducer/operation.rs` (new)
-
-```rust
-/// Operation type from TCS 2011 paper
-///
-/// Represents a single edit operation as a triple ⟨t^x, t^y, t^w⟩
-#[derive(Debug, Clone, PartialEq)]
-pub struct OperationType {
-    /// Characters consumed from first word (t^x)
-    pub x_consumed: u8,
-
-    /// Characters consumed from second word (t^y)
-    pub y_consumed: u8,
-
-    /// Operation weight/cost (t^w)
-    ///
-    /// - 0.0: No cost (match operation)
-    /// - 1.0: Standard cost
-    /// - Other: Custom weights
-    pub weight: f32,
-
-    /// Optional: Restricted character pairs (op^r)
-    ///
-    /// If None: operation applies to all character pairs
-    /// If Some: operation only applies to pairs in the set
-    pub restriction: Option<SubstitutionSet>,
-
-    /// Human-readable name for debugging
-    pub name: &'static str,
-}
-
-impl OperationType {
-    /// Create a new operation type
-    pub fn new(x_consumed: u8, y_consumed: u8, weight: f32, name: &'static str) -> Self {
-        Self {
-            x_consumed,
-            y_consumed,
-            weight,
-            restriction: None,
-            name,
-        }
-    }
-
-    /// Create operation with restricted character pairs
-    pub fn with_restriction(
-        x_consumed: u8,
-        y_consumed: u8,
-        weight: f32,
-        restriction: SubstitutionSet,
-        name: &'static str,
-    ) -> Self {
-        Self {
-            x_consumed,
-            y_consumed,
-            weight,
-            restriction: Some(restriction),
-            name,
-        }
-    }
-
-    /// Check if operation is a match (zero-weighted)
-    pub fn is_match(&self) -> bool {
-        self.weight == 0.0
-    }
-
-    /// Check if operation is length-preserving
-    pub fn is_length_preserving(&self) -> bool {
-        self.x_consumed == self.y_consumed
-    }
-
-    /// Check if operation applies to character pair (a, b)
-    pub fn applies_to(&self, a: char, b: char) -> bool {
-        match &self.restriction {
-            None => true,  // Unrestricted
-            Some(set) => set.allows(a, b),
-        }
-    }
-}
-```
-
-### Operation Set
-
-```rust
-/// Set of operation types defining custom edit distance
-#[derive(Debug, Clone)]
-pub struct OperationSet {
-    /// All operation types
-    operations: Vec<OperationType>,
-
-    /// Cached: index of match operation (for fast lookup)
-    match_index: usize,
-
-    /// Cached: maximum character consumption
-    max_consumption: u8,
-}
-
-impl OperationSet {
-    /// Create operation set from types
-    ///
-    /// # Panics
-    ///
-    /// Panics if no match operation (⟨1, 1, 0⟩) is present
-    pub fn new(operations: Vec<OperationType>) -> Self {
-        // Validate: must contain match operation
-        let match_index = operations
-            .iter()
-            .position(|op| op.is_match() && op.x_consumed == 1 && op.y_consumed == 1)
-            .expect("Operation set must contain match operation ⟨1,1,0⟩");
-
-        // Compute max consumption
-        let max_consumption = operations
-            .iter()
-            .map(|op| op.x_consumed.max(op.y_consumed))
-            .max()
-            .unwrap_or(1);
-
-        Self {
-            operations,
-            match_index,
-            max_consumption,
-        }
-    }
-
-    /// Get all operations
-    pub fn operations(&self) -> &[OperationType] {
-        &self.operations
-    }
-
-    /// Get match operation
-    pub fn match_operation(&self) -> &OperationType {
-        &self.operations[self.match_index]
-    }
-
-    /// Get maximum character consumption
-    pub fn max_consumption(&self) -> u8 {
-        self.max_consumption
-    }
-
-    /// Find operations applicable to character pair
-    pub fn applicable_operations(&self, a: char, b: char) -> impl Iterator<Item = &OperationType> {
-        self.operations.iter().filter(move |op| op.applies_to(a, b))
-    }
-}
-```
-
-### Preset Operation Sets
-
-```rust
-impl OperationSet {
-    /// Standard Levenshtein operations
-    pub fn standard() -> Self {
-        Self::new(vec![
-            OperationType::new(1, 1, 0.0, "match"),
-            OperationType::new(1, 1, 1.0, "substitute"),
-            OperationType::new(0, 1, 1.0, "insert"),
-            OperationType::new(1, 0, 1.0, "delete"),
-        ])
-    }
-
-    /// Levenshtein with transposition
-    pub fn transposition() -> Self {
-        Self::new(vec![
-            OperationType::new(1, 1, 0.0, "match"),
-            OperationType::new(1, 1, 1.0, "substitute"),
-            OperationType::new(0, 1, 1.0, "insert"),
-            OperationType::new(1, 0, 1.0, "delete"),
-            OperationType::new(2, 2, 1.0, "transpose"),
-        ])
-    }
-
-    /// Keyboard proximity substitutions (QWERTY)
-    pub fn keyboard_qwerty() -> Self {
-        let proximity = SubstitutionSet::keyboard_qwerty();
-        Self::new(vec![
-            OperationType::new(1, 1, 0.0, "match"),
-            OperationType::with_restriction(1, 1, 0.3, proximity.clone(), "keyboard_subst"),
-            OperationType::new(1, 1, 1.0, "substitute"),  // Fallback
-            OperationType::new(0, 1, 1.0, "insert"),
-            OperationType::new(1, 0, 1.0, "delete"),
-        ])
-    }
-
-    /// OCR confusion-weighted substitutions
-    pub fn ocr_friendly() -> Self {
-        let ocr_confusion = SubstitutionSet::ocr_friendly();
-        Self::new(vec![
-            OperationType::new(1, 1, 0.0, "match"),
-            OperationType::with_restriction(1, 1, 0.2, ocr_confusion, "ocr_subst"),
-            OperationType::new(1, 1, 1.0, "substitute"),  // Fallback
-            OperationType::new(0, 1, 1.0, "insert"),
-            OperationType::new(1, 0, 1.0, "delete"),
-        ])
-    }
-
-    /// Phonetic similarity substitutions
-    pub fn phonetic() -> Self {
-        let phonetic = SubstitutionSet::phonetic_basic();
-        Self::new(vec![
-            OperationType::new(1, 1, 0.0, "match"),
-            OperationType::with_restriction(1, 1, 0.3, phonetic, "phonetic_subst"),
-            OperationType::new(1, 1, 1.0, "substitute"),  // Fallback
-            OperationType::new(0, 1, 1.0, "insert"),
-            OperationType::new(1, 0, 1.0, "delete"),
-        ])
-    }
-}
-```
-
-### Builder Pattern
-
-```rust
-/// Builder for custom operation sets
-pub struct OperationSetBuilder {
-    operations: Vec<OperationType>,
-}
-
-impl OperationSetBuilder {
-    pub fn new() -> Self {
-        Self {
-            operations: Vec::new(),
-        }
-    }
-
-    /// Add match operation (required)
-    pub fn with_match(mut self) -> Self {
-        self.operations.push(OperationType::new(1, 1, 0.0, "match"));
-        self
-    }
-
-    /// Add standard operations (insert, delete, substitute)
-    pub fn with_standard_ops(mut self) -> Self {
-        self.operations.push(OperationType::new(1, 1, 1.0, "substitute"));
-        self.operations.push(OperationType::new(0, 1, 1.0, "insert"));
-        self.operations.push(OperationType::new(1, 0, 1.0, "delete"));
-        self
-    }
-
-    /// Add custom operation
-    pub fn with_operation(mut self, op: OperationType) -> Self {
-        self.operations.push(op);
-        self
-    }
-
-    /// Add weighted operation
-    pub fn with_weighted_op(
-        mut self,
-        x: u8,
-        y: u8,
-        weight: f32,
-        name: &'static str,
-    ) -> Self {
-        self.operations.push(OperationType::new(x, y, weight, name));
-        self
-    }
-
-    /// Add restricted substitution
-    pub fn with_restricted_subst(
-        mut self,
-        restriction: SubstitutionSet,
-        weight: f32,
-        name: &'static str,
-    ) -> Self {
-        self.operations.push(OperationType::with_restriction(
-            1, 1, weight, restriction, name,
-        ));
-        self
-    }
-
-    /// Build operation set
-    pub fn build(self) -> OperationSet {
-        OperationSet::new(self.operations)
-    }
-}
-
-// Usage example:
-let custom_ops = OperationSetBuilder::new()
-    .with_match()
+use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
+use liblevenshtein::transducer::{
+    OperationSetBuilder, OperationType, SubstitutionSet,
+};
+
+let mut digraphs = SubstitutionSet::new();
+digraphs.allow_str("ph", "f");
+
+let operations = OperationSetBuilder::new()
     .with_standard_ops()
-    .with_weighted_op(2, 2, 0.8, "transpose")
-    .with_restricted_subst(SubstitutionSet::keyboard_qwerty(), 0.3, "keyboard")
-    .build();
-```
-
----
-
-## 4. Migration Strategy
-
-### Phase 1: Introduce New Types Alongside Old
-
-**Goal**: Add new types without breaking existing code
-
-**Changes**:
-1. Create `src/transducer/operation.rs` with new types
-2. Keep existing `Algorithm` enum
-3. Add conversion: `impl From<Algorithm> for OperationSet`
-
-```rust
-impl From<Algorithm> for OperationSet {
-    fn from(alg: Algorithm) -> Self {
-        match alg {
-            Algorithm::Standard => OperationSet::standard(),
-            Algorithm::Transposition => OperationSet::transposition(),
-            Algorithm::MergeAndSplit => OperationSet::merge_and_split(),
-        }
-    }
-}
-```
-
-**Status**: No breaking changes
-
-### Phase 2: Update Internal APIs
-
-**Goal**: Make automaton internals use `OperationSet`
-
-**Changes**:
-1. Update lazy transition logic to use `OperationSet`
-2. Update universal successor generation to use `OperationSet`
-3. Keep public APIs accepting `Algorithm` (convert internally)
-
-```rust
-// Internal API
-impl State {
-    fn transition_internal(&self, ops: &OperationSet, ...) -> State {
-        // New implementation using ops.operations()
-    }
-
-    // Public API (backward compatible)
-    pub fn transition(&self, algorithm: Algorithm, ...) -> State {
-        let ops = OperationSet::from(algorithm);
-        self.transition_internal(&ops, ...)
-    }
-}
-```
-
-**Status**: Breaking changes to internal APIs only
-
-### Phase 3: Add New Public APIs
-
-**Goal**: Expose `OperationSet` in public APIs
-
-**Changes**:
-1. Add new methods accepting `OperationSet`
-2. Deprecate old methods accepting `Algorithm`
-3. Update examples and documentation
-
-```rust
-impl State {
-    /// New API: custom operation sets
-    pub fn transition_with_ops(&self, ops: &OperationSet, ...) -> State {
-        self.transition_internal(ops, ...)
-    }
-
-    /// Old API: deprecated but still works
-    #[deprecated(since = "0.7.0", note = "Use transition_with_ops instead")]
-    pub fn transition(&self, algorithm: Algorithm, ...) -> State {
-        let ops = OperationSet::from(algorithm);
-        self.transition_with_ops(&ops, ...)
-    }
-}
-```
-
-**Status**: Deprecation warnings, backward compatible
-
-### Phase 4: Remove Deprecated APIs (Future)
-
-**Goal**: Clean up codebase
-
-**Changes**:
-1. Remove `Algorithm` enum (breaking change)
-2. Remove deprecated methods
-3. Require `OperationSet` everywhere
-
-**Status**: Major version bump (0.x.0 → 1.0.0)
-
----
-
-## 5. Performance Considerations
-
-### Static vs Dynamic Dispatch
-
-**Problem**: Operation set is now data, not types
-- Current: `match algorithm { Standard => ..., Transposition => ... }` (static dispatch)
-- Proposed: Iterate over `ops.operations()` (dynamic dispatch)
-
-**Impact**: Potential performance regression
-
-#### Mitigation 1: Inline Common Path
-
-```rust
-// Fast path for standard operations
-if ops.is_standard() {
-    // Hardcoded standard logic (inlined)
-    return standard_transition(...);
-}
-
-// Slow path for custom operations
-return generic_transition(ops, ...);
-```
-
-#### Mitigation 2: Cache Applicability
-
-```rust
-/// Precompute which operations apply to which character pairs
-struct OperationCache {
-    /// For each char pair (a, b), list of applicable operation indices
-    cache: HashMap<(char, char), SmallVec<[usize; 4]>>,
-}
-
-impl OperationCache {
-    fn applicable_ops(&self, a: char, b: char, ops: &OperationSet) -> &[usize] {
-        self.cache.get(&(a, b))
-            .map(|v| v.as_slice())
-            .unwrap_or_else(|| {
-                // Fallback: iterate operations
-                ops.operations().iter().enumerate()
-                    .filter(|(_, op)| op.applies_to(a, b))
-                    .map(|(i, _)| i)
-                    .collect()
-            })
-    }
-}
-```
-
-#### Mitigation 3: Trait Objects with Specialization
-
-```rust
-trait OperationSetImpl {
-    fn transition(&self, state: &State, ...) -> State;
-}
-
-// Specialized implementation for standard ops
-struct StandardOps;
-impl OperationSetImpl for StandardOps {
-    fn transition(&self, state: &State, ...) -> State {
-        // Inlined, optimized standard logic
-    }
-}
-
-// Generic implementation for custom ops
-struct GenericOps {
-    ops: Vec<OperationType>,
-}
-impl OperationSetImpl for GenericOps {
-    fn transition(&self, state: &State, ...) -> State {
-        // Generic logic iterating operations
-    }
-}
-
-pub struct OperationSet {
-    impl_: Box<dyn OperationSetImpl>,
-}
-```
-
-### Benchmarking Plan
-
-**Test Scenarios**:
-1. Standard Levenshtein (baseline)
-2. Standard via `OperationSet` (measure overhead)
-3. Keyboard proximity (custom weighted)
-4. OCR confusion (restricted + weighted)
-
-**Acceptance Criteria**:
-- Standard via `OperationSet`: < 5% overhead
-- Custom operations: < 20% overhead vs hardcoded equivalent
-
----
-
-## 6. Use Case Examples
-
-### Example 1: Unicode Normalization
-
-```rust
-// Define é → e decomposition with low cost
-let unicode_norm = OperationSetBuilder::new()
-    .with_match()
-    .with_standard_ops()
-    .with_restricted_subst(
-        SubstitutionSet::from_pairs(&[
-            ('é', 'e'), ('è', 'e'), ('ê', 'e'), ('ë', 'e'),
-            ('à', 'a'), ('â', 'a'), ('ä', 'a'),
-            // ... more diacritics
-        ]),
-        0.1,  // Low cost for diacritic removal
-        "unicode_norm"
-    )
+    .with_operation(OperationType::with_restriction(
+        2,
+        1,
+        0.125,
+        digraphs,
+        "ph_to_f",
+    ))
     .build();
 
-// Query: "café" matches "cafe" with distance 0.1
-let automaton = build_automaton("café", 2, unicode_norm);
-assert!(automaton.accepts("cafe"));
-assert_eq!(automaton.distance("cafe"), 0.1);
-```
-
-### Example 2: OCR Correction
-
-```rust
-// Weight substitutions by OCR confusion probability
-let ocr_ops = OperationSetBuilder::new()
-    .with_match()
-    .with_restricted_subst(
-        SubstitutionSet::from_pairs(&[
-            ('O', '0'), ('0', 'O'),  // Common confusion
-            ('I', '1'), ('1', 'I'),
-            ('l', 'I'), ('I', 'l'),
-        ]),
-        0.2,  // Low cost (high confidence)
-        "ocr_common"
-    )
-    .with_restricted_subst(
-        SubstitutionSet::from_pairs(&[
-            ('S', '5'), ('5', 'S'),  // Less common
-            ('B', '8'), ('8', 'B'),
-        ]),
-        0.5,  // Medium cost
-        "ocr_rare"
-    )
-    .with_standard_ops()  // Fallback
-    .build();
-
-// "H3LL0" → "HELLO" with distance 0.2 + 0.2 = 0.4
-```
-
-### Example 3: Phonetic Matching
-
-```rust
-// Model phonetic similarity
-let phonetic = OperationSetBuilder::new()
-    .with_match()
-    .with_restricted_subst(
-        SubstitutionSet::from_pairs(&[
-            ('f', "ph"),  // f ↔ ph
-            ('c', 'k'),   // hard c ↔ k
-            ('c', 's'),   // soft c ↔ s
-        ]),
-        0.3,
-        "phonetic"
-    )
-    .with_standard_ops()
-    .build();
-
-// "telefone" matches "telephone" (f ↔ ph)
-```
-
-### Example 4: Case-Insensitive with Penalty
-
-```rust
-// Allow case changes but with small cost
-let case_insensitive = OperationSetBuilder::new()
-    .with_match()
-    .with_weighted_op(1, 1, 0.05, "case_change")  // Low cost for case
-    .with_standard_ops()
-    .build();
-
-// "Hello" matches "HELLO" with distance 0.25 (5 case changes × 0.05)
-```
-
-### Example 5: English Phonetic Corrections
-
-**Complete analysis**: See [English Phonetic Feasibility Analysis](../research/phonetic-corrections/ENGLISH_PHONETIC_FEASIBILITY.md)
-
-```rust
-// Model phonetic spelling corrections based on English pronunciation rules
-let phonetic_english = OperationSetBuilder::new()
-    .with_match()
-
-    // Consonant digraphs: ph→f, ch→ç, sh→$, th→+
-    .with_weighted_op_restricted(
-        2, 1, 0.15,
-        SubstitutionSet::from_pairs(&[
-            ("ph", "f"), ("ch", "ç"), ("sh", "$"), ("th", "+"),
-            ("qu", "kw"), ("wr", "r"), ("wh", "w"),
-        ]),
-        "consonant_digraphs"
-    )
-
-    // Vowel digraphs: ea→ë, oa→ö, etc.
-    .with_weighted_op_restricted(
-        2, 1, 0.15,
-        SubstitutionSet::from_pairs(&[
-            ("ea", "ë"), ("ee", "ë"), ("oa", "ö"),
-            ("ai", "ä"), ("ou", "ôw"), ("oi", "öy"),
-        ]),
-        "vowel_digraphs"
-    )
-
-    // Silent e deletion
-    .with_weighted_op_restricted(
-        1, 0, 0.1,
-        SubstitutionSet::from_chars(&['e']),
-        "silent_e"
-    )
-
-    // Complex GH patterns: igh→ï (right→rït)
-    .with_weighted_op_restricted(
-        3, 1, 0.2,
-        SubstitutionSet::from_pairs(&[
-            ("igh", "ï"), ("aught", "òt"), ("ough", "ö"),
-        ]),
-        "gh_patterns"
-    )
-
-    .with_standard_ops()
-    .build();
-
-// Examples:
-let automaton = build_automaton("telephone", 2, phonetic_english);
-assert!(automaton.accepts("tel@fön"));  // Phonetic spelling
-assert!(automaton.accepts("telefone")); // Common misspelling
-
-let automaton = build_automaton("daughter", 3, phonetic_english);
-assert!(automaton.accepts("dòt@r"));    // Phonetic transformation
-
-// Use cases:
-// - Spell checking with phonetic suggestions
-// - "Sounds like" search queries
-// - OCR post-processing (errors often preserve pronunciation)
-// - Cross-lingual name matching (transliterations)
-```
-
-**Coverage**: 60-85% of English phonetic transformations achievable with this framework
-
-**Implementation Guide**: See [Implementation Guide](../research/phonetic-corrections/IMPLEMENTATION_GUIDE.md)
-
-**Required Extensions for Full Coverage**:
-- **Larger operations** (d=3,4): For patterns like "aught"→"òt" (4→2)
-- **Position-aware operations**: For word-initial/final rules (kn→n only at start)
-- **Bi-directional context** (lazy only): For c→s/k based on following vowel
-
-**Limitations**:
-- ❌ Cannot model retroactive modifications (gh lengthening previous vowel)
-- ❌ Cannot detect syllable boundaries (unbounded lookahead)
-- ❌ Cannot distinguish morphological context (suffix -able vs word "table")
-
-**Performance**:
-- Memory: 8-50 MB (depending on operation set size)
-- Speed: 3-10× faster than dynamic programming for dictionary search
-- Coverage: 75-85% of common English words
-
----
-
-## 7. Implementation Phases
-
-### Phase 1: Core Types (Week 1)
-
-**Files to Create**:
-- `src/transducer/operation.rs` - Core types
-- `src/transducer/operation/builder.rs` - Builder pattern
-- `src/transducer/operation/presets.rs` - Preset operation sets
-
-**Tests**:
-- Unit tests for `OperationType`
-- Unit tests for `OperationSet`
-- Builder pattern tests
-- Preset correctness tests
-
-**Deliverables**:
-- ✅ Core types compile
-- ✅ All unit tests pass
-- ✅ Documentation complete
-
-### Phase 2: Lazy Integration (Week 2)
-
-**Files to Modify**:
-- `src/transducer/lazy.rs` - Update transition logic
-- `src/transducer/state.rs` - Update state operations
-
-**Changes**:
-1. Add `transition_with_ops()` method
-2. Refactor existing transition logic to use operations
-3. Keep `Algorithm` enum, add conversion
-
-**Tests**:
-- Regression tests (all existing tests still pass)
-- New tests with custom operations
-- Benchmark: measure overhead
-
-**Deliverables**:
-- ✅ Lazy automata work with `OperationSet`
-- ✅ No performance regression for standard ops
-- ✅ Custom operations tested
-
-### Phase 3: Universal Integration (Week 2-3)
-
-**Files to Modify**:
-- `src/transducer/universal/position.rs` - Successor generation
-- `src/transducer/universal/state.rs` - State transitions
-
-**Changes**:
-1. Update `successors()` to use `OperationSet`
-2. Handle weighted operations in distance calculation
-3. Test with restricted substitutions
-
-**Tests**:
-- Universal automaton with custom ops
-- Word-pair distance with weights
-- Characteristic vector with restrictions
-
-**Deliverables**:
-- ✅ Universal automata work with `OperationSet`
-- ✅ Weighted operations compute correct distances
-- ✅ Integration tests pass
-
-### Phase 4: Public API & Documentation (Week 3)
-
-**Changes**:
-1. Add public constructors accepting `OperationSet`
-2. Deprecate old `Algorithm`-based constructors
-3. Update examples
-4. Write migration guide
-
-**Documentation**:
-- API documentation for all new types
-- Migration guide (Algorithm → OperationSet)
-- Use case examples
-- Performance comparison benchmarks
-
-**Deliverables**:
-- ✅ Public APIs finalized
-- ✅ Documentation complete
-- ✅ Examples updated
-- ✅ Migration guide published
-
----
-
-## 8. Testing Strategy
-
-### Unit Tests
-
-**File**: `tests/operation_tests.rs`
-
-```rust
-#[test]
-fn test_operation_type_match() {
-    let op = OperationType::new(1, 1, 0.0, "match");
-    assert!(op.is_match());
-    assert!(op.is_length_preserving());
-}
-
-#[test]
-fn test_operation_set_standard() {
-    let ops = OperationSet::standard();
-    assert_eq!(ops.operations().len(), 4);
-    assert_eq!(ops.match_operation().weight, 0.0);
-}
-
-#[test]
-fn test_restricted_substitution() {
-    let subst_set = SubstitutionSet::from_pairs(&[('a', 'b'), ('b', 'a')]);
-    let op = OperationType::with_restriction(1, 1, 0.5, subst_set, "test");
-    assert!(op.applies_to('a', 'b'));
-    assert!(op.applies_to('b', 'a'));
-    assert!(!op.applies_to('a', 'c'));
-}
-```
-
-### Integration Tests
-
-**File**: `tests/generalized_operations_integration.rs`
-
-```rust
-#[test]
-fn test_lazy_automaton_with_custom_ops() {
-    let ops = OperationSetBuilder::new()
-        .with_match()
-        .with_standard_ops()
-        .with_weighted_op(2, 2, 0.8, "transpose")
-        .build();
-
-    let automaton = build_lazy_automaton("kitten", 2, ops);
-    assert!(automaton.accepts("sitting"));
-}
-
-#[test]
-fn test_weighted_distance_calculation() {
-    let ops = OperationSet::keyboard_qwerty();  // Adjacent keys cost 0.3
-    let automaton = build_lazy_automaton("name", 2, ops);
-
-    // "nane" → "name" (m/n adjacent) should have distance 0.3
-    assert_eq!(automaton.distance("nane"), 0.3);
-}
-```
-
-### Property-Based Tests
-
-**Using proptest**:
-
-```rust
-proptest! {
-    #[test]
-    fn test_custom_ops_satisfy_distance_properties(
-        word1 in "[a-z]{3,10}",
-        word2 in "[a-z]{3,10}",
-    ) {
-        let ops = OperationSet::standard();
-
-        // Distance should be symmetric
-        let d1 = compute_distance(&word1, &word2, &ops);
-        let d2 = compute_distance(&word2, &word1, &ops);
-        assert_eq!(d1, d2);
-
-        // Distance to self should be 0
-        let d_self = compute_distance(&word1, &word1, &ops);
-        assert_eq!(d_self, 0.0);
-    }
-}
-```
-
-### Performance Benchmarks
-
-**File**: `benches/operation_overhead_bench.rs`
-
-```rust
-fn bench_standard_hardcoded(c: &mut Criterion) {
-    c.bench_function("standard/hardcoded", |b| {
-        b.iter(|| {
-            let automaton = build_lazy_automaton("kitten", 2, Algorithm::Standard);
-            automaton.distance("sitting")
-        })
-    });
-}
-
-fn bench_standard_via_operation_set(c: &mut Criterion) {
-    c.bench_function("standard/operation_set", |b| {
-        let ops = OperationSet::standard();
-        b.iter(|| {
-            let automaton = build_lazy_automaton_ops("kitten", 2, &ops);
-            automaton.distance("sitting")
-        })
-    });
-}
-
-fn bench_keyboard_weighted(c: &mut Criterion) {
-    c.bench_function("keyboard/weighted", |b| {
-        let ops = OperationSet::keyboard_qwerty();
-        b.iter(|| {
-            let automaton = build_lazy_automaton_ops("hello", 2, &ops);
-            automaton.distance("hekko")  // e→k (adjacent keys)
-        })
-    });
-}
-
-criterion_group!(benches, bench_standard_hardcoded, bench_standard_via_operation_set, bench_keyboard_weighted);
-criterion_main!(benches);
-```
-
----
-
-## 9. Backward Compatibility
-
-### Compatibility Matrix
-
-| Version | `Algorithm` enum | `OperationSet` | Breaking Changes |
-|---------|------------------|----------------|------------------|
-| 0.6.x (current) | ✅ Available | ❌ Not available | - |
-| 0.7.0 (Phase 1-3) | ✅ Available | ✅ Available | None (additive) |
-| 0.8.0 (Phase 4) | ⚠️ Deprecated | ✅ Primary API | Deprecation warnings |
-| 1.0.0 (Future) | ❌ Removed | ✅ Only API | `Algorithm` removed |
-
-### Migration Path for Users
-
-#### Step 1: Update to 0.7.0 (No Code Changes)
-
-Existing code continues to work:
-
-```rust
-// This still works (no changes needed)
-let automaton = build_automaton("test", 2, Algorithm::Standard);
-```
-
-#### Step 2: Try New API (Optional)
-
-Users can experiment with new features:
-
-```rust
-// New: custom operation sets
-let ops = OperationSet::keyboard_qwerty();
-let automaton = build_automaton_ops("test", 2, ops);
-```
-
-#### Step 3: Update to 0.8.0 (Deprecation Warnings)
-
-Old API deprecated but functional:
-
-```rust
-// Warning: use `build_automaton_ops` instead
-let automaton = build_automaton("test", 2, Algorithm::Standard);
-```
-
-Fix warnings by migrating:
-
-```rust
-// New way (no warnings)
-let ops = OperationSet::standard();
-let automaton = build_automaton_ops("test", 2, ops);
-```
-
-#### Step 4: Update to 1.0.0 (Breaking)
-
-Must use new API:
-
-```rust
-// Only way
-let ops = OperationSet::standard();
-let automaton = build_automaton_ops("test", 2, ops);
-```
-
-### Automated Migration Tool
-
-Provide script to convert code:
-
-```bash
-# Converts Algorithm::Standard → OperationSet::standard()
-$ cargo run --bin migrate_operations src/
-Migrating src/main.rs...
-  - Line 42: Algorithm::Standard → OperationSet::standard()
-  - Line 57: Algorithm::Transposition → OperationSet::transposition()
-Done! 2 conversions.
-```
-
----
-
-## 10. Future Extensions
-
-### Extension 1: Versioned binary operation sets — implemented
-
-Custom operation sets use either the deterministic bincode envelope or the
-portable versioned protobuf schema. `OperationType` owns its diagnostic name,
-and `OperationApplicability` explicitly represents unrestricted,
-equality-only, adjacent-transpose, and listed-substitution semantics. No
-behavior is inferred from the name.
-
-```rust
-let bytes = operations.to_binary()?;
-let restored = OperationSet::from_binary_with_limits(
-    &bytes,
-    OperationSetBinaryLimits::default(),
-)?;
-assert_eq!(restored, operations);
-
-let protobuf = operations.to_protobuf()?;
-let portable = OperationSet::from_protobuf_with_limits(
-    &protobuf,
-    OperationSetBinaryLimits::default(),
-)?;
-assert_eq!(portable, operations);
+let automaton = GeneralizedAutomaton::try_with_operations(1, operations)?;
+let scale = automaton.cost_scale()?;
+assert_eq!(scale.denominator(), 8);
+assert_eq!(automaton.scaled_distance("phone", "fone")?, Some(1));
+assert_eq!(scale.from_scaled(1), 0.125);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-The bincode envelope pins magic, version, flags, payload length, and exact
-consumption. Protobuf selects V1 through an explicit container `oneof` and
-stores weights as `fixed64` IEEE-754 bits. Both use canonical substitution-pair
-ordering and check limits for payload bytes, operations, names, pairs, and pair
-text before the result is accepted. The protobuf decoder performs those count
-checks in a pre-allocation wire scan. Text persistence is intentionally outside
-the contract: bincode is the optimized Rust format, while protobuf is the
-portable binary interchange format. Optional gzip wraps either byte stream;
-it does not create another semantic format.
+The same API shape is compile-checked and executed by
+[`operation_set_persistence.rs`](../../examples/operation_set_persistence.rs).
+The source-level `OperationType` and `OperationSetBuilder` documentation also
+contains Rust doctests for individual constructors.
 
-### Extension 2: Context-Aware Operations
+### 3.1 Validation invariants
 
-**Goal**: Operations that depend on surrounding context
+`OperationSet::validate` admits an empty set and otherwise enforces every rule
+as one bounded alignment grammar:
+
+1. each name contains 1 to 1,024 UTF-8 bytes;
+2. each weight is finite and non-negative;
+3. no rule has arity `(0, 0)`;
+4. a zero-cost rule preserves length;
+5. `Equal` has equal source and target arity;
+6. `AdjacentTranspose` has arity `(2, 2)`;
+7. every listed byte or string pair has the operation's declared scalar arity;
+8. all consumption arithmetic is checked; and
+9. aggregate consumption satisfies:
+
+```math
+\sum_{t\in\mathcal O}(t^x+t^y)\le 4096.
+```
+
+The no-progress rule makes the alignment graph acyclic. The aggregate ceiling
+bounds per-cell slice work for generated or untrusted grammars. An empty set
+describes only the empty-to-empty alignment.
+
+`OperationType` constructors assert some local preconditions, but they do not
+replace complete-set validation. Runtime-loaded configurations should use the
+owned-name constructors and cross the checked automaton or decoder boundary.
+
+### 3.2 Presets
+
+| Constructor | Included rules | Meaning |
+|---|---|---|
+| `OperationSet::standard()` | match, substitute, insert, delete | Ordinary Levenshtein operations |
+| `OperationSet::with_transposition()` | standard plus adjacent transpose | Restricted adjacent-swap extension |
+| `OperationSet::with_merge_split()` | standard plus unrestricted `(1,2,1)` and `(2,1,1)` rules | Additive merge/split alignment |
+| `OperationSet::hamming()` | match and substitute | Fixed-length mismatch count |
+| `OperationSet::indel()` | match, insert, delete | Insertion/deletion distance |
+| `OperationSet::bounded_skip()` | match and source deletion | Directional bounded subsequence relation |
+
+The builder names use the historical query-to-dictionary vocabulary:
+`with_merge` declares `(consume_x, consume_y) = (1, 2)`, while `with_split`
+declares `(2, 1)`. The alignment edge itself is documented source-first, with
+`x` as dictionary/source and `y` as query/target. Some older universal-
+automaton reports name the same arities in the opposite, source-to-target
+direction. Use the numeric arity when comparing those documents. The combined
+preset includes both rules, so this naming orientation does not change its
+accepted relation.
+
+Both builder methods create unrestricted rules. Use listed applicability when
+only particular multi-scalar correspondences should be legal.
+
+## 4. Evaluation and resource behavior
+
+`GeneralizedAutomaton` prepares UTF-8 scalar offsets once, derives the cost
+scale, and traverses reachable cells in lexicographic order through a
+`BTreeMap`. Every valid edge reaches a lexicographically later cell, so this is
+sparse topological dynamic programming rather than Dijkstra's algorithm. A
+cell stores only the least discovered scaled cost.
+
+Let `$`R`$` be the number of in-budget cells reached and
+`$`|\mathcal O|`$` the number of operations. The current implementation uses:
+
+```math
+\mathcal O\left(R|\mathcal O|\log R\right)
+```
+
+time and `$`\mathcal{O}(R)`$` frontier memory. Evaluation fails with a resource
+error before materializing more than 1,000,000 unique alignment cells. Cell
+coordinates, accumulated costs, scale arithmetic, and discovery counts use
+checked operations.
+
+The recommended API behavior is:
+
+| Method | Failure behavior |
+|---|---|
+| `try_with_operations` | Rejects an invalid grammar or cost scale eagerly. |
+| `scaled_distance` | Reports validation, scale, overflow, or resource errors and otherwise returns an in-budget cost. |
+| `try_accepts` | Reports the same errors and returns a Boolean match result. |
+| `accepts` | Compatibility wrapper that maps every error to `false`. |
+| `with_operations` | Compatibility constructor; validation is deferred until evaluation. |
+
+The exact empty-side rates `rho_del` and `rho_ins` expose the cheapest pure
+deletion and insertion cost per scalar as reduced rationals, or explicit
+infinity when no such rule exists. They explain empty-side behavior but are
+not used as a global length heuristic: a merge or split can change length
+without being a pure deletion or insertion.
+
+## 5. Binary persistence contract
+
+Only two semantic persistence formats are supported for complete operation
+sets:
+
+1. a versioned bincode envelope for compact Rust storage; and
+2. a versioned Protocol Buffers schema for portable binary interchange.
+
+Gzip may wrap either byte stream. It is compression, not a third semantic
+format. JSON, TOML, YAML, newline-delimited text, and other plaintext encodings
+are intentionally outside this API.
+
+![Bincode and Protocol Buffers are the supported binary formats; gzip is an optional outer wrapper.](../diagrams/serialization/serialization-formats.svg)
+
+### 5.1 Feature and method matrix
+
+| Cargo feature | Added methods | Notes |
+|---|---|---|
+| `serialization` | `to_binary`, `from_binary`, `from_binary_with_limits` | Enables the bincode envelope. |
+| `protobuf` | `to_protobuf`, `from_protobuf`, `from_protobuf_with_limits` | Implies `serialization`; schema is `proto/operation_set.proto`. |
+| `compression` | `to_binary_gzip`, `from_binary_gzip`, limit-aware gzip methods | Implies `serialization`. |
+| `protobuf` + `compression` | `to_protobuf_gzip`, `from_protobuf_gzip`, limit-aware gzip methods | One gzip member around one protobuf message. |
+
+The public operation-model types do not implement generic Serde
+`Serialize`/`Deserialize`. Bincode's Serde use is confined to private wire
+types. This makes accidental JSON or TOML persistence a compile-time error and
+keeps text-format dependencies out of the operation-set contract.
+
+### 5.2 Bincode envelope
+
+The bincode representation begins with a fixed 20-byte header:
+
+| Offset | Width | Field | Version 1 value |
+|---:|---:|---|---|
+| 0 | 8 | Magic | ASCII bytes `LLEVOPS\0` |
+| 8 | 2 | Version, little-endian | `1` |
+| 10 | 2 | Reserved flags, little-endian | `0` |
+| 12 | 8 | Payload length, little-endian | Exact following-byte count |
+
+The payload uses private version-1 wire structs and bincode's legacy
+configuration. It contains the ordered operations, source and target arities,
+the exact `f64` weight, applicability discriminator, canonical listed pairs,
+and owned diagnostic names.
+
+The decoder rejects a short header, wrong magic, unknown version or flags,
+oversized declaration, truncation, appended bytes, prefix-only bincode decode,
+resource-limit violation, or semantic validation failure. The fixed 64 MiB
+payload ceiling remains authoritative when callers provide looser limits.
+
+### 5.3 Protocol Buffers
+
+`OperationSetContainer` uses a `oneof` version discriminator whose version-1
+message contains ordered `OperationTypeV1` values. Each operation records
+`consume_x`, `consume_y`, exact IEEE-754 `weight_bits`, applicability, listed
+pairs, and name. The schema contains no maps. Canonical restriction order plus
+retained operation order makes bytes emitted by this implementation
+deterministic.
+
+Before `prost` allocates decoded vectors and strings, a non-allocating preflight
+scans the wire stream and checks payload bytes, operation counts, per-operation
+and total pair counts, name bytes, and aggregate restriction text. The decoder
+then rejects malformed fields, a missing or unsupported schema variant,
+unknown applicability, invalid weight bits, inconsistent restriction tags,
+arity mismatches, and semantic validation failures.
+
+Unknown protobuf fields are skipped for forward compatibility and are not
+retained on re-encoding. This differs deliberately from the bincode envelope,
+which requires exact byte consumption.
+
+### 5.4 What survives a round trip
+
+Both formats preserve:
+
+- operation count and order;
+- every source and target consumption value;
+- exact `f64::to_bits()` weight bits, including signed zero;
+- the explicit applicability discriminator;
+- raw single-byte and UTF-8 string restrictions;
+- canonical restriction-set membership; and
+- owned diagnostic names.
+
+Round-trip tests also compare `GeneralizedAutomaton::scaled_distance` before
+and after persistence so representational equality is paired with execution
+correspondence.
+
+### 5.5 Optional gzip wrapper
+
+Bincode and protobuf are compact encodings, not compression algorithms.
+Repeated names, prefixes, and restriction patterns can therefore compress
+substantially, while a small protobuf message can grow because of gzip framing.
+The measured evidence in the
+[operation-set persistence ledger](../scientific-ledger/operation-set-binary-persistence-2026-08-02.md)
+keeps gzip opt-in rather than default-on.
+
+The gzip decoders:
+
+1. reject compressed input over 64 MiB;
+2. stop inflation at the selected inner-format output limit plus one byte;
+3. require a valid checksum;
+4. accept exactly one complete gzip member;
+5. reject concatenated members and trailing bytes; and
+6. pass the inflated bytes to the ordinary bincode or protobuf validator.
+
+Callers should measure representative data before adding compression. Whole
+stream gzip also prevents direct random access; large indexed dictionaries need
+a separately designed chunked format rather than transparent whole-file gzip.
+
+## 6. Persistence examples
+
+With `serialization`, bincode uses an explicit versioned method rather than a
+generic serializer:
 
 ```rust
-pub struct ContextualOperationType {
-    op: OperationType,
-    /// Precondition: operation only applies if context matches
-    context: Box<dyn Fn(&str, usize) -> bool>,
-}
-
-// Example: Allow 'c'→'s' only before 'i' or 'e' (soft c)
-let soft_c = ContextualOperationType {
-    op: OperationType::new(1, 1, 0.5, "soft_c"),
-    context: Box::new(|word, pos| {
-        word.chars().nth(pos + 1)
-            .map(|c| c == 'i' || c == 'e')
-            .unwrap_or(false)
-    }),
+use liblevenshtein::transducer::{
+    OperationSet, OperationSetBinaryLimits, OperationSetBuilder,
 };
-```
 
-### Extension 3: Machine Learning Weights
+let operations = OperationSetBuilder::new().with_standard_ops().build();
+let bytes = operations.to_binary()?;
 
-**Goal**: Learn operation weights from training data
-
-```rust
-pub struct LearnedOperationSet {
-    base_ops: OperationSet,
-    weight_model: Box<dyn Fn(char, char) -> f32>,
-}
-
-impl LearnedOperationSet {
-    /// Train weights from word pairs with target distances
-    pub fn train(
-        pairs: &[(String, String, f32)],
-        base_ops: OperationSet,
-    ) -> Self {
-        // Use gradient descent to learn weights
-        // that minimize error on training pairs
-    }
-
-    /// Adjust weights for specific domain
-    pub fn fine_tune(&mut self, pairs: &[(String, String, f32)]) {
-        // Incremental learning
-    }
-}
-```
-
-### Extension 4: Multi-Character Operations
-
-**Goal**: Support operations consuming >2 characters
-
-Current limitation: $`t^x, t^y \le 2`$ (hardcoded in successor logic, where $`k = 2`$)
-
-Extension:
-
-```rust
-pub struct MultiCharOperation {
-    x_consumed: u8,  // No limit
-    y_consumed: u8,  // No limit
-    weight: f32,
-    /// Pattern in first word
-    x_pattern: Regex,
-    /// Pattern in second word
-    y_pattern: Regex,
-}
-
-// Example: "ough" → "off" (English spelling)
-let spelling_reform = MultiCharOperation {
-    x_consumed: 4,
-    y_consumed: 3,
-    weight: 0.5,
-    x_pattern: Regex::new("ough").unwrap(),
-    y_pattern: Regex::new("off").unwrap(),
+let limits = OperationSetBinaryLimits {
+    max_operations: 16,
+    ..OperationSetBinaryLimits::default()
 };
+let restored = OperationSet::from_binary_with_limits(&bytes, limits)?;
+assert_eq!(restored, operations);
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
----
+With `protobuf`, portable interchange uses separate methods; format guessing is
+not part of the API:
 
-## Summary
+```rust
+use liblevenshtein::transducer::{OperationSet, OperationSetBuilder};
 
-This design provides a **flexible, extensible operation type system** that:
+let operations = OperationSetBuilder::new().with_transposition().build();
+let bytes = operations.to_protobuf()?;
+let restored = OperationSet::from_protobuf(&bytes)?;
+assert_eq!(restored, operations);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
 
-✅ Replaces hardcoded `Algorithm` enum with data-driven `OperationSet`
-✅ Supports weighted operations and restricted substitutions
-✅ Maintains backward compatibility through gradual migration
-✅ Applies to both lazy and universal automata
-✅ Provides clear implementation roadmap (3 weeks)
-✅ Includes comprehensive testing strategy
-✅ Plans for future extensions (serialization, ML weights, context-aware)
+The first example is reproduced by the compile-gated
+[`doc_serialization_check.rs`](../../examples/doc_serialization_check.rs); the
+second is covered by both that example and
+[`operation_set_persistence.rs`](../../examples/operation_set_persistence.rs).
 
-**Next Steps**:
-1. Review and approve this design
-2. Create feature branch: `feature/generalized-operations`
-3. Implement Phase 1 (core types)
-4. Benchmark Phase 2 (lazy integration)
-5. Complete Phase 3-4 (universal + public API)
+## 7. Verification and test map
 
----
+The implementation is checked at complementary levels:
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-12
-**Author**: Claude Code (Anthropic AI Assistant)
-**Status**: 📋 **READY FOR REVIEW** - Design complete, awaiting implementation approval
+| Property | Executable evidence | Formal-model evidence |
+|---|---|---|
+| Exact grid agrees with standard, Hamming, indel, and subsequence references | `tests/proptest_generalized_automaton_repair.rs` | `GeneralizedAutomatonRepair.v`, Verus, SMT models |
+| Fractional costs accumulate and budget acceptance is monotone | generalized unit and property tests | exact-rescaling and accumulation lemmas |
+| Unicode restrictions count scalars | generalized unit tests and persistence execution checks | abstract slice-consumption obligations |
+| Bincode preserves the complete model and rejects corrupt or over-limit data | `tests/operation_set_serialization.rs` | `OperationSetSerialization.v`, portable-decode model |
+| Protobuf preflight precedes semantic admission | `tests/operation_set_protobuf.rs` including arbitrary bytes | serialization and portable-decode models |
+| Gzip is one bounded outer member | `tests/operation_set_gzip.rs` | serialization and portable-decode models |
+| Public examples remain compilable | `doc_serialization_check`, `operation_set_persistence`, Rust doctests | not applicable |
+
+The formal artifacts state abstract invariants over model datatypes. They are
+valuable for finding counterexamples and deriving property tests, but they do
+not by themselves prove a refinement theorem from every Rust parser branch to
+the model. Rust integration tests, arbitrary-byte decoder properties, exact
+wire fixtures, and feature-gated examples cover that implementation boundary.
+
+For commands and the maintained evidence inventory, see the
+[verification index](../verification/README.md),
+[`FORMAL_VERIFICATION_MANIFEST.tsv`](../verification/FORMAL_VERIFICATION_MANIFEST.tsv),
+and the [security resource policy](../security/resource-exhaustion.md).
+
+## 8. Source map and references
+
+| Concern | Source of truth |
+|---|---|
+| Rule and applicability model | `src/transducer/operation_type.rs` |
+| Grammar, validation, builder, and standard presets | `src/transducer/operation_set.rs` |
+| Hamming, indel, and bounded-skip presets | `src/transducer/presets.rs` |
+| Exact evaluator | `src/transducer/generalized/automaton.rs` |
+| Exact cost scale | `src/cost/scale.rs` |
+| Bincode envelope and resource limits | `src/transducer/operation_set_binary.rs` |
+| Protocol Buffers decoder and preflight | `src/transducer/operation_set_protobuf.rs` |
+| Published protobuf schema | `proto/operation_set.proto` |
+| Gzip wrapper | `src/transducer/operation_set_gzip.rs` |
+
+The generalized operation tuple and bounded-neighborhood foundation follow
+P. Mitankin, S. Mihov, and K. U. Schulz, “Deciding word neighborhood with
+universal neighborhood automata,” *Theoretical Computer Science* 412(22),
+2340–2355 (2011),
+[DOI 10.1016/j.tcs.2011.01.013](https://doi.org/10.1016/j.tcs.2011.01.013).
+
+The sparse grid is also a direct weighted generalization of the dynamic
+programming recurrence in R. A. Wagner and M. J. Fischer, “The string-to-string
+correction problem,” *Journal of the ACM* 21(1), 168–173 (1974),
+[DOI 10.1145/321796.321811](https://doi.org/10.1145/321796.321811).

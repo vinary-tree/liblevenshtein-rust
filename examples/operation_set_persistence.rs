@@ -4,6 +4,7 @@
 //! Run with:
 //! `cargo run --example operation_set_persistence --features protobuf`
 
+use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
 use liblevenshtein::transducer::{
     OperationSet, OperationSetBuilder, OperationType, SubstitutionSet,
 };
@@ -24,6 +25,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "runtime_digraph".to_owned(),
         ))
         .build();
+
+    // Compile-gate the generalized-operation construction shown in
+    // docs/design/generalized-operations.md as well as the persistence calls.
+    let automaton = GeneralizedAutomaton::try_with_operations(1, operations.clone())?;
+    let scale = automaton.cost_scale()?;
+    assert_eq!(scale.denominator(), 8);
+    assert_eq!(automaton.scaled_distance("phone", "fone")?, Some(1));
+    assert_eq!(scale.from_scaled(1), 0.125);
 
     let bincode_bytes = operations.to_binary()?;
     let protobuf_bytes = operations.to_protobuf()?;
