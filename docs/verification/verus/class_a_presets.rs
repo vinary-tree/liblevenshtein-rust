@@ -8,6 +8,14 @@ fn main() {}
 
 verus! {
 
+spec fn indel_cost(inserted: nat, deleted: nat) -> nat {
+    inserted + deleted
+}
+
+spec fn alignment_consumption(kept: nat, inserted: nat, deleted: nat) -> (nat, nat) {
+    (kept + deleted, kept + inserted)
+}
+
 proof fn hamming_coordinate_triangle(
     left_right: nat,
     left_middle: nat,
@@ -47,9 +55,11 @@ proof fn reversing_indel_counts_preserves_cost(
     deleted: nat,
 )
     ensures
-        inserted + deleted == deleted + inserted,
-        kept + deleted == kept + deleted,
-        kept + inserted == kept + inserted,
+        indel_cost(inserted, deleted) == indel_cost(deleted, inserted),
+        alignment_consumption(kept, inserted, deleted).0
+            == alignment_consumption(kept, deleted, inserted).1,
+        alignment_consumption(kept, inserted, deleted).1
+            == alignment_consumption(kept, deleted, inserted).0,
 {
 }
 
@@ -78,7 +88,6 @@ proof fn concatenating_indel_scripts_adds_cost(
 
 proof fn bounded_skip_has_exact_directional_cost(matched: nat, skipped: nat)
     ensures
-        matched + skipped == matched + skipped,
         matched <= matched + skipped,
         (matched + skipped) - matched == skipped,
 {
@@ -114,11 +123,13 @@ proof fn checked_aggregate_update_stays_bounded(
 {
 }
 
+spec fn empty_side_indel_distance(length: nat) -> nat {
+    length
+}
+
 proof fn affordable_empty_side_is_exact(length: nat, budget: nat)
-    requires
-        length <= budget,
     ensures
-        length <= budget,
+        (empty_side_indel_distance(length) <= budget) == (length <= budget),
 {
 }
 

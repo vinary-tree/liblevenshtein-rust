@@ -16,6 +16,14 @@ spec fn erase_bracket_kind(kinds: nat, token: nat) -> nat {
     if token < kinds { 0 } else { 1 }
 }
 
+spec fn active_frame_balance(enters: nat, leaves: nat) -> int {
+    enters as int - leaves as int
+}
+
+spec fn leaves_after_unwind(leaves: nat, depth: nat) -> nat {
+    leaves + depth
+}
+
 proof fn kind_erasure_is_nonexpansive(kinds: nat, left: nat, right: nat)
     ensures
         substitution_cost(erase_bracket_kind(kinds, left), erase_bracket_kind(kinds, right))
@@ -66,9 +74,9 @@ proof fn unwinding_active_dfs_frames_restores_balance(
     depth: nat,
 )
     requires
-        enters == leaves + depth,
+        active_frame_balance(enters, leaves) == depth as int,
     ensures
-        enters == leaves + depth,
+        active_frame_balance(enters, leaves_after_unwind(leaves, depth)) == 0,
 {
 }
 

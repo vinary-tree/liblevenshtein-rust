@@ -15,6 +15,12 @@ spec fn select_variant(algorithm: nat) -> nat {
     if algorithm == 0 { 0 } else if algorithm == 1 { 1 } else { 2 }
 }
 
+/// One edge dispatch selects a variant while preserving the position payload
+/// that the selected kernel will consume.
+spec fn dispatch_edge(algorithm: nat, position: nat) -> (nat, nat) {
+    (select_variant(algorithm), position)
+}
+
 proof fn normal_constructor_preserves_payload_invariant()
     ensures
         !is_special(0),
@@ -63,8 +69,13 @@ proof fn edge_selection_is_position_independent(
     lhs_position: nat,
     rhs_position: nat,
 )
+    requires
+        algorithm <= 2,
     ensures
-        select_variant(algorithm) == select_variant(algorithm),
+        dispatch_edge(algorithm, lhs_position).0 == algorithm,
+        dispatch_edge(algorithm, rhs_position).0 == algorithm,
+        dispatch_edge(algorithm, lhs_position).1 == lhs_position,
+        dispatch_edge(algorithm, rhs_position).1 == rhs_position,
 {
 }
 
@@ -103,7 +114,12 @@ proof fn one_dispatch_serves_every_position(
     requires
         algorithm <= 2,
     ensures
-        select_variant(algorithm) == algorithm,
+        dispatch_edge(algorithm, first).0 == algorithm,
+        dispatch_edge(algorithm, second).0 == algorithm,
+        dispatch_edge(algorithm, third).0 == algorithm,
+        dispatch_edge(algorithm, first).1 == first,
+        dispatch_edge(algorithm, second).1 == second,
+        dispatch_edge(algorithm, third).1 == third,
 {
 }
 

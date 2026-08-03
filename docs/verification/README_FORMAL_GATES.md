@@ -70,6 +70,11 @@ unbounded. The runner refuses fully uncapped proof execution unless
   claims until promoted in `FORMAL_VERIFICATION_MANIFEST.tsv`.
 - A trusted Verus file may not widen its trusted boundary with an external body
   or an `assume` statement.
+- A trusted Verus postcondition may not merely repeat a precondition, assert
+  literal truth, compare an expression reflexively with `==`, `<=`, or `>=`,
+  or imply itself. `scripts/audit-verus-vacuity.py` parses proof-function
+  contracts and enforces this rule in both `trusted` and `coq-trusted` modes;
+  its embedded positive and negative fixtures run before every scan.
 - A trusted SMT model is cross-checked by Z3 and cvc5; `sat`, `unknown`, a
   missing result, or a result-count mismatch fails the gate.
 - A mathematical-real proof for a floating-point implementation must name the

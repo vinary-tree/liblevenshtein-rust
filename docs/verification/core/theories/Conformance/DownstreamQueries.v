@@ -139,6 +139,20 @@ Proof. vm_compute; reflexivity. Qed.
     rejected edge. *)
 Definition visitor_balanced (enters leaves : nat) : Prop := enters = leaves.
 
+Definition active_frame_count (enters leaves : nat) : nat := enters - leaves.
+
+Fixpoint leaves_after_unwind (leaves depth : nat) : nat :=
+  match depth with
+  | 0 => leaves
+  | S remaining => S (leaves_after_unwind leaves remaining)
+  end.
+
+Lemma leaves_after_unwind_adds_depth : forall leaves depth,
+  leaves_after_unwind leaves depth = leaves + depth.
+Proof.
+  intros leaves depth; induction depth as [|depth IH]; simpl; lia.
+Qed.
+
 Lemma enter_then_leave_preserves_balance : forall enters leaves,
   visitor_balanced enters leaves ->
   visitor_balanced (S enters) (S leaves).
@@ -146,9 +160,15 @@ Proof. unfold visitor_balanced; intros; now f_equal. Qed.
 
 Theorem unwinding_active_dfs_frames_restores_balance :
   forall enters leaves depth,
-    enters = leaves + depth ->
-    enters = (leaves + depth).
-Proof. intros; assumption. Qed.
+    leaves <= enters ->
+    active_frame_count enters leaves = depth ->
+    visitor_balanced enters (leaves_after_unwind leaves depth).
+Proof.
+  unfold active_frame_count, visitor_balanced.
+  intros enters leaves depth Horder Hdepth.
+  rewrite leaves_after_unwind_adds_depth.
+  lia.
+Qed.
 
 (** BFS and DFS may enumerate in different orders.  No-pruning conformance is
     equality of result membership, never equality of output sequences. *)

@@ -142,8 +142,9 @@ proof fn observational_subsets_are_bounded(
         column_pruned <= columns_built,
         cutoff_abandoned <= exact_evaluations,
     ensures
-        column_pruned <= columns_built,
-        cutoff_abandoned <= exact_evaluations,
+        column_pruned + (columns_built - column_pruned) == columns_built,
+        cutoff_abandoned + (exact_evaluations - cutoff_abandoned)
+            == exact_evaluations,
 {
 }
 

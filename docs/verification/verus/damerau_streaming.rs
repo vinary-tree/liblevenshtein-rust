@@ -33,6 +33,10 @@ spec fn pending_subsumes(
         && lhs_delta == rhs_delta
 }
 
+spec fn extend_pending(error: nat, delta: nat, steps: nat) -> (nat, nat) {
+    (error + steps, delta)
+}
+
 proof fn entry_is_budget_bounded(error: nat, delta: nat, budget: nat)
     requires
         1 <= delta,
@@ -52,17 +56,20 @@ proof fn macro_charge_is_lowrance_wagner(delta: nat, between: nat)
 {
 }
 
-proof fn extension_preserves_delta_and_adds_one(
+proof fn extension_preserves_delta_and_charges_every_step(
     error: nat,
     delta: nat,
+    steps: nat,
     budget: nat,
 )
     requires
-        error + 1 <= budget,
+        steps > 0,
+        error + steps <= budget,
         1 <= delta < 256,
     ensures
-        error + 1 <= budget,
-        delta == delta,
+        extend_pending(error, delta, steps).0 <= budget,
+        extend_pending(error, delta, steps).0 > error,
+        extend_pending(error, delta, steps).1 == delta,
 {
 }
 

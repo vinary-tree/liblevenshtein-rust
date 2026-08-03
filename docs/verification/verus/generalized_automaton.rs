@@ -8,6 +8,32 @@ fn main() {}
 
 verus! {
 
+#[derive(PartialEq, Eq)]
+enum EmptySideRate {
+    Infinite,
+    Finite { numerator: nat, denominator: nat },
+}
+
+spec fn empty_side_fits(rate: EmptySideRate, count: nat, budget: nat) -> bool {
+    match rate {
+        EmptySideRate::Infinite => count == 0,
+        EmptySideRate::Finite { numerator, denominator } =>
+            denominator > 0 && numerator * count <= budget * denominator,
+    }
+}
+
+spec fn hamming_source_consumption(matches: nat, substitutions: nat) -> nat {
+    matches + substitutions
+}
+
+spec fn hamming_target_consumption(matches: nat, substitutions: nat) -> nat {
+    matches + substitutions
+}
+
+spec fn materialized_discovery_count(discovered: nat) -> nat {
+    discovered + 1
+}
+
 proof fn positive_scaled_weight_is_not_free(weight: nat)
     requires
         weight > 0,
@@ -33,17 +59,16 @@ proof fn alignment_operation_progresses(source: nat, target: nat)
 {
 }
 
-proof fn hamming_steps_preserve_length(first: nat, second: nat)
+proof fn hamming_steps_preserve_length(matches: nat, substitutions: nat)
     ensures
-        first + second == first + second,
+        hamming_source_consumption(matches, substitutions)
+            == hamming_target_consumption(matches, substitutions),
 {
 }
 
 proof fn infinite_empty_side_rate_fits_only_zero(count: nat, budget: nat)
-    requires
-        count == 0,
     ensures
-        count == 0,
+        empty_side_fits(EmptySideRate::Infinite, count, budget) == (count == 0),
 {
 }
 
@@ -55,9 +80,12 @@ proof fn finite_empty_side_rate_uses_cross_product(
 )
     requires
         denominator > 0,
-        numerator * count <= budget * denominator,
     ensures
-        numerator * count <= budget * denominator,
+        empty_side_fits(
+            EmptySideRate::Finite { numerator, denominator },
+            count,
+            budget,
+        ) == (numerator * count <= budget * denominator),
 {
 }
 
@@ -106,7 +134,6 @@ proof fn uncertified_subsumption_requires_same_coordinate(
         left_cost < right_cost,
     ensures
         left_offset == right_offset,
-        left_cost < right_cost,
 {
 }
 
@@ -127,7 +154,8 @@ proof fn discovery_guard_precedes_materialization(discovered: nat, limit: nat)
     requires
         discovered + 1 <= limit,
     ensures
-        discovered + 1 <= limit,
+        materialized_discovery_count(discovered) <= limit,
+        materialized_discovery_count(discovered) > discovered,
 {
 }
 

@@ -384,6 +384,20 @@ audit_vacuous() {
     | uniq -c \
     | sort -nr || true
   rm -f "$tmp_hits"
+
+  echo
+  echo "== Vacuous Verus contract conclusions =="
+  python3 "$ROOT/scripts/audit-verus-vacuity.py" --self-test
+}
+
+check_trusted_verus_nonvacuous() {
+  local files=()
+  while IFS=$'\t' read -r _profile entry; do
+    files+=("$ROOT/$entry")
+  done < <(trusted_entries_by_kind verus)
+
+  echo "== Trusted Verus non-vacuity gate =="
+  python3 "$ROOT/scripts/audit-verus-vacuity.py" --self-test "${files[@]}"
 }
 
 audit_gaps_tsv() {
@@ -923,6 +937,7 @@ case "$MODE" in
     check_trusted_contracts
     check_trusted_evidence
     check_trusted_verus_trust_boundary
+    check_trusted_verus_nonvacuous
     ;;
   coq-trusted)
     audit_manifest
@@ -931,6 +946,7 @@ case "$MODE" in
     check_trusted_contracts
     check_trusted_evidence
     check_trusted_verus_trust_boundary
+    check_trusted_verus_nonvacuous
     clean_trusted_coq_artifacts
     coq_compile_trusted
     ;;
