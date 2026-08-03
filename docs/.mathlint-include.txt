@@ -55,6 +55,7 @@ docs/design/dynamic-dawg.md
 docs/design/generalized-automaton.md
 docs/design/generalized-operations.md
 docs/design/grammar-correction/benchmark_specification.md
+docs/design/grammar-correction/dyck-projection-lower-bound.md
 docs/design/grammar-correction/MAIN_DESIGN.md
 docs/design/grammar-correction/README.md
 docs/design/grammar-correction/theoretical-analysis/complete-analysis.md
