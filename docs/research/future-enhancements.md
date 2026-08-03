@@ -1,10 +1,8 @@
 # Research roadmap
 
-This living roadmap records open research directions. Executable work is
-tracked in pgmcp under root epic
-`extending-liblevenshtein-automaton-families-4bb97598`; pgmcp owns task status,
-dependencies, and acceptance gates. This page explains why the remaining work
-belongs in the library and directs readers to its design evidence.
+This living roadmap records open research directions, explains why the
+remaining work belongs in the library, and directs readers to its design
+evidence.
 
 ## Shipped foundations
 
@@ -89,7 +87,6 @@ the pushdown implementation belongs in `lling-llang`.
 3. Prove or falsify the pruning invariant before designing a public API.
 4. Add a differential oracle, property invariants, resource guards, and a
    pre-registered performance decision rule.
-5. Create the task under the pgmcp root epic above and link its scientific
-   ledger record.
+5. Link the proposal to its scientific-ledger record.
 
 [← Research index](README.md)

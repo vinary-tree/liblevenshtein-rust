@@ -35,5 +35,6 @@ runs:
             )
         manifest.write_text(after)
         PY
+        cargo generate-lockfile
         echo "libdictenstein dependency now resolves from crates.io:"
         grep -n 'libdictenstein =' Cargo.toml

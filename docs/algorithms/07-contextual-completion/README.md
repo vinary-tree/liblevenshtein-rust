@@ -896,7 +896,7 @@ pub fn complete(&self, context: ContextId, query: &str, max_distance: usize)
 ### Implementation Resources
 
 - **PathMap Library**: [github.com/Adam-Vandervorst/PathMap](https://github.com/Adam-Vandervorst/PathMap) - Persistent trie implementation
-- **liblevenshtein**: Original Java implementation by [universal-automata](https://github.com/universal-automata/liblevenshtein)
+- **liblevenshtein**: Original Java implementation maintained by [vinary-tree](https://github.com/vinary-tree/liblevenshtein-java)
 - **Language Server Protocol (LSP)**: [microsoft.github.io/language-server-protocol](https://microsoft.github.io/language-server-protocol/) - Standard for IDE integration
 
 ### Related Documentation

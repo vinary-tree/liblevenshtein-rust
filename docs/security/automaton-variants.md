@@ -66,4 +66,4 @@ rejecting any runtime selector, non-Standard leaf provenance, or surviving
 Treat a failed formal counterexample check, differential test, or property seed
 as a correctness incident. Do not widen a pruning rule to recover benchmark
 performance. Disable the unsound rule, retain the minimized regression seed,
-and record a root-attributed bug through pgmcp.
+and record a root-attributed issue in the project tracker.

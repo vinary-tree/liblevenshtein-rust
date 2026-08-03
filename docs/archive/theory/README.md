@@ -6,7 +6,7 @@ These are the original in-repo deep-dive chapters for two data structures that w
 the **[libdictenstein](https://github.com/f1r3fly-io/libdictenstein)** crate, which now owns their
 canonical, maintained theory documentation. They were moved here (verbatim) during the 2026-07-12
 documentation campaign when the live [`docs/theory/`](../../theory/) pages were trimmed to concise
-**integration pointers** (see the plan of record and `docs/DOCUMENTATION_OVERHAUL_LEDGER.md`).
+**integration pointers**.
 
 They are kept for historical reference; the authoritative, up-to-date treatment is in libdictenstein.
 

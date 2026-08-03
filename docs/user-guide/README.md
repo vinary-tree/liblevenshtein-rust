@@ -37,7 +37,7 @@ Save and load dictionaries efficiently:
 - Supported compact formats (bincode and Protocol Buffers)
 - Optional gzip wrappers
 - Format comparison and selection
-- CLI tool usage
+- Link to the separate `liblevenshtein-cli` command documentation
 - Best practices
 
 ## Feature Guides

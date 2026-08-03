@@ -9,7 +9,7 @@ happened and are preserved as a historical record.
 ## Records
 
 - [API_DESIGN_DECISION.md](API_DESIGN_DECISION.md) — API Design Decision: Substitution Policy Integration
-- [DEBUG_FINDINGS_KAT_CHATH.md](DEBUG_FINDINGS_KAT_CHATH.md) — Debug Findings: "kat"→"chath" Double Split Failure
+- [DEBUG_FINDINGS_KAT_CHATH.md](../archive/development/DEBUG_FINDINGS_KAT_CHATH.md) — Debug Findings: "kat"→"chath" Double Split Failure
 - [FINAL_CLEANUP_LOG.md](FINAL_CLEANUP_LOG.md) — Final Cleanup Log — Restricted Substitutions
 - [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md) — Restricted Substitutions — Implementation Complete
 - [OPTION1_ANALYSIS.md](OPTION1_ANALYSIS.md) — Option 1 Analysis: Generic `Transducer<D, P = Unrestricted>`
@@ -21,7 +21,7 @@ happened and are preserved as a historical record.
 - [PROGRESS_SUMMARY.md](PROGRESS_SUMMARY.md) — Restricted Substitutions Implementation: Progress Summary
 - [RESTRICTED_SUBSTITUTIONS_COMPLETE.md](RESTRICTED_SUBSTITUTIONS_COMPLETE.md) — Restricted Substitutions Feature — Implementation Complete
 - [RESTRICTED_SUBSTITUTIONS_PLAN.md](RESTRICTED_SUBSTITUTIONS_PLAN.md) — Implementation Plan: Restricted Substitutions with Lazy/Eager Cross-Validation
-- [SESSION_2025-11-12_SUMMARY.md](SESSION_2025-11-12_SUMMARY.md) — Development Session Summary — 2025-11-12
+- [SESSION_2025-11-12_SUMMARY.md](../archive/development/SESSION_2025-11-12_SUMMARY.md) — Development Session Summary — 2025-11-12
 
 **Status: Historical — append-only scientific record; indexed, not edited.**
 

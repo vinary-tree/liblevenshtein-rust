@@ -8,7 +8,7 @@ resolver = "2"
 
 [package]
 name = "liblevenshtein"
-version = "0.9.1"
+version = "0.10.0"
 edition = "2021"
 # Matches the libdictenstein path dependency, whose --all-features floor is set by
 # sysinfo 0.39 (1.95). The previous 1.70 was already false: libdictenstein pulls
@@ -59,41 +59,12 @@ bincode = { package = "bincode-next", version = "3", features = ["serde"], optio
 prost = { version = "0.14", optional = true }
 bytes = { version = "1.5", optional = true }
 flate2 = { version = "1.0", optional = true }
-# CLI dependencies (optional)
-clap = { version = "4.4", features = ["derive"], optional = true }
-anyhow = { version = "1.0", optional = true }
-rustyline = { version = "18.0", optional = true }
-colored = { version = "3.0", optional = true }
-dirs = { version = "6.0", optional = true }
 # Random number generation for corpus utilities (test/benchmark use)
 # 0.9.3 is the floor for RUSTSEC-2026-0097 (unsound with a custom logger using
 # `rand::rng()`). 0.9 rather than 0.10 so this shares proptest's copy.
 rand = { version = "0.9.3", optional = true }
-# Parallel grep support (optional)
+# Parallel support for the reusable in-memory phonetic grep engines
 rayon = { version = "1.11", optional = true }
-# Compression formats for grep (optional)
-zstd = { version = "0.13", optional = true }
-xz2 = { version = "0.1", optional = true }
-bzip2 = { version = "0.6", optional = true }
-# Archive formats for grep (optional)
-tar = { version = "0.4", optional = true }
-zip = { version = "8.0", optional = true }
-# Glob pattern matching for archive entry filtering (optional)
-globset = { version = "0.4", optional = true }
-# Document text extraction dependencies (optional)
-# 0.12 is the first pdf-extract release requiring lopdf ^0.42, which carries the
-# fix for RUSTSEC-2026-0187 (stack overflow on deeply-nested PDF objects).
-pdf-extract = { version = "0.12", optional = true }
-# Suppress stdout during PDF extraction (to hide pdf-extract warnings)
-gag = { version = "1.0", optional = true }
-# 0.36 moves to quick-xml 0.41, clearing RUSTSEC-2026-0194 (quadratic run time on
-# duplicate attribute names) and RUSTSEC-2026-0195 (unbounded namespace allocation),
-# both of which reached us only through calamine 0.35's pinned quick-xml 0.39.
-calamine = { version = "0.36", optional = true }
-docx-rs = { version = "0.4", optional = true }
-quick-xml = { version = "0.41", optional = true }
-leptess = { version = "0.14", optional = true }
-tempfile = { version = "3.8", optional = true }
 # Unicode normalization for accent-insensitive matching and (?u:NFC) flag
 unicode-normalization = { version = "0.1", optional = true }
 # Memory-mapped I/O for persistent data structures
@@ -365,11 +336,6 @@ name = "bktree_vs_fuzzymap_benchmarks"
 harness = false
 required-features = ["phonetic-rules"]
 
-[[bin]]
-name = "liblevenshtein"
-path = "src/bin/liblevenshtein.rs"
-required-features = ["cli"]
-
 [[example]]
 name = "serialization"
 required-features = ["serialization"]
@@ -441,7 +407,6 @@ pathmap-backend = ["pathmap", "libdictenstein/pathmap-backend"]
 serialization = ["serde", "bincode", "libdictenstein/serialization"]
 protobuf = ["prost", "bytes", "prost-build", "serialization", "libdictenstein/protobuf"]
 compression = ["flate2", "serialization", "libdictenstein/compression"]
-cli = ["clap", "anyhow", "rustyline", "colored", "dirs", "pathmap-backend", "serialization"]
 phonetic-rules = ["unicode-normalization"]  # Phonetic rewrite rules with formal verification
 embedded-rules = ["phonetic-rules"]  # Pre-compiled English phonetic rules embedded in binary
 parallel-grep = ["rayon", "phonetic-rules"]  # Parallel phonetic grep with Rayon for multi-core document scanning
@@ -463,24 +428,6 @@ eviction-opt-memory = ["eviction-compact-metadata"]
 # Persistent Adaptive Radix Trie (disk-based dictionary)
 persistent-artrie = ["memmap2", "parking_lot", "serde", "bincode", "libdictenstein/persistent-artrie"]
 
-# Grep compression support (gzip, zstd, xz, bzip2)
-grep-compression = ["flate2", "zstd", "xz2", "bzip2"]
-# Archive support for grep (tar, zip) - implies compression for .tar.gz etc.
-grep-archives = ["tar", "zip", "globset", "grep-compression"]
-# Full grep features (phonetic + parallel + compression + archives)
-grep-full = ["phonetic-rules", "parallel-grep", "grep-compression", "grep-archives", "grep-documents"]
-
-# Document extraction features for grep
-grep-pdf = ["pdf-extract", "gag"]
-grep-pdf-ocr = ["grep-pdf", "leptess", "tempfile"]
-grep-docx = ["docx-rs"]
-grep-xlsx = ["calamine"]
-# Uses `zip` + `quick-xml` directly rather than the `epub` crate, which is GPL-3.0
-# and would impose copyleft on any binary built with this feature.
-grep-epub = ["quick-xml", "zip"]
-grep-odt = ["quick-xml", "zip"]
-grep-documents = ["grep-pdf", "grep-docx", "grep-xlsx", "grep-epub", "grep-odt"]
-
 # WASM support - enables wasm-bindgen bindings for JavaScript
 wasm = ["wasm-bindgen", "serde-wasm-bindgen", "console_error_panic_hook", "getrandom", "js-sys", "serde"]
 # WASM with full phonetic support
@@ -489,18 +436,6 @@ wasm-phonetic = ["wasm", "phonetic-rules"]
 ffi = []
 # Combined WASM + FFI
 wasm-ffi = ["wasm", "ffi"]
-
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/release/liblevenshtein", dest = "/usr/bin/liblevenshtein", mode = "755" },
-    { source = "target/release/libliblevenshtein.so", dest = "/usr/lib64/libliblevenshtein.so", mode = "644", doc = false },
-    { source = "target/release/libliblevenshtein.rlib", dest = "/usr/lib64/libliblevenshtein.rlib", mode = "644", doc = false },
-    { source = "README.md", dest = "/usr/share/doc/liblevenshtein/README.md", mode = "644", doc = true },
-    { source = "CHANGELOG.md", dest = "/usr/share/doc/liblevenshtein/CHANGELOG.md", mode = "644", doc = true },
-]
-
-[package.metadata.generate-rpm.requires]
-glibc = "*"
 
 # For local development: uncomment this section to use a local PathMap checkout
 # instead of the GitHub repository. This allows you to test changes to PathMap

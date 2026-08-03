@@ -522,6 +522,6 @@ With the dictionary layer complete, three research initiatives have been identif
 2. **Hybrid Storage** (4-6 weeks) - Arena/per-node hybrid for immutable dictionaries
 3. **DAT/DAWG Hybrid** (8-12 weeks) - Novel BASE+CHECK + suffix sharing algorithm
 
-**See**: [Research Initiatives](../research/RESEARCH_INITIATIVES.md) for detailed plans and methodology.
+**See**: [Research Initiatives](../archive/research/RESEARCH_INITIATIVES.md) for detailed plans and methodology.
 
 These represent substantial multi-week research projects with phased approaches and early exit criteria based on empirical data. Each follows the scientific method with hypothesis formation, controlled experiments, and data-driven decisions.

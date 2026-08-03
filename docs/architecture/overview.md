@@ -14,14 +14,15 @@ a clean seam so each crate has a single concern:
 
 | Crate | Relationship | Owns |
 |---|---|---|
-| **liblevenshtein** (this crate, `v0.9.1`) | — | the Levenshtein **transducer/automata**, edit-distance functions, pre-filters, and every higher-level engine (phonetic, time-series MSM, WallBreaker, contextual completion, fuzzy cache, grep), plus the CLI/REPL/WASM/FFI/serialization surfaces |
+| **liblevenshtein** (this crate, `v0.10.0`) | — | the Levenshtein **transducer/automata**, edit-distance functions, pre-filters, higher-level reusable engines (phonetic, time-series MSM, WallBreaker, contextual completion, fuzzy cache), plus WASM/FFI/serialization surfaces |
+| **liblevenshtein-cli** (`v0.10.0`) | depends on this crate | the `liblevenshtein` executable, REPL, filesystem grep, compression/archive readers, document parsers, and optional OCR |
 | **libdictenstein** (`v0.2`) | **hard path dependency** (`Cargo.toml`: `libdictenstein = { path = "../libdictenstein" }`) | **all dictionary backends** (`DoubleArrayTrie`, `DynamicDawg`/`DynamicDawgU64`, `SuffixAutomaton`, `Scdawg`, `PersistentARTrie`, `PathMapDictionary`) and the `Dictionary` / `DictionaryNode` / `MappedDictionary` traits, plus SIMD + bloom-filter pruning and prefix zippers |
 | **duallity** | **external, optional** integration (referenced for WFST composition; *not* a build dependency of this crate) | weighted finite-state transducer (WFST) / language-model composition |
 | **liblevenshtein-macros** | **independent Cargo workspace**, local path integration | compile-time regex → NFA generation without duplicating the library `cdylib` artifact |
 
-The dependency direction is strict and acyclic: liblevenshtein → libdictenstein.
-There is no reverse edge, so the dictionaries can be developed and versioned
-independently of the automata that consume them.
+The dependency direction is strict and acyclic:
+`liblevenshtein-cli → liblevenshtein → libdictenstein`. There are no reverse
+edges, so each layer can be consumed without pulling in the layer above it.
 
 ## 2 · Why the dictionaries moved out (the 0.9.0 extraction)
 
@@ -62,7 +63,7 @@ A query threads through all three areas in one lock-step pass:
    ┌───────────────▼───────────────────────┐      └──────────────────────┘
    │  Engines                               │
    │   phonetic · MSM · WallBreaker         │        duallity (optional)
-   │   contextual · cache · grep            │      ┌──────────────────────┐
+   │   contextual · cache                   │      ┌──────────────────────┐
    └───────────────┬───────────────────────┘      │  WFST composition     │
                    └───────── optional ──────────▶ │  (language models)    │
                                                    └──────────────────────┘

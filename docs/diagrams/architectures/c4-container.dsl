@@ -10,6 +10,7 @@ workspace "liblevenshtein containers" "Major subsystems of liblevenshtein" {
   model {
     user = person "Application / Developer" ""
     dict = softwareSystem "libdictenstein" "Dictionary backends" "Dict"
+    cli = softwareSystem "liblevenshtein-cli" "Command, REPL, archive, and document-search application" "Cli"
     wfst = softwareSystem "duallity (optional)" "WFST composition" "Wfst"
 
     lev = softwareSystem "liblevenshtein" "Approximate matching library" {
@@ -20,18 +21,18 @@ workspace "liblevenshtein containers" "Major subsystems of liblevenshtein" {
       wallbrk    = container "WallBreaker"           "SCDAWG + pigeonhole for large error bounds"                       "src/wallbreaker" "Wall"
       contextual = container "Contextual completion" "Hierarchical scopes, draft buffers, checkpoints"                  "src/contextual"  "Ctx"
       cache      = container "Fuzzy cache"           "FuzzyMultiMap + eviction wrappers"                                "src/cache"       "Cache"
-      grep       = container "Grep"                  "Streaming decompress / archive / document fuzzy search"           "src/grep"        "Grep"
-      surfaces   = container "Surfaces"              "CLI, REPL, WASM, FFI, serialization"                              "src/cli,repl,…"  "Surf"
+      surfaces   = container "Bindings & persistence" "WASM, FFI, bincode, protobuf, gzip"                               "src/wasm,ffi,serialization" "Surf"
     }
 
+    user       -> cli      "Invokes"
     user       -> surfaces "Invokes"
     user       -> core     "Queries"
+    cli        -> core     "Uses reusable matching engines"
     surfaces   -> core     "Drives queries"
     phonetic   -> core     "Composes pattern NFA with Levenshtein automaton"
     timeser    -> core     "Reuses position-set machinery"
     wallbrk    -> core     "Splits query, verifies pieces"
     contextual -> core     "Incremental fuzzy completion"
-    grep       -> phonetic "Per-token phonetic match"
     core       -> distance "Exact distance & affix stripping"
     core       -> dict     "Lock-step traversal"
     contextual -> dict     "Draft dictionaries"
@@ -75,7 +76,7 @@ workspace "liblevenshtein containers" "Major subsystems of liblevenshtein" {
       element "Cache" {
         background #FFF9C4
       }
-      element "Grep" {
+      element "Cli" {
         background #FFE0B2
       }
       element "Surf" {

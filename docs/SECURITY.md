@@ -5,10 +5,10 @@ surfaces it exposes, and the posture at each. It is aimed at integrators
 embedding the library in a service or another language runtime.
 
 liblevenshtein is a **library**, not a network service: it has no listening
-sockets, no ambient authority, and performs no I/O of its own except where a
-feature explicitly reads files (grep, serialization). Its security profile is
-therefore the profile of the **inputs it parses** and the **language boundaries
-it crosses**.
+sockets or ambient authority. Its filesystem input/output is limited to APIs
+that callers explicitly invoke, such as dictionary serialization. Its security
+profile is therefore the profile of the **inputs it parses** and the **language
+boundaries it crosses**.
 
 ## Trust boundaries at a glance
 
@@ -16,7 +16,6 @@ it crosses**.
 |---|---|---|---|
 | Core query API | query term $`W`$, distance $`k`$ | none (pure, in-process) | total functions; $`k`$ bounds the search; no allocation proportional to attacker-chosen constants beyond $`\mathcal{O}(\lvert W\rvert)`$ state |
 | `.llre` / regex DSL | a regular expression | `src/phonetic/regex`, `src/phonetic/llre` | compiled to an NFA (Thompson/Glushkov) → **linear-time matching, no catastrophic backtracking (ReDoS-resistant by construction)** |
-| Grep (`grep-*` features) | files, archives, compressed & document formats | `src/grep/source.rs` | streaming extraction with archive-entry filtering; integrators must bound decompression (see below) |
 | Serialization (`serialization`) | a serialized dictionary file | `src/serialization` | deserialize only trusted/own-produced artifacts; treat third-party blobs as untrusted |
 | FFI (`ffi`) | raw C pointers | `src/ffi` (`unsafe extern "C"`) | documented caller contract; the boundary is `unsafe` by nature |
 | WASM (`wasm`) | values from JavaScript | `src/wasm` (`wasm_bindgen`) | sandboxed by the Wasm runtime; validate term sizes at the host |
@@ -43,33 +42,7 @@ length. The construction also exposes size/complexity hooks in
 to matching time. If you accept very large *pattern sources*, bound the input
 length before compilation as you would any parser input.
 
-## 3 · Grep — untrusted archives, compressed streams, and documents
-
-The grep subsystem (`src/grep/source.rs`, behind the `grep-*` features) is the
-widest untrusted-input surface: it transparently peels compressed streams
-(gzip, zstd, xz, bzip2), walks archives (tar, zip) with an entry-glob filter, and
-extracts text from document formats (PDF, DOCX, XLSX, EPUB, ODT). The relevant
-classes of risk and the posture:
-
-- **Decompression bombs.** A small archive can expand to a huge stream. The
-  pipeline is *streaming* (it does not require materialising whole files), which
-  bounds peak memory, but integrators scanning untrusted archives should still
-  impose an overall output-size / time budget at the call site.
-- **Path traversal (zip-slip).** Archive entries are matched against an
-  entry-glob filter rather than being written to arbitrary paths; grep reads
-  entry *contents* for matching and does not extract entries to the filesystem,
-  which removes the classic zip-slip write primitive. If you extend grep to
-  *write* extracted entries, sanitise entry paths.
-- **Malformed documents.** Document extractors (PDF/DOCX/…) parse complex,
-  attacker-controllable formats via third-party crates; treat extraction of
-  untrusted documents as you would any untrusted parser — sandbox or resource-limit
-  the process when scanning hostile corpora.
-
-**Guidance.** When scanning untrusted input, run with an OS-level memory/time
-limit (e.g. `systemd-run --scope -p MemoryMax=… -p RuntimeMaxSec=…`) and enable
-only the document extractors you need.
-
-## 4 · Binary persistence — bound every decode
+## 3 · Binary persistence — bound every decode
 
 The `serialization` feature loads bincode dictionaries; `protobuf` adds Protocol
 Buffers, and `compression` permits gzip around either binary stream. JSON, TOML,
@@ -90,7 +63,7 @@ unstructured trailing junk. Operation-set gzip accepts exactly one checksummed
 member, rejects concatenated members/trailing bytes, and caps inflated output
 before invoking either inner decoder.
 
-## 5 · FFI — the documented `unsafe` contract
+## 4 · FFI — the documented `unsafe` contract
 
 Every FFI function is `unsafe extern "C"` (`src/ffi/`), as it dereferences raw
 caller pointers. The contract, lifted from the module documentation, is:
@@ -107,7 +80,7 @@ Violating the contract is undefined behaviour. Memory safety across this boundar
 is the **caller's** responsibility; the Rust side upholds its half (it never hands
 back a dangling pointer and validates nullness where it can).
 
-## 6 · WASM — sandboxed, but validate sizes at the host
+## 5 · WASM — sandboxed, but validate sizes at the host
 
 The `wasm` bindings (`src/wasm/`) run inside the host's WebAssembly sandbox, which
 provides memory isolation. The residual concern is resource use: a caller can ask
@@ -117,17 +90,19 @@ at the JavaScript host before crossing into Wasm.
 ## Scope
 
 - **In scope:** memory-safety of the safe Rust API; denial-of-service resistance of
-  the matching engines; the documented FFI contract; the parsing posture of the
-  grep, serialization, and DSL surfaces.
+  the matching engines; the documented FFI contract; and the parsing posture of
+  serialization and the domain-specific languages (DSLs).
 - **Out of scope:** misuse of the `unsafe` FFI contract by the caller; security of
-  the third-party document-parsing crates beyond how this crate invokes them;
   host-application authorization (the library has no notion of users or
-  permissions).
+  permissions); and the CLI application's archive, compression, document, and
+  optical character recognition (OCR) parsers. See the CLI repository's
+  [security guide](https://github.com/vinary-tree/liblevenshtein-rust-cli/blob/master/docs/security.md)
+  for those application-owned boundaries.
 
 ## Reporting
 
 Report suspected vulnerabilities via the project's GitHub repository
-(`https://github.com/universal-automata/liblevenshtein-rust`) security advisory /
+(`https://github.com/vinary-tree/liblevenshtein-rust`) security advisory /
 issue channel. Please include a reproducer and the affected feature flags.
 
 ---

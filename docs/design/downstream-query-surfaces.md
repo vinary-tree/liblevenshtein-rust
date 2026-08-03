@@ -298,7 +298,7 @@ tested against `QueryIteratorF64`.
 
 ### 7.3 Measured cost, not guessed cost
 
-The pinned pgmcp experiment 158 compared equivalent standard costs on one
+The pinned experiment compared equivalent standard costs on one
 Threadripper core. The control `QueryIteratorF64` mean was 1,802,404 ns and the
 contextual treatment mean was 1,184,158 ns for the frozen 10,000-term arm. The
 preregistered expectation of overhead was refuted on this workload; the

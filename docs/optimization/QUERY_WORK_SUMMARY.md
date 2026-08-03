@@ -345,9 +345,11 @@ test result: ok. 139 passed; 0 failed; 0 ignored
 ```
 
 ### REPL Verification
-The original bug can be verified as fixed in the REPL:
+This is a historical pre-0.10 transcript. The REPL now lives in the sibling CLI
+repository and can be launched from a sibling checkout:
 ```bash
-$ cargo run --features cli --release -- repl
+$ cd ../liblevenshtein-rust-cli
+$ cargo run --release -- --repl
 > load dict foo bar baz quo qux
 Loaded dictionary with 5 terms
 > query-ordered quuo 99

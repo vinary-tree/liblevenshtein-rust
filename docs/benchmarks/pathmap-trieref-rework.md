@@ -20,8 +20,7 @@ Hypotheses are stated up front; verdicts are recorded against measured data.
   Criterion `pre-trieref` baselines are produced there, then compared against
   the reworked tree. *(The worktree was removed after the runs to reclaim
   ~626 MB; recreate it with the Stage 0 commands below for any rerun. All
-  measured numbers are preserved in this ledger and in the pgmcp data tables
-  `pathmap_trieref_hypotheses` / `pathmap_trieref_measurements`.)*
+  measured numbers are preserved in this ledger.)*
 
 ### Commands
 

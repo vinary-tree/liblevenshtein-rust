@@ -3,9 +3,7 @@
 This directory holds every conceptual diagram for `liblevenshtein`, authored as
 **plain-text source** and rendered to a **committed sibling SVG**. It is the
 single source of truth for *how* the project draws its architecture, automata,
-and data-flows, and it implements the pgmcp documentation guideline
-`diagrams-pgmcp-catalog` ("determine the best diagrams for each illustration and
-refer to the diagramming catalog in pgmcp for available tooling").
+and data flows.
 
 > **Golden rule.** Every diagram is a *text* source with exactly one committed
 > `<stem>.svg` beside it. **Never hand-edit an `.svg`.** Edit the source and run
@@ -33,17 +31,15 @@ concern; a diagram that spans concerns lives with the concern it *teaches*.
 | `contextual/` | hierarchical scope tree, draft/checkpoint lifecycle |
 | `cache/` | `FuzzyMultiMap` and the eviction-wrapper decorator stack |
 | `serialization/` | persistence formats |
-| `grep/` | the streaming decompress/extract/match pipeline |
 | `bindings/` | the WASM / FFI boundary |
 | `_legend/` | the canonical colour legend (`color-legend.svg`) |
 
 ---
 
-## 2. Tooling — the pgmcp diagramming catalog
+## 2. Tooling
 
-The pgmcp diagramming toolbox is installed locally; this project uses the
-subset below. **Choose the tool by what the diagram *is*, not by habit** — the
-right notation makes a diagram self-explanatory.
+The project uses the tools below. **Choose the tool by what the diagram *is*,
+not by habit** — the right notation makes a diagram self-explanatory.
 
 | Concept to illustrate | Tool | Source ext | Why this tool |
 |---|---|---|---|

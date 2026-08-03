@@ -780,9 +780,9 @@ impl<V: PositionVariant> UniversalState<V> {
 
 ### Related Documentation
 
-1. [TCS_2011_PAPER_ANALYSIS.md](./TCS_2011_PAPER_ANALYSIS.md) - Section 8
-2. [TCS_2011_IMPLEMENTATION_MAPPING.md](./TCS_2011_IMPLEMENTATION_MAPPING.md) - Section 8
-3. [THEORETICAL_FOUNDATIONS.md](./THEORETICAL_FOUNDATIONS.md) - Diagonal property
+1. [TCS_2011_PAPER_ANALYSIS.md](../../research/universal-levenshtein/TCS_2011_PAPER_ANALYSIS.md) - Section 8
+2. [TCS_2011_IMPLEMENTATION_MAPPING.md](../../research/universal-levenshtein/TCS_2011_IMPLEMENTATION_MAPPING.md) - Section 8
+3. [THEORETICAL_FOUNDATIONS.md](../../research/universal-levenshtein/THEORETICAL_FOUNDATIONS.md) - Diagonal property
 
 ### Code References
 

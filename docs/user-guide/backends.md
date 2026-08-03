@@ -429,7 +429,7 @@ Enable backends via Cargo features:
 ```toml
 [dependencies]
 liblevenshtein = {
-    git = "https://github.com/universal-automata/liblevenshtein-rust",
+    git = "https://github.com/vinary-tree/liblevenshtein-rust",
     tag = "v0.9.1",
     features = [
         "dat-backend",              # DoubleArrayTrie (default)

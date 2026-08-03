@@ -123,30 +123,11 @@ assert!(is_match("^hello$", "hello")?);
 assert!(!is_match("^hello$", "world")?);
 ```
 
-## CLI Integration
+## Command-line integration
 
-### Compile to Binary
-
-```bash
-# Compile .llre to binary format
-liblevenshtein --compile-regex --input pattern.llre --output pattern.llre.bin
-
-# Verify compilation by loading result
-liblevenshtein --compile-regex --input pattern.llre --verify
-```
-
-### Match Text
-
-```bash
-# Match against source .llre file
-liblevenshtein --match-regex --rules pattern.llre --text "test input"
-
-# Match against compiled binary (faster)
-liblevenshtein --match-regex --rules pattern.llre.bin --text "test input" --compiled
-
-# With flags
-liblevenshtein --match-regex --rules pattern.llre --text "test\ninput" --multiline
-```
+The `.llre` compiler and matching commands live in the separate
+[`liblevenshtein-cli` regex guide](https://github.com/vinary-tree/liblevenshtein-rust-cli/blob/master/docs/commands/regex.md).
+The sections here describe the reusable parser, compiler, and matching APIs.
 
 ## Compile-Time Macros
 

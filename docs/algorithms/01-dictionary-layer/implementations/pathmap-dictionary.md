@@ -112,13 +112,13 @@ Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-liblevenshtein = { version = "0.9", features = ["pathmap-backend"] }
+liblevenshtein = { version = "0.10", features = ["pathmap-backend"] }
 ```
 
-Or use CLI:
+For the separate command application:
 
 ```bash
-cargo add liblevenshtein --features pathmap-backend
+cargo install liblevenshtein-cli
 ```
 
 ### PathMap Features

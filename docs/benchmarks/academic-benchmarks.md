@@ -61,8 +61,7 @@ en-us-cmudict
 ```
 
 `clean-raw` removes downloaded and extracted corpora while preserving result
-artifacts. Use it after recording artifacts in pgmcp or another experiment
-ledger.
+artifacts. Use it after recording artifacts in the scientific ledger.
 
 The runner writes metadata, checksum files, raw benchmark output, and compact
 summary files under:
@@ -220,10 +219,10 @@ public corpus
   -> target/academic-benchmarks/{msm,phonetic}/
   -> systemd-run capped Cargo example
   -> target/academic-benchmarks/results/raw artifacts
-  -> pgmcp experiment artifact records
+  -> repository scientific-ledger record
   -> scripts/run-academic-benchmarks.sh clean-raw
 ```
 
-The raw artifacts are intentionally line-oriented CSV or JSONL so that pgmcp can
-ingest paired binary counts, measurement summaries, or diagnostic categories
-without rerunning the workload.
+The raw artifacts are intentionally line-oriented CSV or JSONL so paired binary
+counts, measurement summaries, or diagnostic categories can be analyzed without
+rerunning the workload.

@@ -400,7 +400,7 @@ H4-H6 are **NOT recommended** at this time:
 
 ```bash
 # Clone repository
-git clone https://github.com/universal-automata/liblevenshtein-rust
+git clone https://github.com/vinary-tree/liblevenshtein-rust
 cd liblevenshtein-rust
 git checkout e5a32a0  # Baseline
 

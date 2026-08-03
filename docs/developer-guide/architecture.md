@@ -1,7 +1,7 @@
 # liblevenshtein-rust Architecture
 
-**Version:** 0.9.1
-**Last Updated:** 2026-06-19
+**Version:** 0.10.0
+**Last Updated:** 2026-08-03
 
 This document describes the **intra-crate** architecture and design principles of
 liblevenshtein-rust — how the modules inside this crate fit together. For the
@@ -36,7 +36,7 @@ using Levenshtein automata. Since v0.9.0 it is layered over a sibling crate:
    the lazy/parameterized engine (default), plus eager `universal/` and
    runtime-configurable `generalized/` implementations.
 3. **Higher-level engines** are built on the core: phonetic matching, time-series
-   (MSM), WallBreaker, contextual completion, fuzzy caching, and grep.
+   measures, WallBreaker, contextual completion, and fuzzy caching.
 
 ![Three-layer architecture: libdictenstein backends, the Levenshtein transducer core, and the higher-level engines.](../diagrams/architectures/component-stack.svg)
 
@@ -50,7 +50,7 @@ using Levenshtein automata. Since v0.9.0 it is layered over a sibling crate:
 - **Concurrent-safe** — **lock-free reads on every backend** (immutable arrays on the
   static dict, `ArcSwap` snapshots on the dynamic ones); every backend is `Send + Sync`
   with cheap `Arc` clones.
-- **Feature-gated** — modular compilation (phonetic, serialization, cli, grep, wasm, ffi …).
+- **Feature-gated** — modular compilation (phonetic, serialization, WASM, FFI, caching …).
 
 ---
 
@@ -95,12 +95,9 @@ src/
 ├── wallbreaker/        # Large-k strategy (SCDAWG + pigeonhole)
 ├── contextual/         # Hierarchical scopes, draft buffers, checkpoints
 ├── cache/              # FuzzyMultiMap + composable eviction wrappers
-├── grep/               # Streaming decompress / archive / document fuzzy search
 │
 ├── serialization/      # bincode / protobuf binary persistence (+ gzip wrapper)
-├── cli/ · repl/        # Command-line & interactive surfaces (feature: cli)
-├── wasm/ · ffi/        # JavaScript & C-ABI boundaries
-└── commands/           # Shared load/save/query primitives used by cli & repl
+└── wasm/ · ffi/        # JavaScript & C-ABI boundaries
 ```
 
 ![Module dependency overview: engines and surfaces build on the transducer core, which traverses the libdictenstein dictionaries.](../diagrams/architectures/module-dependency.svg)
@@ -188,17 +185,16 @@ Implementations: `BincodeSerializer`, `ProtobufSerializer` (feature:
 add compression (feature: `compression`). JSON, TOML, and newline text are not
 dictionary persistence formats. See the
 [serialization formats diagram](../diagrams/serialization/serialization-formats.svg).
-Format auto-detection uses binary magic bytes and recognized binary extensions
-(`cli::detect`).
+The separate `liblevenshtein-cli` application crate owns file-extension and
+magic-byte auto-detection.
 
-### 6 · CLI / REPL architecture
+### 6 · Application boundary
 
-The CLI (clap) and REPL (rustyline) are thin front-ends over **shared** primitives
-in `src/commands/` (and `src/cli/commands.rs`): `load_dictionary`,
-`save_dictionary`, and the query operations are written once and reused, so both
-surfaces behave identically. CLI-specific code is argument parsing and one-shot
-execution; REPL-specific code is the interactive session, history, completion, and
-highlighting.
+The CLI, REPL, filesystem traversal, compression/archive handling, and
+document extractors live in the sibling `liblevenshtein-rust-cli` repository.
+That crate depends on this one; this library has no reverse dependency and no
+application feature flag. Reusable in-memory phonetic grep engines remain under
+`phonetic::{grep,grep_online,token_grep}`.
 
 ---
 
@@ -235,8 +231,9 @@ Modular compilation keeps the default dependency set minimal:
 default          = ["parking_lot"]
 phonetic-rules   = ["unicode-normalization"]
 serialization    = ["serde", "bincode", "libdictenstein/serialization"]
-cli              = ["clap", "rustyline", "pathmap-backend", "serialization"]
-# … grep-*, wasm, ffi, eviction-opt-* …
+compression      = ["flate2", "serialization", "libdictenstein/compression"]
+parallel-grep    = ["rayon", "phonetic-rules"]
+# … wasm, ffi, persistent-artrie, eviction-opt-* …
 ```
 
 The full graph is shown in the [feature-flag DAG](../diagrams/architectures/feature-flag-dag.svg).

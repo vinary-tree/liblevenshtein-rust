@@ -24,12 +24,7 @@ digraph modules {
   "wallbreaker" [fillcolor="#FFCCBC"];   // deep orange
   "contextual"  [fillcolor="#D1C4E9"];   // deep purple
   "cache"       [fillcolor="#FFF9C4"];   // yellow
-  "grep"        [fillcolor="#FFE0B2"];   // amber
-
-  // Surfaces
-  "commands"      [fillcolor="#CFD8DC"];
-  "cli"           [fillcolor="#CFD8DC"];
-  "repl"          [fillcolor="#CFD8DC"];
+  // Library surfaces
   "serialization" [fillcolor="#F0F4C3"]; // lime
   "wasm"          [fillcolor="#F0F4C3"];
   "ffi"           [fillcolor="#F0F4C3"];
@@ -51,15 +46,7 @@ digraph modules {
   "contextual"  -> "transducer";
   "contextual"  -> "cache";
   "cache"       -> "dictionary\n(shim)";
-  "grep"        -> "phonetic";
-  "grep"        -> "transducer";
-
-  // Surfaces wrap everything
-  "commands"      -> "transducer";
-  "commands"      -> "serialization";
-  "cli"           -> "commands";
-  "cli"           -> "repl";
-  "repl"          -> "commands";
+  // Bindings and persistence wrap the reusable engines
   "serialization" -> "dictionary\n(shim)";
   "wasm"          -> "transducer";
   "wasm"          -> "phonetic";

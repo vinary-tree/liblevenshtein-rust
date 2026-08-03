@@ -1,341 +1,94 @@
-name: CI - Tests and Linting
+name: CI
 
 on:
   push:
-    branches: [ master, develop, dylon/* ]
+    branches: [master, develop]
   pull_request:
-    branches: [ master, develop ]
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-  # Note: RUSTFLAGS is configured per-platform in job env sections
-  # to provide platform-specific CPU features (aes+sse2 for x86, aes+neon for ARM)
 
 jobs:
   test:
-    name: Test Suite
-    runs-on: ${{ matrix.platform.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [stable, nightly]
-        platform:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            rustflags: "-C target-feature=+aes,+sse2"
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            rustflags: "-C target-feature=+aes,+neon"
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-
-    - name: Checkout dev sibling crates
-      uses: ./.github/actions/checkout-dev-siblings
-
-    - name: Register Tesseract Repository (Linux)
-      if: runner.os == 'Linux'
-      run: sudo add-apt-repository ppa:alex-p/tesseract-ocr5
-
-    - name: Update package index (Linux)
-      if: runner.os == 'Linux'
-      run: sudo apt-get update
-
-    - name: Install protobuf compiler (Linux)
-      if: runner.os == 'Linux'
-      run: sudo apt-get install -y protobuf-compiler
-
-    - name: Install protobuf compiler (macOS)
-      if: runner.os == 'macOS'
-      run: brew install protobuf
-
-    - name: Install Leptonica (Linux)
-      if: runner.os == 'Linux'
-      run: sudo apt-get install -y libleptonica-dev
-
-    - name: Install Leptonica (macOS)
-      if: runner.os == 'macOS'
-      run: brew install leptonica
-
-    - name: Install Tesseract (Linux)
-      if: runner.os == 'Linux'
-      run: sudo apt-get install -y tesseract-ocr libtesseract-dev
-
-    - name: Install Tesseract (macOS)
-      if: runner.os == 'macOS'
-      run: brew install tesseract
-
-    - name: Install Rust toolchain
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-      with:
-        toolchain: ${{ matrix.rust }}
-        target: ${{ matrix.platform.target }}
-        components: rustfmt, clippy
-
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-${{ matrix.rust }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.rust }}-cargo-registry-
-
-    - name: Cache cargo index
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-${{ matrix.rust }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.rust }}-cargo-index-
-
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-${{ matrix.rust }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.rust }}-cargo-build-target-
-
-    - name: Build library
-      env:
-        RUSTFLAGS: ${{ matrix.platform.rustflags }}
-      run: |
-        echo "::group::Building liblevenshtein"
-        cargo build --all-features --target ${{ matrix.platform.target }} --verbose
-        echo "::endgroup::"
-
-    - name: Build CLI
-      env:
-        RUSTFLAGS: ${{ matrix.platform.rustflags }}
-      run: |
-        echo "::group::Building CLI"
-        cargo build --bin liblevenshtein --features cli,compression,protobuf --target ${{ matrix.platform.target }} --verbose
-        echo "::endgroup::"
-
-    - name: Run unit tests
-      env:
-        RUSTFLAGS: ${{ matrix.platform.rustflags }}
-      run: |
-        echo "::group::Running unit tests"
-        cargo test --lib --all-features --target ${{ matrix.platform.target }} --verbose
-        echo "::endgroup::"
-
-    - name: Run integration tests
-      env:
-        RUSTFLAGS: ${{ matrix.platform.rustflags }}
-      run: |
-        echo "::group::Running integration tests"
-        cargo test --test '*' --all-features --target ${{ matrix.platform.target }} --verbose -- --nocapture
-        echo "::endgroup::"
-
-    - name: Run doc tests
-      env:
-        RUSTFLAGS: ${{ matrix.platform.rustflags }}
-      run: |
-        echo "::group::Running documentation tests"
-        cargo test --doc --all-features --target ${{ matrix.platform.target }} --verbose
-        echo "::endgroup::"
-
-    - name: Verify procedural-macro workspace
-      env:
-        RUSTFLAGS: ${{ matrix.platform.rustflags }}
-      run: |
-        echo "::group::Testing liblevenshtein-macros"
-        cargo test --manifest-path liblevenshtein-macros/Cargo.toml --all-features --target ${{ matrix.platform.target }} --verbose
-        echo "::endgroup::"
-
-    - name: Build examples
-      env:
-        RUSTFLAGS: ${{ matrix.platform.rustflags }}
-      run: |
-        echo "::group::Building examples"
-        cargo build --examples --all-features --target ${{ matrix.platform.target }} --verbose
-        echo "::endgroup::"
-
-    - name: Upload test artifacts on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results-${{ matrix.platform.os }}-${{ matrix.rust }}
-        path: |
-          target/${{ matrix.platform.target }}/debug/
-          tests/*.rs
-          examples/*.rs
-        retention-days: 7
-
-  # lint:
-  #   name: Lint and Format Check
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     # Use x86_64 Linux flags for linting
-  #     RUSTFLAGS: "-C target-feature=+aes,+sse2"
-
-  #   steps:
-  #   - name: Checkout repository
-  #     uses: actions/checkout@v4
-  #     with:
-  #       fetch-depth: 1
-
-  #   - name: Install protobuf compiler
-  #     run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
-  #   - name: Install Rust toolchain
-  #     uses: actions-rust-lang/setup-rust-toolchain@v1
-  #     with:
-  #       toolchain: stable
-  #       target: x86_64-unknown-linux-gnu
-  #       components: rustfmt, clippy
-
-  #   - name: Check formatting
-  #     run: cargo fmt -- --check
-
-  #   - name: Run clippy
-  #     run: |
-  #       # Lint workspace code
-  #       # --no-deps: Don't lint dependencies (avoids failing on upstream warnings)
-  #       # cargo clippy --no-deps --all-features -- -D warnings
-  #       cargo clippy --no-deps -- -D warnings
-
-  # ---------------------------------------------------------------------
-  # Supply-chain gate: published advisories, licence compatibility, banned
-  # crates, and permitted sources. Configured in deny.toml.
-  #
-  # Added after a fleet-wide OSV sweep (2026-07) found five advisories in the
-  # locked tree -- including two quick-xml denial-of-service issues that
-  # arrived pinned inside document-format dependencies rather than through
-  # anything declared in Cargo.toml, so reading our own manifest would never
-  # have revealed them.
-  #
-  # This job can fail on a commit that changes nothing, because advisories are
-  # published against code that is already merged. That is the point.
-  # ---------------------------------------------------------------------
-  supply-chain:
-    name: Supply chain (cargo-deny)
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        feature-set: [default, all]
     steps:
-    - uses: actions/checkout@v4
-    - uses: EmbarkStudios/cargo-deny-action@v2
-      with:
-        command: check advisories bans sources licenses
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - if: matrix.feature-set == 'default'
+        run: cargo test --locked
+      - if: matrix.feature-set == 'all'
+        run: cargo test --locked --all-features
+      - if: matrix.feature-set == 'all'
+        run: cargo clippy --locked --all-features --all-targets -- -D warnings
+      - if: matrix.feature-set == 'all'
+        run: cargo test --locked --manifest-path liblevenshtein-macros/Cargo.toml --all-features
+      - if: matrix.feature-set == 'all'
+        run: cargo build --locked --examples --all-features
+      - run: cargo fmt --all --check
+
+  supply-chain:
+    name: Supply chain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories bans sources licenses
 
   wasm:
-    name: WASM Build Check
+    name: WASM build
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-
-    - name: Checkout dev sibling crates
-      uses: ./.github/actions/checkout-dev-siblings
-
-    - name: Install Rust toolchain (wasm32-unknown-unknown)
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-      with:
-        toolchain: nightly
-        target: wasm32-unknown-unknown
-
-    - name: Check wasm build (--features wasm)
-      # The `wasm` feature targets browser/Node via wasm-bindgen. getrandom 0.4's
-      # web RNG backend is selected by the getrandom_backend="wasm_js" cfg in
-      # .cargo/config.toml under [target.wasm32-unknown-unknown]. Do NOT set
-      # RUSTFLAGS here — it would override that target-specific rustflags entry
-      # and drop the cfg (and would also apply the invalid target-cpu=native to
-      # wasm), breaking the build.
-      run: cargo check --target wasm32-unknown-unknown --features wasm --verbose
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo check --locked --target wasm32-unknown-unknown --features wasm
 
   benchmarks:
-    name: Benchmarks
+    name: Benchmark compilation
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    env:
-      RUSTFLAGS: "-C target-feature=+aes,+sse2"
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: cargo build --locked --benches --all-features
 
-    - name: Checkout dev sibling crates
-      uses: ./.github/actions/checkout-dev-siblings
-
-    - name: Install system dependencies
-      # --all-features pulls in leptess (leptonica-sys/tesseract-sys), which need
-      # the Leptonica + Tesseract dev libraries at build time, plus protobuf.
-      run: |
-        sudo add-apt-repository -y ppa:alex-p/tesseract-ocr5
-        sudo apt-get update
-        sudo apt-get install -y protobuf-compiler libleptonica-dev tesseract-ocr libtesseract-dev
-
-    - name: Install Rust toolchain
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-      with:
-        toolchain: nightly
-        target: x86_64-unknown-linux-gnu
-        components: rustfmt, clippy
-
-    - name: Compile-check benchmarks
-      # Build every bench target (dev profile, no LTO) to catch bench rot against
-      # the current API — fast (minutes). The full statistical `cargo bench` run
-      # is release+LTO over ~50 benches and takes hours, so it is intentionally
-      # NOT run in CI; perf measurement is done deliberately and CPU-pinned
-      # locally (see the project's benchmarking methodology).
-      run: cargo build --benches --all-features --target x86_64-unknown-linux-gnu
-
-  test-report:
-    name: Test Report Summary
+  downstream-boundary:
+    name: Library dependency boundary
     runs-on: ubuntu-latest
-    # needs: [test, lint, benchmarks]
-    needs: [test, wasm, benchmarks]
-    if: always()
-
     steps:
-    - name: Download benchmark results
-      if: needs.benchmarks.result == 'success'
-      uses: actions/download-artifact@v4
-      with:
-        name: benchmark-results
-        path: ./benchmark-results
-      continue-on-error: true
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo tree --locked --all-features --edges normal
+      - name: Reject application-only packages
+        run: |
+          if cargo tree --locked --all-features --edges normal |
+             grep -E ' (clap|rustyline|quick-xml|pdf-extract|calamine|docx-rs|leptess|tar|zip|zstd|xz2|bzip2) v'; then
+            echo "application-only dependency leaked into liblevenshtein" >&2
+            exit 1
+          fi
 
-    - name: Generate summary
-      run: |
-        echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
-        echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| WASM | ${{ needs.wasm.result }} |" >> $GITHUB_STEP_SUMMARY
-        # echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Benchmarks | ${{ needs.benchmarks.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-
-        # if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.lint.result }}" == "success" ]; then
-        #   echo "✅ All checks passed!" >> $GITHUB_STEP_SUMMARY
-        # else
-        #   echo "❌ Some checks failed. Please review the logs." >> $GITHUB_STEP_SUMMARY
-        # fi
-
-        echo "" >> $GITHUB_STEP_SUMMARY
-
-        # Include benchmark summary if available
-        if [ -f "./benchmark-results/benchmark-summary.md" ]; then
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          cat ./benchmark-results/benchmark-summary.md >> $GITHUB_STEP_SUMMARY
-        elif [ "${{ needs.benchmarks.result }}" == "skipped" ]; then
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "⏭️ Benchmarks skipped (only run on master branch)" >> $GITHUB_STEP_SUMMARY
-        fi
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --locked --all-features --no-deps

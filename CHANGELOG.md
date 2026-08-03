@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-03
+
+### Changed
+
+- Split the `liblevenshtein` executable, REPL, filesystem grep pipeline, and
+  archive/document extractors into the new `liblevenshtein-cli` crate.
+- Removed the `cli`, `grep-compression`, `grep-archives`, and
+  `grep-documents` feature families and their application-only dependencies.
+- Kept the reusable in-memory phonetic grep engines and `parallel-grep` in the
+  library.
+
+### Removed
+
+- Removed `MittonCorpus::load_birkbeck_zip`; archive-backed corpus fixture
+  loading is no longer part of the library API.
+
 ### Added
 
 - **Alignment-expressible Class-A presets and references.**

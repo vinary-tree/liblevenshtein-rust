@@ -131,7 +131,8 @@ See `FUTURE_ENHANCEMENTS.md` for detailed planned features.
 
 - Additional serialization formats (MessagePack, CBOR)
 - Dictionary builder optimizations
-- Extended CLI features (batch processing, watch mode)
+- CLI batch processing and watch mode belong in
+  [`liblevenshtein-rust-cli`](https://github.com/vinary-tree/liblevenshtein-rust-cli)
 - More comprehensive benchmarking suite
 
 ### Documentation

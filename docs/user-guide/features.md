@@ -194,76 +194,12 @@ let loaded: PathMapDictionary = GzipSerializer::<BincodeSerializer>::deserialize
 
 ### CLI Tool
 
-Enable with: `features = ["cli"]`
+The executable and REPL moved to the separate
+[`liblevenshtein-cli`](https://github.com/vinary-tree/liblevenshtein-rust-cli)
+package in 0.10. Version 0.10.0 is not published yet; build the sibling checkout
+until the coordinated library-first release is complete. After publication,
+install it with `cargo install liblevenshtein-cli`.
 
-Build: `cargo build --bin liblevenshtein --features cli,compression,protobuf --release`
-
-**Commands**:
-
-1. **Query**: Search for fuzzy matches
-```bash
-liblevenshtein --query --text aple \\
-    --dict words.bin \\
-    --max-distance 2 \\
-    --algorithm transposition \\
-    --show-distances
-```
-
-2. **Convert**: Between supported binary formats and backends
-```bash
-liblevenshtein --convert --input words.bin --output words.pb \\
-    --from-format bincode --to-format protobuf \\
-    --to-backend path-map
-
-liblevenshtein --convert --input dict.bin --output dict-dawg.bin \\
-    --from-backend path-map \\
-    --to-backend dynamic-dawg
-```
-
-3. **Insert/Delete**: Runtime dictionary updates
-```bash
-liblevenshtein --insert --dict dict.bin newterm
-liblevenshtein --delete --dict dict.bin oldterm
-```
-
-4. **REPL**: Interactive exploration
-```bash
-liblevenshtein --repl --dict words.bin.gz --format bincode-gz
-```
-
-5. **Info**: Show dictionary statistics
-```bash
-liblevenshtein --info --dict words.bin --backend path-map
-```
-
-**Format Support**:
-- Bincode (`--format bincode` or `.bin`)
-- Protobuf (`--format protobuf` or `.pb`)
-- **Compressed**: `bincode-gz`, `protobuf-gz` (`.bin.gz`, `.pb.gz`)
-
-**Backend Options**:
-- `double-array-trie`: Default read-optimized trie (static dictionaries)
-- `dynamic-dawg`: Space-efficient DAWG with runtime updates
-- `path-map`: General-purpose trie with structural sharing
-
-**Algorithm Options**:
-- `standard`: Insert, delete, substitute
-- `transposition`: + character swaps
-- `merge-and-split`: + merge/split operations
-
-## Examples
-
-All examples can be run with `cargo run --example <name>`:
-
-1. **serialization**: Dictionary save/load demo
-2. **dawg_demo**: DAWG vs PathMap comparison
-3. **builder_demo**: TransducerBuilder usage
-4. **code_completion_demo** (v0.4.0): IDE-style autocomplete with filtering
-5. **advanced_contextual_filtering** (v0.4.0): Bitmap masking for context switching
-6. **contextual_filtering_optimization** (v0.4.0): Performance comparison of filtering strategies
-7. **dynamic_dictionary**: Runtime dictionary updates with thread safety
-
-## Performance
 
 ### Recent Optimizations (Phases 1-6)
 
@@ -313,7 +249,7 @@ See [Thread Safety](thread-safety.md) for the full per-backend concurrency model
 | PathMap/Trie | ✅ | ✅ | Full parity |
 | Serialization | ✅ | ✅ | **New in Rust!** |
 | Builder pattern | ✅ | ✅ | **New in Rust!** |
-| CLI tool | ✅ | ✅ | **New in Rust!** |
+| CLI tool | ✅ | ✅ | Separate `liblevenshtein-cli` package |
 | State pooling | ✅ | ✅ | **Enhanced in Rust!** |
 | Performance | Good | **Excellent** | 40-60% faster after optimizations |
 
@@ -334,7 +270,7 @@ See [Thread Safety](thread-safety.md) for the full per-backend concurrency model
 ### Optional
 - `serde`, `bincode`: Binary serialization (feature: `serialization`)
 - `prost`: Protocol Buffers (feature: `protobuf`)
-- `clap`, `anyhow`: CLI (feature: `cli`)
+- `rayon`: Parallel in-memory phonetic matching (feature: `parallel-grep`)
 
 ### Dev
 - `criterion`: Benchmarking
@@ -343,18 +279,19 @@ See [Thread Safety](thread-safety.md) for the full per-backend concurrency model
 
 ```toml
 [features]
-default = []
-serialization = ["serde", "bincode"]
-compression = ["flate2"]  # v0.2.0
-protobuf = ["serialization", "prost"]  # v0.2.0
-cli = ["clap", "anyhow", "serialization"]
+default = ["parking_lot"]
+serialization = ["serde", "bincode", "libdictenstein/serialization"]
+compression = ["flate2", "serialization", "libdictenstein/compression"]
+protobuf = ["prost", "bytes", "prost-build", "serialization"]
+phonetic-rules = ["unicode-normalization"]
+parallel-grep = ["rayon", "phonetic-rules"]
 ```
 
 **Feature combinations**:
 - `serialization`: Compact bincode save/load support
 - `serialization,compression`: Add gzip compression
 - `serialization,protobuf`: Add cross-language Protobuf support
-- `cli,compression,protobuf`: Full binary CLI format set
+- `phonetic-rules,parallel-grep`: Parallel in-memory phonetic matching
 
 ## Related Documentation
 

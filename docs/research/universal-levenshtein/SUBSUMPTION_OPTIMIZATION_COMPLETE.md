@@ -385,7 +385,7 @@ This work builds on:
 
 ### Code
 
-1. **liblevenshtein-java**: https://github.com/universal-automata/liblevenshtein-java
+1. **liblevenshtein-java**: https://github.com/vinary-tree/liblevenshtein-java
    - UnsubsumeFunction.java: Batch unsubsumption
    - State.java: Linked list + merge sort
    - SubsumesFunction.java: Subsumption formulas

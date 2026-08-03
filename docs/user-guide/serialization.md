@@ -26,7 +26,7 @@ supported binary format.
 ```toml
 [dependencies]
 liblevenshtein = {
-    git = "https://github.com/universal-automata/liblevenshtein-rust",
+    git = "https://github.com/vinary-tree/liblevenshtein-rust",
     tag = "v0.9.1",
     features = ["serialization"]
 }
@@ -198,28 +198,12 @@ An operation's explicit applicability tag controls its behavior; its diagnostic 
 does. The compile-checked [`operation_set_persistence` example](../../examples/operation_set_persistence.rs)
 round-trips one complete configuration through both formats.
 
-## CLI use
+## Command-line use
 
-The CLI accepts the following storage format names:
-
-| CLI value | Typical extensions | Required feature |
-|---|---|---|
-| `bincode` | `.bin`, `.bincode` | `serialization` |
-| `protobuf` | `.pb`, `.protobuf` | `protobuf` |
-| `bincode-gz` | `.bin.gz`, `.bincode.gz` | `compression` |
-| `protobuf-gz` | `.pb.gz`, `.protobuf.gz` | `protobuf`, `compression` |
-
-Examples:
-
-```bash
-liblevenshtein --convert --input old.bin --output new.pb \
-  --from-format bincode --to-format protobuf
-
-liblevenshtein --query --dict dictionary.bin --text test --max-distance 2
-```
-
-Format detection uses the binary extensions above. For an unusual extension, pass `--format`,
-`--from-format`, or `--to-format` explicitly.
+Dictionary format detection, conversion flags, and command examples belong to
+the separate
+[`liblevenshtein-cli` dictionary guide](https://github.com/vinary-tree/liblevenshtein-rust-cli/blob/master/docs/commands/dictionaries.md).
+This page documents the reusable serialization API and wire-format behavior.
 
 ## Compatibility and safety
 

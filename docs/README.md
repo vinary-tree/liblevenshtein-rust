@@ -82,7 +82,8 @@ index maps everything else.
 ## 5 · Developer Guide
 
 - [Developer Guide](developer-guide/README.md) — [building](developer-guide/building.md), [contributing](developer-guide/contributing.md), [performance](developer-guide/performance.md), [publishing](developer-guide/publishing.md).
-- [Security & threat model](SECURITY.md) — untrusted-input surfaces (grep archive/document extraction, FFI/WASM boundaries, serialization, `.llre` parsing).
+- [Migration to the split CLI](migration-cli-split-0.10.md) — the v0.10 package and API boundary.
+- [Security & threat model](SECURITY.md) — untrusted-input surfaces (FFI/WASM boundaries, serialization, `.llre` parsing).
 - [Resource-exhaustion controls](security/resource-exhaustion.md) — automaton state ceilings, edit budgets, elastic-DP guards, and deployment policy.
 - [Automaton-variant security](security/automaton-variants.md) — continuation-tag integrity, subsumption soundness, selector stability, and extension review controls.
 - [Migration](migration/README.md) — terminology and version-migration notes (including the libdictenstein extraction).
@@ -107,11 +108,11 @@ written; they are indexed and cross-linked but never rewritten.
 - [Optimization journals](optimization/README.md) and [optimization results](optimizations/README.md) — hypothesis ledgers (H1/H2…), per-topic experiment logs.
 - [Universal](universal/README.md) · [Generalized](generalized/README.md) — phase records for the universal & generalized automaton work.
 - [MeTTaIL](mettail/README.md) — semantic type-checking for MeTTa (a large self-contained subtree: theoretical foundations, correction-WFST, simplification, implementation, ecosystem).
-- [Time-series analysis](time_series/README.md) · [Integration](integration/) (MORK, PathMap) · [Benchmarks](benchmarks/README.md) · [Analysis](analysis/) · [Bug reports](bug-reports/README.md) · [Completion reports](completion-reports/README.md) · [Implementation status](implementation-status/README.md) · [Delivery manifest](delivery/verify-manifest.md) — the Phase-10 verify manifest for the optimization/hardening plan (pgmcp 1719): full item set, gate evidence, behavioral impact, residual risk, verification handoff. · [Archive](archive/README.md).
+- [Time-series analysis](time_series/README.md) · [Integration](integration/) (MORK, PathMap) · [Benchmarks](benchmarks/README.md) · [Analysis](analysis/) · [Bug reports](bug-reports/README.md) · [Completion reports](completion-reports/README.md) · [Implementation status](implementation-status/README.md) · [Archive](archive/README.md).
 
 ## 9 · Diagrams
 
-- [Diagram suite & style guide](diagrams/README.md) — fully coloured diagrams (text source + committed SVG) built from the pgmcp diagramming catalog (PlantUML, Graphviz, D2, Structurizr, Pikchr, Asymptote), with a [shared colour legend](diagrams/_legend/color-legend.svg) and a reproducible [render pipeline](diagrams/render.sh).
+- [Diagram suite & style guide](diagrams/README.md) — fully coloured diagrams (text source + committed SVG) built with PlantUML, Graphviz, D2, Structurizr, Pikchr, and Asymptote, with a [shared colour legend](diagrams/_legend/color-legend.svg) and a reproducible [render pipeline](diagrams/render.sh).
 
 ---
 

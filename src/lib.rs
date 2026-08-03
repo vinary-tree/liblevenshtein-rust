@@ -27,7 +27,6 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
-pub mod commands;
 #[cfg(feature = "pathmap-backend")]
 pub mod contextual;
 /// Ordered cost monoids and exact decimal fixed-point scaling.
@@ -117,33 +116,6 @@ pub mod serialization;
 /// `PathMapDictionary`, `SuffixAutomaton`, etc.
 #[cfg(any(feature = "pathmap-backend", feature = "phonetic-rules"))]
 pub mod cache;
-
-/// Interactive REPL for exploring Levenshtein dictionaries
-#[cfg(all(feature = "cli", not(target_arch = "wasm32")))]
-pub mod repl;
-
-/// CLI interface and utilities
-#[cfg(all(feature = "cli", not(target_arch = "wasm32")))]
-pub mod cli;
-
-/// Grep support for compressed, archived, and document files
-///
-/// This module provides streaming decompression and archive support
-/// for searching through .gz, .zst, .xz, .bz2, .tar, and .zip files.
-/// Also provides document extraction support for PDF, DOCX, XLSX, EPUB, and ODT files.
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    any(
-        feature = "grep-compression",
-        feature = "grep-archives",
-        feature = "grep-pdf",
-        feature = "grep-docx",
-        feature = "grep-xlsx",
-        feature = "grep-epub",
-        feature = "grep-odt"
-    )
-))]
-pub mod grep;
 
 /// WebAssembly bindings for browser and Node.js via wasm-bindgen
 ///

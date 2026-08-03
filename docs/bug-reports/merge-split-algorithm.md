@@ -206,8 +206,8 @@ if i + 1 <= query_length {
 ## References
 
 - Schulz, K. U., & Mihov, S. (2002). Fast string correction with Levenshtein automata.
-- liblevenshtein-java: https://github.com/universal-automata/liblevenshtein-java
-- liblevenshtein-cpp: https://github.com/universal-automata/liblevenshtein-cpp
+- liblevenshtein-java: https://github.com/vinary-tree/liblevenshtein-java
+- liblevenshtein-cpp: https://github.com/vinary-tree/liblevenshtein-cpp
 
 ## Conclusion
 

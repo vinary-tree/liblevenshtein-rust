@@ -2,7 +2,7 @@
 
 **Date**: 2025-10-30
 **Analyzed Repositories**:
-- Java: `/home/dylon/Workspace/universal-automata/liblevenshtein-java/`
+- Java: [`vinary-tree/liblevenshtein-java`](https://github.com/vinary-tree/liblevenshtein-java)
 - Rust: `/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/`
 
 ## Executive Summary

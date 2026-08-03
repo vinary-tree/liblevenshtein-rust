@@ -200,4 +200,4 @@ e ┤   ● p1 = (i, e)
 | Phase 4 | non-ASCII grep/serialization regression tests |
 
 Whole-crate gate: `cargo check`/`clippy -D warnings`/`test` under `--all-features` (4890 tests),
-`git diff --check`, incomplete-code marker scan, and `pgmcp bug-gate`.
+`git diff --check`, incomplete-code marker scan, and the open-bug gate.

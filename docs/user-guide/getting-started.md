@@ -1,7 +1,7 @@
 # Getting Started with liblevenshtein-rust
 
-**Version**: 0.9.1
-**Last Updated**: 2026-06-19
+**Version**: 0.10.0
+**Last Updated**: 2026-08-03
 
 This guide will help you get started with liblevenshtein-rust for fast approximate string matching.
 
@@ -19,7 +19,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-liblevenshtein = { git = "https://github.com/universal-automata/liblevenshtein-rust", tag = "v0.9.1" }
+liblevenshtein = "0.10"
 ```
 
 SIMD (AVX2/SSE4.1) is enabled automatically on x86_64 targets via runtime CPU
@@ -27,14 +27,18 @@ feature detection — no feature flag required.
 
 ### Installing the CLI Tool
 
+Version 0.10.0 is not published yet. Build the sibling
+[`liblevenshtein-rust-cli`](https://github.com/vinary-tree/liblevenshtein-rust-cli)
+checkout while the coordinated release is being prepared. After publication:
+
 ```bash
-cargo install --git https://github.com/universal-automata/liblevenshtein-rust --tag v0.9.1 \
-  --features cli,compression,protobuf liblevenshtein
+cargo install liblevenshtein-cli
 ```
 
 ### Pre-built Packages
 
-Download pre-built packages from the [GitHub Releases](https://github.com/universal-automata/liblevenshtein-rust/releases) page:
+Future pre-built packages will be available from the
+[`liblevenshtein-rust-cli` releases](https://github.com/vinary-tree/liblevenshtein-rust-cli/releases) page:
 
 - **Debian/Ubuntu**: `.deb` packages
 - **Fedora/RHEL/CentOS**: `.rpm` packages

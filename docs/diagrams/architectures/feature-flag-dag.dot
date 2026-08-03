@@ -31,24 +31,6 @@ digraph features {
   "embedded-rules" -> "phonetic-rules";
   "parallel-grep"  -> "phonetic-rules";
 
-  subgraph cluster_grep {
-    label="grep"; style="rounded,filled"; fillcolor="#FFF3E0"; color="#EF6C00"; fontname="DejaVu Sans";
-    node [fillcolor="#FFE0B2"];
-    "grep-compression"; "grep-archives"; "grep-pdf"; "grep-pdf-ocr"; "grep-docx";
-    "grep-xlsx"; "grep-epub"; "grep-odt"; "grep-documents"; "grep-full";
-  }
-  "grep-archives"  -> "grep-compression";
-  "grep-pdf-ocr"   -> "grep-pdf";
-  "grep-documents" -> "grep-pdf";
-  "grep-documents" -> "grep-docx";
-  "grep-documents" -> "grep-xlsx";
-  "grep-documents" -> "grep-epub";
-  "grep-documents" -> "grep-odt";
-  "grep-full" -> "parallel-grep";
-  "grep-full" -> "grep-compression";
-  "grep-full" -> "grep-archives";
-  "grep-full" -> "grep-documents";
-
   subgraph cluster_evict {
     label="eviction (cache) profiles"; style="rounded,filled"; fillcolor="#FFFDE7"; color="#F9A825"; fontname="DejaVu Sans";
     node [fillcolor="#FFF9C4"];
@@ -74,8 +56,5 @@ digraph features {
   "wasm-ffi" -> "wasm";
   "wasm-ffi" -> "ffi";
 
-  "cli" [fillcolor="#CFD8DC"];
-  "cli" -> "pathmap-backend";
-  "cli" -> "serialization";
   "pathmap-backend" [fillcolor="#C8E6C9"];
 }

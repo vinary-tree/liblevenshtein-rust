@@ -1,9 +1,9 @@
 # liblevenshtein-rust
 
 [![Crates.io](https://img.shields.io/crates/v/liblevenshtein.svg)](https://crates.io/crates/liblevenshtein)
-[![CI](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/ci.yml)
-[![Nightly Tests](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/nightly.yml/badge.svg)](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/nightly.yml)
-[![Release](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/release.yml/badge.svg)](https://github.com/universal-automata/liblevenshtein-rust/actions/workflows/release.yml)
+[![CI](https://github.com/vinary-tree/liblevenshtein-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/vinary-tree/liblevenshtein-rust/actions/workflows/ci.yml)
+[![Nightly Tests](https://github.com/vinary-tree/liblevenshtein-rust/actions/workflows/nightly.yml/badge.svg)](https://github.com/vinary-tree/liblevenshtein-rust/actions/workflows/nightly.yml)
+[![Release](https://github.com/vinary-tree/liblevenshtein-rust/actions/workflows/release.yml/badge.svg)](https://github.com/vinary-tree/liblevenshtein-rust/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **Approximate string matching that scales with matches, not dictionary size.** Instead of computing an edit distance against every entry, `liblevenshtein` represents the query $`W`$ and an error bound $`k`$ as a **Levenshtein automaton** — the set of still-viable $`\langle \text{position}, \text{errors}\rangle`$ states that together accept exactly the strings within distance $`k`$ of $`W`$ — and walks it **in lock-step** with the dictionary (a trie/DAWG), advancing both together and pruning a branch the instant no automaton state survives. The automaton is **simulated on the fly**, never built as a standalone table. Per-query setup is $`\mathcal{O}(\lvert W\rvert)`$; each automaton step costs $`\mathcal{O}(k)`$ — a constant for fixed $`k`$ — so total work tracks the explored near-match frontier rather than the size of the dictionary.
@@ -117,7 +117,7 @@ for candidate in transducer.query_with_distance("tset", 2) {
 
 ```toml
 [dependencies]
-liblevenshtein = "0.9"
+liblevenshtein = "0.10"
 
 # Phonetic rules, time-series, persistence, etc. are opt-in features:
 # liblevenshtein = { version = "0.9", features = ["phonetic-rules"] }
@@ -666,16 +666,16 @@ See the [paper analysis](docs/research/frechet/PAPER_SUMMARY.md),
 
 ## Completed External-Corpus Benchmark Evidence
 
-The table below lists the completed, non-synthetic benchmark evidence currently
-recorded in pgmcp and the repository scientific ledger. Synthetic microbenchmarks
+The table below lists the completed, non-synthetic benchmark evidence in the
+repository scientific ledger. Synthetic microbenchmarks
 and deterministic conformance gates are intentionally omitted from this README
 summary; rerun commands and artifact naming are documented in
 [Academic Benchmark Reproduction](docs/benchmarks/academic-benchmarks.md).
 
 | Automata path | External corpus | Completed measure | Result |
 | --- | --- | --- | --- |
-| Exact MSM automata / `MsmTransducer` k-NN | UCR/aeon 2018 univariate time-series archive slice [[14]](#references) | Exact 1-NN classification against a majority-label baseline | 51 datasets selected by `train_count * test_count * series_len^2 <= 1e9`; exact MSM 1-NN reached `11653/13754 = 0.847244` accuracy versus majority baseline `5664/13754 = 0.411807`. pgmcp recorded paired evidence `control_only=415`, `treatment_only=6404`, `n_discordant=6819`, `p_value=0.0`. The exact run used `1,154,677` candidate distance evaluations, `152,272` lower-bound prunes, and `1,087,933` cutoff-abandoned evaluations. |
-| Shared `ElasticKernel` flat/trie evaluation | The identical 51-dataset UCR/aeon slice [[14]](#references) | Exact 1-NN plus prefix/column/candidate pruning economics for five fixed configurations | Accuracy was ERP `0.862149`, MSM `0.847244`, banded DTW `0.842010`, TWED `0.799767`, and discrete Fréchet `0.777665`, versus majority `0.411807`. Flat exact evaluations ranged from Fréchet's `311,921` to TWED's `1,221,307`; trie exact evaluations ranged from Fréchet's `29,818` to TWED's `55,976`. DTW rejected `93,727` edges before column construction. Every flat nearest distance matched the trie, all accounting identities passed, and pgmcp computed significant paired McNemar results for all five arms. See the [complete preregistered ledger](docs/scientific-ledger/elastic-ucr-harness-2026-08-01.md). |
+| Exact MSM automata / `MsmTransducer` k-NN | UCR/aeon 2018 univariate time-series archive slice [[14]](#references) | Exact 1-NN classification against a majority-label baseline | 51 datasets selected by `train_count * test_count * series_len^2 <= 1e9`; exact MSM 1-NN reached `11653/13754 = 0.847244` accuracy versus majority baseline `5664/13754 = 0.411807`. Paired evidence was `control_only=415`, `treatment_only=6404`, `n_discordant=6819`, `p_value=0.0`. The exact run used `1,154,677` candidate distance evaluations, `152,272` lower-bound prunes, and `1,087,933` cutoff-abandoned evaluations. |
+| Shared `ElasticKernel` flat/trie evaluation | The identical 51-dataset UCR/aeon slice [[14]](#references) | Exact 1-NN plus prefix/column/candidate pruning economics for five fixed configurations | Accuracy was ERP `0.862149`, MSM `0.847244`, banded DTW `0.842010`, TWED `0.799767`, and discrete Fréchet `0.777665`, versus majority `0.411807`. Flat exact evaluations ranged from Fréchet's `311,921` to TWED's `1,221,307`; trie exact evaluations ranged from Fréchet's `29,818` to TWED's `55,976`. DTW rejected `93,727` edges before column construction. Every flat nearest distance matched the trie, all accounting identities passed, and paired McNemar results were significant for all five arms. See the [complete preregistered ledger](docs/scientific-ledger/elastic-ucr-harness-2026-08-01.md). |
 | Phonetic automata / LLev English profiles | CMU Pronouncing Dictionary homophone groups [[15]](#references) | Recall@5 over the first 2048 CMUdict homophone cases | Fixed `en-us-cmudict` matched `3768/3960` expected homophone rows with mean recall@5 `0.985597` and mean reciprocal rank `0.987402`. The comparison profiles were Zompist `2109/3960`, mean recall@5 `0.642223`, and `american.llev + homophones.llev + names.llev` `2086/3960`, mean recall@5 `0.627313`. The post-fix diagnostic found `0` coverage gaps and `0` normalized-index/query bugs; remaining misses were top-k ceiling or ambiguous-pronunciation ranking cases. |
 | Ordered Levenshtein query automata | Birkbeck/Fawthrop spelling-error gate [[16]](#references) | Ordered recall and optimization gate on real spelling-error cases | Recall@5 stayed `50/51`; ordered p95 latency improved with Welch `p < 1e-6` and Cohen's `d ~= -2.16`. Allocation count improved, while allocated bytes increased because the accepted arena treatment stores vector-backed query state. |
 
@@ -912,9 +912,13 @@ assert_eq!(OperationSet::from_protobuf(&portable)?, operations);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-**CLI** (`cli`) — `cargo install liblevenshtein --features cli,compression`, then `liblevenshtein query "test" --dict words.txt -m 2`, `… convert`, or `… repl`.
+**CLI and document grep** — install the separate
+[`liblevenshtein-cli`](https://github.com/vinary-tree/liblevenshtein-rust-cli)
+package. It owns the executable, REPL, filesystem traversal, compression,
+archive, XML, office-document, PDF, and OCR dependencies.
 
-**WASM** (`wasm`) — `wasm-bindgen` bindings for browser/Node.js. **Grep** (`grep-documents`, `grep-full`, `parallel-grep`) — fuzzy/phonetic search across PDF, DOCX, XLSX, EPUB, and archives.
+**WASM** (`wasm`) — `wasm-bindgen` bindings for browser/Node.js.
+`parallel-grep` accelerates the reusable in-memory phonetic grep engines.
 
 ---
 
@@ -985,9 +989,8 @@ See [`docs/verification/README_FORMAL_GATES.md`](docs/verification/README_FORMAL
 | `persistent-artrie` | memory-mapped ARTrie dictionaries |
 | `wfst` | lling-llang WFST adapters |
 | `serialization` / `compression` / `protobuf` | save/load; gzip; Protocol Buffers |
-| `cli` | command-line tool + REPL |
 | `wasm` | WebAssembly bindings |
-| `grep-documents` / `grep-full` / `parallel-grep` | fuzzy/phonetic document & archive search (PDF, DOCX, XLSX, EPUB, …) |
+| `parallel-grep` | parallel in-memory phonetic matching |
 
 Enabling a feature enables the features it depends on (`A → B` = "A enables B"):
 
@@ -1023,7 +1026,7 @@ Enabling a feature enables the features it depends on (`A → B` = "A enables B"
 22. R. Lowrance and R. A. Wagner. "An extension of the string-to-string correction problem." *Journal of the ACM*, 22(2):177–183, 1975. [doi:10.1145/321879.321880](https://doi.org/10.1145/321879.321880)
 23. O. Gotoh. "An improved algorithm for matching biological sequences." *Journal of Molecular Biology*, 162(3):705–708, 1982. [doi:10.1016/0022-2836(82)90398-9](https://doi.org/10.1016/0022-2836(82)90398-9)
 
-**Project documentation:** [algorithm research](docs/research/levenshtein-automata/README.md) · [implementation mapping](docs/research/levenshtein-automata/implementation-mapping.md) · [architecture](docs/developer-guide/architecture.md) · [benchmarks](docs/benchmarks/README.md) · [formal verification](docs/verification/README.md). Upstream: [original Java implementation](https://github.com/universal-automata/liblevenshtein-java).
+**Project documentation:** [algorithm research](docs/research/levenshtein-automata/README.md) · [implementation mapping](docs/research/levenshtein-automata/implementation-mapping.md) · [architecture](docs/developer-guide/architecture.md) · [benchmarks](docs/benchmarks/README.md) · [formal verification](docs/verification/README.md). Upstream: [original Java implementation](https://github.com/vinary-tree/liblevenshtein-java).
 
 ---
 

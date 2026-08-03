@@ -411,7 +411,7 @@ let dict: PathMapDictionary<Vec<u32>> = ...;
 ## Contributing
 
 Found a bug or have a feature request? Please file an issue at:
-https://github.com/universal-automata/liblevenshtein-rust/issues
+https://github.com/vinary-tree/liblevenshtein-rust/issues
 
 ## License
 

@@ -178,9 +178,9 @@ src/<family>/
 Families: `pathmap`, `dynamic_dawg`, `double_array_trie`, `suffix_automaton`,
 `scdawg`, `persistent_artrie` (with `char/ core/ vocab/`). Every intra-crate
 reference was rewritten to the real path (`super::sub::` within a family,
-`crate::family::sub::` across modules); the six downstream consumers
+`crate::family::sub::` across modules); the five downstream consumers
 (`liblevenshtein-rust`, `duallity`, `latex-corrector`, `lling-llang`,
-`libgrammstein`, `pgmcp`) were updated to the new paths. No aliases remain.
+`libgrammstein`) were updated to the new paths. No aliases remain.
 
 ## 5. Dependency & portability
 

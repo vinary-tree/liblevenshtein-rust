@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
 # render.sh — render every diagram source under docs/diagrams/ to a committed
-# sibling SVG, using the pgmcp diagramming-catalog toolchain.
+# sibling SVG with the repository's reproducible diagram toolchain.
 #
-#   Source ext   Tool          Concept (per pgmcp tool-selection policy)
+#   Source ext   Tool          Concept
 #   ----------   -----------   ------------------------------------------------
 #   .puml        PlantUML      component / sequence / state / class diagrams
 #   .dsl         Structurizr   C4 model views (exported via PlantUML)

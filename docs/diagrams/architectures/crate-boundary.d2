@@ -1,5 +1,6 @@
-# crate-boundary.d2 — the three-crate map.
-# liblevenshtein (blue) hard-depends on libdictenstein (green); duallity
+# crate-boundary.d2 — the application/library/dictionary map.
+# liblevenshtein-cli (orange) depends on liblevenshtein (blue), which
+# hard-depends on libdictenstein (green); duallity
 # (light-blue, dashed) is an external, optional WFST integration; the macros
 # crate (grey) generates code for liblevenshtein at compile time.
 direction: right
@@ -15,15 +16,19 @@ macros: "liblevenshtein-macros\n(proc-macro: compile-time regex → NFA)" {
   style.fill: "#ECEFF1"; style.stroke: "#455A64"; style.font-color: "#102027"
 }
 
-lib: "liblevenshtein   (this crate · v0.9.1)" {
+cli: "liblevenshtein-cli   (application crate · v0.10.0)\nCLI · REPL · filesystem grep · archives · documents · OCR" {
+  style.fill: "#FFE0B2"; style.stroke: "#EF6C00"; style.font-color: "#102027"
+}
+
+lib: "liblevenshtein   (this crate · v0.10.0)" {
   style.fill: "#BBDEFB"; style.stroke: "#1565C0"; style.font-color: "#102027"
   core: "Core — Transducer · lazy / universal / generalized automata\nsubsumption · distance (Myers + SIMD) · pre-filters" {
     style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
   }
-  engines: "Engines — phonetic · time-series (MSM) · WallBreaker\ncontextual completion · fuzzy cache · grep" {
+  engines: "Engines — phonetic · time-series · WallBreaker\ncontextual completion · fuzzy cache" {
     style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
   }
-  surfaces: "Surfaces — CLI · REPL · WASM · FFI · serialization" {
+  surfaces: "Surfaces — WASM · FFI · serialization" {
     style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
   }
 }
@@ -49,6 +54,9 @@ llang: "lling-llang   (external · optional)\nsemirings · weighted automata · 
 }
 
 macros -> lib: "generates code for" { style.stroke: "#455A64"; style.stroke-width: 2 }
+cli -> lib: "normal dependency\n(reusable matching engines)" {
+  style.stroke: "#EF6C00"; style.stroke-width: 3
+}
 lib -> dict: "hard dependency  (backends re-exported\nas #[deprecated] shims since 0.9.0)" {
   style.stroke: "#2E7D32"; style.stroke-width: 3
 }

@@ -60,7 +60,7 @@ phonetic homophone benchmark:
 - Scripted corpus preparation and cleanup
 - Memory-capped execution with `systemd-run`
 - Cargo aliases for already-prepared corpora
-- Result artifact locations for pgmcp experiment tracking
+- Result artifact locations for repository scientific-ledger records
 
 #### [DAWG Optimization Analysis](DAWG_OPTIMIZATION_ANALYSIS.md)
 Analysis of DAWG optimization techniques:
