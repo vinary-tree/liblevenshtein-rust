@@ -46,6 +46,10 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `every_source_has_a_correction` | `core/theories/Conformance/DyckCorrection.v` | Deleting every token supplies a total upper-bound witness. |
 | `interval_recurrence_is_globally_exact` | `core/theories/Conformance/DyckCorrection.v` | With strict subinterval minima already filled, the least runtime branch cost is equivalent to the global minimum over all correction trees. |
 | `nonempty_dyck_first_pair_decomposition` | `core/theories/Conformance/DyckCorrection.v` | Every nonempty typed-Dyck word has the first-pair decomposition enumerated by the interval recurrence. |
+| `correction_tree_is_standard_alignment` | `core/theories/Conformance/DyckCorrection.v` | Every reconstruction tree denotes an ordinary unit-cost Levenshtein alignment with exactly the same cost. |
+| `standard_alignment_normalizes_to_correction_tree` | `core/theories/Conformance/DyckCorrection.v` | Every standard alignment to a typed-Dyck target normalizes to a reconstruction tree at no greater cost. |
+| `correction_minimum_equals_dyck_levenshtein_minimum` | `core/theories/Conformance/DyckCorrection.v` | The algorithm-shaped minimum is extensionally equal to the independent standard-Levenshtein minimum over the typed Dyck language. |
+| `interval_recurrence_is_exact_standard_dyck_distance` | `core/theories/Conformance/DyckCorrection.v` | The increasing-interval invariant refines the runtime recurrence directly to the independent language-distance specification. |
 | `diagnostic_rename_is_semantics_preserving` | `core/theories/Conformance/OperationSetSerialization.v` | Operation behavior depends on its applicability tag, never its diagnostic name. |
 | `accepted_envelope_is_exact_and_bounded` | `core/theories/Conformance/OperationSetSerialization.v` | Acceptance implies the magic/version/flags contract, exact consumption, semantic validation, and resource bounds. |
 | `trailing_payload_bytes_are_rejected` | `core/theories/Conformance/OperationSetSerialization.v` | An envelope with bytes beyond its declared payload cannot be accepted. |

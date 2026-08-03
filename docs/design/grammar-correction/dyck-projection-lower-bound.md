@@ -55,6 +55,16 @@ an inserted closer, and deletion permits the alignment to begin after an
 unusable input token. This is the optimal-substructure basis of the interval
 program.
 
+The correctness specification is deliberately not this recurrence.  In Rocq,
+`levenshtein_alignment` independently defines the ordinary left-to-right edit
+relation with insertion, deletion, keep, and substitution columns.  The proof
+normalizes every such alignment whose target is in `$`D_k`$` into one of the
+four reconstruction trees at no greater cost.  The converse maps every
+reconstruction tree back to an ordinary alignment at exactly the same cost.
+Consequently, the table minimum is extensionally equal to the standard
+Levenshtein minimum over all typed Dyck targets; it is not merely optimal among
+algorithm-shaped witnesses.
+
 ### Literate pseudocode
 
 ```text
@@ -163,15 +173,17 @@ accident.
 ## 6. Verification and executable correspondence
 
 - Rocq proves typed-Dyck constructor soundness, zero-cost balanced identity,
-  correction existence, first-pair decomposition, and cross-kind separation
-  without axioms or admitted goals.
+  correction existence, first-pair decomposition, cross-kind separation, and
+  bidirectional refinement to an independently defined standard Levenshtein
+  relation without axioms or admitted goals.
 - Dafny and Verus check the replacement, typed-pair, recurrence-minimum, and
   zero-cost endpoint obligations.
 - Z3 and cvc5 independently reject counterexamples to those arithmetic
   obligations.
-- Rust property tests compare the exact implementation with brute-force
-  enumeration of every bounded Dyck word for 2,000 generated inputs, replay
-  every witness, and check that the projection lower bound is admissible.
+- Rust property tests compare every source subinterval with brute-force
+  standard Levenshtein distance over every bounded Dyck word for 2,000
+  generated inputs, replay every root witness, and check that the projection
+  lower bound is admissible.
 - lling-llang property tests compare the distinct-marker PDA with a reference
   stack recognizer for generated multi-kind token streams.
 

@@ -340,6 +340,42 @@ proptest! {
         input in prop::collection::vec(0_u64..4, 0..=4),
     ) {
         let input: Vec<u64> = input.into_iter().map(|token| token % (2 * kinds) as u64).collect();
+
+        // Mirror the formal increasing-interval table invariant: every strict
+        // subinterval must already equal the independent edit-distance oracle,
+        // not only the root cell reconstructed below.
+        for left in 0..=input.len() {
+            for right in left..=input.len() {
+                let interval = &input[left..right];
+                let mut interval_language = Vec::new();
+                generate_balanced(
+                    kinds,
+                    interval.len().saturating_mul(2),
+                    &mut Vec::new(),
+                    &mut Vec::new(),
+                    &mut interval_language,
+                );
+                let interval_brute_force = interval_language
+                    .iter()
+                    .map(|word| reference_levenshtein(interval, word))
+                    .min()
+                    .unwrap();
+                let interval_actual = DyckCorrector::new(kinds)
+                    .correct(interval)
+                    .unwrap()
+                    .distance;
+                prop_assert_eq!(
+                    interval_actual,
+                    interval_brute_force,
+                    "interval={}..{}, input={:?}, kinds={}",
+                    left,
+                    right,
+                    input,
+                    kinds,
+                );
+            }
+        }
+
         let correction = DyckCorrector::new(kinds).correct(&input).unwrap();
         let mut language = Vec::new();
         generate_balanced(

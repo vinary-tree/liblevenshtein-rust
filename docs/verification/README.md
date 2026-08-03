@@ -20,18 +20,21 @@ The multi-kind Dyck corrector is verified against the same four candidate
 families used by the Rust interval table. Rocq proves that reconstruction is
 kind-sensitive Dyck and that, once all strict subinterval minima are available,
 the least recurrence candidate is equivalent to the global minimum over every
-correction tree. This is the increasing-interval-length induction invariant,
-not a bounded-language approximation.
+correction tree. A separate, ordinary Levenshtein alignment relation does not
+mention the recurrence; bidirectional normalization proves that its minimum
+over every typed-Dyck target is the same minimum. This is the
+increasing-interval-length induction invariant, not a bounded-language
+approximation or a circular algorithm-shaped specification.
 
 | Tool | Artifact | Checked invariant |
 |---|---|---|
-| Rocq | `core/theories/Conformance/DyckCorrection.v` | typed grammar, witness soundness, zero identity, total correction, first-pair decomposition, strict-subinterval dependencies, and global recurrence exactness |
+| Rocq | `core/theories/Conformance/DyckCorrection.v` | typed grammar, standard edit relation, bidirectional alignment/tree normalization, zero identity, total correction, first-pair decomposition, strict-subinterval dependencies, and independent language-distance exactness |
 | Rocq | `core/theories/Conformance/OperationSetSerialization.v` | explicit-applicability name independence; bincode exactness; protobuf preflight/exact-bit; gzip bounds |
 | Dafny | `dafny/DyckSerialization.dfy` | replacement/pair arithmetic, recurrence minimum selection, and bincode/protobuf/gzip admission guards |
 | Verus | `verus/dyck_serialization.rs` | Rust-facing typed-pair, candidate-minimum, zero-cost, bincode/protobuf preflight, exact-bit, and gzip obligations without assumptions |
 | Z3 + cvc5 | `smt/dyck_serialization.smt2` | independent negated Dyck, bincode, protobuf-limit/version/exact-bit, and gzip-limit/trailing obligations are UNSAT in both solvers |
 | TLA+ TLC | `tla/OperationSetDecode.tla`, `tla/OperationSetPortableDecode.tla` | exhaustive finite bincode lifecycle plus protobuf pre-allocation and single-member gzip admission |
-| proptest | `tests/proptest_phase9_downstream.rs`, `tests/operation_set_serialization.rs`, `tests/operation_set_protobuf.rs`, `tests/operation_set_gzip.rs` | 2,000-case exhaustive-language differential and algebraic Dyck invariants; deterministic, canonical, execution-equivalent round trips; hostile decode and compression-correspondence cases |
+| proptest | `tests/proptest_phase9_downstream.rs`, `tests/operation_set_serialization.rs`, `tests/operation_set_protobuf.rs`, `tests/operation_set_gzip.rs` | 2,000-case every-subinterval exhaustive-language differential and algebraic Dyck invariants; deterministic, canonical, execution-equivalent round trips; hostile decode and compression-correspondence cases |
 
 The [exact-correction design](../design/grammar-correction/dyck-projection-lower-bound.md)
 and [binary persistence guide](../user-guide/serialization.md) map the proof
