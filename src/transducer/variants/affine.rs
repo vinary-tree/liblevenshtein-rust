@@ -141,7 +141,7 @@ impl AffineV {
         ctx: &TransitionCtx<AffineGapParams>,
         out: &mut SmallVec<[Position; 4]>,
     ) {
-        for skipped in 1..characteristic_vector.len() {
+        for (skipped, &matches) in characteristic_vector.iter().enumerate().skip(1) {
             let Some(query_index) = position.term_index.checked_add(skipped) else {
                 break;
             };
@@ -162,11 +162,7 @@ impl AffineV {
                 continue;
             }
 
-            let substitution = if characteristic_vector[skipped] {
-                0
-            } else {
-                ctx.params.substitution
-            };
+            let substitution = if matches { 0 } else { ctx.params.substitution };
             if let (Some(term_index), Some(cost)) = (
                 query_index.checked_add(1),
                 gap_cost
