@@ -1,4 +1,4 @@
-// Dafny model of exact-scaled affine-gap arithmetic and B-4 subsumption.
+// Dafny model of exact-scaled affine-gap arithmetic and B-4/B-5 subsumption.
 
 datatype Layer = Match | QueryGap | DictGap
 datatype Action = Diagonal(substitution: nat) | OpenQuery | OpenDict
@@ -26,6 +26,31 @@ predicate B4(leftCost: nat, leftLayer: Layer,
 {
   (LayerPrecedes(leftLayer, rightLayer) && leftCost <= rightCost)
   || leftCost + open <= rightCost
+}
+
+function QueryGapOpenCharge(incoming: Layer, open: nat): nat
+{
+  if incoming == QueryGap then 0 else open
+}
+
+function QueryGapRunCost(leftCost: nat, incoming: Layer, skipped: nat,
+                         open: nat, extend: nat): nat
+{
+  leftCost + QueryGapOpenCharge(incoming, open) + skipped * extend
+}
+
+function RightRealignmentCharge(right: Layer, open: nat): nat
+{
+  if right == DictGap then open else 0
+}
+
+predicate B5Forward(leftCost: nat, leftLayer: Layer,
+                    rightCost: nat, rightLayer: Layer, skipped: nat,
+                    open: nat, extend: nat)
+{
+  skipped > 0
+  && QueryGapRunCost(leftCost, leftLayer, skipped, open, extend)
+       + RightRealignmentCharge(rightLayer, open) <= rightCost
 }
 
 lemma B1QueryGapPrecedesMatch(action: Action, open: nat, extend: nat)
@@ -111,6 +136,71 @@ lemma B4PreservesEveryCommonStep(leftCost: nat, leftLayer: Layer,
   } else {
     B3UniformSwitchPenalty(leftLayer, rightLayer, action, open, extend);
   }
+}
+
+lemma B5ForwardReachesB4(leftCost: nat, leftLayer: Layer,
+                         rightCost: nat, rightLayer: Layer, skipped: nat,
+                         open: nat, extend: nat)
+  requires B5Forward(leftCost, leftLayer, rightCost, rightLayer,
+                     skipped, open, extend)
+  ensures B4(QueryGapRunCost(leftCost, leftLayer, skipped, open, extend),
+             QueryGap, rightCost, rightLayer, open)
+{
+  match rightLayer
+  case Match =>
+  case QueryGap =>
+  case DictGap =>
+}
+
+lemma B5ForwardPreservesEveryCommonStep(
+    leftCost: nat, leftLayer: Layer,
+    rightCost: nat, rightLayer: Layer, skipped: nat,
+    action: Action, open: nat, extend: nat)
+  requires B5Forward(leftCost, leftLayer, rightCost, rightLayer,
+                     skipped, open, extend)
+  ensures QueryGapRunCost(leftCost, leftLayer, skipped, open, extend)
+            + FirstStep(QueryGap, action, open, extend)
+       <= rightCost + FirstStep(rightLayer, action, open, extend)
+{
+  B5ForwardReachesB4(leftCost, leftLayer, rightCost, rightLayer,
+                     skipped, open, extend);
+  B4PreservesEveryCommonStep(
+    QueryGapRunCost(leftCost, leftLayer, skipped, open, extend), QueryGap,
+    rightCost, rightLayer, action, open, extend);
+}
+
+function EpsilonQueryGapCost(incoming: Layer, count: nat,
+                             open: nat, extend: nat): nat
+  decreases count
+{
+  if count == 0 then 0
+  else GapStep(incoming, QueryGap, open, extend)
+       + EpsilonQueryGapCost(QueryGap, count - 1, open, extend)
+}
+
+lemma EpsilonQueryGapFromOpen(count: nat, open: nat, extend: nat)
+  ensures EpsilonQueryGapCost(QueryGap, count, open, extend) == count * extend
+  decreases count
+{
+  if count > 0 {
+    EpsilonQueryGapFromOpen(count - 1, open, extend);
+  }
+}
+
+lemma FusedQueryGapCostRefinesEpsilonChain(
+    leftCost: nat, incoming: Layer, skipped: nat, action: Action,
+    open: nat, extend: nat)
+  requires skipped > 0
+  ensures QueryGapRunCost(leftCost, incoming, skipped, open, extend)
+            + FirstStep(QueryGap, action, open, extend)
+       == leftCost + EpsilonQueryGapCost(incoming, skipped, open, extend)
+            + FirstStep(QueryGap, action, open, extend)
+{
+  EpsilonQueryGapFromOpen(skipped - 1, open, extend);
+  match incoming
+  case Match =>
+  case QueryGap =>
+  case DictGap =>
 }
 
 function FinishCost(cost: nat, incoming: Layer, remaining: nat,

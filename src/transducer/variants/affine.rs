@@ -111,6 +111,84 @@ impl AffineV {
             .checked_add(increment)
             .filter(|cost| *cost <= maximum)
     }
+
+    /// Cost of consuming `count` query units as one query-gap run.
+    #[inline(always)]
+    fn query_gap_run_cost(
+        position: Position,
+        count: usize,
+        params: AffineGapParams,
+        maximum: usize,
+    ) -> Option<usize> {
+        debug_assert!(count > 0);
+        let opening = if position.kind() == PositionKind::AffineQueryGap {
+            0
+        } else {
+            params.gap_open
+        };
+        let run = count.checked_mul(params.gap_extend)?;
+        let increment = opening.checked_add(run)?;
+        Self::checked_cost(position, increment, maximum)
+    }
+
+    /// Fuse a non-empty query-gap run with consumption of the current
+    /// dictionary unit. This is the concrete simulation required before a
+    /// forward cross-index position may subsume its epsilon descendant.
+    #[inline(always)]
+    fn fused_query_gap_successors(
+        position: Position,
+        characteristic_vector: &[bool],
+        ctx: &TransitionCtx<AffineGapParams>,
+        out: &mut SmallVec<[Position; 4]>,
+    ) {
+        for skipped in 1..characteristic_vector.len() {
+            let Some(query_index) = position.term_index.checked_add(skipped) else {
+                break;
+            };
+            if query_index > ctx.query_length {
+                break;
+            }
+            let Some(gap_cost) =
+                Self::query_gap_run_cost(position, skipped, ctx.params, ctx.max_distance)
+            else {
+                continue;
+            };
+
+            if ctx.prefix_mode && query_index == ctx.query_length {
+                out.push(Position::new_affine_query_gap(query_index, gap_cost));
+                continue;
+            }
+            if query_index >= ctx.query_length {
+                continue;
+            }
+
+            let substitution = if characteristic_vector[skipped] {
+                0
+            } else {
+                ctx.params.substitution
+            };
+            if let (Some(term_index), Some(cost)) = (
+                query_index.checked_add(1),
+                gap_cost
+                    .checked_add(substitution)
+                    .filter(|cost| *cost <= ctx.max_distance),
+            ) {
+                out.push(Position::new(term_index, cost));
+            }
+
+            if let Some(dict_gap_step) = ctx
+                .params
+                .gap_step(PositionKind::AffineQueryGap, PositionKind::AffineDictGap)
+            {
+                if let Some(cost) = gap_cost
+                    .checked_add(dict_gap_step)
+                    .filter(|cost| *cost <= ctx.max_distance)
+                {
+                    out.push(Position::new_affine_dict_gap(query_index, cost));
+                }
+            }
+        }
+    }
 }
 
 impl AutomatonVariant for AffineV {
@@ -152,6 +230,8 @@ impl AutomatonVariant for AffineV {
                 out.push(Position::new_affine_dict_gap(position.term_index, cost));
             }
         }
+
+        Self::fused_query_gap_successors(position, characteristic_vector, ctx, out);
     }
 
     #[inline(always)]
@@ -179,14 +259,26 @@ impl AutomatonVariant for AffineV {
 
     #[inline(always)]
     fn subsumes(lhs: &Position, rhs: &Position, ctx: &TransitionCtx<Self::Params>) -> bool {
-        if lhs.term_index != rhs.term_index {
-            // B-5's forward inequality is a valid semantic bound, but enabling
-            // it in this closure architecture also requires a fused
-            // skip-and-consume successor. Without that successor, canonicalizing
-            // an epsilon representative can hide the only matching cv offset.
-            // The backwards direction is additionally vulnerable to splitting
-            // a gap run. B-4 therefore remains intentionally same-index.
+        if lhs.term_index > rhs.term_index {
+            // Backward cross-index pruning can split an existing gap run and
+            // introduce a second opening charge, so it remains incomparable.
             return false;
+        }
+        if lhs.term_index < rhs.term_index {
+            let distance = rhs.term_index - lhs.term_index;
+            let Some(run_cost) =
+                Self::query_gap_run_cost(*lhs, distance, ctx.params, ctx.max_distance)
+            else {
+                return false;
+            };
+            let rhs_adjustment = if rhs.kind() == PositionKind::AffineDictGap {
+                ctx.params.gap_open
+            } else {
+                0
+            };
+            return run_cost
+                .checked_add(rhs_adjustment)
+                .is_some_and(|cost| cost <= rhs.num_errors);
         }
         (Self::layer_precedes(lhs.kind(), rhs.kind()) && lhs.num_errors <= rhs.num_errors)
             || lhs
@@ -393,10 +485,11 @@ mod tests {
         #![proptest_config(ProptestConfig::with_cases(2_000))]
 
         #[test]
-        fn b4_subsumption_is_sound_for_every_generated_suffix(
+        fn affine_subsumption_is_sound_for_every_generated_suffix(
             query in prop::collection::vec(0u8..=2, 0..=6),
             suffix in prop::collection::vec(0u8..=2, 0..=6),
-            raw_index in 0usize..=6,
+            raw_left_index in 0usize..=6,
+            raw_right_index in 0usize..=6,
             left_cost in 0usize..=20,
             right_cost in 0usize..=20,
             left_tag in 0u8..3,
@@ -405,20 +498,56 @@ mod tests {
             extend in 0usize..=5,
             substitution in 0usize..=5,
         ) {
-            let index = raw_index.min(query.len());
+            let left_index = raw_left_index.min(query.len());
+            let right_index = raw_right_index.min(query.len());
             let params = params(open, extend, substitution);
-            let left = Position::with_kind(index, left_cost, kind(left_tag), 0);
-            let right = Position::with_kind(index, right_cost, kind(right_tag), 0);
+            let left = Position::with_kind(left_index, left_cost, kind(left_tag), 0);
+            let right = Position::with_kind(right_index, right_cost, kind(right_tag), 0);
             let ctx = TransitionCtx::new(query.len(), 100, false, params);
 
             if AffineV::subsumes(&left, &right, &ctx) {
                 let left_total = left_cost + completion_cost(
-                    &query, &suffix, index, 0, left.kind(), params, &mut HashMap::new()
+                    &query, &suffix, left_index, 0, left.kind(), params, &mut HashMap::new()
                 );
                 let right_total = right_cost + completion_cost(
-                    &query, &suffix, index, 0, right.kind(), params, &mut HashMap::new()
+                    &query, &suffix, right_index, 0, right.kind(), params, &mut HashMap::new()
                 );
                 prop_assert!(left_total <= right_total);
+            }
+        }
+
+        #[test]
+        fn fused_query_gap_successors_equal_epsilon_chain_then_consume(
+            cv in prop::collection::vec(any::<bool>(), 2..=8),
+            raw_index in 0usize..=7,
+            raw_skipped in 1usize..=7,
+            cost in 0usize..=20,
+            layer_tag in 0u8..3,
+            open in 0usize..=5,
+            extend in 0usize..=5,
+            substitution in 0usize..=5,
+        ) {
+            let index = raw_index;
+            let skipped = raw_skipped.min(cv.len() - 1).max(1);
+            let params = params(open, extend, substitution);
+            let ctx = TransitionCtx::new(index + cv.len(), 100, false, params);
+            let origin = Position::with_kind(index, cost, kind(layer_tag), 0);
+
+            let mut epsilon_position = origin;
+            for _ in 0..skipped {
+                let mut epsilon = SmallVec::<[Position; 4]>::new();
+                AffineV::epsilon_successors(epsilon_position, &ctx, &mut epsilon);
+                prop_assert_eq!(epsilon.len(), 1);
+                epsilon_position = epsilon[0];
+            }
+            let explicit_cv = &cv[skipped..];
+            let mut explicit = SmallVec::<[Position; 4]>::new();
+            AffineV::successors(epsilon_position, explicit_cv, &ctx, &mut explicit);
+
+            let mut fused = SmallVec::<[Position; 4]>::new();
+            AffineV::successors(origin, &cv, &ctx, &mut fused);
+            for successor in explicit {
+                prop_assert!(fused.contains(&successor));
             }
         }
 
@@ -434,6 +563,31 @@ mod tests {
             let left = params.gap_step(kind(left_tag), kind(target_tag)).expect("small costs");
             let right = params.gap_step(kind(right_tag), kind(target_tag)).expect("small costs");
             prop_assert!(left <= right + open);
+        }
+
+        #[test]
+        fn trailing_query_gap_extension_is_chunking_invariant(
+            index in 0usize..=32,
+            cost in 0usize..=10_000,
+            first_chunk in 0usize..=32,
+            second_chunk in 0usize..=32,
+            extend in 0usize..=100,
+        ) {
+            let params = params(17, extend, 1);
+            let query_length = index + first_chunk + second_chunk;
+            let direct = AffineV::finish_cost(
+                &Position::new_affine_query_gap(index, cost),
+                query_length,
+                params,
+            );
+            let first_cost = cost + first_chunk * extend;
+            let chunked = AffineV::finish_cost(
+                &Position::new_affine_query_gap(index + first_chunk, first_cost),
+                query_length,
+                params,
+            );
+            prop_assert_eq!(direct, Some(cost + (first_chunk + second_chunk) * extend));
+            prop_assert_eq!(chunked, direct);
         }
 
         #[test]

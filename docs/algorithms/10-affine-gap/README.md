@@ -106,7 +106,10 @@ does not duplicate the `_f64` transition family.
 ## 5. Literate transition algorithm
 
 The dictionary walker consumes one dictionary edge at a time. Before that edge,
-the existing epsilon-closure loop emits every affordable query-gap prefix.
+the epsilon-closure loop emits every affordable query-gap prefix. The consuming
+kernel also materializes the equivalent fused successors so cross-index
+canonicalization cannot remove the only representative able to consume the
+current edge.
 
 ```text
 EPSILON-QUERY-GAP(position p, query length m, budget k):
@@ -132,6 +135,18 @@ CONSUME-DICTIONARY(position p, symbol b, query q, budget k):
     if CHECKED-ADD(p.cost, increment) <= k:
         emit DictGap(index=p.index,
                      cost=p.cost+increment)
+
+    for skipped in 1 .. CHARACTERISTIC-WINDOW:
+        gap_cost := QUERY-GAP-RUN(p, skipped)
+        if q[p.index+skipped] MATCHES b:
+            emit Match(index=p.index+skipped+1,
+                       cost=gap_cost)
+        else if CHECKED-ADD(gap_cost, substitution) <= k:
+            emit Match(index=p.index+skipped+1,
+                       cost=gap_cost+substitution)
+        if CHECKED-ADD(gap_cost, GAP-STEP(QueryGap, DictGap)) <= k:
+            emit DictGap(index=p.index+skipped,
+                         cost=gap_cost+GAP-STEP(QueryGap, DictGap))
 ```
 
 `MATCHES` includes exact unit equality and the configured zero-cost
@@ -181,7 +196,7 @@ direction. For any two incoming layers, switching costs at most `$`g_o`$`:
 C(i,\ell_1,v)\le C(i,\ell_2,v)+g_o.
 ```
 
-The shipped B-4 rule follows:
+The same-index B-4 rule follows:
 
 ```math
 (i,c_1,\ell_1)\sqsupseteq(i,c_2,\ell_2)
@@ -194,25 +209,34 @@ Rocq proves this inequality for arbitrary action traces. Dafny, Verus, Z3, and
 cvc5 independently prove or counterexample-search its one-step preservation;
 TLC exhaustively checks bounded traces.
 
-### 7.1 Why B-5 remains disabled
+### 7.1 Forward B-5 and fused realization
 
-A forward cross-index inequality can price the query-gap run needed to move a
-left position to a right position. Semantically it is a useful lower bound. In
-the current closure implementation, however, enabling it as canonicalization
-can delete the epsilon representative before that representative consumes the
-current dictionary edge.
+A forward cross-index comparison first prices the non-empty query-gap run from
+the earlier position to the later query index. Let `$`r=i_2-i_1>0`$` and
+`$`Q(c,\ell,r)=c+[\ell\ne I_x]g_o+r g_e`$`. The earlier position subsumes the
+later one when
+
+```math
+Q(c_1,\ell_1,r)+[\ell_2=I_y]g_o\le c_2.
+```
+
+After the concrete query-gap run, the left representative is in `$`I_x`$` at
+`$`i_2`$`. For right layers `$`M`$` and `$`I_x`$`, the inequality supplies the
+layer-preorder arm of B-4. For `$`I_y`$`, the extra `$`g_o`$` supplies B-4's
+uniform switch-penalty arm. Thus B-5 reduces to B-4 at the later index and
+inherits its arbitrary-suffix proof.
 
 The saved minimal counterexample is query `ba`, term `a`, `$`g_o=0`$`,
 `$`g_e=s=1`$`, and budget 1. Pruning `(1,1,I_x)` under `(0,0,M)` loses the only
-match unless the successor fuses “skip `b`” and “consume `a`.” Therefore:
+match unless the successor fuses “skip `b`” and “consume `a`.” The consuming
+kernel now emits that fused transition, with a property proving it equals the
+explicit epsilon chain followed by the same dictionary-edge action. Therefore:
 
-- B-4 is enabled and formally verified;
-- forward B-5 requires a fused skip-and-consume successor plus a new refinement
-  proof before it may be enabled;
+- B-4 and forward B-5 are enabled and formally verified;
+- the minimized `ba`/`a` counterexample is an explicit integration test and a
+  persisted property-test regression;
 - backward cross-index pruning remains disabled because deleting symbols from
   a completion can split a gap run and add an opening charge.
-
-This boundary is pinned by `tests/affine_gap.proptest-regressions`.
 
 ## 8. Operation-derived characteristic windows
 
@@ -264,8 +288,9 @@ by `AffineGapParams` through `VariantSpec::AffineGap`.
 
 The reference DP uses `$`\mathcal{O}(mn)`$` time and space. The automaton walks
 only dictionary prefixes whose exact lower bound fits the budget; its work is
-proportional to reached edges times the canonical frontier size. B-4 is
-conservative, so a permissive budget may still visit most of a dictionary.
+proportional to reached edges times the canonical frontier size. B-4/B-5
+canonicalization is conservative, so a permissive budget may still visit most
+of a dictionary.
 
 Every untrusted service should cap query length, dictionary-key length,
 fixed-point denominator, scaled budget, result count, and wall time. Scaling and

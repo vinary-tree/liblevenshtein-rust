@@ -13,6 +13,7 @@
 (declare-const substitution Int)
 (declare-const maximum Int)
 (declare-const operations Int)
+(declare-const skipped Int)
 
 (define-fun valid-layer ((l Int)) Bool (and (<= 0 l) (<= l 2)))
 (define-fun valid-action ((a Int)) Bool (and (<= 0 a) (<= a 2)))
@@ -26,6 +27,18 @@
 (define-fun b4 ((left-cost Int) (left Int) (right-cost Int) (right Int)) Bool
   (or (and (precedes left right) (<= left-cost right-cost))
       (<= (+ left-cost gap-open) right-cost)))
+(define-fun query-gap-open-charge ((incoming Int)) Int
+  (ite (= incoming 1) 0 gap-open))
+(define-fun query-gap-run-cost ((left-cost Int) (incoming Int) (count Int)) Int
+  (+ left-cost (query-gap-open-charge incoming) (* count gap-extend)))
+(define-fun right-realignment-charge ((right Int)) Int
+  (ite (= right 2) gap-open 0))
+(define-fun b5-forward
+  ((left-cost Int) (left Int) (right-cost Int) (right Int) (count Int)) Bool
+  (and (> count 0)
+       (<= (+ (query-gap-run-cost left-cost left count)
+              (right-realignment-charge right))
+           right-cost)))
 
 ; B-1: either gap layer can reproduce every first action from M no dearer.
 (push)
@@ -98,13 +111,34 @@
 (check-sat)
 (pop)
 
-; Shipped subsumption is same-index: cross-index pruning is impossible.
+; B-5 reaches a concrete query-gap representative satisfying B-4.
 (push)
-(declare-const i1 Int)
-(declare-const i2 Int)
-(define-fun shipped-subsumes () Bool
-  (and (= i1 i2) (b4 c1 l1 c2 l2)))
-(assert shipped-subsumes)
-(assert (not (= i1 i2)))
+(assert (and (valid-layer l1) (valid-layer l2)))
+(assert (and (>= c1 0) (>= c2 0) (>= gap-open 0)
+             (>= gap-extend 0) (> skipped 0)))
+(assert (b5-forward c1 l1 c2 l2 skipped))
+(assert (not (b4 (query-gap-run-cost c1 l1 skipped) 1 c2 l2)))
+(check-sat)
+(pop)
+
+; The reached B-5 representative preserves dominance for every shared step.
+(push)
+(assert (and (valid-layer l1) (valid-layer l2) (valid-action action)))
+(assert (and (>= c1 0) (>= c2 0) (>= gap-open 0)
+             (>= gap-extend 0) (>= substitution 0) (> skipped 0)))
+(assert (b5-forward c1 l1 c2 l2 skipped))
+(assert (> (+ (query-gap-run-cost c1 l1 skipped) (first-step 1 action))
+           (+ c2 (first-step l2 action))))
+(check-sat)
+(pop)
+
+; Fused skip-and-consume uses the closed cost of the same epsilon chain.
+(push)
+(assert (and (valid-layer l1) (> skipped 0)))
+(assert (and (>= c1 0) (>= gap-open 0) (>= gap-extend 0)))
+(define-fun epsilon-chain-closed () Int
+  (+ (query-gap-open-charge l1) (* skipped gap-extend)))
+(assert (not (= (query-gap-run-cost c1 l1 skipped)
+                (+ c1 epsilon-chain-closed))))
 (check-sat)
 (pop)

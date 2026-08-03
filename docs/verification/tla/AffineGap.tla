@@ -2,12 +2,13 @@
 EXTENDS Integers, Naturals, TLC
 
 (***************************************************************************)
-(* Finite transition model of B-4 affine dominance. Two representatives    *)
-(* begin at the same query index under B-4, take identical actions, and     *)
-(* must preserve cost dominance.                                            *)
+(* Finite transition model of B-4 affine dominance and the B-5 reduction.   *)
+(* Two aligned representatives take identical actions; a separate finite    *)
+(* theorem checks that every enabled forward B-5 relation reaches B-4 after *)
+(* the concrete epsilon query-gap run used by the Rust implementation.       *)
 (***************************************************************************)
 
-CONSTANTS GapOpen, GapExtend, Substitution, MaxCost, StepLimit
+CONSTANTS GapOpen, GapExtend, Substitution, MaxCost, StepLimit, SkipCount
 
 Layers == {"M", "Q", "D"}
 Actions == {"Diagonal", "QueryGap", "DictGap"}
@@ -29,6 +30,15 @@ Precedes(left, right) == left = right \/ right = "M"
 B4(leftCost, leftLayer, rightCost, rightLayer) ==
     (Precedes(leftLayer, rightLayer) /\ leftCost <= rightCost)
     \/ leftCost + GapOpen <= rightCost
+
+QueryGapOpenCharge(incoming) == IF incoming = "Q" THEN 0 ELSE GapOpen
+QueryGapRunCost(cost, incoming, skipped) ==
+    cost + QueryGapOpenCharge(incoming) + skipped * GapExtend
+RightRealignmentCharge(right) == IF right = "D" THEN GapOpen ELSE 0
+B5Forward(leftCost, leftLayer, rightCost, rightLayer, skipped) ==
+    /\ skipped > 0
+    /\ QueryGapRunCost(leftCost, leftLayer, skipped)
+         + RightRealignmentCharge(rightLayer) <= rightCost
 
 VARIABLES leftCost, leftLayer, rightCost, rightLayer, steps
 vars == <<leftCost, leftLayer, rightCost, rightLayer, steps>>
@@ -74,5 +84,13 @@ OperationWindowSound ==
       \A operations \in 0..MaxCost :
         cost + operations * GapExtend <= MaxCost
         => operations < (MaxCost - cost) \div GapExtend + 1
+
+B5ReachesB4 ==
+    \A c1 \in 0..MaxCost :
+      \A l1 \in Layers :
+        \A c2 \in 0..MaxCost :
+          \A l2 \in Layers :
+            B5Forward(c1, l1, c2, l2, SkipCount)
+            => B4(QueryGapRunCost(c1, l1, SkipCount), "Q", c2, l2)
 
 =============================================================================

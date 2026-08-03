@@ -110,6 +110,34 @@ B-4; keep all cross-index affine positions incomparable; require a fused
 skip-and-consume transition and refinement proof before revisiting B-5. The
 saved seed is committed in `tests/affine_gap.proptest-regressions`.
 
+### 5.1 Completion-audit follow-up: B-5 prerequisite satisfied
+
+On 2026-08-02, the root-epic completion audit found that the documented B-5
+precondition was still an open implementation task rather than a permanent
+non-shipping decision. The implementation now emits the fused query-gap-run
+plus current-edge successors before canonicalization and enables only the
+forward cross-index relation. Backward cross-index comparisons remain disabled
+for the separately justified gap-splitting counterexample.
+
+This follow-up does not alter the frozen Phase 7 hypotheses or retrospectively
+label the new work as pre-registered. It records the later evidence needed to
+close the explicit prerequisite:
+
+| Added evidence | Decision rule | Result |
+|---|---|---|
+| minimized `ba`/`a` integration example | exact result map equals the quadratic Gotoh oracle at budget 1 | passed |
+| fused-successor property, 2,000 cases | every explicit epsilon-chain-then-consume successor is emitted by the fused kernel | passed |
+| suffix-simulation property, 2,000 cases | every enabled B-4 or B-5 comparison preserves completion cost for the generated suffix | passed |
+| Rocq | concrete non-empty query-gap run reaches B-4; arbitrary action traces remain dominated | compiled without assumptions |
+| Verus and Dafny | Rust-shaped B-5 reduction and recursive epsilon-run closed form | verified |
+| Z3 and cvc5 | negations of B-5 reduction, one-step preservation, and fused-cost equality | `unsat` in both solvers |
+| TLC | every enabled finite B-5 instance reaches B-4, alongside the original bounded trace graph | no violation |
+
+The technical decision is therefore to ship forward B-5 with the fused
+transition as one inseparable correctness unit. Removing either side requires
+disabling the other and rerunning the complete affine differential and formal
+gate matrix.
+
 ## 6. Repository gates
 
 The final repository surface was checked after adding the corpus gate and

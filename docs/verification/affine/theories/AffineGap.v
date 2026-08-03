@@ -1,11 +1,11 @@
 (** * Exact affine-gap automaton obligations
 
     This assumption-free model captures the arithmetic used by the Rust
-    [AffineV] transition and B-4 subsumption rule.  Costs live in [Z] to match
+    [AffineV] transition and B-4/B-5 subsumption rules.  Costs live in [Z] to match
     the fixed-point integer domain before Rust's checked [usize] boundary.
 *)
 
-From Stdlib Require Import ZArith Lia List.
+From Stdlib Require Import ZArith Lia List Ring.
 Import ListNotations.
 Open Scope Z_scope.
 
@@ -90,6 +90,100 @@ Proof.
   - pose proof (B4_preserves_one_step c1 l1 c2 l2 next go ge Hgo Hb4).
     destruct next; simpl in *; lia.
 Qed.
+
+(** Moving a position forward by a non-empty epsilon query-gap run pays one
+    opening charge unless that gap was already open, followed by one extension
+    charge per consumed query unit.  This is the exact cost accumulated by the
+    Rust epsilon chain. *)
+Definition query_gap_open_charge (incoming : layer) (go : Z) : Z :=
+  match incoming with QueryGap => 0 | _ => go end.
+
+Fixpoint epsilon_query_gap_cost
+    (incoming : layer) (count : nat) (go ge : Z) : Z :=
+  match count with
+  | O => 0
+  | S remaining =>
+      gap_step incoming QueryGap go ge +
+      epsilon_query_gap_cost QueryGap remaining go ge
+  end.
+
+Lemma epsilon_query_gap_from_open : forall count go ge,
+  epsilon_query_gap_cost QueryGap count go ge = Z.of_nat count * ge.
+Proof.
+  intros count go ge; induction count as [|count IH].
+  - reflexivity.
+  - rewrite Nat2Z.inj_succ.
+    cbn [epsilon_query_gap_cost gap_step].
+    rewrite IH; ring.
+Qed.
+
+Lemma epsilon_query_gap_cost_closed_form : forall incoming count go ge,
+  epsilon_query_gap_cost incoming (S count) go ge =
+  query_gap_open_charge incoming go + Z.of_nat (S count) * ge.
+Proof.
+  intros incoming count go ge.
+  rewrite Nat2Z.inj_succ.
+  cbn [epsilon_query_gap_cost gap_step].
+  rewrite epsilon_query_gap_from_open.
+  destruct incoming; simpl; ring.
+Qed.
+
+(** A later dictionary-gap state can extend its existing gap for one action,
+    while the realigned query-gap state must switch layers.  Exactly one gap
+    opening charge is therefore needed in that case and no other. *)
+Definition right_realignment_charge (right : layer) (go : Z) : Z :=
+  match right with DictGap => go | _ => 0 end.
+
+(** B-5 is a forward-only rule.  Its arithmetic does not merely lower-bound
+    an abstract completion: the earlier position has a concrete epsilon path
+    to a query-gap position at the later index, and that reached position
+    satisfies the already-proved B-4 relation. *)
+Theorem B5_forward_reaches_B4 : forall c1 l1 c2 l2 count go ge,
+  0 <= go -> 0 <= ge ->
+  c1 + epsilon_query_gap_cost l1 (S count) go ge +
+    right_realignment_charge l2 go <= c2 ->
+  b4
+    (c1 + epsilon_query_gap_cost l1 (S count) go ge)
+    QueryGap c2 l2 go.
+Proof.
+  intros c1 l1 c2 [] count go ge Hgo Hge Hbound;
+    unfold b4, layer_precedes, right_realignment_charge in *; simpl in *.
+  - left; split; [right; reflexivity | lia].
+  - left; split; [left; reflexivity | lia].
+  - right; lia.
+Qed.
+
+(** Universal suffix simulation for B-5.  After the concrete epsilon run, the
+    earlier position is no more expensive than the later position for every
+    possible future action trace. *)
+Theorem B5_forward_subsumption_sound : forall
+    trace c1 l1 c2 l2 count go ge,
+  0 <= go -> 0 <= ge ->
+  c1 + epsilon_query_gap_cost l1 (S count) go ge +
+    right_realignment_charge l2 go <= c2 ->
+  c1 + epsilon_query_gap_cost l1 (S count) go ge +
+      trace_cost QueryGap trace go ge <=
+    c2 + trace_cost l2 trace go ge.
+Proof.
+  intros trace c1 l1 c2 l2 count go ge Hgo Hge Hb5.
+  apply B4_subsumption_sound; [exact Hgo |].
+  now apply B5_forward_reaches_B4.
+Qed.
+
+Definition fused_query_gap_action_cost
+    (cost : Z) (incoming : layer) (count : nat)
+    (next : action) (go ge : Z) : Z :=
+  cost + epsilon_query_gap_cost incoming count go ge +
+    first_step QueryGap next go ge.
+
+(** The fused Rust successor has exactly the cost of the epsilon query-gap
+    chain followed by consumption of the current dictionary edge. *)
+Theorem fused_successor_refines_epsilon_then_consume : forall
+    cost incoming count next go ge,
+  fused_query_gap_action_cost cost incoming count next go ge =
+  (cost + epsilon_query_gap_cost incoming count go ge) +
+    first_step QueryGap next go ge.
+Proof. intros; unfold fused_query_gap_action_cost; lia. Qed.
 
 Definition finish_cost (cost remaining go ge : Z) (incoming : layer) : Z :=
   cost + remaining * ge +

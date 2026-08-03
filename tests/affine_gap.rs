@@ -73,6 +73,17 @@ fn gotoh_examples_and_public_decimal_surface() {
 }
 
 #[test]
+fn forward_b5_fuses_query_skip_with_current_dictionary_edge() {
+    let words = [String::from("a")];
+    let params = scaled(0, 1, 1);
+
+    let matches = automaton_matches(&words, "ba", 1, params);
+
+    assert_eq!(matches.get("a"), Some(&1));
+    assert_eq!(matches, reference_matches(&words, "ba", 1, params));
+}
+
+#[test]
 fn byte_char_u64_and_policy_surfaces_share_the_kernel() {
     let params = scaled(2, 1, 2);
     let terms = ["a", "abcd", "é", "e"];

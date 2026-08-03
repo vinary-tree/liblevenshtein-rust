@@ -57,19 +57,20 @@ executable invariants.
 ## Affine-gap proof island
 
 The affine-gap development verifies the three-layer Gotoh refinement, exact
-integer guards, same-index B-4 subsumption, layer-aware completion, and the
-operation-derived characteristic-vector window. The proof boundary is explicit:
-cross-index B-5 pruning is disabled until the transition kernel can fuse a
-query skip with the current dictionary-edge consumption.
+integer guards, same-index B-4 subsumption, forward B-5 subsumption,
+layer-aware completion, and the operation-derived characteristic-vector
+window. B-5 is realized by a concrete epsilon query-gap run plus a fused
+skip-and-consume successor, then reduced to B-4 at the later index. Backward
+cross-index pruning remains outside the relation because it can split a gap.
 
 | Tool | Artifact | Checked invariant |
 |---|---|---|
-| Rocq | `affine/theories/AffineGap.v` | layer separation, uniform switch penalty, arbitrary-trace B-4 soundness, trailing completion, window, and budget guards |
-| Dafny | `dafny/AffineGap.dfy` | 14 imperative-style arithmetic and layer obligations |
-| Verus | `verus/affine_gap.rs` | eight Rust-facing layer, B-4, completion, window, and checked-add obligations |
-| Z3 + cvc5 | `smt/affine_gap.smt2` | ten independent negated obligations are UNSAT in both solvers |
-| TLA+ TLC | `tla/AffineGap.tla` | bounded identical-action traces preserve B-4 and cost dominance |
-| proptest | `src/transducer/variants/affine.rs`, `tests/affine_gap.rs` | 2,000-case invariant families plus exact complete-result-map differential tests against an independent Gotoh implementation |
+| Rocq | `affine/theories/AffineGap.v` | layer separation, uniform switch penalty, arbitrary-trace B-4 soundness, concrete B-5-to-B-4 reduction, fused-cost refinement, trailing completion, window, and budget guards |
+| Dafny | `dafny/AffineGap.dfy` | imperative-style B-4/B-5, recursive epsilon-run, fused-cost, completion, window, and arithmetic obligations |
+| Verus | `verus/affine_gap.rs` | Rust-facing layer, B-4/B-5, fused-run, completion, window, and checked-add obligations |
+| Z3 + cvc5 | `smt/affine_gap.smt2` | independent negated B-4/B-5, fused-cost, completion, window, and arithmetic obligations are UNSAT in both solvers |
+| TLA+ TLC | `tla/AffineGap.tla` | bounded identical-action traces preserve B-4 and exhaustive finite B-5 instances reach B-4 |
+| proptest | `src/transducer/variants/affine.rs`, `tests/affine_gap.rs` | 2,000-case suffix simulation and fused-vs-explicit transition invariants plus complete-result-map differential tests against an independent Gotoh implementation |
 
 See the [literate algorithm](../algorithms/10-affine-gap/README.md), [design](../design/affine-gap-automaton.md), and [Gotoh paper summary](../research/gotoh/PAPER_SUMMARY.md) for the implementation correspondence.
 

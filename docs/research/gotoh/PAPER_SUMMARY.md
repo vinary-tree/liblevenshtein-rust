@@ -21,8 +21,9 @@ are epsilon transitions; dictionary gaps consume trie edges; diagonals reset to
 automaton as an independent oracle.
 
 The paper supplies the recurrence, not a trie canonicalization theorem. B-1
-through B-4, exact scaling, resource bounds, backend genericity, and the B-5
-closure counterexample are library-specific engineering obligations.
+through B-5, the fused skip-and-consume realization, exact scaling, resource
+bounds, backend genericity, and the closure counterexample that motivated the
+fusion are library-specific engineering obligations.
 
 ## Cost-convention note
 

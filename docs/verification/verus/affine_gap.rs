@@ -59,6 +59,39 @@ spec fn b4(
         || left_cost + open <= right_cost
 }
 
+spec fn query_gap_open_charge(incoming: Layer, open: nat) -> nat {
+    if incoming == Layer::QueryGap { 0 } else { open }
+}
+
+spec fn query_gap_run_cost(
+    cost: nat,
+    incoming: Layer,
+    skipped: nat,
+    open: nat,
+    extend: nat,
+) -> nat {
+    cost + query_gap_open_charge(incoming, open) + skipped * extend
+}
+
+spec fn right_realignment_charge(right: Layer, open: nat) -> nat {
+    if right == Layer::DictGap { open } else { 0 }
+}
+
+spec fn b5_forward(
+    left_cost: nat,
+    left_layer: Layer,
+    right_cost: nat,
+    right_layer: Layer,
+    skipped: nat,
+    open: nat,
+    extend: nat,
+) -> bool {
+    skipped > 0
+        && query_gap_run_cost(left_cost, left_layer, skipped, open, extend)
+            + right_realignment_charge(right_layer, open)
+            <= right_cost
+}
+
 proof fn query_gap_precedes_match(
     action: Action,
     open: nat,
@@ -162,14 +195,100 @@ proof fn b4_preserves_every_common_step(
     }
 }
 
-proof fn trailing_query_gap_does_not_reopen(
+proof fn b5_forward_reaches_b4(
+    left_cost: nat,
+    left_layer: Layer,
+    right_cost: nat,
+    right_layer: Layer,
+    skipped: nat,
+    open: nat,
+    extend: nat,
+)
+    requires
+        b5_forward(
+            left_cost,
+            left_layer,
+            right_cost,
+            right_layer,
+            skipped,
+            open,
+            extend,
+        ),
+    ensures
+        b4(
+            query_gap_run_cost(left_cost, left_layer, skipped, open, extend),
+            Layer::QueryGap,
+            right_cost,
+            right_layer,
+            open,
+        ),
+{
+    match right_layer {
+        Layer::Match => {},
+        Layer::QueryGap => {},
+        Layer::DictGap => {},
+    }
+}
+
+proof fn b5_forward_preserves_every_common_step(
+    left_cost: nat,
+    left_layer: Layer,
+    right_cost: nat,
+    right_layer: Layer,
+    skipped: nat,
+    action: Action,
+    open: nat,
+    extend: nat,
+    substitution: nat,
+)
+    requires
+        b5_forward(
+            left_cost,
+            left_layer,
+            right_cost,
+            right_layer,
+            skipped,
+            open,
+            extend,
+        ),
+    ensures
+        query_gap_run_cost(left_cost, left_layer, skipped, open, extend)
+                + first_step(Layer::QueryGap, action, open, extend, substitution)
+            <= right_cost + first_step(right_layer, action, open, extend, substitution),
+{
+    b5_forward_reaches_b4(
+        left_cost,
+        left_layer,
+        right_cost,
+        right_layer,
+        skipped,
+        open,
+        extend,
+    );
+    b4_preserves_every_common_step(
+        query_gap_run_cost(left_cost, left_layer, skipped, open, extend),
+        Layer::QueryGap,
+        right_cost,
+        right_layer,
+        action,
+        open,
+        extend,
+        substitution,
+    );
+}
+
+proof fn extending_trailing_query_gap_is_chunking_invariant(
     cost: nat,
-    remaining: nat,
+    first_chunk: nat,
+    second_chunk: nat,
     extend: nat,
 )
     ensures
-        cost + remaining * extend == cost + remaining * extend,
+        cost + (first_chunk + second_chunk) * extend
+            == (cost + first_chunk * extend) + second_chunk * extend,
 {
+    assert((first_chunk + second_chunk) * extend
+        == first_chunk * extend + second_chunk * extend) by (nonlinear_arith);
 }
 
 proof fn operation_window_bounds_every_affordable_run(

@@ -18,7 +18,7 @@ typed parameters through `AutomatonVariant::Params`. It does not add an
 | Component | Responsibility |
 |---|---|
 | `AffineGapParams` | exact decimal scaling, getters, budget conversion |
-| `AffineV` | successors, epsilon closure, B-4 subsumption, finish, window |
+| `AffineV` | fused successors, epsilon closure, B-4/B-5 subsumption, finish, window |
 | `QueryVariant::Affine` | carry typed parameters through the existing iterator |
 | `AffineQueryIterator` | convert scaled candidate costs for presentation |
 | `affine_gap_distance_units` | independent quadratic oracle |
@@ -48,12 +48,14 @@ marker; typed entry points dispatch directly to `AffineV`.
 Rejected because it abandons canonical position frontiers and state pooling.
 The `PositionKind` byte is sufficient history.
 
-### 3.4 Enable B-5 immediately
+### 3.4 Enable B-5 without fused successors
 
 Rejected by a generated counterexample. Cross-index pruning changes which
-epsilon representatives survive closure. It is safe only after the transition
-kernel can fuse the priced query skip with consumption of the current
-dictionary edge. The root-epic task records that precondition.
+epsilon representatives survive closure. The shipped kernel satisfies the
+missing precondition by fusing the priced query skip with consumption of the
+current dictionary edge; B-5 was enabled only after the fused transition,
+arbitrary-suffix reduction to B-4, and executable differential properties were
+added together.
 
 ## 4. Safety contracts
 
@@ -61,7 +63,9 @@ dictionary edge. The root-epic task records that precondition.
 - Every transition cost uses `checked_add`; every run uses checked
   multiplication where multiplication occurs.
 - A route exceeding the exact integer domain is absent, never wrapped.
-- B-4 compares only positions at the same query index.
+- B-4 compares positions at the same query index.
+- Forward B-5 first realizes the exact query-gap run and reduces to B-4 at the
+  later index; backward cross-index positions remain incomparable.
 - `$`g_e=0`$` is exact but uses the full remaining-query window.
 - Suffix dictionaries retain their documented substring completion semantics.
 
@@ -69,12 +73,16 @@ dictionary edge. The root-epic task records that precondition.
 
 The proof stack is intentionally redundant:
 
-1. Rocq proves B-4 for arbitrary action traces over mathematical integers.
+1. Rocq proves B-4 for arbitrary action traces and B-5 by a concrete reduction
+   to B-4 over mathematical integers.
 2. Dafny automatically verifies the imperative-style arithmetic contracts.
 3. Verus mirrors the Rust-facing natural/integer guards.
-4. Z3 and cvc5 independently search for counterexamples to ten negated claims.
-5. TLC explores all bounded B-4 layer/cost traces in the configured model.
-6. Proptest instantiates the same claims over concrete suffix DPs and the real
+4. Z3 and cvc5 independently search for counterexamples to the negated B-4,
+   B-5, fused-cost, completion, window, and checked-arithmetic claims.
+5. TLC explores all bounded B-4 layer/cost traces and the finite B-5-to-B-4
+   reduction in the configured model.
+6. Proptest instantiates the same claims over concrete suffix DPs and proves
+   fused successors equal explicit epsilon-then-consume execution in the real
    dictionary automaton.
 
 The [formal manifest](../verification/FORMAL_VERIFICATION_MANIFEST.tsv) is the
