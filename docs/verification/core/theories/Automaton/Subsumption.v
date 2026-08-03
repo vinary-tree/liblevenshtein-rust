@@ -6,13 +6,22 @@
     The exact, assumption-free branch model and insertion contract live in
     [Conformance/RustSubsumption.v]. Keep claims about executable behavior there.
 
+    Formal-manifest classification: [partial]. This file is compiled so the
+    surrounding research tree remains mechanically checked, but it is not a
+    line-by-line model of the runtime relation. In particular, ordinary OSA
+    positions use same-index-only pruning here, and this model applies
+    conservative finality guards that the executable classic-position relation
+    does not. These are intentional reductions in pruning power, not Rust
+    implementation claims.
+
     This module defines the subsumption relation for all three algorithm variants.
     Position p1 subsumes p2 if all candidates reachable from p2 are also reachable
     from p1, allowing p2 to be pruned.
 
     Part of: Liblevenshtein.Core.Automaton
 
-    Related Rust implementation: src/transducer/position.rs:56-180
+    Executable conformance reference: Conformance/RustSubsumption.v
+    Rust comparison points: src/cost/subsumption.rs and src/transducer/state.rs
 
     Subsumption Rules:
     - Standard: e ≤ f ∧ |i-j| ≤ f-e

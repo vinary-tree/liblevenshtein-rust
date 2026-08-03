@@ -17,7 +17,7 @@ a clean seam so each crate has a single concern:
 | **liblevenshtein** (this crate, `v0.9.1`) | — | the Levenshtein **transducer/automata**, edit-distance functions, pre-filters, and every higher-level engine (phonetic, time-series MSM, WallBreaker, contextual completion, fuzzy cache, grep), plus the CLI/REPL/WASM/FFI/serialization surfaces |
 | **libdictenstein** (`v0.2`) | **hard path dependency** (`Cargo.toml`: `libdictenstein = { path = "../libdictenstein" }`) | **all dictionary backends** (`DoubleArrayTrie`, `DynamicDawg`/`DynamicDawgU64`, `SuffixAutomaton`, `Scdawg`, `PersistentARTrie`, `PathMapDictionary`) and the `Dictionary` / `DictionaryNode` / `MappedDictionary` traits, plus SIMD + bloom-filter pruning and prefix zippers |
 | **duallity** | **external, optional** integration (referenced for WFST composition; *not* a build dependency of this crate) | weighted finite-state transducer (WFST) / language-model composition |
-| **liblevenshtein-macros** | workspace member, proc-macro | compile-time regex → NFA generation |
+| **liblevenshtein-macros** | **independent Cargo workspace**, local path integration | compile-time regex → NFA generation without duplicating the library `cdylib` artifact |
 
 The dependency direction is strict and acyclic: liblevenshtein → libdictenstein.
 There is no reverse edge, so the dictionaries can be developed and versioned

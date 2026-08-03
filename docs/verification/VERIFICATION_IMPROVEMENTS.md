@@ -16,10 +16,23 @@ The verification infrastructure combines two complementary approaches:
 |------|---------|----------------|
 | `OnlineScanner.tla` | Multi-match tracking | ActiveMatchesBounded, NoMissedMatches, PositionMonotonicity |
 | `ProductAutomaton.tla` | NFA × Levenshtein composition | ProductCorrectness, StateSpaceBounded, CostMonotonicity |
-| `Subsumption.tla` | Partial order verification | Irreflexive, Asymmetric, Transitive |
+| `Subsumption.tla` | Executable classic-position coverage and antichain lifecycle | Standard/OSA reflexivity, MergeSplit irreflexivity, variant separation, strict-dominance laws, retained-cover preservation, termination |
 | `PriorityQuery.tla` | A* search correctness | HeapInvariant, AdmissibleHeuristic, Optimality |
 
 ### Rocq/Coq Modules
+
+#### Executable Subsumption Conformance (`docs/verification/core/theories/Conformance/`)
+
+| File | Purpose | Key Theorems |
+|------|---------|--------------|
+| `RustSubsumption.v` | Exact branch model for `Position::subsumes`, its weighted carrier, and state insertion | cross-kind OSA separation, pending/pending exactness, normal/normal equivalence to Standard, arithmetic transitivity, equality-aware retention, shrinking-state witness |
+
+`core/theories/Automaton/Subsumption.v` is a separate conservative research
+relation used inside the partial Automaton proof tree. It intentionally prunes
+less aggressively than Rust, including same-index-only normal OSA pruning and
+extra finality guards. The formal manifest therefore classifies it as
+`partial`; it must not be cited as executable conformance. Exact Rust claims
+use `Conformance/RustSubsumption.v` together with `tla/Subsumption.tla`.
 
 #### LLRE Module (`docs/verification/llre/theories/`)
 
@@ -152,12 +165,14 @@ systemd-run --user --scope -p MemoryMax=126G -p CPUQuota=1800% \
 | `Equivalence.v` | `src/distance/myers.rs` |
 | `FeatureDistance.v` | `src/phonetic/feature_distance.rs`, `src/transducer/articulatory_costs.rs` |
 | `ProductState.v` | `src/phonetic/nfa/product.rs` |
+| `RustSubsumption.v` | `src/cost/subsumption.rs`, `src/transducer/{position,state}.rs`, and their weighted twins |
+| `Automaton/Subsumption.v` | conservative research relation only; no line-by-line executable correspondence |
 
 | TLA+ Spec | Rust File |
 |-----------|-----------|
 | `OnlineScanner.tla` | `src/phonetic/online_scanner.rs` |
 | `ProductAutomaton.tla` | `src/phonetic/nfa/product.rs` |
-| `Subsumption.tla` | `src/transducer/universal/subsumption.rs` |
+| `Subsumption.tla` | `src/cost/subsumption.rs`, `src/transducer/{position,state}.rs`, and their weighted twins |
 | `PriorityQuery.tla` | `src/transducer/priority_query.rs` |
 
 ## Key Insights

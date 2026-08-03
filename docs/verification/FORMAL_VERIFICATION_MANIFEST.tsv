@@ -23,6 +23,7 @@ trusted	light	coq	docs/verification/core/theories/Core/MinLemmas.v	min3/substitu
 trusted	standard	coq	docs/verification/core/theories/Core/LevDistance.v	Levenshtein distance definition and basic unfolding lemmas
 trusted	standard	coq	docs/verification/core/theories/Core/MetricProperties.v	core Levenshtein metric properties; no active assumptions
 trusted	light	coq	docs/verification/core/theories/Conformance/RustSubsumption.v	exact Rust classic-position subsumption branches plus insertion-retention contract and shrinking-state counterexample; no active assumptions
+partial	standard	coq	docs/verification/core/theories/Automaton/Subsumption.v	conservative research relation for the partial Automaton tree; intentionally differs from executable Rust OSA/finality pruning and is not a conformance boundary
 trusted	light	verus	docs/verification/verus/language_product.rs	Rust-facing language-product arithmetic, canonicalization, and frontier-merge invariants; no active assumptions
 trusted	light	coq	docs/verification/core/theories/Conformance/LanguageProduct.v	assumption-free relational-image, canonicalization, disjointness, and frontier-bound theorems
 trusted	light	smt	docs/verification/smt/language_product.smt2	bounded bit-vector counterexample checks; both Z3 and cvc5 must report UNSAT
