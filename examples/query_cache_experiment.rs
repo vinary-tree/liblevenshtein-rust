@@ -1,4 +1,4 @@
-//! Phase 6 novel optimization #4 — measurement harness (pgmcp experiment 142).
+//! Phase 6 novel optimization #4 — pre-registered measurement harness.
 //!
 //! Compares a version-tied cross-query cache (treatment) against the uncached
 //! transducer (control) on a repeated-query workload, emitting raw per-query

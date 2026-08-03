@@ -1,5 +1,4 @@
-//! Regression oracle for the weighted-`f64` subsumption soundness bug
-//! (pgmcp `weighted-f64-subsumption-over-prunes-...`, Phase 2 item 1764).
+//! Regression oracle for the weighted-`f64` subsumption soundness bug.
 //!
 //! `PositionF64::subsumes` previously tested `|i - j| <= (f - e)`, implicitly
 //! assuming each term-index realignment step costs exactly `1.0`. With a custom

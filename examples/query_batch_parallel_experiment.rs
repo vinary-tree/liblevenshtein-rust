@@ -1,4 +1,4 @@
-//! Phase 6 novel option #3 / SOTA — measurement harness (pgmcp experiment 143).
+//! Phase 6 novel option #3 / SOTA — pre-registered measurement harness.
 //!
 //! Parallel batch fuzzy-query evaluation: a batch (query distribution) of
 //! independent queries evaluated with rayon over a *shared, read-only*

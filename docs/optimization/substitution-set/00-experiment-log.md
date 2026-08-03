@@ -376,7 +376,7 @@ collisions, <0.5% end-to-end gain not justified
 **Reproduction Commands**:
 ```bash
 # Clone repository
-git clone https://github.com/anthropics/liblevenshtein-rust
+git clone https://github.com/vinary-tree/liblevenshtein-rust
 cd liblevenshtein-rust
 git checkout <commit-hash>
 

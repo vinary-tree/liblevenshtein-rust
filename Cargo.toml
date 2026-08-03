@@ -9,6 +9,7 @@ resolver = "2"
 [package]
 name = "liblevenshtein"
 version = "0.10.0"
+autobins = false
 edition = "2021"
 # Matches the libdictenstein path dependency, whose --all-features floor is set by
 # sysinfo 0.39 (1.95). The previous 1.70 was already false: libdictenstein pulls

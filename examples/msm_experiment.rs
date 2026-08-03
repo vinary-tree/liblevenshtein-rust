@@ -1,4 +1,4 @@
-//! Deterministic MSM experiment harness used for pgmcp-recorded optimization runs.
+//! Deterministic MSM experiment harness used for recorded optimization runs.
 //!
 //! The binary intentionally avoids external data and extra dependencies so that
 //! control and treatment arms can be run from any checked-out commit:
