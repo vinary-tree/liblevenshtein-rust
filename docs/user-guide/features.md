@@ -155,13 +155,13 @@ Enable with: `features = ["serialization"]`
 
 **Supported formats**:
 - **Bincode**: Fast, compact binary format
-- **JSON**: Human-readable, for debugging
-- **Protobuf** (optional `protobuf` feature): Cross-language compatibility
+- **Protobuf** (optional `protobuf` feature): Portable binary schema
+- JSON, TOML, and newline text are deliberately not persistence formats
 
 **Compression support** (v0.2.0, optional `compression` feature):
-- **Gzip compression**: 85% file size reduction
-- **Compressed formats**: bincode-gz, json-gz, protobuf-gz
-- **Generic wrapper**: `GzipSerializer<S>` works with any serializer
+- **Gzip compression**: Corpus-dependent size reduction with added CPU/latency
+- **Compressed formats**: bincode-gz and protobuf-gz
+- **Generic wrapper**: `GzipSerializer<S>` wraps a supported binary serializer
 
 **Usage**:
 ```rust
@@ -189,7 +189,7 @@ let loaded: PathMapDictionary = GzipSerializer::<BincodeSerializer>::deserialize
 **Benefits**:
 - **Fast startup** with pre-built dictionaries
 - **Share dictionaries** across systems and languages
-- **Reduce file size** by 85% with compression
+- **Trade CPU for storage or transfer size** when representative benchmarks justify gzip
 - **Production-ready**: Validated with 470k+ word dictionaries
 
 ### CLI Tool
@@ -202,51 +202,44 @@ Build: `cargo build --bin liblevenshtein --features cli,compression,protobuf --r
 
 1. **Query**: Search for fuzzy matches
 ```bash
-liblevenshtein query "aple" \\
-    --dict words.txt \\
-    -m 2 \\
+liblevenshtein --query --text aple \\
+    --dict words.bin \\
+    --max-distance 2 \\
     --algorithm transposition \\
-    -s  # Show distances
+    --show-distances
 ```
 
-2. **Convert**: Between formats and backends (v0.4.0)
+2. **Convert**: Between supported binary formats and backends
 ```bash
-# Convert to compressed format
-liblevenshtein convert words.txt words.bin.gz \\
-    --to-format bincode-gz \\
+liblevenshtein --convert --input words.bin --output words.pb \\
+    --from-format bincode --to-format protobuf \\
     --to-backend path-map
 
-# Convert between backends
-liblevenshtein convert dict.bin dict-dawg.bin \\
+liblevenshtein --convert --input dict.bin --output dict-dawg.bin \\
     --from-backend path-map \\
-    --to-backend dawg
+    --to-backend dynamic-dawg
 ```
 
-3. **Insert/Delete**: Runtime dictionary updates (v0.4.0)
+3. **Insert/Delete**: Runtime dictionary updates
 ```bash
-# Insert terms
-liblevenshtein insert "newterm" --dict dict.bin
-
-# Delete terms
-liblevenshtein delete "oldterm" --dict dict.bin
+liblevenshtein --insert --dict dict.bin newterm
+liblevenshtein --delete --dict dict.bin oldterm
 ```
 
-4. **REPL**: Interactive exploration (v0.4.0)
+4. **REPL**: Interactive exploration
 ```bash
-liblevenshtein repl --dict words.bin.gz --format bincode-gz
+liblevenshtein --repl --dict words.bin.gz --format bincode-gz
 ```
 
 5. **Info**: Show dictionary statistics
 ```bash
-liblevenshtein info --dict words.txt --backend path-map
+liblevenshtein --info --dict words.bin --backend path-map
 ```
 
-**Format Support** (v0.4.0):
-- Text (`--format text` or `.txt`)
+**Format Support**:
 - Bincode (`--format bincode` or `.bin`)
-- JSON (`--format json` or `.json`)
 - Protobuf (`--format protobuf` or `.pb`)
-- **Compressed**: `bincode-gz`, `json-gz`, `protobuf-gz` (.bin.gz, .json.gz, .pb.gz)
+- **Compressed**: `bincode-gz`, `protobuf-gz` (`.bin.gz`, `.pb.gz`)
 
 **Backend Options**:
 - `double-array-trie`: Default read-optimized trie (static dictionaries)
@@ -339,7 +332,8 @@ See [Thread Safety](thread-safety.md) for the full per-backend concurrency model
 - `smallvec`: Stack-allocated vectors
 
 ### Optional
-- `serde`, `bincode`, `serde_json`: Serialization (feature: `serialization`)
+- `serde`, `bincode`: Binary serialization (feature: `serialization`)
+- `prost`: Protocol Buffers (feature: `protobuf`)
 - `clap`, `anyhow`: CLI (feature: `cli`)
 
 ### Dev
@@ -350,17 +344,17 @@ See [Thread Safety](thread-safety.md) for the full per-backend concurrency model
 ```toml
 [features]
 default = []
-serialization = ["serde", "bincode", "serde_json"]
+serialization = ["serde", "bincode"]
 compression = ["flate2"]  # v0.2.0
-protobuf = ["prost", "prost-build"]  # v0.2.0
+protobuf = ["serialization", "prost"]  # v0.2.0
 cli = ["clap", "anyhow", "serialization"]
 ```
 
 **Feature combinations**:
-- `serialization`: Basic save/load support (bincode, JSON)
+- `serialization`: Compact bincode save/load support
 - `serialization,compression`: Add gzip compression
 - `serialization,protobuf`: Add cross-language Protobuf support
-- `cli,compression,protobuf`: Full CLI with all formats
+- `cli,compression,protobuf`: Full binary CLI format set
 
 ## Related Documentation
 

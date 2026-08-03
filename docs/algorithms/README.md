@@ -52,7 +52,7 @@ The library is organized into 9 distinct algorithmic layers:
 ### Key Features
 
 - **9 Dictionary Backends** - Tries, DAWGs, Suffix Automata (byte & char variants)
-- **3 Levenshtein Algorithms** - Standard, Transposition, Merge-and-Split
+- **5 String-Distance Selectors** - Standard, OSA transposition, unrestricted Damerau, merge-and-split, and parameterized affine gap
 - **SIMD Acceleration** - 20-64% speedup with AVX2/SSE4.1
 - **Value Storage** - Associate arbitrary data with terms (fuzzy maps)
 - **Unicode Support** - Correct character-level edit distances
@@ -157,13 +157,53 @@ let results: Vec<String> = dict
   - Use case: OCR errors, scanning artifacts
 
 **Core Concepts:**
-- Position Representation: `(term_index, num_errors, is_special)`
+- Position Representation: `(term_index, accumulated_cost, kind, auxiliary_payload)`
+
+### [Affine-gap dictionary automata](10-affine-gap/README.md)
+
+**Purpose:** Exact trie search when a contiguous query or dictionary gap pays
+one opening cost plus a per-symbol extension cost.
+
+**Coverage:** Gotoh recurrence, exact fixed-point costs, three position layers,
+B-4 subsumption, layer-aware completion, operation-derived windows, Rust API,
+security guidance, independent formal models, generated properties, and
+benchmark protocol.
+
+### [Unrestricted Damerau–Levenshtein](11-true-damerau/README.md)
+
+**Purpose:** Exact trie search under history-composing adjacent transpositions.
+
+**Coverage:** Lowrance–Wagner recurrence, bounded streaming macro,
+kind-aware subsumption, literate pseudocode, resource policy, Rust usage,
+formal invariants, generated properties, and corpus evidence.
 - Subsumption: 3.3x faster with online pruning
 - State Composition: SmallVec optimization
 
 **Performance:**
 - Online subsumption: $`\mathcal{O}(kn)`$ vs $`\mathcal{O}(n^{2})`$ batch
 - SIMD acceleration: 3-4x on characteristic vector
+
+### [Exact Generalized-Operation Grid](14-generalized-operation-grid/README.md)
+
+**Purpose:** Operation-driven acceptance for runtime weighted and multi-scalar
+operation sets
+
+**Core properties:**
+- exact decimal-to-integer accumulation
+- sparse topological alignment traversal
+- correct absent insertion/deletion behavior
+- Hamming, indel, bounded-skip, and standard differential invariants
+
+### [Class-A Preset References](15-class-a-presets/README.md)
+
+**Purpose:** Independent reference algorithms and conformance harnesses for
+alignment-expressible presets
+
+**Core properties:**
+- Hamming partial-domain and fixed-length metric laws
+- indel/LCS identity, banded threshold equivalence, and metric laws
+- directional bounded-skip/subsequence identity
+- operation-set progress, cost, overflow, and aggregate resource guards
 
 ---
 
@@ -189,6 +229,18 @@ let results: Vec<String> = dict
 - Product Construction
 - Path Tracking: 15-25% speedup
 - Lazy Evaluation
+
+### [Language Products](13-language-products/README.md)
+
+**Purpose:** Exact bounded Levenshtein distance from a dictionary term to a
+regular language
+
+**Key Topics:**
+- Unit-generic `LanguageAutomaton<U>`
+- Fixed $`k+1`$ cost frontier
+- Frontier merge and minimum-cost canonicalization laws
+- Iterative, frontier-pruned dictionary traversal
+- Regex resource ceilings and formal verification
 
 ---
 
@@ -457,6 +509,10 @@ Need to remove terms?
    - Journal of Functional Programming 7.5
    - DOI: [10.1017/S0956796897002864](https://doi.org/10.1017/S0956796897002864)
 
+7. **Gotoh (1982)** - "An improved algorithm for matching biological sequences"
+   - Journal of Molecular Biology 162.3
+   - DOI: [10.1016/0022-2836(82)90398-9](https://doi.org/10.1016/0022-2836(82)90398-9)
+
 See the complete reference list for more papers and resources.
 
 ---
@@ -466,6 +522,7 @@ See the complete reference list for more papers and resources.
 **By Layer:**
 - [01-dictionary-layer/](01-dictionary-layer/README.md)
 - [02-levenshtein-automata/](02-levenshtein-automata/README.md)
+- [10-affine-gap/](10-affine-gap/README.md)
 - [03-intersection-traversal/](03-intersection-traversal/README.md)
 - [04-distance-calculation/](04-distance-calculation/README.md)
 - [05-simd-optimization/](05-simd-optimization/README.md)
@@ -473,6 +530,7 @@ See the complete reference list for more papers and resources.
 - [07-contextual-completion/](07-contextual-completion/README.md)
 - [08-caching-layer/](08-caching-layer/README.md)
 - [09-value-storage/](09-value-storage/README.md)
+- [13-language-products/](13-language-products/README.md)
 
 **By Topic:**
 - Theory Documents (All layers)

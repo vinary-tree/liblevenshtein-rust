@@ -305,7 +305,7 @@ pub type DFAState = Vec<StateId>;
 ///
 /// # H8 Optimization: State ID Caching
 ///
-/// Uses compact numeric IDs for cache keys instead of Vec<StateId>.
+/// Uses compact numeric IDs for cache keys instead of `Vec<StateId>`.
 #[derive(Debug, Clone)]
 pub struct LazyDFA {
     /// The underlying NFA

@@ -1,7 +1,7 @@
 # Verification Index
 
 **Total Documentation**: 2,900+ lines
-**Last Updated**: 2025-11-18
+**Last Updated**: 2026-08-01
 **Phase**: Historical snapshot; see `FORMAL_VERIFICATION_MANIFEST.tsv` for
 current trusted/partial/legacy status.
 
@@ -18,6 +18,58 @@ current trusted/partial/legacy status.
 - **Want a summary?** → See [SUMMARY.md](SUMMARY.md)
 
 ### 🔬 Formal Proofs
+- **Exact typed-Dyck recurrence and witness soundness** → [core/theories/Conformance/DyckCorrection.v](core/theories/Conformance/DyckCorrection.v)
+- **OperationSet bincode/protobuf/gzip admission invariants** → [core/theories/Conformance/OperationSetSerialization.v](core/theories/Conformance/OperationSetSerialization.v)
+- **Dyck/serialization Rust-facing model** → [verus/dyck_serialization.rs](verus/dyck_serialization.rs)
+- **Dyck/serialization auto-active model** → [dafny/DyckSerialization.dfy](dafny/DyckSerialization.dfy)
+- **Dyck/serialization cross-solver checks** → [smt/dyck_serialization.smt2](smt/dyck_serialization.smt2)
+- **Strict bincode decoder lifecycle** → [tla/OperationSetDecode.tla](tla/OperationSetDecode.tla)
+- **Portable protobuf/gzip admission lifecycle** → [tla/OperationSetPortableDecode.tla](tla/OperationSetPortableDecode.tla)
+- **`PositionKind`/variant conformance** → [core/theories/Conformance/PositionKindVariant.v](core/theories/Conformance/PositionKindVariant.v)
+- **Variant Rust-facing model** → [verus/position_kind_variant.rs](verus/position_kind_variant.rs)
+- **Variant cross-solver model** → [smt/position_kind_variant.smt2](smt/position_kind_variant.smt2)
+- **One-dispatch trace equivalence** → [tla/VariantDispatch.tla](tla/VariantDispatch.tla)
+- **Affine-gap arbitrary-trace refinement** → [affine/theories/AffineGap.v](affine/theories/AffineGap.v)
+- **Affine-gap Dafny contracts** → [dafny/AffineGap.dfy](dafny/AffineGap.dfy)
+- **Affine-gap Rust-facing model** → [verus/affine_gap.rs](verus/affine_gap.rs)
+- **Affine-gap cross-solver model** → [smt/affine_gap.smt2](smt/affine_gap.smt2)
+- **Affine-gap operational model** → [tla/AffineGap.tla](tla/AffineGap.tla)
+- **True-Damerau streaming refinement** → [damerau/theories/DamerauStreaming.v](damerau/theories/DamerauStreaming.v)
+- **True-Damerau Rust-facing model** → [verus/damerau_streaming.rs](verus/damerau_streaming.rs)
+- **True-Damerau cross-solver model** → [smt/damerau_streaming.smt2](smt/damerau_streaming.smt2)
+- **True-Damerau operational model** → [tla/DamerauStreaming.tla](tla/DamerauStreaming.tla)
+- **Discrete Fréchet bottleneck, interval, and bound proofs** → [frechet/theories/Metric/FrechetProperties.v](frechet/theories/Metric/FrechetProperties.v)
+- **Discrete Fréchet Rust-facing model** → [verus/frechet_kernel.rs](verus/frechet_kernel.rs)
+- **Discrete Fréchet cross-solver model** → [smt/frechet_kernel.smt2](smt/frechet_kernel.smt2)
+- **ERP arithmetic, interval, potential, and quotient proofs** → [erp/theories/Metric/ErpProperties.v](erp/theories/Metric/ErpProperties.v)
+- **ERP Rust-facing model** → [verus/erp_kernel.rs](verus/erp_kernel.rs)
+- **ERP cross-solver model** → [smt/erp_kernel.smt2](smt/erp_kernel.smt2)
+- **Elastic-kernel K1–K4 conformance** → [core/theories/Conformance/ElasticKernel.v](core/theories/Conformance/ElasticKernel.v)
+- **Traversal-level K1+K2 no-false-negative theorem** → [elastic/theories/WalkerSoundness.v](elastic/theories/WalkerSoundness.v)
+- **Elastic-kernel Rust-facing model** → [verus/elastic_kernel.rs](verus/elastic_kernel.rs)
+- **Elastic-kernel cross-solver model** → [smt/elastic_kernel.smt2](smt/elastic_kernel.smt2)
+- **Elastic-trie operational model** → [tla/ElasticTrieSearch.tla](tla/ElasticTrieSearch.tla)
+- **Banded-DTW interval, prefix, and reachability proofs** → [dtw/theories/Indexing/DtwProperties.v](dtw/theories/Indexing/DtwProperties.v)
+- **Banded-DTW non-metric counterexample** → [dtw/theories/NotAMetric.v](dtw/theories/NotAMetric.v)
+- **Banded-DTW Rust-facing model** → [verus/dtw_kernel.rs](verus/dtw_kernel.rs)
+- **Banded-DTW cross-solver model** → [smt/dtw_kernel.smt2](smt/dtw_kernel.smt2)
+- **Generalized-operation conformance** → [core/theories/Conformance/GeneralizedAutomatonRepair.v](core/theories/Conformance/GeneralizedAutomatonRepair.v)
+- **Generalized-operation Rust-facing model** → [verus/generalized_automaton.rs](verus/generalized_automaton.rs)
+- **Generalized-operation cross-solver model** → [smt/generalized_automaton.smt2](smt/generalized_automaton.smt2)
+- **Class-A preset conformance** → [core/theories/Conformance/ClassAPresets.v](core/theories/Conformance/ClassAPresets.v)
+- **Class-A Dafny model** → [dafny/ClassAPresets.dfy](dafny/ClassAPresets.dfy)
+- **Class-A Rust-facing model** → [verus/class_a_presets.rs](verus/class_a_presets.rs)
+- **Class-A cross-solver model** → [smt/class_a_presets.smt2](smt/class_a_presets.smt2)
+- **Class-A finite operational model** → [tla/ClassAPresets.tla](tla/ClassAPresets.tla)
+- **Ordered cost-monoid conformance** → [core/theories/Conformance/CostMonoid.v](core/theories/Conformance/CostMonoid.v)
+- **Cost-monoid Rust-facing model** → [verus/cost_monoid.rs](verus/cost_monoid.rs)
+- **Cost-monoid cross-solver model** → [smt/cost_monoid.smt2](smt/cost_monoid.smt2)
+- **Phase 11 carrier-generic subsumption fallback** → [core/theories/Conformance/SubsumptionFallback.v](core/theories/Conformance/SubsumptionFallback.v)
+- **Phase 11 Rust-shaped subsumption fallback** → [verus/subsumption_fallback.rs](verus/subsumption_fallback.rs)
+- **Phase 11 cross-solver subsumption fallback** → [smt/subsumption_fallback.smt2](smt/subsumption_fallback.smt2)
+- **Language-product conformance** → [core/theories/Conformance/LanguageProduct.v](core/theories/Conformance/LanguageProduct.v)
+- **Rust-facing Verus model** → [verus/language_product.rs](verus/language_product.rs)
+- **Cross-solver SMT model** → [smt/language_product.smt2](smt/language_product.smt2)
 - **Core definitions** → [phonetic/rewrite_rules.v](phonetic/rewrite_rules.v)
 - **Rule implementations** → [phonetic/zompist_rules.v](phonetic/zompist_rules.v)
 

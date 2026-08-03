@@ -22,6 +22,34 @@ Exploration of potential future enhancements:
 
 ### Research Areas
 
+#### [Lowrance–Wagner unrestricted Damerau distance](lowrance-wagner/PAPER_SUMMARY.md)
+Scientific and engineering reading of the 1975 recurrence:
+- last-occurrence transposition macro
+- budget-bounded streaming refinement
+- cost-equivalence equation
+- implementation, proof, and resource obligations
+
+#### [Edit distance with Real Penalty](erp/PAPER_SUMMARY.md)
+Scientific analysis of Chen and Ng's ERP measure:
+- exact recurrence and source examples
+- raw-sequence pseudometric versus `$`g`$`-quotient identity
+- gap-mass and interval lower-bound derivations
+- implementation, test, and formal-proof mapping
+
+#### [Discrete Fréchet distance](frechet/PAPER_SUMMARY.md)
+Scientific analysis of Eiter and Mannila's coupling distance:
+- coupling semantics and the complete Table 1 recurrence
+- raw vectors versus identity modulo consecutive-duplicate collapse
+- pinned-endpoint, one-sided-Hausdorff, and interval-bound derivations
+- bottleneck-monoid, implementation, test, and formal-proof mapping
+
+#### [Time Warp Edit Distance](twed/PAPER_SUMMARY.md)
+Scientific analysis of Marteau's timestamp-aware segment edit distance:
+- unit-spaced recurrence and accumulated empty boundaries
+- carry-aware interval match/deletion minima and length lower bound
+- strict metric-domain correction and zero-parameter counterexample
+- API, testing, security, and heterogeneous formal-proof mapping
+
 #### [SIMD Optimization](simd-optimization/README.md)
 Research and implementation of SIMD optimizations:
 - Vectorization opportunities

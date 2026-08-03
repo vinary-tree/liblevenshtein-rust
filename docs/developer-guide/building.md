@@ -25,9 +25,10 @@ cargo install --path . --features cli,compression,protobuf
 
 # Now available system-wide:
 liblevenshtein --help
-liblevenshtein repl --dict words.bin.gz --format bincode-gz
-liblevenshtein query "test" --dict /usr/share/dict/words -m 2
-liblevenshtein convert words.txt words.bin.gz --to-format bincode-gz
+liblevenshtein --repl --dict words.bin.gz --format bincode-gz
+liblevenshtein --query --dict words.bin.gz --text test --max-distance 2
+liblevenshtein --convert --input words.bin --output words.pb \
+  --from-format bincode --to-format protobuf
 ```
 
 ---
@@ -51,18 +52,18 @@ cargo build --bin liblevenshtein --features cli,serialization
 # Much faster compile times, but slower execution
 ```
 
-### Minimal CLI (No Serialization)
+### Minimal binary CLI
 ```bash
 cargo build --bin liblevenshtein --release --features cli
 
-# Smaller binary, but limited to text format dictionaries
+# Includes the bincode persistence surface required by the CLI
 ```
 
 ### With Compression Only
 ```bash
 cargo build --bin liblevenshtein --release --features cli,compression
 
-# Includes bincode-gz and json-gz formats, excludes protobuf
+# Includes bincode-gz, excludes protobuf
 ```
 
 ### Strip Debug Symbols (Smallest Binary)
@@ -118,7 +119,7 @@ cargo rustc --release --crate-type=staticlib
 | Feature | Description | CLI Required | Size Impact |
 |---------|-------------|--------------|-------------|
 | `cli` | Command-line interface and REPL | Yes | +2 MB |
-| `serialization` | Bincode, JSON support | No | +500 KB |
+| `serialization` | Bincode binary persistence | No | +500 KB |
 | `compression` | Gzip compression | No | +300 KB |
 | `protobuf` | Protocol Buffers support | No | +1 MB |
 
@@ -131,7 +132,7 @@ cargo build --release
 
 # Library + Serialization
 cargo build --release --features serialization
-# ~3.5 MB, adds Bincode/JSON support
+# ~3.5 MB, adds bincode support
 
 # Library + Serialization + Compression
 cargo build --release --features serialization,compression

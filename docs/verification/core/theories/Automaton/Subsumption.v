@@ -1,4 +1,10 @@
-(** * Subsumption Relation for Levenshtein Automata
+(** * Conservative Research Subsumption Model
+
+    This module defines a conservative relation used by the larger, partially
+    trusted Automaton research tree. It is not the executable conformance
+    boundary: several branches deliberately prune less aggressively than Rust.
+    The exact, assumption-free branch model and insertion contract live in
+    [Conformance/RustSubsumption.v]. Keep claims about executable behavior there.
 
     This module defines the subsumption relation for all three algorithm variants.
     Position p1 subsumes p2 if all candidates reachable from p2 are also reachable
@@ -6,7 +12,7 @@
 
     Part of: Liblevenshtein.Core.Automaton
 
-    Rust Reference: src/transducer/position.rs:56-180
+    Related Rust implementation: src/transducer/position.rs:56-180
 
     Subsumption Rules:
     - Standard: e ≤ f ∧ |i-j| ≤ f-e
@@ -14,7 +20,7 @@
     - MergeAndSplit: e < f (strict) + distance check
 
     Key Theorems:
-    - subsumes_irrefl: No position subsumes itself (except trivial case)
+    - algorithm-specific reflexivity/irreflexivity lemmas
     - subsumes_trans: Transitivity of subsumption
     - subsumes_covers_reachable: Semantic correctness
 *)
@@ -61,7 +67,7 @@ Definition subsumes_standard (qlen : nat) (p1 p2 : Position) : bool :=
     - i#e_t ≤^t_s j#f     ⇔ false (different subscripts/variant_state)
     - i#e   ≤^t_s j#f_t   ⇔ false (different subscripts/variant_state)
     - i#e   ≤^t_s j#f     ⇔ f > e ∧ |j - i| ≤ f - e (both Usual)
-    - i#e_t ≤^t_s j#f_t   ⇔ false (transposition positions never subsume each other)
+    - i#e_t ≤^t_s j#f_t   is restricted to exact query-index agreement here
 
     Rules:
     - Normal ⊑ Normal: same query index and e ≤ f

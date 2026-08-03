@@ -1,10 +1,8 @@
 //! Serialization-format auto-detection.
 //!
 //! Determines the [`SerializationFormat`] of a dictionary file using a three-stage
-//! cascade: (1) **magic bytes** — an exact signature at the start of the file
-//! (e.g. the gzip header, the bincode/protobuf markers); (2) **file extension** —
-//! a heuristic when no signature matches; (3) **content analysis** — a fallback that
-//! inspects the bytes (e.g. valid UTF-8 / JSON shape) to guess plain-text vs binary.
+//! cascade: (1) **file extension**, which distinguishes bincode from protobuf;
+//! (2) a binary-content fallback to bincode when no extension is available.
 //! Used by [`crate::cli::commands`] so both the CLI and REPL load files without an
 //! explicit `--format` flag.
 
@@ -44,8 +42,6 @@ pub struct FormatDetection {
 /// Method used to detect dictionary format
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DetectionMethod {
-    /// Exact detection via magic bytes or header
-    Exact,
     /// Heuristic detection via file extension
     Extension,
     /// Heuristic detection via file content analysis
@@ -57,7 +53,6 @@ pub enum DetectionMethod {
 impl std::fmt::Display for DetectionMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Exact => write!(f, "exact (magic bytes)"),
             Self::Extension => write!(f, "heuristic (file extension)"),
             Self::Content => write!(f, "heuristic (content analysis)"),
             Self::UserSpecified => write!(f, "user specified"),
@@ -77,30 +72,6 @@ pub fn detect_format(
             format: DictFormat { backend, format },
             method: DetectionMethod::UserSpecified,
         });
-    }
-
-    // Try exact detection first (magic bytes)
-    if let Ok(detection) = detect_exact(path) {
-        // Validate against user specifications if provided
-        if let Some(backend) = user_backend {
-            if backend != detection.format.backend {
-                bail!(
-                    "Backend mismatch: file contains {} but --backend specified {}",
-                    detection.format.backend,
-                    backend
-                );
-            }
-        }
-        if let Some(format) = user_format {
-            if format != detection.format.format {
-                bail!(
-                    "Format mismatch: file contains {} but --format specified {}",
-                    detection.format.format,
-                    format
-                );
-            }
-        }
-        return Ok(detection);
     }
 
     // Try extension-based heuristics
@@ -143,7 +114,7 @@ pub fn detect_format(
     Ok(FormatDetection {
         format: DictFormat {
             backend: user_backend.unwrap_or(DictionaryBackend::PathMap),
-            format: user_format.unwrap_or(SerializationFormat::Text),
+            format: user_format.unwrap_or(SerializationFormat::Bincode),
         },
         method: if user_backend.is_some() || user_format.is_some() {
             DetectionMethod::UserSpecified
@@ -151,52 +122,6 @@ pub fn detect_format(
             DetectionMethod::Extension
         },
     })
-}
-
-/// Detect format by exact matching (magic bytes)
-fn detect_exact(path: &Path) -> Result<FormatDetection> {
-    let mut file = std::fs::File::open(path)
-        .with_context(|| format!("Failed to open file: {}", path.display()))?;
-
-    let mut header = [0u8; 16];
-    let bytes_read = file
-        .read(&mut header)
-        .with_context(|| format!("Failed to read file header: {}", path.display()))?;
-
-    if bytes_read < 4 {
-        bail!("File too small for magic byte detection");
-    }
-
-    // Check for JSON format
-    if header[0] == b'{' || header[0] == b'[' {
-        // Could be JSON - try to determine backend from content
-        return Ok(FormatDetection {
-            format: DictFormat {
-                backend: DictionaryBackend::PathMap, // Default for JSON
-                format: SerializationFormat::Json,
-            },
-            method: DetectionMethod::Exact,
-        });
-    }
-
-    // Check for plain text (all printable ASCII or starts with letter)
-    if bytes_read > 0 && header[0].is_ascii_alphabetic() {
-        let is_text = header[..bytes_read]
-            .iter()
-            .all(|&b| b.is_ascii() && (b.is_ascii_graphic() || b.is_ascii_whitespace()));
-
-        if is_text {
-            return Ok(FormatDetection {
-                format: DictFormat {
-                    backend: DictionaryBackend::PathMap,
-                    format: SerializationFormat::Text,
-                },
-                method: DetectionMethod::Content,
-            });
-        }
-    }
-
-    bail!("Could not detect format from magic bytes")
 }
 
 /// Detect format by file extension
@@ -207,12 +132,9 @@ fn detect_by_extension(path: &Path) -> Result<FormatDetection> {
         .context("No file extension")?;
 
     let format = match ext.to_lowercase().as_str() {
-        "txt" | "text" | "dict" => SerializationFormat::Text,
         "bin" | "bincode" => SerializationFormat::Bincode,
-        "json" => SerializationFormat::Json,
         #[cfg(feature = "protobuf")]
         "pb" | "protobuf" => SerializationFormat::Protobuf,
-        "paths" => SerializationFormat::PathsNative,
         _ => bail!("Unknown file extension: {}", ext),
     };
 
@@ -245,28 +167,8 @@ fn detect_by_content(path: &Path) -> Result<FormatDetection> {
     file.read_exact(&mut buffer)
         .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-    // Check if it's valid UTF-8 text
-    if let Ok(text) = std::str::from_utf8(&buffer) {
-        // Plain text dictionary: one word per line
-        if text.lines().take(10).all(|line| {
-            let trimmed = line.trim();
-            trimmed.is_empty()
-                || trimmed.starts_with('#')
-                || trimmed
-                    .chars()
-                    .all(|c| c.is_alphanumeric() || c.is_whitespace() || "-_'".contains(c))
-        }) {
-            return Ok(FormatDetection {
-                format: DictFormat {
-                    backend: DictionaryBackend::PathMap,
-                    format: SerializationFormat::Text,
-                },
-                method: DetectionMethod::Content,
-            });
-        }
-    }
-
-    // Assume binary format if not text
+    // Both supported formats are binary. Without an extension, bincode is the
+    // conservative local default; protobuf callers should specify the format.
     Ok(FormatDetection {
         format: DictFormat {
             backend: DictionaryBackend::PathMap,

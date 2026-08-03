@@ -26,7 +26,14 @@ use smallvec::SmallVec;
 #[cfg(target_arch = "x86_64")]
 pub mod simd;
 
+mod affine;
+mod hamming;
+mod indel;
 pub mod myers;
+
+pub use affine::{affine_gap_distance, affine_gap_distance_units};
+pub use hamming::{hamming_distance, hamming_distance_units};
+pub use indel::{indel_distance, indel_distance_bounded};
 
 /// A symmetric pair of strings for use as cache keys.
 ///
@@ -444,11 +451,13 @@ fn bounded_levenshtein_chars(
     (prev_row[n] <= max_distance).then_some(prev_row[n])
 }
 
-/// Compute Levenshtein distance with transposition support.
+/// Compute optimal string alignment (OSA) distance.
 ///
 /// Extends standard Levenshtein distance to also consider transposition
 /// (swapping two adjacent characters) as a single edit operation.
-/// This is also known as Damerau-Levenshtein distance.
+/// OSA is also called *restricted Damerau distance*: a substring may be edited
+/// at most once. It differs from unrestricted Damerau–Levenshtein distance and
+/// does not satisfy the triangle inequality.
 ///
 /// # Example
 ///
@@ -515,7 +524,95 @@ pub fn transposition_distance(source: &str, target: &str) -> usize {
     prev_row[n]
 }
 
-/// Compute Damerau-Levenshtein distance up to a maximum threshold.
+/// Compute unrestricted Damerau–Levenshtein distance.
+///
+/// This is the full Lowrance–Wagner dynamic program with a last-occurrence
+/// table over the union alphabet. Unlike [`transposition_distance`], an edit
+/// may act on a substring changed by an earlier edit. The implementation keeps
+/// the complete matrix deliberately: it is the obvious reference oracle for
+/// the streaming automaton, not a windowed production shortcut.
+///
+/// # Examples
+///
+/// ```rust
+/// use liblevenshtein::distance::damerau_levenshtein_distance;
+///
+/// assert_eq!(damerau_levenshtein_distance("ab", "ba"), 1);
+/// assert_eq!(damerau_levenshtein_distance("CA", "ABC"), 2);
+/// ```
+pub fn damerau_levenshtein_distance(source: &str, target: &str) -> usize {
+    let source: SmallVec<[char; 32]> = source.chars().collect();
+    let target: SmallVec<[char; 32]> = target.chars().collect();
+    let source_len = source.len();
+    let target_len = target.len();
+
+    if source_len == 0 {
+        return target_len;
+    }
+    if target_len == 0 {
+        return source_len;
+    }
+
+    let sentinel = source_len.saturating_add(target_len);
+    let rows = source_len.saturating_add(2);
+    let columns = target_len.saturating_add(2);
+    let mut matrix = vec![vec![0usize; columns]; rows];
+
+    matrix[0][0] = sentinel;
+    for i in 0..=source_len {
+        matrix[i + 1][0] = sentinel;
+        matrix[i + 1][1] = i;
+    }
+    for j in 0..=target_len {
+        matrix[0][j + 1] = sentinel;
+        matrix[1][j + 1] = j;
+    }
+
+    let mut last_row = std::collections::HashMap::<char, usize>::new();
+    for i in 1..=source_len {
+        let mut last_match_column = 0usize;
+        for j in 1..=target_len {
+            let transposition_row = last_row.get(&target[j - 1]).copied().unwrap_or(0);
+            let transposition_column = last_match_column;
+            let substitution_cost = usize::from(source[i - 1] != target[j - 1]);
+            if substitution_cost == 0 {
+                last_match_column = j;
+            }
+
+            let substitution = matrix[i][j].saturating_add(substitution_cost);
+            let insertion = matrix[i + 1][j].saturating_add(1);
+            let deletion = matrix[i][j + 1].saturating_add(1);
+            let transposition = matrix[transposition_row][transposition_column]
+                .saturating_add(i - transposition_row - 1)
+                .saturating_add(1)
+                .saturating_add(j - transposition_column - 1);
+
+            matrix[i + 1][j + 1] = substitution.min(insertion).min(deletion).min(transposition);
+        }
+        last_row.insert(source[i - 1], i);
+    }
+
+    matrix[source_len + 1][target_len + 1]
+}
+
+/// Compute unrestricted Damerau–Levenshtein distance up to a threshold.
+///
+/// The length difference is an admissible constant-time rejection. Remaining
+/// cases use the full reference recurrence and retain the result only when it
+/// is within `max_distance`.
+pub fn damerau_levenshtein_distance_bounded(
+    source: &str,
+    target: &str,
+    max_distance: usize,
+) -> Option<usize> {
+    if source.chars().count().abs_diff(target.chars().count()) > max_distance {
+        return None;
+    }
+    let distance = damerau_levenshtein_distance(source, target);
+    (distance <= max_distance).then_some(distance)
+}
+
+/// Compute optimal string alignment distance up to a maximum threshold.
 ///
 /// This uses the same optimal-string-alignment recurrence as
 /// [`transposition_distance`] and returns `None` when the distance is proven to

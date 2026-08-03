@@ -38,6 +38,7 @@
 
 use super::jaro_winkler::jaro_winkler_similarity;
 use super::ngram::NgramIndex;
+use crate::transducer::AllowedPrefixes;
 
 /// Default n-gram size for hybrid matching.
 const DEFAULT_NGRAM_SIZE: usize = 2;
@@ -212,6 +213,16 @@ impl HybridMatcher {
             .into_iter()
             .filter(|term| jaro_winkler_similarity(query, term) >= adaptive_threshold)
             .collect()
+    }
+
+    /// Build a downward-closed prefix visitor from the complete hybrid-filter
+    /// candidate set, so rejected terms are pruned during dictionary DFS.
+    pub fn prefix_pruner(&self, query: &str, max_distance: usize) -> AllowedPrefixes<u8> {
+        AllowedPrefixes::new(
+            self.filter_candidates(query, max_distance)
+                .into_iter()
+                .map(str::as_bytes),
+        )
     }
 
     /// Filter candidates and return similarity scores.

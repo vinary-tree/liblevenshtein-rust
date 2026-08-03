@@ -1,0 +1,36 @@
+// generalized-operation-grid.dot — sparse exact-cost alignment evaluation.
+// Colour mapping (per the canonical legend):
+//   source/target input       teal   #B2EBF2, border #00838F
+//   reachable alignment cell blue   #BBDEFB, border #1565C0
+//   checked cost boundary    amber  #FFE0B2, border #EF6C00
+//   accepting cell           green  #C8E6C9, border #2E7D32
+//   pruned edge              red    #FFCDD2, border #C62828
+digraph generalized_operation_grid {
+  rankdir=LR;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="GeneralizedAutomaton — exact scaled operation grid"];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+        color="#455A64", fontcolor="#102027"];
+  edge [fontname="DejaVu Sans", fontsize=10, color="#37474F"];
+
+  input [label="word w · input x\nOperationSet · integer budget", shape=oval,
+         fillcolor="#B2EBF2", color="#00838F"];
+  scale [label="CostScale\nexact checked weights", fillcolor="#FFE0B2", color="#EF6C00"];
+  q00 [label="(0, 0)\ncost 0", fillcolor="#BBDEFB", color="#1565C0"];
+  q11 [label="(1, 1)\nleast cost", fillcolor="#BBDEFB", color="#1565C0"];
+  q21 [label="(2, 1)\nleast cost", fillcolor="#BBDEFB", color="#1565C0"];
+  q12 [label="(1, 2)\nleast cost", fillcolor="#BBDEFB", color="#1565C0"];
+  final [label="(m, n)\naccept with exact cost", shape=doubleoctagon,
+         fillcolor="#C8E6C9", color="#2E7D32"];
+  prune [label="cost > budget or\ncell limit reached", fillcolor="#FFCDD2", color="#C62828"];
+
+  input -> scale;
+  scale -> q00 [label="scaled budget K"];
+  q00 -> q11 [label="⟨1,1,w⟩"];
+  q00 -> q21 [label="⟨2,1,w⟩"];
+  q00 -> q12 [label="⟨1,2,w⟩"];
+  q11 -> final [label="topological relaxations"];
+  q21 -> final [label="topological relaxations"];
+  q12 -> final [label="topological relaxations"];
+  q11 -> prune [label="checked guard", color="#C62828", fontcolor="#C62828"];
+}

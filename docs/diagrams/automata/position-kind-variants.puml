@@ -1,0 +1,91 @@
+@startuml
+title PositionKind representation and one-dispatch-per-edge variant seam
+
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam class {
+  BackgroundColor #E0F2FE
+  BorderColor #075985
+  ArrowColor #334155
+  FontColor #0F172A
+}
+skinparam note {
+  BackgroundColor #FEF3C7
+  BorderColor #B45309
+  FontColor #451A03
+}
+
+class "Algorithm\n(runtime API)" as Algorithm #FCE7F3 {
+  Standard
+  Transposition
+  MergeAndSplit
+}
+class "VariantSpec\n(edge selector)" as VariantSpec #EDE9FE {
+  Standard
+  Osa
+  MergeSplit
+}
+interface "AutomatonVariant" as Variant #DCFCE7 {
+  successors(position, cv, ctx, out)
+  epsilon_successors(position, ctx, out)
+  subsumes(lhs, rhs, ctx)
+  finish_cost(position, query_length, params)
+  skip_window(position, ctx)
+}
+class StandardV #D1FAE5
+class OsaV #DBEAFE
+class MergeSplitV #FFEDD5
+class "Position — 24 bytes on 64-bit" as Position #E0F2FE {
+  + term_index: usize [8]
+  + num_errors: usize [8]
+  - kind: PositionKind [1]
+  - aux: u8 [1]
+  - padding [6]
+  + kind()
+  + aux()
+  + is_special()
+}
+enum PositionKind #F1F5F9 {
+  Normal
+  OsaTransposing
+  Splitting
+  AffineQueryGap
+  AffineDictGap
+  DamerauPending
+}
+class "transition_state_inner<U,P,V>" as Kernel #CCFBF1 {
+  one immutable TransitionCtx
+  epsilon_closure_mut<V>
+  State::insert_with<V>
+}
+
+Algorithm --> VariantSpec : select once\nper dictionary edge
+VariantSpec --> Kernel : with_variant!
+Kernel --> Variant : static calls\ninside position loop
+Variant <|.. StandardV
+Variant <|.. OsaV
+Variant <|.. MergeSplitV
+Kernel --> Position : reads / emits
+Position *-- PositionKind
+
+note right of Position
+  Full sort key:
+  (term_index, num_errors, kind, aux)
+
+  Private tags prevent invalid
+  continuation collisions.
+end note
+note bottom of Kernel
+  No trait object and no public iterator generic.
+  Runtime branch count per edge = 1.
+end note
+legend left
+  |= Color |= Concept |
+  |<#FCE7F3> pink | public runtime selector |
+  |<#EDE9FE> violet | closed edge dispatch |
+  |<#DCFCE7> green | proof/extension contract |
+  |<#CCFBF1> teal | monomorphized hot kernel |
+  |<#E0F2FE> blue | compact state representation |
+endlegend
+@enduml

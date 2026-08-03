@@ -52,7 +52,7 @@ use super::error::{LLevError, LLevErrorKind, LLevResult};
 use super::ruleset::{RuleSet, RuleSetChar};
 
 /// Magic bytes identifying a compiled LLev file.
-const MAGIC: [u8; 4] = [b'L', b'L', b'E', b'V'];
+const MAGIC: [u8; 4] = *b"LLEV";
 
 /// Current file format version.
 const VERSION: u8 = 1;

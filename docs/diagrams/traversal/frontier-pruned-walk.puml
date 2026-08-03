@@ -1,0 +1,54 @@
+@startuml frontier-pruned-walk
+' End-to-end sequence for dictionary × LanguageProduct traversal. It contrasts
+' the removed full-dictionary scan with frontier-guided descent and makes D1's
+' pruning point explicit. Colours follow the canonical project legend.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam sequence {
+  ArrowColor #37474F
+  ArrowThickness 2
+  LifeLineBorderColor #455A64
+  ParticipantFontColor #102027
+}
+
+title Frontier-pruned regular-language query — D1 closed at the dictionary edge
+
+actor "Caller" as C #B2EBF2
+participant "LanguageQueryIterator" as Q #FFE0B2
+participant "DictionaryNode" as D #C8E6C9
+participant "LanguageProduct" as P #BBDEFB
+participant "LanguageAutomaton" as L #F8BBD0
+
+C -> Q : query_language(language, k)
+Q -> P : initial_frontier()
+P -> L : initial() + deletion closure
+L --> P : cost-indexed state sets
+
+loop while queued dictionary nodes remain
+  Q -> D : pop node; edges()
+  loop each (unit, child)
+    Q -> P : step(frontier, unit)
+    P -> L : step / advance / union / subtract
+    L --> P : next frontier
+    alt frontier is empty
+      P --> Q : ∅
+      note over Q,D #FFCDD2
+        prune child immediately;
+        no descendant can recover
+      end note
+    else frontier is live
+      P --> Q : at most k + 1 levels
+      Q -> Q : enqueue(child, frontier)
+    end
+  end
+  opt node final and a level accepts
+    Q -[#2E7D32]-> C : LanguageMatch { units, distance, node }
+  end
+end
+
+note over Q,L #FFF3E0
+  Iterative queue: no recursion and no fixed depth 100.
+  Legacy phonetic query scanned every dictionary edge and rescored full paths.
+end note
+@enduml

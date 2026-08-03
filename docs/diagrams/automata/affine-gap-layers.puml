@@ -1,0 +1,53 @@
+@startuml
+' Teaches every Gotoh layer transition, its consumption direction, and its cost.
+title Exact affine-gap automaton layers
+
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam roundcorner 14
+skinparam ArrowColor #334155
+skinparam state {
+  FontColor #0F172A
+  BorderColor #334155
+}
+skinparam note {
+  BackgroundColor #FEF3C7
+  BorderColor #B45309
+  FontColor #451A03
+}
+
+state "M / Normal\n(query index i, cost c)" as M #DBEAFE
+state "I_x / AffineQueryGap\n(query index i, cost c)" as Ix #FCE7F3
+state "I_y / AffineDictGap\n(query index i, cost c)" as Iy #FFF7ED
+
+[*] --> M : initial state
+
+M --> M : consume query + dictionary\nmatch 0 / substitution s
+Ix --> M : consume query + dictionary\nmatch 0 / substitution s
+Iy --> M : consume query + dictionary\nmatch 0 / substitution s
+
+M --> Ix : consume query (epsilon)\nopen + extend: g_o + g_e
+Iy --> Ix : consume query (epsilon)\nswitch + extend: g_o + g_e
+Ix --> Ix : consume query (epsilon)\nextend: g_e
+
+M --> Iy : consume dictionary edge\nopen + extend: g_o + g_e
+Ix --> Iy : consume dictionary edge\nswitch + extend: g_o + g_e
+Iy --> Iy : consume dictionary edge\nextend: g_e
+
+M --> [*] : finish trailing query run\ng_o + r g_e
+Iy --> [*] : finish trailing query run\ng_o + r g_e
+Ix --> [*] : finish trailing query run\nr g_e (already open)
+
+note right of Ix
+  <latex>G(r)=g_o+r g_e</latex>
+  Opening is charged once per contiguous run.
+end note
+
+legend left
+  |= Color |= Meaning |
+  |<#DBEAFE> blue | diagonal / ordinary residual language |
+  |<#FCE7F3> pink | query-consuming gap layer |
+  |<#FFF7ED> orange | dictionary-consuming gap layer |
+  |<#FEF3C7> amber | exact cost convention |
+endlegend
+@enduml

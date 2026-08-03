@@ -215,6 +215,17 @@ proptest! {
 // Transposition Distance Tests (Iterative)
 // ============================================================================
 
+/// OSA is deliberately classified as non-metric. This separating example is
+/// the executable counterpart of `Algorithm::is_metric`.
+#[test]
+fn optimal_string_alignment_triangle_inequality_counterexample() {
+    let direct = transposition_distance("CA", "ABC");
+    let via = transposition_distance("CA", "AC") + transposition_distance("AC", "ABC");
+    assert_eq!(direct, 3);
+    assert_eq!(via, 2);
+    assert!(direct > via);
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
 
@@ -238,11 +249,6 @@ proptest! {
         let d_ba = transposition_distance(&b, &a);
         prop_assert_eq!(d_ab, d_ba, "Distance must be symmetric: d(a,b) = d(b,a)");
     }
-
-    // Note: Damerau-Levenshtein does NOT satisfy triangle inequality!
-    // See: https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
-    // Example: d("ca", "abc") = 2, but d("ca", "ac") + d("ac", "abc") = 1 + 1 = 2
-    // So we don't test triangle inequality for transposition distance.
 
     #[test]
     fn transposition_distance_left_invariance(
@@ -354,6 +360,45 @@ proptest! {
 // Merge and Split Distance Tests
 // ============================================================================
 
+#[test]
+fn merge_split_triangle_inequality_bounded_exhaustive() {
+    fn words(alphabet: &[char], max_len: usize) -> Vec<String> {
+        fn extend(prefix: &mut String, alphabet: &[char], remaining: usize, out: &mut Vec<String>) {
+            out.push(prefix.clone());
+            if remaining == 0 {
+                return;
+            }
+            for &ch in alphabet {
+                prefix.push(ch);
+                extend(prefix, alphabet, remaining - 1, out);
+                prefix.pop();
+            }
+        }
+
+        let mut out = Vec::new();
+        extend(&mut String::new(), alphabet, max_len, &mut out);
+        out.sort();
+        out.dedup();
+        out
+    }
+
+    let corpus = words(&['a', 'b', 'c'], 3);
+    let cache = create_memo_cache();
+    for a in &corpus {
+        for b in &corpus {
+            let d_ab = merge_and_split_distance(a, b, &cache);
+            for c in &corpus {
+                let d_bc = merge_and_split_distance(b, c, &cache);
+                let d_ac = merge_and_split_distance(a, c, &cache);
+                assert!(
+                    d_ac <= d_ab + d_bc,
+                    "triangle counterexample: d({a:?}, {c:?})={d_ac} > d({a:?}, {b:?})={d_ab} + d({b:?}, {c:?})={d_bc}"
+                );
+            }
+        }
+    }
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(1000))]
 
@@ -381,8 +426,22 @@ proptest! {
         prop_assert_eq!(d_ab, d_ba, "Distance must be symmetric: d(a,b) = d(b,a)");
     }
 
-    // Note: Merge-and-split also may not satisfy triangle inequality
-    // Similar to transposition distance, we skip this test
+    #[test]
+    fn merge_split_distance_triangle_inequality(
+        a in arb_string(),
+        b in arb_string(),
+        c in arb_string()
+    ) {
+        let cache = create_memo_cache();
+        let d_ab = merge_and_split_distance(&a, &b, &cache);
+        let d_bc = merge_and_split_distance(&b, &c, &cache);
+        let d_ac = merge_and_split_distance(&a, &c, &cache);
+        prop_assert!(
+            d_ac <= d_ab + d_bc,
+            "triangle inequality violated: d({:?}, {:?})={} > d({:?}, {:?})={} + d({:?}, {:?})={}",
+            a, c, d_ac, a, b, d_ab, b, c, d_bc
+        );
+    }
 
     #[test]
     fn merge_split_distance_left_invariance(

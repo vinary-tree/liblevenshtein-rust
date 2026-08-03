@@ -123,12 +123,15 @@ impl LevenshteinAutomaton {
 | Deletion | 1 | cart → cat |
 | Substitution | 1 | cat → c**o**t |
 
-### Damerau-Levenshtein Distance
+### Optimal string alignment distance
 
-Extends Levenshtein with transposition:
+The sketched finite-state variant extends Levenshtein with a restricted adjacent
+transposition. Its semantics are optimal string alignment (restricted Damerau),
+not unrestricted Damerau–Levenshtein, because an edited substring cannot be
+edited again:
 
 ```rust
-/// Damerau-Levenshtein extends Levenshtein with transposition
+/// Optimal string alignment extends Levenshtein with restricted transposition.
 pub struct DamerauLevenshteinAutomaton {
     /// Base Levenshtein automaton
     base: LevenshteinAutomaton,

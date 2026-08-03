@@ -9,8 +9,8 @@
 use std::collections::VecDeque;
 
 use crate::distance::{
-    create_memo_cache, merge_and_split_distance, standard_distance_bounded,
-    transposition_distance_bounded,
+    create_memo_cache, damerau_levenshtein_distance, merge_and_split_distance,
+    standard_distance_bounded, transposition_distance_bounded,
 };
 #[cfg(test)]
 use crate::distance::{standard_distance, transposition_distance};
@@ -40,6 +40,13 @@ fn compute_distance_within(
 
             let cache = create_memo_cache();
             let distance = merge_and_split_distance(source, target, &cache);
+            (distance <= max_distance).then_some(distance)
+        }
+        Algorithm::DamerauLevenshtein => {
+            if source.chars().count().abs_diff(target.chars().count()) > max_distance {
+                return None;
+            }
+            let distance = damerau_levenshtein_distance(source, target);
             (distance <= max_distance).then_some(distance)
         }
     }

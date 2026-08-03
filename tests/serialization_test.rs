@@ -161,19 +161,17 @@ mod serialization_tests {
     }
 
     // ============================================================================
-    // JSON Round-Trip Tests
+    // Native PathMap Round-Trip Test
     // ============================================================================
-
     #[test]
     #[cfg(feature = "pathmap-backend")]
-    fn test_pathmap_json_roundtrip() {
+    fn test_pathmap_native_roundtrip() {
         use libdictenstein::pathmap::PathMapDictionary;
 
         let terms = test_terms();
         let dict: PathMapDictionary<()> = PathMapDictionary::from_terms(terms.iter().copied());
 
-        // PathMap uses its own native .paths format, not JSON
-        // Test serialization using the native format
+        // PathMap uses its own compact native .paths format.
         let mut buffer = Vec::new();
         dict.serialize_paths(&mut buffer)
             .expect("Failed to serialize PathMapDictionary");
@@ -191,133 +189,6 @@ mod serialization_tests {
             );
         }
         assert_eq!(dict.term_count(), deserialized.term_count());
-    }
-
-    #[test]
-    fn test_double_array_trie_json_roundtrip() {
-        let terms = test_terms();
-        let dict = DoubleArrayTrie::from_terms(terms.clone());
-
-        // Serialize
-        let json =
-            serde_json::to_string(&dict).expect("Failed to serialize DoubleArrayTrie to JSON");
-
-        // Deserialize
-        let deserialized: DoubleArrayTrie =
-            serde_json::from_str(&json).expect("Failed to deserialize DoubleArrayTrie from JSON");
-
-        // Verify
-        for term in &terms {
-            assert!(
-                deserialized.contains(term),
-                "DoubleArrayTrie missing term: {}",
-                term
-            );
-        }
-        assert_eq!(dict.len(), deserialized.len());
-    }
-
-    #[test]
-    fn test_dynamic_dawg_json_roundtrip() {
-        let terms = test_terms();
-        let dict: DynamicDawg<()> = DynamicDawg::from_terms(terms.clone());
-
-        // Serialize
-        let json = serde_json::to_string(&dict).expect("Failed to serialize DynamicDawg to JSON");
-
-        // Deserialize
-        let deserialized: DynamicDawg<()> =
-            serde_json::from_str(&json).expect("Failed to deserialize DynamicDawg from JSON");
-
-        // Verify
-        for term in &terms {
-            assert!(
-                deserialized.contains(term),
-                "DynamicDawg missing term: {}",
-                term
-            );
-        }
-        assert_eq!(dict.term_count(), deserialized.term_count());
-    }
-
-    #[test]
-    fn test_dynamic_dawg_char_json_roundtrip() {
-        use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
-
-        let terms = test_terms();
-        let dict: DynamicDawgChar<()> = DynamicDawgChar::from_terms(terms.clone());
-
-        // Serialize
-        let json =
-            serde_json::to_string(&dict).expect("Failed to serialize DynamicDawgChar to JSON");
-
-        // Deserialize
-        let deserialized: DynamicDawgChar<()> =
-            serde_json::from_str(&json).expect("Failed to deserialize DynamicDawgChar from JSON");
-
-        // Verify
-        for term in &terms {
-            assert!(
-                deserialized.contains(term),
-                "DynamicDawgChar missing term: {}",
-                term
-            );
-        }
-        assert_eq!(dict.term_count(), deserialized.term_count());
-    }
-
-    #[test]
-    fn test_suffix_automaton_json_roundtrip() {
-        let terms: Vec<String> = test_terms().iter().map(|s| s.to_string()).collect();
-        let dict = SuffixAutomaton::<()>::from_texts(terms.clone());
-
-        // Serialize
-        let json =
-            serde_json::to_string(&dict).expect("Failed to serialize SuffixAutomaton to JSON");
-
-        // Deserialize
-        let deserialized: SuffixAutomaton =
-            serde_json::from_str(&json).expect("Failed to deserialize SuffixAutomaton from JSON");
-
-        // Verify
-        for term in &terms {
-            assert!(
-                deserialized.contains(term),
-                "SuffixAutomaton missing term: {}",
-                term
-            );
-        }
-        assert_eq!(dict.string_count(), deserialized.string_count());
-    }
-
-    // ============================================================================
-    // Cross-Format Consistency Tests
-    // ============================================================================
-
-    #[test]
-    fn test_double_array_trie_bincode_json_consistency() {
-        let terms = test_terms();
-        let dict = DoubleArrayTrie::from_terms(terms.clone());
-
-        // Serialize to both formats
-        let bincode_bytes =
-            bincode::serde::encode_to_vec(&dict, bincode::config::legacy()).unwrap();
-        let json_str = serde_json::to_string(&dict).unwrap();
-
-        // Deserialize from both
-        let from_bincode: DoubleArrayTrie =
-            bincode::serde::decode_from_slice(&bincode_bytes, bincode::config::legacy())
-                .map(|(__decoded, _)| __decoded)
-                .unwrap();
-        let from_json: DoubleArrayTrie = serde_json::from_str(&json_str).unwrap();
-
-        // Both should contain same terms
-        for term in &terms {
-            assert!(from_bincode.contains(term));
-            assert!(from_json.contains(term));
-        }
-
-        assert_eq!(from_bincode.len(), from_json.len());
     }
 
     #[test]

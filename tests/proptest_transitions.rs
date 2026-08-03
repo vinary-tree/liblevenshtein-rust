@@ -46,6 +46,28 @@ fn valid_m_position() -> impl Strategy<Value = (i32, u8, u8)> {
     })
 }
 
+/// Generate I positions with a positive accumulated cost and one unit of
+/// remaining budget, avoiding rejection-heavy `prop_assume!` filters.
+fn valid_i_position_with_budget() -> impl Strategy<Value = (i32, u8, u8)> {
+    (2_u8..10).prop_flat_map(|max_distance| {
+        (1_u8..max_distance).prop_flat_map(move |errors| {
+            let radius = i32::from(errors);
+            (-radius..=radius, Just(errors), Just(max_distance))
+        })
+    })
+}
+
+/// Generate M positions with at least one unit of remaining budget.
+fn valid_m_position_with_budget() -> impl Strategy<Value = (i32, u8, u8)> {
+    (1_u8..10).prop_flat_map(|max_distance| {
+        let n = i32::from(max_distance);
+        (0_u8..max_distance).prop_flat_map(move |errors| {
+            let minimum_offset = (-i32::from(errors) - n).max(-2 * n);
+            (minimum_offset..=0, Just(errors), Just(max_distance))
+        })
+    })
+}
+
 /// Generate test strings
 fn test_word() -> impl Strategy<Value = String> {
     "[a-z]{3,8}"
@@ -121,7 +143,7 @@ mod i_type_invariant_preservation {
                         }
 
                         // I-invariant conjunct 3: errors ≤ n
-                        prop_assert!(succ_errors <= max_distance,
+                        prop_assert!(succ_errors <= usize::from(max_distance),
                             "Successor errors {} > max_distance {}", succ_errors, max_distance);
                     }
                 }
@@ -190,7 +212,7 @@ mod m_type_invariant_preservation {
                             "Successor offset {} > 0", succ_offset);
 
                         // M-invariant conjunct 3: errors ≤ n
-                        prop_assert!(succ_errors <= max_distance,
+                        prop_assert!(succ_errors <= usize::from(max_distance),
                             "Successor errors {} > max_distance {}", succ_errors, max_distance);
                     }
                 }
@@ -218,13 +240,10 @@ mod cost_correctness {
     proptest! {
         #[test]
         fn i_successor_cost_matches_operation(
-            (offset, errors, max_distance) in valid_i_position(),
+            (offset, errors, max_distance) in valid_i_position_with_budget(),
             word in test_word(),
             input_ch in input_char()
         ) {
-            prop_assume!(errors > 0); // Skip relaxed invariant case (errors=0)
-            prop_assume!(errors < max_distance); // Need budget for error ops
-
             let p = GeneralizedPosition::new_i(offset, errors, max_distance)
                 .expect("valid I-position");
             let mut state = GeneralizedState::new(max_distance);
@@ -253,7 +272,7 @@ mod cost_correctness {
                         // Match (cost 0): errors unchanged
                         // Delete/Insert/Substitute (cost 1): errors + 1
                         if error_diff == 1 {
-                            prop_assert_eq!(succ.errors(), errors + 1,
+                            prop_assert_eq!(succ.errors(), usize::from(errors + 1),
                                 "Error operation should increase errors by exactly 1");
                         }
                     }
@@ -263,12 +282,10 @@ mod cost_correctness {
 
         #[test]
         fn m_successor_cost_matches_operation(
-            (offset, errors, max_distance) in valid_m_position(),
+            (offset, errors, max_distance) in valid_m_position_with_budget(),
             word in test_word(),
             input_ch in input_char()
         ) {
-            prop_assume!(errors < max_distance);
-
             let p = GeneralizedPosition::new_m(offset, errors, max_distance)
                 .expect("valid M-position");
             let mut state = GeneralizedState::new(max_distance);
@@ -308,14 +325,10 @@ mod offset_semantics {
     proptest! {
         #[test]
         fn i_type_offset_changes_are_valid(
-            (offset, errors, max_distance) in valid_i_position(),
+            (offset, errors, max_distance) in valid_i_position_with_budget(),
             word in test_word(),
             input_ch in input_char()
         ) {
-            prop_assume!(errors > 0); // Skip relaxed invariant case (errors=0)
-            prop_assume!(errors < max_distance);
-            prop_assume!(offset > -(max_distance as i32)); // Allow delete
-
             let p = GeneralizedPosition::new_i(offset, errors, max_distance)
                 .expect("valid I-position");
             let mut state = GeneralizedState::new(max_distance);
@@ -353,12 +366,10 @@ mod offset_semantics {
 
         #[test]
         fn m_type_offset_increases_or_stays(
-            (offset, errors, max_distance) in valid_m_position(),
+            (offset, errors, max_distance) in valid_m_position_with_budget(),
             word in test_word(),
             input_ch in input_char()
         ) {
-            prop_assume!(errors < max_distance);
-
             let p = GeneralizedPosition::new_m(offset, errors, max_distance)
                 .expect("valid M-position");
             let mut state = GeneralizedState::new(max_distance);

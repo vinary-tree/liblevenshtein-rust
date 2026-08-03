@@ -16,7 +16,7 @@
 //!    - Deletion: "phonee" → "phone" (extra 'e')
 //!    - Substitution: "fhone" → "phone" (wrong letter)
 //!
-//! 3. **Transposition Errors**: Adjacent character swaps (Damerau-Levenshtein)
+//! 3. **Transposition Errors**: Adjacent character swaps (optimal string alignment)
 //!    - "hpone" → "phone" (h↔p swapped)
 //!    - "pohne" → "phone" (o↔h swapped)
 //!    - "philospohy" → "philosophy" (p↔h swapped)
@@ -313,7 +313,7 @@ fn example_2_standard_levenshtein_edits(dictionary: &[&str]) {
     }
 }
 
-/// Example 3: Transposition Errors (Damerau-Levenshtein)
+/// Example 3: Transposition Errors (optimal string alignment)
 ///
 /// Demonstrates handling adjacent character swaps using the Transposition algorithm.
 fn example_3_transposition_errors(dictionary: &[&str]) {
@@ -321,7 +321,7 @@ fn example_3_transposition_errors(dictionary: &[&str]) {
     println!("EXAMPLE 3: Transposition Errors (Adjacent Character Swaps)");
     println!("{}", "─".repeat(80));
     println!();
-    println!("Using Algorithm::Transposition for Damerau-Levenshtein distance");
+    println!("Using Algorithm::Transposition for optimal string alignment distance");
     println!();
 
     let ortho_rules = orthography_rules();

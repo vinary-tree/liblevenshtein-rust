@@ -9,6 +9,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Alignment-expressible Class-A presets and references.**
+  `OperationSet::{hamming,indel,bounded_skip}`, Unicode-scalar Hamming, and
+  full/banded insertion-deletion distances expose exact reference semantics.
+  `OperationSet::validate` enforces progress, finite non-negative weights,
+  zero-cost length preservation, checked aggregation, and a 4,096-unit
+  resource ceiling before generalized traversal. Twenty-thousand generated
+  cases, an exhaustive 42,395-pair Birkbeck gate, runnable examples, and
+  Rocq/Dafny/Verus/Z3/cvc5/TLA+ models cross-check the invariants. Dedicated
+  dictionary walkers remain unshipped because the preregistered structural
+  reduction threshold was not met.
+
+- **Exact affine-gap dictionary search.** `AffineGapParams`,
+  `Transducer::query_affine`, scaled string/token entry points, and
+  `QueryBuilder::affine_gap` expose Gotoh's three-layer recurrence with exact
+  decimal scaling. The lazy kernel implements layer-aware completion,
+  operation-derived windows, and formally verified same-index B-4
+  subsumption; an independent quadratic oracle and 2,000-case differential,
+  invariant, backend, and policy properties enforce complete result-map and
+  cost equality. Rocq, Dafny, Verus, Z3/cvc5, and TLA+ cross-check the core
+  invariants. Cross-index B-5 pruning remains deliberately disabled, with its
+  minimized unfused-transition counterexample retained as a regression seed.
+- **Budget-bounded unrestricted Damerau–Levenshtein search.**
+  `Algorithm::DamerauLevenshtein`, `Transducer::with_damerau_levenshtein`, and
+  the full Lowrance–Wagner reference DP add true history-composing
+  transpositions without changing OSA. A `DamerauPending` macro chain preserves
+  all Standard paths and refines entry/extension/resolution exactly. Serde,
+  `FromStr`, FFI, WASM, REPL, examples, Criterion, 2,000-case differential and
+  metric properties, a 42,395-pair Birkbeck gate, and Rocq/Verus/SMT/TLA+
+  evidence ship together. The compact delta ceiling is explicit at 255 and
+  unsupported weighted/product engines fail rather than silently projecting to
+  another distance.
+- **Zero-width `PositionKind`/`AutomatonVariant` seam.** `Position` remains 24
+  bytes on 64-bit targets while typed continuation kind and payload now
+  participate in its total order. Legacy transition and subsumption policy is
+  selected once per repeated dictionary-edge loop and statically specialized
+  inside the position loop; the one-position API uses one direct match and an
+  owned return. `Algorithm` is now `#[non_exhaustive]`; downstream exhaustive
+  matches require a wildcard arm. Property, Rocq, Verus, Z3/cvc5, and TLA+
+  gates pass. All six pre-registered Criterion suites pass across 423 cases;
+  the stricter byte-identical-disassembly hypothesis is retained as a documented
+  negative result because its probe also measured intentional payload and
+  ownership changes. A separate optimized-LLVM-IR audit passes by showing that
+  the constant-Standard probe retains no runtime selector, non-Standard leaf,
+  or selector `switch`.
+- **Observable elastic-search pruning and a shared UCR harness.**
+  `ElasticSearchStats` and `search_knn_with_stats` report prefix, column,
+  candidate, exact-evaluation, cutoff, node, and edge counts without changing
+  ordered results. The generalized `elastic-ucr --measure` experiment runs
+  MSM, ERP, TWED, discrete Fréchet, or banded DTW under one preregistered
+  51-dataset protocol, with flat/trie distance agreement, process peak memory,
+  checksums, paired case outcomes, and deterministic summaries. Rocq, Verus,
+  Z3/cvc5, example, integration, and 2,000-case property tests enforce result
+  transparency and counter partitions.
+- **Exact TWED kernel and trie search.** `TwedConfig` implements unit-spaced
+  Time Warp Edit Distance with a two-row cutoff DP, carry-aware interval
+  columns, and the `$`|m-n|*lambda`$` candidate bound. `MetricTwedConfig`
+  validates finite `nu > 0` and `lambda >= 0` and alone supplies the static
+  metric witness; the unrestricted zero-stiffness family remains available
+  without an unsound marker. Differential, example, property, integration,
+  Rocq, Verus, Z3/cvc5, documentation, and registered benchmark coverage ship
+  with the kernel.
+- **Ordered cost-monoid seam.** `CostMonoid` provides a fixed minimum choice,
+  total ordering, inclusive budget predicate, and lawful accumulation for
+  `UnitCost`, additive `WeightedCost`, and minimax `BottleneckCost`.
+  `CostScale` converts decimal operation weights into checked exact integer
+  costs without silent rounding or overflow. Rocq, Verus, Z3/cvc5, and
+  property tests cover the algebra and explicitly delimit IEEE-754 rounding.
+- **Repaired `GeneralizedAutomaton` acceptance.** Runtime operations now drive
+  the complete alignment, including empty-side behavior, multi-scalar
+  restrictions, and adjacent transposition. Fractional weights accumulate in
+  an exact scaled-integer domain instead of truncating to zero. Fallible APIs
+  report invalid weights, overflow, and the one-million-cell resource guard;
+  Hamming, indel, bounded-skip, Unicode, and standard semantics are checked
+  against independent references and formal models.
 - **`VersionedQueryCache`** (`liblevenshtein::transducer::VersionedQueryCache`) — an
   opt-in, dictionary-version-tied cross-query result cache that memoizes
   `(query, max_distance) → results` and self-invalidates on a dictionary version bump
@@ -21,6 +95,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Zipper whole-term distance inference now uses query length.**
+  `AutomatonZipper::infer_distance` previously passed dictionary depth to a
+  state method whose argument is query length, undercharging shorter terms and
+  overcharging longer ones. Node, intersection, and zipper traversal now agree;
+  the true-Damerau separator `CA` → `ABC` is retained at distance 2.
 - **Weighted edit distance now honours non-unit insertion/deletion costs.** The
   float-weighted transducer (`CandidateIteratorF64` / `OperationCostsF64`) previously
   returned wrong distances whenever `insertion` or `deletion` differed from `1.0`:

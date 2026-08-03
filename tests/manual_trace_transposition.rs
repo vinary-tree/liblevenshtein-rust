@@ -49,14 +49,14 @@ fn manual_trace_ab_to_ba() {
     println!("    Inserted (0,1,false)");
     println!("      State now: {:?}", state1.positions());
 
-    state1.insert(Position::new_special(0, 1), algorithm, query_length);
+    state1.insert(Position::new_osa_transposing(0, 1), algorithm, query_length);
     println!("    Inserted (0,1,true)");
     println!("      State now: {:?}", state1.positions());
 
     let has_special = state1
         .positions()
         .iter()
-        .any(|p| p.is_special && p.term_index == 0 && p.num_errors == 1);
+        .any(|p| p.is_special() && p.term_index == 0 && p.num_errors == 1);
     if has_special {
         println!("      ✓ (0,1,true) survived!");
     } else {
@@ -84,10 +84,12 @@ fn manual_trace_ab_to_ba() {
         println!("  From position {:?}:", pos);
         println!(
             "    term_index={}, num_errors={}, is_special={}",
-            pos.term_index, pos.num_errors, pos.is_special
+            pos.term_index,
+            pos.num_errors,
+            pos.is_special()
         );
 
-        if pos.is_special && pos.term_index == 0 && pos.num_errors == 1 {
+        if pos.is_special() && pos.term_index == 0 && pos.num_errors == 1 {
             println!("    This is the special transposition position!");
             println!("    CV for 'a' vs \"ab\" at offset 0:");
             println!("      cv[0]: 'a' == 'a'? true ← Match!");
@@ -108,7 +110,7 @@ fn manual_trace_ab_to_ba() {
     println!("Does (0,1,false) subsume (0,1,true)?");
 
     let p_normal = Position::new(0, 1);
-    let p_special = Position::new_special(0, 1);
+    let p_special = Position::new_osa_transposing(0, 1);
 
     let subsumes = p_normal.subsumes(&p_special, algorithm, query_length);
     println!("  p_normal.subsumes(p_special) = {}", subsumes);

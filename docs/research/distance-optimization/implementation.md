@@ -14,7 +14,7 @@ Successfully implemented three recursive memoized Levenshtein distance functions
 
 ✅ **Three Complete Implementations**:
 - `standard_distance_recursive()` - Standard Levenshtein (insertion, deletion, substitution)
-- `transposition_distance_recursive()` - Damerau-Levenshtein (adds transposition)
+- `transposition_distance_recursive()` - optimal string alignment (restricted Damerau)
 - `merge_and_split_distance()` - Extended variant (adds merge/split operations) **[NEW]**
 
 ✅ **36 Property-Based Tests** - All passing, covering mathematical distance metric properties
@@ -103,7 +103,8 @@ assert_eq!(standard_distance_recursive("kitten", "sitting", &cache), 3);
 #### Transposition Distance (`transposition_distance_recursive`)
 
 **Operations**: Insert, Delete, Substitute, **Transpose** (swap adjacent chars)
-**Also known as**: Damerau-Levenshtein distance
+**Semantics**: optimal string alignment, also called restricted Damerau distance.
+Unlike unrestricted Damerau–Levenshtein, a substring cannot be edited twice.
 
 **Key Logic** (from C++):
 ```rust

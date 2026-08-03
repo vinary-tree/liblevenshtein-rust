@@ -22,6 +22,17 @@ scripts/verify-formal.sh coq-file exceptional docs/verification/core/theories/Au
 
 # Run bounded TLA+ checks through JVM and cgroup caps.
 scripts/verify-formal.sh tla
+
+# Verify Rust-facing contracts with Verus. Trusted files may not use
+# external_body, external_fn_specification, or assume(...).
+scripts/verify-formal.sh verus
+
+# Check every trusted SMT counterexample query with both Z3 and cvc5.
+# Every check-sat command must report unsat in both solvers.
+scripts/verify-formal.sh smt
+
+# Run every trusted gate and all registered TLA+ models.
+scripts/verify-formal.sh all
 ```
 
 ## CI
@@ -33,7 +44,8 @@ and pushes that touch verification files. Full Coq/TLC execution is
 
 ## Resource Profiles
 
-All Rocq/TLC execution goes through `systemd-run --user --scope` by default.
+All Rocq, Verus, SMT, and TLC execution goes through
+`systemd-run --user --scope` by default.
 If user-scoped systemd is unavailable, the runner falls back to `prlimit --as`
 with a conservative virtual-address ceiling so Rocq can start without running
 unbounded. The runner refuses fully uncapped proof execution unless
@@ -56,3 +68,11 @@ unbounded. The runner refuses fully uncapped proof execution unless
   local facts.
 - Debug and legacy files are audited but do not support public correctness
   claims until promoted in `FORMAL_VERIFICATION_MANIFEST.tsv`.
+- A trusted Verus file may not widen its trusted boundary with an external body
+  or an `assume` statement.
+- A trusted SMT model is cross-checked by Z3 and cvc5; `sat`, `unknown`, a
+  missing result, or a result-count mismatch fails the gate.
+- A mathematical-real proof for a floating-point implementation must name the
+  IEEE-754 refinement boundary. Exact representable domains and the numerical
+  error envelope are executable property-test obligations; the real proof may
+  not be presented as bitwise floating-point associativity.

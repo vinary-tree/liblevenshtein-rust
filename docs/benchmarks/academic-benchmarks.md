@@ -1,7 +1,7 @@
 # Academic Benchmark Reproduction
 
 This page describes the repeatable entry points for the academic benchmark
-workloads used in the MSM and phonetic automata experiments.
+workloads used in the elastic time-series and phonetic automata experiments.
 
 The canonical runner is:
 
@@ -17,29 +17,41 @@ with `MemoryMax` and `MemorySwapMax` controls by default.
 
 | Workload | Academic data | Primary command | Output |
 | --- | --- | --- | --- |
-| MSM exact 1-NN | UCR/UEA 2018 univariate time-series archive | `scripts/run-academic-benchmarks.sh msm-ucr` | `target/academic-benchmarks/results/msm_ucr_archive_*.csv` |
+| Shared elastic exact 1-NN | UCR/UEA 2018 univariate time-series archive | `scripts/run-academic-benchmarks.sh elastic-ucr-all` | `target/academic-benchmarks/results/elastic_ucr_{msm,erp,twed,frechet,dtw}_*.csv` |
+| One elastic measure | The same selected UCR slice | `scripts/run-academic-benchmarks.sh elastic-ucr --measure dtw` | one raw CSV plus `elastic_ucr_dtw_summary.tsv` |
+| Legacy MSM exact 1-NN | UCR/UEA 2018 univariate time-series archive | `scripts/run-academic-benchmarks.sh msm-ucr` | `target/academic-benchmarks/results/msm_ucr_archive_*.csv` |
 | Phonetic homophones | CMU Pronouncing Dictionary homophone groups | `scripts/run-academic-benchmarks.sh phonetic-cmudict` | `target/academic-benchmarks/results/phonetic_cmudict_*.jsonl` |
 
-The MSM benchmark uses the UCR Time Series Archive described by Dau et al.
-([arXiv:1810.07758](https://arxiv.org/abs/1810.07758)). The phonetic benchmark
+The elastic benchmark uses the UCR Time Series Archive described by Dau et al.
+([DOI 10.48550/arXiv.1810.07758](https://doi.org/10.48550/arXiv.1810.07758)). The phonetic benchmark
 uses the public CMUdict word-to-pronunciation lexicon
 ([cmusphinx/cmudict](https://github.com/cmusphinx/cmudict)).
 
 ## Runner Semantics
 
-The runner has four operational commands:
+The runner's operational commands are:
 
 ```bash
 scripts/run-academic-benchmarks.sh all
+scripts/run-academic-benchmarks.sh elastic-ucr --measure msm
+scripts/run-academic-benchmarks.sh elastic-ucr --measure erp
+scripts/run-academic-benchmarks.sh elastic-ucr --measure twed
+scripts/run-academic-benchmarks.sh elastic-ucr --measure frechet
+scripts/run-academic-benchmarks.sh elastic-ucr --measure dtw
+scripts/run-academic-benchmarks.sh elastic-ucr-all
 scripts/run-academic-benchmarks.sh msm-ucr
 scripts/run-academic-benchmarks.sh phonetic-cmudict
 scripts/run-academic-benchmarks.sh clean-raw
 ```
 
-`all` prepares both corpora and runs both workloads. `msm-ucr` downloads or
-uses an existing UCR archive, extracts it to
+`all` prepares both corpora, runs all five elastic arms, and then runs the
+phonetic workload. `elastic-ucr` requires one allowlisted measure name;
+`elastic-ucr-all` runs those names sequentially so their process time and peak
+memory do not overlap. Both commands download or use an existing UCR archive,
+extract it to
 `target/academic-benchmarks/msm/Univariate_ts`, then runs the archive summary
-and exact MSM 1-nearest-neighbor benchmark. `phonetic-cmudict` downloads or
+and exact one-nearest-neighbor benchmark. `msm-ucr` preserves the older
+MSM-only artifact format. `phonetic-cmudict` downloads or
 uses an existing CMUdict file, then evaluates three profiles:
 
 ```text
@@ -58,6 +70,26 @@ summary files under:
 ```text
 target/academic-benchmarks/results/
 ```
+
+Each generalized summary row reports flat candidate-bound pruning and exact
+cutoff work, plus trie nodes, edges, prefix prunes, columns built, column
+prunes, queued-subtree prunes, candidate prunes, exact evaluations, and cutoff
+abandonments. It also reports the summed per-dataset elapsed time, process
+high-water resident memory, configuration, and a native-distance checksum.
+Two normalized case rows retain the paired majority/measure correctness
+outcomes.
+
+After all arms complete, run the independent artifact gate:
+
+```bash
+scripts/verify-elastic-ucr-gate.sh
+```
+
+It checks the 32-field schema, the same 51 dataset names and 13,754 case keys,
+identical majority outcomes, every flat/trie accounting partition, and exact
+historical MSM accuracy and pruning counts. The analytic rationale and observed
+results are in the
+[shared scientific ledger](../scientific-ledger/elastic-ucr-harness-2026-08-01.md).
 
 ## Resource Controls
 
@@ -138,6 +170,19 @@ The default MSM selector matches the completed academic run:
 MSM_MAX_CELLS=1000000000 MSM_MAX_DATASETS=1000 \
   scripts/run-academic-benchmarks.sh msm-ucr
 ```
+
+The generalized selector defaults to those same values:
+
+```bash
+ELASTIC_UCR_MAX_CELLS=1000000000 ELASTIC_UCR_MAX_DATASETS=1000 \
+  scripts/run-academic-benchmarks.sh elastic-ucr-all
+```
+
+Its fixed configurations are MSM `$`c=1`$`, ERP `$`g=0`$`, TWED
+`$`\nu=1`$` and `$`\lambda=1`$`, discrete Fréchet, and banded DTW with
+`$`w=\max(1,\lceil0.1L\rceil)`$`. Quantization uses 256 uniform bins derived
+from training data only. These settings are preregistered and are not tuned
+from test accuracy or timing.
 
 The default phonetic settings match the completed CMUdict homophone run:
 

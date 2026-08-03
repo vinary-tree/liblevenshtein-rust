@@ -11,7 +11,7 @@
 //! - **Standard Levenshtein**: `b+1` pieces suffice
 //!   - Each operation (insert, delete, substitute) corrupts at most 1 piece
 //!
-//! - **Transposition (Damerau-Levenshtein)**: `2b+1` pieces required
+//! - **Transposition (optimal string alignment)**: `2b+1` pieces required
 //!   - Adjacent transpositions can corrupt 2 pieces when spanning boundaries
 //!   - Counterexample: "ABCDE" → "ACBDX" (k=2) corrupts all 3 pieces of (k+1)
 //!
@@ -206,14 +206,15 @@ impl PatternSplitter {
     ///
     /// Returns the algorithm-specific piece count:
     /// - Standard: `b + 1`
-    /// - Transposition: `2b + 1`
+    /// - Transposition or unrestricted Damerau: `2b + 1`
     /// - MergeAndSplit: `2b + 1`
     #[inline]
     pub fn num_pieces(&self) -> usize {
         match self.algorithm {
             Algorithm::Standard => self.max_distance + 1,
-            Algorithm::Transposition => 2 * self.max_distance + 1,
-            Algorithm::MergeAndSplit => 2 * self.max_distance + 1,
+            Algorithm::Transposition | Algorithm::MergeAndSplit | Algorithm::DamerauLevenshtein => {
+                self.max_distance.saturating_mul(2).saturating_add(1)
+            }
         }
     }
 

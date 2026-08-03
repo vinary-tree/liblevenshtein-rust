@@ -59,6 +59,7 @@ index maps everything else.
 - [Lazy vs. Eager Automata](concepts/LAZY_VS_EAGER_AUTOMATA.md) — the central idea: a query *lazily simulates* a parameterized Levenshtein automaton, it is **not** a precompiled universal DFA.
 - [Levenshtein-automata theory](research/levenshtein-automata/README.md) — the Schulz–Mihov method, glossary, and code-to-paper mapping (theory home; also cross-linked from the glossary).
 - [Algorithm layer 02 — Levenshtein automata](algorithms/02-levenshtein-automata/README.md) — the position/subsumption model, with diagrams.
+- [Edit-distance classification](theory/edit-distance-classification.md) — the alignment/script boundary, four implementation classes, metricity-versus-pruning distinction, and placement checklist for future measures.
 - [Theory](theory/) — disk-trie and SCDAWG theory pointers (backend internals now live in `libdictenstein`).
 - Specialized theory: [universal automata](research/universal-levenshtein/README.md) · [weighted automata](research/weighted-levenshtein-automata/README.md) · [bimachines](research/bimachines/README.md).
 
@@ -66,7 +67,7 @@ index maps everything else.
 
 - [Architecture Overview](architecture/overview.md) — the **inter-crate** view: liblevenshtein ↔ libdictenstein ↔ optional duallity (WFST) ↔ the `.llev`/`.llre` DSL layer.
 - [Developer Guide → Architecture](developer-guide/architecture.md) — the **intra-crate** module design and traits.
-- [Design specifications](design/README.md) — feature-level designs (dynamic DAWG, suffix automaton, contextual completion, protobuf serialization, grammar correction, …).
+- [Design specifications](design/README.md) — feature-level designs, including [Class-A presets](design/class-a-presets.md), the [ordered cost monoid](design/cost-monoid.md), [language products](design/language-product.md), dynamic DAWG, suffix automaton, contextual completion, protobuf serialization, and grammar correction.
 - [Algorithm Reference layers 01–09](algorithms/README.md) — the layered architecture, bottom-up.
 - Diagrams: [crate boundary](diagrams/architectures/crate-boundary.svg) · [component stack](diagrams/architectures/component-stack.svg) · [C4 context](diagrams/architectures/c4-context.svg) / [container](diagrams/architectures/c4-container.svg) · [feature-flag DAG](diagrams/architectures/feature-flag-dag.svg) · [module dependencies](diagrams/architectures/module-dependency.svg).
 
@@ -81,17 +82,19 @@ index maps everything else.
 ## 5 · Developer Guide
 
 - [Developer Guide](developer-guide/README.md) — [building](developer-guide/building.md), [contributing](developer-guide/contributing.md), [performance](developer-guide/performance.md), [publishing](developer-guide/publishing.md).
-- [Security & threat model](SECURITY.md) — untrusted-input surfaces (grep archive/document extraction, FFI/WASM boundaries, serialization, `.llre` ReDoS-resistance).
+- [Security & threat model](SECURITY.md) — untrusted-input surfaces (grep archive/document extraction, FFI/WASM boundaries, serialization, `.llre` parsing).
+- [Resource-exhaustion controls](security/resource-exhaustion.md) — automaton state ceilings, edit budgets, elastic-DP guards, and deployment policy.
+- [Automaton-variant security](security/automaton-variants.md) — continuation-tag integrity, subsumption soundness, selector stability, and extension review controls.
 - [Migration](migration/README.md) — terminology and version-migration notes (including the libdictenstein extraction).
 - [Development logs](development/README.md) — phase/session implementation logs *(historical)*.
 
 ## 6 · Algorithm Reference
 
-- [Algorithm Reference](algorithms/README.md) — the [documentation index](algorithms/DOCUMENTATION_INDEX.md) and the nine layered READMEs: [01 dictionary](algorithms/01-dictionary-layer/README.md) · [02 Levenshtein automata](algorithms/02-levenshtein-automata/README.md) · [03 intersection traversal](algorithms/03-intersection-traversal/README.md) · [04 distance](algorithms/04-distance-calculation/README.md) · [05 SIMD](algorithms/05-simd-optimization/README.md) · [06 zipper navigation](algorithms/06-zipper-navigation/README.md) · [07 contextual completion](algorithms/07-contextual-completion/README.md) · [08 caching](algorithms/08-caching-layer/README.md) · [09 value storage](algorithms/09-value-storage/README.md).
+- [Algorithm Reference](algorithms/README.md) — the [documentation index](algorithms/DOCUMENTATION_INDEX.md), layers [01 dictionary](algorithms/01-dictionary-layer/README.md) through [09 value storage](algorithms/09-value-storage/README.md), the [10 affine-gap automaton](algorithms/10-affine-gap/README.md), [13 language products](algorithms/13-language-products/README.md), and the [14 exact generalized-operation grid](algorithms/14-generalized-operation-grid/README.md).
 
 ## 7 · Formal Verification
 
-- [Verification](verification/README.md) — the formal-proof artifacts. **`FORMAL_VERIFICATION_MANIFEST.tsv` is the declared source of truth** for trusted/partial/legacy status; see [INDEX](verification/INDEX.md) and [README_FORMAL_GATES](verification/README_FORMAL_GATES.md). Holds the Rocq (`.v`) theories (core, articulatory, msm, phonetic, wallbreaker, grammar, llre, myers, product) and TLA+ specs ([`tla/`](verification/tla/README.md)).
+- [Verification](verification/README.md) — the formal-proof artifacts. **`FORMAL_VERIFICATION_MANIFEST.tsv` is the declared source of truth** for trusted/partial/legacy status; see [INDEX](verification/INDEX.md) and [README_FORMAL_GATES](verification/README_FORMAL_GATES.md). The trusted CostMonoid island combines Rocq, Verus, cross-solver SMT, and property tests; the tree also holds the remaining Rocq and TLA+ models.
 - [Formal-verification writeups](formal-verification/README.md) — the parallel markdown proof exposition and findings (defers to the manifest for canonical status).
 
 ## 8 · Research & Scientific Ledgers — *historical, append-only (indexed, not edited)*
@@ -108,7 +111,7 @@ written; they are indexed and cross-linked but never rewritten.
 
 ## 9 · Diagrams
 
-- [Diagram suite & style guide](diagrams/README.md) — 49 fully-coloured diagrams (source + committed SVG) built from the pgmcp diagramming catalog (PlantUML, Graphviz, D2, Structurizr, Pikchr, Asymptote), with a [shared colour legend](diagrams/_legend/color-legend.svg) and a reproducible [render pipeline](diagrams/render.sh).
+- [Diagram suite & style guide](diagrams/README.md) — fully coloured diagrams (text source + committed SVG) built from the pgmcp diagramming catalog (PlantUML, Graphviz, D2, Structurizr, Pikchr, Asymptote), with a [shared colour legend](diagrams/_legend/color-legend.svg) and a reproducible [render pipeline](diagrams/render.sh).
 
 ---
 

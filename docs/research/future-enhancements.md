@@ -1,178 +1,95 @@
-# Future Enhancements
+# Research roadmap
 
-This document outlines planned future enhancements for liblevenshtein-rust.
+This living roadmap records open research directions. Executable work is
+tracked in pgmcp under root epic
+`extending-liblevenshtein-automaton-families-4bb97598`; pgmcp owns task status,
+dependencies, and acceptance gates. This page explains why the remaining work
+belongs in the library and directs readers to its design evidence.
 
-## Priority Queue for Ordered Results
+## Shipped foundations
 
-**Goal**: Produce spelling candidates lazily in order of least distance from the query term.
+The following items appeared as proposals in the former version of this page
+but are already implemented. They are listed here only to prevent duplicate
+projects:
 
-**Approach**: Implement a variation that uses:
-- **Priority Queue (Min-Heap)**: Store intersections ordered by inferred distance
-- **Dijkstra-like Search**: Explore intersections in order of increasing distance
-- **A* Heuristic**: Use remaining query length as heuristic for distance-to-goal
-- **BFS with Distance Tracking**: Current BFS could be modified to prioritize lower distances
+- ordered and priority query iterators;
+- WallBreaker search and its split bound;
+- byte and Unicode double-array tries, dynamic DAWGs, suffix automata, and
+  persistent dictionary backends through `libdictenstein`;
+- dictionary serialization surfaces and precomputed universal automata;
+- SIMD helpers, parallel traversal features, property tests, fuzz targets, and
+  corpus benchmarks.
 
-**Implementation Sketch**:
-```rust
-pub struct PriorityQueryIterator<N: DictionaryNode> {
-    // Min-heap ordered by (distance, intersection)
-    pending: BinaryHeap<Reverse<(usize, Box<Intersection<N>>)>>,
-    query: Vec<u8>,
-    max_distance: usize,
-    algorithm: Algorithm,
-}
-```
+Their current behavior is documented in the [algorithm index](../algorithms/README.md),
+[developer guide](../developer-guide/README.md), and
+[formal-verification index](../verification/README.md).
 
-**Challenges**:
-- Need to compute or estimate distance efficiently at each node
-- Balance between accuracy (actual distance) and performance (heuristic)
-- May need to explore more nodes than BFS before finding next match
+## Active automaton-family program
 
-**References**:
-- Dijkstra's algorithm for single-source shortest paths
-- A* search for informed heuristic search
-- Best-first search variations
+The program classifies a proposed measure before adding machinery:
 
-## WallBreaker Support
+| Class | Defining feature | Planned seam | Representative work |
+|---|---|---|---|
+| Alignment | A minimum over bounded consuming operations | `OperationSet` presets and repaired generalized acceptance | Hamming, indel, bounded-skip subsequence |
+| Stateful | A continuation depends on bounded edit history | `PositionKind` and a specialized transition kernel | affine gaps, bounded true Damerau–Levenshtein |
+| Cost algebra | Path costs combine by an operation other than addition | `CostMonoid` | discrete Fréchet bottleneck cost |
+| Input domain | Transitions compare non-character observations or a language state | `ElasticKernel` or `LanguageProduct` | ERP, TWED, DTW, fuzzy regular languages |
 
-**Paper**: "WallBreaker - overcoming the wall effect in similarity search"
-**Location**: `/home/dylon/Papers/Approximate String Matching/WallBreaker - overcoming the wall effect in similarity search.pdf`
+The classification prevents two recurring mistakes: calling a restricted
+optimal-string-alignment recurrence unrestricted Damerau–Levenshtein, and
+adding a new automaton type when an exact `OperationSet` configuration suffices.
+See the metric terminology in the [glossary](../GLOSSARY.md).
 
-**Goal**: Overcome the "wall effect" where matches beyond a certain edit distance become computationally expensive.
+## Search and ranking surfaces
 
-**Requirements**:
-- Likely requires a different dictionary backend than PathMap
-- May need specialized data structures for wall-breaking
-- Could involve:
-  - Multi-level indexing
-  - Approximate distance bounds
-  - Pruning strategies beyond subsumption
+Three extensions remain useful because they can prune before materializing a
+candidate:
 
-**Integration Points**:
-- Dictionary trait is already designed to support multiple backends
-- Can implement `WallBreakerDictionary` similar to `PathMapDictionary`
-- May need extensions to the `DictionaryNode` trait
+- a stateful `PrefixPruner` visitor with balanced enter/leave events;
+- lazy value-aware ranking by `(distance, score)` for mapped dictionaries;
+- structural subsequence traversal, including the library half of an fzf-style
+  matcher whose gain-valued scoring stays in downstream WFST crates.
 
-## Additional Algorithm Support
+A post-result `MatchFilter` is not planned: the existing generic filtered
+iterators already monomorphize closures, and filtering after materialization
+cannot reduce dictionary traversal. A minimum-distance range is API sugar only;
+its lower bound cannot prune a subtree because extending an exact prefix may
+raise the final distance.
 
-### Damerau-Levenshtein (Full)
-Current Transposition implementation is simplified. Full Damerau-Levenshtein considers:
-- Multiple transpositions
-- Restricted vs unrestricted variants
+## Experimental decision gates
 
-### Custom Edit Cost Models
-Allow users to specify custom costs for different operations:
-```rust
-pub struct EditCosts {
-    insertion: usize,
-    deletion: usize,
-    substitution: usize,
-    transposition: usize,
-}
-```
+Optimizations land only after a pre-registered benchmark passes its stated
+decision rule:
 
-## Performance Optimizations
+- specialized Hamming/indel walkers must beat the honest standard-automaton
+  candidate-generation baseline by at least `2×` on two of three dictionary
+  sizes for budgets 1 and 2, while enumerating at least `4×` fewer edges;
+- transition-kernel specialization must keep the Standard path below a `1.5%`
+  mean regression, with a 95% confidence interval excluding `3%`;
+- any float-engine unification must satisfy the same zero-cost gate and preserve
+  all weighted-distance results.
 
-### SIMD Acceleration
-- Vectorized characteristic vector computation
-- Parallel state transitions
-- Batch distance calculations
+Failed gates are results, not unfinished features. They belong in
+`docs/scientific-ledger/` with the workload, environment, confidence interval,
+and disposition.
 
-### Lazy PathMap Zippers
-PathMap's zipper API is already lazy, but we recreate zippers frequently.
-Consider:
-- Caching zippers at frequently-visited nodes
-- Using PathMap's owned zippers more effectively
+## Deliberate boundaries
 
-### Parallel Dictionary Traversal
-For very large dictionaries:
-- Partition search space
-- Use Rayon for parallel exploration
-- Merge results from multiple threads
+The library accepts a cost model only when non-negative prefix extension gives
+a sound subtree lower bound. Scoring systems with positive gains, weight
+pushing, closure (`star`), or division belong in the sibling WFST stack rather
+than in `CostMonoid`. Multi-kind bounded-depth Dyck recognition is also outside
+scope: its finite-state representation grows exponentially with stack depth;
+the pushdown implementation belongs in `lling-llang`.
 
-## Serialization
+## How to propose another enhancement
 
-### Dictionary Serialization
-Enable saving/loading dictionaries:
-```rust
-impl PathMapDictionary {
-    pub fn save(&self, path: &Path) -> Result<()>;
-    pub fn load(path: &Path) -> Result<Self>;
-}
-```
+1. State the semantic function and a reference algorithm.
+2. Classify it by alignment, history, cost combination, and input domain.
+3. Prove or falsify the pruning invariant before designing a public API.
+4. Add a differential oracle, property invariants, resource guards, and a
+   pre-registered performance decision rule.
+5. Create the task under the pgmcp root epic above and link its scientific
+   ledger record.
 
-### Automata Precomputation
-For common query patterns, precompute and cache automata states.
-
-## Extended API Features
-
-### Fuzzy Matching Modes
-```rust
-pub enum MatchMode {
-    Exact,           // Only exact distance
-    AtMost(usize),   // Current behavior
-    Range(usize, usize),  // Between min and max
-}
-```
-
-### Custom Filters
-```rust
-pub trait MatchFilter {
-    fn accept(&self, term: &str, distance: usize) -> bool;
-}
-```
-
-### Suggestions API
-```rust
-pub struct Suggestion {
-    term: String,
-    distance: usize,
-    frequency: f64,  // If dictionary has frequency data
-    confidence: f64,
-}
-```
-
-## Alternative Dictionary Backends
-
-### Trie Backend
-Port the C++ trie implementation for comparison.
-
-### Double Array Trie
-Implement or integrate a double-array trie for:
-- Lower memory usage
-- Faster transitions
-- Compact serialization
-
-### Suffix Array Backend
-For certain use cases, suffix arrays might be more appropriate.
-
-### FST (Finite State Transducer)
-Integrate with the `fst` crate for additional functionality.
-
-## Documentation Improvements
-
-- Comprehensive API documentation with examples
-- Performance benchmarking guide
-- Tutorial for building custom dictionary backends
-- Comparison with other fuzzy matching libraries
-- Interactive examples in the documentation
-
-## Testing
-
-- Property-based testing with `proptest`
-- Fuzzing with `cargo-fuzz`
-- Benchmark suite comparing algorithms
-- Large-scale dictionary tests (millions of terms)
-
-## Build Features
-
-Enable/disable features via Cargo:
-```toml
-[features]
-default = ["pathmap"]
-pathmap = []
-trie = []
-wallbreaker = []
-priority-queue = []
-simd = []
-```
+[← Research index](README.md)

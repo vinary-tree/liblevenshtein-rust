@@ -8,7 +8,7 @@
 //!
 //! Welsh phonetic normalization handles:
 //! - **8 digraphs as letters**: ch, dd, ff, ng, ll, ph, rh, th
-//! - **LL**: Unique voiceless lateral fricative [ɬ]
+//! - **LL**: Unique voiceless lateral fricative `[ɬ]`
 //! - **W and Y as vowels**: w = oo sound, y = schwa or i
 //! - **Circumflex**: â, ê, î, ô, û, ŵ, ŷ (long vowels)
 //! - **F = V sound**: Single f is pronounced like English "v"

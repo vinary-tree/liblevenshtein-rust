@@ -23,7 +23,7 @@ concern; a diagram that spans concerns lives with the concern it *teaches*.
 | Directory | Subsystem illustrated |
 |---|---|
 | `architectures/` | crate boundary, layered component stack, C4 views, feature-flag & module graphs |
-| `automata/` | Levenshtein NFAs, position-sets, subsumption, the three automaton implementations, WallBreaker |
+| `automata/` | metric-classification decision tree, Levenshtein NFAs, position-sets, `PositionKind` variant dispatch, subsumption, cost-monoid laws, generalized operation grids, the three automaton implementations, WallBreaker |
 | `traversal/` | the lazy-simulation query model and the transducer $`\cap`$ dictionary lock-step walk |
 | `dictionary-structures/` | backend taxonomy & decision tree, trait relationships, DAWG/SCDAWG internals |
 | `concurrency/` | the locking / wait-free read model |
@@ -161,8 +161,9 @@ renderers' limits:
   `O(<latex>\vert W\vert</latex>)` — plain `O(` around a LaTeX `|W|` — is what this rule forbids;
   write `<latex>\mathcal{O}(\vert W\vert)</latex>`). Use `\text{…}` for prose words that sit
   *inside* a formula, e.g. `<latex>\{ (\text{term}, \text{distance}) : \text{distance} \le k \}</latex>`.
-- **A lone standalone symbol** beside prose — a single relation/operator (`∩ ∈ ≤ × ↔ ⇒ ⇄ ∧ ∅`), a
-  lone Greek letter (`χ δ ε λ`), or a standalone sub/superscripted identifier Unicode can render
+- **A lone standalone symbol** beside prose — a single relation/operator (for example intersection,
+  membership, less-than-or-equal, multiplication, implication, conjunction, or the empty-set sign); a
+  lone Greek letter (for example chi, delta, epsilon, or lambda); or a standalone sub/superscripted identifier Unicode can render
   (`q₀`, `Pᵢ`, `sym₁`) — stays a **Unicode literal at the body font size (14 px)**. Bare single
   variables (`k`, `W`, `D`) likewise stay plain text.
 
@@ -180,7 +181,11 @@ Per tool:
   `Unknown symbol 'lvert'` — and `\mathcal{O}(…)` for big-O. Output is embedded vector SVG, so it
   stays byte-reproducible under `render.sh --check`.
 - **Structurizr** (`.dsl`) exports through PlantUML and inherits the same `<latex>` facility.
-- **Asymptote** (`.asy`) typesets LaTeX directly via `$…$`: `label("$\mathcal{O}(n)$", position)`.
+- **Asymptote** (`.asy`) typesets LaTeX directly via dollar-sign delimiters:
+
+  ```asy
+  label("$\mathcal{O}(n)$", position);
+  ```
 - **Graphviz** (`.dot`), **D2** (`.d2`), **Pikchr**, and **Mermaid** have **no** LaTeX-label
   facility, so a formula in one of their labels stays a compact Unicode literal — keep it
   short, and prefer a PlantUML source when a label is math-heavy:

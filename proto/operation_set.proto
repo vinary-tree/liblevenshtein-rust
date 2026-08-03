@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package liblevenshtein.operations;
+
+option java_package = "com.github.liblevenshtein.operations";
+option java_outer_classname = "OperationSetProtos";
+
+// Versioned portable representation of a generalized edit-operation set.
+//
+// The oneof is the version discriminator. Future incompatible schemas must
+// use a new field number rather than changing OperationSetV1 in place.
+message OperationSetContainer {
+    oneof format {
+        OperationSetV1 v1 = 1;
+    }
+}
+
+message OperationSetV1 {
+    // Order is semantically retained for deterministic tie-breaking.
+    repeated OperationTypeV1 operations = 1;
+}
+
+message OperationTypeV1 {
+    uint64 consume_x = 1;
+    uint64 consume_y = 2;
+
+    // IEEE-754 bits, rather than a protobuf double, make the exact persistence
+    // contract explicit (including the sign bit of zero).
+    fixed64 weight_bits = 3;
+
+    OperationApplicabilityV1 applicability = 4;
+
+    // Present only when applicability is APPLICABILITY_LISTED. Entries are
+    // emitted in canonical order and duplicates are rejected by normalization.
+    repeated SubstitutionPairV1 restriction = 5;
+
+    // Diagnostic only: behavior never depends on this name.
+    string name = 6;
+}
+
+enum OperationApplicabilityV1 {
+    APPLICABILITY_UNSPECIFIED = 0;
+    APPLICABILITY_ANY = 1;
+    APPLICABILITY_EQUAL = 2;
+    APPLICABILITY_ADJACENT_TRANSPOSE = 3;
+    APPLICABILITY_LISTED = 4;
+}
+
+message SubstitutionPairV1 {
+    oneof pair {
+        ByteSubstitutionV1 bytes = 1;
+        StringSubstitutionV1 strings = 2;
+    }
+}
+
+message ByteSubstitutionV1 {
+    uint32 source = 1;
+    uint32 target = 2;
+}
+
+message StringSubstitutionV1 {
+    string source = 1;
+    string target = 2;
+}

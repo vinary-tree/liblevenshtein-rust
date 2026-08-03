@@ -163,11 +163,15 @@ impl StateF64 {
         algorithm: Algorithm,
         query_length: usize,
         max_index_op_cost: f64,
-    ) {
+    ) -> bool {
+        // The return value is a membership-change witness, not a length-change
+        // witness: a retained representative can remove several subsumed ones.
         // Check if this position is subsumed by an existing one
         for existing in &self.positions {
-            if existing.subsumes(&position, algorithm, query_length, max_index_op_cost) {
-                return; // Already covered by existing position
+            if existing.approx_eq(&position)
+                || existing.subsumes(&position, algorithm, query_length, max_index_op_cost)
+            {
+                return false; // Already covered by existing position
             }
         }
 
@@ -181,6 +185,7 @@ impl StateF64 {
             .binary_search(&position)
             .unwrap_or_else(|pos| pos);
         self.positions.insert(insert_pos, position);
+        true
     }
 
     /// Merge another state into this one.
@@ -461,6 +466,32 @@ mod tests {
         let head = state.head().expect("test fixture: head on non-empty state");
         assert_eq!(head.term_index, 0);
         assert!(approx_eq(head.accumulated_cost, 0.0));
+    }
+
+    #[test]
+    fn insertion_reports_retained_position_when_state_shrinks() {
+        let mut state =
+            StateF64::from_positions(vec![PositionF64::new(0, 1.0), PositionF64::new(2, 1.0)]);
+
+        assert!(state.insert(PositionF64::new(1, 0.0), Algorithm::Standard, 3, 1.0,));
+        assert_eq!(state.positions(), &[PositionF64::new(1, 0.0)]);
+
+        assert!(!state.insert(PositionF64::new(1, 1.0), Algorithm::Standard, 3, 1.0,));
+    }
+
+    #[test]
+    fn merge_split_insertion_rejects_approximate_duplicates() {
+        let mut state = StateF64::new();
+        let position = PositionF64::new(1, 1.0);
+        assert!(state.insert(position, Algorithm::MergeAndSplit, 3, 1.0));
+        assert!(!state.insert(
+            PositionF64::new(1, 1.0 + 1e-12),
+            Algorithm::MergeAndSplit,
+            3,
+            1.0,
+        ));
+        assert_eq!(state.len(), 1);
+        assert!(state.positions()[0].approx_eq(&position));
     }
 
     #[test]

@@ -14,7 +14,7 @@ The Rust implementation has **excellent feature parity** with the Java version f
 | Feature | Java | Rust | Notes |
 |---------|------|------|-------|
 | **Standard Levenshtein** | ✅ | ✅ | Both have full implementation |
-| **Transposition** | ✅ | ✅ | Damerau-Levenshtein support |
+| **Transposition** | ✅ | ✅ | Optimal string alignment (restricted Damerau) |
 | **Merge/Split** | ✅ | ✅ | Both fully implemented |
 | **Candidate with distance** | ✅ | ✅ | Both return term + distance |
 | **Dictionary abstraction** | ✅ | ✅ | Java: IDictionary, Rust: Dictionary trait |

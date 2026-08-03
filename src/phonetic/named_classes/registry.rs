@@ -67,7 +67,9 @@ impl Deref for NamedClassRegistry {
 
 /// Built-in named phonetic classes.
 ///
-/// Access classes via [`get_named_class`] which handles case-insensitive lookup.
+/// Access classes via
+/// [`get_named_class`](crate::phonetic::named_classes::get_named_class), which
+/// handles case-insensitive lookup.
 pub static NAMED_CLASSES: NamedClassRegistry = NamedClassRegistry::new();
 
 fn build_named_classes() -> HashMap<&'static str, NamedClass> {

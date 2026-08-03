@@ -1,26 +1,27 @@
-# Serialization Guide
+# Binary Persistence Guide
 
 **Version**: 0.9.1
-**Last Updated**: 2026-06-19
+**Last updated**: 2026-08-02
 
-This guide explains how to save and load dictionaries using liblevenshtein-rust's serialization support.
+Large dictionaries require a compact persistence format. Liblevenshtein therefore supports
+two dictionary formats: bincode for efficient Rust-to-Rust storage and Protocol Buffers for
+portable binary interchange. Gzip can wrap either format. JSON, TOML, and newline-delimited
+text are deliberately not dictionary persistence formats: their size and parse cost are not
+appropriate for production dictionaries.
 
-## Overview
+This restriction concerns persisted dictionaries. A program may still ingest a source word
+list while constructing a dictionary; after construction, persist the resulting backend in a
+supported binary format.
 
-Constructing large dictionaries can be time-consuming. Serialization allows you to:
-- Build a dictionary once
-- Save it to disk
-- Load it quickly in subsequent runs
-- Share dictionaries across applications
-- Support multiple serialization formats
+![Bincode and Protocol Buffers are the supported persistence formats; gzip may wrap either binary stream](../diagrams/serialization/serialization-formats.svg)
 
-![Serialization formats: a dictionary is encoded as bincode, JSON, plain text, or protobuf, each optionally wrapped in gzip compression](../diagrams/serialization/serialization-formats.svg)
+## Feature flags
 
-*Serialization formats: every backend can be written as bincode, JSON, text, or protobuf, optionally gzip-compressed.*
-
-## Feature Flags
-
-Serialization requires the `serialization` feature:
+| Capability | Cargo feature | Intended use |
+|---|---|---|
+| Bincode | `serialization` | Compact, high-throughput Rust storage |
+| Protocol Buffers | `protobuf` | Portable binary interchange |
+| Gzip wrapper | `compression` | Lower transfer or storage size |
 
 ```toml
 [dependencies]
@@ -29,477 +30,218 @@ liblevenshtein = {
     tag = "v0.9.1",
     features = ["serialization"]
 }
-
-# With compression support
-liblevenshtein = {
-    git = "https://github.com/universal-automata/liblevenshtein-rust",
-    tag = "v0.9.1",
-    features = ["serialization", "compression"]
-}
-
-# With Protobuf support
-liblevenshtein = {
-    git = "https://github.com/universal-automata/liblevenshtein-rust",
-    tag = "v0.9.1",
-    features = ["serialization", "protobuf"]
-}
 ```
 
-## Supported Formats
+Add `protobuf`, `compression`, or both when those capabilities are required. Enabling
+`serialization` does not enable a text-format dependency.
 
-| Format | Feature Flag | Description | Best For |
-|--------|-------------|-------------|----------|
-| **Bincode** | `serialization` | Binary, fast, compact | Production use, Rust-to-Rust |
-| **JSON** | `serialization` | Text-based, human-readable | Debugging, cross-language |
-| **Plain Text** | `serialization` | Newline-delimited UTF-8 | Simple term lists, human-editable |
-| **Protobuf** | `protobuf` | Binary, optimized, cross-language | Cross-language, optimized |
-| **Gzip** | `compression` | Compressed (85% reduction) | Network transfer, storage |
+The complete operation-model types (`OperationSet`, `OperationType`,
+`OperationApplicability`, `SubstitutionSet`, and `SubstitutionPair`) deliberately do not
+implement generic Serde traits. Bincode uses private versioned wire types internally. This
+prevents downstream crates from silently treating JSON or TOML as an operation-set persistence
+format while retaining the compact bincode API below. Other crate subsystems may use Serde for
+non-dictionary configuration or WebAssembly bindings; that is not a persistence format.
 
-## Basic Usage
+## Bincode dictionaries
 
-### Saving a Dictionary
+`BincodeSerializer` is the default for Rust applications. It works for every byte-oriented
+dictionary backend, including backends that do not themselves implement Serde traits.
 
 ```rust
-use liblevenshtein::prelude::*;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
-use std::fs::File;
 
-// Create a dictionary
-let dict = DoubleArrayTrie::from_terms(vec![
-    "test", "testing", "tested", "tester"
-]);
+let dictionary = DoubleArrayTrie::from_terms(vec!["test", "tested", "testing"]);
 
-// Save to file
-let file = File::create("dictionary.bin")?;
-BincodeSerializer::serialize(&dict, file)?;
+let mut bytes = Vec::new();
+BincodeSerializer::serialize(&dictionary, &mut bytes)?;
+
+let restored: DoubleArrayTrie = BincodeSerializer::deserialize(&bytes[..])?;
+assert!(restored.contains("testing"));
+# Ok::<(), libdictenstein::serialization::SerializationError>(())
 ```
 
-### Loading a Dictionary
+Decoding is exact: a valid object followed by trailing bytes is rejected. This prevents a
+caller from accidentally accepting a valid prefix while ignoring malformed or concatenated
+data.
+
+The lower-level `bincode_compat` module is available for types that directly implement
+`Serialize` and `Deserialize`:
 
 ```rust
-use liblevenshtein::prelude::*;
-use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
-use std::fs::File;
-
-// Load from file
-let file = File::open("dictionary.bin")?;
-let dict: DoubleArrayTrie = BincodeSerializer::deserialize(file)?;
-
-// Use the dictionary
-let transducer = Transducer::new(dict, Algorithm::Standard);
-for term in transducer.query("test", 1) {
-    println!("{}", term);
-}
-```
-
-## Format-Specific Usage
-
-### Bincode (Binary, Fast)
-
-**Characteristics:**
-- Binary format
-- Fast serialization/deserialization
-- Compact size
-- Rust-specific (not cross-language compatible)
-
-```rust
-use liblevenshtein::prelude::*;
-use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
-use std::fs::File;
-
-let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
-
-// Save
-let file = File::create("dict.bincode")?;
-BincodeSerializer::serialize(&dict, file)?;
-
-// Load
-let file = File::open("dict.bincode")?;
-let dict: DoubleArrayTrie = BincodeSerializer::deserialize(file)?;
-```
-
-**When to use:** Default choice for Rust-to-Rust serialization.
-
-### JSON (Human-Readable)
-
-**Characteristics:**
-- Text-based, human-readable
-- Larger file size
-- Slower than binary formats
-- Cross-language compatible
-
-```rust
-use liblevenshtein::prelude::*;
-use libdictenstein::serialization::{JsonSerializer, DictionarySerializer};
-use std::fs::File;
-
-let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
-
-// Save
-let file = File::create("dict.json")?;
-JsonSerializer::serialize(&dict, file)?;
-
-// Load
-let file = File::open("dict.json")?;
-let dict: DoubleArrayTrie = JsonSerializer::deserialize(file)?;
-```
-
-**When to use:** Debugging, inspection, cross-language interop.
-
-### Plain Text (Simple Lists)
-
-**Characteristics:**
-- Newline-delimited UTF-8 text
-- Human-readable and editable
-- No structure preservation (rebuilds dictionary on load)
-- Universal compatibility
-
-```rust
-use liblevenshtein::prelude::*;
-use libdictenstein::serialization::{PlainTextSerializer, DictionarySerializer};
-use std::fs::File;
-
-let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
-
-// Save
-let file = File::create("terms.txt")?;
-PlainTextSerializer::serialize(&dict, file)?;
-
-// The file contains:
-// test
-// testing
-// tested
-
-// Load (rebuilds dictionary from terms)
-let file = File::open("terms.txt")?;
-let dict: DoubleArrayTrie = PlainTextSerializer::deserialize(file)?;
-```
-
-**When to use:** Simple term lists, manual editing, universal compatibility.
-
-### Protobuf (Optimized, Cross-Language)
-
-**Characteristics:**
-- Binary, cross-language
-- Multiple optimized variants
-- 62% smaller than JSON (V2 format)
-- Backend-specific optimizations
-
-**Requires:** `protobuf` feature flag
-
-```rust
-use liblevenshtein::prelude::*;
-use libdictenstein::serialization::{OptimizedProtobufSerializer, DictionarySerializer};
-use std::fs::File;
-
-let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
-
-// Save with Protobuf V2 (optimized)
-let file = File::create("dict.pb")?;
-OptimizedProtobufSerializer::serialize(&dict, file)?;
-
-// Load
-let file = File::open("dict.pb")?;
-let dict: DoubleArrayTrie = OptimizedProtobufSerializer::deserialize(file)?;
-```
-
-**Protobuf Format Variants:**
-- `ProtobufSerializer` - Standard protobuf format
-- `OptimizedProtobufSerializer` - Optimized format (62% smaller)
-- `DatProtobufSerializer` - DoubleArrayTrie-specific optimization
-- `SuffixAutomatonProtobufSerializer` - SuffixAutomaton-specific optimization
-
-**When to use:** Cross-language applications, optimized storage, production systems.
-
-### Gzip Compression
-
-**Requires:** `compression` feature flag
-
-**Characteristics:**
-- Works with any format
-- 85% file size reduction
-- Slightly slower load/save
-- Great for network transfer
-
-```rust
-use liblevenshtein::prelude::*;
-use libdictenstein::serialization::{BincodeSerializer, GzipSerializer, DictionarySerializer};
-use std::fs::File;
-
-let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
-
-// Save with gzip compression
-let file = File::create("dict.bincode.gz")?;
-GzipSerializer::<BincodeSerializer>::serialize(&dict, file)?;
-
-// Load compressed
-let file = File::open("dict.bincode.gz")?;
-let dict: DoubleArrayTrie = GzipSerializer::<BincodeSerializer>::deserialize(file)?;
-```
-
-**Compressed format variants:**
-- `GzipSerializer::<BincodeSerializer>` - Bincode with gzip
-- `GzipSerializer::<JsonSerializer>` - JSON with gzip
-- `GzipSerializer::<PlainTextSerializer>` - Plain text with gzip
-
-**When to use:** Network transfer, storage optimization, backups.
-
-## Format Comparison
-
-### File Size (100K terms dictionary)
-
-| Format | Size | Relative | Compression |
-|--------|------|----------|-------------|
-| Bincode | 2.1 MB | 1.0× | - |
-| BincodeGz | 320 KB | 0.15× | 85% reduction |
-| JSON | 5.8 MB | 2.8× | - |
-| JsonGz | 450 KB | 0.21× | 92% reduction |
-| Text | 1.2 MB | 0.57× | - |
-| TextGz | 180 KB | 0.09× | 85% reduction |
-| ProtobufV2 | 2.2 MB | 1.05× | - |
-| ProtobufDat | 1.9 MB | 0.90× | - |
-
-### Serialization Speed (100K terms)
-
-| Format | Save Time | Load Time |
-|--------|-----------|-----------|
-| Bincode | 12 ms | 8 ms |
-| BincodeGz | 145 ms | 95 ms |
-| JSON | 280 ms | 320 ms |
-| Text | 45 ms | 180 ms (rebuild) |
-| ProtobufV2 | 18 ms | 12 ms |
-
-**Takeaway:** Use Bincode for speed, BincodeGz for size, Protobuf for cross-language.
-
-## Advanced Usage
-
-### Error Handling
-
-```rust
-use liblevenshtein::prelude::*;
-use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer, SerializationError};
-use std::fs::File;
-
-fn save_dictionary(dict: &DoubleArrayTrie, path: &str) -> Result<(), SerializationError> {
-    let file = File::create(path)
-        .map_err(|e| SerializationError::Io(e))?;
-    // `dict` is already a `&DoubleArrayTrie`, so pass it straight through.
-    BincodeSerializer::serialize(dict, file)?;
-    Ok(())
-}
-
-fn load_dictionary(path: &str) -> Result<DoubleArrayTrie, SerializationError> {
-    let file = File::open(path)
-        .map_err(|e| SerializationError::Io(e))?;
-    BincodeSerializer::deserialize(file)
-}
-```
-
-### Automatic Format Detection
-
-The CLI tool supports automatic format detection based on file extension:
-
-```bash
-# Save with auto-detected format
-liblevenshtein convert -i terms.txt -o dict.bincode.gz
-
-# Load with auto-detected format
-liblevenshtein query dict.bincode.gz "test" 2
-```
-
-### Custom Serialization
-
-For advanced use cases you can bypass the dictionary serializers and encode a backend
-through **serde** directly. `bincode 2.x` removed the crate-root `serialize` / `deserialize`
-functions, so use the crate's shim `bincode_compat`, which restores the bincode-1.x API on
-top of bincode 2.x and pins the legacy fixint-little-endian wire format:
-
-```rust
-use liblevenshtein::prelude::*;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use libdictenstein::serialization::bincode_compat;
 
-// Serialize to bytes (DoubleArrayTrie derives serde under the `serialization` feature)
-let dict = DoubleArrayTrie::from_terms(vec!["test"]);
-let bytes: Vec<u8> = bincode_compat::serialize(&dict)?;
-
-// Deserialize from bytes
-let dict: DoubleArrayTrie = bincode_compat::deserialize(&bytes)?;
+let dictionary = DoubleArrayTrie::from_terms(vec!["café", "新しい"]);
+let bytes = bincode_compat::serialize(&dictionary)?;
+let restored: DoubleArrayTrie = bincode_compat::deserialize(&bytes)?;
+assert!(restored.contains("café"));
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-> Prefer `BincodeSerializer` (above) for ordinary dictionary I/O — it works for **every**
-> byte-level backend, including `PathMapDictionary`, which implements no serde traits at all.
-> The serde path only works for backends that derive `Serialize`/`Deserialize`.
+Prefer `BincodeSerializer` for ordinary dictionary storage. The compatibility module is a
+Serde transport, not a separately versioned storage contract.
 
-## CLI Tool Usage
+## Protocol Buffers dictionaries
 
-The CLI tool provides convenient serialization operations:
-
-### Convert Between Formats
-
-```bash
-# Text to Bincode
-liblevenshtein convert -i words.txt -o dict.bincode
-
-# Bincode to JSON (for inspection)
-liblevenshtein convert -i dict.bincode -o dict.json
-
-# Compress existing dictionary
-liblevenshtein convert -i dict.bincode -o dict.bincode.gz
-```
-
-### Query Serialized Dictionaries
-
-```bash
-# Query directly from file
-liblevenshtein query dict.bincode "test" 2
-
-# Query compressed dictionary
-liblevenshtein query dict.bincode.gz "test" 2 --algorithm transposition
-```
-
-### REPL with Persistence
-
-```bash
-# Start REPL with saved dictionary
-liblevenshtein repl dict.bincode
-
-# In REPL:
-> query test 2
-> insert testing
-> save dict-updated.bincode
-> exit
-```
-
-## Best Practices
-
-### 1. Choose the Right Format
+Enable `protobuf` for a binary format whose schema can be implemented in other languages.
+The general serializer preserves the dictionary's terms:
 
 ```rust
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::serialization::{DictionarySerializer, ProtobufSerializer};
+
+let dictionary = DoubleArrayTrie::from_terms(vec!["test", "tested", "testing"]);
+
+let mut bytes = Vec::new();
+ProtobufSerializer::serialize(&dictionary, &mut bytes)?;
+
+let restored: DoubleArrayTrie = ProtobufSerializer::deserialize(&bytes[..])?;
+assert!(restored.contains("tested"));
+# Ok::<(), libdictenstein::serialization::SerializationError>(())
+```
+
+`OptimizedProtobufSerializer` is the compact general variant. The specialized
+`DatProtobufSerializer` and `SuffixAutomatonProtobufSerializer` APIs preserve additional
+backend structure. Their payloads are binary and self-identifying; they do not accept a
+newline-text compatibility payload.
+
+Protocol Buffers gives broad ecosystem support, but a schema alone does not guarantee that
+two implementations enforce identical limits. Cross-language consumers should bound message
+size, repeated-field counts, and decoded string bytes before admitting untrusted payloads.
+
+## Gzip compression
+
+With `compression`, `GzipSerializer<S>` composes with a supported binary serializer:
+
+```rust
+use libdictenstein::double_array_trie::DoubleArrayTrie;
 use libdictenstein::serialization::{
-    BincodeSerializer, DictionarySerializer, GzipSerializer, JsonSerializer,
-    OptimizedProtobufSerializer,
+    BincodeSerializer, DictionarySerializer, GzipSerializer,
 };
 
-// Development/debugging: JSON
-JsonSerializer::serialize(&dict, file)?;
+let dictionary = DoubleArrayTrie::from_terms(vec!["test", "tested", "testing"]);
 
-// Production (Rust-only): Bincode
-BincodeSerializer::serialize(&dict, file)?;
+let mut compressed = Vec::new();
+GzipSerializer::<BincodeSerializer>::serialize(&dictionary, &mut compressed)?;
 
-// Production (cross-language): Protobuf V2
-OptimizedProtobufSerializer::serialize(&dict, file)?;
-
-// Network transfer: Compressed
-GzipSerializer::<BincodeSerializer>::serialize(&dict, file)?;
+let restored: DoubleArrayTrie =
+    GzipSerializer::<BincodeSerializer>::deserialize(&compressed[..])?;
+assert!(restored.contains("test"));
+# Ok::<(), libdictenstein::serialization::SerializationError>(())
 ```
 
-### 2. Version Your Dictionaries
+`GzipSerializer<ProtobufSerializer>` is available when both `compression` and `protobuf` are
+enabled. Compression is a transport wrapper, not a third persistence schema. Apply compressed
+and decompressed byte limits when reading untrusted data to prevent decompression bombs.
+
+## Operation-set persistence
+
+Generalized edit operations support the same two binary choices as dictionaries. The bincode
+API uses a stable `LLEVOPS\0` envelope with version, flags, and declared payload length. The
+protobuf API uses the versioned `OperationSetContainer` schema in
+`proto/operation_set.proto`. Both preserve operation order, exact IEEE-754 weight bits, owned
+diagnostic names, explicit applicability, raw-byte restrictions, and Unicode restrictions.
+Listed substitutions are emitted in canonical order. The bincode version-1 layout is retained
+by private wire structs, so removing public generic Serde did not change existing envelope
+bytes.
 
 ```rust
-use libdictenstein::serialization::bincode_compat;
-use serde::{Serialize, Deserialize};
-
-#[derive(Serialize, Deserialize)]
-struct VersionedDictionary {
-    version: String,
-    dict: DoubleArrayTrie,  // derives serde under the `serialization` feature
-}
-
-let versioned = VersionedDictionary {
-    version: "1.0.0".to_string(),
-    dict,
+use liblevenshtein::transducer::{
+    OperationSet, OperationSetBinaryLimits, OperationSetBuilder,
 };
 
-// Save with version info (`serialize_into` takes `&mut W`)
-let mut file = File::create("dict-v1.0.0.bincode")?;
-bincode_compat::serialize_into(&mut file, &versioned)?;
+let operations = OperationSetBuilder::new().with_standard_ops().build();
+let bytes = operations.to_binary()?;
+
+let mut limits = OperationSetBinaryLimits::default();
+limits.max_operations = 16;
+let restored = OperationSet::from_binary_with_limits(&bytes, limits)?;
+assert_eq!(restored, operations);
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-### 3. Validate After Loading
+With `protobuf`, portable interchange uses a separate method so callers never guess a format:
 
 ```rust
-use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
-// Load dictionary
-let dict: DoubleArrayTrie = BincodeSerializer::deserialize(file)?;
+use liblevenshtein::transducer::{OperationSet, OperationSetBuilder};
 
-// Validate
-if let Some(len) = dict.len() {
-    if len == 0 {
-        return Err("Empty dictionary loaded".into());
-    }
-}
-
-// Test with known term
-if !dict.contains("test") {
-    return Err("Dictionary validation failed".into());
-}
+let operations = OperationSetBuilder::new().with_standard_ops().build();
+let bytes = operations.to_protobuf()?;
+let restored = OperationSet::from_protobuf(&bytes)?;
+assert_eq!(restored, operations);
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-### 4. Handle Large Dictionaries
+Before `prost` allocates decoded vectors or strings, the protobuf decoder performs a
+non-allocating wire scan that enforces payload, operation, per-operation pair, total-pair,
+name, and aggregate restriction-text limits. It then rejects missing/unknown schema versions,
+unknown applicability values, invalid bytes, inconsistent restriction tags, and every semantic
+error checked by `OperationSet::validate`. Unknown protobuf fields are skipped for forward
+compatibility and are not re-emitted. This differs intentionally from the bincode envelope,
+which rejects any bytes outside its exact declared payload.
 
-```rust
-use libdictenstein::serialization::{BincodeSerializer, DictionarySerializer};
-use std::io::BufWriter;
+With `compression`, the following methods wrap exactly one gzip member around the selected
+inner representation:
 
-// Use buffered writer for large dictionaries
-let file = File::create("large-dict.bincode")?;
-let writer = BufWriter::new(file);
-BincodeSerializer::serialize(&dict, writer)?;
-```
+- `to_binary_gzip` / `from_binary_gzip`
+- `to_protobuf_gzip` / `from_protobuf_gzip` (also requires `protobuf`)
 
-## Performance Tips
+The gzip decoders bound compressed input and decompressed output, verify the gzip checksum,
+reject concatenated members or trailing bytes, and then delegate to the ordinary inner decoder.
+Gzip is optional because bincode and protobuf are compact encodings but not compression
+algorithms: repeated names, prefixes, and field patterns can still compress well, at the cost
+of encode/decode CPU and loss of direct random access. Measure representative artifacts before
+making gzip a storage default.
 
-1. **Use Bincode for speed**: Fastest serialization/deserialization
-2. **Use compression for size**: 85% size reduction with minimal overhead
-3. **Buffer I/O**: Use `BufReader`/`BufWriter` for large dictionaries
-4. **Cache dictionaries**: Load once, reuse across multiple queries
-5. **Consider format trade-offs**: Speed vs. size vs. compatibility
+An operation's explicit applicability tag controls its behavior; its diagnostic name never
+does. The compile-checked [`operation_set_persistence` example](../../examples/operation_set_persistence.rs)
+round-trips one complete configuration through both formats.
 
-## Troubleshooting
+## CLI use
 
-### Dictionary Too Large
+The CLI accepts the following storage format names:
+
+| CLI value | Typical extensions | Required feature |
+|---|---|---|
+| `bincode` | `.bin`, `.bincode` | `serialization` |
+| `protobuf` | `.pb`, `.protobuf` | `protobuf` |
+| `bincode-gz` | `.bin.gz`, `.bincode.gz` | `compression` |
+| `protobuf-gz` | `.pb.gz`, `.protobuf.gz` | `protobuf`, `compression` |
+
+Examples:
 
 ```bash
-# Use compression
-liblevenshtein convert -i large.txt -o large.bincode.gz
+liblevenshtein --convert --input old.bin --output new.pb \
+  --from-format bincode --to-format protobuf
 
-# Or use Protobuf V2
-liblevenshtein convert -i large.txt -o large.pb --format protobuf-v2
+liblevenshtein --query --dict dictionary.bin --text test --max-distance 2
 ```
 
-### Cross-Language Compatibility
+Format detection uses the binary extensions above. For an unusual extension, pass `--format`,
+`--from-format`, or `--to-format` explicitly.
 
-```bash
-# Use Protobuf for cross-language
-liblevenshtein convert -i words.txt -o dict.pb --format protobuf-v2
-```
+## Compatibility and safety
 
-### Corrupted Files
+- Treat stored bytes as untrusted input unless their provenance is guaranteed.
+- Bound input size before decoding and decompressed size while inflating gzip data.
+- Keep the creating application version or schema version with long-lived artifacts.
+- Decode into the expected backend and format; do not guess among unrelated schemas after a
+  successful prefix decode.
+- Rebuild artifacts when a format version is unsupported. Never reinterpret unknown bytes as
+  a plaintext dictionary.
+- Use atomic replacement when updating a dictionary file so interruption cannot leave a
+  partially written artifact.
 
-```bash
-# Validate by loading and checking
-liblevenshtein query dict.bincode "" 0
+The operation-set envelope has its own explicit version. Dictionary bincode payloads follow
+the `libdictenstein` compatibility contract; Protocol Buffers payloads follow their published
+schema and embedded format markers.
 
-# Rebuild from source if needed
-liblevenshtein convert -i original-words.txt -o dict-rebuilt.bincode
-```
+## Choosing a format
 
-## Related Documentation
+Use bincode when all readers are Rust applications using compatible library versions. Use
+Protocol Buffers when non-Rust readers, an explicit schema, or longer-lived interchange is
+required. Add gzip only after measuring the size/latency trade-off on representative
+dictionaries.
 
-- [Getting Started](getting-started.md) - Basic usage
-- [Backends](backends.md) - Dictionary backend comparison
-- [Features](features.md) - Full feature overview
-- CLI Usage - CLI tool guide
-- [Protobuf Design](../design/protobuf-serialization.md) - Protobuf format specification
-
-## Examples
-
-See `examples/serialization_basic.rs` in the repository:
-
-```bash
-cargo run --example serialization_basic --features serialization
-```
-
----
-
-[← Documentation Index](../README.md)
+Do not select JSON, TOML, or another text encoding for production dictionary persistence.

@@ -11,6 +11,24 @@
 //! - **Lazy**: States constructed on-demand during queries
 //! - **Parameterized**: Academic term emphasizing query-word-specific construction
 //!
+//! # Distance semantics and indexing
+//!
+//! A **metric** is a non-negative, symmetric distance that is zero only for
+//! identical inputs and satisfies the triangle inequality. Metric trees such as
+//! BK-trees and VP-trees use that last law for pruning. A trie walker based on an
+//! admissible dynamic-programming lower bound has a different proof obligation
+//! and does not inherently require a metric.
+//!
+//! | [`Algorithm`] | Distance semantics | Metric? | Safe for metric-tree pruning? |
+//! |---|---|---:|---:|
+//! | [`Algorithm::Standard`] | Levenshtein | yes | yes |
+//! | [`Algorithm::Transposition`] | optimal string alignment (restricted Damerau) | no | no |
+//! | [`Algorithm::MergeAndSplit`] | generic symmetric merge/split metric | yes | yes |
+//! | [`Algorithm::DamerauLevenshtein`] | unrestricted Damerau–Levenshtein | yes | yes |
+//!
+//! Call [`Algorithm::is_metric`] when selecting an index whose correctness
+//! contract explicitly requires the triangle inequality.
+//!
 //! See [`universal`] module for eager (precomputed) automata.
 
 mod algorithm;
@@ -18,13 +36,23 @@ pub mod articulatory_costs;
 mod automaton_zipper;
 pub mod builder;
 mod builder_api;
+mod contextual_costs;
+mod contextual_query;
 pub mod costs_f64;
 pub mod generalized;
 pub mod helpers;
 mod intersection;
 mod intersection_f64;
 pub mod intersection_zipper;
+pub mod language;
+mod match_mode;
 pub mod operation_set;
+#[cfg(feature = "serialization")]
+mod operation_set_binary;
+#[cfg(feature = "compression")]
+mod operation_set_gzip;
+#[cfg(feature = "protobuf")]
+mod operation_set_protobuf;
 pub mod operation_type;
 mod ordered_query;
 pub mod phonetic;
@@ -34,20 +62,28 @@ mod pool;
 mod pool_f64;
 mod position;
 mod position_f64;
+mod prefix_pruner;
+mod prefix_query;
+mod presets;
 mod priority_query;
 mod query;
 pub mod query_cache;
 mod query_f64;
 mod query_result;
+mod ranked_value_query;
 mod state;
 mod state_f64;
+mod subsequence_query;
 pub mod substitution_policy;
 pub mod substitution_set;
 pub mod substitution_set_char;
+mod suggestion;
 pub mod transition;
 pub mod transition_f64;
 pub mod universal;
 mod value_filtered_query;
+mod variant;
+mod variants;
 mod zipper_query_iterator;
 
 #[cfg(target_arch = "x86_64")]
@@ -62,19 +98,34 @@ pub use costs_f64::OperationCostsF64;
 pub use intersection::{Intersection, PathNode};
 pub use intersection_f64::IntersectionF64;
 pub use intersection_zipper::IntersectionZipper;
-pub use operation_set::{OperationSet, OperationSetBuilder};
-pub use operation_type::OperationType;
+pub use match_mode::{MatchMode, MatchModeError, MatchModeQueryIterator};
+pub use operation_set::{
+    EmptySideRate, OperationSet, OperationSetBuilder, OperationSetValidationError,
+    MAX_OPERATION_SET_TOTAL_CONSUMPTION,
+};
+#[cfg(feature = "serialization")]
+pub use operation_set_binary::{
+    OperationSetBinaryError, OperationSetBinaryLimits, MAX_OPERATION_SET_BINARY_PAYLOAD_BYTES,
+    OPERATION_SET_BINARY_MAGIC, OPERATION_SET_BINARY_VERSION,
+};
+#[cfg(feature = "compression")]
+pub use operation_set_gzip::{OperationSetGzipError, MAX_OPERATION_SET_GZIP_INPUT_BYTES};
+#[cfg(feature = "protobuf")]
+pub use operation_set_protobuf::OperationSetProtobufError;
+pub use operation_type::{OperationApplicability, OperationType};
 pub use ordered_query::{OrderedCandidate, OrderedQueryIterator};
 pub use pool::StatePool;
 pub use pool_f64::StatePoolF64;
 pub use position::Position;
 pub use position_f64::PositionF64;
+pub use prefix_pruner::{AllowedPrefixes, NoPruning, PrefixPruner};
+pub use prefix_query::{PrefixQueryIterator, PrefixQueryMatch, PrefixQueryStats};
 pub use priority_query::{
     priority_query, priority_query_with_policy, PriorityCandidate, PriorityQueryIterator,
 };
 pub use query::{
-    Candidate, CandidateIterator, QueryIterator, StringQueryIterator, UnitCandidate,
-    UnitCandidateIterator, UnitQueryIterator,
+    AffineCandidate, AffineQueryIterator, Candidate, CandidateIterator, QueryIterator,
+    StringQueryIterator, UnitCandidate, UnitCandidateIterator, UnitQueryIterator,
 };
 pub use query_cache::VersionedQueryCache;
 pub use query_f64::{
@@ -82,14 +133,19 @@ pub use query_f64::{
     UnitCandidateF64, UnitCandidateIteratorF64, UnitQueryIteratorF64,
 };
 pub use query_result::QueryResult;
+pub use ranked_value_query::RankedValueQueryIterator;
 pub use state::State;
 pub use state_f64::StateF64;
+pub use subsequence_query::{SubsequenceMatch, SubsequenceQueryIterator, SubsequenceQueryStats};
 pub use substitution_policy::{
     OwnedRestricted, Restricted, RestrictedChar, SubstitutionPolicy, SubstitutionPolicyChar,
     SubstitutionPolicyFor, Unrestricted,
 };
-pub use substitution_set::SubstitutionSet;
+pub use substitution_set::{
+    SubstitutionPair, SubstitutionSet, MAX_SUBSTITUTION_PAIRS, MAX_SUBSTITUTION_TEXT_BYTES,
+};
 pub use substitution_set_char::SubstitutionSetChar;
+pub use suggestion::{FrequencyValue, LogFrequencyScorer, Suggestion, SuggestionScorer};
 pub use transition_f64::{
     initial_state_f64, transition_position_f64, transition_state_f64, transition_state_pooled_f64,
     TransitionSettingsF64,
@@ -98,6 +154,8 @@ pub use value_filtered_query::{
     ValueFilteredQueryIterator, ValueSetFilteredQueryIterator, ValueTerm,
     ValueYieldingQueryIterator,
 };
+pub use variant::PositionKind;
+pub use variants::AffineGapParams;
 pub use zipper_query_iterator::ZipperQueryIterator;
 
 #[cfg(feature = "phonetic-rules")]
@@ -107,7 +165,9 @@ pub use phonetic_transducer::{
     PhoneticValueQueryIterator, PhoneticValueQueryIteratorChar,
 };
 
-use libdictenstein::{Dictionary, DictionaryNode, MappedDictionary, MappedDictionaryNode};
+use libdictenstein::{
+    CharUnit, Dictionary, DictionaryNode, MappedDictionary, MappedDictionaryNode,
+};
 use std::collections::HashSet;
 
 /// Main transducer for approximate string matching.
@@ -226,6 +286,11 @@ where
     /// ```
     pub fn with_merge_split(dictionary: D) -> Self {
         Self::new(dictionary, Algorithm::MergeAndSplit)
+    }
+
+    /// Create a transducer using unrestricted Damerau–Levenshtein distance.
+    pub fn with_damerau_levenshtein(dictionary: D) -> Self {
+        Self::new(dictionary, Algorithm::DamerauLevenshtein)
     }
 
     /// Create a transducer with custom substitutions.
@@ -407,6 +472,77 @@ impl<
         )
     }
 
+    /// Query dictionary terms by standard edit distance to a regular language.
+    ///
+    /// Unlike [`query`](Self::query), which compares against one query sequence,
+    /// this intersects the dictionary with all words recognized by `language`.
+    /// The product is unit-generic and does not inspect this transducer's
+    /// [`Algorithm`] or substitution policy; its semantics are unit-cost match,
+    /// insertion, deletion, and substitution.
+    pub fn query_language<L>(
+        &self,
+        language: L,
+        max_distance: u8,
+    ) -> language::LanguageQueryIterator<D::Node, L>
+    where
+        L: language::LanguageAutomaton<<D::Node as DictionaryNode>::Unit>,
+    {
+        let product = language::LanguageProduct::new(language, max_distance);
+        language::LanguageQueryIterator::from_dictionary(&self.dictionary, product)
+    }
+
+    /// Compile a phonetic regular expression and query by distance to its
+    /// language.
+    #[cfg(feature = "phonetic-rules")]
+    pub fn query_regex(
+        &self,
+        pattern: &str,
+        max_distance: u8,
+    ) -> crate::phonetic::regex::error::ParseResult<
+        language::LanguageQueryIterator<D::Node, crate::phonetic::nfa::NFAChar>,
+    >
+    where
+        D::Node: DictionaryNode<Unit = char>,
+    {
+        // Reject pathologically long source text before the parser builds its
+        // (potentially left-deep) AST. The two-states-per-source-scalar policy
+        // is intentionally conservative for escaped/syntax-heavy patterns;
+        // the expansion-aware estimate below catches compact repetitions.
+        let source_scalars = pattern.chars().count();
+        let source_state_bound = source_scalars.saturating_mul(2);
+        if source_state_bound > language::LANGUAGE_PRODUCT_MAX_STATES {
+            return Err(crate::phonetic::regex::error::ParseError::new(
+                crate::phonetic::regex::error::ParseErrorKind::PatternTooComplex {
+                    size: source_state_bound,
+                    max: language::LANGUAGE_PRODUCT_MAX_STATES,
+                },
+                crate::phonetic::common::Position::start(),
+            ));
+        }
+        let regex = crate::phonetic::regex::parse(pattern)?;
+        let estimated_states = crate::phonetic::nfa::estimate_thompson_states(&regex)?;
+        if estimated_states > language::LANGUAGE_PRODUCT_MAX_STATES {
+            return Err(crate::phonetic::regex::error::ParseError::new(
+                crate::phonetic::regex::error::ParseErrorKind::PatternTooComplex {
+                    size: estimated_states,
+                    max: language::LANGUAGE_PRODUCT_MAX_STATES,
+                },
+                crate::phonetic::common::Position::start(),
+            ));
+        }
+        let nfa = crate::phonetic::nfa::compile(&regex)?;
+        if nfa.num_states() > language::LANGUAGE_PRODUCT_MAX_STATES {
+            return Err(crate::phonetic::regex::error::ParseError::new(
+                crate::phonetic::regex::error::ParseErrorKind::PatternTooComplex {
+                    size: nfa.num_states(),
+                    max: language::LANGUAGE_PRODUCT_MAX_STATES,
+                },
+                crate::phonetic::common::Position::start(),
+            ));
+        }
+        Ok(self.query_language(nfa, max_distance))
+    }
+
     /// Query for terms within `max_distance` edits of `term`
     ///
     /// Returns an iterator over matching terms (strings only)
@@ -435,6 +571,42 @@ impl<
             term.to_string(),
             max_distance,
             self.algorithm,
+            self.policy.clone(),
+            self.dictionary.is_suffix_based(),
+        )
+    }
+
+    /// Query with affine gap costs using exact fixed-point arithmetic.
+    ///
+    /// A gap of length `k` costs `gap_open + k * gap_extend`. Decimal
+    /// parameters and `max_cost` are converted exactly; inexact budgets return
+    /// [`ScaleError`](crate::cost::ScaleError) instead of being rounded.
+    pub fn query_affine(
+        &self,
+        term: &str,
+        max_cost: f64,
+        params: AffineGapParams,
+    ) -> Result<AffineQueryIterator<D::Node, P>, crate::cost::ScaleError> {
+        let max_cost = params.scale_cost(max_cost)?;
+        let inner = self.query_affine_scaled(term, max_cost, params);
+        Ok(AffineQueryIterator::new(inner, params))
+    }
+
+    /// Query with affine costs and an already-scaled exact budget.
+    ///
+    /// Distances in the returned [`Candidate`] values use the same scale as
+    /// `params`; call [`AffineGapParams::unscale_cost`] for presentation.
+    pub fn query_affine_scaled(
+        &self,
+        term: &str,
+        max_cost: usize,
+        params: AffineGapParams,
+    ) -> QueryIterator<D::Node, Candidate, P> {
+        QueryIterator::with_affine_policy_and_substring(
+            self.dictionary.root(),
+            term.to_string(),
+            max_cost,
+            params,
             self.policy.clone(),
             self.dictionary.is_suffix_based(),
         )
@@ -484,6 +656,23 @@ impl<
             units.to_vec(),
             max_distance,
             self.algorithm,
+            self.policy.clone(),
+            self.dictionary.is_suffix_based(),
+        )
+    }
+
+    /// Query native unit sequences with exact scaled affine-gap costs.
+    pub fn query_units_affine_scaled(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        max_cost: usize,
+        params: AffineGapParams,
+    ) -> QueryIterator<D::Node, UnitCandidate<<D::Node as DictionaryNode>::Unit>, P> {
+        QueryIterator::with_affine_units(
+            self.dictionary.root(),
+            units.to_vec(),
+            max_cost,
+            params,
             self.policy.clone(),
             self.dictionary.is_suffix_based(),
         )
@@ -554,6 +743,88 @@ impl<
             max_distance,
             self.algorithm,
             self.policy.clone(),
+            self.dictionary.is_suffix_based(),
+        )
+    }
+
+    /// Query using an ergonomic completed-candidate distance mode.
+    ///
+    /// This is sugar over [`query_ordered`](Self::query_ordered). `Exact` and
+    /// the lower end of `Range` filter completed candidates; they cannot prune
+    /// dictionary prefixes and therefore do not provide an algorithmic speedup.
+    /// The underlying ordered iterator still uses the selected maximum as its
+    /// automaton budget and remains lazy.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use libdictenstein::double_array_trie::DoubleArrayTrie;
+    /// use liblevenshtein::transducer::{Algorithm, MatchMode, Transducer};
+    ///
+    /// let transducer = Transducer::new(
+    ///     DoubleArrayTrie::from_terms(["cat", "bat", "cot", "coat"]),
+    ///     Algorithm::Standard,
+    /// );
+    /// let terms: Vec<_> = transducer
+    ///     .query_mode("cat", MatchMode::Exact(1))?
+    ///     .map(|candidate| candidate.term)
+    ///     .collect();
+    /// assert_eq!(terms, ["bat", "coat", "cot"]);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn query_mode(
+        &self,
+        term: &str,
+        mode: MatchMode,
+    ) -> Result<MatchModeQueryIterator<OrderedQueryIterator<D::Node, P>>, MatchModeError> {
+        let (_, max_distance) = mode.bounds()?;
+        MatchModeQueryIterator::try_new(self.query_ordered(term, max_distance), mode)
+    }
+
+    /// Query with a stateful prefix pruner during an explicit fuzzy DFS.
+    ///
+    /// This is a DFS surface because [`PrefixPruner`] has balanced enter/leave
+    /// stack semantics. It returns the same match set and distances as
+    /// [`query_units_with_distance`](Self::query_units_with_distance), after
+    /// intersecting that set with the pruner's accepted terminal set. Result
+    /// order is dictionary DFS order, not distance order.
+    pub fn query_with_pruner<R>(
+        &self,
+        term: &str,
+        max_distance: usize,
+        pruner: R,
+    ) -> PrefixQueryIterator<D::Node, P, R>
+    where
+        R: PrefixPruner<<D::Node as DictionaryNode>::Unit>,
+    {
+        PrefixQueryIterator::with_policy_and_pruner(
+            self.dictionary.root(),
+            <D::Node as DictionaryNode>::Unit::from_str(term),
+            max_distance,
+            self.algorithm,
+            self.policy.clone(),
+            pruner,
+            self.dictionary.is_suffix_based(),
+        )
+    }
+
+    /// Unit-native counterpart of [`query_with_pruner`](Self::query_with_pruner).
+    pub fn query_units_with_pruner<R>(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        max_distance: usize,
+        pruner: R,
+    ) -> PrefixQueryIterator<D::Node, P, R>
+    where
+        R: PrefixPruner<<D::Node as DictionaryNode>::Unit>,
+    {
+        PrefixQueryIterator::with_policy_and_pruner(
+            self.dictionary.root(),
+            units.to_vec(),
+            max_distance,
+            self.algorithm,
+            self.policy.clone(),
+            pruner,
             self.dictionary.is_suffix_based(),
         )
     }
@@ -641,6 +912,49 @@ where
     D::Node: MappedDictionaryNode<Value = D::Value>,
     P: SubstitutionPolicy + SubstitutionPolicyFor<<D::Node as DictionaryNode>::Unit>,
 {
+    /// Query mapped values lazily, ordered first by edit distance and then by
+    /// decreasing scorer confidence within the current distance layer.
+    pub fn query_suggestions<S>(
+        &self,
+        term: &str,
+        max_distance: usize,
+        scorer: S,
+    ) -> RankedValueQueryIterator<D::Node, S, P>
+    where
+        S: SuggestionScorer<D::Value>,
+        P: Clone,
+    {
+        RankedValueQueryIterator::with_policy(
+            self.dictionary.root(),
+            term.to_owned(),
+            max_distance,
+            self.algorithm,
+            scorer,
+            self.policy.clone(),
+        )
+    }
+
+    /// Units-native suggestion query for token alphabets such as `u64`.
+    pub fn query_unit_suggestions<S>(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        max_distance: usize,
+        scorer: S,
+    ) -> RankedValueQueryIterator<D::Node, S, P>
+    where
+        S: SuggestionScorer<D::Value>,
+        P: Clone,
+    {
+        RankedValueQueryIterator::with_units(
+            self.dictionary.root(),
+            units.to_vec(),
+            max_distance,
+            self.algorithm,
+            scorer,
+            self.policy.clone(),
+        )
+    }
+
     /// Query with value-based filtering during result collection.
     ///
     /// This method checks each final node's associated value before materializing
@@ -800,3 +1114,7 @@ where
         )
     }
 }
+pub use contextual_costs::{ContextualCost, EditContext, EnglishSoftC, PositionalSilentE};
+pub use contextual_query::{
+    ContextualCandidate, ContextualQueryError, ContextualQueryIterator, ContextualQueryStats,
+};

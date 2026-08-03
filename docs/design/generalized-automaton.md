@@ -3,8 +3,13 @@
 [← Documentation Index](../README.md)
 
 **Date**: 2025-11-12
-**Status**: Design Phase
-**Estimated Implementation**: 2-3 weeks
+**Status**: Historical initial design; the current implementation contract is
+the [generalized-automaton repair](generalized-automaton-repair.md)
+
+> This page preserves the original phased design context. It is not the
+> current source of truth for acceptance, weighted costs, performance, or
+> public APIs. The shipped engine uses an exact scaled sparse alignment graph;
+> its older universal-position types remain only as a compatibility surface.
 
 ---
 

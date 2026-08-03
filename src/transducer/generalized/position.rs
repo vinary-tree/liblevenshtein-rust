@@ -7,8 +7,8 @@
 //! # Theory Background
 //!
 //! Generalized positions use parameters I (non-final) and M (final) with runtime operations:
-//! - `I + t#k`: Non-final position, offset t from start, k errors consumed
-//! - `M + t#k`: Final position, offset t from end, k errors consumed
+//! - `I + t#k`: Non-final position, offset t from start, scaled cost k consumed
+//! - `M + t#k`: Final position, offset t from end, scaled cost k consumed
 //!
 //! Unlike UniversalPosition, GeneralizedPosition does not use compile-time variants
 //! (Standard, Transposition, MergeAndSplit). Instead, operations are determined at
@@ -16,7 +16,8 @@
 //!
 //! ## Invariants (from Definition 15)
 //!
-//! **I-type (non-final)**:
+//! The source-compatible public constructors use a unit-cost budget and
+//! preserve the classical invariants. **I-type (non-final)** positions satisfy:
 //! ```text
 //! I^ε_s = {I + t#k | |t| ≤ k ∧ -n ≤ t ≤ n ∧ 0 ≤ k ≤ n}
 //! ```
@@ -25,6 +26,12 @@
 //! ```text
 //! M^ε_s = {M + t#k | k ≥ -t - n ∧ -2n ≤ t ≤ 0 ∧ 0 ≤ k ≤ n}
 //! ```
+//!
+//! Streaming transitions carry an exact denominator `d` internally, store
+//! `k` as a `usize` numerator, and compare it with the scaled budget `K = n*d`.
+//! For a non-classical operation lattice, only the budget and bounded-offset
+//! constraints are universal; cheap multi-scalar rules invalidate the unit
+//! theorem `|t| ≤ k`. Subsumption is correspondingly conservative.
 //!
 //! # Examples
 //!
@@ -43,24 +50,24 @@ use std::fmt;
 /// Error type for invalid position creation
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PositionError {
-    /// I-type position violates invariant |t| ≤ k ∧ -n ≤ t ≤ n ∧ 0 ≤ k ≤ n
+    /// I-type position violates the applicable offset or scaled-budget invariant.
     InvalidIPosition {
         /// The offset value that violated the invariant
         offset: i32,
-        /// The error count that violated the invariant
-        errors: u8,
-        /// The maximum distance n
-        max_distance: u8,
+        /// The exact scaled cost that violated the invariant.
+        errors: usize,
+        /// Legacy field name; contains the maximum scaled cost.
+        max_distance: usize,
     },
 
-    /// M-type position violates invariant k ≥ -t - n ∧ -2n ≤ t ≤ 0 ∧ 0 ≤ k ≤ n
+    /// M-type position violates the applicable offset or scaled-budget invariant.
     InvalidMPosition {
         /// The offset value that violated the invariant
         offset: i32,
-        /// The error count that violated the invariant
-        errors: u8,
-        /// The maximum distance n
-        max_distance: u8,
+        /// The exact scaled cost that violated the invariant.
+        errors: usize,
+        /// Legacy field name; contains the maximum scaled cost.
+        max_distance: usize,
     },
 }
 
@@ -74,8 +81,7 @@ impl fmt::Display for PositionError {
             } => {
                 write!(
                     f,
-                    "Invalid I-position: I + {}#{} with n={}. \
-                     Invariant: |t| ≤ k ∧ -n ≤ t ≤ n ∧ 0 ≤ k ≤ n",
+                    "invalid I-position: I + {}#{} with scaled budget {}",
                     offset, errors, max_distance
                 )
             }
@@ -86,8 +92,7 @@ impl fmt::Display for PositionError {
             } => {
                 write!(
                     f,
-                    "Invalid M-position: M + {}#{} with n={}. \
-                     Invariant: k ≥ -t - n ∧ -2n ≤ t ≤ 0 ∧ 0 ≤ k ≤ n",
+                    "invalid M-position: M + {}#{} with scaled budget {}",
                     offset, errors, max_distance
                 )
             }
@@ -125,7 +130,7 @@ pub enum GeneralizedPosition {
         offset: i32,
 
         /// Number of errors consumed (range: 0 to n)
-        errors: u8,
+        errors: usize,
     },
 
     /// M-type (final): M + offset#errors
@@ -138,7 +143,7 @@ pub enum GeneralizedPosition {
         offset: i32,
 
         /// Number of errors consumed (range: 0 to n)
-        errors: u8,
+        errors: usize,
     },
 
     /// I-type transposing state: I + offset#errors_t
@@ -152,7 +157,7 @@ pub enum GeneralizedPosition {
         offset: i32,
 
         /// Number of errors consumed (range: 0 to n)
-        errors: u8,
+        errors: usize,
     },
 
     /// M-type transposing state: M + offset#errors_t
@@ -165,7 +170,7 @@ pub enum GeneralizedPosition {
         offset: i32,
 
         /// Number of errors consumed (range: 0 to n)
-        errors: u8,
+        errors: usize,
     },
 
     /// I-type splitting state: I + offset#errors_s
@@ -179,7 +184,7 @@ pub enum GeneralizedPosition {
         offset: i32,
 
         /// Number of errors consumed (range: 0 to n)
-        errors: u8,
+        errors: usize,
 
         /// Phase 3b: Character read when entering the split state (first of 2-char input sequence)
         /// This is needed because when completing the split, we need to pair this with the
@@ -197,7 +202,7 @@ pub enum GeneralizedPosition {
         offset: i32,
 
         /// Number of errors consumed (range: 0 to n)
-        errors: u8,
+        errors: usize,
 
         /// Phase 3b: Character read when entering the split state (first of 2-char input sequence)
         entry_char: char,
@@ -287,20 +292,31 @@ impl GeneralizedPosition {
     /// let pos = GeneralizedPosition::new_i(-2, 2, 2)?; // I + (-2)#2
     /// ```
     pub fn new_i(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
+        Self::new_i_scaled(
+            offset,
+            usize::from(errors),
+            usize::from(max_distance),
+            max_distance,
+            1,
+        )
+    }
 
-        // Check invariant: |offset| ≤ errors ∧ -n ≤ offset ≤ n ∧ 0 ≤ errors ≤ n
-        // RELAXED: For fractional-weight operations (which truncate to 0), allow offset > errors
-        // when errors == 0. Since fractional operations are "free", we don't limit offset by n
-        // in this case, as multiple free operations can be chained.
-        let invariant_satisfied = if errors == 0 && offset > 0 {
-            // Relaxed invariant for fractional-weight operations: no offset upper bound
-            // Only check that offset is non-negative (we're ahead in word consumption)
-            true
-        } else {
-            // Standard invariant
-            offset.abs() <= errors as i32 && offset >= -n && offset <= n && errors <= max_distance
-        };
+    pub(crate) fn new_i_scaled(
+        offset: i32,
+        errors: usize,
+        max_cost: usize,
+        max_distance: u8,
+        scale_denominator: u32,
+    ) -> Result<Self, PositionError> {
+        let n = i32::from(max_distance);
+        let unit_reachable = usize::try_from(offset.unsigned_abs())
+            .ok()
+            .and_then(|distance| distance.checked_mul(scale_denominator as usize))
+            .is_some_and(|required| required <= errors);
+        let invariant_satisfied = errors <= max_cost
+            && offset >= -n
+            && offset <= n
+            && (scale_denominator != 1 || unit_reachable);
 
         if invariant_satisfied {
             Ok(GeneralizedPosition::INonFinal { offset, errors })
@@ -308,7 +324,7 @@ impl GeneralizedPosition {
             Err(PositionError::InvalidIPosition {
                 offset,
                 errors,
-                max_distance,
+                max_distance: max_cost,
             })
         }
     }
@@ -333,17 +349,38 @@ impl GeneralizedPosition {
     /// let pos = GeneralizedPosition::new_m(-4, 2, 2)?;  // M + (-4)#2
     /// ```
     pub fn new_m(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
+        Self::new_m_scaled(
+            offset,
+            usize::from(errors),
+            usize::from(max_distance),
+            max_distance,
+            1,
+        )
+    }
 
-        // Check invariant: errors ≥ -offset - n ∧ -2n ≤ offset ≤ 0 ∧ 0 ≤ errors ≤ n
-        if errors as i32 >= -offset - n && offset >= -2 * n && offset <= 0 && errors <= max_distance
-        {
+    pub(crate) fn new_m_scaled(
+        offset: i32,
+        errors: usize,
+        max_cost: usize,
+        max_distance: u8,
+        scale_denominator: u32,
+    ) -> Result<Self, PositionError> {
+        let n = i32::from(max_distance);
+        let unit_reachable = i64::try_from(errors)
+            .ok()
+            .is_some_and(|cost| cost >= i64::from(-offset - n));
+        let invariant_satisfied = errors <= max_cost
+            && offset >= -2 * n
+            && offset <= 0
+            && (scale_denominator != 1 || unit_reachable);
+
+        if invariant_satisfied {
             Ok(GeneralizedPosition::MFinal { offset, errors })
         } else {
             Err(PositionError::InvalidMPosition {
                 offset,
                 errors,
-                max_distance,
+                max_distance: max_cost,
             })
         }
     }
@@ -367,17 +404,31 @@ impl GeneralizedPosition {
         errors: u8,
         max_distance: u8,
     ) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
+        Self::new_i_transposing_scaled(
+            offset,
+            usize::from(errors),
+            usize::from(max_distance),
+            max_distance,
+            1,
+        )
+    }
 
-        // Phase 3b: Relaxed invariant for fractional-weight operations
-        // Similar to new_i(), allow negative offsets when errors==0 for phonetic operations
-        let invariant_satisfied = if errors == 0 && offset < 0 {
-            // Relaxed invariant: allow negative offset for transpose entry with fractional weights
-            offset >= -n && errors <= max_distance
-        } else {
-            // Standard invariant
-            offset.abs() <= errors as i32 && offset >= -n && offset <= n && errors <= max_distance
-        };
+    pub(crate) fn new_i_transposing_scaled(
+        offset: i32,
+        errors: usize,
+        max_cost: usize,
+        max_distance: u8,
+        scale_denominator: u32,
+    ) -> Result<Self, PositionError> {
+        let n = i32::from(max_distance);
+        let unit_reachable = usize::try_from(offset.unsigned_abs())
+            .ok()
+            .and_then(|distance| distance.checked_mul(scale_denominator as usize))
+            .is_some_and(|required| required <= errors);
+        let invariant_satisfied = errors <= max_cost
+            && offset >= -n
+            && offset <= n
+            && (scale_denominator != 1 || unit_reachable);
 
         if invariant_satisfied {
             Ok(GeneralizedPosition::ITransposing { offset, errors })
@@ -385,7 +436,7 @@ impl GeneralizedPosition {
             Err(PositionError::InvalidIPosition {
                 offset,
                 errors,
-                max_distance,
+                max_distance: max_cost,
             })
         }
     }
@@ -409,17 +460,38 @@ impl GeneralizedPosition {
         errors: u8,
         max_distance: u8,
     ) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
+        Self::new_m_transposing_scaled(
+            offset,
+            usize::from(errors),
+            usize::from(max_distance),
+            max_distance,
+            1,
+        )
+    }
 
-        // Same invariant as MFinal
-        if errors as i32 >= -offset - n && offset >= -2 * n && offset <= 0 && errors <= max_distance
-        {
+    pub(crate) fn new_m_transposing_scaled(
+        offset: i32,
+        errors: usize,
+        max_cost: usize,
+        max_distance: u8,
+        scale_denominator: u32,
+    ) -> Result<Self, PositionError> {
+        let n = i32::from(max_distance);
+        let unit_reachable = i64::try_from(errors)
+            .ok()
+            .is_some_and(|cost| cost >= i64::from(-offset - n));
+        let invariant_satisfied = errors <= max_cost
+            && offset >= -2 * n
+            && offset <= 0
+            && (scale_denominator != 1 || unit_reachable);
+
+        if invariant_satisfied {
             Ok(GeneralizedPosition::MTransposing { offset, errors })
         } else {
             Err(PositionError::InvalidMPosition {
                 offset,
                 errors,
-                max_distance,
+                max_distance: max_cost,
             })
         }
     }
@@ -445,22 +517,37 @@ impl GeneralizedPosition {
         max_distance: u8,
         entry_char: char,
     ) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
+        Self::new_i_splitting_scaled(
+            offset,
+            usize::from(errors),
+            usize::from(max_distance),
+            max_distance,
+            1,
+            entry_char,
+        )
+    }
 
-        // Phase 4: Relaxed invariant for splitting states
-        // Splitting states are intermediate states during phonetic operations
-        // They need slightly relaxed reachability: |offset| ≤ errors + 1
-        // This allows phonetic splits from I+0#0 to create ISplitting+(-1)#0
-        // which satisfies |-1| ≤ 0 + 1 ✓
-        //
-        // Rationale: The split is a two-step operation (entry → completion)
-        // Entry: offset - 1 (may temporarily exceed reachability)
-        // Completion: offset + 1 (restores reachability)
-        // Net effect: offset unchanged, so final position satisfies standard invariant
-        let invariant_satisfied = offset.abs() <= (errors as i32 + 1)
+    pub(crate) fn new_i_splitting_scaled(
+        offset: i32,
+        errors: usize,
+        max_cost: usize,
+        max_distance: u8,
+        scale_denominator: u32,
+        entry_char: char,
+    ) -> Result<Self, PositionError> {
+        let n = i32::from(max_distance);
+        let reachable_with_intermediate = usize::try_from(offset.unsigned_abs())
+            .ok()
+            .and_then(|distance| {
+                distance
+                    .saturating_sub(1)
+                    .checked_mul(scale_denominator as usize)
+            })
+            .is_some_and(|required| required <= errors);
+        let invariant_satisfied = errors <= max_cost
             && offset >= -n
             && offset <= n
-            && errors <= max_distance;
+            && (scale_denominator != 1 || reachable_with_intermediate);
 
         if invariant_satisfied {
             Ok(GeneralizedPosition::ISplitting {
@@ -472,7 +559,7 @@ impl GeneralizedPosition {
             Err(PositionError::InvalidIPosition {
                 offset,
                 errors,
-                max_distance,
+                max_distance: max_cost,
             })
         }
     }
@@ -498,16 +585,35 @@ impl GeneralizedPosition {
         max_distance: u8,
         entry_char: char,
     ) -> Result<Self, PositionError> {
-        let n = max_distance as i32;
+        Self::new_m_splitting_scaled(
+            offset,
+            usize::from(errors),
+            usize::from(max_distance),
+            max_distance,
+            1,
+            entry_char,
+        )
+    }
 
-        // Phase 4: Slightly relaxed invariant for M-type splitting states
-        // Allow errors + 1 >= -offset - n instead of errors >= -offset - n
-        // This gives splitting states one extra buffer for the offset decrement
-        if (errors as i32 + 1) >= -offset - n
+    pub(crate) fn new_m_splitting_scaled(
+        offset: i32,
+        errors: usize,
+        max_cost: usize,
+        max_distance: u8,
+        scale_denominator: u32,
+        entry_char: char,
+    ) -> Result<Self, PositionError> {
+        let n = i32::from(max_distance);
+        let reachable_with_intermediate = i64::try_from(errors)
+            .ok()
+            .and_then(|cost| cost.checked_add(i64::from(scale_denominator)))
+            .is_some_and(|cost| cost >= i64::from(-offset - n));
+        let invariant_satisfied = errors <= max_cost
             && offset >= -2 * n
             && offset <= 0
-            && errors <= max_distance
-        {
+            && (scale_denominator != 1 || reachable_with_intermediate);
+
+        if invariant_satisfied {
             Ok(GeneralizedPosition::MSplitting {
                 offset,
                 errors,
@@ -517,7 +623,7 @@ impl GeneralizedPosition {
             Err(PositionError::InvalidMPosition {
                 offset,
                 errors,
-                max_distance,
+                max_distance: max_cost,
             })
         }
     }
@@ -534,8 +640,8 @@ impl GeneralizedPosition {
         }
     }
 
-    /// Get the error count
-    pub fn errors(&self) -> u8 {
+    /// Get the exact scaled cost accumulated by this position.
+    pub fn errors(&self) -> usize {
         match self {
             GeneralizedPosition::INonFinal { errors, .. }
             | GeneralizedPosition::MFinal { errors, .. }
@@ -544,6 +650,42 @@ impl GeneralizedPosition {
             | GeneralizedPosition::ISplitting { errors, .. }
             | GeneralizedPosition::MSplitting { errors, .. } => *errors,
         }
+    }
+
+    pub(crate) fn checked_rescale(&self, multiplier: usize) -> Option<Self> {
+        let errors = self.errors().checked_mul(multiplier)?;
+        Some(match self {
+            Self::INonFinal { offset, .. } => Self::INonFinal {
+                offset: *offset,
+                errors,
+            },
+            Self::MFinal { offset, .. } => Self::MFinal {
+                offset: *offset,
+                errors,
+            },
+            Self::ITransposing { offset, .. } => Self::ITransposing {
+                offset: *offset,
+                errors,
+            },
+            Self::MTransposing { offset, .. } => Self::MTransposing {
+                offset: *offset,
+                errors,
+            },
+            Self::ISplitting {
+                offset, entry_char, ..
+            } => Self::ISplitting {
+                offset: *offset,
+                errors,
+                entry_char: *entry_char,
+            },
+            Self::MSplitting {
+                offset, entry_char, ..
+            } => Self::MSplitting {
+                offset: *offset,
+                errors,
+                entry_char: *entry_char,
+            },
+        })
     }
 
     /// Check if this is an I-type (non-final) position

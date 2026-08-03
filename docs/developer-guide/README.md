@@ -39,6 +39,10 @@ Release and publishing procedures:
 - Publishing to crates.io
 - Documentation updates
 
+### [Cargo workspace layout](workspace-layout.md)
+Why the procedural-macro package is verified as an independent workspace and
+which commands CI must run for complete coverage.
+
 ## Related Documentation
 
 - [Design Documents](../design/README.md) - Algorithm and feature designs

@@ -9,7 +9,7 @@ fn check_transposition_subsumption_both_ways() {
     let query_length = 2;
 
     let p_normal = Position::new(0, 1);
-    let p_special = Position::new_special(0, 1);
+    let p_special = Position::new_osa_transposing(0, 1);
 
     println!(
         "p_normal:  ({}, {}, false)",

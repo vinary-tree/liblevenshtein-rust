@@ -73,7 +73,7 @@ use std::sync::OnceLock;
 /// - a, e, i, o, u (simple 5-vowel system)
 ///
 /// ## Glottal Stop Markers (weight 0.1)
-/// - Apostrophe ('), backtick (`), hyphen (-) → removed
+/// - Apostrophe ('), backtick (\`), hyphen (-) → removed
 pub fn base() -> &'static RuleSetChar {
     static RULESET: OnceLock<RuleSetChar> = OnceLock::new();
     RULESET.get_or_init(|| {

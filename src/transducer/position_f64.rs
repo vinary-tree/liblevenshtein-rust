@@ -40,7 +40,7 @@
 //! state manipulation during automaton traversal.
 
 use super::algorithm::Algorithm;
-use crate::numeric::nonnegative_floor_to_usize_checked;
+use crate::cost::{subsumes_with, SubsumptionMode, WeightedCost};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
@@ -206,87 +206,32 @@ impl PositionF64 {
         query_length: usize,
         max_index_op_cost: f64,
     ) -> bool {
-        let i = self.term_index;
-        let e = self.accumulated_cost;
-        let s = self.is_special;
-
-        let j = other.term_index;
-        let f = other.accumulated_cost;
-        let t = other.is_special;
-
-        // Must have lower or equal cost to subsume (with epsilon tolerance)
-        if e > f + EPSILON {
-            return false;
-        }
-
-        let cost_slack = f - e;
-
         match algorithm {
-            Algorithm::Standard => {
-                // Weighted standard subsumption: realigning the term index by
-                // |i - j| steps costs at most |i - j| * max(insertion, deletion),
-                // which must fit within the cost slack (f - e). Reduces to the
-                // classic |i - j| <= f - e when ins/del both cost 1.
-                let index_diff = i.abs_diff(j) as f64;
-                index_diff * max_index_op_cost <= cost_slack + EPSILON
+            Algorithm::Standard | Algorithm::Transposition | Algorithm::MergeAndSplit => {
+                let mode = match algorithm {
+                    Algorithm::Standard => SubsumptionMode::Standard,
+                    Algorithm::Transposition => SubsumptionMode::Transposition,
+                    Algorithm::MergeAndSplit => SubsumptionMode::MergeSplit,
+                    Algorithm::DamerauLevenshtein => unreachable!(),
+                };
+                subsumes_with::<WeightedCost>(
+                    self.term_index,
+                    self.accumulated_cost,
+                    self.is_special,
+                    other.term_index,
+                    other.accumulated_cost,
+                    other.is_special,
+                    mode,
+                    query_length,
+                    max_index_op_cost,
+                )
             }
 
-            Algorithm::Transposition => {
-                if s {
-                    if t {
-                        // Both special: must be at same position
-                        return i == j;
-                    }
-                    // lhs special, rhs not: requires rhs at query length and same position
-                    let Some(f_as_usize) = nonnegative_floor_to_usize_checked(f) else {
-                        return false;
-                    };
-                    return (f_as_usize == query_length) && (i == j);
-                }
-
-                if t {
-                    // A non-special (normal) position cannot subsume a special
-                    // transposition-in-progress position: the special position still
-                    // owes the second half of a transposition that a normal position
-                    // cannot reproduce. Reachable only with `s == false` — every
-                    // `s == true` case returns in the block above — so the previous
-                    // "both special" arm here was dead code and has been removed.
-                    return false;
-                }
-
-                // Neither special: standard formula (weighted by max(ins, del)).
-                let index_diff = i.abs_diff(j) as f64;
-                index_diff * max_index_op_cost <= cost_slack + EPSILON
-            }
-
-            Algorithm::MergeAndSplit => {
-                // MergeAndSplit normal and split-in-progress positions have
-                // different continuations, so they cannot subsume each other.
-                if s != t {
-                    return false;
-                }
-
-                // The automaton never generates representatives past the query.
-                if i > query_length {
-                    return false;
-                }
-
-                // A final pending split cannot consume the second split
-                // character required by a non-final pending split.
-                if s && i >= query_length && j < query_length {
-                    return false;
-                }
-
-                // Must have strictly lower cost for MergeAndSplit
-                // This allows (i,e,false) and (i,e,true) to coexist
-                if e >= f - EPSILON {
-                    return false;
-                }
-
-                // Keep pruning same-index only. Cross-index pruning can erase
-                // delete-closure witnesses needed by split/merge completions.
-                i == j
-            }
+            // The weighted PositionF64 family has only one Boolean continuation
+            // bit and cannot represent the delta carried by true Damerau states.
+            // Returning false is the conservative pruning rule; transition entry
+            // rejects this unsupported API combination explicitly.
+            Algorithm::DamerauLevenshtein => false,
         }
     }
 
@@ -359,23 +304,6 @@ mod tests {
         let mut hasher = DefaultHasher::new();
         position.hash(&mut hasher);
         hasher.finish()
-    }
-
-    #[test]
-    fn nonnegative_floor_to_usize_handles_float_boundaries() {
-        assert_eq!(nonnegative_floor_to_usize_checked(f64::NAN), None);
-        assert_eq!(nonnegative_floor_to_usize_checked(-1.0), None);
-        assert_eq!(nonnegative_floor_to_usize_checked(-0.0), Some(0));
-        assert_eq!(nonnegative_floor_to_usize_checked(0.0), Some(0));
-        assert_eq!(nonnegative_floor_to_usize_checked(2.9), Some(2));
-        assert_eq!(
-            nonnegative_floor_to_usize_checked(f64::INFINITY),
-            Some(usize::MAX)
-        );
-        assert_eq!(
-            nonnegative_floor_to_usize_checked(f64::MAX),
-            Some(usize::MAX)
-        );
     }
 
     #[test]
@@ -486,10 +414,10 @@ mod tests {
     }
 
     #[test]
-    fn test_subsumption_transposition_special_floor_conversion_boundaries() {
+    fn test_subsumption_transposition_variants_never_cross_subsume() {
         let lhs = PositionF64::new_special(5, 1.0);
         let rhs = PositionF64::new(5, 5.9);
-        assert!(lhs.subsumes(&rhs, Algorithm::Transposition, 5, 1.0));
+        assert!(!lhs.subsumes(&rhs, Algorithm::Transposition, 5, 1.0));
         assert!(!lhs.subsumes(&rhs, Algorithm::Transposition, 6, 1.0));
 
         let nan_rhs = PositionF64 {
@@ -513,7 +441,7 @@ mod tests {
 
         let max_lhs = PositionF64::new_special(usize::MAX, 1.0);
         let infinite_rhs = PositionF64::new(usize::MAX, f64::INFINITY);
-        assert!(max_lhs.subsumes(&infinite_rhs, Algorithm::Transposition, usize::MAX, 1.0));
+        assert!(!max_lhs.subsumes(&infinite_rhs, Algorithm::Transposition, usize::MAX, 1.0));
     }
 
     #[test]

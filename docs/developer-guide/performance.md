@@ -14,7 +14,7 @@ The library has undergone extensive performance optimization, achieving:
 - **3.3x speedup for DAWG operations**
 - **15-50% faster PathMap edge iteration**
 - **5-18% improvements for filtering/prefix operations**
-- **85% file size reduction with compression**
+- **Optional gzip compression for storage/transfer trade-offs**
 
 ---
 
@@ -162,7 +162,7 @@ pub struct DawgNode {
 **Feature:** Optional gzip compression for serialized dictionaries
 
 **Results:**
-- **85% file size reduction**
+- **Corpus-dependent size reduction**
 - ~1.6x deserialization overhead
 - Transparent compression/decompression
 
@@ -179,7 +179,6 @@ let dict = GzipSerializer::<BincodeSerializer>::deserialize(file)?;
 
 **Formats Supported:**
 - `bincode-gz` - Binary format with gzip
-- `json-gz` - JSON with gzip
 - `protobuf-gz` - Protocol Buffers with gzip
 
 ---
@@ -223,7 +222,8 @@ RUSTFLAGS="-C target-feature=+aes,+sse2" cargo flamegraph --bench profiling_benc
 2. **Enable features selectively** - Only enable features you need
 3. **Reuse transducers** - Create once, query many times
 4. **Consider DAWG for read-only** - More space-efficient than PathMap
-5. **Use compression for storage** - 85% smaller files with minimal overhead
+5. **Measure compression for storage** - gzip can reduce redundant dictionary payloads,
+   but the ratio and CPU/latency cost depend on the corpus and serializer
 
 ### For Contributors
 

@@ -1,0 +1,54 @@
+// metric-classification.dot — decision tree for placing a new distance or scorer.
+// Teaches which existing seam owns each kind of mathematical difference.
+digraph metric_classification {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="Classify the measure before adding an automaton"];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+        color="#455A64", fontcolor="#102027", margin="0.14,0.09"];
+  edge [fontname="DejaVu Sans", fontsize=10, color="#37474F", penwidth=1.8];
+
+  start [label="Proposed distance or scorer\nstate its exact semantics", shape=oval,
+         fillcolor="#B2EBF2", color="#00838F"];
+  alignment [label="Finite fixed-consumption\nalignment operations?", shape=diamond,
+             fillcolor="#FFE0B2", color="#EF6C00"];
+  history [label="Does legality or cost depend\non operation history?", shape=diamond,
+           fillcolor="#FFE0B2", color="#EF6C00"];
+  combine [label="Do sequential path costs\naccumulate by ordinary addition?", shape=diamond,
+           fillcolor="#FFE0B2", color="#EF6C00"];
+  domain [label="Are inputs ordinary strings\nrather than sequences or languages?", shape=diamond,
+          fillcolor="#FFE0B2", color="#EF6C00"];
+  inflation [label="Non-negative monotone steps\ngive a subtree lower bound?", shape=diamond,
+             fillcolor="#FFE0B2", color="#EF6C00"];
+
+  class_a [label="Class A\nOperationSet preset\nHamming · indel · bounded skip",
+           fillcolor="#BBDEFB", color="#1565C0"];
+  class_b [label="Class B\nPositionKind + AutomatonVariant\naffine gap · true Damerau",
+           fillcolor="#BBDEFB", color="#1565C0"];
+  class_c [label="Class C\nCostMonoid accumulation\ndiscrete Fréchet bottleneck",
+           fillcolor="#C5CAE9", color="#283593"];
+  class_d [label="Class D\nElasticKernel or LanguageProduct\nERP · TWED · DTW · d(w,L)",
+           fillcolor="#B2DFDB", color="#00695C"];
+  bounded [label="Keep bounded-distance traversal\nprove K1–K4 / subsumption",
+           fillcolor="#C8E6C9", color="#2E7D32"];
+  external [label="Cross the crate boundary\nWFST / Arctic / pushdown\nfzf · exact multi-kind Dyck",
+            fillcolor="#B3E5FC", color="#0277BD"];
+
+  start -> alignment;
+  alignment -> class_a [label="yes", color="#2E7D32", fontcolor="#2E7D32"];
+  alignment -> history [label="no / script semantics"];
+  history -> class_b [label="yes, bounded finite state", color="#2E7D32", fontcolor="#2E7D32"];
+  history -> combine [label="no"];
+  combine -> class_c [label="no"];
+  combine -> domain [label="yes"];
+  domain -> class_d [label="no"];
+  domain -> inflation [label="yes"];
+
+  class_a -> inflation [style=dashed];
+  class_b -> inflation [style=dashed];
+  class_c -> inflation [style=dashed];
+  class_d -> inflation [style=dashed];
+  inflation -> bounded [label="yes", color="#2E7D32", fontcolor="#2E7D32"];
+  inflation -> external [label="no / needs max-choice, closure,\ndivision, or stack memory",
+                         color="#C62828", fontcolor="#C62828"];
+}

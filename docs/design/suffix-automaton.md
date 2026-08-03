@@ -1042,7 +1042,7 @@ Found: algorithm (distance: 1) [doc 0, pos 42]
 
 2. **Serialization Integration**
    - Serialize → deserialize → verify equality
-   - Works with bincode, JSON, protobuf
+   - Works with bincode and protobuf binary persistence
    - Works with gzip compression
 
 3. **Thread Safety**

@@ -1435,7 +1435,7 @@ Experiment 11 revealed that WallBreaker only supported the Standard algorithm. T
 
 **Proof sketch**: Each operation (insert, delete, substitute) affects at most 1 character position, thus corrupts at most 1 piece. With k operations and k+1 pieces, at least one piece survives by pigeonhole.
 
-#### Transposition (Damerau-Levenshtein): k+1 pieces are INSUFFICIENT, 2k+1 required
+#### OSA transposition (restricted Damerau): k+1 pieces are INSUFFICIENT, 2k+1 required
 
 **Counterexample for k=2**:
 ```

@@ -6,9 +6,11 @@
 //!
 //! # Operation Support
 //!
-//! The state transition logic consumes a runtime `OperationSet`, including
-//! standard edit operations, transposition, merge, split, and restricted
-//! phonetic multi-character operations.
+//! Every state carries the exact [`CostScale`] derived from its operation set.
+//! Position costs are `usize` values in that scale; changing to another exact
+//! operation scale rescales the complete state through a checked least common
+//! denominator. Multi-scalar operation costs are charged when their final
+//! target scalar arrives, so restrictions are known before cost is committed.
 //!
 //! # Theory Background
 //!
@@ -27,8 +29,77 @@ use smallvec::SmallVec;
 use std::fmt;
 
 use super::position::GeneralizedPosition;
-use super::subsumption::subsumes;
+use super::subsumption::subsumes_scaled;
+use crate::cost::{CostScale, ScaleError};
 use crate::transducer::universal::bit_vector::CharacteristicVector;
+
+/// Failure while evaluating the bounded universal-state compatibility API.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GeneralizedStateError {
+    /// An operation weight cannot be represented by an exact common scale.
+    Scale(ScaleError),
+    /// The universal-state encoding has no intermediate position for this
+    /// source/target consumption pair.
+    UnsupportedOperationArity {
+        /// Human-readable operation identifier.
+        name: Box<str>,
+        /// Number of source scalars consumed.
+        consume_x: usize,
+        /// Number of target scalars consumed.
+        consume_y: usize,
+    },
+}
+
+impl From<ScaleError> for GeneralizedStateError {
+    fn from(error: ScaleError) -> Self {
+        Self::Scale(error)
+    }
+}
+
+impl fmt::Display for GeneralizedStateError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Scale(error) => write!(formatter, "invalid operation cost scale: {error}"),
+            Self::UnsupportedOperationArity {
+                name,
+                consume_x,
+                consume_y,
+            } => write!(
+                formatter,
+                "operation {name:?} consumes ({consume_x}, {consume_y}), which the bounded universal-state encoding cannot represent"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for GeneralizedStateError {}
+
+#[inline]
+fn state_supports_operation(operation: &crate::transducer::OperationType) -> bool {
+    matches!(
+        (operation.consume_x(), operation.consume_y()),
+        (1, 1) | (1, 0) | (0, 1) | (2, 2) | (2, 1) | (1, 2)
+    )
+}
+
+fn is_classical_levenshtein_lattice(operations: &crate::transducer::OperationSet) -> bool {
+    if operations.len() != 4 || operations.iter().any(|operation| operation.is_restricted()) {
+        return false;
+    }
+
+    let count = |consume_x, consume_y, weight: f64| {
+        operations
+            .iter()
+            .filter(|operation| {
+                operation.consume_x() == consume_x
+                    && operation.consume_y() == consume_y
+                    && operation.weight().to_bits() == weight.to_bits()
+            })
+            .count()
+    };
+
+    count(1, 1, 0.0) == 1 && count(1, 1, 1.0) == 1 && count(0, 1, 1.0) == 1 && count(1, 0, 1.0) == 1
+}
 
 #[inline]
 fn bounded_index(index: i32, len: usize) -> Option<usize> {
@@ -52,30 +123,29 @@ fn word_position_index(input_position: usize, offset: i32) -> Option<usize> {
 }
 
 #[inline]
-fn add_weight_to_errors(errors: u8, weight: f64, max_distance: u8) -> Option<u8> {
-    if !weight.is_finite() || weight < 0.0 {
-        return None;
-    }
-
-    let weight_errors = weight.trunc();
-    if weight_errors > f64::from(max_distance) {
-        return None;
-    }
-
-    let weight_errors = weight_errors as u8;
+fn add_weight_to_errors(
+    errors: usize,
+    weight: f64,
+    scale: CostScale,
+    max_cost: usize,
+) -> Option<usize> {
+    let weight_errors = scale.to_scaled(weight).ok()?;
     errors
         .checked_add(weight_errors)
-        .filter(|&new_errors| new_errors <= max_distance)
+        .filter(|&new_errors| new_errors <= max_cost)
 }
 
 #[inline]
-fn add_distance_to_errors(errors: u8, distance: usize, max_distance: u8) -> Option<u8> {
-    let new_errors = usize::from(errors).checked_add(distance)?;
-    if new_errors <= usize::from(max_distance) {
-        u8::try_from(new_errors).ok()
-    } else {
-        None
-    }
+fn add_distance_to_errors(
+    errors: usize,
+    distance: usize,
+    scale: CostScale,
+    max_cost: usize,
+) -> Option<usize> {
+    let distance_cost = distance.checked_mul(scale.denominator() as usize)?;
+    errors
+        .checked_add(distance_cost)
+        .filter(|&new_errors| new_errors <= max_cost)
 }
 
 /// Input context for one generalized automaton transition.
@@ -140,11 +210,20 @@ pub struct GeneralizedState {
     /// SmallVec avoids heap allocation for states with ≤8 positions
     positions: SmallVec<[GeneralizedPosition; 8]>,
 
-    /// Maximum edit distance n
+    /// Maximum edit distance n in public unit-cost budget units.
     max_distance: u8,
 
-    /// Previous input character for split/transpose validation (Phase 3b)
-    /// Needed for two-step phonetic operations that validate across input positions
+    /// Exact fixed-point scale used by every position cost.
+    cost_scale: CostScale,
+
+    /// Maximum budget represented in [`Self::cost_scale`] units.
+    max_cost: usize,
+
+    /// Whether the classical unit-cost offset/slack subsumption theorem is
+    /// justified by the complete operation set seen so far.
+    use_classical_subsumption: bool,
+
+    /// Previous input scalar for two-step transpose validation.
     previous_input_char: Option<char>,
 }
 
@@ -155,9 +234,27 @@ impl GeneralizedState {
     ///
     /// - `max_distance`: Maximum edit distance n
     pub fn new(max_distance: u8) -> Self {
+        Self::with_scale(
+            max_distance,
+            CostScale::new(1).expect("one is a valid denominator"),
+            true,
+        )
+    }
+
+    fn with_scale(
+        max_distance: u8,
+        cost_scale: CostScale,
+        use_classical_subsumption: bool,
+    ) -> Self {
+        let max_cost = cost_scale
+            .scale_budget(max_distance)
+            .expect("u8 budget times u32 denominator fits usize on supported targets");
         Self {
             positions: SmallVec::new(),
             max_distance,
+            cost_scale,
+            max_cost,
+            use_classical_subsumption,
             previous_input_char: None,
         }
     }
@@ -168,10 +265,110 @@ impl GeneralizedState {
     pub fn initial(max_distance: u8) -> Self {
         let mut state = Self::new(max_distance);
         // I + 0#0 always satisfies invariant, so unwrap is safe
-        let initial_pos =
-            GeneralizedPosition::new_i(0, 0, max_distance).expect("I + 0#0 should always be valid");
+        let initial_pos = GeneralizedPosition::new_i_scaled(
+            0,
+            0,
+            state.max_cost,
+            max_distance,
+            state.cost_scale.denominator(),
+        )
+        .expect("I + 0#0 should always be valid");
         state.positions.push(initial_pos);
         state
+    }
+
+    /// Return the exact scale carried by this state.
+    pub const fn cost_scale(&self) -> CostScale {
+        self.cost_scale
+    }
+
+    /// Return the maximum budget in scaled integer units.
+    pub const fn max_scaled_cost(&self) -> usize {
+        self.max_cost
+    }
+
+    #[inline]
+    fn new_i_position(&self, offset: i32, cost: usize) -> Option<GeneralizedPosition> {
+        GeneralizedPosition::new_i_scaled(
+            offset,
+            cost,
+            self.max_cost,
+            self.max_distance,
+            self.cost_scale.denominator(),
+        )
+        .ok()
+    }
+
+    #[inline]
+    fn new_m_position(&self, offset: i32, cost: usize) -> Option<GeneralizedPosition> {
+        GeneralizedPosition::new_m_scaled(
+            offset,
+            cost,
+            self.max_cost,
+            self.max_distance,
+            self.cost_scale.denominator(),
+        )
+        .ok()
+    }
+
+    #[inline]
+    fn new_i_transposing_position(&self, offset: i32, cost: usize) -> Option<GeneralizedPosition> {
+        GeneralizedPosition::new_i_transposing_scaled(
+            offset,
+            cost,
+            self.max_cost,
+            self.max_distance,
+            self.cost_scale.denominator(),
+        )
+        .ok()
+    }
+
+    #[inline]
+    fn new_m_transposing_position(&self, offset: i32, cost: usize) -> Option<GeneralizedPosition> {
+        GeneralizedPosition::new_m_transposing_scaled(
+            offset,
+            cost,
+            self.max_cost,
+            self.max_distance,
+            self.cost_scale.denominator(),
+        )
+        .ok()
+    }
+
+    #[inline]
+    fn new_i_splitting_position(
+        &self,
+        offset: i32,
+        cost: usize,
+        entry_char: char,
+    ) -> Option<GeneralizedPosition> {
+        GeneralizedPosition::new_i_splitting_scaled(
+            offset,
+            cost,
+            self.max_cost,
+            self.max_distance,
+            self.cost_scale.denominator(),
+            entry_char,
+        )
+        .ok()
+    }
+
+    #[inline]
+    fn new_m_splitting_position(
+        &self,
+        offset: i32,
+        cost: usize,
+        entry_char: char,
+    ) -> Option<GeneralizedPosition> {
+        GeneralizedPosition::new_m_splitting_scaled(
+            offset,
+            cost,
+            self.max_cost,
+            self.max_distance,
+            self.cost_scale.denominator(),
+            entry_char,
+        )
+        .ok()
     }
 
     /// Add position, maintaining anti-chain property (⊔ operator)
@@ -184,18 +381,29 @@ impl GeneralizedState {
     pub fn add_position(&mut self, pos: GeneralizedPosition) {
         // Check if this position is subsumed by an existing one
         for existing in &self.positions {
-            if subsumes(existing, &pos, self.max_distance) {
+            if existing == &pos {
+                return;
+            }
+            if subsumes_scaled(
+                existing,
+                &pos,
+                self.max_distance,
+                self.use_classical_subsumption,
+            ) {
                 return; // Already covered by existing position
             }
         }
 
         // Remove any positions that this new position subsumes
-        self.positions
-            .retain(|p| !subsumes(&pos, p, self.max_distance));
+        self.positions.retain(|p| {
+            !subsumes_scaled(&pos, p, self.max_distance, self.use_classical_subsumption)
+        });
 
         // Insert in sorted position (binary search)
-        let insert_pos = self.positions.binary_search(&pos).unwrap_or_else(|pos| pos);
-        self.positions.insert(insert_pos, pos);
+        match self.positions.binary_search(&pos) {
+            Ok(_) => {}
+            Err(insert_pos) => self.positions.insert(insert_pos, pos),
+        }
     }
 
     /// Check if state is empty
@@ -225,25 +433,78 @@ impl GeneralizedState {
 
     /// Compute transition to successor state (δ^∀,χ_n)
     ///
-    /// Phase 2: Supports runtime-configurable operations via OperationSet.
-    ///
-    /// # Arguments
-    ///
-    /// - `operations`: Set of operations defining the edit distance metric
-    /// - `bit_vector`: Characteristic vector β(a, w) encoding matches for character a
-    /// - `_input_length`: Reserved for diagonal crossing (future)
+    /// Supports runtime-configurable operations via `OperationSet`.
     ///
     /// # Returns
     ///
     /// Successor state, or `None` if no successors exist (undefined transition)
     pub fn transition(&self, input: GeneralizedTransitionInput<'_>) -> Option<Self> {
+        self.try_transition(input).ok().flatten()
+    }
+
+    /// Compute a successor while reporting invalid scales or operation arities
+    /// that this bounded universal-state representation cannot encode.
+    ///
+    /// [`crate::transducer::generalized::GeneralizedAutomaton`] is the operation-complete
+    /// API for arbitrary non-zero consumption pairs.
+    pub fn try_transition(
+        &self,
+        input: GeneralizedTransitionInput<'_>,
+    ) -> Result<Option<Self>, GeneralizedStateError> {
+        if let Some(operation) = input
+            .operations
+            .iter()
+            .find(|operation| !state_supports_operation(operation))
+        {
+            return Err(GeneralizedStateError::UnsupportedOperationArity {
+                name: operation.name().into(),
+                consume_x: operation.consume_x(),
+                consume_y: operation.consume_y(),
+            });
+        }
+        let operation_scale = CostScale::for_operations(input.operations)?;
+        let common_scale = self.cost_scale.common(operation_scale)?;
+        let mut normalized = self.rescaled(common_scale)?;
+        normalized.use_classical_subsumption &= is_classical_levenshtein_lattice(input.operations);
+        Ok(normalized.transition_scaled(input))
+    }
+
+    fn rescaled(&self, target: CostScale) -> Result<Self, ScaleError> {
+        if target == self.cost_scale {
+            return Ok(self.clone());
+        }
+        let multiplier = target.denominator() as usize / self.cost_scale.denominator() as usize;
+        let positions = self
+            .positions
+            .iter()
+            .map(|position| {
+                position
+                    .checked_rescale(multiplier)
+                    .ok_or(ScaleError::CostOverflow)
+            })
+            .collect::<Result<SmallVec<[GeneralizedPosition; 8]>, _>>()?;
+        Ok(Self {
+            positions,
+            max_distance: self.max_distance,
+            cost_scale: target,
+            max_cost: target.scale_budget(self.max_distance)?,
+            use_classical_subsumption: self.use_classical_subsumption,
+            previous_input_char: self.previous_input_char,
+        })
+    }
+
+    fn transition_scaled(&self, input: GeneralizedTransitionInput<'_>) -> Option<Self> {
         // Special case: empty state has no successors
         if self.is_empty() {
             return None;
         }
 
         // Create new state for successors
-        let mut next_state = Self::new(self.max_distance);
+        let mut next_state = Self::with_scale(
+            self.max_distance,
+            self.cost_scale,
+            self.use_classical_subsumption,
+        );
 
         // For each position in current state
         for pos in &self.positions {
@@ -270,9 +531,8 @@ impl GeneralizedState {
 
     /// Compute successors for a position using runtime-configurable operations
     ///
-    /// Phase 2: Uses OperationSet to support custom edit distance metrics.
-    /// Phase 3b: Accepts full_word, word_slice, and input_char for phonetic operations.
-    /// Phase 4: Accepts input_position for correct word_pos calculation in splits.
+    /// The input context supplies the full word, active word slice, current
+    /// scalar, and input position needed to validate restricted intermediates.
     fn successors(
         &self,
         pos: &GeneralizedPosition,
@@ -335,7 +595,7 @@ impl GeneralizedState {
     fn successors_i_type(
         &self,
         offset: i32,
-        errors: u8,
+        errors: usize,
         input: &GeneralizedTransitionInput<'_>,
     ) -> Vec<GeneralizedPosition> {
         let operations = input.operations;
@@ -379,9 +639,7 @@ impl GeneralizedState {
                                 .as_bytes();
                             if op.can_apply(word_char_bytes, input_char_bytes) {
                                 // δ^D,ε_e: (t+1)#e → I^ε → I+t#e
-                                if let Ok(succ) =
-                                    GeneralizedPosition::new_i(offset, errors, self.max_distance)
-                                {
+                                if let Some(succ) = self.new_i_position(offset, errors) {
                                     successors.push(succ);
                                     // Phase 3b: Don't return early - allow multi-character operations to compete
                                 }
@@ -391,10 +649,13 @@ impl GeneralizedState {
                 } else if op.is_deletion() {
                     // Delete operation: ⟨1, 0, w⟩
                     // Phase 3: For deletion, check can_apply() with word character and empty input
-                    if errors < self.max_distance {
-                        if let Some(new_errors) =
-                            add_weight_to_errors(errors, op.weight(), self.max_distance)
-                        {
+                    if errors < self.max_cost {
+                        if let Some(new_errors) = add_weight_to_errors(
+                            errors,
+                            op.weight(),
+                            self.cost_scale,
+                            self.max_cost,
+                        ) {
                             // H2 Optimization: Using word_slice_chars from method beginning
                             if match_index < word_slice_chars.len() {
                                 // H1 Optimization: Use stack buffer instead of heap allocation
@@ -404,11 +665,8 @@ impl GeneralizedState {
                                     .as_bytes();
                                 if op.can_apply(word_char_bytes, &[]) {
                                     // δ^D,ε_e: t#(e+w) → I^ε → I+(t-1)#(e+w)
-                                    if let Ok(succ) = GeneralizedPosition::new_i(
-                                        offset - 1,
-                                        new_errors,
-                                        self.max_distance,
-                                    ) {
+                                    if let Some(succ) = self.new_i_position(offset - 1, new_errors)
+                                    {
                                         successors.push(succ);
                                     }
                                 }
@@ -418,18 +676,17 @@ impl GeneralizedState {
                 } else if op.is_insertion() {
                     // Insert ⟨0, 1, w⟩
                     // Phase 3: For insertion, check can_apply() with empty word and input character
-                    if errors < self.max_distance {
-                        if let Some(new_errors) =
-                            add_weight_to_errors(errors, op.weight(), self.max_distance)
-                        {
+                    if errors < self.max_cost {
+                        if let Some(new_errors) = add_weight_to_errors(
+                            errors,
+                            op.weight(),
+                            self.cost_scale,
+                            self.max_cost,
+                        ) {
                             // H1 Optimization: Use pre-encoded input_char_bytes (no allocation)
                             if op.can_apply(&[], input_char_bytes) {
                                 // δ^D,ε_e: (t+1)#(e+w) → I^ε → I+t#(e+w)
-                                if let Ok(succ) = GeneralizedPosition::new_i(
-                                    offset,
-                                    new_errors,
-                                    self.max_distance,
-                                ) {
+                                if let Some(succ) = self.new_i_position(offset, new_errors) {
                                     successors.push(succ);
                                 }
                             }
@@ -438,10 +695,13 @@ impl GeneralizedState {
                 } else if op.is_substitution() {
                     // Substitute ⟨1, 1, w⟩
                     // Phase 3: For substitution, check can_apply() with word and input characters
-                    if errors < self.max_distance {
-                        if let Some(new_errors) =
-                            add_weight_to_errors(errors, op.weight(), self.max_distance)
-                        {
+                    if errors < self.max_cost {
+                        if let Some(new_errors) = add_weight_to_errors(
+                            errors,
+                            op.weight(),
+                            self.cost_scale,
+                            self.max_cost,
+                        ) {
                             // H2 Optimization: Using word_slice_chars from method beginning
                             if match_index < word_slice_chars.len() {
                                 // H1 Optimization: Use stack buffer instead of heap allocation
@@ -451,11 +711,7 @@ impl GeneralizedState {
                                     .as_bytes();
                                 if op.can_apply(word_char_bytes, input_char_bytes) {
                                     // δ^D,ε_e: (t+1)#(e+w) → I^ε → I+t#(e+w)
-                                    if let Ok(succ) = GeneralizedPosition::new_i(
-                                        offset,
-                                        new_errors,
-                                        self.max_distance,
-                                    ) {
+                                    if let Some(succ) = self.new_i_position(offset, new_errors) {
                                         successors.push(succ);
                                     }
                                 }
@@ -473,7 +729,9 @@ impl GeneralizedState {
                 .filter(|op| op.consume_x() == 2 && op.consume_y() == 2)
                 .collect();
 
-            if !transpose_ops.is_empty() && errors < self.max_distance {
+            if transpose_ops.iter().any(|op| {
+                add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost).is_some()
+            }) {
                 // H2 Optimization: Using word_slice_chars from method beginning
                 let next_match_index_i32 = match_index_i32 + 1;
 
@@ -482,33 +740,11 @@ impl GeneralizedState {
                     bounded_index(next_match_index_i32, word_slice_chars.len())
                 {
                     if word_slice_chars[next_match_index] != '$' {
-                        // Check standard operations (bit_vector match at next position)
-                        let standard_match = bounded_index(next_match_index_i32, bit_vector.len())
-                            .is_some_and(|idx| bit_vector.is_match(idx));
-
-                        // For phonetic operations, speculatively enter transpose state
-                        let has_phonetic_transpose =
-                            transpose_ops.iter().any(|op| op.weight() < 1.0);
-
-                        // Enter transpose state if either standard or phonetic operations could apply
-                        if standard_match {
-                            // Standard transpose: enter with errors+1 (will decrement at completion)
-                            if let Ok(trans) = GeneralizedPosition::new_i_transposing(
-                                offset - 1,
-                                errors + 1,
-                                self.max_distance,
-                            ) {
-                                successors.push(trans);
-                            }
-                        } else if has_phonetic_transpose {
-                            // Phonetic transpose: enter with errors+0 (fractional weight)
-                            if let Ok(trans) = GeneralizedPosition::new_i_transposing(
-                                offset - 1,
-                                errors,
-                                self.max_distance,
-                            ) {
-                                successors.push(trans);
-                            }
+                        // Both target characters are needed to decide a general
+                        // two-for-two restriction, so entry is speculative and
+                        // completion performs the exact applicability check.
+                        if let Some(trans) = self.new_i_transposing_position(offset - 1, errors) {
+                            successors.push(trans);
                         }
                     }
                 }
@@ -517,7 +753,7 @@ impl GeneralizedState {
             // Phase 2d/3: Multi-character operations - MERGE ⟨2,1⟩
             // Merge: consume 2 word chars, match 1 input char (direct operation)
             // Phase 3: Supports phonetic operations like "ch"→"k", "ph"→"f"
-            if errors < self.max_distance {
+            if errors < self.max_cost {
                 // H2 Optimization: Using word_slice_chars from method beginning
 
                 // Check if we have enough word characters (need 2 consecutive chars)
@@ -548,20 +784,16 @@ impl GeneralizedState {
                                 // Phase 3: Use can_apply() for phonetic operations
                                 // Don't check bit_vector - phonetic ops don't require char matches
                                 if op.can_apply(word_2chars_bytes, input_char_bytes) {
-                                    if let Some(new_errors) =
-                                        add_weight_to_errors(errors, op.weight(), self.max_distance)
-                                    {
-                                        // Direct transition: offset+1, errors+weight
-                                        // Note: For fractional weights (e.g., 0.15), weight truncates to 0
-                                        // This creates positions with offset > errors (e.g., offset=1, errors=0)
-                                        // which is allowed by the relaxed invariant in new_i()
-                                        if let Ok(merge) = GeneralizedPosition::new_i(
-                                            offset + 1,
-                                            new_errors,
-                                            self.max_distance,
-                                        ) {
+                                    if let Some(new_errors) = add_weight_to_errors(
+                                        errors,
+                                        op.weight(),
+                                        self.cost_scale,
+                                        self.max_cost,
+                                    ) {
+                                        if let Some(merge) =
+                                            self.new_i_position(offset + 1, new_errors)
+                                        {
                                             successors.push(merge);
-                                            break; // Only add one merge successor per position
                                         }
                                     }
                                 }
@@ -580,11 +812,9 @@ impl GeneralizedState {
                 .filter(|op| op.consume_x() == 1 && op.consume_y() == 2)
                 .collect();
 
-            // Phase 3b: Check if we should enter split state
-            // For standard splits: errors < max_distance required
-            // For phonetic splits with fractional weight: allowed even at max_distance (cost=0)
-            let has_phonetic_split = split_ops.iter().any(|op| op.weight() < 1.0);
-            let can_enter_split = errors < self.max_distance || has_phonetic_split;
+            let can_enter_split = split_ops.iter().any(|op| {
+                add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost).is_some()
+            });
 
             if !split_ops.is_empty() && can_enter_split {
                 // H2 Optimization: Using word_slice_chars from method beginning
@@ -592,88 +822,39 @@ impl GeneralizedState {
                 // Check if we can enter split state
                 if let Some(match_index) = bounded_index(match_index_i32, word_slice_chars.len()) {
                     if word_slice_chars[match_index] != '$' {
-                        // Check standard operations (bit_vector match)
-                        let standard_match = bounded_index(match_index_i32, bit_vector.len())
-                            .is_some_and(|idx| bit_vector.is_match(idx));
-
-                        // H1 Optimization: Encode word character using stack buffer
-                        let mut word_1char_buf = [0u8; 4];
-                        let word_1char_bytes = word_slice_chars[match_index]
-                            .encode_utf8(&mut word_1char_buf)
-                            .as_bytes();
-
-                        // For phonetic operations, check if THIS word character can be split
-                        // We need at least one split operation that can apply to this word char
-                        // AND the current input char must match the first char of the split target
-                        let can_phonetic_split = split_ops.iter().any(|op| {
-                            if op.weight() < 1.0 && op.consume_x() == 1 {
-                                // Check TWO conditions:
-                                // 1. This word character can be split (source check)
-                                // 2. Current input character matches first char of the split target
-                                // This fixes the double-split defect where t→th was entered when reading 'a' instead of 't'
-                                op.can_apply_to_source(word_1char_bytes)
-                                    && op.matches_first_target_char(word_1char_bytes, input_char)
-                            } else {
-                                false
-                            }
-                        });
-
-                        // Enter split state - prioritize phonetic over standard
-                        // When both conditions are true, phonetic split takes precedence (errors+0 vs errors+1)
-                        if can_phonetic_split {
-                            // Phonetic split: enter with errors+0 (fractional weight truncates to 0)
-                            // Phase 4: Requires max_distance > 0 (edit operations not allowed at distance 0)
-                            // AND errors <= max_distance (can be at max because doesn't consume errors)
-                            // Phase 4: offset UNCHANGED on entry (like MATCH, per PhoneticOperations.v)
-                            if self.max_distance > 0 && errors <= self.max_distance {
-                                if let Ok(split) = GeneralizedPosition::new_i_splitting(
-                                    offset, // Phase 4 FIX: unchanged (was offset-1)
-                                    errors,
-                                    self.max_distance,
-                                    input_char, // Store the character read when entering this split state
-                                ) {
-                                    successors.push(split);
-                                }
-                            }
-                        } else if standard_match && errors < self.max_distance {
-                            // Standard split: enter with errors+1 (will decrement at completion)
-                            // Only used when phonetic split doesn't apply
-                            // Phase 4: offset UNCHANGED on entry (like MATCH, per PhoneticOperations.v)
-                            if let Ok(split) = GeneralizedPosition::new_i_splitting(
-                                offset, // Phase 4 FIX: unchanged (was offset-1)
-                                errors + 1,
-                                self.max_distance,
-                                input_char, // Store the character read when entering this split state
-                            ) {
-                                successors.push(split);
-                            }
+                        // The second target scalar is not available until the
+                        // next transition. Enter speculatively; completion checks
+                        // every restriction and charges the selected cost.
+                        if let Some(split) =
+                            self.new_i_splitting_position(offset, errors, input_char)
+                        {
+                            successors.push(split);
                         }
                     }
                 }
             }
 
-            // SKIP-TO-MATCH optimization (Phase 2c: generalize for multi-char)
-            // Scans FORWARD through word to find next match position
-            // NOT equivalent to N DELETEs (DELETE moves backward, skip moves forward)
-            // Cost: number of word characters skipped over
-            if !has_match && errors < self.max_distance {
+            // The skip-to-match shortcut is a compact form of repeated
+            // unrestricted unit deletions. It is valid only for the certified
+            // classical operation lattice; other operation sets must advance
+            // exclusively through their configured rules.
+            if self.use_classical_subsumption && !has_match && errors < self.max_cost {
                 for idx in (match_index + 1)..bit_vector.len() {
                     if bit_vector.is_match(idx) {
                         let skip_distance = idx - match_index;
-                        if let Some(new_errors) =
-                            add_distance_to_errors(errors, skip_distance, self.max_distance)
-                        {
+                        if let Some(new_errors) = add_distance_to_errors(
+                            errors,
+                            skip_distance,
+                            self.cost_scale,
+                            self.max_cost,
+                        ) {
                             let Some(new_offset) = i32::try_from(skip_distance)
                                 .ok()
                                 .and_then(|distance| offset.checked_add(distance))
                             else {
                                 break;
                             };
-                            if let Ok(succ) = GeneralizedPosition::new_i(
-                                new_offset,
-                                new_errors,
-                                self.max_distance,
-                            ) {
+                            if let Some(succ) = self.new_i_position(new_offset, new_errors) {
                                 successors.push(succ);
                             }
                         }
@@ -685,31 +866,23 @@ impl GeneralizedState {
             return successors;
         }
 
-        // Case 2: Position beyond visible window
-        // This happens when input is longer than word (e.g., "test" vs "tests")
-        // We still need to generate error transitions to account for extra input
-        if errors >= self.max_distance {
-            return successors; // No error budget left
-        }
-
-        // Special case: empty bit vector
-        if bit_vector.is_empty() {
-            if let Ok(succ) = GeneralizedPosition::new_i(offset - 1, errors + 1, self.max_distance)
+        // Outside the dictionary window, only an operation that consumes the
+        // current target scalar without consuming a source scalar can advance
+        // this transition. Never synthesize a unit insertion/deletion that is
+        // absent from the configured operation set.
+        for operation in operations.operations() {
+            if operation.consume_x() == 0
+                && operation.consume_y() == 1
+                && operation.can_apply(&[], input_char_bytes)
             {
-                successors.push(succ);
+                if let Some(new_errors) =
+                    add_weight_to_errors(errors, operation.weight(), self.cost_scale, self.max_cost)
+                {
+                    if let Some(succ) = self.new_i_position(offset, new_errors) {
+                        successors.push(succ);
+                    }
+                }
             }
-            return successors;
-        }
-
-        // Generate generic error transitions for positions outside window
-        // DELETE: skip word character
-        if let Ok(succ) = GeneralizedPosition::new_i(offset - 1, errors + 1, self.max_distance) {
-            successors.push(succ);
-        }
-
-        // INSERT/SUBSTITUTE: advance input
-        if let Ok(succ) = GeneralizedPosition::new_i(offset, errors + 1, self.max_distance) {
-            successors.push(succ);
         }
 
         successors
@@ -721,7 +894,7 @@ impl GeneralizedState {
     fn successors_m_type(
         &self,
         offset: i32,
-        errors: u8,
+        errors: usize,
         input: &GeneralizedTransitionInput<'_>,
     ) -> Vec<GeneralizedPosition> {
         let operations = input.operations;
@@ -767,25 +940,21 @@ impl GeneralizedState {
                         // Phase 4: M-type invariant is -2n ≤ offset ≤ 0
                         // If new_offset > 0, create I-type instead (I-type allows -n ≤ offset ≤ n)
                         if new_offset > 0 {
-                            if let Ok(succ) =
-                                GeneralizedPosition::new_i(new_offset, errors, self.max_distance)
-                            {
+                            if let Some(succ) = self.new_i_position(new_offset, errors) {
                                 successors.push(succ);
                             }
                         } else {
-                            if let Ok(succ) =
-                                GeneralizedPosition::new_m(new_offset, errors, self.max_distance)
-                            {
+                            if let Some(succ) = self.new_m_position(new_offset, errors) {
                                 successors.push(succ);
                             }
                         }
                     }
                 }
-            } else if op.is_deletion() && errors < self.max_distance {
+            } else if op.is_deletion() && errors < self.max_cost {
                 // Delete operation: ⟨1, 0, w⟩
                 // Phase 3: Check can_apply() with word character and empty input
                 if let Some(new_errors) =
-                    add_weight_to_errors(errors, op.weight(), self.max_distance)
+                    add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost)
                 {
                     // H2 Optimization: Using word_slice_chars from method beginning
                     if let Some(bit_index) = bounded_index(bit_index_i32, word_slice_chars.len()) {
@@ -795,19 +964,17 @@ impl GeneralizedState {
                             .encode_utf8(&mut word_char_buf)
                             .as_bytes();
                         if op.can_apply(word_char_bytes, &[]) {
-                            if let Ok(succ) =
-                                GeneralizedPosition::new_m(offset, new_errors, self.max_distance)
-                            {
+                            if let Some(succ) = self.new_m_position(offset, new_errors) {
                                 successors.push(succ);
                             }
                         }
                     }
                 }
-            } else if op.is_insertion() && errors < self.max_distance {
+            } else if op.is_insertion() && errors < self.max_cost {
                 // Insert ⟨0, 1, w⟩
                 // Phase 3: Check can_apply() with empty word and input character
                 if let Some(new_errors) =
-                    add_weight_to_errors(errors, op.weight(), self.max_distance)
+                    add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost)
                 {
                     // H1 Optimization: Use pre-encoded input_char_bytes (no allocation)
                     if op.can_apply(&[], input_char_bytes) {
@@ -815,29 +982,21 @@ impl GeneralizedState {
                         // Phase 4: M-type invariant is -2n ≤ offset ≤ 0
                         // If new_offset > 0, create I-type instead (I-type allows -n ≤ offset ≤ n)
                         if new_offset > 0 {
-                            if let Ok(succ) = GeneralizedPosition::new_i(
-                                new_offset,
-                                new_errors,
-                                self.max_distance,
-                            ) {
+                            if let Some(succ) = self.new_i_position(new_offset, new_errors) {
                                 successors.push(succ);
                             }
                         } else {
-                            if let Ok(succ) = GeneralizedPosition::new_m(
-                                new_offset,
-                                new_errors,
-                                self.max_distance,
-                            ) {
+                            if let Some(succ) = self.new_m_position(new_offset, new_errors) {
                                 successors.push(succ);
                             }
                         }
                     }
                 }
-            } else if op.is_substitution() && errors < self.max_distance {
+            } else if op.is_substitution() && errors < self.max_cost {
                 // Substitute ⟨1, 1, w⟩
                 // Phase 3: Check can_apply() with word and input characters
                 if let Some(new_errors) =
-                    add_weight_to_errors(errors, op.weight(), self.max_distance)
+                    add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost)
                 {
                     // H2 Optimization: Using word_slice_chars from method beginning
                     if let Some(bit_index) = bounded_index(bit_index_i32, word_slice_chars.len()) {
@@ -851,19 +1010,11 @@ impl GeneralizedState {
                             // Phase 4: M-type invariant is -2n ≤ offset ≤ 0
                             // If new_offset > 0, create I-type instead (I-type allows -n ≤ offset ≤ n)
                             if new_offset > 0 {
-                                if let Ok(succ) = GeneralizedPosition::new_i(
-                                    new_offset,
-                                    new_errors,
-                                    self.max_distance,
-                                ) {
+                                if let Some(succ) = self.new_i_position(new_offset, new_errors) {
                                     successors.push(succ);
                                 }
                             } else {
-                                if let Ok(succ) = GeneralizedPosition::new_m(
-                                    new_offset,
-                                    new_errors,
-                                    self.max_distance,
-                                ) {
+                                if let Some(succ) = self.new_m_position(new_offset, new_errors) {
                                     successors.push(succ);
                                 }
                             }
@@ -881,7 +1032,9 @@ impl GeneralizedState {
             .filter(|op| op.consume_x() == 2 && op.consume_y() == 2)
             .collect();
 
-        if !transpose_ops.is_empty() && errors < self.max_distance {
+        if transpose_ops.iter().any(|op| {
+            add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost).is_some()
+        }) {
             let next_match_index_i32 = bit_index_i32 + 1;
             // H2 Optimization: Using word_slice_chars from method beginning
 
@@ -890,32 +1043,8 @@ impl GeneralizedState {
                 bounded_index(next_match_index_i32, word_slice_chars.len())
             {
                 if word_slice_chars[next_match_index] != '$' {
-                    // Check standard operations (bit_vector match at next position)
-                    let standard_match = bounded_index(next_match_index_i32, bit_vector.len())
-                        .is_some_and(|idx| bit_vector.is_match(idx));
-
-                    // For phonetic operations, speculatively enter transpose state
-                    let has_phonetic_transpose = transpose_ops.iter().any(|op| op.weight() < 1.0);
-
-                    // Enter transpose state if either standard or phonetic operations could apply
-                    if standard_match {
-                        // Standard transpose: enter with errors+1 (will decrement at completion)
-                        if let Ok(trans) = GeneralizedPosition::new_m_transposing(
-                            offset - 1,
-                            errors + 1,
-                            self.max_distance,
-                        ) {
-                            successors.push(trans);
-                        }
-                    } else if has_phonetic_transpose {
-                        // Phonetic transpose: enter with errors+0 (fractional weight)
-                        if let Ok(trans) = GeneralizedPosition::new_m_transposing(
-                            offset - 1,
-                            errors,
-                            self.max_distance,
-                        ) {
-                            successors.push(trans);
-                        }
+                    if let Some(trans) = self.new_m_transposing_position(offset - 1, errors) {
+                        successors.push(trans);
                     }
                 }
             }
@@ -924,7 +1053,7 @@ impl GeneralizedState {
         // Phase 2d/3: Multi-character operations - MERGE ⟨2,1⟩
         // Merge: consume 2 word chars, match 1 input char (direct operation)
         // Phase 3: Supports phonetic operations like "ch"→"k", "ph"→"f"
-        if errors < self.max_distance {
+        if errors < self.max_cost {
             // H1 Optimization: Reuse word_slice_chars collected at method start (no redundant collection)
             let next_match_index_i32 = bit_index_i32 + 1;
 
@@ -955,17 +1084,16 @@ impl GeneralizedState {
                         if op.consume_x() == 2 && op.consume_y() == 1 {
                             // Phase 3: Use can_apply() for phonetic operations
                             if op.can_apply(word_2chars_bytes, input_char_bytes) {
-                                if let Some(new_errors) =
-                                    add_weight_to_errors(errors, op.weight(), self.max_distance)
-                                {
+                                if let Some(new_errors) = add_weight_to_errors(
+                                    errors,
+                                    op.weight(),
+                                    self.cost_scale,
+                                    self.max_cost,
+                                ) {
                                     // Direct transition: offset+1, errors+weight
-                                    if let Ok(merge) = GeneralizedPosition::new_m(
-                                        offset + 1,
-                                        new_errors,
-                                        self.max_distance,
-                                    ) {
+                                    if let Some(merge) = self.new_m_position(offset + 1, new_errors)
+                                    {
                                         successors.push(merge);
-                                        break; // Only add one merge successor per position
                                     }
                                 }
                             }
@@ -984,12 +1112,9 @@ impl GeneralizedState {
             .filter(|op| op.consume_x() == 1 && op.consume_y() == 2)
             .collect();
 
-        // Phase 3b: Check if we should enter split state
-        // Phase 4: Phonetic splits allowed when max_distance > 0 AND errors <= max_distance
-        // Standard splits allowed when errors < max_distance
-        let has_phonetic_split = split_ops.iter().any(|op| op.weight() < 1.0);
-        let can_enter_split = errors < self.max_distance
-            || (has_phonetic_split && self.max_distance > 0 && errors <= self.max_distance);
+        let can_enter_split = split_ops.iter().any(|op| {
+            add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost).is_some()
+        });
 
         if !split_ops.is_empty() && can_enter_split {
             let next_match_index_i32 = bit_index_i32;
@@ -1000,59 +1125,8 @@ impl GeneralizedState {
                 bounded_index(next_match_index_i32, word_slice_chars.len())
             {
                 if word_slice_chars[next_match_index] != '$' {
-                    // Check standard operations (bit_vector match)
-                    let standard_match = bounded_index(bit_index_i32, bit_vector.len())
-                        .is_some_and(|idx| bit_vector.is_match(idx));
-
-                    // H1 Optimization: Encode word character using stack buffer
-                    let mut word_1char_buf = [0u8; 4];
-                    let word_1char_bytes = word_slice_chars[next_match_index]
-                        .encode_utf8(&mut word_1char_buf)
-                        .as_bytes();
-
-                    // For phonetic operations, check if THIS word character can be split
-                    // AND the current input char must match the first char of the split target
-                    let can_phonetic_split = split_ops.iter().any(|op| {
-                        if op.weight() < 1.0 && op.consume_x() == 1 {
-                            // Check TWO conditions:
-                            // 1. This word character can be split (source check)
-                            // 2. Current input character matches first char of the split target
-                            op.can_apply_to_source(word_1char_bytes)
-                                && op.matches_first_target_char(word_1char_bytes, input_char)
-                        } else {
-                            false
-                        }
-                    });
-
-                    // Enter split state - prioritize phonetic over standard
-                    // When both conditions are true, phonetic split takes precedence (errors+0 vs errors+1)
-                    if can_phonetic_split {
-                        // Phonetic split: enter with errors+0 (fractional weight truncates to 0)
-                        // Phase 4: Requires max_distance > 0 (edit operations not allowed at distance 0)
-                        // AND errors <= max_distance (can be at max because doesn't consume errors)
-                        // Phase 4: offset UNCHANGED on entry (like MATCH, per PhoneticOperations.v)
-                        if self.max_distance > 0 && errors <= self.max_distance {
-                            if let Ok(split) = GeneralizedPosition::new_m_splitting(
-                                offset, // Phase 4 FIX: unchanged (was offset-1)
-                                errors,
-                                self.max_distance,
-                                input_char, // Store the character read when entering this split state
-                            ) {
-                                successors.push(split);
-                            }
-                        }
-                    } else if standard_match && errors < self.max_distance {
-                        // Standard split: enter with errors+1 (will decrement at completion)
-                        // Only used when phonetic split doesn't apply
-                        // Phase 4: offset UNCHANGED on entry (like MATCH, per PhoneticOperations.v)
-                        if let Ok(split) = GeneralizedPosition::new_m_splitting(
-                            offset, // Phase 4 FIX: unchanged (was offset-1)
-                            errors + 1,
-                            self.max_distance,
-                            input_char, // Store the character read when entering this split state
-                        ) {
-                            successors.push(split);
-                        }
+                    if let Some(split) = self.new_m_splitting_position(offset, errors, input_char) {
+                        successors.push(split);
                     }
                 }
             }
@@ -1070,15 +1144,15 @@ impl GeneralizedState {
     ///
     /// From transposing state I+(offset)#(errors)_t:
     /// - Check bit_vector[offset + n] (current position)
-    /// - If match, create I+(offset+1)#(errors-1) (jump 2 word positions, decrement error)
+    /// - If the complete slices satisfy a configured rule, create an ordinary
+    ///   position and add that rule's exact scaled cost.
     fn successors_i_transposing(
         &self,
         offset: i32,
-        errors: u8,
+        errors: usize,
         input: &GeneralizedTransitionInput<'_>,
     ) -> Vec<GeneralizedPosition> {
         let operations = input.operations;
-        let bit_vector = input.bit_vector;
         let word_slice = input.word_slice;
         let input_char = input.input_char;
         let mut successors = Vec::new();
@@ -1105,37 +1179,19 @@ impl GeneralizedState {
         let curr_char = input_char;
         let input_2chars = format!("{}{}", prev_char, curr_char);
 
-        // Check standard operations first (bit_vector match)
-        // Only use standard path if we have errors to decrement
-        if errors > 0
-            && bounded_index(match_index_i32, bit_vector.len())
-                .is_some_and(|idx| bit_vector.is_match(idx))
-        {
-            // Complete transposition: offset+1 (jump 2 word positions), errors-1
-            if let Ok(succ) = GeneralizedPosition::new_i(
-                offset + 1,
-                errors - 1, // Decrement error (was incremented on enter)
-                self.max_distance,
-            ) {
-                successors.push(succ);
-                return successors; // Return early - one successor per position
-            }
-        }
-
-        // Check phonetic transpose operations ⟨2,2⟩
+        // Complete every applicable two-for-two operation and charge its exact
+        // cost now that both target characters are available.
         for op in operations.operations() {
             if op.consume_x() == 2
                 && op.consume_y() == 2
-                && op.can_apply(word_2chars.as_bytes(), input_2chars.as_bytes())
+                && op.applies_to_slices(&word_2chars, &input_2chars)
             {
-                // Complete phonetic transpose (cost was already applied on enter)
-                if let Ok(succ) = GeneralizedPosition::new_i(
-                    offset + 1, // Jump 2 word positions
-                    errors,     // Keep same errors (cost was already applied)
-                    self.max_distance,
-                ) {
-                    successors.push(succ);
-                    break; // Only add one transpose successor per position
+                if let Some(new_errors) =
+                    add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost)
+                {
+                    if let Some(succ) = self.new_i_position(offset + 1, new_errors) {
+                        successors.push(succ);
+                    }
                 }
             }
         }
@@ -1151,11 +1207,12 @@ impl GeneralizedState {
     ///
     /// From transposing state M+(offset)#(errors)_t:
     /// - Check bit_vector at appropriate index
-    /// - If match, create M+(offset+1)#(errors-1)
+    /// - If the complete slices satisfy a configured rule, create an ordinary
+    ///   M-position and add that rule's exact scaled cost.
     fn successors_m_transposing(
         &self,
         offset: i32,
-        errors: u8,
+        errors: usize,
         input: &GeneralizedTransitionInput<'_>,
     ) -> Vec<GeneralizedPosition> {
         let operations = input.operations;
@@ -1188,37 +1245,17 @@ impl GeneralizedState {
         let curr_char = input_char;
         let input_2chars = format!("{}{}", prev_char, curr_char);
 
-        // Check standard operations first (bit_vector match)
-        // Only use standard path if we have errors to decrement
-        if errors > 0
-            && bounded_index(bit_index_i32, bit_vector.len())
-                .is_some_and(|idx| bit_vector.is_match(idx))
-        {
-            // Complete transposition: offset+1, errors-1
-            if let Ok(succ) = GeneralizedPosition::new_m(
-                offset + 1,
-                errors - 1, // Decrement error
-                self.max_distance,
-            ) {
-                successors.push(succ);
-                return successors; // Return early - one successor per position
-            }
-        }
-
-        // Check phonetic transpose operations ⟨2,2⟩
         for op in operations.operations() {
             if op.consume_x() == 2
                 && op.consume_y() == 2
-                && op.can_apply(word_2chars.as_bytes(), input_2chars.as_bytes())
+                && op.applies_to_slices(&word_2chars, &input_2chars)
             {
-                // Complete phonetic transpose (cost was already applied on enter)
-                if let Ok(succ) = GeneralizedPosition::new_m(
-                    offset + 1, // Jump 2 word positions
-                    errors,     // Keep same errors (cost was already applied)
-                    self.max_distance,
-                ) {
-                    successors.push(succ);
-                    break; // Only add one transpose successor per position
+                if let Some(new_errors) =
+                    add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost)
+                {
+                    if let Some(succ) = self.new_m_position(offset + 1, new_errors) {
+                        successors.push(succ);
+                    }
                 }
             }
         }
@@ -1235,7 +1272,8 @@ impl GeneralizedState {
     ///
     /// From splitting state I+(offset)#(errors)_s:
     /// - Check bit_vector[offset + n] (current position for second word char)
-    /// - If match, create I+(offset+0)#(errors-1) (advance 1 word position, decrement error)
+    /// - If the complete slices satisfy a configured rule, create an ordinary
+    ///   position at the completed coordinate and add the exact scaled cost.
     ///
     /// # Phase 4: Formal Verification Fix
     ///
@@ -1244,12 +1282,11 @@ impl GeneralizedState {
     fn successors_i_splitting(
         &self,
         offset: i32,
-        errors: u8,
+        errors: usize,
         entry_char: char,
         input: &GeneralizedTransitionInput<'_>,
     ) -> Vec<GeneralizedPosition> {
         let operations = input.operations;
-        let bit_vector = input.bit_vector;
         let full_word = input.full_word;
         let word_chars = input.word_chars;
         let word_slice = input.word_slice;
@@ -1316,9 +1353,13 @@ impl GeneralizedState {
         for op in operations.operations() {
             if op.consume_x() == 1
                 && op.consume_y() == 2
-                && op.can_apply(word_1char.as_bytes(), input_2chars.as_bytes())
+                && op.applies_to_slices(&word_1char, &input_2chars)
             {
-                // Complete phonetic split (cost was already applied on enter)
+                let Some(new_errors) =
+                    add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost)
+                else {
+                    continue;
+                };
                 // Phase 4: offset UNCHANGED on completion (per PhoneticOperations.v)
                 // Advancement happens via sliding subword window, not offset changes
                 let new_offset = offset; // Phase 4 FIX: unchanged (was offset+1)
@@ -1347,47 +1388,21 @@ impl GeneralizedState {
                         result_offset - (full_word_len as i32 - n)
                     };
 
-                    if let Ok(succ) =
-                        GeneralizedPosition::new_m(m_offset, errors, self.max_distance)
-                    {
+                    if let Some(succ) = self.new_m_position(m_offset, new_errors) {
                         successors.push(succ);
-                        return successors; // Early return after phonetic split
                     } else {
                         // Fallback: try creating I-type instead with unchanged offset
                         // This handles the case where we're exactly at word end but M-type invariant can't be satisfied
-                        if let Ok(succ) =
-                            GeneralizedPosition::new_i(new_offset, errors, self.max_distance)
-                        {
+                        if let Some(succ) = self.new_i_position(new_offset, new_errors) {
                             successors.push(succ);
-                            return successors;
                         }
                     }
                 } else {
                     // Still within word -> I-type position
-                    if let Ok(succ) =
-                        GeneralizedPosition::new_i(new_offset, errors, self.max_distance)
-                    {
+                    if let Some(succ) = self.new_i_position(new_offset, new_errors) {
                         successors.push(succ);
-                        return successors; // Early return after phonetic split
                     }
                 }
-            }
-        }
-
-        // FALLBACK: Check standard operations (bit_vector match)
-        // Only reached if no phonetic operation applied
-        if errors > 0
-            && match_index_i32 >= 0
-            && bounded_index(match_index_i32, bit_vector.len())
-                .is_some_and(|idx| bit_vector.is_match(idx))
-        {
-            // Complete split: offset+0 (advance 1 word position), errors-1
-            if let Ok(succ) = GeneralizedPosition::new_i(
-                offset,     // +0 (stays same!)
-                errors - 1, // Decrement error (was incremented on enter)
-                self.max_distance,
-            ) {
-                successors.push(succ);
             }
         }
 
@@ -1402,11 +1417,12 @@ impl GeneralizedState {
     ///
     /// From splitting state M+(offset)#(errors)_s:
     /// - Check bit_vector at appropriate index
-    /// - If match, create M+(offset+0)#(errors-1)
+    /// - If the complete slices satisfy a configured rule, create an ordinary
+    ///   M-position and add the exact scaled cost.
     fn successors_m_splitting(
         &self,
         offset: i32,
-        errors: u8,
+        errors: usize,
         entry_char: char,
         input: &GeneralizedTransitionInput<'_>,
     ) -> Vec<GeneralizedPosition> {
@@ -1481,35 +1497,18 @@ impl GeneralizedState {
         for op in operations.operations() {
             if op.consume_x() == 1
                 && op.consume_y() == 2
-                && op.can_apply(word_1char.as_bytes(), input_2chars.as_bytes())
+                && op.applies_to_slices(&word_1char, &input_2chars)
             {
-                // Complete phonetic split (cost was already applied on enter)
+                let Some(new_errors) =
+                    add_weight_to_errors(errors, op.weight(), self.cost_scale, self.max_cost)
+                else {
+                    continue;
+                };
                 // Phase 4: offset UNCHANGED on completion (per PhoneticOperations.v)
                 let new_offset = offset; // Phase 4 FIX: unchanged (was offset+1)
-                if let Ok(succ) = GeneralizedPosition::new_m(
-                    new_offset, // Phase 4 FIX: unchanged (was offset+1)
-                    errors,     // Keep same errors (cost was already applied)
-                    self.max_distance,
-                ) {
+                if let Some(succ) = self.new_m_position(new_offset, new_errors) {
                     successors.push(succ);
-                    return successors; // Early return after phonetic split
                 }
-            }
-        }
-
-        // FALLBACK: Check standard operations (bit_vector match)
-        // Only reached if no phonetic operation applied
-        if errors > 0
-            && bounded_index(bit_index_i32, bit_vector.len())
-                .is_some_and(|idx| bit_vector.is_match(idx))
-        {
-            // Complete split: offset+0, errors-1
-            if let Ok(succ) = GeneralizedPosition::new_m(
-                offset,     // +0 (stays same!)
-                errors - 1, // Decrement error
-                self.max_distance,
-            ) {
-                successors.push(succ);
             }
         }
 
@@ -1557,6 +1556,17 @@ mod tests {
                 .expect("test fixture: GeneralizedPosition::new_i with valid args"),
         );
         assert_eq!(state.len(), 2);
+    }
+
+    #[test]
+    fn add_position_preserves_set_semantics_for_equal_positions() {
+        let mut state = GeneralizedState::new(2);
+        let position = GeneralizedPosition::new_i(0, 1, 2).expect("test fixture: valid I-position");
+
+        state.add_position(position.clone());
+        state.add_position(position);
+
+        assert_eq!(state.len(), 1);
     }
 
     #[test]
@@ -1670,6 +1680,135 @@ mod tests {
     }
 
     #[test]
+    fn direct_transition_represents_fractional_weight_exactly() {
+        use crate::transducer::{OperationSetBuilder, OperationType};
+
+        let operations = OperationSetBuilder::new()
+            .with_operation(OperationType::new(1, 1, 0.15, "fractional"))
+            .build();
+        let state = GeneralizedState::initial(1);
+        let vector = CharacteristicVector::new('b', "$a");
+        let input = GeneralizedTransitionInput::new(&operations, &vector, "a", None, "$a", 'b', 1);
+
+        let next = state
+            .try_transition(input)
+            .expect("finite decimal scale")
+            .expect("fractional substitution is in budget");
+        assert_eq!(next.cost_scale().denominator(), 20);
+        assert_eq!(next.max_scaled_cost(), 20);
+        assert!(next.positions().any(|position| position.errors() == 3));
+        assert!(next.positions().all(|position| position.errors() != 0));
+    }
+
+    #[test]
+    fn direct_transition_selects_the_least_applicable_scaled_cost_independent_of_order() {
+        use crate::transducer::{OperationSetBuilder, OperationType, SubstitutionSet};
+
+        let mut rule = SubstitutionSet::new();
+        rule.allow_str("ph", "f");
+        let operations = OperationSetBuilder::new()
+            .with_operation(OperationType::with_restriction(
+                2,
+                1,
+                0.8,
+                rule.clone(),
+                "heavy_ph",
+            ))
+            .with_operation(OperationType::with_restriction(2, 1, 0.2, rule, "light_ph"))
+            .build();
+        let state = GeneralizedState::initial(1);
+        let vector = CharacteristicVector::new('f', "$ph");
+        let input =
+            GeneralizedTransitionInput::new(&operations, &vector, "ph", None, "$ph", 'f', 1);
+
+        let next = state
+            .try_transition(input)
+            .expect("finite decimal scale")
+            .expect("restricted merge applies");
+        assert_eq!(next.cost_scale().denominator(), 5);
+        assert_eq!(
+            next.positions().map(GeneralizedPosition::errors).min(),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn direct_transition_reports_non_finite_cost_scale() {
+        use crate::transducer::{OperationSetBuilder, OperationType};
+
+        let operations = OperationSetBuilder::new()
+            .with_operation(OperationType::new(1, 1, f64::INFINITY, "invalid"))
+            .build();
+        let state = GeneralizedState::initial(1);
+        let vector = CharacteristicVector::new('b', "$a");
+        let input = GeneralizedTransitionInput::new(&operations, &vector, "a", None, "$a", 'b', 1);
+
+        assert_eq!(
+            state.try_transition(input),
+            Err(GeneralizedStateError::Scale(ScaleError::NonFiniteWeight))
+        );
+    }
+
+    #[test]
+    fn direct_transition_reports_unrepresentable_operation_arity() {
+        use crate::transducer::{OperationSetBuilder, OperationType};
+
+        let operations = OperationSetBuilder::new()
+            .with_operation(OperationType::new(3, 1, 1.0, "three_to_one"))
+            .build();
+        let state = GeneralizedState::initial(3);
+        let vector = CharacteristicVector::new('a', "$abc");
+        let input =
+            GeneralizedTransitionInput::new(&operations, &vector, "abc", None, "$abc", 'a', 1);
+
+        assert_eq!(
+            state.try_transition(input),
+            Err(GeneralizedStateError::UnsupportedOperationArity {
+                name: "three_to_one".into(),
+                consume_x: 3,
+                consume_y: 1,
+            })
+        );
+        assert!(state.transition(input).is_none());
+    }
+
+    #[test]
+    fn only_the_exact_standard_lattice_enables_classical_subsumption() {
+        use crate::transducer::{OperationSet, OperationSetBuilder, OperationType};
+
+        assert!(is_classical_levenshtein_lattice(&OperationSet::standard()));
+        assert!(!is_classical_levenshtein_lattice(
+            &OperationSet::with_transposition()
+        ));
+        let integer_weighted = OperationSetBuilder::new()
+            .with_standard_ops()
+            .with_operation(OperationType::new(1, 1, 2.0, "heavy"))
+            .build();
+        assert!(!is_classical_levenshtein_lattice(&integer_weighted));
+    }
+
+    #[test]
+    fn hamming_state_does_not_synthesize_skip_to_match_deletions() {
+        use crate::transducer::OperationSetBuilder;
+
+        let operations = OperationSetBuilder::new()
+            .with_match()
+            .with_substitution()
+            .build();
+        let state = GeneralizedState::initial(2);
+        let vector = CharacteristicVector::new('a', "$$ba");
+        let input =
+            GeneralizedTransitionInput::new(&operations, &vector, "ba", None, "$$ba", 'a', 1);
+
+        let next = state
+            .try_transition(input)
+            .expect("Hamming costs are exactly representable")
+            .expect("substitution remains available");
+        assert!(next.positions().any(|position| position.offset() == 0));
+        assert!(next.positions().all(|position| position.offset() != 1));
+    }
+
+    #[test]
     fn test_i_skip_to_far_match_does_not_wrap_errors() {
         let max_distance = 2;
         let mut state = GeneralizedState::new(max_distance);
@@ -1693,7 +1832,9 @@ mod tests {
             ))
             .expect("standard delete/substitute successors remain in budget");
 
-        assert!(next.positions().all(|pos| pos.errors() <= max_distance));
+        assert!(next
+            .positions()
+            .all(|pos| pos.errors() <= usize::from(max_distance)));
         let delete = GeneralizedPosition::new_i(-1, 2, max_distance)
             .expect("test fixture: valid I-position");
         let substitute =

@@ -4,10 +4,10 @@
 //! supporting both standard regex constructs and phonetic rewrite rules.
 //!
 //! The parser is split along the char/byte duality:
-//! - [`char`] holds the Unicode [`Parser`] with full feature support
+//! - `char` holds the Unicode [`Parser`] with full feature support
 //!   (capturing groups, scoped flags, group references).
-//! - [`byte`] holds the leaner ASCII [`ParserByte`].
-//! - [`common`] holds shared helpers and the public [`SymbolTable`]
+//! - `byte` holds the leaner ASCII [`ParserByte`].
+//! - `common` holds shared helpers and the public [`SymbolTable`]
 //!   re-export.
 //!
 //! # Grammar

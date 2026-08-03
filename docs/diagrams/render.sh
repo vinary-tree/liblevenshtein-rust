@@ -57,7 +57,8 @@ render_structurizr() {
   # The primary view is the first non-legend (.puml that is not *-key.puml).
   puml="$(find "$tmp" -name '*.puml' ! -name '*-key.puml' | sort | head -1)"
   [ -n "$puml" ] || { rm -rf "$tmp"; warn "structurizr produced no view for $src"; return 1; }
-  plantuml -tsvg -nometadata -o "$tmp" "$puml"
+  JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djava.awt.headless=true" \
+    plantuml -tsvg -nometadata -o "$tmp" "$puml"
   mv "${puml%.puml}.svg" "$out"
   rm -rf "$tmp"
 }
@@ -70,7 +71,8 @@ render_one() {
   out="$outdir/$stem.svg"
   mkdir -p "$outdir"
   case "$ext" in
-    puml)   plantuml -tsvg -nometadata -o "$outdir" "$src" ;;
+    puml)   JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djava.awt.headless=true" \
+              plantuml -tsvg -nometadata -o "$outdir" "$src" ;;
     d2)     d2 --layout=elk --pad=20 "$src" "$out" >/dev/null 2>&1 ;;
     mmd)    mmdc -i "$src" -o "$out" -b transparent -p "$PUPPETEER_CFG" -q >/dev/null 2>&1 ;;
     dot)    dot -Tsvg -o "$out" "$src" ;;

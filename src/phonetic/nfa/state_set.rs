@@ -71,7 +71,7 @@ fn bitset_count_len(bit_count: u32) -> usize {
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct StateSet {
     /// Bitset representation for small state sets (states 0-255).
-    /// bits[0] covers states 0-63, bits[1] covers 64-127, etc.
+    /// `bits[0]` covers states 0-63, `bits[1]` covers 64-127, etc.
     bits: [u64; WORD_COUNT],
     /// Count of states in the bitset portion.
     bit_count: u32,
@@ -173,7 +173,7 @@ impl StateSet {
     /// Check if the set is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.bit_count == 0 && self.overflow.as_ref().map_or(true, |o| o.is_empty())
+        self.bit_count == 0 && self.overflow.as_ref().is_none_or(|o| o.is_empty())
     }
 
     /// Get the number of states in the set.

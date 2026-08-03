@@ -263,7 +263,7 @@ impl OnlinePhoneticScannerChar {
             // If already at an accepting state, record it
             if self.product.is_accepting(&m.product_state) {
                 let dist = m.product_state.edit_distance();
-                if m.min_distance.map_or(true, |d| dist < d) {
+                if m.min_distance.is_none_or(|d| dist < d) {
                     updates.push((i, dist));
                 }
                 continue;
@@ -277,7 +277,7 @@ impl OnlinePhoneticScannerChar {
             while attempts < max_deletions as usize + 1 {
                 if self.product.is_accepting(&state) {
                     let dist = state.edit_distance();
-                    if m.min_distance.map_or(true, |d| dist < d) {
+                    if m.min_distance.is_none_or(|d| dist < d) {
                         updates.push((i, dist));
                     }
                     break;
@@ -296,7 +296,7 @@ impl OnlinePhoneticScannerChar {
         // Apply updates
         for (i, dist) in updates {
             if let Some(m) = self.active_matches.get_mut(i) {
-                if m.min_distance.map_or(true, |d| dist < d) {
+                if m.min_distance.is_none_or(|d| dist < d) {
                     m.min_distance = Some(dist);
                 }
             }
@@ -369,7 +369,7 @@ impl OnlinePhoneticScannerChar {
                 if self.product.is_accepting(&best) {
                     // Record if this is the best distance seen
                     let dist = best.edit_distance();
-                    if m.min_distance.map_or(true, |d| dist < d) {
+                    if m.min_distance.is_none_or(|d| dist < d) {
                         m.min_distance = Some(dist);
                     }
                 }

@@ -321,7 +321,7 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
         let word_char_count = if start <= end { end - start + 1 } else { 0 };
 
         let mut result = String::with_capacity(pad_count.saturating_add(word_char_count));
-        result.extend(std::iter::repeat('$').take(pad_count));
+        result.extend(std::iter::repeat_n('$', pad_count));
 
         if start <= end {
             result.extend(word_chars[start - 1..end].iter().copied());

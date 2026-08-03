@@ -328,7 +328,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
         self.search_with_algorithm(query, max_distance, Algorithm::Standard)
     }
 
-    /// Search using transposition algorithm (Damerau-Levenshtein).
+    /// Search using the adjacent-transposition OSA algorithm (restricted Damerau).
     ///
     /// Allows adjacent character transpositions at cost 1.
     pub fn search_transposition(&self, query: &[f64], max_distance: usize) -> Vec<(V, usize)> {

@@ -1,6 +1,10 @@
 //! State transition logic for Levenshtein automata.
 
-use super::{Algorithm, Position, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor};
+use super::variant::{with_variant, AutomatonVariant, TransitionCtx, VariantSpec};
+use super::variants::{AffineGapParams, AffineV};
+use super::{
+    Algorithm, Position, PositionKind, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor,
+};
 use libdictenstein::CharUnit;
 use smallvec::SmallVec;
 
@@ -21,6 +25,28 @@ impl TransitionSettings {
         Self {
             max_distance,
             algorithm,
+            prefix_mode,
+        }
+    }
+}
+
+/// Configuration shared by pooled affine-gap transitions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct AffineTransitionSettings {
+    /// Maximum exact scaled cost.
+    pub max_cost: usize,
+    /// Exact affine-gap parameters.
+    pub params: AffineGapParams,
+    /// Whether positions beyond the query length are free matches.
+    pub prefix_mode: bool,
+}
+
+impl AffineTransitionSettings {
+    /// Create affine transition settings.
+    pub(crate) const fn new(max_cost: usize, params: AffineGapParams, prefix_mode: bool) -> Self {
+        Self {
+            max_cost,
+            params,
             prefix_mode,
         }
     }
@@ -133,7 +159,7 @@ fn checked_successor_or_max(value: usize) -> usize {
 }
 
 #[inline(always)]
-fn transition_window_size(max_distance: usize, query_length: usize) -> usize {
+pub(crate) fn transition_window_size(max_distance: usize, query_length: usize) -> usize {
     let distance_window = checked_successor_or_max(max_distance);
     let query_window = checked_successor_or_max(query_length).max(1);
     distance_window.min(query_window)
@@ -165,10 +191,11 @@ fn checked_special_position_with_offsets(
     term_offset: usize,
     num_errors: usize,
     error_offset: usize,
+    kind: PositionKind,
 ) -> Option<Position> {
     let term_index = term_index.checked_add(term_offset)?;
     let num_errors = num_errors.checked_add(error_offset)?;
-    Some(Position::new_special(term_index, num_errors))
+    Some(Position::with_kind(term_index, num_errors, kind, 0))
 }
 
 #[inline(always)]
@@ -204,7 +231,7 @@ fn has_query_units(term_index: usize, count: usize, query_length: usize) -> bool
 /// # Standard Algorithm
 ///
 /// From position `(i, e)` (term_index=i, num_errors=e), we can reach:
-/// - `(i+1, e)` if query[i] matches dict_char (no error)
+/// - `(i+1, e)` if `query[i]` matches `dict_char` (no error)
 /// - `(i+1, e+1)` via substitution (if different)
 /// - `(i, e+1)` via insertion (dictionary char, no query advance)
 /// - `(i+1, e+1)` via deletion (skip query char)
@@ -225,6 +252,7 @@ pub fn transition_position(
     algorithm: Algorithm,
     prefix_mode: bool,
 ) -> SmallVec<[Position; 4]> {
+    algorithm.assert_supported_max_distance(max_distance);
     match algorithm {
         Algorithm::Standard => transition_standard(
             position,
@@ -241,6 +269,13 @@ pub fn transition_position(
             prefix_mode,
         ),
         Algorithm::MergeAndSplit => transition_merge_split(
+            position,
+            characteristic_vector,
+            query_length,
+            max_distance,
+            prefix_mode,
+        ),
+        Algorithm::DamerauLevenshtein => transition_damerau(
             position,
             characteristic_vector,
             query_length,
@@ -276,7 +311,7 @@ fn index_of_match(cv: &[bool], start: usize, limit: usize) -> Option<usize> {
 /// characters are treated as free matches, keeping the position "stuck" at query_length
 /// with the same error count.
 #[inline]
-fn transition_standard(
+pub(crate) fn transition_standard(
     position: &Position,
     cv: &[bool],
     query_length: usize,
@@ -284,6 +319,31 @@ fn transition_standard(
     prefix_mode: bool,
 ) -> SmallVec<[Position; 4]> {
     let mut next = SmallVec::new();
+    transition_standard_into(
+        position,
+        cv,
+        query_length,
+        max_distance,
+        prefix_mode,
+        &mut next,
+    );
+    next
+}
+
+/// Fill a caller-owned buffer with Standard Levenshtein successors.
+///
+/// Keeping ownership at the caller avoids constructing and then assigning a
+/// temporary `SmallVec` inside [`AutomatonVariant::successors`].
+#[inline(always)]
+pub(crate) fn transition_standard_into(
+    position: &Position,
+    cv: &[bool],
+    query_length: usize,
+    max_distance: usize,
+    prefix_mode: bool,
+    next: &mut SmallVec<[Position; 4]>,
+) {
+    debug_assert!(next.is_empty());
     let i = position.term_index;
     let e = position.num_errors;
     let h = 0; // cv is offset-adjusted to start at position i, so h = 0
@@ -292,7 +352,7 @@ fn transition_standard(
     // Prefix matching: if enabled and we've consumed the full query, treat any character as a free match
     if prefix_mode && i >= query_length {
         next.push(Position::new(i, e));
-        return next;
+        return;
     }
 
     // Case 1: e < max_distance (can still add errors)
@@ -306,19 +366,19 @@ fn transition_standard(
             match index_of_match(cv, h, k) {
                 Some(0) => {
                     // Immediate match at cv[h]
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
                 }
                 Some(j) => {
                     // Match found at cv[h + j]
                     // Return: insertion, substitution, and multi-character deletion
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
-                    push_checked_position(&mut next, checked_deletion_position(i, e, j));
+                    push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
+                    push_checked_position(next, checked_deletion_position(i, e, j));
                 }
                 None => {
                     // No match found in range
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
+                    push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
                 }
             }
         }
@@ -326,36 +386,32 @@ fn transition_standard(
         else if h + 1 == w {
             if cv[h] {
                 // Match at last position
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
             } else {
                 // No match at last position
-                push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
+                push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
             }
         }
         // Subcase 1c: Past the end of query (h >= w)
         else {
             // Only insertion is possible
-            push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+            push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
         }
     }
     // Case 2: e == max_distance (at max errors, only exact matches allowed)
     else if e == max_distance && h < w && cv[h] {
-        push_checked_position(
-            &mut next,
-            checked_position_with_offsets(i, 1, max_distance, 0),
-        );
+        push_checked_position(next, checked_position_with_offsets(i, 1, max_distance, 0));
     }
-
-    next
 }
 
-/// Transposition algorithm transition (adds swap of adjacent chars)
+/// Unrestricted Damerau–Levenshtein position transition.
 ///
-/// This implements the transposition Levenshtein distance which allows
-/// swapping of two adjacent characters as a single edit operation.
+/// Normal positions retain every Standard successor and may start a
+/// Lowrance–Wagner macro transition. Pending positions either resolve their
+/// deferred query endpoint or consume another intervening dictionary unit.
 #[inline]
-fn transition_transposition(
+pub(crate) fn transition_damerau(
     position: &Position,
     cv: &[bool],
     query_length: usize,
@@ -363,16 +419,128 @@ fn transition_transposition(
     prefix_mode: bool,
 ) -> SmallVec<[Position; 4]> {
     let mut next = SmallVec::new();
+    transition_damerau_into(
+        position,
+        cv,
+        query_length,
+        max_distance,
+        prefix_mode,
+        &mut next,
+    );
+    next
+}
+
+/// Fill a caller-owned buffer with unrestricted Damerau successors.
+#[inline(always)]
+pub(crate) fn transition_damerau_into(
+    position: &Position,
+    cv: &[bool],
+    query_length: usize,
+    max_distance: usize,
+    prefix_mode: bool,
+    next: &mut SmallVec<[Position; 4]>,
+) {
+    debug_assert!(next.is_empty());
+
+    match position.kind() {
+        PositionKind::Normal => {
+            transition_standard_into(position, cv, query_length, max_distance, prefix_mode, next);
+
+            let Some(remaining_budget) = max_distance.checked_sub(position.num_errors) else {
+                return;
+            };
+            let max_delta = remaining_budget
+                .min(cv.len().saturating_sub(1))
+                .min(usize::from(u8::MAX));
+
+            for (delta, &matches) in cv.iter().enumerate().take(max_delta + 1).skip(1) {
+                if !matches {
+                    continue;
+                }
+                let Some(num_errors) = position.num_errors.checked_add(delta) else {
+                    continue;
+                };
+                let Ok(delta) = u8::try_from(delta) else {
+                    continue;
+                };
+                next.push(Position::new_damerau_pending(
+                    position.term_index,
+                    num_errors,
+                    delta,
+                ));
+            }
+        }
+        PositionKind::DamerauPending => {
+            let delta = usize::from(position.aux());
+
+            if cv.first().copied().unwrap_or(false) {
+                let term_offset = delta.checked_add(1);
+                if let Some(term_index) =
+                    term_offset.and_then(|offset| position.term_index.checked_add(offset))
+                {
+                    next.push(Position::new(term_index, position.num_errors));
+                }
+            }
+
+            if let Some(num_errors) = position.num_errors.checked_add(1) {
+                if num_errors <= max_distance {
+                    next.push(Position::new_damerau_pending(
+                        position.term_index,
+                        num_errors,
+                        position.aux(),
+                    ));
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Transposition algorithm transition (adds swap of adjacent chars)
+///
+/// This implements the transposition Levenshtein distance which allows
+/// swapping of two adjacent characters as a single edit operation.
+#[inline]
+pub(crate) fn transition_transposition(
+    position: &Position,
+    cv: &[bool],
+    query_length: usize,
+    max_distance: usize,
+    prefix_mode: bool,
+) -> SmallVec<[Position; 4]> {
+    let mut next = SmallVec::new();
+    transition_transposition_into(
+        position,
+        cv,
+        query_length,
+        max_distance,
+        prefix_mode,
+        &mut next,
+    );
+    next
+}
+
+/// Fill a caller-owned buffer with OSA successors.
+#[inline(always)]
+pub(crate) fn transition_transposition_into(
+    position: &Position,
+    cv: &[bool],
+    query_length: usize,
+    max_distance: usize,
+    prefix_mode: bool,
+    next: &mut SmallVec<[Position; 4]>,
+) {
+    debug_assert!(next.is_empty());
     let i = position.term_index;
     let e = position.num_errors;
-    let t = position.is_special; // Transposition flag
+    let t = position.is_special(); // Transposition flag
     let h = 0; // cv is offset-adjusted
     let w = cv.len();
 
     // Prefix matching
     if prefix_mode && i >= query_length {
         next.push(Position::new(i, e));
-        return next;
+        return;
     }
 
     // Case 1: e == 0 (no errors yet)
@@ -385,33 +553,33 @@ fn transition_transposition(
             match index_of_match(cv, h, k) {
                 Some(0) => {
                     // Immediate match
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, 0, 0));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, 0, 0));
                 }
                 Some(1) => {
                     // Match at next position - potential transposition
                     next.push(Position::new(i, 1)); // insertion
-                    next.push(Position::new_special(i, 1)); // transposition start
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, 1, 0));
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 2, 1, 0));
+                    next.push(Position::with_kind(i, 1, PositionKind::OsaTransposing, 0));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, 1, 0));
+                    push_checked_position(next, checked_position_with_offsets(i, 2, 1, 0));
                 }
                 Some(j) => {
                     // Match found at position j > 1
                     next.push(Position::new(i, 1)); // insertion
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, 1, 0));
-                    push_checked_position(&mut next, checked_deletion_position(i, 0, j));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, 1, 0));
+                    push_checked_position(next, checked_deletion_position(i, 0, j));
                 }
                 None => {
                     // No match found
                     next.push(Position::new(i, 1)); // insertion
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, 1, 0));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, 1, 0));
                 }
             }
         } else if h + 1 == w {
             if cv[h] {
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, 0, 0));
+                push_checked_position(next, checked_position_with_offsets(i, 1, 0, 0));
             } else {
                 next.push(Position::new(i, 1));
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, 1, 0));
+                push_checked_position(next, checked_position_with_offsets(i, 1, 1, 0));
             }
         } else {
             next.push(Position::new(i, 1));
@@ -428,66 +596,64 @@ fn transition_transposition(
 
                 match index_of_match(cv, h, k) {
                     Some(0) => {
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                        push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
                     }
                     Some(1) => {
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+                        push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
                         push_checked_position(
-                            &mut next,
-                            checked_special_position_with_offsets(i, 0, e, 1),
+                            next,
+                            checked_special_position_with_offsets(
+                                i,
+                                0,
+                                e,
+                                1,
+                                PositionKind::OsaTransposing,
+                            ),
                         );
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 2, e, 1));
+                        push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
+                        push_checked_position(next, checked_position_with_offsets(i, 2, e, 1));
                     }
                     Some(j) => {
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
-                        push_checked_position(&mut next, checked_deletion_position(i, e, j));
+                        push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
+                        push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
+                        push_checked_position(next, checked_deletion_position(i, e, j));
                     }
                     None => {
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
+                        push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
+                        push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
                     }
                 }
             } else {
                 // In transposition state (is_special == true)
                 if cv[h] {
                     // Complete the transposition by matching
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 2, e, 0));
+                    push_checked_position(next, checked_position_with_offsets(i, 2, e, 0));
                 }
                 // else: no valid transitions from failed transposition
             }
         } else if h + 1 == w {
             if cv[h] {
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
             } else {
-                push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
+                push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
             }
         } else {
-            push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+            push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
         }
     }
     // Case 3: e == max_distance (at max errors)
     else if e == max_distance {
         if h < w && !t {
             if cv[h] {
-                push_checked_position(
-                    &mut next,
-                    checked_position_with_offsets(i, 1, max_distance, 0),
-                );
+                push_checked_position(next, checked_position_with_offsets(i, 1, max_distance, 0));
             }
             // else: no transitions at max distance without match
         } else if h + 2 <= w && t && cv[h] {
             // Complete transposition at max distance
-            push_checked_position(
-                &mut next,
-                checked_position_with_offsets(i, 2, max_distance, 0),
-            );
+            push_checked_position(next, checked_position_with_offsets(i, 2, max_distance, 0));
         }
     }
-
-    next
 }
 
 /// Merge and split algorithm transition
@@ -496,7 +662,7 @@ fn transition_transposition(
 /// - Merge: Two query characters combine into one dictionary character
 /// - Split: One query character expands into two dictionary characters
 #[inline]
-fn transition_merge_split(
+pub(crate) fn transition_merge_split(
     position: &Position,
     cv: &[bool],
     query_length: usize,
@@ -504,16 +670,38 @@ fn transition_merge_split(
     prefix_mode: bool,
 ) -> SmallVec<[Position; 4]> {
     let mut next = SmallVec::new();
+    transition_merge_split_into(
+        position,
+        cv,
+        query_length,
+        max_distance,
+        prefix_mode,
+        &mut next,
+    );
+    next
+}
+
+/// Fill a caller-owned buffer with merge/split successors.
+#[inline(always)]
+pub(crate) fn transition_merge_split_into(
+    position: &Position,
+    cv: &[bool],
+    query_length: usize,
+    max_distance: usize,
+    prefix_mode: bool,
+    next: &mut SmallVec<[Position; 4]>,
+) {
+    debug_assert!(next.is_empty());
     let i = position.term_index;
     let e = position.num_errors;
-    let s = position.is_special; // Special flag for merge/split
+    let s = position.is_special(); // Special flag for merge/split
     let h = 0; // cv is offset-adjusted
     let w = cv.len();
 
     // Prefix matching
     if prefix_mode && i >= query_length {
         next.push(Position::new(i, e));
-        return next;
+        return;
     }
 
     // Case 1: e == 0 (no errors yet)
@@ -521,39 +709,39 @@ fn transition_merge_split(
         if h + 2 <= w {
             if cv[h] {
                 // Immediate match
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
             } else {
                 // No match - add error operations including merge/split
-                push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+                push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
                 // Split operation: one query char becomes two dict chars (only if we have 1 char available)
                 if i < query_length {
                     push_checked_position(
-                        &mut next,
-                        checked_special_position_with_offsets(i, 0, e, 1),
+                        next,
+                        checked_special_position_with_offsets(i, 0, e, 1, PositionKind::Splitting),
                     );
                 }
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
                 // Merge operation: skip 2 query chars (only if we have 2 chars available)
                 if has_query_units(i, 2, query_length) {
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 2, e, 1));
+                    push_checked_position(next, checked_position_with_offsets(i, 2, e, 1));
                 }
             }
         } else if h + 1 == w {
             if cv[h] {
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
             } else {
-                push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+                push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
                 // Split operation: one query char becomes two dict chars (only if we have 1 char available)
                 if i < query_length {
                     push_checked_position(
-                        &mut next,
-                        checked_special_position_with_offsets(i, 0, e, 1),
+                        next,
+                        checked_special_position_with_offsets(i, 0, e, 1, PositionKind::Splitting),
                     );
                 }
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
             }
         } else {
-            push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+            push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
         }
     }
     // Case 2: e < max_distance (can still add errors)
@@ -562,66 +750,73 @@ fn transition_merge_split(
             if !s {
                 // Not in special state
                 if cv[h] {
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
                 } else {
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+                    push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
                     // Split operation: one query char becomes two dict chars (only if we have 1 char available)
                     if i < query_length {
                         push_checked_position(
-                            &mut next,
-                            checked_special_position_with_offsets(i, 0, e, 1),
+                            next,
+                            checked_special_position_with_offsets(
+                                i,
+                                0,
+                                e,
+                                1,
+                                PositionKind::Splitting,
+                            ),
                         );
                     }
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
                     // Merge operation: skip 2 query chars (only if we have 2 chars available)
                     if has_query_units(i, 2, query_length) {
-                        push_checked_position(&mut next, checked_position_with_offsets(i, 2, e, 1));
+                        push_checked_position(next, checked_position_with_offsets(i, 2, e, 1));
                     }
                 }
             } else {
                 // In special state (completing split)
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
             }
         } else if h + 1 == w {
             if !s {
                 if cv[h] {
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
                 } else {
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+                    push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
                     // Split operation: one query char becomes two dict chars (only if we have 1 char available)
                     if i < query_length {
                         push_checked_position(
-                            &mut next,
-                            checked_special_position_with_offsets(i, 0, e, 1),
+                            next,
+                            checked_special_position_with_offsets(
+                                i,
+                                0,
+                                e,
+                                1,
+                                PositionKind::Splitting,
+                            ),
                         );
                     }
-                    push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 1));
+                    push_checked_position(next, checked_position_with_offsets(i, 1, e, 1));
                 }
             } else {
                 // Special state at boundary
-                push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+                push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
             }
         } else {
-            push_checked_position(&mut next, checked_position_with_offsets(i, 0, e, 1));
+            push_checked_position(next, checked_position_with_offsets(i, 0, e, 1));
         }
     }
     // Case 3: e == max_distance (at max errors)
     else if e == max_distance && h < w {
         if !s {
             if cv[h] {
-                push_checked_position(
-                    &mut next,
-                    checked_position_with_offsets(i, 1, max_distance, 0),
-                );
+                push_checked_position(next, checked_position_with_offsets(i, 1, max_distance, 0));
             }
             // else: no transitions at max distance without match
         } else {
             // Special state: can advance even at max distance (completing split)
-            push_checked_position(&mut next, checked_position_with_offsets(i, 1, e, 0));
+            push_checked_position(next, checked_position_with_offsets(i, 1, e, 0));
         }
     }
-
-    next
 }
 
 /// Compute epsilon closure: add positions reachable by deletion (skipping query chars)
@@ -629,12 +824,7 @@ fn transition_merge_split(
 ///
 /// Optimized version that modifies the state in-place to avoid cloning.
 #[inline]
-fn epsilon_closure_mut(
-    state: &mut State,
-    query_length: usize,
-    max_distance: usize,
-    algorithm: Algorithm,
-) {
+fn epsilon_closure_mut<V: AutomatonVariant>(state: &mut State, ctx: &TransitionCtx<V::Params>) {
     // Pre-allocate with typical size to avoid reallocation
     let mut to_process: SmallVec<[Position; 8]> = SmallVec::with_capacity(8);
 
@@ -644,23 +834,17 @@ fn epsilon_closure_mut(
     }
 
     let mut processed = 0;
+    let mut epsilon = SmallVec::<[Position; 4]>::new();
     while processed < to_process.len() {
-        let position = &to_process[processed];
+        let position = to_process[processed];
         processed += 1;
 
-        // Can we delete a query character (skip to next position)?
-        if position.num_errors < max_distance && position.term_index < query_length {
-            let Some(deleted) =
-                checked_position_with_offsets(position.term_index, 1, position.num_errors, 1)
-            else {
-                continue;
-            };
-
+        epsilon.clear();
+        V::epsilon_successors(position, ctx, &mut epsilon);
+        for deleted in epsilon.iter().copied() {
             // Try to insert - State.insert handles deduplication efficiently
             // Only add to to_process if it was actually inserted (new position)
-            let len_before = state.len();
-            state.insert(deleted, algorithm, query_length);
-            if state.len() > len_before {
+            if state.insert_with::<V>(deleted, ctx) {
                 to_process.push(deleted);
             }
         }
@@ -668,14 +852,9 @@ fn epsilon_closure_mut(
 }
 
 /// Wrapper that creates a new state and applies epsilon closure
-fn epsilon_closure(
-    state: &State,
-    query_length: usize,
-    max_distance: usize,
-    algorithm: Algorithm,
-) -> State {
+fn epsilon_closure<V: AutomatonVariant>(state: &State, ctx: &TransitionCtx<V::Params>) -> State {
     let mut result = state.clone();
-    epsilon_closure_mut(&mut result, query_length, max_distance, algorithm);
+    epsilon_closure_mut::<V>(&mut result, ctx);
     result
 }
 
@@ -691,39 +870,36 @@ fn epsilon_closure(
 /// - Position is Copy, so no clone overhead
 /// - Eliminates one State::clone compared to epsilon_closure()
 #[inline]
-fn epsilon_closure_into(
+fn epsilon_closure_into<V: AutomatonVariant>(
     source: &State,
     target: &mut State,
-    query_length: usize,
-    max_distance: usize,
-    algorithm: Algorithm,
+    ctx: &TransitionCtx<V::Params>,
 ) {
     // Copy positions from source to target
     target.copy_from(source);
 
     // Apply epsilon closure in-place
-    epsilon_closure_mut(target, query_length, max_distance, algorithm);
+    epsilon_closure_mut::<V>(target, ctx);
 }
 
 #[inline]
-fn transition_zero_distance_into<U: CharUnit, P: SubstitutionPolicy + SubstitutionPolicyFor<U>>(
+fn transition_zero_distance_into<
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    V: AutomatonVariant,
+>(
     state: &State,
     target: &mut State,
     policy: &P,
     dict_unit: U,
     query: &[U],
-    algorithm: Algorithm,
-    prefix_mode: bool,
+    ctx: &TransitionCtx<V::Params>,
 ) {
-    let query_length = query.len();
+    let query_length = ctx.query_length;
 
     for position in state.positions() {
-        if prefix_mode && position.term_index >= query_length {
-            target.insert(
-                Position::new(position.term_index, position.num_errors),
-                algorithm,
-                query_length,
-            );
+        if ctx.prefix_mode && position.term_index >= query_length {
+            target.insert_with::<V>(Position::new(position.term_index, position.num_errors), ctx);
             continue;
         }
 
@@ -739,7 +915,7 @@ fn transition_zero_distance_into<U: CharUnit, P: SubstitutionPolicy + Substituti
             if let Some(next_position) =
                 checked_position_with_offsets(position.term_index, 1, position.num_errors, 0)
             {
-                target.insert(next_position, algorithm, query_length);
+                target.insert_with::<V>(next_position, ctx);
             }
         }
     }
@@ -750,7 +926,7 @@ fn supports_zero_distance_fast_path(state: &State) -> bool {
     state
         .positions()
         .iter()
-        .all(|position| !position.is_special && position.num_errors == 0)
+        .all(|position| !position.is_special() && position.num_errors == 0)
 }
 
 /// Transition an entire state given a dictionary character unit.
@@ -766,45 +942,57 @@ pub fn transition_state<U: CharUnit, P: SubstitutionPolicy + SubstitutionPolicyF
     algorithm: Algorithm,
     prefix_mode: bool,
 ) -> Option<State> {
-    let query_length = query.len();
+    algorithm.assert_supported_max_distance(max_distance);
+    let ctx = TransitionCtx::unit(query.len(), max_distance, prefix_mode);
+    with_variant!(VariantSpec::from(algorithm), |V| {
+        transition_state_inner::<U, P, V>(state, &policy, dict_unit, query, &ctx)
+    })
+}
 
-    if max_distance == 0 && supports_zero_distance_fast_path(state) {
+#[inline]
+fn transition_state_inner<
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    V: AutomatonVariant,
+>(
+    state: &State,
+    policy: &P,
+    dict_unit: U,
+    query: &[U],
+    ctx: &TransitionCtx<V::Params>,
+) -> Option<State> {
+    if ctx.max_distance == 0
+        && V::supports_zero_distance_fast_path(ctx)
+        && supports_zero_distance_fast_path(state)
+    {
         let mut next_state = State::new();
-        transition_zero_distance_into(
+        transition_zero_distance_into::<U, P, V>(
             state,
             &mut next_state,
-            &policy,
+            policy,
             dict_unit,
             query,
-            algorithm,
-            prefix_mode,
+            ctx,
         );
         return (!next_state.is_empty()).then_some(next_state);
     }
 
-    let window_size = transition_window_size(max_distance, query_length);
-
     // First, compute epsilon closure to handle deletions
-    let expanded_state = epsilon_closure(state, query_length, max_distance, algorithm);
+    let expanded_state = epsilon_closure::<V>(state, ctx);
 
     let mut next_state = State::new();
     let mut cv = SmallVec::<[bool; 8]>::new();
+    let mut next_positions = SmallVec::<[Position; 4]>::new();
 
     for position in expanded_state.positions() {
         let offset = position.term_index;
-        let cv = characteristic_vector(&policy, dict_unit, query, window_size, offset, &mut cv);
+        let window_size = V::skip_window(position, ctx);
+        let cv = characteristic_vector(policy, dict_unit, query, window_size, offset, &mut cv);
 
-        let next_positions = transition_position(
-            position,
-            cv,
-            query_length,
-            max_distance,
-            algorithm,
-            prefix_mode,
-        );
-
-        for next_pos in next_positions {
-            next_state.insert(next_pos, algorithm, query_length);
+        next_positions.clear();
+        V::successors(*position, cv, ctx, &mut next_positions);
+        for next_pos in next_positions.iter().copied() {
+            next_state.insert_with::<V>(next_pos, ctx);
         }
     }
 
@@ -868,18 +1056,40 @@ pub(crate) fn transition_state_pooled_ref<
     query: &[U],
     settings: TransitionSettings,
 ) -> Option<State> {
-    let query_length = query.len();
+    settings
+        .algorithm
+        .assert_supported_max_distance(settings.max_distance);
+    let ctx = TransitionCtx::unit(query.len(), settings.max_distance, settings.prefix_mode);
+    with_variant!(VariantSpec::from(settings.algorithm), |V| {
+        transition_state_pooled_inner::<U, P, V>(state, pool, policy, dict_unit, query, &ctx)
+    })
+}
 
-    if settings.max_distance == 0 && supports_zero_distance_fast_path(state) {
+#[inline]
+fn transition_state_pooled_inner<
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    V: AutomatonVariant,
+>(
+    state: &State,
+    pool: &mut StatePool,
+    policy: &P,
+    dict_unit: U,
+    query: &[U],
+    ctx: &TransitionCtx<V::Params>,
+) -> Option<State> {
+    if ctx.max_distance == 0
+        && V::supports_zero_distance_fast_path(ctx)
+        && supports_zero_distance_fast_path(state)
+    {
         let mut next_state = pool.acquire();
-        transition_zero_distance_into(
+        transition_zero_distance_into::<U, P, V>(
             state,
             &mut next_state,
             policy,
             dict_unit,
             query,
-            settings.algorithm,
-            settings.prefix_mode,
+            ctx,
         );
 
         if next_state.is_empty() {
@@ -890,39 +1100,26 @@ pub(crate) fn transition_state_pooled_ref<
         return Some(next_state);
     }
 
-    let window_size = transition_window_size(settings.max_distance, query_length);
-
     // Acquire a state from pool for epsilon closure (reuses allocation!)
     let mut expanded_state = pool.acquire();
 
     // Compute epsilon closure into the pooled state (no clone!)
-    epsilon_closure_into(
-        state,
-        &mut expanded_state,
-        query_length,
-        settings.max_distance,
-        settings.algorithm,
-    );
+    epsilon_closure_into::<V>(state, &mut expanded_state, ctx);
 
     // Acquire another state from pool for next state
     let mut next_state = pool.acquire();
     let mut cv = SmallVec::<[bool; 8]>::new();
+    let mut next_positions = SmallVec::<[Position; 4]>::new();
 
     for position in expanded_state.positions() {
         let offset = position.term_index;
+        let window_size = V::skip_window(position, ctx);
         let cv = characteristic_vector(policy, dict_unit, query, window_size, offset, &mut cv);
 
-        let next_positions = transition_position(
-            position,
-            cv,
-            query_length,
-            settings.max_distance,
-            settings.algorithm,
-            settings.prefix_mode,
-        );
-
-        for next_pos in next_positions {
-            next_state.insert(next_pos, settings.algorithm, query_length);
+        next_positions.clear();
+        V::successors(*position, cv, ctx, &mut next_positions);
+        for next_pos in next_positions.iter().copied() {
+            next_state.insert_with::<V>(next_pos, ctx);
         }
     }
 
@@ -943,17 +1140,61 @@ pub(crate) fn transition_state_pooled_ref<
 /// The initial state contains positions representing all possible
 /// ways to start matching (including initial errors via deletions/insertions).
 pub fn initial_state(query_length: usize, max_distance: usize, algorithm: Algorithm) -> State {
+    algorithm.assert_supported_max_distance(max_distance);
+    let ctx = TransitionCtx::unit(query_length, max_distance, false);
+    with_variant!(VariantSpec::from(algorithm), |V| {
+        initial_state_with::<V>(&ctx)
+    })
+}
+
+#[inline]
+fn initial_state_with<V: AutomatonVariant>(ctx: &TransitionCtx<V::Params>) -> State {
     let mut state = State::new();
 
     // Start at position (0, 0) - no errors, beginning of query
-    state.insert(Position::new(0, 0), algorithm, query_length);
+    state.insert_with::<V>(Position::new(0, 0), ctx);
 
-    // Also add positions for initial deletions (skipping query chars)
-    for i in 1..=max_distance.min(query_length) {
-        state.insert(Position::new(i, i), algorithm, query_length);
-    }
+    // Seed every legal query-prefix gap. For unit-cost variants this is the
+    // historical `(i, i)` prefix; affine uses the same fixpoint shape with its
+    // layer-aware open/extension costs.
+    epsilon_closure_mut::<V>(&mut state, ctx);
 
     state
+}
+
+/// Create the initial state for an exact scaled affine-gap query.
+pub(crate) fn initial_state_affine(
+    query_length: usize,
+    max_cost: usize,
+    params: AffineGapParams,
+) -> State {
+    // Keep the runtime seam's marker executable even though parameters require
+    // the typed path below rather than the unit-parameter dispatch macro.
+    let _spec = VariantSpec::AffineGap;
+    let ctx = TransitionCtx::new(query_length, max_cost, false, params);
+    initial_state_with::<AffineV>(&ctx)
+}
+
+/// Transition a scaled affine-gap state with a borrowed substitution policy.
+#[inline]
+pub(crate) fn transition_state_pooled_affine_ref<
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+>(
+    state: &State,
+    pool: &mut StatePool,
+    policy: &P,
+    dict_unit: U,
+    query: &[U],
+    settings: AffineTransitionSettings,
+) -> Option<State> {
+    let ctx = TransitionCtx::new(
+        query.len(),
+        settings.max_cost,
+        settings.prefix_mode,
+        settings.params,
+    );
+    transition_state_pooled_inner::<U, P, AffineV>(state, pool, policy, dict_unit, query, &ctx)
 }
 
 #[cfg(test)]
@@ -1009,6 +1250,29 @@ mod tests {
         assert_eq!(checked_deletion_position(usize::MAX, 0, 0), None);
         assert_eq!(checked_deletion_position(0, 0, usize::MAX), None);
         assert!(!has_query_units(usize::MAX, 1, usize::MAX));
+    }
+
+    #[test]
+    fn damerau_budget_ceiling_accepts_the_largest_representable_delta() {
+        let state = initial_state(
+            0,
+            Algorithm::MAX_DAMERAU_DISTANCE,
+            Algorithm::DamerauLevenshtein,
+        );
+        assert_eq!(state.len(), 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Algorithm::DamerauLevenshtein supports max_distance <= 255")]
+    fn damerau_budget_ceiling_rejects_incomplete_semantics() {
+        let _ = transition_position(
+            &Position::new(0, 0),
+            &[false; 257],
+            257,
+            Algorithm::MAX_DAMERAU_DISTANCE + 1,
+            Algorithm::DamerauLevenshtein,
+            false,
+        );
     }
 
     #[test]
@@ -1180,7 +1444,7 @@ mod tests {
     #[test]
     fn test_zero_distance_transition_falls_back_for_special_positions() {
         let query = b"a";
-        let state = State::single(Position::new_special(0, 0));
+        let state = State::single(Position::new_osa_transposing(0, 0));
         let policy = Unrestricted;
 
         let next = transition_state(

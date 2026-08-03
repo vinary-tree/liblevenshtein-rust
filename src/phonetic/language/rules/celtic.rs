@@ -8,7 +8,7 @@ use crate::phonetic::types::RewriteRuleChar;
 ///
 /// Returns the complete phonetic normalization rules for Welsh (Cymraeg):
 /// - 8 digraphs as letters: ch→CH, dd→DH, ff→F, ng→NG, ll→LL, ph→F, rh→RH, th→TH
-/// - Unique LL: Voiceless lateral fricative [ɬ]
+/// - Unique LL: voiceless lateral fricative /ɬ/
 /// - F = V sound (ff = F sound)
 /// - W and Y as vowels
 /// - Circumflex for long vowels: â, ê, î, ô, û, ŵ, ŷ

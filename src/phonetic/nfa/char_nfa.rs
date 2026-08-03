@@ -293,7 +293,8 @@ pub struct NFAChar {
     start: StateId,
     /// Set of final (accepting) states
     finals: FxHashSet<StateId>,
-    /// H9: CSR offsets - transitions for state s are at transitions[offsets[s]..offsets[s+1]]
+    /// H9: CSR offsets - transitions for state `s` are at
+    /// `transitions[offsets[s]..offsets[s + 1]]`.
     /// Length = num_states + 1 (last element is transitions.len())
     transition_offsets: Vec<usize>,
     /// Pending transitions before finalization (used during construction)

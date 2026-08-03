@@ -454,6 +454,7 @@ proptest! {
                     Algorithm::Standard => standard_distance(&query, result),
                     Algorithm::Transposition => transposition_distance(&query, result),
                     Algorithm::MergeAndSplit => merge_and_split_distance(&query, result, &cache),
+                    _ => unreachable!("test iterates only the three built-in algorithms"),
                 };
                 prop_assert!(
                     dist <= max_dist,
@@ -483,6 +484,7 @@ proptest! {
                     Algorithm::Standard => standard_distance(&query, result),
                     Algorithm::Transposition => transposition_distance(&query, result),
                     Algorithm::MergeAndSplit => merge_and_split_distance(&query, result, &cache),
+                    _ => unreachable!("test iterates only the three built-in algorithms"),
                 };
                 prop_assert!(
                     dist <= max_dist,

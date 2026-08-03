@@ -1877,7 +1877,7 @@ mod proptest_phonetic {
             let (optimized, _) = optimizer.optimize(nfa.clone());
 
             // Should accept n repetitions of c
-            let s: String = std::iter::repeat(c).take(n).collect();
+            let s: String = std::iter::repeat_n(c, n).collect();
             prop_assert!(nfa.accepts(&s));
             prop_assert!(optimized.accepts(&s));
         }

@@ -1,0 +1,51 @@
+@startuml language-product-frontier
+' Cost-indexed language frontier: all NFA states at one edit cost are unioned,
+' and states seen at a cheaper cost are removed from dearer levels.
+' Colour mapping: pink = language NFA; blue = edit product; amber = traversal;
+' green = accepting output. Edit arrows use the canonical operation colours.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title LanguageProduct — a bounded, cost-indexed frontier
+
+rectangle "LanguageAutomaton<U>\nNFA, DFA, or token automaton" as LANG #F8BBD0
+rectangle "Input unit u" as UNIT #B2EBF2
+
+rectangle "Frontier before step" as BEFORE #FFE0B2 {
+  rectangle "levels[0] = {q₀, q₂}" as B0 #E3F2FD
+  rectangle "levels[1] = {q₁, q₃}" as B1 #E3F2FD
+  rectangle "levels[2] = ∅" as B2 #E3F2FD
+}
+
+rectangle "match / insert / substitute\nthen deletion closure" as STEP #BBDEFB
+
+rectangle "Canonical frontier" as AFTER #FFE0B2 {
+  rectangle "levels[0] = S₀" as A0 #E3F2FD
+  rectangle "levels[1] = S₁ \\ S₀" as A1 #E3F2FD
+  rectangle "levels[2] = S₂ \\ (S₀ ∪ S₁)" as A2 #E3F2FD
+}
+
+rectangle "first accepting level\n= exact bounded distance" as ACCEPT #C8E6C9
+
+LANG -[#AD1457]-> BEFORE : initial + ε-closure
+UNIT -[#00838F]-> STEP
+BEFORE -[#37474F]-> STEP
+STEP -[#2E7D32]-> AFTER : match cost 0
+STEP -[#6A1B9A]-> AFTER : substitution cost 1
+STEP -[#EF6C00]-> AFTER : insertion cost 1
+STEP -[#C62828]-> AFTER : deletion cost 1
+AFTER -[#2E7D32]-> ACCEPT : least e with final state
+
+note bottom of AFTER #FFF3E0
+  Fixed length: <latex>k + 1</latex> levels
+  Merge law: <latex>\delta(A \cup B,u)=\delta(A,u)\cup\delta(B,u)</latex>
+end note
+@enduml

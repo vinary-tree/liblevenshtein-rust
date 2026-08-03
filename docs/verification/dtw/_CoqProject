@@ -1,0 +1,3 @@
+-Q theories Liblevenshtein.Dtw
+theories/Indexing/DtwProperties.v
+theories/NotAMetric.v

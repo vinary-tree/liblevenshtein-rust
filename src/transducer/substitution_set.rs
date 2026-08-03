@@ -41,6 +41,38 @@
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// Maximum number of restriction pairs accepted from one serialized set.
+///
+/// The binary [`OperationSet`](super::operation_set::OperationSet) decoders use
+/// this as a format-independent hard ceiling in addition to their byte limits.
+pub const MAX_SUBSTITUTION_PAIRS: usize = 1_048_576;
+
+/// Maximum aggregate UTF-8 bytes accepted in serialized string restrictions.
+pub const MAX_SUBSTITUTION_TEXT_BYTES: usize = 64 * 1024 * 1024;
+
+/// One lossless entry in a [`SubstitutionSet`].
+///
+/// Raw byte entries remain distinct from UTF-8 string entries so all values
+/// accepted by [`SubstitutionSet::allow_byte`] survive a round trip, including
+/// bytes that are not valid UTF-8 on their own.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SubstitutionPair {
+    /// A raw single-byte source and target.
+    Bytes {
+        /// Source byte.
+        source: u8,
+        /// Target byte.
+        target: u8,
+    },
+    /// A non-empty UTF-8 source and target.
+    Strings {
+        /// Source text.
+        source: Box<str>,
+        /// Target text.
+        target: Box<str>,
+    },
+}
+
 #[inline]
 fn substitution_upgrade_capacity(existing_len: usize) -> Option<usize> {
     existing_len.checked_add(1)
@@ -87,7 +119,7 @@ enum SubstitutionSetImpl {
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum MultiCharSubstitutionImpl {
     /// Small set using linear scan (≤4 pairs).
-    /// Box<str> is used instead of String for lower memory overhead.
+    /// `Box<str>` is used instead of `String` for lower memory overhead.
     Small(Vec<(Box<str>, Box<str>)>),
 
     /// Large set using hash lookup (>4 pairs).
@@ -128,7 +160,7 @@ enum MultiCharSubstitutionImpl {
 /// ```
 ///
 /// Most presets (like `phonetic_basic()`) include symmetric pairs where appropriate.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct SubstitutionSet {
     /// Internal storage for single-character pairs using hybrid Vec/HashSet approach.
     inner: SubstitutionSetImpl,
@@ -137,6 +169,20 @@ pub struct SubstitutionSet {
     /// This is separate from single-char storage to maintain performance for the common case.
     multi_char: MultiCharSubstitutionImpl,
 }
+
+impl PartialEq for SubstitutionSet {
+    /// Compare the logical set, not insertion order or hybrid storage state.
+    ///
+    /// Equality is intentionally canonical and may allocate. Membership is the
+    /// hot path; equality is used for configuration/tests and persistence
+    /// correspondence, where exposing `Small` versus `Large` would violate the
+    /// public set abstraction.
+    fn eq(&self, other: &Self) -> bool {
+        self.pairs() == other.pairs()
+    }
+}
+
+impl Eq for SubstitutionSet {}
 
 impl SubstitutionSet {
     /// Threshold for upgrading from Vec to FxHashSet.
@@ -357,10 +403,15 @@ impl SubstitutionSet {
     /// ```
     #[inline]
     pub fn len(&self) -> usize {
-        match &self.inner {
+        let byte_pairs = match &self.inner {
             SubstitutionSetImpl::Small(vec) => vec.len(),
             SubstitutionSetImpl::Large(set) => set.len(),
-        }
+        };
+        let string_pairs = match &self.multi_char {
+            MultiCharSubstitutionImpl::Small(vec) => vec.len(),
+            MultiCharSubstitutionImpl::Large(map) => map.values().map(FxHashSet::len).sum(),
+        };
+        byte_pairs.saturating_add(string_pairs)
     }
 
     /// Check if the substitution set is empty.
@@ -377,10 +428,62 @@ impl SubstitutionSet {
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
-        match &self.inner {
+        let bytes_empty = match &self.inner {
             SubstitutionSetImpl::Small(vec) => vec.is_empty(),
             SubstitutionSetImpl::Large(set) => set.is_empty(),
+        };
+        let strings_empty = match &self.multi_char {
+            MultiCharSubstitutionImpl::Small(vec) => vec.is_empty(),
+            MultiCharSubstitutionImpl::Large(map) => map.is_empty(),
+        };
+        bytes_empty && strings_empty
+    }
+
+    /// Return every restriction pair in canonical order.
+    ///
+    /// Hash-backed internal representations deliberately do not expose their
+    /// iteration order. Sorting this lossless view makes serialization byte
+    /// deterministic without changing hot-path lookup storage.
+    pub fn pairs(&self) -> Vec<SubstitutionPair> {
+        let mut pairs = Vec::with_capacity(self.len());
+        match &self.inner {
+            SubstitutionSetImpl::Small(values) => {
+                pairs.extend(
+                    values
+                        .iter()
+                        .map(|&(source, target)| SubstitutionPair::Bytes { source, target }),
+                );
+            }
+            SubstitutionSetImpl::Large(values) => {
+                pairs.extend(
+                    values
+                        .iter()
+                        .map(|&(source, target)| SubstitutionPair::Bytes { source, target }),
+                );
+            }
         }
+        match &self.multi_char {
+            MultiCharSubstitutionImpl::Small(values) => {
+                pairs.extend(
+                    values
+                        .iter()
+                        .map(|(source, target)| SubstitutionPair::Strings {
+                            source: source.clone(),
+                            target: target.clone(),
+                        }),
+                );
+            }
+            MultiCharSubstitutionImpl::Large(values) => {
+                for (source, targets) in values {
+                    pairs.extend(targets.iter().map(|target| SubstitutionPair::Strings {
+                        source: source.clone(),
+                        target: target.clone(),
+                    }));
+                }
+            }
+        }
+        pairs.sort_unstable();
+        pairs
     }
 
     /// Clear all allowed substitutions.
@@ -1129,6 +1232,61 @@ mod tests {
         let set = SubstitutionSet::new();
         assert_eq!(set.len(), 0);
         assert!(set.is_empty());
+    }
+
+    #[test]
+    fn length_and_emptiness_include_multi_character_pairs() {
+        let mut set = SubstitutionSet::new();
+        set.allow_str("ph", "f");
+        assert_eq!(set.len(), 1);
+        assert!(!set.is_empty());
+
+        set.allow_byte(0xff, 0x80);
+        assert_eq!(set.len(), 2);
+        assert_eq!(
+            set.pairs(),
+            vec![
+                SubstitutionPair::Bytes {
+                    source: 0xff,
+                    target: 0x80,
+                },
+                SubstitutionPair::Strings {
+                    source: "ph".into(),
+                    target: "f".into(),
+                },
+            ]
+        );
+
+        set.clear();
+        assert!(set.is_empty());
+        assert_eq!(set.len(), 0);
+    }
+
+    #[test]
+    fn equality_ignores_insertion_order_and_hybrid_storage_variant() {
+        let pairs = [(b'a', b'b'), (b'c', b'd'), (0xff, 0x00)];
+
+        let mut forward = SubstitutionSet::new();
+        for pair in pairs {
+            forward.allow_byte(pair.0, pair.1);
+        }
+
+        let mut reverse = SubstitutionSet::new();
+        for pair in pairs.into_iter().rev() {
+            reverse.allow_byte(pair.0, pair.1);
+        }
+        assert_eq!(forward, reverse);
+
+        let mut large_storage = SubstitutionSet::new();
+        for value in 0..=SubstitutionSet::SMALL_SET_THRESHOLD {
+            large_storage.allow_byte(value as u8, (value + 1) as u8);
+        }
+        large_storage.clear();
+        for pair in pairs.into_iter().rev() {
+            large_storage.allow_byte(pair.0, pair.1);
+        }
+        assert!(matches!(large_storage.inner, SubstitutionSetImpl::Large(_)));
+        assert_eq!(forward, large_storage);
     }
 
     #[test]

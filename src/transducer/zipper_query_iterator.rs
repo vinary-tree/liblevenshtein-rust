@@ -159,6 +159,7 @@ where
 #[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
+    use crate::distance::standard_distance;
     use libdictenstein::pathmap::zipper::PathMapZipper;
     use libdictenstein::pathmap::PathMapDictionary;
 
@@ -214,10 +215,17 @@ mod tests {
         // "cat" should have distance 0
         assert!(results.iter().any(|c| c.term == "cat" && c.distance == 0));
 
-        // "at" should have distance 1 (deletion of 'c')
-        // "ca" should have distance 0 (perfect match of first 2 chars)
-        assert!(results.iter().any(|c| c.term == "at"));
-        assert!(results.iter().any(|c| c.term == "ca" && c.distance == 0));
+        // Both shorter terms require one full-string deletion. Compare to the
+        // independent oracle so prefix-only scoring cannot return unnoticed.
+        for term in ["at", "ca"] {
+            let expected = standard_distance("cat", term);
+            assert!(
+                results
+                    .iter()
+                    .any(|candidate| candidate.term == term && candidate.distance == expected),
+                "missing oracle distance for {term}"
+            );
+        }
     }
 
     #[test]

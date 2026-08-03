@@ -133,7 +133,7 @@ fn bench_transition_transposition(c: &mut Criterion) {
             // Test both regular and special positions
             for is_special in &[false, true] {
                 let position = if *is_special {
-                    Position::new_special(0, 1)
+                    Position::new_osa_transposing(0, 1)
                 } else {
                     Position::new(0, 0)
                 };
@@ -180,7 +180,7 @@ fn bench_transition_merge_split(c: &mut Criterion) {
         for (name, cv) in &scenarios {
             for is_special in &[false, true] {
                 let position = if *is_special {
-                    Position::new_special(0, 1)
+                    Position::new_splitting(0, 1)
                 } else {
                     Position::new(0, 0)
                 };

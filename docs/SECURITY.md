@@ -69,17 +69,26 @@ classes of risk and the posture:
 limit (e.g. `systemd-run --scope -p MemoryMax=… -p RuntimeMaxSec=…`) and enable
 only the document extractors you need.
 
-## 4 · Serialization — deserialize only trusted artifacts
+## 4 · Binary persistence — bound every decode
 
-The `serialization` feature loads dictionaries from bincode, JSON, and protobuf
-(optionally gzip-wrapped). Deserialization of **untrusted** data is a general
-risk class (resource exhaustion on malformed input, logic errors on crafted
-structures). The formats here are data-only (no code execution), but a crafted
-blob can still drive large allocations.
+The `serialization` feature loads bincode dictionaries; `protobuf` adds Protocol
+Buffers, and `compression` permits gzip around either binary stream. JSON, TOML,
+and newline text are not persistence formats. Deserialization of **untrusted**
+data is a general risk class (resource exhaustion on malformed input, logic
+errors on crafted structures). The formats are data-only, but a crafted blob can
+still drive large allocations or decompression work.
 
-**Guidance.** Deserialize only artifacts you produced or trust. For third-party
-blobs, validate provenance (e.g. a signature) and deserialize under a resource
-limit.
+**Guidance.** Prefer authenticated artifacts. Bound compressed input,
+decompressed output, decoder allocations, and elapsed work. The generalized
+`OperationSet` bincode envelope validates magic, version, flags, exact payload
+length/consumption, semantic invariants, and caller-configurable resource
+limits. Its protobuf decoder first scans the wire without allocating decoded
+collections, enforces operation/pair/name/text limits, requires a supported
+container version, and then validates the semantic model. Protobuf unknown
+fields are skipped for forward compatibility; they are not equivalent to
+unstructured trailing junk. Operation-set gzip accepts exactly one checksummed
+member, rejects concatenated members/trailing bytes, and caps inflated output
+before invoking either inner decoder.
 
 ## 5 · FFI — the documented `unsafe` contract
 

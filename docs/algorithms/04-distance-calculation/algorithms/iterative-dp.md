@@ -118,9 +118,12 @@ Iteration i=2 (processing 'i'):
 Memory: O(2n) = 2×8 = 16 cells (4× reduction)
 ```
 
-## Transposition Distance (Damerau-Levenshtein)
+## Transposition Distance (Optimal String Alignment)
 
 Extends standard DP to support transposition (swapping adjacent characters) as a single operation.
+Because the recurrence only looks back two rows and does not maintain a
+last-occurrence table, it computes OSA (restricted Damerau), not unrestricted
+Damerau–Levenshtein distance.
 
 ### Recurrence Relation
 

@@ -90,7 +90,7 @@ use crate::transducer::universal::subsumption::subsumes;
 /// ## Theoretical Foundation
 ///
 /// **Theorem 8.2** (TCS 2011, Page 2348): The following are equivalent:
-/// 1. R[Op,r] has bounded length difference
+/// 1. `R[Op,r]` has bounded length difference
 /// 2. There exists constant c such that every Op instance satisfies c-bounded diagonal property
 /// 3. Every zero-weighted type in Υ is length preserving
 ///

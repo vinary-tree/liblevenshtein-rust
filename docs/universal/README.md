@@ -1,6 +1,6 @@
 # Universal Levenshtein Automaton Documentation
 
-This directory contains documentation for the Universal Levenshtein Automaton implementation, including the transposition variant (Damerau-Levenshtein distance).
+This directory contains documentation for the Universal Levenshtein Automaton implementation, including its optimal-string-alignment transposition variant (restricted Damerau distance, not unrestricted Damerau–Levenshtein).
 
 ## Overview
 

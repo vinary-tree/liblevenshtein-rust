@@ -9,20 +9,20 @@ use liblevenshtein::transducer::generalized::GeneralizedPosition;
 use proptest::prelude::*;
 
 // Helper function to check I-type invariant
-fn check_i_invariant(offset: i32, errors: u8, max_distance: u8) -> bool {
+fn check_i_invariant(offset: i32, errors: usize, max_distance: u8) -> bool {
     let n = max_distance as i32;
     // Bounds: -n <= offset <= n
     let bounds_ok = -n <= offset && offset <= n;
     // Reachability: |offset| <= errors
     let reachability_ok = offset.abs() <= errors as i32;
     // Budget: errors <= max_distance
-    let budget_ok = errors <= max_distance;
+    let budget_ok = errors <= usize::from(max_distance);
 
     bounds_ok && reachability_ok && budget_ok
 }
 
 // Helper function to check M-type invariant
-fn check_m_invariant(offset: i32, errors: u8, max_distance: u8) -> bool {
+fn check_m_invariant(offset: i32, errors: usize, max_distance: u8) -> bool {
     let n = max_distance as i32;
     // Bounds: -2n <= offset <= 0
     let bounds_ok = -(2 * n) <= offset && offset <= 0;
@@ -30,7 +30,7 @@ fn check_m_invariant(offset: i32, errors: u8, max_distance: u8) -> bool {
     // Equivalently: |offset| <= errors + n (since offset <= 0)
     let reachability_ok = errors as i32 >= (-offset - n);
     // Budget: errors <= max_distance
-    let budget_ok = errors <= max_distance;
+    let budget_ok = errors <= usize::from(max_distance);
 
     bounds_ok && reachability_ok && budget_ok
 }
@@ -54,7 +54,7 @@ proptest! {
         skip_distance in 1u8..5,
     ) {
         // Only test valid initial positions
-        if !check_i_invariant(offset, errors, max_distance) {
+        if !check_i_invariant(offset, usize::from(errors), max_distance) {
             return Ok(());
         }
 
@@ -98,7 +98,7 @@ proptest! {
         skip_distance in 1u8..5,
     ) {
         // Only test valid initial positions
-        if !check_i_invariant(offset, errors, max_distance) {
+        if !check_i_invariant(offset, usize::from(errors), max_distance) {
             return Ok(());
         }
 
@@ -121,7 +121,7 @@ proptest! {
             // Verify formula holds
             prop_assert_eq!(successor.offset(), expected_offset,
                 "Skip-to-match offset formula failed");
-            prop_assert_eq!(successor.errors(), expected_errors,
+            prop_assert_eq!(successor.errors(), usize::from(expected_errors),
                 "Skip-to-match errors formula failed");
         }
     }
@@ -144,7 +144,7 @@ proptest! {
         skip_distance in 1u8..5,
     ) {
         // Only test valid initial positions
-        if !check_m_invariant(offset, errors, max_distance) {
+        if !check_m_invariant(offset, usize::from(errors), max_distance) {
             return Ok(());
         }
 
@@ -188,7 +188,7 @@ proptest! {
         skip_distance in 1u8..5,
     ) {
         // Only test valid initial positions
-        if !check_m_invariant(offset, errors, max_distance) {
+        if !check_m_invariant(offset, usize::from(errors), max_distance) {
             return Ok(());
         }
 
@@ -211,7 +211,7 @@ proptest! {
             // Verify formula holds
             prop_assert_eq!(successor.offset(), expected_offset,
                 "Skip-to-match offset formula failed (M-type should be unchanged)");
-            prop_assert_eq!(successor.errors(), expected_errors,
+            prop_assert_eq!(successor.errors(), usize::from(expected_errors),
                 "Skip-to-match errors formula failed");
         }
     }
@@ -229,7 +229,7 @@ proptest! {
         skip_distance in 1u8..3,
     ) {
         // Only test valid initial positions
-        if !check_i_invariant(offset, errors, max_distance) {
+        if !check_i_invariant(offset, usize::from(errors), max_distance) {
             return Ok(());
         }
 

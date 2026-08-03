@@ -1,0 +1,24 @@
+// affine-subsumption-lattice.dot — Hasse diagram for affine continuation layers.
+// Teaches that each gap layer can dominate Match, while the two gap layers are incomparable.
+digraph affine_subsumption_lattice {
+  rankdir=BT;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="Affine continuation preorder used by B-4 subsumption"];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+        color="#455A64", fontcolor="#102027", margin="0.16,0.10"];
+  edge [fontname="DejaVu Sans", fontsize=10, color="#37474F", penwidth=2,
+        arrowhead=normal];
+
+  m [label="Match layer M\nnext gap pays open + extend",
+     fillcolor="#BBDEFB", color="#1565C0"];
+  q [label="Query-gap layer Iₓ\nextend Iₓ for extend cost",
+     fillcolor="#FFE0B2", color="#EF6C00"];
+  d [label="Dictionary-gap layer Iᵧ\nextend Iᵧ for extend cost",
+     fillcolor="#FFE0B2", color="#EF6C00"];
+
+  q -> m [label="Iₓ ⪯ M"];
+  d -> m [label="Iᵧ ⪯ M"];
+  { rank=same; q; d; }
+  q -> d [dir=none, style=dashed, color="#C62828",
+          fontcolor="#C62828", label="incomparable"];
+}

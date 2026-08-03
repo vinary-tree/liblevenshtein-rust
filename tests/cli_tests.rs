@@ -41,44 +41,45 @@ mod cli_integration_tests {
     }
 
     #[test]
-    fn test_detect_text_format() {
+    fn test_detect_bincode_format() {
         let scratch = ScratchDir::new();
-        let dict_path = scratch.path().join("test.txt");
-        fs::write(&dict_path, "hello\nworld\ntest\n").unwrap();
+        let dict_path = scratch.path().join("test.bin");
+        fs::write(&dict_path, [0_u8, 1, 2, 3]).unwrap();
 
         let detection = detect_format(&dict_path, None, None).unwrap();
-        assert_eq!(detection.format.format, SerializationFormat::Text);
+        assert_eq!(detection.format.format, SerializationFormat::Bincode);
         assert!(matches!(
             detection.method,
             DetectionMethod::Extension | DetectionMethod::Content
         ));
     }
 
+    #[cfg(feature = "protobuf")]
     #[test]
     fn test_detect_format_by_extension() {
         let scratch = ScratchDir::new();
-        let dict_path = scratch.path().join("test.json");
-        fs::write(&dict_path, "[]").unwrap();
+        let dict_path = scratch.path().join("test.pb");
+        fs::write(&dict_path, [0_u8, 1, 2, 3]).unwrap();
 
         let detection = detect_format(&dict_path, None, None).unwrap();
-        assert_eq!(detection.format.format, SerializationFormat::Json);
+        assert_eq!(detection.format.format, SerializationFormat::Protobuf);
     }
 
     #[test]
     fn test_user_specified_format_override() {
         let scratch = ScratchDir::new();
-        let dict_path = scratch.path().join("test.txt");
-        fs::write(&dict_path, "hello\nworld\n").unwrap();
+        let dict_path = scratch.path().join("test.bin");
+        fs::write(&dict_path, [0_u8, 1, 2, 3]).unwrap();
 
         let detection = detect_format(
             &dict_path,
             Some(DictionaryBackend::DynamicDawg),
-            Some(SerializationFormat::Text),
+            Some(SerializationFormat::Bincode),
         )
         .unwrap();
 
         assert_eq!(detection.format.backend, DictionaryBackend::DynamicDawg);
-        assert_eq!(detection.format.format, SerializationFormat::Text);
+        assert_eq!(detection.format.format, SerializationFormat::Bincode);
     }
 
     #[test]
@@ -96,9 +97,9 @@ mod cli_integration_tests {
 
     #[test]
     fn test_file_extensions() {
-        assert_eq!(file_extension(SerializationFormat::Text), "txt");
         assert_eq!(file_extension(SerializationFormat::Bincode), "bin");
-        assert_eq!(file_extension(SerializationFormat::Json), "json");
+        #[cfg(feature = "protobuf")]
+        assert_eq!(file_extension(SerializationFormat::Protobuf), "pb");
     }
 
     #[test]

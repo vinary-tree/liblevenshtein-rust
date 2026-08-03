@@ -1,0 +1,47 @@
+# cost-monoid-boundary.d2 — anti-drift boundary between bounded DP and WFST algebra.
+# Teaches what CostMonoid intentionally guarantees and where richer operations belong.
+direction: right
+
+title: "Cost algebra boundary — bounded distance versus weighted transducers" {
+  near: top-center
+  shape: text
+  style.font-size: 26
+  style.bold: true
+}
+
+lev: "liblevenshtein\nbounded acyclic dynamic programs" {
+  style.fill: "#BBDEFB"; style.stroke: "#1565C0"; style.font-color: "#102027"
+  monoid: "CostMonoid\ncombine · total compare · within\nchoice fixed to minimum" {
+    style.fill: "#E3F2FD"; style.stroke: "#1565C0"; style.font-color: "#102027"
+  }
+  laws: "Required laws\nassociativity · monotonicity\nnon-negative inflation · TOP absorption" {
+    style.fill: "#FFE0B2"; style.stroke: "#EF6C00"; style.font-color: "#102027"
+  }
+  users: "Consumers\nsubsumption · trie lower bounds\nrange / kNN cutoffs · elastic kernels" {
+    style.fill: "#C8E6C9"; style.stroke: "#2E7D32"; style.font-color: "#102027"
+  }
+}
+
+dual: "duallity\nWFST adapters and composition" {
+  style.fill: "#B3E5FC"; style.stroke: "#0277BD"; style.font-color: "#102027"
+  adapters: "Path-sensitive state sources\nweight deltas · lazy composition" {
+    style.fill: "#E1F5FE"; style.stroke: "#0277BD"; style.font-color: "#102027"
+  }
+}
+
+llang: "lling-llang\nreusable weight algebra" {
+  style.fill: "#E1BEE7"; style.stroke: "#6A1B9A"; style.font-color: "#102027"
+  semiring: "Semiring operations\nchoice parameter · star · divide\nTropical · Arctic · probability" {
+    style.fill: "#F3E5F5"; style.stroke: "#6A1B9A"; style.font-color: "#102027"
+  }
+}
+
+lev.monoid -> lev.laws: "lawful carrier" { style.stroke: "#1565C0"; style.stroke-width: 2 }
+lev.laws -> lev.users: "sound pruning" { style.stroke: "#2E7D32"; style.stroke-width: 2 }
+lev -> dual: "cross when gains need an explicit upper bound\nor machines need weighted composition" {
+  style.stroke: "#C62828"; style.stroke-width: 2; style.stroke-dash: 4
+}
+dual -> llang: "uses semiring weights" { style.stroke: "#0277BD"; style.stroke-width: 2 }
+lev -> llang: "anti-drift: never add configurable choice,\nstar, divide, or left-divide to CostMonoid" {
+  style.stroke: "#C62828"; style.stroke-width: 3; style.stroke-dash: 5
+}

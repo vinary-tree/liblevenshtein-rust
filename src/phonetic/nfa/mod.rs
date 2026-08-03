@@ -67,6 +67,7 @@ pub mod char_nfa;
 pub mod compiler;
 pub mod context;
 pub mod incremental;
+mod language_impl;
 pub mod lazy_dfa;
 pub mod memoized;
 pub mod optimizer;
@@ -81,8 +82,8 @@ mod tests;
 // Re-export main types (character-level)
 pub use char_nfa::NFAChar;
 pub use compiler::{
-    compile, compile_rewrite, compile_with_flags, CompileResultChar, CompiledRewriteChar,
-    NFACompilerChar,
+    compile, compile_rewrite, compile_with_flags, estimate_thompson_states, CompileResultChar,
+    CompiledRewriteChar, NFACompilerChar,
 };
 pub use context::{
     BoundaryKind, ContextMatcherChar, ContextPatternChar, ContextualRewriteRuleChar,

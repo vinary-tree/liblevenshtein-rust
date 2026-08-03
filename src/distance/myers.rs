@@ -49,8 +49,8 @@ fn byte_mask_index(byte: u8) -> usize {
 impl PatternMasks {
     /// Create pattern masks for the given byte sequence.
     ///
-    /// For each character c in the alphabet, peq[c] has bit i set
-    /// if pattern[i] == c.
+    /// For each character `c` in the alphabet, `peq[c]` has bit `i` set
+    /// if `pattern[i] == c`.
     #[inline]
     fn new(pattern: &[u8]) -> Self {
         let mut peq = [0u64; 256];
@@ -392,7 +392,8 @@ pub fn myers_distance_bounded(source: &str, target: &str, max_distance: usize) -
 /// needed for exact adjacent transpositions. This function therefore uses the
 /// same optimal-string-alignment recurrence as [`crate::distance::transposition_distance`],
 /// with fixed-size stack rows for the common short-string case that Myers users
-/// typically care about.
+/// typically care about. Optimal string alignment is the restricted Damerau
+/// recurrence, not unrestricted Damerau–Levenshtein distance, and is not a metric.
 ///
 /// # Example
 ///
@@ -769,7 +770,7 @@ mod tests {
     fn test_myers_bounded_long_byte_path_matches_unbounded() {
         let insertion_source = vec![b'a'; 96];
         let mut insertion_target = insertion_source.clone();
-        insertion_target.splice(48..48, [b'b', b'c', b'd']);
+        insertion_target.splice(48..48, *b"bcd");
 
         let cases = vec![
             (vec![b'a'; 80], vec![b'a'; 80]),

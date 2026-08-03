@@ -23,6 +23,12 @@ Core/MinLemmas.v
 
 # Tier 3: Metric Properties
 Core/MetricProperties.v
+Conformance/RustSubsumption.v
+Conformance/LanguageProduct.v
+Conformance/CostMonoid.v
+Conformance/GeneralizedAutomatonRepair.v
+Conformance/ElasticKernel.v
+Conformance/DownstreamQueries.v
 
 # Tier 4: Trace Infrastructure
 Trace/TraceBasics.v
@@ -41,6 +47,11 @@ Triangle/SubstCostTriangle.v
 
 # Tier 7: Composition
 Composition/WitnessLemmas.v
+Conformance/PositionKindVariant.v
+Conformance/DyckCorrection.v
+Conformance/OperationSetSerialization.v
+Conformance/FzfUpperBound.v
+Conformance/SubsumptionFallback.v
 Composition/CompositionNoDup.v
 Composition/CompositionValidity.v
 Composition/CostBounds.v

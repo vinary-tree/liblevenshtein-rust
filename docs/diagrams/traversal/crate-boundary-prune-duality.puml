@@ -1,0 +1,29 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam ArrowColor #34495E
+skinparam componentStyle rectangle
+
+rectangle "liblevenshtein\nstructural dictionary DFS" as L #FADBD8
+rectangle "duallity\nFuzzyMatchV2 DP + bound" as D #D6EAF8
+rectangle "lling-llang\nArcticWeight + WFST" as A #FCF3CF
+database "libdictenstein\nDAWG / trie" as T #D5F5E3
+rectangle "top-k candidates" as O #E8DAEF
+
+T --> L : dictionary edges
+L --> D : balanced enter / leave
+D --> L : keep subtree?\n<latex>U(p) \geq \tau_k</latex>
+D --> A : arc delta\n<latex>S_{j+1}-S_j</latex>
+D --> O : exact score
+A --> O : accepting path weight
+
+note bottom of L
+min-plus distance remains here
+when non-negative extension gives
+<latex>c \leq c \otimes w</latex>
+end note
+note bottom of D
+max-plus gain requires an explicit
+upper bound with the unstarted term
+end note
+@enduml

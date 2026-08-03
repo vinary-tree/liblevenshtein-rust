@@ -61,7 +61,25 @@ use super::position::GeneralizedPosition;
 /// ```
 #[inline(always)]
 pub fn subsumes(pos1: &GeneralizedPosition, pos2: &GeneralizedPosition, max_distance: u8) -> bool {
-    subsumes_standard(pos1, pos2, max_distance)
+    subsumes_scaled(pos1, pos2, max_distance, true)
+}
+
+/// Check strict subsumption when position costs use a fixed-point scale.
+///
+/// A proven unit-cost Levenshtein lattice uses the classical offset/slack
+/// theorem. Every other runtime operation lattice collapses only identical
+/// control positions by exact cost dominance. A scale denominator of one is
+/// not sufficient evidence: an integer-weight operation can still cost two or
+/// more units. The conservative branch is sound for arbitrary operation
+/// arities and weights because it never assumes that one unit of offset can be
+/// repaired for one unit of cost.
+pub(crate) fn subsumes_scaled(
+    pos1: &GeneralizedPosition,
+    pos2: &GeneralizedPosition,
+    max_distance: u8,
+    use_classical_offset_rule: bool,
+) -> bool {
+    subsumes_standard(pos1, pos2, max_distance, use_classical_offset_rule)
 }
 
 /// Standard subsumption rule implementation
@@ -97,21 +115,34 @@ fn subsumes_standard(
     pos1: &GeneralizedPosition,
     pos2: &GeneralizedPosition,
     _max_distance: u8,
+    use_classical_offset_rule: bool,
 ) -> bool {
     use GeneralizedPosition::*;
 
     // Helper function for the actual subsumption check (same for all variants)
-    fn check_subsumption(i: i32, e: u8, j: i32, f: u8) -> bool {
+    fn check_subsumption(
+        i: i32,
+        e: usize,
+        j: i32,
+        f: usize,
+        use_classical_offset_rule: bool,
+    ) -> bool {
         // f > e (pos2 has more errors available)
         if f <= e {
             return false;
         }
 
-        let error_diff = (f - e) as i32;
-        let offset_diff = (j - i).abs();
+        if !use_classical_offset_rule {
+            return i == j;
+        }
+
+        let error_diff = f - e;
+        let offset_diff = i64::from(j)
+            .checked_sub(i64::from(i))
+            .and_then(|difference| usize::try_from(difference.unsigned_abs()).ok());
 
         // |j - i| ≤ f - e
-        offset_diff <= error_diff
+        offset_diff.is_some_and(|difference| difference <= error_diff)
     }
 
     match (pos1, pos2) {
@@ -125,7 +156,7 @@ fn subsumes_standard(
                 offset: j,
                 errors: f,
             },
-        ) => check_subsumption(*i, *e, *j, *f),
+        ) => check_subsumption(*i, *e, *j, *f, use_classical_offset_rule),
 
         // M-type subsumes M-type (usual state)
         (
@@ -137,7 +168,7 @@ fn subsumes_standard(
                 offset: j,
                 errors: f,
             },
-        ) => check_subsumption(*i, *e, *j, *f),
+        ) => check_subsumption(*i, *e, *j, *f, use_classical_offset_rule),
 
         // I-type transposing subsumes I-type transposing
         (
@@ -149,7 +180,7 @@ fn subsumes_standard(
                 offset: j,
                 errors: f,
             },
-        ) => check_subsumption(*i, *e, *j, *f),
+        ) => check_subsumption(*i, *e, *j, *f, use_classical_offset_rule),
 
         // M-type transposing subsumes M-type transposing
         (
@@ -161,35 +192,41 @@ fn subsumes_standard(
                 offset: j,
                 errors: f,
             },
-        ) => check_subsumption(*i, *e, *j, *f),
+        ) => check_subsumption(*i, *e, *j, *f, use_classical_offset_rule),
 
         // I-type splitting subsumes I-type splitting
         (
             ISplitting {
                 offset: i,
                 errors: e,
-                ..
+                entry_char: left_entry,
             },
             ISplitting {
                 offset: j,
                 errors: f,
-                ..
+                entry_char: right_entry,
             },
-        ) => check_subsumption(*i, *e, *j, *f),
+        ) => {
+            left_entry == right_entry
+                && check_subsumption(*i, *e, *j, *f, use_classical_offset_rule)
+        }
 
         // M-type splitting subsumes M-type splitting
         (
             MSplitting {
                 offset: i,
                 errors: e,
-                ..
+                entry_char: left_entry,
             },
             MSplitting {
                 offset: j,
                 errors: f,
-                ..
+                entry_char: right_entry,
             },
-        ) => check_subsumption(*i, *e, *j, *f),
+        ) => {
+            left_entry == right_entry
+                && check_subsumption(*i, *e, *j, *f, use_classical_offset_rule)
+        }
 
         // Different variants never subsume each other
         _ => false,
@@ -224,6 +261,17 @@ mod tests {
         let pos2 = GeneralizedPosition::new_i(-2, 3, 3)
             .expect("test fixture: GeneralizedPosition::new_i with valid args");
         assert!(!subsumes(&pos1, &pos2, 3));
+    }
+
+    #[test]
+    fn integer_scale_does_not_imply_unit_cost_offset_subsumption() {
+        let lower =
+            GeneralizedPosition::new_i(0, 0, 3).expect("test fixture: valid lower-cost position");
+        let displaced =
+            GeneralizedPosition::new_i(1, 2, 3).expect("test fixture: valid displaced position");
+
+        assert!(subsumes_scaled(&lower, &displaced, 3, true));
+        assert!(!subsumes_scaled(&lower, &displaced, 3, false));
     }
 
     #[test]
@@ -311,6 +359,17 @@ mod tests {
         let pos2 = GeneralizedPosition::new_i_splitting(0, 2, 2, 'a')
             .expect("test fixture: GeneralizedPosition::new_i_splitting with valid args");
         assert!(subsumes(&pos1, &pos2, 2));
+    }
+
+    #[test]
+    fn splitting_positions_with_distinct_entry_characters_do_not_subsume() {
+        let left =
+            GeneralizedPosition::new_i_splitting(0, 1, 2, 'a').expect("valid splitting position");
+        let right =
+            GeneralizedPosition::new_i_splitting(0, 2, 2, 'b').expect("valid splitting position");
+
+        assert!(!subsumes(&left, &right, 2));
+        assert!(!subsumes(&right, &left, 2));
     }
 
     #[test]

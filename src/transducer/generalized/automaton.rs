@@ -1,48 +1,29 @@
-//! Generalized Levenshtein Automaton
+//! Exact runtime-configurable generalized alignment.
 //!
-//! Implements a Levenshtein automaton with runtime-configurable operations.
+//! [`GeneralizedAutomaton`] decides whether an `OperationSet` alignment fits an
+//! integer budget. Decimal operation weights are converted through one exact
+//! [`CostScale`], and a sparse topological alignment graph evaluates every
+//! configured source/target consumption rule.
 //!
 //! # Design Philosophy
 //!
-//! `GeneralizedAutomaton` complements `UniversalAutomaton` by trading compile-time
-//! specialization for runtime flexibility:
-//!
-//! - **UniversalAutomaton**: Compile-time operations (Standard, Transposition, MergeAndSplit)
-//!   - Zero runtime overhead
-//!   - Fixed operation sets
-//!   - Perfect for standard Levenshtein variants
-//!
-//! - **GeneralizedAutomaton**: Runtime operations via `OperationSet`
-//!   - Small runtime overhead (+10-20% estimate)
-//!   - Custom operation sets
-//!   - Perfect for phonetic corrections and custom metrics
+//! `UniversalAutomaton` remains the compile-time specialized choice for its
+//! fixed variants. This engine is the correctness oracle for runtime presets,
+//! phonetic restrictions, fractional weights, and multi-scalar operations.
 //!
 //! # Operation Support
 //!
-//! The automaton supports runtime-configurable standard operations,
-//! transposition, merge/split operations, and restricted phonetic operations.
+//! The public Boolean API fails closed on invalid cost domains, arithmetic
+//! overflow, or the alignment-state resource ceiling. Use
+//! [`GeneralizedAutomaton::try_accepts`] to distinguish those errors.
 //!
 //! # Theory Background
 //!
-//! ## Definition 15: Universal Levenshtein Automaton (Page 30)
+//! ## Acceptance condition
 //!
-//! ```text
-//! A^∀,χ_n = ⟨Σ^∀_n, Q^∀,χ_n, I^∀,χ, F^∀,χ_n, δ^∀,χ_n⟩
-//! ```
-//!
-//! Where:
-//! - **Σ^∀_n**: Bit vectors of length ≤ 2n + 2
-//! - **Q^∀,χ_n**: State space (I^χ_states ∪ M^χ_states)
-//! - **I^∀,χ**: Initial state {I#0}
-//! - **F^∀,χ_n**: Final states (states with M-type positions)
-//! - **δ^∀,χ_n**: Transition function
-//!
-//! ## Acceptance Condition (Page 48)
-//!
-//! Given a word w and input x, the automaton accepts if:
-//! 1. Encode the pair as h_n(w, x) = β(x₁, s_n(w,1))...β(x_t, s_n(w,t))
-//! 2. Process the bit vector sequence: δ^∀,χ_n*(I^∀,χ, h_n(w, x))
-//! 3. Check if the resulting state is final (contains M-type positions)
+//! An alignment cell `(i, j)` has consumed `i` source scalars and `j` target
+//! scalars. An operation advances by its declared pair and adds its exact
+//! scaled cost. Acceptance means reaching both string ends within budget.
 //!
 //! # Examples
 //!
@@ -59,22 +40,75 @@
 //! assert!(!automaton.accepts("test", "hello"));
 //! ```
 
-use super::state::{GeneralizedState, GeneralizedTransitionInput};
-use crate::transducer::universal::bit_vector::CharacteristicVector;
-use crate::transducer::OperationSet;
+use crate::cost::{CostScale, ScaleError};
+use crate::transducer::{OperationSet, OperationSetValidationError, OperationType};
+use std::collections::{btree_map::Entry, BTreeMap};
+use std::fmt;
 
-/// Generalized Levenshtein Automaton A^∀,χ_n
+/// Maximum number of reachable alignment cells explored by one generalized query.
+pub const MAX_GENERALIZED_ALIGNMENT_STATES: usize = 1_000_000;
+
+/// Failure while preparing or evaluating a generalized automaton.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GeneralizedAutomatonError {
+    /// The complete operation set violates a structural or resource invariant.
+    OperationSet(OperationSetValidationError),
+    /// An operation weight cannot be represented by the exact scale.
+    Scale(ScaleError),
+    /// Checked alignment arithmetic overflowed.
+    ArithmeticOverflow,
+    /// The reachable alignment graph exceeded the public resource ceiling.
+    ResourceLimit {
+        /// Number of states observed when evaluation stopped.
+        observed: usize,
+        /// Configured hard ceiling.
+        limit: usize,
+    },
+}
+
+impl fmt::Display for GeneralizedAutomatonError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::OperationSet(error) => write!(f, "invalid generalized operation set: {error}"),
+            Self::Scale(error) => write!(f, "invalid generalized-operation cost: {error}"),
+            Self::ArithmeticOverflow => f.write_str("generalized-alignment arithmetic overflowed"),
+            Self::ResourceLimit { observed, limit } => write!(
+                f,
+                "generalized alignment reached {observed} states (limit {limit})"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for GeneralizedAutomatonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::OperationSet(error) => Some(error),
+            Self::Scale(error) => Some(error),
+            Self::ArithmeticOverflow | Self::ResourceLimit { .. } => None,
+        }
+    }
+}
+
+impl From<OperationSetValidationError> for GeneralizedAutomatonError {
+    fn from(value: OperationSetValidationError) -> Self {
+        Self::OperationSet(value)
+    }
+}
+
+impl From<ScaleError> for GeneralizedAutomatonError {
+    fn from(error: ScaleError) -> Self {
+        Self::Scale(error)
+    }
+}
+
+/// Exact runtime-configurable generalized alignment engine.
 ///
-/// A parameter-free automaton that recognizes the Levenshtein neighborhood
-/// L^χ_{Lev}(n, w) for any word w without modification.
-///
-/// # Phase 2: Runtime-Configurable Operations
-///
-/// Supports custom operation sets including:
+/// Supported operation sets include:
 /// - Standard operations (match, substitute, insert, delete)
-/// - Transposition
+/// - Adjacent transposition
 /// - Multi-character operations (phonetic corrections, merge/split)
-/// - Weighted operations with custom costs
+/// - Exact decimal-weighted operations
 ///
 /// # Examples
 ///
@@ -101,6 +135,9 @@ pub struct GeneralizedAutomaton {
 
     /// Set of operations defining the edit distance metric
     operations: OperationSet,
+
+    /// Exact decimal scale shared by every operation and the public budget.
+    cost_scale: Result<CostScale, ScaleError>,
 }
 
 impl GeneralizedAutomaton {
@@ -123,9 +160,12 @@ impl GeneralizedAutomaton {
     /// ```
     #[must_use]
     pub fn new(max_distance: u8) -> Self {
+        let operations = OperationSet::standard();
+        let cost_scale = CostScale::for_operations(&operations);
         Self {
             max_distance,
-            operations: OperationSet::standard(),
+            operations,
+            cost_scale,
         }
     }
 
@@ -164,10 +204,26 @@ impl GeneralizedAutomaton {
     /// ```
     #[must_use]
     pub fn with_operations(max_distance: u8, operations: OperationSet) -> Self {
+        let cost_scale = CostScale::for_operations(&operations);
         Self {
             max_distance,
             operations,
+            cost_scale,
         }
+    }
+
+    /// Create an automaton, rejecting an invalid operation-cost domain eagerly.
+    pub fn try_with_operations(
+        max_distance: u8,
+        operations: OperationSet,
+    ) -> Result<Self, GeneralizedAutomatonError> {
+        operations.validate()?;
+        let cost_scale = CostScale::for_operations(&operations)?;
+        Ok(Self {
+            max_distance,
+            operations,
+            cost_scale: Ok(cost_scale),
+        })
     }
 
     /// Get the maximum edit distance n
@@ -176,87 +232,12 @@ impl GeneralizedAutomaton {
         self.max_distance
     }
 
-    /// Create the initial state I^∀,χ = {I#0}
-    ///
-    /// From thesis page 38: The initial state contains a single I-type position
-    /// with offset 0 and 0 errors.
-    ///
-    /// # Returns
-    ///
-    /// Initial state {I#0}
-    fn initial_state(&self) -> GeneralizedState {
-        GeneralizedState::initial(self.max_distance)
+    /// Return the exact scale derived from the complete operation set.
+    pub fn cost_scale(&self) -> Result<CostScale, GeneralizedAutomatonError> {
+        self.cost_scale.clone().map_err(Into::into)
     }
 
-    /// Check if a state is accepting according to Levenshtein distance criterion
-    ///
-    /// From thesis page 24 (Proposition 11): A position i#e is accepting if:
-    /// ```text
-    /// p - i ≤ n - e
-    /// ```
-    /// Where p is word length, i is position, n is max distance, e is errors.
-    ///
-    /// This translates to: remaining characters ≤ remaining error budget.
-    ///
-    /// # Arguments
-    ///
-    /// - `state`: State to check after processing all input
-    /// - `word_len`: Length of dictionary word
-    /// - `input_len`: Length of input string processed
-    ///
-    /// # Returns
-    ///
-    /// `true` if state is accepting (within distance n), `false` otherwise
-    #[must_use]
-    fn is_accepting(&self, state: &GeneralizedState, word_len: usize, input_len: usize) -> bool {
-        use crate::transducer::generalized::GeneralizedPosition;
-
-        let n = self.max_distance as i32;
-
-        state.positions().any(|pos| {
-            match pos {
-                GeneralizedPosition::MFinal { offset, errors } => {
-                    // M-type positions are past the word end
-                    // They're accepting if offset ≤ 0 and errors ≤ n
-                    *offset <= 0 && *errors <= self.max_distance
-                }
-                GeneralizedPosition::INonFinal { .. } => {
-                    // I-type positions: check if we can reach word end with remaining errors
-                    // Current word position in the word = input_len + offset
-                    let current_word_pos = input_len as i32 + pos.offset();
-
-                    // Check bounds
-                    if current_word_pos < 0 {
-                        return false; // Before word start
-                    }
-
-                    // Remaining characters to match = word_len - current_word_pos
-                    let remaining_chars = word_len as i32 - current_word_pos;
-
-                    // Remaining error budget = max_distance - errors_used
-                    let remaining_errors = n - (pos.errors() as i32);
-
-                    // Accept if we can delete/skip remaining characters with available errors
-                    // Proposition 11: p - i ≤ n - e
-                    // where p = word_len, i = current_word_pos, e = errors used, n = max_distance
-                    // Phase 4: If remaining_chars < 0, we're past the word end (acceptable)
-                    // If remaining_chars >= 0, we need enough errors to delete them
-                    remaining_chars <= remaining_errors
-                }
-                // Phase 2d: Transposing and splitting positions are intermediate states
-                // They are not accepting states (operation must complete first)
-                GeneralizedPosition::ITransposing { .. }
-                | GeneralizedPosition::MTransposing { .. }
-                | GeneralizedPosition::ISplitting { .. }
-                | GeneralizedPosition::MSplitting { .. } => false,
-            }
-        })
-    }
-
-    /// Check if word w accepts input x within the maximum distance
-    ///
-    /// From thesis page 51-52: Encodes the pair (w, x) as h_n(w, x) and
-    /// processes it through the automaton.
+    /// Check whether an exact configured-operation alignment fits the budget.
     ///
     /// # Arguments
     ///
@@ -265,20 +246,15 @@ impl GeneralizedAutomaton {
     ///
     /// # Returns
     ///
-    /// `true` if Lev(w, x) ≤ n, `false` otherwise
+    /// `true` if the least configured-operation cost is at most the integer
+    /// budget. Invalid costs, overflow, and resource exhaustion fail closed.
     ///
     /// # Algorithm
     ///
-    /// 1. Start with initial state I^∀,χ = {I#0}
-    /// 2. For each character x_i in input:
-    ///    - Compute relevant subword s_n(w, i)
-    ///    - Compute characteristic vector β(x_i, s_n(w, i))
-    ///    - Apply transition: state := δ^∀,χ_n(state, β)
-    /// 3. Check if final state is accepting
-    ///
-    /// # Operation Note
-    ///
-    /// Uses this automaton's configured `OperationSet`.
+    /// 1. Derive one exact decimal scale for the operation set.
+    /// 2. Traverse reachable alignment cells in topological order.
+    /// 3. Relax every applicable operation whose exact cost remains in budget.
+    /// 4. Accept only when both strings are completely consumed.
     ///
     /// # Examples
     ///
@@ -295,84 +271,108 @@ impl GeneralizedAutomaton {
     /// assert!(!automaton.accepts("test", "hello"));
     /// ```
     pub fn accepts(&self, word: &str, input: &str) -> bool {
-        let word_chars: Vec<char> = word.chars().collect();
-        let word_len = word_chars.len();
-        let input_len = input.chars().count();
+        self.try_accepts(word, input).unwrap_or(false)
+    }
 
-        // Special case 1: Empty input (outside domain of h_n from thesis page 51)
-        // From Levenshtein definition: d(w, ε) = |w|
-        // Accept if |w| ≤ n
-        if input.is_empty() {
-            return word_len <= self.max_distance as usize;
-        }
+    /// Fallible acceptance with exact operation-driven costs.
+    ///
+    /// Evaluation is a shortest-path computation over the acyclic alignment
+    /// grid. Only cells reachable within the scaled budget are materialized.
+    pub fn try_accepts(&self, word: &str, input: &str) -> Result<bool, GeneralizedAutomatonError> {
+        Ok(self.scaled_distance(word, input)?.is_some())
+    }
 
-        // Special case 2: Input too long (encoding h_n undefined)
-        // From thesis page 51: h_n(w, x) defined only if |x| ≤ |w| + n
-        // However, expansion operations (e.g., split ⟨1,2⟩) can increase effective word length
-        // Phase 3b: Calculate maximum expansion from operations
-        let max_expansion = self
+    /// Return the least exact scaled cost when it is inside the configured budget.
+    pub fn scaled_distance(
+        &self,
+        word: &str,
+        input: &str,
+    ) -> Result<Option<usize>, GeneralizedAutomatonError> {
+        self.scaled_distance_with_limit(word, input, MAX_GENERALIZED_ALIGNMENT_STATES)
+    }
+
+    fn scaled_distance_with_limit(
+        &self,
+        word: &str,
+        input: &str,
+        state_limit: usize,
+    ) -> Result<Option<usize>, GeneralizedAutomatonError> {
+        self.operations.validate()?;
+        let scale = self.cost_scale()?;
+        let budget = scale.scale_budget(self.max_distance)?;
+        let word_offsets = char_byte_offsets(word);
+        let input_offsets = char_byte_offsets(input);
+        let word_len = word_offsets.len() - 1;
+        let input_len = input_offsets.len() - 1;
+
+        let weighted_operations = self
             .operations
-            .operations()
             .iter()
-            .map(|op| op.consume_y().saturating_sub(op.consume_x()))
-            .max()
-            .unwrap_or(0);
+            .map(|operation| Ok((operation, scale.to_scaled(operation.weight())?)))
+            .collect::<Result<Vec<_>, ScaleError>>()?;
 
-        if max_expansion > 0 {
-            // With expansion operations (e.g., k→ch split):
-            // Upper bound: each word char could expand by max_expansion, plus insertions
-            // Example: "kat" with 2 splits ⟨1,2⟩ → 3 + 2*1 = 5 effective chars
-            // Conservative bound: |x| ≤ |w| * (1 + max_expansion) + n
-            let max_len = word_len
-                .saturating_mul(max_expansion.saturating_add(1))
-                .saturating_add(self.max_distance as usize);
-            if input_len > max_len {
-                return false;
+        let mut pending = BTreeMap::new();
+        pending.insert((0_usize, 0_usize), 0_usize);
+        let mut discovered = 1_usize;
+        if discovered > state_limit {
+            return Err(GeneralizedAutomatonError::ResourceLimit {
+                observed: discovered,
+                limit: state_limit,
+            });
+        }
+
+        while let Some(((word_pos, input_pos), accumulated)) = pending.pop_first() {
+            if word_pos == word_len && input_pos == input_len {
+                return Ok(Some(accumulated));
             }
-        } else {
-            // Standard Levenshtein bound: |x| ≤ |w| + n
-            if input_len > word_len.saturating_add(self.max_distance as usize) {
-                return false;
+
+            for (operation, step) in &weighted_operations {
+                if operation.consume_x() == 0 && operation.consume_y() == 0 {
+                    continue;
+                }
+                let Some(next_word) = word_pos.checked_add(operation.consume_x()) else {
+                    continue;
+                };
+                let Some(next_input) = input_pos.checked_add(operation.consume_y()) else {
+                    continue;
+                };
+                if next_word > word_len || next_input > input_len {
+                    continue;
+                }
+
+                let word_slice = &word[word_offsets[word_pos]..word_offsets[next_word]];
+                let input_slice = &input[input_offsets[input_pos]..input_offsets[next_input]];
+                if !operation_applies(operation, word_slice, input_slice) {
+                    continue;
+                }
+                let Some(next_cost) = accumulated.checked_add(*step) else {
+                    continue;
+                };
+                if next_cost > budget {
+                    continue;
+                }
+
+                match pending.entry((next_word, next_input)) {
+                    Entry::Occupied(mut entry) => {
+                        *entry.get_mut() = (*entry.get()).min(next_cost);
+                    }
+                    Entry::Vacant(entry) => {
+                        discovered = discovered
+                            .checked_add(1)
+                            .ok_or(GeneralizedAutomatonError::ArithmeticOverflow)?;
+                        if discovered > state_limit {
+                            return Err(GeneralizedAutomatonError::ResourceLimit {
+                                observed: discovered,
+                                limit: state_limit,
+                            });
+                        }
+                        entry.insert(next_cost);
+                    }
+                }
             }
         }
 
-        // Start with initial state {I#0}
-        let mut state = self.initial_state();
-
-        // Process each character of input
-        // This generates the bit vector sequence h_n(w, x) = β(x₁, s_n(w,1))...β(x_t, s_n(w,t))
-        for (i, input_char) in input.chars().enumerate() {
-            // Compute relevant subword s_n(w, i+1)
-            // From thesis page 51: s_n(w, i) = w_{i-n}...w_{min(|w|, i+n+1)}
-            let position = i.saturating_add(1);
-            let subword = self.relevant_subword_from_chars(&word_chars, position);
-
-            // Compute characteristic vector β(x_i, s_n(w, i))
-            let bit_vector = CharacteristicVector::new(input_char, &subword);
-
-            // Apply transition: state := δ^∀,χ_n(state, β)
-            // Phase 3b: Pass full word, word slice, and input character for phonetic operations
-            // H2 Optimization: Pass pre-computed character vector for subword and split logic
-            if let Some(next_state) = state.transition(GeneralizedTransitionInput::new(
-                &self.operations,
-                &bit_vector,
-                word,
-                Some(&word_chars),
-                &subword,
-                input_char,
-                position,
-            )) {
-                state = next_state;
-            } else {
-                // Transition failed, reject
-                return false;
-            }
-        }
-
-        // Check acceptance using Proposition 11 criterion (thesis page 24)
-        // A position i#e is accepting if: p - i ≤ n - e
-        // (remaining characters ≤ remaining error budget)
-        self.is_accepting(&state, word_len, input_len)
+        Ok(None)
     }
 
     /// Compute relevant subword s_n(w, i)
@@ -399,6 +399,7 @@ impl GeneralizedAutomaton {
         self.relevant_subword_from_chars(&word_chars, position)
     }
 
+    #[cfg(test)]
     fn relevant_subword_from_chars(&self, word_chars: &[char], position: usize) -> String {
         let n = self.max_distance as usize;
         let word_len = word_chars.len();
@@ -411,7 +412,7 @@ impl GeneralizedAutomaton {
         let word_char_count = if start <= end { end - start + 1 } else { 0 };
 
         let mut result = String::with_capacity(pad_count.saturating_add(word_char_count));
-        result.extend(std::iter::repeat('$').take(pad_count));
+        result.extend(std::iter::repeat_n('$', pad_count));
 
         if start <= end {
             result.extend(word_chars[start - 1..end].iter().copied());
@@ -419,6 +420,19 @@ impl GeneralizedAutomaton {
 
         result
     }
+}
+
+fn char_byte_offsets(value: &str) -> Vec<usize> {
+    let mut offsets = value
+        .char_indices()
+        .map(|(offset, _)| offset)
+        .collect::<Vec<_>>();
+    offsets.push(value.len());
+    offsets
+}
+
+fn operation_applies(operation: &OperationType, word: &str, input: &str) -> bool {
+    operation.applies_to_slices(word, input)
 }
 
 #[cfg(test)]
@@ -429,6 +443,30 @@ mod tests {
     fn test_new() {
         let automaton = GeneralizedAutomaton::new(2);
         assert_eq!(automaton.max_distance(), 2);
+    }
+
+    #[test]
+    fn reachable_alignment_state_ceiling_fails_closed() {
+        let automaton = GeneralizedAutomaton::new(0);
+        assert_eq!(
+            automaton.scaled_distance_with_limit("a", "a", 1),
+            Err(GeneralizedAutomatonError::ResourceLimit {
+                observed: 2,
+                limit: 1,
+            })
+        );
+    }
+
+    #[test]
+    fn alignment_state_ceiling_counts_the_initial_materialized_cell() {
+        let automaton = GeneralizedAutomaton::new(0);
+        assert_eq!(
+            automaton.scaled_distance_with_limit("", "", 0),
+            Err(GeneralizedAutomatonError::ResourceLimit {
+                observed: 1,
+                limit: 0,
+            })
+        );
     }
 
     #[test]
@@ -445,43 +483,6 @@ mod tests {
         assert_eq!(subword, "");
     }
 
-    fn manual_transition_accepts(
-        automaton: &GeneralizedAutomaton,
-        word: &str,
-        input: &str,
-    ) -> bool {
-        let mut state = automaton.initial_state();
-        let word_chars: Vec<char> = word.chars().collect();
-        let input_len = input.chars().count();
-
-        for (i, ch) in input.chars().enumerate() {
-            let subword = automaton.relevant_subword_from_chars(&word_chars, i + 1);
-            let bit_vector = CharacteristicVector::new(ch, &subword);
-
-            match state.transition(GeneralizedTransitionInput::new(
-                &automaton.operations,
-                &bit_vector,
-                word,
-                Some(&word_chars),
-                &subword,
-                ch,
-                i + 1,
-            )) {
-                Some(next) => state = next,
-                None => return false,
-            }
-        }
-
-        automaton.is_accepting(&state, word_chars.len(), input_len)
-    }
-
-    #[test]
-    fn test_manual_transition_identical() {
-        let automaton = GeneralizedAutomaton::new(2);
-
-        assert!(manual_transition_accepts(&automaton, "test", "test"));
-    }
-
     #[test]
     fn test_accepts_identical() {
         let automaton = GeneralizedAutomaton::new(2);
@@ -495,13 +496,6 @@ mod tests {
         let automaton = GeneralizedAutomaton::new(2);
         assert!(automaton.accepts("test", "text")); // t->x
         assert!(automaton.accepts("hello", "hallo")); // e->a
-    }
-
-    #[test]
-    fn test_manual_transition_one_insertion() {
-        let automaton = GeneralizedAutomaton::new(2);
-
-        assert!(manual_transition_accepts(&automaton, "test", "tests"));
     }
 
     #[test]
@@ -548,13 +542,6 @@ mod tests {
     }
 
     #[test]
-    fn test_manual_transition_deletion_middle() {
-        let automaton = GeneralizedAutomaton::new(1);
-
-        assert!(manual_transition_accepts(&automaton, "test", "tst"));
-    }
-
-    #[test]
     fn test_max_distance_one() {
         let automaton = GeneralizedAutomaton::new(1);
         assert!(automaton.accepts("test", "text")); // 1 substitution
@@ -586,7 +573,7 @@ mod tests {
     #[test]
     fn test_transposition_adjacent_swap_middle() {
         let ops = crate::transducer::OperationSet::with_transposition();
-        let automaton = GeneralizedAutomaton::with_operations(1, ops);
+        let automaton = GeneralizedAutomaton::with_operations(1, ops.clone());
 
         // "test" → "tset" (swap 'e' and 's')
         assert!(automaton.accepts("test", "tset"));
@@ -1296,9 +1283,12 @@ mod tests {
         assert!(automaton1.accepts("phone", "fone")); // one ph→f
         assert!(!automaton1.accepts("phone", "fo")); // would need ph→f + delete (2 ops)
 
-        // Distance 2: allows two operations
-        let automaton2 = GeneralizedAutomaton::with_operations(2, ops);
-        assert!(automaton2.accepts("phone", "fo")); // ph→f + delete 'ne'
+        // The exact cost is 0.15 + 2×1.0 = 2.15, so an integer budget of 2
+        // still rejects and budget 3 accepts.
+        let automaton2 = GeneralizedAutomaton::with_operations(2, ops.clone());
+        assert!(!automaton2.accepts("phone", "fo"));
+        let automaton3 = GeneralizedAutomaton::with_operations(3, ops);
+        assert!(automaton3.accepts("phone", "fo"));
     }
 
     // ==================== Cross-Validation Tests ====================
@@ -1362,7 +1352,7 @@ mod tests {
             ("graph", "graf"),  // ph→f
             ("ship", "sip"),    // sh→s
             ("think", "tink"),  // th→t
-            ("church", "kurc"), // first ch→k
+            ("church", "kurk"), // both ch→k, exact cost 0.30
             ("chair", "kair"),  // ch→k
         ];
 
@@ -1393,8 +1383,8 @@ mod tests {
 
     #[test]
     fn test_cross_validate_fractional_weights() {
-        // Verify fractional weights (0.15) are treated as "free" operations
-        // Multiple phonetic operations should be possible at distance 1
+        // Verify fractional weights (0.15) accumulate exactly rather than
+        // truncating to free operations.
         let phonetic_ops = crate::transducer::phonetic::consonant_digraphs();
         let mut builder = crate::transducer::OperationSetBuilder::new().with_standard_ops();
         for op in phonetic_ops.operations() {
@@ -1406,19 +1396,28 @@ mod tests {
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
         // "church" → "kurk" requires 2× ch→k operations
-        // Each operation has weight 0.15, truncates to 0
-        // Both should succeed at distance 1
+        // Each operation has weight 0.15; total cost 0.30 is inside budget 1.
         assert!(
             automaton.accepts("church", "kurk"),
-            "Two phonetic operations (2×0.15=0 errors) should work at distance 1"
+            "Two phonetic operations (2×0.15=0.30) should work at distance 1"
         );
 
-        // "church" → "kurks" requires 2× ch→k + 1 insert = 1 standard error
-        // Should still work at distance 1
+        // "church" → "kurks" costs 2×0.15 + 1.0 = 1.30 and must not
+        // inherit the old truncation-based acceptance at budget 1.
         assert!(
-            automaton.accepts("church", "kurks"),
-            "Two phonetic + one standard operation (total 1 error) should work at distance 1"
+            !automaton.accepts("church", "kurks"),
+            "Two phonetic + one standard operation costs 1.30"
         );
+
+        let automaton2 = GeneralizedAutomaton::with_operations(2, {
+            let phonetic_ops = crate::transducer::phonetic::consonant_digraphs();
+            let mut builder = crate::transducer::OperationSetBuilder::new().with_standard_ops();
+            for op in phonetic_ops.operations() {
+                builder = builder.with_operation(op.clone());
+            }
+            builder.build()
+        });
+        assert!(automaton2.accepts("church", "kurks"));
 
         // But two standard operations should fail
         assert!(
@@ -1437,7 +1436,7 @@ mod tests {
             builder = builder.with_operation(op.clone());
         }
         let ops = builder.build();
-        let automaton = GeneralizedAutomaton::with_operations(1, ops);
+        let automaton = GeneralizedAutomaton::with_operations(1, ops.clone());
 
         // "ark" → "arch" via k→ch split
         assert!(
@@ -1539,15 +1538,13 @@ mod tests {
         // Multiple splits require higher distance
         let automaton = GeneralizedAutomaton::with_operations(1, ops);
 
-        // Single split at distance 1 (fractional weight = 0)
+        // A single split costs the exact fractional weight 0.15.
         assert!(
             automaton.accepts("kair", "chair"),
             "Single k→ch split should work at distance 1"
         );
 
-        // But two splits need to check if fractional weights allow it
-        // Each split has weight 0.15, both truncate to 0
-        // So two splits should work at distance 1
+        // Two splits cost 0.30 exactly and therefore fit distance 1.
         assert!(
             automaton.accepts("kat", "chath"),
             "Two splits (k→ch, t→th) with fractional weights should work at distance 1"
@@ -1674,8 +1671,7 @@ mod tests {
             "Single transpose should work at distance 1"
         );
 
-        // Two transposes would need multiple qu/kw in the word
-        // "ququ" → "kwkw" (two transposes, both fractional = 0)
+        // "ququ" → "kwkw" uses two transposes for exact total cost 0.30.
         assert!(
             automaton.accepts("ququ", "kwkw"),
             "Two transposes with fractional weights should work at distance 1"
@@ -1690,14 +1686,16 @@ mod tests {
             builder = builder.with_operation(op.clone());
         }
         let ops = builder.build();
-        let automaton = GeneralizedAutomaton::with_operations(1, ops);
+        let automaton = GeneralizedAutomaton::with_operations(1, ops.clone());
 
         // Transpose + standard operations
-        // "queen" → "kweens" via qu→kw (0) + insert 's' (1) = 1 total
+        // "queen" → "kweens" costs 0.15 + 1.0 = 1.15.
         assert!(
-            automaton.accepts("queen", "kweens"),
-            "Transpose + insert should work at distance 1"
+            !automaton.accepts("queen", "kweens"),
+            "Transpose + insert must exceed distance 1"
         );
+        let automaton2 = GeneralizedAutomaton::with_operations(2, ops);
+        assert!(automaton2.accepts("queen", "kweens"));
     }
 
     #[test]
@@ -1753,7 +1751,6 @@ mod tests {
             "Transpose operation should work"
         );
 
-        // All three have fractional weights, all work at distance 1
-        // Each operation independently truncates to 0 errors
+        // Each configured phonetic rule has exact cost 0.15 and fits budget 1.
     }
 }

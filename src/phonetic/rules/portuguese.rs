@@ -65,7 +65,7 @@ pub fn base() -> &'static RuleSetChar {
 /// Dialect-specific transformations for European Portuguese (Portugal):
 /// - **Vowel reduction**: Strong reduction in unstressed syllables
 ///   - Unstressed 'e' → schwa, unstressed 'o' → u
-/// - **R pronunciation**: Uvular [ʀ] initially and in rr
+/// - **R pronunciation**: Uvular `[ʀ]` initially and in rr
 /// - **S/Z patterns**: s/z → ʃ/ʒ before consonants and at word end
 /// - **L preservation**: L stays as lateral (unlike Brazilian → w)
 ///

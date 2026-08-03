@@ -854,13 +854,10 @@ impl TokenGrep {
             }
 
             // Try to match current token at current word
-            if let Some(detail) = self.try_match_token(product, words, word_idx, token_idx) {
-                total_distance = total_distance.saturating_add(detail.distance);
-                token_matches.push(detail);
-                word_idx += 1;
-            } else {
-                return None;
-            }
+            let detail = self.try_match_token(product, words, word_idx, token_idx)?;
+            total_distance = total_distance.saturating_add(detail.distance);
+            token_matches.push(detail);
+            word_idx += 1;
         }
 
         if token_matches.is_empty() {

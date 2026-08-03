@@ -83,7 +83,27 @@
 //! - **Cache-friendly**: Small operations stored inline (SmallVec)
 
 use crate::transducer::substitution_set::SubstitutionSet;
+use std::borrow::Cow;
 use std::fmt;
+
+/// Maximum UTF-8 byte length accepted for a persisted operation name.
+pub const MAX_OPERATION_NAME_BYTES: usize = 1_024;
+
+/// Semantic predicate controlling where an operation may apply.
+///
+/// This discriminator is deliberately independent of [`OperationType::name`]:
+/// diagnostic renaming must never change the accepted language.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum OperationApplicability {
+    /// Apply to every source/target slice of the declared dimensions.
+    Any,
+    /// Apply only when the complete source and target slices are equal.
+    Equal,
+    /// Apply only to an adjacent two-scalar reversal.
+    AdjacentTranspose,
+    /// Apply only to pairs explicitly listed in the restriction set.
+    Listed(SubstitutionSet),
+}
 
 /// A generalized operation type for Levenshtein automata.
 ///
@@ -147,16 +167,12 @@ pub struct OperationType {
     /// - Other values: Custom costs for weighted operations
     weight: f64,
 
-    /// Optional restriction set for character pair substitutions.
-    /// If None, operation is unrestricted (applies to all character pairs).
-    /// If Some(set), operation only applies to pairs in set.
-    ///
-    /// Corresponds to `op^r` in TCS 2011 for restricted operations.
-    restriction: Option<SubstitutionSet>,
+    /// Explicit semantic applicability predicate.
+    applicability: OperationApplicability,
 
     /// Human-readable name for debugging and profiling.
     /// Examples: "match", "substitute", "ph_to_f", "silent_e"
-    name: &'static str,
+    name: Cow<'static, str>,
 }
 
 impl OperationType {
@@ -201,8 +217,43 @@ impl OperationType {
             consume_x,
             consume_y,
             weight,
-            restriction: None,
-            name,
+            applicability: if weight == 0.0 {
+                OperationApplicability::Equal
+            } else {
+                OperationApplicability::Any
+            },
+            name: Cow::Borrowed(name),
+        }
+    }
+
+    /// Create an unrestricted operation with an owned diagnostic name.
+    ///
+    /// This is the non-leaking construction path used by deserialization and
+    /// by applications that load operation definitions at runtime.
+    #[inline]
+    pub fn new_owned(
+        consume_x: usize,
+        consume_y: usize,
+        weight: f64,
+        name: impl Into<String>,
+    ) -> Self {
+        assert!(weight >= 0.0, "Operation weight must be non-negative");
+        if weight == 0.0 {
+            assert_eq!(
+                consume_x, consume_y,
+                "Zero-weight operation must preserve length (consume_x == consume_y)"
+            );
+        }
+        Self {
+            consume_x,
+            consume_y,
+            weight,
+            applicability: if weight == 0.0 {
+                OperationApplicability::Equal
+            } else {
+                OperationApplicability::Any
+            },
+            name: Cow::Owned(name.into()),
         }
     }
 
@@ -241,9 +292,116 @@ impl OperationType {
         restriction: SubstitutionSet,
         name: &'static str,
     ) -> Self {
-        let mut op = Self::new(consume_x, consume_y, weight, name);
-        op.restriction = Some(restriction);
-        op
+        assert!(weight >= 0.0, "Operation weight must be non-negative");
+        if weight == 0.0 {
+            assert_eq!(
+                consume_x, consume_y,
+                "Zero-weight operation must preserve length (consume_x == consume_y)"
+            );
+        }
+        Self {
+            consume_x,
+            consume_y,
+            weight,
+            applicability: OperationApplicability::Listed(restriction),
+            name: Cow::Borrowed(name),
+        }
+    }
+
+    /// Create a restricted operation with an owned diagnostic name.
+    #[inline]
+    pub fn with_owned_restriction(
+        consume_x: usize,
+        consume_y: usize,
+        weight: f64,
+        restriction: SubstitutionSet,
+        name: impl Into<String>,
+    ) -> Self {
+        assert!(weight >= 0.0, "Operation weight must be non-negative");
+        if weight == 0.0 {
+            assert_eq!(
+                consume_x, consume_y,
+                "Zero-weight operation must preserve length (consume_x == consume_y)"
+            );
+        }
+        Self {
+            consume_x,
+            consume_y,
+            weight,
+            applicability: OperationApplicability::Listed(restriction),
+            name: Cow::Owned(name.into()),
+        }
+    }
+
+    /// Create an adjacent-transposition operation.
+    ///
+    /// The operation consumes exactly two scalar values from each side and
+    /// applies only when the target slice reverses the source slice.
+    #[inline]
+    pub fn adjacent_transposition(weight: f64, name: &'static str) -> Self {
+        assert!(weight.is_finite() && weight >= 0.0);
+        Self {
+            consume_x: 2,
+            consume_y: 2,
+            weight,
+            applicability: OperationApplicability::AdjacentTranspose,
+            name: Cow::Borrowed(name),
+        }
+    }
+
+    /// Create an operation with an explicit semantic applicability predicate.
+    #[inline]
+    pub fn with_applicability(
+        consume_x: usize,
+        consume_y: usize,
+        weight: f64,
+        applicability: OperationApplicability,
+        name: &'static str,
+    ) -> Self {
+        assert!(weight >= 0.0, "Operation weight must be non-negative");
+        if weight == 0.0 {
+            assert_eq!(
+                consume_x, consume_y,
+                "Zero-weight operation must preserve length (consume_x == consume_y)"
+            );
+        }
+        Self {
+            consume_x,
+            consume_y,
+            weight,
+            applicability,
+            name: Cow::Borrowed(name),
+        }
+    }
+
+    /// Create an operation with explicit applicability and an owned name.
+    ///
+    /// This is the non-leaking construction path for schema-driven and other
+    /// runtime-loaded operation definitions. Semantic compatibility between
+    /// the applicability discriminator and the declared arity is checked by
+    /// [`OperationSet::validate`](super::OperationSet::validate).
+    #[inline]
+    pub fn with_owned_applicability(
+        consume_x: usize,
+        consume_y: usize,
+        weight: f64,
+        applicability: OperationApplicability,
+        name: impl Into<String>,
+    ) -> Self {
+        assert!(weight >= 0.0, "Operation weight must be non-negative");
+        if weight == 0.0 {
+            assert_eq!(
+                consume_x, consume_y,
+                "Zero-weight operation must preserve length (consume_x == consume_y)"
+            );
+        }
+        Self {
+            consume_x,
+            consume_y,
+            weight,
+            applicability,
+            name: Cow::Owned(name.into()),
+        }
     }
 
     /// Get the number of characters consumed from the dictionary word.
@@ -266,26 +424,35 @@ impl OperationType {
 
     /// Get the operation name.
     #[inline]
-    pub fn name(&self) -> &'static str {
-        self.name
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// Check if this operation is restricted to specific character pairs.
     #[inline]
     pub fn is_restricted(&self) -> bool {
-        self.restriction.is_some()
+        matches!(self.applicability, OperationApplicability::Listed(_))
     }
 
     /// Get the restriction set, if any.
     #[inline]
     pub fn restriction(&self) -> Option<&SubstitutionSet> {
-        self.restriction.as_ref()
+        match &self.applicability {
+            OperationApplicability::Listed(restriction) => Some(restriction),
+            _ => None,
+        }
+    }
+
+    /// Return the explicit semantic applicability predicate.
+    #[inline]
+    pub fn applicability(&self) -> &OperationApplicability {
+        &self.applicability
     }
 
     /// Check if this operation is a match (zero cost, length-preserving).
     #[inline]
     pub fn is_match(&self) -> bool {
-        self.weight == 0.0
+        self.weight == 0.0 && matches!(self.applicability, OperationApplicability::Equal)
     }
 
     /// Check if this operation is an insertion (consumes only from query).
@@ -300,10 +467,10 @@ impl OperationType {
         self.consume_x > 0 && self.consume_y == 0
     }
 
-    /// Check if this operation is a substitution (single-char, non-zero cost).
+    /// Check if this is a non-equality single-scalar replacement.
     #[inline]
     pub fn is_substitution(&self) -> bool {
-        self.consume_x == 1 && self.consume_y == 1 && self.weight > 0.0
+        self.consume_x == 1 && self.consume_y == 1 && !self.is_match()
     }
 
     /// Check if this operation can apply to the given character pair.
@@ -335,21 +502,70 @@ impl OperationType {
     /// ```
     #[inline]
     pub fn can_apply(&self, dict_chars: &[u8], query_chars: &[u8]) -> bool {
+        if let (Ok(dict), Ok(query)) = (
+            std::str::from_utf8(dict_chars),
+            std::str::from_utf8(query_chars),
+        ) {
+            return self.can_apply_str(dict, query);
+        }
+
         // Length check
         if dict_chars.len() != self.consume_x || query_chars.len() != self.consume_y {
             return false;
         }
 
-        // Special case: match operation requires character equality
-        if self.is_match() {
-            return dict_chars == query_chars;
+        match &self.applicability {
+            OperationApplicability::Any => true,
+            OperationApplicability::Equal => dict_chars == query_chars,
+            OperationApplicability::AdjacentTranspose => {
+                dict_chars.len() == 2
+                    && query_chars.len() == 2
+                    && dict_chars[0] == query_chars[1]
+                    && dict_chars[1] == query_chars[0]
+            }
+            OperationApplicability::Listed(set) => set.contains_str(dict_chars, query_chars),
+        }
+    }
+
+    /// Check whether this operation applies to two Unicode string slices.
+    ///
+    /// `consume_x` and `consume_y` count Unicode scalar values, not UTF-8
+    /// bytes. This method performs that dimensional check before delegating
+    /// restricted-pair lookup to the byte-oriented storage. It is therefore
+    /// the correct entry point for the `char`-based generalized automaton.
+    #[inline]
+    pub fn can_apply_str(&self, dict: &str, query: &str) -> bool {
+        if dict.chars().count() != self.consume_x || query.chars().count() != self.consume_y {
+            return false;
         }
 
-        // Check restriction set if present
-        match &self.restriction {
-            None => true, // Unrestricted operation
-            Some(set) => set.contains_str(dict_chars, query_chars),
+        match &self.applicability {
+            OperationApplicability::Any => true,
+            OperationApplicability::Equal => dict == query,
+            OperationApplicability::AdjacentTranspose => {
+                let mut source = dict.chars();
+                let mut target = query.chars();
+                matches!(
+                    (source.next(), source.next(), source.next(), target.next(), target.next(), target.next()),
+                    (Some(source_first), Some(source_second), None, Some(target_first), Some(target_second), None)
+                        if source_first == target_second && source_second == target_first
+                )
+            }
+            OperationApplicability::Listed(set) => {
+                set.contains_str(dict.as_bytes(), query.as_bytes())
+            }
         }
+    }
+
+    /// Check complete alignment semantics for character slices.
+    ///
+    /// The built-in unrestricted `transpose` operation denotes an adjacent
+    /// reversal rather than an arbitrary two-for-two substitution. All other
+    /// operations use their declared restriction, or apply to every slice of
+    /// the declared scalar dimensions when unrestricted.
+    #[inline]
+    pub fn applies_to_slices(&self, dict: &str, query: &str) -> bool {
+        self.can_apply_str(dict, query)
     }
 
     /// Check if this operation could potentially apply to the given source characters.
@@ -400,15 +616,22 @@ impl OperationType {
     /// ```
     #[inline]
     pub fn can_apply_to_source(&self, dict_chars: &[u8]) -> bool {
-        // Length check - must match expected consumption
-        if dict_chars.len() != self.consume_x {
+        // Valid UTF-8 follows the public scalar-value consumption contract.
+        // Retain byte-counting only for the low-level invalid-UTF-8
+        // compatibility path, matching `can_apply`.
+        let dimension_matches = std::str::from_utf8(dict_chars).map_or_else(
+            |_| dict_chars.len() == self.consume_x,
+            |dict| dict.chars().count() == self.consume_x,
+        );
+        if !dimension_matches {
             return false;
         }
 
-        // Check restriction set if present
-        match &self.restriction {
-            None => true, // Unrestricted operation can apply to any source
-            Some(set) => set.has_source(dict_chars),
+        match &self.applicability {
+            OperationApplicability::Listed(set) => set.has_source(dict_chars),
+            OperationApplicability::Any
+            | OperationApplicability::Equal
+            | OperationApplicability::AdjacentTranspose => true,
         }
     }
 
@@ -470,15 +693,23 @@ impl OperationType {
     /// ```
     #[inline]
     pub fn matches_first_target_char(&self, dict_chars: &[u8], first_target_char: char) -> bool {
-        // Length check - must match expected consumption
-        if dict_chars.len() != self.consume_x {
+        // Keep source feasibility consistent with `can_apply_to_source`: valid
+        // UTF-8 counts scalar values, while invalid UTF-8 uses raw bytes.
+        let dimension_matches = std::str::from_utf8(dict_chars).map_or_else(
+            |_| dict_chars.len() == self.consume_x,
+            |dict| dict.chars().count() == self.consume_x,
+        );
+        if !dimension_matches {
             return false;
         }
 
-        // Check restriction set if present
-        match &self.restriction {
-            None => false, // Unrestricted operations don't have specific targets to check
-            Some(set) => set.has_target_starting_with(dict_chars, first_target_char),
+        match &self.applicability {
+            OperationApplicability::Listed(set) => {
+                set.has_target_starting_with(dict_chars, first_target_char)
+            }
+            OperationApplicability::Any
+            | OperationApplicability::Equal
+            | OperationApplicability::AdjacentTranspose => false,
         }
     }
 }
@@ -504,7 +735,7 @@ impl PartialEq for OperationType {
         self.consume_x == other.consume_x
             && self.consume_y == other.consume_y
             && self.weight == other.weight
-            && self.restriction == other.restriction
+            && self.applicability == other.applicability
             && self.name == other.name
     }
 }
@@ -595,18 +826,53 @@ mod tests {
         rules.allow_str("α", "β");
         rules.allow_str("sch", "š");
 
-        let greek =
-            OperationType::with_restriction("α".len(), "β".len(), 0.2, rules.clone(), "greek");
+        let greek = OperationType::with_restriction(
+            "α".chars().count(),
+            "β".chars().count(),
+            0.2,
+            rules.clone(),
+            "greek",
+        );
         assert!(greek.can_apply("α".as_bytes(), "β".as_bytes()));
+        assert!(greek.can_apply_str("α", "β"));
         assert!(greek.can_apply_to_source("α".as_bytes()));
         assert!(!greek.can_apply("α".as_bytes(), "γ".as_bytes()));
 
-        let palatal =
-            OperationType::with_restriction("sch".len(), "š".len(), 0.2, rules, "palatal");
+        let palatal = OperationType::with_restriction(
+            "sch".chars().count(),
+            "š".chars().count(),
+            0.2,
+            rules,
+            "palatal",
+        );
         assert!(palatal.can_apply(b"sch", "š".as_bytes()));
         assert!(palatal.can_apply_to_source(b"sch"));
         assert!(palatal.matches_first_target_char(b"sch", 'š'));
         assert!(!palatal.matches_first_target_char(b"sch", 's'));
+    }
+
+    #[test]
+    fn alignment_slice_semantics_distinguish_transpose_from_two_for_two_substitution() {
+        let transpose = OperationType::adjacent_transposition(1.0, "diagnostic label");
+        let unrestricted = OperationType::new(2, 2, 1.0, "two_for_two");
+        let misleading_name = OperationType::new(2, 2, 1.0, "transpose");
+
+        assert!(transpose.applies_to_slices("ab", "ba"));
+        assert!(!transpose.applies_to_slices("ab", "cd"));
+        assert!(unrestricted.applies_to_slices("ab", "cd"));
+        assert!(misleading_name.applies_to_slices("ab", "cd"));
+        assert!(transpose.applies_to_slices("éß", "ßé"));
+    }
+
+    #[test]
+    fn zero_cost_listed_applicability_is_not_replaced_by_equality() {
+        let mut listed = SubstitutionSet::new();
+        listed.allow_str("a", "b");
+        let operation = OperationType::with_restriction(1, 1, 0.0, listed, "free_alias");
+
+        assert!(operation.can_apply_str("a", "b"));
+        assert!(!operation.can_apply_str("a", "a"));
+        assert!(!operation.is_match());
     }
 
     #[test]

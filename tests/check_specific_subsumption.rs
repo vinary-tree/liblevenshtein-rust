@@ -9,7 +9,7 @@ fn check_1_1_false_subsumes_0_1_true() {
     let query_length = 2;
 
     let p_1_1 = Position::new(1, 1); // (1,1,false)
-    let p_0_1_special = Position::new_special(0, 1); // (0,1,true)
+    let p_0_1_special = Position::new_osa_transposing(0, 1); // (0,1,true)
 
     println!(
         "p_1_1:          ({}, {}, false)",
@@ -35,11 +35,15 @@ fn check_1_1_false_subsumes_0_1_true() {
         println!("  Input:");
         println!(
             "    self (lhs): i={}, e={}, s={}",
-            p_1_1.term_index, p_1_1.num_errors, p_1_1.is_special
+            p_1_1.term_index,
+            p_1_1.num_errors,
+            p_1_1.is_special()
         );
         println!(
             "    other (rhs): j={}, f={}, t={}",
-            p_0_1_special.term_index, p_0_1_special.num_errors, p_0_1_special.is_special
+            p_0_1_special.term_index,
+            p_0_1_special.num_errors,
+            p_0_1_special.is_special()
         );
         println!("    algorithm: Transposition");
         println!("    query_length: {}", query_length);
@@ -54,11 +58,11 @@ fn check_1_1_false_subsumes_0_1_true() {
         println!("    If true, return false (cannot subsume with more errors)");
         println!();
         println!("  Step 2: Transposition algorithm logic");
-        println!("    if s (lhs is special): {}", p_1_1.is_special);
+        println!("    if s (lhs is special): {}", p_1_1.is_special());
 
         println!("      → NO, lhs is NOT special");
         println!();
-        println!("    if t (rhs is special): {}", p_0_1_special.is_special);
+        println!("    if t (rhs is special): {}", p_0_1_special.is_special());
         println!("      → YES, rhs IS special");
         println!();
         println!("    Lines 116-125 handle this case:");

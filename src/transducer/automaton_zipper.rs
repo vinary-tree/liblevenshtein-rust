@@ -207,8 +207,9 @@ impl AutomatonZipper {
     /// query characters (term_index == query.len()). The minimum distance is
     /// the smallest num_errors among all such positions.
     ///
-    /// This is primarily used for substring matching mode. For standard matching,
-    /// use `infer_distance()` with the term length instead.
+    /// This is primarily used for substring matching mode. For whole-term
+    /// matching, use [`infer_distance`](Self::infer_distance), which charges the
+    /// query suffix left by every normal position.
     ///
     /// # Returns
     ///
@@ -239,7 +240,7 @@ impl AutomatonZipper {
         self.state
             .positions()
             .iter()
-            .filter(|p| p.term_index == query_len && !p.is_special)
+            .filter(|p| p.term_index == query_len && !p.is_special())
             .map(|p| p.num_errors)
             .min()
     }
@@ -263,15 +264,17 @@ impl AutomatonZipper {
         self.state.min_distance()
     }
 
-    /// Infer the edit distance for a dictionary term of the given length.
+    /// Infer the edit distance when the current dictionary path ends.
     ///
     /// This is used when the dictionary signals that a term ends at the current
     /// position (is_final). The distance is inferred from the current automaton
-    /// state and the term length.
+    /// state and the stored query length.
     ///
     /// # Arguments
     ///
-    /// * `term_length` - Length of the dictionary term
+    /// * `_term_length` - Length of the dictionary term. Retained for API
+    ///   compatibility; the finishing cost is defined by the stored query
+    ///   length and each position's query index.
     ///
     /// # Returns
     ///
@@ -291,13 +294,12 @@ impl AutomatonZipper {
     /// let zipper = zipper.transition(b'e', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
     /// let zipper = zipper.transition(b's', &mut pool).expect("doc/test fixture: transition on valid dictionary path");
     ///
-    /// // If dictionary term "tes" ends here (length 3),
-    /// // distance is 0 (matched 3/3 characters of "tes" perfectly)
-    /// // The unmatched 't' in query "test" doesn't count
-    /// assert_eq!(zipper.infer_distance(3), Some(0));
+    /// // If dictionary term "tes" ends here, the unmatched final 't' in the
+    /// // query costs one deletion.
+    /// assert_eq!(zipper.infer_distance(3), Some(1));
     /// ```
-    pub fn infer_distance(&self, term_length: usize) -> Option<usize> {
-        self.state.infer_distance(term_length)
+    pub fn infer_distance(&self, _term_length: usize) -> Option<usize> {
+        self.state.infer_distance(self.query.len())
     }
 
     /// Check if the zipper is in a viable state.
@@ -415,7 +417,7 @@ mod tests {
         let state = State::from_positions(vec![
             Position::new(1, 0),
             Position::new(3, 2),
-            Position::new_special(3, 0),
+            Position::new_osa_transposing(3, 0),
             Position::new(3, 1),
         ]);
         let zipper =
@@ -529,34 +531,9 @@ mod tests {
             .transition(b'e', &mut pool)
             .expect("test fixture: transition on valid dictionary path");
 
-        // After consuming "te", we're at position 2 with 0 errors
-        // If the dictionary term "te" ends here (term_length=2),
-        // we need to account for 2 more query chars ("st")
-        // So distance = 0 (errors so far) + 2 (remaining) = 2
-        // But actually, the state will have a position at (2,0)
-        // infer_distance for term_length=2 means we've matched 2 chars of dict
-        // The state should calculate: remaining query chars from position 2 = "st" (2 chars)
-        // Actually wait - let me check the actual position. At this point we should
-        // have consumed 2 dict chars and 2 query chars with 0 errors.
-        // The infer_distance with term_length=2 should give us the exact match distance
-        // which is 2 (the 2 remaining query characters "st" that weren't matched)
-
-        // Let me recalculate: After transitions through "te":
-        // - We've consumed 2 dictionary characters ('t', 'e')
-        // - The state should have positions showing we've consumed 2 query characters
-        // - For term_length=2, the dict term has ended
-        // - Query has 4 characters total ("test")
-        // - We've matched 2, need to delete 2 more from query
-        // - Distance = 2
-
-        // Actually, looking at the error: left: Some(0), right: Some(2)
-        // It's returning 0, which suggests exact match... Let me think
-        // Oh! At term_length=2, we check which positions match this.
-        // A position (2, 0) means "consumed 2 query chars with 0 errors"
-        // For term_length=2, this is an EXACT match (both are length 2)
-        // So distance should be 0, not 2!
-
-        assert_eq!(z2.infer_distance(2), Some(0)); // Exact match: "te" query, "te" dict term
+        // The dictionary path ends after "te", while two query units remain.
+        // A position at query index 2 therefore finishes at cost 2.
+        assert_eq!(z2.infer_distance(2), Some(2));
     }
 
     #[test]

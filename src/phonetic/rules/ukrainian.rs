@@ -12,7 +12,7 @@
 //! - **Iotated vowels**: ю→yu, я→ya
 //! - **Simple vowels**: а→a, е→e, и→y, о→o, у→u
 //! - **Consonants**: Standard Cyrillic consonant mappings
-//! - **Special г→h**: Ukrainian г is [ɦ] (voiced glottal), not [g]
+//! - **Special г→h**: Ukrainian г is `[ɦ]` (voiced glottal), not `[g]`
 //! - **Soft sign removal**: ь removed (palatalization marker)
 //! - **Final devoicing**: б→p, в→f, г→kh, д→t at word end
 //!
@@ -20,7 +20,7 @@
 //!
 //! - No ы, ё, э (Russian letters not used in Ukrainian)
 //! - Ukrainian и sounds like Russian ы (→ y)
-//! - Ukrainian г = [ɦ] (→ h), while ґ = [g] (→ g)
+//! - Ukrainian г = `[ɦ]` (→ h), while ґ = `[g]` (→ g)
 //! - Ukrainian е is not iotated (→ e, not ye)
 //!
 //! # Available Rule Sets

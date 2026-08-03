@@ -347,7 +347,7 @@ where
 
     /// Queries for fuzzy matches and returns (matched_key, distance, values) tuples.
     ///
-    /// Unlike [`query`], this method preserves the matched key and its edit distance,
+    /// Unlike [`Self::query`], this method preserves the matched key and its edit distance,
     /// enabling applications that need to distinguish between different matches
     /// (e.g., PhoneticNormalizedDictionary for mapping back to original terms).
     ///

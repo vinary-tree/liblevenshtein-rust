@@ -66,18 +66,10 @@
 //! finite (an ±∞ endpoint always routes to the penalty-`0` / overlap branch), so
 //! no `∞ − ∞` is ever evaluated.
 
+pub use super::elastic::interval::interval_dist;
+
 /// Epsilon for float comparisons (mirrors `msm_transition::COST_EPSILON`).
 pub const COST_EPSILON: f64 = 1e-9;
-
-/// Distance from a scalar `v` to the closed interval `[lo, hi]`.
-///
-/// Returns `0.0` when `v ∈ [lo, hi]`, otherwise the distance to the nearer
-/// endpoint. This is the admissible lower bound on the MSM **Move** cost
-/// `|v − y|` for any `y ∈ [lo, hi]`. Safe with infinite endpoints.
-#[inline]
-pub fn interval_dist(v: f64, lo: f64, hi: f64) -> f64 {
-    (lo - v).max(0.0).max(v - hi)
-}
 
 /// Admissible lower bound on the MSM `C(a, b, c)` **Merge** cost when `a` and
 /// `b` are scalars and `c` ranges over the bin interval `[lo, hi]`.
@@ -185,7 +177,10 @@ pub fn step_interval_column_into(
 /// This is identical to [`step_interval_column_into`] but also returns the
 /// minimum live cell while the column is being filled. Exact trie traversal can
 /// use that value directly for subtree pruning, avoiding a second `O(m)` scan of
-/// the just-written column.
+/// the just-written column. Non-finite query samples, NaN or reversed interval
+/// endpoints, a negative/non-finite MSM constant, NaN predecessor cells, and
+/// negative-infinity predecessor cells fail closed: the output is cleared and
+/// the returned bound is positive infinity.
 pub fn step_interval_column_into_with_bound(
     prev_col: &[f64],
     query: &[f64],
@@ -194,6 +189,20 @@ pub fn step_interval_column_into_with_bound(
     c_const: f64,
     col: &mut Vec<f64>,
 ) -> f64 {
+    let valid_interval = |(low, high): (f64, f64)| !low.is_nan() && !high.is_nan() && low <= high;
+    if !c_const.is_finite()
+        || c_const < 0.0
+        || query.iter().any(|value| !value.is_finite())
+        || !valid_interval(curr)
+        || prev.is_some_and(|interval| !valid_interval(interval))
+        || prev_col
+            .iter()
+            .any(|value| value.is_nan() || *value == f64::NEG_INFINITY)
+    {
+        col.clear();
+        return f64::INFINITY;
+    }
+
     let m = query.len();
     let Some(column_len) = interval_column_len(m) else {
         col.clear();
@@ -345,6 +354,35 @@ mod tests {
         assert!(col[1..].iter().all(|value| value.is_infinite()));
         assert!(lower_bound.is_infinite());
         assert!(column_lower_bound(&col).is_infinite());
+    }
+
+    #[test]
+    fn invalid_numeric_inputs_fail_closed_without_nan_cells() {
+        let assert_closed = |previous_column: &[f64], query: &[f64], current, previous, c_const| {
+            let mut output = vec![f64::NAN];
+            let bound = step_interval_column_into_with_bound(
+                previous_column,
+                query,
+                current,
+                previous,
+                c_const,
+                &mut output,
+            );
+            assert_eq!(bound, f64::INFINITY);
+            assert!(output.is_empty());
+        };
+
+        assert_closed(&[0.0], &[f64::NAN], (0.0, 1.0), None, 1.0);
+        assert_closed(&[0.0], &[f64::INFINITY], (0.0, 1.0), None, 1.0);
+        assert_closed(&[0.0], &[f64::NEG_INFINITY], (0.0, 1.0), None, 1.0);
+        assert_closed(&[0.0], &[0.0], (f64::NAN, 1.0), None, 1.0);
+        assert_closed(&[0.0], &[0.0], (2.0, 1.0), None, 1.0);
+        assert_closed(&[0.0], &[0.0], (0.0, 1.0), Some((2.0, 1.0)), 1.0);
+        assert_closed(&[0.0], &[0.0], (0.0, 1.0), None, f64::INFINITY);
+        assert_closed(&[0.0], &[0.0], (0.0, 1.0), None, f64::NAN);
+        assert_closed(&[0.0], &[0.0], (0.0, 1.0), None, -1.0);
+        assert_closed(&[0.0, f64::NAN], &[0.0], (0.0, 1.0), None, 1.0);
+        assert_closed(&[0.0, f64::NEG_INFINITY], &[0.0], (0.0, 1.0), None, 1.0);
     }
 
     #[test]

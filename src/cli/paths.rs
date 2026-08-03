@@ -39,7 +39,7 @@ pub fn app_config_path() -> Result<PathBuf> {
     let dir = config_dir()?;
     std::fs::create_dir_all(&dir)
         .with_context(|| format!("Failed to create directory: {}", dir.display()))?;
-    Ok(dir.join("app-config.json"))
+    Ok(dir.join("app-config.bin"))
 }
 
 /// Get the default user config path
@@ -47,7 +47,7 @@ fn default_user_config_path() -> Result<PathBuf> {
     let dir = config_dir()?;
     std::fs::create_dir_all(&dir)
         .with_context(|| format!("Failed to create directory: {}", dir.display()))?;
-    Ok(dir.join("config.json"))
+    Ok(dir.join("config.bin"))
 }
 
 /// Get the persistent config path (reads from app config)
@@ -73,31 +73,27 @@ pub fn config_file_path_with_override(custom_path: Option<PathBuf>) -> Result<Pa
 /// Get file extension for a serialization format
 pub fn file_extension(format: SerializationFormat) -> &'static str {
     match format {
-        SerializationFormat::Text => "txt",
         SerializationFormat::Bincode => "bin",
-        SerializationFormat::Json => "json",
         #[cfg(feature = "protobuf")]
         SerializationFormat::Protobuf => "pb",
         #[cfg(feature = "compression")]
         SerializationFormat::BincodeGzip => "bin.gz",
         #[cfg(feature = "compression")]
-        SerializationFormat::JsonGzip => "json.gz",
         #[cfg(all(feature = "protobuf", feature = "compression"))]
         SerializationFormat::ProtobufGzip => "pb.gz",
-        SerializationFormat::PathsNative => "paths",
     }
 }
 
-/// Validate that a config file path has .json extension
+/// Validate that a config file path has the compact binary extension.
 pub fn validate_config_path(path: &Path) -> Result<()> {
     match path.extension().and_then(|s| s.to_str()) {
-        Some("json") => Ok(()),
+        Some("bin") => Ok(()),
         Some(ext) => Err(anyhow::anyhow!(
-            "Config file must have .json extension, got .{}. Please use a .json file.",
+            "Config file must have .bin extension, got .{}. Please use a compact binary config file.",
             ext
         )),
         None => Err(anyhow::anyhow!(
-            "Config file must have .json extension. Please add .json to the filename."
+            "Config file must have .bin extension. Please add .bin to the filename."
         )),
     }
 }
@@ -146,17 +142,17 @@ impl AppConfig {
             return Ok(default);
         }
 
-        let contents = std::fs::read_to_string(&path)
+        let contents = std::fs::read(&path)
             .with_context(|| format!("Failed to read app config: {}", path.display()))?;
 
-        serde_json::from_str(&contents)
-            .with_context(|| format!("Failed to parse app config: {}", path.display()))
+        crate::serialization::bincode_compat::deserialize(&contents)
+            .with_context(|| format!("Failed to decode app config: {}", path.display()))
     }
 
     /// Save application config
     pub fn save(&self) -> Result<()> {
         let path = app_config_path()?;
-        let contents = serde_json::to_string_pretty(self)?;
+        let contents = crate::serialization::bincode_compat::serialize(self)?;
         std::fs::write(&path, contents)
             .with_context(|| format!("Failed to write app config: {}", path.display()))
     }
@@ -180,7 +176,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             user_config_path: default_user_config_path()
-                .unwrap_or_else(|_| PathBuf::from("config.json")),
+                .unwrap_or_else(|_| PathBuf::from("config.bin")),
         }
     }
 }
@@ -221,11 +217,11 @@ impl PersistentConfig {
             return Ok(Self::default());
         }
 
-        let contents = std::fs::read_to_string(&path)
+        let contents = std::fs::read(&path)
             .with_context(|| format!("Failed to read config file: {}", path.display()))?;
 
-        serde_json::from_str(&contents)
-            .with_context(|| format!("Failed to parse config file: {}", path.display()))
+        crate::serialization::bincode_compat::deserialize(&contents)
+            .with_context(|| format!("Failed to decode config file: {}", path.display()))
     }
 
     /// Save configuration to file
@@ -236,7 +232,7 @@ impl PersistentConfig {
     /// Save configuration to custom path
     pub fn save_to(&self, custom_path: Option<PathBuf>) -> Result<()> {
         let path = config_file_path_with_override(custom_path)?;
-        let contents = serde_json::to_string_pretty(self)?;
+        let contents = crate::serialization::bincode_compat::serialize(self)?;
         std::fs::write(&path, contents)
             .with_context(|| format!("Failed to write config file: {}", path.display()))
     }
@@ -250,7 +246,7 @@ impl PersistentConfig {
         }
 
         // Save to destination
-        let contents = serde_json::to_string_pretty(self)?;
+        let contents = crate::serialization::bincode_compat::serialize(self)?;
         std::fs::write(dest, contents)
             .with_context(|| format!("Failed to write config file: {}", dest.display()))
     }

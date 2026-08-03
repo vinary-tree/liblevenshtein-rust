@@ -432,6 +432,7 @@ mod path_node_tests {
 #[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
+    use crate::distance::standard_distance;
     use crate::transducer::Algorithm;
     use libdictenstein::pathmap::zipper::PathMapZipper;
     use libdictenstein::pathmap::PathMapDictionary;
@@ -599,10 +600,13 @@ mod tests {
             }
         }
 
-        // At "ca" - matches perfectly with "ca" from query "cat" (distance 0)
-        // The remaining 't' in the query doesn't affect the distance at this position
+        // At "ca", the unmatched final 't' in query "cat" costs one deletion.
+        // Pin the zipper result to the independent full-string oracle.
         assert!(intersection.is_match());
-        assert_eq!(intersection.distance(), Some(0));
+        assert_eq!(
+            intersection.distance(),
+            Some(standard_distance("cat", "ca"))
+        );
         assert_eq!(intersection.term(), "ca");
 
         // Continue to 't'

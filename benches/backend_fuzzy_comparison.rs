@@ -171,6 +171,7 @@ fn bench_fuzzy_queries(c: &mut Criterion) {
             Algorithm::Standard => "Standard",
             Algorithm::Transposition => "Transposition",
             Algorithm::MergeAndSplit => "MergeAndSplit",
+            _ => "FutureAlgorithm",
         };
 
         for (max_dist, query_len) in configs {

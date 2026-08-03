@@ -97,7 +97,7 @@ src/
 ├── cache/              # FuzzyMultiMap + composable eviction wrappers
 ├── grep/               # Streaming decompress / archive / document fuzzy search
 │
-├── serialization/      # bincode / json / protobuf (+ gzip) persistence
+├── serialization/      # bincode / protobuf binary persistence (+ gzip wrapper)
 ├── cli/ · repl/        # Command-line & interactive surfaces (feature: cli)
 ├── wasm/ · ffi/        # JavaScript & C-ABI boundaries
 └── commands/           # Shared load/save/query primitives used by cli & repl
@@ -183,11 +183,12 @@ pub trait DictionarySerializer {
 }
 ```
 
-Implementations: `BincodeSerializer`, `JsonSerializer`, `ProtobufSerializer`
-(feature: `protobuf`), and `GzipSerializer<S>` which **wraps** another serializer
-to add compression (feature: `compression`). See the
+Implementations: `BincodeSerializer`, `ProtobufSerializer` (feature:
+`protobuf`), and `GzipSerializer<S>` which **wraps** either binary serializer to
+add compression (feature: `compression`). JSON, TOML, and newline text are not
+dictionary persistence formats. See the
 [serialization formats diagram](../diagrams/serialization/serialization-formats.svg).
-Format auto-detection uses magic bytes, then extension, then content analysis
+Format auto-detection uses binary magic bytes and recognized binary extensions
 (`cli::detect`).
 
 ### 6 · CLI / REPL architecture
@@ -233,7 +234,7 @@ Modular compilation keeps the default dependency set minimal:
 [features]
 default          = ["parking_lot"]
 phonetic-rules   = ["unicode-normalization"]
-serialization    = ["serde", "bincode", "serde_json", "libdictenstein/serialization"]
+serialization    = ["serde", "bincode", "libdictenstein/serialization"]
 cli              = ["clap", "rustyline", "pathmap-backend", "serialization"]
 # … grep-*, wasm, ffi, eviction-opt-* …
 ```

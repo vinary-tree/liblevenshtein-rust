@@ -2,7 +2,11 @@
 
 use super::query_result::QueryResult;
 use super::state::State;
-use super::transition::{initial_state, transition_state_pooled_ref, TransitionSettings};
+use super::transition::{
+    initial_state, initial_state_affine, transition_state_pooled_affine_ref,
+    transition_state_pooled_ref, AffineTransitionSettings, TransitionSettings,
+};
+use super::variants::{AffineGapParams, AffineV};
 use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
@@ -15,6 +19,47 @@ pub struct Candidate {
     pub term: String,
     /// Edit distance from query
     pub distance: usize,
+}
+
+/// Affine-gap result with both presentation and exact fixed-point costs.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AffineCandidate {
+    /// Matching dictionary term.
+    pub term: String,
+    /// Cost converted through the parameter set's exact scale.
+    pub distance: f64,
+    /// Exact integer cost used by pruning and ordering comparisons.
+    pub scaled_distance: usize,
+}
+
+/// Iterator returned by [`Transducer::query_affine`](crate::transducer::Transducer::query_affine).
+pub struct AffineQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unrestricted> {
+    inner: QueryIterator<N, Candidate, P>,
+    params: AffineGapParams,
+}
+
+impl<N: DictionaryNode, P: SubstitutionPolicy> AffineQueryIterator<N, P> {
+    pub(crate) fn new(inner: QueryIterator<N, Candidate, P>, params: AffineGapParams) -> Self {
+        Self { inner, params }
+    }
+}
+
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> Iterator
+    for AffineQueryIterator<N, P>
+{
+    type Item = AffineCandidate;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|candidate| AffineCandidate {
+            distance: self.params.unscale_cost(candidate.distance),
+            scaled_distance: candidate.distance,
+            term: candidate.term,
+        })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
 }
 
 /// Query result containing the matched term as a raw unit sequence and its distance.
@@ -45,6 +90,12 @@ struct QueryIntersection<N: DictionaryNode> {
     node: N,
     state: State,
     parent: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum QueryVariant {
+    Unit(Algorithm),
+    Affine(AffineGapParams),
 }
 
 impl<N: DictionaryNode> QueryIntersection<N> {
@@ -156,7 +207,7 @@ pub struct QueryIterator<N: DictionaryNode, R = String, P: SubstitutionPolicy = 
     pending: VecDeque<QueryIntersection<N>>,
     query: Vec<N::Unit>,
     max_distance: usize,
-    algorithm: Algorithm,
+    variant: QueryVariant,
     policy: P, // Substitution policy for matching
     path_arena: Vec<QueryPathNode<N::Unit>>,
     finished: bool,
@@ -249,6 +300,60 @@ impl<
     ) -> Self {
         let initial = initial_state(query_units.len(), max_distance, algorithm);
 
+        Self::with_units_and_variant(
+            root,
+            query_units,
+            max_distance,
+            QueryVariant::Unit(algorithm),
+            policy,
+            substring_mode,
+            initial,
+        )
+    }
+
+    /// Create a scaled affine-gap iterator from a query string.
+    pub fn with_affine_policy_and_substring(
+        root: N,
+        query: String,
+        max_cost: usize,
+        params: AffineGapParams,
+        policy: P,
+        substring_mode: bool,
+    ) -> Self {
+        let query_units = N::Unit::from_str(&query);
+        Self::with_affine_units(root, query_units, max_cost, params, policy, substring_mode)
+    }
+
+    /// Create a scaled affine-gap iterator from a native unit sequence.
+    pub fn with_affine_units(
+        root: N,
+        query_units: Vec<N::Unit>,
+        max_cost: usize,
+        params: AffineGapParams,
+        policy: P,
+        substring_mode: bool,
+    ) -> Self {
+        let initial = initial_state_affine(query_units.len(), max_cost, params);
+        Self::with_units_and_variant(
+            root,
+            query_units,
+            max_cost,
+            QueryVariant::Affine(params),
+            policy,
+            substring_mode,
+            initial,
+        )
+    }
+
+    fn with_units_and_variant(
+        root: N,
+        query_units: Vec<N::Unit>,
+        max_distance: usize,
+        variant: QueryVariant,
+        policy: P,
+        substring_mode: bool,
+        initial: State,
+    ) -> Self {
         let mut pending = VecDeque::new();
 
         // Always add root to pending queue - it will be checked for finality in advance()
@@ -259,7 +364,7 @@ impl<
             pending,
             query: query_units,
             max_distance,
-            algorithm,
+            variant,
             policy,
             path_arena: Vec::with_capacity(64),
             finished: false,
@@ -280,10 +385,16 @@ impl<
                     intersection.state.min_distance().unwrap_or(usize::MAX)
                 } else {
                     // Standard mode: penalize remaining query characters
-                    intersection
-                        .state
-                        .infer_distance(self.query.len())
-                        .unwrap_or(usize::MAX)
+                    match self.variant {
+                        QueryVariant::Unit(_) => intersection
+                            .state
+                            .infer_distance(self.query.len())
+                            .unwrap_or(usize::MAX),
+                        QueryVariant::Affine(params) => intersection
+                            .state
+                            .infer_distance_with::<AffineV>(self.query.len(), params)
+                            .unwrap_or(usize::MAX),
+                    }
                 };
 
                 if distance <= self.max_distance {
@@ -318,18 +429,25 @@ impl<
         let mut child_parent_path = None;
 
         for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled_ref(
-                &intersection.state,
-                &mut self.state_pool, // Use pool for State allocation reuse
-                &self.policy,         // Borrow the iterator's policy; avoid per-edge clones
-                label,
-                &self.query,
-                TransitionSettings::new(
-                    self.max_distance,
-                    self.algorithm,
-                    self.substring_mode, // Use prefix_mode=true only for substring matching
+            let next_state = match self.variant {
+                QueryVariant::Unit(algorithm) => transition_state_pooled_ref(
+                    &intersection.state,
+                    &mut self.state_pool,
+                    &self.policy,
+                    label,
+                    &self.query,
+                    TransitionSettings::new(self.max_distance, algorithm, self.substring_mode),
                 ),
-            ) {
+                QueryVariant::Affine(params) => transition_state_pooled_affine_ref(
+                    &intersection.state,
+                    &mut self.state_pool,
+                    &self.policy,
+                    label,
+                    &self.query,
+                    AffineTransitionSettings::new(self.max_distance, params, self.substring_mode),
+                ),
+            };
+            if let Some(next_state) = next_state {
                 let parent_path = match child_parent_path {
                     Some(path) => path,
                     None => {

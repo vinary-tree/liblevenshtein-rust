@@ -53,7 +53,7 @@ let results = automaton.query(&dictionary);
 - 🚀 **Sublinear time**: Query time independent of dictionary size
 - 🎯 **Exact results**: Finds all matches within distance threshold
 - 💾 **Memory efficient**: No need to materialize all comparisons
-- 🔧 **Flexible**: Three algorithm variants for different distance metrics
+- 🔧 **Flexible**: Four algorithm variants for different distance semantics
 - 🌍 **Unicode support**: Works with both byte-level and character-level dictionaries
 
 ## Theory: Levenshtein Distance
@@ -169,7 +169,7 @@ The automaton tracks **all possible ways** the query could align with the input,
 
 ## Algorithm Variants
 
-liblevenshtein provides three algorithm variants for different distance metrics:
+liblevenshtein provides four algorithm variants for different distance semantics:
 
 ### 1. Standard (Classic Levenshtein)
 
@@ -188,7 +188,7 @@ let automaton = LevenshteinAutomaton::new("test", 2, Algorithm::Standard);
 - "test" → "est" = 1 (delete t)
 - "test" → "tests" = 1 (insert s)
 
-### 2. Transposition (Damerau-Levenshtein)
+### 2. Transposition (Optimal String Alignment)
 
 **Operations**: Insertion, Deletion, Substitution, **Transposition** (swap adjacent characters)
 
@@ -206,7 +206,36 @@ let automaton = LevenshteinAutomaton::new("test", 1, Algorithm::Transposition);
 
 **Advantage**: More natural for spell checkers (humans often swap adjacent chars)
 
-### 3. Merge-and-Split
+**Restriction**: The recurrence is OSA (restricted Damerau), so a substring
+cannot be edited twice. It differs from unrestricted Damerau–Levenshtein and
+violates the triangle inequality on `CA`, `AC`, `ABC` (`3 > 1 + 1`).
+
+### 3. Unrestricted Damerau–Levenshtein
+
+**Operations**: Insertion, deletion, substitution, and adjacent transposition,
+with later edits allowed to revisit an earlier edit's output.
+
+```rust
+use liblevenshtein::prelude::*;
+
+let dictionary = DoubleArrayTrie::from_terms(["AC", "ABC", "CA"]);
+let transducer = Transducer::with_damerau_levenshtein(dictionary);
+let matches: Vec<_> = transducer.query_with_distance("CA", 2).collect();
+assert!(matches.iter().any(|candidate| {
+    candidate.term == "ABC" && candidate.distance == 2
+}));
+```
+
+**Use when**: A transposition may compose with a later insertion, deletion, or
+substitution and metricity matters. The separating example is `CA` → `ABC`:
+unrestricted Damerau distance is 2, while OSA is 3.
+
+The bounded implementation uses a history-carrying continuation and has a
+`$`\mathcal{O}(k^2)`$` state envelope. See the dedicated
+[literate chapter](../11-true-damerau/README.md) for the recurrence,
+subsumption proof, formal evidence, resource ceiling, and corpus results.
+
+### 4. Merge-and-Split
 
 **Operations**: Insertion, Deletion, Substitution, **Merge** (two chars → one), **Split** (one char → two)
 
@@ -226,14 +255,15 @@ let automaton = LevenshteinAutomaton::new("test", 2, Algorithm::MergeAndSplit);
 
 ### Comparison Table
 
-| Feature | Standard | Transposition | Merge-and-Split |
-|---------|----------|---------------|-----------------|
-| **Operations** | I, D, S | I, D, S, T | I, D, S, M, Sp |
-| **Transpositions** | ❌ (cost 2) | ✅ (cost 1) | ❌ (cost 2) |
-| **Adjacent merges** | ❌ | ❌ | ✅ (cost 1) |
-| **Character splits** | ❌ | ❌ | ✅ (cost 1) |
-| **Complexity** | $`\mathcal{O}(M \times D)`$ states | $`\mathcal{O}(M \times D^{2})`$ states | $`\mathcal{O}(M \times D^{3})`$ states |
-| **Use case** | General fuzzy search | Spell checking | OCR errors |
+| Feature | Standard | Transposition (OSA) | Unrestricted Damerau | Merge-and-Split |
+|---------|----------|---------------------|-----------------------|-----------------|
+| **Operations** | I, D, S | I, D, S, T | I, D, S, composable T | I, D, S, M, Sp |
+| **Transpositions** | ❌ (cost 2) | ✅, non-overlapping | ✅, composable | ❌ (cost 2) |
+| **Metric** | yes | no | yes | yes |
+| **Adjacent merges** | ❌ | ❌ | ❌ | ✅ (cost 1) |
+| **Character splits** | ❌ | ❌ | ❌ | ✅ (cost 1) |
+| **Frontier envelope** | $`\mathcal{O}(k)`$ | $`\mathcal{O}(k)`$ | $`\mathcal{O}(k^2)`$ | operation-dependent |
+| **Use case** | General fuzzy search | Ordinary swapped keys | Composable edits, metric distance | OCR errors |
 
 **Legend**: I=Insert, D=Delete, S=Substitute, T=Transpose, M=Merge, Sp=Split
 
@@ -553,7 +583,8 @@ What's your use case?
 
 ├─ General fuzzy search / spell check
 │  ├─ Common typing errors (swapped letters)?
-│  │  ├─ Yes → Transposition
+│  │  ├─ Yes, edits never overlap → Transposition (OSA)
+│  │  ├─ Yes, edits may compose or metricity matters → DamerauLevenshtein
 │  │  └─ No  → Standard
 │
 ├─ OCR / handwriting recognition
@@ -568,13 +599,13 @@ What's your use case?
 
 ### Detailed Comparison
 
-| Criterion | Standard | Transposition | Merge-and-Split |
-|-----------|----------|---------------|-----------------|
-| **Speed** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Memory** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Accuracy (typing)** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Accuracy (OCR)** | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Simplicity** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
+| Criterion | Standard | Transposition | Unrestricted Damerau | Merge-and-Split |
+|-----------|----------|---------------|-----------------------|-----------------|
+| **Speed** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| **Memory** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| **Accuracy (typing)** | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| **Accuracy (OCR)** | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| **Simplicity** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
 
 ### Recommendations
 
@@ -589,6 +620,12 @@ What's your use case?
 - ✅ Autocomplete with typo tolerance
 - ✅ Keyboard input errors common
 - ✅ Natural language text correction
+
+**Use unrestricted Damerau–Levenshtein when:**
+- ✅ A later edit may affect a transposed region
+- ✅ Triangle-inequality-dependent indexing or reasoning is required
+- ✅ The higher `$`\mathcal{O}(k^2)`$` frontier cost is acceptable
+- ✅ The service can enforce a small practical budget such as 1 through 3
 
 **Use Merge-and-Split when:**
 - ✅ OCR error correction

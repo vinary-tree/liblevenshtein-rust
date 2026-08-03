@@ -117,7 +117,8 @@ Cargo packages or analysis harnesses rather than library demos — noted in thei
 
 | Example | Purpose | Features |
 |---|---|---|
-| [`serialization.rs`](../../examples/serialization.rs) | Save/load a `DoubleArrayTrie` via bincode and JSON, then verify fuzzy queries round-trip | `serialization` |
+| [`serialization.rs`](../../examples/serialization.rs) | Save/load a `DoubleArrayTrie` via compact bincode and verify fuzzy queries round-trip | `serialization` |
+| [`operation_set_persistence.rs`](../../examples/operation_set_persistence.rs) | Round-trip a complete generalized edit grammar through bincode and protobuf | `protobuf` |
 
 ---
 

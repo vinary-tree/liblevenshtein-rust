@@ -1,0 +1,51 @@
+@startuml
+skinparam backgroundColor #FCFCFF
+skinparam shadowing false
+skinparam roundcorner 14
+skinparam defaultFontName SansSerif
+skinparam ArrowColor #334155
+skinparam ArrowThickness 2
+skinparam rectangle {
+  BorderColor #334155
+  FontColor #0F172A
+}
+
+title Class-A presets: configuration, validation, and exact conformance
+
+rectangle "Public constructors" as API #DBEAFE {
+  rectangle "OperationSet::hamming()\nmatch + substitute" as HAM #BFDBFE
+  rectangle "OperationSet::indel()\nmatch + insert + delete" as IND #C7D2FE
+  rectangle "OperationSet::bounded_skip()\nmatch + source delete" as SKIP #DDD6FE
+}
+
+rectangle "OperationSet::validate()\nprogress · finite nonnegative cost\nfree edges preserve length\nchecked aggregate <= 4096" as VALIDATE #FDE68A
+rectangle "GeneralizedAutomaton\nexact sparse alignment grid" as GRID #A7F3D0
+
+rectangle "Independent references" as REF #FCE7F3 {
+  rectangle "Hamming mismatch count\n(equal lengths only)" as HREF #FBCFE8
+  rectangle "Indel two-row / banded DP\n<latex>|x|+|y|-2\\operatorname{LCS}(x,y)</latex>" as IREF #F9A8D4
+  rectangle "Subsequence scan\n<latex>y\\preceq x</latex> and cost <latex>|x|-|y|</latex>" as SREF #F0ABFC
+}
+
+rectangle "Conformance gates\n20,000 generated cases\n42,395 Birkbeck pairs\nformal invariant toolbox" as GATES #BBF7D0
+rectangle "Dedicated dictionary walkers\nnot shipped: structural gate 1.229x < 4x" as REJECT #FECACA
+
+HAM --> VALIDATE
+IND --> VALIDATE
+SKIP --> VALIDATE
+VALIDATE --> GRID : accepted rules
+VALIDATE -right-> REJECT : benchmark decision
+GRID --> GATES : preset result
+HREF --> GATES : independent result
+IREF --> GATES : independent result
+SREF --> GATES : independent result
+
+legend right
+  |<#DBEAFE>| public configuration |
+  |<#FDE68A>| security boundary |
+  |<#A7F3D0>| executable oracle |
+  |<#FCE7F3>| independent references |
+  |<#BBF7D0>| verification evidence |
+  |<#FECACA>| rejected specialization |
+endlegend
+@enduml

@@ -1,6 +1,6 @@
 //! Online (streaming) phonetic grep without word boundary constraints.
 //!
-//! Unlike [`PhoneticGrep`] which operates on word boundaries, `PhoneticGrepOnline`
+//! Unlike [`PhoneticGrep`](crate::phonetic::grep::PhoneticGrep), which operates on word boundaries, `PhoneticGrepOnline`
 //! performs character-by-character scanning, allowing it to match substrings and
 //! handle text without clear word boundaries.
 //!

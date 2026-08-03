@@ -179,6 +179,7 @@ mod tests {
             Algorithm::Standard,
             Algorithm::Transposition,
             Algorithm::MergeAndSplit,
+            Algorithm::DamerauLevenshtein,
         ] {
             let dict = DoubleArrayTrie::from_terms(vec!["test"]);
             let transducer = TransducerBuilder::new()

@@ -20,6 +20,97 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 
 ## 1. Main Theorems (Top-Level Results)
 
+### Generic elastic walker
+
+| Theorem | Location | Description |
+|---|---|---|
+| `tree_bound_lower_bounds_every_terminal` | `elastic/theories/WalkerSoundness.v` | Local K1 terminal bounds and K2 child inflation lift to every terminal in a recursive dictionary subtree. |
+| `rejected_subtree_contains_no_qualifying_terminal` | `elastic/theories/WalkerSoundness.v` | A subtree rejected above the inclusive cutoff contains no qualifying exact result. |
+| `k1_k2_imply_no_false_negatives` | `elastic/theories/WalkerSoundness.v` | The complete recursive DFS walker retains every exact terminal whose distance is inside the cutoff. |
+| `walk_tree_sound` | `elastic/theories/WalkerSoundness.v` | Every emitted value belongs to the source tree and satisfies the cutoff. |
+
+### Representation-preserving subsumption fallback
+
+| Theorem | Location | Description |
+|---|---|---|
+| `shared_subsumes_is_legacy_subsumes` | `core/theories/Conformance/SubsumptionFallback.v` | For every carrier predicate, factoring the shared cost guard out of the three legacy mode branches is extensionally exact. |
+| `transposition_mixed_continuations_never_subsume` | `core/theories/Conformance/SubsumptionFallback.v` | Normal and in-progress OSA states remain incomparable in both directions. |
+| `merge_split_requires_same_index_and_kind` | `core/theories/Conformance/SubsumptionFallback.v` | Every shared merge/split dominance result preserves index and continuation kind. |
+
+### Exact multi-kind Dyck correction and binary persistence
+
+| Theorem | Location | Description |
+|---|---|---|
+| `correction_target_is_dyck` | `core/theories/Conformance/DyckCorrection.v` | Every reconstruction branch produces a kind-sensitive balanced target. |
+| `zero_cost_correction_is_balanced_identity` | `core/theories/Conformance/DyckCorrection.v` | A zero-cost witness preserves the source exactly and proves it is Dyck. |
+| `every_source_has_a_correction` | `core/theories/Conformance/DyckCorrection.v` | Deleting every token supplies a total upper-bound witness. |
+| `interval_recurrence_is_globally_exact` | `core/theories/Conformance/DyckCorrection.v` | With strict subinterval minima already filled, the least runtime branch cost is equivalent to the global minimum over all correction trees. |
+| `nonempty_dyck_first_pair_decomposition` | `core/theories/Conformance/DyckCorrection.v` | Every nonempty typed-Dyck word has the first-pair decomposition enumerated by the interval recurrence. |
+| `diagnostic_rename_is_semantics_preserving` | `core/theories/Conformance/OperationSetSerialization.v` | Operation behavior depends on its applicability tag, never its diagnostic name. |
+| `accepted_envelope_is_exact_and_bounded` | `core/theories/Conformance/OperationSetSerialization.v` | Acceptance implies the magic/version/flags contract, exact consumption, semantic validation, and resource bounds. |
+| `trailing_payload_bytes_are_rejected` | `core/theories/Conformance/OperationSetSerialization.v` | An envelope with bytes beyond its declared payload cannot be accepted. |
+| `accepted_protobuf_is_preflight_bounded` | `core/theories/Conformance/OperationSetSerialization.v` | Every allocation-bearing protobuf count is within policy before semantic admission. |
+| `protobuf_over_limit_never_reaches_prost` | `core/theories/Conformance/OperationSetSerialization.v` | An operation, pair, or text count above policy cannot pass the pre-allocation gate. |
+| `protobuf_weight_bits_round_trip_exactly` | `core/theories/Conformance/OperationSetSerialization.v` | The protobuf fixed64 weight field preserves all 64 IEEE-754 bits. |
+| `trailing_compressed_data_is_rejected` | `core/theories/Conformance/OperationSetSerialization.v` | A gzip wrapper that does not consume the complete supplied input cannot be accepted. |
+| `decompression_over_limit_is_rejected` | `core/theories/Conformance/OperationSetSerialization.v` | Inflated bytes above the inner-format ceiling are rejected before semantic decode. |
+
+### Class-A alignment presets
+
+| Theorem | Location | Description |
+|---|---|---|
+| `hamming_triangle` | `core/theories/Conformance/ClassAPresets.v` | Coordinate mismatch triangle inequalities lift inductively to equal-length sequences. |
+| `reverse_script_preserves_cost` | `core/theories/Conformance/ClassAPresets.v` | Reversing an indel script and swapping insert/delete preserves cost. |
+| `reverse_script_swaps_consumption` | `core/theories/Conformance/ClassAPresets.v` | The inverse script exchanges source and target consumption. |
+| `indel_length_lower_bounds` | `core/theories/Conformance/ClassAPresets.v` | Either directional length difference is bounded by script cost. |
+| `bounded_skip_exact_length_difference` | `core/theories/Conformance/ClassAPresets.v` | A match/source-delete path costs exactly source length minus target length. |
+| `validated_total_bounds_every_prefix` | `core/theories/Conformance/ClassAPresets.v` | A complete aggregate below the resource ceiling bounds every operation prefix. |
+
+### `PositionKind` and monomorphized variants
+
+| Theorem | Location | Description |
+|---|---|---|
+| `full_key_injective` | `core/theories/Conformance/PositionKindVariant.v` | Equality of `(term_index, num_errors, kind, aux)` implies equality of positions, justifying binary-search uniqueness. |
+| `dispatch_equivalence` | `core/theories/Conformance/PositionKindVariant.v` | Runtime per-position and selected static variant policies are extensionally equal for every built-in algorithm. |
+| `osa_mixed_continuations_do_not_subsume` | `core/theories/Conformance/PositionKindVariant.v` | A normal OSA position cannot prune a pending adjacent-transposition continuation. |
+| `merge_split_requires_strictly_fewer_errors` | `core/theories/Conformance/PositionKindVariant.v` | Every successful merge/split dominance decision has strict accumulated-cost improvement. |
+| `standard_subsumption_never_reverses_error_order` | `core/theories/Conformance/PositionKindVariant.v` | Standard dominance cannot hold when the alleged dominator has greater accumulated cost. |
+
+### Unrestricted Damerau streaming refinement
+
+| Theorem | Location | Description |
+|---|---|---|
+| `entry_preserves_budget` | `damerau/theories/DamerauStreaming.v` | Every guarded macro entry remains inside the configured edit budget. |
+| `entry_creates_valid_pending` | `damerau/theories/DamerauStreaming.v` | Entry creates a pending continuation whose positive delta fits the one-byte payload. |
+| `extend_preserves_delta_and_adds_one` | `damerau/theories/DamerauStreaming.v` | An interior dictionary unit preserves origin/delta and charges exactly one insertion. |
+| `pending_has_no_epsilon_successor` | `damerau/theories/DamerauStreaming.v` | A pending macro cannot double-charge prepaid query-interior deletions. |
+| `resolve_advances_exact_endpoint` | `damerau/theories/DamerauStreaming.v` | Resolution advances from the stored origin by exactly `$`\delta+1`$` and preserves cost. |
+| `macro_cost_equivalent` | `damerau/theories/DamerauStreaming.v` | The streaming charge equals the Lowrance–Wagner macro term. |
+| `mixed_continuations_never_subsume` | `damerau/theories/DamerauStreaming.v` | Normal and pending residual languages are incomparable in both directions. |
+| `pending_subsumption_requires_same_key` | `damerau/theories/DamerauStreaming.v` | Pending dominance exposes non-greater cost and equality of origin and delta. |
+| `frontier_quadratic_bound` | `damerau/theories/DamerauStreaming.v` | At most `$`k`$` diagonals times `$`k`$` deltas yields the `$`k^2`$` frontier envelope. |
+
+### Discrete Fréchet kernel and bottleneck properties
+
+| Theorem | Location | Description |
+|---|---|---|
+| `interval_frechet_step_admissible` | `frechet/theories/Metric/FrechetProperties.v` | Exact point-to-bin minima and monotone min/max recurrence lower-bound every represented scalar cell. |
+| `point_interval_frechet_step_exact` | `frechet/theories/Metric/FrechetProperties.v` | A point bin reproduces the scalar bottleneck recurrence exactly. |
+| `endpoint_bound_admissible` | `frechet/theories/Metric/FrechetProperties.v` | The maximum of the two coupling-pinned endpoint links is a candidate lower bound. |
+| `one_sided_hausdorff_admissible` | `frechet/theories/Metric/FrechetProperties.v` | Coverage of every source point by a bounded coupling implies the one-sided Hausdorff bound. |
+| `bottleneck_triangle_composition_step` | `frechet/theories/Metric/FrechetProperties.v` | Pointwise triangle bounds survive one minimax coupling-composition step. |
+| `bottleneck_zero_identifies_each_link` | `frechet/theories/Metric/FrechetProperties.v` | A non-negative zero bottleneck forces both prefix and current link to zero. |
+
+### ERP kernel and quotient properties
+
+| Theorem | Location | Description |
+|---|---|---|
+| `interval_dist_admissible` | `erp/theories/Metric/ErpProperties.v` | Scalar-to-bin distance lower-bounds every concrete realization. |
+| `interval_dist_degenerate` | `erp/theories/Metric/ErpProperties.v` | A point bin reproduces scalar absolute distance exactly. |
+| `script_gap_mass_bound` | `erp/theories/Metric/ErpProperties.v` | Gap-mass potential difference is bounded by the cost of any ERP edit script. |
+| `erp_candidate_lower_bound` | `erp/theories/Metric/ErpProperties.v` | K4 candidate bound for the source and target projected from any alignment. |
+| `zero_cost_alignment_has_quotient_identity` | `erp/theories/Metric/ErpProperties.v` | Every zero-cost alignment has equal normal forms after removing the fixed gap value. |
+
 ### Core Verification - Levenshtein Distance Properties
 
 | Theorem | Location | Description |

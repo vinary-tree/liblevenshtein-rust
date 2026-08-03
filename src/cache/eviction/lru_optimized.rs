@@ -3,7 +3,7 @@
 //! This module shows performance optimizations using feature flags:
 //! - `eviction-parking-lot`: Use parking_lot::RwLock instead of std::sync::RwLock
 //! - `eviction-dashmap`: Use DashMap for lock-free concurrent access
-//! - `eviction-arc-str`: Use Arc<str> instead of String for keys
+//! - `eviction-arc-str`: Use `Arc<str>` instead of `String` for keys
 //! - `eviction-compact-metadata`: Compact metadata representation
 //! - `eviction-coarse-timestamps`: Coarse-grained timestamps (reduce syscalls)
 

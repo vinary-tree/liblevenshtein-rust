@@ -1,302 +1,239 @@
-# Protobuf Serialization Format
+# Protocol Buffers Dictionary and Operation-Set Persistence
 
 [← Documentation Index](../README.md)
 
-## Overview
+**Status**: implemented binary persistence design
+**Updated**: 2026-08-02
 
-The protobuf serialization format provides cross-language compatibility for liblevenshtein dictionaries. It's supported across all implementations (Java, C++, Rust) and preserves the internal graph structure.
+Protocol Buffers is the portable persistence option for liblevenshtein dictionaries.
+Bincode remains the compact Rust-native option. No JSON, TOML, newline-delimited, or other
+text persistence surface is supported.
 
-![Serialization formats: how Bincode, JSON, and Protobuf (V1 / optimized V2) encode the same dictionary, contrasting term-list versus graph-structure layouts and their relative sizes.](../diagrams/serialization/serialization-formats.svg)
+`OperationSet` and its constituent public model types do not implement generic Serde traits.
+The Rust-native encoder uses private bincode wire structs whose version-1 layout is regression
+tested. This keeps the supported method surface binary-only instead of relying solely on the
+absence of a `serde_json` dependency in this crate.
 
-## Format Specification
+![Bincode and Protocol Buffers are the supported persistence formats; gzip may wrap either binary stream](../diagrams/serialization/serialization-formats.svg)
 
-Defined in `proto/liblevenshtein.proto`:
+Dictionary schemas are maintained in `libdictenstein/proto/libdictenstein.proto`.
+Generalized operations use `proto/operation_set.proto`. Both are compiled with `prost`.
+Protocol Buffers defines a language-neutral binary wire format and compatibility rules for
+evolving numbered fields; see the [Protocol Buffers language guide](https://protobuf.dev/programming-guides/proto3/)
+and [encoding guide](https://protobuf.dev/programming-guides/encoding/).
+
+## Design goals
+
+- Keep production dictionary persistence binary and compact.
+- Provide a schema that non-Rust implementations can generate and consume.
+- Preserve dictionary terms exactly across a round trip.
+- Reject malformed graph structure, invalid labels, cycles, inconsistent counts, and malformed
+  specialized payloads.
+- Keep backend-specific representations separate from the portable general format.
+- Preserve complete operation-set semantics without interpreting diagnostic names.
+- Permit gzip as an orthogonal transport wrapper.
+
+## Format family
+
+| Rust API | Schema message | Representation | Compatibility role |
+|---|---|---|---|
+| `ProtobufSerializer` | `Dictionary` | Explicit nodes, terminal nodes, and labeled edges | General V1 interchange |
+| `OptimizedProtobufSerializer` | `DictionaryV2` | Packed edge triples and delta-coded terminal IDs | Compact Rust format |
+| `DatProtobufSerializer` | `DoubleArrayTrie` | `LDT1` length-delimited term payload | DAT-specific reconstruction |
+| `SuffixAutomatonProtobufSerializer` | `SuffixAutomaton` | Indexed source texts | Suffix-automaton reconstruction |
+| `OperationSet::to_protobuf` | `OperationSetContainer` | Ordered operations, explicit applicability, canonical restriction pairs | Portable edit-grammar interchange |
+
+The general serializers traverse a byte-level dictionary as a trie. The current dictionary
+trait does not expose stable node identity, so DAWG node sharing is not preserved. Decoding
+enumerates accepted UTF-8 terms and rebuilds the requested backend. The persistence guarantee
+is therefore language preservation, not byte-for-byte preservation of a backend's in-memory
+layout.
+
+## V1 graph representation
+
+The portable message records declared node IDs, terminal node IDs, edges, a root ID, and the
+term count:
 
 ```protobuf
 message Dictionary {
-    message Edge {
-        uint64 source_id = 1;  // Source node ID
-        uint32 label = 2;       // Character/byte label
-        uint64 target_id = 3;   // Target node ID
-    }
+  message Edge {
+    uint64 source_id = 1;
+    uint32 label = 2;
+    uint64 target_id = 3;
+  }
 
-    repeated uint64 node_id = 1;         // All node IDs
-    repeated uint64 final_node_id = 2;   // Terminal node IDs
-    repeated Edge edge = 3;               // All edges
-    uint64 root_id = 4;                   // Root node (usually 0)
-    uint64 size = 5;                      // Number of terms
+  repeated uint64 node_id = 1;
+  repeated uint64 final_node_id = 2;
+  repeated Edge edge = 3;
+  uint64 root_id = 4;
+  uint64 size = 5;
 }
 ```
 
-## Why Graph Structure?
+The decoder requires the root, every edge endpoint, and every terminal ID to be declared. Edge
+labels must fit a byte. A depth-first color check rejects reachable cycles before term
+enumeration, and the enumerated term count must equal `size`.
 
-Unlike bincode/JSON which serialize terms as strings, protobuf serializes the **actual trie/DAWG structure**:
-
-### Advantages
-
-1. **Cross-Language Compatibility**: Works with Java, C++, and Rust implementations
-2. **Structure Preservation**: No rebuild needed - loads directly into memory
-3. **DAWG Efficiency**: For minimized DAWGs with node sharing, much more compact than term lists
-4. **Fast Deserialization**: No trie reconstruction needed
-
-### Trade-offs
-
-For simple tries without node sharing:
-- **Bincode**: 109 bytes (just term strings)
-- **Protobuf**: 262 bytes (full graph structure)
-
-For DAWGs with significant node sharing:
-- **Bincode**: Size grows with unique strings
-- **Protobuf**: Size grows with unique nodes (can be much smaller!)
-
-## Current Implementation
-
-### Serialization
-
-```rust
-use liblevenshtein::prelude::*;
-
-let dict = PathMapDictionary::from_iter(vec!["test", "testing"]);
-
-// Serialize as protobuf
-let mut file = std::fs::File::create("dict.pb")?;
-ProtobufSerializer::serialize(&dict, file)?;
+```text
+decode_v1(message):
+    declared := set(message.node_id)
+    require root_id in declared
+    for each edge:
+        require edge.source_id and edge.target_id in declared
+        require edge.label <= 255
+        adjacency[edge.source_id].append((edge.label, edge.target_id))
+    require each final_node_id in declared
+    require reachable graph is acyclic
+    terms := enumerate UTF-8 root-to-final paths
+    require len(terms) == message.size
+    return rebuild_backend(terms)
 ```
 
-The serializer:
-1. Traverses the dictionary structure (DFS)
-2. Assigns sequential IDs to nodes
-3. Records all edges with (source, label, target)
-4. Marks final (terminal) nodes
+## Compact V2 representation
 
-### Deserialization
+`DictionaryV2` removes the declared-node array, stores edges as packed
+`[source, label, target]` triples, and delta-codes terminal IDs. The decoder checks that the
+packed array is divisible by three, that its triple count equals `edge_count`, that delta sums
+do not overflow, that every label fits a byte, that the reachable graph is acyclic, and that
+the reconstructed term count agrees with `size`.
 
-```rust
-// Deserialize from protobuf
-let file = std::fs::File::open("dict.pb")?;
-let dict: PathMapDictionary = ProtobufSerializer::deserialize(file)?;
+V2 is not promised to be readable by older or third-party V1 implementations. Use V1 when the
+consumer supports only the portable base schema.
+
+## Specialized binary payloads
+
+The DAT serializer currently stores terms in the `edge_data` field using this unambiguous
+binary grammar:
+
+```text
+dat_payload := "LDT1" term*
+term        := byte_length:u32_le utf8_bytes[byte_length]
 ```
 
-The deserializer:
-1. Decodes protobuf message
-2. Builds adjacency list from edges
-3. Extracts terms via DFS from root
-4. Reconstructs dictionary from terms
+Decoding requires the `LDT1` magic, complete length fields and term bodies, valid UTF-8, exact
+payload consumption, and agreement with `term_count`. A newline-delimited compatibility
+payload is deliberately rejected: accepting it would reintroduce an undocumented text
+persistence format and would make embedded newlines ambiguous.
 
-## Limitations & Future Optimizations
+The suffix-automaton serializer stores the original source strings because the automaton can
+be reconstructed from them. Its decoder verifies `string_count` before rebuilding.
 
-### Current Limitations
+## OperationSet V1 representation
 
-1. **No True DAWG Serialization**: Since the `Dictionary` trait doesn't expose node identity, we serialize as a trie structure (each path creates unique nodes). True DAWGs with node sharing require dictionary implementations to expose node IDs.
-
-2. **Redundant node_id Field**: Node IDs are sequential (0, 1, 2, ...), so the `node_id` array could be omitted with minimal changes to consumers.
-
-3. **Edge Packing**: Edges are stored as messages. Could pack as flat array: `[src1, lbl1, tgt1, src2, lbl2, tgt2, ...]`
-
-### Proposed Optimizations
-
-#### Option 1: Remove Redundant node_id Field
+`OperationSetContainer` is an explicit version discriminator. The V1 arm contains an ordered
+sequence of operations. Each operation records source/target scalar consumption, exact
+IEEE-754 weight bits, an applicability enum, canonical listed restrictions, and a diagnostic
+name. Restriction pairs use a `oneof` so raw non-UTF-8 bytes remain distinct from Unicode
+strings.
 
 ```protobuf
-message DictionaryV2 {
-    // REMOVED: repeated uint64 node_id = 1;
-    repeated uint64 final_node_id = 1;  // Just finals needed
-    repeated Edge edge = 2;
-    uint64 root_id = 3;
-    uint64 size = 4;
+message OperationSetContainer {
+  oneof format {
+    OperationSetV1 v1 = 1;
+  }
+}
 
-    // Consumers infer node IDs from edges
+message OperationTypeV1 {
+  uint64 consume_x = 1;
+  uint64 consume_y = 2;
+  fixed64 weight_bits = 3;
+  OperationApplicabilityV1 applicability = 4;
+  repeated SubstitutionPairV1 restriction = 5;
+  string name = 6;
 }
 ```
 
-**Savings**: ~8 bytes per node (varint encoded)
+Operation order is retained because it participates in deterministic tie-breaking. The
+serializer sorts the logical restriction set, so equal configurations emit identical bytes
+from this implementation. Applicability is independent of `name`: renaming a rule cannot turn
+it into a match or transposition.
 
-#### Option 2: Packed Edge Format
+Before invoking `prost`, `from_protobuf_with_limits` scans the wire without allocating
+decoded collections. It bounds operations, pairs per operation, total pairs, every name, and
+aggregate restriction-string bytes, including repeated encodings of singular fields. Unknown
+fields are skipped, but malformed wire types and lengths are rejected. After decoding, the
+same limits and `OperationSet::validate` are checked again. This two-stage design prevents a
+small declared limit from being bypassed by `prost` vector allocation.
 
-```protobuf
-message DictionaryV2 {
-    repeated uint64 final_node_id = 1;
-    // Pack as [src, lbl, tgt, src, lbl, tgt, ...]
-    repeated uint64 edge_data = 2 [packed=true];
-    uint64 root_id = 3;
-    uint64 size = 4;
-}
+```text
+decode_operation_set_protobuf(bytes, limits):
+    require len(bytes) <= limits.payload_bytes
+    for each wire field, without constructing schema objects:
+        validate key, wire type, varint, and length boundaries
+        count every operation and restriction-pair message
+        sum every known restriction string length
+        require each count <= its caller-selected limit
+        skip unknown fields without retaining them
+    message := prost_decode(bytes)
+    require message.format is V1
+    model := convert_explicit_applicability_and_exact_weight_bits(message)
+    require model.validate()
+    require model satisfies limits again
+    return model
 ```
 
-**Savings**: Message overhead per edge (~2 bytes each)
+## Usage
 
-#### Option 3: Delta Encoding
-
-For sequential node IDs, encode deltas:
-
-```
-Nodes: [0, 1, 2, 3, 4]
-Deltas: [0, 1, 1, 1, 1]  // Smaller varints!
-```
-
-**Savings**: Varint efficiency for sequential IDs
-
-### True DAWG Serialization
-
-To serialize actual DAWGs with node sharing, we need:
-
-1. **Dictionary Trait Extension**:
-```rust
-trait IdentifiableDictionary: Dictionary {
-    fn node_id(&self, node: &Self::Node) -> u64;
-}
-```
-
-2. **Modified Serialization**:
-```rust
-fn extract_graph_with_sharing<D: IdentifiableDictionary>(dict: &D) -> proto::Dictionary {
-    let mut visited = HashMap::new();
-
-    // Track which nodes we've seen
-    fn traverse(node: &N, dict: &D, visited: &mut HashMap<u64, ()>) {
-        let id = dict.node_id(node);
-        if visited.contains_key(&id) {
-            return;  // Already visited - this is node sharing!
-        }
-        visited.insert(id, ());
-
-        for (label, child) in node.edges() {
-            traverse(&child, dict, visited);
-        }
-    }
-}
-```
-
-This would properly serialize DAWGs with shared nodes.
-
-## Compatibility
-
-The current format is **fully compatible** with:
-- liblevenshtein-java
-- liblevenshtein-cpp
-- Future liblevenshtein implementations
-
-Changes to the format (like proposed optimizations) should be:
-1. Optional (via `DictionaryV2` message)
-2. Backward compatible
-3. Coordinated across all implementations
-
-## Migration Guide
-
-### Migrating from V1 to V2
-
-The optimized V2 format provides 40-60% space savings while maintaining full compatibility. Here's how to migrate:
-
-#### For New Projects
-
-Use `OptimizedProtobufSerializer` from the start:
+Enable the `protobuf` feature:
 
 ```rust
-use liblevenshtein::prelude::*;
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use libdictenstein::serialization::{DictionarySerializer, ProtobufSerializer};
 
-let dict = PathMapDictionary::from_iter(vec!["test", "testing"]);
-
-// Serialize with V2 (optimized)
-let mut file = std::fs::File::create("dict.pb")?;
-OptimizedProtobufSerializer::serialize(&dict, file)?;
-
-// Deserialize (automatically detects format)
-let file = std::fs::File::open("dict.pb")?;
-let dict: PathMapDictionary = OptimizedProtobufSerializer::deserialize(file)?;
+let dictionary = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
+let mut bytes = Vec::new();
+ProtobufSerializer::serialize(&dictionary, &mut bytes)?;
+let restored: DoubleArrayTrie = ProtobufSerializer::deserialize(&bytes[..])?;
+assert!(restored.contains("testing"));
+# Ok::<(), libdictenstein::serialization::SerializationError>(())
 ```
 
-#### For Existing V1 Files
+With `compression`, `GzipSerializer<ProtobufSerializer>` wraps the same message bytes. Gzip
+does not change schema identity or validation rules.
 
-Convert existing V1 protobuf files to V2:
+For operation sets, `to_protobuf_gzip` and `from_protobuf_gzip` provide the corresponding
+single-member wrapper. `to_binary_gzip` and `from_binary_gzip` do the same for the bincode
+envelope. These APIs reject concatenated members and trailing compressed data.
 
-```rust
-use liblevenshtein::prelude::*;
+## Trust boundary and resource policy
 
-// Read V1 format
-let v1_file = std::fs::File::open("dict_v1.pb")?;
-let dict: PathMapDictionary = ProtobufSerializer::deserialize(v1_file)?;
+Dictionary serializer APIs read the supplied stream into memory before decoding. A caller
+accepting untrusted dictionary bytes must therefore impose a compressed-size limit before
+entry and, for gzip, a decompressed-size/work limit around the reader. Protobuf repeated fields
+can request large allocations, so public services should decode inside their ordinary memory
+and time budgets.
 
-// Write V2 format
-let v2_file = std::fs::File::create("dict_v2.pb")?;
-OptimizedProtobufSerializer::serialize(&dict, v2_file)?;
-```
+The operation-set APIs enforce fixed compressed and decompressed ceilings themselves, plus
+caller-selected inner limits. That is still not authentication or a wall-clock limit; hostile
+workloads should run under the service's ordinary process/time controls.
 
-#### Choosing Between V1 and V2
+Structural validation prevents malformed graphs from becoming dictionaries, but it is not
+authentication. Sign or MAC artifacts when provenance matters.
 
-**Use V1 (`ProtobufSerializer`) when:**
-- Cross-language compatibility with older liblevenshtein versions
-- Other implementations haven't adopted V2 yet
-- Compatibility is more important than file size
+## Compatibility policy
 
-**Use V2 (`OptimizedProtobufSerializer`) when:**
-- File size matters (60% smaller)
-- Using only Rust implementation
-- Other implementations support V2
+- Never reuse or change the meaning of an existing protobuf field number.
+- Add fields compatibly; reserve removed field numbers and names.
+- Use V1 for cross-implementation interchange unless the peer explicitly supports another
+  message.
+- Treat an unsupported specialized marker as an error. Do not reinterpret it as text.
+- Retain fixture-based cross-language tests before claiming compatibility with a particular
+  external implementation.
 
-#### Format Detection
+The repository does not claim cross-language compatibility merely because protobuf runtimes
+exist in those languages; compatibility is established by sharing the schema and passing the
+same validation fixtures.
 
-Both serializers automatically detect the format during deserialization:
+## Verification and tests
 
-```rust
-// Works with both V1 and V2 files
-let file = std::fs::File::open("dict.pb")?;
-let dict: PathMapDictionary = OptimizedProtobufSerializer::deserialize(file)?;
-```
+The test suite covers general V1/V2 round trips, corrupted edge triples, oversized labels,
+undeclared nodes, cycles, count mismatches, truncated specialized payloads, gzip composition,
+backend/query correspondence, and the binary-only DAT marker. Property tests compare accepted
+terms and values before and after serialization.
 
-The `DictionaryContainer` message uses a `oneof` field to distinguish formats:
-
-```protobuf
-message DictionaryContainer {
-    oneof format {
-        Dictionary v1 = 1;      // Detected automatically
-        DictionaryV2 v2 = 2;    // Detected automatically
-    }
-}
-```
-
-#### Performance Comparison
-
-Based on benchmarks with 100 terms:
-
-| Format | Size | vs V1 | vs Bincode |
-|--------|------|-------|------------|
-| Bincode | 1508 bytes | +32.3% | baseline |
-| JSON | 1302 bytes | +14.2% | -13.7% |
-| Protobuf V1 | 1140 bytes | baseline | -24.4% |
-| Protobuf V2 | 454 bytes | **-60.2%** | **-69.9%** |
-
-#### Migration Checklist
-
-- [ ] Identify all `.pb` files using V1 format
-- [ ] Decide on migration strategy (convert all at once vs gradual)
-- [ ] Test deserialization with V2 serializer on existing V1 files
-- [ ] Convert files using the code example above
-- [ ] Update serialization code to use `OptimizedProtobufSerializer`
-- [ ] Verify file sizes decreased by ~40-60%
-- [ ] Update documentation/comments referencing the old format
-
-## Benchmarks
-
-```
-Small dictionary (7 terms, trie structure):
-- Bincode:  109 bytes
-- JSON:     156 bytes
-- Protobuf: 262 bytes
-
-Large dictionary (1000 terms, DAWG structure):
-- Bincode:  ~15 KB (term strings)
-- Protobuf: ~8 KB (with node sharing) [projected]
-```
-
-## Usage Examples
-
-See:
-- `examples/serialization.rs` - Basic usage
-- `src/commands/handlers/io.rs` - Feature-gated protobuf round-trip tests for
-  PathMap, suffix automaton, and compressed protobuf dictionaries
-
-## References
-
-- Protocol Buffers: https://protobuf.dev/
-- Varint Encoding: https://protobuf.dev/programming-guides/encoding/#varints
-- DAWG Minimization: Schulz & Mihov (2002)
+The generalized `OperationSet` has both a versioned bincode envelope and the V1 protobuf
+schema described above. Its tests cover deterministic and execution-equivalent round trips,
+exact floating-point bits, raw bytes, Unicode pairs, malformed wire, unknown fields, allocation
+preflight limits, arbitrary-input panic freedom, gzip checksum/trailing-member rejection, and
+uncompressed/compressed correspondence. See the
+[binary persistence guide](../user-guide/serialization.md).

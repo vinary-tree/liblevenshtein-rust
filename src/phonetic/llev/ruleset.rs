@@ -243,7 +243,7 @@ impl RuleSetChar {
     /// that graph and sequence phones are expanded to their constituent
     /// characters. It has the same semantics as [`apply`](Self::apply).
     ///
-    /// Matching is case-insensitive by default (same as [`apply`]).
+    /// Matching is case-insensitive by default (same as [`Self::apply`]).
     pub fn apply_full(&self, input: &str) -> String {
         self.apply(input)
     }
@@ -575,7 +575,7 @@ impl<'a, U: PhoneticUnit> RuleConverter<'a, U> {
     ///
     /// Supports:
     /// - Word boundaries (#_ and _#)
-    /// - Character class contexts ([aeiou]_ and _[aeiou])
+    /// - Character class contexts (`[aeiou]_` and `_[aeiou]`)
     /// - Compound contexts (And, Or, Not)
     /// - Both left AND right contexts simultaneously
     fn convert_context(

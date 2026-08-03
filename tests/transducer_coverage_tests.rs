@@ -382,7 +382,7 @@ fn test_successors_i_type_at_max_errors() {
     if let Some(n) = next {
         // Verify successors don't exceed max_distance
         for p in n.positions() {
-            assert!(p.errors() <= max_distance);
+            assert!(p.errors() <= usize::from(max_distance));
         }
     }
 }

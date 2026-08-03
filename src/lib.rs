@@ -30,6 +30,8 @@
 pub mod commands;
 #[cfg(feature = "pathmap-backend")]
 pub mod contextual;
+/// Ordered cost monoids and exact decimal fixed-point scaling.
+pub mod cost;
 pub mod dictionary;
 pub mod distance;
 pub mod filter;
@@ -146,7 +148,7 @@ pub mod grep;
 /// WebAssembly bindings for browser and Node.js via wasm-bindgen
 ///
 /// This module provides JavaScript-friendly APIs for all core functionality:
-/// - Distance functions (Levenshtein, Damerau-Levenshtein)
+/// - Distance functions (Levenshtein, optimal string alignment)
 /// - Dictionary backends (DoubleArrayTrie, DynamicDawg)
 /// - Levenshtein transducers for fuzzy search
 /// - Phonetic rules (with `wasm-phonetic` feature)
@@ -176,8 +178,10 @@ pub mod corpus;
 
 /// Common imports for convenient usage
 pub mod prelude {
+    pub use crate::cost::{BottleneckCost, CostMonoid, CostScale, UnitCost, WeightedCost};
     pub use crate::transducer::{
-        Algorithm, Candidate, QueryBuilder, Transducer, TransducerBuilder,
+        Algorithm, Candidate, MatchMode, MatchModeError, PrefixQueryIterator, PrefixQueryMatch,
+        PrefixQueryStats, QueryBuilder, Transducer, TransducerBuilder,
     };
     // ----------------------------------------------------------------------
     // Legacy dictionary re-exports (deprecated since 0.9.1).
@@ -227,10 +231,7 @@ pub mod prelude {
     pub use libdictenstein::{Dictionary, DictionaryNode, SyncStrategy};
 
     #[cfg(feature = "serialization")]
-    pub use crate::serialization::{
-        BincodeSerializer, DictionaryFromTerms, DictionarySerializer, JsonSerializer,
-        PlainTextSerializer,
-    };
+    pub use crate::serialization::{BincodeSerializer, DictionaryFromTerms, DictionarySerializer};
 
     #[cfg(feature = "protobuf")]
     pub use crate::serialization::{

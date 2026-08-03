@@ -241,7 +241,8 @@ pub struct NFA {
     start: StateId,
     /// Set of final (accepting) states
     finals: FxHashSet<StateId>,
-    /// H9: CSR offsets - transitions for state s are at transitions[offsets[s]..offsets[s+1]]
+    /// H9: CSR offsets - transitions for state `s` are at
+    /// `transitions[offsets[s]..offsets[s + 1]]`.
     transition_offsets: Vec<usize>,
     /// Pending transitions before finalization
     pending_transitions: Vec<Transition>,

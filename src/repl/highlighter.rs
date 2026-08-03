@@ -119,12 +119,7 @@ impl CommandHighlighter {
             } else if Self::is_format_name(part) {
                 // Highlight format names in cyan
                 result.push_str(&part.cyan().to_string());
-            } else if part.ends_with(".txt")
-                || part.ends_with(".bin")
-                || part.ends_with(".json")
-                || part.ends_with(".pb")
-                || part.ends_with(".paths")
-            {
+            } else if part.ends_with(".bin") || part.ends_with(".pb") {
                 // Highlight file paths in bright white
                 result.push_str(&part.bright_white().to_string());
             } else if matches!(
@@ -163,25 +158,22 @@ impl CommandHighlighter {
     fn is_algorithm_name(s: &str) -> bool {
         matches!(
             s.to_lowercase().as_str(),
-            "standard" | "std" | "transposition" | "trans" | "merge-and-split" | "mas"
+            "standard"
+                | "std"
+                | "transposition"
+                | "trans"
+                | "damerau-levenshtein"
+                | "damerau"
+                | "true-damerau"
+                | "merge-and-split"
+                | "mas"
         )
     }
 
     fn is_format_name(s: &str) -> bool {
         matches!(
             s.to_lowercase().as_str(),
-            "text"
-                | "txt"
-                | "bincode"
-                | "bin"
-                | "json"
-                | "protobuf"
-                | "pb"
-                | "bincode-gzip"
-                | "json-gzip"
-                | "protobuf-gzip"
-                | "paths-native"
-                | "paths"
+            "bincode" | "bin" | "protobuf" | "pb" | "bincode-gzip" | "protobuf-gzip"
         )
     }
 }

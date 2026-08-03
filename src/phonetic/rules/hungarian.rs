@@ -59,7 +59,7 @@ use std::sync::OnceLock;
 /// - cs → CH (like English "ch")
 /// - dz → DZ (voiced alveolar affricate)
 /// - gy → GY (palatalized d)
-/// - ly → Y (palatal lateral, [j] in modern Hungarian)
+/// - ly → Y (palatal lateral, `[j]` in modern Hungarian)
 /// - ny → NY (palatal nasal, like Spanish ñ)
 /// - sz → S (voiceless "s" - this is the normal "s" sound!)
 /// - ty → TY (palatalized t)

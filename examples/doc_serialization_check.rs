@@ -13,9 +13,10 @@
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use libdictenstein::dynamic_dawg::{DynamicDawg, DynamicDawgChar};
 use libdictenstein::serialization::{
-    bincode_compat, BincodeSerializer, DictionarySerializer, JsonSerializer, PlainTextSerializer,
-    SerializationError,
+    bincode_compat, BincodeSerializer, DictionarySerializer, SerializationError,
 };
+use liblevenshtein::transducer::Algorithm;
+use liblevenshtein::transducer::{OperationSet, OperationSetBinaryLimits, OperationSetBuilder};
 
 /// `BincodeSerializer` round-trip through a byte buffer
 /// (`Vec<u8>: Write`, `&[u8]: Read`) — the pattern used by the DoubleArrayTrie,
@@ -37,20 +38,6 @@ fn serialize_via_reference(dict: &DoubleArrayTrie) -> Result<Vec<u8>, Serializat
     let mut bytes = Vec::new();
     BincodeSerializer::serialize(dict, &mut bytes)?;
     Ok(bytes)
-}
-
-/// The other text/binary serializers share the same `DictionarySerializer` trait.
-fn json_and_plaintext() -> Result<(), SerializationError> {
-    let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
-
-    let mut json = Vec::new();
-    JsonSerializer::serialize(&dict, &mut json)?;
-    let _from_json: DoubleArrayTrie = JsonSerializer::deserialize(&json[..])?;
-
-    let mut text = Vec::new();
-    PlainTextSerializer::serialize(&dict, &mut text)?;
-    let _from_text: DoubleArrayTrie = PlainTextSerializer::deserialize(&text[..])?;
-    Ok(())
 }
 
 /// `DynamicDawg` (byte-level) deep-copy via serialization.
@@ -83,6 +70,15 @@ fn custom_serde_bytes() -> Result<(), Box<dyn std::error::Error>> {
     let dict = DoubleArrayTrie::from_terms(vec!["test"]);
     let bytes: Vec<u8> = bincode_compat::serialize(&dict)?;
     let _dict: DoubleArrayTrie = bincode_compat::deserialize(&bytes)?;
+    Ok(())
+}
+
+/// Public algorithm selectors, including unrestricted Damerau, retain their
+/// identity through the same serde-compatible binary format.
+fn algorithm_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
+    let bytes = bincode_compat::serialize(&Algorithm::DamerauLevenshtein)?;
+    let restored: Algorithm = bincode_compat::deserialize(&bytes)?;
+    assert_eq!(restored, Algorithm::DamerauLevenshtein);
     Ok(())
 }
 
@@ -124,6 +120,59 @@ fn gzip_roundtrip() -> Result<(), SerializationError> {
     Ok(())
 }
 
+/// The Protocol Buffers section uses the portable general serializer.
+#[cfg(feature = "protobuf")]
+fn protobuf_roundtrip() -> Result<(), SerializationError> {
+    use libdictenstein::serialization::ProtobufSerializer;
+
+    let dict = DoubleArrayTrie::from_terms(vec!["test", "tested", "testing"]);
+    let mut bytes = Vec::new();
+    ProtobufSerializer::serialize(&dict, &mut bytes)?;
+    let loaded: DoubleArrayTrie = ProtobufSerializer::deserialize(&bytes[..])?;
+    assert!(loaded.contains("tested"));
+    Ok(())
+}
+
+/// The stable, bounded binary envelope used by generalized edit operations.
+fn operation_set_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
+    let operations = OperationSetBuilder::new().with_standard_ops().build();
+    let bytes = operations.to_binary()?;
+
+    let limits = OperationSetBinaryLimits {
+        max_operations: 16,
+        ..OperationSetBinaryLimits::default()
+    };
+    let restored = OperationSet::from_binary_with_limits(&bytes, limits)?;
+    assert_eq!(restored, operations);
+    Ok(())
+}
+
+/// Portable OperationSet schema and its bounded pre-allocation decoder.
+#[cfg(feature = "protobuf")]
+fn operation_set_protobuf_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
+    let operations = OperationSetBuilder::new().with_standard_ops().build();
+    let bytes = operations.to_protobuf()?;
+    let restored =
+        OperationSet::from_protobuf_with_limits(&bytes, OperationSetBinaryLimits::default())?;
+    assert_eq!(restored, operations);
+    Ok(())
+}
+
+/// Gzip remains an outer wrapper around either OperationSet binary format.
+#[cfg(feature = "compression")]
+fn operation_set_gzip_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
+    let operations = OperationSetBuilder::new().with_standard_ops().build();
+    let bincode = operations.to_binary_gzip()?;
+    assert_eq!(OperationSet::from_binary_gzip(&bincode)?, operations);
+
+    #[cfg(feature = "protobuf")]
+    {
+        let protobuf = operations.to_protobuf_gzip()?;
+        assert_eq!(OperationSet::from_protobuf_gzip(&protobuf)?, operations);
+    }
+    Ok(())
+}
+
 /// `PathMapDictionary` implements NO serde traits — it must go through
 /// `BincodeSerializer` (which encodes terms via the `Dictionary` trait).
 #[cfg(feature = "pathmap-backend")]
@@ -147,14 +196,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     bincode_roundtrip()?;
     let dict = DoubleArrayTrie::from_terms(vec!["test"]);
     serialize_via_reference(&dict)?;
-    json_and_plaintext()?;
     dynamic_dawg_deep_copy()?;
     dynamic_dawg_char_deep_copy()?;
     custom_serde_bytes()?;
+    algorithm_roundtrip()?;
     versioned_dictionary()?;
 
     #[cfg(feature = "compression")]
     gzip_roundtrip()?;
+
+    #[cfg(feature = "protobuf")]
+    protobuf_roundtrip()?;
+
+    operation_set_roundtrip()?;
+
+    #[cfg(feature = "protobuf")]
+    operation_set_protobuf_roundtrip()?;
+
+    #[cfg(feature = "compression")]
+    operation_set_gzip_roundtrip()?;
 
     #[cfg(feature = "pathmap-backend")]
     pathmap_roundtrip()?;

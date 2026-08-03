@@ -1,12 +1,5 @@
 @startuml serialization-formats
-' The dictionary serialization format family (in libdictenstein, re-exported by
-' liblevenshtein::serialization). One Serializer trait abstracts persisting a
-' Dictionary to bytes / a file and reconstructing it; four concrete formats
-' implement it. GzipSerializer is a DECORATOR: it wraps any other serializer and
-' transparently adds gzip compression around the inner format's byte stream.
-' Color: serialization / bindings (lime) — the Dictionary node is dictionary-green
-'   to mark the type that is round-tripped.  Feature gates shown per format.
-'   src/serialization/mod.rs → libdictenstein::serialization::*
+' Supported compact dictionary and OperationSet persistence formats.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "DejaVu Sans"
@@ -16,34 +9,38 @@ skinparam class {
   FontColor #102027
   AttributeFontColor #102027
 }
+skinparam note {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
 skinparam ArrowColor #37474F
 skinparam ArrowThickness 2
 
-title Serialization format family — one Serializer trait, four formats, a gzip-compression decorator
+title Compact binary persistence — bincode or protobuf, optionally gzip wrapped
 
-interface "Serializer\n«trait»" as Ser #F0F4C3 {
+interface "DictionarySerializer\n«trait»" as Ser #F0F4C3 {
   serialize(&Dictionary) -> bytes
   deserialize(bytes) -> Dictionary
 }
 
 class "BincodeSerializer" as Bin #F9FBE7 {
-  compact binary
-}
-class "JsonSerializer" as Json #F9FBE7 {
-  human-readable
-}
-class "PlainTextSerializer" as Txt #F9FBE7 {
-  one term per line
-}
-class "ProtobufSerializer" as Pb #F9FBE7 {
-  «feature = protobuf»
+  «feature = serialization»
+  compact Rust binary
+  exact-consumption decode
 }
 
-class "GzipSerializer<S: Serializer>" as Gz #F0F4C3 {
-  inner : S        ' «feature = compression»
+class "ProtobufSerializer" as Pb #F9FBE7 {
+  «feature = protobuf»
+  portable schema
+  binary interchange
+}
+
+class "GzipSerializer<S>" as Gz #F0F4C3 {
+  «feature = compression»
+  inner : S
   --
-  serialize()   : gzip(inner.serialize(..))
-  deserialize() : inner.deserialize(gunzip(..))
+  serialize()   : gzip(inner bytes)
+  deserialize() : inner(gunzip(bytes))
 }
 
 class "Dictionary" as Dict #C8E6C9 {
@@ -51,22 +48,23 @@ class "Dictionary" as Dict #C8E6C9 {
   SuffixAutomaton · Scdawg
 }
 
-' Concrete formats implement the trait.
-Bin  ..|> Ser
-Json ..|> Ser
-Txt  ..|> Ser
-Pb   ..|> Ser
+class "OperationSet" as Ops #C8E6C9 {
+  explicit applicability · exact f64 bits
+  canonical restrictions · retained rule order
+}
 
-' Gzip is both a Serializer and a wrapper of one (decorator).
-Gz   ..|> Ser : implements
-Gz   o--> Ser : wraps inner S
+Bin ..|> Ser
+Pb  ..|> Ser
+Gz  ..|> Ser : implements
+Gz  o--> Ser : wraps bincode or protobuf
+Ser -down-> Dict : "round trip"
+Bin -down-> Ops : to/from_binary
+Pb -down-> Ops : to/from_protobuf
+Gz -down-> Ops : optional outer wrapper
 
-' A Serializer round-trips a Dictionary to/from bytes or a file.
-Ser  -down-> Dict : "⇄ bytes / file"
-
-note bottom of Gz
-  GzipSerializer<BincodeSerializer> persists
-  the compact binary format under gzip; any
-  format composes the same way.
+note bottom of Ops
+  JSON, TOML, and newline-delimited text are
+  intentionally outside the persistence surface.
+  Gzip is compression, not a third format.
 end note
 @enduml

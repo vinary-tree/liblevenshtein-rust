@@ -41,6 +41,7 @@ use super::state_set::StateSet;
 use super::types::StateId;
 use super::{NFAChar, NFA};
 use crate::transducer::articulatory_costs::ArticulatoryCosts;
+use crate::transducer::language::LanguageProduct;
 use crate::transducer::Algorithm;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::cmp::Reverse;
@@ -54,6 +55,14 @@ const F64_EXPONENT_MASK: u64 = 0x7ff;
 const F64_MANTISSA_BITS: u32 = 52;
 const F64_MANTISSA_MASK: u64 = (1u64 << F64_MANTISSA_BITS) - 1;
 const F64_EXPONENT_BIAS: i32 = 1023;
+
+#[inline]
+fn assert_product_algorithm_supported(algorithm: Algorithm) {
+    assert!(
+        algorithm != Algorithm::DamerauLevenshtein,
+        "Algorithm::DamerauLevenshtein is history-dependent and is not supported by the phonetic NFA product; use Algorithm::Transposition for optimal string alignment"
+    );
+}
 
 #[inline]
 fn product_search_capacity(input_len: usize, max_errors: u8) -> usize {
@@ -373,6 +382,7 @@ impl ProductAutomatonChar {
     /// * `max_distance` - Maximum edit distance allowed
     /// * `algorithm` - The Levenshtein algorithm variant to use
     pub fn with_algorithm(nfa: NFAChar, max_distance: u8, algorithm: Algorithm) -> Self {
+        assert_product_algorithm_supported(algorithm);
         Self {
             nfa,
             max_cost: max_distance as f64,
@@ -413,6 +423,7 @@ impl ProductAutomatonChar {
         algorithm: Algorithm,
         phonetic_weight: f64,
     ) -> Self {
+        assert_product_algorithm_supported(algorithm);
         Self {
             nfa,
             max_cost: max_distance as f64,
@@ -452,6 +463,7 @@ impl ProductAutomatonChar {
         algorithm: Algorithm,
         articulatory_costs: ArticulatoryCosts,
     ) -> Self {
+        assert_product_algorithm_supported(algorithm);
         // F7: reject cost configurations that would break monotone-cost pruning
         // (negative/NaN/infinite operation costs, or a non-zero match cost).
         // `ArticulatoryCosts::is_valid()` transitively checks its base
@@ -496,6 +508,14 @@ impl ProductAutomatonChar {
     /// Get the algorithm variant.
     pub fn algorithm(&self) -> Algorithm {
         self.algorithm
+    }
+
+    /// Borrow the language NFA used by this product.
+    ///
+    /// Exposed within the crate so dictionary intersections can delegate to the
+    /// generic language-product walker without cloning product internals.
+    pub(crate) fn nfa(&self) -> &NFAChar {
+        &self.nfa
     }
 
     /// Returns true when this product automaton can be advanced incrementally
@@ -1561,6 +1581,7 @@ impl ProductAutomaton {
 
     /// Create a product automaton with a specific algorithm.
     pub fn with_algorithm(nfa: NFA, max_distance: u8, algorithm: Algorithm) -> Self {
+        assert_product_algorithm_supported(algorithm);
         Self {
             nfa,
             max_distance,
@@ -1599,6 +1620,7 @@ impl ProductAutomaton {
         algorithm: Algorithm,
         phonetic_weight: f64,
     ) -> Self {
+        assert_product_algorithm_supported(algorithm);
         Self {
             nfa,
             max_distance,
@@ -1718,172 +1740,7 @@ impl ProductAutomaton {
 
     /// Check if input is accepted.
     pub fn accepts(&self, input: &[u8]) -> bool {
-        if self.nfa.is_empty() {
-            return input.is_empty() || input.len() <= max_distance_budget_len(self.max_distance());
-        }
-
-        let n = input.len();
-        let max_errors = self.max_distance();
-        let initial_closure =
-            state_set_to_sorted_vec(self.nfa.epsilon_closure_single(self.nfa.start()));
-
-        let search_capacity = product_search_capacity(n, max_errors);
-        let mut visited: FxHashSet<(usize, Vec<StateId>, u8)> = FxHashSet::default();
-        visited.reserve(search_capacity);
-        let mut queue: VecDeque<(usize, Vec<StateId>, u8)> =
-            VecDeque::with_capacity(search_capacity);
-
-        enqueue_product_search_state(&mut queue, &mut visited, 0, initial_closure, 0);
-
-        while let Some((pos, nfa_states, errors)) = queue.pop_front() {
-            if errors > max_errors {
-                continue;
-            }
-
-            if pos == n {
-                if self.can_reach_final_vec(&nfa_states, errors) {
-                    return true;
-                }
-                continue;
-            }
-
-            let b = input[pos];
-
-            // 1. Match
-            let match_states = self.nfa_step_vec(&nfa_states, b);
-            if !match_states.is_empty() {
-                enqueue_product_search_state(
-                    &mut queue,
-                    &mut visited,
-                    pos + 1,
-                    match_states,
-                    errors,
-                );
-            }
-
-            if errors < max_errors {
-                let advanced_states = self.nfa_advance_vec(&nfa_states);
-
-                // 2. Substitution
-                if !advanced_states.is_empty() {
-                    enqueue_product_search_state(
-                        &mut queue,
-                        &mut visited,
-                        pos + 1,
-                        advanced_states.clone(),
-                        errors + 1,
-                    );
-                }
-
-                // 3. Insertion
-                enqueue_product_search_state(
-                    &mut queue,
-                    &mut visited,
-                    pos + 1,
-                    nfa_states.clone(),
-                    errors + 1,
-                );
-
-                // 4. Deletion
-                if !advanced_states.is_empty() {
-                    enqueue_product_search_state(
-                        &mut queue,
-                        &mut visited,
-                        pos,
-                        advanced_states.clone(),
-                        errors + 1,
-                    );
-                }
-
-                // 5. Transposition
-                if self.algorithm.supports_transposition() && pos + 1 < n {
-                    let next_b = input[pos + 1];
-                    let trans_states = self.nfa_step_transposed_vec(&nfa_states, b, next_b);
-                    if !trans_states.is_empty() {
-                        enqueue_product_search_state(
-                            &mut queue,
-                            &mut visited,
-                            pos + 2,
-                            trans_states,
-                            errors + 1,
-                        );
-                    }
-                }
-
-                // 6. Merge: two adjacent input bytes → one NFA edge, cost 1.
-                //    Generic Merge-and-Split: merge is byte-agnostic by definition
-                //    (bytes not validated); see `nfa_step_merged_from_advance_vec`.
-                if self.algorithm.supports_merge_split() && pos + 1 < n {
-                    let next_b = input[pos + 1];
-                    if !advanced_states.is_empty() {
-                        let merge_states =
-                            self.nfa_step_merged_from_advance_vec(&advanced_states, b, next_b);
-                        if !merge_states.is_empty() {
-                            enqueue_product_search_state(
-                                &mut queue,
-                                &mut visited,
-                                pos + 2,
-                                merge_states,
-                                errors + 1,
-                            );
-                        }
-                    }
-                }
-
-                // 7. Split: one input byte → two NFA edges, cost 1.
-                //    Generic Merge-and-Split: split is byte-agnostic by definition
-                //    (byte not validated); see `nfa_step_split_from_advance_vec`.
-                if self.algorithm.supports_merge_split() && !advanced_states.is_empty() {
-                    let split_states = self.nfa_step_split_from_advance_vec(&advanced_states, b);
-                    if !split_states.is_empty() {
-                        enqueue_product_search_state(
-                            &mut queue,
-                            &mut visited,
-                            pos + 1,
-                            split_states,
-                            errors + 1,
-                        );
-                    }
-                }
-            }
-        }
-
-        false
-    }
-
-    /// Check if we can reach a final state.
-    fn can_reach_final_vec(&self, states: &[StateId], current_errors: u8) -> bool {
-        if states.iter().any(|&s| self.nfa.is_final(s)) {
-            return true;
-        }
-
-        let remaining = self.max_distance() - current_errors;
-        if remaining == 0 {
-            return false;
-        }
-
-        let search_capacity = final_search_capacity(remaining);
-        let mut visited: FxHashSet<Vec<StateId>> = FxHashSet::default();
-        visited.reserve(search_capacity);
-        let mut queue: VecDeque<(Vec<StateId>, u8)> = VecDeque::with_capacity(search_capacity);
-        enqueue_final_search_state(&mut queue, &mut visited, states.to_vec(), 0);
-
-        while let Some((current, dist)) = queue.pop_front() {
-            if dist > remaining {
-                continue;
-            }
-
-            if current.iter().any(|&s| self.nfa.is_final(s)) {
-                return true;
-            }
-
-            let next = self.nfa_advance_vec(&current);
-            if !next.is_empty() {
-                enqueue_final_search_state(&mut queue, &mut visited, next, dist + 1);
-            }
-        }
-
-        false
+        self.min_distance(input).is_some()
     }
 
     /// Get minimum distance.
@@ -1896,6 +1753,11 @@ impl ProductAutomaton {
             } else {
                 None
             };
+        }
+
+        if self.algorithm == Algorithm::Standard {
+            return LanguageProduct::new(self.nfa.clone(), self.max_distance)
+                .distance_to_language(input.iter().copied());
         }
 
         let n = input.len();
@@ -2407,8 +2269,30 @@ mod tests {
         assert!(!standard.accepts("ba")); // distance 2 with standard
 
         // With transposition algorithm, "ab" DOES match "ba" with distance 1
-        let transposition = ProductAutomatonChar::with_algorithm(nfa, 1, Algorithm::Transposition);
+        let transposition =
+            ProductAutomatonChar::with_algorithm(nfa.clone(), 1, Algorithm::Transposition);
         assert!(transposition.accepts("ba")); // distance 1 with transposition
+
+        // Merge-and-Split has (1, 2) and (2, 1) structural operations, but no
+        // (2, 2) transposition. Its capability flags must not silently enable
+        // the transposition-only product construction.
+        let merge_split = ProductAutomatonChar::with_algorithm(nfa, 1, Algorithm::MergeAndSplit);
+        assert!(!merge_split.accepts("ba"));
+    }
+
+    #[test]
+    #[should_panic(expected = "is history-dependent and is not supported")]
+    fn char_product_rejects_true_damerau_instead_of_silently_computing_osa() {
+        let nfa = compile(&parse("CA").expect("test: parse CA")).expect("test: compile nfa");
+        let _ = ProductAutomatonChar::with_algorithm(nfa, 2, Algorithm::DamerauLevenshtein);
+    }
+
+    #[test]
+    #[should_panic(expected = "is history-dependent and is not supported")]
+    fn byte_product_rejects_true_damerau_instead_of_silently_computing_osa() {
+        let nfa = compile_bytes(&parse_bytes(b"CA").expect("test: parse CA bytes"))
+            .expect("test: compile byte nfa");
+        let _ = ProductAutomaton::with_algorithm(nfa, 2, Algorithm::DamerauLevenshtein);
     }
 
     #[test]
@@ -2496,8 +2380,12 @@ mod tests {
         let standard = ProductAutomaton::new(nfa.clone(), 1);
         assert!(!standard.accepts(b"ba")); // distance 2 with standard
 
-        let transposition = ProductAutomaton::with_algorithm(nfa, 1, Algorithm::Transposition);
+        let transposition =
+            ProductAutomaton::with_algorithm(nfa.clone(), 1, Algorithm::Transposition);
         assert!(transposition.accepts(b"ba")); // distance 1 with transposition
+
+        let merge_split = ProductAutomaton::with_algorithm(nfa, 1, Algorithm::MergeAndSplit);
+        assert!(!merge_split.accepts(b"ba"));
     }
 
     /// Document the ACTUAL accepted language of `Algorithm::MergeAndSplit`.

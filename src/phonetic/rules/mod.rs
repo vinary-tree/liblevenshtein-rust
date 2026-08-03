@@ -31,7 +31,7 @@
 //!
 //! Rules must be applied in the order defined in the rule set, as some rules
 //! depend on transformations made by earlier rules (e.g., rule 21 "c → k" must
-//! follow rule 20 "c → s before [ie]").
+//! follow rule 20 `c → s before [ie]`).
 //!
 //! # Formal Specification
 //!

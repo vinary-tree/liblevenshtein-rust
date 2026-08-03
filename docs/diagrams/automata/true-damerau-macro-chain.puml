@@ -1,0 +1,51 @@
+@startuml
+' Teaches the complete entry -> extension -> resolution lifecycle and all guards.
+title Bounded unrestricted Damerau macro transition
+
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam roundcorner 14
+skinparam ArrowColor #334155
+skinparam state {
+  FontColor #0F172A
+  BorderColor #334155
+}
+skinparam note {
+  BackgroundColor #FEF3C7
+  BorderColor #B45309
+  FontColor #451A03
+}
+
+state "Normal\n(origin i, cost e)" as Normal #DBEAFE
+state "DamerauPending\n(origin i, cost e+δ, aux δ)" as Pending #FCE7F3
+state "DamerauPending\n(origin i, cost e+δ+b, aux δ)" as Extended #F3E8FF
+state "Normal\n(index i+δ+1, cost e+δ+b)" as Resolved #DCFCE7
+state "Standard successors" as Standard #CCFBF1
+
+[*] --> Normal
+Normal --> Standard : always retain ordinary\nLevenshtein paths
+Normal --> Pending : cv[δ] and 1 ≤ δ\nand e+δ ≤ k\nprepay δ−1 deletions + transpose
+Pending --> Extended : intervening dictionary unit\nand cost+1 ≤ k\ncharge one insertion
+Extended --> Extended : another interior unit\nand cost+1 ≤ k
+Pending --> Resolved : cv[0]\nresolve immediately
+Extended --> Resolved : cv[0]\nresolve after b insertions
+Resolved --> [*] : continue as Normal
+
+note bottom of Pending
+  No epsilon edge.
+  Query-interior deletions were prepaid.
+end note
+
+note bottom of Extended
+  <latex>C_{stream}=\delta+b=(\delta-1)+b+1=C_{LW}</latex>
+end note
+
+legend left
+  |= Color |= Meaning |
+  |<#DBEAFE> blue | ordinary residual language |
+  |<#FCE7F3> pink | newly entered history |
+  |<#F3E8FF> violet | extended history |
+  |<#DCFCE7> green | resolved exact macro |
+  |<#CCFBF1> teal | preserved Standard behavior |
+endlegend
+@enduml

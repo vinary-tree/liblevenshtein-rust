@@ -208,8 +208,18 @@ run_capped() {
       -p "TasksMax=$tasks" \
       /usr/bin/time -v "$@"
   elif command -v prlimit >/dev/null 2>&1; then
-    echo "warning: systemd-run scope unavailable; using prlimit --as=$mem_bytes plus RSS monitor cap=$mem fallback" >&2
-    run_rss_monitored "$profile" prlimit --as="$mem_bytes" /usr/bin/time -v "$@"
+    # CoreCLR reserves a sparse virtual-address range derived from host memory
+    # before Dafny begins verification. RLIMIT_AS therefore rejects runtime
+    # initialization even when actual resident memory is tiny. The process-tree
+    # RSS monitor is the relevant resource guard and remains active; native
+    # proof tools retain the additional address-space backstop.
+    if [[ "$(basename "$1")" == "dafny" ]]; then
+      echo "warning: systemd-run scope unavailable; using RSS monitor cap=$mem fallback (Dafny requires uncapped sparse virtual address space)" >&2
+      run_rss_monitored "$profile" /usr/bin/time -v "$@"
+    else
+      echo "warning: systemd-run scope unavailable; using prlimit --as=$mem_bytes plus RSS monitor cap=$mem fallback" >&2
+      run_rss_monitored "$profile" prlimit --as="$mem_bytes" /usr/bin/time -v "$@"
+    fi
   elif [[ "${FORMAL_VERIFY_ALLOW_UNCAPPED:-}" == "1" ]]; then
     echo "warning: running uncapped because FORMAL_VERIFY_ALLOW_UNCAPPED=1" >&2
     /usr/bin/time -v "$@"
@@ -228,6 +238,15 @@ trusted_files() {
 trusted_entries() {
   awk -F '\t' '
     $0 !~ /^#/ && NF >= 4 && $1 == "trusted" && $3 == "coq" { print $2 "\t" $4 }
+  ' "$MANIFEST"
+}
+
+trusted_entries_by_kind() {
+  local kind="$1"
+  awk -F '\t' -v kind="$kind" '
+    $0 !~ /^#/ && NF >= 4 && $1 == "trusted" && $3 == kind {
+      print $2 "\t" $4
+    }
   ' "$MANIFEST"
 }
 
@@ -688,6 +707,18 @@ check_trusted_assumptions() {
   return "$failed"
 }
 
+check_trusted_verus_trust_boundary() {
+  local failed=0
+  while IFS=$'\t' read -r _profile rel; do
+    [[ -z "$rel" ]] && continue
+    if rg -n '#\[verifier::(external_body|external_fn_specification)\]|\bassume\s*\(' "$ROOT/$rel"; then
+      echo "trusted Verus file widens the trusted boundary: $rel" >&2
+      failed=1
+    fi
+  done < <(trusted_entries_by_kind verus)
+  return "$failed"
+}
+
 clean_coq_artifacts_under() {
   local dir="$1"
   [[ -d "$dir" ]] || return 0
@@ -799,6 +830,64 @@ tla_check() {
   done
 }
 
+verus_check() {
+  if ! command -v verus >/dev/null 2>&1; then
+    echo "error: verus is required for trusted Verus entries" >&2
+    exit 2
+  fi
+
+  local profile rel
+  while IFS=$'\t' read -r profile rel; do
+    [[ -z "$rel" ]] && continue
+    echo "== Verus trusted compile [$profile]: $rel =="
+    run_capped "$profile" verus --triggers-mode silent "$ROOT/$rel"
+  done < <(trusted_entries_by_kind verus)
+}
+
+dafny_check() {
+  if ! command -v dafny >/dev/null 2>&1; then
+    echo "error: dafny is required for trusted Dafny entries" >&2
+    exit 2
+  fi
+
+  local profile rel
+  while IFS=$'\t' read -r profile rel; do
+    [[ -z "$rel" ]] && continue
+    echo "== Dafny trusted verify [$profile]: $rel =="
+    run_capped "$profile" dafny verify --allow-warnings=false --cores=2 "$ROOT/$rel"
+  done < <(trusted_entries_by_kind dafny)
+}
+
+smt_check() {
+  local solver profile rel output expected actual
+  for solver in z3 cvc5; do
+    if ! command -v "$solver" >/dev/null 2>&1; then
+      echo "error: $solver is required for cross-solver SMT verification" >&2
+      exit 2
+    fi
+
+    while IFS=$'\t' read -r profile rel; do
+      [[ -z "$rel" ]] && continue
+      echo "== SMT trusted check [$profile, $solver]: $rel =="
+      output="$(mktemp)"
+      if [[ "$solver" == "cvc5" ]]; then
+        run_capped "$profile" "$solver" --incremental --lang smt2 "$ROOT/$rel" >"$output"
+      else
+        run_capped "$profile" "$solver" "$ROOT/$rel" >"$output"
+      fi
+      cat "$output"
+      expected="$(rg -c '^\(check-sat\)' "$ROOT/$rel")"
+      actual="$(rg -c '^unsat$' "$output" || true)"
+      if rg -q '^(sat|unknown)$' "$output" || [[ "$actual" -ne "$expected" ]]; then
+        echo "error: expected $expected UNSAT results from $solver, observed $actual" >&2
+        rm -f "$output"
+        exit 1
+      fi
+      rm -f "$output"
+    done < <(trusted_entries_by_kind smt)
+  done
+}
+
 case "$MODE" in
   audit)
     audit_manifest
@@ -833,6 +922,7 @@ case "$MODE" in
     check_trusted_assumptions
     check_trusted_contracts
     check_trusted_evidence
+    check_trusted_verus_trust_boundary
     ;;
   coq-trusted)
     audit_manifest
@@ -840,6 +930,7 @@ case "$MODE" in
     check_trusted_assumptions
     check_trusted_contracts
     check_trusted_evidence
+    check_trusted_verus_trust_boundary
     clean_trusted_coq_artifacts
     coq_compile_trusted
     ;;
@@ -855,14 +946,30 @@ case "$MODE" in
   tla)
     tla_check
     ;;
+  verus)
+    audit_manifest
+    check_trusted_verus_trust_boundary
+    verus_check
+    ;;
+  dafny)
+    audit_manifest
+    dafny_check
+    ;;
+  smt)
+    audit_manifest
+    smt_check
+    ;;
   all)
     "$0" trusted
     "$0" coq-trusted
+    "$0" verus
+    "$0" dafny
+    "$0" smt
     "$0" tla
     ;;
   *)
     cat >&2 <<USAGE
-usage: scripts/verify-formal.sh [audit|audit-tsv|audit-contracts|audit-contracts-tsv|audit-evidence|audit-evidence-tsv|audit-vacuous|trusted|coq-trusted|coq-file|tla|all]
+usage: scripts/verify-formal.sh [audit|audit-tsv|audit-contracts|audit-contracts-tsv|audit-evidence|audit-evidence-tsv|audit-vacuous|trusted|coq-trusted|coq-file|verus|dafny|smt|tla|all]
 
 All proof/model execution is memory-capped with systemd-run unless
 FORMAL_VERIFY_ALLOW_UNCAPPED=1 is set.

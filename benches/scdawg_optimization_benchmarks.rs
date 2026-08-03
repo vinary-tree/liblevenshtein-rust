@@ -149,7 +149,7 @@ fn analyze_edge_distribution(scdawg: &Scdawg<()>) -> EdgeDistributionStats {
 
     while let Some(node) = queue.pop_front() {
         // Create a simple unique identifier for the node
-        let node_id = format!("{:?}", &node);
+        let node_id = format!("{:?}", node);
         if visited.contains(&node_id) {
             continue;
         }

@@ -25,6 +25,12 @@ theories/Core/DamerauLevDistanceDef.v
 theories/Core/DamerauLevDistance.v
 theories/Core/MergeSplitDistance.v
 theories/Core/MetricProperties.v
+theories/Conformance/RustSubsumption.v
+theories/Conformance/LanguageProduct.v
+theories/Conformance/CostMonoid.v
+theories/Conformance/GeneralizedAutomatonRepair.v
+theories/Conformance/ElasticKernel.v
+theories/Conformance/DownstreamQueries.v
 
 # DPMatrix lemmas
 theories/DPMatrix/SnocLemmas.v
@@ -53,6 +59,11 @@ theories/Trace/DamerauTrace.v
 
 # Triangle inequality
 theories/Triangle/SubstCostTriangle.v
+theories/Conformance/PositionKindVariant.v
+theories/Conformance/DyckCorrection.v
+theories/Conformance/OperationSetSerialization.v
+theories/Conformance/FzfUpperBound.v
+theories/Conformance/SubsumptionFallback.v
 theories/Triangle/TriangleInequality.v
 
 # Cardinality lemmas

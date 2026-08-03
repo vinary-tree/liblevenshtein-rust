@@ -134,6 +134,79 @@ pub fn compile(regex: &Regex) -> ParseResult<NFAChar> {
     compiler.compile(regex)
 }
 
+/// Conservatively estimate the number of Thompson-NFA states produced by a
+/// character regular expression after flag and group-reference expansion.
+///
+/// Arithmetic saturates at [`usize::MAX`], so hostile counted repetitions can
+/// be compared with a caller's resource ceiling without overflowing. The
+/// estimate is taken before NFA construction and therefore provides a useful
+/// allocation guard; optimization may subsequently reduce the actual count.
+pub fn estimate_thompson_states(regex: &Regex) -> ParseResult<usize> {
+    let transformed = apply_flags(regex);
+    let prepared = prepare_regex_for_compile(&transformed.regex)?;
+    Ok(thompson_state_bound(prepared.as_ref()))
+}
+
+#[allow(deprecated)]
+fn thompson_state_bound(regex: &Regex) -> usize {
+    match regex {
+        Regex::Empty | Regex::FlagsGroup { inner: None, .. } | Regex::WordBoundary => 1,
+        Regex::Char(_)
+        | Regex::CharClass(_)
+        | Regex::Any
+        | Regex::GroupRef(_)
+        | Regex::StartOfLine
+        | Regex::EndOfLine
+        | Regex::StartOfInput
+        | Regex::EndOfInput
+        | Regex::EndOfInputStrict => 2,
+        Regex::Concat(left, right) => {
+            thompson_state_bound(left).saturating_add(thompson_state_bound(right))
+        }
+        Regex::Alt(left, right) => thompson_state_bound(left)
+            .saturating_add(thompson_state_bound(right))
+            .saturating_add(2),
+        Regex::Star(inner) | Regex::Optional(inner) => {
+            thompson_state_bound(inner).saturating_add(2)
+        }
+        // Thompson plus is A concatenated with A*, so it contains two copies.
+        Regex::Plus(inner) => thompson_state_bound(inner)
+            .saturating_mul(2)
+            .saturating_add(2),
+        Regex::RepeatExact(inner, repetitions) => {
+            if *repetitions == 0 {
+                1
+            } else {
+                thompson_state_bound(inner).saturating_mul(*repetitions)
+            }
+        }
+        Regex::RepeatRange(inner, minimum, maximum) => {
+            let inner_states = thompson_state_bound(inner);
+            let required = if *minimum == 0 {
+                1
+            } else {
+                inner_states.saturating_mul(*minimum)
+            };
+            match maximum {
+                Some(maximum) if maximum < minimum => 1,
+                Some(maximum) => required.saturating_add(
+                    inner_states
+                        .saturating_add(2)
+                        .saturating_mul(maximum - minimum),
+                ),
+                None => required.saturating_add(inner_states.saturating_add(2)),
+            }
+        }
+        Regex::CapturingGroup(_, inner)
+        | Regex::NonCapturingGroup(inner)
+        | Regex::NamedGroup(_, inner) => thompson_state_bound(inner),
+        Regex::FlagsGroup {
+            inner: Some(inner), ..
+        } => thompson_state_bound(inner),
+        Regex::RewriteRule { pattern, .. } => thompson_state_bound(pattern),
+    }
+}
+
 /// Compile a character-level regex to an NFA with full flag support.
 ///
 /// This applies regex flag transformations and returns both the NFA and

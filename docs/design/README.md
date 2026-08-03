@@ -4,6 +4,62 @@ Technical specifications and design documents for major features and algorithms.
 
 ## Contents
 
+### [Crate Boundary and Pruning Duality](crate-boundary-and-prune-duality.md)
+Placement rule for future measures:
+- why non-negative min-plus costs stay in liblevenshtein
+- why gain-valued fzf scoring crosses through duallity to lling-llang
+- the corrected unstarted local-alignment upper bound
+- why the balanced prefix visitor is DFS rather than BFS
+
+### [Class-A Alignment Presets](class-a-presets.md)
+Exact configuration-based string measures:
+- Hamming, insertion/deletion, and directional bounded-skip semantics
+- public reference distances and generalized-grid conformance
+- operation-set validation and resource ceiling
+- rejected specialized-walker decision and formal/property evidence
+
+### [True-Damerau Streaming](true-damerau-streaming.md)
+History-dependent string-automaton design:
+- Lowrance–Wagner entry/extension/resolution refinement
+- `DamerauPending` payload and kind-aware subsumption
+- explicit representation/resource boundaries
+- heterogeneous formal and empirical evidence
+
+### [Elastic Kernels](elastic-kernels.md)
+Generic exact time-series retrieval design:
+- `ElasticKernel` and `ElasticTransducer<K,V>` ownership boundary
+- K1–K4 subtree, candidate, and exact-rescoring obligations
+- additive and bottleneck cost-monoid support
+- literate range/kNN algorithms, security boundaries, and multi-tool verification
+
+### [`PositionKind` and `AutomatonVariant`](automaton-variant-seam.md)
+Monomorphized legacy-automaton seam:
+- typed continuation languages in the unchanged 24-byte `Position`
+- one runtime selection per dictionary edge
+- variant-specific successor, epsilon, subsumption, finish, and window contracts
+- property, formal, disassembly, and pre-registered zero-cost gates
+
+### [Ordered Cost Monoid](cost-monoid.md)
+Bounded dynamic-programming cost design:
+- exact L1–L7 algebra and dominance argument
+- unit, weighted, and bottleneck carriers
+- checked decimal-to-integer `CostScale`
+- IEEE-754 trust boundary and multi-tool verification
+
+### [Generalized-Automaton Repair](generalized-automaton-repair.md)
+Exact operation-driven acceptance:
+- sparse alignment graph over arbitrary consuming operations
+- exact cumulative fractional weights via `CostScale`
+- correct Hamming, indel, bounded-skip, and empty-side semantics
+- compatibility, resource, formal-proof, and behavior-change boundaries
+
+### [Language Product](language-product.md)
+Generic distance-to-language product design:
+- `LanguageAutomaton<U>` set-transition contract
+- Cost-indexed frontier and merge proof
+- Iterative dictionary intersection
+- Resource policy and multi-tool formal evidence
+
 ### [Dynamic DAWG](dynamic-dawg.md)
 Design specification for the dynamic directed acyclic word graph:
 - Incremental construction algorithm
@@ -23,7 +79,7 @@ Prefix-based search optimization design:
 - Early termination strategies
 - Integration with Levenshtein automata
 
-### [Protobuf Serialization](protobuf-serialization.md)
+### [Protobuf Dictionary and Operation-Set Persistence](protobuf-serialization.md)
 Protocol buffer serialization format specification:
 - Schema design
 - Backward compatibility guarantees

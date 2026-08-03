@@ -109,7 +109,7 @@ impl LLevFile {
 
     /// Extract symbols as a SymbolTable for use with the regex parser.
     ///
-    /// This converts symbol definitions to a HashMap<String, Vec<char>> that can be
+    /// This converts symbol definitions to a `HashMap<String, Vec<char>>` that can be
     /// passed to `regex::Parser::new_with_symbols()` for symbol sharing between
     /// LLev grammars and regex patterns.
     ///

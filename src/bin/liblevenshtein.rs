@@ -113,7 +113,7 @@ fn run_repl(options: ReplLaunchOptions) -> anyhow::Result<()> {
         let backend = merged_config.backend.unwrap_or(state.backend);
         let format = merged_config
             .format
-            .unwrap_or(liblevenshtein::cli::args::SerializationFormat::Text);
+            .unwrap_or(liblevenshtein::cli::args::SerializationFormat::Bincode);
         default_dict_path(backend, format).ok()
     };
 

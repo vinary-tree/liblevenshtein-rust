@@ -28,24 +28,6 @@ const F64_MANTISSA_MASK: u64 = (1u64 << F64_MANTISSA_BITS) - 1;
 const F64_HIDDEN_BIT: u64 = 1u64 << F64_MANTISSA_BITS;
 const F64_EXPONENT_BIAS: i32 = 1023;
 
-/// Floor a non-negative `f64` to `usize`, returning `None` for inputs outside
-/// the representable non-negative domain.
-///
-/// Contract:
-/// - `NaN`, or any strictly-negative value (including `-∞`) → `None`.
-/// - `+∞`, or any finite value whose floor exceeds `usize::MAX` → `Some(usize::MAX)`.
-/// - Otherwise → `Some(⌊value⌋)`. `-0.0` is treated as `0.0` → `Some(0)`.
-#[inline(always)]
-pub(crate) fn nonnegative_floor_to_usize_checked(value: f64) -> Option<usize> {
-    if value.is_nan() || value < 0.0 {
-        None
-    } else if !value.is_finite() {
-        Some(usize::MAX)
-    } else {
-        finite_nonnegative_floor_to_usize(value).or(Some(usize::MAX))
-    }
-}
-
 /// Floor a non-negative `f64` to `usize`, saturating out-of-domain inputs to `0`
 /// or `usize::MAX` instead of signalling with `None`.
 ///
@@ -179,30 +161,6 @@ mod tests {
 
     fn expected_large() -> usize {
         usize::try_from(4_503_599_627_370_496_u128).unwrap_or(usize::MAX)
-    }
-
-    #[test]
-    fn nonnegative_floor_to_usize_checked_contract() {
-        assert_eq!(nonnegative_floor_to_usize_checked(f64::NAN), None);
-        assert_eq!(nonnegative_floor_to_usize_checked(f64::NEG_INFINITY), None);
-        assert_eq!(nonnegative_floor_to_usize_checked(-1.0), None);
-        assert_eq!(nonnegative_floor_to_usize_checked(-0.0), Some(0));
-        assert_eq!(nonnegative_floor_to_usize_checked(0.0), Some(0));
-        assert_eq!(nonnegative_floor_to_usize_checked(0.9), Some(0));
-        assert_eq!(nonnegative_floor_to_usize_checked(2.0), Some(2));
-        assert_eq!(nonnegative_floor_to_usize_checked(2.9), Some(2));
-        assert_eq!(
-            nonnegative_floor_to_usize_checked(EXACT_LARGE),
-            Some(expected_large())
-        );
-        assert_eq!(
-            nonnegative_floor_to_usize_checked(f64::INFINITY),
-            Some(usize::MAX)
-        );
-        assert_eq!(
-            nonnegative_floor_to_usize_checked(f64::MAX),
-            Some(usize::MAX)
-        );
     }
 
     #[test]

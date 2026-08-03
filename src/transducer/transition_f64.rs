@@ -154,6 +154,10 @@ pub fn transition_position_f64(
             costs,
             prefix_mode,
         ),
+        Algorithm::DamerauLevenshtein => panic!(
+            "Algorithm::DamerauLevenshtein requires the unit-cost transducer; \
+             PositionF64 cannot represent its pending delta"
+        ),
     }
 }
 
@@ -800,14 +804,12 @@ fn epsilon_closure_mut_f64(
                 continue;
             };
 
-            let len_before = state.len();
-            state.insert(
+            if state.insert(
                 deleted,
                 algorithm,
                 query_length,
                 costs.insertion.max(costs.deletion),
-            );
-            if state.len() > len_before {
+            ) {
                 to_process.push(deleted);
             }
         }

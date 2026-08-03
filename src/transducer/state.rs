@@ -2,6 +2,8 @@
 
 use super::algorithm::Algorithm;
 use super::position::Position;
+use super::variant::{with_variant, AutomatonVariant, TransitionCtx, VariantSpec};
+use super::variants::StandardV;
 use smallvec::SmallVec;
 
 /// A state in the Levenshtein automaton.
@@ -103,17 +105,46 @@ impl State {
     /// ## Implementation
     ///
     /// Maintains sorted order and removes subsumed positions incrementally.
-    pub fn insert(&mut self, position: Position, algorithm: Algorithm, query_length: usize) {
+    /// Returns `true` exactly when `position` is retained in the state.
+    ///
+    /// The return value is intentionally independent of the state's length: inserting one
+    /// representative may remove several positions that it subsumes. Fixpoint callers must
+    /// use this result instead of comparing lengths before and after insertion.
+    pub fn insert(
+        &mut self,
+        position: Position,
+        algorithm: Algorithm,
+        query_length: usize,
+    ) -> bool {
+        let ctx = TransitionCtx::unit(query_length, 0, false);
+        with_variant!(VariantSpec::from(algorithm), |V| {
+            self.insert_with::<V>(position, &ctx)
+        })
+    }
+
+    /// Insert using a compile-time automaton variant.
+    ///
+    /// The runtime algorithm dispatch happens in the caller; the hot
+    /// subsumption loop therefore contains only the selected variant's rule.
+    #[inline]
+    pub(crate) fn insert_with<V: AutomatonVariant>(
+        &mut self,
+        position: Position,
+        ctx: &TransitionCtx<V::Params>,
+    ) -> bool {
         // Check if this position is subsumed by an existing one
         for existing in &self.positions {
-            if existing.subsumes(&position, algorithm, query_length) {
-                return; // Already covered by existing position
+            // Exact identity is independent of algorithmic dominance. In
+            // particular, MergeAndSplit dominance is intentionally strict and
+            // therefore irreflexive, but a canonical state must still reject
+            // duplicate representatives.
+            if existing == &position || V::subsumes(existing, &position, ctx) {
+                return false; // Already covered by existing position
             }
         }
 
         // Remove any positions that this new position subsumes
-        self.positions
-            .retain(|p| !position.subsumes(p, algorithm, query_length));
+        self.positions.retain(|p| !V::subsumes(&position, p, ctx));
 
         // Insert in sorted position
         let insert_pos = self
@@ -121,12 +152,25 @@ impl State {
             .binary_search(&position)
             .unwrap_or_else(|pos| pos);
         self.positions.insert(insert_pos, position);
+        true
     }
 
     /// Merge another state into this one
     pub fn merge(&mut self, other: &State, algorithm: Algorithm, query_length: usize) {
+        let ctx = TransitionCtx::unit(query_length, 0, false);
+        with_variant!(VariantSpec::from(algorithm), |V| {
+            self.merge_with::<V>(other, &ctx)
+        });
+    }
+
+    #[inline]
+    pub(crate) fn merge_with<V: AutomatonVariant>(
+        &mut self,
+        other: &State,
+        ctx: &TransitionCtx<V::Params>,
+    ) {
         for position in &other.positions {
-            self.insert(*position, algorithm, query_length);
+            self.insert_with::<V>(*position, ctx);
         }
     }
 
@@ -231,15 +275,23 @@ impl State {
     /// distance based on remaining characters in query term
     #[inline]
     pub fn infer_distance(&self, query_length: usize) -> Option<usize> {
+        self.infer_distance_with::<StandardV>(query_length, ())
+    }
+
+    /// Infer a final distance through a compile-time variant policy.
+    ///
+    /// The public unit-cost algorithms currently share the same finishing
+    /// rule. Keeping that rule behind the variant seam lets later weighted
+    /// variants specialize it without reintroducing a branch in the scan.
+    #[inline]
+    pub(crate) fn infer_distance_with<V: AutomatonVariant>(
+        &self,
+        query_length: usize,
+        params: V::Params,
+    ) -> Option<usize> {
         // Fast path: single position (common case)
         if self.positions.len() == 1 {
-            let p = &self.positions[0];
-            // Skip special positions (transposition/merge-split intermediate states)
-            if p.is_special {
-                return None;
-            }
-            let remaining = query_length.saturating_sub(p.term_index);
-            return Some(p.num_errors + remaining);
+            return V::finish_cost(&self.positions[0], query_length, params);
         }
 
         // General case: find minimum across all NON-SPECIAL positions
@@ -247,12 +299,7 @@ impl State {
         // and should not contribute to the final distance calculation
         self.positions
             .iter()
-            .filter(|p| !p.is_special) // CRITICAL: Skip special positions
-            .map(|p| {
-                // Distance is errors already accumulated plus remaining chars
-                let remaining = query_length.saturating_sub(p.term_index);
-                p.num_errors + remaining
-            })
+            .filter_map(|p| V::finish_cost(p, query_length, params))
             .min()
     }
 
@@ -346,6 +393,27 @@ mod tests {
         // Only (3,1) should remain
         assert_eq!(positions.len(), 1);
         assert_eq!(positions[0], Position::new(3, 1));
+    }
+
+    #[test]
+    fn insertion_reports_retained_position_when_state_shrinks() {
+        let mut state = State::from_positions(vec![Position::new(0, 1), Position::new(2, 1)]);
+
+        // (1, 0) subsumes both existing representatives. The state shrinks from two
+        // positions to one, but the new representative was still retained.
+        assert!(state.insert(Position::new(1, 0), Algorithm::Standard, 3));
+        assert_eq!(state.positions(), &[Position::new(1, 0)]);
+
+        assert!(!state.insert(Position::new(1, 1), Algorithm::Standard, 3));
+    }
+
+    #[test]
+    fn merge_split_insertion_rejects_exact_duplicates() {
+        let mut state = State::new();
+        let position = Position::new(1, 1);
+        assert!(state.insert(position, Algorithm::MergeAndSplit, 3));
+        assert!(!state.insert(position, Algorithm::MergeAndSplit, 3));
+        assert_eq!(state.positions(), &[position]);
     }
 
     #[test]

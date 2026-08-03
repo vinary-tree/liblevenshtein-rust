@@ -8,12 +8,12 @@ use crate::transducer::Algorithm;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// REPL command
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
-    /// Query the dictionary: query <term> [distance] [--prefix] [--limit N]
+    /// Query the dictionary: `query <term> [distance] [--prefix] [--limit N]`
     Query {
         /// Query term
         term: String,
@@ -24,84 +24,84 @@ pub enum Command {
         /// Result limit
         limit: Option<usize>,
     },
-    /// Insert term(s): insert <term> [term2] [term3] ...
+    /// Insert term(s): `insert <term> [term2] [term3] ...`
     Insert {
         /// Terms to insert
         terms: Vec<String>,
     },
-    /// Delete term(s): delete <term> [term2] [term3] ...
+    /// Delete term(s): `delete <term> [term2] [term3] ...`
     Delete {
         /// Terms to delete
         terms: Vec<String>,
     },
-    /// Check if term exists: contains <term>
+    /// Check if term exists: `contains <term>`
     Contains {
         /// Term to check
         term: String,
     },
-    /// Load dictionary from file: load <path> [backend]
+    /// Load dictionary from file: `load <path> [backend]`
     Load {
         /// Path to dictionary file
         path: PathBuf,
         /// Backend type (auto-detected if not specified)
         backend: Option<DictionaryBackend>,
     },
-    /// Save dictionary to file: save <path>
+    /// Save dictionary to file: `save <path>`
     Save {
         /// Path to save to
         path: PathBuf,
     },
-    /// Insert terms from file: insert-from <path>
+    /// Insert terms from file: `insert-from <path>`
     InsertFrom {
         /// Path to file containing terms
         path: PathBuf,
     },
-    /// Remove terms from file: remove-from <path>
+    /// Remove terms from file: `remove-from <path>`
     RemoveFrom {
         /// Path to file containing terms to remove
         path: PathBuf,
     },
-    /// Replace all terms with those from file: replace-with <path>
+    /// Replace all terms with those from file: `replace-with <path>`
     ReplaceWith {
         /// Path to file containing replacement terms
         path: PathBuf,
     },
-    /// Change backend: backend <type>
+    /// Change backend: `backend <type>`
     Backend {
         /// Backend type
         backend: DictionaryBackend,
     },
-    /// Change algorithm: algorithm <type>
+    /// Change algorithm: `algorithm <type>`
     Algorithm {
         /// Algorithm type
         algorithm: Algorithm,
     },
-    /// Set max distance: distance <n>
+    /// Set max distance: `distance <n>`
     Distance {
         /// Maximum edit distance
         distance: usize,
     },
-    /// Toggle prefix mode: prefix [on|off]
+    /// Toggle prefix mode: `prefix [on|off]`
     PrefixMode {
         /// Enable or disable prefix mode
         enable: Option<bool>,
     },
-    /// Toggle distance display: show-distances [on|off]
+    /// Toggle distance display: `show-distances [on|off]`
     ShowDistances {
         /// Enable or disable distance display
         enable: Option<bool>,
     },
-    /// Set result limit: limit <n>
+    /// Set result limit: `limit <n>`
     Limit {
         /// Result limit
         limit: Option<usize>,
     },
-    /// Change serialization format: format <type>
+    /// Change serialization format: `format <type>`
     Format {
         /// Serialization format
         format: SerializationFormat,
     },
-    /// Toggle auto-sync: auto-sync [on|off]
+    /// Toggle auto-sync: `auto-sync [on|off]`
     AutoSync {
         /// Enable or disable auto-sync
         enable: Option<bool>,
@@ -110,7 +110,7 @@ pub enum Command {
     Clear,
     /// Compact/minimize dictionary: compact
     Compact,
-    /// Dump all terms: dump [limit]
+    /// Dump all terms: `dump [limit]`
     Dump {
         /// Limit number of terms to dump
         limit: Option<usize>,
@@ -119,17 +119,17 @@ pub enum Command {
     Stats,
     /// Show settings: settings
     Settings,
-    /// Manage config file: config [path]
+    /// Manage config file: `config [path]`
     Config {
         /// Path to config file
         path: Option<PathBuf>,
     },
-    /// Show help: help [command]
+    /// Show help: `help [command]`
     Help {
         /// Help topic
         topic: Option<String>,
     },
-    /// Enable cache: cache enable <strategy> [max-size]
+    /// Enable cache: `cache enable <strategy> [max-size]`
     CacheEnable {
         /// Cache strategy
         strategy: String,
@@ -349,9 +349,12 @@ impl Command {
             "standard" | "std" => Algorithm::Standard,
             "transposition" | "trans" => Algorithm::Transposition,
             "merge-and-split" | "merge" | "ms" => Algorithm::MergeAndSplit,
+            "damerau-levenshtein" | "damerau" | "dl" | "true-damerau" => {
+                Algorithm::DamerauLevenshtein
+            }
             _ => {
                 return Err(anyhow::anyhow!(
-                    "Unknown algorithm: {}. Valid: standard, transposition, merge-and-split",
+                    "Unknown algorithm: {}. Valid: standard, transposition, damerau-levenshtein, merge-and-split",
                     args[0]
                 ))
             }
@@ -412,17 +415,14 @@ impl Command {
         }
 
         let format = match args[0].to_lowercase().as_str() {
-            "text" | "txt" => SerializationFormat::Text,
             "bincode" | "bin" => SerializationFormat::Bincode,
-            "json" => SerializationFormat::Json,
             #[cfg(feature = "protobuf")]
             "protobuf" | "proto" | "pb" => SerializationFormat::Protobuf,
-            "paths" => SerializationFormat::PathsNative,
             _ => {
                 #[cfg(feature = "protobuf")]
-                let valid_formats = "text, bincode, json, protobuf, paths";
+                let valid_formats = "bincode, protobuf";
                 #[cfg(not(feature = "protobuf"))]
-                let valid_formats = "text, bincode, json, paths";
+                let valid_formats = "bincode";
 
                 return Err(anyhow::anyhow!(
                     "Invalid format: '{}'. Valid formats: {}",
@@ -1299,13 +1299,13 @@ impl Command {
                             Types: pathmap, double-array-trie, dawg,
                                    optimized-dawg, dynamic-dawg, suffix-automaton
   algorithm, algo <type>    Change Levenshtein algorithm
-                            Types: standard, transposition, merge-and-split
+                            Types: standard, transposition, damerau-levenshtein, merge-and-split
   distance, dist <n>        Set maximum edit distance
   prefix [on|off]           Toggle prefix matching mode
   show-distances [on|off]   Toggle distance display in results
   limit <n>                 Set result limit (0 or 'none' to remove)
   format <type>             Set serialization format
-                            Types: text, bincode, json, protobuf
+                            Types: bincode, protobuf
   auto-sync [on|off]        Toggle auto-save on modifications
 
 {}
@@ -1480,12 +1480,14 @@ impl Command {
 {}
   standard          Insert, delete, substitute only
   transposition     Includes character transposition
-  merge-and-split   Includes merge and split operations
+  damerau-levenshtein  Unrestricted Damerau edit scripts
+  merge-and-split      Includes merge and split operations
 
 {}
   algorithm standard            # Basic Levenshtein
   algo transposition            # Allow swaps
-  algorithm merge-and-split     # Most permissive
+  algorithm damerau-levenshtein # True edit-script transposition
+  algorithm merge-and-split     # OCR merge/split model
 "#,
                 "algorithm - Change Levenshtein Algorithm"
                     .bold()
@@ -1575,33 +1577,8 @@ impl Command {
         }
     }
 
-    /// Load terms from file (supports plain text and serialized formats)
-    fn load_terms_from_file(path: &PathBuf) -> Result<Vec<String>> {
-        // Try to detect if it's a plain text file first
-        let contents = std::fs::read_to_string(path)
-            .with_context(|| format!("Failed to read file: {}", path.display()))?;
-
-        // Check if it looks like plain text (one term per line)
-        // Plain text files should have mostly printable ASCII/UTF-8 and newlines
-        if contents
-            .chars()
-            .all(|c| c.is_alphanumeric() || c.is_whitespace() || c.is_ascii_punctuation())
-        {
-            // Parse as plain text
-            let terms: Vec<String> = contents
-                .lines()
-                .map(|line| line.trim())
-                .filter(|line| !line.is_empty() && !line.starts_with('#'))
-                .map(|s| s.to_string())
-                .collect();
-
-            if !terms.is_empty() {
-                return Ok(terms);
-            }
-        }
-
-        // If not plain text or empty, try to load as serialized dictionary and extract terms
-        // We'll try using the CLI's detect_format and load_dictionary functions
+    /// Load terms from a supported binary dictionary file.
+    fn load_terms_from_file(path: &Path) -> Result<Vec<String>> {
         use crate::cli::commands::load_dictionary;
         use crate::cli::detect::detect_format;
 

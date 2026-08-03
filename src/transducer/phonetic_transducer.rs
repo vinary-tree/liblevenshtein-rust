@@ -7,7 +7,7 @@
 //!
 //! The phonetic transducer composes two automata:
 //!
-//! 1. **Phonetic NFA**: Handles sound-based variations (ph ↔ f, c → s / _[ei])
+//! 1. **Phonetic NFA**: Handles sound-based variations (`ph ↔ f`, `c → s / _[ei]`)
 //! 2. **Dictionary traversal**: Efficiently explores the dictionary
 //!
 //! The result is a fuzzy regex that finds dictionary terms matching a phonetic
@@ -37,11 +37,13 @@
 //! ```
 
 #[cfg(feature = "phonetic-rules")]
-use crate::phonetic::nfa::product::{ProductAutomaton, ProductAutomatonChar};
+use crate::phonetic::nfa::product::ProductAutomatonChar;
 #[cfg(feature = "phonetic-rules")]
 use crate::phonetic::nfa::{NFAChar, NFA};
 #[cfg(feature = "phonetic-rules")]
 use crate::transducer::articulatory_costs::ArticulatoryCosts;
+#[cfg(feature = "phonetic-rules")]
+use crate::transducer::language::{LanguageProduct, LanguageQueryIterator};
 #[cfg(feature = "phonetic-rules")]
 use crate::transducer::Algorithm;
 use libdictenstein::{Dictionary, DictionaryNode};
@@ -471,9 +473,14 @@ where
 
 /// Iterator over phonetic query results.
 #[cfg(feature = "phonetic-rules")]
-pub struct PhoneticQueryIteratorChar<'a, D: Dictionary> {
+pub struct PhoneticQueryIteratorChar<'a, D: Dictionary>
+where
+    D::Node: DictionaryNode<Unit = char>,
+{
     /// Product automaton for matching
     product: ProductAutomatonChar,
+    /// Frontier-pruned generic language query on the unit-cost path.
+    language_query: Option<LanguageQueryIterator<D::Node, NFAChar>>,
     /// Queue of dictionary nodes to explore.
     queue: VecDeque<PhoneticTraversal<D::Node>>,
     /// Parent-path arena for reconstructing terms without per-edge path clones.
@@ -515,15 +522,26 @@ where
             None => ProductAutomatonChar::new(nfa.clone(), max_distance),
         };
 
-        // Initialize queue with root node
-        let mut queue = VecDeque::with_capacity(1);
-        queue.push_back(PhoneticTraversal::root(dictionary.root()));
+        let language_query = product.supports_incremental_trie_intersection().then(|| {
+            LanguageQueryIterator::from_dictionary(
+                dictionary,
+                LanguageProduct::new(nfa.clone(), max_distance),
+            )
+        });
+
+        // The scan queue is retained only for fractional articulatory costs,
+        // whose exact full-string Dijkstra matcher is not the unit-cost product.
+        let mut queue = VecDeque::with_capacity(usize::from(language_query.is_none()));
+        if language_query.is_none() {
+            queue.push_back(PhoneticTraversal::root(dictionary.root()));
+        }
 
         // Max depth: reasonable buffer for dictionary traversal
         let max_depth = 100;
 
         Self {
             product,
+            language_query,
             queue,
             path_arena: Vec::with_capacity(64),
             _dictionary: PhantomData,
@@ -564,6 +582,15 @@ where
     type Item = PhoneticCandidate;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if let Some(query) = &mut self.language_query {
+            let matched = query.next()?;
+            return Some(PhoneticCandidate::new(
+                matched.units.into_iter().collect(),
+                matched.distance,
+                0.0,
+            ));
+        }
+
         while let Some(entry) = self.queue.pop_front() {
             // Depth limit to prevent infinite exploration
             if entry.depth > self.max_depth {
@@ -646,6 +673,8 @@ where
 {
     /// Product automaton for matching (articulatory-aware when configured).
     product: ProductAutomatonChar,
+    /// Frontier-pruned generic language query on the unit-cost path.
+    language_query: Option<LanguageQueryIterator<D::Node, NFAChar>>,
     /// Queue of dictionary nodes to explore.
     queue: VecDeque<PhoneticTraversal<D::Node>>,
     /// Parent-path arena for reconstructing terms without per-edge path clones.
@@ -679,11 +708,21 @@ where
             None => ProductAutomatonChar::new(nfa.clone(), max_distance),
         };
 
-        let mut queue = VecDeque::with_capacity(1);
-        queue.push_back(PhoneticTraversal::root(dictionary.root()));
+        let language_query = product.supports_incremental_trie_intersection().then(|| {
+            LanguageQueryIterator::from_dictionary(
+                dictionary,
+                LanguageProduct::new(nfa.clone(), max_distance),
+            )
+        });
+
+        let mut queue = VecDeque::with_capacity(usize::from(language_query.is_none()));
+        if language_query.is_none() {
+            queue.push_back(PhoneticTraversal::root(dictionary.root()));
+        }
 
         Self {
             product,
+            language_query,
             queue,
             path_arena: Vec::with_capacity(64),
             _dictionary: PhantomData,
@@ -738,6 +777,20 @@ where
     type Item = PhoneticValueCandidate<D::Value>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if let Some(query) = &mut self.language_query {
+            for matched in query {
+                if let Some(value) = matched.node.value() {
+                    return Some(PhoneticValueCandidate::new(
+                        matched.units.into_iter().collect(),
+                        matched.distance,
+                        0.0,
+                        value,
+                    ));
+                }
+            }
+            return None;
+        }
+
         while let Some(entry) = self.queue.pop_front() {
             if entry.depth > self.max_depth {
                 continue;
@@ -1031,17 +1084,14 @@ impl<V> PhoneticValueCandidateByte<V> {
 
 /// Iterator over byte-level phonetic query results.
 #[cfg(feature = "phonetic-rules")]
-pub struct PhoneticQueryIterator<'a, D: Dictionary> {
-    /// Product automaton for matching
-    product: ProductAutomaton,
-    /// Queue of dictionary nodes to explore
-    queue: VecDeque<PhoneticTraversal<D::Node>>,
-    /// Parent-path arena for reconstructing terms without per-edge path clones.
-    path_arena: Vec<PhoneticPathNode<u8>>,
+pub struct PhoneticQueryIterator<'a, D: Dictionary>
+where
+    D::Node: DictionaryNode<Unit = u8>,
+{
+    /// Frontier-pruned generic language query.
+    language_query: LanguageQueryIterator<D::Node, NFA>,
     /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
     _dictionary: PhantomData<&'a D>,
-    /// Maximum depth
-    max_depth: usize,
     /// Phonetic weight
     _phonetic_weight: f64,
 }
@@ -1058,42 +1108,14 @@ where
         max_distance: u8,
         phonetic_weight: f64,
     ) -> Self {
-        let product = ProductAutomaton::new(nfa.clone(), max_distance);
-
-        let mut queue = VecDeque::with_capacity(1);
-        queue.push_back(PhoneticTraversal::root(dictionary.root()));
-
-        let max_depth = 100;
-
         Self {
-            product,
-            queue,
-            path_arena: Vec::with_capacity(64),
+            language_query: LanguageQueryIterator::from_dictionary(
+                dictionary,
+                LanguageProduct::new(nfa.clone(), max_distance),
+            ),
             _dictionary: PhantomData,
-            max_depth,
             _phonetic_weight: phonetic_weight,
         }
-    }
-
-    #[inline]
-    fn push_path_node(&mut self, label: u8, parent: usize) -> usize {
-        let depth = if parent == PHONETIC_NO_PATH {
-            1
-        } else {
-            self.path_arena[parent].depth.saturating_add(1)
-        };
-        let index = self.path_arena.len();
-        self.path_arena.push(PhoneticPathNode {
-            label,
-            parent,
-            depth,
-        });
-        index
-    }
-
-    #[inline]
-    fn materialize_path(&self, entry: &PhoneticTraversal<D::Node>) -> Vec<u8> {
-        collect_path_units(entry.label, entry.parent, &self.path_arena)
     }
 }
 
@@ -1105,54 +1127,9 @@ where
     type Item = PhoneticCandidateByte;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(entry) = self.queue.pop_front() {
-            if entry.depth > self.max_depth {
-                continue;
-            }
-
-            // Determine whether this node yields a candidate, but do NOT return
-            // yet: its children must still be enqueued below, or every term that
-            // extends a matched prefix would be skipped. `phonetic_cost` is
-            // `0.0` for the byte path by construction — articulatory (feature)
-            // distances are defined over phonemes (`char`s), and the byte NFA's
-            // transition label exposes no "expected byte", so a per-substitution
-            // articulatory cost is not expressible here (see the char transducer,
-            // `PhoneticTransducerChar::with_articulatory_costs`, for the weighted
-            // path).
-            let candidate = if entry.node.is_final() {
-                let path = self.materialize_path(&entry);
-                self.product
-                    .min_distance(&path)
-                    .map(|distance| PhoneticCandidateByte::new(path, distance, 0.0))
-            } else {
-                None
-            };
-
-            // Explore children via edges (bounded by max_depth) BEFORE returning
-            // any candidate, so the traversal state advances past this node.
-            let parent = match entry.label {
-                Some(label) => self.push_path_node(label, entry.parent),
-                None => entry.parent,
-            };
-            if let Some(child_depth) = phonetic_child_depth(entry.depth) {
-                if child_depth <= self.max_depth {
-                    for (b, child) in entry.node.edges() {
-                        self.queue.push_back(PhoneticTraversal::child(
-                            child,
-                            b,
-                            parent,
-                            child_depth,
-                        ));
-                    }
-                }
-            }
-
-            if let Some(candidate) = candidate {
-                return Some(candidate);
-            }
-        }
-
-        None
+        self.language_query
+            .next()
+            .map(|matched| PhoneticCandidateByte::new(matched.units, matched.distance, 0.0))
     }
 }
 
@@ -1172,16 +1149,10 @@ pub struct PhoneticValueQueryIterator<'a, D: MappedDictionary>
 where
     D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = u8>,
 {
-    /// Product automaton for matching.
-    product: ProductAutomaton,
-    /// Queue of dictionary nodes to explore.
-    queue: VecDeque<PhoneticTraversal<D::Node>>,
-    /// Parent-path arena for reconstructing terms without per-edge path clones.
-    path_arena: Vec<PhoneticPathNode<u8>>,
+    /// Frontier-pruned generic language query.
+    language_query: LanguageQueryIterator<D::Node, NFA>,
     /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
     _dictionary: PhantomData<&'a D>,
-    /// Maximum depth (prevents infinite exploration).
-    max_depth: usize,
 }
 
 #[cfg(feature = "phonetic-rules")]
@@ -1190,39 +1161,13 @@ where
     D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = u8>,
 {
     fn new(dictionary: &'a D, nfa: &NFA, _input: &[u8], max_distance: u8) -> Self {
-        let product = ProductAutomaton::new(nfa.clone(), max_distance);
-
-        let mut queue = VecDeque::with_capacity(1);
-        queue.push_back(PhoneticTraversal::root(dictionary.root()));
-
         Self {
-            product,
-            queue,
-            path_arena: Vec::with_capacity(64),
+            language_query: LanguageQueryIterator::from_dictionary(
+                dictionary,
+                LanguageProduct::new(nfa.clone(), max_distance),
+            ),
             _dictionary: PhantomData,
-            max_depth: 100,
         }
-    }
-
-    #[inline]
-    fn push_path_node(&mut self, label: u8, parent: usize) -> usize {
-        let depth = if parent == PHONETIC_NO_PATH {
-            1
-        } else {
-            self.path_arena[parent].depth.saturating_add(1)
-        };
-        let index = self.path_arena.len();
-        self.path_arena.push(PhoneticPathNode {
-            label,
-            parent,
-            depth,
-        });
-        index
-    }
-
-    #[inline]
-    fn materialize_path(&self, entry: &PhoneticTraversal<D::Node>) -> Vec<u8> {
-        collect_path_units(entry.label, entry.parent, &self.path_arena)
     }
 }
 
@@ -1234,45 +1179,16 @@ where
     type Item = PhoneticValueCandidateByte<D::Value>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(entry) = self.queue.pop_front() {
-            if entry.depth > self.max_depth {
-                continue;
-            }
-
-            // A value-bearing terminal that is also a phonetic/edit match.
-            // Compute but do NOT return yet — children are enqueued below so
-            // extensions of a matched prefix are not skipped.
-            let candidate = if let Some(value) = entry.node.value() {
-                let path = self.materialize_path(&entry);
-                self.product
-                    .min_distance(&path)
-                    .map(|distance| PhoneticValueCandidateByte::new(path, distance, 0.0, value))
-            } else {
-                None
-            };
-
-            let parent = match entry.label {
-                Some(label) => self.push_path_node(label, entry.parent),
-                None => entry.parent,
-            };
-            if let Some(child_depth) = phonetic_child_depth(entry.depth) {
-                if child_depth <= self.max_depth {
-                    for (b, child) in entry.node.edges() {
-                        self.queue.push_back(PhoneticTraversal::child(
-                            child,
-                            b,
-                            parent,
-                            child_depth,
-                        ));
-                    }
-                }
-            }
-
-            if let Some(candidate) = candidate {
-                return Some(candidate);
+        for matched in &mut self.language_query {
+            if let Some(value) = matched.node.value() {
+                return Some(PhoneticValueCandidateByte::new(
+                    matched.units,
+                    matched.distance,
+                    0.0,
+                    value,
+                ));
             }
         }
-
         None
     }
 }

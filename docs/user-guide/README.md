@@ -16,10 +16,12 @@ Quick start guide for new users:
 ### [Algorithms](algorithms.md)
 Deep dive into Levenshtein distance algorithms:
 - Standard Levenshtein distance
-- Transposition (Damerau-Levenshtein)
+- Transposition (optimal string alignment / restricted Damerau)
+- Unrestricted Damerau–Levenshtein with composable edits
 - Merge and Split operations
 - Algorithm selection guide
 - Distance threshold tuning
+- Regular-language queries with `query_language` and `query_regex`
 
 ### [Dictionary Backends](backends.md)
 Comprehensive backend comparison and selection guide:
@@ -32,8 +34,8 @@ Comprehensive backend comparison and selection guide:
 
 ### [Serialization](serialization.md)
 Save and load dictionaries efficiently:
-- Supported formats (Bincode, JSON, Text, Protobuf)
-- Compression options (85% size reduction)
+- Supported compact formats (bincode and Protocol Buffers)
+- Optional gzip wrappers
 - Format comparison and selection
 - CLI tool usage
 - Best practices

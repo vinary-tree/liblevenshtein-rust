@@ -33,7 +33,7 @@ pub struct WasmCandidate {
 /// // Create from terms with algorithm type
 /// const trans = new WasmTransducer(
 ///     ["hello", "help", "world", "helm"],
-///     "standard"  // or "transposition", "merge_and_split"
+///     "standard"  // or "transposition", "damerau_levenshtein", "merge_and_split"
 /// );
 ///
 /// // Query with max distance
@@ -53,12 +53,14 @@ impl WasmTransducer {
     /// # Arguments
     ///
     /// * `terms` - Array of strings to search through
-    /// * `algorithm` - Algorithm type: "standard", "transposition", or "merge_and_split"
+    /// * `algorithm` - Algorithm type: "standard", "transposition",
+    ///   "damerau_levenshtein", or "merge_and_split"
     ///
     /// # Algorithms
     ///
     /// - `standard`: Basic Levenshtein (insert, delete, substitute)
     /// - `transposition`: Adds transposition as a single edit (good for typos)
+    /// - `damerau_levenshtein`: Unrestricted edit-script composition
     /// - `merge_and_split`: Adds merge/split operations (good for spacing errors)
     #[wasm_bindgen(constructor)]
     pub fn new(terms: Vec<JsValue>, algorithm: &str) -> Result<WasmTransducer, JsValue> {
@@ -169,7 +171,8 @@ impl WasmDynamicTransducer {
     /// # Arguments
     ///
     /// * `terms` - Array of strings to search through
-    /// * `algorithm` - Algorithm type: "standard", "transposition", or "merge_and_split"
+    /// * `algorithm` - Algorithm type: "standard", "transposition",
+    ///   "damerau_levenshtein", or "merge_and_split"
     #[wasm_bindgen(constructor)]
     pub fn new(terms: Vec<JsValue>, algorithm: &str) -> Result<WasmDynamicTransducer, JsValue> {
         let terms = parse_sorted_terms(terms)?;
@@ -261,21 +264,23 @@ impl WasmDynamicTransducer {
 fn parse_algorithm(s: &str) -> Result<Algorithm, JsValue> {
     if matches_algorithm_alias(s, &["standard", "levenshtein"]) {
         Ok(Algorithm::Standard)
+    } else if matches_algorithm_alias(s, &["transposition", "osa", "restricted-damerau"]) {
+        Ok(Algorithm::Transposition)
     } else if matches_algorithm_alias(
         s,
         &[
-            "transposition",
             "damerau",
             "damerau_levenshtein",
             "damerau-levenshtein",
+            "true-damerau",
         ],
     ) {
-        Ok(Algorithm::Transposition)
+        Ok(Algorithm::DamerauLevenshtein)
     } else if matches_algorithm_alias(s, &["merge_and_split", "merge-and-split", "mergesplit"]) {
         Ok(Algorithm::MergeAndSplit)
     } else {
         Err(JsValue::from_str(
-            "unknown algorithm; use 'standard', 'transposition', or 'merge_and_split'",
+            "unknown algorithm; use 'standard', 'transposition', 'damerau_levenshtein', or 'merge_and_split'",
         ))
     }
 }
@@ -391,8 +396,9 @@ mod tests {
         assert_eq!(parse_algorithm("STANDARD").unwrap(), Algorithm::Standard);
         assert_eq!(
             parse_algorithm("Damerau-Levenshtein").unwrap(),
-            Algorithm::Transposition
+            Algorithm::DamerauLevenshtein
         );
+        assert_eq!(parse_algorithm("OSA").unwrap(), Algorithm::Transposition);
         assert_eq!(
             parse_algorithm("merge-and-split").unwrap(),
             Algorithm::MergeAndSplit

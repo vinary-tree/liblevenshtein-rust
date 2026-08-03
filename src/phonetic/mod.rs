@@ -10,8 +10,8 @@
 //!
 //! | Function | Use Case |
 //! |----------|----------|
-//! | [`apply_rules_seq`] | **Default** - use for all typical workloads (dictionary words, phrases) |
-//! | [`apply_rules_seq_optimized`] | **Opt-in** - use only for very long strings (100+ chars) with repetitive patterns |
+//! | [`apply_rules_seq`](crate::phonetic::apply_rules_seq) | **Default** - use for all typical workloads (dictionary words, phrases) |
+//! | [`apply_rules_seq_optimized`](crate::phonetic::apply_rules_seq_optimized) | **Opt-in** - use only for very long strings (100+ chars) with repetitive patterns |
 //!
 //! The position skipping optimization in `apply_rules_seq_optimized` provides up to
 //! 26.6× speedup for synthetic repetitive strings, but causes 1-15% overhead for
@@ -53,10 +53,11 @@
 //! # Usage
 //!
 //! ```rust,ignore
-//! use liblevenshtein::phonetic::{apply_rules_seq, ORTHOGRAPHY_RULES};
+//! use liblevenshtein::phonetic::{apply_rules_seq, orthography_rules};
 //!
 //! let input = "enough";
-//! let phonetic = apply_rules_seq(&ORTHOGRAPHY_RULES, input);
+//! let rules = orthography_rules();
+//! let phonetic = apply_rules_seq(&rules, input);
 //! assert_eq!(phonetic, "enuf");
 //! ```
 //!
@@ -64,9 +65,9 @@
 //!
 //! Three built-in rule sets are provided:
 //!
-//! - [`ORTHOGRAPHY_RULES`] - Simplifies English spelling (e.g., "gh" → "f")
-//! - [`PHONETIC_RULES`] - Maps to phonetic representations
-//! - [`TEST_RULES`] - Example rules for testing and validation
+//! - [`orthography_rules()`](crate::phonetic::orthography_rules) - Simplifies English spelling (e.g., "gh" → "f")
+//! - [`phonetic_rules()`](crate::phonetic::phonetic_rules) - Maps to phonetic representations
+//! - [`test_rules()`](crate::phonetic::test_rules) - Example rules for testing and validation
 //!
 //! # Custom Rules with `.llev` Files
 //!
@@ -94,7 +95,7 @@
 //! assert_eq!(result, "fone");
 //! ```
 //!
-//! See the [`llev`] module for complete documentation on the file format.
+//! See the [`llev`](crate::phonetic::llev) module for complete documentation on the file format.
 //!
 //! # Implementation Note
 //!

@@ -12,7 +12,7 @@
 #   exceptional  <= 128G RSS/cgroup memory, serial only
 #
 # kind:
-#   coq, tla, doc
+#   coq, tla, verus, dafny, smt, doc
 #
 # This manifest is intentionally conservative. Files with any active
 # Admitted., Axiom, Parameter, Conjecture, or Hypothesis remain partial until
@@ -22,6 +22,38 @@ trusted	light	coq	docs/verification/core/theories/Core/Definitions.v	core base d
 trusted	light	coq	docs/verification/core/theories/Core/MinLemmas.v	min3/substitution-cost helper lemmas; no active assumptions
 trusted	standard	coq	docs/verification/core/theories/Core/LevDistance.v	Levenshtein distance definition and basic unfolding lemmas
 trusted	standard	coq	docs/verification/core/theories/Core/MetricProperties.v	core Levenshtein metric properties; no active assumptions
+trusted	light	coq	docs/verification/core/theories/Conformance/RustSubsumption.v	exact Rust classic-position subsumption branches plus insertion-retention contract and shrinking-state counterexample; no active assumptions
+trusted	light	verus	docs/verification/verus/language_product.rs	Rust-facing language-product arithmetic, canonicalization, and frontier-merge invariants; no active assumptions
+trusted	light	coq	docs/verification/core/theories/Conformance/LanguageProduct.v	assumption-free relational-image, canonicalization, disjointness, and frontier-bound theorems
+trusted	light	smt	docs/verification/smt/language_product.smt2	bounded bit-vector counterexample checks; both Z3 and cvc5 must report UNSAT
+trusted	light	verus	docs/verification/verus/cost_monoid.rs	exact additive, bottleneck, monotonicity, inflation, and fixed-point divisibility obligations; no active assumptions
+trusted	light	coq	docs/verification/core/theories/Conformance/CostMonoid.v	assumption-free extended-real weighted/bottleneck algebra; explicitly models the f64 rounding trust boundary
+trusted	light	smt	docs/verification/smt/cost_monoid.smt2	bounded saturation, monotonicity, bottleneck associativity, TOP absorption, and guarded scale-overflow checks in Z3 and cvc5
+trusted	light	verus	docs/verification/verus/generalized_automaton.rs	positive completion charging, exact rescaling, certified-versus-conservative subsumption, exact empty-side rate comparison, discovery guarding, operation-order independence, equal-position insertion idempotence, fractional boundaries, and guarded accumulation; no active assumptions
+trusted	light	coq	docs/verification/core/theories/Conformance/GeneralizedAutomatonRepair.v	assumption-free path consumption, exact accumulated and completion cost, exact rescaling, certified-versus-conservative subsumption, explicit-infinity and finite empty-side rates, discovery guarding, operation-order independence, antichain set semantics, Hamming length preservation, absent-deletion empty-side rejection, and progress
+trusted	light	smt	docs/verification/smt/generalized_automaton.smt2	bounded fractional-cost, completion charging, certified-versus-conservative subsumption, explicit-infinity and finite empty-side rates, discovery guarding, operation-order independence, antichain insertion idempotence, Hamming length, absent-deletion, and guarded-budget counterexample checks in Z3 and cvc5
+trusted	light	coq	docs/verification/core/theories/Conformance/ClassAPresets.v	assumption-free Hamming identity, symmetry, and triangle laws; indel script reversal, composition, and length bounds; exact bounded-skip cost; aggregate-prefix validation and progress
+trusted	light	verus	docs/verification/verus/class_a_presets.rs	Rust-shaped Hamming sum triangle, indel reversal/composition/length bounds, bounded-skip cost, validation prefix, guarded aggregate, progress, and empty-side obligations
+trusted	light	dafny	docs/verification/dafny/ClassAPresets.dfy	automatically verified Hamming coordinate/prefix laws, indel symmetry/composition/length/parity, bounded-skip direction, band, empty-side, and aggregate validation obligations
+trusted	light	smt	docs/verification/smt/class_a_presets.smt2	13 independent Hamming, indel, bounded-skip, empty-side, band, progress, and validation counterexample queries in Z3 and cvc5
+trusted	light	tla	docs/verification/tla/ClassAPresets.tla	complete finite operation-grid exploration for all three presets checking Hamming length, indel length bounds, bounded-skip exact cost, operation progress, budget, and declared-consumption ceiling
+trusted	light	verus	docs/verification/verus/elastic_kernel.rs	Rust-facing K1-K4 pruning, best-first cutoff, additive/bottleneck inflation, interval-gap, and observational-counter partition obligations; no active assumptions
+trusted	light	coq	docs/verification/core/theories/Conformance/ElasticKernel.v	assumption-free K1-K4 subtree/candidate pruning, exact-rescore, best-first termination, additive/bottleneck inflation, sequence-dependent empty-side cost, and observational-counter partition theorems
+trusted	light	coq	docs/verification/elastic/theories/WalkerSoundness.v	assumption-free traversal-level proof that recursive DFS pruning under local K1 terminal bounds and K2 child inflation has no false negatives; also proves output soundness and termination by structural recursion
+trusted	light	smt	docs/verification/smt/elastic_kernel.smt2	bounded K1-K4, best-first cutoff, additive/bottleneck inflation, interval-gap, and counter-partition checks in Z3 and cvc5
+trusted	light	coq	docs/verification/erp/theories/Metric/ErpProperties.v	assumption-free ERP interval admissibility and degenerate exactness, gap-mass candidate bound over arbitrary edit scripts, quotient equivalence laws, and zero-cost-alignment quotient identity
+trusted	light	verus	docs/verification/verus/erp_kernel.rs	Rust-facing ERP interval, gap-mass, quotient-generator, candidate-prune, row-cutoff, and non-negative-inflation obligations; no active assumptions
+trusted	light	smt	docs/verification/smt/erp_kernel.smt2	ERP interval, reverse-triangle potential, quotient-generator, candidate-prune, row-cutoff, and non-negative-inflation counterexample checks in Z3 and cvc5
+trusted	light	coq	docs/verification/frechet/theories/Metric/FrechetProperties.v	assumption-free discrete Frechet interval/point recurrence, bottleneck inflation and triangle composition, pinned-endpoint and one-sided Hausdorff bounds, and zero-link identity obligations
+trusted	light	verus	docs/verification/verus/frechet_kernel.rs	Rust-facing discrete Frechet interval, recurrence monotonicity, bottleneck inflation/triangle, endpoint/combined candidate pruning, and zero-link obligations; no active assumptions
+trusted	light	smt	docs/verification/smt/frechet_kernel.smt2	discrete Frechet interval, recurrence monotonicity, bottleneck inflation/triangle, endpoint/combined candidate pruning, and zero-link counterexample checks in Z3 and cvc5
+trusted	light	coq	docs/verification/dtw/theories/Indexing/DtwProperties.v	assumption-free banded-DTW squared interval/point recurrence, additive inflation, prefix LB_Keogh and first-gate pruning, band reachability, symmetry/non-negativity, and an executable root-distance triangle counterexample
+trusted	light	coq	docs/verification/dtw/theories/NotAMetric.v	assumption-free executable band-one DTW root-distance triangle-inequality counterexample
+trusted	light	verus	docs/verification/verus/dtw_kernel.rs	Rust-facing banded-DTW squared interval, recurrence, additive inflation, incremental prefix pruning, band reachability, symmetry/non-negativity, and concrete non-metric witness obligations; no active assumptions
+trusted	light	smt	docs/verification/smt/dtw_kernel.smt2	banded-DTW interval, recurrence, additive inflation, incremental LB_Keogh, first-gate pruning, band reachability, symmetry/non-negativity, and non-metric counterexample checks in Z3 and cvc5
+trusted	light	coq	docs/verification/twed/theories/Metric/TwedProperties.v	assumption-free unit-spaced TWED interval match/delete leaves, additive recurrence, arbitrary-script length bound, strict stiffness gate, zero-parameter witness, and script composition
+trusted	light	verus	docs/verification/verus/twed_kernel.rs	Rust-facing TWED interval, separability, recurrence, length-bound pruning, metric-parameter, degeneracy, and composition obligations; no active assumptions
+trusted	light	smt	docs/verification/smt/twed_kernel.smt2	TWED interval, separability, recurrence, length-bound pruning, strict metric gate, degeneracy, and composition counterexample checks in Z3 and cvc5
 trusted	light	coq	docs/verification/core/theories/Triangle/SubstCostTriangle.v	substitution-cost triangle helper
 trusted	light	coq	docs/verification/articulatory/theories/FeatureDistance.v	articulatory distance parameterized by FeatureWeights record; symmetry/identity (all weights), non-negativity/bound-by-sum/per-dimension monotonicity (non-negative weights), standard-weight <=1 corollary; checked examples
 trusted	light	coq	docs/verification/articulatory/theories/FeatureDistanceWeighted.v	faithful 7-dimension weighted articulatory model (vowel path + Qmin cap, mirrors Rust FeatureDistanceWeights); symmetry/identity/non-negativity/boundedness(<=1)/per-dimension monotonicity; checked examples
@@ -42,20 +74,44 @@ trusted	heavy	coq	docs/verification/msm/theories/Indexing/IntervalColumn.v	inter
 partial	standard	tla	docs/verification/tla/OnlineScanner.tla	TLA+ model abstracts character matching; now checks NoMissedMatches (no reachable final state dropped) and MatchesRecordedCorrectly; model-checks clean
 partial	standard	tla	docs/verification/tla/ProductAutomaton.tla	TLA+ model uses a finite non-total witness NFA transition relation and checks PatternPositionValid; ProductCorrectness/CostMonotonicity for arbitrary Rust NFAs are verified on the Rust construction by tests/proptest_product_automaton.rs
 partial	standard	tla	docs/verification/tla/PriorityQuery.tla	TLA+ model is an idealized admissible A* (matches OrderedQueryIterator; PriorityQueryIterator's heuristic is inadmissible -> approximate ordering, see tests/proptest_priority_query.rs); abstracts heap/dictionary
-partial	light	tla	docs/verification/tla/Subsumption.tla	TLA+ model uses simplified completion semantics; now checks Irreflexive/Asymmetric/Transitive/CompletionPreservationInv/NoFalseRemoval explicitly
+trusted	light	tla	docs/verification/tla/Subsumption.tla	exact bounded model of Position::subsumes and antichain removal; checks variant separation, relation laws, retained-cover preservation, and termination
 partial	light	tla	docs/verification/tla/ValueYieldingQuery.tla	TLA+ model of Transducer::query_values over a concrete dictionary (valued/valueless and in-range/out-of-range finals + shared-term dedup case); checks ValueCorrectness/Soundness/NoValuelessYielded/DedupInv/CompletenessInv and termination; cross-validated on the real dictionary by tests/proptest_value_yielding_query.rs
 trusted	standard	tla	docs/verification/tla/MsmTrieSearch.tla	TLA+ model of MsmTransducer::search_range: interval-pruned trie walk + exact re-scoring; checks NoFalsePositives/NoMissedMatches/PruneSound + termination over an abstracted distance/bound table constrained by the Coq admissibility theorem; model-checks clean
+trusted	light	tla	docs/verification/tla/ElasticTrieSearch.tla	generic ElasticTransducer traversal with executable K1/K4 tables and a final root; checks subtree and candidate pruning, exact-rescore soundness, root/full terminal completeness, and termination without abstract assumptions
+trusted	light	coq	docs/verification/core/theories/Conformance/PositionKindVariant.v	assumption-free PositionKind representation, full-key injectivity, runtime/static dispatch equivalence, continuation separation, and variant subsumption obligations
+trusted	light	verus	docs/verification/verus/position_kind_variant.rs	Rust-facing PositionKind payload, ordering-key, selector equivalence, edge-stability, and variant separation obligations; no active assumptions
+trusted	light	smt	docs/verification/smt/position_kind_variant.smt2	PositionKind representation, selector equivalence, full-key injectivity, and built-in variant subsumption counterexample checks in Z3 and cvc5
+trusted	light	tla	docs/verification/tla/VariantDispatch.tla	exact finite model comparing legacy per-position dispatch with one monomorphized selection per edge; checks stability, equivalence, exactly-once processing, and termination
+trusted	light	coq	docs/verification/damerau/theories/DamerauStreaming.v	assumption-free streaming macro-cost equivalence, budget/representation preservation, no-pending-epsilon, resolution, subsumption separation, and quadratic frontier bound
+trusted	light	verus	docs/verification/verus/damerau_streaming.rs	Rust-facing entry-budget, u8 delta, macro-charge, extension, resolution, and pending-subsumption obligations; no active assumptions
+trusted	light	smt	docs/verification/smt/damerau_streaming.smt2	independent entry-budget, Lowrance-Wagner cost, resolution, and pending-subsumption counterexample checks in Z3 and cvc5
+trusted	light	tla	docs/verification/tla/DamerauStreaming.tla	finite streaming macro model checking charge, positive delta, endpoint resolution, consumption, and terminal cost invariants
+trusted	light	coq	docs/verification/affine/theories/AffineGap.v	assumption-free B-1/B-2/B-3, B-4 trace subsumption, layer-aware finish, operation-window, and checked-budget obligations
+trusted	light	verus	docs/verification/verus/affine_gap.rs	Rust-facing affine layer order, switch penalty, B-4 step preservation, operation-window, trailing-gap, and guarded-addition obligations
+trusted	light	dafny	docs/verification/dafny/AffineGap.dfy	automatically verified affine B-1 through B-4, layer-aware finish, operation-window, and checked-budget obligations
+trusted	light	smt	docs/verification/smt/affine_gap.smt2	independent affine layer, B-4 preservation, trailing finish, operation-window, checked-add, and same-index counterexample checks in Z3 and cvc5
+trusted	light	tla	docs/verification/tla/AffineGap.tla	finite B-4 transition-preservation model with layer canonicalization, separating actions, and operation-window invariant
 partial	light	doc	docs/verification/PROOF_COMPLETION_PLAN.md	ordered closure plan for remaining proof debt
 legacy	exceptional	coq	docs/verification/core/theories/Distance.v	deprecated monolith; use modular core files where possible
 legacy	exceptional	coq	docs/verification/core/theories/TraceLowerBound.v	decomposed into LowerBound modules
 legacy	standard	coq	rocq/liblevenshtein	older formal-verification tree; audit before trusting
-debug	light	coq	docs/verification/phonetic/test_debug.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_debug2.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_debug3.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_debug4.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_phone_eqb.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_phone_sym.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_rule_unique_fix.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_rule_unique_local.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_rule_unique_standalone.v	debug-only proof scratch file
-debug	light	coq	docs/verification/phonetic/test_rule_unique_v2.v	debug-only proof scratch file
+trusted	light	coq	docs/verification/core/theories/Conformance/DownstreamQueries.v	assumption-free subsequence, terminal-membership, kind-erasure, bracket-state, balanced-visitor, ranked-order, and contextual-realignment obligations
+trusted	light	dafny	docs/verification/dafny/DownstreamQueries.dfy	automatically verified kind-erasure, alignment, bracket resource, balanced-visitor, ranked-order, and contextual-realignment obligations
+trusted	light	verus	docs/verification/verus/downstream_queries.rs	Rust-facing kind-erasure, bracket resource, balanced-visitor, ranked-order, and contextual-realignment obligations; no active assumptions
+trusted	light	smt	docs/verification/smt/downstream_queries.smt2	independent Phase-9 counterexample checks in Z3 and cvc5
+trusted	light	tla	docs/verification/tla/DownstreamQueries.tla	exact finite balanced DFS visitor, subsequence progress, terminal membership, and completion model
+trusted	light	coq	docs/verification/core/theories/Conformance/DyckCorrection.v	assumption-free typed-Dyck grammar, correction-witness soundness, zero-cost identity, total correction existence, first-pair decomposition, cross-kind separation, and global exactness of the four-family interval recurrence from strict-subinterval minima
+trusted	light	coq	docs/verification/core/theories/Conformance/OperationSetSerialization.v	assumption-free explicit-applicability name independence, strict bincode-envelope validation, protobuf pre-allocation bounds/exact weight bits, and single-member gzip obligations
+trusted	light	dafny	docs/verification/dafny/DyckSerialization.dfy	auto-active typed-pair separation, recurrence minimum, zero-cost identity, bincode strictness, protobuf preflight bounds/exact weight bits, and gzip composition obligations
+trusted	light	verus	docs/verification/verus/dyck_serialization.rs	Rust-facing typed-pair and recurrence invariants plus bincode exact consumption, protobuf preflight bounds/exact weight bits, and gzip single-member obligations
+trusted	light	smt	docs/verification/smt/dyck_serialization.smt2	independent typed-Dyck, recurrence, bincode, protobuf preflight/version/exact-bit, and gzip limit/trailing counterexample checks in Z3 and cvc5
+trusted	light	tla	docs/verification/tla/OperationSetDecode.tla	exhaustive finite binary-decoder lifecycle checking header policy, exact payload consumption, semantic validation, and resource limits
+trusted	light	tla	docs/verification/tla/OperationSetPortableDecode.tla	exhaustive finite bincode/protobuf/gzip admission lifecycle; protobuf allocation is reachable only after wire/count preflight and gzip requires one complete bounded member
+trusted	light	coq	docs/verification/core/theories/Conformance/FzfUpperBound.v	assumption-free unstarted/active local-alignment upper bound, sound pruning, active-only counterexample, top-k cutoff monotonicity, and Arctic transition-delta telescoping
+trusted	light	verus	docs/verification/verus/fzf_upper_bound.rs	Rust-facing local-alignment alternative, branch-and-bound, active-only counterexample, and Arctic delta invariants; no active assumptions
+trusted	light	dafny	docs/verification/dafny/FzfUpperBound.dfy	auto-active local-alignment upper-bound, sound pruning, counterexample, and Arctic telescoping obligations
+trusted	light	smt	docs/verification/smt/fzf_upper_bound.smt2	independent unstarted/active bound, top-k pruning, active-only counterexample, and Arctic delta counterexample checks in Z3 and cvc5
+trusted	light	tla	docs/verification/tla/FzfTrieSearch.tla	exhaustive finite fzf trie traversal retaining unstarted local alignment and checking pruning, top-k completeness, and termination
+trusted	light	coq	docs/verification/core/theories/Conformance/SubsumptionFallback.v	assumption-free carrier-generic equivalence between the shared Standard/OSA/MergeSplit decision tree and the legacy per-mode organization
+trusted	light	verus	docs/verification/verus/subsumption_fallback.rs	Rust-shaped exact-unit equivalence for the representation-preserving Phase 11 fallback and mixed-OSA incomparability
+trusted	light	smt	docs/verification/smt/subsumption_fallback.smt2	independent unit-integer and epsilon-real counterexample checks for shared-versus-legacy subsumption equivalence in Z3 and cvc5

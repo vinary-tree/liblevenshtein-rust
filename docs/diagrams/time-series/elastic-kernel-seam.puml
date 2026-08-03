@@ -1,0 +1,50 @@
+@startuml elastic-kernel-seam
+' Generic ElasticKernel component seam. Shows ownership and which elements vary
+' per distance while one generic exact trie walker supplies every traversal.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam component {
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Elastic time-series seam — one exact walker, multiple recurrences
+
+package "Prefix-shared index" #E8F5E9 {
+  component "ElasticTransducer<K,V>\nrange DFS + best-first kNN\ncollision buckets + originals" as Walker #C8E6C9
+  component "DynamicDawg<u8>\nquantized prefixes" as Trie #DCEDC8
+}
+
+interface "ElasticKernel\nprefix + column K1 admissibility\nK2 inflation\nK3 exact survivors\nK4 candidate bound\nIS_METRIC label" as Kernel #BBDEFB
+component "CostMonoid\nordered combine + within" as Monoid #D1C4E9
+
+package "Kernel instances" #E3F2FD {
+  component "MsmKernel\nWeightedCost\ncarry: previous bin" as MSM #B2DFDB
+  component "ERP\nWeightedCost\ncarry: ()" as ERP #B2DFDB
+  component "TWED\nWeightedCost\ncarry: previous bin" as TWED #B2DFDB
+  component "Discrete Fréchet\nBottleneckCost\ncarry: ()" as Frechet #B2DFDB
+  component "Banded DTW\nWeightedCost\ncarry: prefix LB\nplan: envelopes" as DTW #B2DFDB
+}
+
+Walker -[#2E7D32,thickness=3]-> Trie : shares prefixes
+Walker -[#1565C0,thickness=3]-> Kernel : static dispatch per edge
+Kernel -[#5E35B1,thickness=3]-> Monoid : selects cost carrier
+MSM .up.|> Kernel
+ERP .up.|> Kernel
+TWED .up.|> Kernel
+Frechet .up.|> Kernel
+DTW .up.|> Kernel
+
+note right of Walker #FFF3E0
+  Reports only full-precision K3 scores.
+  Quantization affects pruning, never correctness.
+end note
+
+note bottom of Kernel #E8EAF6
+  <latex>b_p > \tau \Rightarrow
+  \forall t\in\mathrm{subtree}(p),\ D(q,t)>\tau</latex>
+end note
+@enduml

@@ -1,6 +1,7 @@
 //! Position in the Levenshtein automaton.
 
 use super::algorithm::Algorithm;
+use super::variant::{with_variant, AutomatonVariant, PositionKind, TransitionCtx, VariantSpec};
 use std::cmp::Ordering;
 
 /// A position in the Levenshtein automaton state.
@@ -9,14 +10,15 @@ use std::cmp::Ordering;
 /// automaton, indicating we've consumed `term_index` characters from
 /// the query term with `num_errors` accumulated errors.
 ///
-/// The `is_special` flag is used by extended algorithms (Transposition,
-/// MergeAndSplit) to track additional state.
+/// The compact `kind` and `aux` fields distinguish unfinished variant states
+/// without widening the legacy 64-bit layout.
 ///
 /// # Performance
 ///
-/// Position is `Copy` (two `usize` fields plus a `bool`, with target-dependent
-/// padding) to eliminate allocation overhead when copying positions during
-/// state transitions. This reduces cloning to a plain bitwise copy.
+/// Position is `Copy` (two `usize` fields plus two one-byte tags and
+/// target-dependent padding) to eliminate allocation overhead when copying
+/// positions during state transitions. On supported 64-bit targets it remains
+/// exactly 24 bytes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Position {
     /// Index into the query term (characters consumed)
@@ -25,12 +27,16 @@ pub struct Position {
     /// Number of accumulated edit operations
     pub num_errors: usize,
 
-    /// Special flag for extended algorithm states
-    ///
-    /// - For Transposition: indicates a transposition is in progress
-    /// - For MergeAndSplit: indicates a merge/split operation
-    pub is_special: bool,
+    /// Variant continuation tag. Kept private so constructors preserve the
+    /// relationship between the tag and `aux`.
+    kind: PositionKind,
+
+    /// Variant-specific payload. Zero for all three legacy variants.
+    aux: u8,
 }
+
+#[cfg(target_pointer_width = "64")]
+const _: [(); 24] = [(); std::mem::size_of::<Position>()];
 
 impl Position {
     /// Create a new position
@@ -39,18 +45,92 @@ impl Position {
         Self {
             term_index,
             num_errors,
-            is_special: false,
+            kind: PositionKind::Normal,
+            aux: 0,
         }
     }
 
-    /// Create a new special position (for extended algorithms)
+    /// Create a new OSA transposition position.
+    ///
+    /// This historical constructor predates typed continuation kinds. New
+    /// variant implementations should use `with_kind` so their continuation
+    /// language is explicit.
+    #[deprecated(since = "0.9.1", note = "use typed variant constructors")]
     #[inline(always)]
     pub fn new_special(term_index: usize, num_errors: usize) -> Self {
+        Self::new_osa_transposing(term_index, num_errors)
+    }
+
+    /// Create an OSA transposition-in-progress position.
+    #[inline(always)]
+    pub const fn new_osa_transposing(term_index: usize, num_errors: usize) -> Self {
+        Self::with_kind(term_index, num_errors, PositionKind::OsaTransposing, 0)
+    }
+
+    /// Create a merge/split continuation position.
+    #[inline(always)]
+    pub const fn new_splitting(term_index: usize, num_errors: usize) -> Self {
+        Self::with_kind(term_index, num_errors, PositionKind::Splitting, 0)
+    }
+
+    /// Create a position inside a gap that consumes query units.
+    #[inline(always)]
+    pub(crate) const fn new_affine_query_gap(term_index: usize, cost: usize) -> Self {
+        Self::with_kind(term_index, cost, PositionKind::AffineQueryGap, 0)
+    }
+
+    /// Create a position inside a gap that consumes dictionary units.
+    #[inline(always)]
+    pub(crate) const fn new_affine_dict_gap(term_index: usize, cost: usize) -> Self {
+        Self::with_kind(term_index, cost, PositionKind::AffineDictGap, 0)
+    }
+
+    /// Create an unrestricted Damerau–Levenshtein continuation.
+    ///
+    /// `delta` is the positive distance from the current query index to the
+    /// transposition's deferred query endpoint. Zero is invalid because it
+    /// would not describe a transposition macro.
+    #[inline(always)]
+    pub(crate) const fn new_damerau_pending(
+        term_index: usize,
+        num_errors: usize,
+        delta: u8,
+    ) -> Self {
+        debug_assert!(delta > 0);
+        Self::with_kind(term_index, num_errors, PositionKind::DamerauPending, delta)
+    }
+
+    #[inline(always)]
+    pub(crate) const fn with_kind(
+        term_index: usize,
+        num_errors: usize,
+        kind: PositionKind,
+        aux: u8,
+    ) -> Self {
         Self {
             term_index,
             num_errors,
-            is_special: true,
+            kind,
+            aux,
         }
+    }
+
+    /// Whether this is an unfinished multi-edge operation.
+    #[inline(always)]
+    pub const fn is_special(&self) -> bool {
+        self.kind.is_special()
+    }
+
+    /// Return the typed continuation kind.
+    #[inline(always)]
+    pub const fn kind(&self) -> PositionKind {
+        self.kind
+    }
+
+    /// Return the variant-specific one-byte payload.
+    #[inline(always)]
+    pub const fn aux(&self) -> u8 {
+        self.aux
     }
 
     /// Check if this position subsumes another position.
@@ -80,100 +160,21 @@ impl Position {
     /// # Parameters
     /// - `query_length`: Length of the query term (n in C++/Java code)
     pub fn subsumes(&self, other: &Position, algorithm: Algorithm, query_length: usize) -> bool {
-        let i = self.term_index;
-        let e = self.num_errors;
-        let s = self.is_special;
-
-        let j = other.term_index;
-        let f = other.num_errors;
-        let t = other.is_special;
-
-        // Must have fewer or equal errors to subsume
-        if e > f {
-            return false;
-        }
-
-        match algorithm {
-            Algorithm::Standard => {
-                // Standard algorithm: |i - j| <= (f - e)
-                let index_diff = i.abs_diff(j);
-                let error_diff = f - e;
-                index_diff <= error_diff
-            }
-
-            Algorithm::Transposition => {
-                // From C++ subsumes.cpp lines 15-39
-                if s {
-                    if t {
-                        // Both special: must be at same position
-                        return i == j;
-                    }
-                    // lhs special, rhs not: NEVER subsume
-                    // Special positions can only advance via transposition completion (advance by 2)
-                    // Normal positions can advance via regular match (advance by 1)
-                    // These are different computational paths that cannot be interchanged
-                    // The original C++ rule (f == query_length && i == j) was incorrect
-                    return false;
-                }
-
-                if t {
-                    // Special positions (transposition-in-progress) represent
-                    // different computational paths than normal positions.
-                    // A normal position cannot subsume a special position,
-                    // or valid transposition completions can be pruned.
-                    //
-                    // Example defect case: Query "ab", dict "ba"
-                    //   (1,1,false) was incorrectly subsuming (0,1,true)
-                    //   The special position is needed to complete the transposition!
-                    return false;
-                }
-
-                // Neither special: standard formula
-                let index_diff = i.abs_diff(j);
-                let error_diff = f - e;
-                index_diff <= error_diff
-            }
-
-            Algorithm::MergeAndSplit => {
-                // MergeAndSplit positions can only represent positions in the
-                // same variant state. A pending split and a normal position have
-                // different continuations.
-                if s != t {
-                    return false;
-                }
-
-                // The automaton never generates representatives past the query.
-                if i > query_length {
-                    return false;
-                }
-
-                // A final pending split cannot consume the second split
-                // character required by a non-final pending split.
-                if s && i >= query_length && j < query_length {
-                    return false;
-                }
-
-                // Must have strictly fewer errors to subsume. This allows
-                // (i,e,false) and (i,e,true) to coexist when needed.
-                if e >= f {
-                    return false;
-                }
-
-                // Keep pruning same-index only. Cross-index pruning can erase
-                // delete-closure witnesses needed by split/merge completions.
-                i == j
-            }
-        }
+        let ctx = TransitionCtx::unit(query_length, 0, false);
+        with_variant!(VariantSpec::from(algorithm), |V| {
+            V::subsumes(self, other, &ctx)
+        })
     }
 
     /// Compare positions for sorting (lexicographic order)
     ///
-    /// Order: term_index (asc), then num_errors (asc), then is_special (false < true)
+    /// Order: term index, accumulated cost, continuation kind, then `aux`.
     pub fn compare(&self, other: &Position) -> Ordering {
         self.term_index
             .cmp(&other.term_index)
             .then_with(|| self.num_errors.cmp(&other.num_errors))
-            .then_with(|| self.is_special.cmp(&other.is_special))
+            .then_with(|| self.kind.cmp(&other.kind))
+            .then_with(|| self.aux.cmp(&other.aux))
     }
 }
 
@@ -198,13 +199,23 @@ mod tests {
         let pos = Position::new(5, 2);
         assert_eq!(pos.term_index, 5);
         assert_eq!(pos.num_errors, 2);
-        assert!(!pos.is_special);
+        assert!(!pos.is_special());
+        assert_eq!(pos.kind(), PositionKind::Normal);
+        assert_eq!(pos.aux(), 0);
     }
 
     #[test]
     fn test_position_special() {
+        let pos = Position::new_osa_transposing(3, 1);
+        assert!(pos.is_special());
+        assert_eq!(pos.kind(), PositionKind::OsaTransposing);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_special_constructor_maps_to_osa_kind() {
         let pos = Position::new_special(3, 1);
-        assert!(pos.is_special);
+        assert_eq!(pos, Position::new_osa_transposing(3, 1));
     }
 
     #[test]
@@ -252,15 +263,15 @@ mod tests {
         let max_distance = 3; // Max distance for tests
 
         // Both special: must be at same position
-        let p1 = Position::new_special(5, 2);
-        let p2 = Position::new_special(5, 3);
+        let p1 = Position::new_osa_transposing(5, 2);
+        let p2 = Position::new_osa_transposing(5, 3);
         assert!(
             p1.subsumes(&p2, Algorithm::Transposition, max_distance),
             "special(5,2) should subsume special(5,3) - same position"
         );
 
-        let p3 = Position::new_special(5, 2);
-        let p4 = Position::new_special(6, 3);
+        let p3 = Position::new_osa_transposing(5, 2);
+        let p4 = Position::new_osa_transposing(6, 3);
         assert!(
             !p3.subsumes(&p4, Algorithm::Transposition, max_distance),
             "special(5,2) should NOT subsume special(6,3) - different position"
@@ -269,7 +280,7 @@ mod tests {
         // lhs special, rhs not: special should NEVER subsume non-special
         // Defect fix: Special positions (transposition-in-progress) and normal positions
         // represent fundamentally different computational paths that cannot be interchanged.
-        let p5 = Position::new_special(5, 2);
+        let p5 = Position::new_osa_transposing(5, 2);
         let p6 = Position::new(5, 3);
         assert!(
             !p5.subsumes(&p6, Algorithm::Transposition, max_distance),
@@ -279,7 +290,7 @@ mod tests {
         // Regression test for defect case: special(0,2) subsuming normal(0,2) caused false negatives
         // Test case: dict=["auou"], query="ou", max_dist=2
         // Defect: After processing 'u', (0,2,special) was subsuming (0,2), eliminating valid paths
-        let p5a = Position::new_special(0, 2);
+        let p5a = Position::new_osa_transposing(0, 2);
         let p5b = Position::new(0, 2);
         assert!(
             !p5a.subsumes(&p5b, Algorithm::Transposition, max_distance),
@@ -288,14 +299,14 @@ mod tests {
 
         // lhs normal, rhs special: normal cannot subsume special (transposition-in-progress)
         let p7 = Position::new(5, 2);
-        let p8 = Position::new_special(4, 3);
+        let p8 = Position::new_osa_transposing(4, 3);
         assert!(
             !p7.subsumes(&p8, Algorithm::Transposition, max_distance),
             "normal(5,2) should NOT subsume special(4,3) - special positions are transposition-in-progress"
         );
 
         let p9 = Position::new(5, 2);
-        let p10 = Position::new_special(6, 3);
+        let p10 = Position::new_osa_transposing(6, 3);
         assert!(
             !p9.subsumes(&p10, Algorithm::Transposition, max_distance),
             "normal(5,2) should NOT subsume special(6,3) - special positions are transposition-in-progress"
@@ -317,7 +328,7 @@ mod tests {
         for term_index in 0..=query_length {
             for num_errors in 0..=2 {
                 let normal = Position::new(term_index, num_errors);
-                let special = Position::new_special(term_index, num_errors);
+                let special = Position::new_osa_transposing(term_index, num_errors);
 
                 assert!(
                     !normal.subsumes(&special, Algorithm::Transposition, query_length),
@@ -341,7 +352,7 @@ mod tests {
         let query_length = 5;
 
         // Different variant states cannot subsume each other.
-        let p1 = Position::new_special(5, 2);
+        let p1 = Position::new_splitting(5, 2);
         let p2 = Position::new(5, 3);
         assert!(
             !p1.subsumes(&p2, Algorithm::MergeAndSplit, query_length),
@@ -349,15 +360,15 @@ mod tests {
         );
 
         let p2a = Position::new(5, 2);
-        let p2b = Position::new_special(4, 3);
+        let p2b = Position::new_splitting(4, 3);
         assert!(
             !p2a.subsumes(&p2b, Algorithm::MergeAndSplit, query_length),
             "normal(5,2) should NOT subsume special(4,3) for MergeAndSplit"
         );
 
         // Final split-in-progress states cannot prune non-final pending splits.
-        let p2c = Position::new_special(5, 1);
-        let p2d = Position::new_special(4, 2);
+        let p2c = Position::new_splitting(5, 1);
+        let p2d = Position::new_splitting(4, 2);
         assert!(
             !p2c.subsumes(&p2d, Algorithm::MergeAndSplit, query_length),
             "final special(5,1) should NOT subsume non-final special(4,2)"
@@ -372,8 +383,8 @@ mod tests {
         );
 
         // Same variant, same index, strictly fewer errors can prune.
-        let p5 = Position::new_special(5, 2);
-        let p6 = Position::new_special(5, 3);
+        let p5 = Position::new_splitting(5, 2);
+        let p6 = Position::new_splitting(5, 3);
         assert!(
             p5.subsumes(&p6, Algorithm::MergeAndSplit, query_length),
             "special(5,2) should subsume special(5,3)"
@@ -389,5 +400,25 @@ mod tests {
         assert!(p1 < p2);
         assert!(p1 < p3);
         assert!(p2 < p3);
+    }
+
+    #[test]
+    fn ordering_distinguishes_kind_and_aux_payload() {
+        let normal = Position::new(3, 1);
+        let osa = Position::new_osa_transposing(3, 1);
+        let split = Position::new_splitting(3, 1);
+        let pending_1 = Position::with_kind(3, 1, PositionKind::DamerauPending, 1);
+        let pending_2 = Position::with_kind(3, 1, PositionKind::DamerauPending, 2);
+
+        assert!(normal < osa);
+        assert!(osa < split);
+        assert!(split < pending_1);
+        assert!(pending_1 < pending_2);
+    }
+
+    #[test]
+    fn legacy_64_bit_layout_is_a_compile_time_contract() {
+        #[cfg(target_pointer_width = "64")]
+        assert_eq!(std::mem::size_of::<Position>(), 24);
     }
 }

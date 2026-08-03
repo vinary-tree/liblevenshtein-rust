@@ -1,0 +1,44 @@
+// cost-monoid-laws.dot — ordered cost algebra used by bounded dynamic programs.
+// Colour mapping (per the canonical legend):
+//   API input / configured weights  teal   #B2EBF2, border #00838F
+//   CostMonoid core                blue   #BBDEFB, border #1565C0
+//   law/guard decisions            amber  #FFE0B2, border #EF6C00
+//   concrete cost carriers         indigo #C5CAE9, border #283593
+//   accepted bounded state         green  #C8E6C9, border #2E7D32
+//   pruned / rejected state        red    #FFCDD2, border #C62828
+digraph cost_monoid_laws {
+  rankdir=TB;
+  graph [bgcolor=transparent, fontname="DejaVu Sans", fontsize=12, labelloc=t,
+         label="CostMonoid — fixed choice, lawful accumulation, bounded pruning"];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+        color="#455A64", fontcolor="#102027"];
+  edge [fontname="DejaVu Sans", fontsize=10, color="#37474F"];
+
+  input [label="configured step costs\nand inclusive budget", shape=oval,
+         fillcolor="#B2EBF2", color="#00838F"];
+  scale [label="CostScale\nchecked exact integer conversion",
+         fillcolor="#FFE0B2", color="#EF6C00"];
+  trait [label="CostMonoid\ncombine · compare · within\nselect = fixed minimum",
+         fillcolor="#BBDEFB", color="#1565C0"];
+
+  unit [label="UnitCost\nsaturating addition", fillcolor="#C5CAE9", color="#283593"];
+  weighted [label="WeightedCost\nf64 addition + rounding contract", fillcolor="#C5CAE9", color="#283593"];
+  bottleneck [label="BottleneckCost\nmaximum", fillcolor="#C5CAE9", color="#283593"];
+
+  law [label="L1–L7 hold on\nthe lawful domain?", shape=diamond, style=filled,
+       fillcolor="#FFE0B2", color="#EF6C00"];
+  keep [label="retain least-cost state\nwithin the budget", fillcolor="#C8E6C9", color="#2E7D32"];
+  prune [label="reject configuration or\nprune dominated state", fillcolor="#FFCDD2", color="#C62828"];
+
+  input -> scale [label="decimal weights"];
+  input -> trait [label="native carrier"];
+  scale -> unit [label="exact scaled usize"];
+  trait -> unit;
+  trait -> weighted;
+  trait -> bottleneck;
+  unit -> law;
+  weighted -> law;
+  bottleneck -> law;
+  law -> keep [label="yes", color="#2E7D32", fontcolor="#2E7D32"];
+  law -> prune [label="no / out of budget", color="#C62828", fontcolor="#C62828"];
+}

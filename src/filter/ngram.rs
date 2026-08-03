@@ -47,6 +47,7 @@
 //! - **Query**: O(|query| + |matches|) amortized
 //! - **Space**: O(n * m) for index storage
 
+use crate::transducer::AllowedPrefixes;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// N-gram index for approximate string matching pre-filtering.
@@ -354,6 +355,19 @@ impl NgramIndex {
             })
             .map(|(id, _)| self.terms[id].as_str())
             .collect()
+    }
+
+    /// Build a downward-closed dictionary prefix pruner from this filter's
+    /// conservative candidate set.
+    ///
+    /// The resulting visitor moves filtering inside a compatible DFS: a trie
+    /// branch is rejected as soon as it ceases to prefix any n-gram candidate.
+    pub fn prefix_pruner(&self, query: &str, max_distance: usize) -> AllowedPrefixes<u8> {
+        AllowedPrefixes::new(
+            self.find_candidates(query, max_distance)
+                .into_iter()
+                .map(str::as_bytes),
+        )
     }
 
     /// Find candidate terms with their n-gram overlap counts.

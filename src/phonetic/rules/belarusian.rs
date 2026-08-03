@@ -10,7 +10,7 @@
 //! - **Unique Ў**: Short u/w sound - ONLY Belarusian has this letter!
 //! - **І instead of И**: Like Ukrainian, uses dotted І
 //! - **No Щ**: Uses ШЧ digraph instead
-//! - **Г = h sound**: Unlike Russian [g], Belarusian Г is [ɦ] (voiced glottal fricative)
+//! - **Г = h sound**: Unlike Russian `[g]`, Belarusian Г is `[ɦ]` (voiced glottal fricative)
 //! - **Ё commonly used**: Unlike Russian where it's often omitted
 //!
 //! # Belarusian vs Russian Differences

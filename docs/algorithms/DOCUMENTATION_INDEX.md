@@ -33,7 +33,9 @@ This index shows what's documented and where to find it. The documentation is or
 | Algorithm Variant | Coverage | Location |
 |-------------------|----------|----------|
 | **Standard** | ⭐ Complete theory + examples | [Automata README](02-levenshtein-automata/README.md#1-standard-classic-levenshtein) |
-| **Transposition** | ⭐ Complete theory + examples | [Automata README](02-levenshtein-automata/README.md#2-transposition-damerau-levenshtein) |
+| **Transposition** | ⭐ Complete theory + examples | [Automata README](02-levenshtein-automata/README.md#2-transposition-optimal-string-alignment) |
+| **Unrestricted Damerau–Levenshtein** | ⭐ Complete recurrence, implementation, proofs, and evidence | [Dedicated chapter](11-true-damerau/README.md) |
+| **Affine gap** | ⭐ Exact fixed-point recurrence, implementation, proofs, properties, and security guidance | [Dedicated chapter](10-affine-gap/README.md) |
 | **Merge-and-Split** | ⭐ Complete theory + examples | [Automata README](02-levenshtein-automata/README.md#3-merge-and-split) |
 
 **Key sections**:
@@ -106,7 +108,11 @@ Comprehensive implementation for IDE-style code completion in [docs/design](../d
 | **Intersection/Traversal** | ⭐ Complete | [03-intersection-traversal/README.md](03-intersection-traversal/README.md) |
 | **SIMD Optimization** | ⭐ Complete | [05-simd-optimization/README.md](05-simd-optimization/README.md) |
 | **Distance Calculation** | 📝 Covered in Automata README | [02-levenshtein-automata/README.md](02-levenshtein-automata/README.md) |
+| **Affine Gap** | ⭐ Complete, proved and property-tested | [10-affine-gap/README.md](10-affine-gap/README.md) |
 | **Contextual Completion** | ⭐ Complete (feature flag) | [docs/design/contextual-completion-*.md](../design/README.md) |
+| **Language Products** | ⭐ Complete, proved and property-tested | [13-language-products/README.md](13-language-products/README.md) |
+| **Generalized Operation Grid** | ⭐ Complete, proved and property-tested | [14-generalized-operation-grid/README.md](14-generalized-operation-grid/README.md) |
+| **Elastic Measures** | ⭐ Generic exact walker, MSM adapter, K1–K4 proofs | [12-elastic-measures/README.md](12-elastic-measures/README.md) |
 
 ## Documentation by Component
 
@@ -194,6 +200,34 @@ Comprehensive implementation for IDE-style code completion in [docs/design](../d
 - Optimization techniques
 - 4 usage examples
 - Performance analysis
+
+### Language products
+**File**: [13-language-products/README.md](13-language-products/README.md)
+
+**Contents**:
+- Distance-to-language semantics and worked regex example
+- Literate cost-frontier and dictionary-walk pseudocode
+- Merge/canonicalization proofs and executable invariants
+- Byte, Unicode-scalar, and token-unit API examples
+- Resource ceilings, formal-tool map, and benchmark evidence
+
+### Generalized operation grid
+**File**: [14-generalized-operation-grid/README.md](14-generalized-operation-grid/README.md)
+
+**Contents**:
+- Exact sparse alignment-graph pseudocode
+- Cost-scale preparation and checked failure handling
+- Topological finality argument and fractional worked example
+- Hamming, indel, bounded-skip, and standard reference invariants
+
+### Class-A preset references
+**File**: [15-class-a-presets/README.md](15-class-a-presets/README.md)
+
+**Contents**:
+- Literate Hamming, two-row indel, banded indel, and subsequence algorithms
+- Metric, length, parity, direction, and threshold invariants
+- Operation-set validation pseudocode and resource boundary
+- Generated three-way, corpus, and formal conformance strategy
 
 ### Layer 5: SIMD Optimization
 **File**: [05-simd-optimization/README.md](05-simd-optimization/README.md)

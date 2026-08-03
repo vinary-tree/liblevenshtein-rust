@@ -1,8 +1,10 @@
 //! Time series distance metrics and indexing.
 //!
 //! This module provides implementations for time series similarity measures,
-//! particularly the Move-Split-Merge (MSM) metric, along with indexing structures
-//! for efficient similarity search.
+//! particularly Move-Split-Merge (MSM), Edit distance with Real Penalty (ERP),
+//! Time Warp Edit Distance (TWED), discrete Fréchet, and explicitly banded
+//! Dynamic Time Warping (DTW), along with indexing structures for efficient
+//! similarity search.
 //!
 //! # Move-Split-Merge (MSM) Metric
 //!
@@ -47,6 +49,93 @@
 //! // With threshold (returns None if distance exceeds threshold)
 //! let distance = msm_distance_wavefront(&x, &y, &config, 2.0);
 //! assert!(distance.is_some());
+//! ```
+//!
+//! # Edit distance with Real Penalty
+//!
+//! ERP uses absolute match costs and charges unmatched samples relative to a
+//! fixed real gap value. [`crate::time_series::ErpTransducer`] supplies exact range and nearest
+//! neighbour search over the same generic quantized-trie walker as MSM.
+//!
+//! ```rust
+//! use liblevenshtein::time_series::{
+//!     ErpConfig, ErpTransducer, QuantizationConfig,
+//! };
+//!
+//! let references = vec![vec![1.0, 2.0], vec![1.0, 0.0, 2.0]];
+//! let index = ErpTransducer::from_series(
+//!     QuantizationConfig::for_u8(-10.0, 10.0),
+//!     ErpConfig::new(0.0),
+//!     &references,
+//! );
+//! assert_eq!(index.search_range(&[1.0, 2.0], 0.0).len(), 2);
+//! ```
+//!
+//! # Time Warp Edit Distance
+//!
+//! TWED edits adjacent sample segments and penalizes temporal displacement.
+//! [`crate::time_series::TwedConfig`] exposes the complete non-negative
+//! parameter family, including the non-metric `nu = 0` regime. Validate
+//! `nu > 0` with [`crate::time_series::MetricTwedConfig`] when a compile-time
+//! metric witness is required.
+//!
+//! ```rust
+//! use liblevenshtein::time_series::{
+//!     MetricTwedConfig, MetricTwedTransducer, QuantizationConfig,
+//! };
+//!
+//! let references = vec![vec![0.0, 1.0, 2.0], vec![0.0, 2.0, 3.0]];
+//! let kernel = MetricTwedConfig::try_new(0.5, 1.0).unwrap();
+//! let index = MetricTwedTransducer::from_series(
+//!     QuantizationConfig::for_u8(0.0, 3.0),
+//!     kernel,
+//!     &references,
+//! );
+//! assert_eq!(index.search_range(&[0.0, 1.0, 2.0], 0.0), vec![(0, 0.0)]);
+//! ```
+//!
+//! # Banded Dynamic Time Warping
+//!
+//! [`crate::time_series::DtwTransducer`] computes exact Dynamic Time Warping
+//! (DTW) under a required symmetric Sakoe–Chiba band. Internal DP and
+//! LB_Keogh costs are squared; public thresholds and results are square roots.
+//! DTW is explicitly non-metric and must not be used in structures whose
+//! pruning proof assumes the triangle inequality.
+//!
+//! ```rust
+//! use liblevenshtein::time_series::{
+//!     DtwConfig, DtwTransducer, QuantizationConfig,
+//! };
+//!
+//! let references = vec![vec![0.0, 1.0, 2.0], vec![0.0, 1.0, 1.0, 2.0]];
+//! let index = DtwTransducer::from_series(
+//!     QuantizationConfig::for_u8(0.0, 10.0),
+//!     DtwConfig::new(1),
+//!     &references,
+//! );
+//! let zero_distance = index.search_range(&[0.0, 1.0, 2.0], 0.0);
+//! assert_eq!(zero_distance.len(), 2);
+//! assert!(zero_distance.iter().all(|(_, distance)| *distance == 0.0));
+//! ```
+//!
+//! # Discrete Fréchet distance
+//!
+//! Discrete Fréchet minimizes the largest link in an order-preserving
+//! coupling. [`crate::time_series::FrechetTransducer`] exercises the generic
+//! walker with bottleneck (`max`) rather than additive path accumulation.
+//!
+//! ```rust
+//! use liblevenshtein::time_series::{
+//!     FrechetConfig, FrechetTransducer, QuantizationConfig,
+//! };
+//!
+//! let references = vec![vec![1.0, 2.0], vec![1.0, 1.0, 2.0]];
+//! let index = FrechetTransducer::from_series(
+//!     QuantizationConfig::for_u8(-10.0, 10.0),
+//!     FrechetConfig::new(),
+//!     &references,
+//! );
+//! assert_eq!(index.search_range(&[1.0, 2.0], 0.0).len(), 2);
 //! ```
 //!
 //! # Time Series Indexing
@@ -130,11 +219,14 @@
 //!   IEEE transactions on Knowledge and Data Engineering 25.6 (2012): 1425-1438.
 
 mod approx_msm;
+pub mod elastic;
 mod encoding;
 mod hybrid_search;
+pub mod kernels;
 mod lower_bounds;
 mod msm;
 pub mod msm_interval;
+mod msm_kernel;
 mod msm_position;
 mod msm_state;
 mod msm_transducer;
@@ -144,6 +236,7 @@ mod trie_index;
 // MSM metric exports
 pub use approx_msm::{paa_features, ApproxMsmConfig, ApproxMsmIndex};
 pub use msm::{MsmConfig, MsmResult};
+pub use msm_kernel::MsmKernel;
 pub use msm_position::{msm_subsumes, MsmPosition};
 pub use msm_state::MsmState;
 pub use msm_transition::{
@@ -157,6 +250,14 @@ pub use encoding::{delta_encoding, float_encoding, sax_encoding};
 
 // Indexing exports
 pub use hybrid_search::{HybridSearchIndex, HybridSearchIndexBuilder, HybridSearchStats};
+pub use kernels::{
+    erp_gap_mass_lower_bound, frechet_candidate_lower_bound, frechet_endpoint_lower_bound,
+    frechet_one_sided_hausdorff_lower_bound, keogh_envelopes, lb_keogh, lb_keogh_squared,
+    twed_length_lower_bound, DtwConfig, DtwKernel, DtwTransducer, ErpConfig, ErpKernel,
+    ErpTransducer, FrechetConfig, FrechetKernel, FrechetTransducer, KeoghPlan, MetricTwedConfig,
+    MetricTwedConfigError, MetricTwedKernel, MetricTwedTransducer, TwedConfig, TwedKernel,
+    TwedTransducer,
+};
 pub use msm_transducer::MsmTransducer;
 pub use trie_index::{TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats};
 

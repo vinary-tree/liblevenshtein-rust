@@ -1,15 +1,15 @@
-// Comprehensive benchmarks for generalized automaton core operations
-//
-// Tests hypotheses H1, H2, and H3:
-// - H1: Successor generation dominates runtime (60-80%)
-// - H2: Repeated char().collect() causes 10-15% overhead
-// - H3: Subsumption creates O(n²) bottleneck for large states
-//
-// Hardware: Intel Xeon E5-2699 v3 @ 2.30GHz
-// Run with: taskset -c 0 cargo bench --bench generalized_automaton_benchmarks
+//! Generalized-automaton acceptance benchmarks.
+//!
+//! The groups cover short and long inputs, budget growth, accepting and
+//! rejecting paths, realistic words, and the exact fractional-cost boundary.
+//! Record hardware, governor, affinity, compiler flags, and git state in the
+//! scientific ledger rather than embedding one machine in this source file.
+//!
+//! Run with: `taskset -c 0 cargo bench --bench generalized_automaton_benchmarks`.
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
+use liblevenshtein::transducer::{OperationSetBuilder, OperationType};
 use std::hint::black_box;
 
 /// Benchmark state transition performance with varying input lengths
@@ -233,6 +233,25 @@ fn bench_realistic_words(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark the correctness boundary where six operations of cost `0.15`
+/// fit integer budget one and seven do not.
+fn bench_fractional_cost_boundary(c: &mut Criterion) {
+    let mut group = c.benchmark_group("fractional_cost/boundary");
+    let operations = OperationSetBuilder::new()
+        .with_match()
+        .with_operation(OperationType::new(1, 1, 0.15, "cheap_substitution"))
+        .build();
+    let automaton = GeneralizedAutomaton::with_operations(1, operations);
+
+    group.bench_function("six_accept", |b| {
+        b.iter(|| black_box(automaton.accepts(black_box("aaaaaa"), black_box("bbbbbb"))));
+    });
+    group.bench_function("seven_reject", |b| {
+        b.iter(|| black_box(automaton.accepts(black_box("aaaaaaa"), black_box("bbbbbbb"))));
+    });
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_state_transition_by_input_length,
@@ -242,6 +261,7 @@ criterion_group!(
     bench_operation_types,
     bench_state_size_impact,
     bench_realistic_words,
+    bench_fractional_cost_boundary,
 );
 
 criterion_main!(benches);

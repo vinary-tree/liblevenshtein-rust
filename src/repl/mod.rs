@@ -7,11 +7,12 @@
 //!
 //! ## Submodules
 //!
-//! - [`command`] — parses and executes a line of REPL input ([`Command`], [`CommandResult`]).
-//! - [`state`] — the persistent session state (loaded dictionary, backend, format).
-//! - [`state_machine`] — drives the prompt's input lifecycle.
-//! - [`helper`] — `rustyline` integration (completion, history, hints).
-//! - [`highlighter`] — syntax highlighting of the input line.
+//! - [`command`](crate::repl::command) — parses and executes a line of REPL input
+//!   ([`Command`](crate::repl::Command), [`CommandResult`](crate::repl::CommandResult)).
+//! - [`state`](crate::repl::state) — the persistent session state (loaded dictionary, backend, format).
+//! - [`state_machine`](crate::repl::state_machine) — drives the prompt's input lifecycle.
+//! - [`helper`](crate::repl::helper) — `rustyline` integration (completion, history, hints).
+//! - [`highlighter`](crate::repl::highlighter) — syntax highlighting of the input line.
 
 pub mod command;
 pub mod helper;

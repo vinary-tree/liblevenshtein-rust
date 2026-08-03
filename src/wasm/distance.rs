@@ -3,8 +3,8 @@
 use wasm_bindgen::prelude::*;
 
 use crate::distance::{
-    standard_distance, standard_distance_bounded, transposition_distance,
-    transposition_distance_bounded,
+    damerau_levenshtein_distance, damerau_levenshtein_distance_bounded, standard_distance,
+    standard_distance_bounded, transposition_distance, transposition_distance_bounded,
 };
 
 /// Calculate the Levenshtein distance between two strings.
@@ -53,10 +53,11 @@ pub fn levenshtein_threshold(source: &str, target: &str, threshold: usize) -> Op
     standard_distance_bounded(source, target, threshold)
 }
 
-/// Calculate the Damerau-Levenshtein distance between two strings.
+/// Calculate optimal string alignment distance between two strings.
 ///
-/// The Damerau-Levenshtein distance extends Levenshtein by also allowing
-/// transpositions (swapping two adjacent characters) as a single edit.
+/// This legacy JavaScript name extends Levenshtein with an adjacent swap, but
+/// its recurrence is restricted Damerau (OSA), not unrestricted
+/// Damerau–Levenshtein. OSA is not a metric.
 ///
 /// # Arguments
 ///
@@ -78,7 +79,7 @@ pub fn damerau_levenshtein(source: &str, target: &str) -> usize {
     transposition_distance(source, target)
 }
 
-/// Calculate the Damerau-Levenshtein distance with early termination.
+/// Calculate optimal string alignment distance with early termination.
 ///
 /// # Arguments
 ///
@@ -98,6 +99,26 @@ pub fn damerau_levenshtein_threshold(
     transposition_distance_bounded(source, target, threshold)
 }
 
+/// Calculate unrestricted Damerau–Levenshtein distance.
+///
+/// This true edit-script distance differs from the legacy
+/// `damerau_levenshtein` export, which is retained with OSA semantics for
+/// compatibility.
+#[wasm_bindgen]
+pub fn true_damerau_levenshtein(source: &str, target: &str) -> usize {
+    damerau_levenshtein_distance(source, target)
+}
+
+/// Calculate unrestricted Damerau–Levenshtein distance within a threshold.
+#[wasm_bindgen]
+pub fn true_damerau_levenshtein_threshold(
+    source: &str,
+    target: &str,
+    threshold: usize,
+) -> Option<usize> {
+    damerau_levenshtein_distance_bounded(source, target, threshold)
+}
+
 /// Calculate edit distances for multiple pairs in batch.
 ///
 /// More efficient than calling `levenshtein` multiple times when you have
@@ -113,7 +134,7 @@ pub fn damerau_levenshtein_threshold(
 /// Array of distances corresponding to each pair.
 #[wasm_bindgen]
 pub fn levenshtein_batch(pairs: Vec<JsValue>) -> Result<Vec<usize>, JsValue> {
-    if pairs.len() % 2 != 0 {
+    if !pairs.len().is_multiple_of(2) {
         return Err(JsValue::from_str(
             "pairs array must have even length (source, target pairs)",
         ));
@@ -148,5 +169,12 @@ mod tests {
     fn damerau_levenshtein_threshold_returns_distance_within_bound() {
         assert_eq!(damerau_levenshtein_threshold("ab", "ba", 1), Some(1));
         assert_eq!(damerau_levenshtein_threshold("kitten", "sitting", 2), None);
+    }
+
+    #[test]
+    fn true_damerau_export_separates_from_legacy_osa_export() {
+        assert_eq!(damerau_levenshtein("CA", "ABC"), 3);
+        assert_eq!(true_damerau_levenshtein("CA", "ABC"), 2);
+        assert_eq!(true_damerau_levenshtein_threshold("CA", "ABC", 2), Some(2));
     }
 }

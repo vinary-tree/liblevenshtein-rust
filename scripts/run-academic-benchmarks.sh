@@ -23,9 +23,12 @@ DRY_RUN="${DRY_RUN:-0}"
 ALLOW_UNCAPPED="${ALLOW_UNCAPPED:-0}"
 ALLOW_HIGH_LOAD="${ALLOW_HIGH_LOAD:-0}"
 LOAD_LIMIT_FACTOR="${LOAD_LIMIT_FACTOR:-0.75}"
+LOADAVG_PATH="${LOADAVG_PATH:-/proc/loadavg}"
 
 MSM_MAX_CELLS="${MSM_MAX_CELLS:-1000000000}"
 MSM_MAX_DATASETS="${MSM_MAX_DATASETS:-1000}"
+ELASTIC_UCR_MAX_CELLS="${ELASTIC_UCR_MAX_CELLS:-$MSM_MAX_CELLS}"
+ELASTIC_UCR_MAX_DATASETS="${ELASTIC_UCR_MAX_DATASETS:-$MSM_MAX_DATASETS}"
 PHONETIC_CASES="${PHONETIC_CASES:-2048}"
 PHONETIC_RECALL_K="${PHONETIC_RECALL_K:-5}"
 PHONETIC_MAX_DISTANCE="${PHONETIC_MAX_DISTANCE:-2}"
@@ -45,7 +48,10 @@ usage() {
 Usage: scripts/run-academic-benchmarks.sh <command>
 
 Commands:
-  all                 Download/prepare corpora and run MSM + phonetic benchmarks.
+  all                 Run all five elastic UCR measures, then phonetic benchmarks.
+  elastic-ucr --measure NAME
+                      Run one of: msm, erp, twed, frechet, dtw.
+  elastic-ucr-all     Run all five measures over the identical selected UCR slice.
   msm-ucr             Run the UCR/UEA 2018 univariate archive exact 1-NN MSM benchmark.
   phonetic-cmudict    Run CMUdict homophone recall profiles and diagnostics.
   clean-raw           Remove downloaded/extracted corpora, preserving result artifacts.
@@ -58,6 +64,9 @@ Important environment variables:
   CARGO_BUILD_JOBS        Cargo parallelism for benchmark builds. Default: 1
   MSM_MAX_CELLS           Dataset selector for UCR archive. Default: 1000000000
   MSM_MAX_DATASETS        Dataset cap for UCR archive. Default: 1000
+  ELASTIC_UCR_MAX_CELLS   Shared five-measure selector. Defaults to MSM_MAX_CELLS.
+  ELASTIC_UCR_MAX_DATASETS
+                           Shared five-measure cap. Defaults to MSM_MAX_DATASETS.
   PHONETIC_CASES          CMUdict homophone sample/corpus limit. Default: 2048
   PHONETIC_RECALL_K       Homophone recall cutoff. Default: 5
   PHONETIC_MAX_DISTANCE   Phonetic query edit-distance limit. Default: 2
@@ -121,6 +130,8 @@ write_metadata() {
         printf 'cargo_build_jobs=%s\n' "$CARGO_BUILD_JOBS"
         printf 'msm_max_cells=%s\n' "$MSM_MAX_CELLS"
         printf 'msm_max_datasets=%s\n' "$MSM_MAX_DATASETS"
+        printf 'elastic_ucr_max_cells=%s\n' "$ELASTIC_UCR_MAX_CELLS"
+        printf 'elastic_ucr_max_datasets=%s\n' "$ELASTIC_UCR_MAX_DATASETS"
         printf 'phonetic_cases=%s\n' "$PHONETIC_CASES"
         printf 'phonetic_recall_k=%s\n' "$PHONETIC_RECALL_K"
         printf 'phonetic_max_distance=%s\n' "$PHONETIC_MAX_DISTANCE"
@@ -241,11 +252,11 @@ load_guard() {
     if [[ "$DRY_RUN" == "1" || "$ALLOW_HIGH_LOAD" == "1" ]]; then
         return 0
     fi
-    local cores load
+    local cores current_load
     cores="$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')"
-    load="$(awk '{print $1}' /proc/loadavg 2>/dev/null || printf '0')"
-    if awk -v load="$load" -v cores="$cores" -v factor="$LOAD_LIMIT_FACTOR" 'BEGIN { exit !(load > cores * factor) }'; then
-        printf 'refusing wall-time-producing benchmark under high load: load=%s cores=%s factor=%s\n' "$load" "$cores" "$LOAD_LIMIT_FACTOR" >&2
+    current_load="$(awk '{print $1}' "$LOADAVG_PATH" 2>/dev/null || printf '0')"
+    if awk -v current_load="$current_load" -v cores="$cores" -v factor="$LOAD_LIMIT_FACTOR" 'BEGIN { exit !(current_load > cores * factor) }'; then
+        printf 'refusing wall-time-producing benchmark under high load: load=%s cores=%s factor=%s\n' "$current_load" "$cores" "$LOAD_LIMIT_FACTOR" >&2
         printf 'set ALLOW_HIGH_LOAD=1 only when you intentionally want to bypass this guard\n' >&2
         exit 1
     fi
@@ -310,6 +321,53 @@ summarize_msm() {
     log "wrote MSM summary: $output"
 }
 
+summarize_elastic_ucr() {
+    local input="$1"
+    local measure="$2"
+    local output="$RESULTS_DIR/elastic_ucr_${measure}_summary.tsv"
+    awk -F, '
+        BEGIN {
+            print "measure\tdatasets\ttotal\tmajority_correct\tmeasure_correct\tmajority_accuracy\tmeasure_accuracy\tflat_candidates\tflat_bound_pruned\tflat_exact_evaluations\tflat_cutoff_abandoned\ttrie_visited_nodes\ttrie_visited_edges\ttrie_prefix_pruned\ttrie_columns_built\ttrie_column_pruned\ttrie_queued_subtrees_pruned\ttrie_candidates\ttrie_candidate_bound_pruned\ttrie_exact_evaluations\ttrie_cutoff_abandoned\telapsed_ms\tpeak_resident_kib\tnative_distance_checksum"
+        }
+        $1 == "summary" {
+            measure = $2;
+            datasets++;
+            majority += $11;
+            correct += $12;
+            total += $13;
+            flat_candidates += $15;
+            flat_pruned += $16;
+            flat_exact += $17;
+            flat_abandoned += $18;
+            trie_nodes += $19;
+            trie_edges += $20;
+            trie_prefix += $21;
+            trie_columns += $22;
+            trie_column_pruned += $23;
+            trie_queued += $24;
+            trie_candidates += $25;
+            trie_bound += $26;
+            trie_exact += $27;
+            trie_abandoned += $28;
+            elapsed += $29;
+            if ($30 > peak) peak = $30;
+            checksum += $31;
+        }
+        END {
+            if (total > 0) {
+                printf "%s\t%d\t%d\t%d\t%d\t%.12f\t%.12f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.6f\t%d\t%.12f\n",
+                    measure, datasets, total, majority, correct,
+                    majority / total, correct / total,
+                    flat_candidates, flat_pruned, flat_exact, flat_abandoned,
+                    trie_nodes, trie_edges, trie_prefix, trie_columns,
+                    trie_column_pruned, trie_queued, trie_candidates,
+                    trie_bound, trie_exact, trie_abandoned, elapsed, peak, checksum;
+            }
+        }
+    ' "$input" >"$output"
+    log "wrote elastic UCR summary: $output"
+}
+
 summarize_phonetic() {
     local label="$1"
     local input="$2"
@@ -358,6 +416,65 @@ run_msm_ucr() {
     if [[ "$DRY_RUN" != "1" ]]; then
         summarize_msm "$results_csv"
     fi
+}
+
+run_elastic_ucr_measure() {
+    local measure="$1"
+    case "$measure" in
+        msm|erp|twed|frechet|dtw) ;;
+        *)
+            printf 'unsupported elastic measure: %s\n' "$measure" >&2
+            exit 2
+            ;;
+    esac
+
+    prepare_ucr_archive
+    write_metadata
+    local results_csv="$RESULTS_DIR/elastic_ucr_${measure}_${ELASTIC_UCR_MAX_CELLS}_${ELASTIC_UCR_MAX_DATASETS}.csv"
+    run_to_file "$results_csv" \
+        cargo run --release --example msm_experiment -- \
+        elastic-ucr \
+        --measure "$measure" \
+        --archive-root "$UCR_ARCHIVE_ROOT" \
+        --max-cells "$ELASTIC_UCR_MAX_CELLS" \
+        --max-datasets "$ELASTIC_UCR_MAX_DATASETS"
+
+    if [[ "$DRY_RUN" != "1" ]]; then
+        summarize_elastic_ucr "$results_csv" "$measure"
+    fi
+}
+
+run_all_elastic_ucr() {
+    local measure
+    for measure in msm erp twed frechet dtw; do
+        run_elastic_ucr_measure "$measure"
+    done
+}
+
+run_elastic_ucr_command() {
+    local measure=""
+    shift
+    while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+            --measure)
+                if [[ "$#" -lt 2 ]]; then
+                    printf 'elastic-ucr requires a value after --measure\n' >&2
+                    exit 2
+                fi
+                measure="$2"
+                shift 2
+                ;;
+            *)
+                printf 'unknown elastic-ucr option: %s\n' "$1" >&2
+                exit 2
+                ;;
+        esac
+    done
+    if [[ -z "$measure" ]]; then
+        printf 'elastic-ucr requires --measure {msm,erp,twed,frechet,dtw}\n' >&2
+        exit 2
+    fi
+    run_elastic_ucr_measure "$measure"
 }
 
 run_phonetic_profile() {
@@ -439,8 +556,14 @@ clean_raw() {
 main() {
     case "${1:-help}" in
         all)
-            run_msm_ucr
+            run_all_elastic_ucr
             run_phonetic_cmudict
+            ;;
+        elastic-ucr)
+            run_elastic_ucr_command "$@"
+            ;;
+        elastic-ucr-all)
+            run_all_elastic_ucr
             ;;
         msm-ucr)
             run_msm_ucr
@@ -461,4 +584,6 @@ main() {
     esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi

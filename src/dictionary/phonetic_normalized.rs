@@ -69,10 +69,11 @@
 use crate::cache::multimap::FuzzyMultiMap;
 use crate::distance::standard_distance;
 use crate::phonetic::expansion::expand_phonetic_alternatives_char;
-use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar, ProductStateChar};
+use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar};
 use crate::phonetic::regex::{parse as parse_regex, ParseError as RegexParseError};
 use crate::phonetic::types::{ContextChar, PhoneChar, RewriteRuleChar};
 use crate::phonetic::{apply_rules_seq_char, zompist_rules_char};
+use crate::transducer::language::{LanguageProduct, LanguageQueryIterator};
 use crate::transducer::Algorithm;
 use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
 use libdictenstein::dynamic_dawg::char_zipper::DynamicDawgCharZipper;
@@ -1506,61 +1507,27 @@ where
         product: &ProductAutomatonChar,
     ) -> Vec<PhoneticNormalizedCandidate> {
         let mut results = Vec::with_capacity(self.len().unwrap_or(0));
-        let mut normalized_form = String::new();
-        let frontier = product.initial_frontier();
-
-        self.collect_product_trie_matches(
-            product,
-            self.normalized_multimap.dictionary().root(),
-            frontier,
-            &mut normalized_form,
-            &mut results,
+        let language_product = LanguageProduct::new(product.nfa().clone(), product.max_distance());
+        let query = LanguageQueryIterator::from_dictionary(
+            self.normalized_multimap.dictionary(),
+            language_product,
         );
 
-        results.sort_by_key(|c| c.distance);
-        results
-    }
-
-    fn collect_product_trie_matches<N>(
-        &self,
-        product: &ProductAutomatonChar,
-        node: N,
-        frontier: Vec<ProductStateChar>,
-        normalized_form: &mut String,
-        results: &mut Vec<PhoneticNormalizedCandidate>,
-    ) where
-        N: DictionaryNode<Unit = char> + MappedDictionaryNode<Value = HashSet<String>>,
-    {
-        if let Some(distance) = product.min_accepting_distance(&frontier) {
-            if let Some(originals) = node.value() {
-                if !originals.is_empty() {
-                    for term in originals.iter().filter(|term| !term.is_empty()) {
-                        results.push(PhoneticNormalizedCandidate {
-                            term: term.clone(),
-                            distance: distance as usize,
-                            normalized_form: normalized_form.clone(),
-                        });
-                    }
+        for matched in query {
+            let normalized_form: String = matched.units.into_iter().collect();
+            if let Some(originals) = matched.node.value() {
+                for term in originals.iter().filter(|term| !term.is_empty()) {
+                    results.push(PhoneticNormalizedCandidate {
+                        term: term.clone(),
+                        distance: usize::from(matched.distance),
+                        normalized_form: normalized_form.clone(),
+                    });
                 }
             }
         }
 
-        for (label, child) in node.edges() {
-            let child_frontier = product.transition_frontier(&frontier, label);
-            if child_frontier.is_empty() {
-                continue;
-            }
-
-            normalized_form.push(label);
-            self.collect_product_trie_matches(
-                product,
-                child,
-                child_frontier,
-                normalized_form,
-                results,
-            );
-            normalized_form.pop();
-        }
+        results.sort_by_key(|c| c.distance);
+        results
     }
 
     /// Query with automatic phonetic pattern expansion.

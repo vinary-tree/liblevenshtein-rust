@@ -86,7 +86,7 @@ pub struct OperationCostsF64 {
     /// Cost for deleting a character (character in dictionary not in query).
     pub deletion: f64,
 
-    /// Cost for transposing adjacent characters (Damerau-Levenshtein).
+    /// Cost for transposing adjacent characters in optimal string alignment.
     pub transposition: f64,
 
     /// Cost for splitting one dictionary character into two query characters.

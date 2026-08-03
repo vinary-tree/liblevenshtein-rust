@@ -14,7 +14,7 @@
 //!
 //! # â vs î
 //!
-//! Romanian has two spellings for the same sound [ɨ]:
+//! Romanian has two spellings for the same sound `[ɨ]`:
 //! - **â** is used in the middle of words
 //! - **î** is used at the beginning and end of words
 //!   Both normalize to 'i' for phonetic matching.

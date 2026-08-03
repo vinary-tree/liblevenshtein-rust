@@ -316,12 +316,8 @@ pub struct Cli {
 /// Serialization format for dictionary storage
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, serde::Serialize, serde::Deserialize)]
 pub enum SerializationFormat {
-    /// Plain text (one term per line)
-    Text,
     /// Bincode binary format
     Bincode,
-    /// JSON format
-    Json,
     /// Protocol Buffers format
     #[cfg(feature = "protobuf")]
     Protobuf,
@@ -329,34 +325,23 @@ pub enum SerializationFormat {
     #[cfg(feature = "compression")]
     #[value(name = "bincode-gz")]
     BincodeGzip,
-    /// Gzip-compressed JSON format
-    #[cfg(feature = "compression")]
-    #[value(name = "json-gz")]
-    JsonGzip,
     /// Gzip-compressed Protocol Buffers format
     #[cfg(all(feature = "protobuf", feature = "compression"))]
     #[value(name = "protobuf-gz")]
     ProtobufGzip,
-    /// PathMap's native .paths compressed format (PathMap backend only)
-    #[value(name = "paths")]
-    PathsNative,
 }
 
 impl std::fmt::Display for SerializationFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Text => write!(f, "text"),
             Self::Bincode => write!(f, "bincode"),
-            Self::Json => write!(f, "json"),
             #[cfg(feature = "protobuf")]
             Self::Protobuf => write!(f, "protobuf"),
             #[cfg(feature = "compression")]
             Self::BincodeGzip => write!(f, "bincode-gz"),
             #[cfg(feature = "compression")]
-            Self::JsonGzip => write!(f, "json-gz"),
             #[cfg(all(feature = "protobuf", feature = "compression"))]
             Self::ProtobufGzip => write!(f, "protobuf-gz"),
-            Self::PathsNative => write!(f, "paths"),
         }
     }
 }

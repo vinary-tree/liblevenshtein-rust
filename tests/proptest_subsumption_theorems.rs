@@ -62,6 +62,30 @@ fn valid_i_position() -> impl Strategy<Value = (GeneralizedPosition, u8)> {
     })
 }
 
+fn valid_cross_variant_positions(
+) -> impl Strategy<Value = (GeneralizedPosition, GeneralizedPosition, u8)> {
+    (1_u8..10).prop_flat_map(|max_distance| {
+        (0_u8..=max_distance).prop_flat_map(move |i_errors| {
+            let i_radius = i32::from(i_errors);
+            (-i_radius..=i_radius).prop_flat_map(move |i_offset| {
+                let n = i32::from(max_distance);
+                (-2 * n..=0).prop_flat_map(move |m_offset| {
+                    let minimum_m_errors = (-m_offset - n).max(0) as u8;
+                    (minimum_m_errors..=max_distance).prop_map(move |m_errors| {
+                        (
+                            GeneralizedPosition::new_i(i_offset, i_errors, max_distance)
+                                .expect("constructive I-position strategy"),
+                            GeneralizedPosition::new_m(m_offset, m_errors, max_distance)
+                                .expect("constructive M-position strategy"),
+                            max_distance,
+                        )
+                    })
+                })
+            })
+        })
+    })
+}
+
 // ============================================================================
 // THEOREM: subsumes_transitive (HIGH PRIORITY)
 // ============================================================================
@@ -119,12 +143,12 @@ mod subsumption_transitivity {
 
             for i in 1..chain_length {
                 let prev = &chain[i - 1];
-                let new_errors = (prev.errors() + 1).min(max_distance);
+                let new_errors = (prev.errors() + 1).min(usize::from(max_distance));
 
                 // Create position that prev should subsume
                 if let Ok(next_pos) = GeneralizedPosition::new_i(
                     prev.offset(),
-                    new_errors,
+                    u8::try_from(new_errors).expect("unit-cost fixture remains within u8"),
                     max_distance
                 ) {
                     chain.push(next_pos);
@@ -224,28 +248,12 @@ mod subsumption_variant_restriction {
     proptest! {
         #[test]
         fn subsumes_requires_same_variant(
-            offset1 in -5i32..5,
-            errors1 in 0u8..5,
-            offset2 in -5i32..0,  // M-type range
-            errors2 in 0u8..5,
-            max_distance in 1u8..10
+            (p_i, p_m, max_distance) in valid_cross_variant_positions()
         ) {
-            prop_assume!(errors1 <= max_distance);
-            prop_assume!(errors2 <= max_distance);
-            prop_assume!(offset1.abs() <= errors1 as i32);
-            prop_assume!(errors2 as i32 >= -(offset2) - max_distance as i32);
-
-            // Create I-type and M-type positions
-            if let (Ok(p_i), Ok(p_m)) = (
-                GeneralizedPosition::new_i(offset1, errors1, max_distance),
-                GeneralizedPosition::new_m(offset2, errors2, max_distance)
-            ) {
-                // Different variants cannot subsume each other
-                prop_assert!(!subsumes(&p_i, &p_m, max_distance),
-                    "I-type {:?} should not subsume M-type {:?}", p_i, p_m);
-                prop_assert!(!subsumes(&p_m, &p_i, max_distance),
-                    "M-type {:?} should not subsume I-type {:?}", p_m, p_i);
-            }
+            prop_assert!(!subsumes(&p_i, &p_m, max_distance),
+                "I-type {:?} should not subsume M-type {:?}", p_i, p_m);
+            prop_assert!(!subsumes(&p_m, &p_i, max_distance),
+                "M-type {:?} should not subsume I-type {:?}", p_m, p_i);
         }
     }
 }

@@ -1,0 +1,78 @@
+@startuml downstream-query-surfaces
+' End-to-end component/data-flow for the Phase-9 downstream surfaces.
+' Colours follow docs/diagrams/_legend: inputs cyan, source filters green,
+' traversals orange/blue, contextual rules purple, serialization olive.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Downstream query surfaces — information stays at its sound traversal boundary
+
+rectangle "query / native units" as Q #B2EBF2
+rectangle "NgramIndex or\nHybridMatcher" as F #C8E6C9
+rectangle "AllowedPrefixes\nreachability + exact terminals" as AP #E8F5E9
+rectangle "balanced structural DFS\nSubsequenceQueryIterator" as DFS #FFE0B2
+rectangle "balanced fuzzy DFS\nPrefixQueryIterator" as FDFS #FFCC80
+rectangle "breadth-first fuzzy walk\nQueryIterator" as BFS #BBDEFB
+rectangle "completed-candidate filter\nMatchMode" as MM #D7CCC8
+rectangle "mapped dictionary\nfinal-node values" as MV #C8E6C9
+rectangle "distance-layered\nRankedValueQueryIterator" as R #BBDEFB
+rectangle "Suggestion<V>\ndistance then confidence" as S #E3F2FD
+rectangle "ContextualCost\navailable context only" as C #D1C4E9
+rectangle "contextual DP columns\nfail-closed dynamic costs" as CDP #EDE7F6
+rectangle "OperationSet binary envelope\nbincode payload + strict validation" as O #F0F4C3
+rectangle "bounded bracket DFA\npreflight geometric states" as B #FFCCBC
+rectangle "kind-erased Dyck bound\nadmissible heuristic" as H #FBE9E7
+rectangle "DyckCorrector\nexact interval dynamic program" as D #FFCCBC
+rectangle "lling-llang multi-kind PDA\ndistinct stack marker per kind" as P #FFAB91
+
+Q --> F : filter request
+F --> AP : complete candidate set
+AP --> DFS : enter / leave / permits_accept
+Q --> DFS : subsequence
+DFS -[#2E7D32]-> S : exact permitted matches
+
+AP --> FDFS : enter / leave / permits_accept
+Q --> FDFS : fuzzy query + budget
+FDFS -[#EF6C00]-> S : DFS-order fuzzy matches
+
+Q --> BFS : fuzzy query + budget
+BFS --> MM : ordered candidates
+MM -[#6D4C41]-> S : Within / Exact / Range
+
+Q --> R : fuzzy query + budget
+MV --> R : value at final node
+R -[#1565C0]-> S : one exact distance layer
+
+Q --> CDP : fixed query context
+C --> CDP : insertion / deletion / substitution
+CDP -[#4527A0]-> S : exact contextual cost
+
+O -[#827717]-> C : validated context-free operations
+
+Q --> B : kinds + depth
+B --> H : stack-language boundary
+Q --> H : bracket tokens
+H -[#D84315]-> S : lower-bound score only
+Q --> D : bracket tokens + kinds
+D --> P : replayable minimum witness
+D -[#D84315]-> S : exact correction cost
+
+note bottom of FDFS #FFF3E0
+  DFS keeps one visitor state on the active path.
+  BFS would require a snapshot per queued path or prefix replay;
+  one shared mutable visitor would conflate siblings.
+end note
+
+note bottom of H #FFF3E0
+  Kind erasure is useful for pruning only.
+  Exact multi-kind correction uses the interval recurrence.
+end note
+@enduml

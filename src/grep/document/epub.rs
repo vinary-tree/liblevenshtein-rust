@@ -13,7 +13,7 @@
 //! 2. The package document's `<manifest>` maps item ids to hrefs, and its `<spine>`
 //!    lists `<itemref idref="...">` in reading order.
 //! 3. Each spine entry is read from the archive and stripped to plain text by
-//!    [`strip_html_tags`], which along with [`decode_html_entity`] is unchanged --
+//!    `strip_html_tags`, which along with `decode_html_entity` is unchanged --
 //!    those were always this crate's own code, not the dependency's.
 //!
 //! Hrefs in the manifest are relative to the package document, so they are resolved
@@ -442,7 +442,7 @@ mod tests {
             let opts: zip::write::FileOptions<'_, ()> = zip::write::FileOptions::default()
                 .compression_method(zip::CompressionMethod::Stored);
 
-            let mut add = |zip: &mut zip::ZipWriter<_>, name: &str, body: &str| {
+            let add = |zip: &mut zip::ZipWriter<_>, name: &str, body: &str| {
                 zip.start_file(name, opts).expect("start_file");
                 zip.write_all(body.as_bytes()).expect("write");
             };

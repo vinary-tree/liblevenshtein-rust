@@ -10,7 +10,7 @@
 //! # Design Philosophy
 //!
 //! `GeneralizedAutomaton` complements `UniversalAutomaton` by trading compile-time
-//! specialization for runtime flexibility:
+//! specialization for an exact runtime operation grid:
 //!
 //! - **UniversalAutomaton**: Compile-time operations (Standard, Transposition, MergeAndSplit)
 //!   - Zero runtime overhead
@@ -18,7 +18,8 @@
 //!   - Perfect for standard Levenshtein variants
 //!
 //! - **GeneralizedAutomaton**: Runtime operations via `OperationSet`
-//!   - Small runtime overhead (+10-20%)
+//!   - Exact decimal weights through [`crate::cost::CostScale`]
+//!   - Sparse, resource-bounded alignment graph
 //!   - Custom operation sets
 //!   - Perfect for phonetic corrections and custom metrics
 //!
@@ -40,14 +41,19 @@
 //! # Implementation Status
 //!
 //! **Current:**
-//! - Generalized positions and states with same-variant subsumption.
-//! - Runtime `OperationSet` support for standard, transposition, merge, split,
-//!   and restricted phonetic operations.
-//! - `accepts()` support for configurable operations over UTF-8 input.
-//! - Focused performance work remains ongoing for heavily weighted and
-//!   corpus-scale workloads.
+//! - `GeneralizedAutomaton` exactly accumulates standard, transposition,
+//!   merge/split, weighted, and restricted phonetic operations.
+//! - Consumption counts Unicode scalar values; restrictions use exact UTF-8
+//!   slices.
+//! - Fallible APIs report invalid costs, overflow, and resource exhaustion.
+//! - Generalized positions/states provide a bounded streaming compatibility
+//!   API for one-scalar operations and the historical 2-to-2, 2-to-1, and
+//!   1-to-2 intermediates. They accumulate weights exactly and report an
+//!   unsupported-arity error instead of silently ignoring a rule. The sparse
+//!   alignment graph remains the operation-complete API for arbitrary
+//!   non-zero consumption pairs.
 //!
-//! See: `docs/design/generalized-automaton.md`
+//! See: `docs/design/generalized-automaton-repair.md`
 
 mod automaton;
 pub mod position;
@@ -55,7 +61,9 @@ mod state;
 mod subsumption;
 
 pub use crate::transducer::universal::bit_vector::CharacteristicVector;
-pub use automaton::GeneralizedAutomaton;
+pub use automaton::{
+    GeneralizedAutomaton, GeneralizedAutomatonError, MAX_GENERALIZED_ALIGNMENT_STATES,
+};
 pub use position::{GeneralizedPosition, PositionError};
-pub use state::{GeneralizedState, GeneralizedTransitionInput};
+pub use state::{GeneralizedState, GeneralizedStateError, GeneralizedTransitionInput};
 pub use subsumption::subsumes;

@@ -27,7 +27,7 @@
 //! - **Standard Levenshtein**: `k+1` pieces suffice
 //!   - Each operation (insert, delete, substitute) corrupts at most 1 piece
 //!
-//! - **Transposition (Damerau-Levenshtein)**: `2k+1` pieces required
+//! - **Transposition (optimal string alignment)**: `2k+1` pieces required
 //!   - Adjacent transpositions can corrupt 2 pieces when spanning boundaries
 //!   - Proven in `WallBreakerPigeonhole.v` with counterexample for k=2
 //!
@@ -173,7 +173,7 @@ where
     ///
     /// let dict = Scdawg::<()>::from_terms(["test"]);
     ///
-    /// // For Damerau-Levenshtein (transposition) matching
+    /// // For OSA (adjacent-transposition) matching
     /// let wb = WallBreaker::with_algorithm(&dict, 2, Algorithm::Transposition);
     /// ```
     pub fn with_algorithm(dictionary: &'a D, max_distance: usize, algorithm: Algorithm) -> Self {

@@ -1417,7 +1417,7 @@ impl<'a> Lexer<'a> {
             'i' if self.peek_char() == Some('f') => {
                 // Check if "if" is followed by a non-identifier char (space, &, |, etc.)
                 let next2 = self.peek_char2();
-                if next2.map_or(true, |c| !c.is_alphanumeric() && c != '_') {
+                if next2.is_none_or(|c| !c.is_alphanumeric() && c != '_') {
                     self.advance(); // consume 'f'
                     Ok(Token::KeywordIf)
                 } else {

@@ -43,10 +43,21 @@ duallity: "duallity   (external · optional)\nWFST / language-model composition"
   style.stroke-dash: 4
 }
 
+llang: "lling-llang   (external · optional)\nsemirings · weighted automata · pushdown / grammar" {
+  style.fill: "#E1BEE7"; style.stroke: "#6A1B9A"; style.font-color: "#102027"
+  style.stroke-dash: 4
+}
+
 macros -> lib: "generates code for" { style.stroke: "#455A64"; style.stroke-width: 2 }
 lib -> dict: "hard dependency  (backends re-exported\nas #[deprecated] shims since 0.9.0)" {
   style.stroke: "#2E7D32"; style.stroke-width: 3
 }
-lib -> duallity: "optional WFST composition" {
-  style.stroke: "#0277BD"; style.stroke-width: 2; style.stroke-dash: 4
+lib -> duallity: "balanced structural DFS hook\nfzf fails non-negative L2 + L4 inflation" {
+  style.stroke: "#C62828"; style.stroke-width: 2; style.stroke-dash: 4
+}
+duallity -> llang: "Arctic (max,+) weights\nand weighted composition" {
+  style.stroke: "#6A1B9A"; style.stroke-width: 2; style.stroke-dash: 4
+}
+lib -> llang: "exact multi-kind Dyck correction\ncrosses to pushdown memory" {
+  style.stroke: "#6A1B9A"; style.stroke-width: 2; style.stroke-dash: 4
 }

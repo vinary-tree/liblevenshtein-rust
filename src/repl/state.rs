@@ -558,48 +558,38 @@ impl ReplState {
             Ok(count)
         }
 
-        #[cfg(not(feature = "cli"))]
+        #[cfg(all(not(feature = "cli"), feature = "serialization"))]
         {
-            // Fallback to plain text loading if CLI feature is not enabled
-            let contents = std::fs::read_to_string(path)
-                .with_context(|| format!("Failed to read dictionary file: {}", path.display()))?;
-
-            let terms: Vec<&str> = contents
-                .lines()
-                .map(|line| line.trim())
-                .filter(|line| !line.is_empty() && !line.starts_with('#'))
-                .collect();
-
-            if terms.is_empty() {
-                return Err(anyhow::anyhow!("Dictionary file is empty"));
-            }
-
-            let term_count = terms.len();
-
+            use crate::serialization::{BincodeSerializer, DictionarySerializer};
+            let file = std::fs::File::open(path)
+                .with_context(|| format!("Failed to open dictionary: {}", path.display()))?;
             self.dictionary = match backend {
                 DictionaryBackend::PathMap => {
-                    DictContainer::PathMap(PathMapDictionary::from_terms(terms))
+                    DictContainer::PathMap(BincodeSerializer::deserialize(file)?)
                 }
                 DictionaryBackend::DoubleArrayTrie => {
-                    DictContainer::DoubleArrayTrie(DoubleArrayTrie::from_terms(terms))
+                    DictContainer::DoubleArrayTrie(BincodeSerializer::deserialize(file)?)
                 }
                 DictionaryBackend::DynamicDawg => {
-                    let dict = DynamicDawg::new();
-                    for term in &terms {
-                        dict.insert(term);
-                    }
-                    DictContainer::DynamicDawg(dict)
+                    DictContainer::DynamicDawg(BincodeSerializer::deserialize(file)?)
                 }
-                DictionaryBackend::SuffixAutomaton => {
-                    let dict =
-                        SuffixAutomaton::from_texts(terms.iter().map(|s| s.to_string()).collect());
-                    DictContainer::SuffixAutomaton(dict)
-                }
+                DictionaryBackend::SuffixAutomaton => DictContainer::SuffixAutomaton(
+                    BincodeSerializer::deserialize_suffix_automaton(file)?,
+                ),
             };
-
             self.backend = backend;
+            self.serialization_format = SerializationFormat::Bincode;
+            let term_count = self.dictionary.len();
             self.invalidate_cache();
             Ok(term_count)
+        }
+
+        #[cfg(all(not(feature = "cli"), not(feature = "serialization")))]
+        {
+            let _ = (path, backend);
+            Err(anyhow::anyhow!(
+                "binary dictionary loading requires the `serialization` feature"
+            ))
         }
     }
 
@@ -614,16 +604,34 @@ impl ReplState {
             Ok(count)
         }
 
-        #[cfg(not(feature = "cli"))]
+        #[cfg(all(not(feature = "cli"), feature = "serialization"))]
         {
-            // Fallback to plain text saving if CLI feature is not enabled
-            let terms = self.dictionary.terms();
-            let content = terms.join("\n");
+            use crate::serialization::{BincodeSerializer, DictionarySerializer};
+            let file = std::fs::File::create(path)
+                .with_context(|| format!("Failed to create dictionary: {}", path.display()))?;
+            match &self.dictionary {
+                DictContainer::PathMap(dictionary) => {
+                    BincodeSerializer::serialize(dictionary, file)?
+                }
+                DictContainer::DoubleArrayTrie(dictionary) => {
+                    BincodeSerializer::serialize(dictionary, file)?
+                }
+                DictContainer::DynamicDawg(dictionary) => {
+                    BincodeSerializer::serialize(dictionary, file)?
+                }
+                DictContainer::SuffixAutomaton(dictionary) => {
+                    BincodeSerializer::serialize_suffix_automaton(dictionary, file)?
+                }
+            }
+            Ok(self.dictionary.len())
+        }
 
-            std::fs::write(path, content)
-                .with_context(|| format!("Failed to write dictionary file: {}", path.display()))?;
-
-            Ok(terms.len())
+        #[cfg(all(not(feature = "cli"), not(feature = "serialization")))]
+        {
+            let _ = path;
+            Err(anyhow::anyhow!(
+                "binary dictionary saving requires the `serialization` feature"
+            ))
         }
     }
 

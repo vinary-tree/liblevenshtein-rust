@@ -1096,45 +1096,40 @@ Done! 2 conversions.
 
 ## 10. Future Extensions
 
-### Extension 1: Serializable Operation Sets
+### Extension 1: Versioned binary operation sets — implemented
 
-**Goal**: Load custom operations from config files
-
-```toml
-# operations.toml
-[[operation]]
-name = "match"
-x_consumed = 1
-y_consumed = 1
-weight = 0.0
-
-[[operation]]
-name = "keyboard_subst"
-x_consumed = 1
-y_consumed = 1
-weight = 0.3
-restriction = "keyboard_qwerty"
-
-[[operation]]
-name = "substitute"
-x_consumed = 1
-y_consumed = 1
-weight = 1.0
-```
-
-Implementation:
+Custom operation sets use either the deterministic bincode envelope or the
+portable versioned protobuf schema. `OperationType` owns its diagnostic name,
+and `OperationApplicability` explicitly represents unrestricted,
+equality-only, adjacent-transpose, and listed-substitution semantics. No
+behavior is inferred from the name.
 
 ```rust
-impl OperationSet {
-    pub fn from_toml_file(path: &Path) -> Result<Self, Error> {
-        // Deserialize TOML → Vec<OperationType> → OperationSet
-    }
+let bytes = operations.to_binary()?;
+let restored = OperationSet::from_binary_with_limits(
+    &bytes,
+    OperationSetBinaryLimits::default(),
+)?;
+assert_eq!(restored, operations);
 
-    pub fn from_json(json: &str) -> Result<Self, Error> {
-        // Deserialize JSON → Vec<OperationType> → OperationSet
-    }
-}
+let protobuf = operations.to_protobuf()?;
+let portable = OperationSet::from_protobuf_with_limits(
+    &protobuf,
+    OperationSetBinaryLimits::default(),
+)?;
+assert_eq!(portable, operations);
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
+
+The bincode envelope pins magic, version, flags, payload length, and exact
+consumption. Protobuf selects V1 through an explicit container `oneof` and
+stores weights as `fixed64` IEEE-754 bits. Both use canonical substitution-pair
+ordering and check limits for payload bytes, operations, names, pairs, and pair
+text before the result is accepted. The protobuf decoder performs those count
+checks in a pre-allocation wire scan. Text persistence is intentionally outside
+the contract: bincode is the optimized Rust format, while protobuf is the
+portable binary interchange format. Optional gzip wraps either byte stream;
+it does not create another semantic format.
 
 ### Extension 2: Context-Aware Operations
 

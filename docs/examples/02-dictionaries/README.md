@@ -128,8 +128,7 @@ let all: Vec<_> = transducer2.query("test", 2).collect();        // sees everyth
 
 A *static* `DoubleArrayTrie` can be written to disk and reloaded — handy for shipping a
 prebuilt dictionary rather than rebuilding it on every startup. The
-`BincodeSerializer` (compact binary) and `JsonSerializer` (human-readable) implement a
-symmetric `serialize` / `deserialize` pair:
+`BincodeSerializer` implements a compact symmetric `serialize` / `deserialize` pair:
 
 ```rust
 use liblevenshtein::prelude::*;
@@ -137,15 +136,15 @@ use std::fs::File;
 
 let dict = DoubleArrayTrie::from_terms(vec!["apple", "apply", "banana", "band"]);
 
-BincodeSerializer::serialize(&dict, File::create("dict.bin")?)?;          // compact
-JsonSerializer::serialize(&dict, File::create("dict.json")?)?;            // debuggable
+BincodeSerializer::serialize(&dict, File::create("dict.bin")?)?;
 
 let loaded: DoubleArrayTrie = BincodeSerializer::deserialize(File::open("dict.bin")?)?;
 assert!(loaded.contains("banana"));
 ```
 
-Bincode is the smaller of the two; JSON is easier to inspect during development. Both
-round-trip the dictionary exactly, so fuzzy queries behave identically after a reload.
+The binary round trip preserves the terms, so fuzzy queries behave identically after a
+reload. Enable `protobuf` and use `ProtobufSerializer` when a portable binary schema is
+required. Dictionary persistence deliberately excludes JSON, TOML, and newline text.
 
 ---
 
@@ -172,8 +171,8 @@ cargo run --example serialization --features serialization
   Unicode alphabets.
 - A `DynamicDawg` handle and its `Transducer` share one reference-counted, lock-free
   graph: `insert` / `remove` are seen immediately, with concurrent lock-free reads.
-- `BincodeSerializer` / `JsonSerializer` save and load static dictionaries with identical
-  query behavior after a round-trip.
+- `BincodeSerializer` saves and loads static dictionaries with identical query behavior;
+  `ProtobufSerializer` is the cross-language binary alternative.
 
 ---
 

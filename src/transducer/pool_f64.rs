@@ -89,7 +89,7 @@ impl StatePoolF64 {
     /// # Performance
     ///
     /// - Pool hit: O(1) - pop from Vec + clear positions Vec
-    /// - Pool miss: O(1) - allocate new Vec<PositionF64>
+    /// - Pool miss: O(1) - allocate new `Vec<PositionF64>`
     ///
     /// The state's `Vec<PositionF64>` allocation is reused when available,
     /// which is the primary performance benefit.

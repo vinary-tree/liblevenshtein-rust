@@ -117,7 +117,7 @@ unsafe {
 
 **Pros**:
 - ✅ **Proven performance** (20-30x speedup)
-- ✅ **Already implemented** Levenshtein + Damerau-Levenshtein
+- ✅ **Already implemented** Levenshtein + optimal string alignment (restricted Damerau)
 - ✅ **Runtime dispatch** with fallbacks
 - ✅ **Open source** (MIT license) - can study implementation
 

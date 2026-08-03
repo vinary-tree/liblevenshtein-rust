@@ -214,7 +214,7 @@ The Universal Levenshtein Automaton merge/split implementation is now **complete
 
 The trait-based dispatch system continues to provide a clean, extensible architecture for supporting multiple distance metrics:
 - ✅ **Standard** - Insertion, deletion, substitution
-- ✅ **Transposition** - Adjacent character swaps (Damerau-Levenshtein)
+- ✅ **Transposition** - Adjacent swaps under optimal string alignment (restricted Damerau)
 - ✅ **MergeAndSplit** - Character merge and split operations
 
 ## Next Steps

@@ -6,7 +6,8 @@
 //!
 //! # Memory Management
 //!
-//! All strings returned by FFI functions must be freed using [`llev_string_free`].
+//! All strings returned by FFI functions must be freed using
+//! [`llev_string_free`](crate::ffi::llev_string_free).
 //! All arrays returned must be freed using their specific free function.
 //!
 //! # Safety
@@ -63,10 +64,12 @@ use std::{ffi::c_char, slice, str};
 pub enum LlevAlgorithm {
     /// Standard Levenshtein (insert, delete, substitute)
     Standard = 0,
-    /// Damerau-Levenshtein (adds transposition)
+    /// Optimal string alignment (restricted Damerau; adds adjacent transposition)
     Transposition = 1,
     /// Merge and split operations
     MergeAndSplit = 2,
+    /// Unrestricted Damerau–Levenshtein edit scripts
+    DamerauLevenshtein = 3,
 }
 
 impl From<LlevAlgorithm> for crate::transducer::Algorithm {
@@ -75,6 +78,7 @@ impl From<LlevAlgorithm> for crate::transducer::Algorithm {
             LlevAlgorithm::Standard => crate::transducer::Algorithm::Standard,
             LlevAlgorithm::Transposition => crate::transducer::Algorithm::Transposition,
             LlevAlgorithm::MergeAndSplit => crate::transducer::Algorithm::MergeAndSplit,
+            LlevAlgorithm::DamerauLevenshtein => crate::transducer::Algorithm::DamerauLevenshtein,
         }
     }
 }

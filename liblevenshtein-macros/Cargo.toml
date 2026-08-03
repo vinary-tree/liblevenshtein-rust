@@ -21,3 +21,9 @@ proc-macro2 = "1.0"
 
 # The main crate for parsing and compiling
 liblevenshtein = { path = "..", features = ["phonetic-rules", "serialization"] }
+
+# This proc-macro depends on the parent package and is intentionally verified
+# as its own workspace. If it joins the parent workspace, Cargo builds two
+# root-package units that emit the same fixed-name cdylib artifacts.
+[workspace]
+resolver = "2"

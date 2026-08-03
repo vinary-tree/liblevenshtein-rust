@@ -96,6 +96,14 @@ jobs:
           cargo test --all-features --target ${{ matrix.platform.target }} --verbose -- --nocapture
           echo "::endgroup::"
 
+      - name: Verify procedural-macro workspace
+        env:
+          RUSTFLAGS: ${{ matrix.platform.rustflags }}
+        run: |
+          echo "::group::Testing liblevenshtein-macros"
+          cargo test --manifest-path liblevenshtein-macros/Cargo.toml --all-features --target ${{ matrix.platform.target }} --verbose
+          echo "::endgroup::"
+
       - name: Compile-check benchmarks
         if: runner.os == 'Linux'
         env:

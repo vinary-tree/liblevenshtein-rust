@@ -30,7 +30,7 @@ Successfully completed a comprehensive 3-phase optimization of Levenshtein dista
 **Result**: All three distance functions implemented and tested
 
 - Standard Levenshtein distance
-- Transposition distance (Damerau-Levenshtein)
+- Transposition distance (optimal string alignment, or restricted Damerau)
 - Merge-and-split distance
 
 ### Phase 2: Quick Wins ✅

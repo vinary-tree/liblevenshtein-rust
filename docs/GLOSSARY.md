@@ -2,7 +2,7 @@
 
 **Comprehensive reference for implementation, performance, and user-facing terminology**
 
-**Last Updated:** 2026-06-19  ·  **Version:** 0.9.1
+**Last Updated:** 2026-08-01  ·  **Version:** 0.9.1
 
 ---
 
@@ -43,6 +43,31 @@ This glossary covers implementation details, performance optimizations, data str
 ---
 
 ## A
+
+### Affine gap
+**Categories:** [Algorithm], [Edit Operations], [Mathematics]
+
+**Definition:** A contiguous run of symbols consumed from only one input whose
+cost is `$`G(r)=g_o+r g_e`$` for run length `$`r>0`$`. The **gap-open cost**
+`$`g_o`$` is paid once per run; the **gap-extension cost** `$`g_e`$` is paid for
+each symbol, including the first. The lazy automaton remembers whether a query
+gap or dictionary gap is already open, so extension does not pay `$`g_o`$`
+again.
+
+**Implementation:** `AffineGapParams` converts decimal costs to exact scaled
+integers. `AffineV` maps Gotoh's `$`M`$`, `$`I_x`$`, and `$`I_y`$` matrices to
+`Normal`, `AffineQueryGap`, and `AffineDictGap` positions.
+
+**Code:** [`src/transducer/variants/affine.rs`](../src/transducer/variants/affine.rs)
+· **Algorithm:** [Affine-gap dictionary automata](algorithms/10-affine-gap/README.md)
+· **See also:** Automaton variant, CostScale, Subsumption
+
+### Automaton variant
+
+A compile-time policy that defines successor generation, epsilon closure,
+subsumption, completion cost, and characteristic-vector windowing for one lazy
+automaton family. The public `Algorithm` remains a runtime selector, but Phase 5
+chooses its `AutomatonVariant` once per dictionary edge.
 
 ### Arc Path Sharing
 **Categories:** [Performance], [Memory]
@@ -328,24 +353,76 @@ if CHECK[result] == state: valid transition
 
 ## D
 
-### Damerau-Levenshtein Distance
+### Damerau–Levenshtein Distance
 **Categories:** [Algorithm], [Edit Operations]
 
-**Definition:** Edit distance metric that includes transpositions (swapping adjacent characters) as a single operation, in addition to standard insertions, deletions, and substitutions.
+**Definition:** An unrestricted edit-script metric that includes adjacent
+transpositions in addition to insertion, deletion, and substitution. An edit
+may act on the output of an earlier edit. This is different from **optimal
+string alignment** (OSA), which forbids editing the same substring twice.
 
 **Example:**
 - Standard Levenshtein: "teh" → "the" = 2 (delete 'e', insert 'e')
-- Damerau-Levenshtein: "teh" → "the" = 1 (transpose 'e' and 'h')
+- Damerau–Levenshtein: "teh" → "the" = 1 (transpose 'e' and 'h')
 
 **Use Cases:**
 - Typing errors (common transpositions: "teh", "recieve")
 - Keyboard input corrections
 
-**Implementation:** `Algorithm::Transposition` variant
+**Implementation:** `Algorithm::DamerauLevenshtein` selects the unrestricted,
+history-carrying unit-cost automaton;
+`damerau_levenshtein_distance` is its full last-occurrence DP oracle.
+`Algorithm::Transposition` remains OSA. The distinction is observable on
+`"CA" → "ABC"`: unrestricted Damerau–Levenshtein costs `2`, whereas OSA costs
+`3`. The compact pending delta supports budgets through 255; 1–3 is the
+measured practical search range.
 
-**Code:** [`src/transducer/transition.rs`](../src/transducer/transition.rs) (Lines 195-319)
+**Reference:** Lowrance and Wagner, “An Extension of the String-to-String
+Correction Problem,” *Journal of the ACM* 22(2), 1975.
+[doi:10.1145/321879.321880](https://doi.org/10.1145/321879.321880)
 
-**See also:** Transposition, Edit Operations, Standard Algorithm
+**See also:** Optimal String Alignment, Transposition, Edit Operations, Standard Algorithm
+
+---
+
+### Last-occurrence table
+**Categories:** [Algorithm], [Dynamic Programming]
+
+**Definition:** The map used by unrestricted Damerau–Levenshtein dynamic
+programming to remember the most recent row at which each alphabet symbol
+occurred. Together with the most recent matching target column, it identifies
+the opposite endpoints of a transposition macro.
+
+The reference DP stores the complete table. The bounded dictionary automaton
+does not: its joint budget bound permits one `DamerauPending` position to carry
+only the currently owed positive endpoint delta.
+
+**See also:** Damerau–Levenshtein Distance, Position kind
+
+---
+
+### Optimal String Alignment (OSA)
+**Categories:** [Algorithm], [Edit Operations]
+
+**Definition:** The restricted adjacent-transposition recurrence implemented
+by `Algorithm::Transposition` and `transposition_distance`. Each substring may
+be edited at most once. OSA is symmetric and non-negative, but it is not a
+metric because the triangle inequality fails:
+
+```math
+d_{\mathrm{OSA}}(\texttt{CA},\texttt{ABC}) = 3
+> d_{\mathrm{OSA}}(\texttt{CA},\texttt{AC})
+ + d_{\mathrm{OSA}}(\texttt{AC},\texttt{ABC}) = 2.
+```
+
+**Indexing consequence:** Do not use OSA with a BK-tree, VP-tree, or any other
+index whose pruning proof assumes the triangle inequality. A trie walker with
+an independently admissible lower bound may still be sound.
+
+**Code:** [`src/distance/mod.rs`](../src/distance/mod.rs) and
+[`src/transducer/transition.rs`](../src/transducer/transition.rs)
+
+**See also:** Damerau–Levenshtein Distance, Transposition, Metric
 
 ---
 
@@ -825,6 +902,17 @@ Results (in order):
 
 ## P
 
+### Position kind
+
+The one-byte `PositionKind` tag that identifies a frontier representative's
+continuation language: normal, OSA transposition, split, affine gap, or pending
+true-Damerau state. Together with the `aux` payload, it prevents distinct
+unfinished operations from colliding in state ordering and subsumption.
+
+For `DamerauPending`, `aux` is a positive endpoint delta. The macro has prepaid
+the transposition and query-interior deletions; it may extend over dictionary
+interior units and resolve only when the opposite endpoint matches.
+
 ### Parallel Traversal
 **Categories:** [Algorithm], [Performance]
 
@@ -1282,7 +1370,9 @@ Arc<RwLock<Dictionary>>
 ### Transposition
 **Categories:** [Algorithm], [Edit Operations]
 
-**Definition:** Edit operation swapping two adjacent characters, implemented in Algorithm::Transposition variant (Damerau-Levenshtein distance).
+**Definition:** Edit operation swapping two adjacent characters, implemented
+by `Algorithm::Transposition` as optimal string alignment (restricted Damerau),
+not unrestricted Damerau–Levenshtein distance.
 
 **Example:** "teh" → "the" (transpose 'e' and 'h')
 
@@ -1292,7 +1382,7 @@ Arc<RwLock<Dictionary>>
 
 **Code:** [`src/transducer/transition.rs`](../src/transducer/transition.rs) (Table 7.1, Lines 195-319)
 
-**See also:** Damerau-Levenshtein Distance, Edit Operations, t-position (theory glossary)
+**See also:** Optimal String Alignment, Damerau–Levenshtein Distance, Edit Operations, t-position (theory glossary)
 
 ---
 
@@ -1483,6 +1573,64 @@ transducer.query("var", 1).filter(|t| visible_scopes.contains(&t.scope))
 The terms below cover subsystems introduced or substantially expanded after the
 2025-01 revision. Each is defined before use elsewhere in the documentation.
 
+### Elastic time-series traversal
+
+#### Elastic Distance
+**Categories:** [Algorithm], [Time Series]
+
+**Definition:** A sequence measure whose dynamic-programming path may advance
+through its two input axes at different rates. MSM, ERP, TWED, discrete
+Fréchet, and DTW are elastic measures, although they do not share all metric
+axioms or the same cost-combination operator.
+
+#### Elastic Kernel
+**Categories:** [Algorithm], [Architecture], [Time Series]
+
+**Definition:** The measure-specific policy behind the generic time-series
+trie walker. It defines relaxed column transitions, exact candidate scoring,
+candidate lower bounds, query plans, carry state, and empty-side semantics.
+
+**Code:** [`src/time_series/elastic/`](../src/time_series/elastic/) · **Design:**
+[Elastic kernels](design/elastic-kernels.md) · **See also:** Kernel Obligations
+K1–K4, Interval Relaxation, CostMonoid
+
+#### Interval Relaxation
+**Categories:** [Algorithm], [Mathematics], [Time Series]
+
+**Definition:** Evaluation of a recurrence over a quantization bin
+$`[\ell,h]`$ by replacing each concrete step with its minimum over the bin. It
+supports exact pruning only when K1 proves that every relaxed cell lower-bounds
+every concrete cell represented by the trie prefix.
+
+#### Kernel Obligations K1–K4
+**Categories:** [Formal Verification], [Algorithm]
+
+**Definition:** K1 is interval-column admissibility; K2 is cost inflation under
+lawful non-negative steps; K3 is exact survivor scoring; and K4 is
+candidate-level lower-bound coherence. Together they justify subtree pruning,
+leaf pruning, and exact emission without assuming the triangle inequality.
+
+#### Query Plan
+**Categories:** [Data Structure], [Time Series]
+
+**Definition:** Immutable metadata computed once before an elastic trie walk
+and borrowed by every column transition. A banded-DTW plan contains query
+envelopes; MSM uses the unit type `()`.
+
+#### Carry State
+**Categories:** [Data Structure], [Time Series]
+
+**Definition:** Kernel-specific prefix information not encoded in a DP column.
+MSM carries the previous target bin because its Split recurrence depends on it;
+ERP and discrete Fréchet require no carry.
+
+#### Degenerate-Bin Exactness
+**Categories:** [Testing], [Mathematics], [Time Series]
+
+**Definition:** The property that replacing every concrete sample $`v`$ by a
+point interval $`[v,v]`$ reproduces the scalar DP exactly. It complements
+admissibility by ruling out bounds that are sound but uselessly weak.
+
 ### Automaton variants
 
 #### Parameterized (Lazy) Automaton
@@ -1502,14 +1650,66 @@ The terms below cover subsystems introduced or substantially expanded after the
 #### Generalized Automaton
 **Categories:** [Algorithm]
 
-**Definition:** A runtime-configurable automaton whose edit operations are supplied as an `OperationSet` at run time (rather than a compile-time marker type), enabling weighted (`f64`) and phonetic edit costs at ~10–20 % overhead.
+**Definition:** A runtime-configurable acceptance engine whose edit operations
+are supplied as an `OperationSet` rather than a compile-time marker type. It
+evaluates an exact sparse alignment graph: every edge consumes the operation's
+declared source and target scalar counts, restricted pairs are checked, and
+decimal weights accumulate as scaled integers. It is the differential oracle
+for Hamming, indel, bounded-skip, phonetic, and other alignment-expressible
+presets; it is not connected to dictionary traversal.
 
-**Code:** [`src/transducer/generalized/`](../src/transducer/generalized/) · **See also:** OperationSet, Articulatory Distance
+**Code:** [`src/transducer/generalized/`](../src/transducer/generalized/) · **Design:** [Generalized-automaton repair](design/generalized-automaton-repair.md) · **See also:** Alignment Cell, OperationSet, CostScale, Articulatory Distance
+
+#### Hamming Distance
+**Categories:** [Algorithm], [Metric]
+
+**Definition:** The number of unequal positions in two equal-length sequences.
+The string API counts Unicode scalars and returns `None` for unequal lengths.
+Hamming is a metric separately on each fixed-length space; it is not Standard
+Levenshtein followed by a length check.
+
+**Code:** [`src/distance/hamming.rs`](../src/distance/hamming.rs) · **Design:** [Class-A presets](design/class-a-presets.md) · **See also:** Indel Distance, OperationSet
+
+#### Indel Distance
+**Categories:** [Algorithm], [Metric]
+
+**Definition:** Minimum insertion/deletion cost when substitution is absent.
+Replacing one scalar costs two, and the value equals
+$`|x|+|y|-2\operatorname{LCS}(x,y)`$`, where LCS is longest common
+subsequence. `indel_distance_bounded` returns the exact value only when it does
+not exceed the supplied threshold.
+
+**Code:** [`src/distance/indel.rs`](../src/distance/indel.rs) · **Design:** [Class-A presets](design/class-a-presets.md) · **See also:** Hamming Distance, Bounded Skip
+
+#### Bounded Skip
+**Categories:** [Algorithm], [Relation]
+
+**Definition:** Directional subsequence alignment using only match and source
+deletion. For `GeneralizedAutomaton::accepts(word, input)`, `input` must be a
+subsequence of `word`; the cost is the number of skipped source scalars. This
+does not include fzf-style gains, bonuses, or ranking.
+
+**Design:** [Class-A presets](design/class-a-presets.md) · **See also:** Indel Distance, Generalized Automaton, OperationSet
+
+#### Alignment Cell
+**Categories:** [Algorithm], [Data Structure]
+
+**Definition:** Coordinate $`(i,j)`$ in the generalized-operation grid,
+meaning that the first $`i`$ dictionary-word scalars and first $`j`$ input
+scalars have been consumed. The sparse frontier stores the least exact scaled
+cost for each reachable cell. Every non-empty operation moves to a
+lexicographically later cell, giving a topological traversal order.
+
+**See also:** Generalized Automaton, CostScale
 
 #### OperationSet / SubstitutionSet / SubstitutionPolicy
 **Categories:** [Algorithm], [API]
 
 **Definition:** `OperationSet` enumerates the edit operations a generalized automaton may apply. `SubstitutionSet` restricts *which* character substitutions are permitted (presets: `phonetic_basic`, `keyboard_qwerty`, `leet_speak`, `ocr_friendly`); `SubstitutionPolicy` (`Unrestricted` — a zero-sized default — or `Restricted`) selects the policy at the type level.
+
+`OperationSet::validate()` rejects non-progressing or invalid-cost rules,
+zero-cost length changes, consumption overflow, and aggregate declared
+consumption above 4,096 before generalized traversal.
 
 **Code:** [`src/transducer/{algorithm,substitution_set,substitution_policy}.rs`](../src/transducer/) · **See also:** Edit Operations, Restricted Substitutions
 
@@ -1533,6 +1733,42 @@ The terms below cover subsystems introduced or substantially expanded after the
 **Definition:** A bidirectional compact DAWG indexing every substring, supporting forward extension and suffix links so a matched region can grow left and right. Backs WallBreaker piece location.
 
 **Code:** `Scdawg` / `ScdawgChar` in `libdictenstein` · **See also:** WallBreaker, DAWG
+
+### Cost algebra
+
+#### CostMonoid
+**Categories:** [Algorithm], [API]
+
+**Definition:** The ordered accumulation contract used by bounded dynamic
+programs. It supplies an identity `ZERO`, absorbing `TOP`, associative
+`combine`, total `compare`, inclusive `within`, and a non-overridable
+minimum-valued `select`. Its seven laws make minimum-cost dominance and budget
+pruning sound. It is intentionally not a semiring or WFST weight interface.
+
+**Code:** [`src/cost/`](../src/cost/) · **Design:** [Ordered cost monoid](design/cost-monoid.md) · **See also:** CostScale, Subsumption, WFST
+
+#### CostScale
+**Categories:** [Algorithm], [API]
+
+**Definition:** A checked fixed-point denominator that converts the shortest
+round-tripping decimal representation of a non-negative finite `f64` weight to
+an exact `usize` numerator. A derived scale is the least common multiple of all
+reduced operation denominators. Inexact conversion, invalid values, and every
+arithmetic overflow are reported as `ScaleError`; no weight is silently rounded
+or truncated.
+
+**Code:** [`src/cost/scale.rs`](../src/cost/scale.rs) · **See also:** CostMonoid, Generalized Automaton
+
+#### Bottleneck Cost
+**Categories:** [Algorithm]
+
+**Definition:** A minimax path cost whose accumulation operation is maximum.
+The cost of a path is therefore its most expensive step, as in discrete
+Fréchet-style dynamic programming. `BottleneckCost` uses non-negative finite
+`f64` values plus positive infinity and shares the fixed minimum selection rule
+with the other cost monoids.
+
+**Code:** [`src/cost/bottleneck.rs`](../src/cost/bottleneck.rs) · **See also:** CostMonoid, Discrete Fréchet Distance
 
 ### Phonetic matching
 
@@ -1567,14 +1803,60 @@ The terms below cover subsystems introduced or substantially expanded after the
 #### NFA Product (Phonetic $`\cap`$ Levenshtein)
 **Categories:** [Algorithm]
 
-**Definition:** The product automaton of a phonetic-pattern NFA (built by Thompson construction) with the Levenshtein automaton $`A(W, k)`$; running it against the dictionary yields candidates that match the pattern *and* lie within edit distance $`k`$.
+**Definition:** The product of a phonetic-pattern NFA (built by Thompson
+construction) with unit-cost Levenshtein edits. For dictionary term $`w`$ and
+the NFA language $`L`$, it computes $`d(w,L)=\min_{v\in L}d(w,v)`$. The generic
+implementation stores one unioned NFA state set per exact cost.
 
-**Code:** [`src/phonetic/nfa/product.rs`](../src/phonetic/nfa/product.rs) · **See also:** Thompson Construction, `.llre`
+**Code:** [`src/transducer/language/`](../src/transducer/language/) · **See also:** Language Automaton, Cost-indexed Frontier, Thompson Construction, `.llre`
+
+#### Language Automaton
+**Categories:** [Algorithm], [API]
+
+**Definition:** A finite-state recognizer exposed through set-valued `initial`,
+`step`, and arbitrary-symbol `advance` operations. Its transitions distribute
+over state-set union. Implementations include `SmallDfa<U>`, the byte NFA, and
+the Unicode-scalar NFA.
+
+**Code:** [`src/transducer/language/mod.rs`](../src/transducer/language/mod.rs) · **See also:** NFA Product, Relational Image
+
+#### Cost-indexed Frontier
+**Categories:** [Algorithm], [Data Structure], [Performance]
+
+**Definition:** A fixed $`k+1`$-slot product state whose slot $`e`$ is the union
+of all language states reachable at exact edit cost $`e`. The representation
+merges equal-cost histories and bounds frontier storage independently of path
+history.
+
+**Code:** [`src/transducer/language/product.rs`](../src/transducer/language/product.rs) · **See also:** Frontier Canonicalization, NFA Product
+
+#### Frontier Canonicalization
+**Categories:** [Algorithm], [Performance]
+
+**Definition:** Minimum-cost dominance pass over a cost-indexed frontier. A
+language state already present at cheaper level $`e`$ is removed from every
+dearer level $`f>e`$ because non-negative future edit costs cannot make the
+dearer copy improve a continuation.
+
+**See also:** Cost-indexed Frontier, Subsumption
+
+#### Relational Image
+**Categories:** [Algorithm]
+
+**Definition:** For relation $`R`$ and state set $`S`$, the target set
+$`R[S]=\{q'\mid\exists q\in S.\ R(q,q')\}`$. Relational image distributes over
+union; this is the formal basis for merging equal-cost language-product states.
+
+**See also:** Language Automaton, Frontier Canonicalization
 
 #### Thompson Construction
 **Categories:** [Algorithm]
 
-**Definition:** The classical construction of an $`\varepsilon`$-NFA from a regular expression by structural induction (concatenation, alternation, Kleene star). Because the result is an NFA simulated in linear time, the `.llre` engine is **ReDoS-resistant by construction**.
+**Definition:** The classical construction of an $`\varepsilon`$-NFA from a
+regular expression by structural induction (concatenation, alternation, Kleene
+star). It avoids catastrophic backtracking, but NFA size and reachable subset
+diversity remain resource surfaces; untrusted `query_regex` calls enforce a
+4,096-state construction ceiling.
 
 **Code:** [`src/phonetic/nfa/thompson.rs`](../src/phonetic/nfa/thompson.rs) · **See also:** `.llre`, NFA Product
 
@@ -1603,19 +1885,154 @@ The terms below cover subsystems introduced or substantially expanded after the
 
 ### Time series
 
+#### ERP (Edit distance with Real Penalty)
+**Categories:** [Algorithm], [Time Series], [Mathematics]
+
+**Definition:** An elastic edit distance for real-valued sequences with one
+fixed real gap value `$`g`$`. A match costs `$`\lvert x-y\rvert`$`; deleting
+or inserting a sample `$`v`$` costs `$`\lvert v-g\rvert`$`. ERP is a
+pseudometric on raw sequences because occurrences of `$`g`$` can be inserted
+or removed at zero cost. It is a metric modulo the **`$`g`$`-quotient**, which
+identifies sequences after all occurrences of `$`g`$` are removed.
+
+**Code:** [`src/time_series/kernels/erp.rs`](../src/time_series/kernels/erp.rs) ·
+**Research:** [ERP paper analysis](research/erp/PAPER_SUMMARY.md) · **DOI:**
+[10.1016/B978-012088469-8.50070-X](https://doi.org/10.1016/B978-012088469-8.50070-X)
+
+#### Gap-Mass Potential
+**Categories:** [Algorithm], [Mathematics], [Time Series]
+
+**Definition:** For ERP gap value `$`g`$`, the scalar
+`$`\Phi_g(x)=\sum_i\lvert x_i-g\rvert`$`. The reverse triangle inequality
+proves `$`\lvert\Phi_g(x)-\Phi_g(y)\rvert\le D_{\mathrm{ERP}}(x,y)`$`, so the
+absolute potential difference is an admissible candidate lower bound.
+
+#### TWED (Time Warp Edit Distance)
+**Categories:** [Algorithm], [Time Series], [Mathematics]
+
+**Definition:** An elastic edit distance for timestamped numeric sequences that
+compares adjacent sample segments. In the crate's unit-spaced specialization,
+deleting a segment pays its absolute sample change plus temporal stiffness
+`$`\nu`$` and deletion penalty `$`\lambda`$`; matching pays current and previous
+sample deviations plus `$`2\nu\lvert i-j\rvert`$`. The previous target
+quantization interval is carried between trie edges so both segment terms have
+exact interval-box minima.
+
+The complete `TwedConfig` family permits `$`\nu=0`$` and is not uniformly
+metric. `MetricTwedConfig` validates the primary-source domain
+`$`\nu>0,\lambda\ge0`$` and alone implements `MetricElasticKernel`. At
+`$`\nu=\lambda=0`$`, `$`D([0,1],[1])=0`$` is an identity counterexample.
+
+**Code:** [`src/time_series/kernels/twed.rs`](../src/time_series/kernels/twed.rs) ·
+**Research:** [Marteau analysis](research/twed/PAPER_SUMMARY.md) · **DOI:**
+[10.1109/TPAMI.2008.76](https://doi.org/10.1109/TPAMI.2008.76) ·
+**See also:** ElasticKernel, MetricElasticKernel, Admissible Bound
+
+#### TWED Stiffness
+**Categories:** [Algorithm], [Time Series], [Mathematics]
+
+**Definition:** The non-negative coefficient `$`\nu`$` multiplying timestamp
+displacement in TWED. Larger values resist temporal warping. Strict positivity
+is part of the metric proof's identity premise; non-negativity alone is enough
+for additive inflation and exact lower-bound trie pruning.
+
+**See also:** TWED, MetricElasticKernel
+
+#### Discrete Fréchet Distance
+**Categories:** [Algorithm], [Time Series], [Mathematics]
+
+**Definition:** The minimum, over all order-preserving couplings of two
+nonempty sequences, of the coupling's largest point-to-point link. Its dynamic
+program selects alternative predecessors with `min` and extends a path with
+`max`, so the implementation uses `BottleneckCost`. On raw vectors it is a
+pseudometric: consecutive duplicate samples are zero-cost stutters. Identity
+holds modulo **run-length collapse**.
+
+**Code:** [`src/time_series/kernels/frechet.rs`](../src/time_series/kernels/frechet.rs) ·
+**Research:** [Eiter–Mannila analysis](research/frechet/PAPER_SUMMARY.md) ·
+**Source:** [Technical Report CD-TR 94/64](https://www.kr.tuwien.ac.at/staff/eiter/et-archive/files/cdtr9464.pdf)
+
+#### One-Sided Hausdorff Lower Bound
+**Categories:** [Algorithm], [Mathematics], [Time Series]
+
+**Definition:** For sequences `$`x`$` and `$`y`$`, the quantity
+`$`\max_i\min_j\lvert x_i-y_j\rvert`$`. Every discrete Fréchet coupling pairs
+each `$`x_i`$` with some `$`y_j`$`, so this value lower-bounds the coupling
+bottleneck and the exact distance. “One-sided” matters: exchanging `$`x`$` and
+`$`y`$` can change the value.
+
+#### Run-Length Collapse
+**Categories:** [Algorithm], [Mathematics], [Time Series]
+
+**Definition:** The normal form that replaces each maximal consecutive run of
+equal samples by one sample. For example, `[1, 1, 2, 2, 2]` collapses to
+`[1, 2]`. Discrete Fréchet identity on raw vectors is equality of this normal
+form rather than literal vector equality.
+
 #### MSM (Move–Split–Merge)
 **Categories:** [Algorithm]
 
-**Definition:** A metric for real-valued time series built from three unit-cost-parameterized edits — **Move** (change a value, cost $`\lvert x_i - y\rvert`$), **Split** (one value → two), and **Merge** (two adjacent values → one). Unlike DTW, MSM is a true metric (satisfies the triangle inequality), enabling lower-bound pruning.
+**Definition:** A metric for real-valued time series built from three unit-cost-parameterized edits — **Move** (change a value, cost $`\lvert x_i - y\rvert`$), **Split** (one value → two), and **Merge** (two adjacent values → one). MSM satisfies the triangle inequality, so metric-tree indexing is possible. The crate's trie search instead prunes with an admissible interval-relaxed dynamic-programming lower bound; that proof uses non-negative step costs and exact survivor re-scoring, not the triangle inequality.
 
 **Code:** [`src/time_series/msm.rs`](../src/time_series/msm.rs) · **DOI:** [10.1109/TKDE.2012.88](https://doi.org/10.1109/TKDE.2012.88) · **See also:** TimeSeriesIndex, DTW
 
 #### DTW (Dynamic Time Warping)
 **Categories:** [Algorithm]
 
-**Definition:** A classical elastic time-series similarity measure; included here for contrast — DTW is *not* a metric (no triangle inequality), whereas MSM is, which is why this crate indexes with MSM.
+**Definition:** An elastic time-series similarity measure whose monotone path
+may advance either input or both inputs. This crate's exact variant requires a
+symmetric Sakoe–Chiba half-width `$`w`$`, accumulates squared deviations inside
+`$`\lvert i-j\rvert\le w`$`, and returns the square root publicly. DTW is not a
+metric because it can violate the triangle inequality, so it is inadmissible
+for BK-trees, VP-trees, cover trees, and other metric-ball pruning. It remains
+admissible for this crate's quantized trie because interval columns and
+LB_Keogh lower-bound every descendant and every survivor is re-scored exactly.
+The code-level labels are `DtwConfig::IS_METRIC = false` and absence of a
+`MetricElasticKernel` implementation.
 
-**See also:** MSM
+**Code:** [`src/time_series/kernels/dtw.rs`](../src/time_series/kernels/dtw.rs) ·
+**Research:** [DTW and LB_Keogh analysis](research/dtw/PAPER_SUMMARY.md) ·
+**DOIs:** [10.1109/TASSP.1978.1163055](https://doi.org/10.1109/TASSP.1978.1163055),
+[10.1007/s10115-004-0154-9](https://doi.org/10.1007/s10115-004-0154-9) ·
+**See also:** Sakoe–Chiba Band, LB_Keogh, MetricElasticKernel, MSM
+
+#### Sakoe–Chiba Band
+**Categories:** [Algorithm], [Security]
+
+**Definition:** The symmetric DTW constraint `$`\lvert i-j\rvert\le w`$`,
+where `$`w`$` is an inclusive half-width. It makes cells outside the diagonal
+strip unreachable, rejects endpoint length gaps larger than `$`w`$`, and caps
+live work per DP column at `$`2w+1`$` cells. The band changes the distance and
+is therefore required in `DtwConfig::new(w)` rather than selected by a default.
+
+**See also:** DTW, LB_Keogh
+
+#### LB_Keogh
+**Categories:** [Algorithm], [Data Structure]
+
+**Definition:** An admissible lower bound for banded DTW. For each candidate
+position, it measures squared deviation outside the minimum/maximum query
+envelope reachable through the Sakoe–Chiba band, then sums those deviations.
+`KeoghPlan` constructs all envelopes with monotonic deques. The trie also uses
+an interval-valued prefix form as a constant-time first gate before computing
+the banded DP column.
+
+**Code:** [`src/time_series/kernels/keogh.rs`](../src/time_series/kernels/keogh.rs) ·
+**DOI:** [10.1007/s10115-004-0154-9](https://doi.org/10.1007/s10115-004-0154-9) ·
+**See also:** DTW, Sakoe–Chiba Band, Admissible Bound
+
+#### MetricElasticKernel
+**Categories:** [API], [Formal Verification]
+
+**Definition:** A compile-time marker for elastic kernels whose reviewed proof
+establishes metricity on the documented domain or quotient. A future index
+whose correctness uses the triangle inequality must require this marker rather
+than merely inspect `ElasticKernel::IS_METRIC`. The generic lower-bound trie
+does not require it. `MetricTwedConfig` implements the marker only after
+validating strict stiffness; unchecked `TwedConfig` and DTW do not.
+
+**Code:** [`src/time_series/elastic/mod.rs`](../src/time_series/elastic/mod.rs) ·
+**See also:** DTW, TWED, ElasticKernel, Kernel Obligations
 
 #### TimeSeriesIndex / HybridSearchIndex
 **Categories:** [Data Structure], [API]
@@ -1697,4 +2114,4 @@ The terms below cover subsystems introduced or substantially expanded after the
 
 **Contributing:** To add new terms, maintain alphabetical order and include all standard fields (definition, benefits, trade-offs, code references, see also).
 
-**Last Updated:** 2026-06-19
+**Last Updated:** 2026-08-01

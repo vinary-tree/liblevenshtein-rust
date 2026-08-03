@@ -299,7 +299,8 @@ if let Some(iter) = zipper.with_prefix(b"get") {
 | `Algorithm` | Extra operation | Typical use |
 |-------------|-----------------|-------------|
 | **Standard** | — (insert, delete, substitute) | general fuzzy matching |
-| **Transposition** | swap of adjacent characters (Damerau [[4]](#references)) | typing errors (`teh → the` costs 1) |
+| **Transposition** | optimal string alignment: add an adjacent swap (restricted Damerau [[4]](#references)) | typing errors (`teh → the` costs 1) |
+| **DamerauLevenshtein** | unrestricted history-composing adjacent swaps [[22]](#references) | overlapping edits; metric transposition distance (`CA → ABC` costs 2) |
 | **MergeAndSplit** | two characters ↔ one | OCR errors (`rn → m`, `vv → w`) |
 
 ```rust
@@ -308,10 +309,31 @@ let dict = DoubleArrayTrie::from_terms(vec!["the", "them", "then"]);
 
 let standard      = Transducer::new(dict.clone(), Algorithm::Standard);      // teh→the = 2
 let transposition = Transducer::new(dict.clone(), Algorithm::Transposition); // teh→the = 1
-let merge_split   = Transducer::new(dict,        Algorithm::MergeAndSplit);  // rn↔m  = 1
+let true_damerau  = Transducer::new(dict.clone(), Algorithm::DamerauLevenshtein);
+let merge_split   = Transducer::new(dict,         Algorithm::MergeAndSplit);  // rn↔m  = 1
 ```
 
-![The three Algorithm variants and the edit operations each admits: Standard (match, insert, delete, substitute), Transposition (+ adjacent swap), MergeAndSplit (+ merge and split).](docs/diagrams/automata/operation-sets.svg)
+The parameterized affine-gap surface is separate because its gap-open,
+gap-extension, and substitution costs are query parameters:
+
+```rust
+use libdictenstein::double_array_trie::DoubleArrayTrie;
+use liblevenshtein::transducer::{AffineGapParams, Algorithm, Transducer};
+
+let dict = DoubleArrayTrie::from_terms(["a", "abcd"]);
+let transducer = Transducer::new(dict, Algorithm::Standard);
+let costs = AffineGapParams::new(3.0, 2.0, 10.0).expect("exact decimal costs");
+let result = transducer
+    .query_affine("a", 9.0, costs)
+    .expect("exact decimal budget")
+    .find(|candidate| candidate.term == "abcd")
+    .expect("one length-three gap costs 3 + 3*2");
+assert_eq!(result.distance, 9.0);
+```
+
+![The unit-cost Algorithm selectors and the edit operations each admits: Standard (match, insert, delete, substitute), Transposition (+ adjacent swap), and MergeAndSplit (+ merge and split).](docs/diagrams/automata/operation-sets.svg)
+
+Affine gaps use a three-layer state machine derived from Gotoh [[23]](#references); see the [literate algorithm and verification map](docs/algorithms/10-affine-gap/README.md).
 
 ### How the automaton transitions (literate pseudocode)
 
@@ -396,6 +418,28 @@ Unicode pairs use `SubstitutionSetChar` (`.allow('é', 'e')`, `.allow('ñ', 'n')
 
 Two complementary ways to go beyond unit-cost edits.
 
+**Alignment-expressible presets** — use direct Unicode-scalar references or
+evaluate the identical operations through the exact generalized grid:
+
+```rust
+use liblevenshtein::distance::{hamming_distance, indel_distance};
+use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
+use liblevenshtein::transducer::OperationSet;
+
+assert_eq!(hamming_distance("abc", "bca"), Some(3));
+assert_eq!(hamming_distance("abc", "ab"), None);
+assert_eq!(indel_distance("a", "b"), 2);
+
+let skip = GeneralizedAutomaton::try_with_operations(2, OperationSet::bounded_skip())?;
+assert_eq!(skip.scaled_distance("crate", "cat")?, Some(2));
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+Hamming, indel, and directional bounded skip are `OperationSet`
+configurations, not separate lazy dictionary automata. Generated sets should
+cross `OperationSet::validate()` before use. See the
+[Class-A design](docs/design/class-a-presets.md).
+
 **Discrete operations** — choose *which* edits exist at runtime via an `OperationSet`, then run a generalized automaton or compose it as a [WFST](#wfst-integration):
 
 ```rust,ignore
@@ -450,9 +494,9 @@ Plug the weights into a transducer's substitution cost via `ArticulatoryCosts::w
 
 ---
 
-## Time Series (Move–Split–Merge)
+## Time Series (MSM, ERP, TWED, Discrete Fréchet, and Banded DTW)
 
-**MSM** [[10]](#references) is a metric for real-valued sequences built from three operations: **Move** a value (cost $`\lvert \Delta\rvert`$), **Split** one element into two equal copies, and **Merge** two equal adjacent elements (Split/Merge share a configurable cost $`c`$). Unlike DTW it is a true metric (it obeys the triangle inequality), and it is robust to temporal misalignment. The cost obeys the recurrence
+**MSM** [[10]](#references) is a metric for real-valued sequences built from three operations: **Move** a value (cost $`\lvert \Delta\rvert`$), **Split** one element into two equal copies, and **Merge** two equal adjacent elements (Split/Merge share a configurable cost $`c`$). Unlike DTW it obeys the triangle inequality, so it can support metric-tree indexes, and it is robust to temporal misalignment. This crate's trie walker has a separate correctness argument: interval-relaxed columns lower-bound every concrete descendant, step costs are non-negative, and surviving candidates are re-scored exactly. The cost obeys the recurrence
 
 ```math
 \mathrm{Cost}(i, j) = \min \begin{cases}
@@ -464,7 +508,15 @@ Plug the weights into a transducer's substitution cost via `ArticulatoryCosts::w
 
 where $`\mathrm{splitmerge}(a, b, c) = c`$ when $`a`$ lies between $`b`$ and $`c`$, else $`c + \min(\lvert a-b\rvert, \lvert a-c\rvert)`$.
 
-**`MsmTransducer`** indexes a set of reference series in a *quantized trie* and answers **exact** range and `k`-NN queries. Non-empty queries walk the trie with an *interval-relaxed* MSM dynamic program; empty queries use the exact empty-series branch directly. Its column lower bounds are admissible — so no true neighbor within the threshold is ever pruned — and surviving candidates are re-scored at full precision:
+**`MsmTransducer`** is the source-compatible MSM specialization of the generic
+`ElasticTransducer<MsmKernel, V>`. It indexes reference series in a *quantized
+trie* and answers **exact** range and `k`-NN queries. Non-empty finite queries
+walk the trie with an *interval-relaxed* MSM dynamic program; unsupported and
+empty queries use deterministic exact scoring. K1–K4 lower-bound and exactness
+obligations ensure that no true neighbor is pruned and every reported distance
+is recomputed at full precision. See the
+[design contract](docs/design/elastic-kernels.md) and
+[literate algorithm](docs/algorithms/12-elastic-measures/README.md):
 
 ```rust
 use liblevenshtein::time_series::{MsmConfig, MsmTransducer, QuantizationConfig};
@@ -487,6 +539,129 @@ let nearest = index.search_knn(&query, 2, 5.0);  // exact 2 nearest (initial thr
 
 The interval lower bounds and quantization soundness carry **admit-free** Coq/Rocq proofs and a TLA⁺ model — see [Formal Verification](#formal-verification).
 
+**ERP** [[17]](#references) aligns real-valued sequences using absolute match
+cost and a fixed real gap value. `ErpTransducer` reuses the same exact trie
+walker with an ERP interval recurrence and gap-mass candidate bound:
+
+```rust
+use liblevenshtein::time_series::{ErpConfig, ErpTransducer, QuantizationConfig};
+
+let references = vec![vec![1.0, 2.0], vec![1.0, 0.0, 2.0], vec![9.0]];
+let index = ErpTransducer::from_series(
+    QuantizationConfig::for_u8(-10.0, 10.0),
+    ErpConfig::new(0.0),
+    &references,
+);
+let zero_distance = index.search_range(&[1.0, 2.0], 0.0);
+assert_eq!(zero_distance.len(), 2); // inserting the gap value 0 costs zero
+```
+
+ERP is a pseudometric on raw sequences: adding or removing `$`g`$` costs zero.
+Identity holds after quotienting sequences by removal of `$`g`$`. See the
+[paper analysis](docs/research/erp/PAPER_SUMMARY.md),
+[design contract](docs/design/elastic-kernels.md), and
+[literate algorithm](docs/algorithms/12-elastic-measures/README.md).
+
+**TWED** [[21]](#references) compares adjacent segments and penalizes temporal
+displacement. The public scalar specialization uses unit-spaced timestamps,
+stiffness `$`\nu`$`, deletion penalty `$`\lambda`$`, and a zero sentinel.
+Validate the strict metric premise when metric-dependent generic code is in
+scope:
+
+```rust
+use liblevenshtein::time_series::{
+    MetricTwedConfig, MetricTwedTransducer, QuantizationConfig,
+};
+
+let references = vec![
+    vec![0.0, 1.0, 2.0],
+    vec![0.0, 2.0, 3.0],
+    vec![8.0, 9.0],
+];
+let kernel = MetricTwedConfig::try_new(0.5, 1.0).unwrap();
+let index = MetricTwedTransducer::from_series(
+    QuantizationConfig::for_u8(0.0, 10.0),
+    kernel,
+    &references,
+);
+assert_eq!(index.search_range(&[0.0, 1.0, 2.0], 0.0), vec![(0, 0.0)]);
+```
+
+The unrestricted `TwedConfig` also permits `$`\nu=0`$`; it is deliberately
+labelled non-metric because `$`D([0,1],[1])=0`$` at
+`$`\nu=\lambda=0`$`. Only `MetricTwedConfig`, which requires finite
+`$`\nu>0`$` and `$`\lambda\ge0`$`, implements `MetricElasticKernel`. Exact trie
+pruning remains valid for either type through carry-aware interval columns,
+the `$`\lvert m-n\rvert\lambda`$` candidate bound, and full-precision survivor
+scoring. See the [source analysis](docs/research/twed/PAPER_SUMMARY.md),
+[formal evidence](docs/verification/README.md), and
+[security limits](docs/security/resource-exhaustion.md).
+
+**Banded DTW** [[19]](#references) uses squared local deviations inside a
+required symmetric Sakoe–Chiba window [[20]](#references). `DtwTransducer`
+keeps DP columns and LB_Keogh in squared units, but accepts thresholds and
+returns scores in conventional square-root units:
+
+```rust
+use liblevenshtein::time_series::{
+    DtwConfig, DtwTransducer, QuantizationConfig,
+};
+
+let references = vec![
+    vec![0.0, 1.0, 2.0],
+    vec![0.0, 1.0, 1.0, 2.0],
+    vec![8.0, 9.0],
+];
+let index = DtwTransducer::from_series(
+    QuantizationConfig::for_u8(0.0, 10.0),
+    DtwConfig::new(1), // the band is required
+    &references,
+);
+let near = index.search_range(&[0.0, 1.0, 2.0], 0.25);
+assert_eq!(near.len(), 2);
+assert!(near.iter().all(|(_, distance)| *distance <= 0.25));
+```
+
+DTW is symmetric and non-negative but **not a metric**. Its code label is
+`DtwConfig::IS_METRIC = false`, and it cannot satisfy the
+`MetricElasticKernel` gate used by triangle-dependent indexes. The quantized
+trie remains exact because monotonic-deque LB_Keogh, interval prefix bounds,
+banded columns, and full-precision survivor scoring require no triangle
+inequality. See the [paper analysis](docs/research/dtw/PAPER_SUMMARY.md),
+[formal evidence](docs/verification/README.md), and
+[security limits](docs/security/resource-exhaustion.md).
+
+**Discrete Fréchet** [[18]](#references) measures the shortest possible
+longest link in an order-preserving coupling. It is the first production
+`BottleneckCost` kernel: the generic walker is unchanged, while DP path
+extension uses `max` instead of addition.
+
+```rust
+use liblevenshtein::time_series::{
+    FrechetConfig, FrechetTransducer, QuantizationConfig,
+};
+
+let references = vec![
+    vec![1.0, 2.0, 3.0],
+    vec![1.0, 1.0, 2.0, 3.0],
+    vec![8.0, 9.0],
+];
+let index = FrechetTransducer::from_series(
+    QuantizationConfig::for_u8(-10.0, 10.0),
+    FrechetConfig::new(),
+    &references,
+);
+let zero_distance = index.search_range(&[1.0, 2.0, 3.0], 0.0);
+assert_eq!(zero_distance.len(), 2);
+```
+
+Consecutive duplicate samples are zero-cost stutters, so raw vectors form a
+pseudometric; identity holds after run-length collapse. Exactly one empty side
+has infinite distance, and non-finite samples are outside the exact domain.
+See the [paper analysis](docs/research/frechet/PAPER_SUMMARY.md),
+[formal evidence](docs/verification/README.md), and
+[literate algorithm](docs/algorithms/12-elastic-measures/README.md).
+
 ---
 
 ## Completed External-Corpus Benchmark Evidence
@@ -500,6 +675,7 @@ summary; rerun commands and artifact naming are documented in
 | Automata path | External corpus | Completed measure | Result |
 | --- | --- | --- | --- |
 | Exact MSM automata / `MsmTransducer` k-NN | UCR/aeon 2018 univariate time-series archive slice [[14]](#references) | Exact 1-NN classification against a majority-label baseline | 51 datasets selected by `train_count * test_count * series_len^2 <= 1e9`; exact MSM 1-NN reached `11653/13754 = 0.847244` accuracy versus majority baseline `5664/13754 = 0.411807`. pgmcp recorded paired evidence `control_only=415`, `treatment_only=6404`, `n_discordant=6819`, `p_value=0.0`. The exact run used `1,154,677` candidate distance evaluations, `152,272` lower-bound prunes, and `1,087,933` cutoff-abandoned evaluations. |
+| Shared `ElasticKernel` flat/trie evaluation | The identical 51-dataset UCR/aeon slice [[14]](#references) | Exact 1-NN plus prefix/column/candidate pruning economics for five fixed configurations | Accuracy was ERP `0.862149`, MSM `0.847244`, banded DTW `0.842010`, TWED `0.799767`, and discrete Fréchet `0.777665`, versus majority `0.411807`. Flat exact evaluations ranged from Fréchet's `311,921` to TWED's `1,221,307`; trie exact evaluations ranged from Fréchet's `29,818` to TWED's `55,976`. DTW rejected `93,727` edges before column construction. Every flat nearest distance matched the trie, all accounting identities passed, and pgmcp computed significant paired McNemar results for all five arms. See the [complete preregistered ledger](docs/scientific-ledger/elastic-ucr-harness-2026-08-01.md). |
 | Phonetic automata / LLev English profiles | CMU Pronouncing Dictionary homophone groups [[15]](#references) | Recall@5 over the first 2048 CMUdict homophone cases | Fixed `en-us-cmudict` matched `3768/3960` expected homophone rows with mean recall@5 `0.985597` and mean reciprocal rank `0.987402`. The comparison profiles were Zompist `2109/3960`, mean recall@5 `0.642223`, and `american.llev + homophones.llev + names.llev` `2086/3960`, mean recall@5 `0.627313`. The post-fix diagnostic found `0` coverage gaps and `0` normalized-index/query bugs; remaining misses were top-k ceiling or ambiguous-pronunciation ranking cases. |
 | Ordered Levenshtein query automata | Birkbeck/Fawthrop spelling-error gate [[16]](#references) | Ordered recall and optimization gate on real spelling-error cases | Recall@5 stayed `50/51`; ordered p95 latency improved with Welch `p < 1e-6` and Cohen's `d ~= -2.16`. Allocation count improved, while allocated bytes increased because the accepted arena treatment stores vector-backed query state. |
 
@@ -717,7 +893,11 @@ let _ = transducer.query("alfa", 1).collect::<Vec<_>>();
 
 ## Additional Features
 
-**Serialization** (`serialization`, `compression`) — save/load dictionaries, with optional gzip (~85% smaller):
+**Binary persistence** (`serialization`, `protobuf`, `compression`) — bincode for optimized
+Rust storage, protobuf for portable interchange, and optional gzip around either byte stream.
+Bincode/protobuf are compact encodings, not compression; gzip's size/latency trade-off must be
+measured on representative artifacts. JSON, TOML, and other text persistence formats are not
+supported:
 
 ```rust
 use liblevenshtein::prelude::*;
@@ -725,6 +905,10 @@ use std::fs::File;
 let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
 GzipSerializer::<BincodeSerializer>::serialize(&dict, File::create("dict.bin.gz")?)?;
 let dict: DoubleArrayTrie = GzipSerializer::<BincodeSerializer>::deserialize(File::open("dict.bin.gz")?)?;
+
+let operations = OperationSet::standard();
+let portable = operations.to_protobuf()?;
+assert_eq!(OperationSet::from_protobuf(&portable)?, operations);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
@@ -828,9 +1012,16 @@ Enabling a feature enables the features it depends on (`A → B` = "A enables B"
 11. J. Aoe. "An Efficient Digital Search Algorithm by Using a Double-Array Structure." *IEEE Transactions on Software Engineering*, 15(9):1066–1077, 1989. [doi:10.1109/32.31365](https://doi.org/10.1109/32.31365)
 12. V. Leis, A. Kemper, and T. Neumann. "The adaptive radix tree: ARTful indexing for main-memory databases." *IEEE ICDE 2013*, pp. 38–49. [doi:10.1109/ICDE.2013.6544812](https://doi.org/10.1109/ICDE.2013.6544812)
 13. B. H. Bloom. "Space/time trade-offs in hash coding with allowable errors." *Communications of the ACM*, 13(7):422–426, 1970. [doi:10.1145/362686.362692](https://doi.org/10.1145/362686.362692)
-14. H. A. Dau, A. Bagnall, K. Kamgar, C.-C. M. Yeh, Y. Zhu, S. Gharghabi, C. A. Ratanamahatana, and E. Keogh. "The UCR Time Series Archive." arXiv:1810.07758, 2018. [arXiv](https://arxiv.org/abs/1810.07758)
+14. H. A. Dau, A. Bagnall, K. Kamgar, C.-C. M. Yeh, Y. Zhu, S. Gharghabi, C. A. Ratanamahatana, and E. Keogh. "The UCR Time Series Archive." arXiv:1810.07758, 2018. [doi:10.48550/arXiv.1810.07758](https://doi.org/10.48550/arXiv.1810.07758)
 15. Carnegie Mellon University. "The CMU Pronouncing Dictionary." [cmusphinx/cmudict](https://github.com/cmusphinx/cmudict)
 16. R. Mitton. "Birkbeck spelling error corpus." Oxford Text Archive, ota:0643, 1980. [OTA record](https://ota.bodleian.ox.ac.uk/repository/xmlui/handle/20.500.12024/0643)
+17. L. Chen and R. T. Ng. "On the Marriage of Lp-norms and Edit Distance." *Proceedings of the 30th VLDB Conference*, pp. 792–803, 2004. [doi:10.1016/B978-012088469-8.50070-X](https://doi.org/10.1016/B978-012088469-8.50070-X)
+18. T. Eiter and H. Mannila. "Computing Discrete Fréchet Distance." Technical Report CD-TR 94/64, TU Vienna, 1994. [Author-hosted report](https://www.kr.tuwien.ac.at/staff/eiter/et-archive/files/cdtr9464.pdf)
+19. E. Keogh and C. A. Ratanamahatana. "Exact Indexing of Dynamic Time Warping." *Knowledge and Information Systems*, 7:358–386, 2005. [doi:10.1007/s10115-004-0154-9](https://doi.org/10.1007/s10115-004-0154-9)
+20. H. Sakoe and S. Chiba. "Dynamic Programming Algorithm Optimization for Spoken Word Recognition." *IEEE Transactions on Acoustics, Speech, and Signal Processing*, 26(1):43–49, 1978. [doi:10.1109/TASSP.1978.1163055](https://doi.org/10.1109/TASSP.1978.1163055)
+21. P.-F. Marteau. "Time Warp Edit Distance with Stiffness Adjustment for Time Series Matching." *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 31(2):306–318, 2009. [doi:10.1109/TPAMI.2008.76](https://doi.org/10.1109/TPAMI.2008.76)
+22. R. Lowrance and R. A. Wagner. "An extension of the string-to-string correction problem." *Journal of the ACM*, 22(2):177–183, 1975. [doi:10.1145/321879.321880](https://doi.org/10.1145/321879.321880)
+23. O. Gotoh. "An improved algorithm for matching biological sequences." *Journal of Molecular Biology*, 162(3):705–708, 1982. [doi:10.1016/0022-2836(82)90398-9](https://doi.org/10.1016/0022-2836(82)90398-9)
 
 **Project documentation:** [algorithm research](docs/research/levenshtein-automata/README.md) · [implementation mapping](docs/research/levenshtein-automata/implementation-mapping.md) · [architecture](docs/developer-guide/architecture.md) · [benchmarks](docs/benchmarks/README.md) · [formal verification](docs/verification/README.md). Upstream: [original Java implementation](https://github.com/universal-automata/liblevenshtein-java).
 

@@ -11,6 +11,7 @@
 //! cargo run --release --example msm_experiment -- approx-paa-knn 33 3
 //! cargo run --release --example msm_experiment -- ucr-1nn-latency 5 1 target/msm-corpora/ItalyPowerDemand ItalyPowerDemand
 //! cargo run --release --example msm_experiment -- ucr-1nn-outcomes 0 0 target/msm-corpora/ItalyPowerDemand ItalyPowerDemand
+//! cargo run --release --example msm_experiment -- elastic-ucr --measure dtw --archive-root target/academic-benchmarks/msm/Univariate_ts
 //! ```
 
 use std::collections::BTreeMap;
@@ -19,9 +20,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use liblevenshtein::cost::CostMonoid;
+use liblevenshtein::time_series::elastic::{ElasticKernel, ElasticSearchStats, ElasticTransducer};
 use liblevenshtein::time_series::{
     length_lb, msm_distance_automaton, msm_distance_wavefront, ApproxMsmConfig, ApproxMsmIndex,
-    MsmConfig, MsmTransducer, QuantizationConfig,
+    DtwConfig, ErpConfig, FrechetConfig, MsmConfig, MsmKernel, MsmTransducer, QuantizationConfig,
+    TwedConfig,
 };
 
 #[derive(Debug, Clone)]
@@ -51,6 +55,81 @@ struct DatasetEvaluation {
     cutoff_abandoned: usize,
     elapsed_ms: f64,
     outcomes: Vec<(bool, bool)>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct FlatSearchStats {
+    candidates_considered: usize,
+    candidate_bound_pruned: usize,
+    exact_evaluations: usize,
+    cutoff_abandoned: usize,
+}
+
+impl FlatSearchStats {
+    fn accounting_is_consistent(self) -> bool {
+        self.candidate_bound_pruned
+            .checked_add(self.exact_evaluations)
+            .is_some_and(|total| total == self.candidates_considered)
+            && self.cutoff_abandoned <= self.exact_evaluations
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ElasticDatasetEvaluation {
+    candidate: DatasetCandidate,
+    measure: &'static str,
+    parameters: String,
+    majority_correct: usize,
+    measure_correct: usize,
+    total: usize,
+    flat: FlatSearchStats,
+    trie: ElasticSearchStats,
+    elapsed_ms: f64,
+    peak_resident_kib: usize,
+    native_distance_checksum: f64,
+    outcomes: Vec<(bool, bool)>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ElasticMeasure {
+    Msm,
+    Erp,
+    Twed,
+    Frechet,
+    Dtw,
+}
+
+impl ElasticMeasure {
+    fn parse(value: &str) -> Result<Self, String> {
+        match value {
+            "msm" => Ok(Self::Msm),
+            "erp" => Ok(Self::Erp),
+            "twed" => Ok(Self::Twed),
+            "frechet" => Ok(Self::Frechet),
+            "dtw" => Ok(Self::Dtw),
+            _ => Err(format!(
+                "unsupported elastic measure {value:?}; expected msm, erp, twed, frechet, or dtw"
+            )),
+        }
+    }
+
+    const fn name(self) -> &'static str {
+        match self {
+            Self::Msm => "msm",
+            Self::Erp => "erp",
+            Self::Twed => "twed",
+            Self::Frechet => "frechet",
+            Self::Dtw => "dtw",
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ElasticUcrOptions {
+    measure: ElasticMeasure,
+    archive_root: PathBuf,
+    max_dataset_cells: u128,
+    max_datasets: usize,
 }
 
 fn generate_series(len: usize, seed: u64) -> Vec<f64> {
@@ -379,6 +458,324 @@ fn discover_ucr_archive(root: &Path) -> Result<Vec<DatasetCandidate>, String> {
     Ok(candidates)
 }
 
+fn add_elastic_stats(total: &mut ElasticSearchStats, observed: ElasticSearchStats) {
+    total.visited_nodes = total.visited_nodes.saturating_add(observed.visited_nodes);
+    total.visited_edges = total.visited_edges.saturating_add(observed.visited_edges);
+    total.prefix_pruned = total.prefix_pruned.saturating_add(observed.prefix_pruned);
+    total.columns_built = total.columns_built.saturating_add(observed.columns_built);
+    total.column_pruned = total.column_pruned.saturating_add(observed.column_pruned);
+    total.queued_subtrees_pruned = total
+        .queued_subtrees_pruned
+        .saturating_add(observed.queued_subtrees_pruned);
+    total.candidates_considered = total
+        .candidates_considered
+        .saturating_add(observed.candidates_considered);
+    total.candidate_bound_pruned = total
+        .candidate_bound_pruned
+        .saturating_add(observed.candidate_bound_pruned);
+    total.exact_evaluations = total
+        .exact_evaluations
+        .saturating_add(observed.exact_evaluations);
+    total.cutoff_abandoned = total
+        .cutoff_abandoned
+        .saturating_add(observed.cutoff_abandoned);
+}
+
+fn process_peak_resident_kib() -> usize {
+    let Ok(status) = fs::read_to_string("/proc/self/status") else {
+        return 0;
+    };
+    status
+        .lines()
+        .find_map(|line| {
+            line.strip_prefix("VmHWM:")?
+                .split_whitespace()
+                .next()?
+                .parse::<usize>()
+                .ok()
+        })
+        .unwrap_or(0)
+}
+
+fn dataset_quantization(train: &[LabeledSeries]) -> Result<QuantizationConfig, String> {
+    let mut minimum = f64::INFINITY;
+    let mut maximum = f64::NEG_INFINITY;
+    for value in train.iter().flat_map(|row| row.series.iter().copied()) {
+        if !value.is_finite() {
+            return Err("UCR preprocessing left a non-finite sample".to_string());
+        }
+        minimum = minimum.min(value);
+        maximum = maximum.max(value);
+    }
+    if !minimum.is_finite() || !maximum.is_finite() {
+        return Err("UCR dataset contains no finite samples".to_string());
+    }
+    if minimum == maximum {
+        let padding = (minimum.abs() * 1e-9).max(1.0);
+        minimum -= padding;
+        maximum += padding;
+    }
+    QuantizationConfig::try_uniform(minimum, maximum, 256).ok_or_else(|| {
+        format!("cannot construct 256-bin quantizer for dataset range [{minimum}, {maximum}]")
+    })
+}
+
+fn predict_elastic_1nn<'a, K>(
+    train: &'a [LabeledSeries],
+    probe: &[f64],
+    kernel: &K,
+    stats: &mut FlatSearchStats,
+) -> (&'a str, f64)
+where
+    K: ElasticKernel,
+    K::Monoid: CostMonoid<Cost = f64>,
+{
+    let plan = kernel.plan(probe);
+    let mut best_label = "";
+    let mut best_distance = K::Monoid::TOP;
+    for candidate in train {
+        stats.candidates_considered = stats.candidates_considered.saturating_add(1);
+        let lower_bound = kernel.candidate_lower_bound(probe, &candidate.series, &plan);
+        if K::Monoid::compare(lower_bound, best_distance) == std::cmp::Ordering::Greater {
+            stats.candidate_bound_pruned = stats.candidate_bound_pruned.saturating_add(1);
+            continue;
+        }
+        stats.exact_evaluations = stats.exact_evaluations.saturating_add(1);
+        let Some(distance) = kernel.exact_with_cutoff(probe, &candidate.series, best_distance)
+        else {
+            stats.cutoff_abandoned = stats.cutoff_abandoned.saturating_add(1);
+            continue;
+        };
+        if K::Monoid::compare(distance, best_distance) == std::cmp::Ordering::Less {
+            best_distance = distance;
+            best_label = candidate.label.as_str();
+        }
+    }
+    (best_label, best_distance)
+}
+
+fn evaluate_elastic_dataset<K>(
+    candidate: &DatasetCandidate,
+    measure: &'static str,
+    parameters: String,
+    kernel: K,
+) -> Result<ElasticDatasetEvaluation, String>
+where
+    K: ElasticKernel,
+    K::Monoid: CostMonoid<Cost = f64>,
+{
+    let (train, test) = load_ucr_dataset(&candidate.dir, &candidate.name)?;
+    let quantization = dataset_quantization(&train)?;
+    let originals: Vec<Vec<f64>> = train.iter().map(|row| row.series.clone()).collect();
+    let index = ElasticTransducer::<K>::from_series(quantization, kernel.clone(), &originals);
+    let majority = majority_label(&train).to_string();
+    let started = Instant::now();
+    let mut majority_correct = 0usize;
+    let mut measure_correct = 0usize;
+    let mut flat = FlatSearchStats::default();
+    let mut trie = ElasticSearchStats::default();
+    let mut native_distance_checksum = 0.0;
+    let mut outcomes = Vec::with_capacity(test.len());
+
+    for probe in &test {
+        let majority_hit = majority == probe.label;
+        majority_correct = majority_correct.saturating_add(usize::from(majority_hit));
+
+        let (predicted, exact_distance) =
+            predict_elastic_1nn(&train, &probe.series, &kernel, &mut flat);
+        let measure_hit = predicted == probe.label;
+        measure_correct = measure_correct.saturating_add(usize::from(measure_hit));
+        if exact_distance.is_finite() {
+            native_distance_checksum += exact_distance;
+        }
+
+        let (nearest, observed) = index.search_knn_with_stats(&probe.series, 1, K::Monoid::TOP);
+        add_elastic_stats(&mut trie, observed);
+        match nearest.first() {
+            Some((_, trie_distance))
+                if K::Monoid::compare(*trie_distance, exact_distance)
+                    == std::cmp::Ordering::Equal => {}
+            None if K::Monoid::compare(exact_distance, K::Monoid::TOP)
+                != std::cmp::Ordering::Less => {}
+            other => {
+                return Err(format!(
+                    "{}: flat/trie nearest-distance mismatch for measure {measure}: flat={exact_distance:?}, trie={other:?}",
+                    candidate.name
+                ));
+            }
+        }
+        outcomes.push((majority_hit, measure_hit));
+    }
+
+    if !flat.accounting_is_consistent() || !trie.accounting_is_consistent() {
+        return Err(format!(
+            "{}: inconsistent pruning counters for measure {measure}",
+            candidate.name
+        ));
+    }
+
+    Ok(ElasticDatasetEvaluation {
+        candidate: candidate.clone(),
+        measure,
+        parameters,
+        majority_correct,
+        measure_correct,
+        total: test.len(),
+        flat,
+        trie,
+        elapsed_ms: started.elapsed().as_secs_f64() * 1000.0,
+        peak_resident_kib: process_peak_resident_kib(),
+        native_distance_checksum,
+        outcomes,
+    })
+}
+
+fn evaluate_elastic_measure(
+    candidate: &DatasetCandidate,
+    measure: ElasticMeasure,
+) -> Result<ElasticDatasetEvaluation, String> {
+    match measure {
+        ElasticMeasure::Msm => evaluate_elastic_dataset(
+            candidate,
+            measure.name(),
+            "c=1".to_string(),
+            MsmKernel::new(MsmConfig::new(1.0)),
+        ),
+        ElasticMeasure::Erp => evaluate_elastic_dataset(
+            candidate,
+            measure.name(),
+            "g=0".to_string(),
+            ErpConfig::new(0.0),
+        ),
+        ElasticMeasure::Twed => evaluate_elastic_dataset(
+            candidate,
+            measure.name(),
+            "nu=1;lambda=1".to_string(),
+            TwedConfig::new(1.0, 1.0),
+        ),
+        ElasticMeasure::Frechet => evaluate_elastic_dataset(
+            candidate,
+            measure.name(),
+            "discrete".to_string(),
+            FrechetConfig::new(),
+        ),
+        ElasticMeasure::Dtw => {
+            let band = candidate.series_len.div_ceil(10).max(1);
+            evaluate_elastic_dataset(
+                candidate,
+                measure.name(),
+                format!("band={band};rule=ceil_10_percent_length"),
+                DtwConfig::new(band),
+            )
+        }
+    }
+}
+
+fn parse_elastic_ucr_options(
+    mut args: impl Iterator<Item = String>,
+) -> Result<ElasticUcrOptions, String> {
+    let mut measure = None;
+    let mut archive_root = PathBuf::from("target/academic-benchmarks/msm/Univariate_ts");
+    let mut max_dataset_cells = 1_000_000_000u128;
+    let mut max_datasets = usize::MAX;
+    while let Some(flag) = args.next() {
+        let value = |args: &mut dyn Iterator<Item = String>| {
+            args.next()
+                .ok_or_else(|| format!("missing value after {flag}"))
+        };
+        match flag.as_str() {
+            "--measure" => measure = Some(ElasticMeasure::parse(&value(&mut args)?)?),
+            "--archive-root" => archive_root = PathBuf::from(value(&mut args)?),
+            "--max-cells" => {
+                max_dataset_cells = value(&mut args)?
+                    .parse()
+                    .map_err(|error| format!("invalid --max-cells value: {error}"))?;
+            }
+            "--max-datasets" => {
+                max_datasets = value(&mut args)?
+                    .parse()
+                    .map_err(|error| format!("invalid --max-datasets value: {error}"))?;
+            }
+            _ => return Err(format!("unknown elastic-ucr option {flag:?}")),
+        }
+    }
+    Ok(ElasticUcrOptions {
+        measure: measure.ok_or_else(|| "elastic-ucr requires --measure".to_string())?,
+        archive_root,
+        max_dataset_cells,
+        max_datasets,
+    })
+}
+
+fn run_elastic_ucr(args: impl Iterator<Item = String>) -> Result<(), String> {
+    let options = parse_elastic_ucr_options(args)?;
+    let candidates = discover_ucr_archive(&options.archive_root)?;
+    println!(
+        "record_type,measure,dataset,case_index,arm,correct,train_count,test_count,series_len,estimated_cells,majority_correct,measure_correct,total,accuracy,flat_candidates,flat_bound_pruned,flat_exact_evaluations,flat_cutoff_abandoned,trie_visited_nodes,trie_visited_edges,trie_prefix_pruned,trie_columns_built,trie_column_pruned,trie_queued_subtrees_pruned,trie_candidates,trie_candidate_bound_pruned,trie_exact_evaluations,trie_cutoff_abandoned,elapsed_ms,peak_resident_kib,native_distance_checksum,parameters"
+    );
+    for candidate in candidates
+        .into_iter()
+        .filter(|candidate| candidate.estimated_cells <= options.max_dataset_cells)
+        .take(options.max_datasets)
+    {
+        let evaluation = evaluate_elastic_measure(&candidate, options.measure)?;
+        let accuracy = if evaluation.total == 0 {
+            0.0
+        } else {
+            evaluation.measure_correct as f64 / evaluation.total as f64
+        };
+        println!(
+            "summary,{},{},,,,{},{},{},{},{},{},{},{:.12},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{:.6},{},{:.12},{}",
+            evaluation.measure,
+            evaluation.candidate.name,
+            evaluation.candidate.train_count,
+            evaluation.candidate.test_count,
+            evaluation.candidate.series_len,
+            evaluation.candidate.estimated_cells,
+            evaluation.majority_correct,
+            evaluation.measure_correct,
+            evaluation.total,
+            accuracy,
+            evaluation.flat.candidates_considered,
+            evaluation.flat.candidate_bound_pruned,
+            evaluation.flat.exact_evaluations,
+            evaluation.flat.cutoff_abandoned,
+            evaluation.trie.visited_nodes,
+            evaluation.trie.visited_edges,
+            evaluation.trie.prefix_pruned,
+            evaluation.trie.columns_built,
+            evaluation.trie.column_pruned,
+            evaluation.trie.queued_subtrees_pruned,
+            evaluation.trie.candidates_considered,
+            evaluation.trie.candidate_bound_pruned,
+            evaluation.trie.exact_evaluations,
+            evaluation.trie.cutoff_abandoned,
+            evaluation.elapsed_ms,
+            evaluation.peak_resident_kib,
+            evaluation.native_distance_checksum,
+            evaluation.parameters,
+        );
+        for (case, (majority_correct, measure_correct)) in
+            evaluation.outcomes.iter().copied().enumerate()
+        {
+            println!(
+                "case,{},{case_dataset},{case},majority,{}",
+                evaluation.measure,
+                u8::from(majority_correct),
+                case_dataset = evaluation.candidate.name,
+            );
+            println!(
+                "case,{},{case_dataset},{case},{},{}",
+                evaluation.measure,
+                evaluation.measure,
+                u8::from(measure_correct),
+                case_dataset = evaluation.candidate.name,
+            );
+        }
+    }
+    Ok(())
+}
+
 fn ucr_1nn_accuracy(
     train: &[LabeledSeries],
     test: &[LabeledSeries],
@@ -594,6 +991,10 @@ fn measure_legacy_ratio(scenario: &str) -> f64 {
 fn main() {
     let mut args = env::args().skip(1);
     let scenario = args.next().unwrap_or_else(|| "exact-range".to_string());
+    if scenario == "elastic-ucr" {
+        run_elastic_ucr(args).unwrap_or_else(|error| panic!("elastic-ucr failed: {error}"));
+        return;
+    }
     let measured_runs = args
         .next()
         .and_then(|s| s.parse::<usize>().ok())
@@ -929,5 +1330,41 @@ mod tests {
         assert_eq!(evaluation.msm_correct, 2);
         assert_eq!(evaluation.total, 2);
         assert_eq!(evaluation.outcomes, vec![(true, true), (false, true)]);
+    }
+
+    #[test]
+    fn elastic_ucr_adapter_runs_every_measure_with_consistent_counters() {
+        let scratch = ScratchDir::new("elastic");
+        let dataset = "ToyElasticArchive";
+        fs::write(
+            scratch.path().join(format!("{dataset}_TRAIN.txt")),
+            "A 0.0 0.0 0.0\nB 10.0 10.0 10.0\n",
+        )
+        .expect("write train split");
+        fs::write(
+            scratch.path().join(format!("{dataset}_TEST.txt")),
+            "A 0.0 0.0 1.0\nB 10.0 9.0 10.0\n",
+        )
+        .expect("write test split");
+        let candidate =
+            estimate_dataset_candidate(scratch.path(), dataset).expect("estimate dataset");
+
+        for measure in [
+            ElasticMeasure::Msm,
+            ElasticMeasure::Erp,
+            ElasticMeasure::Twed,
+            ElasticMeasure::Frechet,
+            ElasticMeasure::Dtw,
+        ] {
+            let evaluation =
+                evaluate_elastic_measure(&candidate, measure).expect("evaluate elastic measure");
+            assert_eq!(evaluation.measure, measure.name());
+            assert_eq!((evaluation.measure_correct, evaluation.total), (2, 2));
+            assert_eq!(evaluation.outcomes, vec![(true, true), (false, true)]);
+            assert!(evaluation.flat.accounting_is_consistent());
+            assert!(evaluation.trie.accounting_is_consistent());
+            assert_eq!(evaluation.flat.candidates_considered, 4);
+            assert!(evaluation.native_distance_checksum.is_finite());
+        }
     }
 }

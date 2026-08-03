@@ -31,8 +31,8 @@ pub struct PositionTracker {
     total_bytes: usize,
 
     /// Byte offsets where each line starts.
-    /// line_starts[0] = 0 (first line starts at offset 0).
-    /// line_starts[n] = byte offset where line n+1 starts.
+    /// `line_starts[0] = 0` (the first line starts at offset 0).
+    /// `line_starts[n]` is the byte offset where line `n + 1` starts.
     line_starts: Vec<usize>,
 
     /// Lines of text (for context in match output).

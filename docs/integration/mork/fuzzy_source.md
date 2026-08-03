@@ -214,7 +214,7 @@ use pathmap::zipper::{ReadZipperUntracked, Zipper, ZipperMoving, ZipperIteration
 /// ```rust
 /// let config = FuzzyConfig {
 ///     max_distance: 2,
-///     algorithm: Algorithm::Transposition,  // Damerau-Levenshtein
+///     algorithm: Algorithm::Transposition,  // OSA / restricted Damerau
 ///     include_exact: true,
 /// };
 /// ```
@@ -225,7 +225,7 @@ pub struct FuzzyConfig {
 
     /// Algorithm to use for distance calculation
     /// - `Standard`: Insert, delete, substitute
-    /// - `Transposition`: Adds adjacent character swaps (Damerau-Levenshtein)
+    /// - `Transposition`: Adds adjacent swaps under optimal string alignment
     /// - `MergeAndSplit`: OCR-optimized two-char ↔ one-char operations
     pub algorithm: Algorithm,
 
@@ -827,7 +827,7 @@ How this works internally:
 !(match &space (fuzzy "teh" 1 standard $result) $result)
 ; Returns: "the" (distance 1 via substitute)
 
-; Transposition (Damerau-Levenshtein, includes adjacent swaps)
+; Transposition (optimal string alignment / restricted Damerau)
 !(match &space (fuzzy "teh" 1 transposition $result) $result)
 ; Returns: "the" (distance 1 via swap 'e'↔'h')
 

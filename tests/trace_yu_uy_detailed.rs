@@ -53,14 +53,14 @@ fn trace_yu_to_uy_detailed() {
     println!("  After subsumption:");
     let mut state1 = State::new();
     state1.insert(Position::new(0, 1), algorithm, query_length);
-    state1.insert(Position::new_special(0, 1), algorithm, query_length);
+    state1.insert(Position::new_osa_transposing(0, 1), algorithm, query_length);
     state1.insert(Position::new(1, 1), algorithm, query_length);
     state1.insert(Position::new(2, 1), algorithm, query_length);
 
     let has_special = state1
         .positions()
         .iter()
-        .any(|p| p.is_special && p.term_index == 0 && p.num_errors == 1);
+        .any(|p| p.is_special() && p.term_index == 0 && p.num_errors == 1);
 
     if has_special {
         println!("    OK Special position (0,1,true) survived!");
@@ -79,7 +79,7 @@ fn trace_yu_to_uy_detailed() {
     for pos in state1.positions() {
         println!("  Position {:?}:", pos);
 
-        if pos.is_special && pos.term_index == 0 && pos.num_errors == 1 {
+        if pos.is_special() && pos.term_index == 0 && pos.num_errors == 1 {
             println!("    -> This is the SPECIAL transposition position!");
             println!("    CV for 'y' vs 'yu' at offset 0:");
             println!("      cv[0]: 'y' == 'y'? true <- MATCH!");

@@ -1185,7 +1185,7 @@ perf report
 - `memory_pressure_benchmarks.rs` - Low-memory scenarios
 - `cost_aware_benchmarks.rs` - Cost-based eviction
 - `merge_split_benchmarks.rs` - OCR-specific operations
-- `transposition_benchmarks.rs` - Damerau-Levenshtein
+- `transposition_benchmarks.rs` - optimal string alignment (restricted Damerau)
 
 ### How to Run Benchmarks
 

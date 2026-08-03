@@ -27,9 +27,13 @@ assert_eq!(standard_distance("kitten", "sitting"), 3);
 
 **Complexity**: $`\mathcal{O}(mn)`$ time, $`\mathcal{O}(\min(m,n))`$ space
 
-### Damerau-Levenshtein Distance (Transposition)
+### Optimal String Alignment Distance (Transposition)
 
 Extends standard Levenshtein to include transposition (swapping adjacent characters) as a single operation.
+
+This three-row recurrence is optimal string alignment (restricted Damerau),
+not unrestricted Damerau–Levenshtein distance. It does not satisfy the triangle
+inequality.
 
 ```rust
 use liblevenshtein::distance::transposition_distance;

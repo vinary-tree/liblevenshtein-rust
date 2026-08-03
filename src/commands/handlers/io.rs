@@ -14,7 +14,7 @@ use crate::commands::core::{
 use crate::repl::state::{DictContainer, DictionaryBackend};
 
 #[cfg(feature = "serialization")]
-use crate::serialization::{BincodeSerializer, DictionarySerializer, JsonSerializer};
+use crate::serialization::{BincodeSerializer, DictionarySerializer};
 #[cfg(feature = "protobuf")]
 use crate::serialization::{ProtobufSerializer, SuffixAutomatonProtobufSerializer};
 
@@ -71,31 +71,17 @@ fn save_dictionary_impl(
     format: SerializationFormat,
 ) -> Result<()> {
     match format {
-        SerializationFormat::Text => save_text_dict(container, path),
         #[cfg(feature = "serialization")]
         SerializationFormat::Bincode => save_bincode_dict(container, path),
-        #[cfg(feature = "serialization")]
-        SerializationFormat::Json => save_json_dict(container, path),
         #[cfg(all(feature = "protobuf", feature = "serialization"))]
         SerializationFormat::Protobuf => save_protobuf_dict(container, path),
         #[cfg(feature = "compression")]
         SerializationFormat::BincodeGzip => save_bincode_gzip_dict(container, path),
-        #[cfg(feature = "compression")]
-        SerializationFormat::JsonGzip => save_json_gzip_dict(container, path),
         #[cfg(all(feature = "protobuf", feature = "compression"))]
         SerializationFormat::ProtobufGzip => save_protobuf_gzip_dict(container, path),
-        SerializationFormat::PathsNative => save_paths_native_dict(container, path),
         #[cfg(not(feature = "serialization"))]
         _ => bail!("Serialization feature not enabled"),
     }
-}
-
-/// Save as plain text (one term per line).
-fn save_text_dict(container: &DictContainer, path: &Path) -> Result<()> {
-    let terms = container.terms();
-    let content = terms.join("\n");
-    std::fs::write(path, content)
-        .with_context(|| format!("Failed to write file: {}", path.display()))
 }
 
 #[cfg(feature = "serialization")]
@@ -108,18 +94,6 @@ fn save_bincode_dict(container: &DictContainer, path: &Path) -> Result<()> {
         DictContainer::SuffixAutomaton(d) => {
             BincodeSerializer::serialize_suffix_automaton(d, file)?
         }
-    }
-    Ok(())
-}
-
-#[cfg(feature = "serialization")]
-fn save_json_dict(container: &DictContainer, path: &Path) -> Result<()> {
-    let file = std::fs::File::create(path)?;
-    match container {
-        DictContainer::PathMap(d) => JsonSerializer::serialize(d, file)?,
-        DictContainer::DoubleArrayTrie(d) => JsonSerializer::serialize(d, file)?,
-        DictContainer::DynamicDawg(d) => JsonSerializer::serialize(d, file)?,
-        DictContainer::SuffixAutomaton(d) => JsonSerializer::serialize(d, file)?,
     }
     Ok(())
 }
@@ -156,20 +130,6 @@ fn save_bincode_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> 
     Ok(())
 }
 
-#[cfg(feature = "compression")]
-fn save_json_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> {
-    use crate::serialization::GzipSerializer;
-
-    let file = std::fs::File::create(path)?;
-    match container {
-        DictContainer::PathMap(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
-        DictContainer::DoubleArrayTrie(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
-        DictContainer::DynamicDawg(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
-        DictContainer::SuffixAutomaton(d) => GzipSerializer::<JsonSerializer>::serialize(d, file)?,
-    }
-    Ok(())
-}
-
 #[cfg(all(feature = "protobuf", feature = "compression"))]
 fn save_protobuf_gzip_dict(container: &DictContainer, path: &Path) -> Result<()> {
     use crate::serialization::GzipSerializer;
@@ -190,21 +150,6 @@ fn save_protobuf_gzip_dict(container: &DictContainer, path: &Path) -> Result<()>
         }
     }
     Ok(())
-}
-
-/// Save as PathMap's native .paths format.
-fn save_paths_native_dict(container: &DictContainer, path: &Path) -> Result<()> {
-    match container {
-        DictContainer::PathMap(d) => {
-            let mut file = std::fs::File::create(path)
-                .with_context(|| format!("Failed to create file: {}", path.display()))?;
-            d.serialize_paths(&mut file)
-                .map_err(|e| anyhow::anyhow!("Failed to serialize paths: {}", e))
-                .with_context(|| format!("Failed to serialize paths to: {}", path.display()))?;
-            Ok(())
-        }
-        _ => bail!("PathsNative format only supports PathMap backend"),
-    }
 }
 
 // ============================================================================
@@ -242,48 +187,17 @@ pub fn execute_deserialize(
 /// Internal implementation for loading dictionaries.
 fn load_dictionary_impl(path: &Path, format: DictFormat) -> Result<DictContainer> {
     match format.format {
-        SerializationFormat::Text => load_text_dict(path, format.backend),
         #[cfg(feature = "serialization")]
         SerializationFormat::Bincode => load_bincode_dict(path, format.backend),
-        #[cfg(feature = "serialization")]
-        SerializationFormat::Json => load_json_dict(path, format.backend),
         #[cfg(all(feature = "protobuf", feature = "serialization"))]
         SerializationFormat::Protobuf => load_protobuf_dict(path, format.backend),
         #[cfg(feature = "compression")]
         SerializationFormat::BincodeGzip => load_bincode_gzip_dict(path, format.backend),
-        #[cfg(feature = "compression")]
-        SerializationFormat::JsonGzip => load_json_gzip_dict(path, format.backend),
         #[cfg(all(feature = "protobuf", feature = "compression"))]
         SerializationFormat::ProtobufGzip => load_protobuf_gzip_dict(path, format.backend),
-        SerializationFormat::PathsNative => load_paths_native_dict(path),
         #[cfg(not(feature = "serialization"))]
         _ => bail!("Serialization feature not enabled"),
     }
-}
-
-/// Load plain text dictionary.
-fn load_text_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContainer> {
-    use std::io::BufRead;
-
-    let file = std::fs::File::open(path)
-        .with_context(|| format!("Failed to open file: {}", path.display()))?;
-    let reader = std::io::BufReader::new(file);
-
-    let terms: Vec<String> = reader
-        .lines()
-        .filter_map(|line| {
-            line.ok().and_then(|l| {
-                let trimmed = l.trim();
-                if trimmed.is_empty() || trimmed.starts_with('#') {
-                    None
-                } else {
-                    Some(trimmed.to_string())
-                }
-            })
-        })
-        .collect();
-
-    create_dict_from_terms(terms, backend)
 }
 
 #[cfg(feature = "serialization")]
@@ -310,36 +224,6 @@ fn load_bincode_dict(path: &Path, backend: DictionaryBackend) -> Result<DictCont
         }
         DictionaryBackend::SuffixAutomaton => {
             let dict: SuffixAutomaton = BincodeSerializer::deserialize_suffix_automaton(file)?;
-            DictContainer::SuffixAutomaton(dict)
-        }
-    };
-    Ok(container)
-}
-
-#[cfg(feature = "serialization")]
-fn load_json_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContainer> {
-    use libdictenstein::double_array_trie::DoubleArrayTrie;
-    use libdictenstein::pathmap::PathMapDictionary;
-    use libdictenstein::suffix_automaton::SuffixAutomaton;
-
-    let file = std::fs::File::open(path)?;
-    let container = match backend {
-        DictionaryBackend::PathMap => {
-            let dict: PathMapDictionary = JsonSerializer::deserialize(file)?;
-            DictContainer::PathMap(dict)
-        }
-        DictionaryBackend::DoubleArrayTrie => {
-            let dict: DoubleArrayTrie = JsonSerializer::deserialize(file)?;
-            DictContainer::DoubleArrayTrie(dict)
-        }
-        DictionaryBackend::DynamicDawg => {
-            // DynamicDawg doesn't implement direct deserialization, so extract terms and rebuild
-            let dict: PathMapDictionary = JsonSerializer::deserialize(file)?;
-            let terms = extract_terms_from_pathmap(&dict);
-            create_dict_from_terms(terms, backend)?
-        }
-        DictionaryBackend::SuffixAutomaton => {
-            let dict: SuffixAutomaton = JsonSerializer::deserialize(file)?;
             DictContainer::SuffixAutomaton(dict)
         }
     };
@@ -404,36 +288,6 @@ fn load_bincode_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<Dic
     Ok(container)
 }
 
-#[cfg(feature = "compression")]
-fn load_json_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContainer> {
-    use crate::serialization::GzipSerializer;
-    use libdictenstein::double_array_trie::DoubleArrayTrie;
-    use libdictenstein::pathmap::PathMapDictionary;
-    use libdictenstein::suffix_automaton::SuffixAutomaton;
-
-    let file = std::fs::File::open(path)?;
-    let container = match backend {
-        DictionaryBackend::PathMap => {
-            let dict: PathMapDictionary = GzipSerializer::<JsonSerializer>::deserialize(file)?;
-            DictContainer::PathMap(dict)
-        }
-        DictionaryBackend::DoubleArrayTrie => {
-            let dict: DoubleArrayTrie = GzipSerializer::<JsonSerializer>::deserialize(file)?;
-            DictContainer::DoubleArrayTrie(dict)
-        }
-        DictionaryBackend::DynamicDawg => {
-            let dict: PathMapDictionary = GzipSerializer::<JsonSerializer>::deserialize(file)?;
-            let terms = extract_terms_from_pathmap(&dict);
-            create_dict_from_terms(terms, backend)?
-        }
-        DictionaryBackend::SuffixAutomaton => {
-            let dict: SuffixAutomaton = GzipSerializer::<JsonSerializer>::deserialize(file)?;
-            DictContainer::SuffixAutomaton(dict)
-        }
-    };
-    Ok(container)
-}
-
 #[cfg(all(feature = "protobuf", feature = "compression"))]
 fn load_protobuf_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<DictContainer> {
     use crate::serialization::GzipSerializer;
@@ -463,19 +317,6 @@ fn load_protobuf_gzip_dict(path: &Path, backend: DictionaryBackend) -> Result<Di
         }
     };
     Ok(container)
-}
-
-/// Load PathMap's native .paths format.
-fn load_paths_native_dict(path: &Path) -> Result<DictContainer> {
-    use libdictenstein::pathmap::PathMapDictionary;
-
-    let file = std::fs::File::open(path)
-        .with_context(|| format!("Failed to open file: {}", path.display()))?;
-
-    let dict = PathMapDictionary::deserialize_paths(file)
-        .map_err(|e| anyhow::anyhow!("Failed to deserialize paths: {}", e))
-        .with_context(|| format!("Failed to load PathMap from: {}", path.display()))?;
-    Ok(DictContainer::PathMap(dict))
 }
 
 // ============================================================================
@@ -578,11 +419,11 @@ fn create_dict_from_terms(terms: Vec<String>, backend: DictionaryBackend) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
     use tempfile::NamedTempFile;
 
+    #[cfg(feature = "serialization")]
     #[test]
-    fn test_save_and_load_text_dict() {
+    fn test_save_and_load_bincode_dict() {
         use libdictenstein::pathmap::PathMapDictionary;
 
         // Create a dictionary
@@ -596,7 +437,7 @@ mod tests {
 
         let params = SerializeParams {
             path: path.clone(),
-            format: SerializationFormat::Text,
+            format: SerializationFormat::Bincode,
             overwrite: true,
         };
 
@@ -608,7 +449,7 @@ mod tests {
         let load_params = DeserializeParams {
             path: path.clone(),
             backend: Some(DictionaryBackend::PathMap),
-            format: Some(SerializationFormat::Text),
+            format: Some(SerializationFormat::Bincode),
         };
 
         let (loaded_container, load_result) =
@@ -619,31 +460,7 @@ mod tests {
         assert!(loaded_container.contains("cherry"));
     }
 
-    #[test]
-    fn test_load_text_dict_with_comments() {
-        // Create a text file with comments
-        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        writeln!(temp_file, "# This is a comment").expect("write failed");
-        writeln!(temp_file, "apple").expect("write failed");
-        writeln!(temp_file).expect("write failed");
-        writeln!(temp_file, "# Another comment").expect("write failed");
-        writeln!(temp_file, "banana").expect("write failed");
-        temp_file.flush().expect("flush failed");
-
-        let path = temp_file.path().to_path_buf();
-
-        let params = DeserializeParams {
-            path,
-            backend: Some(DictionaryBackend::PathMap),
-            format: Some(SerializationFormat::Text),
-        };
-
-        let (container, result) = execute_deserialize(&params).expect("Failed to deserialize");
-        assert_eq!(result.term_count, 2);
-        assert!(container.contains("apple"));
-        assert!(container.contains("banana"));
-    }
-
+    #[cfg(feature = "serialization")]
     #[test]
     fn test_serialize_no_overwrite() {
         use libdictenstein::pathmap::PathMapDictionary;
@@ -657,7 +474,7 @@ mod tests {
 
         let params = SerializeParams {
             path,
-            format: SerializationFormat::Text,
+            format: SerializationFormat::Bincode,
             overwrite: false, // Should fail because file exists
         };
 

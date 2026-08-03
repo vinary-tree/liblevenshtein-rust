@@ -10,7 +10,7 @@ fn generate_positions(count: usize, max_distance: usize, query_length: usize) ->
         let num_errors = (i / (query_length + 1)) % (max_distance + 1);
         let is_special = (i % 3) == 0; // Some special positions
         if is_special {
-            positions.push(Position::new_special(term_index, num_errors));
+            positions.push(Position::new_osa_transposing(term_index, num_errors));
         } else {
             positions.push(Position::new(term_index, num_errors));
         }

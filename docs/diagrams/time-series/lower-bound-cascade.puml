@@ -1,0 +1,47 @@
+@startuml lower-bound-cascade
+' Activity diagram of exact elastic range search's two admissible pruning stages
+' and authoritative exact verification.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam activity {
+  BorderColor #455A64
+  FontColor #102027
+  ArrowColor #37474F
+}
+
+title Exact elastic search — lower-bound cascade
+
+start
+:Enter quantized trie node; <<#C8E6C9>>
+:Compute interval column and node bound K1; <<#BBDEFB>>
+if (node bound within cutoff?) then (yes)
+  if (final node?) then (yes)
+    :Load each full-precision original; <<#FFF3E0>>
+    :Compute candidate lower bound K4; <<#D1C4E9>>
+    if (candidate bound within cutoff?) then (yes)
+      :Exact score with cutoff K3; <<#B2DFDB>>
+      if (exact score within cutoff?) then (yes)
+        :Emit exact result; <<#C8E6C9>>
+      else (no)
+        :Reject false positive; <<#FFCDD2>>
+      endif
+    else (no)
+      :Skip exact DP; <<#FFCDD2>>
+    endif
+  endif
+  :Descend to children; <<#C8E6C9>>
+else (no)
+  :Prune entire subtree using K1 + K2; <<#FFCDD2>>
+endif
+stop
+
+legend right
+  |= Colour |= Meaning |
+  |<#C8E6C9>| traversal / accepted work |
+  |<#BBDEFB>| interval subtree bound |
+  |<#D1C4E9>| candidate bound |
+  |<#B2DFDB>| exact full-precision score |
+  |<#FFCDD2>| sound rejection |
+endlegend
+@enduml

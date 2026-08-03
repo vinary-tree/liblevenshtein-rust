@@ -55,10 +55,15 @@ impl LevenshteinHelper {
                 .into_iter()
                 .map(String::from)
                 .collect(),
-            algorithms: vec!["standard", "transposition", "merge-and-split"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
+            algorithms: vec![
+                "standard",
+                "transposition",
+                "damerau-levenshtein",
+                "merge-and-split",
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect(),
         }
     }
 }

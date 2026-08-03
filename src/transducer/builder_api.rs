@@ -4,8 +4,8 @@
 //! dictionaries with various options.
 
 use super::{
-    Algorithm, OrderedQueryIterator, QueryIterator, SubstitutionPolicy, SubstitutionPolicyFor,
-    Unrestricted,
+    AffineGapParams, AffineQueryIterator, Algorithm, OrderedQueryIterator, QueryIterator,
+    SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted,
 };
 use libdictenstein::Dictionary;
 
@@ -113,6 +113,30 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
             self.policy,
             self.suffix_based,
         )
+    }
+
+    /// Execute this builder's term as an affine-gap query.
+    ///
+    /// The affine budget is independent of [`max_distance`](Self::max_distance)
+    /// because it is expressed in the parameter set's cost domain.
+    pub fn affine_gap(
+        self,
+        max_cost: f64,
+        params: AffineGapParams,
+    ) -> Result<AffineQueryIterator<D::Node, P>, crate::cost::ScaleError>
+    where
+        P: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
+    {
+        let max_cost = params.scale_cost(max_cost)?;
+        let inner = QueryIterator::with_affine_policy_and_substring(
+            self.dictionary.root(),
+            self.term,
+            max_cost,
+            params,
+            self.policy,
+            self.suffix_based,
+        );
+        Ok(AffineQueryIterator::new(inner, params))
     }
 
     /// Execute the query with ordered results

@@ -19,7 +19,7 @@ use super::state::State;
 ///
 /// The pool maintains a collection of States that can be reused across
 /// multiple transitions within a single query, eliminating the need to
-/// repeatedly allocate and deallocate Vec<Position> structures.
+/// repeatedly allocate and deallocate `Vec<Position>` structures.
 ///
 /// # Usage
 ///
@@ -94,9 +94,9 @@ impl StatePool {
     /// # Performance
     ///
     /// - Pool hit: O(1) - pop from Vec + clear positions Vec
-    /// - Pool miss: O(1) - allocate new Vec<Position>
+    /// - Pool miss: O(1) - allocate new `Vec<Position>`
     ///
-    /// The state's Vec<Position> allocation is reused when available,
+    /// The state's `Vec<Position>` allocation is reused when available,
     /// which is the primary performance benefit.
     #[inline]
     pub fn acquire(&mut self) -> State {
@@ -119,7 +119,7 @@ impl StatePool {
     ///
     /// - O(1) - push to Vec (unless pool is full, then drop)
     ///
-    /// The state's internal Vec<Position> allocation is preserved for reuse.
+    /// The state's internal `Vec<Position>` allocation is preserved for reuse.
     #[inline]
     pub fn release(&mut self, state: State) {
         if self.pool.len() < Self::MAX_POOL_SIZE {

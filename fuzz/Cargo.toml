@@ -1,0 +1,58 @@
+[package]
+name = "liblevenshtein-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+libdictenstein = { path = "../../libdictenstein", default-features = false }
+liblevenshtein = { path = "..", default-features = false, features = ["phonetic-rules"] }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "regex_nfa_resource"
+path = "fuzz_targets/regex_nfa_resource.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bracket_state_growth"
+path = "fuzz_targets/bracket_state_growth.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "true_damerau_budget"
+path = "fuzz_targets/true_damerau_budget.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "banded_dtw"
+path = "fuzz_targets/banded_dtw.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cost_scale_overflow"
+path = "fuzz_targets/cost_scale_overflow.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "msm_nonfinite"
+path = "fuzz_targets/msm_nonfinite.rs"
+test = false
+doc = false
+bench = false

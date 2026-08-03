@@ -92,7 +92,7 @@ use std::fmt;
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CharacteristicVector {
-    /// Bit vector: bits[i] = true if character matches at position i
+    /// Bit vector: `bits[i] = true` if the character matches at position `i`.
     bits: Vec<bool>,
 }
 
@@ -339,7 +339,7 @@ fn relevant_subword_from_chars(word_chars: &[char], position: usize, max_distanc
     let word_char_count = if start <= end { end - start + 1 } else { 0 };
 
     let mut result = String::with_capacity(pad_count.saturating_add(word_char_count));
-    result.extend(std::iter::repeat(PADDING_CHAR).take(pad_count));
+    result.extend(std::iter::repeat_n(PADDING_CHAR, pad_count));
 
     if start <= end {
         result.extend(word_chars[start - 1..end].iter().copied());
