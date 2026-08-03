@@ -695,3 +695,71 @@ impl<'a> WireCursor<'a> {
         Ok(taken)
     }
 }
+
+#[cfg(test)]
+mod wire_cursor_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn encoded_varint(mut value: u64) -> Vec<u8> {
+        let mut encoded = Vec::new();
+        while value >= 0x80 {
+            encoded.push((value as u8) | 0x80);
+            value >>= 7;
+        }
+        encoded.push(value as u8);
+        encoded
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1_024))]
+
+        #[test]
+        fn varint_cursor_consumes_exactly_the_encoded_prefix(
+            value in any::<u64>(),
+            suffix in prop::collection::vec(any::<u8>(), 0..64),
+            base_offset in 0_usize..1_024,
+        ) {
+            let encoded = encoded_varint(value);
+            let mut bytes = encoded.clone();
+            bytes.extend_from_slice(&suffix);
+            let mut cursor = WireCursor::new(&bytes, base_offset);
+
+            prop_assert_eq!(cursor.read_varint().unwrap(), value);
+            prop_assert_eq!(cursor.offset, base_offset + encoded.len());
+            prop_assert_eq!(cursor.remaining, suffix.as_slice());
+        }
+
+        #[test]
+        fn length_delimited_cursor_preserves_payload_and_suffix_boundaries(
+            payload in prop::collection::vec(any::<u8>(), 0..256),
+            suffix in prop::collection::vec(any::<u8>(), 0..64),
+            base_offset in 0_usize..1_024,
+        ) {
+            let prefix = encoded_varint(
+                u64::try_from(payload.len()).expect("generated payload length fits u64"),
+            );
+            let mut bytes = prefix.clone();
+            bytes.extend_from_slice(&payload);
+            bytes.extend_from_slice(&suffix);
+            let mut cursor = WireCursor::new(&bytes, base_offset);
+
+            let (actual, payload_offset) = cursor.read_length_delimited().unwrap();
+            prop_assert_eq!(actual, payload.as_slice());
+            prop_assert_eq!(payload_offset, base_offset + prefix.len());
+            prop_assert_eq!(cursor.offset, base_offset + prefix.len() + payload.len());
+            prop_assert_eq!(cursor.remaining, suffix.as_slice());
+        }
+    }
+
+    #[test]
+    fn varint_overflow_and_truncation_are_rejected_at_the_byte_boundary() {
+        let overflowing = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x02];
+        assert!(WireCursor::new(&overflowing, 0).read_varint().is_err());
+
+        for length in 1..10 {
+            let truncated = vec![0x80; length];
+            assert!(WireCursor::new(&truncated, 0).read_varint().is_err());
+        }
+    }
+}

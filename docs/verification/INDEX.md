@@ -1,7 +1,7 @@
 # Verification Index
 
 **Total Documentation**: 2,900+ lines
-**Last Updated**: 2026-08-01
+**Last Updated**: 2026-08-02
 **Phase**: Historical snapshot; see `FORMAL_VERIFICATION_MANIFEST.tsv` for
 current trusted/partial/legacy status.
 
@@ -20,6 +20,7 @@ current trusted/partial/legacy status.
 ### 🔬 Formal Proofs
 - **Exact typed-Dyck recurrence and witness soundness** → [core/theories/Conformance/DyckCorrection.v](core/theories/Conformance/DyckCorrection.v)
 - **OperationSet bincode/protobuf/gzip admission invariants** → [core/theories/Conformance/OperationSetSerialization.v](core/theories/Conformance/OperationSetSerialization.v)
+- **OperationSet executable concrete-byte parser refinement** → [core/theories/Conformance/OperationSetByteParsers.v](core/theories/Conformance/OperationSetByteParsers.v)
 - **Dyck/serialization Rust-facing model** → [verus/dyck_serialization.rs](verus/dyck_serialization.rs)
 - **Dyck/serialization auto-active model** → [dafny/DyckSerialization.dfy](dafny/DyckSerialization.dfy)
 - **Dyck/serialization cross-solver checks** → [smt/dyck_serialization.smt2](smt/dyck_serialization.smt2)

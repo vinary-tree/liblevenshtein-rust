@@ -30,11 +30,12 @@ approximation or a circular algorithm-shaped specification.
 |---|---|---|
 | Rocq | `core/theories/Conformance/DyckCorrection.v` | typed grammar, standard edit relation, bidirectional alignment/tree normalization, zero identity, total correction, first-pair decomposition, strict-subinterval dependencies, and independent language-distance exactness |
 | Rocq | `core/theories/Conformance/OperationSetSerialization.v` | explicit-applicability name independence; bincode exactness; protobuf preflight/exact-bit; gzip bounds |
+| Rocq | `core/theories/Conformance/OperationSetByteParsers.v` | executable bincode little-endian envelope parser; bounded protobuf varint/key/value and nested allocation preflight; explicit flate2 gzip adapter boundary |
 | Dafny | `dafny/DyckSerialization.dfy` | replacement/pair arithmetic, recurrence minimum selection, and bincode/protobuf/gzip admission guards |
 | Verus | `verus/dyck_serialization.rs` | Rust-facing typed-pair, candidate-minimum, zero-cost, bincode/protobuf preflight, exact-bit, and gzip obligations without assumptions |
 | Z3 + cvc5 | `smt/dyck_serialization.smt2` | independent negated Dyck, bincode, protobuf-limit/version/exact-bit, and gzip-limit/trailing obligations are UNSAT in both solvers |
 | TLA+ TLC | `tla/OperationSetDecode.tla`, `tla/OperationSetPortableDecode.tla` | exhaustive finite bincode lifecycle plus protobuf pre-allocation and single-member gzip admission |
-| proptest | `tests/proptest_phase9_downstream.rs`, `tests/operation_set_serialization.rs`, `tests/operation_set_protobuf.rs`, `tests/operation_set_gzip.rs` | 2,000-case every-subinterval exhaustive-language differential and algebraic Dyck invariants; deterministic, canonical, execution-equivalent round trips; hostile decode and compression-correspondence cases |
+| proptest | `tests/proptest_phase9_downstream.rs`, `tests/operation_set_serialization.rs`, `tests/operation_set_protobuf.rs`, `tests/operation_set_gzip.rs`, private protobuf cursor properties | 2,000-case every-subinterval exhaustive-language differential and algebraic Dyck invariants; deterministic, canonical, execution-equivalent round trips; exact wire-offset consumption; hostile decode and compression-correspondence cases |
 
 The [exact-correction design](../design/grammar-correction/dyck-projection-lower-bound.md)
 and [binary persistence guide](../user-guide/serialization.md) map the proof

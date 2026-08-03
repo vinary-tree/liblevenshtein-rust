@@ -415,15 +415,27 @@ The implementation is checked at complementary levels:
 | Fractional costs accumulate and budget acceptance is monotone | generalized unit and property tests | exact-rescaling and accumulation lemmas |
 | Unicode restrictions count scalars | generalized unit tests and persistence execution checks | abstract slice-consumption obligations |
 | Bincode preserves the complete model and rejects corrupt or over-limit data | `tests/operation_set_serialization.rs` | `OperationSetSerialization.v`, portable-decode model |
-| Protobuf preflight precedes semantic admission | `tests/operation_set_protobuf.rs` including arbitrary bytes | serialization and portable-decode models |
-| Gzip is one bounded outer member | `tests/operation_set_gzip.rs` | serialization and portable-decode models |
+| Bincode header fields and exact payload length are derived from concrete bytes | exact fixture and arbitrary-byte properties | `OperationSetByteParsers.v` executable little-endian parser and refinement theorem |
+| Protobuf preflight precedes semantic admission | `tests/operation_set_protobuf.rs`, private cursor offset properties, and arbitrary bytes | executable varint/key/value/nested-message parser in `OperationSetByteParsers.v`; portable-decode model |
+| Gzip is one bounded outer member | `tests/operation_set_gzip.rs`, including arbitrary compressed bytes | crate-owned adapter theorem in `OperationSetByteParsers.v`; portable-decode model |
 | Public examples remain compilable | `doc_serialization_check`, `operation_set_persistence`, Rust doctests | not applicable |
 
-The formal artifacts state abstract invariants over model datatypes. They are
-valuable for finding counterexamples and deriving property tests, but they do
-not by themselves prove a refinement theorem from every Rust parser branch to
-the model. Rust integration tests, arbitrary-byte decoder properties, exact
-wire fixtures, and feature-gated examples cover that implementation boundary.
+`OperationSetByteParsers.v` closes the former abstract-record gap at the wire
+boundary: executable functions parse the actual 20-byte little-endian bincode
+header and protobuf's bounded varints, field keys, fixed-width values,
+length-delimited values, nested operation messages, and resource counters.
+Its theorems derive exact consumption and every pre-allocation bound from
+successful parsing. This is a mechanized byte-parser specification, not a
+machine extraction of the Rust source; exact fixtures, private cursor-offset
+properties, and arbitrary-byte decoder properties check that remaining
+Rust-to-Rocq correspondence seam.
+
+The gzip proof deliberately does not claim to verify DEFLATE or `flate2`.
+`flate2` is the third-party decompression trust boundary. The crate-owned
+adapter theorem begins with its observation and proves that admission requires
+gzip magic, complete consumption of the supplied compressed bytes, a valid
+checksum observation, bounded inflated bytes, and acceptance by the ordinary
+inner decoder.
 
 For commands and the maintained evidence inventory, see the
 [verification index](../verification/README.md),

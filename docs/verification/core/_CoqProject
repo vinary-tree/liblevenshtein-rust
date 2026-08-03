@@ -62,6 +62,7 @@ theories/Triangle/SubstCostTriangle.v
 theories/Conformance/PositionKindVariant.v
 theories/Conformance/DyckCorrection.v
 theories/Conformance/OperationSetSerialization.v
+theories/Conformance/OperationSetByteParsers.v
 theories/Conformance/FzfUpperBound.v
 theories/Conformance/SubsumptionFallback.v
 theories/Triangle/TriangleInequality.v

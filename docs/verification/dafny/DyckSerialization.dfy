@@ -234,6 +234,42 @@ lemma WeightBitsRoundTripExactly(bits: bv64)
 {
 }
 
+function DecodeU16Le(first: nat, second: nat): nat
+{
+  first + 256 * second
+}
+
+lemma VersionOneHeaderBytesDecodeLittleEndian()
+  ensures DecodeU16Le(1, 0) == 1
+  ensures DecodeU16Le(0, 1) == 256
+{
+}
+
+lemma WireCursorAdvanceIsExact(start: nat, width: nat, total: nat)
+  requires start <= total
+  requires width <= total - start
+  ensures start + width <= total
+  ensures start + width - start == width
+{
+}
+
+lemma BoundedVarintCursorStaysWithinInput(
+    start: nat, consumed: nat, total: nat)
+  requires start <= total
+  requires 1 <= consumed <= 10
+  requires consumed <= total - start
+  ensures start < start + consumed <= total
+{
+}
+
+lemma LengthDelimitedPartitionIsExact(
+    prefixBytes: nat, payloadBytes: nat, suffixBytes: nat, totalBytes: nat)
+  requires totalBytes == prefixBytes + payloadBytes + suffixBytes
+  ensures prefixBytes + payloadBytes <= totalBytes
+  ensures totalBytes - (prefixBytes + payloadBytes) == suffixBytes
+{
+}
+
 predicate AcceptGzip(
     checksumValid: bool,
     compressedBytes: nat, compressedLimit: nat,

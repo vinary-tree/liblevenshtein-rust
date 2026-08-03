@@ -45,6 +45,13 @@
 (declare-const consumed-compressed Int)
 (declare-const supplied-compressed Int)
 (declare-const inner-ok Bool)
+(declare-const cursor-start Int)
+(declare-const cursor-width Int)
+(declare-const cursor-total Int)
+(declare-const varint-consumed Int)
+(declare-const length-prefix Int)
+(declare-const length-payload Int)
+(declare-const length-suffix Int)
 
 (define-fun replacement-cost ((actual Int) (expected Int)) Int
   (ite (= actual expected) 0 1))
@@ -92,6 +99,8 @@
        semantic))
 (define-fun encode-weight-bits ((bits Int)) Int bits)
 (define-fun decode-weight-bits ((bits Int)) Int bits)
+(define-fun decode-u16-le ((first Int) (second Int)) Int
+  (+ first (* 256 second)))
 (define-fun accepts-gzip
   ((checksum Bool)
    (compressed Int) (compressed-limit Int)
@@ -111,6 +120,51 @@
              (>= right-kind 0) (< right-kind kinds)
              (not (= left-kind right-kind))))
 (assert (= (+ kinds left-kind) (+ kinds right-kind)))
+(check-sat)
+(pop)
+
+; The actual version bytes are little-endian, not host-endian.
+(push)
+(assert (or (not (= (decode-u16-le 1 0) 1))
+            (not (= (decode-u16-le 0 1) 256))))
+(check-sat)
+(pop)
+
+; A successful cursor slice advances exactly and cannot leave the input.
+(push)
+(assert (and (>= cursor-start 0)
+             (>= cursor-width 0)
+             (>= cursor-total 0)
+             (<= cursor-start cursor-total)
+             (<= cursor-width (- cursor-total cursor-start))))
+(assert (or (> (+ cursor-start cursor-width) cursor-total)
+            (not (= (- (+ cursor-start cursor-width) cursor-start)
+                    cursor-width))))
+(check-sat)
+(pop)
+
+; A protobuf varint consumes a positive prefix of at most ten bytes.
+(push)
+(assert (and (>= cursor-start 0)
+             (>= cursor-total 0)
+             (<= cursor-start cursor-total)
+             (>= varint-consumed 1)
+             (<= varint-consumed 10)
+             (<= varint-consumed (- cursor-total cursor-start))))
+(assert (or (<= (+ cursor-start varint-consumed) cursor-start)
+            (> (+ cursor-start varint-consumed) cursor-total)))
+(check-sat)
+(pop)
+
+; Length-delimited parsing partitions prefix, payload, and suffix exactly.
+(push)
+(assert (and (>= length-prefix 0)
+             (>= length-payload 0)
+             (>= length-suffix 0)
+             (= cursor-total (+ length-prefix length-payload length-suffix))))
+(assert (or (> (+ length-prefix length-payload) cursor-total)
+            (not (= (- cursor-total (+ length-prefix length-payload))
+                    length-suffix))))
 (check-sat)
 (pop)
 

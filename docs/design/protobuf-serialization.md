@@ -207,6 +207,14 @@ The operation-set APIs enforce fixed compressed and decompressed ceilings themse
 caller-selected inner limits. That is still not authentication or a wall-clock limit; hostile
 workloads should run under the service's ordinary process/time controls.
 
+The executable Rocq model parses protobuf varints, keys, supported wire values,
+length-delimited boundaries, and the nested allocation-bearing fields before
+deriving the same limit postconditions. It does not mechanically extract or
+verify `prost`. Likewise, gzip inflation and checksum calculation remain a
+`flate2` trust boundary: the proof covers the crate-owned checks on that
+observation—complete input consumption, bounded output, and inner-decoder
+acceptance—not the DEFLATE implementation itself.
+
 Structural validation prevents malformed graphs from becoming dictionaries, but it is not
 authentication. Sign or MAC artifacts when provenance matters.
 

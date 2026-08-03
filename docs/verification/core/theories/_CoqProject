@@ -50,6 +50,7 @@ Composition/WitnessLemmas.v
 Conformance/PositionKindVariant.v
 Conformance/DyckCorrection.v
 Conformance/OperationSetSerialization.v
+Conformance/OperationSetByteParsers.v
 Conformance/FzfUpperBound.v
 Conformance/SubsumptionFallback.v
 Composition/CompositionNoDup.v

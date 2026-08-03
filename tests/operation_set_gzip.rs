@@ -128,6 +128,8 @@ fn gzip_reduces_a_repetitive_operation_table_but_remains_optional() {
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig::with_cases(512))]
+
     #[test]
     fn gzip_roundtrip_corresponds_to_the_uncompressed_decoder(
         pairs in prop::collection::btree_set((any::<u8>(), any::<u8>()), 0..64),
@@ -138,5 +140,29 @@ proptest! {
         let restored = OperationSet::from_binary_gzip(&compressed)
             .expect("generated gzip decodes");
         prop_assert_eq!(restored, operations);
+    }
+
+    #[test]
+    fn arbitrary_gzip_input_never_panics_or_bypasses_inner_limits(
+        bytes in prop::collection::vec(any::<u8>(), 0..=512),
+        payload_limit in 0_usize..=512,
+        operation_limit in 0_usize..=16,
+    ) {
+        let limits = OperationSetBinaryLimits {
+            max_payload_bytes: payload_limit,
+            max_operations: operation_limit,
+            max_operation_name_bytes: 64,
+            max_restriction_pairs_per_operation: 64,
+            max_total_restriction_pairs: 64,
+            max_restriction_text_bytes: 256,
+        };
+        let decoded = std::panic::catch_unwind(|| {
+            OperationSet::from_binary_gzip_with_limits(&bytes, limits)
+        });
+        prop_assert!(decoded.is_ok(), "gzip decoder panicked on {bytes:?}");
+        if let Ok(Ok(operation_set)) = decoded {
+            prop_assert!(operation_set.len() <= operation_limit);
+            prop_assert!(operation_set.validate().is_ok());
+        }
     }
 }

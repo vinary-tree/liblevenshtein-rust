@@ -324,6 +324,61 @@ proof fn weight_bits_round_trip_exactly(bits: u64)
 {
 }
 
+spec fn decode_u16_le(first: nat, second: nat) -> nat {
+    first + 256 * second
+}
+
+proof fn version_one_header_bytes_decode_little_endian()
+    ensures
+        decode_u16_le(1, 0) == 1,
+        decode_u16_le(0, 1) == 256,
+{
+}
+
+proof fn wire_cursor_advance_is_exact(
+    start: nat,
+    width: nat,
+    total: nat,
+)
+    requires
+        start <= total,
+        width <= total - start,
+    ensures
+        start + width <= total,
+        start + width - start == width,
+{
+}
+
+proof fn bounded_varint_cursor_stays_within_input(
+    start: nat,
+    consumed: nat,
+    total: nat,
+)
+    requires
+        start <= total,
+        1 <= consumed,
+        consumed <= 10,
+        consumed <= total - start,
+    ensures
+        start < start + consumed,
+        start + consumed <= total,
+{
+}
+
+proof fn length_delimited_partition_is_exact(
+    prefix_bytes: nat,
+    payload_bytes: nat,
+    suffix_bytes: nat,
+    total_bytes: nat,
+)
+    requires
+        total_bytes == prefix_bytes + payload_bytes + suffix_bytes,
+    ensures
+        prefix_bytes + payload_bytes <= total_bytes,
+        total_bytes - (prefix_bytes + payload_bytes) == suffix_bytes,
+{
+}
+
 spec fn accept_gzip(
     checksum_valid: bool,
     compressed_bytes: nat,

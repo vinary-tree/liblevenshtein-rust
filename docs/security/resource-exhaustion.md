@@ -248,6 +248,25 @@ data as a resource guarantee. Consecutive stutters may tie at zero and must not
 be deduplicated by raw-vector identity unless the application explicitly uses
 run-length collapse.
 
+### 5.9 Operation-set binary decoders
+
+Operation sets accept only a versioned bincode envelope or the versioned
+Protocol Buffers schema; gzip is an optional outer transport wrapper. The
+bincode decoder validates its 20-byte header and declared payload length before
+decoding. The protobuf decoder scans varints, keys, wire types, nested message
+lengths, operation counts, restriction counts, name bytes, and restriction text
+bytes before `prost` constructs schema objects. Both paths validate semantic
+arity, applicability, and finite non-negative weights after decoding.
+
+The executable Rocq byte parser proves exact header and length consumption,
+bounded ten-byte `uint64` varints, exact length-delimited boundaries, and all
+pre-allocation count postconditions. Rust properties feed arbitrary bytes to
+each decoder and assert panic freedom plus post-admission limits. Gzip adds a
+compressed-input ceiling, an inflated-output ceiling, checksum enforcement,
+and exact single-member consumption. DEFLATE and checksum computation inside
+`flate2` are explicitly trusted third-party behavior; formal claims begin at
+the returned decompressor observation and cover only the crate-owned adapter.
+
 ## 6. Deployment checklist
 
 - Prefer `query_regex` over manually compiling an untrusted pattern and calling

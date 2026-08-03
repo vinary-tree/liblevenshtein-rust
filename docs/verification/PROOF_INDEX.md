@@ -58,6 +58,14 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `protobuf_weight_bits_round_trip_exactly` | `core/theories/Conformance/OperationSetSerialization.v` | The protobuf fixed64 weight field preserves all 64 IEEE-754 bits. |
 | `trailing_compressed_data_is_rejected` | `core/theories/Conformance/OperationSetSerialization.v` | A gzip wrapper that does not consume the complete supplied input cannot be accepted. |
 | `decompression_over_limit_is_rejected` | `core/theories/Conformance/OperationSetSerialization.v` | Inflated bytes above the inner-format ceiling are rejected before semantic decode. |
+| `accepted_bincode_bytes_have_the_exact_runtime_envelope` | `core/theories/Conformance/OperationSetByteParsers.v` | Successful executable parsing derives magic, little-endian version and flags, exact declared payload consumption, and the payload ceiling from concrete bytes. |
+| `parsed_varint_is_bounded_and_consumes_one_prefix` | `core/theories/Conformance/OperationSetByteParsers.v` | Every successful protobuf varint consumes one prefix of at most ten bytes and fits `uint64`. |
+| `parsed_length_delimited_field_consumes_exactly_its_prefix_and_body` | `core/theories/Conformance/OperationSetByteParsers.v` | A successful length-delimited parse partitions the input exactly into length prefix, body, and unconsumed suffix. |
+| `accepted_protobuf_bytes_are_wire_parsed_before_allocation` | `core/theories/Conformance/OperationSetByteParsers.v` | Successful nested wire preflight implies concrete parse evidence and every payload, operation, name, pair, and text bound. |
+| `accepted_gzip_adapter_observation_is_complete_bounded_and_inner_valid` | `core/theories/Conformance/OperationSetByteParsers.v` | Given the explicit flate2 observation boundary, admission implies gzip identity, complete input consumption, bounded output, valid checksum observation, and inner acceptance. |
+| `concrete_bincode_and_validated_payload_refine_abstract_admission` | `core/theories/Conformance/OperationSetByteParsers.v` | Concrete header parsing composed with bounded semantic payload validation satisfies the abstract bincode admission contract. |
+| `concrete_protobuf_and_validated_message_refine_abstract_admission` | `core/theories/Conformance/OperationSetByteParsers.v` | Concrete nested wire preflight composed with supported-format and semantic validation satisfies the abstract protobuf admission contract. |
+| `concrete_gzip_adapter_refines_abstract_admission` | `core/theories/Conformance/OperationSetByteParsers.v` | The crate-owned checks on a trusted decompressor observation refine the abstract single-member gzip admission contract. |
 
 ### Class-A alignment presets
 
