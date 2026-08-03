@@ -34,7 +34,7 @@ approximation or a circular algorithm-shaped specification.
 | Rocq | `core/theories/Conformance/DyckCorrection.v` | typed grammar, executable split/branch enumeration, constructive finite minimum selection, unconditional interval-fill induction, standard edit relation, bidirectional alignment/tree normalization, target-length bound, and independent language-distance exactness |
 | Rocq | `core/theories/Conformance/OperationSetSerialization.v` | explicit-applicability name independence; bincode exactness; protobuf preflight/exact-bit; gzip bounds |
 | Rocq | `core/theories/Conformance/OperationSetByteParsers.v` | executable bincode little-endian envelope parser; bounded protobuf varint/key/value and nested allocation preflight; explicit flate2 gzip adapter boundary |
-| Dafny | `dafny/DyckSerialization.dfy` | replacement/pair arithmetic, recurrence minimum selection, and bincode/protobuf/gzip admission guards |
+| Dafny | `dafny/DyckSerialization.dfy` | replacement/pair arithmetic, strict subinterval dependency lengths, recurrence minimum selection, and bincode/protobuf/gzip admission guards |
 | Verus | `verus/dyck_serialization.rs` | Rust-facing typed-pair, candidate-minimum, zero-cost, bincode/protobuf preflight, exact-bit, and gzip obligations without assumptions |
 | Z3 + cvc5 | `smt/dyck_serialization.smt2` | independent negated Dyck, bincode, protobuf-limit/version/exact-bit, and gzip-limit/trailing obligations are UNSAT in both solvers |
 | TLA+ TLC | `tla/OperationSetDecode.tla`, `tla/OperationSetPortableDecode.tla` | exhaustive finite bincode lifecycle plus protobuf pre-allocation and single-member gzip admission |
