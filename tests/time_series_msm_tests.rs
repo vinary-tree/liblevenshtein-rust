@@ -48,6 +48,26 @@ proptest! {
         );
     }
 
+    /// The Rust-facing extended-cost semantics use zero for two empty series
+    /// and positive infinity for exactly one empty series. Every finite cutoff
+    /// must therefore reject the latter in both argument orders.
+    #[test]
+    fn prop_msm_one_empty_is_positive_infinity(
+        nonempty in prop::collection::vec(-1_000.0f64..1_000.0, 1..=8),
+        split_merge_cost in 0.0f64..10.0,
+        finite_cutoff in 0.0f64..10_000.0,
+    ) {
+        let config = MsmConfig::new(split_merge_cost);
+
+        prop_assert_eq!(config.distance(&[], &[]), 0.0);
+        for (left, right) in [(&[][..], nonempty.as_slice()), (nonempty.as_slice(), &[][..])] {
+            prop_assert!(config.distance(left, right).is_infinite());
+            prop_assert!(config.distance_optimized(left, right).is_infinite());
+            prop_assert!(config.distance_with_matrix(left, right).distance.is_infinite());
+            prop_assert_eq!(config.distance_with_cutoff(left, right, finite_cutoff), None);
+        }
+    }
+
     /// MSM Symmetry: d(x, y) == d(y, x)
     #[test]
     fn prop_msm_symmetry(

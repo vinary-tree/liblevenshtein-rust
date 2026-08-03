@@ -9,11 +9,13 @@
     2. Length difference (weighted by c) for empty-side alignments
     3. Combined pruning bounds for empty-side alignments
 
-    Note: [MsmDistance.v] models one-empty distances as finite repeated
-    split/merge costs, while the Rust [MsmConfig::distance] returns +infinity
-    for one-empty inputs. These empty-side lemmas are therefore model-local and
-    are not used to justify Rust's empty-query branch. The non-empty
-    counterexamples below apply to both semantics.
+    [msm_distance] is the recurrence proof tree's finite totalization;
+    [msm_runtime_distance] is the Rust-facing conformance boundary and returns
+    positive infinity for exactly one empty input. The rational-valued
+    empty-side lemmas remain facts about the internal totalization. Separate
+    runtime lemmas below justify the shipped empty-query pruning branch without
+    treating infinity as a large rational. The non-empty counterexamples apply
+    to both semantics.
 
     Counterexamples recorded here:
     1. Broad non-empty L1 pruning is not sound for MSM.
@@ -26,6 +28,18 @@ From Stdlib Require Import List Nat Arith Lia.
 From Stdlib Require Import QArith Qabs Qminmax.
 Import ListNotations.
 From Liblevenshtein.MSM Require Import MsmDefinitions CFunction MsmDistance.
+
+(** * Runtime one-empty pruning *)
+
+Theorem runtime_empty_left_prunes_at_every_finite_threshold : forall y ys cfg threshold,
+  msm_runtime_cost_exceeds threshold
+    (msm_runtime_distance [] (y :: ys) cfg).
+Proof. intros; simpl; exact I. Qed.
+
+Theorem runtime_empty_right_prunes_at_every_finite_threshold : forall x xs cfg threshold,
+  msm_runtime_cost_exceeds threshold
+    (msm_runtime_distance (x :: xs) [] cfg).
+Proof. intros; simpl; exact I. Qed.
 
 (** * Pointwise Distances *)
 

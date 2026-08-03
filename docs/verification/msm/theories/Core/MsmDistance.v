@@ -13,10 +13,16 @@
       Cost(i, j-1) + C(y_j, x_i, y_{j-1})     // Split-like
     }
 
-    Base cases:
+    Non-empty recurrence base cases:
     - Cost(1, 1) = |x_1 - y_1|
     - Cost(i, 1) = Cost(i-1, 1) + C(x_i, x_{i-1}, y_1)  for i > 1
     - Cost(1, j) = Cost(1, j-1) + C(y_j, x_1, y_{j-1})  for j > 1
+
+    [msm_distance] below is a finite totalization used by the recurrence proof
+    tree. The public Rust API instead makes a one-empty transformation
+    unreachable. [msm_runtime_distance] is the conformance boundary: it returns
+    [MsmPositiveInfinity] for exactly one empty input and refines to the finite
+    recurrence whenever both inputs are non-empty.
 
     Part of: Liblevenshtein.MSM
 *)
@@ -96,6 +102,70 @@ Definition msm_distance (X Y : TimeSeries) (cfg : MsmConfig) : Q :=
     (* Return last element of final row *)
     last final_row 0
   end.
+
+(** Runtime-visible costs. A distinct constructor represents positive
+    infinity so no finite rational can accidentally justify a one-empty match. *)
+Inductive MsmRuntimeCost : Type :=
+| MsmFinite (cost : Q)
+| MsmPositiveInfinity.
+
+(** Exact public empty-sequence semantics, with the proved finite recurrence
+    reused only on the domain where MSM operations have an initial sample. *)
+Definition msm_runtime_distance
+    (X Y : TimeSeries) (cfg : MsmConfig) : MsmRuntimeCost :=
+  match X, Y with
+  | [], [] => MsmFinite 0
+  | [], _ :: _ | _ :: _, [] => MsmPositiveInfinity
+  | _ :: _, _ :: _ => MsmFinite (msm_distance X Y cfg)
+  end.
+
+Definition msm_runtime_cost_exceeds
+    (threshold : Q) (cost : MsmRuntimeCost) : Prop :=
+  match cost with
+  | MsmFinite actual => threshold < actual
+  | MsmPositiveInfinity => True
+  end.
+
+Lemma msm_runtime_distance_empty_empty : forall cfg,
+  msm_runtime_distance [] [] cfg = MsmFinite 0.
+Proof. reflexivity. Qed.
+
+Lemma msm_runtime_distance_empty_left : forall y ys cfg,
+  msm_runtime_distance [] (y :: ys) cfg = MsmPositiveInfinity.
+Proof. reflexivity. Qed.
+
+Lemma msm_runtime_distance_empty_right : forall x xs cfg,
+  msm_runtime_distance (x :: xs) [] cfg = MsmPositiveInfinity.
+Proof. reflexivity. Qed.
+
+Lemma msm_runtime_distance_nonempty_refines_recurrence : forall x xs y ys cfg,
+  msm_runtime_distance (x :: xs) (y :: ys) cfg =
+  MsmFinite (msm_distance (x :: xs) (y :: ys) cfg).
+Proof. reflexivity. Qed.
+
+Theorem msm_runtime_distance_infinite_iff : forall X Y cfg,
+  msm_runtime_distance X Y cfg = MsmPositiveInfinity <->
+  (X = [] /\ Y <> []) \/ (X <> [] /\ Y = []).
+Proof.
+  intros [|x xs] [|y ys] cfg; simpl; split; intros H.
+  - discriminate.
+  - destruct H as [[_ Hnil] | [Hnil _]]; contradiction.
+  - left; repeat split; discriminate.
+  - reflexivity.
+  - right; repeat split; discriminate.
+  - reflexivity.
+  - discriminate.
+  - destruct H as [[Hnil _] | [_ Hnil]]; discriminate.
+Qed.
+
+Theorem msm_runtime_one_empty_exceeds_every_finite_threshold : forall X Y cfg threshold,
+  ((X = [] /\ Y <> []) \/ (X <> [] /\ Y = [])) ->
+  msm_runtime_cost_exceeds threshold (msm_runtime_distance X Y cfg).
+Proof.
+  intros X Y cfg threshold Hempty.
+  apply (proj2 (msm_runtime_distance_infinite_iff X Y cfg)) in Hempty.
+  rewrite Hempty; exact I.
+Qed.
 
 (** Helper: inject_Z of a positive nat is positive. *)
 Lemma inject_Z_of_nat_pos : forall n, (0 < n)%nat -> 0 < inject_Z (Z.of_nat n).

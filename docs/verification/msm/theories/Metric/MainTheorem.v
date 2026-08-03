@@ -7,10 +7,12 @@
     3. Symmetry: MSM(X, Y) = MSM(Y, X)
     4. Triangle Inequality: MSM(X, Z) <= MSM(X, Y) + MSM(Y, Z)
 
-    The executable model treats empty series with a simple length*c extension.
-    That extension is not a full metric over all lists: an empty middle series
-    can violate the triangle inequality. The metric construction below is
-    therefore stated over non-empty time series.
+    The recurrence proof tree uses [msm_distance], whose finite empty-side
+    totalization simplifies induction. The Rust-facing [msm_runtime_distance]
+    separately proves that exactly one empty input has positive-infinite cost.
+    Metric construction over the rational recurrence is therefore stated on
+    non-empty time series; the runtime wrapper does not weaken or approximate
+    that theorem.
 
     Part of: Liblevenshtein.MSM
 
