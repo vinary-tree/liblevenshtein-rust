@@ -37,6 +37,16 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `transposition_mixed_continuations_never_subsume` | `core/theories/Conformance/SubsumptionFallback.v` | Normal and in-progress OSA states remain incomparable in both directions. |
 | `merge_split_requires_same_index_and_kind` | `core/theories/Conformance/SubsumptionFallback.v` | Every shared merge/split dominance result preserves index and continuation kind. |
 
+### Ordered costs and binary64 roundoff
+
+| Theorem | Location | Description |
+|---|---|---|
+| `weighted_l1_associative` | `core/theories/Conformance/CostMonoid.v` | Mathematical non-negative real addition with explicit top is associative; this is not a bitwise `f64` claim. |
+| `binary64_round_error_components` | `core/theories/Conformance/WeightedCostFloat.v` | Flocq decomposes round-to-nearest-even binary64 error into bounded relative and gradual-underflow components. |
+| `binary64_round_absolute_error` | `core/theories/Conformance/WeightedCostFloat.v` | The component theorem implies a one-round absolute-plus-relative bound. |
+| `two_rounded_additions_reassociation_envelope` | `core/theories/Conformance/WeightedCostFloat.v` | Any rounder satisfying the one-round contract has a proved symbolic three-term reassociation envelope. |
+| `binary64_three_term_reassociation_envelope` | `core/theories/Conformance/WeightedCostFloat.v` | Instantiating the composition theorem with Flocq's binary64 rounder bounds finite three-term regrouping error without asserting exact associativity. |
+
 ### Exact multi-kind Dyck correction and binary persistence
 
 | Theorem | Location | Description |
@@ -45,11 +55,17 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `zero_cost_correction_is_balanced_identity` | `core/theories/Conformance/DyckCorrection.v` | A zero-cost witness preserves the source exactly and proves it is Dyck. |
 | `every_source_has_a_correction` | `core/theories/Conformance/DyckCorrection.v` | Deleting every token supplies a total upper-bound witness. |
 | `interval_recurrence_is_globally_exact` | `core/theories/Conformance/DyckCorrection.v` | With strict subinterval minima already filled, the least runtime branch cost is equivalent to the global minimum over all correction trees. |
+| `finite_functional_minimum` | `core/theories/Conformance/DyckCorrection.v` | A nonempty finite family with one natural cost per descriptor has a constructively selected least cost; no classical choice is used. |
+| `every_source_has_an_exact_minimum` | `core/theories/Conformance/DyckCorrection.v` | Strong interval-length induction establishes an attained exact correction minimum for every source. |
+| `strict_subintervals_always_minimized` | `core/theories/Conformance/DyckCorrection.v` | The runtime fill-order premise follows for every interval rather than remaining a caller assumption. |
+| `correction_target_length_is_bounded` | `core/theories/Conformance/DyckCorrection.v` | Every reconstructed target has length at most twice the source length, justifying the exhaustive-oracle cutoff. |
 | `nonempty_dyck_first_pair_decomposition` | `core/theories/Conformance/DyckCorrection.v` | Every nonempty typed-Dyck word has the first-pair decomposition enumerated by the interval recurrence. |
 | `correction_tree_is_standard_alignment` | `core/theories/Conformance/DyckCorrection.v` | Every reconstruction tree denotes an ordinary unit-cost Levenshtein alignment with exactly the same cost. |
 | `standard_alignment_normalizes_to_correction_tree` | `core/theories/Conformance/DyckCorrection.v` | Every standard alignment to a typed-Dyck target normalizes to a reconstruction tree at no greater cost. |
 | `correction_minimum_equals_dyck_levenshtein_minimum` | `core/theories/Conformance/DyckCorrection.v` | The algorithm-shaped minimum is extensionally equal to the independent standard-Levenshtein minimum over the typed Dyck language. |
 | `interval_recurrence_is_exact_standard_dyck_distance` | `core/theories/Conformance/DyckCorrection.v` | The increasing-interval invariant refines the runtime recurrence directly to the independent language-distance specification. |
+| `interval_recurrence_is_unconditionally_exact_standard_dyck_distance` | `core/theories/Conformance/DyckCorrection.v` | Finite descriptor enumeration and strong induction discharge the interval premise and prove end-to-end exactness against ordinary Levenshtein semantics. |
+| `every_source_has_an_exact_standard_dyck_distance` | `core/theories/Conformance/DyckCorrection.v` | Every source has an attained minimum distance to the complete typed-Dyck language. |
 | `diagnostic_rename_is_semantics_preserving` | `core/theories/Conformance/OperationSetSerialization.v` | Operation behavior depends on its applicability tag, never its diagnostic name. |
 | `accepted_envelope_is_exact_and_bounded` | `core/theories/Conformance/OperationSetSerialization.v` | Acceptance implies the magic/version/flags contract, exact consumption, semantic validation, and resource bounds. |
 | `trailing_payload_bytes_are_rejected` | `core/theories/Conformance/OperationSetSerialization.v` | An envelope with bytes beyond its declared payload cannot be accepted. |

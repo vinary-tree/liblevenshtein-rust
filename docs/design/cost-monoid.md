@@ -98,6 +98,23 @@ For three finite inputs, the executable envelope is:
 \le 4\epsilon_{64}\max(1,a+b+c).
 ```
 
+The machine-checked Flocq statement keeps the binary64 constants symbolic.
+Let `$`u=u_{\mathrm{ro}}/(1+u_{\mathrm{ro}})`$` be Flocq's
+round-to-nearest relative bound and let `$`\eta=2^{-1075}`$` be half the
+smallest subnormal quantum. For non-negative inputs, it proves:
+
+```math
+\left|\operatorname{fl}(\operatorname{fl}(a+b)+c)-
+\operatorname{fl}(a+\operatorname{fl}(b+c))\right|
+\le (4u+2u^2)\max(1,a+b+c)+(2u+4)\eta.
+```
+
+This theorem uses Flocq's unbounded-exponent FLT rounding model. The Rust
+property requires both evaluated parenthesizations to remain finite, which is
+the executable overflow boundary needed to apply that model to `f64`. Its
+generator samples raw non-negative finite binary64 bit patterns across normal,
+subnormal, and extreme exponents rather than only a small decimal range.
+
 Code that requires exact equality, stable hashing of path totals, or exact
 subsumption must use `UnitCost` with `CostScale`. `EPSILON = 10^{-9}` affects
 only the inclusive budget predicate; `compare` remains a true total order.
@@ -182,6 +199,7 @@ using it as an index or budget comparison.
 | Evidence | Checked claim |
 |---|---|
 | `core/theories/Conformance/CostMonoid.v` | Assumption-free real-model L1/L2/L3/L4/L6/L7 for additive and bottleneck costs |
+| `core/theories/Conformance/WeightedCostFloat.v` | Flocq binary64 round-to-nearest-even error components and composed finite-result reassociation envelope |
 | `verus/cost_monoid.rs` | Exact integer associativity/monotonicity, bottleneck laws, and scale divisibility |
 | `smt/cost_monoid.smt2` | Bounded counterexample search for saturation, monotonicity, `TOP`, maximum, and overflow guards in Z3 and cvc5 |
 | `tests/cost_monoid_laws.rs` | 2,000-case properties for all laws, scale round trips, NaN handling, and the floating rounding boundary |

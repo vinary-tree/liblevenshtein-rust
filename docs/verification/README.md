@@ -18,17 +18,20 @@ until promoted in the manifest.
 
 The multi-kind Dyck corrector is verified against the same four candidate
 families used by the Rust interval table. Rocq proves that reconstruction is
-kind-sensitive Dyck and that, once all strict subinterval minima are available,
-the least recurrence candidate is equivalent to the global minimum over every
-correction tree. A separate, ordinary Levenshtein alignment relation does not
-mention the recurrence; bidirectional normalization proves that its minimum
-over every typed-Dyck target is the same minimum. This is the
-increasing-interval-length induction invariant, not a bounded-language
+kind-sensitive Dyck. An executable finite descriptor list mirrors the Rust
+kind and closer-index loops. Constructive finite minimum selection and strong
+induction on interval length prove that every strict subinterval has an
+attained exact minimum before the current cell is selected. The resulting
+unconditional theorem equates the least current-cell candidate with the global
+minimum over every correction tree. A separate, ordinary Levenshtein alignment
+relation does not mention the recurrence; bidirectional normalization proves
+that its minimum over every typed-Dyck target is the same minimum. This is a
+proved increasing-interval-length invariant, not a bounded-language
 approximation or a circular algorithm-shaped specification.
 
 | Tool | Artifact | Checked invariant |
 |---|---|---|
-| Rocq | `core/theories/Conformance/DyckCorrection.v` | typed grammar, standard edit relation, bidirectional alignment/tree normalization, zero identity, total correction, first-pair decomposition, strict-subinterval dependencies, and independent language-distance exactness |
+| Rocq | `core/theories/Conformance/DyckCorrection.v` | typed grammar, executable split/branch enumeration, constructive finite minimum selection, unconditional interval-fill induction, standard edit relation, bidirectional alignment/tree normalization, target-length bound, and independent language-distance exactness |
 | Rocq | `core/theories/Conformance/OperationSetSerialization.v` | explicit-applicability name independence; bincode exactness; protobuf preflight/exact-bit; gzip bounds |
 | Rocq | `core/theories/Conformance/OperationSetByteParsers.v` | executable bincode little-endian envelope parser; bounded protobuf varint/key/value and nested allocation preflight; explicit flate2 gzip adapter boundary |
 | Dafny | `dafny/DyckSerialization.dfy` | replacement/pair arithmetic, recurrence minimum selection, and bincode/protobuf/gzip admission guards |
@@ -148,6 +151,7 @@ conflated:
 | Tool | Artifact | Checked invariant |
 |---|---|---|
 | Rocq | `core/theories/Conformance/CostMonoid.v` | assumption-free additive-real and bottleneck L1/L2/L3/L4/L6/L7 laws |
+| Rocq + Flocq | `core/theories/Conformance/WeightedCostFloat.v` | binary64 round-to-nearest-even relative/subnormal error decomposition and a symbolic two-addition reassociation envelope for finite results |
 | Verus | `verus/cost_monoid.rs` | integer arithmetic, maximum, monotonicity, and exact scale divisibility |
 | Z3 + cvc5 | `smt/cost_monoid.smt2` | bounded saturation, monotonicity, maximum, `TOP`, and scale-overflow counterexample queries |
 | proptest | `tests/cost_monoid_laws.rs` | all concrete carriers, exact dyadic addition, general `f64` error envelope, scale round trips, and invalid values |

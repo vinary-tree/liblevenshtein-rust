@@ -52,6 +52,9 @@
 (declare-const length-prefix Int)
 (declare-const length-payload Int)
 (declare-const length-suffix Int)
+(declare-const interval-left Int)
+(declare-const interval-right Int)
+(declare-const close-index Int)
 
 (define-fun replacement-cost ((actual Int) (expected Int)) Int
   (ite (= actual expected) 0 1))
@@ -258,6 +261,41 @@
             (> (min4 candidate-a candidate-b candidate-c candidate-d) candidate-b)
             (> (min4 candidate-a candidate-b candidate-c candidate-d) candidate-c)
             (> (min4 candidate-a candidate-b candidate-c candidate-d) candidate-d)))
+(check-sat)
+(pop)
+
+; Every consumed-pair dependency is a strict source subinterval, so an
+; increasing-length table has already filled it.
+(push)
+(assert (and (>= interval-left 0)
+             (< interval-left close-index)
+             (< close-index interval-right)))
+(assert (or (>= (- close-index (+ interval-left 1))
+                (- interval-right interval-left))
+            (>= (- interval-right (+ close-index 1))
+                (- interval-right interval-left))))
+(check-sat)
+(pop)
+
+; The inserted-opener branch may choose the first token as its closer, but
+; both recursive intervals are still strict.
+(push)
+(assert (and (>= interval-left 0)
+             (<= interval-left close-index)
+             (< close-index interval-right)))
+(assert (or (>= (- close-index interval-left)
+                (- interval-right interval-left))
+            (>= (- interval-right (+ close-index 1))
+                (- interval-right interval-left))))
+(check-sat)
+(pop)
+
+; Delete-first and inserted-closer both read [left+1,right), also strict.
+(push)
+(assert (and (>= interval-left 0)
+             (< interval-left interval-right)))
+(assert (>= (- interval-right (+ interval-left 1))
+            (- interval-right interval-left)))
 (check-sat)
 (pop)
 

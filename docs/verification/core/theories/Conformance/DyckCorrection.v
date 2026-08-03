@@ -5,7 +5,9 @@
     target is kind-sensitive Dyck, that zero-cost reconstruction is exactly a
     balanced identity, that deletion supplies a correction for every source,
     and that the typed Dyck grammar has the first-pair decomposition used by
-    the interval recurrence.
+    the interval recurrence. Executable finite branch enumeration and strong
+    interval-length induction then prove unconditional exactness against an
+    independently defined ordinary Levenshtein distance to the language.
 *)
 
 From Stdlib Require Import Arith Lia List PeanoNat.
@@ -543,6 +545,421 @@ Proof.
     apply (Hleast other_target other_cost Hother_tree).
 Qed.
 
+(** A source split identifies the consumed closer at one interval position.
+    [all_splits] is executable and enumerates positions from left to right,
+    exactly like the two [close_index] loops in the Rust implementation. *)
+Record source_split : Type := {
+  split_left : list nat;
+  split_token : nat;
+  split_right : list nat
+}.
+
+Fixpoint all_splits (source : list nat) : list source_split :=
+  match source with
+  | [] => []
+  | token :: rest =>
+      {| split_left := [];
+         split_token := token;
+         split_right := rest |}
+      :: map
+          (fun split =>
+             {| split_left := token :: split_left split;
+                split_token := split_token split;
+                split_right := split_right split |})
+          (all_splits rest)
+  end.
+
+Lemma all_splits_sound : forall source split,
+  In split (all_splits source) ->
+  source = split_left split ++ split_token split :: split_right split.
+Proof.
+  intros source; induction source as [|token rest IH]; intros split Hin; simpl in Hin.
+  - contradiction.
+  - destruct Hin as [Heq | Hin].
+    + subst split; reflexivity.
+    + apply in_map_iff in Hin.
+      destruct Hin as [prior [Heq Hin]].
+      subst split; simpl.
+      specialize (IH prior Hin); rewrite IH; reflexivity.
+Qed.
+
+Lemma all_splits_complete : forall left token right,
+  In
+    {| split_left := left; split_token := token; split_right := right |}
+    (all_splits (left ++ token :: right)).
+Proof.
+  intros left; induction left as [|head tail IH]; intros token right; simpl.
+  - left; reflexivity.
+  - right; apply in_map_iff.
+    exists {| split_left := tail; split_token := token; split_right := right |}.
+    split; [reflexivity | apply IH].
+Qed.
+
+Lemma listed_split_parts_are_strict : forall source split,
+  In split (all_splits source) ->
+  length (split_left split) < length source /\
+  length (split_right split) < length source.
+Proof.
+  intros source split Hin.
+  pose proof (all_splits_sound source split Hin) as Hsource.
+  rewrite Hsource; rewrite length_app; simpl; split; lia.
+Qed.
+
+(** Finite branch identities for one non-empty interval. The order is the
+    runtime tie order: consumed pair, inserted opener, inserted closer, then
+    deletion. *)
+Inductive recurrence_descriptor : Type :=
+  | descriptor_delete
+  | descriptor_insert_close (kind : nat)
+  | descriptor_pair (kind : nat) (split : source_split)
+  | descriptor_insert_open (kind : nat) (split : source_split).
+
+Definition pair_descriptors
+    (constructor : nat -> source_split -> recurrence_descriptor)
+    (kinds : nat) (splits : list source_split) : list recurrence_descriptor :=
+  flat_map
+    (fun kind => map (constructor kind) splits)
+    (seq 0 kinds).
+
+Definition recurrence_descriptors
+    (kinds : nat) (source : list nat) : list recurrence_descriptor :=
+  match source with
+  | [] => []
+  | _ :: rest =>
+      pair_descriptors descriptor_pair kinds (all_splits rest) ++
+      pair_descriptors descriptor_insert_open kinds (all_splits source) ++
+      map descriptor_insert_close (seq 0 kinds) ++
+      [descriptor_delete]
+  end.
+
+(** The cost attached to a descriptor uses exact minima from strict source
+    subintervals. It is a finite, explicit presentation of
+    [recurrence_candidate], not the independent correctness specification. *)
+Inductive descriptor_cost
+    (kinds : nat) : list nat -> recurrence_descriptor -> nat -> Prop :=
+  | descriptor_cost_delete : forall actual source source_cost,
+      minimum_correction_cost kinds source source_cost ->
+      descriptor_cost kinds (actual :: source)
+        descriptor_delete (S source_cost)
+  | descriptor_cost_insert_close : forall actual source kind source_cost,
+      kind < kinds ->
+      minimum_correction_cost kinds source source_cost ->
+      descriptor_cost kinds (actual :: source)
+        (descriptor_insert_close kind)
+        (replacement_cost actual kind + 1 + source_cost)
+  | descriptor_cost_pair : forall actual kind split inner_cost suffix_cost,
+      kind < kinds ->
+      minimum_correction_cost kinds (split_left split) inner_cost ->
+      minimum_correction_cost kinds (split_right split) suffix_cost ->
+      descriptor_cost kinds
+        (actual :: split_left split ++ split_token split :: split_right split)
+        (descriptor_pair kind split)
+        (replacement_cost actual kind + inner_cost +
+         replacement_cost (split_token split) (kinds + kind) + suffix_cost)
+  | descriptor_cost_insert_open : forall kind split inner_cost suffix_cost,
+      kind < kinds ->
+      minimum_correction_cost kinds (split_left split) inner_cost ->
+      minimum_correction_cost kinds (split_right split) suffix_cost ->
+      descriptor_cost kinds
+        (split_left split ++ split_token split :: split_right split)
+        (descriptor_insert_open kind split)
+        (1 + inner_cost +
+         replacement_cost (split_token split) (kinds + kind) + suffix_cost).
+
+Lemma minimum_correction_cost_unique : forall kinds source left right,
+  minimum_correction_cost kinds source left ->
+  minimum_correction_cost kinds source right ->
+  left = right.
+Proof.
+  intros kinds source left right [[left_target Hleft] Hleast_left]
+    [[right_target Hright] Hleast_right].
+  specialize (Hleast_left right_target right Hright).
+  specialize (Hleast_right left_target left Hleft); lia.
+Qed.
+
+Lemma descriptor_cost_is_a_recurrence_candidate : forall
+    kinds source descriptor cost,
+  descriptor_cost kinds source descriptor cost ->
+  recurrence_candidate kinds source cost.
+Proof.
+  intros kinds source descriptor cost Hcost; destruct Hcost.
+  - constructor; assumption.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+Qed.
+
+Lemma descriptor_cost_functional : forall
+    kinds source descriptor left right,
+  descriptor_cost kinds source descriptor left ->
+  descriptor_cost kinds source descriptor right ->
+  left = right.
+Proof.
+  intros kinds source descriptor left right Hleft Hright.
+  destruct Hleft; inversion Hright; subst; try reflexivity.
+  - erewrite (minimum_correction_cost_unique kinds source source_cost source_cost0);
+      eauto.
+  - erewrite (minimum_correction_cost_unique kinds source source_cost source_cost0);
+      eauto.
+  - erewrite (minimum_correction_cost_unique
+      kinds (split_left split) inner_cost inner_cost0); eauto.
+    erewrite (minimum_correction_cost_unique
+      kinds (split_right split) suffix_cost suffix_cost0); eauto.
+  - erewrite (minimum_correction_cost_unique
+      kinds (split_left split) inner_cost inner_cost0); eauto.
+    erewrite (minimum_correction_cost_unique
+      kinds (split_right split) suffix_cost suffix_cost0); eauto.
+Qed.
+
+(** Constructive minimum selection over a finite functional family. The proof
+    compares natural costs with [le_dec]; it uses neither excluded middle for
+    arbitrary propositions nor any choice principle. *)
+Lemma finite_functional_minimum : forall
+    (A : Type) (R : A -> nat -> Prop) choices,
+  choices <> [] ->
+  (forall choice, In choice choices -> exists cost, R choice cost) ->
+  (forall choice left right,
+      R choice left -> R choice right -> left = right) ->
+  exists best,
+    (exists choice, In choice choices /\ R choice best) /\
+    forall choice cost,
+      In choice choices -> R choice cost -> best <= cost.
+Proof.
+  intros A R choices; induction choices as [|head tail IH];
+    intros Hnonempty Htotal Hfunctional.
+  - contradiction.
+  - destruct (Htotal head) as [head_cost Hhead]; [left; reflexivity |].
+    destruct tail as [|next rest].
+    + exists head_cost; split.
+      * exists head; split; [left; reflexivity | exact Hhead].
+      * intros choice cost Hin Hcost; simpl in Hin; destruct Hin as [-> | []].
+        specialize (Hfunctional _ head_cost cost Hhead Hcost); lia.
+    + assert (Htail_nonempty : next :: rest <> []) by discriminate.
+      assert (Htail_total : forall choice,
+          In choice (next :: rest) -> exists cost, R choice cost).
+      { intros choice Hin; apply Htotal; right; exact Hin. }
+      destruct (IH Htail_nonempty Htail_total Hfunctional)
+        as [tail_cost [[tail_choice [Htail_choice Htail_cost]] Htail_least]].
+      destruct (le_dec head_cost tail_cost) as [Hhead_le | Htail_lt].
+      * exists head_cost; split.
+        -- exists head; split; [left; reflexivity | exact Hhead].
+        -- intros choice cost Hin Hcost; simpl in Hin.
+           destruct Hin as [Heq | Hin].
+           ++ subst choice.
+              specialize (Hfunctional _ head_cost cost Hhead Hcost); lia.
+           ++ specialize (Htail_least choice cost Hin Hcost); lia.
+      * exists tail_cost; split.
+        -- exists tail_choice; split; [right; exact Htail_choice | exact Htail_cost].
+        -- intros choice cost Hin Hcost; simpl in Hin.
+           destruct Hin as [Heq | Hin].
+           ++ subst choice.
+              specialize (Hfunctional _ head_cost cost Hhead Hcost); lia.
+           ++ apply Htail_least with (choice := choice); assumption.
+Qed.
+
+Lemma listed_descriptor_has_a_cost : forall kinds source descriptor,
+  source <> [] ->
+  strict_subintervals_minimized kinds source ->
+  In descriptor (recurrence_descriptors kinds source) ->
+  exists cost, descriptor_cost kinds source descriptor cost.
+Proof.
+  intros kinds source descriptor Hnonempty Hsubproblems Hin.
+  destruct source as [|actual rest]; [contradiction |].
+  unfold recurrence_descriptors in Hin; fold recurrence_descriptors in Hin.
+  repeat rewrite in_app_iff in Hin.
+  destruct Hin as [Hpair | [Hinsert_open | [Hinsert_close | Hdelete]]].
+  - unfold pair_descriptors in Hpair.
+    apply in_flat_map in Hpair.
+    destruct Hpair as [kind [Hkind Hpair]].
+    apply in_map_iff in Hpair.
+    destruct Hpair as [split [Heq Hsplit]]; subst descriptor.
+    apply in_seq in Hkind; destruct Hkind as [_ Hkind].
+    pose proof (all_splits_sound rest split Hsplit) as Hrest.
+    pose proof (listed_split_parts_are_strict rest split Hsplit)
+      as [Hleft_rest Hright_rest].
+    destruct (Hsubproblems (split_left split)) as [inner_cost Hinner];
+      [simpl; lia |].
+    destruct (Hsubproblems (split_right split)) as [suffix_cost Hsuffix];
+      [simpl; lia |].
+    exists (replacement_cost actual kind + inner_cost +
+      replacement_cost (split_token split) (kinds + kind) + suffix_cost).
+    rewrite Hrest; econstructor; eauto.
+  - unfold pair_descriptors in Hinsert_open.
+    apply in_flat_map in Hinsert_open.
+    destruct Hinsert_open as [kind [Hkind Hinsert_open]].
+    apply in_map_iff in Hinsert_open.
+    destruct Hinsert_open as [split [Heq Hsplit]]; subst descriptor.
+    apply in_seq in Hkind; destruct Hkind as [_ Hkind].
+    pose proof (all_splits_sound (actual :: rest) split Hsplit) as Hsource.
+    pose proof (listed_split_parts_are_strict (actual :: rest) split Hsplit)
+      as [Hleft_source Hright_source].
+    destruct (Hsubproblems (split_left split)) as [inner_cost Hinner];
+      [exact Hleft_source |].
+    destruct (Hsubproblems (split_right split)) as [suffix_cost Hsuffix];
+      [exact Hright_source |].
+    exists (1 + inner_cost +
+      replacement_cost (split_token split) (kinds + kind) + suffix_cost).
+    rewrite Hsource; econstructor; eauto.
+  - apply in_map_iff in Hinsert_close.
+    destruct Hinsert_close as [kind [Heq Hkind]]; subst descriptor.
+    apply in_seq in Hkind; destruct Hkind as [_ Hkind].
+    destruct (Hsubproblems rest) as [source_cost Hsource]; [simpl; lia |].
+    exists (replacement_cost actual kind + 1 + source_cost).
+    econstructor; eauto.
+  - destruct Hdelete as [Heq | Hfalse]; [|contradiction].
+    inversion Heq; subst descriptor.
+    destruct (Hsubproblems rest) as [source_cost Hsource]; [simpl; lia |].
+    exists (S source_cost); constructor; exact Hsource.
+Qed.
+
+Lemma recurrence_candidate_has_a_listed_descriptor : forall kinds source cost,
+  recurrence_candidate kinds source cost ->
+  exists descriptor,
+    In descriptor (recurrence_descriptors kinds source) /\
+    descriptor_cost kinds source descriptor cost.
+Proof.
+  intros kinds source cost Hcandidate; destruct Hcandidate.
+  - exists descriptor_delete; split.
+    + unfold recurrence_descriptors; simpl.
+      repeat rewrite in_app_iff; right; right; right; simpl; tauto.
+    + constructor; exact H.
+  - exists (descriptor_insert_close kind); split.
+    + unfold recurrence_descriptors; simpl.
+      repeat rewrite in_app_iff; right; right; left.
+      apply in_map; apply in_seq; lia.
+    + econstructor; eauto.
+  - set (split := {| split_left := source_inner;
+                     split_token := actual_close;
+                     split_right := source_suffix |}).
+    exists (descriptor_pair kind split); split.
+    + unfold recurrence_descriptors; simpl.
+      repeat rewrite in_app_iff; left.
+      unfold pair_descriptors; apply in_flat_map.
+      exists kind; split.
+      * apply in_seq; lia.
+      * apply in_map; apply all_splits_complete.
+    + subst split; exact (@descriptor_cost_pair kinds actual_open kind
+        {| split_left := source_inner;
+           split_token := actual_close;
+           split_right := source_suffix |}
+        inner_cost suffix_cost H H0 H1).
+  - set (split := {| split_left := source_inner;
+                     split_token := actual_close;
+                     split_right := source_suffix |}).
+    exists (descriptor_insert_open kind split); split.
+    + destruct source_inner as [|head tail];
+        unfold recurrence_descriptors; simpl;
+        repeat rewrite in_app_iff; right; left;
+        unfold pair_descriptors; apply in_flat_map;
+        exists kind; split.
+      * apply in_seq; lia.
+      * apply in_map; apply all_splits_complete.
+      * apply in_seq; lia.
+      * apply in_map; apply all_splits_complete.
+    + subst split; exact (@descriptor_cost_insert_open kinds kind
+        {| split_left := source_inner;
+           split_token := actual_close;
+           split_right := source_suffix |}
+        inner_cost suffix_cost H H0 H1).
+Qed.
+
+Lemma minimum_recurrence_candidate_exists : forall kinds source,
+  source <> [] ->
+  strict_subintervals_minimized kinds source ->
+  exists cost, minimum_recurrence_candidate kinds source cost.
+Proof.
+  intros kinds source Hnonempty Hsubproblems.
+  assert (Hdescriptors_nonempty : recurrence_descriptors kinds source <> []).
+  { destruct source as [|actual rest]; [contradiction |].
+    unfold recurrence_descriptors; simpl; intro Hempty.
+    apply app_eq_nil in Hempty as [_ Hempty].
+    apply app_eq_nil in Hempty as [_ Hempty].
+    apply app_eq_nil in Hempty as [_ Hempty].
+    discriminate. }
+  destruct (finite_functional_minimum
+      recurrence_descriptor (descriptor_cost kinds source)
+      (recurrence_descriptors kinds source)
+      Hdescriptors_nonempty
+      (fun descriptor Hlisted =>
+         listed_descriptor_has_a_cost
+           kinds source descriptor Hnonempty Hsubproblems Hlisted)
+      (descriptor_cost_functional kinds source))
+    as [best [[descriptor [Hlisted Hbest]] Hleast]].
+  exists best; split.
+  - apply (descriptor_cost_is_a_recurrence_candidate
+      kinds source descriptor best Hbest).
+  - intros other Hcandidate.
+    destruct (recurrence_candidate_has_a_listed_descriptor
+      kinds source other Hcandidate)
+      as [other_descriptor [Hother_listed Hother_cost]].
+    apply (Hleast other_descriptor other Hother_listed Hother_cost).
+Qed.
+
+(** Strong induction closes the increasing-interval fill invariant. Every
+    listed descriptor depends only on shorter source intervals, finite
+    selection chooses the current cell, and the existing exact step theorem
+    promotes that choice to the independent global minimum. *)
+Lemma every_source_has_an_exact_minimum_bounded : forall bound kinds source,
+  length source <= bound ->
+  exists cost, minimum_correction_cost kinds source cost.
+Proof.
+  induction bound as [|bound IH]; intros kinds source Hlength.
+  - assert (source = []) by (apply length_zero_iff_nil; lia); subst source.
+    exists 0; split.
+    + exists []; constructor.
+    + intros target other_cost Htree; lia.
+  - destruct source as [|actual rest].
+    + exists 0; split.
+      * exists []; constructor.
+      * intros target other_cost Htree; lia.
+    + assert (Hsubproblems : strict_subintervals_minimized kinds (actual :: rest)).
+      { intros subsource Hstrict.
+        apply (IH kinds subsource); simpl in Hstrict, Hlength; lia. }
+      destruct (minimum_recurrence_candidate_exists
+        kinds (actual :: rest) ltac:(discriminate) Hsubproblems)
+        as [cost Hcandidate].
+      exists cost.
+      apply (proj1 (interval_recurrence_is_globally_exact
+        kinds (actual :: rest) cost ltac:(discriminate) Hsubproblems)).
+      exact Hcandidate.
+Qed.
+
+Theorem every_source_has_an_exact_minimum : forall kinds source,
+  exists cost, minimum_correction_cost kinds source cost.
+Proof.
+  intros kinds source.
+  apply (every_source_has_an_exact_minimum_bounded
+    (length source) kinds source); reflexivity.
+Qed.
+
+Theorem strict_subintervals_always_minimized : forall kinds source,
+  strict_subintervals_minimized kinds source.
+Proof.
+  intros kinds source subsource _.
+  apply every_source_has_an_exact_minimum.
+Qed.
+
+Theorem interval_recurrence_is_unconditionally_globally_exact :
+  forall kinds source cost,
+    source <> [] ->
+    (minimum_recurrence_candidate kinds source cost <->
+     minimum_correction_cost kinds source cost).
+Proof.
+  intros kinds source cost Hnonempty.
+  apply interval_recurrence_is_globally_exact; [exact Hnonempty |].
+  apply strict_subintervals_always_minimized.
+Qed.
+
+(** Every correction target has length at most twice its source length. This
+    is the formal cutoff used by the bounded exhaustive Rust oracle. *)
+Theorem correction_target_length_is_bounded : forall kinds source target cost,
+  correction_tree kinds source target cost ->
+  length target <= 2 * length source.
+Proof.
+  intros kinds source target cost Htree; induction Htree; simpl;
+    rewrite ?length_app in *; simpl in *; lia.
+Qed.
+
 (** Every non-empty typed Dyck word exposes exactly the grammar shape
     enumerated by the interval split: one opening kind, a balanced interior,
     its same-kind closer, and a balanced suffix. *)
@@ -898,6 +1315,29 @@ Proof.
     apply (proj2 (interval_recurrence_is_globally_exact
       kinds source cost Hnonempty Hsubproblems)).
     apply correction_minimum_equals_dyck_levenshtein_minimum; exact Hminimum.
+Qed.
+
+(** End-to-end unconditional exactness. The finite descriptor enumeration and
+    strong interval-length induction above establish the table invariant for
+    every source, so callers do not supply any optimality premise. *)
+Theorem interval_recurrence_is_unconditionally_exact_standard_dyck_distance :
+  forall kinds source cost,
+    source <> [] ->
+    (minimum_recurrence_candidate kinds source cost <->
+     minimum_dyck_levenshtein_cost kinds source cost).
+Proof.
+  intros kinds source cost Hnonempty.
+  apply interval_recurrence_is_exact_standard_dyck_distance;
+    [exact Hnonempty | apply strict_subintervals_always_minimized].
+Qed.
+
+Theorem every_source_has_an_exact_standard_dyck_distance : forall kinds source,
+  exists cost, minimum_dyck_levenshtein_cost kinds source cost.
+Proof.
+  intros kinds source.
+  destruct (every_source_has_an_exact_minimum kinds source) as [cost Hminimum].
+  exists cost.
+  apply correction_minimum_equals_dyck_levenshtein_minimum; exact Hminimum.
 Qed.
 
 Example cross_kind_pair_is_not_a_typed_wrap :

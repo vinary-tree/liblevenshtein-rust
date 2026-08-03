@@ -63,6 +63,7 @@ current trusted/partial/legacy status.
 - **Class-A cross-solver model** → [smt/class_a_presets.smt2](smt/class_a_presets.smt2)
 - **Class-A finite operational model** → [tla/ClassAPresets.tla](tla/ClassAPresets.tla)
 - **Ordered cost-monoid conformance** → [core/theories/Conformance/CostMonoid.v](core/theories/Conformance/CostMonoid.v)
+- **Binary64 weighted-cost roundoff boundary** → [core/theories/Conformance/WeightedCostFloat.v](core/theories/Conformance/WeightedCostFloat.v)
 - **Cost-monoid Rust-facing model** → [verus/cost_monoid.rs](verus/cost_monoid.rs)
 - **Cost-monoid cross-solver model** → [smt/cost_monoid.smt2](smt/cost_monoid.smt2)
 - **Phase 11 carrier-generic subsumption fallback** → [core/theories/Conformance/SubsumptionFallback.v](core/theories/Conformance/SubsumptionFallback.v)

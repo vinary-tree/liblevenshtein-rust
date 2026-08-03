@@ -38,6 +38,31 @@ lemma Min4IsNoGreaterThanEveryCandidate(
 {
 }
 
+// The two closer-index loops read only cells from shorter intervals. These
+// arithmetic obligations are the executable table-fill invariant mirrored by
+// Rocq's strong induction and Rust's increasing-length loops.
+lemma ConsumedPairDependenciesAreStrict(
+    left: nat, closeIndex: nat, right: nat)
+  requires left < closeIndex < right
+  ensures closeIndex - (left + 1) < right - left
+  ensures right - (closeIndex + 1) < right - left
+{
+}
+
+lemma InsertedOpenDependenciesAreStrict(
+    left: nat, closeIndex: nat, right: nat)
+  requires left <= closeIndex < right
+  ensures closeIndex - left < right - left
+  ensures right - (closeIndex + 1) < right - left
+{
+}
+
+lemma DeleteAndInsertedCloseDependencyIsStrict(left: nat, right: nat)
+  requires left < right
+  ensures right - (left + 1) < right - left
+{
+}
+
 function PairFromFirstCost(
     actualOpen: nat, expectedOpen: nat, innerCost: nat,
     actualClose: nat, expectedClose: nat, suffixCost: nat): nat

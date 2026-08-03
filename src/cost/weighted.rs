@@ -12,8 +12,9 @@ use std::cmp::Ordering;
 ///
 /// IEEE-754 addition is not bitwise associative for arbitrary operands. The
 /// algebraic L1 proof therefore concerns the corresponding non-negative real
-/// model. Tests separately pin exact associativity on dyadic inputs and a
-/// forward-error envelope on general finite inputs.
+/// model. A Flocq proof bounds binary64 round-to-nearest-even reassociation;
+/// tests separately pin exact associativity on same-scale dyadic inputs and a
+/// forward-error envelope across non-negative finite binary64 bit patterns.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct WeightedCost;
 

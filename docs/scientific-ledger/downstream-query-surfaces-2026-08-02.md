@@ -107,9 +107,13 @@ features existed. The prior scope inference was rejected explicitly.
 | offer JSON/TOML/plaintext persistence | support only practical binary formats | bincode for Rust-native persistence and protobuf for cross-language dictionaries; optional gzip wraps either and is not a semantic format |
 
 The Dyck recurrence proof now has an assumption-free global exactness theorem:
-strictly smaller intervals are exact, every correction induces a recurrence
-candidate of no greater cost, every candidate denotes a valid correction, and
-the selected candidate is therefore globally minimal. Its executable
+`recurrence_descriptors` finitely enumerates the Rust branch and split ranges;
+constructive selection plus strong interval-length induction proves that
+strictly smaller intervals are exact; every correction induces a recurrence
+candidate of no greater cost; every candidate denotes a valid correction; and
+`interval_recurrence_is_unconditionally_exact_standard_dyck_distance` makes
+the selected candidate globally minimal against the independent ordinary
+Levenshtein relation. Its executable
 counterparts include brute-force oracle comparison and algebraic properties
 for replay, fixed points, determinism, kind renaming, symmetry, and
 concatenation.

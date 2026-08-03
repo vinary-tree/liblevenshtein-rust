@@ -14,7 +14,11 @@ fn regression_config(cases: u32) -> ProptestConfig {
 use std::cmp::Ordering;
 
 fn finite_cost() -> impl Strategy<Value = f64> {
-    (0_u64..=1_000_000_000_000_u64).prop_map(|value| value as f64 / 1_000.0)
+    any::<u64>()
+        .prop_map(|bits| f64::from_bits(bits & i64::MAX as u64))
+        .prop_filter("lawful non-negative finite WeightedCost", |value| {
+            value.is_finite()
+        })
 }
 
 fn dyadic_cost() -> impl Strategy<Value = f64> {
@@ -61,6 +65,7 @@ proptest! {
     fn weighted_cost_l1_general_inputs_obey_rounding_envelope(a in finite_cost(), b in finite_cost(), c in finite_cost()) {
         let left = WeightedCost::combine(WeightedCost::combine(a, b), c);
         let right = WeightedCost::combine(a, WeightedCost::combine(b, c));
+        prop_assume!(left.is_finite() && right.is_finite());
         let envelope = 4.0 * f64::EPSILON * (a + b + c).max(1.0);
         prop_assert!((left - right).abs() <= envelope, "left={left:?}, right={right:?}, envelope={envelope:?}");
     }

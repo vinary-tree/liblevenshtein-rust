@@ -65,6 +65,18 @@ Consequently, the table minimum is extensionally equal to the standard
 Levenshtein minimum over all typed Dyck targets; it is not merely optimal among
 algorithm-shaped witnesses.
 
+The fill-order premise is itself proved. `all_splits` is an executable Gallina
+enumeration of every possible consumed-closer position, while
+`recurrence_descriptors` enumerates the four branch families in Rust tie order.
+For each non-empty interval, every descriptor has exactly one cost once its
+strict subintervals have exact minima. A constructive finite-list lemma selects
+the least descriptor using decidable natural-number comparison. Strong
+induction on source length then establishes the strict-subinterval invariant
+for every cell and yields the unconditional theorem
+`interval_recurrence_is_unconditionally_exact_standard_dyck_distance`. No
+classical choice principle, axiom, admitted goal, or caller-supplied optimality
+premise remains.
+
 ### Literate pseudocode
 
 ```text
@@ -173,9 +185,11 @@ accident.
 ## 6. Verification and executable correspondence
 
 - Rocq proves typed-Dyck constructor soundness, zero-cost balanced identity,
-  correction existence, first-pair decomposition, cross-kind separation, and
-  bidirectional refinement to an independently defined standard Levenshtein
-  relation without axioms or admitted goals.
+  exact-minimum existence for every source, finite branch-enumeration
+  completeness, unconditional interval-fill optimality, the
+  `$`|target|\le 2|source|`$` oracle cutoff, first-pair decomposition,
+  cross-kind separation, and bidirectional refinement to an independently
+  defined standard Levenshtein relation without axioms or admitted goals.
 - Dafny and Verus check the replacement, typed-pair, recurrence-minimum, and
   zero-cost endpoint obligations.
 - Z3 and cvc5 independently reject counterexamples to those arithmetic
