@@ -15,21 +15,37 @@ Children == (1 :> {2, 5}) @@ (2 :> {3, 4}) @@ (3 :> {})
 Exact == (1 :> 0) @@ (2 :> 0) @@ (3 :> 20)
       @@ (4 :> 40) @@ (5 :> 0) @@ (6 :> 25)
 
-(* Node 2 is the load-bearing case: Active[2] is too small for a descendant
-   that starts later. Retaining Unstarted[2] repairs the upper bound. *)
+QueryLen == 2
+Beta == 20
+Capacity == (1 :> 3) @@ (2 :> 2) @@ (3 :> 0)
+         @@ (4 :> 0) @@ (5 :> 1) @@ (6 :> 0)
+ActiveRemaining == (1 :> 2) @@ (2 :> 1) @@ (3 :> 0)
+                @@ (4 :> 0) @@ (5 :> 1) @@ (6 :> 0)
+Completed == (1 :> 0) @@ (2 :> 0) @@ (3 :> 20)
+          @@ (4 :> 40) @@ (5 :> 0) @@ (6 :> 25)
+
+(* Node 2 is the load-bearing recurrence case: its active projection is 30,
+   but a descendant can start later and score 40. QueryLen <= Capacity[2]
+   retains the unstarted term. At node 5 the query no longer fits and the
+   active recurrence projection supplies the exact bound 25. *)
 Active == (1 :> 0) @@ (2 :> 10) @@ (3 :> 20)
        @@ (4 :> 40) @@ (5 :> 5) @@ (6 :> 25)
 Unstarted == (1 :> 50) @@ (2 :> 40) @@ (3 :> 0)
           @@ (4 :> 0) @@ (5 :> 25) @@ (6 :> 0)
 Max2(a, b) == IF a >= b THEN a ELSE b
-Bound[n \in Nodes] == Max2(Active[n], Unstarted[n])
+Feasible(ok, completed, term) == IF ok THEN term ELSE completed
+Bound[n \in Nodes] ==
+  Max2(Completed[n],
+    Max2(Feasible(QueryLen <= Capacity[n], Completed[n], Unstarted[n]),
+         Feasible(ActiveRemaining[n] <= Capacity[n], Completed[n],
+                  Active[n] + ActiveRemaining[n] * Beta)))
 
 RECURSIVE ReachFrom(_)
 ReachFrom(n) == {n} \cup UNION {ReachFrom(c) : c \in Children[n]}
 
 BoundSound == \A n \in Nodes : \A d \in ReachFrom(n) :
                 d \in Finals => Exact[d] <= Bound[n]
-LegacyActiveOnlyIsUnsound == Active[2] < Exact[4]
+LegacyActiveOnlyIsUnsound == Active[2] + ActiveRemaining[2] * Beta < Exact[4]
 
 VARIABLES pending, done, pruned, emitted
 vars == <<pending, done, pruned, emitted>>
