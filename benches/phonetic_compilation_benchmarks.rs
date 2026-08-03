@@ -20,29 +20,35 @@ mod benchmarks {
     use liblevenshtein::phonetic::llev::lexer::{Lexer, Token};
     use liblevenshtein::phonetic::llev::{load_file, parse_str};
     use liblevenshtein::phonetic::RuleSetChar;
+    use std::path::{Path, PathBuf};
 
     /// Rule files to benchmark
     const RULE_FILES: &[(&str, &str)] = &[
-        ("zompist", "data/rules/english/zompist.llev"),
+        ("zompist", "data/rules/english/base.llev"),
         ("homophones", "data/rules/english/homophones.llev"),
         ("text_speak", "data/rules/english/text_speak.llev"),
     ];
+
+    fn rule_path(relative_path: impl AsRef<Path>) -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join(relative_path)
+    }
 
     /// Benchmark LLev file parsing
     pub fn bench_llev_parsing(c: &mut Criterion) {
         let mut group = c.benchmark_group("llev_parsing");
         group.sample_size(100);
 
-        for (name, path) in RULE_FILES {
+        for (name, relative_path) in RULE_FILES {
+            let path = rule_path(relative_path);
             // Read file content for throughput calculation
-            let content = std::fs::read_to_string(path).expect("Failed to read rule file");
+            let content = std::fs::read_to_string(&path).expect("Failed to read rule file");
             let content_len = content.len() as u64;
 
             group.throughput(Throughput::Bytes(content_len));
 
-            group.bench_with_input(BenchmarkId::new("load_file", name), path, |b, path| {
+            group.bench_with_input(BenchmarkId::new("load_file", name), &path, |b, path| {
                 b.iter(|| {
-                    let file = load_file(black_box(*path)).expect("Parse failed");
+                    let file = load_file(black_box(path)).expect("Parse failed");
                     black_box(file)
                 });
             });
@@ -56,7 +62,8 @@ mod benchmarks {
         let mut group = c.benchmark_group("ruleset_construction");
         group.sample_size(100);
 
-        for (name, path) in RULE_FILES {
+        for (name, relative_path) in RULE_FILES {
+            let path = rule_path(relative_path);
             let llev_file = load_file(path).expect("Failed to parse");
             let rule_count = llev_file.rules.len();
 
@@ -83,10 +90,11 @@ mod benchmarks {
         let mut group = c.benchmark_group("cold_start");
         group.sample_size(50); // Fewer samples for slower benchmark
 
-        for (name, path) in RULE_FILES {
-            group.bench_with_input(BenchmarkId::new("end_to_end", name), path, |b, path| {
+        for (name, relative_path) in RULE_FILES {
+            let path = rule_path(relative_path);
+            group.bench_with_input(BenchmarkId::new("end_to_end", name), &path, |b, path| {
                 b.iter(|| {
-                    let file = load_file(black_box(*path)).expect("Parse failed");
+                    let file = load_file(black_box(path)).expect("Parse failed");
                     let ruleset = RuleSetChar::from_llev(&file).expect("Conversion failed");
                     black_box(ruleset)
                 });
@@ -125,8 +133,9 @@ mod benchmarks {
         let mut group = c.benchmark_group("lexer_throughput");
         group.sample_size(100);
 
-        for (name, path) in RULE_FILES {
-            let content = std::fs::read_to_string(path).expect("Failed to read");
+        for (name, relative_path) in RULE_FILES {
+            let content = std::fs::read_to_string(rule_path(relative_path))
+                .expect("Failed to read rule file");
             let content_len = content.len() as u64;
 
             group.throughput(Throughput::Bytes(content_len));
