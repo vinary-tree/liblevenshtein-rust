@@ -75,7 +75,7 @@ require(
 header = text(ROOT / "include" / "liblevenshtein.h")
 for symbol in modeled:
     require(
-        re.search(rf"\b{re.escape(symbol)}\s*\(", header),
+        re.search(rf"\b{re.escape(symbol)}\s*\(", header) is not None,
         f"public C header is missing {symbol}",
     )
 abi_header = text(ROOT / "include" / "liblevenshtein_abi.h")
@@ -704,6 +704,7 @@ def named_in(leaf: str, corpus: str) -> bool:
 
 def modeled_symbols(entry: object, context: str) -> list[str]:
     require(isinstance(entry, dict), f"{context} must be an object")
+    assert isinstance(entry, dict)  # require() exits above; this narrows for type checkers
     require(
         not set(entry) - SYMBOL_KEYS,
         f"{context} carries unknown keys {sorted(set(entry) - SYMBOL_KEYS)}",
