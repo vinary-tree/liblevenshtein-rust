@@ -96,6 +96,9 @@ reference:
 | DSL (`.llev` / `.llre`) compilation | `#D7CCC8` | `#EFEBE9` | `#4E342E` |
 | WFST (`duallity`, optional) | `#B3E5FC` | `#E1F5FE` | `#0277BD` |
 | Serialization / bindings | `#F0F4C3` | `#F9FBE7` | `#9E9D24` |
+| VtResource handle (retained two-word ABI) | `#DCEDC8` | `#F1F8E9` | `#33691E` |
+| Foreign / host trust boundary | `#FFCDD2` | `#FFEBEE` | `#B71C1C` |
+| Leased / borrowed memory (batch views, arenas) | `#FFECB3` | `#FFF8E1` | `#FF6F00` |
 
 **Edit-operation edge colours** (automaton transitions): match `#2E7D32` ·
 substitution `#6A1B9A` · insertion `#EF6C00` · deletion `#C62828` ·
