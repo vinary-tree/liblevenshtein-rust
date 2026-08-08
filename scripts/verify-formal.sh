@@ -844,6 +844,61 @@ tla_check() {
   done
 }
 
+# Unbounded-rung runners. A trusted tla manifest row opts in by carrying a
+# bracketed directive in its notes column — "[apalache: <args>]" or
+# "[tlapm: <args>]" — recorded when a wave-W9 upgrade lands. The runners are
+# fully data-driven: with no registered directives they report that state and
+# succeed, so the gates stay meaningful from the day the first row opts in.
+directive_entries() {
+  local marker="$1"
+  awk -F '\t' -v marker="$marker" '
+    $0 !~ /^#/ && NF >= 5 && $1 == "trusted" && $3 == "tla" && index($5, "[" marker ":") {
+      note = $5
+      start = index(note, "[" marker ":") + length(marker) + 2
+      rest = substr(note, start)
+      close_at = index(rest, "]")
+      args = substr(rest, 1, close_at - 1)
+      gsub(/^ +| +$/, "", args)
+      print $2 "\t" $4 "\t" args
+    }
+  ' "$MANIFEST"
+}
+
+apalache_check() {
+  if ! command -v apalache-mc >/dev/null 2>&1; then
+    echo "error: apalache-mc is required for registered Apalache rungs" >&2
+    exit 2
+  fi
+  local profile rel args found=0
+  while IFS=$'\t' read -r profile rel args; do
+    [[ -z "$rel" ]] && continue
+    found=1
+    echo "== Apalache [$profile]: $rel =="
+    (cd "$ROOT/$(dirname "$rel")" && run_capped "$profile" apalache-mc $args "$(basename "$rel")")
+  done < <(directive_entries apalache)
+  if [[ "$found" -eq 0 ]]; then
+    echo "no trusted tla rows carry an [apalache: ...] directive yet (unbounded rungs land with wave W9)"
+  fi
+}
+
+tlaps_check() {
+  local tlapm_bin="${TLAPM_BIN:-$HOME/.local/tlaps/bin/tlapm}"
+  if [[ ! -x "$tlapm_bin" ]]; then
+    echo "error: tlapm not found at $tlapm_bin (set TLAPM_BIN)" >&2
+    exit 2
+  fi
+  local profile rel args found=0
+  while IFS=$'\t' read -r profile rel args; do
+    [[ -z "$rel" ]] && continue
+    found=1
+    echo "== TLAPS [$profile]: $rel =="
+    (cd "$ROOT/$(dirname "$rel")" && run_capped "$profile" "$tlapm_bin" $args "$(basename "$rel")")
+  done < <(directive_entries tlapm)
+  if [[ "$found" -eq 0 ]]; then
+    echo "no trusted tla rows carry a [tlapm: ...] directive yet (unbounded rungs land with wave W9)"
+  fi
+}
+
 verus_check() {
   if ! command -v verus >/dev/null 2>&1; then
     echo "error: verus is required for trusted Verus entries" >&2
@@ -906,6 +961,8 @@ case "$MODE" in
   audit)
     audit_manifest
     audit_all_gaps
+    echo "== ABI invariant registry =="
+    python3 "$ROOT/scripts/check-abi-invariants.py"
     ;;
   audit-tsv)
     audit_manifest >/dev/null
@@ -962,6 +1019,14 @@ case "$MODE" in
   tla)
     tla_check
     ;;
+  apalache)
+    audit_manifest
+    apalache_check
+    ;;
+  tlaps)
+    audit_manifest
+    tlaps_check
+    ;;
   verus)
     audit_manifest
     check_trusted_verus_trust_boundary
@@ -985,7 +1050,7 @@ case "$MODE" in
     ;;
   *)
     cat >&2 <<USAGE
-usage: scripts/verify-formal.sh [audit|audit-tsv|audit-contracts|audit-contracts-tsv|audit-evidence|audit-evidence-tsv|audit-vacuous|trusted|coq-trusted|coq-file|verus|dafny|smt|tla|all]
+usage: scripts/verify-formal.sh [audit|audit-tsv|audit-contracts|audit-contracts-tsv|audit-evidence|audit-evidence-tsv|audit-vacuous|trusted|coq-trusted|coq-file|verus|dafny|smt|tla|apalache|tlaps|all]
 
 All proof/model execution is memory-capped with systemd-run unless
 FORMAL_VERIFY_ALLOW_UNCAPPED=1 is set.
