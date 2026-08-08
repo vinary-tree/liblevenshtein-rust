@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Condvar, Mutex, RwLock};
 use vinary_tree_interop::{
     dictionary_flags, VtDictionaryEdge, VtDictionaryVTable, VtInterfaceId, VtOptionalU64,
     VtResource, VtResourceVTable, VtStatus, VtUnitDomain, VtValueDomain, VT_ABI_VERSION,
@@ -71,6 +71,60 @@ impl Revision {
 struct Metrics {
     snapshots: AtomicUsize,
     edge_batches: AtomicUsize,
+    // Lifecycle ledger (VT-LIFE invariants): every vtable retain/release call
+    // and every Context destruction, observable without touching the Arcs.
+    retains: AtomicUsize,
+    releases: AtomicUsize,
+    context_drops: AtomicUsize,
+    // Callback concurrency observed inside node_edges, aggregated across
+    // every context (base + snapshots). Distinct captured objects carry
+    // distinct consumer gates (VT-GATE-1), so this aggregate may legally
+    // exceed one even for a serialized provider — per-OBJECT serialization
+    // is what VT-GATE-2 constrains, observed via the snapshot() counters
+    // below (all snapshot() calls in these tests hit the one base object).
+    in_flight: AtomicUsize,
+    max_in_flight: AtomicUsize,
+    // Query-start concurrency observed inside snapshot() on the base object —
+    // the shared-object contention point the consumer gate actually guards.
+    snapshot_in_flight: AtomicUsize,
+    max_snapshot_in_flight: AtomicUsize,
+    // Test-controlled holds: while true, the corresponding callback blocks
+    // after registering itself in-flight, letting tests park a thread
+    // provably inside a callback without sleeps.
+    edge_hold: Mutex<bool>,
+    edge_hold_cv: Condvar,
+    snapshot_hold: Mutex<bool>,
+    snapshot_hold_cv: Condvar,
+}
+
+/// RAII registration of one in-flight callback, honoring a test hold.
+struct CallbackGuard<'a> {
+    live: &'a AtomicUsize,
+}
+
+impl<'a> CallbackGuard<'a> {
+    fn enter(
+        live: &'a AtomicUsize,
+        peak: &'a AtomicUsize,
+        hold: &'a Mutex<bool>,
+        hold_cv: &'a Condvar,
+    ) -> Self {
+        let now_live = live.fetch_add(1, Ordering::SeqCst) + 1;
+        peak.fetch_max(now_live, Ordering::SeqCst);
+        let mut held = hold.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        while *held {
+            held = hold_cv
+                .wait(held)
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+        }
+        Self { live }
+    }
+}
+
+impl Drop for CallbackGuard<'_> {
+    fn drop(&mut self) {
+        self.live.fetch_sub(1, Ordering::SeqCst);
+    }
 }
 
 struct Store {
@@ -88,6 +142,15 @@ enum ContextKind {
 
 struct Context {
     kind: ContextKind,
+    // Which capability set query_interface hands out: false = serialized
+    // (CallGate::Serial on the consumer side), true = PARALLEL_REENTRANT.
+    reentrant: bool,
+}
+
+impl Drop for Context {
+    fn drop(&mut self) {
+        self.metrics().context_drops.fetch_add(1, Ordering::SeqCst);
+    }
 }
 
 impl Context {
@@ -126,10 +189,17 @@ unsafe fn context<'a>(raw: *mut c_void) -> &'a Context {
 }
 
 unsafe extern "C" fn retain(raw: *mut c_void) {
+    context(raw)
+        .metrics()
+        .retains
+        .fetch_add(1, Ordering::SeqCst);
     Arc::increment_strong_count(raw.cast::<Context>());
 }
 
 unsafe extern "C" fn release(raw: *mut c_void) {
+    // Clone the metrics handle first: this release may destroy the Context.
+    let metrics = Arc::clone(context(raw).metrics());
+    metrics.releases.fetch_add(1, Ordering::SeqCst);
     drop(Arc::from_raw(raw.cast::<Context>()));
 }
 
@@ -147,10 +217,12 @@ unsafe extern "C" fn query_interface(
     {
         return VtStatus::Unsupported;
     }
-    let dictionary = if context(raw).immutable() {
-        &SNAPSHOT_DICTIONARY_VTABLE
-    } else {
-        &MUTABLE_DICTIONARY_VTABLE
+    let source = context(raw);
+    let dictionary = match (source.immutable(), source.reentrant) {
+        (true, false) => &SNAPSHOT_DICTIONARY_VTABLE,
+        (false, false) => &MUTABLE_DICTIONARY_VTABLE,
+        (true, true) => &SNAPSHOT_REENTRANT_VTABLE,
+        (false, true) => &MUTABLE_REENTRANT_VTABLE,
     };
     out_vtable.write((dictionary as *const VtDictionaryVTable).cast());
     VtStatus::Ok
@@ -161,12 +233,22 @@ unsafe extern "C" fn snapshot(raw: *mut c_void, out: *mut VtResource) -> VtStatu
         return VtStatus::NullPointer;
     }
     let source = context(raw);
-    source.metrics().snapshots.fetch_add(1, Ordering::Relaxed);
+    let metrics = source.metrics();
+    metrics.snapshots.fetch_add(1, Ordering::Relaxed);
+    // Registers this query-start callback in-flight and honors the test
+    // hold; the guard un-registers on every return path.
+    let _in_flight = CallbackGuard::enter(
+        &metrics.snapshot_in_flight,
+        &metrics.max_snapshot_in_flight,
+        &metrics.snapshot_hold,
+        &metrics.snapshot_hold_cv,
+    );
     out.write(resource(Context {
         kind: ContextKind::Snapshot {
             revision: source.revision(),
             metrics: Arc::clone(source.metrics()),
         },
+        reentrant: source.reentrant,
     }));
     VtStatus::Ok
 }
@@ -270,6 +352,15 @@ unsafe extern "C" fn node_edges(
         .metrics()
         .edge_batches
         .fetch_add(1, Ordering::Relaxed);
+    // Registers this call in-flight (max tracked) and honors a test-imposed
+    // hold; the guard un-registers on every return path.
+    let edge_metrics = source.metrics();
+    let _in_flight = CallbackGuard::enter(
+        &edge_metrics.in_flight,
+        &edge_metrics.max_in_flight,
+        &edge_metrics.edge_hold,
+        &edge_metrics.edge_hold_cv,
+    );
     let revision = source.revision();
     let Some(node) = revision.nodes.get(node as usize) else {
         return VtStatus::InvalidArgument;
@@ -317,6 +408,10 @@ const fn dictionary_vtable(flags: u64) -> VtDictionaryVTable {
 static MUTABLE_DICTIONARY_VTABLE: VtDictionaryVTable = dictionary_vtable(0);
 static SNAPSHOT_DICTIONARY_VTABLE: VtDictionaryVTable =
     dictionary_vtable(dictionary_flags::IMMUTABLE);
+static MUTABLE_REENTRANT_VTABLE: VtDictionaryVTable =
+    dictionary_vtable(dictionary_flags::PARALLEL_REENTRANT);
+static SNAPSHOT_REENTRANT_VTABLE: VtDictionaryVTable =
+    dictionary_vtable(dictionary_flags::IMMUTABLE | dictionary_flags::PARALLEL_REENTRANT);
 
 pub struct TestDictionary {
     store: Arc<Store>,
@@ -325,6 +420,16 @@ pub struct TestDictionary {
 
 impl TestDictionary {
     pub fn new(entries: impl IntoIterator<Item = (String, Option<u64>)>) -> Self {
+        Self::with_reentrancy(entries, false)
+    }
+
+    /// Build a provider that advertises `PARALLEL_REENTRANT` when `reentrant`
+    /// is true; the default provider stays serialized so consumers exercise
+    /// `CallGate::Serial`.
+    pub fn with_reentrancy(
+        entries: impl IntoIterator<Item = (String, Option<u64>)>,
+        reentrant: bool,
+    ) -> Self {
         let mut revision = Revision::default();
         for (term, value) in entries {
             revision.insert(&term, value);
@@ -335,6 +440,7 @@ impl TestDictionary {
         });
         let resource = resource(Context {
             kind: ContextKind::Mutable(Arc::clone(&store)),
+            reentrant,
         });
         Self { store, resource }
     }
@@ -385,10 +491,134 @@ impl TestDictionary {
     pub fn edge_batch_calls(&self) -> usize {
         self.store.metrics.edge_batches.load(Ordering::Relaxed)
     }
+
+    /// Vtable `retain` calls observed across this provider and every
+    /// snapshot resource it produced.
+    pub fn retain_calls(&self) -> usize {
+        self.store.metrics.retains.load(Ordering::SeqCst)
+    }
+
+    /// Vtable `release` calls observed across this provider and every
+    /// snapshot resource it produced.
+    pub fn release_calls(&self) -> usize {
+        self.store.metrics.releases.load(Ordering::SeqCst)
+    }
+
+    /// Number of resource contexts (the root plus every snapshot) whose
+    /// final release destroyed them — the executable face of VT-LIFE-5/6.
+    pub fn context_drops(&self) -> usize {
+        self.store.metrics.context_drops.load(Ordering::SeqCst)
+    }
+
+    /// Callbacks currently inside `node_edges`.
+    pub fn edges_in_flight(&self) -> usize {
+        self.store.metrics.in_flight.load(Ordering::SeqCst)
+    }
+
+    /// High-water mark of concurrent `node_edges` callbacks — the executable
+    /// face of VT-GATE-2 (== 1 under a serialized consumer gate).
+    pub fn max_edges_in_flight(&self) -> usize {
+        self.store.metrics.max_in_flight.load(Ordering::SeqCst)
+    }
+
+    /// Park every subsequent `node_edges` call after it registers in-flight,
+    /// until `resume_edges`. Lets tests hold a thread provably inside a
+    /// callback without timing assumptions.
+    pub fn pause_edges(&self) {
+        let mut held = self
+            .store
+            .metrics
+            .edge_hold
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        *held = true;
+    }
+
+    /// Query-start callbacks currently inside `snapshot()`.
+    pub fn snapshots_in_flight(&self) -> usize {
+        self.store.metrics.snapshot_in_flight.load(Ordering::SeqCst)
+    }
+
+    /// High-water mark of concurrent `snapshot()` callbacks on this provider
+    /// — the executable face of VT-GATE-2 (== 1 under a serialized consumer
+    /// gate, since every query start crosses the one base object).
+    pub fn max_snapshots_in_flight(&self) -> usize {
+        self.store
+            .metrics
+            .max_snapshot_in_flight
+            .load(Ordering::SeqCst)
+    }
+
+    /// Park every subsequent `snapshot()` call after it registers in-flight,
+    /// until `resume_snapshots`.
+    pub fn pause_snapshots(&self) {
+        let mut held = self
+            .store
+            .metrics
+            .snapshot_hold
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        *held = true;
+    }
+
+    /// Release callbacks parked by `pause_snapshots`.
+    pub fn resume_snapshots(&self) {
+        let mut held = self
+            .store
+            .metrics
+            .snapshot_hold
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        *held = false;
+        drop(held);
+        self.store.metrics.snapshot_hold_cv.notify_all();
+    }
+
+    /// A metrics handle that outlives this provider, so teardown-complete
+    /// ledgers (release of the root's own retain included) stay observable
+    /// after `drop(TestDictionary)`.
+    pub fn metrics_probe(&self) -> MetricsProbe {
+        MetricsProbe(Arc::clone(&self.store.metrics))
+    }
+
+    /// Release callbacks parked by `pause_edges`.
+    pub fn resume_edges(&self) {
+        let mut held = self
+            .store
+            .metrics
+            .edge_hold
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        *held = false;
+        drop(held);
+        self.store.metrics.edge_hold_cv.notify_all();
+    }
 }
 
 impl Drop for TestDictionary {
     fn drop(&mut self) {
         unsafe { release(self.resource.context) };
+    }
+}
+
+/// Provider-independent view of the lifecycle ledger (valid after the
+/// provider itself is dropped).
+pub struct MetricsProbe(Arc<Metrics>);
+
+impl MetricsProbe {
+    pub fn snapshot_calls(&self) -> usize {
+        self.0.snapshots.load(Ordering::SeqCst)
+    }
+
+    pub fn retain_calls(&self) -> usize {
+        self.0.retains.load(Ordering::SeqCst)
+    }
+
+    pub fn release_calls(&self) -> usize {
+        self.0.releases.load(Ordering::SeqCst)
+    }
+
+    pub fn context_drops(&self) -> usize {
+        self.0.context_drops.load(Ordering::SeqCst)
     }
 }

@@ -90,7 +90,11 @@ fn every_struct_is_packed_in_declaration_order() {
         size_of::<VtResourceVTable>(),
         align_of::<VtResourceVTable>(),
         &[
-            ("struct_size", offset_of!(VtResourceVTable, struct_size), WORD),
+            (
+                "struct_size",
+                offset_of!(VtResourceVTable, struct_size),
+                WORD,
+            ),
             ("abi_version", offset_of!(VtResourceVTable, abi_version), 4),
             ("reserved", offset_of!(VtResourceVTable, reserved), 4),
             ("retain", offset_of!(VtResourceVTable, retain), fnp),
@@ -126,14 +130,26 @@ fn every_struct_is_packed_in_declaration_order() {
         size_of::<VtDictionaryVTable>(),
         align_of::<VtDictionaryVTable>(),
         &[
-            ("struct_size", offset_of!(VtDictionaryVTable, struct_size), WORD),
+            (
+                "struct_size",
+                offset_of!(VtDictionaryVTable, struct_size),
+                WORD,
+            ),
             (
                 "interface_version",
                 offset_of!(VtDictionaryVTable, interface_version),
                 4,
             ),
-            ("unit_domain", offset_of!(VtDictionaryVTable, unit_domain), 4),
-            ("value_domain", offset_of!(VtDictionaryVTable, value_domain), 4),
+            (
+                "unit_domain",
+                offset_of!(VtDictionaryVTable, unit_domain),
+                4,
+            ),
+            (
+                "value_domain",
+                offset_of!(VtDictionaryVTable, value_domain),
+                4,
+            ),
             ("flags", offset_of!(VtDictionaryVTable, flags), 8),
             ("snapshot", offset_of!(VtDictionaryVTable, snapshot), fnp),
             ("root", offset_of!(VtDictionaryVTable, root), fnp),
@@ -153,7 +169,11 @@ fn every_struct_is_packed_in_declaration_order() {
                 offset_of!(VtDictionaryVTable, node_transition),
                 fnp,
             ),
-            ("node_edges", offset_of!(VtDictionaryVTable, node_edges), fnp),
+            (
+                "node_edges",
+                offset_of!(VtDictionaryVTable, node_edges),
+                fnp,
+            ),
         ],
     );
     assert_packed_in_order(
@@ -419,5 +439,8 @@ fn optional_function_pointers_have_the_null_niche() {
     // the discriminant representation; None is guaranteed to be the null
     // pointer under the NPO for `Option<extern "C" fn>`.
     let none_bits: usize = unsafe { core::mem::transmute::<Retain, usize>(None) };
-    assert_eq!(none_bits, 0, "None must be the all-zero (NULL) function pointer");
+    assert_eq!(
+        none_bits, 0,
+        "None must be the all-zero (NULL) function pointer"
+    );
 }

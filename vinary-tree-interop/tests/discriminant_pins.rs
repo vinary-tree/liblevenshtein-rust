@@ -61,14 +61,20 @@ fn status_universe_is_exactly_nine_values() {
             VtStatus::LimitExceeded => 7,
             VtStatus::ProviderError => 8,
         };
-        assert_eq!(value, status as u32, "match table drifted from discriminant");
+        assert_eq!(
+            value, status as u32,
+            "match table drifted from discriminant"
+        );
         assert!(
             !seen[value as usize],
             "duplicate discriminant {value} — two variants share an ABI value"
         );
         seen[value as usize] = true;
     }
-    assert!(seen.iter().all(|&hit| hit), "discriminants are not contiguous 0..=8");
+    assert!(
+        seen.iter().all(|&hit| hit),
+        "discriminants are not contiguous 0..=8"
+    );
 }
 
 #[test]
@@ -100,7 +106,11 @@ fn unit_domain_discriminants_are_pinned() {
     assert_eq!(VtUnitDomain::Byte as u32, 1);
     assert_eq!(VtUnitDomain::UnicodeScalar as u32, 2);
     assert_eq!(VtUnitDomain::U64 as u32, 3);
-    for domain in [VtUnitDomain::Byte, VtUnitDomain::UnicodeScalar, VtUnitDomain::U64] {
+    for domain in [
+        VtUnitDomain::Byte,
+        VtUnitDomain::UnicodeScalar,
+        VtUnitDomain::U64,
+    ] {
         let value = match domain {
             VtUnitDomain::Byte => 1u32,
             VtUnitDomain::UnicodeScalar => 2,
@@ -159,7 +169,10 @@ fn weight_domain_discriminants_are_pinned() {
             VtWeightDomain::BooleanF64 => 7,
         };
         assert_eq!(value, domain as u32);
-        assert!(!seen[value as usize], "duplicate weight-domain value {value}");
+        assert!(
+            !seen[value as usize],
+            "duplicate weight-domain value {value}"
+        );
         seen[value as usize] = true;
     }
     assert!(

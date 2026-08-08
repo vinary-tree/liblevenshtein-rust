@@ -169,14 +169,12 @@ fn base_vtable_advertises_its_own_size_and_version() {
 fn wrong_interface_id_is_unsupported_and_writes_nothing() {
     let provider = Provider::new();
     let mut out = POISON;
-    let status = query(
-        provider.resource(),
-        &VT_WFST_INTERFACE_ID,
-        1,
-        &mut out,
-    );
+    let status = query(provider.resource(), &VT_WFST_INTERFACE_ID, 1, &mut out);
     assert_eq!(status, VtStatus::Unsupported);
-    assert_eq!(out, POISON, "a failed negotiation must not touch the output");
+    assert_eq!(
+        out, POISON,
+        "a failed negotiation must not touch the output"
+    );
     assert_eq!(provider.retains(), 0, "discovery must not retain");
 }
 
@@ -232,7 +230,12 @@ fn null_arguments_are_null_pointer_errors() {
 fn successful_negotiation_yields_a_prefix_consumable_future_vtable() {
     let provider = Provider::new();
     let mut out: *const c_void = core::ptr::null();
-    let status = query(provider.resource(), &VT_DICTIONARY_INTERFACE_ID, 1, &mut out);
+    let status = query(
+        provider.resource(),
+        &VT_DICTIONARY_INTERFACE_ID,
+        1,
+        &mut out,
+    );
     assert_eq!(status, VtStatus::Ok);
     assert!(!out.is_null());
 
