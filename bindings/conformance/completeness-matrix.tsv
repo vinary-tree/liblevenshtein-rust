@@ -1,0 +1,16 @@
+language	fns_exposed	fns_null_with_reason	enums_ok	iterator	reducer	phonetic_gating	readme_present	tests_present	findings
+c	35/35	0	4/4	llev_query_cursor_next_batch	llev_query_cursor_reduce	llev_build_features	no	yes	-
+clojure	16/35	19	3/4	ResultCursor	reduce-batches	status-error	yes	yes	-
+cpp	35/35	0	4/4	vinary_tree::liblevenshtein::query_cursor::next_batch	llev_query_cursor_reduce	llev_build_features	yes	yes	-
+dotnet	25/35	10	4/4	Query.GetEnumerator	none	status-error	yes	yes	llev_damerau_distance_threshold,llev_true_damerau_distance_threshold
+fortran	26/35	9	3/4	query_iterator%next	none	status-error	yes	yes	-
+go	27/35	8	4/4	Iterator.Next	none	status-error	yes	yes	-
+haskell	26/35	9	3/4	next	foldBatches	status-error	yes	yes	-
+javascript	18/35	17	3/4	QueryCursor	QueryCursor.reduceBatches	status-error	yes	yes	llev_phonetic_pattern_size,llev_phonetic_rules_len
+javascript-runtime	21/35	14	3/4	QueryCursor.next	QueryCursor.reduceBatches	status-error	yes	yes	llev_distance_threshold,llev_damerau_distance_threshold,llev_true_damerau_distance_threshold,llev_phonetic_pattern_size,llev_phonetic_rules_len
+jvm	21/35	14	4/4	QueryCursor.next	QueryCursor.forEachBatch	status-error	yes	yes	-
+lua	27/35	8	3/4	cursor:next	cursor:reduce_batches	status-error	yes	yes	-
+ocaml	26/35	9	3/4	next	fold_batches	status-error	yes	yes	-
+python	20/35	15	4/4	QueryCursor.__next__	QueryCursor.reduce	status-error	yes	yes	llev_phonetic_pattern_size,llev_phonetic_rules_len
+ruby	27/35	8	3/4	Query#each	none	status-error	yes	yes	-
+swift	17/35	18	2/4	QueryCursor.next	QueryCursor.reduceBatches	status-error	yes	yes	llev_distance_threshold,llev_damerau_distance_threshold,llev_true_damerau_distance_threshold,llev_owned_string_free,llev_phonetic_pattern_size,llev_phonetic_rules_parse,llev_phonetic_rules_builtin,llev_phonetic_rules_free,llev_phonetic_rules_len,llev_phonetic_rules_apply

@@ -1,0 +1,2453 @@
+{
+  "$comment": "Per-language facade surface model for the 35 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against the facade sources and regenerates bindings/conformance/completeness-matrix.tsv from this file. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "modelVersion": 1,
+  "languages": {
+    "c": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "include/liblevenshtein.h",
+        "include/liblevenshtein_abi.h"
+      ],
+      "readme": null,
+      "tests": [
+        "bindings/c/tests/cross_project_snapshot.c"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "LlevStatus",
+          "definedIn": "include/liblevenshtein_abi.h"
+        },
+        "algorithm": {
+          "symbol": "LlevAlgorithm",
+          "definedIn": "include/liblevenshtein_abi.h"
+        },
+        "queryOrder": {
+          "symbol": "LlevQueryOrder",
+          "definedIn": "include/liblevenshtein_abi.h"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "LlevPhoneticRuleSetKind",
+          "definedIn": "include/liblevenshtein_abi.h"
+        }
+      },
+      "iterator": {
+        "symbol": "llev_query_cursor_next_batch"
+      },
+      "reducer": {
+        "symbol": "llev_query_cursor_reduce"
+      },
+      "phoneticGating": "llev_build_features",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": "llev_abi_version"
+        },
+        "llev_api_revision": {
+          "symbol": "llev_api_revision"
+        },
+        "llev_build_features": {
+          "symbol": "llev_build_features"
+        },
+        "llev_last_error_message": {
+          "symbol": "llev_last_error_message"
+        },
+        "llev_string_free": {
+          "symbol": "llev_string_free"
+        },
+        "llev_string_array_free": {
+          "symbol": "llev_string_array_free"
+        },
+        "llev_string_dup": {
+          "symbol": "llev_string_dup"
+        },
+        "llev_distance": {
+          "symbol": "llev_distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "llev_distance_threshold"
+        },
+        "llev_damerau_distance": {
+          "symbol": "llev_damerau_distance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "llev_damerau_distance_threshold"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "llev_true_damerau_distance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "llev_true_damerau_distance_threshold"
+        },
+        "llev_transducer_new": {
+          "symbol": "llev_transducer_new"
+        },
+        "llev_transducer_free": {
+          "symbol": "llev_transducer_free"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": "llev_transducer_unit_domain"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "llev_transducer_query_utf8"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "llev_transducer_query_bytes"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "llev_transducer_query_u64"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "llev_query_cursor_next_batch"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "llev_query_cursor_release_batch"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": "llev_query_cursor_reduce"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "llev_query_cursor_free"
+        },
+        "llev_owned_string_free": {
+          "symbol": "llev_owned_string_free"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "llev_phonetic_pattern_compile_regex"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "llev_phonetic_pattern_compile_llre"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "llev_phonetic_pattern_free"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "llev_phonetic_pattern_size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "llev_phonetic_pattern_matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "llev_transducer_query_pattern"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "llev_phonetic_rules_parse"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "llev_phonetic_rules_builtin"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "llev_phonetic_rules_free"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "llev_phonetic_rules_len"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "llev_phonetic_rules_apply"
+        }
+      }
+    },
+    "clojure": {
+      "binding": "delegated",
+      "delegateTo": "jvm",
+      "sourceFiles": [
+        "bindings/clojure/src/vinary_tree/liblevenshtein.clj"
+      ],
+      "readme": "bindings/clojure/README.md",
+      "tests": [
+        "bindings/clojure/test/vinary_tree/liblevenshtein_test.clj"
+      ],
+      "enums": {
+        "status": {
+          "symbol": null,
+          "_reason": "the delegated NativeException carries the numeric status; no Clojure re-exposure"
+        },
+        "algorithm": {
+          "symbol": "algorithms",
+          "definedIn": "bindings/clojure/src/vinary_tree/liblevenshtein.clj",
+          "note": "keyword options :standard/:transposition/:merge-and-split/:damerau-levenshtein"
+        },
+        "queryOrder": {
+          "symbol": "orders",
+          "definedIn": "bindings/clojure/src/vinary_tree/liblevenshtein.clj",
+          "note": "keyword options :traversal/:distance-then-term"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "phonetic-rules",
+          "definedIn": "bindings/clojure/src/vinary_tree/liblevenshtein.clj",
+          "note": "keyword selectors :english-orthography/:english-phonetic"
+        }
+      },
+      "iterator": {
+        "symbol": "ResultCursor"
+      },
+      "reducer": {
+        "symbol": "reduce-batches"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not wrapped; delegated to the JVM facade, which mirrors ABI constants via GeneratedAbi.java"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not wrapped; delegated to the JVM facade, which mirrors ABI constants via GeneratedAbi.java"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not wrapped; phonetic availability surfaces at call time as the delegated NativeException with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": null,
+          "_reason": "the delegated JVM NativeException (message + status) propagates unchanged; no Clojure-specific wrapper symbol"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_damerau_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_transducer_new": {
+          "symbol": "transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "close!"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "query",
+          "note": "reflective JVM overload dispatch on byte[] terms"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "query",
+          "note": "reflective JVM overload dispatch on long[] terms"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": [
+            "ResultCursor",
+            "reduce-batches"
+          ]
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": [
+            "ResultCursor",
+            "reduce-batches"
+          ]
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "batch reduction is provided by reduce-batches (delegating to QueryCursor.forEachBatch) over next_batch/release_batch leases; the native callback reducer is not bound"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "close!"
+        },
+        "llev_owned_string_free": {
+          "symbol": "rewrite",
+          "note": "the delegated PhoneticRuleSet.apply frees the native string"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "phonetic-pattern"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "llre-pattern"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "close!"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": null,
+          "_reason": "available through Java interop on the returned PhoneticPattern (.size) object; the deliberately thin Clojure def surface is pinned by scripts/check-clojure-facades.clj"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": null,
+          "_reason": "available through Java interop on the returned PhoneticPattern (.matches) object; the deliberately thin Clojure def surface is pinned by scripts/check-clojure-facades.clj"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": null,
+          "_reason": "available through Java interop on the returned Transducer (.query transducer pattern distance) object; the deliberately thin Clojure def surface is pinned by scripts/check-clojure-facades.clj"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "phonetic-rules"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "phonetic-rules",
+          "note": "selected with :english-orthography / :english-phonetic"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "close!"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": null,
+          "_reason": "available through Java interop on the returned PhoneticRuleSet (.size) object; the deliberately thin Clojure def surface is pinned by scripts/check-clojure-facades.clj"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "rewrite"
+        }
+      }
+    },
+    "cpp": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "include/liblevenshtein.hpp",
+        "include/liblevenshtein.h",
+        "include/liblevenshtein_abi.h"
+      ],
+      "readme": "bindings/cpp/README.md",
+      "tests": [
+        "bindings/cpp/tests/snapshot.cpp"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "vinary_tree::liblevenshtein::error::status",
+          "definedIn": "include/liblevenshtein.hpp"
+        },
+        "algorithm": {
+          "symbol": "vinary_tree::liblevenshtein::algorithm",
+          "definedIn": "include/liblevenshtein.hpp"
+        },
+        "queryOrder": {
+          "symbol": "vinary_tree::liblevenshtein::query_order",
+          "definedIn": "include/liblevenshtein.hpp"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "LlevPhoneticRuleSetKind",
+          "definedIn": "include/liblevenshtein_abi.h",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        }
+      },
+      "iterator": {
+        "symbol": "vinary_tree::liblevenshtein::query_cursor::next_batch"
+      },
+      "reducer": {
+        "symbol": "llev_query_cursor_reduce",
+        "note": "C API passthrough via the included liblevenshtein.h"
+      },
+      "phoneticGating": "llev_build_features",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": "llev_abi_version",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_api_revision": {
+          "symbol": "llev_api_revision",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_build_features": {
+          "symbol": "llev_build_features",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_last_error_message": {
+          "symbol": "vinary_tree::liblevenshtein::error",
+          "note": "the thrown error's what() is built from llev_last_error_message()"
+        },
+        "llev_string_free": {
+          "symbol": "llev_string_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_string_array_free": {
+          "symbol": "llev_string_array_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_string_dup": {
+          "symbol": "llev_string_dup",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_distance": {
+          "symbol": "llev_distance",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_distance_threshold": {
+          "symbol": "llev_distance_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_damerau_distance": {
+          "symbol": "llev_damerau_distance",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "llev_damerau_distance_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "llev_true_damerau_distance",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "llev_true_damerau_distance_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_transducer_new": {
+          "symbol": "vinary_tree::liblevenshtein::transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "vinary_tree::liblevenshtein::transducer::~transducer"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": "llev_transducer_unit_domain",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "vinary_tree::liblevenshtein::transducer::query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "vinary_tree::liblevenshtein::transducer::query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "vinary_tree::liblevenshtein::transducer::query"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "vinary_tree::liblevenshtein::query_cursor::next_batch"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "vinary_tree::liblevenshtein::batch::~batch"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": "llev_query_cursor_reduce",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "vinary_tree::liblevenshtein::detail::cursor_state::~cursor_state"
+        },
+        "llev_owned_string_free": {
+          "symbol": "llev_owned_string_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "llev_phonetic_pattern_compile_regex",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "llev_phonetic_pattern_compile_llre",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "llev_phonetic_pattern_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "llev_phonetic_pattern_size",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "llev_phonetic_pattern_matches",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "llev_transducer_query_pattern",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "llev_phonetic_rules_parse",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "llev_phonetic_rules_builtin",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "llev_phonetic_rules_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "llev_phonetic_rules_len",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "llev_phonetic_rules_apply",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        }
+      }
+    },
+    "dotnet": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/dotnet/src/VinaryTree.Liblevenshtein/Native.cs",
+        "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs",
+        "bindings/dotnet/src/VinaryTree.Liblevenshtein/Phonetic.cs",
+        "bindings/dotnet/src/VinaryTree.Liblevenshtein/Distance.cs"
+      ],
+      "readme": "bindings/dotnet/README.md",
+      "tests": [
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/Program.cs"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "LiblevenshteinException.StatusCode",
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Native.cs"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Phonetic.cs"
+        }
+      },
+      "iterator": {
+        "symbol": "Query.GetEnumerator"
+      },
+      "reducer": {
+        "symbol": null,
+        "_reason": "no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as LiblevenshteinException with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": "LiblevenshteinException",
+          "note": "thrown failures carry the native message and StatusCode"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "Distance.Levenshtein"
+        },
+        "llev_distance_threshold": {
+          "symbol": "Distance.Levenshtein",
+          "note": "threshold overload"
+        },
+        "llev_damerau_distance": {
+          "symbol": "Distance.Damerau"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: Distance exposes a threshold overload only for standard Levenshtein; llev_damerau_distance_threshold is unbound in Native.cs while go/ruby/haskell/ocaml/lua/fortran bind all six distance functions"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "Distance.TrueDamerau"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: Distance exposes a threshold overload only for standard Levenshtein; llev_true_damerau_distance_threshold is unbound in Native.cs while go/ruby/haskell/ocaml/lua/fortran bind all six distance functions"
+        },
+        "llev_transducer_new": {
+          "symbol": "Transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer.Dispose"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer.Query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer.Query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer.Query"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "Query.GetEnumerator"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "Query.GetEnumerator"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "Query.Dispose"
+        },
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet.Apply",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "PhoneticPattern.CompileRegex"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "PhoneticPattern.CompileLlre"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern.Dispose"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "PhoneticPattern.Size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern.Matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer.Query"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "PhoneticRuleSet.Parse"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "PhoneticRuleSet.Builtin"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "PhoneticRuleSet.Dispose"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "PhoneticRuleSet.Count"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet.Apply"
+        }
+      }
+    },
+    "fortran": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/fortran/src/vinary_tree_liblevenshtein.f90"
+      ],
+      "readme": "bindings/fortran/README.md",
+      "tests": [
+        "bindings/fortran/test/test_distance.f90",
+        "bindings/fortran/integration/test/test_cross_project.f90"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "llev_ok",
+          "definedIn": "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
+          "note": "only OK and END carry named parameters; other codes stay numeric"
+        },
+        "algorithm": {
+          "symbol": "llev_standard",
+          "definedIn": "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
+          "note": "llev_standard/llev_transposition/llev_merge_and_split/llev_damerau_levenshtein"
+        },
+        "queryOrder": {
+          "symbol": "llev_traversal",
+          "definedIn": "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
+          "note": "llev_traversal/llev_distance_then_term"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": null,
+          "_reason": "builtin_phonetic_rules takes a raw integer kind; named constants are not provided"
+        }
+      },
+      "iterator": {
+        "symbol": "query_iterator%next"
+      },
+      "reducer": {
+        "symbol": null,
+        "_reason": "no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as integer status out-parameters with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": null,
+          "_reason": "not bound; failures surface exclusively as integer status out-parameters, so no textual error channel exists in this facade"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "levenshtein_distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "levenshtein_distance_threshold"
+        },
+        "llev_damerau_distance": {
+          "symbol": "damerau_distance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "damerau_distance_threshold"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "true_damerau_distance_threshold"
+        },
+        "llev_transducer_new": {
+          "symbol": "new_transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "transducer%close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "transducer%query_text"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "transducer%query_bytes"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "transducer%query_u64"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "query_iterator%next"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "query_iterator%next"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "query_iterator%close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "phonetic_rule_set%apply",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "compile_phonetic_regex"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "compile_phonetic_llre"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "phonetic_pattern%close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "phonetic_pattern%size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "phonetic_pattern%matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "transducer%query_pattern"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "parse_phonetic_rules"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "builtin_phonetic_rules"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "phonetic_rule_set%close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "phonetic_rule_set%length"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "phonetic_rule_set%apply"
+        }
+      }
+    },
+    "go": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/go/liblevenshtein.go"
+      ],
+      "readme": "bindings/go/README.md",
+      "tests": [
+        "bindings/go/liblevenshtein_test.go"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "Error.Status",
+          "definedIn": "bindings/go/liblevenshtein.go"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/go/liblevenshtein.go"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/go/liblevenshtein.go"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/go/liblevenshtein.go"
+        }
+      },
+      "iterator": {
+        "symbol": "Iterator.Next"
+      },
+      "reducer": {
+        "symbol": null,
+        "_reason": "no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as Error with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": "Error",
+          "note": "returned failures carry the native message and Status"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "Distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "DistanceThreshold"
+        },
+        "llev_damerau_distance": {
+          "symbol": "DamerauDistance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "DamerauDistanceThreshold"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "TrueDamerauDistance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "TrueDamerauDistanceThreshold"
+        },
+        "llev_transducer_new": {
+          "symbol": "NewTransducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer.Close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer.Query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer.QueryBytes"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer.QueryU64"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "Iterator.Next"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "Iterator.Next"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "Iterator.Close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet.Apply",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "CompilePhoneticRegex"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "CompilePhoneticLLRE"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern.Close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "PhoneticPattern.Size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern.Matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer.QueryPattern"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "ParsePhoneticRules"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "BuiltinPhoneticRules"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "PhoneticRuleSet.Close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "PhoneticRuleSet.Len"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet.Apply"
+        }
+      }
+    },
+    "haskell": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/haskell/src/VinaryTree/Liblevenshtein.hsc"
+      ],
+      "readme": "bindings/haskell/README.md",
+      "tests": [
+        "bindings/haskell/test/Main.hs"
+      ],
+      "enums": {
+        "status": {
+          "symbol": null,
+          "_reason": "failures raise IOError userError with the native message; the numeric status is not re-exposed"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/haskell/src/VinaryTree/Liblevenshtein.hsc"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/haskell/src/VinaryTree/Liblevenshtein.hsc"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "phoneticRules",
+          "definedIn": "bindings/haskell/src/VinaryTree/Liblevenshtein.hsc",
+          "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+        }
+      },
+      "iterator": {
+        "symbol": "next"
+      },
+      "reducer": {
+        "symbol": "foldBatches"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as thrown IOError userError values with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": null,
+          "_reason": "the native message is folded into thrown IOError userError values; no dedicated exported error type"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "distanceThreshold"
+        },
+        "llev_damerau_distance": {
+          "symbol": "damerauDistance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "damerauDistanceThreshold"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "trueDamerauDistance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "trueDamerauDistanceThreshold"
+        },
+        "llev_transducer_new": {
+          "symbol": "transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "closeTransducer"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "queryText"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "queryBytes"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "queryU64"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": [
+            "next",
+            "nextBatch"
+          ]
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "nextBatch"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "batch reduction is provided by foldBatches over next_batch/release_batch leases; the native callback reducer is not bound"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "closeCursor"
+        },
+        "llev_owned_string_free": {
+          "symbol": "applyRules",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "regexPattern"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "llrePattern"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "closePattern"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "patternSize"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "patternMatches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "queryPattern"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "phoneticRules"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "phoneticRules",
+          "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "closeRules"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "rulesLength"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "applyRules"
+        }
+      }
+    },
+    "javascript": {
+      "binding": "delegated",
+      "delegateTo": "javascript-runtime",
+      "sourceFiles": [
+        "bindings/javascript/facades/native.mjs",
+        "bindings/javascript/facades/native.cjs",
+        "bindings/javascript/index.d.ts",
+        "bindings/javascript/cljs/vinary_tree/liblevenshtein.cljs"
+      ],
+      "readme": "bindings/javascript/README.md",
+      "tests": [
+        "bindings/javascript/test/facades.test.mjs",
+        "bindings/javascript/test/cljs/vinary_tree/liblevenshtein_cljs_test.cljs"
+      ],
+      "enums": {
+        "status": {
+          "symbol": null,
+          "_reason": "thrown runtime Error values carry the native message; the numeric status is not re-exposed"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/javascript/index.d.ts",
+          "note": "string-literal union"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/javascript/index.d.ts",
+          "note": "string-literal union"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "phoneticRules",
+          "definedIn": "bindings/javascript/index.d.ts",
+          "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor"
+      },
+      "reducer": {
+        "symbol": "QueryCursor.reduceBatches"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not wrapped; ABI constants are mirrored from bindings/api.json into abi.d.ts"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not wrapped; ABI constants are mirrored from bindings/api.json into abi.d.ts"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not wrapped; phonetic availability surfaces at call time as thrown runtime Error values with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": null,
+          "_reason": "native failures surface as JavaScript Error values thrown by the delegate runtime; no project-facade wrapper symbol"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": null,
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+        },
+        "llev_distance_threshold": {
+          "symbol": null,
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface; the Node native runtime path additionally lacks the threshold variants entirely (see the javascript-runtime FINDING)"
+        },
+        "llev_damerau_distance": {
+          "symbol": null,
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface; the Node native runtime path additionally lacks the threshold variants entirely (see the javascript-runtime FINDING)"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": null,
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface; the Node native runtime path additionally lacks the threshold variants entirely (see the javascript-runtime FINDING)"
+        },
+        "llev_transducer_new": {
+          "symbol": "transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer.close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer.query"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "QueryCursor.nextBatch"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "QueryCursor.nextBatch",
+          "note": "the delegate runtime releases each lease after copying"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "batch reduction is provided by QueryCursor.reduceBatches over next_batch/release_batch leases; the native callback reducer is not bound"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "QueryCursor.close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet.apply",
+          "note": "the delegate runtime frees the native string"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "phoneticPattern"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "llrePattern"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern.close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": null,
+          "_reason": "FINDING: not exposable: the delegate javascript-runtime omits llev_phonetic_pattern_size (see the javascript-runtime FINDING)"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern.matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer.query"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "phoneticRules"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "phoneticRules",
+          "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "PhoneticRuleSet.close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": null,
+          "_reason": "FINDING: not exposable: the delegate javascript-runtime omits llev_phonetic_rules_len (see the javascript-runtime FINDING)"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet.apply"
+        }
+      }
+    },
+    "javascript-runtime": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/javascript-runtime/native.mjs",
+        "bindings/javascript-runtime/native.cjs",
+        "bindings/javascript-runtime/index.d.ts",
+        "bindings/javascript-runtime/native/src/addon.cc"
+      ],
+      "readme": "bindings/javascript-runtime/README.md",
+      "tests": [
+        "bindings/javascript-runtime/test/native.test.mjs",
+        "bindings/javascript-runtime/test/wasi.test.mjs",
+        "bindings/javascript-runtime/test/browser-wasm.test.mjs"
+      ],
+      "enums": {
+        "status": {
+          "symbol": null,
+          "_reason": "thrown Error values carry the native message; the numeric status is not re-exposed"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/javascript-runtime/index.d.ts",
+          "note": "string-literal union mapped by the algorithms table in native.mjs"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/javascript-runtime/index.d.ts",
+          "note": "string-literal union mapped by the orders table in native.mjs"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "phoneticRules",
+          "definedIn": "bindings/javascript-runtime/index.d.ts",
+          "note": "string selectors \"english-orthography\"/\"english-phonetic\" dispatched in addon.cc"
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor.next"
+      },
+      "reducer": {
+        "symbol": "QueryCursor.reduceBatches"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not re-exported; the addon is compiled and shipped against exactly one native library, and runtime identity is asserted structurally via runtimeIdentity"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not re-exported; the addon is compiled and shipped against exactly one native library, and runtime identity is asserted structurally via runtimeIdentity"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as thrown Error values with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": null,
+          "_reason": "thrown Error values carry the llev_last_error_message text (addon llev_error helper); no exported error class"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "liblevenshtein.levenshteinDistance"
+        },
+        "llev_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: index.d.ts declares levenshteinDistanceThreshold/damerauDistanceThreshold/trueDamerauDistanceThreshold and the browser-wasm path implements them (rust/src/browser.rs via runtime-factory.mjs), but the default Node NAPI path binds no llev_*_threshold symbol (native/src/addon.cc), so the typed members are undefined at run time on Node"
+        },
+        "llev_damerau_distance": {
+          "symbol": "liblevenshtein.damerauDistance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: index.d.ts declares levenshteinDistanceThreshold/damerauDistanceThreshold/trueDamerauDistanceThreshold and the browser-wasm path implements them (rust/src/browser.rs via runtime-factory.mjs), but the default Node NAPI path binds no llev_*_threshold symbol (native/src/addon.cc), so the typed members are undefined at run time on Node"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "liblevenshtein.trueDamerauDistance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: index.d.ts declares levenshteinDistanceThreshold/damerauDistanceThreshold/trueDamerauDistanceThreshold and the browser-wasm path implements them (rust/src/browser.rs via runtime-factory.mjs), but the default Node NAPI path binds no llev_*_threshold symbol (native/src/addon.cc), so the typed members are undefined at run time on Node"
+        },
+        "llev_transducer_new": {
+          "symbol": "liblevenshtein.transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer.close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer.query"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "QueryCursor.nextBatch"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "QueryCursor.nextBatch",
+          "note": "the addon releases each lease after copying the batch"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "batch reduction is provided by QueryCursor.reduceBatches over next_batch/release_batch leases; the native callback reducer is not bound"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "QueryCursor.close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet.apply",
+          "note": "the addon frees the native string after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "liblevenshtein.phoneticPattern"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "liblevenshtein.llrePattern"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern.close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": null,
+          "_reason": "FINDING: the runtime PhoneticPattern class omits a size accessor (llev_phonetic_pattern_size is unbound in native/src/addon.cc); the JVM and every Tier-2/3 facade expose it"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern.matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer.query"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "liblevenshtein.phoneticRules"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "liblevenshtein.phoneticRules",
+          "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "PhoneticRuleSet.close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": null,
+          "_reason": "FINDING: the runtime PhoneticRuleSet class omits a length accessor (llev_phonetic_rules_len is unbound in native/src/addon.cc); the JVM and every Tier-2/3 facade expose it"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet.apply"
+        }
+      }
+    },
+    "jvm": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Native.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Transducer.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/QueryCursor.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/BorrowedMatchBatch.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/BorrowedBatchConsumer.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/PhoneticPattern.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/PhoneticRuleSet.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/PhoneticRuleSetKind.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Algorithm.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/QueryOrder.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Match.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Term.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/AutomatonSize.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeException.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeLibraryLoader.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/GeneratedAbi.java"
+      ],
+      "readme": "bindings/jvm/README.md",
+      "tests": [
+        "bindings/jvm/src/test/java/io/vinarytree/liblevenshtein/BindingArchitectureTest.java",
+        "bindings/jvm/src/test/java/io/vinarytree/liblevenshtein/ResourceSnapshotTest.java",
+        "bindings/jvm/src/smoke/java/io/vinarytree/liblevenshtein/ResourceSnapshotSmoke.java"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "NativeException.status",
+          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeException.java",
+          "note": "numeric values are generated into GeneratedAbi.java"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Algorithm.java"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/QueryOrder.java"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/PhoneticRuleSetKind.java"
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor.next"
+      },
+      "reducer": {
+        "symbol": "QueryCursor.forEachBatch"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json into GeneratedAbi.java"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json into GeneratedAbi.java"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as NativeException with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": "NativeException",
+          "note": "thrown failures carry the native message and status"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_damerau_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_transducer_new": {
+          "symbol": "Transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer.close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer.query"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": [
+            "QueryCursor.next",
+            "QueryCursor.forEachBatch"
+          ]
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": [
+            "QueryCursor.next",
+            "QueryCursor.forEachBatch"
+          ]
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "batch reduction is provided by QueryCursor.forEachBatch (zero-copy MemorySegment views) over next_batch/release_batch leases; the native callback reducer is not bound"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "QueryCursor.close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet.apply",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "PhoneticPattern.compileRegex"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "PhoneticPattern.compileLlre"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern.close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "PhoneticPattern.size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern.matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer.query"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "PhoneticRuleSet.parse"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "PhoneticRuleSet.builtin"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "PhoneticRuleSet.close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "PhoneticRuleSet.size"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet.apply"
+        }
+      }
+    },
+    "lua": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/lua/src/liblevenshtein_lua.c"
+      ],
+      "readme": "bindings/lua/README.md",
+      "tests": [
+        "bindings/lua/tests/snapshot.lua"
+      ],
+      "enums": {
+        "status": {
+          "symbol": null,
+          "_reason": "raised Lua errors embed the numeric code as \"(status %d)\" text; no named constants"
+        },
+        "algorithm": {
+          "symbol": "algorithm",
+          "definedIn": "bindings/lua/src/liblevenshtein_lua.c",
+          "note": "string names \"standard\"/\"transposition\"/\"merge-and-split\"/\"damerau-levenshtein\""
+        },
+        "queryOrder": {
+          "symbol": "order",
+          "definedIn": "bindings/lua/src/liblevenshtein_lua.c",
+          "note": "string names \"traversal\"/\"distance-then-term\""
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "phonetic_rules",
+          "definedIn": "bindings/lua/src/liblevenshtein_lua.c",
+          "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+        }
+      },
+      "iterator": {
+        "symbol": "cursor:next"
+      },
+      "reducer": {
+        "symbol": "cursor:reduce_batches"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as raised Lua errors with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": null,
+          "_reason": "raised Lua errors carry the native message plus \"(status %d)\"; no separate accessor symbol"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "distance_threshold"
+        },
+        "llev_damerau_distance": {
+          "symbol": "damerau_distance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "damerau_distance_threshold"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "true_damerau_distance_threshold"
+        },
+        "llev_transducer_new": {
+          "symbol": "transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "transducer:close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": "transducer:domain"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "transducer:query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "transducer:query_bytes"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "transducer:query_u64"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": [
+            "cursor:next",
+            "cursor:next_batch"
+          ]
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": [
+            "cursor:next",
+            "cursor:next_batch"
+          ]
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "batch reduction is provided by cursor:reduce_batches over next_batch/release_batch leases; the native callback reducer is not bound"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "cursor:close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "rules:apply",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "phonetic_pattern"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "llre_pattern"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "pattern:close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "pattern:size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "pattern:matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "transducer:query_pattern"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "phonetic_rules"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "phonetic_rules",
+          "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "rules:close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "rules:len"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "rules:apply"
+        }
+      }
+    },
+    "ocaml": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/ocaml/vinary_tree_liblevenshtein.mli",
+        "bindings/ocaml/vinary_tree_liblevenshtein.ml",
+        "bindings/ocaml/liblevenshtein_stubs.c"
+      ],
+      "readme": "bindings/ocaml/README.md",
+      "tests": [
+        "bindings/ocaml/test/snapshot.ml"
+      ],
+      "enums": {
+        "status": {
+          "symbol": null,
+          "_reason": "failures raise Stdlib Failure with the native message; the numeric status is not re-exposed"
+        },
+        "algorithm": {
+          "symbol": "algorithm",
+          "definedIn": "bindings/ocaml/vinary_tree_liblevenshtein.mli"
+        },
+        "queryOrder": {
+          "symbol": "query_order",
+          "definedIn": "bindings/ocaml/vinary_tree_liblevenshtein.mli"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "phonetic_rules",
+          "definedIn": "bindings/ocaml/vinary_tree_liblevenshtein.mli",
+          "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+        }
+      },
+      "iterator": {
+        "symbol": "next"
+      },
+      "reducer": {
+        "symbol": "fold_batches"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as raised Failure exceptions with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": null,
+          "_reason": "the native message is folded into raised Stdlib Failure exceptions; no dedicated exported error type"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "distance_threshold"
+        },
+        "llev_damerau_distance": {
+          "symbol": "damerau_distance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "damerau_distance_threshold"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "true_damerau_distance_threshold"
+        },
+        "llev_transducer_new": {
+          "symbol": "transducer"
+        },
+        "llev_transducer_free": {
+          "symbol": "close_transducer"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "query_bytes"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "query_u64"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": [
+            "next",
+            "next_batch",
+            "to_seq"
+          ]
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": [
+            "next",
+            "next_batch"
+          ]
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "batch reduction is provided by fold_batches over next_batch/release_batch leases; the native callback reducer is not bound"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "cursor_close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "apply_rules",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "regex_pattern"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "llre_pattern"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "close_pattern"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "pattern_size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "pattern_matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "query_pattern"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "phonetic_rules"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "phonetic_rules",
+          "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "close_rules"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "rules_length"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "apply_rules"
+        }
+      }
+    },
+    "python": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/python/src/liblevenshtein/_native.py",
+        "bindings/python/src/liblevenshtein/__init__.py",
+        "bindings/python/src/liblevenshtein/_generated.py"
+      ],
+      "readme": "bindings/python/README.md",
+      "tests": [
+        "bindings/python/tests/test_api.py"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "Status",
+          "definedIn": "bindings/python/src/liblevenshtein/_generated.py",
+          "note": "NativeError.status carries the raw value; Status itself is not re-exported from the package root"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/python/src/liblevenshtein/_generated.py"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/python/src/liblevenshtein/_generated.py"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/python/src/liblevenshtein/_generated.py"
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor.__next__"
+      },
+      "reducer": {
+        "symbol": "QueryCursor.reduce"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "bound internally for the import-time ABI guard in _native.py (a mismatch raises ImportError); not re-exported as a public symbol"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json into _generated.py"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as NativeError with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": "NativeError",
+          "note": "raised failures carry the native message and status"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_damerau_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+        },
+        "llev_transducer_new": {
+          "symbol": "Transducer.__init__"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer.close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer.query"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "QueryCursor.__next__"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "QueryCursor.__next__"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": "QueryCursor.reduce",
+          "note": "zero-copy BorrowedBatch views cross the ctypes callback"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "QueryCursor.close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet.apply",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "PhoneticPattern.__init__"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "PhoneticPattern.__init__",
+          "note": "selected with llre=True"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern.close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": null,
+          "_reason": "FINDING: _native.py does not bind llev_phonetic_pattern_size; the Tier-1 JVM facade and every Tier-2/3 facade expose the automaton size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern.matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer.query"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "PhoneticRuleSet.__init__"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "PhoneticRuleSet.__init__",
+          "note": "selected by passing a PhoneticRuleSetKind"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "PhoneticRuleSet.close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": null,
+          "_reason": "FINDING: _native.py does not bind llev_phonetic_rules_len; the Tier-1 JVM facade and every Tier-2/3 facade expose the enabled-rule count"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet.apply"
+        }
+      }
+    },
+    "ruby": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
+        "bindings/ruby/lib/vinary_tree/liblevenshtein/native.rb",
+        "bindings/ruby/lib/vinary_tree/liblevenshtein/version.rb"
+      ],
+      "readme": "bindings/ruby/README.md",
+      "tests": [
+        "bindings/ruby/test/test_liblevenshtein.rb"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "Error#status",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb"
+        },
+        "algorithm": {
+          "symbol": "Transducer::STANDARD",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
+          "note": "STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants"
+        },
+        "queryOrder": {
+          "symbol": null,
+          "_reason": "Transducer#query takes a raw integer order: keyword; named constants are not provided"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSet::ENGLISH_ORTHOGRAPHY",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
+          "note": "ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants"
+        }
+      },
+      "iterator": {
+        "symbol": "Query#each"
+      },
+      "reducer": {
+        "symbol": null,
+        "_reason": "no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as raised Error exceptions with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": "Error",
+          "note": "raised failures carry the native message and #status"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "Liblevenshtein.distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "Liblevenshtein.distance_threshold"
+        },
+        "llev_damerau_distance": {
+          "symbol": "Liblevenshtein.damerau_distance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "Liblevenshtein.damerau_distance_threshold"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "Liblevenshtein.true_damerau_distance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "Liblevenshtein.true_damerau_distance_threshold"
+        },
+        "llev_transducer_new": {
+          "symbol": "Transducer#initialize"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer#close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer#query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer#query_bytes"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer#query_u64"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": "Query#each"
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "Query#each"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "Query#close"
+        },
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet#apply",
+          "note": "frees the native LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "PhoneticPattern.compile_regex"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "PhoneticPattern.compile_llre"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern#close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "PhoneticPattern#size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern#matches?"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer#query_pattern"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "PhoneticRuleSet.parse"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "PhoneticRuleSet.builtin"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "PhoneticRuleSet#close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "PhoneticRuleSet#length"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet#apply"
+        }
+      }
+    },
+    "swift": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift",
+        "bindings/swift/liblevenshtein/Sources/CLiblevenshtein/CLiblevenshtein.h"
+      ],
+      "readme": "bindings/swift/README.md",
+      "tests": [
+        "bindings/swift/Integration/Sources/SwiftBindingIntegration/main.swift"
+      ],
+      "enums": {
+        "status": {
+          "symbol": null,
+          "_reason": "LiblevenshteinError carries only the message text; the numeric status is not re-exposed"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": null,
+          "_reason": "no rule-set facade exists to consume it (see the PhoneticRuleSet FINDING)"
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor.next"
+      },
+      "reducer": {
+        "symbol": "QueryCursor.reduceBatches"
+      },
+      "phoneticGating": "status-error",
+      "functions": {
+        "llev_abi_version": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_api_revision": {
+          "symbol": null,
+          "_reason": "not bound; ABI constants are mirrored from bindings/api.json"
+        },
+        "llev_build_features": {
+          "symbol": null,
+          "_reason": "not bound; phonetic availability surfaces at call time as thrown LiblevenshteinError values with the UNSUPPORTED status"
+        },
+        "llev_last_error_message": {
+          "symbol": "LiblevenshteinError",
+          "note": "thrown failures carry the native message"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev-owned C strings (owned text crosses as LlevOwnedString and is released with llev_owned_string_free)"
+        },
+        "llev_distance": {
+          "symbol": "EditDistance.levenshtein"
+        },
+        "llev_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: EditDistance omits all three threshold variants; every other Tier-2/3 facade binds llev_distance_threshold"
+        },
+        "llev_damerau_distance": {
+          "symbol": "EditDistance.damerauOSA"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: EditDistance omits all three threshold variants; every other Tier-2/3 facade binds llev_damerau_distance_threshold"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "EditDistance.damerauLevenshtein"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: EditDistance omits all three threshold variants; every other Tier-2/3 facade binds llev_true_damerau_distance_threshold"
+        },
+        "llev_transducer_new": {
+          "symbol": "Transducer.init"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer.close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": null,
+          "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
+        },
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer.query"
+        },
+        "llev_query_cursor_next_batch": {
+          "symbol": [
+            "QueryCursor.next",
+            "QueryCursor.nextBatch"
+          ]
+        },
+        "llev_query_cursor_release_batch": {
+          "symbol": "QueryCursor.nextBatch"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "batch reduction is provided by QueryCursor.reduceBatches over next_batch/release_batch leases; the native callback reducer is not bound"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "QueryCursor.close"
+        },
+        "llev_owned_string_free": {
+          "symbol": null,
+          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+        },
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "PhoneticPattern.regex"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "PhoneticPattern.llre"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern.close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": null,
+          "_reason": "FINDING: PhoneticPattern lacks a size accessor (llev_phonetic_pattern_size is unbound); jvm/dotnet/go/ruby/haskell/ocaml/lua/fortran all expose it"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern.matches"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer.query"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": null,
+          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": null,
+          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": null,
+          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": null,
+          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": null,
+          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+        }
+      }
+    }
+  }
+}

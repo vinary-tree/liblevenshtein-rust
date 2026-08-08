@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -13,6 +14,14 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL = json.loads((ROOT / "bindings" / "api.json").read_text(encoding="utf-8"))
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument(
+    "--check",
+    action="store_true",
+    help="verify the committed completeness matrix instead of rewriting it",
+)
+ARGS = parser.parse_args()
 
 
 def require(condition: bool, message: str) -> None:
@@ -632,6 +641,280 @@ require(
 )
 text(ROOT / "bindings" / "javascript-runtime" / "generated" / "wasm" / ".npmignore")
 
+# Facade-coverage completeness: every modeled C function must map, in every
+# maintained facade, either to a real public symbol found in that facade's
+# sources or to an explicit reasoned absence. The per-language surface model
+# lives in bindings/api-surface-map.json and regenerates the committed matrix
+# bindings/conformance/completeness-matrix.tsv, which --check verifies
+# byte-for-byte exactly as generate-bindings.py verifies its mirrors.
+FACADE_LANGUAGES = (
+    "c",
+    "clojure",
+    "cpp",
+    "dotnet",
+    "fortran",
+    "go",
+    "haskell",
+    "javascript",
+    "javascript-runtime",
+    "jvm",
+    "lua",
+    "ocaml",
+    "python",
+    "ruby",
+    "swift",
+)
+FACADE_KEYS = {
+    "binding",
+    "delegateTo",
+    "sourceFiles",
+    "readme",
+    "tests",
+    "enums",
+    "iterator",
+    "reducer",
+    "phoneticGating",
+    "functions",
+}
+SYMBOL_KEYS = {"symbol", "_reason", "note"}
+ENUM_KEYS = {"symbol", "definedIn", "_reason", "note"}
+
+surface = json.loads(text(ROOT / "bindings" / "api-surface-map.json"))
+require(surface.get("modelVersion") == 1, "unknown api-surface-map model version")
+facades = surface["languages"]
+require(
+    sorted(facades) == sorted(FACADE_LANGUAGES),
+    "api-surface-map languages mismatch: "
+    f"missing={sorted(set(FACADE_LANGUAGES) - set(facades))}, "
+    f"extra={sorted(set(facades) - set(FACADE_LANGUAGES))}",
+)
+function_names = [item["name"] for item in MODEL["cFunctions"]]
+
+
+def symbol_leaf(symbol: str) -> str:
+    parts = [part for part in re.split(r"[\s.:#%$/()]+", symbol) if part]
+    require(bool(parts), f"unusable facade symbol {symbol!r}")
+    return parts[-1]
+
+
+def named_in(leaf: str, corpus: str) -> bool:
+    pattern = rf"(?<![A-Za-z0-9_]){re.escape(leaf)}(?![A-Za-z0-9_])"
+    return re.search(pattern, corpus) is not None
+
+
+def modeled_symbols(entry: object, context: str) -> list[str]:
+    require(isinstance(entry, dict), f"{context} must be an object")
+    require(
+        not set(entry) - SYMBOL_KEYS,
+        f"{context} carries unknown keys {sorted(set(entry) - SYMBOL_KEYS)}",
+    )
+    require("symbol" in entry, f"{context} is missing its symbol")
+    symbol = entry["symbol"]
+    if symbol is None:
+        reason = entry.get("_reason")
+        require(
+            isinstance(reason, str) and bool(reason.strip()),
+            f"{context} models an absence without a _reason",
+        )
+        return []
+    symbols = symbol if isinstance(symbol, list) else [symbol]
+    require(
+        bool(symbols)
+        and all(isinstance(item, str) and item.strip() for item in symbols),
+        f"{context} has an empty symbol",
+    )
+    return symbols
+
+
+matrix_rows: list[str] = []
+matrix_exposed = 0
+matrix_absent = 0
+matrix_findings: list[str] = []
+absence_report: list[str] = []
+for language in FACADE_LANGUAGES:
+    facade = facades[language]
+    context = f"api-surface-map {language}"
+    require(
+        not set(facade) - FACADE_KEYS,
+        f"{context} carries unknown keys {sorted(set(facade) - FACADE_KEYS)}",
+    )
+    binding = facade["binding"]
+    require(
+        binding in {"c-abi", "delegated"},
+        f"{context} has unknown binding kind {binding!r}",
+    )
+    if binding == "delegated":
+        require(
+            facade.get("delegateTo") in FACADE_LANGUAGES,
+            f"{context} delegates to an unmodeled facade",
+        )
+    require(bool(facade["sourceFiles"]), f"{context} lists no facade sources")
+    corpus = "\n".join(text(ROOT / relative) for relative in facade["sourceFiles"])
+    readme = facade["readme"]
+    if readme is not None:
+        require((ROOT / readme).is_file(), f"{context} README is missing: {readme}")
+    require(bool(facade["tests"]), f"{context} lists no executable tests")
+    for relative in facade["tests"]:
+        require((ROOT / relative).is_file(), f"{context} test is missing: {relative}")
+
+    functions = facade["functions"]
+    require(
+        sorted(functions) == sorted(function_names),
+        f"{context} functions mismatch: "
+        f"missing={sorted(set(function_names) - set(functions))}, "
+        f"extra={sorted(set(functions) - set(function_names))}",
+    )
+    exposed = 0
+    findings: list[str] = []
+    absences: list[str] = []
+    for name in function_names:
+        symbols = modeled_symbols(functions[name], f"{context} {name}")
+        if not symbols:
+            absences.append(name)
+            if functions[name]["_reason"].startswith("FINDING"):
+                findings.append(name)
+                matrix_findings.append(f"{language}:{name}")
+            continue
+        exposed += 1
+        if binding == "c-abi":
+            require(
+                named_in(name, corpus),
+                f"{context} claims {name} without binding the C symbol",
+            )
+        for symbol in symbols:
+            require(
+                named_in(symbol_leaf(symbol), corpus),
+                f"{context} {name} names unlocatable symbol {symbol!r}",
+            )
+
+    enums = facade["enums"]
+    require(
+        sorted(enums) == sorted(MODEL["enums"]),
+        f"{context} enums mismatch: "
+        f"missing={sorted(set(MODEL['enums']) - set(enums))}, "
+        f"extra={sorted(set(enums) - set(MODEL['enums']))}",
+    )
+    enums_exposed = 0
+    for enum_name in sorted(MODEL["enums"]):
+        entry = enums[enum_name]
+        enum_context = f"{context} enum {enum_name}"
+        require(isinstance(entry, dict), f"{enum_context} must be an object")
+        require(
+            not set(entry) - ENUM_KEYS,
+            f"{enum_context} carries unknown keys {sorted(set(entry) - ENUM_KEYS)}",
+        )
+        require("symbol" in entry, f"{enum_context} is missing its symbol")
+        if entry["symbol"] is None:
+            reason = entry.get("_reason")
+            require(
+                isinstance(reason, str) and bool(reason.strip()),
+                f"{enum_context} models an absence without a _reason",
+            )
+            continue
+        defined_in = entry.get("definedIn")
+        require(
+            defined_in in facade["sourceFiles"],
+            f"{enum_context} must be defined in a listed facade source",
+        )
+        require(
+            named_in(symbol_leaf(entry["symbol"]), text(ROOT / defined_in)),
+            f"{enum_context} names unlocatable symbol {entry['symbol']!r}",
+        )
+        enums_exposed += 1
+
+    iterator_symbols = modeled_symbols(facade["iterator"], f"{context} iterator")
+    require(
+        len(iterator_symbols) == 1,
+        f"{context} must name exactly one safe-iterator entry point",
+    )
+    require(
+        named_in(symbol_leaf(iterator_symbols[0]), corpus),
+        f"{context} iterator {iterator_symbols[0]!r} is not in its sources",
+    )
+    reducer_symbols = modeled_symbols(facade["reducer"], f"{context} reducer")
+    require(
+        len(reducer_symbols) <= 1,
+        f"{context} must name at most one batch-reducer entry point",
+    )
+    for symbol in reducer_symbols:
+        require(
+            named_in(symbol_leaf(symbol), corpus),
+            f"{context} reducer {symbol!r} is not in its sources",
+        )
+    gating = facade["phoneticGating"]
+    require(
+        isinstance(gating, str) and bool(gating.strip()),
+        f"{context} is missing its phonetic gating mode",
+    )
+    if gating != "status-error":
+        require(
+            named_in(symbol_leaf(gating), corpus),
+            f"{context} phonetic gate {gating!r} is not in its sources",
+        )
+
+    matrix_exposed += exposed
+    matrix_absent += len(absences)
+    absence_report.append(
+        f"  {language}: {len(absences)} reasoned absences"
+        + (f" ({', '.join(absences)})" if absences else "")
+    )
+    matrix_rows.append(
+        "\t".join(
+            (
+                language,
+                f"{exposed}/{len(function_names)}",
+                str(len(absences)),
+                f"{enums_exposed}/{len(MODEL['enums'])}",
+                iterator_symbols[0],
+                reducer_symbols[0] if reducer_symbols else "none",
+                gating,
+                "yes" if readme is not None else "no",
+                "yes" if facade["tests"] else "no",
+                ",".join(findings) if findings else "-",
+            )
+        )
+    )
+
+matrix = "\n".join(
+    [
+        "\t".join(
+            (
+                "language",
+                "fns_exposed",
+                "fns_null_with_reason",
+                "enums_ok",
+                "iterator",
+                "reducer",
+                "phonetic_gating",
+                "readme_present",
+                "tests_present",
+                "findings",
+            )
+        ),
+        *matrix_rows,
+        "",
+    ]
+)
+matrix_path = ROOT / "bindings" / "conformance" / "completeness-matrix.tsv"
+if ARGS.check:
+    require(
+        matrix_path.is_file()
+        and matrix_path.read_text(encoding="utf-8") == matrix,
+        "completeness matrix is stale: rerun scripts/check-bindings.py to "
+        "regenerate bindings/conformance/completeness-matrix.tsv",
+    )
+else:
+    matrix_path.parent.mkdir(parents=True, exist_ok=True)
+    matrix_path.write_text(matrix, encoding="utf-8")
+
+print("facade completeness matrix:")
+print("\n".join(absence_report))
+print(
+    f"facade completeness: {matrix_exposed}/"
+    f"{len(FACADE_LANGUAGES) * len(function_names)} exposures, "
+    f"{matrix_absent} reasoned absences, {len(matrix_findings)} findings"
+    + (f": {', '.join(matrix_findings)}" if matrix_findings else "")
+)
 print(
     "binding model, ownership, marshalling, packages, snapshots, and CI are consistent"
 )
