@@ -1,0 +1,187 @@
+@startuml vt-structs-class
+' Every #[repr(C)] type the vinary-tree interop ABI publishes, as one class
+' model: the two-word VtResource handle, the base VtResourceVTable it points
+' at, the two interface vtables discovered through query_interface, the POD
+' payload types that cross in caller-owned pages, and the shared enums.
+' Color: VtResource handle concept = #DCEDC8 (border #33691E); the dictionary
+'   interface = dictionary-backend green #C8E6C9 (#2E7D32); the scalar-WFST
+'   interface = WFST blue #B3E5FC (#0277BD); caller-owned (leased) page
+'   payloads = #FFECB3 (border #FF6F00); shared enums / identifiers =
+'   serialization-bindings lime #F9FBE7 (#9E9D24).
+' Source of truth: vinary-tree-interop/src/lib.rs and
+'   vinary-tree-interop/include/vinary_tree_interop.h; layout pinned by
+'   vinary-tree-interop/tests/layout_contract.rs.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam class {
+  BorderColor #455A64
+  FontColor #102027
+  AttributeFontColor #102027
+  RoundCorner 10
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title vinary-tree-interop — the published ABI surface (one handle, one base vtable, two interfaces)
+
+class "VtResource" as Resource #DCEDC8 {
+  context : void*
+  vtable : const VtResourceVTable*
+}
+note right of Resource #F1F8E9
+  <b>Two-word law</b> (VT-ABI-3)
+  <latex>\mathrm{sizeof}(\text{VtResource}) = 2\cdot\mathrm{sizeof}(\text{void*})</latex>
+  Copying the two words is free and
+  does <b>not</b> retain; null in either
+  word means a null resource.
+end note
+
+class "VtResourceVTable" as Base #DCEDC8 {
+  struct_size : size_t
+  abi_version : uint32_t
+  reserved : uint32_t «must be 0»
+  --
+  retain(context) : void
+  release(context) : void
+  query_interface(context, id, min_version, out) : VtStatus
+}
+note right of Base #F1F8E9
+  <b>Handshake law</b> (VT-ABI-1..2, VT-QI-2)
+  <latex>\text{struct size} \ge \mathrm{sizeof}(V_{1}) \;\land\; \text{abi version} = 1 \;\land\; \text{reserved} = 0</latex>
+  Absent ops are NULL fn pointers
+  (the Option null niche, VT-ABI-6).
+end note
+
+class "VtInterfaceId" as Id #F9FBE7 {
+  bytes : uint8_t[16] «compared byte-for-byte»
+}
+note bottom of Id #F9FBE7
+  <b>Published identifiers</b> (VT-ABI-4)
+  "vt.dictionary.v1" — dictionary interface
+  "vt.scalar-wfst.1" — scalar-WFST interface
+  (exactly 16 bytes, no NUL terminator)
+end note
+
+enum "VtStatus : uint32_t" as Status #F9FBE7 {
+  Ok = 0
+  End = 1
+  InvalidArgument = 2
+  NullPointer = 3
+  Unsupported = 4
+  IoError = 5
+  Closed = 6
+  LimitExceeded = 7
+  ProviderError = 8
+}
+
+class "VtDictionaryVTable" as Dict #C8E6C9 {
+  struct_size : size_t
+  interface_version : uint32_t
+  unit_domain : VtUnitDomain
+  value_domain : VtValueDomain
+  flags : uint64_t «PARALLEL_REENTRANT | SUFFIX_BASED | IMMUTABLE»
+  --
+  snapshot(context, out_snapshot) : VtStatus
+  root(context, out_node) : VtStatus
+  len(context, out_len, out_known) : VtStatus
+  node_is_final(context, node, out_is_final) : VtStatus
+  node_value_u64(context, node, out_value) : VtStatus
+  node_transition(context, node, label, out_child, out_found) : VtStatus
+  node_edges(context, node, start, out, capacity, out_written, out_total) : VtStatus
+}
+note left of Dict #E8F5E9
+  <b>Snapshot law</b> (VT-SNAP)
+  capture cost <latex>\mathcal{O}(1)</latex> via structural
+  sharing; node ids valid only while
+  the snapshot resource stays retained.
+end note
+
+class "VtWfstVTable" as Wfst #B3E5FC {
+  struct_size : size_t
+  interface_version : uint32_t
+  unit_domain : VtUnitDomain
+  weight_domain : VtWeightDomain
+  reserved : uint32_t «must be 0»
+  flags : uint64_t «PARALLEL_REENTRANT | IMMUTABLE | LAZY | ACYCLIC»
+  --
+  snapshot(context, out_snapshot) : VtStatus
+  start(context, out_state) : VtStatus
+  num_states(context, out_count, out_known) : VtStatus
+  state_info(context, state, out_valid, out_is_final, out_final_weight) : VtStatus
+  state_arcs(context, state, start, out, capacity, out_written, out_total) : VtStatus
+}
+
+enum "VtUnitDomain : uint32_t" as Unit #F9FBE7 {
+  Byte = 1
+  UnicodeScalar = 2
+  U64 = 3
+}
+
+enum "VtValueDomain : uint32_t" as Value #F9FBE7 {
+  Unit = 0
+  OptionalU64 = 1
+  Bytes = 2 «reserved»
+}
+
+enum "VtWeightDomain : uint32_t" as Weight #F9FBE7 {
+  TropicalF64 = 1
+  LogF64 = 2
+  ProbabilityF64 = 3
+  ArcticF64 = 4
+  SignedTropicalF64 = 5
+  CountF64 = 6
+  BooleanF64 = 7
+}
+
+class "VtDictionaryEdge (16 B)" as Edge #FFECB3 {
+  label : uint64_t
+  node : uint64_t
+}
+
+class "VtOptionalU64 (16 B)" as Opt #FFECB3 {
+  value : uint64_t
+  has_value : uint8_t
+  reserved : uint8_t[7] «must be 0»
+}
+
+class "VtWfstArc (40 B)" as Arc #FFECB3 {
+  input_label : uint64_t
+  output_label : uint64_t
+  target_state : uint64_t
+  weight : double
+  has_input : uint8_t «0 = input epsilon»
+  has_output : uint8_t «0 = output epsilon»
+  reserved : uint8_t[6] «must be 0»
+}
+note bottom of Arc #FFF8E1
+  <b>Caller-owned pages</b> (leased memory):
+  the consumer allocates the buffer, the
+  provider fills at most <i>capacity</i> entries.
+  <latex>\text{out written} \le \text{capacity},\quad \text{out total stable per node}</latex>
+end note
+
+Resource o--> "1" Base : vtable
+Base .[#33691E].> Id : compares
+Base .[#2E7D32].> Dict : query_interface\n("vt.dictionary.v1", ≥1)
+Base .[#0277BD].> Wfst : query_interface\n("vt.scalar-wfst.1", ≥1)
+Base .[#9E9D24].> Status : returns
+Dict -[#2E7D32]-> Unit : labels
+Dict -[#2E7D32]-> Value : values
+Dict .[#FF6F00].> Edge : node_edges pages
+Dict .[#FF6F00].> Opt : node_value_u64
+Dict .[#9E9D24].> Status : every op returns
+Wfst -[#0277BD]-> Unit : labels
+Wfst -[#0277BD]-> Weight : scalar semiring
+Wfst .[#FF6F00].> Arc : state_arcs pages
+Wfst .[#9E9D24].> Status : every op returns
+@enduml
