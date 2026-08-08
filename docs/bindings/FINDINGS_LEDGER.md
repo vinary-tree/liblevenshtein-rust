@@ -24,7 +24,7 @@ or "ledger-only") | verification | status`.
 | LLEV-B7 | `VtOptionalU64.reserved` validation (F2) | correctness | medium | OPEN → W3 | — |
 | LLEV-B8 | paging-acceptance asymmetry (F3, llev side) | correctness | medium | OPEN → W3 | — |
 | LLEV-B9 | family version pins | version-pin | info | LEDGER-ONLY | ledger-only |
-| LLEV-B10 | `vinary-tree-interop` `rust-version` | hygiene | low | OPEN → W1 | — |
+| LLEV-B10 | `vinary-tree-interop` `rust-version` | hygiene | low | FIXED | `d895183` |
 
 ## Findings
 
@@ -94,5 +94,6 @@ or "ledger-only") | verification | status`.
 ### LLEV-B10 — interop crate `rust-version` predates `offset_of!`
 - **Date**: 2026-08-08 · **Component**: `vinary-tree-interop/Cargo.toml` · **Class**: hygiene · **Severity**: low
 - **Evidence**: `rust-version = "1.70"`; `core::mem::offset_of!` stabilized in 1.77; the W1 layout-contract tests use it; the family MSRV gate is 1.95.
-- **Fix**: scheduled wave W1 — bump to 1.95 alongside the layout tests (crate unpublished, so no compatibility impact).
-- **Status**: OPEN → W1.
+- **Fix**: commit `d895183` — bumped to 1.95 alongside the layout tests (crate unpublished, so no compatibility impact).
+- **Verification**: `cargo test --locked -p vinary-tree-interop` green (27 tests) under the workspace toolchain; MSRV leg covers the workspace with `--features ffi`.
+- **Status**: FIXED.
