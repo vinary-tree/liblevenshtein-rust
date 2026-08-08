@@ -367,4 +367,19 @@ pub struct VtWfstVTable {
 
 const _: () = {
     assert!(core::mem::size_of::<VtResource>() == 2 * core::mem::size_of::<usize>());
+    assert!(core::mem::align_of::<VtResource>() == core::mem::align_of::<usize>());
+    // The POD payload types are built solely from u64/f64/u8 fields, so their
+    // layout must be identical on every supported target; any drift here is an
+    // ABI break for independently built producers and consumers.
+    assert!(core::mem::size_of::<VtInterfaceId>() == 16);
+    assert!(core::mem::align_of::<VtInterfaceId>() == 1);
+    assert!(core::mem::size_of::<VtOptionalU64>() == 16);
+    assert!(core::mem::size_of::<VtDictionaryEdge>() == 16);
+    assert!(core::mem::size_of::<VtWfstArc>() == 40);
+    // Absent vtable operations are NULL on the C side: the Option-of-function
+    // null-pointer optimization is load-bearing for the whole vtable ABI.
+    assert!(
+        core::mem::size_of::<Option<unsafe extern "C" fn(*mut core::ffi::c_void)>>()
+            == core::mem::size_of::<*const core::ffi::c_void>()
+    );
 };

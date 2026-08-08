@@ -41,6 +41,10 @@ jobs:
         env:
           RUSTFLAGS: -C target-feature=+aes,+sse2
         run: cargo build --locked --examples --all-features
+      # The interop crate is a workspace member the root test run does not
+      # cover; its layout/discriminant/negotiation pins are the executable ABI
+      # contract, so they run on every feature leg.
+      - run: cargo test --locked -p vinary-tree-interop
       - run: cargo fmt --all --check
 
   supply-chain:
@@ -688,6 +692,9 @@ jobs:
           --test query_start_snapshot_semantics
           --test binding_snapshot_semantics
           --test ffi_resource_snapshot_semantics
+      - run: >-
+          cargo test --locked --target ${{ matrix.platform.target }}
+          -p vinary-tree-interop
 
   linux-armv7-experimental:
     name: Linux armv7 (experimental)
@@ -701,6 +708,13 @@ jobs:
           command: test
           target: armv7-unknown-linux-gnueabihf
           args: "--locked --no-default-features --features native-bindings-full --test query_start_snapshot_semantics --test binding_snapshot_semantics --test ffi_resource_snapshot_semantics"
+      # The 32-bit ARM EABI leg is the one place the exact_32_arm layout table
+      # in vinary-tree-interop/tests/layout_contract.rs actually executes.
+      - uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: test
+          target: armv7-unknown-linux-gnueabihf
+          args: "--locked -p vinary-tree-interop"
 
   bsd-portability:
     name: ${{ matrix.platform.name }}
@@ -755,6 +769,9 @@ jobs:
             --test query_start_snapshot_semantics \
             --test binding_snapshot_semantics \
             --test ffi_resource_snapshot_semantics
+      - name: Run interop ABI contract tests
+        shell: cpa.sh {0}
+        run: cargo test --locked -p vinary-tree-interop
 
   bsd-aarch64-compile:
     name: ${{ matrix.name }} aarch64 compile
