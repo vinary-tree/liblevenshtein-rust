@@ -1,0 +1,87 @@
+@startuml trust-zones
+' The family trust model around the interop ABI: host application code and
+' language facades sit in the host-trusted zone; the four project C ABIs are
+' the hardened gates; the interop structs are the neutral exchange plane; the
+' foreign provider behind every vtable fn pointer is adversarial-or-buggy.
+' Every arrow that crosses the red boundary is annotated with the containment
+' duty owed at that crossing.
+' Color: host application = neutral grey #ECEFF1; language facades =
+'   serialization-bindings lime #F0F4C3; family repos = llev #FADBD8,
+'   libdictenstein #D5F5E3, lling-llang #FCF3CF, duallity #D6EAF8; interop
+'   structs / handles = #DCEDC8 (border #33691E); leased pages = #FFECB3
+'   (border #FF6F00); foreign/boundary = #FFCDD2 / #FFEBEE (border #B71C1C).
+' Evidence anchors: src/ffi/index.rs boundary() (catch_unwind),
+'   src/bindings.rs CallGate + fault channel; siblings' ffi.rs equivalents.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam note {
+  BackgroundColor #FFEBEE
+  BorderColor #B71C1C
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Trust zones — one address space, one adversarial vtable boundary
+
+rectangle "One host process — a single address space (no intra-process memory isolation)" as proc #FFFFFF {
+
+  rectangle "HOST-TRUSTED zone" as host #ECEFF1 {
+    rectangle "Host application\n(Python · JVM · JS · Go · C# · Ruby · C/C++ · …)" as app #ECEFF1
+    rectangle "Language facade\nSafeHandle · Arena+Cleaner · ctypes+gc · RAII\n(owns handle lifetime, maps errors totally)" as facade #F0F4C3
+    rectangle "Project C ABIs — the hardened gates" as gates #F9FBE7 {
+      rectangle "liblevenshtein\nllev_* (consumer)" as llev #FADBD8
+      rectangle "libdictenstein\nldict_* (producer)" as ldict #D5F5E3
+      rectangle "lling-llang\nlling_* (producer + consumer)" as lling #FCF3CF
+      rectangle "duallity\ndual_* (consumer + producer)" as dual #D6EAF8
+    }
+  }
+
+  rectangle "Interop exchange plane — vinary-tree-interop\nVtResource (two words) · POD payloads · pinned layouts\n(no code of its own: layouts and constants only)" as plane #DCEDC8
+
+  rectangle "FOREIGN zone — every fn pointer adversarial-or-buggy" as foreign #FFCDD2 {
+    rectangle "Independently built provider\n(other family repo, other version,\nother toolchain, or third party)\nretain · release · query_interface · interface ops" as provider #FFEBEE
+    rectangle "Leased pages\ncaller-owned buffers the foreign\ncode writes (edges, arcs, values)" as lease #FFECB3
+  }
+}
+
+app -[#455A64]-> facade : typed calls
+facade -[#9E9D24]-> gates : extern "C" entry —\nstatus codes only, never exceptions
+
+gates -[#33691E]-> plane : exchange two-word handles\n(copy ≠ retain; explicit refcount ledger)
+
+plane -[#B71C1C,thickness=3]-> provider : «TRUST BOUNDARY»\nevery call gated + validated
+
+provider -[#B71C1C,dashed,thickness=2]-> lease : fills at most capacity entries
+lease -[#FF6F00]-> gates : accepted only after validation
+
+note right of gates
+  <b>Ingress duty (host edge):</b> catch_unwind at every
+  extern "C" entry — src/ffi/index.rs boundary(),
+  siblings' ffi.rs equivalents. Since Rust 1.81 an
+  escaping panic ABORTS, so containment lives
+  INSIDE each implementation, never at the caller.
+end note
+
+note right of plane
+  <b>Crossing duty (outbound):</b> serialize callbacks
+  per captured provider (CallGate, src/bindings.rs)
+  unless the provider claims PARALLEL_REENTRANT;
+  balance every owned retain with one release.
+end note
+
+note bottom of foreign
+  <b>Crossing duty (inbound):</b> validate everything
+  the foreign code wrote before trusting it —
+  status in 0..=8, reserved = 0, out_written ≤ capacity,
+  stable out_total, labels inside the unit domain,
+  weights satisfying the domain predicate
+  (reject NaN and out-of-carrier infinities).
+end note
+@enduml

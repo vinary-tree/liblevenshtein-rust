@@ -291,3 +291,4 @@ README.md
 vinary-tree-interop/README.md
 vinary-tree-interop/docs/abi-reference.md
 vinary-tree-interop/docs/abi-evolution.md
+vinary-tree-interop/docs/security-model.md
