@@ -287,6 +287,14 @@ def outputs(model: dict) -> dict[Path, str]:
         ROOT / "bindings" / "conformance" / "query_start_snapshot.tsv": render_fixture(
             model
         ),
+        # Placement-clean sharing of the conformance oracle: sibling repos may
+        # read a DEPENDENCY's files, and vinary-tree-interop is everyone's
+        # dependency — so the fixture is mirrored into the interop crate for
+        # libdictenstein/lling-llang/duallity tests to consume.
+        ROOT
+        / "vinary-tree-interop"
+        / "conformance"
+        / "query_start_snapshot.tsv": render_fixture(model),
         ROOT
         / "vinary-tree-interop"
         / "bindings"
