@@ -1,0 +1,126 @@
+# ABI layout manifest for the vinary-tree interop resource ABI (wave W1, FV obligation #7).
+#
+# Single source of truth read by both docs/verification/smt/abi_layout.smt2
+# (self-consistency proof, dual-solver) and tests/abi_layout_correspondence.rs
+# (live-compiler and SMT-mirror agreement). The compiler side is pinned
+# independently by vinary-tree-interop/tests/layout_contract.rs and
+# vinary-tree-interop/tests/discriminant_pins.rs; every number here must
+# byte-agree with those pins, which derive from vinary-tree-interop/src/lib.rs.
+#
+# Targets:
+#   64    - required LP64 tier (x86_64/aarch64): pointers, usize, and fn pointers
+#           are 8 bytes; u64/f64 align to 8.
+#   32arm - 32-bit ARM EABI (AAPCS) tier, CI leg linux-armv7-experimental:
+#           pointers, usize, and fn pointers are 4 bytes; u64/f64 align to 8.
+#
+# Row semantics:
+#   kind=struct, member=<field>  - offset/size columns are the field's byte
+#                                  offset and width on each target.
+#   kind=struct, member=__size   - size columns carry the struct's total size;
+#                                  offset columns are '-'.
+#   kind=struct, member=__align  - size columns carry the struct's alignment;
+#                                  offset columns are '-'.
+#   kind=enum                    - value is the u32 discriminant (repr(u32)).
+#   kind=flag                    - value is the u64 bit value (power of two).
+#   kind=const                   - value is the published constant; for the two
+#                                  interface identifiers it is the exact 16-byte
+#                                  ASCII string (no NUL terminator).
+#   '-'                          - column not applicable to this row kind.
+#
+# kind	type	member	offset64	size64	offset32arm	size32arm	value	notes
+struct	VtInterfaceId	bytes	0	16	0	16	-	[u8; 16]; identifier bytes compared byte-for-byte
+struct	VtInterfaceId	__size	-	16	-	16	-	total size in bytes per target
+struct	VtInterfaceId	__align	-	1	-	1	-	alignment in bytes per target
+struct	VtResource	context	0	8	0	4	-	*mut c_void; provider-defined resource context
+struct	VtResource	vtable	8	8	4	4	-	*const VtResourceVTable; base resource vtable
+struct	VtResource	__size	-	16	-	8	-	total size in bytes per target
+struct	VtResource	__align	-	8	-	4	-	alignment in bytes per target
+struct	VtResourceVTable	struct_size	0	8	0	4	-	usize; struct size in bytes for additive ABI evolution
+struct	VtResourceVTable	abi_version	8	4	4	4	-	u32; must equal VT_ABI_VERSION
+struct	VtResourceVTable	reserved	12	4	8	4	-	u32; reserved, must be zero
+struct	VtResourceVTable	retain	16	8	12	4	-	Option<unsafe extern C fn>; add one owned retain (null niche)
+struct	VtResourceVTable	release	24	8	16	4	-	Option<unsafe extern C fn>; release one owned retain (null niche)
+struct	VtResourceVTable	query_interface	32	8	20	4	-	Option<unsafe extern C fn>; versioned interface discovery (null niche)
+struct	VtResourceVTable	__size	-	40	-	24	-	total size in bytes per target
+struct	VtResourceVTable	__align	-	8	-	4	-	alignment in bytes per target
+struct	VtOptionalU64	value	0	8	0	8	-	u64; payload, meaningful only when has_value is one
+struct	VtOptionalU64	has_value	8	1	8	1	-	u8; zero or one
+struct	VtOptionalU64	reserved	9	7	9	7	-	[u8; 7]; reserved, providers must write zero
+struct	VtOptionalU64	__size	-	16	-	16	-	total size in bytes per target
+struct	VtOptionalU64	__align	-	8	-	8	-	alignment in bytes per target
+struct	VtDictionaryEdge	label	0	8	0	8	-	u64; label in the provider's VtUnitDomain
+struct	VtDictionaryEdge	node	8	8	8	8	-	u64; provider-defined node id within the snapshot
+struct	VtDictionaryEdge	__size	-	16	-	16	-	total size in bytes per target
+struct	VtDictionaryEdge	__align	-	8	-	8	-	alignment in bytes per target
+struct	VtDictionaryVTable	struct_size	0	8	0	4	-	usize; struct size in bytes for additive interface evolution
+struct	VtDictionaryVTable	interface_version	8	4	4	4	-	u32; at least VT_DICTIONARY_INTERFACE_VERSION
+struct	VtDictionaryVTable	unit_domain	12	4	8	4	-	VtUnitDomain (repr u32); edge-label domain
+struct	VtDictionaryVTable	value_domain	16	4	12	4	-	VtValueDomain (repr u32); value domain
+struct	VtDictionaryVTable	flags	24	8	16	8	-	u64; bitset from dictionary_flags
+struct	VtDictionaryVTable	snapshot	32	8	24	4	-	Option<unsafe extern C fn>; capture immutable revision (null niche)
+struct	VtDictionaryVTable	root	40	8	28	4	-	Option<unsafe extern C fn>; root node id (null niche)
+struct	VtDictionaryVTable	len	48	8	32	4	-	Option<unsafe extern C fn>; stored-term count when known (null niche)
+struct	VtDictionaryVTable	node_is_final	56	8	36	4	-	Option<unsafe extern C fn>; final-node test (null niche)
+struct	VtDictionaryVTable	node_value_u64	64	8	40	4	-	Option<unsafe extern C fn>; optional u64 value read (null niche)
+struct	VtDictionaryVTable	node_transition	72	8	44	4	-	Option<unsafe extern C fn>; follow one edge (null niche)
+struct	VtDictionaryVTable	node_edges	80	8	48	4	-	Option<unsafe extern C fn>; paged edge expansion (null niche)
+struct	VtDictionaryVTable	__size	-	88	-	56	-	total size in bytes per target
+struct	VtDictionaryVTable	__align	-	8	-	8	-	alignment in bytes per target
+struct	VtWfstArc	input_label	0	8	0	8	-	u64; meaningful only when has_input is one
+struct	VtWfstArc	output_label	8	8	8	8	-	u64; meaningful only when has_output is one
+struct	VtWfstArc	target_state	16	8	16	8	-	u64; target state within the retained snapshot
+struct	VtWfstArc	weight	24	8	24	8	-	f64; scalar semiring value per weight_domain
+struct	VtWfstArc	has_input	32	1	32	1	-	u8; zero for input epsilon
+struct	VtWfstArc	has_output	33	1	33	1	-	u8; zero for output epsilon
+struct	VtWfstArc	reserved	34	6	34	6	-	[u8; 6]; reserved, providers must write zero
+struct	VtWfstArc	__size	-	40	-	40	-	total size in bytes per target
+struct	VtWfstArc	__align	-	8	-	8	-	alignment in bytes per target
+struct	VtWfstVTable	struct_size	0	8	0	4	-	usize; struct size in bytes for additive interface evolution
+struct	VtWfstVTable	interface_version	8	4	4	4	-	u32; at least VT_WFST_INTERFACE_VERSION
+struct	VtWfstVTable	unit_domain	12	4	8	4	-	VtUnitDomain (repr u32); label representation
+struct	VtWfstVTable	weight_domain	16	4	12	4	-	VtWeightDomain (repr u32); scalar semiring
+struct	VtWfstVTable	reserved	20	4	16	4	-	u32; reserved, must be zero
+struct	VtWfstVTable	flags	24	8	24	8	-	u64; bitset from wfst_flags
+struct	VtWfstVTable	snapshot	32	8	32	4	-	Option<unsafe extern C fn>; capture immutable revision (null niche)
+struct	VtWfstVTable	start	40	8	36	4	-	Option<unsafe extern C fn>; initial state (null niche)
+struct	VtWfstVTable	num_states	48	8	40	4	-	Option<unsafe extern C fn>; state count when known (null niche)
+struct	VtWfstVTable	state_info	56	8	44	4	-	Option<unsafe extern C fn>; validity/finality/final weight (null niche)
+struct	VtWfstVTable	state_arcs	64	8	48	4	-	Option<unsafe extern C fn>; paged arc expansion (null niche)
+struct	VtWfstVTable	__size	-	72	-	56	-	total size in bytes per target
+struct	VtWfstVTable	__align	-	8	-	8	-	alignment in bytes per target
+enum	VtStatus	Ok	-	-	-	-	0	operation completed successfully
+enum	VtStatus	End	-	-	-	-	1	iterator or paginated operation exhausted
+enum	VtStatus	InvalidArgument	-	-	-	-	2	an argument was invalid
+enum	VtStatus	NullPointer	-	-	-	-	3	a required pointer was null
+enum	VtStatus	Unsupported	-	-	-	-	4	interface or operation unsupported
+enum	VtStatus	IoError	-	-	-	-	5	provider reported an I/O error
+enum	VtStatus	Closed	-	-	-	-	6	resource already closed
+enum	VtStatus	LimitExceeded	-	-	-	-	7	configured resource limit exceeded
+enum	VtStatus	ProviderError	-	-	-	-	8	provider failure without a portable status
+enum	VtUnitDomain	Byte	-	-	-	-	1	raw byte labels
+enum	VtUnitDomain	UnicodeScalar	-	-	-	-	2	Unicode scalar labels as u32 scalar values
+enum	VtUnitDomain	U64	-	-	-	-	3	unsigned 64-bit token labels
+enum	VtValueDomain	Unit	-	-	-	-	0	set semantics, no attached value
+enum	VtValueDomain	OptionalU64	-	-	-	-	1	optional unsigned 64-bit value
+enum	VtValueDomain	Bytes	-	-	-	-	2	opaque byte payload, reserved for a later interface version
+enum	VtWeightDomain	TropicalF64	-	-	-	-	1	min-plus costs
+enum	VtWeightDomain	LogF64	-	-	-	-	2	log-semiring scalars
+enum	VtWeightDomain	ProbabilityF64	-	-	-	-	3	direct probabilities
+enum	VtWeightDomain	ArcticF64	-	-	-	-	4	max-plus scores
+enum	VtWeightDomain	SignedTropicalF64	-	-	-	-	5	signed tropical representation
+enum	VtWeightDomain	CountF64	-	-	-	-	6	path counts carried in an f64 slot
+enum	VtWeightDomain	BooleanF64	-	-	-	-	7	booleans represented as exactly 0 or 1
+flag	dictionary_flags	PARALLEL_REENTRANT	-	-	-	-	1	bit 0; calls may run concurrently and re-enter the provider
+flag	dictionary_flags	SUFFIX_BASED	-	-	-	-	2	bit 1; suffix/substring distance semantics
+flag	dictionary_flags	IMMUTABLE	-	-	-	-	4	bit 2; snapshot may retain itself directly
+flag	wfst_flags	PARALLEL_REENTRANT	-	-	-	-	1	bit 0; calls may run concurrently and re-enter the provider
+flag	wfst_flags	IMMUTABLE	-	-	-	-	2	bit 1; snapshot may retain the resource directly
+flag	wfst_flags	LAZY	-	-	-	-	4	bit 2; states or arcs may be expanded on demand
+flag	wfst_flags	ACYCLIC	-	-	-	-	8	bit 3; reachable graph guaranteed acyclic
+const	u32	VT_ABI_VERSION	-	-	-	-	1	current base resource ABI version
+const	u32	VT_DICTIONARY_INTERFACE_VERSION	-	-	-	-	1	version of VtDictionaryVTable
+const	u32	VT_WFST_INTERFACE_VERSION	-	-	-	-	1	version of VtWfstVTable
+const	usize	VT_RECOMMENDED_EDGE_BATCH	-	-	-	-	256	recommended provider edges requested per call
+const	usize	VT_RECOMMENDED_ARC_BATCH	-	-	-	-	256	recommended WFST arcs requested per call
+const	VtInterfaceId	VT_DICTIONARY_INTERFACE_ID	-	-	-	-	vt.dictionary.v1	16 ASCII bytes, no NUL terminator; compared byte-for-byte across the ABI
+const	VtInterfaceId	VT_WFST_INTERFACE_ID	-	-	-	-	vt.scalar-wfst.1	16 ASCII bytes, no NUL terminator; compared byte-for-byte across the ABI
