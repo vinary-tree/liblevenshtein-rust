@@ -25,6 +25,10 @@ or "ledger-only") | verification | status`.
 | LLEV-B8 | paging-acceptance asymmetry (F3, llev side) | correctness | medium | OPEN → W3 | — |
 | LLEV-B9 | family version pins | version-pin | info | LEDGER-ONLY | ledger-only |
 | LLEV-B10 | `vinary-tree-interop` `rust-version` | hygiene | low | FIXED | `d895183` |
+| LLEV-B11 | swift facade phonetic/threshold surface | completeness | medium | OPEN → W7 | — |
+| LLEV-B12 | javascript-runtime Node N-API threshold + size/len symbols | correctness | high | OPEN → W3 | — |
+| LLEV-B13 | dotnet threshold overload asymmetry | completeness | low | OPEN → W7 | — |
+| LLEV-B14 | python `pattern_size`/`rules_len` | completeness | low | OPEN → W7 | — |
 
 ## Findings
 
@@ -97,3 +101,28 @@ or "ledger-only") | verification | status`.
 - **Fix**: commit `d895183` — bumped to 1.95 alongside the layout tests (crate unpublished, so no compatibility impact).
 - **Verification**: `cargo test --locked -p vinary-tree-interop` green (27 tests) under the workspace toolchain; MSRV leg covers the workspace with `--features ffi`.
 - **Status**: FIXED.
+
+### LLEV-B11 — swift facade lacks the phonetic rule-set and threshold surface
+- **Date**: 2026-08-08 · **Component**: `bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift` · **Class**: completeness · **Severity**: medium
+- **Evidence**: `bindings/conformance/completeness-matrix.tsv` (swift 17/35, 10 FINDING nulls): no `PhoneticRuleSet` facade (`llev_phonetic_rules_parse/builtin/free/len/apply`, `llev_owned_string_free` unbound), no `llev_phonetic_pattern_size`, and all three `llev_*_distance_threshold` functions missing — every other Tier-2/3 facade exposes these.
+- **Fix**: scheduled wave W7 (uniform per-language completeness) — add the missing Swift wrappers + tests.
+- **Status**: OPEN → W7.
+
+### LLEV-B12 — Node N-API runtime omits symbols its type declarations promise
+- **Date**: 2026-08-08 · **Component**: `bindings/javascript-runtime/native/src/addon.cc`, `native.mjs`/`native.cjs` vs `index.d.ts` · **Class**: correctness · **Severity**: high
+- **Evidence**: `index.d.ts` declares `levenshteinDistanceThreshold`/`damerauDistanceThreshold`/`trueDamerauDistanceThreshold`; the browser-WASM path implements them (`rust/src/browser.rs` via `runtime-factory.mjs`) but the default Node N-API path binds no `llev_*_threshold` — the typed members are `undefined` at runtime on Node. `pattern_size`/`rules_len` are likewise unbound in `addon.cc`, which also blocks the project JS facade (its two FINDING nulls share this root cause).
+- **Analysis**: a TypeScript consumer compiles clean against members that do not exist on the Node default path — a runtime `TypeError` the type system promised away.
+- **Fix**: scheduled wave W3 (umbrella-runtime work): bind the five missing symbols in `addon.cc`, surface them through `native.mjs`/`native.cjs`, and add contract tests asserting runtime presence of every `index.d.ts` member on every runtime path.
+- **Status**: OPEN → W3.
+
+### LLEV-B13 — dotnet threshold overloads only cover standard Levenshtein
+- **Date**: 2026-08-08 · **Component**: `bindings/dotnet/src/VinaryTree.Liblevenshtein/Distance.cs` · **Class**: completeness · **Severity**: low
+- **Evidence**: completeness matrix (dotnet 25/35): `llev_damerau_distance_threshold` and `llev_true_damerau_distance_threshold` unbound while `llev_distance_threshold` has an overload — asymmetric.
+- **Fix**: scheduled wave W7.
+- **Status**: OPEN → W7.
+
+### LLEV-B14 — python facade misses `pattern_size`/`rules_len`
+- **Date**: 2026-08-08 · **Component**: `bindings/python/src/liblevenshtein/_native.py` · **Class**: completeness · **Severity**: low
+- **Evidence**: completeness matrix (python 20/35 with 2 FINDING nulls): `llev_phonetic_pattern_size` and `llev_phonetic_rules_len` unbound while the peer Tier-1 JVM facade and all Tier-2/3 facades expose them.
+- **Fix**: scheduled wave W7.
+- **Status**: OPEN → W7.
