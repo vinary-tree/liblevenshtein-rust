@@ -1,11 +1,39 @@
 # Rust
 /target/
 /liblevenshtein-macros/target/
+/bindings/javascript/pkg/
+/bindings/javascript/node_modules/
+/bindings/javascript-runtime/native/build/
+/bindings/javascript-runtime/native/prebuilds/
+/bindings/javascript-runtime/LICENSE
+/bindings/javascript/target/
+/bindings/javascript/.cpcache/
+/bindings/jvm/.gradle/
+/vendor/
+/bindings/jvm/build/
+/vinary-tree-interop/bindings/jvm/build/
+/vinary-tree-interop/bindings/jvm/.gradle/
+/vinary-tree-interop/bindings/javascript/node_modules/
+/vinary-tree-interop/bindings/javascript/*.tgz
+/vinary-tree-interop/bindings/python/build/
+/vinary-tree-interop/bindings/python/dist/
+/vinary-tree-interop/bindings/python/src/*.egg-info/
+/bindings/clojure/pom.xml
+/bindings/clojure/target/
+/bindings/clojure/.cpcache/
+/examples/phonetic_spellcheck/target/
+/fuzz/target/
+/bindings/python/build/
+/bindings/python/dist/
+/bindings/python/src/*.egg-info/
 **/*.rs.bk
 *.pdb
 
-# Cargo
-Cargo.lock
+# Commit the root and independently verified proc-macro lockfiles used by CI,
+# while ignoring lockfiles in excluded example and fuzz workspaces.
+**/Cargo.lock
+!/Cargo.lock
+!/liblevenshtein-macros/Cargo.lock
 
 # IDE
 .vscode/
@@ -19,6 +47,9 @@ Cargo.lock
 Thumbs.db
 
 # Testing
+__pycache__/
+*.py[cod]
+.pytest_cache/
 *.profraw
 *.profdata
 *.proptest-regressions
@@ -154,3 +185,31 @@ perf.data*
 .pgmcp.toml
 
 .#*
+
+# Language-binding build and test products.
+/bindings/dotnet/**/bin/
+/bindings/dotnet/**/obj/
+/bindings/dotnet/build/
+# Staged prebuilt native libraries (packaging inputs produced by stage/CI scripts;
+# 32 MB ELF objects that must never enter version control).
+/bindings/dotnet/native/runtimes/
+/bindings/ruby/lib/vinary_tree/liblevenshtein/native/
+# Leiningen test-runner scratch.
+**/.lein-failures
+/bindings/haskell/dist-newstyle/
+/bindings/ocaml/_build/
+/bindings/python/.pytest_cache/
+/bindings/python/dist/
+/bindings/python/src/*.egg-info/
+/bindings/python/tests/__pycache__/
+/bindings/ruby/ext/**/Makefile
+/bindings/ruby/ext/**/*.o
+/bindings/ruby/ext/**/*.so
+/bindings/ruby/ext/**/mkmf.log
+/bindings/ruby/*.gem
+/bindings/swift/.build/
+/bindings/fortran/**/*.mod
+/bindings/lua/**/*.o
+/bindings/lua/**/*.so
+/bindings/lua/*.rock
+/*.mod
