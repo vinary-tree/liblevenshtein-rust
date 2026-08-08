@@ -218,9 +218,15 @@ fn live_struct(ty: &str) -> Option<(usize, usize)> {
     match ty {
         "VtInterfaceId" => Some((size_of::<VtInterfaceId>(), align_of::<VtInterfaceId>())),
         "VtResource" => Some((size_of::<VtResource>(), align_of::<VtResource>())),
-        "VtResourceVTable" => Some((size_of::<VtResourceVTable>(), align_of::<VtResourceVTable>())),
+        "VtResourceVTable" => Some((
+            size_of::<VtResourceVTable>(),
+            align_of::<VtResourceVTable>(),
+        )),
         "VtOptionalU64" => Some((size_of::<VtOptionalU64>(), align_of::<VtOptionalU64>())),
-        "VtDictionaryEdge" => Some((size_of::<VtDictionaryEdge>(), align_of::<VtDictionaryEdge>())),
+        "VtDictionaryEdge" => Some((
+            size_of::<VtDictionaryEdge>(),
+            align_of::<VtDictionaryEdge>(),
+        )),
         "VtDictionaryVTable" => Some((
             size_of::<VtDictionaryVTable>(),
             align_of::<VtDictionaryVTable>(),
@@ -442,11 +448,19 @@ fn manifest_shape_is_complete_and_unique() {
     assert_eq!(field_counts.len(), EXPECTED_FIELD_COUNTS.len());
     assert_eq!(total_rows.len(), EXPECTED_FIELD_COUNTS.len());
     for (ty, expected) in EXPECTED_ENUM_COUNTS {
-        assert_eq!(enum_counts.get(ty), Some(expected), "variant count for {ty}");
+        assert_eq!(
+            enum_counts.get(ty),
+            Some(expected),
+            "variant count for {ty}"
+        );
     }
     assert_eq!(enum_counts.len(), EXPECTED_ENUM_COUNTS.len());
     for (module, expected) in EXPECTED_FLAG_COUNTS {
-        assert_eq!(flag_counts.get(module), Some(expected), "flag count for {module}");
+        assert_eq!(
+            flag_counts.get(module),
+            Some(expected),
+            "flag count for {module}"
+        );
     }
     assert_eq!(flag_counts.len(), EXPECTED_FLAG_COUNTS.len());
     assert_eq!(numeric_constants, EXPECTED_NUMERIC_CONSTANTS);
@@ -496,9 +510,8 @@ fn manifest_matches_live_layout_on_this_target() {
                 );
             }
             member => {
-                let (live_offset, live_size, _) = live_field(row.ty, member).unwrap_or_else(|| {
-                    panic!("manifest names unknown field {}.{member}", row.ty)
-                });
+                let (live_offset, live_size, _) = live_field(row.ty, member)
+                    .unwrap_or_else(|| panic!("manifest names unknown field {}.{member}", row.ty));
                 assert_eq!(
                     tsv_offset,
                     Some(live_offset as u64),
@@ -522,7 +535,10 @@ fn manifest_matches_live_discriminants_flags_and_constants() {
         match row.kind {
             "enum" => {
                 let live = live_discriminant(row.ty, row.member).unwrap_or_else(|| {
-                    panic!("manifest names unknown enum variant {}::{}", row.ty, row.member)
+                    panic!(
+                        "manifest names unknown enum variant {}::{}",
+                        row.ty, row.member
+                    )
                 });
                 let manifest: u64 = row.value.parse().expect("enum value column is a u64");
                 assert_eq!(manifest, live, "{}::{} discriminant", row.ty, row.member);
@@ -552,9 +568,8 @@ fn manifest_matches_live_discriminants_flags_and_constants() {
                 );
             }
             "const" => {
-                let live = live_constant(row.member).unwrap_or_else(|| {
-                    panic!("manifest names unknown constant {}", row.member)
-                });
+                let live = live_constant(row.member)
+                    .unwrap_or_else(|| panic!("manifest names unknown constant {}", row.member));
                 let manifest: u64 = row.value.parse().expect("const value column is a u64");
                 assert_eq!(manifest, live, "{} value", row.member);
             }
@@ -569,8 +584,9 @@ fn manifest_matches_live_discriminants_flags_and_constants() {
 fn smt_mirror_matches_manifest_cell_by_cell() {
     let rows = parse_manifest();
     let smt = parse_smt_constants();
-    let mut expected_names: BTreeSet<String> =
-        ["ptr64".to_string(), "ptr32".to_string()].into_iter().collect();
+    let mut expected_names: BTreeSet<String> = ["ptr64".to_string(), "ptr32".to_string()]
+        .into_iter()
+        .collect();
 
     let lookup = |name: &str| -> u64 {
         *smt.get(name)
@@ -665,8 +681,9 @@ fn smt_mirror_matches_manifest_cell_by_cell() {
             if row.kind != "struct" || row.member.starts_with("__") {
                 continue;
             }
-            let (_, _, live_align) = live_field(row.ty, row.member)
-                .unwrap_or_else(|| panic!("manifest names unknown field {}.{}", row.ty, row.member));
+            let (_, _, live_align) = live_field(row.ty, row.member).unwrap_or_else(|| {
+                panic!("manifest names unknown field {}.{}", row.ty, row.member)
+            });
             let name = format!("{prefix}_{}_{}", row.ty, row.member);
             assert_eq!(
                 lookup(&name),

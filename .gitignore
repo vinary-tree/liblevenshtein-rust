@@ -154,6 +154,9 @@ docs/verification/**/.Makefile.d
 # docs/verification/tla/states/tlc-results-*.txt and is deliberately NOT ignored.
 /states/
 docs/verification/**/states/[0-9]*/
+# TLC trace-exploration artifacts emitted next to a module on a violated
+# property (regenerable scratch from counterexample runs).
+docs/verification/**/*_TTrace_*
 
 # Profiling artifacts
 *.perf.data
