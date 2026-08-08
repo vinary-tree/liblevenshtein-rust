@@ -20,6 +20,7 @@ On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted
 - [Notation & Terminology](#notation--terminology)
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
+- [Language Bindings](docs/language-bindings.md)
 - [Common Use Cases](#common-use-cases)
 - [Thread Safety & Parallelism](#thread-safety--parallelism)
 - [Dictionary Types](#dictionary-types)
@@ -231,8 +232,8 @@ Backends come in an **in-memory** family and a **disk-persisted** (durable, memo
 | Dictionary | Best for | Characteristics |
 |------------|----------|-----------------|
 | **DoubleArrayTrie** [[11]](#references) | static ASCII dictionaries | $`\mathcal{O}(1)`$ per transition, fastest queries; read-only after build (the only static backend) |
-| **DynamicDawg** [[8]](#references) | dynamic ASCII dictionaries | atomic insert/remove, SIMD + Bloom-filter pruning (RwLock) |
-| **DynamicDawgU64** | large 64-bit label spaces | identifiers, hashes, compound keys; lock-free reads (ArcSwap) |
+| **DynamicDawg** [[8]](#references) | dynamic ASCII dictionaries | immutable path copies, wait-free snapshot reads, lock-free root CAS |
+| **DynamicDawgU64** | large 64-bit label spaces | identifiers, hashes, compound keys; immutable path copies and lock-free root CAS |
 | **SuffixAutomaton** | substring / infix search | match a pattern anywhere within terms |
 | **Scdawg** [[9]](#references) | substring search + WallBreaker | bidirectional traversal; backs large-`k` search |
 | **PathMapDictionary** | update-heavy workloads | persistent (structural-sharing) map (`pathmap-backend`) |
@@ -789,7 +790,7 @@ assert!(!pattern.matches("bone"));   // b  ∉ fricative
 
 ## WFST Integration
 
-liblevenshtein's automata can be exposed as lazy **Weighted Finite-State Transducers** (WFSTs) for composition with language models — phonetic rewrites, n-gram LMs, and more. As of liblevenshtein 0.9, these adapters live in the companion **[`duallity`](https://github.com/f1r3fly-io/duallity)** crate, which depends on both liblevenshtein and [lling-llang](https://github.com/f1r3fly-io/lling-llang):
+liblevenshtein's automata can be exposed as lazy **Weighted Finite-State Transducers** (WFSTs) for composition with language models — phonetic rewrites, n-gram LMs, and more. As of liblevenshtein 0.9, these adapters live in the companion **[`duallity`](https://github.com/vinary-tree/duallity)** crate, which depends on both liblevenshtein and [lling-llang](https://github.com/vinary-tree/lling-llang):
 
 ```rust,ignore
 use duallity::{LevenshteinWfst, PhoneticWfstBuilder, WallBreakerWfstBuilder};
@@ -803,7 +804,7 @@ let lev = LevenshteinWfst::new(&dict, "helo", 2);
 let composed = compose(lev, language_model);
 ```
 
-See the **[`duallity`](https://github.com/f1r3fly-io/duallity)** crate for the phonetic / WallBreaker / generalized WFST builders and composition recipes.
+See the **[`duallity`](https://github.com/vinary-tree/duallity)** crate for the phonetic / WallBreaker / generalized WFST builders and composition recipes.
 
 ---
 
@@ -917,7 +918,10 @@ assert_eq!(OperationSet::from_protobuf(&portable)?, operations);
 package. It owns the executable, REPL, filesystem traversal, compression,
 archive, XML, office-document, PDF, and OCR dependencies.
 
-**WASM** (`wasm`) — `wasm-bindgen` bindings for browser/Node.js.
+**WASM/WASI** (`wasm`) — project-owned distance and phonetic exports used by
+the shared `@vinary-tree/vinary-tree` runtime. Cross-project dictionary handles
+are composed in that one runtime; the liblevenshtein npm package is a typed
+facade rather than a second WebAssembly instance.
 `parallel-grep` accelerates the reusable in-memory phonetic grep engines.
 
 ---
@@ -939,7 +943,7 @@ Measured backend comparison — 10,000-word dictionary, AMD Ryzen Threadripper P
 | **DynamicDawg** | 4.17 ms | 21.78 µs | 321 µs | 2,912 µs |
 | **PathMap** | 3.33 ms | 59.01 µs | 863 µs | 5,583 µs |
 
-For static dictionaries, `DoubleArrayTrie` is the clear leader (38–175× faster fuzzy matching than the alternatives here). Bloom-filter pre-filtering and runtime SIMD further accelerate the dynamic backends; methodology and more metrics are in [`docs/benchmarks/`](docs/benchmarks/README.md).
+For static dictionaries, `DoubleArrayTrie` is the clear leader (38–175× faster fuzzy matching than the alternatives here). Dynamic DAWGs now favor immutable query-start snapshots and lock-free root publication over the older Bloom-filter/RwLock design measured by this historical benchmark; methodology and more metrics are in [`docs/benchmarks/`](docs/benchmarks/README.md).
 
 ### PathMap TrieRef rework (2026-06-11)
 
@@ -990,6 +994,10 @@ See [`docs/verification/README_FORMAL_GATES.md`](docs/verification/README_FORMAL
 | `wfst` | lling-llang WFST adapters |
 | `serialization` / `compression` / `protobuf` | save/load; gzip; Protocol Buffers |
 | `wasm` | WebAssembly bindings |
+| `bindings-core` | language-neutral retained-resource transducer and streaming cursor model |
+| `bindings-phonetic` | project-owned phonetic pattern/rule bindings over `bindings-core` |
+| `ffi` | stable native C ABI consuming `vinary-tree-interop` resources |
+| `*-bindings` | descriptive opt-in aliases selecting a boundary; no alias compiles another language runtime or moves dictionary CRUD into this crate |
 | `parallel-grep` | parallel in-memory phonetic matching |
 
 Enabling a feature enables the features it depends on (`A → B` = "A enables B"):

@@ -1,0 +1,79 @@
+{
+  "name": "@vinary-tree/liblevenshtein",
+  "version": "0.10.0",
+  "description": "Modular liblevenshtein facade over the shared vinary-tree runtime",
+  "author": {
+    "name": "Dylon Edwards",
+    "email": "dylon.devo@gmail.com"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinary-tree/liblevenshtein-rust.git",
+    "directory": "bindings/javascript"
+  },
+  "engines": {
+    "node": ">=22.14"
+  },
+  "dependencies": {
+    "@vinary-tree/interop": "0.1.0",
+    "@vinary-tree/vinary-tree": "0.10.0"
+  },
+  "devDependencies": {
+    "@cljs-oss/module-deps": "^1.1.1",
+    "@vinary-tree/libdictenstein": "file:../../../libdictenstein/bindings/javascript"
+  },
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./facades/native.mjs",
+      "require": "./facades/native.cjs"
+    },
+    "./typescript": {
+      "types": "./facades/typescript.d.ts",
+      "import": "./facades/typescript.mjs",
+      "require": "./facades/typescript.cjs"
+    },
+    "./clojurescript": {
+      "types": "./facades/clojurescript.d.ts",
+      "import": "./facades/clojurescript.mjs",
+      "require": "./facades/clojurescript.cjs"
+    },
+    "./wasm": {
+      "types": "./index.d.ts",
+      "default": "./facades/wasm.mjs"
+    },
+    "./wasi": {
+      "types": "./index.d.ts",
+      "import": "./facades/wasi.mjs"
+    },
+    "./cljs/vinary_tree/liblevenshtein.cljs": "./cljs/vinary_tree/liblevenshtein.cljs"
+  },
+  "cljs": {
+    "namespaces": {
+      "vinary-tree.liblevenshtein": "./cljs/vinary_tree/liblevenshtein.cljs"
+    }
+  },
+  "files": [
+    "abi.d.ts",
+    "index.d.ts",
+    "facades/",
+    "cljs/",
+    "deps.cljs",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test:contract": "node --test test/facades.test.mjs && tsc -p tsconfig.test.json",
+    "test:clojurescript": "clojure -M:cljs-test && node test/run-clojurescript.cjs",
+    "test": "npm run test:contract && npm run test:clojurescript",
+    "prepack": "npm run build && npm test"
+  }
+}

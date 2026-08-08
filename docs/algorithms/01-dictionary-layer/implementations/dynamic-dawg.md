@@ -211,10 +211,9 @@ pub struct DynamicDawg<V: DictionaryValue = ()> {
 }
 
 // `DynamicDawgInner` is the unit-generic lock-free DAWG core,
-// `LockFreeDawg<u8, V>`: an atomically reference-counted node graph. Each node
-// publishes an immutable edge-list snapshot via `ArcSwap`; readers load the
-// snapshot without locking and writers install a new one with a
-// `compare_exchange` (CAS) loop.
+// `LockFreeDawg<u8, V>`. Published nodes are immutable. Readers retain one
+// root revision; writers path-copy an affected route and publish the new
+// GraphVersion through one ArcSwap compare_exchange (CAS) loop.
 type DynamicDawgInner<V = ()> = LockFreeDawg<u8, V>;
 ```
 
@@ -439,8 +438,8 @@ let writer = {
 ```
 
 **Concurrency semantics:**
-- **Readers are lock-free** — each loads an `ArcSwap` edge-list snapshot and never blocks
-- **Writers publish new nodes** via `compare_exchange` (CAS) loops and do not block readers
+- **Readers are wait-free** — each retains one immutable root revision and never blocks
+- **Writers path-copy and publish a new root** via `compare_exchange` (CAS) loops
 - Write operations: `insert()`, `remove()`, `union_with()`, `compact()`
 - Read operations: `contains()`, `get_value()`, `len()`, iteration
 
@@ -1101,7 +1100,7 @@ fn root(&self) -> DynamicDawgNode // From Dictionary trait
 
 **Performance**:
 - **Complexity**: $`\mathcal{O}(1)`$
-- **Concurrency**: Lock-free traversal (per-node `ArcSwap` snapshot)
+- **Concurrency**: Wait-free traversal over one immutable root revision
 
 **Example**:
 ```rust
@@ -1166,7 +1165,7 @@ if let Some(final_zipper) = result {
 | `get_value()` | ~260ns | 3.8M ops/sec | Traversal + clone |
 | `len()` / `term_count()` | ~5ns | 200M ops/sec | Counter read |
 | `is_empty()` | ~5ns | 200M ops/sec | Counter comparison |
-| `node_count()` | ~5ns | 200M ops/sec | Counter read |
+| `node_count()` | proportional to live graph | — | Unique-node traversal |
 | `needs_compaction()` | ~2ns | 500M ops/sec | Flag read |
 | `root()` | ~3ns | 333M ops/sec | Return node 0 |
 

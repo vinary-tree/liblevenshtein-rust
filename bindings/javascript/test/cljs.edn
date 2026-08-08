@@ -1,0 +1,8 @@
+{:target :nodejs
+ :output-to "target/cljs/main.cjs"
+ :output-dir "target/cljs/out"
+ :npm-deps {"@vinary-tree/liblevenshtein" "file:."
+            "@vinary-tree/libdictenstein" "file:../../../libdictenstein/bindings/javascript"}
+ :install-deps false
+ :optimizations :none
+ :main vinary-tree.liblevenshtein-cljs-test}

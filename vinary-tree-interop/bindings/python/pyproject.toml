@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=77", "wheel>=0.45"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vinary-tree-interop"
+version = "0.1.0"
+description = "Shared retained-resource ABI for modular vinary-tree Python bindings"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "Dylon Edwards", email = "dylon.devo@gmail.com" }]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vinary_tree_interop = ["LICENSE"]

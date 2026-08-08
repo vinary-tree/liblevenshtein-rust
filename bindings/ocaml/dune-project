@@ -1,0 +1,10 @@
+(lang dune 3.20)
+(name vinary-tree-liblevenshtein)
+(generate_opam_files true)
+(source (github vinary-tree/liblevenshtein-rust))
+(authors "Dylon Edwards <dylon.devo@gmail.com>")
+(license "Apache-2.0")
+(package
+ (name vinary-tree-liblevenshtein)
+ (synopsis "Fast streaming Levenshtein automata for OCaml")
+ (depends vinary-tree-interop))

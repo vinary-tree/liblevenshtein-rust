@@ -1,0 +1,37 @@
+name: Checkout portable sibling crates
+description: >
+  Place development sibling sources inside the repository so cross-runtime and
+  VM jobs that mount only GITHUB_WORKSPACE test the same revisions as native CI.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v6
+      with:
+        repository: vinary-tree/llattice
+        path: vendor/llattice
+        persist-credentials: false
+    - uses: actions/checkout@v6
+      with:
+        repository: vinary-tree/libdictenstein
+        path: vendor/libdictenstein
+        persist-credentials: false
+    - name: Point the development dependency at the workspace-local vendor tree
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - <<'PY'
+        from pathlib import Path
+
+        manifest = Path("Cargo.toml")
+        before = manifest.read_text()
+        after = before.replace(
+            'path = "../libdictenstein"',
+            'path = "vendor/libdictenstein"',
+            1,
+        )
+        if after == before:
+            raise SystemExit("development libdictenstein path was not found")
+        manifest.write_text(after)
+        PY
+        cargo generate-lockfile

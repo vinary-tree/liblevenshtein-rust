@@ -3,7 +3,7 @@
 > **Source of truth for the theory:** the complete treatment of disk-based tries — B-tries,
 > the Adaptive Radix Tree (ART), pointer swizzling, buffer management, and the hybrid
 > **Persistent Adaptive Radix Trie (PART)** design — lives in the
-> **[libdictenstein](https://github.com/f1r3fly-io/libdictenstein)** crate that owns the
+> **[libdictenstein](https://github.com/vinary-tree/libdictenstein)** crate that owns the
 > structure: [`libdictenstein/docs/theory/disk-tries/`](../../../../libdictenstein/docs/theory/disk-tries/README.md).
 > This page covers only **how liblevenshtein uses it**. The earlier in-repo deep-dive chapters
 > duplicated that treatment and are preserved under

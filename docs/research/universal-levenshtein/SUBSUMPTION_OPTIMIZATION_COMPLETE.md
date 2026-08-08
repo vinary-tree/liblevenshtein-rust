@@ -390,7 +390,7 @@ This work builds on:
    - State.java: Linked list + merge sort
    - SubsumesFunction.java: Subsumption formulas
 
-2. **liblevenshtein-rust**: https://github.com/f1r3fly/liblevenshtein-rust (current project)
+2. **liblevenshtein-rust**: https://github.com/vinary-tree/liblevenshtein-rust (current project)
    - Universal: BTreeSet with custom Ord
    - Parameterized: SmallVec with online subsumption
 

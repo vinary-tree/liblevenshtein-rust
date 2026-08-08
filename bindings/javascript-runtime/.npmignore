@@ -1,0 +1,2 @@
+# package.json's explicit files list defines the release artifact.  This file
+# prevents repository-level build-output ignores from excluding staged files.

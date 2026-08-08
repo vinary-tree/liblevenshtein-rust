@@ -30,14 +30,14 @@ caller what coordination it provides:
 | Backend | Read path | Reads block? | Writes | Kind |
 |---|---|:---:|---|---|
 | **`DoubleArrayTrie(Char)`** | immutable `base`/`check` arrays | No | build-time only (`&mut self`) | static |
-| **`DynamicDawgU64`** | per-node `ArcSwap<EdgeList>` load | No | lock-free `compare_exchange` (`&self`) | dynamic |
+| **`DynamicDawgU64`** | immutable root revision retained by `Arc` | No | path-copy + root `compare_exchange` (`&self`) | dynamic |
 | **`PathMapSnapshot(Char)` / `PathMapRef(Char)`** | persistent copy-on-write snapshot | No | — (immutable view) | static snapshot |
 | **`PersistentARTrie(Char / U64)`** | lock-free CAS overlay over a memory-mapped trie | No | lock-free CAS (`&self`) | dynamic · disk |
 | **`PersistentScdawg(Char)`** | `ArcSwap` graph load | No | `ArcSwap` publish (`&self`) | dynamic · disk |
 | **`PersistentSuffixAutomaton(Char)`** | `ArcSwap` graph load | No | `ArcSwap` publish (`&self`) | dynamic · disk |
 | **`PersistentSuffixTree(Char)`** | `ArcSwap` graph load | No | `ArcSwap` publish (`&self`) | dynamic · disk |
 | **`PersistentVocabARTrie`** | lock-free overlay | No | lock-free overlay (`&self`) | dynamic · disk |
-| **`DynamicDawg(Char)`** | per-node `ArcSwap<EdgeList>` load (`LockFreeDawg` core) | No | lock-free `compare_exchange` (`&self`) | dynamic |
+| **`DynamicDawg(Char)`** | immutable root revision retained by `Arc` (`LockFreeDawg` core) | No | path-copy + root `compare_exchange` (`&self`) | dynamic |
 | **`SuffixAutomaton(Char)`** | `Arc<ArcSwap<…>>` load (`LockFreeSuffixAutomaton`) | No | `ArcSwap` publish (`&self`) | dynamic |
 | **`Scdawg(Char)`** | `Arc<ArcSwap<…>>` load (`LockFreeScdawg`) | No | `ArcSwap` publish (`&self`) | dynamic |
 | **`PathMapDictionary(Char)`** | `Arc<ArcSwap<PathMapState>>` load, then lock-free traversal | No | `ArcSwap` publish (`&self`) | dynamic |
@@ -51,9 +51,10 @@ an atomic pointer swap or CAS rather than by excluding readers. Grouped by mecha
 
 - **`DoubleArrayTrie(Char)`** — immutable after build; reads touch read-only arrays
   (wait-free).
-- **`DynamicDawg(Char)`**, **`DynamicDawgU64`** — the `LockFreeDawg` core: reads `load()`
-  a per-node `ArcSwap<EdgeList>` snapshot, writes `compare_exchange` a new node, all
-  lock-free. (`DynamicDawg` uses `u8` edge labels; `DynamicDawgU64` a wider `u64` label.)
+- **`DynamicDawg(Char)`**, **`DynamicDawgU64`** — the `LockFreeDawg` core: reads retain
+  one immutable root revision, while writers path-copy the changed route and
+  `compare_exchange` a replacement `GraphVersion`. (`DynamicDawg` uses `u8` edge
+  labels; `DynamicDawgU64` a wider `u64` label.)
 - **`SuffixAutomaton(Char)`**, **`Scdawg(Char)`** — the `LockFreeSuffixAutomaton` /
   `LockFreeScdawg` cores: reads load an `Arc<ArcSwap<…>>` graph snapshot; writes publish
   a new graph by atomic swap.

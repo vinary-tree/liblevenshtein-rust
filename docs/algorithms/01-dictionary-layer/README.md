@@ -3,7 +3,7 @@
 **Navigation**: [← Back to Algorithms](../README.md) | [Next Layer: Automata →](../02-levenshtein-automata/README.md)
 
 > **Note**: The dictionary implementations have been extracted to the
-> [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate for
+> [libdictenstein](https://github.com/vinary-tree/libdictenstein) crate for
 > independent use. For comprehensive dictionary documentation, see:
 > - [libdictenstein/docs/algorithms/](../../../../libdictenstein/docs/algorithms/README.md) - Implementation guides
 > - [libdictenstein/docs/theory/](../../../../libdictenstein/docs/theory/) - SCDAWG and disk-trie theory

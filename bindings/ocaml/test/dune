@@ -1,0 +1,6 @@
+(test
+ (name snapshot)
+ (libraries
+  vinary-tree-interop
+  vinary-tree-libdictenstein
+  vinary-tree-liblevenshtein))

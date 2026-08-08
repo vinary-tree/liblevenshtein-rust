@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "liblevenshtein",
+  "author": {
+    "name": "Dylon Edwards",
+    "email": "dylon.devo@gmail.com"
+  },
+  "organization": {
+    "github": "vinary-tree",
+    "npmScope": "vinary-tree",
+    "mavenGroup": "io.vinarytree",
+    "javaPackage": "io.vinarytree.liblevenshtein",
+    "fpmNamespace": "vinary-tree"
+  },
+  "interop": {
+    "crate": "vinary-tree-interop",
+    "cPrefix": "vt_",
+    "cHeader": "vinary_tree_interop.h",
+    "npm": "@vinary-tree/interop",
+    "maven": "io.vinarytree:vinary-tree-interop",
+    "javaPackage": "io.vinarytree.interop",
+    "resourceLayout": ["context", "vtable"],
+    "dictionaryInterfaceVersion": 1,
+    "scalarWfstInterfaceVersion": 1
+  },
+  "packages": {
+    "pypi": "vinary-tree-liblevenshtein",
+    "npm": "@vinary-tree/liblevenshtein",
+    "maven": "io.vinarytree:liblevenshtein",
+    "clojars": "io.vinarytree/liblevenshtein-clojure",
+    "nuget": "VinaryTree.Liblevenshtein",
+    "goModule": "github.com/vinary-tree/liblevenshtein-rust/bindings/go",
+    "swift": "VinaryTreeLiblevenshtein",
+    "rubygems": "vinary-tree-liblevenshtein",
+    "fpm": "vinary-tree-liblevenshtein",
+    "opam": "vinary-tree-liblevenshtein",
+    "hackage": "vinary-tree-liblevenshtein",
+    "luarocks": "vinary-tree-liblevenshtein"
+  },
+  "supportTiers": {
+    "tier1": ["c", "cpp", "python", "jvm", "clojure", "javascript", "typescript", "clojurescript"],
+    "tier2": ["dotnet", "go", "swift", "ruby", "fortran"],
+    "tier3": ["ocaml", "haskell", "lua"]
+  },
+  "packageVersion": "0.10.0",
+  "abiVersion": 1,
+  "apiRevision": 1,
+  "defaultMatchBatch": 256,
+  "snapshot": {
+    "boundary": "query-start",
+    "revision": "immutable-resource",
+    "captureComplexity": "O(1)",
+    "cursorMayOutliveSource": true
+  },
+  "marshalling": {
+    "resourceHandoff": "O(1)-retained-two-word-resource",
+    "nativeHotPathSerialization": false,
+    "nodeExpansion": "batched-contiguous-edges",
+    "results": "leased-descriptors-and-contiguous-term-arenas",
+    "managedExpertPath": "zero-copy-batch-reducer",
+    "customProviderDefault": "serialized-caller-thread",
+    "customProviderOptIn": "parallel-reentrant",
+    "wfstHandoff": "O(1)-retained-two-word-resource",
+    "wfstComposition": "retained-snapshots-and-lazy-product-states",
+    "wfstExpansion": "one-batched-state-and-paged-contiguous-arcs"
+  },
+  "unitDomains": {
+    "BYTE": 1,
+    "UNICODE_SCALAR": 2,
+    "U64": 3
+  },
+  "valueDomains": {
+    "UNIT": 0,
+    "OPTIONAL_U64": 1,
+    "BYTES_RESERVED": 2
+  },
+  "enums": {
+    "status": {
+      "cType": "LlevStatus",
+      "cPrefix": "LLEV_STATUS_",
+      "values": {
+        "OK": 0,
+        "END": 1,
+        "INVALID_ARGUMENT": 2,
+        "INVALID_UTF8": 3,
+        "NULL_POINTER": 4,
+        "PANIC": 5,
+        "UNSUPPORTED": 6,
+        "IO_ERROR": 7,
+        "CLOSED": 8,
+        "LIMIT_EXCEEDED": 9,
+        "PROVIDER_ERROR": 10,
+        "BATCH_IN_USE": 11,
+        "DOMAIN_MISMATCH": 12
+      }
+    },
+    "algorithm": {
+      "cType": "LlevAlgorithm",
+      "cPrefix": "LLEV_ALGORITHM_",
+      "values": {
+        "STANDARD": 0,
+        "TRANSPOSITION": 1,
+        "MERGE_AND_SPLIT": 2,
+        "DAMERAU_LEVENSHTEIN": 3
+      }
+    },
+    "queryOrder": {
+      "cType": "LlevQueryOrder",
+      "cPrefix": "LLEV_QUERY_ORDER_",
+      "values": {
+        "TRAVERSAL": 0,
+        "DISTANCE_THEN_TERM": 1
+      }
+    },
+    "phoneticRuleSetKind": {
+      "cType": "LlevPhoneticRuleSetKind",
+      "cPrefix": "LLEV_PHONETIC_RULE_SET_",
+      "values": {
+        "ENGLISH_ORTHOGRAPHY": 0,
+        "ENGLISH_PHONETIC": 1
+      }
+    }
+  },
+  "buildFeatures": {
+    "CORE": 1,
+    "PHONETIC": 2
+  },
+  "objects": {
+    "ResourceTransducer": {
+      "accepts": "VtResource(dictionary-v1)",
+      "methods": ["unit_domain", "query_utf8", "query_bytes", "query_u64", "query_pattern"]
+    },
+    "QueryCursor": {
+      "ownership": "retains-query-start-snapshot",
+      "methods": ["next_batch", "release_batch", "reduce", "close"]
+    },
+    "PhoneticPattern": {
+      "feature": "PHONETIC",
+      "methods": ["compile_regex", "compile_llre", "size", "matches", "close"]
+    },
+    "PhoneticRuleSet": {
+      "feature": "PHONETIC",
+      "methods": ["parse", "builtin", "len", "apply", "close"]
+    },
+    "ScalarWfstResource": {
+      "interface": "vt.scalar-wfst.1",
+      "unitDomain": "UNICODE_SCALAR",
+      "weightDomains": ["tropical-f64", "log-f64", "probability-f64", "arctic-f64", "signed-tropical-f64", "count-f64", "boolean-f64"],
+      "methods": ["snapshot", "start", "num_states", "state_info", "state_arcs"]
+    }
+  },
+  "forbiddenOwnedObjects": [
+    "StringIndex",
+    "DynamicDawg",
+    "DoubleArrayTrie",
+    "Scdawg",
+    "PersistentArTrie",
+    "DictionarySnapshot"
+  ],
+  "cFunctions": [
+    {"name": "llev_abi_version", "rustModule": "index"},
+    {"name": "llev_api_revision", "rustModule": "index"},
+    {"name": "llev_build_features", "rustModule": "index"},
+    {"name": "llev_last_error_message", "rustModule": "index"},
+    {"name": "llev_string_free", "rustModule": "string"},
+    {"name": "llev_string_array_free", "rustModule": "string"},
+    {"name": "llev_string_dup", "rustModule": "string"},
+    {"name": "llev_distance", "rustModule": "distance"},
+    {"name": "llev_distance_threshold", "rustModule": "distance"},
+    {"name": "llev_damerau_distance", "rustModule": "distance"},
+    {"name": "llev_damerau_distance_threshold", "rustModule": "distance"},
+    {"name": "llev_true_damerau_distance", "rustModule": "distance"},
+    {"name": "llev_true_damerau_distance_threshold", "rustModule": "distance"},
+    {"name": "llev_transducer_new", "rustModule": "index"},
+    {"name": "llev_transducer_free", "rustModule": "index"},
+    {"name": "llev_transducer_unit_domain", "rustModule": "index"},
+    {"name": "llev_transducer_query_utf8", "rustModule": "index"},
+    {"name": "llev_transducer_query_bytes", "rustModule": "index"},
+    {"name": "llev_transducer_query_u64", "rustModule": "index"},
+    {"name": "llev_query_cursor_next_batch", "rustModule": "index"},
+    {"name": "llev_query_cursor_release_batch", "rustModule": "index"},
+    {"name": "llev_query_cursor_reduce", "rustModule": "index"},
+    {"name": "llev_query_cursor_free", "rustModule": "index"},
+    {"name": "llev_owned_string_free", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_pattern_compile_regex", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_pattern_compile_llre", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_pattern_free", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_pattern_size", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_pattern_matches", "rustModule": "phonetic"},
+    {"name": "llev_transducer_query_pattern", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_rules_parse", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_rules_builtin", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_rules_free", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_rules_len", "rustModule": "phonetic"},
+    {"name": "llev_phonetic_rules_apply", "rustModule": "phonetic"}
+  ],
+  "wasm": {
+    "umbrellaPackage": "@vinary-tree/vinary-tree",
+    "projectPackage": "@vinary-tree/liblevenshtein",
+    "relatedProjectPackages": ["@vinary-tree/libdictenstein", "@vinary-tree/lling-llang", "@vinary-tree/duallity"],
+    "runtimeIdentityGuard": true,
+    "browserPersistence": false,
+    "nodeDefault": "native-napi",
+    "alternatives": ["wasm", "wasi-preview1", "wasi-component"]
+  },
+  "snapshotFixture": {
+    "query": "cat",
+    "maxDistance": 2,
+    "initial": [["cat", 1], ["cot", 2], ["cut", 3], ["scat", null]],
+    "mutations": [["remove", "cot", null], ["update", "cut", 30], ["insert", "cit", 5], ["compact", "", null], ["checkpoint", "", null]]
+  }
+}

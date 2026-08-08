@@ -1,0 +1,8 @@
+(install
+ (section lib)
+ (package vinary-tree-liblevenshtein)
+ (files
+  liblevenshtein.h
+  liblevenshtein_abi.h
+  vinary_tree_interop.h
+  vinary_tree_ocaml.h))

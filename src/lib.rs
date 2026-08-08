@@ -27,6 +27,9 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
+/// Stable, non-generic streaming primitives used by generated language bindings.
+#[cfg(feature = "bindings-core")]
+pub mod bindings;
 #[cfg(feature = "pathmap-backend")]
 pub mod contextual;
 /// Ordered cost monoids and exact decimal fixed-point scaling.

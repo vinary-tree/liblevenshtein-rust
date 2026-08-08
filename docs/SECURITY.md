@@ -65,20 +65,24 @@ before invoking either inner decoder.
 
 ## 4 · FFI — the documented `unsafe` contract
 
-Every FFI function is `unsafe extern "C"` (`src/ffi/`), as it dereferences raw
-caller pointers. The contract, lifted from the module documentation, is:
+FFI operations that dereference caller memory are `unsafe extern "C"`
+(`src/ffi/`). The ABI-version query is pointer-free and safe. The raw-pointer
+contract, lifted from the module documentation, is:
 
-- **Pointers must be valid and non-null**, and C strings must be **NUL-terminated**
-  (`cstr_to_str` returns `None` on a null pointer but cannot validate an
-  out-of-bounds or non-terminated pointer).
-- **Returned memory is owned by the caller** and must be freed with the matching
-  function — strings with `llev_string_free`, candidate arrays with
-  `llev_candidates_free`, dictionaries/transducers with their `*_free` functions.
+- **Required pointers must be valid and non-null**. Length-bearing UTF-8 buffers
+  must be readable for their declared byte length; only `llev_string_dup` takes
+  a NUL-terminated C string.
+- **Owned memory must be freed with its matching function**: strings with
+  `llev_string_free`, string arrays with `llev_string_array_free`, indexes with
+  `llev_index_free`, and query cursors with `llev_query_cursor_free`.
+- **Query match views are borrowed**, not owned. Their arrays and term bytes
+  remain valid only until the next advance on the same cursor or cursor release.
 - **Freed pointers must not be reused** (no use-after-free, no double-free).
 
 Violating the contract is undefined behaviour. Memory safety across this boundary
-is the **caller's** responsibility; the Rust side upholds its half (it never hands
-back a dangling pointer and validates nullness where it can).
+is the **caller's** responsibility; the Rust side validates required nullness,
+catches unwinds at the ABI boundary, and keeps borrowed views alive for the
+documented lifetime.
 
 ## 5 · WASM — sandboxed, but validate sizes at the host
 

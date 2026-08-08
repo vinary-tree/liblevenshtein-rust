@@ -1,0 +1,16 @@
+name = "vinary-tree-liblevenshtein"
+version = "0.10.0"
+license = "Apache-2.0"
+author = "Dylon Edwards"
+maintainer = "Dylon Edwards <dylon.devo@gmail.com>"
+description = "Snapshot-consistent streaming Levenshtein search"
+
+[library]
+source-dir = "src"
+
+[dependencies]
+vinary-tree-interop = { path = "../../vinary-tree-interop/bindings/fortran" }
+
+[build]
+link = ["liblevenshtein"]
+module-naming = true

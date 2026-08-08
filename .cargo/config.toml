@@ -1,35 +1,18 @@
-# Cargo configuration for liblevenshtein
+# Cargo configuration for liblevenshtein.
 #
-# This configuration sets default build flags required by transitive dependencies
-# (specifically PathMap's gxhash) which require AES and SSE2 CPU intrinsics.
-
-[build]
-# Use native CPU features for optimal performance
-# This is equivalent to: RUSTFLAGS="-C target-cpu=native"
-rustflags = ["-C", "target-cpu=native"]
-
-# Alternative: If you need to support CPUs without native optimizations,
-# you can use specific features instead:
-# rustflags = ["-C", "target-feature=+aes,+sse2"]
-
-[target.x86_64-unknown-linux-gnu]
-# Platform-specific flags can be added here if needed
-rustflags = ["-C", "target-cpu=native"]
+# Release artifacts deliberately use each Rust target's portable CPU baseline.
+# Never set target-cpu=native here: doing so can emit instructions unavailable
+# on another Intel/AMD machine and makes cross-compilation non-reproducible.
 
 [target.wasm32-unknown-unknown]
 # getrandom 0.3+ removed the `js` feature; the web/JS backend is now selected
 # by the `getrandom_backend="wasm_js"` cfg in addition to the crate's `wasm_js`
 # feature (enabled in Cargo.toml). Required for `--features wasm` to build for
-# wasm32-unknown-unknown. Note: `target-cpu=native` is intentionally NOT applied
-# here (it is invalid for wasm).
+# wasm32-unknown-unknown.
 rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
 
-# Note: With this configuration, you no longer need to set RUSTFLAGS manually:
-# ✅ cargo build                  (works automatically)
-# ✅ cargo test                   (works automatically)
-# ✅ cargo run                    (works automatically)
-#
-# The RUSTFLAGS environment variable will override this configuration if set.
+# Developers may opt into local-machine-only benchmark builds with
+# `RUSTFLAGS="-C target-cpu=native" cargo bench`; shipped libraries must not.
 
 # Cargo aliases for code coverage (requires cargo-llvm-cov: cargo install cargo-llvm-cov)
 [alias]

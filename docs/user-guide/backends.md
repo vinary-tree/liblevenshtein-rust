@@ -205,7 +205,7 @@ println!("Nodes after minimization: {}", dict.node_count());
 - **Query**: Good (wait-free reads, no blocking)
 - **Memory**: Low (maintains minimization)
 - **Updates**: ✅ Yes (**lock-free** reads; CAS writes)
-- **Concurrency**: Reads are wait-free; writes use lock-free CAS (compare-and-swap) loops via per-node `ArcSwap<EdgeList>` for copy-on-write edge mutation
+- **Concurrency**: Reads are wait-free over one immutable root revision; writes path-copy the affected route and CAS-publish a replacement revision
 
 **When to use:**
 - High-concurrency workloads where updates and queries interleave heavily from many threads
@@ -213,8 +213,8 @@ println!("Nodes after minimization: {}", dict.node_count());
 - You prefer the `u64`-labelled variant of the shared lock-free DAWG core
 
 Both `DynamicDawg` and `DynamicDawgU64` are fully lock-free for reads — they share the
-same `LockFreeDawg` core (reads `load()` a per-node `ArcSwap<EdgeList>` snapshot; writes
-use lock-free `compare_exchange` loops). They differ only in the edge-label width:
+same `LockFreeDawg` core (a reader retains one immutable root; writes use path-copying
+and a root `compare_exchange` loop). They differ only in the edge-label width:
 `DynamicDawg` uses a 1-byte `u8` label, `DynamicDawgU64` a wider `u64` label (more label
 space at some extra memory). See [Thread Safety](thread-safety.md) for the concurrency model.
 

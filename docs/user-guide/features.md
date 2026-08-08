@@ -232,7 +232,7 @@ All dictionary implementations are thread-safe, with **lock-free reads** (a read
 blocks on a writer):
 
 - **PathMapDictionary**: `Arc<ArcSwap<PathMapState>>` — lock-free reads; writes publish a new state by atomic swap
-- **DynamicDawg**: `LockFreeDawg` core — lock-free reads; writes via per-node `compare_exchange`
+- **DynamicDawg**: immutable `LockFreeDawg` revisions — wait-free reads; writers path-copy and CAS-publish a new root
 - **Transducer**: Clone-cheap, can be shared across threads
 
 See [Thread Safety](thread-safety.md) for the full per-backend concurrency model.

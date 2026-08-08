@@ -3,7 +3,7 @@
 **Status: Archived — preserved reference, not maintained.**
 
 These are the original in-repo deep-dive chapters for two data structures that were extracted to
-the **[libdictenstein](https://github.com/f1r3fly-io/libdictenstein)** crate, which now owns their
+the **[libdictenstein](https://github.com/vinary-tree/libdictenstein)** crate, which now owns their
 canonical, maintained theory documentation. They were moved here (verbatim) during the 2026-07-12
 documentation campaign when the live [`docs/theory/`](../../theory/) pages were trimmed to concise
 **integration pointers**.

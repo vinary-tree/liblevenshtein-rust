@@ -6,71 +6,66 @@
 //!
 //! # Memory Management
 //!
-//! All strings returned by FFI functions must be freed using
-//! [`llev_string_free`](crate::ffi::llev_string_free).
-//! All arrays returned must be freed using their specific free function.
+//! Owned strings returned by the legacy string helpers must be freed using
+//! [`llev_string_free`](crate::ffi::llev_string_free). Query matches and their
+//! UTF-8 term bytes are borrowed from a cursor and are invalidated by its next
+//! advance; they must never be freed by the caller.
 //!
 //! # Safety
 //!
 //! All FFI functions are unsafe as they operate on raw pointers. Callers must:
-//! - Ensure pointers are valid and non-null
+//! - Ensure required pointers are valid and non-null
 //! - Ensure length-bearing buffers are valid for their provided byte length
 //! - Free returned memory using the appropriate free function
+//! - Treat cursor match views as borrowed storage
 //! - Not use freed pointers
 //!
 //! # Example (C)
 //!
 //! ```c
 //! #include <liblevenshtein.h>
+//! #include <stdio.h>
 //!
 //! int main() {
 //!     // Calculate distance
 //!     size_t dist = llev_distance("hello", 5, "helo", 4);
 //!     printf("Distance: %zu\n", dist);
 //!
-//!     // Create dictionary
-//!     const char* terms[] = {"hello", "help", "world"};
-//!     LlevDictionary* dict = llev_dict_new(terms, 3);
+//!     LlevIndex* index = NULL;
+//!     uint8_t inserted = 0;
+//!     llev_index_new(&index);
+//!     llev_index_insert(index, "hello", 5, 1, 7, &inserted);
 //!
-//!     // Create transducer
-//!     LlevTransducer* trans = llev_transducer_new(dict, LLEV_ALGORITHM_STANDARD);
-//!
-//!     // Query
-//!     LlevCandidateArray results = llev_transducer_query(trans, "helo", 4, 2);
-//!     for (size_t i = 0; i < results.len; i++) {
-//!         printf("%s: %zu\n", results.data[i].term, results.data[i].distance);
+//!     // Query lazily; every returned match is borrowed from this cursor.
+//!     LlevQueryCursor* cursor = NULL;
+//!     llev_index_query(index, "helo", 4, 2, LLEV_ALGORITHM_STANDARD,
+//!                      LLEV_QUERY_ORDER_TRAVERSAL, &cursor);
+//!     const LlevMatch* match = NULL;
+//!     while (llev_query_cursor_next(cursor, &match) == LLEV_STATUS_OK) {
+//!         printf("%.*s: %zu\n", (int)match->term_len, match->term,
+//!                match->distance);
 //!     }
 //!
-//!     // Cleanup
-//!     llev_candidates_free(results);
-//!     llev_transducer_free(trans);
-//!     llev_dict_free(dict);
+//!     llev_query_cursor_free(cursor);
+//!     llev_index_free(index);
 //!
 //!     return 0;
 //! }
 //! ```
 
 mod distance;
+mod generated;
+mod index;
+mod phonetic;
 mod string;
 
 pub use distance::*;
+pub use generated::*;
+pub use index::*;
+pub use phonetic::*;
 pub use string::*;
 
 use std::{ffi::c_char, slice, str};
-
-/// Algorithm type for transducers.
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum LlevAlgorithm {
-    /// Standard Levenshtein (insert, delete, substitute)
-    Standard = 0,
-    /// Optimal string alignment (restricted Damerau; adds adjacent transposition)
-    Transposition = 1,
-    /// Merge and split operations
-    MergeAndSplit = 2,
-    /// Unrestricted Damerau–Levenshtein edit scripts
-    DamerauLevenshtein = 3,
-}
 
 impl From<LlevAlgorithm> for crate::transducer::Algorithm {
     fn from(algo: LlevAlgorithm) -> Self {

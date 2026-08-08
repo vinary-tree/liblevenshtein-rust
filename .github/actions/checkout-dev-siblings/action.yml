@@ -1,6 +1,7 @@
 name: Checkout dev sibling crates
 description: >
-  Clone the in-development sibling crates (llattice, libdictenstein) into the
+  Clone the in-development related crates (llattice, libdictenstein,
+  lling-llang, duallity) into the
   workspace parent directory so liblevenshtein's `path = "../..."` dependencies
   resolve against their development versions (mirroring the local checkout
   layout). This is for development / CI workflows only — release and other
@@ -12,6 +13,22 @@ inputs:
     description: Git ref (branch, tag, or SHA) to check out for the sibling crates.
     required: false
     default: master
+  llattice-ref:
+    description: Exact llattice ref; defaults to `ref`.
+    required: false
+    default: ""
+  libdictenstein-ref:
+    description: Exact libdictenstein ref; defaults to `ref`.
+    required: false
+    default: ""
+  lling-llang-ref:
+    description: Exact lling-llang ref; defaults to `ref`.
+    required: false
+    default: ""
+  duallity-ref:
+    description: Exact duallity ref; defaults to `ref`.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -21,22 +38,36 @@ runs:
       run: |
         set -euo pipefail
         # The main repo is checked out at $GITHUB_WORKSPACE; its parent is where
-        # `../libdictenstein` and `../llattice` resolve to. llattice must be
-        # present too because libdictenstein itself depends on it by path.
+        # related path dependencies resolve to. The order is dependency order:
+        # libdictenstein consumes llattice, lling-llang consumes both dictionary
+        # crates, and duallity consumes the three lower layers.
         parent="$(dirname "$GITHUB_WORKSPACE")"
-        for repo in llattice libdictenstein; do
+        for repo in llattice libdictenstein lling-llang duallity; do
+          case "$repo" in
+            llattice) selected_ref="${{ inputs.llattice-ref }}" ;;
+            libdictenstein) selected_ref="${{ inputs.libdictenstein-ref }}" ;;
+            lling-llang) selected_ref="${{ inputs.lling-llang-ref }}" ;;
+            duallity) selected_ref="${{ inputs.duallity-ref }}" ;;
+          esac
+          if [ -z "$selected_ref" ]; then
+            selected_ref="${{ inputs.ref }}"
+          fi
           dest="$parent/$repo"
           if [ -d "$dest/.git" ]; then
-            echo "::group::Updating $repo to ${{ inputs.ref }}"
-            git -C "$dest" fetch --depth 1 origin "${{ inputs.ref }}"
+            echo "::group::Updating $repo to $selected_ref"
+            git -C "$dest" fetch --depth 1 origin "$selected_ref"
             git -C "$dest" checkout -f FETCH_HEAD
             echo "::endgroup::"
           else
-            echo "::group::Cloning $repo @ ${{ inputs.ref }}"
-            git clone --depth 1 --branch "${{ inputs.ref }}" \
+            echo "::group::Cloning $repo @ $selected_ref"
+            git clone --depth 1 --branch "$selected_ref" \
               "https://github.com/vinary-tree/$repo.git" "$dest"
             echo "::endgroup::"
           fi
         done
         echo "Sibling crates available under $parent:"
-        ls -1d "$parent"/llattice "$parent"/libdictenstein
+        ls -1d \
+          "$parent"/llattice \
+          "$parent"/libdictenstein \
+          "$parent"/lling-llang \
+          "$parent"/duallity

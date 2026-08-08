@@ -1,0 +1,27 @@
+[package]
+name = "vinary-tree-js-runtime"
+version = "0.10.0"
+edition = "2021"
+rust-version = "1.95"
+license-file = "../../../LICENSE"
+repository = "https://github.com/vinary-tree/liblevenshtein-rust"
+description = "Single-instance JavaScript runtime for related Vinary Tree libraries"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+liblevenshtein = { path = "../../..", version = "0.10.0", features = ["bindings-phonetic"] }
+libdictenstein = { path = "../../../../libdictenstein", version = "0.2.1", features = ["bindings-core"] }
+lling-llang = { path = "../../../../lling-llang", version = "0.2.0", default-features = false, features = ["bindings-core"] }
+duallity = { path = "../../../../duallity", version = "0.3.0", features = ["bindings-core"] }
+vinary-tree-interop = { path = "../../../vinary-tree-interop", version = "0.1.0" }
+wasm-bindgen = "=0.2.100"
+js-sys = "=0.3.77"
+console_error_panic_hook = "0.1"
+
+[features]
+default = ["browser"]
+browser = []
+wasi = ["libdictenstein/persistent-artrie", "liblevenshtein/serialization"]

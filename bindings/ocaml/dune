@@ -1,0 +1,10 @@
+(library
+ (name vinary_tree_liblevenshtein)
+ (public_name vinary-tree-liblevenshtein)
+ (libraries vinary-tree-interop)
+ (foreign_stubs
+  (language c)
+  (names liblevenshtein_stubs)
+  (include_dirs include)
+  (flags (:standard -std=c17 -Wall -Wextra -Werror)))
+ (c_library_flags -lliblevenshtein))

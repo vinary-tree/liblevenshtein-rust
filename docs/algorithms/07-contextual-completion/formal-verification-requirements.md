@@ -669,7 +669,7 @@ If you are using liblevenshtein's contextual completion engine and require forma
 
 ## Contact and Contributing
 
-**Questions**: Open an issue on [GitHub](https://github.com/f1r3fly-io/liblevenshtein-rust) with `[formal-verification]` tag
+**Questions**: Open an issue on [GitHub](https://github.com/vinary-tree/liblevenshtein-rust) with `[formal-verification]` tag
 
 **Contributing Proofs**:
 1. Fork repository

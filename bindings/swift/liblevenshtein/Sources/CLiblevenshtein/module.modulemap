@@ -1,0 +1,5 @@
+module CLiblevenshtein [system] {
+  header "CLiblevenshtein.h"
+  link "liblevenshtein"
+  export *
+}

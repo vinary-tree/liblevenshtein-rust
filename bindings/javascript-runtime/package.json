@@ -1,0 +1,63 @@
+{
+  "name": "@vinary-tree/vinary-tree",
+  "version": "0.10.0",
+  "description": "Single-instance JavaScript runtime for related Vinary Tree libraries",
+  "author": {
+    "name": "Dylon Edwards",
+    "email": "dylon.devo@gmail.com"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinary-tree/liblevenshtein-rust.git",
+    "directory": "bindings/javascript-runtime"
+  },
+  "engines": { "node": ">=22.14" },
+  "dependencies": { "@vinary-tree/interop": "0.1.0" },
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./native.mjs",
+      "require": "./native.cjs"
+    },
+    "./wasm": {
+      "types": "./index.d.ts",
+      "import": "./wasm.mjs"
+    },
+    "./wasi": {
+      "types": "./wasi.d.ts",
+      "import": "./wasi.mjs"
+    }
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "index.d.ts",
+    "runtime-factory.mjs",
+    "native.mjs",
+    "native.cjs",
+    "native/prebuilds/",
+    "wasm.mjs",
+    "wasi-runtime.mjs",
+    "wasi.mjs",
+    "wasi.d.ts",
+    "generated/wasm/vinary_tree.js",
+    "generated/wasm/vinary_tree_bg.wasm",
+    "generated/wasi/vinary_tree.wasm"
+  ],
+  "publishConfig": { "access": "public", "provenance": true },
+  "scripts": {
+    "build:native": "node-gyp rebuild --directory native --nodedir=/usr",
+    "build:native:release": "node-gyp rebuild --directory native --nodedir=/usr -- -Dvinary_tree_profile=release",
+    "stage:native": "node scripts/stage-native-prebuild.mjs",
+    "build:wasm": "wasm-pack build rust --target web --out-dir ../generated/wasm --out-name vinary_tree",
+    "build:wasi": "cargo build --manifest-path rust/Cargo.toml --release --target wasm32-wasip1 --no-default-features --features wasi && mkdir -p generated/wasi && cp ../../target/wasm32-wasip1/release/vinary_tree_js_runtime.wasm generated/wasi/vinary_tree.wasm && wasm-opt -O3 --strip-debug generated/wasi/vinary_tree.wasm -o generated/wasi/vinary_tree.wasm",
+    "test:native": "node --test test/native.test.mjs",
+    "test": "node --test test/browser-wasm.test.mjs test/wasi.test.mjs",
+    "stage:license": "node scripts/stage-license.mjs",
+    "prepack": "npm run stage:license && npm run build:wasm && npm test"
+  }
+}

@@ -1,0 +1,15 @@
+name = "vinary-tree-fortran-integration"
+version = "0.1.0"
+license = "Apache-2.0"
+author = "Dylon Edwards"
+maintainer = "Dylon Edwards <dylon.devo@gmail.com>"
+description = "Cross-project Fortran binding conformance tests"
+
+[dependencies]
+vinary-tree-liblevenshtein = { path = ".." }
+vinary-tree-libdictenstein = { path = "../../../../libdictenstein/bindings/fortran" }
+
+[[test]]
+name = "cross-project-snapshot"
+source-dir = "test"
+main = "test_cross_project.f90"

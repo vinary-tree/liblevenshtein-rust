@@ -1,0 +1,7 @@
+go 1.25
+
+use (
+	./bindings/go
+	./vinary-tree-interop/bindings/go
+	../libdictenstein/bindings/go
+)

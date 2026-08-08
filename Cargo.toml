@@ -1,5 +1,5 @@
 [workspace]
-members = ["."]
+members = [".", "vinary-tree-interop", "bindings/javascript-runtime/rust"]
 # The proc-macro crate depends on this package to reuse the phonetic parser. Building both as
 # workspace members makes Cargo compile two root-package units that emit the same fixed-name
 # cdylib artifacts. Keep the macro crate independently verified instead of accepting collisions.
@@ -25,8 +25,14 @@ categories = ["algorithms", "data-structures", "text-processing"]
 readme = "README.md"
 
 [dependencies]
+# Stable C-compatible resource and provider ABI shared by the modular
+# vinary-tree language bindings. Keep this crate generic and dependency-free so
+# libdictenstein, liblevenshtein, lling-llang, and duallity can exchange live
+# objects without a Rust dynamic-library ABI dependency.
+vinary-tree-interop = { path = "vinary-tree-interop", version = "0.1.0", optional = true }
+
 # Dictionary implementations (extracted to libdictenstein crate)
-libdictenstein = { path = "../libdictenstein", version = "0.2", features = ["parking_lot"] }
+libdictenstein = { path = "../libdictenstein", version = "0.2.1", features = ["parking_lot"] }
 
 # PathMap as an optional dictionary backend
 # NOTE: PathMap uses a git dependency and is NOT available when installing from crates.io
@@ -94,8 +100,8 @@ prost-build = { version = "0.14", optional = true }
 [lib]
 name = "liblevenshtein"
 path = "src/lib.rs"
-# Support both static (rlib) and dynamic (cdylib) library builds
-crate-type = ["rlib", "cdylib"]
+# Rust consumers use the rlib; native packages ship both shared and static C ABI libraries.
+crate-type = ["rlib", "cdylib", "staticlib"]
 
 [[bench]]
 name = "benchmarks"
@@ -404,6 +410,8 @@ inherits = "release"
 
 [features]
 default = ["parking_lot"]
+bindings-core = ["dep:vinary-tree-interop"]
+bindings-phonetic = ["bindings-core", "phonetic-rules"]
 pathmap-backend = ["pathmap", "libdictenstein/pathmap-backend"]
 serialization = ["serde", "bincode", "libdictenstein/serialization"]
 protobuf = ["prost", "bytes", "prost-build", "serialization", "libdictenstein/protobuf"]
@@ -430,13 +438,45 @@ eviction-opt-memory = ["eviction-compact-metadata"]
 persistent-artrie = ["memmap2", "parking_lot", "serde", "bincode", "libdictenstein/persistent-artrie"]
 
 # WASM support - enables wasm-bindgen bindings for JavaScript
-wasm = ["wasm-bindgen", "serde-wasm-bindgen", "console_error_panic_hook", "getrandom", "js-sys", "serde"]
+wasm = ["bindings-core", "wasm-bindgen", "serde-wasm-bindgen", "console_error_panic_hook", "getrandom", "js-sys", "serde"]
 # WASM with full phonetic support
 wasm-phonetic = ["wasm", "phonetic-rules"]
 # C FFI support - exposes raw C-compatible functions (for WASI or native FFI)
-ffi = []
+ffi = ["bindings-core"]
 # Combined WASM + FFI
 wasm-ffi = ["wasm", "ffi"]
+
+# Language-facing aliases. Managed packages remain separate distributions;
+# these names select only the Rust export boundary they consume.
+native-bindings-full = [
+    "ffi",
+    "bindings-phonetic",
+]
+# Test-only cross-project producer/consumer surface. This is deliberately not
+# included by a publishable language alias: liblevenshtein consumes the ABI and
+# does not export libdictenstein's constructors or CRUD.
+binding-integration-tests = ["native-bindings-full", "libdictenstein/bindings-core"]
+binding-persistent-integration-tests = [
+    "binding-integration-tests",
+    "serialization",
+    "libdictenstein/persistent-artrie",
+]
+c-bindings = ["native-bindings-full"]
+cpp-bindings = ["native-bindings-full"]
+python-bindings = ["native-bindings-full"]
+jvm-bindings = ["native-bindings-full"]
+clojure-bindings = ["jvm-bindings"]
+dotnet-bindings = ["native-bindings-full"]
+go-bindings = ["native-bindings-full"]
+swift-bindings = ["native-bindings-full"]
+ruby-bindings = ["native-bindings-full"]
+fortran-bindings = ["native-bindings-full"]
+ocaml-bindings = ["native-bindings-full"]
+haskell-bindings = ["native-bindings-full"]
+lua-bindings = ["native-bindings-full"]
+javascript-bindings = ["wasm", "bindings-phonetic"]
+typescript-bindings = ["javascript-bindings"]
+clojurescript-bindings = ["javascript-bindings"]
 
 # For local development: uncomment this section to use a local PathMap checkout
 # instead of the GitHub repository. This allows you to test changes to PathMap

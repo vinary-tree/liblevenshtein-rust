@@ -1,0 +1,48 @@
+cabal-version: 3.6
+name: vinary-tree-liblevenshtein
+version: 0.10.0
+synopsis: Fast streaming Levenshtein automata for Haskell
+description: Snapshot-consistent, bounded-batch bindings to liblevenshtein.
+category: Text
+license: Apache-2.0
+license-file: LICENSE
+author: Dylon Edwards
+maintainer: dylon.devo@gmail.com
+build-type: Simple
+
+flag strict
+  description: Treat compiler warnings as errors during development and CI.
+  default: False
+  manual: True
+
+library
+  exposed-modules: VinaryTree.Liblevenshtein
+  hs-source-dirs: src
+  pkgconfig-depends: liblevenshtein
+  default-language: GHC2021
+  ghc-options: -Wall -Wcompat
+  if flag(strict)
+    ghc-options: -Werror
+  build-depends:
+    base >=4.18 && <5,
+    bytestring >=0.11 && <0.13,
+    text >=2.0 && <2.2,
+    vinary-tree-interop >=0.1 && <0.2
+
+test-suite snapshot
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: test
+  default-language: GHC2021
+  ghc-options: -Wall -Wcompat -threaded
+  if flag(strict)
+    ghc-options: -Werror
+  build-depends:
+    base,
+    bytestring,
+    directory,
+    filepath,
+    text,
+    vinary-tree-interop,
+    vinary-tree-libdictenstein,
+    vinary-tree-liblevenshtein

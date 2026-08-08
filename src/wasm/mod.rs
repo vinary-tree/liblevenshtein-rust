@@ -6,14 +6,12 @@
 //! # Features
 //!
 //! - **Distance Functions**: `levenshtein()`, `damerau_levenshtein()`
-//! - **Dictionaries**: `WasmDoubleArrayTrie`, `WasmDynamicDawg`
-//! - **Transducers**: `WasmTransducer` for fuzzy search
 //! - **Phonetic Rules**: `WasmRuleSet` (with `wasm-phonetic` feature)
 //!
 //! # Usage from JavaScript
 //!
 //! ```javascript
-//! import init, { WasmTransducer, levenshtein } from 'liblevenshtein';
+//! import init, { levenshtein } from '@vinary-tree/vinary-tree/liblevenshtein';
 //!
 //! async function main() {
 //!     await init();
@@ -21,24 +19,18 @@
 //!     // Distance functions
 //!     console.log(levenshtein("hello", "helo")); // 1
 //!
-//!     // Fuzzy search with transducer
-//!     const trans = new WasmTransducer(["hello", "help", "world"], "standard");
-//!     const results = trans.query("helo", 2);
-//!     console.log(results); // [{ term: "hello", distance: 1 }]
+//!     // Cross-project dictionary/automaton bindings are linked by the
+//!     // @vinary-tree/vinary-tree umbrella runtime so every facade shares one
+//!     // WebAssembly instance and one resource table.
 //! }
 //! ```
 
-mod dictionary;
 mod distance;
-mod terms;
-mod transducer;
 
 #[cfg(feature = "phonetic-rules")]
 mod phonetic;
 
-pub use dictionary::*;
 pub use distance::*;
-pub use transducer::*;
 
 #[cfg(feature = "phonetic-rules")]
 pub use phonetic::*;

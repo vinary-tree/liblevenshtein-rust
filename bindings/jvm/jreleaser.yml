@@ -1,0 +1,28 @@
+project:
+  name: liblevenshtein
+  version: 0.10.0
+  description: Snapshot-consistent streaming fuzzy search through the Java FFM API
+  authors:
+    - Dylon Edwards
+  license: Apache-2.0
+  links:
+    homepage: https://github.com/vinary-tree/liblevenshtein-rust
+  java:
+    groupId: io.vinarytree
+    artifactId: liblevenshtein
+
+signing:
+  pgp:
+    active: RELEASE
+    armored: true
+
+deploy:
+  maven:
+    mavenCentral:
+      sonatype:
+        active: RELEASE
+        url: https://central.sonatype.com/api/v1/publisher
+        authorization: BASIC
+        applyMavenCentralRules: true
+        stagingRepositories:
+          - build/staging-deploy

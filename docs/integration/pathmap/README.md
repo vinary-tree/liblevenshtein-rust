@@ -5,7 +5,7 @@
 **Version**: v0.8.x (PhoneticNormalizedDictionary API)
 
 > **Note**: PathMap dictionary implementation details have been extracted to the
-> [libdictenstein](https://github.com/f1r3fly-io/libdictenstein) crate.
+> [libdictenstein](https://github.com/vinary-tree/libdictenstein) crate.
 > See [libdictenstein/docs/integration/pathmap/](../../../../libdictenstein/docs/integration/pathmap/README.md)
 > for PathMap dictionary internals.
 >

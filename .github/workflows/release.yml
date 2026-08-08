@@ -1,4 +1,4 @@
-name: Release library
+name: Release library and language bindings
 
 on:
   push:
@@ -6,66 +6,1084 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: aarch64-apple-darwin
-    runs-on: ${{ matrix.os }}
+  binding-contract:
+    name: Verify generated binding contract
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/pin-siblings-cratesio
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v6
         with:
-          targets: ${{ matrix.target }}
-      - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - if: runner.os == 'macOS'
-        run: brew install protobuf
-      - run: cargo build --release --lib --all-features --target ${{ matrix.target }}
-      - name: Archive rlib and cdylib
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95
+      - uses: ./.github/actions/pin-siblings-cratesio
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          llattice-ref: v0.1.0
+          libdictenstein-ref: v0.2.1
+          lling-llang-ref: v0.2.0
+          duallity-ref: v0.3.0
+      - run: python3 scripts/check-bindings.py
+      - name: Verify release tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
-          mkdir dist
-          cp target/${{ matrix.target }}/release/libliblevenshtein.rlib dist/
-          find target/${{ matrix.target }}/release -maxdepth 1 \
-            \( -name 'libliblevenshtein.so' -o -name 'libliblevenshtein.dylib' \) \
-            -exec cp {} dist/ \;
-          tar -czf liblevenshtein-${{ matrix.target }}.tar.gz -C dist .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: liblevenshtein-${{ matrix.target }}
-          path: liblevenshtein-${{ matrix.target }}.tar.gz
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
+          test "v$version" = "$GITHUB_REF_NAME"
+      - run: cargo test --locked --features native-bindings-full --test query_start_snapshot_semantics
+      - run: >-
+          cargo test --locked --features native-bindings-full
+          --test binding_snapshot_semantics
+          --test ffi_resource_snapshot_semantics
 
-  publish:
-    needs: build
+  native:
+    name: Native ${{ matrix.target }}
+    needs: binding-contract
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            node-platform: linux-x64
+            dotnet-rid: linux-x64
+            ruby-platform: linux-x64
+            jvm-platform: linux-x86_64
+            jvm-file: libliblevenshtein.so
+            package-file: lib/libliblevenshtein.so
+            static-package-file: lib/libliblevenshtein.a
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            node-platform: linux-arm64
+            dotnet-rid: linux-arm64
+            ruby-platform: linux-arm64
+            jvm-platform: linux-aarch64
+            jvm-file: libliblevenshtein.so
+            package-file: lib/libliblevenshtein.so
+            static-package-file: lib/libliblevenshtein.a
+          - runner: macos-26
+            target: aarch64-apple-darwin
+            node-platform: darwin-arm64
+            dotnet-rid: osx-arm64
+            ruby-platform: darwin-arm64
+            jvm-platform: macos-aarch64
+            jvm-file: libliblevenshtein.dylib
+            package-file: lib/libliblevenshtein.dylib
+            static-package-file: lib/libliblevenshtein.a
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            node-platform: win32-x64
+            dotnet-rid: win-x64
+            ruby-platform: windows-x64
+            jvm-platform: windows-x86_64
+            jvm-file: liblevenshtein.dll
+            package-file: bin/liblevenshtein.dll
+            static-package-file: lib/liblevenshtein.lib
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95
+        with:
+          targets: ${{ matrix.target }}
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          llattice-ref: v0.1.0
+          libdictenstein-ref: v0.2.1
+          lling-llang-ref: v0.2.0
+          duallity-ref: v0.3.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: cargo build --locked --release --lib --features native-bindings-full
+      - run: cargo build --release --manifest-path ../libdictenstein/Cargo.toml --features ffi
+      - run: >-
+          cargo build --release --manifest-path ../lling-llang/Cargo.toml
+          --no-default-features --features ffi
+      - run: >-
+          cargo build --release --manifest-path ../duallity/Cargo.toml
+          --no-default-features --features ffi
+      - name: Stage relocatable C/C++ package
+        shell: bash
+        run: |
+          bash scripts/stage-native-package.sh \
+            "${{ matrix.target }}" \
+            "target/release" \
+            dist
+      - name: Verify CMake package metadata
+        shell: bash
+        run: |
+          package_root=$(find dist -mindepth 1 -maxdepth 1 -type d -name 'liblevenshtein-*' -print -quit)
+          test -n "$package_root"
+          test -f "$package_root/lib/cmake/liblevenshtein/liblevenshteinConfig.cmake"
+          test -f "$package_root/${{ matrix.package-file }}"
+          test -f "$package_root/${{ matrix.static-package-file }}"
+      - name: Stage JVM native resource
+        shell: bash
+        run: |
+          package_root=$(find dist -mindepth 1 -maxdepth 1 -type d -name 'liblevenshtein-*' -print -quit)
+          test -n "$package_root"
+          mkdir -p "jvm-native/META-INF/native/${{ matrix.jvm-platform }}"
+          cp "$package_root/${{ matrix.package-file }}" \
+            "jvm-native/META-INF/native/${{ matrix.jvm-platform }}/${{ matrix.jvm-file }}"
+      - name: Stage .NET and Ruby native resources
+        shell: bash
+        run: |
+          package_root=$(find dist -mindepth 1 -maxdepth 1 -type d -name 'liblevenshtein-*' -print -quit)
+          test -n "$package_root"
+          mkdir -p "dotnet-native/runtimes/${{ matrix.dotnet-rid }}/native"
+          cp "$package_root/${{ matrix.package-file }}" \
+            "dotnet-native/runtimes/${{ matrix.dotnet-rid }}/native/${{ matrix.jvm-file }}"
+          mkdir -p "ruby-native/${{ matrix.ruby-platform }}"
+          cp "$package_root/${{ matrix.package-file }}" \
+            "ruby-native/${{ matrix.ruby-platform }}/${{ matrix.jvm-file }}"
+      - name: Build and test statically linked Node addon
+        shell: bash
+        working-directory: bindings/javascript-runtime
+        run: |
+          if [ "${{ runner.os }}" = Linux ]; then
+            node-gyp rebuild --directory native --nodedir=/usr -- -Dvinary_tree_profile=release
+          else
+            node-gyp rebuild --directory native -- -Dvinary_tree_profile=release
+          fi
+          npm run stage:native
+          npm run test:native
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.target }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: jvm-native-${{ matrix.jvm-platform }}
+          path: jvm-native/META-INF/native
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dotnet-native-${{ matrix.dotnet-rid }}
+          path: dotnet-native/runtimes
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ruby-native-${{ matrix.ruby-platform }}
+          path: ruby-native
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: node-prebuild-${{ matrix.node-platform }}
+          path: bindings/javascript-runtime/native/prebuilds
+          if-no-files-found: error
+
+  python-wheels:
+    name: Python wheel ${{ matrix.platform }}
+    needs: binding-contract
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux-x86_64
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            platform: linux-aarch64
+            arch: aarch64
+          - runner: macos-26
+            platform: macos-aarch64
+            arch: arm64
+          - runner: windows-2025
+            platform: windows-x86_64
+            arch: AMD64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95
+      - uses: ./.github/actions/pin-siblings-cratesio
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Build and test platform wheel
+        uses: pypa/cibuildwheel@v4.1.0
+        with:
+          package-dir: bindings/python
+          output-dir: wheelhouse
+        env:
+          CIBW_BUILD: cp310-*
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_BUILD_VERBOSITY: "1"
+          CIBW_TEST_REQUIRES: pytest
+          CIBW_BEFORE_TEST: >-
+            python -m pip install
+            {project}/vinary-tree-interop/bindings/python
+          CIBW_TEST_COMMAND: >-
+            python -m pytest -q {project}/bindings/python/tests
+          CIBW_BEFORE_ALL_LINUX: >-
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
+            sh -s -- -y --profile minimal --default-toolchain 1.95
+          CIBW_ENVIRONMENT_LINUX: >-
+            PATH=$HOME/.cargo/bin:$PATH
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-wheel-${{ matrix.platform }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  javascript-runtime-package:
+    name: npm related umbrella runtime
+    needs: [binding-contract, native]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          llattice-ref: v0.1.0
+          libdictenstein-ref: v0.2.1
+          lling-llang-ref: v0.2.0
+          duallity-ref: v0.3.0
+      - uses: dtolnay/rust-toolchain@1.95
+        with:
+          targets: wasm32-unknown-unknown, wasm32-wasip1
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - run: sudo apt-get update && sudo apt-get install -y binaryen
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: node-prebuild-*
+          path: bindings/javascript-runtime/native/prebuilds
+          merge-multiple: true
+      - name: Build portable runtimes and test the assembled package
+        working-directory: bindings/javascript-runtime
+        run: |
+          npm run build:wasm
+          npm run build:wasi
+          npm run test:native
+          npm test
+          npm pack --pack-destination ../../dist
+          archive=$(find ../../dist -maxdepth 1 -type f -name 'vinary-tree-vinary-tree-*.tgz' -print -quit)
+          test -n "$archive"
+          for required in \
+            LICENSE \
+            README.md \
+            generated/wasm/vinary_tree.js \
+            generated/wasm/vinary_tree_bg.wasm \
+            generated/wasi/vinary_tree.wasm \
+            native/prebuilds/linux-x64/vinary_tree_native.node \
+            native/prebuilds/linux-arm64/vinary_tree_native.node \
+            native/prebuilds/darwin-arm64/vinary_tree_native.node \
+            native/prebuilds/win32-x64/vinary_tree_native.node; do
+            tar -tf "$archive" | grep -Fx "package/$required"
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-runtime-package
+          path: dist/vinary-tree-vinary-tree-*.tgz
+          if-no-files-found: error
+
+  javascript-package:
+    name: npm package
+    needs: [binding-contract, native, javascript-runtime-package]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          llattice-ref: v0.1.0
+          libdictenstein-ref: v0.2.1
+          lling-llang-ref: v0.2.0
+          duallity-ref: v0.3.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          cli: latest
+      - uses: actions/download-artifact@v7
+        with:
+          name: node-prebuild-linux-x64
+          path: bindings/javascript-runtime/native/prebuilds
+      - name: Build, test, and pack npm artifact
+        working-directory: bindings/javascript
+        run: |
+          npm ci
+          npm run build
+          npm test
+          npm pack --pack-destination ../../dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-package
+          path: dist/*.tgz
+          if-no-files-found: error
+
+  javascript-interop-package:
+    name: npm interop package
+    needs: binding-contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Test and pack the shared resource package
+        working-directory: vinary-tree-interop/bindings/javascript
+        run: |
+          npm test
+          npm pack --pack-destination ../../../dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-interop-package
+          path: dist/vinary-tree-interop-*.tgz
+          if-no-files-found: error
+
+  python-interop-package:
+    name: Python interop package
+    needs: binding-contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - run: python -m pip install build
+      - run: >-
+          python -m build --wheel
+          --outdir dist
+          vinary-tree-interop/bindings/python
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-interop-package
+          path: dist/vinary_tree_interop-*.whl
+          if-no-files-found: error
+
+  jvm-package:
+    name: JVM FFM Maven package
+    needs: native
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: jvm-native-*
+          path: bindings/jvm/build/native-resources/META-INF/native
+          merge-multiple: true
+      - name: Stage the shared JVM interop artifact first
+        working-directory: bindings/jvm
+        run: >-
+          ./gradlew --no-daemon
+          -p ../../vinary-tree-interop/bindings/jvm
+          publishMavenJavaPublicationToStagingRepository
+          -PstagingRepository=${{ github.workspace }}/bindings/jvm/build/staging-deploy
+      - name: Test and stage Maven Central artifacts
+        working-directory: bindings/jvm
+        run: >-
+          ./gradlew --no-daemon
+          test javadoc verifyNativeResources
+          publishMavenJavaPublicationToStagingRepository
+      - uses: actions/upload-artifact@v7
+        with:
+          name: maven-staging
+          path: bindings/jvm/build/staging-deploy
+          if-no-files-found: error
+
+  clojure-package:
+    name: Clojure Clojars artifact
+    needs: jvm-package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          lein: 2.13.0
+      - uses: actions/download-artifact@v7
+        with:
+          name: maven-staging
+          path: maven-staging
+      - name: Install the exact staged JVM dependency locally
+        shell: bash
+        run: |
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
+          interop_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' vinary-tree-interop/Cargo.toml | head -n 1)
+          interop_repository="$HOME/.m2/repository/io/vinarytree/vinary-tree-interop/$interop_version"
+          mkdir -p "$interop_repository"
+          interop_jar=$(find maven-staging -type f -name "vinary-tree-interop-$interop_version.jar" -print -quit)
+          interop_pom=$(find maven-staging -type f -name "vinary-tree-interop-$interop_version.pom" -print -quit)
+          test -n "$interop_jar" && test -n "$interop_pom"
+          cp "$interop_jar" "$interop_repository/vinary-tree-interop-$interop_version.jar"
+          cp "$interop_pom" "$interop_repository/vinary-tree-interop-$interop_version.pom"
+          repository="$HOME/.m2/repository/io/vinarytree/liblevenshtein/$version"
+          mkdir -p "$repository"
+          jar=$(find maven-staging -type f -name "liblevenshtein-$version.jar" -print -quit)
+          pom=$(find maven-staging -type f -name "liblevenshtein-$version.pom" -print -quit)
+          test -n "$jar" && test -n "$pom"
+          cp "$jar" "$repository/liblevenshtein-$version.jar"
+          cp "$pom" "$repository/liblevenshtein-$version.pom"
+      - name: Test and build Clojure JAR and POM
+        working-directory: bindings/clojure
+        env:
+          JAVA_TOOL_OPTIONS: --enable-native-access=ALL-UNNAMED
+        run: lein 'do' clean, test, pom, jar
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clojure-package
+          path: |
+            bindings/clojure/pom.xml
+            bindings/clojure/target/liblevenshtein-clojure-*.jar
+          if-no-files-found: error
+
+  nuget-package:
+    name: NuGet package with platform runtimes
+    needs: native
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: dotnet-native-*
+          path: bindings/dotnet/native/runtimes
+          merge-multiple: true
+      - name: Pack the project artifact against the exact shared package
+        shell: bash
+        run: |
+          dotnet restore bindings/dotnet/src/VinaryTree.Liblevenshtein -p:NuGetAudit=false -m:1
+          dotnet pack bindings/dotnet/src/VinaryTree.Liblevenshtein \
+            --configuration Release --no-restore \
+            --output "$PWD/dist" -p:BuildInParallel=false
+          for rid in linux-x64 linux-arm64 osx-arm64 win-x64; do
+            unzip -l dist/VinaryTree.Liblevenshtein.*.nupkg | grep "runtimes/$rid/native/"
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nuget-package
+          path: dist/*.nupkg
+          if-no-files-found: error
+
+  rubygems-package:
+    name: RubyGem with platform runtimes
+    needs: native
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.5"
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: ruby-native-*
+          path: bindings/ruby/lib/vinary_tree/liblevenshtein/native
+          merge-multiple: true
+      - name: Build and inspect the portable gem
+        working-directory: bindings/ruby
+        run: |
+          gem build vinary-tree-liblevenshtein.gemspec
+          for platform in linux-x64 linux-arm64 darwin-arm64 windows-x64; do
+            tar -tf vinary-tree-liblevenshtein-*.gem >/dev/null
+            test -f "lib/vinary_tree/liblevenshtein/native/$platform/$(case "$platform" in darwin-*) echo libliblevenshtein.dylib ;; windows-*) echo liblevenshtein.dll ;; *) echo libliblevenshtein.so ;; esac)"
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rubygems-package
+          path: bindings/ruby/*.gem
+          if-no-files-found: error
+
+  hackage-package:
+    name: Hackage source packages
+    needs: binding-contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.14.1"
+          cabal-version: latest
+      - name: Validate and build the project sdist
+        shell: bash
+        run: |
+          mkdir -p "$PWD/dist"
+          pushd vinary-tree-interop/bindings/haskell
+          cabal check
+          popd
+          pushd bindings/haskell
+          cabal check
+          cabal sdist --ignore-project --output-directory="$OLDPWD/dist"
+          popd
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hackage-package
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  fpm-package:
+    name: fpm registry package validation
+    needs: binding-contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: fortran-lang/setup-fpm@v10
+      - name: Stage clean registry packages and validate upload metadata
+        run: |
+          scripts/stage-fpm-package.sh interop "$RUNNER_TEMP/fpm-interop"
+          scripts/stage-fpm-package.sh liblevenshtein "$RUNNER_TEMP/fpm-liblevenshtein"
+          pushd "$RUNNER_TEMP/fpm-interop"
+          fpm build --dump fpm_model.json
+          fpm publish --token validation --dry-run
+          popd
+          mkdir -p "$RUNNER_TEMP/fpm-registry/vinary-tree/vinary-tree-interop/0.1.0"
+          cp -R "$RUNNER_TEMP/fpm-interop/src" \
+            "$RUNNER_TEMP/fpm-registry/vinary-tree/vinary-tree-interop/0.1.0/src"
+          cp "$RUNNER_TEMP/fpm-interop/fpm.toml" \
+            "$RUNNER_TEMP/fpm-registry/vinary-tree/vinary-tree-interop/0.1.0/fpm.toml"
+          printf '[registry]\npath = "%s"\n' "$RUNNER_TEMP/fpm-registry" \
+            > "$RUNNER_TEMP/fpm-registry.toml"
+          pushd "$RUNNER_TEMP/fpm-liblevenshtein"
+          fpm build --dump fpm_model.json \
+            --config-file "$RUNNER_TEMP/fpm-registry.toml"
+          fpm publish --token validation --dry-run \
+            --config-file "$RUNNER_TEMP/fpm-registry.toml"
+          popd
+
+  luarocks-package:
+    name: LuaRocks metadata validation
+    needs: binding-contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y luarocks
+      - run: luarocks lint bindings/lua/vinary-tree-liblevenshtein-0.10.0-1.rockspec
+      - uses: actions/upload-artifact@v7
+        with:
+          name: luarocks-package
+          path: bindings/lua/vinary-tree-liblevenshtein-0.10.0-1.rockspec
+          if-no-files-found: error
+
+  opam-package:
+    name: opam source package
+    needs: binding-contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.4.0"
+      - name: Build and lint the standalone source package
+        run: |
+          scripts/stage-ocaml-package.sh "$RUNNER_TEMP/opam-package"
+          opam lint "$RUNNER_TEMP/opam-package/opam"
+          tar -tjf "$RUNNER_TEMP/opam-package/vinary-tree-liblevenshtein-0.10.0.tbz"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: opam-package
+          path: |
+            ${{ runner.temp }}/opam-package/opam
+            ${{ runner.temp }}/opam-package/vinary-tree-liblevenshtein-0.10.0.tbz
+          if-no-files-found: error
+
+  crates-io:
+    name: Publish Rust crate
+    needs: [native, python-wheels, javascript-package, jvm-package, clojure-package]
     if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: crates-io
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95
       - uses: ./.github/actions/pin-siblings-cratesio
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo publish --locked
+      - name: Publish the consumer crate against the immutable shared ABI
+        run: |
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if cargo publish --locked -p liblevenshtein; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 12 ]; then exit 1; fi
+            sleep 10
+          done
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  github-release:
-    needs: build
+  nuget:
+    name: Publish NuGet packages
+    needs: nuget-package
     if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    environment: nuget
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/setup-dotnet@v5
         with:
-          path: artifacts
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v7
+        with:
+          name: nuget-package
+          path: dist
+      - name: Publish liblevenshtein
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          dotnet nuget push dist/VinaryTree.Liblevenshtein.*.nupkg \
+            --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+
+  rubygems:
+    name: Publish RubyGem
+    needs: rubygems-package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: rubygems
+    steps:
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.5"
+      - uses: actions/download-artifact@v7
+        with:
+          name: rubygems-package
+          path: dist
+      - name: Push to RubyGems.org
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+        run: gem push dist/*.gem
+
+  hackage:
+    name: Publish Hackage packages
+    needs: hackage-package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: hackage
+    steps:
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.14.1"
+          cabal-version: latest
+      - uses: actions/download-artifact@v7
+        with:
+          name: hackage-package
+          path: dist
+      - name: Publish liblevenshtein
+        shell: bash
+        env:
+          HACKAGE_USERNAME: ${{ secrets.HACKAGE_USERNAME }}
+          HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        run: |
+          cabal upload --publish \
+            --username="$HACKAGE_USERNAME" --password="$HACKAGE_PASSWORD" \
+            dist/vinary-tree-liblevenshtein-*.tar.gz
+
+  fpm:
+    name: Publish fpm registry packages
+    needs: fpm-package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: fpm
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: fortran-lang/setup-fpm@v10
+      - name: Publish liblevenshtein against the immutable interop package
+        shell: bash
+        env:
+          FPM_REGISTRY_TOKEN: ${{ secrets.FPM_REGISTRY_TOKEN }}
+        run: |
+          scripts/stage-fpm-package.sh liblevenshtein "$RUNNER_TEMP/fpm-liblevenshtein"
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if fpm build -C "$RUNNER_TEMP/fpm-liblevenshtein" \
+              --dump fpm_model.json; then
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then exit 1; fi
+            sleep 10
+          done
+          fpm publish -C "$RUNNER_TEMP/fpm-liblevenshtein" \
+            --token "$FPM_REGISTRY_TOKEN"
+
+  go-module:
+    name: Publish Go module tag
+    needs: binding-contract
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: go-module
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.x"
+      - name: Validate module metadata and create its immutable subdirectory tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          interop_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' vinary-tree-interop/Cargo.toml | head -n 1)
+          interop_tag="vinary-tree-interop/bindings/go/v$interop_version"
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$interop_tag" >/dev/null
+          interop_module="github.com/vinary-tree/liblevenshtein-rust/vinary-tree-interop/bindings/go"
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if GOWORK=off GOPROXY=https://proxy.golang.org \
+              go list -m "$interop_module@v$interop_version" >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then exit 1; fi
+            sleep 10
+          done
+          GOWORK=off go -C bindings/go mod verify
+          version=${GITHUB_REF_NAME#v}
+          module_tag="bindings/go/v$version"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$module_tag" >/dev/null 2>&1; then
+            echo "tag already exists: $module_tag" >&2
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+            --method POST \
+            -f "ref=refs/tags/$module_tag" \
+            -f "sha=$GITHUB_SHA"
+
+  swiftpm:
+    name: Verify SwiftPM tag publication
+    needs: [binding-contract, native]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Verify the repository-root Swift package at the release tag
+        run: |
+          swift package dump-package >/dev/null
+          swift package describe
+
+  luarocks:
+    name: Publish LuaRocks package
+    needs: luarocks-package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: luarocks
+    steps:
+      - run: sudo apt-get update && sudo apt-get install -y luarocks
+      - uses: actions/download-artifact@v7
+        with:
+          name: luarocks-package
+          path: dist
+      - name: Upload signed-in metadata to LuaRocks.org
+        env:
+          LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
+        run: >-
+          luarocks upload dist/vinary-tree-liblevenshtein-0.10.0-1.rockspec
+          --api-key "$LUAROCKS_API_KEY"
+
+  opam:
+    name: Submit package to opam-repository
+    needs: [opam-package, github-release]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: opam
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: opam-package
+          path: dist
+      - name: Create the opam-repository pull request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.OPAM_GITHUB_TOKEN }}
+        run: |
+          account=$(gh api user --jq .login)
+          if ! gh repo view "$account/opam-repository" >/dev/null 2>&1; then
+            gh repo fork ocaml/opam-repository --clone=false
+          fi
+          for attempt in 1 2 3 4 5 6; do
+            if gh repo view "$account/opam-repository" >/dev/null 2>&1; then break; fi
+            if [ "$attempt" -eq 6 ]; then exit 1; fi
+            sleep 5
+          done
+          gh repo clone "$account/opam-repository" opam-repository
+          git -C opam-repository fetch https://github.com/ocaml/opam-repository.git master
+          version=${GITHUB_REF_NAME#v}
+          branch="vinary-tree-liblevenshtein-$version-$GITHUB_RUN_ID"
+          git -C opam-repository checkout -b "$branch" FETCH_HEAD
+          package="opam-repository/packages/vinary-tree-liblevenshtein/vinary-tree-liblevenshtein.$version"
+          mkdir -p "$package"
+          cp dist/opam "$package/opam"
+          git -C opam-repository config user.name "Vinary Tree release automation"
+          git -C opam-repository config user.email "dylon.devo@gmail.com"
+          git -C opam-repository add "packages/vinary-tree-liblevenshtein/vinary-tree-liblevenshtein.$version/opam"
+          git -C opam-repository commit -m "Package vinary-tree-liblevenshtein $version"
+          git -C opam-repository push origin "$branch"
+          gh pr create --repo ocaml/opam-repository \
+            --base master --head "$account:$branch" \
+            --title "Package vinary-tree-liblevenshtein $version" \
+            --body "Automated submission of the tested Vinary Tree OCaml bindings."
+
+  pypi:
+    name: Publish PyPI wheels
+    needs: python-wheels
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: python-wheel-*
+          path: dist
           merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1.14
+        with:
+          packages-dir: dist
+
+  npm-runtime:
+    name: Publish npm umbrella runtime
+    needs: javascript-runtime-package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: npm
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/download-artifact@v7
+        with:
+          name: npm-runtime-package
+          path: dist
+      - run: npm publish --access public --provenance dist/*.tgz
+
+  npm:
+    name: Publish npm package
+    needs: [javascript-package, npm-runtime]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: npm
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/download-artifact@v7
+        with:
+          name: npm-package
+          path: dist
+      - run: npm publish --access public --provenance dist/*.tgz
+
+  maven-central:
+    name: Publish JVM package to Maven Central
+    needs: jvm-package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: maven-central
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        with:
+          name: maven-staging
+          path: bindings/jvm/build/staging-deploy
+      - name: Keep only liblevenshtein in the project deployment bundle
+        shell: bash
+        run: |
+          rm -rf bindings/jvm/build/staging-deploy/io/vinarytree/vinary-tree-interop
+          test -d bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein
+      - name: Deploy signed bundle through Central Publisher Portal
+        uses: jreleaser/release-action@v2
+        with:
+          version: 1.25.0
+          arguments: deploy
+          working-directory: bindings/jvm
+        env:
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.MAVEN_GPG_PUBLIC_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.MAVEN_GPG_SECRET_KEY }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+
+  clojars:
+    name: Publish idiomatic Clojure facade to Clojars
+    needs: [clojure-package, jvm-package]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    environment: clojars
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          lein: 2.13.0
+      - uses: actions/download-artifact@v7
+        with:
+          name: maven-staging
+          path: maven-staging
+      - name: Install the exact staged JVM dependency locally
+        shell: bash
+        run: |
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
+          interop_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' vinary-tree-interop/Cargo.toml | head -n 1)
+          interop_repository="$HOME/.m2/repository/io/vinarytree/vinary-tree-interop/$interop_version"
+          mkdir -p "$interop_repository"
+          interop_jar=$(find maven-staging -type f -name "vinary-tree-interop-$interop_version.jar" -print -quit)
+          interop_pom=$(find maven-staging -type f -name "vinary-tree-interop-$interop_version.pom" -print -quit)
+          test -n "$interop_jar" && test -n "$interop_pom"
+          cp "$interop_jar" "$interop_repository/vinary-tree-interop-$interop_version.jar"
+          cp "$interop_pom" "$interop_repository/vinary-tree-interop-$interop_version.pom"
+          repository="$HOME/.m2/repository/io/vinarytree/liblevenshtein/$version"
+          mkdir -p "$repository"
+          jar=$(find maven-staging -type f -name "liblevenshtein-$version.jar" -print -quit)
+          pom=$(find maven-staging -type f -name "liblevenshtein-$version.pom" -print -quit)
+          test -n "$jar" && test -n "$pom"
+          cp "$jar" "$repository/liblevenshtein-$version.jar"
+          cp "$pom" "$repository/liblevenshtein-$version.pom"
+      - name: Deploy to Clojars for Leiningen and tools.deps
+        working-directory: bindings/clojure
+        env:
+          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_DEPLOY_TOKEN }}
+        run: lein deploy clojars
+
+  github-release:
+    name: Publish GitHub release and checksums
+    needs:
+      - native
+      - python-wheels
+      - javascript-runtime-package
+      - javascript-package
+      - jvm-package
+      - clojure-package
+      - nuget-package
+      - rubygems-package
+      - hackage-package
+      - luarocks-package
+      - opam-package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: native-*
+          path: release-assets
+          merge-multiple: true
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: python-wheel-*
+          path: release-assets
+          merge-multiple: true
+      - uses: actions/download-artifact@v7
+        with:
+          name: npm-package
+          path: release-assets
+      - uses: actions/download-artifact@v7
+        with:
+          name: npm-runtime-package
+          path: release-assets
+      - uses: actions/download-artifact@v7
+        with:
+          name: maven-staging
+          path: maven-staging
+      - uses: actions/download-artifact@v7
+        with:
+          name: clojure-package
+          path: release-assets
+      - uses: actions/download-artifact@v7
+        with:
+          name: nuget-package
+          path: release-assets
+      - uses: actions/download-artifact@v7
+        with:
+          name: rubygems-package
+          path: release-assets
+      - uses: actions/download-artifact@v7
+        with:
+          name: hackage-package
+          path: release-assets
+      - uses: actions/download-artifact@v7
+        with:
+          name: luarocks-package
+          path: release-assets
+      - uses: actions/download-artifact@v7
+        with:
+          name: opam-package
+          path: release-assets
+      - name: Add Maven artifacts and SHA-256 manifest
+        run: |
+          mkdir -p flattened-assets
+          find maven-staging/io/vinarytree/liblevenshtein -type f \
+            \( -name '*.jar' -o -name '*.pom' \) -exec cp {} flattened-assets/ \;
+          find release-assets -mindepth 2 -type f \
+            \( -name '*.jar' -o -name '*.pom' \) -exec cp {} flattened-assets/ \;
+          find flattened-assets -type f -exec cp {} release-assets/ \;
+          cd release-assets
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | \
+            xargs -0 sha256sum > ../SHA256SUMS
+          mv ../SHA256SUMS SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.tar.gz
+          files: release-assets/*
           generate_release_notes: true

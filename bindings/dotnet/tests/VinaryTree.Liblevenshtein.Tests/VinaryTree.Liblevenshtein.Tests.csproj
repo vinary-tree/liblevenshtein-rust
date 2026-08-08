@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/VinaryTree.Interop/VinaryTree.Interop.csproj" />
+    <ProjectReference Include="../../src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj" />
+  </ItemGroup>
+</Project>

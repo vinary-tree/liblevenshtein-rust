@@ -1,0 +1,10 @@
+phase	operation	term	id
+initial	insert	cat	1
+initial	insert	cot	2
+initial	insert	cut	3
+initial	insert	scat	
+mutation	remove	cot	
+mutation	update	cut	30
+mutation	insert	cit	5
+mutation	compact		
+mutation	checkpoint		

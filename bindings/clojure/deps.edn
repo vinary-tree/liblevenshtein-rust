@@ -1,0 +1,12 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.12.5"}
+        io.vinarytree/liblevenshtein {:mvn/version "0.10.0"}}
+ :aliases
+ {:test
+  {:extra-paths ["test"]
+   :jvm-opts ["--enable-native-access=ALL-UNNAMED"]
+   :override-deps
+   {io.vinarytree/vinary-tree-interop
+    {:local/root "../../vinary-tree-interop/bindings/jvm"}
+    io.vinarytree/liblevenshtein {:local/root "../jvm"}}
+   :main-opts ["-m" "vinary-tree.liblevenshtein-test-runner"]}}}

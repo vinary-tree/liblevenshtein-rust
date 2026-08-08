@@ -13,7 +13,7 @@ use liblevenshtein::phonetic::nfa::{
 use liblevenshtein::phonetic::regex::error::ParseErrorKind;
 #[cfg(feature = "phonetic-rules")]
 use liblevenshtein::phonetic::regex::{parse, parse_bytes};
-#[cfg(feature = "phonetic-rules")]
+#[cfg(all(feature = "phonetic-rules", feature = "perf-instrumentation"))]
 use liblevenshtein::transducer::language::LanguageQueryIterator;
 use liblevenshtein::transducer::language::{Frontier, LanguageProduct, SmallDfa};
 use liblevenshtein::transducer::{Algorithm, Transducer};

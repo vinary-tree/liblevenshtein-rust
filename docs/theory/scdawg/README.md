@@ -2,7 +2,7 @@
 
 > **Source of truth for the theory:** the complete, pedagogical treatment of the
 > **Symmetric Compact Directed Acyclic Word Graph (SCDAWG)** — construction, complexity
-> proofs, and operations — lives in the **[libdictenstein](https://github.com/f1r3fly-io/libdictenstein)**
+> proofs, and operations — lives in the **[libdictenstein](https://github.com/vinary-tree/libdictenstein)**
 > crate that owns the data structure:
 > [`libdictenstein/docs/theory/scdawg/`](../../../../libdictenstein/docs/theory/scdawg/README.md).
 > This page covers only **how liblevenshtein uses it**. The earlier in-repo deep-dive chapters

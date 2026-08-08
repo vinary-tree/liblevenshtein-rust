@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <PackageId>VinaryTree.Liblevenshtein</PackageId>
+    <Version>0.10.0</Version>
+    <Description>Snapshot-consistent streaming Levenshtein search for .NET</Description>
+    <Authors>Dylon Edwards</Authors>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/vinary-tree/liblevenshtein-rust</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../VinaryTree.Interop/VinaryTree.Interop.csproj" />
+    <None Include="../../README.md" Pack="true" PackagePath="README.md" />
+    <None Include="../../native/runtimes/**/*"
+          Pack="true"
+          PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

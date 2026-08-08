@@ -1,0 +1,3 @@
+(library
+ (name vinary_tree_interop)
+ (public_name vinary-tree-interop))

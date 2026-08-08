@@ -1,0 +1,42 @@
+{
+  "name": "@vinary-tree/interop",
+  "version": "0.1.0",
+  "description": "Shared resource contracts for modular Vinary Tree JavaScript bindings",
+  "author": {
+    "name": "Dylon Edwards",
+    "email": "dylon.devo@gmail.com"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinary-tree/liblevenshtein-rust.git",
+    "directory": "vinary-tree-interop/bindings/javascript"
+  },
+  "engines": {
+    "node": ">=22.14"
+  },
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./index.cjs"
+    }
+  },
+  "files": [
+    "index.cjs",
+    "index.d.ts",
+    "index.mjs",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "test": "node --test test.mjs",
+    "prepack": "npm test"
+  }
+}

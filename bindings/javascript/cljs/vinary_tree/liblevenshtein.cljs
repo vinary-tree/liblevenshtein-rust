@@ -1,0 +1,38 @@
+(ns vinary-tree.liblevenshtein
+  "ClojureScript facade mirroring the Clojure resource/transducer API."
+  (:require ["@vinary-tree/liblevenshtein" :as native]))
+
+(defn transducer
+  ([dictionary] (native/transducer dictionary "standard"))
+  ([dictionary {:keys [algorithm] :or {algorithm :standard}}]
+   (native/transducer dictionary (name algorithm))))
+
+(defn close! [resource] (.close resource))
+
+(defn query
+  ([automaton term max-distance]
+   (.query automaton term max-distance "traversal"))
+  ([automaton term max-distance {:keys [order] :or {order :traversal}}]
+   (.query automaton term max-distance (name order))))
+
+(defn reduce-batches
+  "Allocation-minimizing batch reduction; borrowed views must not escape f."
+  [f initial cursor]
+  (try
+    (.reduceBatches cursor f initial)
+    (finally (close! cursor))))
+
+(defn cursor-seq [cursor]
+  (let [iterator (.call (aget cursor (.-iterator js/Symbol)) cursor)]
+    (letfn [(step []
+              (lazy-seq
+               (let [result (.next iterator)]
+                 (if (.-done result)
+                   (do (close! cursor) nil)
+                   (cons (.-value result) (step))))))]
+      (step))))
+
+(defn phonetic-pattern [source] (native/phoneticPattern source))
+(defn llre-pattern [source] (native/llrePattern source))
+(defn phonetic-rules [source] (native/phoneticRules (if (keyword? source) (name source) source)))
+(defn rewrite [rules input] (.apply rules input))

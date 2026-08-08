@@ -875,8 +875,8 @@ criterion_main!(benches);
 - **Full API Documentation**: [`docs/design/prefix-zipper.md`](../design/prefix-zipper.md)
 - **Optimization Details**: [`docs/optimization/prefix_zipper_optimization_log.md`](../optimization/prefix_zipper_optimization_log.md)
 - **Benchmark Results**: [`docs/optimization/prefix_zipper_baseline.md`](../optimization/prefix_zipper_baseline.md)
-- **Source Code**: [`prefix_zipper.rs`](https://github.com/f1r3fly-io/libdictenstein/blob/main/src/prefix_zipper.rs) (in the libdictenstein crate)
-- **Test Examples**: [`prefix_zipper_tests.rs`](https://github.com/f1r3fly-io/libdictenstein/blob/main/tests/prefix_zipper_tests.rs) (in the libdictenstein crate)
+- **Source Code**: [`prefix_zipper.rs`](https://github.com/vinary-tree/libdictenstein/blob/main/src/prefix_zipper.rs) (in the libdictenstein crate)
+- **Test Examples**: [`prefix_zipper_tests.rs`](https://github.com/vinary-tree/libdictenstein/blob/main/tests/prefix_zipper_tests.rs) (in the libdictenstein crate)
 
 ## Related Documentation
 

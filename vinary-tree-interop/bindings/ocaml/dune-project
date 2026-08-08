@@ -1,0 +1,9 @@
+(lang dune 3.20)
+(name vinary-tree-interop)
+(generate_opam_files true)
+(source (github vinary-tree/liblevenshtein-rust))
+(authors "Dylon Edwards <dylon.devo@gmail.com>")
+(license "Apache-2.0")
+(package
+ (name vinary-tree-interop)
+ (synopsis "Stable resource types for modular vinary-tree OCaml bindings"))
