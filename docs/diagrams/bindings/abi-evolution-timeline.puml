@@ -1,0 +1,84 @@
+@startuml abi-evolution-timeline
+' How the interop ABI evolves, as a state machine over published surfaces:
+' the additive path keeps the same interface identity (one provider binary
+' serves old and new consumers simultaneously), while the breaking path forks
+' a NEW identity (new 16-byte interface ID or a coordinated VT_ABI_VERSION
+' flag day) and coexists with v1 through query_interface.
+' Color: the published v1 surface + additive growth = VtResource-handle green
+'   #DCEDC8 / #F1F8E9 (border #33691E); breaking forks = trust-boundary red
+'   #FFCDD2 / #FFEBEE (border #B71C1C); notes = amber.
+' Policy source: vinary-tree-interop/docs/abi-evolution.md; executable proof
+'   of the additive law: vinary-tree-interop/tests/vtable_evolution.rs.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+hide empty description
+skinparam state {
+  BackgroundColor #F1F8E9
+  BorderColor #33691E
+  FontColor #102027
+  ArrowColor #37474F
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title ABI evolution — additive growth keeps the identity; breaking change forks it
+
+state "Published surface — ABI v1" as V1 #DCEDC8 {
+  state "base resource: VT_ABI_VERSION = 1" as base
+  state "vt.dictionary.v1 (interface_version = 1)" as dict
+  state "vt.scalar-wfst.1 (interface_version = 1)" as wfst
+}
+
+state "Additive evolution — same identity, one binary serves everyone" as ADD #DCEDC8 {
+  state "trailing vtable operation appended" as addop #F1F8E9
+  addop : struct_size grows (88 → 96 on 64-bit);
+  addop : old consumers keep reading the v1 prefix;
+  addop : new consumers gate on <latex>\text{struct size} \ge \mathrm{offset} + \mathrm{width}</latex>
+  state "new enum value appended" as addenum #F1F8E9
+  addenum : next contiguous discriminant only;
+  addenum : consumers reject unknown domains,
+  addenum : treat unknown status as ProviderError
+  state "new capability flag bit claimed" as addflag #F1F8E9
+  addflag : next free bit, claims only;
+  addflag : consumers ignore unknown bits
+  state "new optional interface published" as addiface #F1F8E9
+  addiface : fresh 16-byte identifier;
+  addiface : legacy consumers receive Unsupported —
+  addiface : negotiation degrades gracefully
+}
+
+state "Breaking evolution — new identity, coexistence via negotiation" as BRK #FFCDD2 {
+  state "vt.dictionary.v2 — new interface ID" as v2 #FFEBEE
+  v2 : layout / ownership / status meaning /
+  v2 : callback signature / snapshot guarantee changed;
+  v2 : provider answers BOTH v1 and v2
+  v2 : from one query_interface
+  state "VT_ABI_VERSION = 2 — base-resource flag day" as abi2 #FFEBEE
+  abi2 : reference consumers check equality
+  abi2 : (validate_base: abi_version ≠ 1 rejects);
+  abi2 : every producer and consumer rebuilds together
+}
+
+[*] -[#33691E]-> V1 : ship (2026, interop crate 0.1.0)
+V1 -[#33691E]-> ADD : compatible change\n(prefix-consumability proven by\nvtable_evolution.rs)
+ADD -[#33691E]-> V1 : republish — same IDs,\nsame VT_ABI_VERSION
+V1 -[#B71C1C,dashed]-> BRK : incompatible change\n(decision table row says "fork")
+BRK -[#B71C1C,dashed]-> V1 : migration window —\nv1 + v2 served side by side,\nv1 retired only when unconsumed
+
+note bottom of ADD
+  Additive gates: <latex>\text{struct size}</latex> for trailing ops;
+  contiguous discriminants for enums (pinned by
+  discriminant_pins.rs); free bits for flags;
+  fresh IDs for new interfaces.
+end note
+note bottom of BRK
+  A fork never edits v1 in place: the 16-byte ID
+  string carries the version ("…v1" → "…v2"),
+  so both identities negotiate independently.
+end note
+@enduml
