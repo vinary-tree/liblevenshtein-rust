@@ -29,6 +29,7 @@ or "ledger-only") | verification | status`.
 | LLEV-B12 | javascript-runtime Node N-API threshold + size/len symbols | correctness | high | OPEN → W3 | — |
 | LLEV-B13 | dotnet threshold overload asymmetry | completeness | low | OPEN → W7 | — |
 | LLEV-B14 | python `pattern_size`/`rules_len` | completeness | low | OPEN → W7 | — |
+| LLEV-B15 | `docs/diagrams` .dot/.asy render drift | hygiene | low | OPEN → W3 | — |
 
 ## Findings
 
@@ -126,3 +127,9 @@ or "ledger-only") | verification | status`.
 - **Evidence**: completeness matrix (python 20/35 with 2 FINDING nulls): `llev_phonetic_pattern_size` and `llev_phonetic_rules_len` unbound while the peer Tier-1 JVM facade and all Tier-2/3 facades expose them.
 - **Fix**: scheduled wave W7.
 - **Status**: OPEN → W7.
+
+### LLEV-B15 — pre-existing diagram render drift outside the bindings suite
+- **Date**: 2026-08-08 · **Component**: `docs/diagrams` (21 `.dot`/`.asy` sources) · **Class**: hygiene · **Severity**: low
+- **Evidence**: `bash docs/diagrams/render.sh --check` reports 21 drifted renders, all Graphviz/Asymptote (renderer-version skew between the committed SVGs and graphviz 15.1.1 / current asy); present at baseline `ae0d6a5`; zero under `docs/diagrams/bindings/` (the new suite renders byte-stable PlantUML).
+- **Fix**: scheduled wave W3 (re-render the drifted sources with the current toolchain in a dedicated commit so `render.sh --check` returns to a meaningful zero).
+- **Status**: OPEN → W3.
