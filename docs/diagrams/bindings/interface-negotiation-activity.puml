@@ -1,0 +1,114 @@
+@startuml interface-negotiation-activity
+' The end-to-end interface negotiation a consumer performs on a received
+' VtResource: copy the two words (free, no retain) -> validate the base
+' vtable -> retain -> query_interface(id, min_version) with its
+' NullPointer / Unsupported branches -> on success use the provider-owned
+' interface vtable, valid exactly while the retain is held -> release once.
+' Mirrors liblevenshtein's reference consumer (src/bindings.rs validate_base /
+' Provider::from_borrowed / from_owned) and the pins in
+' vinary-tree-interop/tests/vtable_evolution.rs.
+' Color: consumer (host-trusted) actions = VtResource-handle green #DCEDC8 /
+'   #F1F8E9 (border #33691E); foreign provider actions = trust-boundary red
+'   #FFCDD2 / #FFEBEE (border #B71C1C); decisions = amber diamonds.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam activity {
+  BackgroundColor #F1F8E9
+  BorderColor #33691E
+  FontColor #102027
+  DiamondBackgroundColor #FFE0B2
+  DiamondBorderColor #EF6C00
+  DiamondFontColor #102027
+  StartColor #2E7D32
+  EndColor #C62828
+  ArrowColor #37474F
+}
+skinparam partition {
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Interface negotiation — from a copied two-word handle to a usable, versioned vtable
+
+start
+partition "Consumer — host-trusted zone" #F1F8E9 {
+  :receive a **VtResource** copy
+  (two words: context, vtable); <<#DCEDC8>>
+  note right
+    Copying the two words is free and
+    confers **no** ownership: the consumer
+    must retain before storing the copy.
+  end note
+  if (context and vtable non-null\nabi_version = 1, struct_size ≥ sizeof(VtResourceVTable)\nreserved = 0, retain/release/query_interface present?) then (no)
+    :reject: **IncompatibleResourceAbi**
+    (nothing was retained — nothing to balance); <<#FFCDD2>>
+    stop
+  else (yes)
+  endif
+  :**retain(context)** — the consumer now
+  owns exactly one retain; <<#DCEDC8>>
+  :call **query_interface**(context,
+  &interface_id, minimum_version, &out_vtable); <<#DCEDC8>>
+}
+partition "Provider — foreign zone (adversarial-or-buggy)" #FFEBEE {
+  if (interface_id or out_vtable NULL?) then (yes)
+    :return **NullPointer**
+    (no partial writes: output untouched); <<#FFCDD2>>
+  elseif (interface_id ≠ a supported
+  16-byte identifier?) then (yes)
+    :return **Unsupported**
+    (output untouched); <<#FFCDD2>>
+  elseif (minimum_version > highest
+  supported version?) then (yes)
+    :return **Unsupported**
+    (consumer is from the future); <<#FFCDD2>>
+  else (all checks pass)
+    :write the **provider-owned** interface
+    vtable pointer to out_vtable; return **Ok**; <<#FFCDD2>>
+    note right
+      Discovery is **not** retention:
+      the refcount is unchanged
+      (vtable_evolution.rs pins this).
+    end note
+  endif
+}
+partition "Consumer — host-trusted zone" #F1F8E9 {
+  if (status = Ok?) then (yes)
+    :validate the interface vtable:
+    struct_size ≥ sizeof(v1 table), version ≥ minimum,
+    required ops present, known unit/value domains; <<#DCEDC8>>
+    if (interface vtable valid?) then (yes)
+      :use the interface operations —
+      the pointer stays valid exactly while
+      the resource remains retained; <<#DCEDC8>>
+      note right
+        A larger future vtable stays
+        consumable through its v1 prefix;
+        <latex>\text{struct size}</latex> gates any extension
+        (additive-evolution law).
+      end note
+      :**release(context)** exactly once
+      when the consumer is done; <<#DCEDC8>>
+      :negotiation succeeded — resource
+      handed back balanced; <<#F1F8E9>>
+      stop
+    else (no)
+      :reject: **IncompatibleDictionaryInterface**; <<#FFCDD2>>
+    endif
+  else (error status)
+    :map the status to the project error
+    (e.g. **MissingDictionaryInterface**); <<#FFCDD2>>
+  endif
+  :**release(context)** — the owned retain
+  must be balanced on every failure path too
+  (from_borrowed releases on constructor error); <<#DCEDC8>>
+  stop
+}
+@enduml

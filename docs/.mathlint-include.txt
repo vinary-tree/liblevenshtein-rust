@@ -289,3 +289,4 @@ docs/design/class-a-presets.md
 docs/algorithms/15-class-a-presets/README.md
 README.md
 vinary-tree-interop/README.md
+vinary-tree-interop/docs/abi-reference.md
