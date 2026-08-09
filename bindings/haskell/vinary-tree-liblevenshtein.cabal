@@ -46,3 +46,20 @@ test-suite snapshot
     vinary-tree-interop,
     vinary-tree-libdictenstein,
     vinary-tree-liblevenshtein
+
+-- C8 property-based tests (QuickCheck) against an in-language oracle.
+test-suite property
+  type: exitcode-stdio-1.0
+  main-is: PropertyMain.hs
+  hs-source-dirs: test
+  default-language: GHC2021
+  ghc-options: -Wall -Wcompat -threaded
+  if flag(strict)
+    ghc-options: -Werror
+  build-depends:
+    base,
+    QuickCheck,
+    text,
+    vinary-tree-interop,
+    vinary-tree-libdictenstein,
+    vinary-tree-liblevenshtein
