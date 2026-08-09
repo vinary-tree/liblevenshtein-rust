@@ -95,6 +95,7 @@ do {
     parsed.close()
 
     try PropertyTests.run()
+    try LeakTests.run()
 
     print("Swift binding integration passed")
 } catch {
