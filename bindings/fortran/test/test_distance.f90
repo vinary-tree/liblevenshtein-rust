@@ -8,6 +8,15 @@ program test_distance
   if (levenshtein_distance("kitten", "sitting") /= 3_c_size_t) error stop "distance"
   if (damerau_distance("ab", "ba") /= 1_c_size_t) error stop "Damerau"
   if (true_damerau_distance("ca", "abc") /= 2_c_size_t) error stop "true Damerau"
+  ! C6: distances count Unicode scalars, not the UTF-8 bytes the facade passes.
+  if (levenshtein_distance("café", "cafe") /= 1_c_size_t) error stop "unicode distance"
+  if (levenshtein_distance("🦀", "x") /= 1_c_size_t) error stop "astral distance"
+  ! C6: the exceeded-bound native sentinel (usize::MAX - 1) reads as -2 under the
+  ! signed c_size_t kind; "ca" -> "abc" separates OSA 3 from unrestricted 2.
+  if (levenshtein_distance_threshold("kitten", "sitting", 3_c_size_t) /= 3_c_size_t) error stop "threshold within"
+  if (levenshtein_distance_threshold("kitten", "sitting", 2_c_size_t) /= -2_c_size_t) error stop "threshold sentinel"
+  if (damerau_distance_threshold("ca", "abc", 2_c_size_t) /= -2_c_size_t) error stop "OSA threshold sentinel"
+  if (true_damerau_distance_threshold("ca", "abc", 2_c_size_t) /= 2_c_size_t) error stop "true Damerau threshold"
   call compile_phonetic_regex(pattern, "cat", status)
   if (status /= llev_ok) error stop "pattern compilation"
   accepted = pattern%matches("cat", status)
