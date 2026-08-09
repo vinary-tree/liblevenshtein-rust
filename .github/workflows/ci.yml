@@ -47,6 +47,22 @@ jobs:
       - run: cargo test --locked -p vinary-tree-interop
       - run: cargo fmt --all --check
 
+  sanitizers:
+    name: Sanitizers (ASan/TSan)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+      # AddressSanitizer (+ LeakSanitizer) then ThreadSanitizer over the
+      # binding-integration suite: catches use-after-free, OOB, leaked
+      # leased/retained resources, and races at the FFI boundary that safe Rust
+      # and catch_unwind cannot. Rebuilds std with the sanitizer runtime.
+      - name: AddressSanitizer and ThreadSanitizer over the binding suite
+        run: bash scripts/run-sanitizers.sh
+
   supply-chain:
     name: Supply chain
     runs-on: ubuntu-latest
