@@ -2,10 +2,36 @@
 #include "liblevenshtein.h"
 
 #include <assert.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+/*
+ * C1 (reduced interop contract): layout and discriminant mirror pins. Every
+ * facade in every language decodes these records by offset and branches on
+ * these discriminants, so the C oracle pins both here. A silent renumbering or
+ * field reorder in the shared ABI must break this translation unit at compile
+ * time, before any downstream binding mistranslates a status or a match.
+ */
+_Static_assert(LLEV_STATUS_OK == 0, "LlevStatus OK discriminant moved");
+_Static_assert(LLEV_STATUS_END == 1, "LlevStatus END discriminant moved");
+_Static_assert(LLEV_STATUS_BATCH_IN_USE == 11, "LlevStatus BATCH_IN_USE moved");
+_Static_assert(LLEV_STATUS_DOMAIN_MISMATCH == 12, "LlevStatus DOMAIN_MISMATCH moved");
+_Static_assert(LLEV_ALGORITHM_STANDARD == 0, "LlevAlgorithm STANDARD moved");
+_Static_assert(LLEV_QUERY_ORDER_TRAVERSAL == 0, "LlevQueryOrder TRAVERSAL moved");
+_Static_assert(VT_STATUS_OK == 0, "VtStatus OK discriminant moved");
+_Static_assert(VT_UNIT_DOMAIN_UNICODE_SCALAR == 2, "VtUnitDomain scalar moved");
+_Static_assert(offsetof(LlevMatch, term_data) == 0, "LlevMatch.term_data must lead");
+_Static_assert(offsetof(LlevMatch, term_len) == sizeof(const void*),
+               "LlevMatch.term_len must follow the term pointer");
+_Static_assert(offsetof(LlevMatchBatchView, matches) == 0,
+               "LlevMatchBatchView.matches must lead");
+_Static_assert(offsetof(LlevMatchBatchView, len) == sizeof(const LlevMatch*),
+               "LlevMatchBatchView.len must follow the match pointer");
+_Static_assert(sizeof(VtResource) == 2 * sizeof(void*),
+               "VtResource must remain a two-word handle");
 
 typedef struct Seen {
     bool cat;
@@ -49,6 +75,15 @@ int main(void) {
     assert(llev_transducer_new(&resource, LLEV_ALGORITHM_STANDARD, &transducer) ==
            LLEV_STATUS_OK);
 
+    /* C1 (reduced): identity and version of the loaded shared objects, plus the
+     * transducer's inherited unit domain. */
+    assert(llev_abi_version() == LLEV_ABI_VERSION);
+    assert(llev_api_revision() == LLEV_API_REVISION);
+    assert((llev_build_features() & LLEV_BUILD_FEATURE_CORE) != 0);
+    VtUnitDomain domain = VT_UNIT_DOMAIN_BYTE;
+    assert(llev_transducer_unit_domain(transducer, &domain) == LLEV_STATUS_OK);
+    assert(domain == VT_UNIT_DOMAIN_UNICODE_SCALAR);
+
     LlevQueryCursor* cursor = NULL;
     assert(llev_transducer_query_utf8(transducer, "cat", 3, 2,
                                       LLEV_QUERY_ORDER_TRAVERSAL, &cursor) ==
@@ -58,6 +93,9 @@ int main(void) {
     assert(llev_query_cursor_next_batch(cursor, 1, &batch) == LLEV_STATUS_OK);
     assert(batch.len == 1);
     remember(&seen, &batch.matches[0]);
+    /* C2/C5 (reduced): a live batch lease pins the cursor. Closing it is refused
+     * with BATCH_IN_USE rather than invalidating the borrowed descriptors. */
+    assert(llev_query_cursor_free(cursor) == LLEV_STATUS_BATCH_IN_USE);
     assert(llev_query_cursor_release_batch(cursor, batch.generation) == LLEV_STATUS_OK);
 
     uint8_t changed = 0;
