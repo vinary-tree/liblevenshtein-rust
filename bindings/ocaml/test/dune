@@ -1,5 +1,5 @@
 (tests
- (names snapshot property)
+ (names snapshot property leak)
  (libraries
   vinary-tree-interop
   vinary-tree-libdictenstein
