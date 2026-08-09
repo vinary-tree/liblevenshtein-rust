@@ -571,15 +571,15 @@
           "symbol": "Distance.Damerau"
         },
         "llev_damerau_distance_threshold": {
-          "symbol": null,
-          "_reason": "FINDING: Distance exposes a threshold overload only for standard Levenshtein; llev_damerau_distance_threshold is unbound in Native.cs while go/ruby/haskell/ocaml/lua/fortran bind all six distance functions"
+          "symbol": "Distance.Damerau",
+          "note": "threshold overload"
         },
         "llev_true_damerau_distance": {
           "symbol": "Distance.TrueDamerau"
         },
         "llev_true_damerau_distance_threshold": {
-          "symbol": null,
-          "_reason": "FINDING: Distance exposes a threshold overload only for standard Levenshtein; llev_true_damerau_distance_threshold is unbound in Native.cs while go/ruby/haskell/ocaml/lua/fortran bind all six distance functions"
+          "symbol": "Distance.TrueDamerau",
+          "note": "threshold overload"
         },
         "llev_transducer_new": {
           "symbol": "Transducer"

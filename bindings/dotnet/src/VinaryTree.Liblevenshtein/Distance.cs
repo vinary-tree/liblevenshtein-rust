@@ -11,17 +11,27 @@ public static class Distance
     public static unsafe nuint Damerau(string source, string target) => Invoke(source, target, NativeMethods.DamerauDistance);
     /// <summary>True unrestricted Damerau-Levenshtein distance.</summary>
     public static unsafe nuint TrueDamerau(string source, string target) => Invoke(source, target, NativeMethods.TrueDamerauDistance);
-    /// <summary>Thresholded Levenshtein distance; returns threshold + 1 when exceeded.</summary>
-    public static unsafe nuint Levenshtein(string source, string target, nuint threshold)
-    {
-        byte[] left = Encoding.UTF8.GetBytes(source);
-        byte[] right = Encoding.UTF8.GetBytes(target);
-        fixed (byte* l = left)
-        fixed (byte* r = right)
-            return NativeMethods.DistanceThreshold(l, (nuint)left.Length, r, (nuint)right.Length, threshold);
-    }
+    /// <summary>
+    /// Thresholded Levenshtein distance. Returns the exact distance when it is at
+    /// most <paramref name="threshold"/>; otherwise returns the native
+    /// exceeded-bound sentinel <c>nuint.MaxValue - 1</c>.
+    /// </summary>
+    public static unsafe nuint Levenshtein(string source, string target, nuint threshold) => Invoke(source, target, threshold, NativeMethods.DistanceThreshold);
+    /// <summary>
+    /// Thresholded adjacent-transposition (OSA) distance. Returns the exact
+    /// distance when it is at most <paramref name="threshold"/>; otherwise returns
+    /// the native exceeded-bound sentinel <c>nuint.MaxValue - 1</c>.
+    /// </summary>
+    public static unsafe nuint Damerau(string source, string target, nuint threshold) => Invoke(source, target, threshold, NativeMethods.DamerauDistanceThreshold);
+    /// <summary>
+    /// Thresholded unrestricted Damerau-Levenshtein distance. Returns the exact
+    /// distance when it is at most <paramref name="threshold"/>; otherwise returns
+    /// the native exceeded-bound sentinel <c>nuint.MaxValue - 1</c>.
+    /// </summary>
+    public static unsafe nuint TrueDamerau(string source, string target, nuint threshold) => Invoke(source, target, threshold, NativeMethods.TrueDamerauDistanceThreshold);
 
     private unsafe delegate nuint DistanceCall(byte* left, nuint leftLength, byte* right, nuint rightLength);
+    private unsafe delegate nuint ThresholdCall(byte* left, nuint leftLength, byte* right, nuint rightLength, nuint threshold);
     private static unsafe nuint Invoke(string source, string target, DistanceCall call)
     {
         byte[] left = Encoding.UTF8.GetBytes(source);
@@ -29,5 +39,13 @@ public static class Distance
         fixed (byte* l = left)
         fixed (byte* r = right)
             return call(l, (nuint)left.Length, r, (nuint)right.Length);
+    }
+    private static unsafe nuint Invoke(string source, string target, nuint threshold, ThresholdCall call)
+    {
+        byte[] left = Encoding.UTF8.GetBytes(source);
+        byte[] right = Encoding.UTF8.GetBytes(target);
+        fixed (byte* l = left)
+        fixed (byte* r = right)
+            return call(l, (nuint)left.Length, r, (nuint)right.Length, threshold);
     }
 }

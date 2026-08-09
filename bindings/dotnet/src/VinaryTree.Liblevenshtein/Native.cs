@@ -75,8 +75,12 @@ internal static unsafe partial class NativeMethods
     internal static partial nuint DistanceThreshold(byte* source, nuint sourceLength, byte* target, nuint targetLength, nuint threshold);
     [LibraryImport(Library, EntryPoint = "llev_damerau_distance")]
     internal static partial nuint DamerauDistance(byte* source, nuint sourceLength, byte* target, nuint targetLength);
+    [LibraryImport(Library, EntryPoint = "llev_damerau_distance_threshold")]
+    internal static partial nuint DamerauDistanceThreshold(byte* source, nuint sourceLength, byte* target, nuint targetLength, nuint threshold);
     [LibraryImport(Library, EntryPoint = "llev_true_damerau_distance")]
     internal static partial nuint TrueDamerauDistance(byte* source, nuint sourceLength, byte* target, nuint targetLength);
+    [LibraryImport(Library, EntryPoint = "llev_true_damerau_distance_threshold")]
+    internal static partial nuint TrueDamerauDistanceThreshold(byte* source, nuint sourceLength, byte* target, nuint targetLength, nuint threshold);
     [LibraryImport(Library, EntryPoint = "llev_transducer_new")]
     internal static partial Status TransducerNew(VinaryTree.Interop.NativeResource* resource, uint algorithm, out nint handle);
     [LibraryImport(Library, EntryPoint = "llev_transducer_free")]

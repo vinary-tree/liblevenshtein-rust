@@ -2,7 +2,7 @@ language	fns_exposed	fns_null_with_reason	enums_ok	iterator	reducer	phonetic_gat
 c	35/35	0	4/4	llev_query_cursor_next_batch	llev_query_cursor_reduce	llev_build_features	no	yes	-
 clojure	16/35	19	3/4	ResultCursor	reduce-batches	status-error	yes	yes	-
 cpp	35/35	0	4/4	vinary_tree::liblevenshtein::query_cursor::next_batch	llev_query_cursor_reduce	llev_build_features	yes	yes	-
-dotnet	25/35	10	4/4	Query.GetEnumerator	none	status-error	yes	yes	llev_damerau_distance_threshold,llev_true_damerau_distance_threshold
+dotnet	27/35	8	4/4	Query.GetEnumerator	none	status-error	yes	yes	-
 fortran	26/35	9	3/4	query_iterator%next	none	status-error	yes	yes	-
 go	27/35	8	4/4	Iterator.Next	none	status-error	yes	yes	-
 haskell	26/35	9	3/4	next	foldBatches	status-error	yes	yes	-
