@@ -490,8 +490,11 @@ jobs:
       - name: Streaming, retained-resource, and snapshot tests
         working-directory: bindings/go
         env:
-          CGO_LDFLAGS: -L${{ github.workspace }}/target/debug
-          LD_LIBRARY_PATH: ${{ github.workspace }}/target/debug
+          # The C8 property/leak suites build dictionaries with the libdictenstein
+          # sibling's DynamicDawg (resolved via go.work), so its native library
+          # must be linkable and loadable too.
+          CGO_LDFLAGS: -L${{ github.workspace }}/../libdictenstein/target/debug -L${{ github.workspace }}/target/debug
+          LD_LIBRARY_PATH: ${{ github.workspace }}/../libdictenstein/target/debug:${{ github.workspace }}/target/debug
         run: go test -race ./...
       - name: Libdictenstein CRUD and cross-project snapshots
         working-directory: ../libdictenstein/bindings/go
