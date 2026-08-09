@@ -57,6 +57,7 @@
     "build:wasi": "cargo build --manifest-path rust/Cargo.toml --release --target wasm32-wasip1 --no-default-features --features wasi && mkdir -p generated/wasi && cp ../../target/wasm32-wasip1/release/vinary_tree_js_runtime.wasm generated/wasi/vinary_tree.wasm && wasm-opt -O3 --strip-debug generated/wasi/vinary_tree.wasm -o generated/wasi/vinary_tree.wasm",
     "test:native": "node --test test/native.test.mjs",
     "test:leak": "node --expose-gc --test test/native.leak.test.mjs",
+    "test:property": "npm --prefix test-property install --no-audit --no-fund && node --test test-property/native.property.test.mjs",
     "test": "node --test test/browser-wasm.test.mjs test/wasi.test.mjs",
     "stage:license": "node scripts/stage-license.mjs",
     "prepack": "npm run stage:license && npm run build:wasm && npm test"

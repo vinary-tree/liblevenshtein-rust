@@ -1,0 +1,4 @@
+# C8 property tests install fast-check into an isolated package so npm never has
+# to resolve the unpublished @vinary-tree/interop sibling. The lockfile is
+# committed for reproducibility; the installed tree is not.
+test-property/node_modules/

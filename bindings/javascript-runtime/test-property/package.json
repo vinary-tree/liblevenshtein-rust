@@ -1,0 +1,13 @@
+{
+  "name": "@vinary-tree/vinary-tree-property-tests",
+  "version": "0.10.0",
+  "private": true,
+  "type": "module",
+  "description": "C8 fast-check property tests for the native runtime, isolated so npm need not resolve the unpublished @vinary-tree/interop sibling",
+  "scripts": {
+    "test": "node --test native.property.test.mjs"
+  },
+  "devDependencies": {
+    "fast-check": "^4.0.0"
+  }
+}

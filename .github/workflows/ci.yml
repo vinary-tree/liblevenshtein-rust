@@ -413,6 +413,7 @@ jobs:
           npm run build:native
           npm run test:native
           npm run test:leak
+          npm run test:property
       - name: Browser WASM and Node WASI conformance
         working-directory: bindings/javascript-runtime
         run: |
