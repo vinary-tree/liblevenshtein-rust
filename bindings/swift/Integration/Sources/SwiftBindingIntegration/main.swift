@@ -94,6 +94,8 @@ do {
     precondition(parsedApplied == "f")
     parsed.close()
 
+    try PropertyTests.run()
+
     print("Swift binding integration passed")
 } catch {
     fatalError("Swift binding integration failed: \(error)")
