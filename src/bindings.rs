@@ -97,11 +97,19 @@ impl fmt::Display for BindingError {
 
 impl std::error::Error for BindingError {}
 
-fn status(status: VtStatus) -> Result<(), BindingError> {
-    if status.is_ok() {
+fn status(raw: u32) -> Result<(), BindingError> {
+    // The wire carries a raw u32 (interop status rule): decode before any
+    // enum-typed use, and treat an out-of-range discriminant as provider
+    // misbehavior rather than undefined behavior (ledger LLEV-B6).
+    let Some(decoded) = VtStatus::from_raw(raw) else {
+        return Err(BindingError::InvalidProviderOutput(
+            "provider returned an out-of-range status code",
+        ));
+    };
+    if decoded.is_ok() {
         Ok(())
     } else {
-        Err(BindingError::Provider(status))
+        Err(BindingError::Provider(decoded))
     }
 }
 
@@ -183,7 +191,7 @@ impl Provider {
             VT_DICTIONARY_INTERFACE_VERSION,
             &mut dictionary,
         );
-        if result == VtStatus::Unsupported {
+        if VtStatus::from_raw(result) == Some(VtStatus::Unsupported) {
             return Err(BindingError::MissingDictionaryInterface);
         }
         status(result)?;

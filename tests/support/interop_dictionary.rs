@@ -208,6 +208,15 @@ unsafe extern "C" fn query_interface(
     interface_id: *const VtInterfaceId,
     minimum_version: u32,
     out_vtable: *mut *const c_void,
+) -> u32 {
+    query_interface_status(raw, interface_id, minimum_version, out_vtable).to_raw()
+}
+
+unsafe fn query_interface_status(
+    raw: *mut c_void,
+    interface_id: *const VtInterfaceId,
+    minimum_version: u32,
+    out_vtable: *mut *const c_void,
 ) -> VtStatus {
     if interface_id.is_null() || out_vtable.is_null() {
         return VtStatus::NullPointer;
@@ -228,7 +237,11 @@ unsafe extern "C" fn query_interface(
     VtStatus::Ok
 }
 
-unsafe extern "C" fn snapshot(raw: *mut c_void, out: *mut VtResource) -> VtStatus {
+unsafe extern "C" fn snapshot(raw: *mut c_void, out: *mut VtResource) -> u32 {
+    snapshot_status(raw, out).to_raw()
+}
+
+unsafe fn snapshot_status(raw: *mut c_void, out: *mut VtResource) -> VtStatus {
     if out.is_null() {
         return VtStatus::NullPointer;
     }
@@ -253,7 +266,11 @@ unsafe extern "C" fn snapshot(raw: *mut c_void, out: *mut VtResource) -> VtStatu
     VtStatus::Ok
 }
 
-unsafe extern "C" fn root(_raw: *mut c_void, out_node: *mut u64) -> VtStatus {
+unsafe extern "C" fn root(_raw: *mut c_void, out_node: *mut u64) -> u32 {
+    root_status(_raw, out_node).to_raw()
+}
+
+unsafe fn root_status(_raw: *mut c_void, out_node: *mut u64) -> VtStatus {
     if out_node.is_null() {
         return VtStatus::NullPointer;
     }
@@ -261,7 +278,11 @@ unsafe extern "C" fn root(_raw: *mut c_void, out_node: *mut u64) -> VtStatus {
     VtStatus::Ok
 }
 
-unsafe extern "C" fn len(raw: *mut c_void, out_len: *mut usize, out_known: *mut u8) -> VtStatus {
+unsafe extern "C" fn len(raw: *mut c_void, out_len: *mut usize, out_known: *mut u8) -> u32 {
+    len_status(raw, out_len, out_known).to_raw()
+}
+
+unsafe fn len_status(raw: *mut c_void, out_len: *mut usize, out_known: *mut u8) -> VtStatus {
     if out_len.is_null() || out_known.is_null() {
         return VtStatus::NullPointer;
     }
@@ -270,7 +291,11 @@ unsafe extern "C" fn len(raw: *mut c_void, out_len: *mut usize, out_known: *mut 
     VtStatus::Ok
 }
 
-unsafe extern "C" fn node_is_final(raw: *mut c_void, node: u64, out_is_final: *mut u8) -> VtStatus {
+unsafe extern "C" fn node_is_final(raw: *mut c_void, node: u64, out_is_final: *mut u8) -> u32 {
+    node_is_final_status(raw, node, out_is_final).to_raw()
+}
+
+unsafe fn node_is_final_status(raw: *mut c_void, node: u64, out_is_final: *mut u8) -> VtStatus {
     if out_is_final.is_null() {
         return VtStatus::NullPointer;
     }
@@ -283,6 +308,14 @@ unsafe extern "C" fn node_is_final(raw: *mut c_void, node: u64, out_is_final: *m
 }
 
 unsafe extern "C" fn node_value_u64(
+    raw: *mut c_void,
+    node: u64,
+    out_value: *mut VtOptionalU64,
+) -> u32 {
+    node_value_u64_status(raw, node, out_value).to_raw()
+}
+
+unsafe fn node_value_u64_status(
     raw: *mut c_void,
     node: u64,
     out_value: *mut VtOptionalU64,
@@ -306,6 +339,16 @@ unsafe extern "C" fn node_value_u64(
 }
 
 unsafe extern "C" fn node_transition(
+    raw: *mut c_void,
+    node: u64,
+    label: u64,
+    out_child: *mut u64,
+    out_found: *mut u8,
+) -> u32 {
+    node_transition_status(raw, node, label, out_child, out_found).to_raw()
+}
+
+unsafe fn node_transition_status(
     raw: *mut c_void,
     node: u64,
     label: u64,
@@ -336,6 +379,27 @@ unsafe extern "C" fn node_transition(
 }
 
 unsafe extern "C" fn node_edges(
+    raw: *mut c_void,
+    node: u64,
+    start: usize,
+    out_edges: *mut VtDictionaryEdge,
+    capacity: usize,
+    out_written: *mut usize,
+    out_total: *mut usize,
+) -> u32 {
+    node_edges_status(
+        raw,
+        node,
+        start,
+        out_edges,
+        capacity,
+        out_written,
+        out_total,
+    )
+    .to_raw()
+}
+
+unsafe fn node_edges_status(
     raw: *mut c_void,
     node: u64,
     start: usize,

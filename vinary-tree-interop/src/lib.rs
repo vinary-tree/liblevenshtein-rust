@@ -3,6 +3,13 @@
 //! This crate is intentionally dependency-free. It defines layouts and
 //! constants only; project crates own the safe wrappers and concrete resource
 //! implementations.
+//!
+//! Status wire rule: every callback returns the RAW `u32` status on the Rust
+//! side. [`VtStatus`] is the vocabulary type — producers encode with
+//! [`VtStatus::to_raw`], consumers decode with [`VtStatus::from_raw`] and
+//! treat out-of-range values as provider errors. This keeps a misbehaving
+//! foreign provider's garbage discriminant a VALUE, never undefined
+//! behavior.
 
 #![no_std]
 #![warn(missing_docs)]
@@ -62,6 +69,37 @@ impl VtStatus {
     /// Return whether this status represents success.
     pub const fn is_ok(self) -> bool {
         matches!(self, Self::Ok)
+    }
+
+    /// Encode this status as its raw wire value.
+    pub const fn to_raw(self) -> u32 {
+        self as u32
+    }
+
+    /// Decode a raw wire value, rejecting anything outside the published
+    /// range.
+    ///
+    /// Every interop callback RETURNS `u32` on the Rust side: a status
+    /// arriving from a foreign provider is untrusted input, and reading an
+    /// out-of-range discriminant into this enum would be undefined behavior
+    /// before any check could run. Consumers must decode with `from_raw`
+    /// and treat `None` as a provider error; producers encode with
+    /// [`VtStatus::to_raw`]. The C header keeps its `VtStatus` returns —
+    /// C enums are integer-typed, so the ABI is identical and only the
+    /// Rust-side type carries the validation obligation.
+    pub const fn from_raw(raw: u32) -> Option<Self> {
+        match raw {
+            0 => Some(Self::Ok),
+            1 => Some(Self::End),
+            2 => Some(Self::InvalidArgument),
+            3 => Some(Self::NullPointer),
+            4 => Some(Self::Unsupported),
+            5 => Some(Self::IoError),
+            6 => Some(Self::Closed),
+            7 => Some(Self::LimitExceeded),
+            8 => Some(Self::ProviderError),
+            _ => None,
+        }
     }
 }
 
@@ -123,7 +161,7 @@ pub struct VtResourceVTable {
             interface_id: *const VtInterfaceId,
             minimum_version: u32,
             out_vtable: *mut *const c_void,
-        ) -> VtStatus,
+        ) -> u32,
     >,
 }
 
@@ -202,30 +240,20 @@ pub struct VtDictionaryVTable {
     /// Bitset from [`dictionary_flags`].
     pub flags: u64,
     /// Capture the revision visible at operation start.
-    pub snapshot: Option<
-        unsafe extern "C" fn(context: *mut c_void, out_snapshot: *mut VtResource) -> VtStatus,
-    >,
+    pub snapshot:
+        Option<unsafe extern "C" fn(context: *mut c_void, out_snapshot: *mut VtResource) -> u32>,
     /// Return the root node identifier for this immutable resource.
-    pub root: Option<unsafe extern "C" fn(context: *mut c_void, out_node: *mut u64) -> VtStatus>,
+    pub root: Option<unsafe extern "C" fn(context: *mut c_void, out_node: *mut u64) -> u32>,
     /// Return the number of stored terms when cheaply available.
     pub len: Option<
-        unsafe extern "C" fn(
-            context: *mut c_void,
-            out_len: *mut usize,
-            out_known: *mut u8,
-        ) -> VtStatus,
+        unsafe extern "C" fn(context: *mut c_void, out_len: *mut usize, out_known: *mut u8) -> u32,
     >,
     /// Test whether a node terminates a stored term.
-    pub node_is_final: Option<
-        unsafe extern "C" fn(context: *mut c_void, node: u64, out_is_final: *mut u8) -> VtStatus,
-    >,
+    pub node_is_final:
+        Option<unsafe extern "C" fn(context: *mut c_void, node: u64, out_is_final: *mut u8) -> u32>,
     /// Read the optional u64 value of a final node.
     pub node_value_u64: Option<
-        unsafe extern "C" fn(
-            context: *mut c_void,
-            node: u64,
-            out_value: *mut VtOptionalU64,
-        ) -> VtStatus,
+        unsafe extern "C" fn(context: *mut c_void, node: u64, out_value: *mut VtOptionalU64) -> u32,
     >,
     /// Follow one edge without enumerating siblings.
     pub node_transition: Option<
@@ -235,7 +263,7 @@ pub struct VtDictionaryVTable {
             label: u64,
             out_child: *mut u64,
             out_found: *mut u8,
-        ) -> VtStatus,
+        ) -> u32,
     >,
     /// Copy a page of outgoing edges into caller-owned contiguous storage.
     ///
@@ -251,7 +279,7 @@ pub struct VtDictionaryVTable {
             capacity: usize,
             out_written: *mut usize,
             out_total: *mut usize,
-        ) -> VtStatus,
+        ) -> u32,
     >,
 }
 
@@ -328,18 +356,17 @@ pub struct VtWfstVTable {
     /// Bitset from [`wfst_flags`].
     pub flags: u64,
     /// Capture the revision visible at operation start.
-    pub snapshot: Option<
-        unsafe extern "C" fn(context: *mut c_void, out_snapshot: *mut VtResource) -> VtStatus,
-    >,
+    pub snapshot:
+        Option<unsafe extern "C" fn(context: *mut c_void, out_snapshot: *mut VtResource) -> u32>,
     /// Return the initial state.
-    pub start: Option<unsafe extern "C" fn(context: *mut c_void, out_state: *mut u64) -> VtStatus>,
+    pub start: Option<unsafe extern "C" fn(context: *mut c_void, out_state: *mut u64) -> u32>,
     /// Return the number of states when cheaply known.
     pub num_states: Option<
         unsafe extern "C" fn(
             context: *mut c_void,
             out_count: *mut usize,
             out_known: *mut u8,
-        ) -> VtStatus,
+        ) -> u32,
     >,
     /// Validate a state and read its finality/final weight.
     pub state_info: Option<
@@ -349,7 +376,7 @@ pub struct VtWfstVTable {
             out_valid: *mut u8,
             out_is_final: *mut u8,
             out_final_weight: *mut f64,
-        ) -> VtStatus,
+        ) -> u32,
     >,
     /// Copy a page of outgoing arcs into caller-owned contiguous storage.
     pub state_arcs: Option<
@@ -361,7 +388,7 @@ pub struct VtWfstVTable {
             capacity: usize,
             out_written: *mut usize,
             out_total: *mut usize,
-        ) -> VtStatus,
+        ) -> u32,
     >,
 }
 

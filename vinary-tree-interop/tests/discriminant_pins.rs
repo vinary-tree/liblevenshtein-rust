@@ -77,6 +77,24 @@ fn status_universe_is_exactly_nine_values() {
     );
 }
 
+/// The wire codec is a bijection onto the published range: every in-range
+/// raw value decodes to the status that re-encodes to it, and nothing
+/// outside 0..=8 decodes at all (the from_raw half of the LLEV-B6 wire
+/// hardening — an out-of-range provider status is a VALUE, never UB).
+#[test]
+fn wire_round_trip_covers_exactly_the_published_range() {
+    for raw in 0u32..=8 {
+        let status = VtStatus::from_raw(raw).expect("in-range wire value decodes");
+        assert_eq!(status.to_raw(), raw);
+    }
+    for raw in [9u32, 10, 42, u32::MAX] {
+        assert!(
+            VtStatus::from_raw(raw).is_none(),
+            "out-of-range {raw} must not decode"
+        );
+    }
+}
+
 #[test]
 fn is_ok_holds_exactly_for_ok() {
     let universe = [

@@ -85,21 +85,21 @@ unsafe extern "C" fn counting_query_interface(
     interface_id: *const VtInterfaceId,
     minimum_version: u32,
     out_vtable: *mut *const c_void,
-) -> VtStatus {
+) -> u32 {
     if interface_id.is_null() || out_vtable.is_null() {
-        return VtStatus::NullPointer;
+        return VtStatus::NullPointer.to_raw();
     }
     let requested = unsafe { *interface_id };
     if requested != VT_DICTIONARY_INTERFACE_ID {
-        return VtStatus::Unsupported;
+        return VtStatus::Unsupported.to_raw();
     }
     if minimum_version > VT_DICTIONARY_INTERFACE_VERSION {
-        return VtStatus::Unsupported;
+        return VtStatus::Unsupported.to_raw();
     }
     unsafe {
         *out_vtable = (extended_dictionary_vtable() as *const ExtendedDictionaryVTable).cast();
     }
-    VtStatus::Ok
+    VtStatus::Ok.to_raw()
 }
 
 static RESOURCE_VTABLE: VtResourceVTable = VtResourceVTable {
@@ -151,7 +151,8 @@ fn query(
     let query_interface = vtable
         .query_interface
         .expect("test provider always publishes query_interface");
-    unsafe { query_interface(resource.context, id, minimum_version, out) }
+    let raw = unsafe { query_interface(resource.context, id, minimum_version, out) };
+    VtStatus::from_raw(raw).expect("provider returned an out-of-range status")
 }
 
 const POISON: *const c_void = 0xDEAD_BEEFusize as *const c_void;

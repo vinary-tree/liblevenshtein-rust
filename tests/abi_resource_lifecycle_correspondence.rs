@@ -47,35 +47,38 @@ unsafe fn vt_release(resource: VtResource) {
 unsafe fn vt_probe_root(resource: VtResource) -> VtStatus {
     let vtable = &*resource.vtable;
     let mut dictionary: *const c_void = std::ptr::null();
-    let status = (vtable.query_interface.expect("query_interface published"))(
+    let raw = (vtable.query_interface.expect("query_interface published"))(
         resource.context,
         &VT_DICTIONARY_INTERFACE_ID,
         VT_DICTIONARY_INTERFACE_VERSION,
         &mut dictionary,
     );
+    let status = VtStatus::from_raw(raw).expect("provider returned an out-of-range status");
     if status != VtStatus::Ok {
         return status;
     }
     let dictionary = &*(dictionary as *const VtDictionaryVTable);
     let mut root = 0u64;
-    (dictionary.root.expect("root published"))(resource.context, &mut root)
+    let raw = (dictionary.root.expect("root published"))(resource.context, &mut root);
+    VtStatus::from_raw(raw).expect("provider returned an out-of-range status")
 }
 
 /// Capture a snapshot resource; the caller owns the returned retain.
 unsafe fn vt_snapshot(resource: VtResource) -> VtResource {
     let vtable = &*resource.vtable;
     let mut dictionary: *const c_void = std::ptr::null();
-    let status = (vtable.query_interface.expect("query_interface published"))(
+    let raw = (vtable.query_interface.expect("query_interface published"))(
         resource.context,
         &VT_DICTIONARY_INTERFACE_ID,
         VT_DICTIONARY_INTERFACE_VERSION,
         &mut dictionary,
     );
+    let status = VtStatus::from_raw(raw).expect("provider returned an out-of-range status");
     assert_eq!(status, VtStatus::Ok, "snapshot negotiation must succeed");
     let dictionary = &*(dictionary as *const VtDictionaryVTable);
     let mut captured = VtResource::NULL;
-    let status =
-        (dictionary.snapshot.expect("snapshot published"))(resource.context, &mut captured);
+    let raw = (dictionary.snapshot.expect("snapshot published"))(resource.context, &mut captured);
+    let status = VtStatus::from_raw(raw).expect("provider returned an out-of-range status");
     assert_eq!(status, VtStatus::Ok, "snapshot capture must succeed");
     assert!(!captured.is_null(), "captured snapshot must be non-null");
     captured
