@@ -814,6 +814,10 @@ coq_compile_file() {
       local file="${rel#docs/verification/llre/theories/}"
       run_capped "$profile" bash -lc "cd '$ROOT/docs/verification/llre/theories' && coqc -R . Liblevenshtein.LLRE '$file'"
       ;;
+    docs/verification/abi/theories/*)
+      local file="${rel#docs/verification/abi/theories/}"
+      run_capped "$profile" bash -lc "cd '$ROOT/docs/verification/abi/theories' && coqc -R . Liblevenshtein.Abi '$file'"
+      ;;
     rocq/liblevenshtein/*)
       local file="${rel#rocq/liblevenshtein/}"
       run_capped "$profile" bash -lc "cd '$ROOT/rocq/liblevenshtein' && coqc -R . LevensteinAutomata '$file'"

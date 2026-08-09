@@ -415,14 +415,16 @@ impl<U: InteropUnit> ForeignNode<U> {
                 return self.callback_failed(BindingError::IncompatibleDictionaryInterface, vec![])
             }
         };
+        // Every page requests the same recommended capacity. The result Vec
+        // grows only from edges actually delivered — never from the
+        // provider-claimed `total`, whose inflation would otherwise drive a
+        // preallocation abort (finding LLEV-B8). The per-page acceptance
+        // check below is exactly the predicate proved in
+        // docs/verification/abi/theories/ConsumerAcceptance.v `accepts_dec`.
         let mut result = Vec::with_capacity(VT_RECOMMENDED_EDGE_BATCH);
         let mut start = 0usize;
         loop {
-            let capacity = if start == 0 {
-                VT_RECOMMENDED_EDGE_BATCH
-            } else {
-                result.capacity().saturating_sub(result.len()).max(1)
-            };
+            let capacity = VT_RECOMMENDED_EDGE_BATCH;
             let mut page = vec![VtDictionaryEdge::default(); capacity];
             let mut written = 0usize;
             let mut total = 0usize;
@@ -440,7 +442,16 @@ impl<U: InteropUnit> ForeignNode<U> {
             if let Err(error) = status(callback_status) {
                 return self.callback_failed(error, vec![]);
             }
-            if written > capacity || total < start.saturating_add(written) {
+            // ConsumerAcceptance.accepts_dec, in order: written<=capacity;
+            // written<=total-start; and empty-page-only-when-exhausted
+            // (progress). The claimed-total ceiling of the model is realized
+            // structurally — no allocation is ever sized from `total` — so a
+            // fabricated total cannot force an abort; it can only fail the
+            // written<=total-start bound above.
+            if written > capacity
+                || written > total.saturating_sub(start)
+                || (written == 0 && start < total)
+            {
                 return self.callback_failed(
                     BindingError::InvalidProviderOutput("invalid edge page lengths"),
                     vec![],
@@ -459,13 +470,6 @@ impl<U: InteropUnit> ForeignNode<U> {
             if start >= total {
                 break;
             }
-            if written == 0 {
-                return self.callback_failed(
-                    BindingError::InvalidProviderOutput("edge paging made no progress"),
-                    vec![],
-                );
-            }
-            result.reserve(total.saturating_sub(start));
         }
         result
     }
