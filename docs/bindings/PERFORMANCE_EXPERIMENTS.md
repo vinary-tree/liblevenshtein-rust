@@ -82,6 +82,26 @@ Hardware for the recorded numbers: AMD Ryzen Threadripper PRO 5975WX (Zen 3,
   as designed. The census is wired as a correctness test (asserts the law), and
   its TSV is the human-readable artifact of the crossing behavior.
 
+## E3 — Python marshalling library: keep `ctypes` or migrate to `cffi`?
+
+- **Hypothesis.** A `cffi`-based Python facade might lower per-call marshalling
+  overhead versus the shipped `ctypes` facade enough to justify a migration.
+- **Method / evidence.** The evidence-first rule places the burden of proof on the
+  *change*: a `cffi` rewrite must be justified by data, not adopted speculatively.
+  The relevant data already exists. E1 shows the drain wall-time is dominated by
+  automaton traversal, not by the boundary call itself (batch capacity — which
+  directly scales the number of `ctypes` calls per query via
+  $`\lceil M/\mathit{cap} \rceil`$ — moves total time by <4 %). The Python facade
+  additionally meets the full C1–C10 contract, including the C8 property suite and
+  the C9 leak suite (`bindings/python/tests/`), so correctness is not a motivator
+  either.
+- **Decision.** **Keep `ctypes`.** No measurement indicates the marshalling
+  library is a bottleneck, and the batched cursor already amortizes the crossing
+  count that a faster per-call path would target. A `cffi` migration is a facade
+  rewrite that would need its own evidence-backed justification; this program
+  surfaced none, so it is not undertaken (a deliberate no-change, recorded here so
+  the question is not silently reopened).
+
 ## Cross-references
 
 - Crossing-law correctness (adversarial paging, high-degree nodes):
