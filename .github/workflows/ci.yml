@@ -732,6 +732,9 @@ jobs:
           LUA_CPATH="$PWD/target/lua/?.so;$PWD/target/lua/?/?.so;;" \
           LD_LIBRARY_PATH="$PWD/target/debug:$PWD/../libdictenstein/target/debug" \
             lua5.4 bindings/lua/tests/property.lua
+          LUA_CPATH="$PWD/target/lua/?.so;$PWD/target/lua/?/?.so;;" \
+          LD_LIBRARY_PATH="$PWD/target/debug:$PWD/../libdictenstein/target/debug" \
+            lua5.4 bindings/lua/tests/leak.lua
 
   native-portability:
     name: ${{ matrix.platform.name }}
