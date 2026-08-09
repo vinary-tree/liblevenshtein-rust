@@ -1,10 +1,19 @@
-//! Query-start snapshot semantics for one long-lived transducer iterator.
+//! Query-start snapshot semantics for one long-lived transducer iterator,
+//! including the canonical cross-language fixture replayed at the NATIVE
+//! layer (no interop boundary at all — the semantic floor the binding and
+//! C-ABI replays must agree with).
+//!
+//! INVARIANT-HOOK: VT-SNAP-1 — emitted matches are a subset of the captured
+//! revision (spec: docs/verification/abi/theories/CursorSnapshotSemantics.v).
+
+mod support;
 
 use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
 use libdictenstein::dynamic_dawg::u64::DynamicDawgU64;
 use liblevenshtein::transducer::{Algorithm, Transducer};
 use proptest::prelude::*;
 use std::collections::BTreeMap;
+use support::query_start_fixture::{self, FixturePhase};
 
 fn sorted_values(iter: impl Iterator<Item = (String, usize, u64)>) -> Vec<(String, usize, u64)> {
     let mut values: Vec<_> = iter.collect();
@@ -18,6 +27,80 @@ fn sorted_unit_values(
     let mut values: Vec<_> = iter.collect();
     values.sort();
     values
+}
+
+/// The canonical cross-language fixture
+/// (vinary-tree-interop/conformance/query_start_snapshot.tsv) replayed at
+/// the native layer. Native dictionaries carry non-optional values, so the
+/// fixture's empty id maps to the documented native sentinel 0; the
+/// OPTIONAL-value fidelity of the same script is pinned at the binding and
+/// C-ABI layers.
+#[test]
+fn canonical_fixture_replays_at_the_native_layer() {
+    let steps = query_start_fixture::load();
+    let initial: Vec<(String, u64)> = steps
+        .iter()
+        .filter(|step| step.phase == FixturePhase::Initial)
+        .map(|step| {
+            assert_eq!(step.operation, "insert", "initial phase is insert-only");
+            (step.term.clone(), step.id.unwrap_or(0))
+        })
+        .collect();
+    let dict = DynamicDawgChar::<u64>::from_terms_with_values(
+        initial.iter().map(|(term, value)| (term.as_str(), *value)),
+    );
+    let transducer = Transducer::new(dict.clone(), Algorithm::Standard);
+
+    let frozen = sorted_values(transducer.query_values("cat", 2));
+    assert_eq!(
+        frozen,
+        vec![
+            ("cat".to_owned(), 0, 1),
+            ("cot".to_owned(), 1, 2),
+            ("cut".to_owned(), 1, 3),
+            ("scat".to_owned(), 1, 0),
+        ],
+        "the pinned frozen set (0 = native sentinel for the empty fixture id)"
+    );
+
+    let mut cursor = transducer.query_values("cat", 2);
+    let first = cursor.next().expect("fixture query has initial matches");
+
+    for step in steps
+        .iter()
+        .filter(|step| step.phase == FixturePhase::Mutation)
+    {
+        match step.operation.as_str() {
+            "insert" | "update" => {
+                dict.insert_with_value(&step.term, step.id.unwrap_or(0));
+            }
+            "remove" => {
+                dict.remove(&step.term);
+            }
+            // The native DAWG has one structural maintenance operation; the
+            // provider-level checkpoint is a publication no-op here.
+            "compact" | "checkpoint" => {
+                dict.compact();
+            }
+            other => panic!("fixture mutation {other:?} is not a native operation"),
+        }
+    }
+
+    assert_eq!(
+        sorted_values(std::iter::once(first).chain(cursor)),
+        frozen,
+        "the mid-mutation native cursor stays frozen"
+    );
+    assert_eq!(
+        sorted_values(transducer.query_values("cat", 2)),
+        vec![
+            ("cat".to_owned(), 0, 1),
+            ("cit".to_owned(), 1, 5),
+            ("cut".to_owned(), 1, 30),
+            ("scat".to_owned(), 1, 0),
+        ],
+        "the pinned post-mutation set"
+    );
 }
 
 #[test]
