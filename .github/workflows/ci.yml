@@ -138,6 +138,15 @@ jobs:
             -Wl,-rpath,"$PWD/../libdictenstein/target/debug" \
             -o target/c-cross-project-snapshot
           target/c-cross-project-snapshot
+          cc -std=c17 -Wall -Wextra -Werror \
+            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            bindings/c/tests/property.c \
+            -Ltarget/debug -lliblevenshtein \
+            -L../libdictenstein/target/debug -llibdictenstein \
+            -Wl,-rpath,"$PWD/target/debug" \
+            -Wl,-rpath,"$PWD/../libdictenstein/target/debug" \
+            -o target/c-property
+          target/c-property
           c++ -std=c++23 -Wall -Wextra -Werror \
             -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
             ../libdictenstein/bindings/cpp/tests/cross_project_snapshot.cpp \
