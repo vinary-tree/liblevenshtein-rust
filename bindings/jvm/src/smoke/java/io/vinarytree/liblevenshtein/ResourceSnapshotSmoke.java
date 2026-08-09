@@ -26,6 +26,11 @@ public final class ResourceSnapshotSmoke {
                         new UnicodeDictionaryResource(current::get);
                 Transducer transducer = new Transducer(dictionary)) {
             frozen = sorted(drain(transducer.query("cat", 2)));
+            // C5: the borrowed-batch reducer (forEachBatch) drains the same
+            // query-start snapshot to the same matches as the pull iterator.
+            if (!frozen.equals(sorted(reduceDrain(transducer.query("cat", 2))))) {
+                throw new AssertionError("reducer drain disagrees with iterator drain");
+            }
             longLived = transducer.query("cat", 2);
             first = longLived.next();
 
@@ -62,6 +67,17 @@ public final class ResourceSnapshotSmoke {
             cursor.forEachRemaining(result::add);
             return result;
         }
+    }
+
+    /** Drain a cursor through the borrowed-batch reducer, materializing matches. */
+    private static List<Match> reduceDrain(QueryCursor cursor) {
+        List<Match> result = new ArrayList<>();
+        cursor.forEachBatch(batch -> {
+            for (int index = 0; index < batch.size(); index++) {
+                result.add(batch.get(index).materialize());
+            }
+        });
+        return result;
     }
 
     private static List<Match> sorted(List<Match> values) {
