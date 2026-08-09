@@ -51,6 +51,25 @@ def test_project_owned_phonetic_resource() -> None:
         pattern.close()
 
 
+def test_phonetic_pattern_size_is_exposed() -> None:
+    # LLEV-B14: _native.py now binds llev_phonetic_pattern_size, so the
+    # automaton (states, transitions) counts surface as PhoneticPattern.size,
+    # matching the JVM and every Tier-2/3 facade.
+    with liblevenshtein.PhoneticPattern("c(at|ot)") as pattern:
+        size = pattern.size
+        assert isinstance(size, tuple) and len(size) == 2
+        states, transitions = size
+        assert states > 0 and transitions > 0
+
+
+def test_phonetic_rule_set_len_is_exposed() -> None:
+    # LLEV-B14: _native.py now binds llev_phonetic_rules_len, so the enabled-rule
+    # count surfaces through the Pythonic len() protocol.
+    with liblevenshtein.PhoneticRuleSet(liblevenshtein.PhoneticRuleSetKind.ENGLISH_ORTHOGRAPHY) as rules:
+        assert len(rules) > 0
+        assert isinstance(rules.apply("phone"), str)
+
+
 def test_one_long_lived_custom_provider_cursor_keeps_query_start_snapshot() -> None:
     current = Snapshot({"cat": 1, "cot": 2, "cut": 3, "scat": None})
     with UnicodeDictionaryResource(lambda: current) as dictionary:

@@ -2099,8 +2099,7 @@
           "symbol": "PhoneticPattern.close"
         },
         "llev_phonetic_pattern_size": {
-          "symbol": null,
-          "_reason": "FINDING: _native.py does not bind llev_phonetic_pattern_size; the Tier-1 JVM facade and every Tier-2/3 facade expose the automaton size"
+          "symbol": "PhoneticPattern.size"
         },
         "llev_phonetic_pattern_matches": {
           "symbol": "PhoneticPattern.matches"
@@ -2119,8 +2118,7 @@
           "symbol": "PhoneticRuleSet.close"
         },
         "llev_phonetic_rules_len": {
-          "symbol": null,
-          "_reason": "FINDING: _native.py does not bind llev_phonetic_rules_len; the Tier-1 JVM facade and every Tier-2/3 facade expose the enabled-rule count"
+          "symbol": "PhoneticRuleSet.__len__"
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"

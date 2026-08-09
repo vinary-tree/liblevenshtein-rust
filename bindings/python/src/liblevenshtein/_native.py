@@ -115,12 +115,16 @@ _lib.llev_phonetic_pattern_compile_llre.restype = ctypes.c_uint32
 _lib.llev_phonetic_pattern_free.argtypes = [ctypes.c_void_p]
 _lib.llev_phonetic_pattern_matches.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_uint8)]
 _lib.llev_phonetic_pattern_matches.restype = ctypes.c_uint32
+_lib.llev_phonetic_pattern_size.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_size_t)]
+_lib.llev_phonetic_pattern_size.restype = ctypes.c_uint32
 _lib.llev_transducer_query_pattern.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint8, ctypes.POINTER(ctypes.c_void_p)]
 _lib.llev_transducer_query_pattern.restype = ctypes.c_uint32
 _lib.llev_phonetic_rules_parse.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_void_p)]
 _lib.llev_phonetic_rules_parse.restype = ctypes.c_uint32
 _lib.llev_phonetic_rules_builtin.argtypes = [ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p)]
 _lib.llev_phonetic_rules_builtin.restype = ctypes.c_uint32
+_lib.llev_phonetic_rules_len.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t)]
+_lib.llev_phonetic_rules_len.restype = ctypes.c_uint32
 _lib.llev_phonetic_rules_free.argtypes = [ctypes.c_void_p]
 _lib.llev_phonetic_rules_apply.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(_OwnedString)]
 _lib.llev_phonetic_rules_apply.restype = ctypes.c_uint32
@@ -355,6 +359,14 @@ class PhoneticPattern:
         _check(_lib.llev_phonetic_pattern_matches(self._handle, data, len(data), ctypes.byref(output)))
         return bool(output.value)
 
+    @property
+    def size(self) -> tuple[int, int]:
+        """Compiled ``(states, transitions)`` counts of the pattern automaton."""
+        states = ctypes.c_size_t()
+        transitions = ctypes.c_size_t()
+        _check(_lib.llev_phonetic_pattern_size(self._handle, ctypes.byref(states), ctypes.byref(transitions)))
+        return (states.value, transitions.value)
+
     def close(self) -> None:
         if self._handle:
             _lib.llev_phonetic_pattern_free(self._handle)
@@ -392,6 +404,12 @@ class PhoneticRuleSet:
             return ctypes.string_at(output.data, output.len).decode()
         finally:
             _lib.llev_owned_string_free(ctypes.byref(output))
+
+    def __len__(self) -> int:
+        """Number of enabled rewrite rules in the set."""
+        count = ctypes.c_size_t()
+        _check(_lib.llev_phonetic_rules_len(self._handle, ctypes.byref(count)))
+        return count.value
 
     def close(self) -> None:
         if self._handle:
