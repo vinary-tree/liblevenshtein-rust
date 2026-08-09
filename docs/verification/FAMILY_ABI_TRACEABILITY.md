@@ -80,3 +80,32 @@ runs; every `formal-only` row (marked `-` in the test columns) is a pure
 Rocq/TLA+ result whose evidence is the machine-checked proof itself. No row
 may drift from its spec or test without its registry gate failing.
 
+
+## DOI verification sweep (W9)
+
+Every DOI across the five repositories' docs was resolved against `doi.org`
+(first-hop resolution: `301`/`302` = a registered, resolvable DOI). Result:
+**137 unique DOIs, 128 resolve.** The nine non-resolving entries break down as:
+
+- **1 intentional negative control** — `10.1145/9999999.9999999` in
+  `docs/theory/snapshot-semantics.md`, an explicit "invalid DOI → 404" example
+  demonstrating the verification methodology. Correctly non-resolving by design.
+- **8 pre-existing citation-debt entries** in general algorithm/architecture/
+  archive documents (NOT in the ABI/binding docs this program produced), flagged
+  here for their doc owners:
+
+  | DOI | Location | Note |
+  |---|---|---|
+  | `10.1007/3-540-45526-4_37` | `liblevenshtein-rust/docs/verification/INDEX.md` | Schulz & Mihov 2002 — the canonical DOI `10.1007/s10032-002-0082-8` resolves and is used elsewhere; this alternate ref does not. |
+  | `10.1007/3-540-44569-9_2` | `liblevenshtein-rust/docs/algorithms/06-zipper-navigation/` | LNCS chapter; DOI does not resolve. |
+  | `10.1007/s00138-001-0043-4` | `liblevenshtein-rust/docs/algorithms/02-levenshtein-automata/` | Machine Vision & Applications; does not resolve. |
+  | `10.1016/S0031-3203(96)00109-X` | `liblevenshtein-rust/docs/algorithms/02-levenshtein-automata/` | Pattern Recognition; does not resolve. |
+  | `10.1109/IIT.2009.5413739` | `liblevenshtein-rust/docs/algorithms/01-dictionary-layer/implementations/double-array-trie.md` | IEEE IIT; does not resolve. |
+  | `10.1145/3164135.3164147` | `libdictenstein/docs/design/history/` | historical design plan; does not resolve. |
+  | `10.1145/32204.32208` | `libdictenstein/docs/architecture/optimization-roadmap.md` | Blumer et al. CDAWG (1987); old ACM DOI does not resolve. |
+  | `10.21437/Interspeech.2021-1019` | `duallity/docs/archive/references/papers.md` | archived reference; does not resolve. |
+
+All DOIs introduced by this ABI/binding-verification program (the family ABI
+references, security models, and bibliographies added in W1–W9) resolve. The
+eight above are baseline citation debt in unrelated documents; the sweep record
+is the falsifiable artifact (re-run the resolution to reproduce).
