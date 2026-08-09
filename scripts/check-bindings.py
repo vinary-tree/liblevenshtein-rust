@@ -641,6 +641,59 @@ require(
 )
 text(ROOT / "bindings" / "javascript-runtime" / "generated" / "wasm" / ".npmignore")
 
+# Panic-free WASM boundary (LLEV-B4): a panic in the umbrella-runtime WASM
+# modules traps and kills the whole instance instead of surfacing a status or
+# JsError, so non-test code in browser.rs and wasi.rs must never reach a
+# panic path. The scanner strips string/char literals and comments, then
+# skips `#[cfg(test)]` items by tracking their brace depth, so doc examples
+# and test modules stay exempt while any reintroduced production panic site
+# fails this gate.
+WASM_PANIC_PATTERN = re.compile(
+    r"\.unwrap\(\)|\.expect\(|\bunreachable!|\bpanic!|\btodo!|\bunimplemented!"
+)
+
+
+def wasm_panic_sites(path: Path) -> list[str]:
+    """Return the non-test panic-capable lines of one WASM boundary module."""
+    sites: list[str] = []
+    depth = 0
+    test_depths: list[int] = []
+    cfg_test_pending = False
+    for number, raw_line in enumerate(text(path).splitlines(), start=1):
+        code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', raw_line)
+        code = re.sub(r"'(?:[^'\\]|\\.)'", "''", code)
+        code = code.split("//", 1)[0]
+        stripped = code.strip()
+        if stripped.startswith("#[cfg(test)]"):
+            cfg_test_pending = True
+        elif cfg_test_pending and stripped.startswith("#["):
+            pass  # further attributes on the same test-only item
+        elif cfg_test_pending:
+            if "{" in code:
+                test_depths.append(depth)
+                cfg_test_pending = False
+            elif stripped.endswith(";"):
+                cfg_test_pending = False  # declaration-only item: `mod tests;`
+        elif not test_depths and WASM_PANIC_PATTERN.search(code):
+            sites.append(f"{path.relative_to(ROOT)}:{number}: {raw_line.strip()}")
+        depth += code.count("{") - code.count("}")
+        if test_depths and depth <= test_depths[-1]:
+            test_depths.pop()
+    return sites
+
+
+for wasm_module in (
+    ROOT / "bindings" / "javascript-runtime" / "rust" / "src" / "browser.rs",
+    ROOT / "bindings" / "javascript-runtime" / "rust" / "src" / "wasi.rs",
+):
+    wasm_panics = wasm_panic_sites(wasm_module)
+    require(
+        not wasm_panics,
+        "WASM boundary modules must stay panic-free (LLEV-B4); surface "
+        "failures as a vt_* status or JsError instead of panicking:\n  "
+        + "\n  ".join(wasm_panics),
+    )
+
 # Facade-coverage completeness: every modeled C function must map, in every
 # maintained facade, either to a real public symbol found in that facade's
 # sources or to an explicit reasoned absence. The per-language surface model

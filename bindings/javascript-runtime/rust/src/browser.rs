@@ -28,9 +28,27 @@ fn error(value: impl std::fmt::Display) -> JsValue {
     js_sys::Error::new(&value.to_string()).into()
 }
 
-fn property(object: &Object, name: &str, value: &JsValue) {
-    Reflect::set(object, &JsValue::from_str(name), value)
-        .expect("setting a fresh plain-object property cannot fail");
+fn property(object: &Object, name: &str, value: &JsValue) -> Result<(), JsValue> {
+    if Reflect::set(object, &JsValue::from_str(name), value)? {
+        Ok(())
+    } else {
+        Err(error(format!("failed to define result property {name}")))
+    }
+}
+
+/// Decode a raw interop status, mapping anything but `Ok` to a `JsError`.
+///
+/// Interop callbacks return raw `u32` statuses on the Rust side; anything
+/// outside the published range is untrusted provider output and must be
+/// rejected rather than read into [`VtStatus`].
+fn require_ok(raw: u32, operation: &str) -> Result<(), JsValue> {
+    match VtStatus::from_raw(raw) {
+        Some(VtStatus::Ok) => Ok(()),
+        Some(status) => Err(error(format!("{operation} failed: {status:?}"))),
+        None => Err(error(format!(
+            "{operation} returned an out-of-range status {raw}"
+        ))),
+    }
 }
 
 fn domain(value: &str) -> Result<BindingUnitDomain, JsValue> {
@@ -87,15 +105,15 @@ fn optional_u64(value: JsValue) -> Result<Option<u64>, JsValue> {
         .map_err(|_| error("value must be an unsigned 64-bit integer"))
 }
 
-fn lookup(found: bool, value: Option<u64>) -> JsValue {
+fn lookup(found: bool, value: Option<u64>) -> Result<JsValue, JsValue> {
     let object = Object::new();
-    property(&object, "found", &JsValue::from_bool(found));
+    property(&object, "found", &JsValue::from_bool(found))?;
     property(
         &object,
         "value",
         &value.map_or(JsValue::NULL, |value| BigInt::from(value).into()),
-    );
-    object.into()
+    )?;
+    Ok(object.into())
 }
 
 enum DictionaryBackend {
@@ -152,7 +170,9 @@ impl JsDictionary {
         let value = match selected {
             BindingUnitDomain::Byte => DoubleArrayTrieBinding::from_byte_terms(parsed),
             BindingUnitDomain::UnicodeScalar => DoubleArrayTrieBinding::from_unicode_terms(parsed),
-            BindingUnitDomain::U64 => unreachable!(),
+            BindingUnitDomain::U64 => {
+                return Err(error("DoubleArrayTrie supports byte or Unicode terms"))
+            }
         };
         Ok(Self {
             backend: Some(DictionaryBackend::Dat(value)),
@@ -271,10 +291,10 @@ impl JsDictionary {
             DictionaryBackend::Dat(dictionary) => dictionary.value(term),
             DictionaryBackend::Scdawg(dictionary) => dictionary.value(term),
         };
-        Ok(match value {
+        match value {
             None => lookup(false, None),
             Some(value) => lookup(true, value),
-        })
+        }
     }
 
     /// Three-state u64-token lookup.
@@ -288,10 +308,10 @@ impl JsDictionary {
             }
             _ => return Err(error("this backend does not accept u64 terms")),
         };
-        Ok(match value {
+        match value {
             None => lookup(false, None),
             Some(value) => lookup(true, value),
-        })
+        }
     }
 
     /// Clear a DynamicDAWG.
@@ -351,7 +371,7 @@ unsafe fn wfst_table(resource: VtResource) -> Result<*const VtWfstVTable, JsValu
         VT_WFST_INTERFACE_VERSION,
         &mut interface,
     );
-    if status != VtStatus::Ok || interface.is_null() {
+    if VtStatus::from_raw(status) != Some(VtStatus::Ok) || interface.is_null() {
         return Err(error("resource has no compatible scalar WFST interface"));
     }
     Ok(interface.cast())
@@ -389,11 +409,11 @@ impl JsWfst {
     pub fn start(&self) -> Result<u64, JsValue> {
         let resource = self.inner()?.as_raw();
         let table = unsafe { &*wfst_table(resource)? };
+        let start = table
+            .start
+            .ok_or_else(|| error("WFST vtable has no start"))?;
         let mut state = 0;
-        let status = unsafe { table.start.unwrap()(resource.context, &mut state) };
-        if status != VtStatus::Ok {
-            return Err(error(format!("WFST start failed: {status:?}")));
-        }
+        require_ok(unsafe { start(resource.context, &mut state) }, "WFST start")?;
         Ok(state)
     }
 
@@ -401,41 +421,47 @@ impl JsWfst {
     pub fn state(&self, state: u64) -> Result<JsValue, JsValue> {
         let resource = self.inner()?.as_raw();
         let table = unsafe { &*wfst_table(resource)? };
+        let state_info = table
+            .state_info
+            .ok_or_else(|| error("WFST vtable has no state_info"))?;
         let mut valid = 0;
         let mut is_final = 0;
         let mut final_weight = 0.0;
-        let status = unsafe {
-            table.state_info.unwrap()(
-                resource.context,
-                state,
-                &mut valid,
-                &mut is_final,
-                &mut final_weight,
-            )
-        };
-        if status != VtStatus::Ok {
-            return Err(error(format!("WFST state_info failed: {status:?}")));
-        }
+        require_ok(
+            unsafe {
+                state_info(
+                    resource.context,
+                    state,
+                    &mut valid,
+                    &mut is_final,
+                    &mut final_weight,
+                )
+            },
+            "WFST state_info",
+        )?;
+        let state_arcs = table
+            .state_arcs
+            .ok_or_else(|| error("WFST vtable has no state_arcs"))?;
         let mut arcs = Vec::<VtWfstArc>::new();
         let mut offset = 0;
         loop {
             let mut page = vec![VtWfstArc::default(); 256];
             let mut written = 0;
             let mut total = 0;
-            let status = unsafe {
-                table.state_arcs.unwrap()(
-                    resource.context,
-                    state,
-                    offset,
-                    page.as_mut_ptr(),
-                    page.len(),
-                    &mut written,
-                    &mut total,
-                )
-            };
-            if status != VtStatus::Ok {
-                return Err(error(format!("WFST state_arcs failed: {status:?}")));
-            }
+            require_ok(
+                unsafe {
+                    state_arcs(
+                        resource.context,
+                        state,
+                        offset,
+                        page.as_mut_ptr(),
+                        page.len(),
+                        &mut written,
+                        &mut total,
+                    )
+                },
+                "WFST state_arcs",
+            )?;
             if written > page.len() || offset + written > total || (written == 0 && offset < total)
             {
                 return Err(error("WFST provider returned invalid arc paging"));
@@ -447,9 +473,9 @@ impl JsWfst {
             }
         }
         let result = Object::new();
-        property(&result, "valid", &JsValue::from_bool(valid == 1));
-        property(&result, "final", &JsValue::from_bool(is_final == 1));
-        property(&result, "finalWeight", &JsValue::from_f64(final_weight));
+        property(&result, "valid", &JsValue::from_bool(valid == 1))?;
+        property(&result, "final", &JsValue::from_bool(is_final == 1))?;
+        property(&result, "finalWeight", &JsValue::from_f64(final_weight))?;
         let output = Array::new();
         for arc in arcs {
             let value = Object::new();
@@ -465,13 +491,13 @@ impl JsWfst {
                 char::from_u32(arc.output_label as u32)
                     .map_or(JsValue::NULL, |value| value.to_string().into())
             };
-            property(&value, "input", &input);
-            property(&value, "output", &output_label);
-            property(&value, "target", &BigInt::from(arc.target_state).into());
-            property(&value, "weight", &JsValue::from_f64(arc.weight));
+            property(&value, "input", &input)?;
+            property(&value, "output", &output_label)?;
+            property(&value, "target", &BigInt::from(arc.target_state).into())?;
+            property(&value, "weight", &JsValue::from_f64(arc.weight))?;
             output.push(&value);
         }
-        property(&result, "arcs", &output.into());
+        property(&result, "arcs", &output.into())?;
         Ok(result.into())
     }
 
@@ -773,23 +799,20 @@ impl JsQueryCursor {
     }
 
     fn next_match(&mut self) -> Result<Option<Match>, JsValue> {
-        if self.cursor.is_none() {
+        let Some(cursor) = self.cursor.as_mut() else {
             return Ok(None);
-        }
+        };
         if self.index >= self.batch.len() {
             self.index = 0;
-            let count = self
-                .cursor
-                .as_mut()
-                .unwrap()
-                .next_batch(&mut self.batch, 256)
-                .map_err(error)?;
+            let count = cursor.next_batch(&mut self.batch, 256).map_err(error)?;
             if count == 0 {
                 self.cursor = None;
                 return Ok(None);
             }
         }
-        let value = self.batch.as_slice()[self.index].clone();
+        let Some(value) = self.batch.as_slice().get(self.index).cloned() else {
+            return Err(error("query batch index out of range"));
+        };
         self.index += 1;
         Ok(Some(value))
     }
@@ -802,10 +825,10 @@ impl JsQueryCursor {
         let result = Object::new();
         match self.next_match()? {
             Some(value) => {
-                property(&result, "done", &JsValue::FALSE);
-                property(&result, "value", &match_value(value));
+                property(&result, "done", &JsValue::FALSE)?;
+                property(&result, "value", &match_value(value)?)?;
             }
-            None => property(&result, "done", &JsValue::TRUE),
+            None => property(&result, "done", &JsValue::TRUE)?,
         }
         Ok(result.into())
     }
@@ -821,7 +844,7 @@ impl JsQueryCursor {
             let Some(value) = self.next_match()? else {
                 break;
             };
-            result.push(&match_value(value));
+            result.push(&match_value(value)?);
         }
         Ok(result)
     }
@@ -832,7 +855,7 @@ impl JsQueryCursor {
     }
 }
 
-fn match_value(value: Match) -> JsValue {
+fn match_value(value: Match) -> Result<JsValue, JsValue> {
     let result = Object::new();
     let term = Object::new();
     let (domain, payload): (&str, JsValue) = match value.term {
@@ -844,20 +867,20 @@ fn match_value(value: Match) -> JsValue {
             ("u64", array.into())
         }
     };
-    property(&term, "domain", &JsValue::from_str(domain));
-    property(&term, "value", &payload);
-    property(&result, "term", &term.into());
+    property(&term, "domain", &JsValue::from_str(domain))?;
+    property(&term, "value", &payload)?;
+    property(&result, "term", &term.into())?;
     property(
         &result,
         "distance",
         &JsValue::from_f64(value.distance as f64),
-    );
+    )?;
     property(
         &result,
         "id",
         &value.id.map_or(JsValue::NULL, |id| BigInt::from(id).into()),
-    );
-    result.into()
+    )?;
+    Ok(result.into())
 }
 
 /// Reusable phonetic language automaton.

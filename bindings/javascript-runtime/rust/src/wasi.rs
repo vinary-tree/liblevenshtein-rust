@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::ffi::c_void;
 use std::slice;
 use std::str;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use vinary_tree_interop::{
     VtResource, VtStatus, VtWfstArc, VtWfstVTable, VT_WFST_INTERFACE_ID, VT_WFST_INTERFACE_VERSION,
 };
@@ -120,6 +120,32 @@ fn registry() -> &'static Mutex<Registry> {
     REGISTRY.get_or_init(|| Mutex::new(Registry::new()))
 }
 
+/// Lock the global registry, recovering from mutex poisoning.
+///
+/// The registry is a plain handle table (a `u32` counter, a handle map, and
+/// an error buffer) with no invariant spanning a critical section: every
+/// operation leaves the table structurally valid even if it unwinds
+/// mid-call, so observing the state after a poisoned lock is always sound.
+/// Recovering instead of unwrapping keeps this boundary panic-free — a
+/// panic here would trap and kill the whole WASM instance instead of
+/// reporting a status the caller can handle.
+fn locked_registry() -> MutexGuard<'static, Registry> {
+    registry().lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Decode a raw interop status, mapping anything but `Ok` to an error.
+///
+/// Interop callbacks return raw `u32` statuses on the Rust side; anything
+/// outside the published range is untrusted provider output and must be
+/// rejected rather than read into [`VtStatus`].
+fn require_ok(raw: u32, operation: &str) -> Result<(), String> {
+    match VtStatus::from_raw(raw) {
+        Some(VtStatus::Ok) => Ok(()),
+        Some(status) => Err(format!("{operation} failed: {status:?}")),
+        None => Err(format!("{operation} returned an out-of-range status {raw}")),
+    }
+}
+
 fn selected_domain(value: u32) -> Result<BindingUnitDomain, &'static str> {
     match value {
         0 => Ok(BindingUnitDomain::Byte),
@@ -189,7 +215,7 @@ unsafe fn wfst_table(resource: VtResource) -> Result<*const VtWfstVTable, String
         VT_WFST_INTERFACE_VERSION,
         &mut interface,
     );
-    if status != VtStatus::Ok || interface.is_null() {
+    if VtStatus::from_raw(status) != Some(VtStatus::Ok) || interface.is_null() {
         return Err("resource has no compatible scalar WFST interface".into());
     }
     Ok(interface.cast())
@@ -214,27 +240,24 @@ pub unsafe extern "C" fn vt_dealloc(pointer: u32, length: u32) {
 /// Pointer to the most recent error message.
 #[no_mangle]
 pub extern "C" fn vt_error_pointer() -> u32 {
-    registry().lock().unwrap().error.as_ptr() as u32
+    locked_registry().error.as_ptr() as u32
 }
 
 /// Byte length of the most recent error message.
 #[no_mangle]
 pub extern "C" fn vt_error_length() -> u32 {
-    registry().lock().unwrap().error.len() as u32
+    locked_registry().error.len() as u32
 }
 
 /// Create an in-memory DynamicDAWG and return its handle.
 #[no_mangle]
 pub extern "C" fn vt_dynamic_dawg_new(domain: u32) -> u32 {
     let Ok(domain) = selected_domain(domain) else {
-        return registry().lock().unwrap().fail("unknown unit domain");
+        return locked_registry().fail("unknown unit domain");
     };
-    registry()
-        .lock()
-        .unwrap()
-        .insert(Handle::Dictionary(Dictionary::Dynamic(
-            DynamicDawgBinding::new(domain),
-        )))
+    locked_registry().insert(Handle::Dictionary(Dictionary::Dynamic(
+        DynamicDawgBinding::new(domain),
+    )))
 }
 
 /// Create a filesystem-backed persistent ARTrie at a preopened WASI path.
@@ -250,7 +273,7 @@ pub unsafe extern "C" fn vt_persistent_artrie_create(
         let domain = selected_domain(domain)?;
         PersistentARTrieBinding::create(path, domain).map_err(|error| error.to_string())
     })();
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match result {
         Ok(dictionary) => registry.insert(Handle::Dictionary(Dictionary::Persistent(dictionary))),
         Err(error) => registry.fail(error),
@@ -270,7 +293,7 @@ pub unsafe extern "C" fn vt_persistent_artrie_open(
         let domain = selected_domain(domain)?;
         PersistentARTrieBinding::open(path, domain).map_err(|error| error.to_string())
     })();
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match result {
         Ok(dictionary) => registry.insert(Handle::Dictionary(Dictionary::Persistent(dictionary))),
         Err(error) => registry.fail(error),
@@ -280,7 +303,7 @@ pub unsafe extern "C" fn vt_persistent_artrie_open(
 /// Return the current number of visible dictionary terms.
 #[no_mangle]
 pub extern "C" fn vt_dictionary_len(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match registry.handles.get(&handle) {
         Some(Handle::Dictionary(dictionary)) => dictionary.len() as u32,
         _ => registry.fail("invalid dictionary handle"),
@@ -297,7 +320,7 @@ pub unsafe extern "C" fn vt_dictionary_put_text(
     value: u64,
 ) -> u32 {
     let term = unsafe { bytes(term_pointer, term_length) };
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     let result = match registry.handles.get(&handle) {
         Some(Handle::Dictionary(dictionary)) => {
             dictionary.insert_text(term, (value_present != 0).then_some(value))
@@ -318,7 +341,7 @@ pub unsafe extern "C" fn vt_dictionary_remove_text(
     term_length: u32,
 ) -> u32 {
     let term = unsafe { bytes(term_pointer, term_length) };
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     let result = match registry.handles.get(&handle) {
         Some(Handle::Dictionary(dictionary)) => dictionary.remove_text(term),
         _ => Err("invalid dictionary handle".into()),
@@ -338,7 +361,10 @@ pub unsafe extern "C" fn vt_dictionary_get_text(
     output_pointer: u32,
 ) -> u32 {
     let term = unsafe { bytes(term_pointer, term_length) };
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
+    if output_pointer == 0 {
+        return registry.fail("output pointer is null");
+    }
     let result = match registry.handles.get(&handle) {
         Some(Handle::Dictionary(dictionary)) => dictionary.value_text(term),
         _ => Err("invalid dictionary handle".into()),
@@ -358,7 +384,7 @@ pub unsafe extern "C" fn vt_dictionary_get_text(
 /// Clear an in-memory DynamicDAWG.
 #[no_mangle]
 pub extern "C" fn vt_dictionary_clear(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match registry.handles.get(&handle) {
         Some(Handle::Dictionary(Dictionary::Dynamic(dictionary))) => {
             dictionary.clear();
@@ -374,7 +400,7 @@ pub extern "C" fn vt_dictionary_clear(handle: u32) -> u32 {
 /// Compact an in-memory DynamicDAWG and return the reclaimed-node count.
 #[no_mangle]
 pub extern "C" fn vt_dictionary_compact(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match registry.handles.get(&handle) {
         Some(Handle::Dictionary(Dictionary::Dynamic(dictionary))) => dictionary.compact() as u32,
         Some(Handle::Dictionary(Dictionary::Persistent(_))) => {
@@ -387,7 +413,7 @@ pub extern "C" fn vt_dictionary_compact(handle: u32) -> u32 {
 /// Durably checkpoint a persistent ARTrie.
 #[no_mangle]
 pub extern "C" fn vt_dictionary_checkpoint(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     let result = match registry.handles.get(&handle) {
         Some(Handle::Dictionary(Dictionary::Persistent(dictionary))) => {
             dictionary.checkpoint().map_err(|error| error.to_string())
@@ -409,7 +435,7 @@ pub extern "C" fn vt_transducer_new(dictionary_handle: u32, algorithm: u32) -> u
     let result = (|| {
         let algorithm = selected_algorithm(algorithm)?;
         let resource = {
-            let registry = registry().lock().unwrap();
+            let registry = locked_registry();
             let Some(Handle::Dictionary(dictionary)) = registry.handles.get(&dictionary_handle)
             else {
                 return Err("invalid dictionary handle".into());
@@ -419,7 +445,7 @@ pub extern "C" fn vt_transducer_new(dictionary_handle: u32, algorithm: u32) -> u
         unsafe { ResourceTransducer::from_resource(resource.as_raw(), algorithm) }
             .map_err(|error| error.to_string())
     })();
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match result {
         Ok(transducer) => registry.insert(Handle::Transducer(transducer)),
         Err(error) => registry.fail(error),
@@ -429,16 +455,13 @@ pub extern "C" fn vt_transducer_new(dictionary_handle: u32, algorithm: u32) -> u
 /// Allocate an empty Unicode/tropical lling-llang VectorWfst builder.
 #[no_mangle]
 pub extern "C" fn vt_wfst_builder_new() -> u32 {
-    registry()
-        .lock()
-        .unwrap()
-        .insert(Handle::WfstBuilder(VectorWfst::new()))
+    locked_registry().insert(Handle::WfstBuilder(VectorWfst::new()))
 }
 
 /// Add one state and return its compact identifier.
 #[no_mangle]
 pub extern "C" fn vt_wfst_builder_add_state(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match registry.handles.get_mut(&handle) {
         Some(Handle::WfstBuilder(graph)) => graph.add_state(),
         _ => registry.fail("invalid WFST builder handle"),
@@ -448,7 +471,7 @@ pub extern "C" fn vt_wfst_builder_add_state(handle: u32) -> u32 {
 /// Set the initial state.
 #[no_mangle]
 pub extern "C" fn vt_wfst_builder_set_start(handle: u32, state: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match registry.handles.get_mut(&handle) {
         Some(Handle::WfstBuilder(graph)) => {
             if graph.try_set_start(state) {
@@ -464,7 +487,7 @@ pub extern "C" fn vt_wfst_builder_set_start(handle: u32, state: u32) -> u32 {
 /// Set a final state and tropical cost.
 #[no_mangle]
 pub extern "C" fn vt_wfst_builder_set_final(handle: u32, state: u32, weight: f64) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     if weight.is_nan() {
         return registry.fail("WFST weight must not be NaN");
     }
@@ -493,7 +516,7 @@ pub extern "C" fn vt_wfst_builder_add_arc(
     to: u32,
     weight: f64,
 ) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     let decode = |label, present| match present {
         0 => Ok(None),
         1 => char::from_u32(label)
@@ -527,7 +550,7 @@ pub extern "C" fn vt_wfst_builder_add_arc(
 /// Consume a builder and freeze its graph into an immutable WFST handle.
 #[no_mangle]
 pub extern "C" fn vt_wfst_builder_build(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match registry.handles.remove(&handle) {
         Some(Handle::WfstBuilder(graph)) if graph.start() != u32::MAX => {
             registry.insert(Handle::Wfst(WasiWfst {
@@ -563,7 +586,7 @@ pub unsafe extern "C" fn vt_duallity_wfst_new(
         let algorithm = selected_algorithm(algorithm)?;
         let kind = selected_duallity_kind(kind)?;
         let dictionary = {
-            let registry = registry().lock().unwrap();
+            let registry = locked_registry();
             let Some(Handle::Dictionary(dictionary)) = registry.handles.get(&dictionary_handle)
             else {
                 return Err("invalid dictionary handle".into());
@@ -581,7 +604,7 @@ pub unsafe extern "C" fn vt_duallity_wfst_new(
         }
         .map_err(|error| error.to_string())
     })();
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match result {
         Ok(resource) => registry.insert(Handle::Wfst(WasiWfst {
             resource,
@@ -595,7 +618,7 @@ pub unsafe extern "C" fn vt_duallity_wfst_new(
 #[no_mangle]
 pub extern "C" fn vt_wfst_compose(first: u32, second: u32) -> u32 {
     let result = (|| -> Result<OwnedWfstResource, String> {
-        let registry = registry().lock().unwrap();
+        let registry = locked_registry();
         let Some(Handle::Wfst(first)) = registry.handles.get(&first) else {
             return Err("invalid first WFST handle".into());
         };
@@ -605,7 +628,7 @@ pub extern "C" fn vt_wfst_compose(first: u32, second: u32) -> u32 {
         OwnedWfstResource::compose(first.resource.as_raw(), second.resource.as_raw())
             .map_err(|error| error.to_string())
     })();
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match result {
         Ok(resource) => registry.insert(Handle::Wfst(WasiWfst {
             resource,
@@ -618,20 +641,23 @@ pub extern "C" fn vt_wfst_compose(first: u32, second: u32) -> u32 {
 /// Write the initial u64 state to an eight-byte caller buffer.
 #[no_mangle]
 pub extern "C" fn vt_wfst_start(handle: u32, output_pointer: u32) -> u32 {
+    if output_pointer == 0 {
+        return locked_registry().fail("output pointer is null");
+    }
     let result = (|| -> Result<u64, String> {
-        let registry = registry().lock().unwrap();
+        let registry = locked_registry();
         let Some(Handle::Wfst(wfst)) = registry.handles.get(&handle) else {
             return Err("invalid WFST handle".into());
         };
         unsafe {
             let table = &*wfst_table(wfst.resource.as_raw())?;
+            let start = table.start.ok_or("WFST vtable has no start")?;
             let mut state = 0u64;
-            let status = table.start.unwrap()(wfst.resource.as_raw().context, &mut state);
-            if status == VtStatus::Ok {
-                Ok(state)
-            } else {
-                Err(format!("WFST start failed: {status:?}"))
-            }
+            require_ok(
+                start(wfst.resource.as_raw().context, &mut state),
+                "WFST start",
+            )?;
+            Ok(state)
         }
     })();
     match result {
@@ -640,14 +666,14 @@ pub extern "C" fn vt_wfst_start(handle: u32, output_pointer: u32) -> u32 {
                 .copy_from_slice(&state.to_le_bytes());
             0
         }
-        Err(error) => registry().lock().unwrap().fail(error),
+        Err(error) => locked_registry().fail(error),
     }
 }
 
 /// Return the numeric VtWeightDomain for a WFST handle.
 #[no_mangle]
 pub extern "C" fn vt_wfst_weight_domain(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     let Some(Handle::Wfst(wfst)) = registry.handles.get(&handle) else {
         return registry.fail("invalid WFST handle");
     };
@@ -660,7 +686,7 @@ pub extern "C" fn vt_wfst_weight_domain(handle: u32) -> u32 {
 /// Expand one state into a contiguous header plus 40-byte arc records.
 #[no_mangle]
 pub extern "C" fn vt_wfst_state(handle: u32, state: u64) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     let resource = match registry.handles.get(&handle) {
         Some(Handle::Wfst(wfst)) => wfst.resource.as_raw(),
         _ => return registry.fail("invalid WFST handle"),
@@ -668,38 +694,40 @@ pub extern "C" fn vt_wfst_state(handle: u32, state: u64) -> u32 {
     let result = (|| unsafe {
         let table = wfst_table(resource)?;
         let table = &*table;
+        let state_info = table.state_info.ok_or("WFST vtable has no state_info")?;
         let mut valid = 0;
         let mut final_state = 0;
         let mut final_weight = 0.0;
-        let status = table.state_info.unwrap()(
-            resource.context,
-            state,
-            &mut valid,
-            &mut final_state,
-            &mut final_weight,
-        );
-        if status != VtStatus::Ok {
-            return Err(format!("WFST state_info failed: {status:?}"));
-        }
+        require_ok(
+            state_info(
+                resource.context,
+                state,
+                &mut valid,
+                &mut final_state,
+                &mut final_weight,
+            ),
+            "WFST state_info",
+        )?;
         let mut arcs = Vec::new();
         if valid == 1 {
+            let state_arcs = table.state_arcs.ok_or("WFST vtable has no state_arcs")?;
             let mut offset = 0;
             loop {
                 let mut page = vec![VtWfstArc::default(); 256];
                 let mut written = 0;
                 let mut total = 0;
-                let status = table.state_arcs.unwrap()(
-                    resource.context,
-                    state,
-                    offset,
-                    page.as_mut_ptr(),
-                    page.len(),
-                    &mut written,
-                    &mut total,
-                );
-                if status != VtStatus::Ok {
-                    return Err(format!("WFST state_arcs failed: {status:?}"));
-                }
+                require_ok(
+                    state_arcs(
+                        resource.context,
+                        state,
+                        offset,
+                        page.as_mut_ptr(),
+                        page.len(),
+                        &mut written,
+                        &mut total,
+                    ),
+                    "WFST state_arcs",
+                )?;
                 if written > page.len()
                     || offset + written > total
                     || (written == 0 && offset < total)
@@ -743,7 +771,7 @@ pub extern "C" fn vt_wfst_state(handle: u32, state: u64) -> u32 {
 /// Pointer to the current encoded WFST state.
 #[no_mangle]
 pub extern "C" fn vt_wfst_state_pointer(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match registry.handles.get(&handle) {
         Some(Handle::Wfst(wfst)) => wfst.encoded.as_ptr() as u32,
         _ => registry.fail("invalid WFST handle"),
@@ -767,7 +795,7 @@ pub unsafe extern "C" fn vt_query_text(
             1 => QueryOrder::DistanceThenTerm,
             _ => return Err("unknown query order".into()),
         };
-        let registry = registry().lock().unwrap();
+        let registry = locked_registry();
         let Some(Handle::Transducer(transducer)) = registry.handles.get(&transducer_handle) else {
             return Err("invalid transducer handle".into());
         };
@@ -775,7 +803,7 @@ pub unsafe extern "C" fn vt_query_text(
             .query_utf8(query, maximum_distance as usize, order)
             .map_err(|error| error.to_string())
     })();
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match result {
         Ok(cursor) => registry.insert(Handle::Cursor(Cursor {
             inner: cursor,
@@ -790,12 +818,9 @@ pub unsafe extern "C" fn vt_query_text(
 #[no_mangle]
 pub extern "C" fn vt_cursor_next_batch(handle: u32, maximum: u32) -> u32 {
     if maximum == 0 {
-        return registry()
-            .lock()
-            .unwrap()
-            .fail("batch size must be positive");
+        return locked_registry().fail("batch size must be positive");
     }
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     let result = match registry.handles.get_mut(&handle) {
         Some(Handle::Cursor(cursor)) => cursor
             .inner
@@ -871,7 +896,7 @@ pub extern "C" fn vt_cursor_next_batch(handle: u32, maximum: u32) -> u32 {
 /// Pointer to the current contiguous cursor batch.
 #[no_mangle]
 pub extern "C" fn vt_cursor_batch_pointer(handle: u32) -> u32 {
-    let mut registry = registry().lock().unwrap();
+    let mut registry = locked_registry();
     match registry.handles.get(&handle) {
         Some(Handle::Cursor(cursor)) => cursor.encoded.as_ptr() as u32,
         _ => registry.fail("invalid cursor handle"),
@@ -881,5 +906,5 @@ pub extern "C" fn vt_cursor_batch_pointer(handle: u32) -> u32 {
 /// Release any dictionary, transducer, or cursor handle.
 #[no_mangle]
 pub extern "C" fn vt_handle_close(handle: u32) -> u32 {
-    u32::from(registry().lock().unwrap().handles.remove(&handle).is_none())
+    u32::from(locked_registry().handles.remove(&handle).is_none())
 }
