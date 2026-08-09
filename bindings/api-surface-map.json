@@ -2306,8 +2306,8 @@
           "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"
         },
         "phoneticRuleSetKind": {
-          "symbol": null,
-          "_reason": "no rule-set facade exists to consume it (see the PhoneticRuleSet FINDING)"
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"
         }
       },
       "iterator": {
@@ -2350,22 +2350,22 @@
           "symbol": "EditDistance.levenshtein"
         },
         "llev_distance_threshold": {
-          "symbol": null,
-          "_reason": "FINDING: EditDistance omits all three threshold variants; every other Tier-2/3 facade binds llev_distance_threshold"
+          "symbol": "EditDistance.levenshtein",
+          "note": "threshold overload"
         },
         "llev_damerau_distance": {
           "symbol": "EditDistance.damerauOSA"
         },
         "llev_damerau_distance_threshold": {
-          "symbol": null,
-          "_reason": "FINDING: EditDistance omits all three threshold variants; every other Tier-2/3 facade binds llev_damerau_distance_threshold"
+          "symbol": "EditDistance.damerauOSA",
+          "note": "threshold overload"
         },
         "llev_true_damerau_distance": {
           "symbol": "EditDistance.damerauLevenshtein"
         },
         "llev_true_damerau_distance_threshold": {
-          "symbol": null,
-          "_reason": "FINDING: EditDistance omits all three threshold variants; every other Tier-2/3 facade binds llev_true_damerau_distance_threshold"
+          "symbol": "EditDistance.damerauLevenshtein",
+          "note": "threshold overload"
         },
         "llev_transducer_new": {
           "symbol": "Transducer.init"
@@ -2403,8 +2403,8 @@
           "symbol": "QueryCursor.close"
         },
         "llev_owned_string_free": {
-          "symbol": null,
-          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+          "symbol": "PhoneticRuleSet.apply",
+          "note": "frees the native LlevOwnedString after copying"
         },
         "llev_phonetic_pattern_compile_regex": {
           "symbol": "PhoneticPattern.regex"
@@ -2416,8 +2416,7 @@
           "symbol": "PhoneticPattern.close"
         },
         "llev_phonetic_pattern_size": {
-          "symbol": null,
-          "_reason": "FINDING: PhoneticPattern lacks a size accessor (llev_phonetic_pattern_size is unbound); jvm/dotnet/go/ruby/haskell/ocaml/lua/fortran all expose it"
+          "symbol": "PhoneticPattern.size"
         },
         "llev_phonetic_pattern_matches": {
           "symbol": "PhoneticPattern.matches"
@@ -2426,24 +2425,19 @@
           "symbol": "Transducer.query"
         },
         "llev_phonetic_rules_parse": {
-          "symbol": null,
-          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+          "symbol": "PhoneticRuleSet.parse"
         },
         "llev_phonetic_rules_builtin": {
-          "symbol": null,
-          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+          "symbol": "PhoneticRuleSet.builtin"
         },
         "llev_phonetic_rules_free": {
-          "symbol": null,
-          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+          "symbol": "PhoneticRuleSet.close"
         },
         "llev_phonetic_rules_len": {
-          "symbol": null,
-          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+          "symbol": "PhoneticRuleSet.count"
         },
         "llev_phonetic_rules_apply": {
-          "symbol": null,
-          "_reason": "FINDING: the Swift package has no PhoneticRuleSet facade: llev_phonetic_rules_* and llev_owned_string_free are entirely unbound in Liblevenshtein.swift while every other Tier-2/3 facade wraps the rewrite-rule surface"
+          "symbol": "PhoneticRuleSet.apply"
         }
       }
     }

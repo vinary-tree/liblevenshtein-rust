@@ -64,8 +64,36 @@ do {
     let pattern = try PhoneticPattern.regex("c[ao]t")
     let patternMatches = try pattern.matches("cat")
     precondition(patternMatches)
+    // LLEV-B11: PhoneticPattern.size now surfaces the automaton dimensions.
+    let patternSize = try pattern.size()
+    precondition(patternSize.states > 0 && patternSize.transitions > 0)
     pattern.close()
+
     precondition(EditDistance.levenshtein("kitten", "sitting") == 3)
+    // LLEV-B11: all three threshold overloads are bound; nil means the exact
+    // distance exceeds the bound (native usize::MAX - 1 sentinel).
+    precondition(EditDistance.levenshtein("kitten", "sitting", threshold: 3) == 3)
+    precondition(EditDistance.levenshtein("kitten", "sitting", threshold: 2) == nil)
+    precondition(EditDistance.damerauOSA("ab", "ba", threshold: 1) == 1)
+    // "ca" -> "abc": OSA is 3 but unrestricted Damerau-Levenshtein is 2.
+    precondition(EditDistance.damerauOSA("ca", "abc", threshold: 2) == nil)
+    precondition(EditDistance.damerauLevenshtein("ca", "abc", threshold: 2) == 2)
+    precondition(EditDistance.damerauLevenshtein("ca", "abc", threshold: 1) == nil)
+
+    // LLEV-B11: the PhoneticRuleSet facade (parse/builtin/count/apply/close).
+    let rules = try PhoneticRuleSet.builtin(.englishOrthography)
+    let builtinCount = try rules.count()
+    let builtinApplied = try rules.apply("phone")
+    precondition(builtinCount > 0)
+    precondition(!builtinApplied.isEmpty)
+    rules.close()
+    let parsed = try PhoneticRuleSet.parse("ph -> f\ngh ->\n")
+    let parsedCount = try parsed.count()
+    let parsedApplied = try parsed.apply("phgh")
+    precondition(parsedCount == 2)
+    precondition(parsedApplied == "f")
+    parsed.close()
+
     print("Swift binding integration passed")
 } catch {
     fatalError("Swift binding integration failed: \(error)")

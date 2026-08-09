@@ -26,6 +26,12 @@ public enum QueryOrder: UInt32, Sendable {
     case distanceThenTerm = 1
 }
 
+/// Built-in phonetic rewrite-rule set selector.
+public enum PhoneticRuleSetKind: UInt32, Sendable {
+    case englishOrthography = 0
+    case englishPhonetic = 1
+}
+
 public enum MatchTerm: Sendable, Equatable {
     case text(String)
     case bytes([UInt8])
@@ -233,9 +239,65 @@ public final class PhoneticPattern: @unchecked Sendable {
         }
         return result != 0
     }
+    /// Compiled `(states, transitions)` counts of the pattern automaton.
+    public func size() throws -> (states: Int, transitions: Int) {
+        var states = 0
+        var transitions = 0
+        try checked(llev_phonetic_pattern_size(try handle(), &states, &transitions))
+        return (states, transitions)
+    }
     public func close() {
         if let raw {
             llev_phonetic_pattern_free(raw)
+            self.raw = nil
+        }
+    }
+}
+
+/// Reusable Unicode phonetic rewrite-rule set.
+public final class PhoneticRuleSet: @unchecked Sendable {
+    private var raw: OpaquePointer?
+    private init(_ raw: OpaquePointer) { self.raw = raw }
+    deinit { close() }
+
+    /// Parse an import-free `.llev` rewrite-rule document.
+    public static func parse(_ source: String) throws -> PhoneticRuleSet {
+        var output: OpaquePointer?
+        try source.withCString { pointer in
+            try checked(llev_phonetic_rules_parse(pointer, source.utf8.count, &output))
+        }
+        return PhoneticRuleSet(output!)
+    }
+    /// Construct a built-in rewrite-rule set.
+    public static func builtin(_ kind: PhoneticRuleSetKind) throws -> PhoneticRuleSet {
+        var output: OpaquePointer?
+        try checked(llev_phonetic_rules_builtin(kind.rawValue, &output))
+        return PhoneticRuleSet(output!)
+    }
+    private func handle() throws -> OpaquePointer {
+        guard let raw else { throw LiblevenshteinError("phonetic rule set is closed") }
+        return raw
+    }
+    /// Number of enabled rewrite rules.
+    public func count() throws -> Int {
+        var length = 0
+        try checked(llev_phonetic_rules_len(try handle(), &length))
+        return length
+    }
+    /// Apply the rewrite rules and return owned UTF-8.
+    public func apply(_ input: String) throws -> String {
+        var output = LlevOwnedString()
+        try input.withCString { pointer in
+            try checked(llev_phonetic_rules_apply(try handle(), pointer, input.utf8.count, &output))
+        }
+        defer { llev_owned_string_free(&output) }
+        guard let data = output.data, output.len > 0 else { return "" }
+        let bytes = UnsafeRawBufferPointer(start: data, count: output.len)
+        return String(decoding: bytes, as: UTF8.self)
+    }
+    public func close() {
+        if let raw {
+            llev_phonetic_rules_free(raw)
             self.raw = nil
         }
     }
@@ -262,5 +324,33 @@ public enum EditDistance {
                 llev_true_damerau_distance(sourcePointer, source.utf8.count, targetPointer, target.utf8.count)
             }
         }
+    }
+    /// Levenshtein distance if it is at most `threshold`, otherwise `nil`.
+    public static func levenshtein(_ source: String, _ target: String, threshold: Int) -> Int? {
+        bounded(source, target, threshold, llev_distance_threshold)
+    }
+    /// Adjacent-transposition (OSA) distance if it is at most `threshold`, otherwise `nil`.
+    public static func damerauOSA(_ source: String, _ target: String, threshold: Int) -> Int? {
+        bounded(source, target, threshold, llev_damerau_distance_threshold)
+    }
+    /// Unrestricted Damerau-Levenshtein distance if it is at most `threshold`, otherwise `nil`.
+    public static func damerauLevenshtein(_ source: String, _ target: String, threshold: Int) -> Int? {
+        bounded(source, target, threshold, llev_true_damerau_distance_threshold)
+    }
+    private static func bounded(
+        _ source: String,
+        _ target: String,
+        _ threshold: Int,
+        _ function: (UnsafePointer<CChar>?, Int, UnsafePointer<CChar>?, Int, Int) -> Int
+    ) -> Int? {
+        let raw = source.withCString { sourcePointer in
+            target.withCString { targetPointer in
+                function(sourcePointer, source.utf8.count, targetPointer, target.utf8.count, threshold)
+            }
+        }
+        // The native contract returns usize::MAX (invalid input) or usize::MAX - 1
+        // (exceeded the bound); both arrive as negative Ints under the size_t ->
+        // Int import, so any negative result means "not within the threshold".
+        return raw < 0 ? nil : raw
     }
 }
