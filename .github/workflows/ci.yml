@@ -63,6 +63,20 @@ jobs:
       - name: AddressSanitizer and ThreadSanitizer over the binding suite
         run: bash scripts/run-sanitizers.sh
 
+  miri:
+    name: Miri (interop crate)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri, rust-src
+      # The interop crate is the base of the family ABI (no sibling deps); Miri
+      # checks its layout (offset_of), vtable negotiation, and discriminant
+      # reads for undefined behavior under the stacked-borrows model.
+      - name: Miri over the interop layout and vtable unsafe
+        run: cargo +nightly miri test -p vinary-tree-interop
+
   supply-chain:
     name: Supply chain
     runs-on: ubuntu-latest
