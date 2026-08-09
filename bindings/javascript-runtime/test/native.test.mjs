@@ -246,6 +246,72 @@ test("every index.d.ts member exists on the native path", async () => {
   }
 });
 
+test("native reducer and iterator drain a query to the same matches (C5)", () => {
+  const dictionary = libdictenstein.dynamicDawg();
+  for (const [term, id] of [["cat", 1n], ["cot", 2n], ["cut", 3n], ["scat", null]]) {
+    dictionary.put(term, id);
+  }
+  const transducer = liblevenshtein.transducer(dictionary);
+  try {
+    const byIterator = collect(transducer.query("cat", 2))
+      .map(([value, distance, id]) => `${value}:${distance}:${id}`)
+      .sort();
+    const reducerCursor = transducer.query("cat", 2);
+    const byReducer = reducerCursor
+      .reduceBatches((accumulator, batch) => {
+        for (const { term, distance, id } of batch) {
+          accumulator.push(`${term.value}:${distance}:${id}`);
+        }
+        return accumulator;
+      }, [])
+      .sort();
+    reducerCursor.close();
+    assert.deepEqual(byIterator, byReducer);
+    assert.ok(byIterator.length >= 3, `expected at least three matches, got ${byIterator.length}`);
+  } finally {
+    transducer.close();
+    dictionary.close();
+  }
+});
+
+test("native cursor paging honors batch-size edges (C7)", () => {
+  const dictionary = libdictenstein.dynamicDawg();
+  // 300 distinct short terms all lie within edit distance 8 of the empty query,
+  // so the match set straddles the 256-wide default batch boundary.
+  for (let index = 0; index < 300; index += 1) dictionary.put(`term-${index}`, BigInt(index));
+  const transducer = liblevenshtein.transducer(dictionary);
+  try {
+    // C7: a non-positive or non-integer page size is a RangeError, never a
+    // silent empty batch that would truncate the stream.
+    const guard = transducer.query("", 8);
+    assert.throws(() => guard.nextBatch(0), RangeError);
+    assert.throws(() => guard.nextBatch(-1), RangeError);
+    assert.throws(() => guard.nextBatch(1.5), RangeError);
+    guard.close();
+
+    const total = collect(transducer.query("", 8)).length;
+    assert.ok(total > 257, `expected a batch-straddling match set, got ${total}`);
+
+    // C7: page sizes 1, 255, 256, 257 each reassemble the complete match set,
+    // and no batch ever exceeds its requested page size.
+    for (const pageSize of [1, 255, 256, 257]) {
+      const cursor = transducer.query("", 8);
+      let count = 0;
+      for (;;) {
+        const batch = cursor.nextBatch(pageSize);
+        if (batch.length === 0) break;
+        assert.ok(batch.length <= pageSize, `batch ${batch.length} exceeded page ${pageSize}`);
+        count += batch.length;
+      }
+      cursor.close();
+      assert.equal(count, total, `page size ${pageSize} lost matches`);
+    }
+  } finally {
+    transducer.close();
+    dictionary.close();
+  }
+});
+
 test("native duallity and lling-llang share retained scalar WFST resources", () => {
   const dictionary = libdictenstein.dynamicDawg();
   dictionary.put("cat", 1n);

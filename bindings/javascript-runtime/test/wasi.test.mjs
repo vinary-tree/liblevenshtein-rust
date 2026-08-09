@@ -67,6 +67,31 @@ test("WASI dynamic cursor survives remove, update, clear, and compact", async ()
   }
 });
 
+test("WASI reducer and iterator drain a query to the same matches (C5)", async () => {
+  const runtime = await createWasiRuntime({ preopens: {} });
+  const dictionary = runtime.libdictenstein.dynamicDawg();
+  for (const [term, id] of [["cat", 1n], ["cot", 2n], ["cut", 3n]]) dictionary.put(term, id);
+  const transducer = runtime.liblevenshtein.transducer(dictionary);
+  try {
+    const byIterator = values(transducer.query("cat", 1))
+      .map(([value, id]) => `${value}:${id}`)
+      .sort();
+    const reducerCursor = transducer.query("cat", 1);
+    const byReducer = reducerCursor
+      .reduceBatches((accumulator, batch) => {
+        for (const { term, id } of batch) accumulator.push(`${term.value}:${id}`);
+        return accumulator;
+      }, [])
+      .sort();
+    reducerCursor.close();
+    assert.deepEqual(byIterator, byReducer);
+    assert.equal(byIterator.length, 3);
+  } finally {
+    transducer.close();
+    dictionary.close();
+  }
+});
+
 test("WASI duallity snapshots compose with lling-llang in the same instance", async () => {
   const runtime = await createWasiRuntime({ preopens: {} });
   const dictionary = runtime.libdictenstein.dynamicDawg();
