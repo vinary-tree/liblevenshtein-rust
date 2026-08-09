@@ -218,3 +218,6 @@ perf.data*
 /bindings/lua/**/*.so
 /bindings/lua/*.rock
 /*.mod
+
+# Swift SwiftPM build output (staged by the language-sweep build)
+bindings/swift/**/.build/
