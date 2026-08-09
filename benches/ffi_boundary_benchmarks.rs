@@ -38,7 +38,12 @@ fn bench_cursor_drain_by_batch(criterion: &mut Criterion) {
     let dictionary = build_dict(2_000);
     let source = dictionary.resource();
     let mut group = criterion.benchmark_group("cursor_drain_by_batch");
-    for &cap in &[1usize, 16, 256] {
+    // Batch-capacity sweep (wave W8): capacity 1 is the one-match-per-crossing
+    // baseline; 32..1024 brackets the recommended default (256) so the marginal
+    // gain from a larger batch can be read directly and the default justified on
+    // evidence rather than assumption. See docs/bindings/FINDINGS_LEDGER.md
+    // (batch-size sweep) for the recorded decision.
+    for &cap in &[1usize, 32, 64, 128, 256, 512, 1024] {
         group.bench_with_input(BenchmarkId::from_parameter(cap), &cap, |b, &cap| {
             b.iter(|| {
                 let transducer = unsafe {
