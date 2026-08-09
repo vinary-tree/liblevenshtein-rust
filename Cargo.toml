@@ -109,6 +109,11 @@ harness = false
 required-features = ["pathmap-backend"]
 
 [[bench]]
+name = "ffi_boundary_benchmarks"
+harness = false
+required-features = ["binding-integration-tests"]
+
+[[bench]]
 name = "phonetic_rules"
 harness = false
 required-features = ["phonetic-rules"]
