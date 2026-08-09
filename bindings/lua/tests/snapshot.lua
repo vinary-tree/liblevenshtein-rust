@@ -100,6 +100,15 @@ assert(levenshtein.damerau_distance("ca", "ac") == 1)
 assert(levenshtein.damerau_distance_threshold("ca", "ac", 1) == 1)
 assert(levenshtein.true_damerau_distance("ca", "ac") == 1)
 assert(levenshtein.true_damerau_distance_threshold("ca", "ac", 1) == 1)
+-- C6: distances count Unicode scalars, not bytes/UTF-16 code units.
+assert(levenshtein.distance("café", "cafe") == 1)
+assert(levenshtein.distance("🦀", "x") == 1)
+assert(levenshtein.distance("é", "e") == 1)
+-- C6: the exceeded-bound native sentinel (usize::MAX - 1) wraps to -2 under the
+-- size_t -> lua_Integer conversion; "ca" -> "abc" separates OSA 3 from true 2.
+assert(levenshtein.distance_threshold("kitten", "sitting", 2) == -2)
+assert(levenshtein.damerau_distance_threshold("ca", "abc", 2) == -2)
+assert(levenshtein.true_damerau_distance_threshold("ca", "abc", 2) == 2)
 os.remove(persistent_path)
 os.remove(persistent_path .. ".wal")
 os.remove(vocabulary_path)
