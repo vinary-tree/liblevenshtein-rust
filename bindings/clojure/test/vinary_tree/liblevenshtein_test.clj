@@ -5,7 +5,8 @@
    (io.vinarytree.interop
     UnicodeDictionaryResource UnicodeDictionarySnapshot
     UnicodeDictionarySnapshot$Edge)
-   (java.util OptionalLong)
+   (io.vinarytree.liblevenshtein Transducer)
+   (java.util ArrayList OptionalLong)
    (java.util.function Supplier)))
 
 (defn- snapshot [entries]
@@ -67,3 +68,31 @@
         (is (= frozen (sort-by :term (into [first] (iterator-seq iterator)))))
         (is (not= frozen
                   (sort-by :term (into [] (llev/query automaton "cat" 2)))))))))
+
+(deftest reducer-and-iterator-drain-to-the-same-matches
+  (let [current (atom (snapshot {"cat" 1 "cot" 2 "cut" 3}))
+        capture (reify Supplier (get [_] @current))]
+    (with-open [dictionary (UnicodeDictionaryResource. capture)
+                automaton (llev/transducer dictionary)]
+      ;; C5: the reducible cursor (IReduceInit/Iterable) materializes the same
+      ;; terms that the zero-copy borrowed-batch reducer (reduce-batches over
+      ;; forEachBatch) yields, so both consumption paths agree.
+      (let [by-iterator (sort (mapv :term (into [] (llev/query automaton "cat" 1))))
+            collected (ArrayList.)]
+        (llev/reduce-batches
+         (.query ^Transducer automaton "cat" (long 1))
+         (fn [batch]
+           (dotimes [index (.size batch)]
+             (.add collected (.utf8 (.get batch index))))))
+        (is (= by-iterator (sort (vec collected))))
+        (is (= 3 (count by-iterator)))))))
+
+(deftest phonetic-pattern-idempotent-close-and-closed-guard
+  ;; C2/C3: close is idempotent and a closed pattern rejects use with an
+  ;; IllegalStateException rather than dereferencing freed native memory.
+  (let [pattern (llev/phonetic-pattern "c[ao]t")]
+    (is (.matches pattern "cat"))
+    (is (not (.matches pattern "cut")))
+    (llev/close! pattern)
+    (llev/close! pattern)
+    (is (thrown? IllegalStateException (.matches pattern "cat")))))
