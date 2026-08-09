@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cstdint>
 #include <cstring>
 #include <map>
 #include <memory>
@@ -244,4 +245,29 @@ int main() {
     assert(live_contexts.load() == contexts_before_escaped_batch + 1);
     escaped_batch = {};
     assert(live_contexts.load() == contexts_before_escaped_batch);
+
+    // C1 (identity/version): the C ABI reports its version and revision.
+    assert(llev_abi_version() == 1);
+    assert(llev_api_revision() >= 1);
+
+    // C6 (Unicode text domains + distance thresholds): the distance functions
+    // decode UTF-8 to Unicode scalar values, so a multi-byte character counts
+    // as a single edit; the threshold variants cap at the requested bound and
+    // report an over-threshold sentinel beyond it.
+    {
+        const std::string cafe = "cafe";
+        const std::string cafe_accent = "café"; // "café": é is 2 UTF-8 bytes, 1 scalar
+        const std::string crab = "\U0001F980";        // 🦀: 4 UTF-8 bytes, 1 scalar
+        // é -> e is one scalar substitution, not two byte edits.
+        assert(llev_distance(cafe_accent.data(), cafe_accent.size(), cafe.data(),
+                             cafe.size()) == 1);
+        // identity holds on multi-byte input.
+        assert(llev_distance(crab.data(), crab.size(), crab.data(), crab.size()) == 0);
+        // a threshold at or above the true distance reports it exactly.
+        assert(llev_damerau_distance_threshold(cafe_accent.data(), cafe_accent.size(),
+                                               cafe.data(), cafe.size(), 2) == 1);
+        // a threshold below the true distance exceeds the bound (sentinel > 1).
+        assert(llev_distance_threshold(crab.data(), crab.size(), cafe.data(),
+                                       cafe.size(), 1) > 1);
+    }
 }
