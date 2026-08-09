@@ -80,6 +80,22 @@ runs; every `formal-only` row (marked `-` in the test columns) is a pure
 Rocq/TLA+ result whose evidence is the machine-checked proof itself. No row
 may drift from its spec or test without its registry gate failing.
 
+## W8 empirical corroboration
+
+The formal invariants are corroborated dynamically by the wave-W8 performance and
+dynamic-analysis artifacts (liblevenshtein-rust), which measure at machine level
+what the proofs certify abstractly. These are corroboration, not a second formal
+home — the machine-checked proof remains the primary evidence for each invariant.
+
+| Invariant family | Empirical corroboration |
+|---|---|
+| `VT-PAGE-*` (paging law) | `tests/ffi_boundary_census.rs` measures `next_batch_calls == ceil(M/cap)+1`; `PERFORMANCE_EXPERIMENTS.md` E2 |
+| `VT-SNAP-*` (constant-time capture) | census `snapshot_calls == 1` per query; `benches/ffi_boundary_benchmarks.rs` resource-handoff flat curve |
+| `LLEV-ARENA-*` (arena reuse, no warm realloc) | `bindings/c/tests/arena_profile.c` (zero-copy packing + base reuse, run under ASan) + `scripts/profile-ffi-arena.sh` (valgrind massif/dhat) |
+| `LLEV-LEASE-*`, `VT-LIFE-*` | census refcount-ledger balance; `scripts/run-sanitizers.sh` (ASan/TSan), plus per-repo ASan legs in lling-llang and duallity |
+
+Performance decisions (batch-size default, ctypes-vs-cffi) are recorded in
+`docs/bindings/PERFORMANCE_EXPERIMENTS.md`.
 
 ## DOI verification sweep (W9)
 

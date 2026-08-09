@@ -64,10 +64,14 @@ jobs:
         run: bash scripts/run-sanitizers.sh
 
   miri:
-    name: Miri (interop crate)
+    name: Miri (interop + consumer ABI)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
+      # The consumer-ABI correspondence tests below build against the
+      # libdictenstein path dependency, so its source must be present even though
+      # Miri never executes its (SIMD) dictionary backend on these paths.
+      - uses: ./.github/actions/checkout-dev-siblings
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: miri, rust-src
@@ -76,6 +80,21 @@ jobs:
       # reads for undefined behavior under the stacked-borrows model.
       - name: Miri over the interop layout and vtable unsafe
         run: cargo +nightly miri test -p vinary-tree-interop
+      # Strict-provenance validation of the consumer's raw-pointer surface that
+      # AddressSanitizer cannot see: the lifecycle + batch-lease correspondence
+      # tests exercise the VtResource / Box::into_raw+from_raw round-trips and the
+      # two-pass arena pointer fixup through the in-repo Rust TestDictionary
+      # provider. Isolation is disabled only for proptest's failure-persistence
+      # file; proptest cases are reduced because Miri interprets. The real SIMD
+      # dictionary backend is never on these code paths (it stays asan-covered).
+      - name: Miri over the consumer resource-ABI correspondence
+        env:
+          MIRIFLAGS: -Zmiri-disable-isolation
+          PROPTEST_CASES: "16"
+        run: >-
+          cargo +nightly miri test --features binding-integration-tests
+          --test abi_resource_lifecycle_correspondence
+          --test ffi_batch_lease_correspondence
 
   supply-chain:
     name: Supply chain
