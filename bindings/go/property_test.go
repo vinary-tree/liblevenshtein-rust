@@ -17,12 +17,11 @@ package liblevenshtein
 //
 // Determinism: every quick.Check runs from a fixed PRNG seed.
 //
-// KNOWN FACADE DEFECT (reported, not fixed here per the test-only remit): the
-// standalone distance functions return the exceeded-bound sentinel for an empty
-// operand, because bytesPointer returns a nil pointer for a zero-length slice
-// and the native distance entry point rejects a null data pointer. The
-// transducer query path handles the same nil+0 correctly, so empties are only
-// excluded from the distance-function properties, not the query/value ones.
+// Empty operands are exercised: bytesPointer returns a nil pointer for a
+// zero-length slice, and as of the LLEV-B18 fix the native distance entry
+// points accept a NULL data pointer with length 0 as the empty string (the
+// transducer query path always did), so the distance properties generate over
+// possibly-empty terms.
 
 import (
 	"math/rand"
@@ -50,12 +49,6 @@ type term string
 
 func (term) Generate(rng *rand.Rand, _ int) reflect.Value {
 	return reflect.ValueOf(term(genString(rng, 0, 6)))
-}
-
-type nonEmptyTerm string
-
-func (nonEmptyTerm) Generate(rng *rand.Rand, _ int) reflect.Value {
-	return reflect.ValueOf(nonEmptyTerm(genString(rng, 1, 6)))
 }
 
 type threshold int
@@ -186,14 +179,14 @@ func TestDistanceProperties(t *testing.T) {
 	}
 	for _, variant := range variants {
 		variant := variant
-		symmetry := func(a, b nonEmptyTerm) bool {
+		symmetry := func(a, b term) bool {
 			return variant.distance(string(a), string(b)) == variant.distance(string(b), string(a)) &&
 				variant.distance(string(a), string(a)) == 0
 		}
 		if err := quick.Check(symmetry, config(500)); err != nil {
 			t.Fatalf("%s symmetry/identity: %v", variant.name, err)
 		}
-		consistency := func(a, b nonEmptyTerm, k threshold) bool {
+		consistency := func(a, b term, k threshold) bool {
 			full := variant.distance(string(a), string(b))
 			bounded := variant.threshold(string(a), string(b), uint(k))
 			if full <= uint(k) {
@@ -205,7 +198,7 @@ func TestDistanceProperties(t *testing.T) {
 			t.Fatalf("%s threshold: %v", variant.name, err)
 		}
 	}
-	agreement := func(a, b nonEmptyTerm) bool {
+	agreement := func(a, b term) bool {
 		return int(Distance(string(a), string(b))) == oracle(string(a), string(b))
 	}
 	if err := quick.Check(agreement, config(500)); err != nil {

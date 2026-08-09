@@ -14,9 +14,9 @@
 
    qcheck runs from a fixed Random.State seed, so a failing run reproduces. An
    ASCII alphabet keeps byte = scalar for the oracle; scalar-vs-byte counting is
-   pinned by the snapshot suite. Distance operands are non-empty (the facade
-   marshals an empty string as a null pointer, the cross-facade empty-operand
-   behaviour characterised by the C suite). *)
+   pinned by the snapshot suite. Distance operands may be empty: the facade
+   marshals an empty string as a null pointer, and as of the LLEV-B18 fix the
+   native distance entry points accept NULL+0 as the empty string. *)
 
 module Dict = Vinary_tree_libdictenstein
 module Lev = Vinary_tree_liblevenshtein
@@ -24,10 +24,8 @@ module Lev = Vinary_tree_liblevenshtein
 let alphabet = [ 'a'; 'b'; 'c'; 'd' ]
 
 let term_gen = QCheck.Gen.(string_size ~gen:(oneof_list alphabet) (int_range 0 6))
-let non_empty_gen = QCheck.Gen.(string_size ~gen:(oneof_list alphabet) (int_range 1 6))
 
 let term = QCheck.make ~print:(Printf.sprintf "%S") term_gen
-let non_empty = QCheck.make ~print:(Printf.sprintf "%S") non_empty_gen
 
 (* Derive the over-bound sentinel from a known over-threshold pair. *)
 let sentinel = Lev.distance_threshold "aaaa" "bbbb" 0
@@ -69,7 +67,7 @@ let run_query entries query k =
   List.map (fun r -> (text_of_match r, (r.Lev.distance, r.Lev.id))) matches
 
 let distance_property name dist thr =
-  QCheck.Test.make ~count:400 ~name (QCheck.triple non_empty non_empty (QCheck.int_range 0 3))
+  QCheck.Test.make ~count:400 ~name (QCheck.triple term term (QCheck.int_range 0 3))
     (fun (a, b, k) ->
       dist a b = dist b a
       && dist a a = 0
@@ -79,7 +77,7 @@ let distance_property name dist thr =
       if full <= k then bounded = full else bounded = sentinel)
 
 let oracle_property =
-  QCheck.Test.make ~count:400 ~name:"standard oracle agreement" (QCheck.pair non_empty non_empty)
+  QCheck.Test.make ~count:400 ~name:"standard oracle agreement" (QCheck.pair term term)
     (fun (a, b) -> Lev.distance a b = oracle a b)
 
 let value_gen =

@@ -35,16 +35,6 @@ internal static class PropertyTests
     private static readonly Gen<string> Term =
         Gen.Int[0, 3].Select(index => "abcé"[index]).Array[0, 6].Select(chars => new string(chars));
 
-    // KNOWN FACADE DEFECT (reported, not fixed here): the standalone Distance.*
-    // functions return the exceeded-bound sentinel for an empty operand, because
-    // C#'s `fixed (byte* p = new byte[0])` yields a null pointer and the native
-    // distance entry point rejects a null data pointer. The transducer *query*
-    // path passes the same null+0 and handles it correctly, so empties are only
-    // excluded from the distance-function properties below, not from the
-    // query/value properties. See the run report for the precise reproduction.
-    private static readonly Gen<string> NonEmptyTerm =
-        Gen.Int[0, 3].Select(index => "abcé"[index]).Array[1, 6].Select(chars => new string(chars));
-
     private static readonly Gen<ulong?> Value =
         Gen.OneOf(Gen.ULong.Select(value => (ulong?)value), Gen.Const((ulong?)null));
 
@@ -59,9 +49,11 @@ internal static class PropertyTests
         CheckVariant((a, b) => Distance.Damerau(a, b), (a, b, k) => Distance.Damerau(a, b, k));
         CheckVariant((a, b) => Distance.TrueDamerau(a, b), (a, b, k) => Distance.TrueDamerau(a, b, k));
 
-        // Standard distance agrees with the brute-force oracle (non-empty inputs;
-        // see NonEmptyTerm for why empties are excluded from distance functions).
-        Gen.Select(NonEmptyTerm, NonEmptyTerm, (a, b) => (a, b)).Sample(
+        // Standard distance agrees with the brute-force oracle. Empty operands are
+        // included: `fixed (byte* p = new byte[0])` yields a null pointer, and as
+        // of the LLEV-B18 fix the native distance functions accept NULL+0 as the
+        // empty string (the transducer query path always did).
+        Gen.Select(Term, Term, (a, b) => (a, b)).Sample(
             pair => (int)Distance.Levenshtein(pair.a, pair.b) == Levenshtein(pair.a, pair.b),
             iter: 1000, seed: Seed);
 
@@ -76,12 +68,12 @@ internal static class PropertyTests
         Func<string, string, nuint, nuint> thresholded)
     {
         // (a) symmetry and zero identity.
-        Gen.Select(NonEmptyTerm, NonEmptyTerm, (a, b) => (a, b)).Sample(
+        Gen.Select(Term, Term, (a, b) => (a, b)).Sample(
             pair => distance(pair.a, pair.b) == distance(pair.b, pair.a) && distance(pair.a, pair.a) == 0,
             iter: 1000, seed: Seed);
 
         // (a) threshold consistency with the sentinel.
-        Gen.Select(NonEmptyTerm, NonEmptyTerm, Threshold, (a, b, k) => (a, b, k)).Sample(
+        Gen.Select(Term, Term, Threshold, (a, b, k) => (a, b, k)).Sample(
             triple =>
             {
                 nuint full = distance(triple.a, triple.b);

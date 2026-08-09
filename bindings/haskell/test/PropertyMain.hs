@@ -16,9 +16,9 @@
 --   (c) u64 value round-trips, with 0 and 'maxBound' pinned.
 --
 -- The RNG is replayed from a fixed seed, so a failing run reproduces. Distance
--- operands are non-empty to avoid the cross-facade empty-operand marshalling
--- behaviour characterised by the C suite (an empty string can reach the native
--- distance entry point as a null pointer).
+-- operands may be empty: an empty 'Text.Text' can reach the native distance
+-- entry point as a null pointer, and as of the LLEV-B18 fix that NULL+0 is
+-- accepted as the empty string (the transducer query path always accepted it).
 module Main (main) where
 
 import Control.Monad (unless)
@@ -38,9 +38,6 @@ alphabet = "abcé"
 
 genTerm :: Gen Text.Text
 genTerm = Text.pack <$> (choose (0, 6) >>= \n -> vectorOf n (elements alphabet))
-
-genNonEmpty :: Gen Text.Text
-genNonEmpty = Text.pack <$> (choose (1, 6) >>= \n -> vectorOf n (elements alphabet))
 
 genValue :: Gen (Maybe Word64)
 genValue = frequency [(1, pure Nothing), (3, Just <$> arbitrary)]
@@ -97,8 +94,8 @@ distanceProperty
   -> (Text.Text -> Text.Text -> Int -> IO Int)
   -> Property
 distanceProperty dist thr =
-  forAll genNonEmpty $ \a ->
-    forAll genNonEmpty $ \b ->
+  forAll genTerm $ \a ->
+    forAll genTerm $ \b ->
       forAll (choose (0, 3)) $ \k -> ioProperty $ do
         full <- dist a b
         backward <- dist b a
@@ -108,8 +105,8 @@ distanceProperty dist thr =
 
 oracleProperty :: Property
 oracleProperty =
-  forAll genNonEmpty $ \a ->
-    forAll genNonEmpty $ \b -> ioProperty $ do
+  forAll genTerm $ \a ->
+    forAll genTerm $ \b -> ioProperty $ do
       d <- Lev.distance a b
       pure (d == levenshtein a b)
 

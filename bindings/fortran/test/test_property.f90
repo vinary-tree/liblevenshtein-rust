@@ -10,10 +10,10 @@
 ! The intrinsic PRNG is seeded from a constant so failures reproduce. An ASCII
 ! alphabet keeps byte == scalar, so the oracle needs no UTF-8 decoding; the
 ! scalar-vs-byte counting is pinned by the conformance test. Distance operands
-! are non-empty: the facade marshals an empty string as a null data pointer,
-! which the native distance entry point rejects with a non-distance value (the
-! cross-facade empty-operand behaviour characterised by the C facade's suite),
-! so empties are out of scope for the distance-function properties.
+! may be empty: the facade marshals an empty string as a null data pointer, and
+! as of the LLEV-B18 fix the native distance entry points accept NULL+0 as the
+! empty string (the transducer query path always did), so random_term generates
+! possibly-empty terms.
 program test_property
   use, intrinsic :: iso_c_binding, only: c_size_t
   use vinary_tree_liblevenshtein
@@ -76,7 +76,7 @@ contains
     integer :: length, index, choice
     real :: sample
     call random_number(sample)
-    length = 1 + int(sample * real(max_length))
+    length = int(sample * real(max_length + 1))
     if (length > max_length) length = max_length
     allocate (character(len=length) :: term)
     do index = 1, length

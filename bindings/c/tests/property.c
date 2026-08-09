@@ -12,10 +12,12 @@
  *   (c) u64 value round-trips, with 0 and 2^64-1 pinned.
  *
  * The PRNG is seeded from a constant so failures reproduce. The C facade passes
- * real (non-null) buffers, so empty operands are exercised too -- see the
- * empty-operand characterization below, which pins the root cause of the
- * Go/.NET empty-operand defect (those facades pass a NULL data pointer for a
- * zero-length string, and the native distance entry point returns SIZE_MAX).
+ * real (non-null) buffers, so empty operands are exercised directly. The
+ * empty-operand characterization below also confirms, at the C level, the fix
+ * for LLEV-B18: the native distance entry points now accept a NULL data pointer
+ * for a zero-length string (some host runtimes -- .NET, Go -- marshal an empty
+ * string as NULL+0), returning the true distance rather than the SIZE_MAX
+ * invalid-input sentinel, while still rejecting NULL with a non-zero length.
  */
 #include "libdictenstein.h"
 #include "liblevenshtein.h"
@@ -76,11 +78,16 @@ static void characterize_empty_operands(void) {
     assert(llev_distance(empty, 0, empty, 0) == 0);
     assert(llev_distance(empty, 0, "ab", 2) == 2);
     assert(llev_distance("ab", 2, empty, 0) == 2);
-    /* Root cause of the Go/.NET empty-operand defect: a NULL data pointer is
-     * rejected with SIZE_MAX (distinct from the SIZE_MAX-1 threshold sentinel).
-     * Facades that pass NULL for an empty string therefore report SIZE_MAX
-     * instead of the true distance. */
-    assert(llev_distance(NULL, 0, NULL, 0) == (size_t)-1);
+    /* LLEV-B18 fix: a NULL data pointer with length 0 denotes the empty string,
+     * so a facade that marshals an empty string as NULL+0 (.NET's
+     * `fixed (byte* p = new byte[0])`, Go's `&slice[0]` on an empty slice) now
+     * gets the true distance, matching the transducer query path. */
+    assert(llev_distance(NULL, 0, NULL, 0) == 0);
+    assert(llev_distance(NULL, 0, "ab", 2) == 2);
+    assert(llev_distance("ab", 2, NULL, 0) == 2);
+    /* A NULL pointer with a non-zero length remains an invalid operand and still
+     * returns the invalid-input sentinel (the fix does not weaken this guard). */
+    assert(llev_distance(NULL, 2, "ab", 2) == (size_t)-1);
 }
 
 static void distance_properties(void) {
