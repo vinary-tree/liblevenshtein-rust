@@ -6,6 +6,8 @@
 /bindings/javascript-runtime/native/build/
 /bindings/javascript-runtime/native/prebuilds/
 /bindings/javascript-runtime/LICENSE
+# Generated WASM/WASI build output (wasm-bindgen / wasi-sdk emit; regenerable).
+/bindings/javascript-runtime/generated/
 /bindings/javascript/target/
 /bindings/javascript/.cpcache/
 /bindings/jvm/.gradle/
