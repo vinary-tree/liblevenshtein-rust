@@ -265,7 +265,24 @@ impl Provider {
                 "snapshot returned a null resource",
             ));
         }
-        let snapshot = unsafe { Provider::from_owned(snapshot) }?;
+        let snapshot = match unsafe { Provider::from_owned(snapshot) } {
+            Ok(provider) => provider,
+            Err(error) => {
+                // The provider transferred ONE owned retain with the snapshot
+                // resource (VtResource contract). Validation failed before a
+                // `Provider` took ownership of that retain, so release it
+                // here; otherwise every failed snapshot decode leaks the
+                // snapshot context (wave-W3 fault-injection finding, pinned
+                // by tests/ffi_provider_fault_injection.rs ledger balance).
+                // The object never entered service, so no gate guards it —
+                // mirroring the `from_borrowed` error path's raw release.
+                let release = unsafe { (*snapshot.vtable).release };
+                if let Some(release) = release {
+                    unsafe { release(snapshot.context) };
+                }
+                return Err(error);
+            }
+        };
         if snapshot.vtable().unit_domain != self.vtable().unit_domain {
             return Err(BindingError::InvalidProviderOutput(
                 "snapshot changed the unit domain",
