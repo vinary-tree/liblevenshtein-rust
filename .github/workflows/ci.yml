@@ -203,7 +203,7 @@ jobs:
       - name: JVM unit tests and strict Javadoc
         working-directory: bindings/jvm
         run: >-
-          ./gradlew --no-daemon test javadoc
+          ./gradlew --no-daemon test propertyTest javadoc
           -Pliblevenshtein.nativeDir=../../target/debug
       - name: Libdictenstein JVM CRUD, persistence, and cross-project snapshots
         shell: bash
@@ -287,7 +287,7 @@ jobs:
       - name: Java 22 API and bytecode on the current JDK
         working-directory: bindings/jvm
         run: >-
-          ./gradlew --no-daemon test javadoc
+          ./gradlew --no-daemon test propertyTest javadoc
           -PjavaToolchain=26
           -Pliblevenshtein.nativeDir=../../target/debug
 

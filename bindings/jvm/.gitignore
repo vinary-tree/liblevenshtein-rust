@@ -1,0 +1,3 @@
+# jqwik writes a small sample database next to the working directory even when
+# the on-disk store is configured empty; it is a transient C8 test artifact.
+.jqwik-database

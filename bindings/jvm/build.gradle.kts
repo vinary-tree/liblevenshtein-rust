@@ -59,6 +59,43 @@ tasks.test {
     )
 }
 
+// --- C8 property-based tests (jqwik) --------------------------------------
+// jqwik targets the JUnit Platform 1.x SPI and does not yet support the JUnit
+// Platform 6 pinned by the junit-bom above (see jqwik release notes: a Platform
+// 6 build is only on the roadmap). To use the real ecosystem PBT framework
+// without disturbing the Jupiter `test` task, jqwik lives in an isolated
+// `property` source set with its own launcher/engine, so the two tasks never
+// share a JUnit Platform on the classpath.
+val property = sourceSets.create("property") {
+    compileClasspath += sourceSets["main"].output
+    runtimeClasspath += sourceSets["main"].output
+}
+
+configurations["propertyImplementation"].extendsFrom(
+    configurations["api"],
+    configurations["implementation"],
+)
+
+dependencies {
+    "propertyImplementation"("net.jqwik:jqwik:1.10.1")
+    "propertyRuntimeOnly"("org.junit.platform:junit-platform-launcher:1.14.4")
+}
+
+val propertyTest = tasks.register<Test>("propertyTest") {
+    group = "verification"
+    description = "C8 jqwik property-based tests on an isolated JUnit Platform 1.x."
+    testClassesDirs = property.output.classesDirs
+    classpath = property.runtimeClasspath
+    useJUnitPlatform { includeEngines("jqwik") }
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+    systemProperty(
+        "java.library.path",
+        providers.gradleProperty("liblevenshtein.nativeDir").orElse("../../target/debug").get()
+    )
+}
+
+tasks.named("check") { dependsOn(propertyTest) }
+
 val nativeResourcesByPlatform = mapOf(
     "linux-x86_64" to "META-INF/native/linux-x86_64/libliblevenshtein.so",
     "linux-aarch64" to "META-INF/native/linux-aarch64/libliblevenshtein.so",
