@@ -25,10 +25,10 @@ or "ledger-only") | verification | status`.
 | LLEV-B8 | paging-acceptance asymmetry (F3, llev side) | correctness | medium | FIXED | `65eb4a2` |
 | LLEV-B9 | family version pins | version-pin | info | LEDGER-ONLY | ledger-only |
 | LLEV-B10 | `vinary-tree-interop` `rust-version` | hygiene | low | FIXED | `d895183` |
-| LLEV-B11 | swift facade phonetic/threshold surface | completeness | medium | OPEN → W7 | — |
+| LLEV-B11 | swift facade phonetic/threshold surface | completeness | medium | FIXED | `95b4cdb` |
 | LLEV-B12 | javascript-runtime Node N-API threshold + size/len symbols | correctness | high | FIXED | `622e4f6` |
-| LLEV-B13 | dotnet threshold overload asymmetry | completeness | low | OPEN → W7 | — |
-| LLEV-B14 | python `pattern_size`/`rules_len` | completeness | low | OPEN → W7 | — |
+| LLEV-B13 | dotnet threshold overload asymmetry | completeness | low | FIXED | `d0481d9` |
+| LLEV-B14 | python `pattern_size`/`rules_len` | completeness | low | FIXED | `26e14ef` |
 | LLEV-B15 | `docs/diagrams` .dot/.asy render drift | hygiene | low | OPEN → W3 | — |
 | LLEV-B16 | FFI reducer/callback status wire (raw `u32`) | correctness (UB) | medium | FIXED | `dad4429` |
 | LLEV-B17 | cursor fault window discards the in-flight batch | correctness (completeness-under-fault) | low | LEDGER + DOCS | ledger-only |
@@ -120,8 +120,9 @@ or "ledger-only") | verification | status`.
 ### LLEV-B11 — swift facade lacks the phonetic rule-set and threshold surface
 - **Date**: 2026-08-08 · **Component**: `bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift` · **Class**: completeness · **Severity**: medium
 - **Evidence**: `bindings/conformance/completeness-matrix.tsv` (swift 17/35, 10 FINDING nulls): no `PhoneticRuleSet` facade (`llev_phonetic_rules_parse/builtin/free/len/apply`, `llev_owned_string_free` unbound), no `llev_phonetic_pattern_size`, and all three `llev_*_distance_threshold` functions missing — every other Tier-2/3 facade exposes these.
-- **Fix**: scheduled wave W7 (uniform per-language completeness) — add the missing Swift wrappers + tests.
-- **Status**: OPEN → W7.
+- **Fix**: commit `95b4cdb` — `Liblevenshtein.swift` gains the three `EditDistance` threshold overloads (`levenshtein`/`damerauOSA`/`damerauLevenshtein`, each `-> Int?` with `nil` for the native `usize::MAX`/`usize::MAX-1` sentinels, via a shared `bounded` helper), `PhoneticPattern.size() -> (states, transitions)`, and a full `PhoneticRuleSet` class (`parse`/`builtin`/`count`/`apply`/`close`) with a `PhoneticRuleSetKind` enum; `apply` copies the `LlevOwnedString` then releases it with `llev_owned_string_free`. Swift rises 17/35 → 27/35 and its enum count 2/4 → 3/4, matching the peer Tier-2/3 reasoned-absence set exactly.
+- **Verification**: the SwiftPM Integration executable pins the threshold within/exceeded results (`ca→abc` separating OSA 3 from unrestricted Damerau 2), the pattern size (positive states/transitions), the built-in english-orthography set, and a parsed 2-rule set whose `apply("phgh") == "f"` (DSL verified against the native library); `swift run` green end-to-end with both native libs linked. `python3 scripts/check-bindings.py --check` now reports **0 findings** across all 15 facades.
+- **Status**: FIXED.
 
 ### LLEV-B12 — Node N-API runtime omits symbols its type declarations promise
 - **Date**: 2026-08-08 · **Component**: `bindings/javascript-runtime/native/src/addon.cc`, `native.mjs`/`native.cjs` vs `index.d.ts` · **Class**: correctness · **Severity**: high
@@ -134,14 +135,16 @@ or "ledger-only") | verification | status`.
 ### LLEV-B13 — dotnet threshold overloads only cover standard Levenshtein
 - **Date**: 2026-08-08 · **Component**: `bindings/dotnet/src/VinaryTree.Liblevenshtein/Distance.cs` · **Class**: completeness · **Severity**: low
 - **Evidence**: completeness matrix (dotnet 25/35): `llev_damerau_distance_threshold` and `llev_true_damerau_distance_threshold` unbound while `llev_distance_threshold` has an overload — asymmetric.
-- **Fix**: scheduled wave W7.
-- **Status**: OPEN → W7.
+- **Fix**: commit `d0481d9` — `Native.cs` binds both missing symbols and `Distance` gains `Damerau`/`TrueDamerau` threshold overloads through a shared `ThresholdCall` helper; the overloads pass the native result through, so the exceeded-bound sentinel is `nuint.MaxValue - 1` (not `threshold + 1` — the XML docs are corrected to say so). dotnet rises 25/35 → 27/35.
+- **Verification**: `dotnet run --framework net10.0` green (net8.0 covered by CI) with the conformance program pinning within-bound and exceeded-bound results for all three overloads and using `ca→abc` (OSA 3 vs unrestricted Damerau 2) to separate the true-Damerau overload from OSA.
+- **Status**: FIXED.
 
 ### LLEV-B14 — python facade misses `pattern_size`/`rules_len`
 - **Date**: 2026-08-08 · **Component**: `bindings/python/src/liblevenshtein/_native.py` · **Class**: completeness · **Severity**: low
 - **Evidence**: completeness matrix (python 20/35 with 2 FINDING nulls): `llev_phonetic_pattern_size` and `llev_phonetic_rules_len` unbound while the peer Tier-1 JVM facade and all Tier-2/3 facades expose them.
-- **Fix**: scheduled wave W7.
-- **Status**: OPEN → W7.
+- **Fix**: commit `26e14ef` — `_native.py` binds both `ctypes` prototypes; `PhoneticPattern.size` returns a `(states, transitions)` tuple and `PhoneticRuleSet.__len__` surfaces the enabled-rule count through the Pythonic `len()` protocol. python rises 20/35 → 22/35.
+- **Verification**: `pytest -q bindings/python/tests` 5/5 (two new tests pin the size-tuple shape with positive states/transitions and `len()` over the built-in english-orthography set plus an `apply()` round-trip).
+- **Status**: FIXED.
 
 ### LLEV-B15 — pre-existing diagram render drift outside the bindings suite
 - **Date**: 2026-08-08 · **Component**: `docs/diagrams` (21 `.dot`/`.asy` sources) · **Class**: hygiene · **Severity**: low
