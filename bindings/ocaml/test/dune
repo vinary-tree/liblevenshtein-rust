@@ -1,6 +1,7 @@
-(test
- (name snapshot)
+(tests
+ (names snapshot property)
  (libraries
   vinary-tree-interop
   vinary-tree-libdictenstein
-  vinary-tree-liblevenshtein))
+  vinary-tree-liblevenshtein
+  qcheck-core))

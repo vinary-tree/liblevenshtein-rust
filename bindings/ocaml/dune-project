@@ -7,4 +7,4 @@
 (package
  (name vinary-tree-liblevenshtein)
  (synopsis "Fast streaming Levenshtein automata for OCaml")
- (depends vinary-tree-interop))
+ (depends vinary-tree-interop (qcheck-core :with-test)))

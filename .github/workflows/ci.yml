@@ -649,6 +649,7 @@ jobs:
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
       - run: opam install dune.3.20.2 --yes
+      - run: opam install qcheck-core --yes
       - run: cargo build --locked --features ocaml-bindings
       - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - name: Install modular OCaml dependencies and run snapshot suite
