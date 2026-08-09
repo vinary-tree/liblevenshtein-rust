@@ -15,14 +15,14 @@ or "ledger-only") | verification | status`.
 
 | ID | Component | Class | Severity | Status | Fix |
 |---|---|---|---|---|---|
-| LLEV-B1 | `src/ffi/mod.rs` doc example | correctness (docs) | medium | OPEN → W3 | — |
+| LLEV-B1 | `src/ffi/mod.rs` doc example | correctness (docs) | medium | FIXED | `8c3c654` |
 | LLEV-B2 | `.gitignore` / staged natives | hygiene | high | FIXED | `de5caee` |
 | LLEV-B3 | root + macros `Cargo.lock` | hygiene | medium | FIXED | `7475484` |
 | LLEV-B4 | `bindings/javascript-runtime/rust/{wasi,browser}.rs` | correctness | high | FIXED | `457d745` |
 | LLEV-B5 | `src/ffi/{index,phonetic}.rs` cfg warnings | hygiene | low | FIXED | `7475484` |
 | LLEV-B6 | FFI `VtStatus` discriminant reads | correctness (UB) | high | FIXED | `e42485c` (+family) |
-| LLEV-B7 | `VtOptionalU64.reserved` validation (F2) | correctness | medium | OPEN → W3 | — |
-| LLEV-B8 | paging-acceptance asymmetry (F3, llev side) | correctness | medium | OPEN → W3 | — |
+| LLEV-B7 | `VtOptionalU64.reserved` validation (F2) | correctness | medium | FIXED | `8c3c654` |
+| LLEV-B8 | paging-acceptance asymmetry (F3, llev side) | correctness | medium | FIXED | `65eb4a2` |
 | LLEV-B9 | family version pins | version-pin | info | LEDGER-ONLY | ledger-only |
 | LLEV-B10 | `vinary-tree-interop` `rust-version` | hygiene | low | FIXED | `d895183` |
 | LLEV-B11 | swift facade phonetic/threshold surface | completeness | medium | OPEN → W7 | — |
@@ -30,6 +30,8 @@ or "ledger-only") | verification | status`.
 | LLEV-B13 | dotnet threshold overload asymmetry | completeness | low | OPEN → W7 | — |
 | LLEV-B14 | python `pattern_size`/`rules_len` | completeness | low | OPEN → W7 | — |
 | LLEV-B15 | `docs/diagrams` .dot/.asy render drift | hygiene | low | OPEN → W3 | — |
+| LLEV-B16 | FFI reducer/callback status wire (raw `u32`) | correctness (UB) | medium | FIXED | `dad4429` |
+| LLEV-B17 | cursor fault window discards the in-flight batch | correctness (completeness-under-fault) | low | LEDGER + DOCS | ledger-only |
 
 ## Findings
 
@@ -90,14 +92,16 @@ or "ledger-only") | verification | status`.
 ### LLEV-B7 — `VtOptionalU64.reserved` accepted unvalidated (pre-registered F2)
 - **Date**: 2026-08-08 · **Component**: `src/bindings.rs` value decoding · **Class**: correctness · **Severity**: medium
 - **Evidence**: lling-llang's consumer validates `VtWfstArc.reserved == 0`; llev's `VtOptionalU64` path checks only `has_value ∈ {0,1}` — asymmetric application of the interop "reserved fields must be zero" law (`vinary-tree-interop/src/lib.rs` doc).
-- **Fix**: scheduled wave W3 under invariant VT-ABI-5, with the fault-provider test.
-- **Status**: OPEN → W3.
+- **Fix**: commit `8c3c654` — the value-decode path now rejects `value.reserved != [0; 7]` (`src/bindings.rs:591`) and the resource-value base rejects `base.reserved != 0` (`src/bindings.rs:317`), both mapping to `InvalidProviderOutput("reserved bytes were not zero")`, under invariant VT-ABI-5.
+- **Verification**: `tests/ffi_provider_fault_injection.rs` pins a nonzero-`reserved` reply to `ProviderError` with message "reserved bytes were not zero".
+- **Status**: FIXED.
 
 ### LLEV-B8 — paging-acceptance asymmetry across consumers (pre-registered F3, llev side)
 - **Date**: 2026-08-08 · **Component**: `src/bindings.rs` `expanded_edges` acceptance checks · **Class**: correctness · **Severity**: medium
 - **Evidence**: llev checks `total < start + written`; lling-llang adds `offset > total` and an in-loop progress check; duallity uses saturating adds with a slightly different predicate — three subtly different acceptance predicates for one interop paging law.
-- **Fix**: scheduled wave W3 — harmonize all three consumers to the single proven predicate from `docs/verification/abi/theories/ConsumerAcceptance.v` (each sibling patches its own copy in its own wave).
-- **Status**: OPEN → W3 (llev), W4 (lling), W5 (duallity).
+- **Fix**: commit `65eb4a2` (llev side) — `expanded_edges` (`src/bindings.rs:428`) now runs the single `accepts_dec` predicate proved in `docs/verification/abi/theories/ConsumerAcceptance.v`: `page_len == written`, `written <= capacity`, `written <= total.saturating_sub(start)`, a progress conjunct, and `total <= max_total` realized *structurally* (the consumer never sizes an allocation from the provider-claimed `total`, closing the preallocation-abort vector LLEV-B8/finding LLEV-B8). lling and duallity patch their own copies in W4/W5.
+- **Verification**: `tests/abi_paging_correspondence.rs::adversarial_pages_are_rejected_without_aborting` (Overfill / PastEnd / StalledProgress / InflatedTotal each surface as a provider error with no allocation abort) and `honest_paging_is_accepted_and_lossless` (the same predicate certified by the Coq proof).
+- **Status**: FIXED (llev); lling → W4, duallity → W5.
 
 ### LLEV-B9 — family version-pin inconsistencies (ledger-only per user decision)
 - **Date**: 2026-08-08 · **Component**: `bindings/related-projects.json`, `.github/workflows/release.yml`, crates.io state · **Class**: version-pin · **Severity**: informational
@@ -144,3 +148,19 @@ or "ledger-only") | verification | status`.
 - **Evidence**: `bash docs/diagrams/render.sh --check` reports 21 drifted renders, all Graphviz/Asymptote (renderer-version skew between the committed SVGs and graphviz 15.1.1 / current asy); present at baseline `ae0d6a5`; zero under `docs/diagrams/bindings/` (the new suite renders byte-stable PlantUML).
 - **Fix**: scheduled wave W3 (re-render the drifted sources with the current toolchain in a dedicated commit so `render.sh --check` returns to a meaningful zero).
 - **Status**: OPEN → W3.
+
+### LLEV-B16 — FFI reducer/callback status wire read as a typed enum (twin of B6)
+- **Date**: 2026-08-08 · **Component**: `src/ffi/index.rs` batch reducer + interop callback returns · **Class**: correctness (UB) · **Severity**: medium
+- **Evidence**: the batch reducer callback and several interop callback returns moved the status across the wire as a typed `#[repr(u32)]` enum; a foreign reducer (or callback) returning an out-of-range discriminant is read directly into the enum — instant undefined behavior, the same class as LLEV-B6 on the provider-callback path.
+- **Analysis**: the ABI status wire must be a raw `u32` validated *before* any enum conversion; a typed return type silently assumes the foreign side only ever produces in-range discriminants.
+- **Fix**: commit `dad4429` — the reducer callback wire is a raw `u32` decoded via `LlevStatus::try_from` (out-of-range → `InvalidArgument`, "batch reducer returned an out-of-range status"); interop callback returns fold through `VtStatus::to_raw()` shims over typed `_status` inner fns; the commit also corrected the cross-read findings noted against B6/B8.
+- **Verification**: `tests/ffi_reducer_laws.rs` (all 11 valid non-Ok/End statuses returned verbatim; raw 13 / 42 / `u32::MAX` → `InvalidArgument`) and the reducer-wire encode in `tests/ffi_resource_snapshot_semantics.rs`; registered as invariant family LLEV-STAT-6 (`ABI_INVARIANTS.tsv`) for the End-from-callback fold.
+- **Status**: FIXED.
+
+### LLEV-B17 — the cursor fault window discards the in-flight batch
+- **Date**: 2026-08-09 · **Component**: `src/bindings.rs` `QueryCursor` fault channel / `src/ffi/index.rs` batch fill · **Class**: correctness (completeness-under-fault) · **Severity**: low
+- **Evidence**: surfaced by the W3 T2 consumer suite. When a provider callback faults partway through assembling a batch, the consumer discards the *whole* in-progress batch and surfaces the fault; the fault channel is take-once, so the next advance resumes the cursor **empty**. A fault while producing match `b` therefore also costs the same poisoned pull's already-visited `c` (pinned by `provider_fault_is_taken_once_then_the_cursor_resumes`), and a fault mid-batch at the safe layer drops that batch's already-gathered prefix.
+- **Analysis**: the behavior is deterministic and memory-safe, and it does **not** violate the proven consumer laws. `CursorSnapshotSemantics.v` `emitted_subset_captured` (VT-SNAP-1) and `latched_fault_surfaces_next` (VT-SNAP-3) require that every emitted match is a member of the captured revision and that no match is fabricated *past* a fault; neither requires delivery of matches gathered *before* the fault. Treating a provider fault as terminal for the in-progress batch — rather than skipping the faulting node and continuing — is the safe, simple contract: it never fabricates, never double-delivers, and always surfaces the error exactly once. Delivering the gathered prefix and then re-surfacing the fault on a later call would require stashing a pending fault and is a semantics change beyond this program's pre-registered scope (F1–F5), so it is intentionally not taken.
+- **Fix**: ledger + docs. Recorded as a **behavioral contract**: *a provider fault is terminal for the batch it interrupts; matches gathered during the faulting pull (including any the traversal advanced past but had not yet emitted) are not delivered, and the fault surfaces exactly once (take-once) before the cursor resumes empty.* No code change. A consumer that must not lose matches under provider faults should either pull with capacity 1 (so at most one match is ever in flight) or treat any `Provider` error as "traversal incomplete — restart from a fresh query over a re-captured snapshot".
+- **Verification**: `tests/binding_snapshot_semantics.rs::provider_fault_is_taken_once_then_the_cursor_resumes` (take-once + resume-empty) and `tests/abi_paging_correspondence.rs::adversarial_pages_are_rejected_without_aborting` (no abort / no fabrication under adversarial pages); registered as invariant LLEV-CUR-1 (`ABI_INVARIANTS.tsv`, test-pinned over the finite fault-channel FSM).
+- **Status**: LEDGER + DOCS (behavioral contract; no code change).
