@@ -16,9 +16,9 @@ Hardware for the recorded numbers: AMD Ryzen Threadripper PRO 5975WX (Zen 3,
 ## E1 — Batch-capacity sweep: is 256 the right default?
 
 - **Hypothesis.** The batched cursor amortizes the FFI boundary, so drain time
-  should fall as the batch capacity grows (fewer `⌈M/cap⌉` crossings), with
-  diminishing returns past some capacity that justifies the `defaultMatchBatch`
-  of 256 in `bindings/api.json`.
+  should fall as the batch capacity grows (fewer $`\lceil M/\mathit{cap} \rceil`$
+  crossings), with diminishing returns past some capacity that justifies the
+  `defaultMatchBatch` of 256 in `bindings/api.json`.
 - **Method.** `benches/ffi_boundary_benchmarks.rs`, group `cursor_drain_by_batch`:
   a distance-2 query (`"term000000"`) drained to completion over a real 2000-term
   `DynamicDawgBinding` consumed through `ResourceTransducer`, at capacities
@@ -30,14 +30,14 @@ Hardware for the recorded numbers: AMD Ryzen Threadripper PRO 5975WX (Zen 3,
   |---|---|---|---|---|---|---|---|
   | time (µs) | 302.6 | 309.2 | 310.2 | 306.6 | 309.2 | 311.3 | 314.6 |
 
-- **Analysis.** Drain time is **flat within ≈4 %** across a 1024× capacity range —
+- **Analysis.** Drain time is **flat** within $`\approx 4\%`$ across a $`1024\times`$ capacity range —
   cap 1 is even marginally fastest, and the largest capacities are marginally
   slowest (larger batch buffers to fill/clear). For a realistic fuzzy query the
   match set is small and **traversal of the automaton dominates**, not the
   boundary crossings, so batch capacity is not the drain-time bottleneck here.
   The amortization the batched design provides is real but is exercised only by
   high-fan-out queries (large `M`); its shape is pinned exactly, independently of
-  wall-clock noise, by the crossing census in E2 (`⌈M/cap⌉ + 1`). Larger
+  wall-clock noise, by the crossing census in E2 ($`\lceil M/\mathit{cap} \rceil + 1`$). Larger
   defaults (512, 1024) buy no crossing reduction for typical queries while
   enlarging the per-cursor arena/descriptor buffers.
 - **Decision.** **Keep `defaultMatchBatch = 256`.** It single-pages the match set
@@ -48,7 +48,7 @@ Hardware for the recorded numbers: AMD Ryzen Threadripper PRO 5975WX (Zen 3,
 ## E2 — Boundary-crossing census: does the crossing count obey the paging law?
 
 - **Hypothesis.** A query returning `M` matches crosses the consumer↔cursor
-  boundary exactly `⌈M/cap⌉ + 1` times (the `+1` is the terminal `End` pull), and
+  boundary exactly $`\lceil M/\mathit{cap} \rceil + 1`$ times (the `+1` is the terminal `End` pull), and
   crosses the cursor↔provider boundary exactly once for the query-start snapshot,
   independent of capacity.
 - **Method.** `tests/ffi_boundary_census.rs`
@@ -60,7 +60,7 @@ Hardware for the recorded numbers: AMD Ryzen Threadripper PRO 5975WX (Zen 3,
 - **Result** (`next_batch_calls` = consumer↔cursor crossings; `snapshot` = per-query
   provider captures):
 
-  | capacity | matches | next_batch_calls | `⌈M/cap⌉+1` | snapshot/query |
+  | capacity | matches | next_batch_calls | ceil(M/cap)+1 | snapshot/query |
   |---|---|---|---|---|
   | 1 | 20 | 21 | 21 | 1 |
   | 4 | 20 | 6 | 6 | 1 |
@@ -69,14 +69,15 @@ Hardware for the recorded numbers: AMD Ryzen Threadripper PRO 5975WX (Zen 3,
   | 20 | 20 | 2 | 2 | 1 |
   | 256 | 20 | 2 | 2 | 1 |
 
-- **Analysis.** The measured crossings equal `⌈M/cap⌉ + 1` at every capacity, and
+- **Analysis.** The measured crossings equal $`\lceil M/\mathit{cap} \rceil + 1`$ at every capacity, and
   the count is monotonically non-increasing in capacity — the batched design
   reduces boundary crossings exactly as the model predicts. Each query captures
   its provider snapshot exactly once (`snapshot/query == 1`), confirming the
-  O(1) query-start capture (VT-SNAP). The provider refcount ledger over the run
-  is balanced (each per-query snapshot context is created at refcount 1, then
-  `+1 retain − 2 release → 0`, destroyed exactly once — one `context_drop` per
-  query), corroborating VT-LIFE without duplicating the dedicated lifecycle test.
+  $`\mathcal{O}(1)`$ query-start capture (VT-SNAP). The provider refcount ledger over the run
+  is balanced (each per-query snapshot context is created at refcount 1, then one
+  retain and two releases drive it back to 0, destroyed exactly once — one
+  `context_drop` per query), corroborating VT-LIFE without duplicating the
+  dedicated lifecycle test.
 - **Decision.** No change; the batched cursor is confirmed to amortize crossings
   as designed. The census is wired as a correctness test (asserts the law), and
   its TSV is the human-readable artifact of the crossing behavior.
@@ -85,8 +86,8 @@ Hardware for the recorded numbers: AMD Ryzen Threadripper PRO 5975WX (Zen 3,
 
 - Crossing-law correctness (adversarial paging, high-degree nodes):
   `tests/abi_paging_correspondence.rs`, invariants VT-PAGE-1..6.
-- Arena reuse (warm batches allocate ≈0): Verus `docs/verification/verus/ffi_batch_arena.rs`
+- Arena reuse (warm batches allocate $`\approx 0`$): Verus `docs/verification/verus/ffi_batch_arena.rs`
   (LLEV-ARENA-1..3) and the arena profile `bindings/c/tests/arena_profile.c` +
   `scripts/profile-ffi-arena.sh`.
-- Resource-handoff O(1) in dictionary size: `benches/ffi_boundary_benchmarks.rs`
+- Resource-handoff $`\mathcal{O}(1)`$ in dictionary size: `benches/ffi_boundary_benchmarks.rs`
   group `resource_handoff_vs_dict_size`.

@@ -300,3 +300,4 @@ docs/bindings/resource-consumer.md
 docs/bindings/wasm-topology.md
 docs/theory/snapshot-semantics.md
 docs/security/binding-trust-model.md
+docs/bindings/PERFORMANCE_EXPERIMENTS.md
