@@ -612,6 +612,21 @@ napi_value pattern_matches(napi_env env, napi_callback_info info) {
   return status == LLEV_STATUS_OK ? boolean(env, matches != 0) : llev_error(env, status);
 }
 
+napi_value pattern_size(napi_env env, napi_callback_info info) {
+  const auto args = arguments(env, info, 1);
+  auto* handle = args.size() == 1 ? external<PatternHandle>(env, args[0]) : nullptr;
+  if (!handle || !handle->value) return nullptr;
+  size_t states = 0;
+  size_t transitions = 0;
+  const auto status = llev_phonetic_pattern_size(handle->value, &states, &transitions);
+  if (status != LLEV_STATUS_OK) return llev_error(env, status);
+  napi_value result;
+  napi_create_object(env, &result);
+  property(env, result, "states", number(env, static_cast<double>(states)));
+  property(env, result, "transitions", number(env, static_cast<double>(transitions)));
+  return result;
+}
+
 napi_value query_pattern(napi_env env, napi_callback_info info) {
   const auto args = arguments(env, info, 3);
   auto* transducer = args.size() == 3 ? external<TransducerHandle>(env, args[0]) : nullptr;
@@ -672,6 +687,15 @@ napi_value rules_apply(napi_env env, napi_callback_info info) {
   return napi_status == napi_ok ? result : fail_napi(env, "napi_create_string_utf8", napi_status);
 }
 
+napi_value rules_len(napi_env env, napi_callback_info info) {
+  const auto args = arguments(env, info, 1);
+  auto* handle = args.size() == 1 ? external<RulesHandle>(env, args[0]) : nullptr;
+  if (!handle || !handle->value) return nullptr;
+  size_t length = 0;
+  const auto status = llev_phonetic_rules_len(handle->value, &length);
+  return status == LLEV_STATUS_OK ? number(env, static_cast<double>(length)) : llev_error(env, status);
+}
+
 napi_value distance(napi_env env, napi_callback_info info, int kind) {
   const auto args = arguments(env, info, 2);
   std::string source, target;
@@ -685,6 +709,47 @@ napi_value distance(napi_env env, napi_callback_info info, int kind) {
 napi_value levenshtein_distance(napi_env env, napi_callback_info info) { return distance(env, info, 0); }
 napi_value damerau_distance(napi_env env, napi_callback_info info) { return distance(env, info, 1); }
 napi_value true_damerau_distance(napi_env env, napi_callback_info info) { return distance(env, info, 2); }
+
+// Thresholded distances mirror the browser-WASM semantics: a number when the
+// distance is within the maximum, undefined once the early exit triggers.
+// The C ABI encodes those outcomes as sentinels (SIZE_MAX for invalid UTF-8,
+// SIZE_MAX - 1 for exceeded); both are decoded here so JavaScript only ever
+// sees a number, undefined, or a thrown Error.
+napi_value distance_threshold(napi_env env, napi_callback_info info, int kind) {
+  const auto args = arguments(env, info, 3);
+  std::string source, target;
+  size_t maximum = 0;
+  if (args.size() != 3 || !string(env, args[0], &source) || !string(env, args[1], &target) ||
+      !size_value(env, args[2], &maximum)) return nullptr;
+  size_t result = SIZE_MAX;
+  if (kind == 0) {
+    result = llev_distance_threshold(source.data(), source.size(),
+                                     target.data(), target.size(), maximum);
+  }
+  if (kind == 1) {
+    result = llev_damerau_distance_threshold(source.data(), source.size(),
+                                             target.data(), target.size(), maximum);
+  }
+  if (kind == 2) {
+    result = llev_true_damerau_distance_threshold(source.data(), source.size(),
+                                                  target.data(), target.size(), maximum);
+  }
+  if (result == SIZE_MAX) {
+    napi_throw_error(env, nullptr, "distance operands must be valid UTF-8");
+    return nullptr;
+  }
+  if (result == SIZE_MAX - 1) return undefined(env);
+  return number(env, static_cast<double>(result));
+}
+napi_value levenshtein_distance_threshold(napi_env env, napi_callback_info info) {
+  return distance_threshold(env, info, 0);
+}
+napi_value damerau_distance_threshold(napi_env env, napi_callback_info info) {
+  return distance_threshold(env, info, 1);
+}
+napi_value true_damerau_distance_threshold(napi_env env, napi_callback_info info) {
+  return distance_threshold(env, info, 2);
+}
 
 napi_value wfst_external(napi_env env, VtResource value) {
   napi_value result;
@@ -973,14 +1038,19 @@ napi_value initialize(napi_env env, napi_value exports) {
     {"patternCompileRegex", nullptr, pattern_compile_regex, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"patternCompileLlre", nullptr, pattern_compile_llre, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"patternMatches", nullptr, pattern_matches, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"patternSize", nullptr, pattern_size, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"patternClose", nullptr, pattern_close, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"queryPattern", nullptr, query_pattern, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"rulesCompile", nullptr, rules_compile, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"rulesApply", nullptr, rules_apply, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"rulesLen", nullptr, rules_len, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"rulesClose", nullptr, rules_close, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"levenshteinDistance", nullptr, levenshtein_distance, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"levenshteinDistanceThreshold", nullptr, levenshtein_distance_threshold, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"damerauDistance", nullptr, damerau_distance, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"damerauDistanceThreshold", nullptr, damerau_distance_threshold, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"trueDamerauDistance", nullptr, true_damerau_distance, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"trueDamerauDistanceThreshold", nullptr, true_damerau_distance_threshold, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"wfstBuilderNew", nullptr, wfst_builder_new, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"wfstBuilderClose", nullptr, wfst_builder_close, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"wfstBuilderAddState", nullptr, wfst_builder_add_state, nullptr, nullptr, nullptr, napi_default, nullptr},

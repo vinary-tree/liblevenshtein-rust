@@ -6,8 +6,8 @@ dotnet	25/35	10	4/4	Query.GetEnumerator	none	status-error	yes	yes	llev_damerau_d
 fortran	26/35	9	3/4	query_iterator%next	none	status-error	yes	yes	-
 go	27/35	8	4/4	Iterator.Next	none	status-error	yes	yes	-
 haskell	26/35	9	3/4	next	foldBatches	status-error	yes	yes	-
-javascript	18/35	17	3/4	QueryCursor	QueryCursor.reduceBatches	status-error	yes	yes	llev_phonetic_pattern_size,llev_phonetic_rules_len
-javascript-runtime	21/35	14	3/4	QueryCursor.next	QueryCursor.reduceBatches	status-error	yes	yes	llev_distance_threshold,llev_damerau_distance_threshold,llev_true_damerau_distance_threshold,llev_phonetic_pattern_size,llev_phonetic_rules_len
+javascript	20/35	15	3/4	QueryCursor	QueryCursor.reduceBatches	status-error	yes	yes	-
+javascript-runtime	26/35	9	3/4	QueryCursor.next	QueryCursor.reduceBatches	status-error	yes	yes	-
 jvm	21/35	14	4/4	QueryCursor.next	QueryCursor.forEachBatch	status-error	yes	yes	-
 lua	27/35	8	3/4	cursor:next	cursor:reduce_batches	status-error	yes	yes	-
 ocaml	26/35	9	3/4	next	fold_batches	status-error	yes	yes	-

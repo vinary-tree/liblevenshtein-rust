@@ -1196,7 +1196,7 @@
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface; the Node native runtime path additionally lacks the threshold variants entirely (see the javascript-runtime FINDING)"
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_damerau_distance": {
           "symbol": null,
@@ -1204,7 +1204,7 @@
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface; the Node native runtime path additionally lacks the threshold variants entirely (see the javascript-runtime FINDING)"
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
@@ -1212,7 +1212,7 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface; the Node native runtime path additionally lacks the threshold variants entirely (see the javascript-runtime FINDING)"
+          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -1261,8 +1261,8 @@
           "symbol": "PhoneticPattern.close"
         },
         "llev_phonetic_pattern_size": {
-          "symbol": null,
-          "_reason": "FINDING: not exposable: the delegate javascript-runtime omits llev_phonetic_pattern_size (see the javascript-runtime FINDING)"
+          "symbol": "PhoneticPattern.size",
+          "note": "declared in index.d.ts; the runtime PhoneticPattern instance (and its size getter) passes through the facade unchanged"
         },
         "llev_phonetic_pattern_matches": {
           "symbol": "PhoneticPattern.matches"
@@ -1281,8 +1281,8 @@
           "symbol": "PhoneticRuleSet.close"
         },
         "llev_phonetic_rules_len": {
-          "symbol": null,
-          "_reason": "FINDING: not exposable: the delegate javascript-runtime omits llev_phonetic_rules_len (see the javascript-runtime FINDING)"
+          "symbol": "PhoneticRuleSet.size",
+          "note": "declared in index.d.ts; the runtime PhoneticRuleSet instance (and its size getter) passes through the facade unchanged"
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"
@@ -1364,22 +1364,22 @@
           "symbol": "liblevenshtein.levenshteinDistance"
         },
         "llev_distance_threshold": {
-          "symbol": null,
-          "_reason": "FINDING: index.d.ts declares levenshteinDistanceThreshold/damerauDistanceThreshold/trueDamerauDistanceThreshold and the browser-wasm path implements them (rust/src/browser.rs via runtime-factory.mjs), but the default Node NAPI path binds no llev_*_threshold symbol (native/src/addon.cc), so the typed members are undefined at run time on Node"
+          "symbol": "liblevenshtein.levenshteinDistanceThreshold",
+          "note": "number within the maximum, undefined on early exit; bound in native/src/addon.cc and mirrored by the browser-wasm path"
         },
         "llev_damerau_distance": {
           "symbol": "liblevenshtein.damerauDistance"
         },
         "llev_damerau_distance_threshold": {
-          "symbol": null,
-          "_reason": "FINDING: index.d.ts declares levenshteinDistanceThreshold/damerauDistanceThreshold/trueDamerauDistanceThreshold and the browser-wasm path implements them (rust/src/browser.rs via runtime-factory.mjs), but the default Node NAPI path binds no llev_*_threshold symbol (native/src/addon.cc), so the typed members are undefined at run time on Node"
+          "symbol": "liblevenshtein.damerauDistanceThreshold",
+          "note": "number within the maximum, undefined on early exit; bound in native/src/addon.cc and mirrored by the browser-wasm path"
         },
         "llev_true_damerau_distance": {
           "symbol": "liblevenshtein.trueDamerauDistance"
         },
         "llev_true_damerau_distance_threshold": {
-          "symbol": null,
-          "_reason": "FINDING: index.d.ts declares levenshteinDistanceThreshold/damerauDistanceThreshold/trueDamerauDistanceThreshold and the browser-wasm path implements them (rust/src/browser.rs via runtime-factory.mjs), but the default Node NAPI path binds no llev_*_threshold symbol (native/src/addon.cc), so the typed members are undefined at run time on Node"
+          "symbol": "liblevenshtein.trueDamerauDistanceThreshold",
+          "note": "number within the maximum, undefined on early exit; bound in native/src/addon.cc and mirrored by the browser-wasm path"
         },
         "llev_transducer_new": {
           "symbol": "liblevenshtein.transducer"
@@ -1428,8 +1428,8 @@
           "symbol": "PhoneticPattern.close"
         },
         "llev_phonetic_pattern_size": {
-          "symbol": null,
-          "_reason": "FINDING: the runtime PhoneticPattern class omits a size accessor (llev_phonetic_pattern_size is unbound in native/src/addon.cc); the JVM and every Tier-2/3 facade expose it"
+          "symbol": "PhoneticPattern.size",
+          "note": "{states, transitions} getter over patternSize in native/src/addon.cc; the browser-wasm class exposes the same getter"
         },
         "llev_phonetic_pattern_matches": {
           "symbol": "PhoneticPattern.matches"
@@ -1448,8 +1448,8 @@
           "symbol": "PhoneticRuleSet.close"
         },
         "llev_phonetic_rules_len": {
-          "symbol": null,
-          "_reason": "FINDING: the runtime PhoneticRuleSet class omits a length accessor (llev_phonetic_rules_len is unbound in native/src/addon.cc); the JVM and every Tier-2/3 facade expose it"
+          "symbol": "PhoneticRuleSet.size",
+          "note": "enabled-rule count getter over rulesLen in native/src/addon.cc; the browser-wasm class exposes the same getter"
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"

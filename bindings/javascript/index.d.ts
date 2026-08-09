@@ -40,12 +40,19 @@ export interface QueryCursor extends IterableIterator<Match> {
   close(): void;
 }
 
+export interface AutomatonSize {
+  readonly states: number;
+  readonly transitions: number;
+}
+
 export interface PhoneticPattern {
+  readonly size: AutomatonSize;
   matches(input: string): boolean;
   close(): void;
 }
 
 export interface PhoneticRuleSet {
+  readonly size: number;
   apply(input: string): string;
   close(): void;
 }

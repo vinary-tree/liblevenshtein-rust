@@ -127,6 +127,7 @@ class PhoneticPattern {
     if (this.#handle === null) throw new Error("phonetic pattern is closed");
     return this.#handle;
   }
+  get size() { return ffi.patternSize(this._handle); }
   matches(input) { return ffi.patternMatches(this._handle, input); }
   close() {
     if (this.#handle !== null) {
@@ -139,6 +140,10 @@ class PhoneticPattern {
 class PhoneticRuleSet {
   #handle;
   constructor(handle) { this.#handle = handle; }
+  get size() {
+    if (this.#handle === null) throw new Error("phonetic rules are closed");
+    return ffi.rulesLen(this.#handle);
+  }
   apply(input) {
     if (this.#handle === null) throw new Error("phonetic rules are closed");
     return ffi.rulesApply(this.#handle, input);
@@ -270,8 +275,11 @@ const liblevenshtein = Object.freeze({
   llrePattern(source) { return new PhoneticPattern(ffi.patternCompileLlre(source)); },
   phoneticRules(source) { return new PhoneticRuleSet(ffi.rulesCompile(source)); },
   levenshteinDistance: ffi.levenshteinDistance,
+  levenshteinDistanceThreshold: ffi.levenshteinDistanceThreshold,
   damerauDistance: ffi.damerauDistance,
+  damerauDistanceThreshold: ffi.damerauDistanceThreshold,
   trueDamerauDistance: ffi.trueDamerauDistance,
+  trueDamerauDistanceThreshold: ffi.trueDamerauDistanceThreshold,
 });
 
 const llingLlang = Object.freeze({

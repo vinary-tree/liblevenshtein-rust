@@ -905,6 +905,23 @@ impl JsPhoneticPattern {
             inner: Some(PhoneticPattern::from_llre(source).map_err(error)?),
         })
     }
+    /// Automaton size as `{states, transitions}`.
+    #[wasm_bindgen(getter)]
+    pub fn size(&self) -> Result<JsValue, JsValue> {
+        let pattern = self.inner()?;
+        let object = Object::new();
+        property(
+            &object,
+            "states",
+            &JsValue::from_f64(pattern.state_count() as f64),
+        )?;
+        property(
+            &object,
+            "transitions",
+            &JsValue::from_f64(pattern.transition_count() as f64),
+        )?;
+        Ok(object.into())
+    }
     /// Test complete-string acceptance.
     pub fn matches(&self, text: &str) -> Result<bool, JsValue> {
         Ok(self.inner()?.matches(text))
@@ -938,6 +955,11 @@ impl JsPhoneticRuleSet {
             source => PhoneticRuleSet::parse(source).map_err(error)?,
         };
         Ok(Self { inner: Some(inner) })
+    }
+    /// Number of enabled rules.
+    #[wasm_bindgen(getter)]
+    pub fn size(&self) -> Result<usize, JsValue> {
+        Ok(self.inner()?.len())
     }
     /// Apply rules to a fixed point.
     pub fn apply(&self, text: &str) -> Result<String, JsValue> {

@@ -31,8 +31,9 @@ export interface QueryCursor extends IterableIterator<Match> {
   reduceBatches<A>(reducer: (accumulator: A, batch: readonly Match[]) => A, initial: A, batchSize?: number): A;
   close(): void;
 }
-export interface PhoneticPattern { matches(input: string): boolean; close(): void; }
-export interface PhoneticRuleSet { apply(input: string): string; close(): void; }
+export interface AutomatonSize { readonly states: number; readonly transitions: number; }
+export interface PhoneticPattern { readonly size: AutomatonSize; matches(input: string): boolean; close(): void; }
+export interface PhoneticRuleSet { readonly size: number; apply(input: string): string; close(): void; }
 export interface Transducer {
   query(input: string, maximumDistance: number, order?: QueryOrder): QueryCursor;
   query(input: Uint8Array | BigUint64Array | PhoneticPattern, maximumDistance: number): QueryCursor;
