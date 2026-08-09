@@ -3,6 +3,7 @@
 module Main (main) where
 
 import Control.Monad (forM_, unless)
+import Data.List (sort)
 import qualified Data.ByteString.Char8 as BS
 import Data.Maybe (fromJust)
 import qualified Data.Text as Text
@@ -138,6 +139,42 @@ main = do
   assertIO (standard == 3 && standardThreshold == 3) "Levenshtein distances"
   assertIO (damerau == 1 && damerauThreshold == 1) "Damerau distances"
   assertIO (trueDamerau == 1 && trueThreshold == 1) "true Damerau distances"
+
+  -- C5: the pull iterator (next/collect) and the push reducer (foldBatches)
+  -- drain the same query to the same sorted multiset of matched terms.
+  equalityDict <- Dict.dynamicDawg Dict.UnicodeScalar
+  _ <- Dict.putBytes equalityDict "cat" (Just 1)
+  _ <- Dict.putBytes equalityDict "cot" (Just 2)
+  _ <- Dict.putBytes equalityDict "cut" (Just 3)
+  equalityShared <- Dict.resource equalityDict
+  equalityAutomaton <- Lev.transducer Lev.Standard equalityShared
+  byIterator <- fmap (sort . map textTerm)
+    (collect =<< Lev.queryText Lev.Traversal equalityAutomaton "cat" 1)
+  reducerCursor <- Lev.queryText Lev.Traversal equalityAutomaton "cat" 1
+  byReducer <- Lev.foldBatches 256 reducerCursor []
+    (\accumulator batch -> pure (accumulator <> map textTerm batch))
+  Lev.closeCursor reducerCursor
+  assertIO (byIterator == sort byReducer && length byIterator == 3)
+    "reducer drains to the same matches as the iterator"
+  Dict.close equalityDict
+  Lev.closeTransducer equalityAutomaton
+
+  -- C6: distances decode UTF-8 to Unicode scalar values, so a multi-byte
+  -- character is one edit, not one edit per byte.
+  cafeDistance <- Lev.distance "café" "cafe"
+  crabDistance <- Lev.distance "🦀" "x"
+  combiningDistance <- Lev.distance "é" "e"
+  cafeThreshold <- Lev.distanceThreshold "café" "cafe" 1
+  assertIO (cafeDistance == 1 && crabDistance == 1 && combiningDistance == 1
+            && cafeThreshold == 1) "Unicode scalar distances"
+
+  -- C2: closePattern is idempotent; finalizing an already-finalized handle is a
+  -- no-op rather than a double free.
+  lifecyclePattern <- Lev.regexPattern "c[ao]t"
+  matchedCat <- Lev.patternMatches lifecyclePattern "cat"
+  Lev.closePattern lifecyclePattern
+  Lev.closePattern lifecyclePattern
+  assertIO matchedCat "lifecycle pattern accepts before close"
 
   mapM_ removeIfPresent persistenceArtifacts
   putStrLn "Haskell binding snapshot integration passed"
