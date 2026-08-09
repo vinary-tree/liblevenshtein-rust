@@ -165,6 +165,15 @@ jobs:
             -Wl,-rpath,"$PWD/../libdictenstein/target/debug" \
             -o target/cpp-cross-project-snapshot
           target/cpp-cross-project-snapshot
+          c++ -std=c++23 -Wall -Wextra -Werror \
+            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            bindings/cpp/tests/property.cpp \
+            -Ltarget/debug -lliblevenshtein \
+            -L../libdictenstein/target/debug -llibdictenstein \
+            -Wl,-rpath,"$PWD/target/debug" \
+            -Wl,-rpath,"$PWD/../libdictenstein/target/debug" \
+            -o target/cpp-property
+          target/cpp-property
       - name: Installed CMake package integration
         run: |
           scripts/stage-native-package.sh \
