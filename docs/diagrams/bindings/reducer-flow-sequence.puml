@@ -1,0 +1,70 @@
+@startuml reducer-flow-sequence
+' The zero-allocation reducer path: llev_query_cursor_reduce drives one
+' callback per reusable batch, auto-releasing the internal lease around each
+' call. Ok continues, End stops successfully, and any other status aborts
+' the reduction and is returned to the caller verbatim — with the lease
+' released and the cursor still usable.
+' Color: caller + callback = trust-boundary tint #FFEBEE (#B71C1C); the llev
+'   cursor = #FADBD8; leased views = #FFECB3 (#FF6F00).
+' Source of truth: src/ffi/index.rs (llev_query_cursor_reduce),
+'   include/liblevenshtein.h (LlevBatchReducer),
+'   tests/ffi_resource_snapshot_semantics.rs
+'   (c_reducer_uses_one_callback_per_batch_and_no_result_vector_abi).
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+skinparam sequence {
+  ParticipantBorderColor #455A64
+  LifeLineBorderColor #90A4AE
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+
+title Reducer flow — one callback per batch, End stops, any other status aborts verbatim
+
+participant "Caller" as Caller #FFEBEE
+participant "LlevQueryCursor" as Cursor #FADBD8
+participant "reducer callback\n(context, matches, len)" as Reducer #FFEBEE
+
+Caller -> Cursor : llev_query_cursor_reduce(cursor,\nbatch_size, reducer, context, &out_count)
+activate Cursor #FADBD8
+
+loop until the stream ends or the reducer stops
+  Cursor -> Cursor : fill_batch(batch_size)\n«internal lease taken»
+  Cursor -> Reducer : reducer(context, views, len)
+  activate Reducer #FFECB3
+  note right of Reducer #FFF8E1
+    The views are borrowed for exactly this
+    call: cursor-owned descriptors + arenas,
+    no managed object per match.
+  end note
+  Reducer --> Cursor : LLEV_STATUS_OK «continue»
+  deactivate Reducer
+  Cursor -> Cursor : lease auto-released;\ncount += len
+end
+
+alt stream exhausted
+  Cursor --> Caller : LLEV_STATUS_OK · out_count = total matches
+else reducer returns End «early stop»
+  Cursor -> Cursor : lease auto-released;\nthe batch already counted
+  Cursor --> Caller : LLEV_STATUS_OK · out_count includes\nthe final partial batch
+else reducer returns any other status «abort»
+  Cursor -> Cursor : lease auto-released
+  Cursor --> Caller : the reducer's status, verbatim\n«cursor remains usable; a later\nnext_batch resumes the stream»
+end
+deactivate Cursor
+
+note over Caller, Reducer #FFFDE7
+  Boundary-crossing count for a query with <latex>n</latex> matches and batch size <latex>B</latex>:
+  <latex>\lceil n / B \rceil</latex> callback invocations (plus one terminal probe) — never one crossing per match.
+end note
+@enduml

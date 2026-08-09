@@ -1,0 +1,70 @@
+@startuml callgate-serialization-sequence
+' The CallGate contract in action: two threads querying through one captured
+' non-reentrant provider are serialized by that provider's own mutex — the
+' gate is released on every exit path, error included — while the same two
+' threads reach a PARALLEL_REENTRANT provider concurrently. The gate's
+' domain is one captured provider object: distinct providers never share it.
+' Color: threads = concurrency slate #CFD8DC (#455A64); the gates =
+'   liblevenshtein #FADBD8; foreign providers = trust-boundary tint #FFEBEE
+'   (#B71C1C).
+' Source of truth: src/bindings.rs (CallGate::Serial / Parallel, Provider::
+'   call, Drop), docs/verification/tla/LlevCallGate.tla (VT-GATE-1..3),
+'   tests/abi_callgate_correspondence.rs.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+skinparam sequence {
+  ParticipantBorderColor #455A64
+  LifeLineBorderColor #90A4AE
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+
+title CallGate — serialized per captured provider, elided under PARALLEL_REENTRANT
+
+participant "Thread A" as A #CFD8DC
+participant "Thread B" as B #CFD8DC
+participant "CallGate(P)\nMutex, per captured object" as GateP #FADBD8
+participant "Provider P\n(no PARALLEL_REENTRANT)" as P #FFEBEE
+participant "Provider Q\n(PARALLEL_REENTRANT)" as Q #FFEBEE
+
+== Serialized: provider P made no concurrency claim ==
+A -> GateP : lock
+activate GateP #FADBD8
+GateP -> P : node_edges(context, node, ...)
+activate P #FFEBEE
+B -> GateP : lock «blocks: VT-GATE-2,\nat most one thread inside P»
+P --> GateP : VT_STATUS_PROVIDER_ERROR «error path»
+deactivate P
+GateP --> A : gate released «VT-GATE-3: every exit\npath, error included, releases»
+deactivate GateP
+GateP -> P : node_edges(...)  «B's turn»
+activate P #FFEBEE
+P --> GateP : Ok
+deactivate P
+GateP --> B : gate released
+
+== Concurrent: provider Q claims PARALLEL_REENTRANT ==
+A -> Q : node_is_final(...) «no gate»
+activate Q #FFEBEE
+B -> Q : node_edges(...) «no gate; overlap is\nQ's advertised capability»
+Q --> A : Ok
+Q --> B : Ok
+deactivate Q
+
+note over GateP, Q #FFFDE7
+  VT-GATE-1: the serialization domain is ONE captured provider object —
+  the gate never serializes the library, other providers, or other captured
+  instances of the same resource. A poisoned lock is recovered, not
+  propagated, so one contained provider fault cannot wedge later callers.
+end note
+@enduml

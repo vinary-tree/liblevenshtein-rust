@@ -1,0 +1,66 @@
+@startuml cursor-lease-state
+' The cursor/lease finite-state machine exactly as src/ffi/index.rs enforces
+' it: Idle alternates with Leased under next_batch/release_batch, reduce
+' leases and auto-releases per callback, End is sticky, and destruction is
+' refused while a lease is live. Guards are typeset as LaTeX.
+' Color: unleased cursor states = liblevenshtein #FADBD8; the leased state =
+'   leased memory #FFECB3 (#FF6F00); terminal Closed = concurrency slate
+'   #CFD8DC (#455A64); refusal self-loops annotated with their status names.
+' Source of truth: src/ffi/index.rs (fill_batch, next_batch, release_batch,
+'   reduce, free); wave-W3 TLA home LlevBatchLease.tla (LLEV-LEASE-1..7);
+'   anchor tests tests/ffi_resource_snapshot_semantics.rs.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+hide empty description
+skinparam state {
+  BorderColor #455A64
+  FontColor #102027
+  BackgroundColor #FADBD8
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+
+title Cursor lease FSM — Idle ⇄ Leased, sticky End, free refused under a live lease
+
+state "Idle\n(no live lease)" as Idle #FADBD8
+state "Leased(g)\nviews + arenas borrowed" as Leased #FFECB3
+state "Ended\n(stream exhausted)" as Ended #FADBD8
+state "Closed" as Closed #CFD8DC
+
+[*] --> Idle : query start captures\nthe snapshot
+
+Idle --> Leased : next_batch(m) → OK\n<latex>m \ge 1,\; \text{matches remain},\; g := \max(g{+}1 \bmod 2^{64},\, 1)</latex>
+Idle --> Ended : next_batch(m) → END\n<latex>m \ge 1,\; \text{no matches remain}</latex>
+Idle --> Idle : next_batch(0) →\nINVALID_ARGUMENT
+Idle --> Idle : release_batch(g′) →\nINVALID_ARGUMENT «no live lease»
+Idle --> Ended : reduce(b, f, ctx) → OK\n«per batch: lease, call f,\nauto-release; f may stop with End»
+Idle --> Idle : reduce aborted → f's status\nverbatim «lease released;\ncursor stays usable»
+
+Leased --> Idle : release_batch(g′) → OK\n<latex>g' = g</latex>
+Leased --> Leased : release_batch(g′) →\nINVALID_ARGUMENT\n<latex>g' \ne g</latex> «stale or zero»
+Leased --> Leased : next_batch / reduce →\nBATCH_IN_USE
+Leased --> Leased : free →\nBATCH_IN_USE «not freed;\nownership stays with the caller»
+
+Ended --> Ended : next_batch → END
+Idle --> Closed : free → OK
+Ended --> Closed : free → OK
+Closed --> [*]
+
+note bottom of Leased #FFF8E1
+  While leased, the library neither mutates nor
+  reallocates the descriptor array or the term
+  arenas (UNSAFE_ABI_CONTRACTS.tsv row
+  ffi-leased-batch-aliasing); generations are
+  strictly increasing and never zero.
+end note
+@enduml

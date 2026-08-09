@@ -1,0 +1,78 @@
+@startuml family-data-flow
+' The end-to-end family ABI data flow: a libdictenstein dictionary crosses to
+' liblevenshtein as a vt.dictionary.v1 resource for cursor queries, and to
+' duallity, which compiles it into a Levenshtein WFST published as
+' vt.scalar-wfst.1; lling-llang lazily composes that WFST with its own to
+' yield a composed vt.scalar-wfst.1. The umbrella JS runtime hosts all four
+' in one process with one resource table.
+' Color: family palette — libdictenstein #D5F5E3, liblevenshtein #FADBD8,
+'   duallity #D6EAF8, lling-llang #FCF3CF; VtResource handles #DCEDC8
+'   (#33691E); umbrella runtime = engines purple #E1BEE7 (#6A1B9A).
+' Source of truth: docs/language-bindings.md, vinary-tree-interop/README.md
+'   ("Who produces and consumes what"), bindings/javascript-runtime/.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+left to right direction
+
+title Family data flow — one dictionary, three consumers, two interfaces
+
+rectangle "libdictenstein" as LDICT #D5F5E3 {
+  rectangle "DynamicDawg /\nDoubleArrayTrie /\nSCDAWG / PersistentARTrie" as BACKENDS #E8F5E9
+  rectangle "ldict_dictionary_resource" as LDR #E8F5E9
+}
+
+rectangle "vt.dictionary.v1\nresource" as DICTRES #DCEDC8
+
+rectangle "liblevenshtein" as LLEV #FADBD8 {
+  rectangle "llev_transducer_new\n(retain + negotiate)" as TNEW #FBE9E7
+  rectangle "query → snapshot capture\n→ leased batch cursor" as CURSOR #FBE9E7
+}
+
+rectangle "duallity" as DUAL #D6EAF8 {
+  rectangle "duallity_wfst_new\n(captures the snapshot once)" as DNEW #E1F5FE
+}
+
+rectangle "vt.scalar-wfst.1\nresource (Levenshtein WFST)" as WFSTRES1 #DCEDC8
+
+rectangle "lling-llang" as LLING #FCF3CF {
+  rectangle "lling_wfst_import /\nlling_wfst_compose\n(lazy product states)" as COMPOSE #FCF8E3
+}
+
+rectangle "composed\nvt.scalar-wfst.1 resource" as WFSTRES2 #DCEDC8
+
+rectangle "umbrella JS runtime\n@vinary-tree/vinary-tree\n(one process, one resource table)" as UMBRELLA #E1BEE7
+
+BACKENDS -[#2E7D32]-> LDR
+LDR -[#33691E]-> DICTRES : publishes\n(born owning one retain)
+DICTRES -[#C62828]-> TNEW : consumed by
+TNEW -[#C62828]-> CURSOR
+DICTRES -[#0277BD]-> DNEW : consumed by
+DNEW -[#33691E]-> WFSTRES1 : produces
+WFSTRES1 -[#F9A825]-> COMPOSE : consumed by
+COMPOSE -[#33691E]-> WFSTRES2 : produces
+
+UMBRELLA .[#6A1B9A].> LDICT : hosts
+UMBRELLA .[#6A1B9A].> LLEV : hosts
+UMBRELLA .[#6A1B9A].> DUAL : hosts
+UMBRELLA .[#6A1B9A].> LLING : hosts
+
+note bottom of DICTRES #F1F8E9
+  Every handoff is the same two-word
+  handle: <latex>\mathcal{O}(1)</latex>, retained, never serialized.
+end note
+
+note bottom of COMPOSE #FCF8E3
+  Lazy WFST composition in the sense of
+  Mohri, Pereira, and Riley (2002): product
+  states materialize on demand from the two
+  retained snapshots.
+end note
+@enduml

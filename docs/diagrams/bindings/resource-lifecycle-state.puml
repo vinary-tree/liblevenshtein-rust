@@ -1,0 +1,66 @@
+@startuml resource-lifecycle-state
+' The retained-resource lifecycle exactly as AbiResourceLifecycle.tla models
+' it: a resource is born owning one retain, stays alive while the provider's
+' counter is positive, admits callbacks only while alive, and is destroyed —
+' permanently — by the release that drops the counter to zero. Copying the
+' two words never moves the counter.
+' Color: live resource states = VtResource green #DCEDC8 / tint #F1F8E9
+'   (#33691E); destroyed = trust-boundary red tint #FFEBEE (#B71C1C);
+'   callback activity = intersection orange #FFE0B2 (#EF6C00).
+' Source of truth: docs/verification/tla/AbiResourceLifecycle.tla
+'   (VT-LIFE-1..6), vinary-tree-interop/docs/abi-reference.md § 5.3,
+'   tests/abi_resource_lifecycle_correspondence.rs.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+hide empty description
+skinparam state {
+  BorderColor #455A64
+  FontColor #102027
+  BackgroundColor #DCEDC8
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+
+title Resource lifecycle — born owning one retain, destroyed exactly at count zero
+
+state "Live\n<latex>\mathrm{count} > 0</latex>" as Live #DCEDC8 {
+  state "Quiescent" as Quiescent #F1F8E9
+  state "InCallback\n(one or more holders inside\na vtable operation)" as InCallback #FFE0B2
+  Quiescent --> InCallback : enter callback\n<latex>\text{requires an owned retain: } \mathrm{owned}(h) > 0</latex>
+  InCallback --> Quiescent : exit callback\n(every path, error included)
+}
+state "Destroyed\n<latex>\mathrm{count} = 0</latex> — permanent" as Destroyed #FFEBEE
+
+[*] --> Live : provider constructs the resource\n<latex>\mathrm{count} := 1</latex> «the first owner's retain»
+
+Live --> Live : retain\n<latex>\mathrm{count}' = \mathrm{count} + 1</latex>
+Live --> Live : release «not the last»\n<latex>\mathrm{count} > 1 \Rightarrow \mathrm{count}' = \mathrm{count} - 1</latex>
+Live --> Live : copy the two words\n<latex>\mathrm{count}' = \mathrm{count}</latex> «VT-LIFE-4: not a retain»
+Live --> Destroyed : final release\n<latex>\mathrm{count} = 1 \;\land\; \text{no live callback of the releaser}</latex>
+Destroyed --> [*]
+
+note right of Live #F1F8E9
+  VT-LIFE-1 (LedgerBalanced):
+  <latex>\mathrm{count} = \sum_{h} \mathrm{owned}(h)</latex>
+  VT-LIFE-2: callbacks imply <latex>\mathrm{count} > 0</latex>
+  VT-LIFE-3: <latex>\mathrm{count} \ge 0</latex> always
+end note
+
+note right of Destroyed #FFEBEE
+  VT-LIFE-6 (NoUseAfterDestroy): destruction
+  happens exactly at count zero, excludes
+  callbacks, and is never reversed — the two
+  words dangle; interface vtable pointers and
+  node ids die with the retain that scoped them.
+end note
+@enduml

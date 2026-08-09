@@ -1,0 +1,73 @@
+@startuml three-layer-architecture
+' The three-layer binding architecture of docs/language-bindings.md: language
+' facades on top, the four project C ABIs in the middle, and the shared
+' vinary-tree-interop resource plane at the bottom. Facades never reach past
+' their own project's C ABI; projects exchange live objects only as two-word
+' VtResource handles.
+' Color: language facades = serialization/bindings lime #F0F4C3 (#9E9D24);
+'   project layers use the family palette — liblevenshtein #FADBD8,
+'   libdictenstein #D5F5E3, lling-llang #FCF3CF, duallity #D6EAF8; the interop
+'   plane = VtResource handle green #DCEDC8 (#33691E); the api.json governance
+'   gate = cache yellow #FFF9C4 (#F9A825).
+' Source of truth: docs/language-bindings.md, bindings/api.json,
+'   vinary-tree-interop/README.md.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+top to bottom direction
+
+title The three binding layers — facades over project C ABIs over one shared resource plane
+
+rectangle "Layer 3 — language facades (idiomatic ownership, iteration, errors)" as L3 #F0F4C3 {
+  rectangle "Tier 1\nC/C++ · Python · JVM · Clojure\nJS/TS/CLJS (umbrella)" as T1 #F9FBE7
+  rectangle "Tier 2\n.NET · Go · Swift\nRuby · Fortran" as T2 #F9FBE7
+  rectangle "Tier 3\nOCaml · Haskell · Lua" as T3 #F9FBE7
+}
+
+rectangle "Layer 2 — project C ABIs (each project publishes only its own capabilities)" as L2 #ECEFF1 {
+  rectangle "libdictenstein\nldict_* — dictionary CRUD,\nbackends, persistence" as LDICT #D5F5E3
+  rectangle "liblevenshtein\nllev_* — transducers, cursors,\nleases, phonetic automata" as LLEV #FADBD8
+  rectangle "duallity\nduallity_* — Levenshtein\nautomata as WFSTs" as DUAL #D6EAF8
+  rectangle "lling-llang\nlling_* — WFST builders,\nlazy composition" as LLING #FCF3CF
+}
+
+rectangle "Layer 1 — vinary-tree-interop (layouts and constants only; no functions)" as L1 #DCEDC8 {
+  rectangle "VtResource = {context, vtable}\nretain · release · query_interface" as RES #F1F8E9
+  rectangle "vt.dictionary.v1\nsnapshot · root · finality ·\ntransition · batched edges" as DICTIF #F1F8E9
+  rectangle "vt.scalar-wfst.1\nsnapshot · start · state info ·\npaged arcs (7 weight domains)" as WFSTIF #F1F8E9
+}
+
+rectangle "bindings/api.json\ngenerate-bindings.py · check-bindings.py" as GOV #FFF9C4
+
+L3 -[hidden]-> L2
+L2 -[hidden]-> L1
+
+T1 -[#9E9D24]-> LLEV : call llev_*
+T2 -[#9E9D24]-> LLEV : call llev_*
+T3 -[#9E9D24]-> LLEV : call llev_*
+
+LDICT -[#2E7D32]-> DICTIF : produces
+LLEV -[#C62828]-> DICTIF : consumes
+DUAL -[#0277BD]-> DICTIF : consumes
+DUAL -[#0277BD]-> WFSTIF : produces
+LLING -[#F9A825]-> WFSTIF : produces + consumes
+
+RES <-[#33691E]- DICTIF : discovered via\nquery_interface
+RES <-[#33691E]- WFSTIF : discovered via\nquery_interface
+
+GOV .[#F9A825].> LLEV : generates constants,\nenforces symbol parity
+GOV .[#F9A825].> L3 : conformance fixtures,\ncompleteness matrix
+
+note right of L1 #F1F8E9
+  Handing a resource between projects is
+  <latex>\mathcal{O}(1)</latex> — two machine words, never a
+  serialization (VT-ABI-3).
+end note
+@enduml

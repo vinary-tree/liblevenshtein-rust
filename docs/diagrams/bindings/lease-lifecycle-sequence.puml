@@ -1,0 +1,76 @@
+@startuml lease-lifecycle-sequence
+' The leased-batch protocol on the wire: next_batch hands out one
+' generation-tagged borrowed view over cursor-owned arenas; while the lease
+' is live every advance, reduce, and free is refused with BATCH_IN_USE and a
+' stale or zero generation cannot release it; release_batch with the exact
+' live generation returns the storage to the cursor; End terminates cleanly.
+' Color: caller = trust-boundary tint #FFEBEE (#B71C1C); cursor =
+'   liblevenshtein #FADBD8; leased memory (views + arenas) = #FFECB3
+'   (#FF6F00).
+' Source of truth: src/ffi/index.rs (fill_batch, llev_query_cursor_next_batch
+'   / release_batch / free), wave-W3 TLA home LlevBatchLease.tla
+'   (LLEV-LEASE-1..7), tests/ffi_resource_snapshot_semantics.rs.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+skinparam sequence {
+  ParticipantBorderColor #455A64
+  LifeLineBorderColor #90A4AE
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+
+title Batch lease lifecycle — exact-generation release, refusal while leased, clean End
+
+participant "Caller" as Caller #FFEBEE
+participant "LlevQueryCursor" as Cursor #FADBD8
+participant "views + byte/u64 arenas\n(cursor-owned storage)" as Arena #FFECB3
+
+Caller -> Cursor : llev_query_cursor_next_batch(cursor, 256, &view)
+activate Cursor #FADBD8
+Cursor -> Arena : clear + refill descriptors,\ntwo-pass pointer fixup
+Cursor --> Caller : OK · view {matches, len, generation g₁}
+deactivate Cursor
+note right of Arena #FFF8E1
+  The lease: descriptors and term bytes are
+  borrowed in place — zero copies, no per-match
+  allocation. The storage is frozen until the
+  exact generation is released.
+end note
+
+Caller -> Caller : read matches[i].term_data\n(borrowed, zero-copy)
+
+Caller -> Cursor : llev_query_cursor_next_batch(...)  «while leased»
+Cursor --> Caller : BATCH_IN_USE  «cursor unchanged»
+Caller -> Cursor : llev_query_cursor_free(cursor)  «while leased»
+Cursor --> Caller : BATCH_IN_USE  «not freed; ownership stays with the caller»
+Caller -> Cursor : llev_query_cursor_release_batch(cursor, 0)
+Cursor --> Caller : INVALID_ARGUMENT  «zero is never a live generation»
+Caller -> Cursor : llev_query_cursor_release_batch(cursor, g₁)
+Cursor --> Caller : OK  «lease settled»
+
+Caller -> Cursor : llev_query_cursor_next_batch(cursor, 256, &view)
+activate Cursor #FADBD8
+Cursor -> Arena : refill (arenas warm:\nclear retains capacity)
+Cursor --> Caller : OK · generation g₂ > g₁
+deactivate Cursor
+Caller -> Cursor : llev_query_cursor_release_batch(cursor, g₁)  «stale»
+Cursor --> Caller : INVALID_ARGUMENT  «only the live generation releases»
+Caller -> Cursor : llev_query_cursor_release_batch(cursor, g₂)
+Cursor --> Caller : OK
+
+Caller -> Cursor : llev_query_cursor_next_batch(cursor, 256, &view)
+Cursor --> Caller : END  «stream exhausted; no lease taken;\nview zeroed to {NULL, 0, 0}»
+
+Caller -> Cursor : llev_query_cursor_free(cursor)
+Cursor --> Caller : OK  «snapshot retain released; ledger balances»
+@enduml

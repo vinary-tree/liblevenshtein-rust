@@ -1,0 +1,90 @@
+@startuml resource-handoff-sequence
+' The O(1) retained-resource handoff: a host obtains a dictionary resource
+' from libdictenstein, hands the two words to llev_transducer_new (which
+' retains, negotiates vt.dictionary.v1, and validates), and starts a query
+' that captures an immutable snapshot resource. The cursor holds only the
+' snapshot retain, so it outlives the transducer and the source handle while
+' the source keeps mutating unblocked.
+' Color: host application = trust-boundary tint #FFEBEE (#B71C1C);
+'   libdictenstein/provider = #D5F5E3 (#2E7D32); liblevenshtein = #FADBD8;
+'   VtResource handles = #DCEDC8 (#33691E) in notes.
+' Source of truth: src/bindings.rs (Provider::from_borrowed/from_owned,
+'   ResourceTransducer::query_utf8), src/ffi/index.rs (llev_transducer_new),
+'   docs/verification/tla/AbiResourceLifecycle.tla (VT-LIFE-1..6).
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+skinparam sequence {
+  ParticipantBorderColor #455A64
+  LifeLineBorderColor #90A4AE
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+
+title Resource handoff — retain, negotiate, capture one snapshot, outlive the source
+
+participant "Host application" as Host #FFEBEE
+participant "libdictenstein\n(provider)" as Ldict #D5F5E3
+participant "liblevenshtein\nllev_* C ABI" as Llev #FADBD8
+
+Host -> Ldict : construct + fill dictionary\n(ldict_* CRUD)
+Host -> Ldict : ldict_dictionary_resource(dict)
+Ldict --> Host : VtResource {context, vtable}\n(born owning one retain)
+note right of Host #F1F8E9
+  Handing the resource on is copying
+  two machine words — <latex>\mathcal{O}(1)</latex>, no
+  serialization (VT-ABI-3, VT-LIFE-4).
+end note
+
+Host -> Llev : llev_transducer_new(&resource,\nLLEV_ALGORITHM_STANDARD, &transducer)
+activate Llev #FADBD8
+Llev -> Ldict : retain(context)
+Llev -> Ldict : query_interface("vt.dictionary.v1",\nminimum_version = 1, &vt)
+Ldict --> Llev : Ok + dictionary vtable
+Llev -> Llev : validate_base + validate_dictionary\n(struct_size, abi_version, reserved,\nrequired ops, value domain)
+Llev --> Host : LLEV_STATUS_OK + LlevTransducer*
+deactivate Llev
+note right of Llev #FBE9E7
+  On any validation failure the fresh
+  retain is released before the error
+  returns — no leak, no double release
+  (UNSAFE_ABI_CONTRACTS.tsv row
+  ffi-borrowed-resource-retain-validate-release).
+end note
+
+Host -> Llev : llev_transducer_query_utf8(transducer,\n"cat", 3, 2, TRAVERSAL, &cursor)
+activate Llev #FADBD8
+Llev -> Ldict : snapshot(context, &snapshot_resource)
+Ldict --> Llev : Ok + immutable revision\n(a second retained resource)
+Llev -> Ldict : root(snapshot_context, &root)
+Ldict --> Llev : Ok + root node id
+Llev --> Host : LLEV_STATUS_OK + LlevQueryCursor*
+deactivate Llev
+note right of Llev #FBE9E7
+  Snapshot capture is <latex>\mathcal{O}(1)</latex> structural
+  sharing; the cursor traverses this frozen
+  revision only (VT-SNAP laws, wave-W3
+  Rocq home CursorSnapshotSemantics.v).
+end note
+
+Host -> Ldict : keep mutating the source dictionary\n(insert / remove / compact / checkpoint)
+note right of Ldict #E8F5E9
+  Writers proceed unblocked: the cursor
+  holds no lock, only the snapshot retain.
+end note
+
+Host -> Llev : llev_transducer_free(transducer)
+Llev -> Ldict : release(context)  «source retain settled»
+Host -> Llev : cursor keeps yielding batches\n(snapshot retain still live)
+Host -> Llev : llev_query_cursor_free(cursor)
+Llev -> Ldict : release(snapshot_context)\n«snapshot retain settled; ledger balances to zero»
+@enduml
