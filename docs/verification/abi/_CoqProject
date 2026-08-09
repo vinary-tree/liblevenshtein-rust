@@ -1,3 +1,4 @@
 -R theories Liblevenshtein.Abi
 theories/PagingLaws.v
 theories/ConsumerAcceptance.v
+theories/CursorSnapshotSemantics.v
