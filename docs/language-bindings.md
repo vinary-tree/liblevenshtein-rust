@@ -23,6 +23,8 @@ The architecture has three layers:
    conformance fixtures are generated from `bindings/api.json`; facade code is
    not generated blindly from C declarations.
 
+![The three binding layers: language facades call only their project's C ABI; the four project ABIs exchange live objects only as two-word VtResource handles over the shared interop plane; bindings/api.json governs constants and parity.](diagrams/bindings/three-layer-architecture.svg)
+
 This lets Java load a dictionary through `libdictenstein`, pass its
 `DictionaryResource` directly to a liblevenshtein `Transducer`, and keep both
 projects independently versioned and packaged. No serialization, term copying,
@@ -31,9 +33,15 @@ or monolithic native binding is involved.
 ## Shared resource boundary
 
 `VtResource` is two machine words: a context pointer and a resource vtable. Its
-base operations are retain, release, and query-interface. The first shipped
+base operations are retain, release, and query-interface. Handing a resource
+between projects is therefore $`\mathcal{O}(1)`$ — sixteen bytes on a 64-bit
+target, never a serialization. The first shipped
 interface is `vt.dictionary.v1`, which supports byte, Unicode-scalar, and `u64`
-unit domains and unit or optional-`u64` values.
+unit domains and unit or optional-`u64` values; the second,
+`vt.scalar-wfst.1`, carries scalar-weighted transducers between the sibling
+projects. One dictionary feeds three consumers across two interfaces:
+
+![Family data flow: a libdictenstein dictionary consumed by liblevenshtein cursors and by duallity's Levenshtein-WFST compiler, whose vt.scalar-wfst.1 output lling-llang lazily composes — every handoff the same two-word retained handle.](diagrams/bindings/family-data-flow.svg)
 
 The dictionary interface deliberately models traversal rather than concrete
 dictionary classes:
@@ -62,7 +70,15 @@ Panics/exceptions must not cross the C ABI and are reported as provider errors.
 ## Iterator and snapshot contract
 
 Every query captures a retained dictionary revision before reading its root.
-That capture must be O(1). A cursor then:
+That capture must be constant-cost regardless of dictionary size,
+
+```math
+\mathrm{cost}(\mathtt{snapshot}) \;=\; \mathcal{O}(1)
+\quad\text{— independent of } \lvert D \rvert ,
+```
+
+so copying the dictionary or holding a long-lived read lock are contract
+violations, not implementations. A cursor then:
 
 - observes exactly the terms and values visible at query start;
 - remains unchanged by later insert, remove, update, clear, compact, and
@@ -86,7 +102,10 @@ The contract is exercised at three boundaries:
 
 Each test starts one cursor, partially consumes it, performs several mutations,
 then drains the same cursor and compares it with its query-start oracle. A fresh
-cursor must observe the new revision.
+cursor must observe the new revision. The laws in full — with the
+persistence-theory derivation and the law ↔ formal-model ↔ test
+correspondence table — are
+[docs/theory/snapshot-semantics.md](theory/snapshot-semantics.md).
 
 ## Marshalling contract
 
@@ -106,7 +125,16 @@ callback. JavaScript runtimes use typed-array views where their runtime boundary
 permits it. Ordinary safe iterators copy a term only when yielding it into the
 host's managed ownership model.
 
-Default batch size is 256. Providers should batch node expansion rather than
+Default batch size is 256, so transferring $`n`$ results costs
+
+```math
+\left\lceil \frac{n}{256} \right\rceil
+```
+
+boundary crossings — never one per match — and a provider expanding a node
+of out-degree $`\deg(v)`$ through the recommended edge batch pays
+$`\lceil \deg(v) / 256 \rceil`$ crossings per expansion. Providers should
+batch node expansion rather than
 implementing a per-edge callback. Benchmark gates should measure boundary
 crossings, allocations, and bytes copied in addition to throughput.
 
@@ -171,6 +199,13 @@ priority; it is not a statement that lower-tier packages are incomplete.
 
 ## Distribution
 
+Publication follows the dependency DAG — the shared interop package first,
+producers before consumers, the npm umbrella before its facades
+(the executable process is
+[releasing-language-bindings.md](releasing-language-bindings.md)):
+
+![Publish-order DAG across registries: interop first, then libdictenstein, then liblevenshtein, then the WFST siblings, then the npm umbrella, then the project facades — every edge an exact-version pin.](diagrams/bindings/registry-topology.svg)
+
 The packages are independently releasable:
 
 - Rust: `vinary-tree-interop` and `liblevenshtein` on crates.io;
@@ -225,4 +260,27 @@ Adding an optional interface or tail vtable field is backward-compatible when
 the size/version handshake makes it discoverable. Changing a layout, ownership
 rule, status value, callback rule, or snapshot guarantee requires a new
 interface version; incompatible versions may coexist. Project APIs evolve above
-that boundary without requiring one monolithic release.
+that boundary without requiring one monolithic release. The full change
+rules — four version counters, the additive-versus-fork decision table,
+worked examples — are the
+[evolution policy](../vinary-tree-interop/docs/abi-evolution.md).
+
+## Deeper documentation
+
+- **Family canon** (normative for all four projects, hosted with the
+  interop crate): [portal](../vinary-tree-interop/README.md) ·
+  [ABI reference](../vinary-tree-interop/docs/abi-reference.md) ·
+  [evolution policy](../vinary-tree-interop/docs/abi-evolution.md) ·
+  [security model](../vinary-tree-interop/docs/security-model.md).
+- **Project corpus**: [binding hub](bindings/README.md) ·
+  [`llev_*` C-ABI reference](bindings/c-abi-reference.md) ·
+  [resource consumer](bindings/resource-consumer.md) ·
+  [WASM topology](bindings/wasm-topology.md) ·
+  [snapshot semantics](theory/snapshot-semantics.md) ·
+  [binding trust model](security/binding-trust-model.md) ·
+  [findings ledger](bindings/FINDINGS_LEDGER.md).
+- **Sibling ABI references** (separate repositories; their documents land
+  with their own waves):
+  [libdictenstein `ldict_*`](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/c-abi-reference.md) ·
+  [lling-llang `lling_*`](https://github.com/vinary-tree/lling-llang/blob/master/docs/api/c-abi-reference.md) ·
+  [duallity `duallity_*`](https://github.com/vinary-tree/duallity/blob/master/docs/architecture/06-resource-abi-and-bindings.md).

@@ -60,12 +60,16 @@ index maps everything else.
 - [Levenshtein-automata theory](research/levenshtein-automata/README.md) — the Schulz–Mihov method, glossary, and code-to-paper mapping (theory home; also cross-linked from the glossary).
 - [Algorithm layer 02 — Levenshtein automata](algorithms/02-levenshtein-automata/README.md) — the position/subsumption model, with diagrams.
 - [Edit-distance classification](theory/edit-distance-classification.md) — the alignment/script boundary, four implementation classes, metricity-versus-pruning distinction, and placement checklist for future measures.
+- [Snapshot semantics](theory/snapshot-semantics.md) — the cursor laws S1-S6 as display math, the $`\mathcal{O}(1)`$-capture argument from path-copied revisions, the partial-persistence classification (Driscoll; Okasaki), and the law ↔ formal-model ↔ test correspondence table.
 - [Theory](theory/) — disk-trie and SCDAWG theory pointers (backend internals now live in `libdictenstein`).
 - Specialized theory: [universal automata](research/universal-levenshtein/README.md) · [weighted automata](research/weighted-levenshtein-automata/README.md) · [bimachines](research/bimachines/README.md).
 
 ## 3 · Architecture
 
 - [Architecture Overview](architecture/overview.md) — the **inter-crate** view: liblevenshtein ↔ libdictenstein ↔ optional duallity (WFST) ↔ the `.llev`/`.llre` DSL layer.
+- [Language-bindings architecture](language-bindings.md) — the three-layer binding decision (versioned C resource ABI + generated constants + hand-written facades), the shared `VtResource` boundary, snapshot/marshalling contracts, tiers, distribution, and platform policy.
+- [Binding documentation hub](bindings/README.md) — the corpus map and reading order: the [`llev_*` C-ABI reference](bindings/c-abi-reference.md) (all 35 functions, status sets, the lease protocol, a compile-checked C consumer), the [resource consumer](bindings/resource-consumer.md) (intake, `CallGate`, fault channel, arenas), the [WASM/JS topology](bindings/wasm-topology.md) (umbrella runtime, identity guard, WASI preopens), and the machine-readable governance (`bindings/api.json`, conformance fixtures, `ABI_INVARIANTS.tsv`).
+- Family ABI canon (hosted with the interop crate): [portal](../vinary-tree-interop/README.md) · [ABI reference](../vinary-tree-interop/docs/abi-reference.md) · [evolution policy](../vinary-tree-interop/docs/abi-evolution.md) · [security model](../vinary-tree-interop/docs/security-model.md).
 - [Developer Guide → Architecture](developer-guide/architecture.md) — the **intra-crate** module design and traits.
 - [Design specifications](design/README.md) — feature-level designs, including [Class-A presets](design/class-a-presets.md), the [ordered cost monoid](design/cost-monoid.md), [language products](design/language-product.md), dynamic DAWG, suffix automaton, contextual completion, protobuf serialization, and grammar correction.
 - [Algorithm Reference layers 01–09](algorithms/README.md) — the layered architecture, bottom-up.
@@ -84,6 +88,8 @@ index maps everything else.
 - [Developer Guide](developer-guide/README.md) — [building](developer-guide/building.md), [contributing](developer-guide/contributing.md), [performance](developer-guide/performance.md), [publishing](developer-guide/publishing.md).
 - [Migration to the split CLI](migration-cli-split-0.10.md) — the v0.10 package and API boundary.
 - [Security & threat model](SECURITY.md) — untrusted-input surfaces (FFI/WASM boundaries, serialization, `.llre` parsing).
+- [Binding trust model](security/binding-trust-model.md) — the family trust model instantiated for the resource consumer: `boundary()` containment, the bounded error channel, the decoded status wire, lease refusal as use-after-free prevention, and duty status per hostile-input class.
+- [Releasing language bindings](releasing-language-bindings.md) — the publish-order DAG, registry coordinates and credentials, pin-coherence preconditions, and pre-publication gates.
 - [Resource-exhaustion controls](security/resource-exhaustion.md) — automaton state ceilings, edit budgets, elastic-DP guards, and deployment policy.
 - [Automaton-variant security](security/automaton-variants.md) — continuation-tag integrity, subsumption soundness, selector stability, and extension review controls.
 - [Migration](migration/README.md) — terminology and version-migration notes (including the libdictenstein extraction).

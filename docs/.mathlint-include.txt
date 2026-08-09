@@ -292,3 +292,11 @@ vinary-tree-interop/README.md
 vinary-tree-interop/docs/abi-reference.md
 vinary-tree-interop/docs/abi-evolution.md
 vinary-tree-interop/docs/security-model.md
+docs/language-bindings.md
+docs/releasing-language-bindings.md
+docs/bindings/README.md
+docs/bindings/c-abi-reference.md
+docs/bindings/resource-consumer.md
+docs/bindings/wasm-topology.md
+docs/theory/snapshot-semantics.md
+docs/security/binding-trust-model.md
