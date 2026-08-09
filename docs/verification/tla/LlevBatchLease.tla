@@ -132,10 +132,16 @@ ReleaseWhenUnleased ==
 (***************************************************************************)
 (* The reducer path: borrows and auto-releases around every callback, so   *)
 (* one Reduce step consumes any number of remaining batches and ends with  *)
-(* NO lease outstanding. It is callable only when no manual lease is live. *)
+(* NO lease outstanding. It is callable whenever no manual lease is live —  *)
+(* from idle it drains the remaining batches, and from ended (where        *)
+(* batchesLeft = 0 by EndedHasNoBatches) it is an Ok no-op that fires zero  *)
+(* callbacks and stays ended: consumed is forced to 0, so the generation    *)
+(* and batch count are unchanged and the cursor remains ended. This mirrors *)
+(* the ABI accepting llev_query_reduce on an exhausted cursor (Ok,          *)
+(* out_count = 0), which the idle-only guard previously failed to model.    *)
 (***************************************************************************)
 Reduce ==
-  /\ cursor = "idle"
+  /\ cursor \in {"idle", "ended"}
   /\ \E consumed \in 0..batchesLeft :
        /\ batchesLeft' = batchesLeft - consumed
        /\ generation' =
@@ -186,6 +192,14 @@ TypeOK ==
   /\ generation \in 0..MaxGeneration
   /\ batchesLeft \in 0..MaxBatches
   /\ lastStatus \in Statuses
+
+\* Entering "ended" always drains the batch count to zero: NextBatchEnds
+\* requires batchesLeft = 0, and Reduce sets cursor' = "ended" only when
+\* batchesLeft' = 0. This is what makes the reduce-on-ended no-op sound — the
+\* widened Reduce guard admits "ended", and there `consumed` can only be 0, so
+\* the step neither mints a generation nor consumes a (non-existent) batch.
+EndedHasNoBatches ==
+  cursor = "ended" => batchesLeft = 0
 
 \* LLEV-LEASE-4: after the first mint, the tag is never zero.
 GenerationsNeverZero ==

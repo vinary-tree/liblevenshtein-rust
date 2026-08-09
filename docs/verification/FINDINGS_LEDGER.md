@@ -846,3 +846,52 @@ and the value-parity property test against the real dictionary.
   `weighted_per_dimension_monotonicity` proptest.
 - TLA+ `ValueCorrectness` ↔ Rust `prop_value_yielding_value_parity`; `NoValuelessYielded` ↔
   `test_value_yielding_skips_valueless_final` / `prop_value_yielding_mixed_skip`.
+
+## Finding 17: Batch-Lease Model Missed Reduce-on-Ended (2026-08-09)
+
+### Context
+The W3 T2 consumer suite reported that `docs/verification/tla/LlevBatchLease.tla`'s `Reduce`
+action was guarded by `cursor = "idle"`, while the liblevenshtein C ABI accepts `llev_query_reduce`
+on an already-ended cursor (returns `Ok`, fires zero callbacks, `out_count = 0`). The model was
+therefore strictly narrower than the implementation: reduce-on-ended was an un-modeled transition
+(neither `Reduce`, which needed `idle`, nor `ReduceRejected`, which needs `leased`).
+
+### Hypothesis
+Widening `Reduce`'s guard from `cursor = "idle"` to `cursor \in {"idle", "ended"}` faithfully
+models reduce-on-ended as an `Ok` no-op, *provided* that entering `"ended"` always drains
+`batchesLeft` to 0 — then from `"ended"` the existential `consumed \in 0..batchesLeft` is forced to
+0, so the step mints no generation, consumes no batch, and keeps the cursor `"ended"`. All existing
+invariants and the four temporal properties should continue to hold, and `ReduceNeverLeaks` should
+then cover the ended path automatically.
+
+### Method
+- Established the enabling invariant by inspection: the only transitions into `"ended"` are
+  `NextBatchEnds` (guarded by `batchesLeft = 0`) and `Reduce` (sets `cursor' = "ended"` only when
+  `batchesLeft' = 0`). Encoded it as a new checked invariant
+  `EndedHasNoBatches == cursor = "ended" => batchesLeft = 0`.
+- Widened `Reduce`'s guard, added `EndedHasNoBatches` to `LlevBatchLease.cfg`, and re-ran TLC under
+  the repository cap (`systemd-run --user --scope -p MemoryMax=8G`, `MaxGeneration = 3`,
+  `MaxBatches = 4`).
+
+### Results
+`Model checking completed. No error has been found.` — 31 distinct states. `TypeOK`,
+`EndedHasNoBatches`, `GenerationsNeverZero`, `BusyImpliesLeased`, and `RejectedFreeKeepsOwnership`
+all hold as invariants; `AdvanceOnlyUnleased`, `LeaseTagStable`, `ReduceNeverLeaks`, and
+`FreedIsTerminal` all hold as temporal properties. Because `Reduce` now fires from `{idle, ended}`
+and always yields `cursor' \in {idle, ended}`, the unchanged property
+`ReduceNeverLeaks == [][Reduce => cursor' # "leased"]_vars` now certifies the ended path too, with no
+change to any property statement.
+
+### Conclusion
+**CONFIRMED and FIXED.** The gap was in the model, not the implementation — the ABI was already
+correct; the spec was under-specified. The batch-lease spec now models reduce-on-ended exactly as the
+ABI implements it, and the widening is justified by a machine-checked invariant rather than by
+inspection alone. No production code changed.
+
+### Correspondence
+- TLA+ `Reduce` (widened) <-> Rust `llev_query_reduce` accepting an ended cursor (`Ok`, zero
+  callbacks): `tests/ffi_batch_lease_correspondence.rs::free_on_idle_and_on_ended_cursors_succeeds`
+  and the reducer laws in `tests/ffi_reducer_laws.rs`.
+- TLA+ `EndedHasNoBatches` <-> the ABI guarantee that an exhausted cursor holds no leasable batch.
+- Registered invariants LLEV-LEASE-1..7 (`docs/verification/ABI_INVARIANTS.tsv`) point at the now
+  complete model.
