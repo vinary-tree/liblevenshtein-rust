@@ -52,3 +52,5 @@ if (builtin.Count == 0) throw new Exception("built-in rule count must be positiv
 if (builtin.Apply("phone").Length == 0) throw new Exception("built-in rule application");
 
 Console.WriteLine(".NET binding conformance passed");
+
+PropertyTests.Run();

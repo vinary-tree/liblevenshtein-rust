@@ -445,7 +445,9 @@ jobs:
       - name: Run the streaming and snapshot suite on both target frameworks
         shell: bash
         env:
-          LD_LIBRARY_PATH: ${{ github.workspace }}/target/debug
+          # The C8 property suite builds dictionaries with the libdictenstein
+          # sibling's DynamicDawg, so its native library must be resolvable too.
+          LD_LIBRARY_PATH: ${{ github.workspace }}/../libdictenstein/target/debug:${{ github.workspace }}/target/debug
         run: |
           project=bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/VinaryTree.Liblevenshtein.Tests.csproj
           dotnet restore "$project" -p:NuGetAudit=false -m:1

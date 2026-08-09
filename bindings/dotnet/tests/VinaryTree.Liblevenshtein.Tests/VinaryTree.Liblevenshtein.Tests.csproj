@@ -7,5 +7,12 @@
   <ItemGroup>
     <ProjectReference Include="../../src/VinaryTree.Interop/VinaryTree.Interop.csproj" />
     <ProjectReference Include="../../src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj" />
+    <!-- C8 property tests build dictionaries with the libdictenstein sibling's
+         DynamicDawg, which implements the same VinaryTree.Interop.IDictionaryResource
+         this facade's Transducer consumes. -->
+    <ProjectReference Include="../../../../../libdictenstein/bindings/dotnet/src/VinaryTree.Libdictenstein/VinaryTree.Libdictenstein.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CsCheck" Version="4.8.0" />
   </ItemGroup>
 </Project>
