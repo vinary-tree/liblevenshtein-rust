@@ -83,8 +83,14 @@ pub struct LlevQueryCursor {
 
 /// Batch reducer callback. Returning `End` stops reduction successfully;
 /// another non-`Ok` status aborts and is returned to the caller.
+///
+/// The Rust side receives the RAW `u32` status (the same wire rule as the
+/// interop callbacks, ledger LLEV-B16): a foreign callback's return is
+/// untrusted input, decoded with `LlevStatus::try_from` — an out-of-range
+/// value aborts the reduction as an invalid argument rather than being
+/// undefined behavior. The C typedef is unchanged (integer-typed enum).
 pub type LlevBatchReducer =
-    unsafe extern "C" fn(context: *mut c_void, matches: *const LlevMatch, len: usize) -> LlevStatus;
+    unsafe extern "C" fn(context: *mut c_void, matches: *const LlevMatch, len: usize) -> u32;
 
 thread_local! {
     static LAST_ERROR: RefCell<CString> = RefCell::new(CString::default());
@@ -569,10 +575,15 @@ pub unsafe extern "C" fn llev_query_cursor_reduce(
             match fill_batch(cursor, batch_size)? {
                 LlevStatus::End => break,
                 LlevStatus::Ok => {
-                    let callback_status =
-                        reducer(context, cursor.views.as_ptr(), cursor.views.len());
+                    let raw_status = reducer(context, cursor.views.as_ptr(), cursor.views.len());
                     count = count.saturating_add(cursor.views.len());
                     cursor.leased = false;
+                    let Ok(callback_status) = LlevStatus::try_from(raw_status) else {
+                        return Err((
+                            LlevStatus::InvalidArgument,
+                            "batch reducer returned an out-of-range status".into(),
+                        ));
+                    };
                     match callback_status {
                         LlevStatus::Ok => {}
                         LlevStatus::End => break,

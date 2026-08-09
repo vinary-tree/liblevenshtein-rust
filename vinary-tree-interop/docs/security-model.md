@@ -44,7 +44,7 @@ One host process, one address space, five zones:
 |---|---|---|
 | Host application | The user's Python / JVM / JS / Go / C# / … code | Trusted; owns the process. |
 | Language facade | The per-language binding layer (SafeHandle, Arena + Cleaner, ctypes + gc, RAII, …) | Trusted; owns handle lifetime and total error mapping. |
-| Project C ABIs | `llev_*` · `ldict_*` · `lling_*` · `dual_*` entry points | Trusted code, **hostile inputs**: every entry point assumes its arguments may be wrong and every panic must die inside (§ 3). |
+| Project C ABIs | `llev_*` · `ldict_*` · `lling_*` · `duallity_*` entry points | Trusted code, **hostile inputs**: every entry point assumes its arguments may be wrong and every panic must die inside (§ 3). |
 | Interop exchange plane | This crate's structs and constants — two-word handles, POD payloads | Neutral: layouts and constants only; no code to trust or distrust. |
 | Foreign provider | Whatever implementation stands behind a received vtable: another family repo, another *version* of a family repo, a third party, or an adversary | **Untrusted.** Every function pointer is adversarial-or-buggy until its outputs pass validation. |
 

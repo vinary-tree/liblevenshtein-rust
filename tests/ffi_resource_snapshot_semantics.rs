@@ -135,11 +135,7 @@ struct Reduced {
     calls: usize,
 }
 
-unsafe extern "C" fn reducer(
-    context: *mut c_void,
-    matches: *const LlevMatch,
-    len: usize,
-) -> LlevStatus {
+unsafe extern "C" fn reducer(context: *mut c_void, matches: *const LlevMatch, len: usize) -> u32 {
     let output = &mut *context.cast::<Reduced>();
     output.calls += 1;
     for item in std::slice::from_raw_parts(matches, len) {
@@ -148,7 +144,8 @@ unsafe extern "C" fn reducer(
             .terms
             .push(std::str::from_utf8(bytes).unwrap().to_owned());
     }
-    LlevStatus::Ok
+    // The reducer wire returns raw u32 (LLEV-B16): encode the enum.
+    LlevStatus::Ok as u32
 }
 
 #[test]

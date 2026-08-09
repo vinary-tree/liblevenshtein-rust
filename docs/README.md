@@ -1,11 +1,11 @@
 # Documentation Index
 
-Complete documentation for **liblevenshtein-rust v0.9.1** — Levenshtein and
+Complete documentation for **liblevenshtein-rust v0.10.0** — Levenshtein and
 related (phonetic, time-series) automata for error-tolerant search over strings
 and byte arrays, with several trie/DAWG dictionaries, fuzzy maps, and fuzzy
 caches.
 
-**Last Updated:** 2026-07-13  ·  **Version:** 0.9.1
+**Last Updated:** 2026-08-08  ·  **Version:** 0.10.0
 
 ![Documentation map: the nine sections of this documentation set.](diagrams/architectures/documentation-map.svg)
 
@@ -36,7 +36,7 @@ index maps everything else.
 ### Living vs. Historical — the rule that bounds edits
 
 > A document is **LIVING** if it describes the *current* behaviour, API, theory,
-> or architecture of liblevenshtein v0.9.1 — something you would consult to *use
+> or architecture of liblevenshtein v0.10.0 — something you would consult to *use
 > or extend the library today*. A document is **HISTORICAL** if it is a dated
 > record of *how we got here*: a scientific ledger, hypothesis log, experiment
 > record, phase/session/completion report, or benchmark dump. Per the project's
@@ -50,7 +50,7 @@ index maps everything else.
 
 - [Main README](../README.md) — overview, installation, quick start, the full feature tour.
 - [User Guide → Getting Started](user-guide/getting-started.md) — first dictionary and query.
-- [CHANGELOG](../CHANGELOG.md) — version history (current: 0.9.1).
+- [CHANGELOG](../CHANGELOG.md) — version history (current: 0.10.0).
 - [Examples & Tutorials](examples/README.md) — the numbered tutorial series
   ([01](examples/01-getting-started/README.md) … [08](examples/08-real-world/README.md)) and a map to the runnable `examples/*.rs`.
 
