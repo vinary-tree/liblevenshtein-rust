@@ -564,6 +564,15 @@ impl<U: InteropUnit> MappedDictionaryNode for ForeignNode<U> {
         if let Err(error) = status(callback_status) {
             return self.callback_failed(error, None);
         }
+        // VT-ABI-5: reserved bytes are part of the ABI contract and must be
+        // zero — a provider writing garbage there would be silently
+        // reinterpreted by a future interface revision (ledger LLEV-B7).
+        if value.reserved != [0; 7] {
+            return self.callback_failed(
+                BindingError::InvalidProviderOutput("reserved bytes were not zero"),
+                None,
+            );
+        }
         let id = match value.has_value {
             0 => None,
             1 => Some(value.value),

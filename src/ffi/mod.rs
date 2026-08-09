@@ -22,33 +22,53 @@
 //!
 //! # Example (C)
 //!
+//! Dictionaries are owned by `libdictenstein`; this library consumes any
+//! `vt.dictionary.v1` resource (here one produced by
+//! `ldict_dictionary_resource`) and streams matches through leased batches.
+//!
 //! ```c
+//! #include <libdictenstein.h>
 //! #include <liblevenshtein.h>
 //! #include <stdio.h>
 //!
-//! int main() {
-//!     // Calculate distance
-//!     size_t dist = llev_distance("hello", 5, "helo", 4);
-//!     printf("Distance: %zu\n", dist);
+//! int main(void) {
+//!     // Distance functions need no dictionary at all.
+//!     size_t distance = llev_distance("hello", 5, "helo", 4);
+//!     printf("distance: %zu\n", distance);
 //!
-//!     LlevIndex* index = NULL;
+//!     // Build a dictionary with its owning library...
+//!     LdictDictionary* dictionary = NULL;
+//!     ldict_dynamic_dawg_new(VT_UNIT_DOMAIN_UNICODE_SCALAR, &dictionary);
+//!     LdictOptionalU64 value = {7, 1, {0}};
 //!     uint8_t inserted = 0;
-//!     llev_index_new(&index);
-//!     llev_index_insert(index, "hello", 5, 1, 7, &inserted);
+//!     ldict_dictionary_insert_text(dictionary, (const uint8_t*)"hello", 5,
+//!                                  value, &inserted);
 //!
-//!     // Query lazily; every returned match is borrowed from this cursor.
+//!     // ...export it as a shared resource and hand it to a transducer.
+//!     VtResource resource;
+//!     ldict_dictionary_resource(dictionary, &resource);
+//!     LlevTransducer* transducer = NULL;
+//!     llev_transducer_new(&resource, LLEV_ALGORITHM_STANDARD, &transducer);
+//!
+//!     // Query lazily; each leased batch is borrowed until released.
 //!     LlevQueryCursor* cursor = NULL;
-//!     llev_index_query(index, "helo", 4, 2, LLEV_ALGORITHM_STANDARD,
-//!                      LLEV_QUERY_ORDER_TRAVERSAL, &cursor);
-//!     const LlevMatch* match = NULL;
-//!     while (llev_query_cursor_next(cursor, &match) == LLEV_STATUS_OK) {
-//!         printf("%.*s: %zu\n", (int)match->term_len, match->term,
-//!                match->distance);
+//!     llev_transducer_query_utf8(transducer, "helo", 4, 2,
+//!                                LLEV_QUERY_ORDER_TRAVERSAL, &cursor);
+//!     LlevMatchBatchView batch;
+//!     while (llev_query_cursor_next_batch(cursor, LLEV_DEFAULT_MATCH_BATCH,
+//!                                         &batch) == LLEV_STATUS_OK &&
+//!            batch.len > 0) {
+//!         for (size_t i = 0; i < batch.len; ++i) {
+//!             const LlevMatch* match = &batch.matches[i];
+//!             printf("%.*s: %zu\n", (int)match->byte_len,
+//!                    (const char*)match->term_data, match->distance);
+//!         }
+//!         llev_query_cursor_release_batch(cursor, batch.generation);
 //!     }
 //!
 //!     llev_query_cursor_free(cursor);
-//!     llev_index_free(index);
-//!
+//!     llev_transducer_free(transducer);
+//!     ldict_dictionary_free(dictionary);
 //!     return 0;
 //! }
 //! ```
