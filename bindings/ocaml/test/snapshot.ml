@@ -114,6 +114,48 @@ let () =
   assert (Lev.true_damerau_distance "ca" "ac" = 1);
   assert (Lev.true_damerau_distance_threshold "ca" "ac" 1 = 1);
 
+  (* C5 (reduced): the pull iterator (to_seq) and the push reducer (fold_batches)
+     drain the same query to the same multiset of matched terms. *)
+  let equality_dictionary = Dict.dynamic_dawg () in
+  ignore (Dict.put equality_dictionary "cat" (Some 1L));
+  ignore (Dict.put equality_dictionary "cot" (Some 2L));
+  ignore (Dict.put equality_dictionary "cut" (Some 3L));
+  let equality_automaton = Lev.transducer (Dict.resource equality_dictionary) in
+  let by_iterator =
+    List.sort compare
+      (List.map (fun result -> result.Lev.term)
+         (collect (Lev.query equality_automaton "cat" ~maximum_distance:1)))
+  in
+  let reducer_cursor = Lev.query equality_automaton "cat" ~maximum_distance:1 in
+  let by_reducer =
+    List.sort compare
+      (Lev.fold_batches reducer_cursor []
+         (fun state batch ->
+            Array.fold_left (fun acc result -> result.Lev.term :: acc) state batch))
+  in
+  Lev.cursor_close reducer_cursor;
+  assert (by_iterator = by_reducer);
+  assert (List.length by_iterator = 3);
+  Dict.close equality_dictionary;
+  Lev.close_transducer equality_automaton;
+
+  (* C6 (reduced): distances decode UTF-8 to Unicode scalar values, so a
+     multi-byte character is one edit, not one edit per byte. *)
+  assert (Lev.distance "café" "cafe" = 1);
+  assert (Lev.distance "🦀" "x" = 1);
+  assert (Lev.distance "é" "e" = 1);
+  assert (Lev.distance_threshold "café" "cafe" 1 = 1);
+
+  (* C2/C3 (reduced): close is idempotent and a closed pattern raises
+     Invalid_argument on use rather than dereferencing a freed automaton. *)
+  let lifecycle = Lev.regex_pattern "c[ao]t" in
+  assert (Lev.pattern_matches lifecycle "cat");
+  Lev.close_pattern lifecycle;
+  Lev.close_pattern lifecycle;
+  (match Lev.pattern_matches lifecycle "cat" with
+   | (_ : bool) -> assert false
+   | exception Invalid_argument _ -> ());
+
   List.iter remove_if_present
     [ persistent_path; persistent_path ^ ".wal";
       vocabulary_path; vocabulary_path ^ ".wal" ];
