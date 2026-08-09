@@ -18,7 +18,7 @@ or "ledger-only") | verification | status`.
 | LLEV-B1 | `src/ffi/mod.rs` doc example | correctness (docs) | medium | OPEN → W3 | — |
 | LLEV-B2 | `.gitignore` / staged natives | hygiene | high | FIXED | `de5caee` |
 | LLEV-B3 | root + macros `Cargo.lock` | hygiene | medium | FIXED | `7475484` |
-| LLEV-B4 | `bindings/javascript-runtime/rust/{wasi,browser}.rs` | correctness | high | OPEN → W3 | — |
+| LLEV-B4 | `bindings/javascript-runtime/rust/{wasi,browser}.rs` | correctness | high | FIXED | `457d745` |
 | LLEV-B5 | `src/ffi/{index,phonetic}.rs` cfg warnings | hygiene | low | FIXED | `7475484` |
 | LLEV-B6 | FFI `VtStatus` discriminant reads | correctness (UB) | high | FIXED | `e42485c` (+family) |
 | LLEV-B7 | `VtOptionalU64.reserved` validation (F2) | correctness | medium | OPEN → W3 | — |
@@ -26,7 +26,7 @@ or "ledger-only") | verification | status`.
 | LLEV-B9 | family version pins | version-pin | info | LEDGER-ONLY | ledger-only |
 | LLEV-B10 | `vinary-tree-interop` `rust-version` | hygiene | low | FIXED | `d895183` |
 | LLEV-B11 | swift facade phonetic/threshold surface | completeness | medium | OPEN → W7 | — |
-| LLEV-B12 | javascript-runtime Node N-API threshold + size/len symbols | correctness | high | OPEN → W3 | — |
+| LLEV-B12 | javascript-runtime Node N-API threshold + size/len symbols | correctness | high | FIXED | `622e4f6` |
 | LLEV-B13 | dotnet threshold overload asymmetry | completeness | low | OPEN → W7 | — |
 | LLEV-B14 | python `pattern_size`/`rules_len` | completeness | low | OPEN → W7 | — |
 | LLEV-B15 | `docs/diagrams` .dot/.asy render drift | hygiene | low | OPEN → W3 | — |
@@ -57,11 +57,20 @@ or "ledger-only") | verification | status`.
 - **Status**: FIXED.
 
 ### LLEV-B4 — panic discipline gap at the WASM boundary
-- **Date**: 2026-08-08 · **Component**: `bindings/javascript-runtime/rust/src/wasi.rs` (~39 `lock().unwrap()`-class sites), `bindings/javascript-runtime/rust/src/browser.rs` (6 sites: `.expect` :33, `unreachable!` :155, vtable-fn `unwrap`s :393/:408/:426, `.unwrap` :784) · **Class**: correctness · **Severity**: high
-- **Evidence**: `rg -n 'unwrap\(\)|expect\(|unreachable!' bindings/javascript-runtime/rust/src/*.rs` (non-test code).
-- **Analysis**: every native `llev_*`/`ldict_*` entry point routes through `catch_unwind` and returns a status; the WASM runtime crate instead panics, which traps/aborts the instance — the one surface without the family's panic-containment discipline. A poisoned registry mutex or a provider misuse should surface as a status/JsError, not kill the instance.
-- **Fix**: scheduled wave W3 — map to status codes/`JsError`, add no-panic regression tests, and add a `check-bindings.py` grep gate over non-test `wasi.rs`/`browser.rs` for `unwrap!/expect(/unreachable!/panic!`.
-- **Status**: OPEN → W3.
+- **Date**: 2026-08-08 · **Component**: `bindings/javascript-runtime/rust/src/wasi.rs` (36 sites: 33 `lock().unwrap()` + 3 vtable-fn `unwrap`s), `bindings/javascript-runtime/rust/src/browser.rs` (6 sites: `.expect` :33, `unreachable!` :155, vtable-fn `unwrap`s :393/:408/:426, `.unwrap` :784) · **Class**: correctness · **Severity**: high
+- **Evidence**: `rg -n 'unwrap\(\)|expect\(|unreachable!' bindings/javascript-runtime/rust/src/*.rs` (non-test code). During the fix a second latent defect surfaced: neither module compiled for its wasm32 target after the `e42485c` raw-u32 wire rule (four `status != VtStatus::Ok` comparisons per file against now-`u32` callback returns); native `cargo check` skips both cfg-gated modules, which is how the break went unseen.
+- **Analysis**: every native `llev_*`/`ldict_*` entry point routes through `catch_unwind` and returns a status; the WASM runtime crate instead panicked, which traps/aborts the instance — the one surface without the family's panic-containment discipline. A poisoned registry mutex or a provider misuse should surface as a status/JsError, not kill the instance.
+- **Fix**: commit `457d745`, zero panic paths remain (no justified residuals were needed):
+  - *wasi.rs mutex poisoning (33 sites)*: recover via `unwrap_or_else(PoisonError::into_inner)` behind one `locked_registry()` chokepoint. Per-site justification (identical for all 33 because they guard one object): the registry is a plain handle table — `next: u32` counter, `HashMap<u32, Handle>`, error `Vec<u8>` — with no invariant spanning a critical section; every operation leaves it structurally valid mid-unwind, so observing post-poison state is sound.
+  - *wasi.rs vtable-fn `unwrap`s (3 sites: `start`/`state_info`/`state_arcs`)*: `Option::ok_or` into the existing `FAILURE` (`u32::MAX`) + `vt_error_pointer` message convention.
+  - *wasi.rs hardening*: null-output-pointer guards on `vt_wfst_start`/`vt_dictionary_get_text` (previously insta-UB writes on a null pointer, now a status); raw-status decode via `VtStatus::from_raw` with out-of-range mapped to an explicit provider error (also the compile fix).
+  - *browser.rs `.expect` :33*: `property()` now returns `Result<(), JsError>` and every caller propagates (`lookup`/`match_value`/`state`/`next` re-typed to `Result`); a `false` `Reflect::set` is reported, never swallowed.
+  - *browser.rs `unreachable!` :155*: the guarded U64 match arm returns the guard's own `JsError` instead.
+  - *browser.rs vtable-fn `unwrap`s :393/:408/:426*: `ok_or_else` `JsError`s; raw statuses decoded via a `require_ok(from_raw)` helper mirroring the wasi side.
+  - *browser.rs `.unwrap` :784*: cursor `Option` restructured into let-else; the adjacent batch index read also moved from panicking indexing to a checked `get`.
+  - *Gate*: `scripts/check-bindings.py` now scans non-test lines of exactly these two files for `unwrap()`/`expect(`/`unreachable!`/`panic!`/`todo!`/`unimplemented!`, stripping string/char literals and comments and tracking `#[cfg(test)]` item brace depth.
+- **Verification**: `cargo check -p vinary-tree-js-runtime` on native, `wasm32-unknown-unknown`, and `--no-default-features --features wasi` on `wasm32-wasip1` (the wasm targets failed to compile before the fix); full runtime conformance green post-fix on all three paths (`node --test` native 7/7, browser-wasm 4/4, wasi 3/3 — no functional regressions); gate verified green on the fixed files, red on a transient production `unwrap()` mutant, green on a transient `#[cfg(test)]`-scoped mutant. Reviewed residual implicit-panic surface: the `put_u32`/`put_u64`/`put_f64` slice writes index buffers resized from the same lengths the loops iterate (in-bounds by construction), and allocation failure aborts rather than unwinds on wasm (outside status-reporting reach by design).
+- **Status**: FIXED.
 
 ### LLEV-B5 — cfg-dependent warnings in the FFI modules
 - **Date**: 2026-08-08 · **Component**: `src/ffi/index.rs` (unused `LLEV_BUILD_FEATURE_PHONETIC` import + `unused_mut` in `llev_build_features`), `src/ffi/phonetic.rs` (3 imports unused without `bindings-phonetic`) · **Class**: hygiene · **Severity**: low
@@ -114,8 +123,9 @@ or "ledger-only") | verification | status`.
 - **Date**: 2026-08-08 · **Component**: `bindings/javascript-runtime/native/src/addon.cc`, `native.mjs`/`native.cjs` vs `index.d.ts` · **Class**: correctness · **Severity**: high
 - **Evidence**: `index.d.ts` declares `levenshteinDistanceThreshold`/`damerauDistanceThreshold`/`trueDamerauDistanceThreshold`; the browser-WASM path implements them (`rust/src/browser.rs` via `runtime-factory.mjs`) but the default Node N-API path binds no `llev_*_threshold` — the typed members are `undefined` at runtime on Node. `pattern_size`/`rules_len` are likewise unbound in `addon.cc`, which also blocks the project JS facade (its two FINDING nulls share this root cause).
 - **Analysis**: a TypeScript consumer compiles clean against members that do not exist on the Node default path — a runtime `TypeError` the type system promised away.
-- **Fix**: scheduled wave W3 (umbrella-runtime work): bind the five missing symbols in `addon.cc`, surface them through `native.mjs`/`native.cjs`, and add contract tests asserting runtime presence of every `index.d.ts` member on every runtime path.
-- **Status**: OPEN → W3.
+- **Fix**: commit `622e4f6` — `addon.cc` binds all five (`levenshteinDistanceThreshold`/`damerauDistanceThreshold`/`trueDamerauDistanceThreshold` decode the C sentinels — `SIZE_MAX` invalid-UTF-8 → thrown `Error`, `SIZE_MAX-1` exceeded → `undefined` — matching the browser-wasm `Option` mapping exactly; `patternSize` → `{states, transitions}`; `rulesLen` → enabled-rule count); `native.mjs`/`native.cjs` re-export the thresholds beside their siblings and add `PhoneticPattern.size`/`PhoneticRuleSet.size` getters; `browser.rs` gains the same two getters so the shared `index.d.ts` additions (`AutomatonSize` + the two `size` members) hold on the wasm path; the project facade `bindings/javascript/index.d.ts` declares the two members its pass-through instances now carry; `api-surface-map.json` converts the 5 runtime + 2 project-facade FINDING nulls to real symbols (findings 21 → 14, all remaining scheduled W7) and `completeness-matrix.tsv` is regenerated.
+- **Verification**: `npm run build:native` (-Werror clean) + `node --test test/native.test.mjs` 7/7, including three new suites: threshold early-exit semantics pinned to the unthresholded functions (with `ca→abc` separating OSA 3 from unrestricted Damerau-Levenshtein 2), size behavior (exact 2-rule count for `ph -> f; gh -> ;`, closed-handle throws), and the structural regression — a nesting-aware `index.d.ts` scan asserting every declared method is `typeof === "function"` and every declared property exists on live native instances (proved red under a transient mutant deleting one threshold re-export). CJS path spot-checked for all five; browser-wasm path returns identical values for all five members; `python3 scripts/check-bindings.py --check` green over the regenerated matrix.
+- **Status**: FIXED.
 
 ### LLEV-B13 — dotnet threshold overloads only cover standard Levenshtein
 - **Date**: 2026-08-08 · **Component**: `bindings/dotnet/src/VinaryTree.Liblevenshtein/Distance.cs` · **Class**: completeness · **Severity**: low
