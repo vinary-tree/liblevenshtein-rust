@@ -20,7 +20,7 @@ or "ledger-only") | verification | status`.
 | LLEV-B3 | root + macros `Cargo.lock` | hygiene | medium | FIXED | `7475484` |
 | LLEV-B4 | `bindings/javascript-runtime/rust/{wasi,browser}.rs` | correctness | high | OPEN → W3 | — |
 | LLEV-B5 | `src/ffi/{index,phonetic}.rs` cfg warnings | hygiene | low | FIXED | `7475484` |
-| LLEV-B6 | FFI `VtStatus` discriminant reads | correctness (UB) | high | OPEN → W3 | — |
+| LLEV-B6 | FFI `VtStatus` discriminant reads | correctness (UB) | high | FIXED | `e42485c` (+family) |
 | LLEV-B7 | `VtOptionalU64.reserved` validation (F2) | correctness | medium | OPEN → W3 | — |
 | LLEV-B8 | paging-acceptance asymmetry (F3, llev side) | correctness | medium | OPEN → W3 | — |
 | LLEV-B9 | family version pins | version-pin | info | LEDGER-ONLY | ledger-only |
@@ -74,8 +74,9 @@ or "ledger-only") | verification | status`.
 - **Date**: 2026-08-08 · **Component**: FFI callback returns read as `#[repr(u32)]` `VtStatus` · **Class**: correctness (undefined behavior) · **Severity**: high
 - **Evidence**: `vinary-tree-interop/src/lib.rs` defines `VtStatus` as a fieldless `#[repr(u32)]` enum; consumer callback sites receive it by value from arbitrary foreign providers. A provider returning e.g. `42` makes the Rust-side value an invalid enum discriminant — UB before any check can run.
 - **Analysis**: the ABI type crossing the trust boundary must be received as raw `u32` and validated before conversion (mirrors how `LlevStatus::try_from(u32)` already works in `src/ffi/generated.rs`).
-- **Fix**: scheduled wave W3 — receive `u32` at every callback boundary, validate, convert (`TryFrom`), map failures to `ProviderError`; adversarial fault-provider test follows the fix (the pre-fix behavior is untestable — it is UB).
-- **Status**: OPEN → W3.
+- **Fix**: wave W3, family-wide while the interop crate is unpublished — all 13 interop callback signatures now return raw `u32` on the Rust side; `VtStatus` gained const `to_raw`/`from_raw` and the crate documents the wire rule. Consumers decode at their chokepoints (llev `status()` → `InvalidProviderOutput` on out-of-range; lling `check_status()` likewise; duallity `status()` + its three adapter fault sites); producers encode via `.to_raw()` shims over typed inner fns. Commits: llev/interop `e42485c`, libdictenstein `1aea856`, lling-llang `0a98513`, duallity `e84b2ac`. The C header is unchanged (C enums are integer-typed; byte-identical ABI).
+- **Verification**: interop `wire_round_trip_covers_exactly_the_published_range` (0..=8 bijective, everything else refuses); full binding/ffi suites green in all four repos post-conversion; the W3 fault-provider test exercises an out-of-range status end-to-end (now a VALUE, so it is testable).
+- **Status**: FIXED.
 
 ### LLEV-B7 — `VtOptionalU64.reserved` accepted unvalidated (pre-registered F2)
 - **Date**: 2026-08-08 · **Component**: `src/bindings.rs` value decoding · **Class**: correctness · **Severity**: medium
