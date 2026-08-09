@@ -147,6 +147,15 @@ jobs:
             -Wl,-rpath,"$PWD/../libdictenstein/target/debug" \
             -o target/c-property
           target/c-property
+          cc -std=c17 -Wall -Wextra -Werror -fsanitize=address -g \
+            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            bindings/c/tests/leak.c \
+            -Ltarget/debug -lliblevenshtein \
+            -L../libdictenstein/target/debug -llibdictenstein \
+            -Wl,-rpath,"$PWD/target/debug" \
+            -Wl,-rpath,"$PWD/../libdictenstein/target/debug" \
+            -o target/c-leak
+          LD_PRELOAD="$(cc -print-file-name=libasan.so)" ASAN_OPTIONS=detect_leaks=1 target/c-leak
           c++ -std=c++23 -Wall -Wextra -Werror \
             -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
             ../libdictenstein/bindings/cpp/tests/cross_project_snapshot.cpp \
