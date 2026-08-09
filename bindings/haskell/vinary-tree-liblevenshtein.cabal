@@ -63,3 +63,19 @@ test-suite property
     vinary-tree-interop,
     vinary-tree-libdictenstein,
     vinary-tree-liblevenshtein
+
+-- C9 leak-discipline tests (performGC + weak pointers).
+test-suite leak
+  type: exitcode-stdio-1.0
+  main-is: LeakMain.hs
+  hs-source-dirs: test
+  default-language: GHC2021
+  ghc-options: -Wall -Wcompat -threaded
+  if flag(strict)
+    ghc-options: -Werror
+  build-depends:
+    base,
+    text,
+    vinary-tree-interop,
+    vinary-tree-libdictenstein,
+    vinary-tree-liblevenshtein
