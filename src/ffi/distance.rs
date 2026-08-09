@@ -236,6 +236,49 @@ mod tests {
         }
     }
 
+    // Regression for the empty-operand defect (LLEV-B18): a caller may pass a
+    // null data pointer for an empty string — several host runtimes materialize
+    // an empty slice as a null pointer — and the distance functions must treat
+    // `(NULL, 0)` as the empty string rather than returning the invalid-input
+    // sentinel `usize::MAX`. This matches the transducer query path, which has
+    // always accepted `(NULL, 0)` as an empty query.
+    #[test]
+    fn ffi_distance_treats_null_zero_length_as_empty_string() {
+        let ab = b"ab";
+        let nul: *const c_char = std::ptr::null();
+
+        unsafe {
+            // Empty to empty is distance 0 across every distance variant.
+            assert_eq!(llev_distance(nul, 0, nul, 0), 0);
+            assert_eq!(llev_distance_threshold(nul, 0, nul, 0, 0), 0);
+            assert_eq!(llev_damerau_distance(nul, 0, nul, 0), 0);
+            assert_eq!(llev_damerau_distance_threshold(nul, 0, nul, 0, 0), 0);
+            assert_eq!(llev_true_damerau_distance(nul, 0, nul, 0), 0);
+            assert_eq!(llev_true_damerau_distance_threshold(nul, 0, nul, 0, 0), 0);
+
+            // A null empty operand pairs correctly with a non-empty operand,
+            // symmetrically, at cost equal to the non-empty length.
+            assert_eq!(llev_distance(nul, 0, ab.as_ptr().cast(), 2), 2);
+            assert_eq!(llev_distance(ab.as_ptr().cast(), 2, nul, 0), 2);
+            assert_eq!(llev_damerau_distance(nul, 0, ab.as_ptr().cast(), 2), 2);
+            assert_eq!(llev_true_damerau_distance(ab.as_ptr().cast(), 2, nul, 0), 2);
+
+            // A non-empty operand fitting under the threshold still reports its
+            // true distance; over the bound still yields the threshold sentinel.
+            assert_eq!(llev_distance_threshold(nul, 0, ab.as_ptr().cast(), 2, 2), 2);
+            assert_eq!(
+                llev_distance_threshold(nul, 0, ab.as_ptr().cast(), 2, 1),
+                usize::MAX - 1
+            );
+
+            // A null pointer with a NON-zero length is still an invalid operand
+            // (it cannot denote any bytes) and must keep returning the
+            // invalid-input sentinel — the fix must not weaken this guard.
+            assert_eq!(llev_distance(nul, 2, ab.as_ptr().cast(), 2), usize::MAX);
+            assert_eq!(llev_distance(ab.as_ptr().cast(), 2, nul, 2), usize::MAX);
+        }
+    }
+
     #[test]
     fn ffi_thresholds_preserve_unicode_character_semantics() {
         let source = "café";

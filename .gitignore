@@ -20,6 +20,7 @@
 /vinary-tree-interop/bindings/python/build/
 /vinary-tree-interop/bindings/python/dist/
 /vinary-tree-interop/bindings/python/src/*.egg-info/
+/vinary-tree-interop/bindings/ocaml/_build/
 /bindings/clojure/pom.xml
 /bindings/clojure/target/
 /bindings/clojure/.cpcache/

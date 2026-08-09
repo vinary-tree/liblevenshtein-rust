@@ -100,10 +100,23 @@ impl From<LlevAlgorithm> for crate::transducer::Algorithm {
 
 /// Convert a length-bearing UTF-8 buffer to a Rust string slice.
 ///
+/// A zero length denotes the empty string regardless of the pointer: a caller
+/// may legitimately pass `(NULL, 0)` for an empty operand (e.g. an empty
+/// distance argument), and some host runtimes materialize an empty slice as a
+/// null data pointer. This mirrors the query path (`index.rs`), which accepts
+/// `(NULL, 0)` as an empty query, so the standalone distance functions agree
+/// with the transducer surface on empties. Handling `len == 0` first is also
+/// required for soundness: `slice::from_raw_parts(NULL, 0)` is undefined
+/// behavior even at zero length, so a null pointer must never reach it.
+///
 /// # Safety
 ///
-/// The input pointer must be valid for `len` bytes and must point to UTF-8.
+/// When `len > 0`, the input pointer must be non-null and valid for `len`
+/// bytes; the bytes must be UTF-8.
 unsafe fn cbuf_to_str<'a>(ptr: *const c_char, len: usize) -> Option<&'a str> {
+    if len == 0 {
+        return Some("");
+    }
     if ptr.is_null() {
         return None;
     }
