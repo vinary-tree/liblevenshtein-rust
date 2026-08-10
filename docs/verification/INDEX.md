@@ -326,7 +326,7 @@ make help
 - [Software Foundations](https://softwarefoundations.cis.upenn.edu/)
 - [Zompist Spelling Rules](https://zompist.com/spell.html)
 - [Wu & Manber (1992)](https://dl.acm.org/doi/10.1145/135239.135244) - Fuzzy regex
-- [Schulz & Mihov (2002)](https://dl.acm.org/doi/10.1007/3-540-45526-4_37) - Levenshtein automata
+- [Schulz & Mihov (2002)](https://doi.org/10.1007/s10032-002-0082-8) - Levenshtein automata
 
 ## Contact & Contribution
 

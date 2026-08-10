@@ -646,7 +646,7 @@ What's your use case?
 
 1. **Schulz, K. U., & Mihov, S. (2002)**. "Fast String Correction with Levenshtein Automata"
    - *International Journal on Document Analysis and Recognition*, 5(1), 67-85
-   - DOI: [10.1007/s00138-001-0043-4](https://doi.org/10.1007/s00138-001-0043-4)
+   - DOI: [10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
    - 📄 **Core algorithm for Levenshtein automata**
 
 2. **Levenshtein, V. I. (1966)**. "Binary codes capable of correcting deletions, insertions, and reversals"
@@ -667,7 +667,7 @@ What's your use case?
 
 5. **Oommen, B. J., & Loke, R. K. S. (1997)**. "Pattern recognition of strings with substitutions, insertions, deletions and generalized transpositions"
    - *Pattern Recognition*, 30(5), 789-800
-   - DOI: [10.1016/S0031-3203(96)00109-X](https://doi.org/10.1016/S0031-3203(96)00109-X)
+   - DOI: [10.1016/S0031-3203(96)00101-X](https://doi.org/10.1016/S0031-3203(96)00101-X)
    - 📄 Extended transposition models
 
 ### Textbooks

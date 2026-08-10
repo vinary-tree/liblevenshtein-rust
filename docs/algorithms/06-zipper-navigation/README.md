@@ -1022,7 +1022,7 @@ println!("{:?}", completions);
 
 2. **Hinze, R., & Jeuring, J. (2001)**. "Generic Haskell: Applications"
    - *Generic Programming: Advanced Lectures*, 57-96
-   - DOI: [10.1007/3-540-44569-9_2](https://doi.org/10.1007/3-540-44569-9_2)
+   - DOI: [10.1007/978-3-540-45191-4_2](https://doi.org/10.1007/978-3-540-45191-4_2)
    - 📄 Zipper applications in generic programming
 
 ### Open Access Resources

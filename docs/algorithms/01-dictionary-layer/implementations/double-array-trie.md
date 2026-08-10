@@ -1013,9 +1013,9 @@ let dict: DoubleArrayTrie = BincodeSerializer::deserialize(&mmap[..]).unwrap();
    - DOI: [10.1016/j.ipm.2006.06.001](https://doi.org/10.1016/j.ipm.2006.06.001)
    - 📄 **Optimization techniques**
 
-3. **Yata, S., Morita, K., Fuketa, M., & Aoe, J. (2009)**. "Fast String Matching with Space-Efficient Word Graphs"
+3. **Yata, S., Morita, K., Fuketa, M., & Aoe, J. (2008)**. "Fast String Matching with Space-Efficient Word Graphs"
    - *Innovations in Information Technology*, 79-83
-   - DOI: [10.1109/IIT.2009.5413739](https://doi.org/10.1109/IIT.2009.5413739)
+   - DOI: [10.1109/innovations.2008.4781726](https://doi.org/10.1109/innovations.2008.4781726)
    - 📄 **Space optimizations**
 
 ### Open Access Resources
