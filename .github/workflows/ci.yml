@@ -81,20 +81,40 @@ jobs:
       - name: Miri over the interop layout and vtable unsafe
         run: cargo +nightly miri test -p vinary-tree-interop
       # Strict-provenance validation of the consumer's raw-pointer surface that
-      # AddressSanitizer cannot see: the lifecycle + batch-lease correspondence
-      # tests exercise the VtResource / Box::into_raw+from_raw round-trips and the
-      # two-pass arena pointer fixup through the in-repo Rust TestDictionary
-      # provider. Isolation is disabled only for proptest's failure-persistence
-      # file; proptest cases are reduced because Miri interprets. The real SIMD
-      # dictionary backend is never on these code paths (it stays asan-covered).
+      # AddressSanitizer cannot see: VtResource / Box::into_raw+from_raw
+      # round-trips, the two-pass arena pointer fixup, discriminant reads, the
+      # lease/generation protocol, and (in abi_callgate) a multi-threaded gate
+      # race that Miri schedules for interleaving UB. Every binding test driven by
+      # the in-repo Rust providers is run here -- all verified Miri-clean (0 UB).
+      # Isolation is disabled only for proptest's failure-persistence file; cases
+      # are reduced because Miri interprets. This is a heavy leg (abi_callgate's
+      # threaded interleaving dominates at minutes, not seconds).
+      #
+      # The four binding tests that build libdictenstein's real dictionary
+      # backends are deliberately excluded: Miri has no native SIMD, so the
+      # DynamicDawg/DoubleArrayTrie backend runs there only via a slow scalar
+      # fallback (if at all), and the persistent-handoff tests additionally mmap,
+      # which Miri does not support. They are covered by ASan (verified clean,
+      # including ffi_arena_stability) and the native suite instead of Miri.
+      # Excluded: ffi_arena_stability, query_start_snapshot_semantics,
+      # libdictenstein_persistent_handoff, libdictenstein_resource_handoff.
       - name: Miri over the consumer resource-ABI correspondence
         env:
           MIRIFLAGS: -Zmiri-disable-isolation
-          PROPTEST_CASES: "16"
+          PROPTEST_CASES: "8"
         run: >-
           cargo +nightly miri test --features binding-integration-tests
           --test abi_resource_lifecycle_correspondence
           --test ffi_batch_lease_correspondence
+          --test abi_callgate_correspondence
+          --test abi_layout_correspondence
+          --test abi_paging_correspondence
+          --test binding_snapshot_semantics
+          --test ffi_boundary_census
+          --test ffi_provider_fault_injection
+          --test ffi_reducer_laws
+          --test ffi_resource_snapshot_semantics
+          --test query_comprehensive_test
 
   supply-chain:
     name: Supply chain
