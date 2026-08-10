@@ -21,7 +21,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import fc from "fast-check";
-import { libdictenstein, liblevenshtein } from "../native.mjs";
+import { libdictenstein, liblevenshtein, llingLlang, duallity } from "../native.mjs";
 
 const U64_MAX = 2n ** 64n - 1n;
 // "é" (U+00E9) is one Unicode scalar but two UTF-8 bytes: including it proves
@@ -176,6 +176,76 @@ test("u64 values round-trip, including 0 and 2**64-1", () => {
       return matches.length === 1 && matches[0].id === storedValue;
     }),
     { seed: SEED, numRuns: 200, examples: [[0n], [U64_MAX], [2n ** 63n]] },
+  );
+});
+
+// --- lling-llang WFST facade: structural round-trip through the N-API boundary
+
+// A chain of arcs described via the builder survives build() with its start,
+// arc labels/targets/weights, and final state/weight intact -- the JS <-> native
+// marshalling of the vt.scalar-wfst.1 surface preserves the WFST structurally.
+const label = fc.constantFrom("a", "b", "c", null);
+const chainSpec = fc.record({
+  labels: fc.array(label, { minLength: 1, maxLength: 5 }),
+  finalWeight: fc.integer({ min: 0, max: 5 }),
+});
+
+test("lling-llang vector WFST round-trips its structure through the native boundary", () => {
+  fc.assert(
+    fc.property(chainSpec, ({ labels, finalWeight }) => {
+      const builder = llingLlang.vectorWfst();
+      const states = [builder.addState()];
+      for (let i = 0; i < labels.length; i += 1) states.push(builder.addState());
+      builder.setStart(states[0]);
+      builder.setFinal(states[labels.length], finalWeight);
+      for (let i = 0; i < labels.length; i += 1) {
+        builder.addArc(states[i], labels[i], labels[i], states[i + 1], i);
+      }
+      const wfst = builder.build();
+      try {
+        if (wfst.start() !== BigInt(states[0])) return false;
+        for (let i = 0; i < labels.length; i += 1) {
+          const node = wfst.state(BigInt(states[i]));
+          if (!node.valid || node.arcs.length !== 1) return false;
+          const arc = node.arcs[0];
+          if (arc.input !== labels[i] || arc.output !== labels[i]) return false;
+          if (arc.target !== BigInt(states[i + 1]) || arc.weight !== i) return false;
+        }
+        const finalNode = wfst.state(BigInt(states[labels.length]));
+        return finalNode.valid && finalNode.final && finalNode.finalWeight === finalWeight;
+      } finally {
+        wfst.close();
+        builder.close();
+      }
+    }),
+    { seed: SEED, numRuns: 200, examples: [[{ labels: ["a"], finalWeight: 0 }], [{ labels: ["a", null, "c"], finalWeight: 3 }]] },
+  );
+});
+
+// --- duallity levenshtein WFST facade: deterministic and valid for its query --
+
+// Building the same (dictionary, query, distance) levenshtein WFST twice yields
+// the same start state, and that start state is valid -- the duallity boundary is
+// deterministic and always produces a well-formed automaton for valid input.
+test("duallity levenshtein WFST is deterministic and its start state is valid", () => {
+  fc.assert(
+    fc.property(dictionary, term, distance, (entries, query, k) => {
+      const dict = libdictenstein.dynamicDawg("unicode");
+      try {
+        for (const [key, storedValue] of entries) dict.put(key, storedValue);
+        const first = duallity.wfst(dict, query, k);
+        const second = duallity.wfst(dict, query, k);
+        try {
+          return first.start() === second.start() && first.state(first.start()).valid;
+        } finally {
+          first.close();
+          second.close();
+        }
+      } finally {
+        dict.close();
+      }
+    }),
+    { seed: SEED, numRuns: 100, examples: [[[["cat", 1n], ["cot", 2n]], "cat", 1], [[["a", 0n]], "", 2]] },
   );
 });
 

@@ -14,7 +14,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { libdictenstein, liblevenshtein } from "../native.mjs";
+import { libdictenstein, liblevenshtein, llingLlang, duallity } from "../native.mjs";
 
 const CYCLES = 10_000;
 const WARMUP = 2_000;
@@ -105,5 +105,58 @@ test("phonetic rules cycle reaches memory steady state", () => {
     const rules = liblevenshtein.phoneticRules("english-orthography");
     rules.apply("phone");
     rules.close();
+  });
+});
+
+// Build a small two-state chain WFST (start -a:a/0-> final) via the lling-llang
+// builder. Returns a built, live Wfst the caller must close.
+function buildSmallWfst() {
+  const builder = llingLlang.vectorWfst();
+  const start = builder.addState();
+  const final = builder.addState();
+  builder.setStart(start);
+  builder.setFinal(final, 0);
+  builder.addArc(start, "a", "a", final, 0);
+  const wfst = builder.build();
+  builder.close();
+  return wfst;
+}
+
+test("lling-llang vector WFST build cycle reaches memory steady state", () => {
+  assertSteady("vectorWfst", () => {
+    const builder = llingLlang.vectorWfst();
+    const start = builder.addState();
+    const final = builder.addState();
+    builder.setStart(start);
+    builder.setFinal(final, 0);
+    builder.addArc(start, "a", "a", final, 0);
+    const wfst = builder.build();
+    wfst.state(wfst.start()); // touch the native handle
+    wfst.close();
+    builder.close();
+  });
+});
+
+test("lling-llang WFST composition cycle reaches memory steady state", () => {
+  assertSteady("composeWfst", () => {
+    const first = buildSmallWfst();
+    const second = buildSmallWfst();
+    // compose captures snapshots of both inputs, which remain owned here.
+    const composed = llingLlang.compose(first, second);
+    composed.close();
+    first.close();
+    second.close();
+  });
+});
+
+test("duallity levenshtein WFST cycle reaches memory steady state", () => {
+  // Directly guards the handle class behind DUAL-B10 (a construction leak in the
+  // duallity WFST boundary) at the JS runtime level.
+  assertSteady("duallityWfst", () => {
+    const dictionary = buildDictionary();
+    const wfst = duallity.wfst(dictionary, "cat", 2);
+    wfst.state(wfst.start()); // touch the native handle
+    wfst.close();
+    dictionary.close();
   });
 });
