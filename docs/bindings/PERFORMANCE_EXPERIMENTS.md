@@ -108,6 +108,11 @@ Hardware for the recorded numbers: AMD Ryzen Threadripper PRO 5975WX (Zen 3,
   `tests/abi_paging_correspondence.rs`, invariants VT-PAGE-1..6.
 - Arena reuse (warm batches allocate $`\approx 0`$): Verus `docs/verification/verus/ffi_batch_arena.rs`
   (LLEV-ARENA-1..3) and the arena profile `bindings/c/tests/arena_profile.c` +
-  `scripts/profile-ffi-arena.sh`.
+  `scripts/profile-ffi-arena.sh`. Measured with dhat over 2000 warm queries: peak
+  live heap **43,482 B in 135 blocks** (bounded, independent of query count) and
+  **128 B in 1 block at exit** (a runtime static, not a leak); the per-query
+  blocks are the levenshtein traversal working set freed after each query, while
+  the within-query cross-batch arena reuse is pinned directly by the profile's
+  (R) base-address assertion.
 - Resource-handoff $`\mathcal{O}(1)`$ in dictionary size: `benches/ffi_boundary_benchmarks.rs`
   group `resource_handoff_vs_dict_size`.
