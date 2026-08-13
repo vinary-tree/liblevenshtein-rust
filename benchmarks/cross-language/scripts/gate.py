@@ -118,6 +118,9 @@ def run_verify_batch(
             fh.write(f"{algorithm}\t{distance}\t{queries}\t{out}\n")
     env = dict(os.environ)
     env["XL_CELL_DIR"] = str(results_dir / "gate")
+    # Verify cells are untimed correctness runs: route them off the timing
+    # cores so gating can proceed concurrently with a timed run.
+    env.setdefault("XL_CPUSET_OVERRIDE", "16-31")
     result = subprocess.run(
         [
             str(SCRIPTS_DIR / "run-one.sh"),

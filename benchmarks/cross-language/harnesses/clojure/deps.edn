@@ -1,0 +1,33 @@
+;; Clojure harness for the cross-language benchmark program.
+;;
+;; Mirrors bindings/clojure's :test alias wiring: the two idiomatic facades
+;; come in as :local/root deps, and :override-deps redirects their published
+;; Maven coordinates (io.vinarytree/{vinary-tree-interop,liblevenshtein,
+;; libdictenstein}) onto the local JVM FFM binding projects, whose deps.edn
+;; expose the Gradle-compiled classes (build/classes/java/main). Natives are
+;; resolved at run time from -Djava.library.path (RELEASE target dirs).
+;;
+;; Run (PROTOCOL.md §10 rule 3: JDK 26, -Xms2g -Xmx2g both sides):
+;;   JAVA_TOOL_OPTIONS="--enable-native-access=ALL-UNNAMED
+;;       -Djava.library.path=$LR/target/release:$LD/target/release
+;;       -Xms2g -Xmx2g" \
+;;     clojure -M:bench --mode verify ...
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.12.5"}
+        io.vinarytree/liblevenshtein-clojure
+        {:local/root "../../../../bindings/clojure"}
+        io.vinarytree/libdictenstein-clojure
+        {:local/root "../../../../../libdictenstein/bindings/clojure"}}
+ :aliases
+ {:bench
+  {:override-deps
+   {io.vinarytree/vinary-tree-interop
+    {:local/root "../../../../vinary-tree-interop/bindings/jvm"}
+    io.vinarytree/liblevenshtein
+    {:local/root "../../../../bindings/jvm"}
+    io.vinarytree/libdictenstein
+    {:local/root "../../../../../libdictenstein/bindings/jvm"}}
+   ;; Direct linking for the compiled harness namespace; a JVM-wide default
+   ;; recorded in the cell notes.
+   :jvm-opts ["-Dclojure.compiler.direct-linking=true"]
+   :main-opts ["-m" "bench-liblevenshtein.core"]}}}

@@ -1,0 +1,12 @@
+-- Cross-language benchmark harness project: the harness executable plus the
+-- three local Vinary Tree binding packages it drives. Native resolution
+-- comes from pkg-config: build with
+--   PKG_CONFIG_PATH=$XL/.stage/haskell-native/lib/pkgconfig cabal build
+-- and run with LD_LIBRARY_PATH=$XL/.stage/haskell-native/lib (RELEASE .so
+-- files staged there by the runner; ci.yml's haskell job stages debug the
+-- same way).
+packages:
+  .
+  ../../../../bindings/haskell
+  ../../../../vinary-tree-interop/bindings/haskell
+  ../../../../../libdictenstein/bindings/haskell

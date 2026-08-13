@@ -1,0 +1,5 @@
+# Closure/CLJS compilation output (regenerate with: clojure -M:compile).
+out/
+.cpcache/
+# Symlink to the JS harness's deterministic farm (run.sh recreates it).
+node_modules

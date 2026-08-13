@@ -51,6 +51,10 @@ manifest_field() { # target -> named column from targets.tsv
 }
 
 CPUSET="$(manifest_field cpuset)" || { echo "run-one: unknown target: $TARGET" >&2; exit 2; }
+# Untimed runs (gate verifies) may be rerouted off the timing cores so they
+# can proceed while a timed run owns the manifest cpuset. Timed cells never
+# set this.
+if [ -n "${XL_CPUSET_OVERRIDE:-}" ]; then CPUSET="$XL_CPUSET_OVERRIDE"; fi
 
 # ---------------------------------------------------------------------------
 # Environment snapshots
@@ -159,6 +163,86 @@ WRAPEOF
 }
 run_lua() { echo "$XL/.stage/lua/bench.sh"; }
 
+build_dotnet() {
+    (cd "$XL/harnesses/dotnet" && \
+     taskset -c "$BUILD_CPUSET" dotnet build -c Release -m:1 -p:NuGetAudit=false >&2)
+    mkdir -p "$XL/.stage/dotnet"
+    cat > "$XL/.stage/dotnet/bench.sh" <<WRAPEOF
+#!/usr/bin/env bash
+exec dotnet "$XL/harnesses/dotnet/bin/Release/net10.0/Bench.dll" "\$@"
+WRAPEOF
+    chmod +x "$XL/.stage/dotnet/bench.sh"
+}
+run_dotnet() { echo "$XL/.stage/dotnet/bench.sh"; }
+
+build_swift() {
+    (cd "$XL/harnesses/swift" && \
+     taskset -c "$BUILD_CPUSET" env LIBRARY_PATH="$LR/target/release:$LD_REPO/target/release" \
+         swift build --package-path "$XL/harnesses/swift" -c release >&2)
+}
+run_swift() { echo "$XL/harnesses/swift/.build/release/bench"; }
+
+build_fortran() {
+    (cd "$XL/harnesses/fortran" && \
+     taskset -c "$BUILD_CPUSET" fpm build --profile release --compiler gfortran \
+         --link-flag "-L$LR/target/release -L$LD_REPO/target/release -Wl,-rpath,$LR/target/release -Wl,-rpath,$LD_REPO/target/release" >&2)
+    mkdir -p "$XL/.stage/fortran"
+    cp "$(find "$XL/harnesses/fortran/build" -type f -name bench -path '*/app/*' | head -1)" \
+       "$XL/.stage/fortran/bench"
+}
+run_fortran() { echo "$XL/.stage/fortran/bench"; }
+
+build_ocaml() {
+    (cd "$XL/harnesses/ocaml" && \
+     taskset -c "$BUILD_CPUSET" env \
+         LIBRARY_PATH="$LR/target/release:$LD_REPO/target/release" \
+         opam exec -- dune build) >&2
+}
+run_ocaml() { echo "$XL/harnesses/ocaml/_build/default/bin/bench.exe"; }
+
+build_haskell() {
+    local stage="$XL/.stage/haskell-native"
+    mkdir -p "$stage/lib/pkgconfig" "$stage/include"
+    cp "$LR/target/release/libliblevenshtein.so" "$LD_REPO/target/release/liblibdictenstein.so" "$stage/lib/"
+    cp "$LR/pkgconfig/liblevenshtein.pc" "$LD_REPO/pkgconfig/libdictenstein.pc" "$stage/lib/pkgconfig/"
+    cp "$LR/include/liblevenshtein.h" "$LR/include/liblevenshtein_abi.h" \
+       "$LR/vinary-tree-interop/include/vinary_tree_interop.h" \
+       "$LD_REPO/include/libdictenstein.h" "$stage/include/"
+    (cd "$XL/harnesses/haskell" && \
+     taskset -c "$BUILD_CPUSET" env PKG_CONFIG_PATH="$stage/lib/pkgconfig" \
+         cabal build bench-cross-haskell) >&2
+    local binary
+    binary="$(cd "$XL/harnesses/haskell" && cabal list-bin bench-cross-haskell)"
+    mkdir -p "$XL/.stage/haskell"
+    cat > "$XL/.stage/haskell/bench.sh" <<WRAPEOF
+#!/usr/bin/env bash
+exec env LD_LIBRARY_PATH="$stage/lib" "$binary" "\$@"
+WRAPEOF
+    chmod +x "$XL/.stage/haskell/bench.sh"
+}
+run_haskell() { echo "$XL/.stage/haskell/bench.sh"; }
+
+build_clojure() {
+    mkdir -p "$XL/.stage/clojure"
+    cat > "$XL/.stage/clojure/bench.sh" <<WRAPEOF
+#!/usr/bin/env bash
+cd "$XL/harnesses/clojure"
+exec env JAVA_TOOL_OPTIONS="--enable-native-access=ALL-UNNAMED -Djava.library.path=$LR/target/release:$LD_REPO/target/release -Xms2g -Xmx2g" \\
+    clojure -M:bench "\$@"
+WRAPEOF
+    chmod +x "$XL/.stage/clojure/bench.sh"
+}
+run_clojure() { echo "$XL/.stage/clojure/bench.sh"; }
+
+build_clojurescript() {
+    bash "$XL/harnesses/javascript/setup-js.sh" >&2
+    ln -sfn "$XL/harnesses/javascript/node_modules" "$XL/harnesses/clojurescript/node_modules"
+    if [ ! -f "$XL/harnesses/clojurescript/out/harness.js" ]; then
+        (cd "$XL/harnesses/clojurescript" && taskset -c "$BUILD_CPUSET" clojure -M:compile) >&2
+    fi
+}
+run_clojurescript() { echo "$XL/harnesses/clojurescript/run.sh"; }
+
 build_python() {
     mkdir -p "$XL/.stage/python"
     cat > "$XL/.stage/python/bench.sh" <<WRAPEOF
@@ -189,6 +273,13 @@ target_binary() {
         go) build_go && run_go ;;
         ruby) build_ruby && run_ruby ;;
         lua) build_lua && run_lua ;;
+        dotnet) build_dotnet && run_dotnet ;;
+        swift) build_swift && run_swift ;;
+        fortran) build_fortran && run_fortran ;;
+        ocaml) build_ocaml && run_ocaml ;;
+        haskell) build_haskell && run_haskell ;;
+        clojure) build_clojure && run_clojure ;;
+        clojurescript) build_clojurescript && run_clojurescript ;;
         *)
             echo "run-one: target '$TARGET' has no recipe yet (its phase has not landed)" >&2
             return 4

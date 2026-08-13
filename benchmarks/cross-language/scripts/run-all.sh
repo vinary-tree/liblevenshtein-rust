@@ -205,25 +205,40 @@ run_target() {
     local backends
     backends="$(target_field "$target" backends)"
     IFS=',' read -r -a backend_list <<< "$backends"
+
+    # The Java pair's query timing belongs to JMH (forks, managed warmup);
+    # the driver is idempotent and covers BOTH jvm targets' missing cells,
+    # so the second target's call is a fast no-op. Construct/memory cells
+    # still flow through the generic per-backend path below.
+    if [ "$target" = "jvm-vinary" ] || [ "$target" = "jvm-legacy" ]; then
+        log "$target: query cells via JMH driver"
+        if ! bash "$SCRIPT_DIR/run-jvm-pair.sh" jmh "$RESULTS_DIR" "${QUICK_FLAG[@]}"; then
+            state_row "${target}__jmh__query" "failed" "see logs/jmh-matrix-driver.log"
+            log "$target JMH query matrix FAILED (continuing with other targets)"
+        fi
+    fi
+
     for backend in "${backend_list[@]}"; do
         # -- query cells (batched; resume = only missing cells enter the TSV)
-        local tsv="$RESULTS_DIR/tsv/${target}__${backend}__query.tsv"
-        local count
-        count="$(python3 "$SCRIPT_DIR/matrix.py" cells --target "$target" --backend "$backend" \
-            --mode query --missing-from "$CELL_DIR" --tsv-out "$tsv" --cell-dir "$CELL_DIR" \
-            "${QUICK_FLAG[@]}")"
-        if [ "$count" -gt 0 ]; then
-            log "$target×$backend: $count query cells"
-            if XL_SAMPLES="${SAMPLES}" "$SCRIPT_DIR/run-one.sh" cells "$RESULTS_DIR" \
-                "$target" "$backend" query "$tsv" >/dev/null; then
-                :
+        if [ "$target" != "jvm-vinary" ] && [ "$target" != "jvm-legacy" ]; then
+            local tsv="$RESULTS_DIR/tsv/${target}__${backend}__query.tsv"
+            local count
+            count="$(python3 "$SCRIPT_DIR/matrix.py" cells --target "$target" --backend "$backend" \
+                --mode query --missing-from "$CELL_DIR" --tsv-out "$tsv" --cell-dir "$CELL_DIR" \
+                "${QUICK_FLAG[@]}")"
+            if [ "$count" -gt 0 ]; then
+                log "$target×$backend: $count query cells"
+                if XL_SAMPLES="${SAMPLES}" "$SCRIPT_DIR/run-one.sh" cells "$RESULTS_DIR" \
+                    "$target" "$backend" query "$tsv" >/dev/null; then
+                    :
+                else
+                    state_row "${target}__${backend}__query" "failed" "see failures/"
+                    log "$target×$backend query batch FAILED (continuing with other targets)"
+                    continue
+                fi
             else
-                state_row "${target}__${backend}__query" "failed" "see failures/"
-                log "$target×$backend query batch FAILED (continuing with other targets)"
-                continue
+                log "$target×$backend: query cells already complete"
             fi
-        else
-            log "$target×$backend: query cells already complete"
         fi
         # -- construct cell
         if [ ! -f "$CELL_DIR/${target}__${backend}__construct__standard__d1__hits.json" ]; then

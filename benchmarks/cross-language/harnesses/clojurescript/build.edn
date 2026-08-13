@@ -1,0 +1,15 @@
+;; Node script build: one self-contained harness.js under out/ (cljs.core
+;; compiled in; the @vinary-tree/* npm requires stay runtime require()
+;; calls that node resolves against the harnesses/javascript symlink farm).
+;; :npm-deps + :install-deps false mirrors the facades' own proven cljs
+;; test configuration (bindings/javascript/test/cljs.edn).
+{:main bench.harness
+ :target :nodejs
+ :output-to "out/harness.js"
+ :output-dir "out"
+ :optimizations :simple
+ :npm-deps {"@vinary-tree/liblevenshtein" "file:../../../../bindings/javascript"
+            "@vinary-tree/libdictenstein" "file:../../../../../libdictenstein/bindings/javascript"}
+ :install-deps false
+ :pretty-print false
+ :infer-externs true}

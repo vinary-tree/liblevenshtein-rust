@@ -12,8 +12,9 @@
 //           global `require`, so the bundle's CommonJS branch never fires).
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { dirname, basename, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HARNESS_DIR = dirname(fileURLToPath(import.meta.url));
 const XL = resolve(HARNESS_DIR, "../..");
@@ -178,22 +179,40 @@ const NEW_STACK_ALGORITHMS = {
 };
 
 async function loadNamespaces() {
+  // Dictionaries come from the UMBRELLA's libdictenstein namespace rather
+  // than the sibling repo's facade package: that facade is a one-line
+  // re-export of exactly this namespace, and importing the umbrella directly
+  // (a) needs no node_modules provisioning inside the libdictenstein repo
+  // (which must stay untouched) and (b) realpath-unifies with the umbrella
+  // instance the liblevenshtein facade holds, so assertSameRuntime passes.
   switch (JS_BACKEND) {
     case "native":
       return {
         levenshtein: await import("@vinary-tree/liblevenshtein"),
-        dictionaries: await import("@vinary-tree/libdictenstein"),
+        dictionaries: (await import("@vinary-tree/vinary-tree")).libdictenstein,
       };
-    case "wasm":
-      return {
-        levenshtein: await import("@vinary-tree/liblevenshtein/wasm"),
-        dictionaries: await import("@vinary-tree/libdictenstein/wasm"),
-      };
-    case "wasi":
-      return {
-        levenshtein: await import("@vinary-tree/liblevenshtein/wasi"),
-        dictionaries: await import("@vinary-tree/libdictenstein/wasi"),
-      };
+    case "wasm": {
+      // The umbrella's ./wasm entry initializes via browser fetch(); under
+      // Node the repo's own conformance test (test/browser-wasm.test.mjs)
+      // loads the module bytes explicitly and builds the runtime through
+      // runtime-factory. Replicate exactly that sanctioned pattern; the
+      // generated/ and runtime-factory paths are not in the export map, so
+      // they are imported by file URL through the farm symlink.
+      const runtimeDir = pathToFileURL(
+        resolve(HARNESS_DIR, "node_modules/@vinary-tree/vinary-tree") + "/",
+      );
+      const raw = await import(new URL("generated/wasm/vinary_tree.js", runtimeDir));
+      raw.initSync({
+        module: await readFile(new URL("generated/wasm/vinary_tree_bg.wasm", runtimeDir)),
+      });
+      const { createRuntime } = await import(new URL("runtime-factory.mjs", runtimeDir));
+      const runtime = createRuntime(raw);
+      return { levenshtein: runtime.liblevenshtein, dictionaries: runtime.libdictenstein };
+    }
+    case "wasi": {
+      const runtime = await import("@vinary-tree/vinary-tree/wasi");
+      return { levenshtein: runtime.liblevenshtein, dictionaries: runtime.libdictenstein };
+    }
     case "legacy": {
       const bundlePath = resolve(XL, "legacy/javascript/vendor/levenshtein-transducer.js");
       const source = readFileSync(bundlePath, "utf8");
@@ -256,7 +275,8 @@ class NewStackSide {
     for (const query of queries) {
       const cursor = this.transducer.query(query, maxDistance);
       for (const match of cursor) {
-        const term = match.term;
+        // Term is a tagged union: { domain: "unicode", value: string } here.
+        const term = match.term.value;
         matches += 1n;
         bytes += BigInt(term.length); // ASCII workload: length == UTF-8 bytes
         distanceSum += BigInt(match.distance);

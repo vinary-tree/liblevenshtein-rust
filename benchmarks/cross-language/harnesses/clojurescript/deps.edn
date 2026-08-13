@@ -1,0 +1,19 @@
+;; ClojureScript harness for the cross-language benchmark program.
+;;
+;; :paths pulls in the two project-owned CLJS facades
+;; (vinary-tree.liblevenshtein / vinary-tree.libdictenstein) exactly as
+;; bindings/javascript/deps.edn does for its own cljs test. The facades
+;; require the npm packages "@vinary-tree/liblevenshtein" etc., which node
+;; resolves AT RUNTIME from the symlink farm under
+;; harnesses/javascript/node_modules (see run.sh; NODE_PATH covers the
+;; packages' own internal @vinary-tree/* requires on the CJS chain).
+;;
+;; Compile (pinned; cores 2-9 host timed benchmarks):
+;;   taskset -c 16-31 clojure -M:compile
+{:paths ["src"
+         "../../../../bindings/javascript/cljs"
+         "../../../../../libdictenstein/bindings/javascript/cljs"]
+ :deps {org.clojure/clojurescript {:mvn/version "1.12.145"}}
+ :aliases
+ {:compile
+  {:main-opts ["-m" "cljs.main" "-co" "build.edn" "-c" "bench.harness"]}}}

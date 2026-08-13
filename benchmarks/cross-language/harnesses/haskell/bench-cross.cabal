@@ -1,0 +1,31 @@
+cabal-version: 3.0
+name: bench-cross
+version: 0.1.0
+synopsis: Haskell harness for the cross-language benchmark program
+description:
+  Implements benchmarks/cross-language/harnesses/common/PROTOCOL.md over the
+  hsc2hs facades (vinary-tree-liblevenshtein + vinary-tree-libdictenstein).
+license: Apache-2.0
+author: Dylon Edwards
+maintainer: dylon.devo@gmail.com
+build-type: Simple
+
+executable bench-cross-haskell
+  main-is: Main.hs
+  hs-source-dirs: app
+  default-language: GHC2021
+  -- Fairness (PROTOCOL.md §10 rule 8): default RTS, single capability —
+  -- deliberately NOT -threaded.
+  ghc-options: -O2 -Wall -Wcompat
+  build-depends:
+    array,
+    base >=4.18 && <5,
+    bytestring >=0.11 && <0.13,
+    clock >=0.8,
+    directory,
+    filepath,
+    text >=2.0 && <2.2,
+    time,
+    vinary-tree-interop,
+    vinary-tree-libdictenstein,
+    vinary-tree-liblevenshtein
