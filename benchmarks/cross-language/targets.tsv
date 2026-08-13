@@ -6,7 +6,10 @@
 #   backends        comma-separated dictionary backends this target runs
 #                   (dynamic_dawg | double_array_trie | own)
 #   cpuset          taskset CPU list (single-threaded: 2; VM runtimes: 2-9;
-#                   both sides of a head-to-head pair always share a cpuset)
+#                   both sides of a head-to-head pair always share a cpuset).
+#                   NB: 2-9 straddles two L3 domains on this host (2-7 = CCD0,
+#                   8-9 = CCD1); see PROTOCOL.md section 10.2 for why that is
+#                   documented as a limitation rather than changed mid-program.
 #   damerau         yes|no — whether the library supports damerau_levenshtein
 #                   (bonus algorithm; legacy libraries predate it)
 #   phase           execution phase that first times this target (0..4)

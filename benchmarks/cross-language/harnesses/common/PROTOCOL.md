@@ -246,9 +246,24 @@ reference), the Rust oracle harness, and the C harness — all three MUST agree
    keeps one process per target×backend for query cells — acceptable because
    all its cells belong to the same side.
 2. The runner pins CPUs: single-threaded runtimes `taskset -c 2`; VM runtimes
-   (JVM, Node, .NET, Go, ClojureScript-on-Node) `taskset -c 2-9` (one CCD,
-   shared L3). Both sides of a head-to-head pair always get identical
-   cpusets. SMT siblings are left idle (asserted by doctor).
+   (JVM, Node, .NET, Go, ClojureScript-on-Node) `taskset -c 2-9`, which gives
+   JIT and GC threads room without letting them roam the machine. Both sides
+   of a head-to-head pair always get identical cpusets, and SMT siblings are
+   left idle (asserted by doctor).
+
+   **Documented limitation.** On this host (Threadripper PRO 5975WX, 4 CCDs
+   of 8 cores) `2-9` straddles two L3 domains: cores 2–7 share CCD0's L3
+   (with 0–7) and cores 8–9 share CCD1's L3 (with 8–15), verified via
+   `/sys/devices/system/cpu/cpu*/cache/index3/shared_cpu_list`. A VM
+   runtime's threads can therefore land across a CCD boundary, adding
+   cross-CCD L3 variance to VM-hosted targets. This does NOT bias any
+   comparison — every arm of every pair runs under the identical cpuset, and
+   the single-threaded targets on `-c 2` are unaffected — but it does widen
+   the VM targets' dispersion, which is why the reported statistics are
+   medians with MAD and bootstrap intervals rather than means. The cpuset is
+   deliberately held fixed for the whole program: switching to a true
+   single-CCD set mid-program would make later cells incomparable with the
+   165 Java cells already collected.
 3. JVM: JDK 26 both sides, `-Xms2g -Xmx2g` both sides, default G1, JMH forks.
 4. Node 26 for all four JS backends and both JS sides; no V8 flag overrides.
 5. Go: `GOMAXPROCS=1`, `GOGC=100` (explicit defaults, recorded).
