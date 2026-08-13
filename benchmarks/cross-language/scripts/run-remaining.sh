@@ -1,64 +1,65 @@
 #!/usr/bin/env bash
-# Chain the remaining DATA COLLECTION behind the atlas sweep so it completes
-# without supervision: the sweep can run for a day or more, and the steps
-# after it must not depend on an interactive session still being attached.
+# Chain the remaining DATA COLLECTION behind the parallel streams so it
+# completes without supervision. The streams can run for many hours and the
+# steps after them must not depend on an interactive session outliving them.
 #
-#   1. wait for the atlas sweep's completion sentinel
-#   2. time the C++ legacy pair (cpp-legacy), which the sweep did not include
-#   3. run the >=51-sample hypothesis arms (pgmcp experiments 178-184)
-#   4. aggregate
-#   5. publish every raw cell to pgmcp (idempotent, content-addressed)
+#   1. wait for every stream's completion sentinel (.stream-<ccd>-done)
+#   2. run the >=51-sample hypothesis arms (pgmcp experiments 178-184)
+#   3. aggregate
+#   4. publish every raw cell to pgmcp (idempotent, content-addressed)
 #
 # Every step is individually resumable and skips work already on disk, so
 # re-running this script is safe. Failures are recorded in state.tsv and do
 # not abort the chain — a later step's data is still worth collecting.
+#
+# CCD 0-7 is deliberately LEFT FREE for the user's other development work
+# (their processes are unpinned and would otherwise contend with measurement
+# cores). The hypothesis arms run SERIALLY on one owned CCD afterwards, so
+# they are measured free of cross-stream contention: they are the arms that
+# formally decide the preregistered experiments.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 XL="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-[ $# -eq 1 ] || { echo "usage: run-remaining.sh <results_dir>" >&2; exit 2; }
-RESULTS_DIR="$(cd "$1" && pwd)"
+[ $# -ge 1 ] || { echo "usage: run-remaining.sh <results_dir> [ccd...]" >&2; exit 2; }
+RESULTS_DIR="$(cd "$1" && pwd)"; shift
+STREAMS=("$@")
+[ ${#STREAMS[@]} -gt 0 ] || STREAMS=(8-15 16-23 24-31)
 STATE_TSV="$RESULTS_DIR/state.tsv"
 
 log() { printf '[remaining %s] %s\n' "$(date '+%F %H:%M:%S')" "$*" >&2; }
 state_row() { printf '%s\t%s\t%s\n' "$1" "$2" "${3:-}" >> "$STATE_TSV"; }
 
 # ---------------------------------------------------------------------------
-# 1. Wait for the atlas sweep (poll; it writes .atlas-done when finished)
+# 1. Wait for all parallel streams
 # ---------------------------------------------------------------------------
-if [ ! -f "$RESULTS_DIR/.atlas-done" ]; then
-    log "waiting for the atlas sweep to finish..."
-    while [ ! -f "$RESULTS_DIR/.atlas-done" ]; do
-        if ! pgrep -f 'run-all.sh --results' >/dev/null 2>&1; then
+log "waiting for streams: ${STREAMS[*]}"
+while :; do
+    pending=0
+    for ccd in "${STREAMS[@]}"; do
+        [ -f "$RESULTS_DIR/.stream-${ccd}-done" ] && continue
+        if pgrep -f "run-stream.sh $RESULTS_DIR $ccd" >/dev/null 2>&1; then
+            pending=$((pending + 1))
+        else
             sleep 10
-            [ -f "$RESULTS_DIR/.atlas-done" ] && break
-            log "atlas sweep vanished without its sentinel — continuing anyway"
-            state_row "atlas-sweep" "vanished" "no sentinel; see logs/atlas-sweep.log"
-            break
+            if [ ! -f "$RESULTS_DIR/.stream-${ccd}-done" ]; then
+                log "stream $ccd vanished without its sentinel"
+                state_row "stream-${ccd}" "vanished" "see logs/stream-${ccd}.log"
+                : > "$RESULTS_DIR/.stream-${ccd}-done"
+            fi
         fi
-        sleep 120
     done
-fi
-log "atlas sweep done (exit $(cat "$RESULTS_DIR/.atlas-done" 2>/dev/null || echo '?'))"
+    [ "$pending" -eq 0 ] && break
+    sleep 120
+done
+log "all streams finished"
 
 # ---------------------------------------------------------------------------
-# 2. C++ legacy pair — the third head-to-head, added after the sweep launched
+# 2. Hypothesis arms, serial and contention-free on one CCD
 # ---------------------------------------------------------------------------
-log "timing cpp-legacy (45 query cells + construct + memory)"
-if bash "$SCRIPT_DIR/run-all.sh" --results "$RESULTS_DIR" --targets cpp-legacy \
-        --no-aggregate >> "$RESULTS_DIR/logs/cpp-legacy-sweep.log" 2>&1; then
-    state_row "cpp-legacy-timing" "ok" ""
-else
-    state_row "cpp-legacy-timing" "failed" "see logs/cpp-legacy-sweep.log"
-    log "cpp-legacy timing FAILED (continuing)"
-fi
-
-# ---------------------------------------------------------------------------
-# 3. Hypothesis arms at the protocol-prescribed >=51 replicates
-# ---------------------------------------------------------------------------
-log "running >=51-sample hypothesis cells"
-if bash "$SCRIPT_DIR/run-hypothesis-cells.sh" "$RESULTS_DIR" \
+log "running >=51-sample hypothesis cells (serial, CCD 16-23)"
+if XL_STREAM_CCD="16-23" bash "$SCRIPT_DIR/run-hypothesis-cells.sh" "$RESULTS_DIR" \
         >> "$RESULTS_DIR/logs/hypothesis-cells.log" 2>&1; then
     state_row "hypothesis-cells" "ok" ""
 else
@@ -67,7 +68,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4-5. Aggregate, then publish raw cells to pgmcp (the system of record)
+# 3-4. Aggregate, then publish raw cells to pgmcp (the system of record)
 # ---------------------------------------------------------------------------
 log "aggregating"
 python3 "$SCRIPT_DIR/aggregate.py" "$RESULTS_DIR" \

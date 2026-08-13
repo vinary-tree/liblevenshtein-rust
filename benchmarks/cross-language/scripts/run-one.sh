@@ -56,6 +56,24 @@ CPUSET="$(manifest_field cpuset)" || { echo "run-one: unknown target: $TARGET" >
 # set this.
 if [ -n "${XL_CPUSET_OVERRIDE:-}" ]; then CPUSET="$XL_CPUSET_OVERRIDE"; fi
 
+# Parallel streams: XL_STREAM_CCD names one whole CCD (e.g. "16-23"). The
+# manifest cpuset is then REMAPPED onto that CCD, preserving each target's
+# core COUNT: a single-threaded target ("2") gets the CCD's first core, a VM
+# target ("2-9") gets the whole CCD. Streams therefore never share an L3.
+#
+# Measured 2026-08-13: identical work on core 24 ran 4.74% faster than on
+# core 2 (MAD 1.2%), i.e. placement shifts results by more than the noise
+# floor. Cross-stream numbers are consequently NOT directly comparable, so
+# each stream measures its own rust anchor and every ratio is computed
+# within-stream. Both arms of a head-to-head pair always run in the same
+# stream, so pair comparisons are unaffected.
+if [ -n "${XL_STREAM_CCD:-}" ]; then
+    case "$CPUSET" in
+        *-*) CPUSET="$XL_STREAM_CCD" ;;                      # VM target: whole CCD
+        *)   CPUSET="${XL_STREAM_CCD%%-*}" ;;                # single-threaded: first core
+    esac
+fi
+
 # ---------------------------------------------------------------------------
 # Environment snapshots
 # ---------------------------------------------------------------------------
