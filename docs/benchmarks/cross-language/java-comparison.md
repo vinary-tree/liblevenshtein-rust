@@ -63,7 +63,7 @@ the legacy library's throughput at the deciding coordinate. Measured there:
 | legacy (`SortedDawg`) | **462.34 ms** | [458.21, 464.18] |
 | Rust-backed (`DynamicDawg`) | **1288.32 ms** | [1281.21, 1294.23] |
 
-Ratio 0.359 where ≥ 3.0 was required — missed by roughly an order of
+Ratio 0.359 where $`\ge`$ 3.0 was required — missed by roughly an order of
 magnitude, in the opposite direction, with non-overlapping confidence
 intervals. **H-J1 is refuted.** It is recorded as refuted; it is not
 reinterpreted after the fact.
@@ -81,7 +81,7 @@ slower than the 2016 Java library on the same cell (standard, d = 1, hits):
 | Rust core via JVM FFM binding (`DoubleArrayTrie`) | 202.7 |
 
 So there are two independent gaps: the Rust core trails legacy Java by
-≈ 1.4×, and the JVM binding adds a further ≈ 2.2× on top. Note also that
+$`\approx`$ 1.4×, and the JVM binding adds a further $`\approx`$ 2.2× on top. Note also that
 `DoubleArrayTrie`, nominally the read-optimized backend, is *slower* here
 than `DynamicDawg`.
 
@@ -93,8 +93,9 @@ the picture differs sharply.
 ### Correctness: identical, proven
 
 Before any timing was accepted, every target had to reproduce a Rust oracle's
-result multiset exactly, compared as `(match count, Σ term bytes, Σ distance,
-order-insensitive FNV-1a-64 checksum)`. Legacy Java matched on **all 45
+result multiset exactly, compared as a four-tuple: match count, summed term
+byte length, summed distance, and an order-insensitive FNV-1a-64 checksum
+over every returned `(term, distance)` pair. Legacy Java matched on **all 45
 shared cells**, bit for bit. Whatever else the two libraries differ in, they
 do not differ in what they return.
 
@@ -115,7 +116,7 @@ one full pass (`/usr/bin/time -v`, identical 2 GiB heaps):
 | Rust-backed `DynamicDawg` | **192.0 MiB** |
 | Rust-backed `DoubleArrayTrie` | 194.5 MiB |
 
-The Rust-backed binding uses **≈ 2.95× less memory**, because the dictionary
+The Rust-backed binding uses **$`\approx`$ 2.95× less memory**, because the dictionary
 lives in native memory rather than as Java heap objects. For a service
 holding a large dictionary resident, this can matter more than per-query
 latency.
@@ -163,7 +164,7 @@ There is, however, one concrete and apparently fixable inefficiency:
 visited node**, paying an atomic reference-count increment per child edge,
 with `LockFreeDawgNode::drop` (2.9%) as the matching decrement. Iterating
 those edges by reference rather than cloning should recover most of that
-≈ 7% cluster. That alone does not close a 1.4× gap, and no optimization has
+$`\approx`$ 7% cluster. That alone does not close a 1.4× gap, and no optimization has
 been attempted here — this document reports measurements, and the lead is
 recorded for follow-up work.
 
@@ -173,7 +174,7 @@ recorded for follow-up work.
 resembles this one should not migrate for query speed.** They would pay
 roughly 2.9× in per-query latency. Migration is nonetheless justified when:
 
-- **memory dominates** — the Rust-backed binding uses ≈ 3× less RSS;
+- **memory dominates** — the Rust-backed binding uses $`\approx`$ 3× less RSS;
 - **maintenance matters** — legacy 3.0.0 has had no upstream commit since
   2016, ships a `protobuf 3.0.0-beta-3` transitive dependency, and carries
   the unfixed empty-string bug;
@@ -200,7 +201,7 @@ workload* is behind.
   comparison is biased, but VM-target dispersion is widened — which is why
   medians with MAD and bootstrap intervals are reported rather than means.
 - **Sample count.** 20 samples per cell (2 forks × 10 iterations). The
-  preregistered protocol prescribes ≥ 51 replicates for the hypothesis
+  preregistered protocol prescribes $`\ge`$ 51 replicates for the hypothesis
   arms; those deeper runs are collected separately and are what formally
   decide H-J1/H-J2. The 45-cell agreement reported here is corroborating
   breadth, not the formal test.
