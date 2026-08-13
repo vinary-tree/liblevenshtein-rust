@@ -310,4 +310,17 @@ PYEOF
 if [ "$NO_AGGREGATE" -eq 0 ]; then
     python3 "$SCRIPT_DIR/aggregate.py" "$RESULTS_DIR"
 fi
+
+# ---------------------------------------------------------------------------
+# 7. Publish raw cells to pgmcp (the system of record for benchmark data).
+#    Content-addressed and idempotent, so this is safe to re-run; a failure
+#    here is reported but never discards local results.
+# ---------------------------------------------------------------------------
+
+if python3 "$SCRIPT_DIR/pgmcp-upload.py" "$RESULTS_DIR"; then
+    state_row "pgmcp-upload" "ok" ""
+else
+    state_row "pgmcp-upload" "failed" "re-run scripts/pgmcp-upload.py $RESULTS_DIR"
+    log "pgmcp upload FAILED — local cells intact; re-run the uploader"
+fi
 log "done: $RESULTS_DIR"

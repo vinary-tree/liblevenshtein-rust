@@ -4,10 +4,16 @@ hypothesis/*.json) → the pgmcp data table `xlang_bench_cells`.
 
 Speaks MCP Streamable HTTP directly to the local pgmcp daemon
 (http://127.0.0.1:3100/mcp): initialize → notifications/initialized →
-tools/call data_table_insert, batching rows. A per-results-dir ledger
-(.pgmcp-uploaded.txt) makes re-runs incremental; the table itself is the
-system of record (user directive: raw benchmark data lives in pgmcp data
-tables).
+tools/call {data_table_insert, data_table_delete}. The pgmcp table is the
+system of record for raw benchmark data (standing user directive), so this
+runs automatically at the end of every timed sweep — never only by hand.
+
+CONTENT-ADDRESSED LEDGER. `.pgmcp-uploaded.txt` records `<key>\\t<sha256>`
+per cell. A cell whose file changed after upload (e.g. JMH cells
+re-converted against full-coverage verify twins) is *replaced*: its existing
+row is deleted by (run_id, cell) filter, then the new row is inserted. So
+re-running is idempotent and the table never accumulates stale duplicates
+of the same coordinate.
 
 Usage: pgmcp-upload.py <results_dir> [--endpoint URL] [--batch N] [--dry-run]
 """
@@ -15,6 +21,7 @@ Usage: pgmcp-upload.py <results_dir> [--endpoint URL] [--batch N] [--dry-run]
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import statistics
 import sys
@@ -93,24 +100,39 @@ class McpClient:
         )
         self.notify("notifications/initialized")
 
-    def insert_rows(self, rows: list[dict], source: str) -> int:
-        result = self.request(
-            "tools/call",
-            {
-                "name": "data_table_insert",
-                "arguments": {
-                    "table": TABLE,
-                    "project": PROJECT,
-                    "source": source,
-                    "rows": rows,
-                },
-            },
-        )
+    def _call(self, name: str, arguments: dict) -> dict:
+        result = self.request("tools/call", {"name": name, "arguments": arguments})
         if result.get("isError"):
-            raise RuntimeError(f"data_table_insert error: {result}")
+            raise RuntimeError(f"{name} error: {result}")
         content = result.get("content", [])
         text = content[0].get("text", "{}") if content else "{}"
-        return json.loads(text).get("inserted", 0)
+        return json.loads(text)
+
+    def insert_rows(self, rows: list[dict], source: str) -> int:
+        payload = self._call(
+            "data_table_insert",
+            {"table": TABLE, "project": PROJECT, "source": source, "rows": rows},
+        )
+        return payload.get("inserted", 0)
+
+    def delete_cell(self, run_id: str, cell: str) -> int:
+        """Remove any existing row for this coordinate (supersede-in-place).
+
+        pgmcp filters are a SEQUENCE of {field, op, value} conditions (a map
+        is rejected with "invalid type: map, expected a sequence").
+        """
+        payload = self._call(
+            "data_table_delete",
+            {
+                "table": TABLE,
+                "project": PROJECT,
+                "filter": [
+                    {"field": "run_id", "op": "eq", "value": run_id},
+                    {"field": "cell", "op": "eq", "value": cell},
+                ],
+            },
+        )
+        return payload.get("deleted", 0)
 
 
 def cell_to_row(run_id: str, path: Path, arm: str | None = None) -> dict:
@@ -173,27 +195,51 @@ def main() -> int:
     run_id = results_dir.name
 
     ledger_path = results_dir / ".pgmcp-uploaded.txt"
-    uploaded = set(ledger_path.read_text().split()) if ledger_path.exists() else set()
+    ledger: dict[str, str] = {}
+    if ledger_path.exists():
+        for line in ledger_path.read_text().splitlines():
+            if not line.strip():
+                continue
+            key, _, digest = line.partition("\t")
+            ledger[key] = digest  # empty digest = pre-content-addressing entry
 
-    pending: list[tuple[str, Path]] = []
+    def digest_of(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    # (key, path, is_replacement)
+    pending: list[tuple[str, Path, bool]] = []
+    sources: list[tuple[str, Path]] = []
     for path in sorted((results_dir / "cells").glob("*.json")):
-        key = f"cells/{path.stem}"
-        if key not in uploaded:
-            pending.append((key, path))
+        sources.append((f"cells/{path.stem}", path))
     hypothesis_dir = results_dir / "hypothesis"
     if hypothesis_dir.is_dir():
         for path in sorted(hypothesis_dir.glob("*.json")):
-            key = f"hypothesis/{path.stem}"
-            if key not in uploaded:
-                pending.append((key, path))
+            sources.append((f"hypothesis/{path.stem}", path))
+
+    for key, path in sources:
+        current = digest_of(path)
+        if key not in ledger:
+            pending.append((key, path, False))
+        elif ledger[key] != current:
+            # Content changed since upload (e.g. re-converted JMH cell):
+            # supersede the stored row rather than duplicating the coordinate.
+            pending.append((key, path, True))
 
     if not pending:
-        print("pgmcp-upload: nothing new to upload", file=sys.stderr)
+        print(
+            f"pgmcp-upload: up to date ({len(sources)} cell(s) already in {TABLE})",
+            file=sys.stderr,
+        )
         return 0
-    print(f"pgmcp-upload: {len(pending)} new cell(s)", file=sys.stderr)
+    replacements = sum(1 for _, _, replace in pending if replace)
+    print(
+        f"pgmcp-upload: {len(pending)} cell(s) to upload "
+        f"({len(pending) - replacements} new, {replacements} superseded)",
+        file=sys.stderr,
+    )
     if args.dry_run:
-        for key, _ in pending:
-            print(key)
+        for key, _, replace in pending:
+            print(f"{'replace' if replace else 'new    '} {key}")
         return 0
 
     client = McpClient(args.endpoint)
@@ -202,19 +248,24 @@ def main() -> int:
     total = 0
     for start in range(0, len(pending), args.batch):
         batch = pending[start : start + args.batch]
+        for key, path, replace in batch:
+            if replace:
+                client.delete_cell(run_id if not key.startswith("hypothesis/") else f"{run_id}/hypothesis", path.stem)
         rows = [
             cell_to_row(run_id, path, arm="hypothesis" if key.startswith("hypothesis/") else None)
-            for key, path in batch
+            for key, path, _ in batch
         ]
         inserted = client.insert_rows(
             rows, source=f"benchmarks/cross-language results/{run_id} (pgmcp-upload.py)"
         )
         if inserted != len(rows):
             raise RuntimeError(f"batch insert mismatch: {inserted} != {len(rows)}")
+        for key, path, _ in batch:
+            ledger[key] = digest_of(path)
+        with ledger_path.open("w") as fh:
+            for key in sorted(ledger):
+                fh.write(f"{key}\t{ledger[key]}\n")
         total += inserted
-        with ledger_path.open("a") as fh:
-            for key, _ in batch:
-                fh.write(key + "\n")
         print(f"pgmcp-upload: {total}/{len(pending)} uploaded", file=sys.stderr)
     return 0
 

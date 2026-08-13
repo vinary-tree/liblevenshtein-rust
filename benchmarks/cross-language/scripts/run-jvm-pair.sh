@@ -124,8 +124,50 @@ jmh_cell() {
     echo "$cell_json"
 }
 
+# Full-coverage verify twins for the JMH cells. The gate's twins run at
+# --gate-limit 200, so their triple describes 200 queries while a JMH sample
+# times all 1000 — copying that triple into a timed cell mislabels its
+# correctness evidence. These twins re-run verify over the FULL query set at
+# every timed coordinate, so each converted JMH cell carries a triple and
+# checksum for exactly the pass it timed. Untimed: runs on the build cores.
+verify_full() {
+    local results_dir="$1"
+    local out_dir="$results_dir/verify-full"
+    mkdir -p "$out_dir/tsv"
+    for target in jvm-vinary jvm-legacy; do
+        local backends
+        backends="$(awk -F'\t' -v t="$target" '!/^#/ && $1 == t { print $4 }' "$XL/targets.tsv")"
+        IFS=',' read -r -a backend_list <<< "$backends"
+        for backend in "${backend_list[@]}"; do
+            local tsv="$out_dir/tsv/${target}__${backend}.tsv"
+            : > "$tsv"
+            local pending=0
+            while IFS=$'\t' read -r _t _b _m algorithm distance queryset; do
+                local name="${target}__${backend}__verify__${algorithm}__d${distance}__${queryset}.json"
+                [ -f "$out_dir/$name" ] && continue
+                printf '%s\t%s\t%s\t%s\n' "$algorithm" "$distance" \
+                    "$XL/workload/queries/${queryset}.txt" "$out_dir/$name" >> "$tsv"
+                pending=$((pending + 1))
+            done < <(python3 "$SCRIPT_DIR/matrix.py" cells --target "$target" \
+                        --backend "$backend" --mode query)
+            if [ "$pending" -eq 0 ]; then
+                log "verify-full: $target x $backend already complete"
+                continue
+            fi
+            log "verify-full: $target x $backend — $pending cells (full query sets)"
+            XL_CELL_DIR="$out_dir" XL_CPUSET_OVERRIDE="16-31" XL_GATE_LIMIT=1000000 \
+                "$SCRIPT_DIR/run-one.sh" cells "$results_dir" "$target" "$backend" \
+                verify "$tsv" >/dev/null
+        done
+    done
+    log "verify-full complete under $out_dir"
+}
+
 cmd="${1:-}"; shift || true
 case "$cmd" in
+verify-full)
+    verify_full "$(cd "$1" && pwd)"
+    ;;
 stage)
     stage_natives
     (cd "$JVM" && ./gradlew "${GRADLE_ARGS[@]}" :common:classes :vinary:classes :legacy:classes >&2)
@@ -150,6 +192,9 @@ jmh)
                         --mode query "${quick_flag[@]}")
         done
     done
+    # Publish to pgmcp (system of record); idempotent + content-addressed.
+    python3 "$SCRIPT_DIR/pgmcp-upload.py" "$results_dir" || \
+        log "pgmcp upload FAILED — local cells intact; re-run scripts/pgmcp-upload.py"
     ;;
 hypothesis)
     results_dir="$(cd "$1" && pwd)"

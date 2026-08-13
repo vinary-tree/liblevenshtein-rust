@@ -91,18 +91,30 @@ def main() -> int:
         if not samples_ns:
             raise SystemExit(f"jmh_to_result: empty rawData in {record['benchmark']}")
 
-        # Correctness evidence from the twin verify cell (gate directory).
-        verify_path = (
-            results_dir
-            / "gate"
-            / f"{args.target}__{args.backend}__verify__{algorithm}__d{distance}__{queryset}.json"
+        # Correctness evidence from the twin verify cell. Prefer the
+        # full-coverage twin (verify-full/, same query count as the timed
+        # pass); fall back to the gate twin only when the full one is absent,
+        # and then say so in the notes — a gate twin covers only the first
+        # --gate-limit queries, so its triple is NOT a per-pass count.
+        twin_name = (
+            f"{args.target}__{args.backend}__verify__{algorithm}__d{distance}__{queryset}.json"
         )
-        if not verify_path.exists():
+        full_path = results_dir / "verify-full" / twin_name
+        gate_path = results_dir / "gate" / twin_name
+        partial_twin = False
+        if full_path.exists():
+            verify_path = full_path
+        elif gate_path.exists():
+            verify_path = gate_path
+            partial_twin = True
+        else:
             raise SystemExit(
-                f"jmh_to_result: missing twin verify cell {verify_path} — "
-                "run the gate before converting JMH results"
+                f"jmh_to_result: missing twin verify cell {twin_name} — run "
+                "`run-jvm-pair.sh verify-full <results>` (or the gate) first"
             )
-        verify = json.loads(verify_path.read_text())["measurements"]
+        twin = json.loads(verify_path.read_text())
+        verify = twin["measurements"]
+        twin_queries = twin["workload"]["query_count"]
 
         forks = int(record.get("forks", 0))
         warmup_iterations = int(record.get("warmupIterations", 0))
@@ -179,7 +191,16 @@ def main() -> int:
             "status": "ok",
             "notes": [
                 f"converted from JMH record {record['benchmark']}",
-                "correctness evidence (triple+checksum) copied from the twin gate verify cell",
+                (
+                    "correctness evidence (triple+checksum) copied from the full-coverage "
+                    f"verify twin over all {twin_queries} queries — the same pass JMH timed"
+                    if not partial_twin
+                    else (
+                        "PARTIAL EVIDENCE: no full-coverage twin available; triple+checksum "
+                        f"copied from the {twin_queries}-query gate twin and therefore describe "
+                        "a subset of the timed pass"
+                    )
+                ),
             ],
         }
         out = (
