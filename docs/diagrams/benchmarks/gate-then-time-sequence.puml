@@ -1,0 +1,51 @@
+@startuml gate-then-time-sequence
+' The run lifecycle: correctness strictly precedes timing. Every cell that
+' is ever timed has (a) a verify twin that matched the Rust oracle's
+' checksum and (b) an in-run triple assertion on every timed pass.
+
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam sequenceMessageAlign center
+skinparam ParticipantBackgroundColor #EDE7F6
+skinparam ActorBackgroundColor #FFE0B2
+
+title One benchmark run: gate, then time, then account
+
+participant "run-all.sh" as RunAll #D1C4E9
+participant "env-capture.py\n+ doctor.sh" as Doctor #DDD2F0
+participant "gate.py" as Gate #C5E1A5
+participant "rust oracle\n(bench-cross-rust)" as Oracle #F4A460
+participant "target harness\n(one of 20)" as Target #BBDEFB
+participant "run-one.sh" as RunOne #DDD2F0
+participant "aggregate.py" as Agg #FFF59D
+
+RunAll -> Doctor : capture environment.json;\nprobe toolchains, governor, artifacts
+Doctor --> RunAll : doctor green (else refuse)
+
+group Correctness gate (untimed, cores 16-31)
+  RunAll -> Gate : gate.py --targets ...
+  Gate -> Oracle : batched --cells verify\n(full query-cell family)
+  Oracle --> Gate : (matches, bytes, distsum, checksum) per cell
+  Gate -> Target : batched --cells verify (same cells)
+  Target --> Gate : signatures
+  Gate --> RunAll : green | undocumented MISMATCH (refuse timing)
+end
+
+group Timed cells (manifest cpusets: 2 or 2-9)
+  loop per target x backend, resumable
+    RunAll -> RunOne : query batch / construct / memory cells
+    RunOne -> Target : taskset -c <cpuset> harness --mode ...
+    note right of Target
+      gate pass (checksum) then warmup >= 3 s
+      then samples; every timed pass asserts
+      its triple equals the gate pass
+    end note
+    Target --> RunOne : cell JSON (--out)
+    RunOne -> RunOne : postfill: run_id, SHA-256s,\nMHz/loadavg snapshot, RSS;\nschema validation
+  end
+  RunAll -> Oracle : drift sentinels every ~90 min\n(3 fixed rust cells; >5% median shift flagged)
+end
+
+RunAll -> Agg : aggregate.py <results>
+Agg --> RunAll : summary.json + tables/*.md\n(incl. mandatory not-measured table)
+@enduml

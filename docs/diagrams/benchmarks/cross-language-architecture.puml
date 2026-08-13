@@ -1,0 +1,92 @@
+@startuml cross-language-architecture
+' Cross-language benchmark program: end-to-end component architecture.
+' One committed workload feeds twenty harnesses over four boundary kinds;
+' a correctness gate against the Rust oracle precedes every timing run;
+' one runner pins, post-fills, and accounts every cell; one aggregator
+' renders the evidence that the docs and pgmcp records cite.
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontName "DejaVu Sans"
+skinparam ArrowColor #444444
+skinparam TitleFontSize 16
+
+title Cross-language benchmark program — component architecture
+
+package "Workload (committed, seeded)" #FFF4E0 {
+  [aspell en_US dump\n79,343 words, LC_ALL=C sorted] as Aspell #FFE3B3
+  [generate_workload.py\nSplitMix64 seed 42\nrealized-distance buckets] as Gen #FFE3B3
+  [dictionary.txt + 8 query sets\n+ provenance.json (SHA-256)] as Files #FFD590
+  Aspell --> Gen
+  Gen --> Files
+}
+
+package "Targets under measurement" #EEF7EE {
+  component "Rust core (anchor + oracle)\nDynamicDawg / DoubleArrayTrie" as Rust #F4A460
+
+  package "C ABI (llev_* / ldict_*)" #E3F0FA {
+    [C (floor)] as C #BBDEFB
+    [C++ RAII] as Cpp #BBDEFB
+    [Go (cgo)] as Go #BBDEFB
+    [Fortran (iso_c_binding)] as Fortran #BBDEFB
+    [OCaml (stubs)] as OCaml #BBDEFB
+    [Haskell (hsc2hs)] as Haskell #BBDEFB
+    [Lua 5.4 (C module)] as Lua #BBDEFB
+    [Python (ctypes)] as Python #BBDEFB
+    [Ruby (Fiddle)] as Ruby #BBDEFB
+    [Swift (system lib)] as Swift #BBDEFB
+    [.NET (P/Invoke)] as Dotnet #BBDEFB
+  }
+
+  package "Managed-runtime facades" #E8F5E9 {
+    [JVM binding (Java 22 FFM)] as Jvm #C8E6C9
+    [Clojure (over FFM)] as Clj #C8E6C9
+    [JS native (N-API umbrella)] as JsN #C8E6C9
+    [JS WASM / WASI] as JsW #C8E6C9
+    [ClojureScript (over N-API)] as Cljs #C8E6C9
+  }
+
+  package "Legacy baselines (2014-2016)" #FBEAEA {
+    [liblevenshtein-java 3.0.0\nMaven Central jar, JDK 26] as LegacyJ #F5C6C6
+    [liblevenshtein 2.0.4 JS\ngh-pages demo bytes, Node 26] as LegacyJs #F5C6C6
+  }
+}
+
+package "Orchestration" #F3EFFA {
+  [doctor.sh\ntoolchains - governor - smokes] as Doctor #DDD2F0
+  [gate.py\nfull-family verify vs oracle\n(1,005+ comparisons, green required)] as Gate #DDD2F0
+  [run-one.sh / run-all.sh\ntaskset pinning - /usr/bin/time -v\npostfill - drift sentinels - resume] as Runner #DDD2F0
+  [JMH driver (Java pair)\n2 forks x 10 iters; 3x17 for H-J1] as Jmh #DDD2F0
+}
+
+package "Evidence & deliverables" #FFFDE7 {
+  [results/<run>/cells/*.json\nschema-validated] as Cells #FFF59D
+  [aggregate.py\nmedian - MAD - bootstrap CI\nratio tables - not-measured] as Agg #FFF59D
+  [docs/benchmarks/cross-language\nRESULTS + migration cases] as Docs #FFF176
+  [pgmcp: experiments 178-183\n+ xlang_bench_cells raw table] as Pgmcp #FFF176
+}
+
+Files --> Rust
+Files --> C
+Files --> Jvm
+Files --> JsN
+Files --> LegacyJ
+Files --> LegacyJs
+
+Doctor --> Gate
+Gate --> Rust : oracle checksums
+Gate ..> Runner : green unlocks timing
+Runner --> Rust
+Runner --> C
+Runner --> Jvm
+Runner --> JsN
+Runner --> LegacyJ
+Runner --> LegacyJs
+Jmh --> Jvm
+Jmh --> LegacyJ
+Runner --> Cells
+Jmh --> Cells
+Cells --> Agg
+Agg --> Docs
+Agg --> Pgmcp
+@enduml

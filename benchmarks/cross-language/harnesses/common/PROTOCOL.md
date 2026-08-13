@@ -6,6 +6,11 @@ document. Where a harness and this document disagree, the harness is wrong.
 `(target × backend × mode × algorithm × max_distance × queryset)` coordinate,
 emitting exactly one JSON file conforming to `schema/result.schema.json`.
 
+Mathematical definitions of the algorithms, the SplitMix64 stream, and the
+FNV-1a-64 checksum — with full literature citations — live in the program
+[README](../../README.md#references); this document is the bit-level
+implementation contract.
+
 ## 1. CLI contract
 
 Every harness accepts exactly these flags (unknown flags MUST abort):

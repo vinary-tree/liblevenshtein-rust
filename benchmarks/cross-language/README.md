@@ -1,6 +1,17 @@
 # Cross-Language Benchmark Program
 
-Measured, reproducible performance comparison across three axes:
+Measured, reproducible performance comparison across three axes. Throughout,
+*edit distance* means the minimum number of single-symbol edit operations
+transforming one string into another: the **standard** algorithm admits
+insert/delete/substitute (Levenshtein [1]; computed by the Wagner–Fischer
+dynamic program [2]); **transposition** additionally admits adjacent-swap
+under the *optimal string alignment* (OSA) restriction, after Damerau [3];
+**merge_and_split** admits two-character merges and splits. A *DAWG*
+(directed acyclic word graph) is the minimal acyclic automaton of a word
+set, built incrementally from sorted input after Daciuk et al. [4]; a *DAT*
+(double-array trie) is Aoe's cache-local read-optimized trie encoding [5].
+Queries execute as lazy simulations of Levenshtein automata intersected
+with the dictionary automaton, after Schulz–Mihov [6].
 
 1. **Java vs Java** — the liblevenshtein-rust JVM binding
    (`io.vinarytree:liblevenshtein` 0.10.0, Java 22 FFM) against legacy
@@ -20,6 +31,18 @@ Measured, reproducible performance comparison across three axes:
 
 This directory is self-contained: nothing in `bindings/`, `src/`, the
 sibling repos, or CI is modified by the program.
+
+## Architecture
+
+![Component architecture](../../docs/diagrams/benchmarks/cross-language-architecture.svg)
+
+One committed workload feeds twenty target harnesses across four boundary
+kinds (pure Rust, raw C ABI, managed-runtime facades, and the two legacy
+baselines); a correctness gate against the Rust oracle strictly precedes
+every timing run; a single runner pins CPUs, post-fills provenance, and
+accounts every cell; a single aggregator renders the evidence.
+
+![Run lifecycle](../../docs/diagrams/benchmarks/gate-then-time-sequence.svg)
 
 ## Layout
 
@@ -74,15 +97,50 @@ report median/MAD/p10/p90 with bootstrap CIs, never bare means.
 `workload/dictionary.txt` is the aspell en_US master dump
 (`aspell 0.60.8.2-2`, `aspell-en 2026.02.25-1`), expanded, filtered to
 `^[a-z]+$`, byte-sorted (`LC_ALL=C sort -u` equivalent): 79,343 words.
-Query sets are seeded-random samples and mutations (SplitMix64, base seed
-42), bucketed by *realized* edit distance verified with reference DPs —
-`std-dK` under plain Levenshtein, `tr-dK` under restricted-Damerau (OSA,
-matching every implementation's `transposition` algorithm). Mutants that are
+Query sets are seeded-random samples and mutations, bucketed by *realized*
+edit distance verified with reference dynamic programs — `std-dK` under
+plain Levenshtein [2], `tr-dK` under restricted-Damerau (OSA, matching
+every implementation's `transposition` algorithm). Mutants that are
 themselves dictionary words stay in, labeled `real_word` in
 `queries-meta/`. The empty string never occurs (legacy Java 3.0.0's
 empty-string bug is designed out rather than special-cased).
 `generate_workload.py --verify` detects any drift against `provenance.json`;
 regeneration is byte-identical by construction.
+
+The program's pseudorandomness is SplitMix64 [7] with base seed 42; each
+query set draws from its own derived stream. One step advances the state
+by the golden-gamma constant and finalizes with two xor-shift multiplies
+(all arithmetic mod $`2^{64}`$):
+
+```math
+s' = s + \mathrm{0x9E3779B97F4A7C15}, \qquad
+z_1 = (s' \oplus (s' \gg 30)) \cdot \mathrm{0xBF58476D1CE4E5B9},
+```
+```math
+z_2 = (z_1 \oplus (z_1 \gg 27)) \cdot \mathrm{0x94D049BB133111EB}, \qquad
+\mathrm{output} = z_2 \oplus (z_2 \gg 31).
+```
+
+## Result checksum
+
+Every implementation must reproduce the oracle's result multiset exactly.
+The order-insensitive cell checksum is a wrapping sum of per-match
+FNV-1a-64 hashes [8]. With FNV offset
+$`h_0 = \mathrm{0xCBF29CE484222325}`$, prime
+$`p = \mathrm{0x100000001B3}`$, and byte stream
+$`b_1 b_2 \ldots b_n = \mathrm{utf8}(t) \parallel \mathrm{0x00} \parallel \mathrm{LE64}(d)`$
+for a match with term $`t`$ and distance $`d`$:
+
+```math
+h_i = (h_{i-1} \oplus b_i) \cdot p \bmod 2^{64}, \qquad
+\mathrm{entry}(t, d) = h_n, \qquad
+\mathrm{checksum} = \sum_{(t,d)} \mathrm{entry}(t, d) \bmod 2^{64}.
+```
+
+Addition (rather than XOR) preserves multiset multiplicity: duplicate
+matches accumulate instead of cancelling. Statistics over timed samples
+report medians with 95 % bootstrap confidence intervals [9] (10,000
+resamples, SplitMix64 seed 42), never bare means.
 
 ## Fairness commitments
 
@@ -104,3 +162,34 @@ regeneration is byte-identical by construction.
 Rendered into `docs/benchmarks/cross-language/` (results + the Java and
 JavaScript migration cases) and `docs/scientific-ledger/` (preregistered
 hypotheses → measurements → verdicts, backed by pgmcp experiment records).
+
+## References
+
+1. V. I. Levenshtein. *Binary codes capable of correcting deletions,
+   insertions, and reversals.* Soviet Physics Doklady 10(8):707–710, 1966.
+2. R. A. Wagner and M. J. Fischer. *The string-to-string correction
+   problem.* Journal of the ACM 21(1):168–173, 1974.
+   [doi:10.1145/321796.321811](https://doi.org/10.1145/321796.321811)
+3. F. J. Damerau. *A technique for computer detection and correction of
+   spelling errors.* Communications of the ACM 7(3):171–176, 1964.
+   [doi:10.1145/363958.363994](https://doi.org/10.1145/363958.363994)
+4. J. Daciuk, S. Mihov, B. W. Watson, R. E. Watson. *Incremental
+   construction of minimal acyclic finite-state automata.* Computational
+   Linguistics 26(1):3–16, 2000.
+   [doi:10.1162/089120100561601](https://doi.org/10.1162/089120100561601)
+5. J. Aoe. *An efficient digital search algorithm by using a double-array
+   structure.* IEEE Transactions on Software Engineering 15(9):1066–1077,
+   1989. [doi:10.1109/32.31365](https://doi.org/10.1109/32.31365)
+6. K. U. Schulz and S. Mihov. *Fast string correction with Levenshtein
+   automata.* International Journal on Document Analysis and Recognition
+   5(1):67–85, 2002.
+   [doi:10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8)
+7. G. L. Steele Jr., D. Lea, C. H. Flood. *Fast splittable pseudorandom
+   number generators.* OOPSLA 2014, 453–472.
+   [doi:10.1145/2660193.2660195](https://doi.org/10.1145/2660193.2660195)
+8. G. Fowler, L. C. Noll, K.-P. Vo, D. Eastlake, T. Hansen. *The FNV
+   non-cryptographic hash algorithm.* IETF Internet-Draft
+   draft-eastlake-fnv (work in progress).
+9. B. Efron. *Bootstrap methods: another look at the jackknife.* Annals of
+   Statistics 7(1):1–26, 1979.
+   [doi:10.1214/aos/1176344552](https://doi.org/10.1214/aos/1176344552)
