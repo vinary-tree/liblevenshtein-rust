@@ -17,6 +17,7 @@ target	language	implementation	backends	cpuset	damerau	phase
 rust	rust	rust-core	dynamic_dawg,double_array_trie	2	yes	0
 c	c	vinary-tree	dynamic_dawg,double_array_trie	2	yes	0
 cpp	cpp	vinary-tree	dynamic_dawg	2	yes	3
+cpp-legacy	cpp	legacy	own	2	no	3
 jvm-vinary	java	vinary-tree	dynamic_dawg,double_array_trie	2-9	yes	1
 jvm-legacy	java	legacy	own	2-9	no	1
 js-native	javascript	vinary-tree	dynamic_dawg,double_array_trie	2-9	yes	2

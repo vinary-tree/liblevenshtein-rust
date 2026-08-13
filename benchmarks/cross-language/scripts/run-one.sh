@@ -85,6 +85,12 @@ run_c() { echo "$XL/.stage/c/bench"; }
 build_cpp() { bash "$XL/harnesses/cpp/build.sh" >/dev/null; }
 run_cpp() { echo "$XL/.stage/cpp/bench"; }
 
+# Third head-to-head baseline: legacy liblevenshtein-cpp. Both sides of this
+# pair are native and AOT-compiled, so it isolates automaton/dictionary
+# quality with no VM, JIT, GC, or FFI confounds.
+build_cpp_legacy() { bash "$XL/harnesses/cpp-legacy/build.sh" >/dev/null; }
+run_cpp_legacy() { echo "$XL/.stage/cpp-legacy/bench"; }
+
 # JVM pair: run-jvm-pair.sh stages natives, compiles, and generates these
 # launchers; gate/construct/memory cells then flow through the generic path.
 build_jvm_vinary() {
@@ -266,6 +272,7 @@ target_binary() {
         rust) build_rust >&2 && run_rust ;;
         c) build_c && run_c ;;
         cpp) build_cpp && run_cpp ;;
+        cpp-legacy) build_cpp_legacy && run_cpp_legacy ;;
         jvm-vinary) build_jvm_vinary && run_jvm_vinary ;;
         jvm-legacy) build_jvm_legacy && run_jvm_legacy ;;
         js-native|js-wasm|js-wasi|js-legacy) build_js_common && run_js_target ;;

@@ -69,9 +69,14 @@ query_cell js-native dynamic_dawg standard 2 std-d2
 query_cell js-wasm dynamic_dawg standard 2 std-d2
 
 # H-A1: rust control + every atlas target at the deciding coordinate.
-query_cell rust dynamic_dawg standard 2 std-d2
-for target in c cpp python go ruby lua dotnet swift fortran ocaml haskell clojure clojurescript; do
-    query_cell "$target" dynamic_dawg standard 2 std-d2
+# H-C1 (exp 184) shares this coordinate: its arms are the `cpp` and
+# `cpp-legacy` rows below. Each target's backend comes from targets.tsv —
+# the legacy targets build their own dictionary and reject `dynamic_dawg`.
+primary_backend() {
+    awk -F'\t' -v t="$1" '!/^#/ && $1 == t { split($4, b, ","); print b[1] }' "$XL/targets.tsv"
+}
+for target in rust c cpp cpp-legacy python go ruby lua dotnet swift fortran ocaml haskell clojure clojurescript; do
+    query_cell "$target" "$(primary_backend "$target")" standard 2 std-d2
 done
 
 log "hypothesis cells complete under $HYP_DIR"

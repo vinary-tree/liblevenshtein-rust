@@ -1,0 +1,5 @@
+-std=c++20
+-DBENCH_LEGACY_CPP_VERSION="dev"
+-DBENCH_LEGACY_CPP_ID="dev"
+-I/home/dylon/Workspace/universal-automata/liblevenshtein-cpp/src
+-I/home/dylon/Workspace/universal-automata/liblevenshtein-cpp/third-party
