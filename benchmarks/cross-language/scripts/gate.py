@@ -3,16 +3,19 @@
 
 Every target×backend must reproduce the Rust oracle's result multiset —
 compared as (matches, term_bytes, distance_sum, checksum) — before any of
-its timing runs are accepted. Gate cells per target×backend:
+its timing runs are accepted. The gate covers the FULL query-cell family
+(the same coordinates the timed matrix runs), so every timed cell has a
+verify twin carrying its correctness evidence — the JMH-converted Java
+cells copy their checksums from these twins:
 
     3 shared algorithms (standard, transposition, merge_and_split)
   × 3 distances (1, 2, 3)
-  × 3 query sets (hits, algorithm-matched mut-d2, oov)          = 27 cells
-  + damerau_levenshtein × 3 distances × 3 sets, for targets
-    whose manifest says damerau=yes                              (+9 cells)
+  × 5 query sets (hits, X-d1, X-d2, X-d3, oov)                  = 45 cells
+  + damerau_levenshtein × 3 × 5, for targets whose manifest
+    says damerau=yes                                             (+15 cells)
 
-The algorithm-matched mutation set is std-d2 for standard/merge_and_split
-and tr-d2 for transposition/damerau_levenshtein. The oracle is
+X is the algorithm-matched mutation family: std for standard/
+merge_and_split, tr for transposition/damerau_levenshtein. The oracle is
 rust×dynamic_dawg; rust×double_array_trie must match it exactly (internal
 consistency) before anything else is compared.
 
@@ -48,8 +51,8 @@ ORACLE_TARGET = "rust"
 ORACLE_BACKEND = "dynamic_dawg"
 
 
-def mut_set_for(algorithm: str) -> str:
-    return "tr-d2" if algorithm in ("transposition", BONUS_ALGORITHM) else "std-d2"
+def mut_prefix(algorithm: str) -> str:
+    return "tr" if algorithm in ("transposition", BONUS_ALGORITHM) else "std"
 
 
 def cells_for(algorithms: tuple[str, ...]) -> list[tuple[str, int, str]]:
@@ -57,7 +60,13 @@ def cells_for(algorithms: tuple[str, ...]) -> list[tuple[str, int, str]]:
         (algorithm, distance, queryset)
         for algorithm in algorithms
         for distance in DISTANCES
-        for queryset in ("hits", mut_set_for(algorithm), "oov")
+        for queryset in (
+            "hits",
+            f"{mut_prefix(algorithm)}-d1",
+            f"{mut_prefix(algorithm)}-d2",
+            f"{mut_prefix(algorithm)}-d3",
+            "oov",
+        )
     ]
 
 

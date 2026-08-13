@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    .NET harness for the cross-language benchmark program
+    (harnesses/common/PROTOCOL.md). Builds against the three facade projects
+    by ProjectReference exactly like the binding test project
+    (bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests); the native
+    liblevenshtein/libdictenstein cdylibs are resolved at run time through
+    LD_LIBRARY_PATH (the runner points it at the RELEASE target dirs).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Bench</AssemblyName>
+    <RootNamespace>VinaryTree.BenchCross</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Optimize>true</Optimize>
+    <!-- Deviation from out-of-the-box defaults; recorded in result notes. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../bindings/dotnet/src/VinaryTree.Interop/VinaryTree.Interop.csproj" />
+    <ProjectReference Include="../../../../bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj" />
+    <ProjectReference Include="../../../../../libdictenstein/bindings/dotnet/src/VinaryTree.Libdictenstein/VinaryTree.Libdictenstein.csproj" />
+  </ItemGroup>
+</Project>

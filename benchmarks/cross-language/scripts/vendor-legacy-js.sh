@@ -38,7 +38,7 @@ if [ "$ACTUAL_SHA1" != "$NPM_EXPECTED_SHA1" ]; then
     VERDICT="tarball-sha1-MISMATCH ($ACTUAL_SHA1)"
 fi
 tar -xzf "$TGZ" -C "$SCRATCH"
-NPM_BUNDLE="$SCRATCH/package/levenshtein-transducer.js"
+NPM_BUNDLE="$SCRATCH/package/lib/liblevenshtein/levenshtein-transducer.js"
 CONTENT_VERDICT="npm-bundle-absent"
 if [ -f "$NPM_BUNDLE" ]; then
     if cmp -s "$NPM_BUNDLE" "$VENDOR/levenshtein-transducer.js"; then

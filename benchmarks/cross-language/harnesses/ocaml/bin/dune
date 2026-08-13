@@ -1,0 +1,20 @@
+; OCaml harness executable for the cross-language benchmark program.
+; Links the installed opam packages (vinary-tree-interop,
+; vinary-tree-libdictenstein, vinary-tree-liblevenshtein); their stub
+; archives reference -lliblevenshtein / -llibdictenstein, so the build
+; environment must export LIBRARY_PATH pointing at the RELEASE cdylib
+; directories ($LR/target/release:$LD/target/release).
+;
+; bench_clock_stubs.c: PROTOCOL.md §9 pins OCaml to a monotonic clock.
+; OCaml 5's unix library exposes no Unix.clock_gettime and Mtime is not a
+; dependency of the bindings, so the harness carries a two-line C stub over
+; clock_gettime(CLOCK_MONOTONIC) — the same approach the protocol already
+; blesses for Lua (harness-local bench_clock shim).
+(executable
+ (name bench)
+ (libraries unix vinary-tree-interop vinary-tree-libdictenstein
+   vinary-tree-liblevenshtein)
+ (foreign_stubs
+  (language c)
+  (names bench_clock_stubs)
+  (flags (:standard -std=c17 -Wall -Wextra -Werror))))

@@ -63,7 +63,7 @@ dictionary's byte-sortedness, build the dictionary once (timed separately in
 sample is one full pass over the query set with every cursor fully drained
 (PROTOCOL.md §5–6). Correctness precedes timing: `gate.py` compares every
 target's order-insensitive FNV-1a64 result checksum against the Rust oracle
-on 27 verify cells and refuses timing on mismatch; each timed pass re-asserts
+across the full query-cell family and refuses timing on mismatch; each timed pass re-asserts
 its match-count/byte/distance triple against the cell's untimed gate pass.
 CPU pinning, the performance governor, fixed JVM heaps, JMH forks for the
 Java pair, and per-cell frequency snapshots control the environment; results

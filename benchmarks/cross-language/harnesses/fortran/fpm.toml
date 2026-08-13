@@ -1,0 +1,18 @@
+name = "bench-cross-fortran"
+version = "0.1.0"
+license = "Apache-2.0"
+author = "Dylon Edwards"
+maintainer = "Dylon Edwards <dylon@vinarytree.io>"
+description = "Cross-language benchmark harness (PROTOCOL.md) over the Fortran facades"
+
+[library]
+source-dir = "src"
+
+[dependencies]
+vinary-tree-liblevenshtein = { path = "../../../../bindings/fortran" }
+vinary-tree-libdictenstein = { path = "../../../../../libdictenstein/bindings/fortran" }
+
+[[executable]]
+name = "bench"
+source-dir = "app"
+main = "main.f90"

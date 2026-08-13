@@ -1,0 +1,23 @@
+{
+  "source_repo": "https://github.com/universal-automata/liblevenshtein",
+  "branch": "gh-pages",
+  "git_commit": "59934da81e56662bfe317aefd6877fc461a64438",
+  "path": "javascripts/2.0.4/",
+  "retrieved_utc": "2026-08-13T06:40:33Z",
+  "files": [
+    { "name": "levenshtein-transducer.js", "sha256": "10cb60a42865b8c00891f3b69fcb8a10e42cf62c4ffff4d841829670e0ccea7b",
+      "url": "https://raw.githubusercontent.com/universal-automata/liblevenshtein/59934da81e56662bfe317aefd6877fc461a64438/javascripts/2.0.4/levenshtein-transducer.js" },
+    { "name": "levenshtein-transducer.min.js", "sha256": "156c59151c1aaeafcc747e2171500f0d54440f646ba020fef635236b497ecac7",
+      "url": "https://raw.githubusercontent.com/universal-automata/liblevenshtein/59934da81e56662bfe317aefd6877fc461a64438/javascripts/2.0.4/levenshtein-transducer.min.js" }
+  ],
+  "npm_cross_check": {
+    "package": "liblevenshtein",
+    "version": "2.0.4",
+    "sha1": "caa72ae5d4bc79261ba4d4941a7116834f370dd1",
+    "expected_sha1": "caa72ae5d4bc79261ba4d4941a7116834f370dd1",
+    "tarball_verdict": "tarball-sha1-match",
+    "content_verdict": "identical-to-gh-pages"
+  },
+  "license": "MIT (c) 2014 Dylon Edwards",
+  "notes": "Compiled CoffeeScript 1.7.1 output; exports-aware IIFE loadable via CommonJS require() on modern Node."
+}

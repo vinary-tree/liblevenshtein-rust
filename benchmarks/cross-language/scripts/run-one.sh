@@ -81,6 +81,99 @@ run_c() { echo "$XL/.stage/c/bench"; }
 build_cpp() { bash "$XL/harnesses/cpp/build.sh" >/dev/null; }
 run_cpp() { echo "$XL/.stage/cpp/bench"; }
 
+# JVM pair: run-jvm-pair.sh stages natives, compiles, and generates these
+# launchers; gate/construct/memory cells then flow through the generic path.
+build_jvm_vinary() {
+    [ -x "$XL/.stage/jvm/vinary-launcher.sh" ] || bash "$SCRIPT_DIR/run-jvm-pair.sh" stage >&2
+}
+run_jvm_vinary() { echo "$XL/.stage/jvm/vinary-launcher.sh"; }
+build_jvm_legacy() {
+    [ -x "$XL/.stage/jvm/legacy-launcher.sh" ] || bash "$SCRIPT_DIR/run-jvm-pair.sh" stage >&2
+}
+run_jvm_legacy() { echo "$XL/.stage/jvm/legacy-launcher.sh"; }
+
+# JavaScript targets: one bench.mjs serves all four; the wrapper pins the
+# backend via XL_JS_BACKEND so the PROTOCOL CLI stays uniform. Prerequisite
+# artifacts (N-API release addon, wasm, wasi) are built by
+# bindings/javascript-runtime's own npm scripts; doctor verifies presence.
+build_js_common() {
+    bash "$XL/harnesses/javascript/setup-js.sh" >&2
+    local addon="$LR/bindings/javascript-runtime/native/build/Release/vinary_tree_native.node"
+    local wasm="$LR/bindings/javascript-runtime/generated/wasm/vinary_tree_bg.wasm"
+    local wasi="$LR/bindings/javascript-runtime/generated/wasi/vinary_tree.wasm"
+    case "$TARGET" in
+        js-native) [ -f "$addon" ] || { echo "run-one: N-API addon missing ($addon); run npm run build:native:release" >&2; return 4; } ;;
+        js-wasm) [ -f "$wasm" ] || { echo "run-one: wasm artifact missing ($wasm); run npm run build:wasm" >&2; return 4; } ;;
+        js-wasi) [ -f "$wasi" ] || { echo "run-one: wasi artifact missing ($wasi); run npm run build:wasi" >&2; return 4; } ;;
+    esac
+    mkdir -p "$XL/.stage/js"
+    local backend="${TARGET#js-}"
+    local wrapper="$XL/.stage/js/${backend}.sh"
+    cat > "$wrapper" <<WRAPEOF
+#!/usr/bin/env bash
+exec env XL_JS_BACKEND=$backend node "$XL/harnesses/javascript/bench.mjs" "\$@"
+WRAPEOF
+    chmod +x "$wrapper"
+}
+run_js_target() { echo "$XL/.stage/js/${TARGET#js-}.sh"; }
+
+# Builds are pinned away from the timing cores (2-9).
+BUILD_CPUSET="16-31"
+
+build_go() {
+    mkdir -p "$XL/.stage/go"
+    (cd "$XL/harnesses/go" && taskset -c "$BUILD_CPUSET" env \
+        CGO_LDFLAGS="-L$LR/target/release -L$LD_REPO/target/release" \
+        go build -o "$XL/.stage/go/bench" .) >&2
+    cat > "$XL/.stage/go/bench.sh" <<WRAPEOF
+#!/usr/bin/env bash
+exec env GOMAXPROCS=1 GOGC=100 "$XL/.stage/go/bench" "\$@"
+WRAPEOF
+    chmod +x "$XL/.stage/go/bench.sh"
+}
+run_go() { echo "$XL/.stage/go/bench.sh"; }
+
+build_ruby() {
+    mkdir -p "$XL/.stage/ruby"
+    cat > "$XL/.stage/ruby/bench.sh" <<WRAPEOF
+#!/usr/bin/env bash
+exec env \\
+    RUBYLIB="$LR/bindings/ruby/lib:$LD_REPO/bindings/ruby/lib" \\
+    LIBLEVENSHTEIN_LIBRARY="$LR/target/release/libliblevenshtein.so" \\
+    LIBDICTENSTEIN_LIBRARY="$LD_REPO/target/release/liblibdictenstein.so" \\
+    ruby "$XL/harnesses/ruby/bench.rb" "\$@"
+WRAPEOF
+    chmod +x "$XL/.stage/ruby/bench.sh"
+}
+run_ruby() { echo "$XL/.stage/ruby/bench.sh"; }
+
+build_lua() {
+    XL_BUILD_CPUSET="$BUILD_CPUSET" bash "$XL/harnesses/lua/build.sh" >&2
+    cat > "$XL/.stage/lua/bench.sh" <<WRAPEOF
+#!/usr/bin/env bash
+exec env \\
+    LUA_CPATH="$XL/.stage/lua/?.so;$XL/.stage/lua/?/?.so;;" \\
+    lua5.4 "$XL/harnesses/lua/bench.lua" "\$@"
+WRAPEOF
+    chmod +x "$XL/.stage/lua/bench.sh"
+}
+run_lua() { echo "$XL/.stage/lua/bench.sh"; }
+
+build_python() {
+    mkdir -p "$XL/.stage/python"
+    cat > "$XL/.stage/python/bench.sh" <<WRAPEOF
+#!/usr/bin/env bash
+exec env \\
+    PYTHONPATH="$LD_REPO/bindings/python/src:$LR/bindings/python/src:$LR/vinary-tree-interop/bindings/python/src" \\
+    PYTHONHASHSEED=0 \\
+    LIBLEVENSHTEIN_LIBRARY="$LR/target/release/libliblevenshtein.so" \\
+    LIBDICTENSTEIN_LIBRARY="$LD_REPO/target/release/liblibdictenstein.so" \\
+    python3 "$XL/harnesses/python/bench.py" "\$@"
+WRAPEOF
+    chmod +x "$XL/.stage/python/bench.sh"
+}
+run_python() { echo "$XL/.stage/python/bench.sh"; }
+
 # Phase 1/2/4 targets register their recipes here as their harnesses land.
 # An unimplemented target aborts loudly (recorded under failures/), it is
 # never silently skipped.
@@ -89,6 +182,13 @@ target_binary() {
         rust) build_rust >&2 && run_rust ;;
         c) build_c && run_c ;;
         cpp) build_cpp && run_cpp ;;
+        jvm-vinary) build_jvm_vinary && run_jvm_vinary ;;
+        jvm-legacy) build_jvm_legacy && run_jvm_legacy ;;
+        js-native|js-wasm|js-wasi|js-legacy) build_js_common && run_js_target ;;
+        python) build_python && run_python ;;
+        go) build_go && run_go ;;
+        ruby) build_ruby && run_ruby ;;
+        lua) build_lua && run_lua ;;
         *)
             echo "run-one: target '$TARGET' has no recipe yet (its phase has not landed)" >&2
             return 4

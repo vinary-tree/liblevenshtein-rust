@@ -1,0 +1,8 @@
+{
+  "name": "bench-cross-javascript",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-language benchmark harness: @vinary-tree/liblevenshtein (native/wasm/wasi) and the vendored legacy 2.0.4 compiled-CoffeeScript build. Resolution is a symlink farm (scripts in setup-js.sh); no registry installs.",
+  "license": "MIT"
+}

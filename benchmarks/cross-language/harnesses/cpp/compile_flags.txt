@@ -1,0 +1,5 @@
+-std=c++23
+-DBENCH_LIBLEV_VERSION="dev"
+-I../../../../include
+-I../../../../../libdictenstein/include
+-I../../../../vinary-tree-interop/include

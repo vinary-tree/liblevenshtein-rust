@@ -1,0 +1,11 @@
+// Harness-local workspace. Go resolves the NEAREST go.work walking up from
+// the package directory, so this file shadows the repository root go.work
+// (which does not list this harness module) without modifying it.
+go 1.25
+
+use (
+	.
+	../../../../bindings/go
+	../../../../vinary-tree-interop/bindings/go
+	../../../../../libdictenstein/bindings/go
+)
