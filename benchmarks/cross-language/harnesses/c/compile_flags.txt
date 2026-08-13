@@ -1,0 +1,6 @@
+-std=c17
+-D_POSIX_C_SOURCE=200809L
+-DBENCH_LIBLEV_VERSION="dev"
+-I../../../../include
+-I../../../../../libdictenstein/include
+-I../../../../vinary-tree-interop/include

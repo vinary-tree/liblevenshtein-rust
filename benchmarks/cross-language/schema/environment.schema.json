@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vinarytree.io/liblevenshtein/benchmarks/cross-language/environment.schema.json",
+  "title": "Cross-language benchmark run environment",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "timestamp_utc",
+    "hostname",
+    "kernel",
+    "cpu",
+    "memory",
+    "governor",
+    "cpusets",
+    "toolchains",
+    "rustflags",
+    "repositories",
+    "native_artifacts",
+    "legacy_artifacts",
+    "workload"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "timestamp_utc": { "type": "string", "minLength": 1 },
+    "hostname": { "type": "string", "minLength": 1 },
+    "kernel": { "type": "string", "minLength": 1 },
+    "cpu": {
+      "type": "object",
+      "required": ["model", "cores", "threads", "scaling_driver", "boost"],
+      "properties": {
+        "model": { "type": "string" },
+        "cores": { "type": "integer", "minimum": 1 },
+        "threads": { "type": "integer", "minimum": 1 },
+        "scaling_driver": { "type": "string" },
+        "boost": { "type": "string" },
+        "smt_sibling_map": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "memory": {
+      "type": "object",
+      "required": ["total_kib"],
+      "properties": { "total_kib": { "type": "integer", "minimum": 1 } },
+      "additionalProperties": true
+    },
+    "governor": { "type": "object", "additionalProperties": { "type": "string" } },
+    "cpusets": {
+      "type": "object",
+      "required": ["single_threaded", "vm_runtimes"],
+      "properties": {
+        "single_threaded": { "type": "string" },
+        "vm_runtimes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "toolchains": { "type": "object", "additionalProperties": { "type": "string" } },
+    "rustflags": { "type": "string" },
+    "repositories": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["commit", "dirty"],
+        "properties": {
+          "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "branch": { "type": "string" },
+          "dirty": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "native_artifacts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "legacy_artifacts": {
+      "type": "object",
+      "properties": {
+        "java_maven_gav": { "type": "string" },
+        "java_jar_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "js_ghpages_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "js_vendor_sha256": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+        "js_npm_tarball_sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      },
+      "additionalProperties": false
+    },
+    "workload": {
+      "type": "object",
+      "required": ["provenance_sha256", "dictionary_sha256"],
+      "properties": {
+        "provenance_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "dictionary_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

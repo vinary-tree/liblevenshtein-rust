@@ -1,0 +1,36 @@
+# Cross-language benchmark target manifest (TSV, tab-separated, # = comment).
+# Columns:
+#   target          stable identifier used in cell/file names
+#   language        result.schema.json target.language value
+#   implementation  vinary-tree | legacy | rust-core
+#   backends        comma-separated dictionary backends this target runs
+#                   (dynamic_dawg | double_array_trie | own)
+#   cpuset          taskset CPU list (single-threaded: 2; VM runtimes: 2-9;
+#                   both sides of a head-to-head pair always share a cpuset)
+#   damerau         yes|no — whether the library supports damerau_levenshtein
+#                   (bonus algorithm; legacy libraries predate it)
+#   phase           execution phase that first times this target (0..4)
+# Build and run command implementations live in scripts/run-one.sh as
+# build_<target> / run_<target> shell functions (TSV cannot carry quoted
+# shell safely); this file is the declarative list run-all.sh iterates.
+target	language	implementation	backends	cpuset	damerau	phase
+rust	rust	rust-core	dynamic_dawg,double_array_trie	2	yes	0
+c	c	vinary-tree	dynamic_dawg,double_array_trie	2	yes	0
+cpp	cpp	vinary-tree	dynamic_dawg	2	yes	3
+jvm-vinary	java	vinary-tree	dynamic_dawg,double_array_trie	2-9	yes	1
+jvm-legacy	java	legacy	own	2-9	no	1
+js-native	javascript	vinary-tree	dynamic_dawg,double_array_trie	2-9	yes	2
+js-wasm	javascript	vinary-tree	dynamic_dawg	2-9	yes	2
+js-wasi	javascript	vinary-tree	dynamic_dawg	2-9	yes	2
+js-legacy	javascript	legacy	own	2-9	no	2
+python	python	vinary-tree	dynamic_dawg,double_array_trie	2	yes	4
+clojure	clojure	vinary-tree	dynamic_dawg	2-9	yes	4
+clojurescript	clojurescript	vinary-tree	dynamic_dawg	2-9	yes	4
+dotnet	dotnet	vinary-tree	dynamic_dawg	2-9	yes	4
+go	go	vinary-tree	dynamic_dawg	2-9	yes	4
+swift	swift	vinary-tree	dynamic_dawg	2	yes	4
+ruby	ruby	vinary-tree	dynamic_dawg	2	yes	4
+fortran	fortran	vinary-tree	dynamic_dawg	2	yes	4
+ocaml	ocaml	vinary-tree	dynamic_dawg	2	yes	4
+haskell	haskell	vinary-tree	dynamic_dawg	2	yes	4
+lua	lua	vinary-tree	dynamic_dawg	2	yes	4

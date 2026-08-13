@@ -1,0 +1,121 @@
+{
+  "generated_utc": "2026-08-13T05:49:58+00:00",
+  "generator": "benchmarks/cross-language/workload/generate_workload.py",
+  "prng": "SplitMix64",
+  "base_seed": 42,
+  "per_set_seed_rule": "SplitMix64(BASE_SEED XOR fnv1a64(set_name)).next()",
+  "dictionary_command_equivalent": "aspell -d en_US dump master | aspell -l en expand | tr ' ' '\\n' | grep -E '^[a-z]+$' | LC_ALL=C sort -u",
+  "packages": {
+    "aspell --version": "@(#) International Ispell Version 3.1.20 (but really Aspell 0.60.8.2)",
+    "pacman aspell": "0.60.8.2-2",
+    "pacman aspell-en": "2026.02.25-1"
+  },
+  "queries_per_set": 1000,
+  "max_query_len": 24,
+  "checksum_test_vectors": {
+    "fnv1a64(\"\")": "cbf29ce484222325",
+    "fnv1a64(\"a\")": "af63dc4c8601ec8c",
+    "entry(\"cat\", 1)": "9697fa3e50464bc4",
+    "entry(\"cat\", 0)": "b592c1475b3595e5",
+    "entry(\"cot\", 1)": "b8acc5d3816bcdea",
+    "checksum{(\"cat\",0),(\"cot\",1)}": "6e3f871adca163cf",
+    "checksum{}": "0000000000000000"
+  },
+  "artifacts": {
+    "dictionary.txt": {
+      "sha256": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23",
+      "lines": 79343,
+      "description": "aspell en_US master dump, expanded, ^[a-z]+$, byte-sorted"
+    },
+    "queries-meta/hits.jsonl": {
+      "sha256": "e8d7e6980fe8d1ac2b7ae0122201f063f789239b89eb59b6ab3cc0ec3e09a8db",
+      "lines": 1000,
+      "description": "audit metadata for queries/hits.txt"
+    },
+    "queries-meta/mitton-holbrook.jsonl": {
+      "sha256": "a4636e5685cbdbd111085609b42ca46f1f70064cf26c1f69eeb3bfa23a5673b8",
+      "lines": 1439,
+      "description": "audit metadata for queries/mitton-holbrook.txt"
+    },
+    "queries-meta/oov.jsonl": {
+      "sha256": "612c305eaa8df3eb0af7e2bd668c30e295f2405031758520a6f62454862d783f",
+      "lines": 1000,
+      "description": "audit metadata for queries/oov.txt"
+    },
+    "queries-meta/std-d1.jsonl": {
+      "sha256": "2ad6e3a25b05daa1d3e07860d88d910f975131280cb5c42247f75e5952b71701",
+      "lines": 1000,
+      "description": "audit metadata for queries/std-d1.txt"
+    },
+    "queries-meta/std-d2.jsonl": {
+      "sha256": "a7b93c48f12c0f6e023b2979e53e5c3d0e7df9719c74584a5bc01ca9e3da2ca6",
+      "lines": 1000,
+      "description": "audit metadata for queries/std-d2.txt"
+    },
+    "queries-meta/std-d3.jsonl": {
+      "sha256": "dfb24c3d300a1ae8d93233d6c31bb846bf7ee657d9358f47e1e5e7eb85b9f5cf",
+      "lines": 1000,
+      "description": "audit metadata for queries/std-d3.txt"
+    },
+    "queries-meta/tr-d1.jsonl": {
+      "sha256": "1ffae01f9ec2a6bcd665eb315edc3d0d6774a03bf1e03930282505c1fd197cb3",
+      "lines": 1000,
+      "description": "audit metadata for queries/tr-d1.txt"
+    },
+    "queries-meta/tr-d2.jsonl": {
+      "sha256": "8bc3ee69a920a141a21aa9b1659dab8c76805acfba1ee6d270a39ac36f67c644",
+      "lines": 1000,
+      "description": "audit metadata for queries/tr-d2.txt"
+    },
+    "queries-meta/tr-d3.jsonl": {
+      "sha256": "60b4e6b167258b34385de1819768925d0a32d22592767ef77434ce8ab5e7d4d5",
+      "lines": 1000,
+      "description": "audit metadata for queries/tr-d3.txt"
+    },
+    "queries/hits.txt": {
+      "sha256": "58ad53d48923b61d09e8115c96629e6010c94d289c67cc6a1cbc825b5be5a35e",
+      "lines": 1000,
+      "description": "1000 distinct dictionary members (k=0)"
+    },
+    "queries/mitton-holbrook.txt": {
+      "sha256": "d588b25caef0b3bb90cce365644cdde6850c893a8a7a0526f3c0dc6dc8dbfde0",
+      "lines": 1439,
+      "description": "SECONDARY (not in matrix): Holbrook misspellings with in-dict targets"
+    },
+    "queries/oov.txt": {
+      "sha256": "d65a5fe87e9a734c3a2869f561976e3e0ce4debd791a9e6ad5905b7347d033d4",
+      "lines": 1000,
+      "description": "1000 random a-z strings len 8-14, not in dictionary"
+    },
+    "queries/std-d1.txt": {
+      "sha256": "5add495226b1db1f1a89af0dd2d4e9ead306e4d76bae8379f54aa3c13c4ec0d3",
+      "lines": 1000,
+      "description": "1000 mutants at realized standard (Levenshtein) distance 1"
+    },
+    "queries/std-d2.txt": {
+      "sha256": "42e034ba6bf90e8153d1cd0cbcd091bf962208591ae0b4f1eca3a722d93812f2",
+      "lines": 1000,
+      "description": "1000 mutants at realized standard (Levenshtein) distance 2"
+    },
+    "queries/std-d3.txt": {
+      "sha256": "d155a849587b295d09cb789665e9b51ee1b66a291c954aca1717f7cc3bad88f7",
+      "lines": 1000,
+      "description": "1000 mutants at realized standard (Levenshtein) distance 3"
+    },
+    "queries/tr-d1.txt": {
+      "sha256": "1d6b1aba3768e83e35997bdab8b31507f875d036d38fd6604d3c686d140fe81a",
+      "lines": 1000,
+      "description": "1000 mutants at realized restricted-Damerau (OSA) distance 1"
+    },
+    "queries/tr-d2.txt": {
+      "sha256": "f0f2705764c6a7b8426d5ea50b1777703af7b55092157c47b73051151be21c15",
+      "lines": 1000,
+      "description": "1000 mutants at realized restricted-Damerau (OSA) distance 2"
+    },
+    "queries/tr-d3.txt": {
+      "sha256": "611f6af44bf4b7bd6c1ab477b24446cfc15906d3bb92822f6b4b20894955a1da",
+      "lines": 1000,
+      "description": "1000 mutants at realized restricted-Damerau (OSA) distance 3"
+    }
+  }
+}

@@ -222,3 +222,22 @@ perf.data*
 
 # Swift SwiftPM build output (staged by the language-sweep build)
 bindings/swift/**/.build/
+
+# Cross-language benchmark program (benchmarks/cross-language/)
+# Raw results and staging are never committed; workload artifacts ARE committed.
+benchmarks/cross-language/results/
+benchmarks/cross-language/.stage/
+benchmarks/cross-language/harnesses/rust/target/
+benchmarks/cross-language/harnesses/jvm/.gradle/
+benchmarks/cross-language/harnesses/jvm/**/build/
+benchmarks/cross-language/harnesses/javascript/node_modules/
+benchmarks/cross-language/harnesses/clojurescript/out/
+benchmarks/cross-language/harnesses/clojurescript/.cpcache/
+benchmarks/cross-language/harnesses/clojure/.cpcache/
+benchmarks/cross-language/harnesses/dotnet/bin/
+benchmarks/cross-language/harnesses/dotnet/obj/
+benchmarks/cross-language/harnesses/go/bench-go
+benchmarks/cross-language/harnesses/swift/.build/
+benchmarks/cross-language/harnesses/fortran/build/
+benchmarks/cross-language/harnesses/ocaml/_build/
+benchmarks/cross-language/harnesses/haskell/dist-newstyle/

@@ -1,0 +1,18 @@
+# Standalone benchmark harness — deliberately NOT a member of the
+# liblevenshtein workspace (the empty [workspace] table detaches it) so the
+# root Cargo.toml, its feature unification, and its lockfile stay untouched.
+[package]
+name = "bench-cross-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+liblevenshtein = { path = "../../../.." }
+libdictenstein = { path = "../../../../../libdictenstein" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

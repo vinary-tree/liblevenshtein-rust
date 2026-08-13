@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vinarytree.io/liblevenshtein/benchmarks/cross-language/result.schema.json",
+  "title": "Cross-language benchmark cell result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "suite",
+    "run_id",
+    "timestamp_utc",
+    "target",
+    "dictionary",
+    "workload",
+    "algorithm",
+    "max_distance",
+    "mode",
+    "protocol",
+    "status",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "suite": { "const": "cross-language-v1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "timestamp_utc": { "type": "string", "minLength": 1 },
+    "target": {
+      "type": "object",
+      "required": ["language", "implementation", "backend", "runtime_version", "library_version", "artifact"],
+      "properties": {
+        "language": {
+          "enum": ["rust", "c", "cpp", "python", "java", "clojure", "javascript", "clojurescript", "dotnet", "go", "swift", "ruby", "fortran", "ocaml", "haskell", "lua"]
+        },
+        "implementation": { "enum": ["vinary-tree", "legacy", "rust-core"] },
+        "backend": { "type": "string", "minLength": 1 },
+        "runtime_version": { "type": "string", "minLength": 1 },
+        "library_version": { "type": "string", "minLength": 1 },
+        "artifact": {
+          "type": "object",
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "enum": ["cargo", "maven", "npm", "vendored", "cdylib", "local-build"] },
+            "id": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "dictionary": {
+      "type": "object",
+      "required": ["file", "sha256", "term_count", "structure", "unit_domain"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "term_count": { "type": "integer", "minimum": 1 },
+        "structure": { "enum": ["dynamic_dawg", "double_array_trie", "legacy_sorted_dawg", "legacy_js_dawg"] },
+        "unit_domain": { "enum": ["unicode_scalar", "byte", "jvm_string", "js_string"] },
+        "construct_ns": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "workload": {
+      "type": "object",
+      "required": ["queryset", "file", "sha256", "query_count"],
+      "properties": {
+        "queryset": { "enum": ["hits", "std-d1", "std-d2", "std-d3", "tr-d1", "tr-d2", "tr-d3", "oov", "mitton-holbrook"] },
+        "file": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "query_count": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "algorithm": { "enum": ["standard", "transposition", "merge_and_split", "damerau_levenshtein"] },
+    "max_distance": { "enum": [1, 2, 3] },
+    "mode": { "enum": ["query", "construct", "memory", "verify"] },
+    "protocol": {
+      "type": "object",
+      "required": ["timer", "harness"],
+      "properties": {
+        "timer": { "const": "monotonic" },
+        "harness": { "enum": ["self-timed", "jmh"] },
+        "warmup_seconds_min": { "type": "number", "minimum": 0 },
+        "warmup_passes": { "type": "integer", "minimum": 0 },
+        "samples_requested": { "type": "integer", "minimum": 0 },
+        "sample_definition": { "type": "string" },
+        "batch_size": { "type": ["integer", "null"], "minimum": 1 },
+        "wall_cap_seconds": { "type": "number", "minimum": 0 },
+        "jmh": {
+          "type": "object",
+          "required": ["forks", "warmup_iterations", "measurement_iterations"],
+          "properties": {
+            "forks": { "type": "integer", "minimum": 1 },
+            "warmup_iterations": { "type": "integer", "minimum": 0 },
+            "measurement_iterations": { "type": "integer", "minimum": 1 },
+            "iteration_seconds": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "measurements": {
+      "type": "object",
+      "required": ["samples_ns", "sample_count", "matches_per_pass", "term_bytes_per_pass", "distance_sum_per_pass", "checksum_hex"],
+      "properties": {
+        "samples_ns": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 0 },
+        "sample_count": { "type": "integer", "minimum": 0 },
+        "matches_per_pass": { "type": "integer", "minimum": 0 },
+        "term_bytes_per_pass": { "type": "integer", "minimum": 0 },
+        "distance_sum_per_pass": { "type": "integer", "minimum": 0 },
+        "checksum_hex": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+      },
+      "additionalProperties": false
+    },
+    "construct": {
+      "type": "object",
+      "required": ["reps", "times_ns", "term_count"],
+      "properties": {
+        "reps": { "type": "integer", "minimum": 1 },
+        "times_ns": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 1 },
+        "term_count": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "memory": {
+      "type": "object",
+      "required": ["max_rss_kib", "measured_by"],
+      "properties": {
+        "max_rss_kib": { "type": "integer", "minimum": 1 },
+        "measured_by": { "const": "/usr/bin/time -v" },
+        "child_cmdline": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "cell_snapshot": {
+      "type": "object",
+      "properties": {
+        "cpuset": { "type": "string" },
+        "cpu_mhz_start": { "type": "number" },
+        "cpu_mhz_end": { "type": "number" },
+        "load_avg_1m": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "environment_ref": { "type": "string" },
+    "status": { "enum": ["ok", "degraded", "failed"] },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "query" } }, "required": ["mode"] },
+      "then": {
+        "required": ["measurements"],
+        "properties": {
+          "measurements": {
+            "properties": {
+              "samples_ns": { "minItems": 1 },
+              "sample_count": { "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "mode": { "const": "verify" } }, "required": ["mode"] },
+      "then": { "required": ["measurements"] }
+    },
+    {
+      "if": { "properties": { "mode": { "const": "construct" } }, "required": ["mode"] },
+      "then": { "required": ["construct"] }
+    },
+    {
+      "if": { "properties": { "mode": { "const": "memory" } }, "required": ["mode"] },
+      "then": { "required": ["memory", "measurements"] }
+    }
+  ],
+  "additionalProperties": false
+}
