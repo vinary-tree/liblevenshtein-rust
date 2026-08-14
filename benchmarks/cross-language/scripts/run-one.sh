@@ -414,11 +414,22 @@ else
         fail_loudly "$log_file" "${TARGET}__${BACKEND} cells batch"
     fi
     mhz_end="$(cpu_mhz)"
-    # Post-fill every JSON the batch produced (4th TSV column).
+    # Post-fill every JSON the batch produced (4th TSV column). A cell that
+    # the harness wrote but that never reached this loop — because the batch
+    # was interrupted — would carry no run_id/sha256/cell_snapshot and be
+    # rejected by schema validation, so it must never be treated as data.
+    # Sweep the batch's whole output set, not just this run's TSV, so any
+    # such orphan left by an earlier interrupted batch is repaired or
+    # surfaced rather than silently persisting as a half-written cell.
     while IFS=$'\t' read -r _algo _dist _queries out_path; do
         case "$_algo" in ''|'#'*) continue ;; esac
         postfill "$out_path" "$mhz_start" "$mhz_end" "$load" \
             || fail_loudly "$log_file" "postfill $out_path"
         echo "$out_path"
     done < "$CELLS_TSV"
+    orphans="$(grep -Lr '"run_id"' "$CELL_DIR" --include='*.json' 2>/dev/null | head -5)"
+    if [ -n "$orphans" ]; then
+        echo "run-one: WARNING un-postfilled cell(s) present (interrupted batch?):" >&2
+        echo "$orphans" | sed 's/^/  /' >&2
+    fi
 fi

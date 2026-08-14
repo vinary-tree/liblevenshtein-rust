@@ -510,6 +510,51 @@ def main() -> int:
         )
     )
 
+    # ------------------------------------------------------------------
+    # Contention accounting. This machine is shared: external workloads run
+    # unpinned and can be scheduled onto the pinned measurement core, which
+    # inflates dispersion (observed: MAD 2.1-3.8% under load vs 1.2% on a
+    # quiet machine). run-one.sh records the 1-minute load average with every
+    # cell, so affected cells are IDENTIFIABLE rather than silently averaged
+    # in. Threshold 8.0 ~ 25% of this host's 32 cores busy.
+    # ------------------------------------------------------------------
+    CONTENTION_THRESHOLD = 8.0
+    contended = []
+    missing_snapshot = []
+    for cell in cells:
+        load = cell.get("cell_snapshot", {}).get("load_avg_1m")
+        if load is None:
+            missing_snapshot.append(cell["_file"].removesuffix(".json"))
+        elif load > CONTENTION_THRESHOLD:
+            contended.append(
+                {
+                    "cell": cell["_file"].removesuffix(".json"),
+                    "load_avg_1m": load,
+                    "status": cell["status"],
+                }
+            )
+    contended.sort(key=lambda r: -r["load_avg_1m"])
+    quiet_count = len(cells) - len(contended) - len(missing_snapshot)
+    contention_note = (
+        f"{len(contended)} of {len(cells)} cells were measured with a 1-minute load "
+        f"average above {CONTENTION_THRESHOLD} on a 32-core host; {quiet_count} were "
+        f"measured quiet and {len(missing_snapshot)} lack a snapshot (a cell only "
+        f"receives one when its batch completes, so in-flight batches appear here). "
+        f"Contention inflates dispersion rather than shifting medians systematically, "
+        f"which is why medians with MAD and bootstrap intervals are reported instead "
+        f"of means; cells listed below can be re-measured on a quiet machine."
+    )
+    (tables_dir / "contention.md").write_text(
+        f"# Cells measured under external load\n\n{contention_note}\n\n"
+        + markdown_table(
+            contended,
+            [("cell", "cell"), ("load_avg_1m", "1-min load"), ("status", "status")],
+            "Cells with load average above the threshold",
+        )
+        if contended
+        else f"# Cells measured under external load\n\n{contention_note}\n"
+    )
+
     (tables_dir / "not_measured.md").write_text(
         markdown_table(
             not_measured,
@@ -532,6 +577,14 @@ def main() -> int:
         "pair_javascript": js_rows,
         "atlas_overhead": atlas_rows,
         "not_measured": not_measured,
+        "contention": {
+            "threshold_load_avg_1m": CONTENTION_THRESHOLD,
+            "cells_under_load": len(contended),
+            "cells_quiet": quiet_count,
+            "cells_without_snapshot": len(missing_snapshot),
+            "note": contention_note,
+            "cells": contended,
+        },
     }
     (results_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(
