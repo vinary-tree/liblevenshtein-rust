@@ -105,6 +105,21 @@ target_tools_ok() { # target -> 0/1 via required tool probes
         rust) probe_tool cargo cargo --version ;;
         c) probe_tool cc cc --version ;;
         cpp) probe_tool c++ c++ --version ;;
+        cpp-legacy)
+            # Legacy liblevenshtein-cpp is built from source out-of-tree; it
+            # needs a C++ compiler, CMake, and protobuf (its only external
+            # dependency). The upstream checkout must exist.
+            probe_tool c++ c++ --version || return 1
+            probe_tool cmake cmake --version || return 1
+            probe_tool protoc protoc --version || return 1
+            local repo="${XL_LEGACY_CPP_REPO:-/home/dylon/Workspace/universal-automata/liblevenshtein-cpp}"
+            if [ -d "$repo" ]; then
+                check "repo:liblevenshtein-cpp" "ok" "$repo"
+            else
+                check "repo:liblevenshtein-cpp" "fail" "missing: $repo (set XL_LEGACY_CPP_REPO)"
+                return 1
+            fi
+            ;;
         jvm-vinary|jvm-legacy)
             probe_tool java java --version || return 1
             local major

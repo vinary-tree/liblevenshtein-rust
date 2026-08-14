@@ -12,11 +12,11 @@
 # re-running this script is safe. Failures are recorded in state.tsv and do
 # not abort the chain — a later step's data is still worth collecting.
 #
-# CCD 0-7 is deliberately LEFT FREE for the user's other development work
-# (their processes are unpinned and would otherwise contend with measurement
-# cores). The hypothesis arms run SERIALLY on one owned CCD afterwards, so
-# they are measured free of cross-stream contention: they are the arms that
-# formally decide the preregistered experiments.
+# EXECUTION IS STRICTLY SERIAL: exactly one single-threaded benchmark process
+# runs at a time, pinned by the manifest cpuset. Parallel streams were tried
+# and reverted — measured anchors showed MAD inflated 2-4x (2.1-3.8% vs 1.2%
+# on a quiet machine), i.e. concurrency perturbs the very quantity being
+# measured. Throughput is not worth biased numbers.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,34 +32,28 @@ log() { printf '[remaining %s] %s\n' "$(date '+%F %H:%M:%S')" "$*" >&2; }
 state_row() { printf '%s\t%s\t%s\n' "$1" "$2" "${3:-}" >> "$STATE_TSV"; }
 
 # ---------------------------------------------------------------------------
-# 1. Wait for all parallel streams
+# 1. Wait for the serial atlas sweep
 # ---------------------------------------------------------------------------
-log "waiting for streams: ${STREAMS[*]}"
-while :; do
-    pending=0
-    for ccd in "${STREAMS[@]}"; do
-        [ -f "$RESULTS_DIR/.stream-${ccd}-done" ] && continue
-        if pgrep -f "run-stream.sh $RESULTS_DIR $ccd" >/dev/null 2>&1; then
-            pending=$((pending + 1))
-        else
+if [ ! -f "$RESULTS_DIR/.atlas-done" ]; then
+    log "waiting for the serial atlas sweep to finish..."
+    while [ ! -f "$RESULTS_DIR/.atlas-done" ]; do
+        if ! pgrep -f 'run-all.sh --results' >/dev/null 2>&1; then
             sleep 10
-            if [ ! -f "$RESULTS_DIR/.stream-${ccd}-done" ]; then
-                log "stream $ccd vanished without its sentinel"
-                state_row "stream-${ccd}" "vanished" "see logs/stream-${ccd}.log"
-                : > "$RESULTS_DIR/.stream-${ccd}-done"
-            fi
+            [ -f "$RESULTS_DIR/.atlas-done" ] && break
+            log "atlas sweep vanished without its sentinel"
+            state_row "atlas-sweep" "vanished" "see logs/atlas-sweep.log"
+            break
         fi
+        sleep 120
     done
-    [ "$pending" -eq 0 ] && break
-    sleep 120
-done
-log "all streams finished"
+fi
+log "atlas sweep finished"
 
 # ---------------------------------------------------------------------------
 # 2. Hypothesis arms, serial and contention-free on one CCD
 # ---------------------------------------------------------------------------
-log "running >=51-sample hypothesis cells (serial, CCD 16-23)"
-if XL_STREAM_CCD="16-23" bash "$SCRIPT_DIR/run-hypothesis-cells.sh" "$RESULTS_DIR" \
+log "running >=51-sample hypothesis cells (serial)"
+if bash "$SCRIPT_DIR/run-hypothesis-cells.sh" "$RESULTS_DIR" \
         >> "$RESULTS_DIR/logs/hypothesis-cells.log" 2>&1; then
     state_row "hypothesis-cells" "ok" ""
 else
