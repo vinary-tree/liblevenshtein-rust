@@ -1,8 +1,19 @@
 # Cargo configuration for liblevenshtein.
 #
-# Release artifacts deliberately use each Rust target's portable CPU baseline.
-# Never set target-cpu=native here: doing so can emit instructions unavailable
-# on another Intel/AMD machine and makes cross-compilation non-reproducible.
+# Never set target-cpu=native here: doing so makes builds host-dependent and
+# cross-compilation non-reproducible. The explicit AES/SSE2/NEON minimum below
+# is required only because the all-features PathMap backend enables Gxhash,
+# which refuses to compile without those intrinsics.
+
+# Gxhash's x86 implementation requires AES and SSE2. A cfg expression keeps
+# the requirement consistent across GNU, musl, MSVC, and other supported ABIs
+# on Linux, macOS, and Windows without enumerating every target triple.
+[target.'cfg(all(any(target_arch = "x86", target_arch = "x86_64"), any(target_os = "linux", target_os = "macos", target_os = "windows")))']
+rustflags = ["-C", "target-feature=+aes,+sse2"]
+
+# Gxhash's ARM implementation requires AES and NEON on the same host OSes.
+[target.'cfg(all(any(target_arch = "arm", target_arch = "aarch64"), any(target_os = "linux", target_os = "macos", target_os = "windows")))']
+rustflags = ["-C", "target-feature=+aes,+neon"]
 
 [target.wasm32-unknown-unknown]
 # getrandom 0.3+ removed the `js` feature; the web/JS backend is now selected
@@ -11,8 +22,8 @@
 # wasm32-unknown-unknown.
 rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
 
-# Developers may opt into local-machine-only benchmark builds with
-# `RUSTFLAGS="-C target-cpu=native" cargo bench`; shipped libraries must not.
+# Developers may opt into additional local-machine-only benchmark features
+# with `RUSTFLAGS="-C target-cpu=native" cargo bench`; shipped libraries must not.
 
 # Cargo aliases for code coverage (requires cargo-llvm-cov: cargo install cargo-llvm-cov)
 [alias]

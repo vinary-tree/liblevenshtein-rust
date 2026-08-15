@@ -142,7 +142,8 @@ where
         while let Some(frame) = self.stack.pop() {
             if let Some(unit) = frame.entered_by {
                 let depth = self.prefix.len();
-                debug_assert_eq!(self.prefix.pop(), Some(unit));
+                let popped = self.prefix.pop();
+                debug_assert_eq!(popped, Some(unit));
                 if let Some(pruner) = self.pruner.as_mut() {
                     pruner.leave(unit, depth);
                 }
@@ -221,7 +222,8 @@ where
             let frame = self.stack.pop().expect("the stack was observed non-empty");
             if let Some(unit) = frame.entered_by {
                 let depth = self.prefix.len();
-                debug_assert_eq!(self.prefix.pop(), Some(unit));
+                let popped = self.prefix.pop();
+                debug_assert_eq!(popped, Some(unit));
                 self.pruner_mut().leave(unit, depth);
             }
         }

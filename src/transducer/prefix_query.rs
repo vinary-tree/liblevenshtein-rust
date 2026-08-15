@@ -196,7 +196,8 @@ where
             self.state_pool.release(frame.state);
             if let Some(unit) = frame.entered_by {
                 let depth = self.prefix.len();
-                debug_assert_eq!(self.prefix.pop(), Some(unit));
+                let popped = self.prefix.pop();
+                debug_assert_eq!(popped, Some(unit));
                 if let Some(pruner) = self.prefix_pruner.as_mut() {
                     pruner.leave(unit, depth);
                 }
@@ -304,7 +305,8 @@ where
             self.state_pool.release(frame.state);
             if let Some(unit) = frame.entered_by {
                 let depth = self.prefix.len();
-                debug_assert_eq!(self.prefix.pop(), Some(unit));
+                let popped = self.prefix.pop();
+                debug_assert_eq!(popped, Some(unit));
                 self.pruner_mut().leave(unit, depth);
             }
         }
