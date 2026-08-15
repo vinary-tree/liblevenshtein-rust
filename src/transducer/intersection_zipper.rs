@@ -3,6 +3,7 @@
 //! This module provides a zipper that composes dictionary navigation with
 //! automaton state tracking, enabling efficient fuzzy string matching.
 
+use crate::transducer::transition::CachedUnitTransitions;
 use crate::transducer::{AutomatonZipper, StatePool};
 use libdictenstein::zipper::DictZipper;
 use std::sync::Arc;
@@ -352,6 +353,34 @@ where
 
                 (label, child)
             })
+        })
+    }
+
+    /// Navigate to viable children through one traversal-owned transition
+    /// cache. This is the allocation-free hot path used by
+    /// `ZipperQueryIterator`; the public `children` method remains the
+    /// compatibility path for independently manipulated zipper values.
+    pub(crate) fn children_cached<'a>(
+        &'a self,
+        pool: &'a mut StatePool,
+        transitions: &'a mut CachedUnitTransitions<u8>,
+    ) -> impl Iterator<Item = (u8, Self)> + 'a {
+        let parent_for_children = self.parent.clone();
+        let automaton = &self.automaton;
+
+        self.dict.children().filter_map(move |(label, dict_child)| {
+            automaton
+                .transition_cached(label, pool, transitions)
+                .map(|auto_child| {
+                    let new_parent = Some(Arc::new(ZipperPathNode::new(
+                        label,
+                        parent_for_children.clone(),
+                    )));
+                    (
+                        label,
+                        IntersectionZipper::with_parent(dict_child, auto_child, new_parent),
+                    )
+                })
         })
     }
 

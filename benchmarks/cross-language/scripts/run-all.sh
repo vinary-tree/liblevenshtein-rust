@@ -48,7 +48,14 @@ fi
 mkdir -p "$RESULTS_DIR"
 RESULTS_DIR="$(cd "$RESULTS_DIR" && pwd)"
 CELL_DIR="$RESULTS_DIR/cells"
-mkdir -p "$CELL_DIR" "$RESULTS_DIR/sentinels" "$RESULTS_DIR/tsv"
+mkdir -p "$CELL_DIR" "$RESULTS_DIR/sentinels" "$RESULTS_DIR/tsv" "$RESULTS_DIR/failures"
+# failures/ must describe THIS run: stale logs from an earlier, since-fixed
+# run make a healthy sweep look broken at a glance. Archive rather than
+# delete, so nothing is lost.
+if compgen -G "$RESULTS_DIR/failures/*.log" > /dev/null; then
+    _fdir="$RESULTS_DIR/failures/previous-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$_fdir" && mv "$RESULTS_DIR"/failures/*.log "$_fdir"/ 2>/dev/null || true
+fi
 STATE_TSV="$RESULTS_DIR/state.tsv"
 
 log() { printf '[run-all %s] %s\n' "$(date +%H:%M:%S)" "$*" >&2; }

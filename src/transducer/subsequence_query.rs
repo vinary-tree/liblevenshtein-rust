@@ -29,32 +29,34 @@ pub struct SubsequenceMatch<U: CharUnit> {
 }
 
 struct Frame<N: DictionaryNode> {
-    node: N,
     edges: std::vec::IntoIter<(N::Unit, N)>,
     matched: usize,
     entered_by: Option<N::Unit>,
+    is_final: bool,
     final_checked: bool,
 }
 
 impl<N: DictionaryNode> Frame<N> {
     fn root(node: N) -> Self {
-        let edges = node.edges().collect::<Vec<_>>().into_iter();
+        let mut edges = Vec::with_capacity(node.edge_count().unwrap_or(0));
+        let is_final = node.visit_edges_and_finality(|label, child| edges.push((label, child)));
         Self {
-            node,
-            edges,
+            edges: edges.into_iter(),
             matched: 0,
             entered_by: None,
+            is_final,
             final_checked: false,
         }
     }
 
     fn child(node: N, entered_by: N::Unit, matched: usize) -> Self {
-        let edges = node.edges().collect::<Vec<_>>().into_iter();
+        let mut edges = Vec::with_capacity(node.edge_count().unwrap_or(0));
+        let is_final = node.visit_edges_and_finality(|label, child| edges.push((label, child)));
         Self {
-            node,
-            edges,
+            edges: edges.into_iter(),
             matched,
             entered_by: Some(entered_by),
+            is_final,
             final_checked: false,
         }
     }
@@ -170,7 +172,7 @@ where
                     false
                 } else {
                     frame.final_checked = true;
-                    frame.node.is_final() && frame.matched == self.query.len()
+                    frame.is_final && frame.matched == self.query.len()
                 }
             };
             if accepts_subsequence {

@@ -34,15 +34,81 @@ public final class BorrowedMatchBatch {
 
     /** Borrow one descriptor without decoding or copying its term. */
     public BorrowedMatch get(int index) {
-        ensureActive();
-        if (index < 0 || index >= size) throw new IndexOutOfBoundsException(index);
-        return new BorrowedMatch(descriptors.asSlice(index * Native.MATCH.byteSize(), Native.MATCH.byteSize()));
+        return new BorrowedMatch(descriptor(index));
+    }
+
+    /** Exact edit distance without allocating a {@link BorrowedMatch} wrapper. */
+    public long distance(int index) {
+        return descriptors.get(JAVA_LONG, descriptorOffset(index) + DISTANCE);
+    }
+
+    /** Number of logical units in the term. */
+    public long termLength(int index) {
+        return descriptors.get(JAVA_LONG, descriptorOffset(index) + TERM_LEN);
+    }
+
+    /** Number of bytes occupied by a byte or Unicode term. */
+    public long byteLength(int index) {
+        return descriptors.get(JAVA_LONG, descriptorOffset(index) + BYTE_LEN);
+    }
+
+    /** Optional provider value without allocating a {@link BorrowedMatch} wrapper. */
+    public OptionalLong id(int index) {
+        long offset = descriptorOffset(index);
+        return descriptors.get(JAVA_BYTE, offset + HAS_ID) == 0
+                ? OptionalLong.empty()
+                : OptionalLong.of(descriptors.get(JAVA_LONG, offset + ID));
+    }
+
+    /** Native unit domain (1 byte, 2 Unicode scalar, 3 u64). */
+    public int unitDomain(int index) {
+        return descriptors.get(JAVA_INT, descriptorOffset(index) + DOMAIN);
+    }
+
+    /** Borrow raw bytes without copying or allocating a per-match wrapper. */
+    public MemorySegment bytes(int index) {
+        long offset = descriptorOffset(index);
+        int domain = descriptors.get(JAVA_INT, offset + DOMAIN);
+        if (domain == Native.DOMAIN_U64) {
+            throw new IllegalStateException("u64 term has no byte view");
+        }
+        long length = descriptors.get(JAVA_LONG, offset + BYTE_LEN);
+        return descriptors.get(ADDRESS, offset + DATA).reinterpret(length);
+    }
+
+    /** Decode one Unicode term without allocating a per-match wrapper. */
+    public String utf8(int index) {
+        if (unitDomain(index) != Native.DOMAIN_UNICODE) {
+            throw new IllegalStateException("term is not Unicode");
+        }
+        return new String(bytes(index).toArray(JAVA_BYTE), StandardCharsets.UTF_8);
+    }
+
+    /** Borrow aligned u64 tokens without copying or allocating a per-match wrapper. */
+    public MemorySegment u64(int index) {
+        long offset = descriptorOffset(index);
+        if (descriptors.get(JAVA_INT, offset + DOMAIN) != Native.DOMAIN_U64) {
+            throw new IllegalStateException("term is not u64");
+        }
+        long length = descriptors.get(JAVA_LONG, offset + TERM_LEN);
+        return descriptors.get(ADDRESS, offset + DATA)
+                .reinterpret(Math.multiplyExact(length, JAVA_LONG.byteSize()));
     }
 
     void invalidate() { active = false; }
 
     private void ensureActive() {
         if (!active) throw new IllegalStateException("borrowed batch lease has ended");
+    }
+
+    private long descriptorOffset(int index) {
+        ensureActive();
+        if (index < 0 || index >= size) throw new IndexOutOfBoundsException(index);
+        return Math.multiplyExact((long) index, Native.MATCH.byteSize());
+    }
+
+    private MemorySegment descriptor(int index) {
+        return descriptors.asSlice(descriptorOffset(index), Native.MATCH.byteSize());
     }
 
     /** One borrowed match descriptor with lazy term decoding. */
@@ -83,7 +149,8 @@ public final class BorrowedMatchBatch {
             ensureActive();
             if (unitDomain() != Native.DOMAIN_U64) throw new IllegalStateException("term is not u64");
             long length = descriptor.get(JAVA_LONG, TERM_LEN);
-            return descriptor.get(ADDRESS, DATA).reinterpret(length * JAVA_LONG.byteSize());
+            return descriptor.get(ADDRESS, DATA)
+                    .reinterpret(Math.multiplyExact(length, JAVA_LONG.byteSize()));
         }
 
         Match materialize() {

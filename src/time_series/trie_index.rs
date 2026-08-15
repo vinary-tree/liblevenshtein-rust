@@ -40,9 +40,7 @@
 //!   then verifies with exact MSM distance. Accurate but slower.
 
 use super::encoding::QuantizationConfig;
-use crate::transducer::transition::{
-    initial_state, transition_state_pooled_ref, TransitionSettings,
-};
+use crate::transducer::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
 use crate::transducer::{Algorithm, State, StatePool, Unrestricted};
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::{Dictionary, DictionaryNode, DictionaryValue, MappedDictionaryNode};
@@ -368,6 +366,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
         let mut pending = VecDeque::with_capacity(encoded.len().saturating_add(1));
         let mut results = Vec::with_capacity(self.count.min(DEFAULT_SEARCH_RESULT_CAPACITY));
         let mut state_pool = StatePool::new();
+        let mut unit_transitions = CachedUnitTransitions::new(encoded.len(), max_distance);
 
         pending.push_back(ByteSearchNode {
             node: self.dawg.root(),
@@ -375,22 +374,8 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
         });
 
         while let Some(current) = pending.pop_front() {
-            if current.node.is_final() {
-                let distance = current
-                    .state
-                    .infer_distance(encoded.len())
-                    .unwrap_or(usize::MAX);
-                if distance <= max_distance {
-                    if let Some(bucket_id) = current.node.value() {
-                        if let Some(bucket) = self.buckets.get(bucket_id) {
-                            results.extend(bucket.iter().map(|&value| (value, distance)));
-                        }
-                    }
-                }
-            }
-
-            for (label, child) in current.node.edges() {
-                if let Some(next_state) = transition_state_pooled_ref(
+            let is_final = current.node.visit_edges_and_finality(|label, child| {
+                if let Some(next_state) = unit_transitions.transition(
                     &current.state,
                     &mut state_pool,
                     &Unrestricted,
@@ -402,6 +387,20 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
                         node: child,
                         state: next_state,
                     });
+                }
+            });
+
+            if is_final {
+                let distance = current
+                    .state
+                    .infer_distance(encoded.len())
+                    .unwrap_or(usize::MAX);
+                if distance <= max_distance {
+                    if let Some(bucket_id) = current.node.value_at_final() {
+                        if let Some(bucket) = self.buckets.get(bucket_id) {
+                            results.extend(bucket.iter().map(|&value| (value, distance)));
+                        }
+                    }
                 }
             }
         }

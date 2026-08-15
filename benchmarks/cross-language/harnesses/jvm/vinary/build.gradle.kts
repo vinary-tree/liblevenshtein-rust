@@ -50,4 +50,10 @@ jmh {
             benchmarkParameters.put(key, objects.listProperty(String::class.java).value(listOf(value)))
         }
     }
+    // Diagnostic-only and opt-in: for example,
+    // `-Pjmh.profilers=gc` records allocation and collection counters without
+    // changing the ordinary parity protocol.
+    providers.gradleProperty("jmh.profilers").orNull?.let { csv ->
+        profilers = csv.split(",").map(String::trim).filter(String::isNotEmpty)
+    }
 }

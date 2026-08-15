@@ -263,9 +263,7 @@ impl StateF64 {
     pub fn copy_from(&mut self, other: &StateF64) {
         self.positions.clear();
         self.positions.reserve(other.positions.len());
-        for pos in &other.positions {
-            self.positions.push(*pos);
-        }
+        self.positions.extend_from_slice(&other.positions);
     }
 
     /// Get the minimum accumulated cost in this state.

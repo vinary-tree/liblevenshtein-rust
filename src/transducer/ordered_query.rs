@@ -6,7 +6,7 @@
 //!
 //! This ordering enables efficient "top-k" queries and take-while patterns.
 
-use super::transition::{initial_state, transition_state_pooled_ref, TransitionSettings};
+use super::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
 use super::{
     state::State, Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted,
 };
@@ -144,6 +144,8 @@ pub struct OrderedQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unres
     policy: P,
     /// State pool for allocation reuse
     state_pool: StatePool,
+    /// Shared cached transition kernel; queued states are epsilon-closed.
+    unit_transitions: CachedUnitTransitions<N::Unit>,
     /// Per-query parent-path arena for reconstructing candidate terms.
     path_arena: Vec<OrderedPathNode<N::Unit>>,
     /// Substring matching mode (for suffix automata)
@@ -201,7 +203,8 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         substring_mode: bool,
     ) -> Self {
         let query_units = N::Unit::from_str(&query);
-        let initial = initial_state(query_units.len(), max_distance, algorithm);
+        let query_length = query_units.len();
+        let initial = initial_state(query_length, max_distance, algorithm);
 
         // Create buckets for each distance level (0..=max_distance)
         // Pre-allocate capacity to reduce reallocations during traversal
@@ -220,6 +223,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             algorithm,
             policy,
             state_pool: StatePool::new(),
+            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
             path_arena: Vec::with_capacity(64),
             substring_mode,
             sorted_buffer: Vec::with_capacity(64), // Heuristic: typical max results per distance
@@ -308,51 +312,68 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         let mut child_parent_path = None;
 
         // Edges are iterated in sorted order (lexicographic) thanks to DAWG construction
-        for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled_ref(
-                &intersection.state,
-                &mut self.state_pool,
-                &self.policy, // Borrow the iterator's policy; avoid per-edge clones
-                label,
-                &self.query,
-                TransitionSettings::new(
-                    self.max_distance,
-                    self.algorithm,
-                    self.substring_mode, // Use prefix_mode=true only for substring matching
-                ),
-            ) {
-                // Determine minimum possible distance from this state
-                let should_enqueue = next_state
-                    .min_distance()
-                    .filter(|&min_dist| min_dist <= self.max_distance);
+        intersection.node.for_each_edge(|label, child_node| {
+            self.queue_child(intersection, &mut child_parent_path, label, child_node);
+        });
+    }
 
-                if let Some(min_dist) = should_enqueue {
-                    let parent_path = match child_parent_path {
-                        Some(path) => path,
-                        None => {
-                            let path = match intersection.label {
-                                Some(current_label) => {
-                                    self.push_path_node(current_label, intersection.parent)
-                                }
-                                None => NO_PATH,
-                            };
-                            child_parent_path = Some(path);
-                            path
-                        }
-                    };
+    /// Queue children and return finality through the generic fused node seam.
+    /// Prefix traversal always expands every popped node, unlike the ordered
+    /// distance scheduler's conditional `distance < current_distance` branch.
+    #[inline]
+    fn queue_children_and_finality(&mut self, intersection: &OrderedIntersection<N>) -> bool {
+        let mut child_parent_path = None;
+        intersection
+            .node
+            .visit_edges_and_finality(|label, child_node| {
+                self.queue_child(intersection, &mut child_parent_path, label, child_node);
+            })
+    }
 
-                    let child = OrderedIntersection::with_parent(
-                        label,
-                        child_node,
-                        next_state,
-                        parent_path,
-                    );
+    #[inline]
+    fn queue_child(
+        &mut self,
+        intersection: &OrderedIntersection<N>,
+        child_parent_path: &mut Option<usize>,
+        label: N::Unit,
+        child_node: N,
+    ) {
+        if let Some(next_state) = self.unit_transitions.transition(
+            &intersection.state,
+            &mut self.state_pool,
+            &self.policy,
+            label,
+            &self.query,
+            TransitionSettings::new(
+                self.max_distance,
+                self.algorithm,
+                self.substring_mode, // Use prefix_mode=true only for substring matching
+            ),
+        ) {
+            let should_enqueue = next_state
+                .min_distance()
+                .filter(|&min_dist| min_dist <= self.max_distance);
 
-                    // Add to the appropriate distance bucket
-                    self.pending_by_distance[min_dist].push_back(child);
-                } else {
-                    self.state_pool.release(next_state);
-                }
+            if let Some(min_dist) = should_enqueue {
+                let parent_path = match *child_parent_path {
+                    Some(path) => path,
+                    None => {
+                        let path = match intersection.label {
+                            Some(current_label) => {
+                                self.push_path_node(current_label, intersection.parent)
+                            }
+                            None => NO_PATH,
+                        };
+                        *child_parent_path = Some(path);
+                        path
+                    }
+                };
+
+                let child =
+                    OrderedIntersection::with_parent(label, child_node, next_state, parent_path);
+                self.pending_by_distance[min_dist].push_back(child);
+            } else {
+                self.state_pool.release(next_state);
             }
         }
     }
@@ -516,7 +537,8 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                 self.inner.pending_by_distance[self.inner.current_distance].pop_front()
             {
                 // Check if this is a complete word (final node) that matches our prefix
-                let matched_distance = if intersection.is_final() {
+                let is_final = self.inner.queue_children_and_finality(&intersection);
+                let matched_distance = if is_final {
                     // For prefix matching: check if we've consumed the entire query
                     intersection
                         .state
@@ -528,9 +550,6 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                 } else {
                     None
                 };
-
-                // Always queue children for further exploration
-                self.inner.queue_children(&intersection);
 
                 // Return the result if it's a complete word matching our prefix
                 if let Some(distance) = matched_distance {

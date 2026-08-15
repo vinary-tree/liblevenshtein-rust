@@ -1,0 +1,322 @@
+//! Feature-gated counters for causal performance investigations.
+//!
+//! The hot path calls the recording functions unconditionally. Without the
+//! `perf-instrumentation` feature they inline to no-ops, so ordinary builds do
+//! not contain counters or branches. Instrumented builds use relaxed atomics:
+//! the counters are observations, never synchronization inputs.
+
+#![allow(dead_code)]
+
+#[cfg(feature = "perf-instrumentation")]
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// Logical work performed by dictionary traversal and automaton simulation.
+///
+/// Timing and work counters must be collected in separate runs because the
+/// instrumented hot path intentionally favors complete observability over
+/// minimum overhead.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CausalPerfStats {
+    /// Dictionary/automaton intersections removed from a pending queue.
+    pub dictionary_intersections: u64,
+    /// Dictionary-node finality checks.
+    pub final_checks: u64,
+    /// Outgoing dictionary edges enumerated.
+    pub edges_enumerated: u64,
+    /// Automaton transitions attempted for dictionary edges.
+    pub transition_attempts: u64,
+    /// Automaton transitions that produced a non-empty state.
+    pub transition_accepted: u64,
+    /// Positions entering epsilon-closure computations.
+    pub epsilon_input_positions: u64,
+    /// Positions produced by epsilon-closure computations.
+    pub epsilon_output_positions: u64,
+    /// Characteristic vectors constructed.
+    pub characteristic_vectors: u64,
+    /// Query units inspected while constructing characteristic vectors.
+    pub characteristic_units: u64,
+    /// Successor positions produced before state subsumption.
+    pub successor_candidates: u64,
+    /// State-position insertions attempted.
+    pub state_insert_attempts: u64,
+    /// State-position insertions retained after subsumption.
+    pub state_insert_retained: u64,
+    /// Pairwise dominance checks performed by online subsumption.
+    pub subsumption_checks: u64,
+    /// Calls that copied one complete automaton state.
+    pub state_copy_calls: u64,
+    /// Positions copied by complete-state copies.
+    pub state_positions_copied: u64,
+    /// Bytes copied by complete-state copies.
+    pub state_bytes_copied: u64,
+    /// Positions embedded in accepted pending intersections.
+    pub state_positions_enqueued: u64,
+    /// Position bytes embedded in accepted pending intersections.
+    pub state_bytes_enqueued: u64,
+    /// Maximum number of pending intersections observed.
+    pub pending_queue_peak: u64,
+    /// State-pool acquisitions.
+    pub pool_acquires: u64,
+    /// State-pool acquisitions satisfied by a recycled state.
+    pub pool_reuses: u64,
+    /// State-pool acquisitions that created a new state.
+    pub pool_misses: u64,
+    /// States returned to the pool.
+    pub pool_releases: u64,
+    /// Accepted matches materialized by native query iterators.
+    pub matches_materialized: u64,
+    /// Foreign-provider finality callbacks.
+    pub foreign_is_final_callbacks: u64,
+    /// Foreign-provider edge callbacks.
+    pub foreign_edge_callbacks: u64,
+    /// Edge pages allocated and submitted to a foreign provider.
+    pub foreign_edge_pages: u64,
+    /// Foreign edge descriptors accepted and copied into consumer nodes.
+    pub foreign_edge_descriptors: u64,
+    /// Immutable foreign nodes served from the consumer snapshot cache.
+    pub foreign_node_cache_hits: u64,
+    /// Immutable foreign nodes populated into the consumer snapshot cache.
+    pub foreign_node_cache_misses: u64,
+    /// Matches copied into C ABI views.
+    pub ffi_matches_packed: u64,
+    /// Term bytes copied into C ABI arenas.
+    pub ffi_bytes_packed: u64,
+}
+
+#[cfg(feature = "perf-instrumentation")]
+macro_rules! counter {
+    ($name:ident) => {
+        static $name: AtomicU64 = AtomicU64::new(0);
+    };
+}
+
+#[cfg(feature = "perf-instrumentation")]
+counter!(DICTIONARY_INTERSECTIONS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FINAL_CHECKS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(EDGES_ENUMERATED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(TRANSITION_ATTEMPTS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(TRANSITION_ACCEPTED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(EPSILON_INPUT_POSITIONS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(EPSILON_OUTPUT_POSITIONS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(CHARACTERISTIC_VECTORS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(CHARACTERISTIC_UNITS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(SUCCESSOR_CANDIDATES);
+#[cfg(feature = "perf-instrumentation")]
+counter!(STATE_INSERT_ATTEMPTS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(STATE_INSERT_RETAINED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(SUBSUMPTION_CHECKS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(STATE_COPY_CALLS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(STATE_POSITIONS_COPIED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(STATE_BYTES_COPIED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(STATE_POSITIONS_ENQUEUED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(STATE_BYTES_ENQUEUED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(PENDING_QUEUE_PEAK);
+#[cfg(feature = "perf-instrumentation")]
+counter!(POOL_ACQUIRES);
+#[cfg(feature = "perf-instrumentation")]
+counter!(POOL_REUSES);
+#[cfg(feature = "perf-instrumentation")]
+counter!(POOL_MISSES);
+#[cfg(feature = "perf-instrumentation")]
+counter!(POOL_RELEASES);
+#[cfg(feature = "perf-instrumentation")]
+counter!(MATCHES_MATERIALIZED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FOREIGN_IS_FINAL_CALLBACKS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FOREIGN_EDGE_CALLBACKS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FOREIGN_EDGE_PAGES);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FOREIGN_EDGE_DESCRIPTORS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FOREIGN_NODE_CACHE_HITS);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FOREIGN_NODE_CACHE_MISSES);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FFI_MATCHES_PACKED);
+#[cfg(feature = "perf-instrumentation")]
+counter!(FFI_BYTES_PACKED);
+
+#[inline(always)]
+fn add(counter: &Counter, value: u64) {
+    counter.add(value);
+}
+
+#[cfg(feature = "perf-instrumentation")]
+struct Counter(&'static AtomicU64);
+
+#[cfg(feature = "perf-instrumentation")]
+impl Counter {
+    #[inline(always)]
+    fn add(&self, value: u64) {
+        self.0.fetch_add(value, Ordering::Relaxed);
+    }
+}
+
+#[cfg(not(feature = "perf-instrumentation"))]
+struct Counter;
+
+#[cfg(not(feature = "perf-instrumentation"))]
+impl Counter {
+    #[inline(always)]
+    fn add(&self, _value: u64) {}
+}
+
+macro_rules! recorder {
+    ($function:ident, $counter:ident) => {
+        #[inline(always)]
+        pub(crate) fn $function(value: u64) {
+            #[cfg(feature = "perf-instrumentation")]
+            add(&Counter(&$counter), value);
+            #[cfg(not(feature = "perf-instrumentation"))]
+            add(&Counter, value);
+        }
+    };
+}
+
+recorder!(record_dictionary_intersections, DICTIONARY_INTERSECTIONS);
+recorder!(record_final_checks, FINAL_CHECKS);
+recorder!(record_edges_enumerated, EDGES_ENUMERATED);
+recorder!(record_transition_attempts, TRANSITION_ATTEMPTS);
+recorder!(record_transition_accepted, TRANSITION_ACCEPTED);
+recorder!(record_epsilon_input_positions, EPSILON_INPUT_POSITIONS);
+recorder!(record_epsilon_output_positions, EPSILON_OUTPUT_POSITIONS);
+recorder!(record_characteristic_vectors, CHARACTERISTIC_VECTORS);
+recorder!(record_characteristic_units, CHARACTERISTIC_UNITS);
+recorder!(record_successor_candidates, SUCCESSOR_CANDIDATES);
+recorder!(record_state_insert_attempts, STATE_INSERT_ATTEMPTS);
+recorder!(record_state_insert_retained, STATE_INSERT_RETAINED);
+recorder!(record_subsumption_checks, SUBSUMPTION_CHECKS);
+recorder!(record_state_copy_calls, STATE_COPY_CALLS);
+recorder!(record_state_positions_copied, STATE_POSITIONS_COPIED);
+recorder!(record_state_bytes_copied, STATE_BYTES_COPIED);
+recorder!(record_state_positions_enqueued, STATE_POSITIONS_ENQUEUED);
+recorder!(record_state_bytes_enqueued, STATE_BYTES_ENQUEUED);
+recorder!(record_pool_acquires, POOL_ACQUIRES);
+recorder!(record_pool_reuses, POOL_REUSES);
+recorder!(record_pool_misses, POOL_MISSES);
+recorder!(record_pool_releases, POOL_RELEASES);
+recorder!(record_matches_materialized, MATCHES_MATERIALIZED);
+recorder!(
+    record_foreign_is_final_callbacks,
+    FOREIGN_IS_FINAL_CALLBACKS
+);
+recorder!(record_foreign_edge_callbacks, FOREIGN_EDGE_CALLBACKS);
+recorder!(record_foreign_edge_pages, FOREIGN_EDGE_PAGES);
+recorder!(record_foreign_edge_descriptors, FOREIGN_EDGE_DESCRIPTORS);
+recorder!(record_foreign_node_cache_hits, FOREIGN_NODE_CACHE_HITS);
+recorder!(record_foreign_node_cache_misses, FOREIGN_NODE_CACHE_MISSES);
+recorder!(record_ffi_matches_packed, FFI_MATCHES_PACKED);
+recorder!(record_ffi_bytes_packed, FFI_BYTES_PACKED);
+
+#[inline(always)]
+pub(crate) fn record_pending_queue_size(size: usize) {
+    #[cfg(feature = "perf-instrumentation")]
+    PENDING_QUEUE_PEAK.fetch_max(size as u64, Ordering::Relaxed);
+    #[cfg(not(feature = "perf-instrumentation"))]
+    let _ = size;
+}
+
+/// Reset all causal counters to zero.
+#[cfg(feature = "perf-instrumentation")]
+pub fn reset_causal_perf_stats() {
+    for counter in counters() {
+        counter.store(0, Ordering::Relaxed);
+    }
+}
+
+/// Snapshot all causal counters.
+#[cfg(feature = "perf-instrumentation")]
+pub fn causal_perf_stats() -> CausalPerfStats {
+    let load = |counter: &AtomicU64| counter.load(Ordering::Relaxed);
+    CausalPerfStats {
+        dictionary_intersections: load(&DICTIONARY_INTERSECTIONS),
+        final_checks: load(&FINAL_CHECKS),
+        edges_enumerated: load(&EDGES_ENUMERATED),
+        transition_attempts: load(&TRANSITION_ATTEMPTS),
+        transition_accepted: load(&TRANSITION_ACCEPTED),
+        epsilon_input_positions: load(&EPSILON_INPUT_POSITIONS),
+        epsilon_output_positions: load(&EPSILON_OUTPUT_POSITIONS),
+        characteristic_vectors: load(&CHARACTERISTIC_VECTORS),
+        characteristic_units: load(&CHARACTERISTIC_UNITS),
+        successor_candidates: load(&SUCCESSOR_CANDIDATES),
+        state_insert_attempts: load(&STATE_INSERT_ATTEMPTS),
+        state_insert_retained: load(&STATE_INSERT_RETAINED),
+        subsumption_checks: load(&SUBSUMPTION_CHECKS),
+        state_copy_calls: load(&STATE_COPY_CALLS),
+        state_positions_copied: load(&STATE_POSITIONS_COPIED),
+        state_bytes_copied: load(&STATE_BYTES_COPIED),
+        state_positions_enqueued: load(&STATE_POSITIONS_ENQUEUED),
+        state_bytes_enqueued: load(&STATE_BYTES_ENQUEUED),
+        pending_queue_peak: load(&PENDING_QUEUE_PEAK),
+        pool_acquires: load(&POOL_ACQUIRES),
+        pool_reuses: load(&POOL_REUSES),
+        pool_misses: load(&POOL_MISSES),
+        pool_releases: load(&POOL_RELEASES),
+        matches_materialized: load(&MATCHES_MATERIALIZED),
+        foreign_is_final_callbacks: load(&FOREIGN_IS_FINAL_CALLBACKS),
+        foreign_edge_callbacks: load(&FOREIGN_EDGE_CALLBACKS),
+        foreign_edge_pages: load(&FOREIGN_EDGE_PAGES),
+        foreign_edge_descriptors: load(&FOREIGN_EDGE_DESCRIPTORS),
+        foreign_node_cache_hits: load(&FOREIGN_NODE_CACHE_HITS),
+        foreign_node_cache_misses: load(&FOREIGN_NODE_CACHE_MISSES),
+        ffi_matches_packed: load(&FFI_MATCHES_PACKED),
+        ffi_bytes_packed: load(&FFI_BYTES_PACKED),
+    }
+}
+
+#[cfg(feature = "perf-instrumentation")]
+fn counters() -> [&'static AtomicU64; 32] {
+    [
+        &DICTIONARY_INTERSECTIONS,
+        &FINAL_CHECKS,
+        &EDGES_ENUMERATED,
+        &TRANSITION_ATTEMPTS,
+        &TRANSITION_ACCEPTED,
+        &EPSILON_INPUT_POSITIONS,
+        &EPSILON_OUTPUT_POSITIONS,
+        &CHARACTERISTIC_VECTORS,
+        &CHARACTERISTIC_UNITS,
+        &SUCCESSOR_CANDIDATES,
+        &STATE_INSERT_ATTEMPTS,
+        &STATE_INSERT_RETAINED,
+        &SUBSUMPTION_CHECKS,
+        &STATE_COPY_CALLS,
+        &STATE_POSITIONS_COPIED,
+        &STATE_BYTES_COPIED,
+        &STATE_POSITIONS_ENQUEUED,
+        &STATE_BYTES_ENQUEUED,
+        &PENDING_QUEUE_PEAK,
+        &POOL_ACQUIRES,
+        &POOL_REUSES,
+        &POOL_MISSES,
+        &POOL_RELEASES,
+        &MATCHES_MATERIALIZED,
+        &FOREIGN_IS_FINAL_CALLBACKS,
+        &FOREIGN_EDGE_CALLBACKS,
+        &FOREIGN_EDGE_PAGES,
+        &FOREIGN_EDGE_DESCRIPTORS,
+        &FOREIGN_NODE_CACHE_HITS,
+        &FOREIGN_NODE_CACHE_MISSES,
+        &FFI_MATCHES_PACKED,
+        &FFI_BYTES_PACKED,
+    ]
+}

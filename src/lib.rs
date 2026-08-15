@@ -27,6 +27,12 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
+mod causal_perf;
+
+#[cfg(feature = "perf-instrumentation")]
+#[doc(hidden)]
+pub use causal_perf::{causal_perf_stats, reset_causal_perf_stats, CausalPerfStats};
+
 /// Stable, non-generic streaming primitives used by generated language bindings.
 #[cfg(feature = "bindings-core")]
 pub mod bindings;

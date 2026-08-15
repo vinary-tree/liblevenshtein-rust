@@ -5,6 +5,7 @@
 //! zipper architecture and enables performance comparison with the existing
 //! node-based QueryIterator.
 
+use crate::transducer::transition::CachedUnitTransitions;
 use crate::transducer::{Algorithm, AutomatonZipper, Candidate, IntersectionZipper, StatePool};
 use libdictenstein::zipper::DictZipper;
 use std::collections::VecDeque;
@@ -59,6 +60,9 @@ where
 
     /// State pool for efficient allocation reuse
     pool: StatePool,
+
+    /// Query-local characteristic vectors shared by every zipper branch.
+    unit_transitions: CachedUnitTransitions<u8>,
 }
 
 impl<D> ZipperQueryIterator<D>
@@ -107,6 +111,7 @@ where
         ZipperQueryIterator {
             queue,
             pool: StatePool::new(),
+            unit_transitions: CachedUnitTransitions::new(query.len(), max_distance),
         }
     }
 }
@@ -120,19 +125,17 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         // BFS loop: explore states until we find a match
         while let Some(intersection) = self.queue.pop_front() {
-            // Check if current position is a match
-            if intersection.is_match() {
-                if let Some(distance) = intersection.distance() {
-                    // Found a match - create candidate
-                    let candidate = Candidate {
-                        term: intersection.term(),
-                        distance,
-                    };
+            // `distance` already performs the dictionary finality check. Calling
+            // `is_match` first would repeat that observation for every match.
+            if let Some(distance) = intersection.distance() {
+                let candidate = Candidate {
+                    term: intersection.term(),
+                    distance,
+                };
 
-                    self.queue_viable_children(&intersection);
+                self.queue_viable_children(&intersection);
 
-                    return Some(candidate);
-                }
+                return Some(candidate);
             }
 
             // Not a match - add viable children to queue
@@ -148,7 +151,9 @@ where
     D: DictZipper<Unit = u8>,
 {
     fn queue_viable_children(&mut self, intersection: &IntersectionZipper<D>) {
-        for (_label, child) in intersection.children(&mut self.pool) {
+        for (_label, child) in
+            intersection.children_cached(&mut self.pool, &mut self.unit_transitions)
+        {
             if child.is_viable() {
                 self.queue.push_back(child);
             }

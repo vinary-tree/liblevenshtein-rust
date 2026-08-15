@@ -9,6 +9,7 @@ import java.lang.foreign.MemorySegment;
 import java.lang.ref.Cleaner;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /** Levenshtein automaton configuration over a retained dictionary resource. */
 public final class Transducer implements AutoCloseable {
@@ -16,6 +17,11 @@ public final class Transducer implements AutoCloseable {
 
     private final State state;
     private final Cleaner.Cleanable cleanable;
+
+    private Transducer(MemorySegment handle) {
+        state = new State(handle);
+        cleanable = CLEANER.register(this, state);
+    }
 
     /** Retain a dictionary in O(1), using standard Levenshtein distance. */
     public Transducer(DictionaryResource dictionary) {
@@ -33,6 +39,20 @@ public final class Transducer implements AutoCloseable {
             state = new State(out.get(ADDRESS, 0));
         }
         cleanable = CLEANER.register(this, state);
+    }
+
+    /**
+     * Capture one immutable dictionary revision for a read-only query batch.
+     * The returned transducer shares validated provider-node data across
+     * cursors and does not observe later dictionary mutations.
+     */
+    public Transducer snapshot() {
+        ensureOpen();
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment out = arena.allocate(ADDRESS);
+            Native.check(Native.transducerSnapshot(state.handle(), out));
+            return new Transducer(out.get(ADDRESS, 0));
+        }
     }
 
     /** Start a traversal-order Unicode query. */
@@ -71,7 +91,8 @@ public final class Transducer implements AutoCloseable {
         Objects.requireNonNull(query, "query");
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment input = arena.allocate(
-                    Math.max(1, query.length) * JAVA_LONG.byteSize(), JAVA_LONG.byteAlignment());
+                    Math.multiplyExact(Math.max(1L, query.length), JAVA_LONG.byteSize()),
+                    JAVA_LONG.byteAlignment());
             for (int index = 0; index < query.length; index++) {
                 input.setAtIndex(JAVA_LONG, index, query[index]);
             }
@@ -94,6 +115,142 @@ public final class Transducer implements AutoCloseable {
                     Objects.requireNonNull(pattern, "pattern").handle(),
                     (byte) maximumDistance, out));
             return new QueryCursor(out.get(ADDRESS, 0));
+        }
+    }
+
+    /**
+     * Materialize every traversal-order Unicode match inside one explicit,
+     * thread-confined native scope.
+     *
+     * <p>This is the allocation-conscious alternative to an escapable
+     * {@link QueryCursor}. The callback receives ordinary owned {@link Match}
+     * values, so matches remain valid after this method returns.
+     */
+    public void forEachMatch(
+            String query,
+            long maximumDistance,
+            Consumer<? super Match> consumer) {
+        forEachMatch(query, maximumDistance, QueryOrder.TRAVERSAL, consumer);
+    }
+
+    /** Materialize every ordered Unicode match inside one explicit native scope. */
+    public void forEachMatch(
+            String query,
+            long maximumDistance,
+            QueryOrder order,
+            Consumer<? super Match> consumer) {
+        MemorySegment transducer = state.handle();
+        byte[] encoded = Objects.requireNonNull(query, "query").getBytes(StandardCharsets.UTF_8);
+        Objects.requireNonNull(order, "order");
+        Objects.requireNonNull(consumer, "consumer");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment out = arena.allocate(ADDRESS);
+            Native.check(Native.queryUtf8(
+                    transducer,
+                    bytes(arena, encoded),
+                    encoded.length,
+                    maximumDistance,
+                    order.nativeValue(),
+                    out));
+            drainMaterialized(out.get(ADDRESS, 0), arena.allocate(Native.BATCH), consumer);
+        }
+    }
+
+    /** Materialize every raw-byte match inside one explicit native scope. */
+    public void forEachMatch(
+            byte[] query,
+            long maximumDistance,
+            Consumer<? super Match> consumer) {
+        MemorySegment transducer = state.handle();
+        Objects.requireNonNull(query, "query");
+        Objects.requireNonNull(consumer, "consumer");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment out = arena.allocate(ADDRESS);
+            Native.check(Native.queryBytes(
+                    transducer,
+                    bytes(arena, query),
+                    query.length,
+                    maximumDistance,
+                    QueryOrder.TRAVERSAL.nativeValue(),
+                    out));
+            drainMaterialized(out.get(ADDRESS, 0), arena.allocate(Native.BATCH), consumer);
+        }
+    }
+
+    /** Materialize every raw u64-token match inside one explicit native scope. */
+    public void forEachMatch(
+            long[] query,
+            long maximumDistance,
+            Consumer<? super Match> consumer) {
+        MemorySegment transducer = state.handle();
+        Objects.requireNonNull(query, "query");
+        Objects.requireNonNull(consumer, "consumer");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment input = arena.allocate(
+                    Math.multiplyExact(Math.max(1L, query.length), JAVA_LONG.byteSize()),
+                    JAVA_LONG.byteAlignment());
+            for (int index = 0; index < query.length; index++) {
+                input.setAtIndex(JAVA_LONG, index, query[index]);
+            }
+            MemorySegment out = arena.allocate(ADDRESS);
+            Native.check(Native.queryU64(
+                    transducer,
+                    input,
+                    query.length,
+                    maximumDistance,
+                    QueryOrder.TRAVERSAL.nativeValue(),
+                    out));
+            drainMaterialized(out.get(ADDRESS, 0), arena.allocate(Native.BATCH), consumer);
+        }
+    }
+
+    /** Materialize every phonetic-product match inside one explicit native scope. */
+    public void forEachMatch(
+            PhoneticPattern pattern,
+            int maximumDistance,
+            Consumer<? super Match> consumer) {
+        MemorySegment transducer = state.handle();
+        if (maximumDistance < 0 || maximumDistance > 255) {
+            throw new IllegalArgumentException("maximumDistance must be 0..255");
+        }
+        Objects.requireNonNull(pattern, "pattern");
+        Objects.requireNonNull(consumer, "consumer");
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment out = arena.allocate(ADDRESS);
+            Native.check(Native.queryPattern(
+                    transducer, pattern.handle(), (byte) maximumDistance, out));
+            drainMaterialized(out.get(ADDRESS, 0), arena.allocate(Native.BATCH), consumer);
+        }
+    }
+
+    private static void drainMaterialized(
+            MemorySegment cursor,
+            MemorySegment batchOut,
+            Consumer<? super Match> consumer) {
+        RuntimeException runtimeFailure = null;
+        Error errorFailure = null;
+        try {
+            while (NativeQueryBatches.withNextBatch(cursor, batchOut, batch -> {
+                for (int index = 0; index < batch.size(); index++) {
+                    consumer.accept(batch.get(index).materialize());
+                }
+            })) {}
+        } catch (RuntimeException failure) {
+            runtimeFailure = failure;
+            throw failure;
+        } catch (Error failure) {
+            errorFailure = failure;
+            throw failure;
+        } finally {
+            try {
+                Native.check(Native.cursorFree(cursor));
+            } catch (RuntimeException | Error cleanupFailure) {
+                Throwable primary = runtimeFailure != null ? runtimeFailure : errorFailure;
+                if (primary == null) {
+                    throw cleanupFailure;
+                }
+                primary.addSuppressed(cleanupFailure);
+            }
         }
     }
 

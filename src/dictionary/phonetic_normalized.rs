@@ -67,6 +67,7 @@
 //! - [`crate::phonetic`] module for phonetic rule definitions
 
 use crate::cache::multimap::FuzzyMultiMap;
+use crate::dictionary::node_adapter::{for_each_wrapped_edge, visit_wrapped_edges_and_finality};
 use crate::distance::standard_distance;
 use crate::phonetic::expansion::expand_phonetic_alternatives_char;
 use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar};
@@ -477,6 +478,30 @@ impl<N: DictionaryNode> DictionaryNode for PhoneticNormalizedNode<N> {
         )
     }
 
+    #[inline]
+    fn for_each_edge<F>(&self, visitor: F)
+    where
+        F: FnMut(Self::Unit, Self),
+    {
+        for_each_wrapped_edge(
+            &self.inner,
+            |inner| PhoneticNormalizedNode { inner },
+            visitor,
+        );
+    }
+
+    #[inline]
+    fn visit_edges_and_finality<F>(&self, visitor: F) -> bool
+    where
+        F: FnMut(Self::Unit, Self),
+    {
+        visit_wrapped_edges_and_finality(
+            &self.inner,
+            |inner| PhoneticNormalizedNode { inner },
+            visitor,
+        )
+    }
+
     fn has_edge(&self, label: Self::Unit) -> bool {
         self.inner.has_edge(label)
     }
@@ -491,6 +516,11 @@ impl<N: MappedDictionaryNode> MappedDictionaryNode for PhoneticNormalizedNode<N>
 
     fn value(&self) -> Option<Self::Value> {
         self.inner.value()
+    }
+
+    #[inline]
+    fn value_at_final(&self) -> Option<Self::Value> {
+        self.inner.value_at_final()
     }
 }
 

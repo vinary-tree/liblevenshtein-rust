@@ -170,10 +170,10 @@ typedef struct VtInterfaceId { uint8_t bytes[16]; } VtInterfaceId;
 ```
 
 An interface identifier is sixteen bytes compared **byte-for-byte** — no
-hashing, no case folding, no NUL terminator, no registry. The two published
-identifiers (quoted in [§ 8.3](#83-the-published-identifiers)) are ASCII
-mnemonics whose *sixteenth byte is the version fork counter*:
-`vt.dictionary.v1` and `vt.scalar-wfst.1`. Exactness is the point: two
+hashing, no case folding, no NUL terminator, no registry. The three published
+identifiers (quoted in [§ 8.1](#81-the-published-identifiers)) are ASCII
+mnemonics with an explicit version suffix: `vt.dictionary.v1`,
+`vt.dict.visit.v1`, and `vt.scalar-wfst.1`. Exactness is the point: two
 independently built binaries agree on an interface exactly when they contain
 the same sixteen bytes, and a *breaking* interface revision changes the
 string itself so the two contracts can never be confused
@@ -478,6 +478,33 @@ The `context` passed to every op is the resource's context word.
   pages the rare high-degree node by advancing `start`. The precise algebra
   is § 6.5, law (P).
 
+#### Optional fused node inspection: `vt.dict.visit.v1`
+
+Consumers that require finality and outgoing edges together may negotiate the
+separate `vt.dict.visit.v1` capability. It is a separate interface—not a tail
+addition to `VtDictionaryVTable`—so the original dictionary-v1 layout remains
+byte-for-byte compatible with existing providers and consumers.
+
+```c
+typedef struct VtDictionaryVisitVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*node_visit)(void* context, uint64_t node, size_t start,
+                           uint8_t* out_is_final,
+                           VtDictionaryEdge* out_edges, size_t capacity,
+                           size_t* out_written, size_t* out_total);
+} VtDictionaryVisitVTable;
+```
+
+`node_visit` returns the same zero-or-one finality value and obeys the same
+edge-page algebra as the two dictionary-v1 operations it fuses. Finality must
+remain identical across every page of one node. The fused operation permits a
+provider to validate a node and acquire its internal synchronization once;
+it does not weaken output validation or snapshot lifetime rules. A consumer
+must fall back to `node_is_final` plus `node_edges` when negotiation returns
+`Unsupported`.
+
 Only `snapshot`, `root`, `node_is_final`, and `node_edges` are unconditionally
 required by the reference consumer; `len` and `node_transition` are optional
 accelerations, and `node_value_u64` is conditionally required as stated
@@ -770,15 +797,21 @@ static const VtInterfaceId VT_DICTIONARY_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','i','o','n','a','r','y','.','v','1' }
 };
 
+static const VtInterfaceId VT_DICTIONARY_VISIT_INTERFACE_ID = {
+    { 'v','t','.','d','i','c','t','.','v','i','s','i','t','.','v','1' }
+};
+
 static const VtInterfaceId VT_WFST_INTERFACE_ID = {
     { 'v','t','.','s','c','a','l','a','r','-','w','f','s','t','.','1' }
 };
 ```
 
-The two constants every conforming binary shares, spelled as character
-arrays so the byte-exactness is visible: `vt.dictionary.v1` (16 bytes) and
-`vt.scalar-wfst.1` (16 bytes). They are `static const` so the header stays
-usable from any C translation unit without a home object file.
+The three constants are spelled as character arrays so byte exactness is
+visible: `vt.dictionary.v1`, `vt.dict.visit.v1`, and `vt.scalar-wfst.1`
+(16 bytes each). They are `static const` so the header stays usable from any
+C translation unit without a home object file. Only the base dictionary and
+WFST interfaces are mandatory for their respective providers; fused visit is
+an optional negotiated capability.
 
 ### 8.2 The C++ guard
 
@@ -811,7 +844,7 @@ and any layout or semantic drift fails there before it can ship:
 
 | Suite | What it pins | Invariant hooks |
 |---|---|---|
-| [`layout_contract.rs`](../tests/layout_contract.rs) | Sizes, alignments, and every field offset of all seven `#[repr(C)]` types — exact tables for the 64-bit tier and the 32-bit ARM EABI tier, plus target-independent packing laws; the two-word law; either-word null semantics; byte-exact interface identifiers; the `Option<extern "C" fn>` null niche. | VT-ABI-1, VT-ABI-2, VT-ABI-3, VT-ABI-4, VT-ABI-6 |
+| [`layout_contract.rs`](../tests/layout_contract.rs) | Sizes, alignments, and every field offset of all eight `#[repr(C)]` types — exact tables for the 64-bit tier and the 32-bit ARM EABI tier, plus target-independent packing laws; the two-word law; either-word null semantics; byte-exact interface identifiers; the `Option<extern "C" fn>` null niche. | VT-ABI-1, VT-ABI-2, VT-ABI-3, VT-ABI-4, VT-ABI-6 |
 | [`discriminant_pins.rs`](../tests/discriminant_pins.rs) | Every enum discriminant and flag bit, twice: exact numeric pins, and wildcard-free `match` tables so *adding* a variant fails compilation until the pins (and the [evolution policy](abi-evolution.md)) are consulted; zeroed defaults for all reserved fields. | VT-ABI-5 |
 | [`vtable_evolution.rs`](../tests/vtable_evolution.rs) | The `query_interface` negotiation surface against a hand-rolled provider: wrong identifier and future `minimum_version` yield `Unsupported` with the output untouched, NULL arguments yield `NullPointer`, success hands out a provider-owned vtable without retaining, the retain/release ledger balances, and a strictly larger future vtable remains consumable through its v1 prefix via `struct_size`. | VT-QI-1, VT-QI-2, VT-QI-3 |
 

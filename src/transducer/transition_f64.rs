@@ -19,6 +19,9 @@
 //! | Threshold | `max_distance: usize` | `max_cost: f64` |
 //! | Comparison | `e < max_distance` | `cost < max_cost` (with epsilon) |
 
+use super::transition::{
+    CachedCharacteristics, CharacteristicCache, CharacteristicProvider, OnDemandCharacteristics,
+};
 use super::{
     Algorithm, OperationCostsF64, PositionF64, StateF64, StatePoolF64, SubstitutionPolicy,
     SubstitutionPolicyFor,
@@ -58,41 +61,6 @@ impl<'a> TransitionSettingsF64<'a> {
             prefix_mode,
         }
     }
-}
-
-/// Compute the characteristic vector for a position in the query.
-///
-/// The characteristic vector indicates which characters in a window
-/// of the query term can be consumed without error when matching the
-/// dictionary character.
-///
-/// This is identical to the integer version since character matching
-/// is independent of cost model.
-#[inline]
-fn characteristic_vector<'a, U: CharUnit, P: SubstitutionPolicy + SubstitutionPolicyFor<U>>(
-    policy: &P,
-    dict_unit: U,
-    query: &[U],
-    window_size: usize,
-    offset: usize,
-    output: &'a mut SmallVec<[bool; 8]>,
-) -> &'a [bool] {
-    output.clear();
-    output.reserve(window_size);
-
-    for i in 0..window_size {
-        let matched = if let Some(query_unit) = checked_query_index(offset, i)
-            .and_then(|query_idx| query.get(query_idx))
-            .copied()
-        {
-            query_unit == dict_unit || policy.is_allowed_for(dict_unit, query_unit)
-        } else {
-            false
-        };
-        output.push(matched);
-    }
-
-    output.as_slice()
 }
 
 /// Find the index of the first true value in `cv[start..start+limit]`.
@@ -174,11 +142,6 @@ fn at_threshold(cost: f64, max_cost: f64) -> bool {
 }
 
 #[inline(always)]
-fn checked_query_index(offset: usize, window_index: usize) -> Option<usize> {
-    offset.checked_add(window_index)
-}
-
-#[inline(always)]
 fn checked_window_end(start: usize, limit: usize, len: usize) -> Option<usize> {
     let end = start.checked_add(limit).unwrap_or(len).min(len);
     (start <= end).then_some(end)
@@ -205,6 +168,56 @@ fn transition_window_size_f64(max_cost: f64, min_cost: f64, query_length: usize)
         cost_window.min(query_window)
     } else {
         query_window
+    }
+}
+
+/// Query-local transition engine for weighted automata.
+///
+/// Character equivalence is independent of the operation-cost model, so the
+/// weighted kernel shares the same label/query cache as the unit-cost kernel.
+/// Every accepted successor is epsilon-closed before it is queued, avoiding a
+/// repeated deletion closure for each outgoing dictionary edge.
+pub(crate) struct CachedF64Transitions<U: CharUnit> {
+    cache: CharacteristicCache<U>,
+    query_length: usize,
+    max_cost_bits: u64,
+}
+
+impl<U: CharUnit> CachedF64Transitions<U> {
+    pub(crate) fn new(query_length: usize, max_cost: f64, costs: &OperationCostsF64) -> Self {
+        let window = transition_window_size_f64(max_cost, costs.min_nonzero_cost(), query_length);
+        let mut cache = CharacteristicCache::new(query_length, 0);
+        cache.ensure_padding(window);
+        Self {
+            cache,
+            query_length,
+            max_cost_bits: max_cost.to_bits(),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn transition<P>(
+        &mut self,
+        state: &StateF64,
+        pool: &mut StatePoolF64,
+        policy: &P,
+        dict_unit: U,
+        query: &[U],
+        settings: TransitionSettingsF64<'_>,
+    ) -> Option<StateF64>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        debug_assert_eq!(query.len(), self.query_length);
+        debug_assert_eq!(settings.max_cost.to_bits(), self.max_cost_bits);
+        let matches = self.cache.matches_for(policy, dict_unit, query);
+        transition_epsilon_closed_state_pooled_f64_cached(
+            state,
+            pool,
+            matches,
+            query.len(),
+            settings,
+        )
     }
 }
 
@@ -840,8 +853,6 @@ pub fn transition_state_f64<U: CharUnit, P: SubstitutionPolicy + SubstitutionPol
     query: &[U],
     settings: TransitionSettingsF64<'_>,
 ) -> Option<StateF64> {
-    let min_cost = settings.costs.min_nonzero_cost();
-    let window_size = transition_window_size_f64(settings.max_cost, min_cost, query.len());
     let query_length = query.len();
 
     // First, expand state with epsilon closure (deletions)
@@ -855,31 +866,13 @@ pub fn transition_state_f64<U: CharUnit, P: SubstitutionPolicy + SubstitutionPol
     );
 
     let mut next_state = StateF64::new();
-    let mut cv = SmallVec::<[bool; 8]>::new();
-
-    for position in expanded_state.positions() {
-        let offset = position.term_index;
-        let cv = characteristic_vector(&policy, dict_unit, query, window_size, offset, &mut cv);
-
-        let next_positions = transition_position_f64(
-            position,
-            cv,
-            query_length,
-            settings.max_cost,
-            settings.algorithm,
-            settings.costs,
-            settings.prefix_mode,
-        );
-
-        for next_pos in next_positions {
-            next_state.insert(
-                next_pos,
-                settings.algorithm,
-                query_length,
-                settings.costs.insertion.max(settings.costs.deletion),
-            );
-        }
-    }
+    let characteristics = OnDemandCharacteristics::new(&policy, dict_unit, query);
+    transition_epsilon_closed_state_into_f64(
+        &expanded_state,
+        &mut next_state,
+        &characteristics,
+        settings,
+    );
 
     if next_state.is_empty() {
         None
@@ -923,8 +916,6 @@ pub(crate) fn transition_state_pooled_f64_ref<
     query: &[U],
     settings: TransitionSettingsF64<'_>,
 ) -> Option<StateF64> {
-    let min_cost = settings.costs.min_nonzero_cost();
-    let window_size = transition_window_size_f64(settings.max_cost, min_cost, query.len());
     let query_length = query.len();
 
     // Acquire state from pool for epsilon closure
@@ -940,12 +931,74 @@ pub(crate) fn transition_state_pooled_f64_ref<
 
     // Acquire another state for next state
     let mut next_state = pool.acquire();
+    let characteristics = OnDemandCharacteristics::new(policy, dict_unit, query);
+    transition_epsilon_closed_state_into_f64(
+        &expanded_state,
+        &mut next_state,
+        &characteristics,
+        settings,
+    );
+
+    // Return expanded state to pool
+    pool.release(expanded_state);
+
+    if next_state.is_empty() {
+        pool.release(next_state);
+        None
+    } else {
+        Some(next_state)
+    }
+}
+
+/// Transition from an epsilon-closed weighted state through precomputed
+/// label/query equivalence data and close the accepted successor in place.
+#[inline]
+fn transition_epsilon_closed_state_pooled_f64_cached(
+    state: &StateF64,
+    pool: &mut StatePoolF64,
+    matches: &[bool],
+    query_length: usize,
+    settings: TransitionSettingsF64<'_>,
+) -> Option<StateF64> {
+    let characteristics = CachedCharacteristics::new(matches, query_length);
+    let mut next_state = pool.acquire();
+    transition_epsilon_closed_state_into_f64(state, &mut next_state, &characteristics, settings);
+
+    if next_state.is_empty() {
+        pool.release(next_state);
+        return None;
+    }
+
+    epsilon_closure_mut_f64(
+        &mut next_state,
+        query_length,
+        settings.max_cost,
+        settings.algorithm,
+        settings.costs,
+    );
+    Some(next_state)
+}
+
+/// Shared weighted successor loop. Both compatibility transitions and the
+/// query-local cached path remain statically dispatched through `C`.
+#[inline]
+fn transition_epsilon_closed_state_into_f64<C: CharacteristicProvider>(
+    state: &StateF64,
+    next_state: &mut StateF64,
+    characteristics: &C,
+    settings: TransitionSettingsF64<'_>,
+) {
+    let query_length = characteristics.query_length();
+    let window_size = transition_window_size_f64(
+        settings.max_cost,
+        settings.costs.min_nonzero_cost(),
+        query_length,
+    );
+    let max_index_operation_cost = settings.costs.insertion.max(settings.costs.deletion);
     let mut cv = SmallVec::<[bool; 8]>::new();
 
-    for position in expanded_state.positions() {
-        let offset = position.term_index;
-        let cv = characteristic_vector(policy, dict_unit, query, window_size, offset, &mut cv);
-
+    for position in state.positions() {
+        let cv = characteristics.window(position.term_index, window_size, &mut cv);
         let next_positions = transition_position_f64(
             position,
             cv,
@@ -956,24 +1009,14 @@ pub(crate) fn transition_state_pooled_f64_ref<
             settings.prefix_mode,
         );
 
-        for next_pos in next_positions {
+        for next_position in next_positions {
             next_state.insert(
-                next_pos,
+                next_position,
                 settings.algorithm,
                 query_length,
-                settings.costs.insertion.max(settings.costs.deletion),
+                max_index_operation_cost,
             );
         }
-    }
-
-    // Return expanded state to pool
-    pool.release(expanded_state);
-
-    if next_state.is_empty() {
-        pool.release(next_state);
-        None
-    } else {
-        Some(next_state)
     }
 }
 
@@ -1030,10 +1073,12 @@ mod tests {
         let policy = Unrestricted;
         let mut buffer = SmallVec::<[bool; 8]>::new();
 
-        let cv = characteristic_vector(&policy, b't', query, 3, 0, &mut buffer);
+        let provider = OnDemandCharacteristics::new(&policy, b't', query);
+        let cv = provider.window(0, 3, &mut buffer);
         assert_eq!(cv, &[true, false, false]);
 
-        let cv = characteristic_vector(&policy, b'e', query, 3, 0, &mut buffer);
+        let provider = OnDemandCharacteristics::new(&policy, b'e', query);
+        let cv = provider.window(0, 3, &mut buffer);
         assert_eq!(cv, &[false, true, false]);
     }
 
@@ -1043,7 +1088,8 @@ mod tests {
         let policy = Unrestricted;
         let mut buffer = SmallVec::<[bool; 8]>::new();
 
-        let cv = characteristic_vector(&policy, b'j', query, 12, 0, &mut buffer);
+        let provider = OnDemandCharacteristics::new(&policy, b'j', query);
+        let cv = provider.window(0, 12, &mut buffer);
 
         assert_eq!(cv.len(), 12);
         assert!(cv[9]);
@@ -1051,7 +1097,6 @@ mod tests {
 
     #[test]
     fn checked_float_transition_arithmetic_helpers_handle_boundaries() {
-        assert_eq!(checked_query_index(usize::MAX, 1), None);
         assert_eq!(checked_window_end(1, usize::MAX, 4), Some(4));
         assert_eq!(checked_window_end(5, 1, 4), None);
         assert_eq!(checked_successor_or_max(usize::MAX), usize::MAX);
@@ -1103,7 +1148,8 @@ mod tests {
         let policy = Unrestricted;
         let mut buffer = SmallVec::<[bool; 8]>::new();
 
-        let cv = characteristic_vector(&policy, b'x', query, 2, usize::MAX, &mut buffer);
+        let provider = OnDemandCharacteristics::new(&policy, b'x', query);
+        let cv = provider.window(usize::MAX, 2, &mut buffer);
 
         assert_eq!(cv, &[false, false]);
     }

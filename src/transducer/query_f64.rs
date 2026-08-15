@@ -12,9 +12,7 @@
 //! | Costs | Hardcoded `+1` | `OperationCostsF64` |
 //! | Result | `Candidate { distance: usize }` | `CandidateF64 { distance: f64 }` |
 
-use super::transition_f64::{
-    initial_state_f64, transition_state_pooled_f64_ref, TransitionSettingsF64,
-};
+use super::transition_f64::{initial_state_f64, CachedF64Transitions, TransitionSettingsF64};
 use super::{
     Algorithm, OperationCostsF64, StateF64, StatePoolF64, SubstitutionPolicy,
     SubstitutionPolicyFor, Unrestricted,
@@ -106,11 +104,6 @@ impl<N: DictionaryNode> QueryIntersectionF64<N> {
 
         units.reverse();
         units
-    }
-
-    #[inline(always)]
-    fn is_final(&self) -> bool {
-        self.node.is_final()
     }
 }
 
@@ -209,6 +202,8 @@ pub struct QueryIteratorF64<N: DictionaryNode, R = String, P: SubstitutionPolicy
     path_arena: Vec<QueryPathNodeF64<N::Unit>>,
     finished: bool,
     state_pool: StatePoolF64,
+    /// Shared weighted transition cache; queued states are epsilon-closed.
+    unit_transitions: CachedF64Transitions<N::Unit>,
     substring_mode: bool,
     _result_type: PhantomData<R>,
 }
@@ -302,6 +297,7 @@ impl<
         substring_mode: bool,
     ) -> Self {
         let initial = initial_state_f64(query_units.len(), max_cost, algorithm, &costs);
+        let unit_transitions = CachedF64Transitions::new(query_units.len(), max_cost, &costs);
 
         let mut pending = VecDeque::new();
         pending.push_back(QueryIntersectionF64::new(root, initial));
@@ -316,6 +312,7 @@ impl<
             path_arena: Vec::with_capacity(64),
             finished: false,
             state_pool: StatePoolF64::new(),
+            unit_transitions,
             substring_mode,
             _result_type: PhantomData,
         }
@@ -324,8 +321,9 @@ impl<
     /// Advance to the next match
     fn advance(&mut self) -> Option<R> {
         while let Some(intersection) = self.pending.pop_front() {
+            let is_final = self.queue_children_and_finality(&intersection);
             // Check if this is a final match
-            if intersection.is_final() {
+            if is_final {
                 // Infer the distance based on matching mode
                 let distance = if self.substring_mode {
                     intersection.state.min_distance().unwrap_or(f64::INFINITY)
@@ -338,17 +336,8 @@ impl<
 
                 if distance <= self.max_cost + 1e-9 {
                     let units = intersection.units(&self.path_arena);
-
-                    // Queue children for further exploration
-                    self.queue_children(&intersection);
-
                     return Some(R::from_match(&units, distance));
-                } else {
-                    // Even if too far, explore children
-                    self.queue_children(&intersection);
                 }
-            } else {
-                self.queue_children(&intersection);
             }
         }
 
@@ -357,43 +346,49 @@ impl<
     }
 
     /// Queue child intersections for exploration
-    fn queue_children(&mut self, intersection: &QueryIntersectionF64<N>) {
+    fn queue_children_and_finality(&mut self, intersection: &QueryIntersectionF64<N>) -> bool {
         let mut child_parent_path = None;
 
-        for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled_f64_ref(
-                &intersection.state,
-                &mut self.state_pool,
-                &self.policy,
-                label,
-                &self.query,
-                TransitionSettingsF64::new(
-                    self.max_cost,
-                    self.algorithm,
-                    &self.costs,
-                    self.substring_mode,
-                ),
-            ) {
-                let parent_path = match child_parent_path {
-                    Some(path) => path,
-                    None => {
-                        let path = match intersection.label {
-                            Some(current_label) => {
-                                self.push_path_node(current_label, intersection.parent)
-                            }
-                            None => NO_PATH,
-                        };
-                        child_parent_path = Some(path);
-                        path
-                    }
-                };
+        intersection
+            .node
+            .visit_edges_and_finality(|label, child_node| {
+                if let Some(next_state) = self.unit_transitions.transition(
+                    &intersection.state,
+                    &mut self.state_pool,
+                    &self.policy,
+                    label,
+                    &self.query,
+                    TransitionSettingsF64::new(
+                        self.max_cost,
+                        self.algorithm,
+                        &self.costs,
+                        self.substring_mode,
+                    ),
+                ) {
+                    let parent_path = match child_parent_path {
+                        Some(path) => path,
+                        None => {
+                            let path = match intersection.label {
+                                Some(current_label) => {
+                                    self.push_path_node(current_label, intersection.parent)
+                                }
+                                None => NO_PATH,
+                            };
+                            child_parent_path = Some(path);
+                            path
+                        }
+                    };
 
-                let child =
-                    QueryIntersectionF64::with_parent(label, child_node, next_state, parent_path);
+                    let child = QueryIntersectionF64::with_parent(
+                        label,
+                        child_node,
+                        next_state,
+                        parent_path,
+                    );
 
-                self.pending.push_back(child);
-            }
-        }
+                    self.pending.push_back(child);
+                }
+            })
     }
 
     #[inline]

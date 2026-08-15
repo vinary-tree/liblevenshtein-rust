@@ -597,11 +597,27 @@ where
                 continue;
             }
 
-            // Determine whether this node yields a candidate, but do NOT return
-            // yet: its children must still be enqueued below, or every term that
-            // extends a matched prefix (e.g. "phones"/"phoned" past a final
-            // "phone") would be skipped.
-            let candidate = if entry.node.is_final() {
+            // Inspect finality and enqueue children as one logical dictionary
+            // operation whenever this node is expandable. This lets
+            // boundary-backed dictionaries fuse their lock/callback work.
+            let child_depth = phonetic_child_depth(entry.depth)
+                .filter(|child_depth| *child_depth <= self.max_depth);
+            let is_final = if let Some(child_depth) = child_depth {
+                let parent = match entry.label {
+                    Some(label) => self.push_path_node(label, entry.parent),
+                    None => entry.parent,
+                };
+                entry.node.visit_edges_and_finality(|c, child| {
+                    self.queue
+                        .push_back(PhoneticTraversal::child(child, c, parent, child_depth));
+                })
+            } else {
+                entry.node.is_final()
+            };
+
+            // Determine whether this node yields a candidate after its children
+            // are enqueued, so extensions of a matched prefix are never skipped.
+            let candidate = if is_final {
                 // Check if the product automaton accepts this path
                 let path = self.materialize_path(&entry);
                 self.product.min_distance(&path).map(|distance| {
@@ -627,25 +643,6 @@ where
             } else {
                 None
             };
-
-            // Explore children via edges (bounded by max_depth) BEFORE returning
-            // any candidate, so the traversal state advances past this node.
-            let parent = match entry.label {
-                Some(label) => self.push_path_node(label, entry.parent),
-                None => entry.parent,
-            };
-            if let Some(child_depth) = phonetic_child_depth(entry.depth) {
-                if child_depth <= self.max_depth {
-                    for (c, child) in entry.node.edges() {
-                        self.queue.push_back(PhoneticTraversal::child(
-                            child,
-                            c,
-                            parent,
-                            child_depth,
-                        ));
-                    }
-                }
-            }
 
             if let Some(candidate) = candidate {
                 return Some(candidate);
@@ -779,7 +776,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(query) = &mut self.language_query {
             for matched in query {
-                if let Some(value) = matched.node.value() {
+                if let Some(value) = matched.node.value_at_final() {
                     return Some(PhoneticValueCandidate::new(
                         matched.units.into_iter().collect(),
                         matched.distance,
@@ -796,11 +793,27 @@ where
                 continue;
             }
 
-            // A candidate requires a stored value at this node (a value-bearing
-            // terminal) AND a phonetic/edit match. Compute it but do NOT return
-            // yet — children are enqueued below so extensions of a matched prefix
-            // are not skipped.
-            let candidate = if let Some(value) = entry.node.value() {
+            let child_depth = phonetic_child_depth(entry.depth)
+                .filter(|child_depth| *child_depth <= self.max_depth);
+            let is_final = if let Some(child_depth) = child_depth {
+                let parent = match entry.label {
+                    Some(label) => self.push_path_node(label, entry.parent),
+                    None => entry.parent,
+                };
+                entry.node.visit_edges_and_finality(|c, child| {
+                    self.queue
+                        .push_back(PhoneticTraversal::child(child, c, parent, child_depth));
+                })
+            } else {
+                entry.node.is_final()
+            };
+
+            // A candidate requires a stored value at this terminal and a
+            // phonetic/edit match. Children have already been enqueued.
+            let candidate = if is_final {
+                let Some(value) = entry.node.value_at_final() else {
+                    continue;
+                };
                 let path = self.materialize_path(&entry);
                 if let Some(distance) = self.product.min_distance(&path) {
                     let phonetic_cost = self.phonetic_cost(&path, distance);
@@ -816,23 +829,6 @@ where
             } else {
                 None
             };
-
-            let parent = match entry.label {
-                Some(label) => self.push_path_node(label, entry.parent),
-                None => entry.parent,
-            };
-            if let Some(child_depth) = phonetic_child_depth(entry.depth) {
-                if child_depth <= self.max_depth {
-                    for (c, child) in entry.node.edges() {
-                        self.queue.push_back(PhoneticTraversal::child(
-                            child,
-                            c,
-                            parent,
-                            child_depth,
-                        ));
-                    }
-                }
-            }
 
             if let Some(candidate) = candidate {
                 return Some(candidate);

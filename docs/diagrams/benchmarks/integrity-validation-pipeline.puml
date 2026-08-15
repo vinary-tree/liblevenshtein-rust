@@ -1,0 +1,161 @@
+@startuml integrity-validation-pipeline
+' Integrity constraints and where each is enforced across the campaign.
+' Companion to docs/benchmarks/cross-language/methodology.md §4-§5.
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+skinparam ArrowColor #37474F
+skinparam roundcorner 8
+
+skinparam activity {
+  BorderColor #37474F
+  FontColor #102027
+}
+
+' Colour legend, applied consistently:
+'   blue   = preparation / provenance capture
+'   green  = correctness gating
+'   amber  = measurement under constraint
+'   purple = post-hoc integrity analysis
+'   red    = abort / quarantine paths
+
+title Integrity constraints and their enforcement points
+
+|#E3F2FD|preparation|
+start
+:**env-capture**
+pins SHA-256 of every artifact:
+cdylibs, dictionary, query sets,
+vendored legacy bundles;
+note right #E3F2FD
+  Establishes the run's identity.
+  Every later check compares
+  against these pins.
+end note
+
+:**doctor**
+governor = performance on cpus 2-9,
+SMT siblings idle, release cdylibs
+present, per-toolchain smoke test;
+if (all requested targets ready?) then (no)
+  #FFCDD2:**ABORT**
+  a target that cannot run is never
+  silently skipped;
+  stop
+else (yes)
+endif
+
+|#E8F5E9|correctness gate|
+:**gate.py**
+every target vs the Rust oracle
+over the verify-cell family;
+:compare the four-tuple
+<latex>(\,|M|,\ \sum |t|,\ \sum d,\ \mathrm{FNV}\text{-}1a_{64}\,)</latex>;
+if (bit-exact for every target?) then (no)
+  #FFCDD2:**ABORT**
+  timing is never accepted from an
+  implementation that is not proven
+  correct on this workload;
+  stop
+else (yes)
+endif
+
+|#FFF8E1|measurement (strictly serial)|
+repeat :next cell;
+  :snapshot cpu MHz + load_avg_1m;
+  :**taskset** pin
+  single-threaded: cpu 2
+  managed runtimes: cpus 2-9
+  (identical for both arms of a pair);
+  :warm up <latex>\geq 3</latex> s, then pin the
+  reference pair <latex>(|M|, \mathrm{checksum})</latex>;
+  repeat :timed pass <latex>i</latex>;
+    :drain every cursor fully,
+    materialize <latex>(term, distance)</latex>;
+    if (pass reproduces the reference?) then (no)
+      #FFCDD2:**FAIL THE CELL**
+      nondeterminism is never
+      averaged away;
+      stop
+    else (yes)
+    endif
+  repeat while (more samples?) is (yes)
+  ->no;
+  :**postfill**
+  run_id, environment_ref, cell_snapshot,
+  workload digests, **native_digests**;
+  if (cell validates against the schema?) then (no)
+    #FFCDD2:**QUARANTINE**
+    incomplete record moved aside
+    with a manifest; resume
+    re-measures the coordinate;
+    detach
+  else (yes)
+  endif
+  :cell written;
+  note right #FFF8E1
+    Concurrently, the **timed-process guard**
+    classifies every harness process as
+    MINE / FOREIGN / WRAPPER and ledgers
+    foreign intervals <latex>[\,started,\ ended\_by\,]</latex>.
+  end note
+  if (drift sentinel due?) then (yes)
+    :re-run 3 fixed anchor cells;
+    if (median shift > 5%?) then (yes)
+      #FFE0B2:annotate the window;
+    else (no)
+    endif
+  else (no)
+  endif
+repeat while (more cells?) is (yes)
+->no;
+
+|#F3E5F5|post-hoc integrity analysis|
+:**mark-contended-cells**
+reconstruct each cell's window
+<latex>t_{start} = t_{stamp} - (\sum_i s_i + w + c)</latex>
+and intersect with foreign intervals;
+:stamp <latex>contended = true</latex>
+(declared in the schema, so flagged
+cells are never dropped as invalid);
+
+:**aggregate**
+check digest consistency;
+if (all workload + native digests match the pins?) then (no)
+  #FFCDD2:**ABORT**
+  refuse to summarize a run whose
+  cells measured different binaries
+  or different inputs;
+  stop
+else (yes)
+endif
+
+:robust statistics per cell
+median, MAD, p10/p90,
+bootstrap 95% CI of the median
+(10 000 resamples, seed 42);
+:ratios summarized **geometrically**
+<latex>\bar{r} = \exp\!\big(\tfrac{1}{n}\sum_i \ln r_i\big)</latex>;
+:emit summary.json + tables/
+including contention.md and
+the mandatory "not measured" table;
+
+|#E1F5FE|system of record|
+:**publish to pgmcp**
+content-addressed, idempotent;
+:experiments decided against
+**preregistered** criteria
+(refutations published as refutations);
+stop
+
+legend right
+  |= colour |= stage |
+  |<#E3F2FD>| preparation / provenance |
+  |<#E8F5E9>| correctness gating |
+  |<#FFF8E1>| measurement under constraint |
+  |<#F3E5F5>| post-hoc integrity analysis |
+  |<#E1F5FE>| system of record |
+  |<#FFCDD2>| abort / quarantine |
+endlegend
+
+@enduml

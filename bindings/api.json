@@ -44,7 +44,7 @@
   },
   "packageVersion": "0.10.0",
   "abiVersion": 1,
-  "apiRevision": 1,
+  "apiRevision": 2,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -128,7 +128,7 @@
   "objects": {
     "ResourceTransducer": {
       "accepts": "VtResource(dictionary-v1)",
-      "methods": ["unit_domain", "query_utf8", "query_bytes", "query_u64", "query_pattern"]
+      "methods": ["snapshot", "unit_domain", "query_utf8", "query_bytes", "query_u64", "query_pattern"]
     },
     "QueryCursor": {
       "ownership": "retains-query-start-snapshot",
@@ -172,6 +172,7 @@
     {"name": "llev_true_damerau_distance", "rustModule": "distance"},
     {"name": "llev_true_damerau_distance_threshold", "rustModule": "distance"},
     {"name": "llev_transducer_new", "rustModule": "index"},
+    {"name": "llev_transducer_snapshot", "rustModule": "index"},
     {"name": "llev_transducer_free", "rustModule": "index"},
     {"name": "llev_transducer_unit_domain", "rustModule": "index"},
     {"name": "llev_transducer_query_utf8", "rustModule": "index"},

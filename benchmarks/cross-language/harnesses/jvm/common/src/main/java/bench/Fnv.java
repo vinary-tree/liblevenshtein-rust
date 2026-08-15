@@ -1,5 +1,9 @@
 package bench;
 
+import static java.lang.foreign.ValueLayout.JAVA_BYTE;
+
+import java.lang.foreign.MemorySegment;
+
 /**
  * Normative checksum primitives (PROTOCOL.md §8).
  *
@@ -34,6 +38,19 @@ public final class Fnv {
         hash = update(hash, (byte) 0x00);
         for (int i = 0; i < 8; i++) {
             hash = update(hash, (byte) ((distance >>> (8 * i)) & 0xff));
+        }
+        return hash;
+    }
+
+    /** Zero-copy variant for a borrowed native UTF-8 term. */
+    public static long entry(MemorySegment termUtf8, long distance) {
+        long hash = OFFSET;
+        for (long index = 0; index < termUtf8.byteSize(); index++) {
+            hash = update(hash, termUtf8.get(JAVA_BYTE, index));
+        }
+        hash = update(hash, (byte) 0x00);
+        for (int index = 0; index < 8; index++) {
+            hash = update(hash, (byte) ((distance >>> (8 * index)) & 0xff));
         }
         return hash;
     }

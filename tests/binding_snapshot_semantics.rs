@@ -125,6 +125,35 @@ fn query_start_snapshot_survives_every_crud_publication_and_owner_drop() {
 }
 
 #[test]
+fn pinned_transducer_reuses_one_revision_while_live_transducer_advances() {
+    let dictionary = TestDictionary::new([
+        ("cat".to_owned(), Some(1)),
+        ("cot".to_owned(), Some(2)),
+        ("cut".to_owned(), Some(3)),
+    ]);
+    let live = unsafe {
+        ResourceTransducer::from_resource(dictionary.resource(), Algorithm::Standard).unwrap()
+    };
+    let pinned = live.snapshot().expect("pin provider revision");
+    let frozen = drain(&mut pinned.query_utf8("cat", 2, QueryOrder::Traversal).unwrap());
+
+    dictionary.remove("cot");
+    dictionary.insert("cit", Some(5));
+
+    let still_frozen = drain(&mut pinned.query_utf8("cat", 2, QueryOrder::Traversal).unwrap());
+    let advanced = drain(&mut live.query_utf8("cat", 2, QueryOrder::Traversal).unwrap());
+    assert_eq!(still_frozen, frozen);
+    assert_ne!(advanced, frozen);
+
+    drop(live);
+    drop(dictionary);
+    assert_eq!(
+        drain(&mut pinned.query_utf8("cat", 2, QueryOrder::Traversal).unwrap()),
+        frozen
+    );
+}
+
+#[test]
 fn clear_after_partial_consumption_does_not_change_the_old_cursor() {
     let dictionary = TestDictionary::new(
         ["alpha", "alpine", "aleph", "beta"]

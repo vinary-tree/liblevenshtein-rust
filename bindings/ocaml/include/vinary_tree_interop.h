@@ -11,6 +11,7 @@ extern "C" {
 
 #define VT_ABI_VERSION 1u
 #define VT_DICTIONARY_INTERFACE_VERSION 1u
+#define VT_DICTIONARY_VISIT_INTERFACE_VERSION 1u
 #define VT_WFST_INTERFACE_VERSION 1u
 #define VT_RECOMMENDED_EDGE_BATCH 256u
 #define VT_RECOMMENDED_ARC_BATCH 256u
@@ -94,6 +95,17 @@ typedef struct VtDictionaryVTable {
                            size_t* out_written, size_t* out_total);
 } VtDictionaryVTable;
 
+/* Optional fused finality + edge-page inspection. */
+typedef struct VtDictionaryVisitVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*node_visit)(void* context, uint64_t node, size_t start,
+                           uint8_t* out_is_final,
+                           VtDictionaryEdge* out_edges, size_t capacity,
+                           size_t* out_written, size_t* out_total);
+} VtDictionaryVisitVTable;
+
 /* Scalar semirings with a portable f64 representation. */
 typedef enum VtWeightDomain {
     VT_WEIGHT_DOMAIN_TROPICAL_F64 = 1,
@@ -148,6 +160,10 @@ typedef struct VtWfstVTable {
 
 static const VtInterfaceId VT_DICTIONARY_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','i','o','n','a','r','y','.','v','1' }
+};
+
+static const VtInterfaceId VT_DICTIONARY_VISIT_INTERFACE_ID = {
+    { 'v','t','.','d','i','c','t','.','v','i','s','i','t','.','v','1' }
 };
 
 static const VtInterfaceId VT_WFST_INTERFACE_ID = {

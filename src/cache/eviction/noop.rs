@@ -26,6 +26,7 @@
 //! assert!(wrapped.contains("world"));
 //! ```
 
+use crate::dictionary::node_adapter::{for_each_wrapped_edge, visit_wrapped_edges_and_finality};
 use libdictenstein::{
     Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
     SyncStrategy,
@@ -175,6 +176,22 @@ where
     }
 
     #[inline]
+    fn for_each_edge<F>(&self, visitor: F)
+    where
+        F: FnMut(Self::Unit, Self),
+    {
+        for_each_wrapped_edge(&self.inner, NoopNode::new, visitor);
+    }
+
+    #[inline]
+    fn visit_edges_and_finality<F>(&self, visitor: F) -> bool
+    where
+        F: FnMut(Self::Unit, Self),
+    {
+        visit_wrapped_edges_and_finality(&self.inner, NoopNode::new, visitor)
+    }
+
+    #[inline]
     fn edge_count(&self) -> Option<usize> {
         self.inner.edge_count()
     }
@@ -190,6 +207,11 @@ where
     #[inline]
     fn value(&self) -> Option<Self::Value> {
         self.inner.value()
+    }
+
+    #[inline]
+    fn value_at_final(&self) -> Option<Self::Value> {
+        self.inner.value_at_final()
     }
 }
 

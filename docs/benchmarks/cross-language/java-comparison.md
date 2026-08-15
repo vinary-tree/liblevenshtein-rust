@@ -1,8 +1,9 @@
 # Java vs Java: liblevenshtein-java 3.0.0 against the Rust-backed JVM binding
 
-**Status:** measured, complete (165 timed cells). **Run:** `phase0`.
-**Verdict on the migration thesis this program set out to test:
-NOT SUPPORTED on query throughput.**
+**Status:** phase-0 baseline and post-optimization closure measured. **Runs:**
+`phase0` and `liblev-h-o7-final`. **Current verdict:** practical query parity
+is achieved across the shared matrix; the preregistered 3x-throughput target
+is not achieved.
 
 This document reports the first *measured* comparison between the two Java
 options for `liblevenshtein`. Every previous statement on the subject — the
@@ -10,6 +11,80 @@ archived [`JAVA_COMPARISON.md`](../../archive/performance/JAVA_COMPARISON.md),
 which speculated that "Rust is likely significantly faster than Java" — was
 feature analysis, not measurement. The measurement disagrees with the
 speculation, and this document reports what was measured.
+
+## 0. Post-optimization closure (2026-08-15)
+
+The rest of this report preserves the original phase-0 baseline and causal
+motivation. After the controlled H-O9 through H-O30 campaign, the unchanged
+45-coordinate Java-to-Java matrix was rerun with the same dictionary, query
+sets, materializing drain contract, JDK, 2 GiB heaps, cpuset, and 2-fork x
+10-iteration JMH protocol. All 45 pairs reproduced the same result counts and
+checksums exactly.
+
+| post-optimization breadth result | value |
+|---|---:|
+| geometric mean, legacy time / Vinary time | 0.965 |
+| median ratio | 0.974 |
+| range | [0.766, 1.109] |
+| Vinary wins | 16 / 45 |
+| legacy wins | 29 / 45 |
+
+A ratio above 1 means Vinary is faster. On geometric mean Vinary is therefore
+only 3.6% slower overall, rather than phase 0's 2.9x slowdown. The result is
+mixed by algorithm in a diagnostically useful way:
+
+| algorithm | Vinary wins | legacy / Vinary geometric mean | interpretation |
+|---|---:|---:|---|
+| standard | 5 / 15 | 0.983 | Vinary 1.8% slower |
+| transposition | 10 / 15 | 1.019 | Vinary 1.9% faster |
+| merge-and-split | 1 / 15 | 0.899 | Vinary 11.2% slower |
+
+The original anchor is now 54.543 ms for Vinary versus 51.256 ms for legacy
+(`standard`, d = 1, `hits`), a 6.4% residual rather than a 3.09x deficit. At
+the formal H-J1 coordinate (`transposition`, d = 2, `tr-d2`), the breadth run
+measured 445.499 ms for Vinary versus 448.694 ms for legacy, making Vinary
+0.7% faster. The formal 51-sample pair, pooled from three independently
+compiler-guarded JVM forks per arm, measured:
+
+| formal H-J1 arm | median pass | 95% bootstrap CI of median |
+|---|---:|---:|
+| legacy control | 455.861 ms | [455.223, 456.856] ms |
+| Vinary treatment | 466.581 ms | [463.029, 468.978] ms |
+
+At that depth Vinary was 2.35% slower. The preregistered one-sided Welch test
+did not support a Vinary improvement (`p = 0.664`, Cohen's `d = +0.084`), and
+the mandatory practical requirement—Vinary at least 3x as fast—was decisively
+missed. Experiment 205 is therefore rejected. Practical matrix parity does not
+retroactively satisfy that stronger target.
+
+Construction moved beyond parity as well. The current direct Rust medians are
+21.416 ms for arbitrary-order byte terms and 11.076 ms for the explicit
+pre-ordered constructor, versus the historical 41.2 ms Java ordered-build
+reference. The binding-owned freeze build measured 26.547 ms after H-O28,
+down from 96.271 ms. These values show that the former construction deficit
+was architectural path-copy/publication work, not an inherent Rust or
+reclamation disadvantage.
+
+The final compiler-guarded pure-Rust core gate (`standard`, d = 1, `hits`)
+measured 42.057 ms over 51 samples, with a 95% bootstrap median interval of
+[41.959, 42.396] ms. It passes the 51.2 ms core threshold by 17.9%, confirming
+that the remaining JVM-level differences are boundary/runtime effects rather
+than a slower native standard-Levenshtein kernel.
+
+The current recommendation is consequently different from the phase-0 one:
+query throughput is no longer a reason to reject migration for workloads
+represented by this matrix. Transposition is slightly ahead, standard is at
+near parity, and merge-and-split remains the clearest optimization target.
+The Rust-backed implementation retains its approximately 3x peak-RSS advantage
+and active-maintenance benefits. Users requiring a literal 3x query-throughput
+gain over legacy Java should not migrate on that expectation; the measured
+outcome is parity, not a threefold win.
+
+> **Read §0 before quoting the historical baseline in §2.** The phase-0
+> measurements showed legacy Java winning every query cell, but the completed
+> optimization campaign reduced that gap to practical matrix parity. The
+> original measurements remain below as an immutable baseline rather than a
+> statement of current performance.
 
 ## 1. The two implementations
 
@@ -26,7 +101,7 @@ the JDK's Foreign Function & Memory API. *Query* here means: given a query
 term and a maximum edit distance `d`, enumerate every dictionary term within
 `d` edits, as a lazy cursor that the caller drains fully.
 
-## 2. Headline result
+## 2. Phase-0 headline result (historical baseline)
 
 Both implementations were run under JMH on **the same JDK 26, the same
 cpuset, and identical fixed 2 GiB heaps**, over the same committed
@@ -84,6 +159,42 @@ So there are two independent gaps: the Rust core trails legacy Java by
 $`\approx`$ 1.4×, and the JVM binding adds a further $`\approx`$ 2.2× on top. Note also that
 `DoubleArrayTrie`, nominally the read-optimized backend, is *slower* here
 than `DynamicDawg`.
+
+### Calibrating against a third implementation: legacy Java is the outlier
+
+Read alone, the table above invites the conclusion that the Rust core is
+slow. A third, independently written implementation of the same algorithm
+family — `liblevenshtein-cpp`, the C++ sibling of the same upstream project
+— shows that this reading is wrong. Measuring it under the identical
+protocol reframes both numbers:
+
+| implementation | standard, d = 1, `hits` | transposition, d = 2, `tr-d2` |
+|---|---|---|
+| legacy Java 3.0.0 (pure Java) | **51.2 µs/query** | **462.3 µs/query** |
+| pure Rust core (no FFI) | 71.7 µs/query | 790.0 µs/query |
+| legacy C++ (`liblevenshtein-cpp`) | 143.7 µs/query | 1432.8 µs/query |
+
+Against the C++ baseline, *both* the Rust core and legacy Java are faster,
+and by wide margins:
+
+| speedup over legacy C++ | standard, d = 1 | transposition, d = 2 |
+|---|---|---|
+| pure Rust core | 2.00× | 1.81× |
+| legacy Java 3.0.0 | 2.80× | 3.10× |
+
+The correct reading is therefore not "the Rust core is slow" but **"legacy
+Java 3.0.0 is exceptionally fast"** — a 2016 JVM library that outruns a
+compiled-C++ implementation of the same algorithm by roughly 3×. The Rust
+core clears that same C++ baseline by about 2×; it is simply beaten by a
+faster competitor, not by a representative one. Any claim that the Rust
+implementation underperforms *implementations in general* is unsupported by
+this evidence — it underperforms exactly one, unusually well-optimized peer.
+
+This also sharpens what §4's profile is looking for. The question is not
+"why is Rust slow?" (it is not) but "what does the JVM implementation do
+that buys it a further $`\approx`$ 1.4–1.7× over an already-fast native
+implementation?" — a materially different, and more tractable,
+investigation.
 
 ## 3. Where the migration case does hold
 
@@ -168,7 +279,7 @@ $`\approx`$ 7% cluster. That alone does not close a 1.4× gap, and no optimizati
 been attempted here — this document reports measurements, and the lead is
 recorded for follow-up work.
 
-## 5. Recommendation
+## 5. Phase-0 recommendation (superseded by section 0)
 
 **On the evidence, a user of liblevenshtein-java 3.0.0 whose workload
 resembles this one should not migrate for query speed.** They would pay
@@ -185,7 +296,11 @@ roughly 2.9× in per-query latency. Migration is nonetheless justified when:
 Anyone migrating for throughput should wait until the profile findings in
 §4 have been acted on and re-measured. The honest summary is that the Rust
 implementation's *engineering* is ahead and its *query performance on this
-workload* is behind.
+workload* is behind — behind **this specific competitor**, which §2 shows to
+be an outlier rather than a typical baseline. Against the project's own C++
+implementation the Rust core is roughly 2× faster; the migration case that
+fails here is specifically "migrate away from liblevenshtein-java 3.0.0 for
+speed", not "prefer another implementation to the Rust one".
 
 ## 6. Threats to validity
 
@@ -205,6 +320,15 @@ workload* is behind.
   arms; those deeper runs are collected separately and are what formally
   decide H-J1/H-J2. The 45-cell agreement reported here is corroborating
   breadth, not the formal test.
+- **Cross-arm drift on the C++ calibration.** The two Java arms were measured
+  time-adjacent and are directly comparable. The `liblevenshtein-cpp` figures
+  in §2 were collected in a different window of the same sweep, during which
+  fixed-cell drift sentinels moved by up to 10.7% as external load on the host
+  fell. That bound is an order of magnitude smaller than the 1.8–3.1× ratios
+  it is used to establish, so the qualitative conclusion (legacy Java is the
+  outlier; the Rust core clears the C++ baseline) is robust to it — but the
+  third-decimal ratios should be taken as provisional until the anchor is
+  re-measured at sweep end and the atlas ratios are recomputed against it.
 
 ## 7. Reproduction
 
@@ -220,7 +344,8 @@ scripts/aggregate.py results/<run>
 
 Raw per-sample data for every cell is in the pgmcp data table
 `xlang_bench_cells`; hypotheses, criteria and verdicts are pgmcp experiments
-178 (H-J1) and 179 (H-J2). Method: [`PROTOCOL.md`](../../../benchmarks/cross-language/harnesses/common/PROTOCOL.md).
+178 (H-J1), 179 (H-J2), and 205 (the post-optimization H-O7 decision).
+Method: [`PROTOCOL.md`](../../../benchmarks/cross-language/harnesses/common/PROTOCOL.md).
 
 ## References
 

@@ -132,19 +132,27 @@ impl State {
         position: Position,
         ctx: &TransitionCtx<V::Params>,
     ) -> bool {
+        crate::causal_perf::record_state_insert_attempts(1);
         // Check if this position is subsumed by an existing one
         for existing in &self.positions {
             // Exact identity is independent of algorithmic dominance. In
             // particular, MergeAndSplit dominance is intentionally strict and
             // therefore irreflexive, but a canonical state must still reject
             // duplicate representatives.
-            if existing == &position || V::subsumes(existing, &position, ctx) {
+            if existing == &position {
                 return false; // Already covered by existing position
+            }
+            crate::causal_perf::record_subsumption_checks(1);
+            if V::subsumes(existing, &position, ctx) {
+                return false;
             }
         }
 
         // Remove any positions that this new position subsumes
-        self.positions.retain(|p| !V::subsumes(&position, p, ctx));
+        self.positions.retain(|p| {
+            crate::causal_perf::record_subsumption_checks(1);
+            !V::subsumes(&position, p, ctx)
+        });
 
         // Insert in sorted position
         let insert_pos = self
@@ -152,6 +160,7 @@ impl State {
             .binary_search(&position)
             .unwrap_or_else(|pos| pos);
         self.positions.insert(insert_pos, position);
+        crate::causal_perf::record_state_insert_retained(1);
         true
     }
 
@@ -229,11 +238,17 @@ impl State {
     /// - Position is Copy, so this is a fast memcpy of the positions
     #[inline]
     pub fn copy_from(&mut self, other: &State) {
+        crate::causal_perf::record_state_copy_calls(1);
+        crate::causal_perf::record_state_positions_copied(other.positions.len() as u64);
+        crate::causal_perf::record_state_bytes_copied(
+            other
+                .positions
+                .len()
+                .saturating_mul(std::mem::size_of::<Position>()) as u64,
+        );
         self.positions.clear();
         self.positions.reserve(other.positions.len());
-        for pos in &other.positions {
-            self.positions.push(*pos); // Copy, not clone
-        }
+        self.positions.extend_from_slice(&other.positions);
     }
 
     /// Get the minimum edit distance in this state

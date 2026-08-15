@@ -3,11 +3,13 @@
 use super::query_result::QueryResult;
 use super::state::State;
 use super::transition::{
-    initial_state, initial_state_affine, transition_state_pooled_affine_ref,
-    transition_state_pooled_ref, AffineTransitionSettings, TransitionSettings,
+    initial_state, initial_state_affine, AffineTransitionSettings, CachedUnitTransitions,
+    TransitionSettings,
 };
 use super::variants::{AffineGapParams, AffineV};
-use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
+use super::{
+    Algorithm, Position, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted,
+};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
@@ -147,11 +149,6 @@ impl<N: DictionaryNode> QueryIntersection<N> {
         units.reverse();
         units
     }
-
-    #[inline(always)]
-    fn is_final(&self) -> bool {
-        self.node.is_final()
-    }
 }
 
 /// Lazy iterator over query matches with configurable result type.
@@ -211,8 +208,9 @@ pub struct QueryIterator<N: DictionaryNode, R = String, P: SubstitutionPolicy = 
     policy: P, // Substitution policy for matching
     path_arena: Vec<QueryPathNode<N::Unit>>,
     finished: bool,
-    state_pool: StatePool,        // Pool for State allocation reuse
-    substring_mode: bool,         // Enable substring matching (for suffix automata)
+    state_pool: StatePool, // Pool for State allocation reuse
+    unit_transitions: CachedUnitTransitions<N::Unit>,
+    substring_mode: bool, // Enable substring matching (for suffix automata)
     _result_type: PhantomData<R>, // Zero-sized marker for result type
 }
 
@@ -355,6 +353,7 @@ impl<
         initial: State,
     ) -> Self {
         let mut pending = VecDeque::new();
+        let query_length = query_units.len();
 
         // Always add root to pending queue - it will be checked for finality in advance()
         // and its children will be queued normally
@@ -369,6 +368,7 @@ impl<
             path_arena: Vec::with_capacity(64),
             finished: false,
             state_pool: StatePool::new(), // Create pool for this query
+            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
             substring_mode,
             _result_type: PhantomData, // Zero-sized, no runtime cost
         }
@@ -377,8 +377,11 @@ impl<
     /// Advance to the next match
     fn advance(&mut self) -> Option<R> {
         while let Some(intersection) = self.pending.pop_front() {
+            crate::causal_perf::record_dictionary_intersections(1);
+            crate::causal_perf::record_final_checks(1);
+            let is_final = self.queue_children_and_finality(&intersection);
             // Check if this is a final match
-            if intersection.is_final() {
+            if is_final {
                 // Infer the distance based on matching mode
                 let distance = if self.substring_mode {
                     // Substring mode: don't penalize unmatched query suffix
@@ -400,23 +403,13 @@ impl<
                 if distance <= self.max_distance {
                     let units = intersection.units(&self.path_arena);
 
-                    // Queue children for further exploration
-                    self.queue_children(&intersection);
-
                     // Convert (units, distance) to result type R
                     // This is zero-cost: QueryResult::from_match is inlined
                     // and monomorphized at compile time. String/Candidate apply
                     // CharUnit::to_string; Vec<U>/UnitCandidate keep the units verbatim.
+                    crate::causal_perf::record_matches_materialized(1);
                     return Some(R::from_match(&units, distance));
-                } else {
-                    // Even if this final node is too far, we must still explore its children
-                    // Example: dict ["z", "za"], query "za" (dist=0)
-                    // At 'z': is_final=true, distance=1 (too far), but we must explore 'a'
-                    self.queue_children(&intersection);
                 }
-            } else {
-                // Not final: queue children to continue exploring
-                self.queue_children(&intersection);
             }
         }
 
@@ -425,49 +418,63 @@ impl<
     }
 
     /// Queue child intersections for exploration
-    fn queue_children(&mut self, intersection: &QueryIntersection<N>) {
+    fn queue_children_and_finality(&mut self, intersection: &QueryIntersection<N>) -> bool {
         let mut child_parent_path = None;
 
-        for (label, child_node) in intersection.node.edges() {
-            let next_state = match self.variant {
-                QueryVariant::Unit(algorithm) => transition_state_pooled_ref(
-                    &intersection.state,
-                    &mut self.state_pool,
-                    &self.policy,
-                    label,
-                    &self.query,
-                    TransitionSettings::new(self.max_distance, algorithm, self.substring_mode),
-                ),
-                QueryVariant::Affine(params) => transition_state_pooled_affine_ref(
-                    &intersection.state,
-                    &mut self.state_pool,
-                    &self.policy,
-                    label,
-                    &self.query,
-                    AffineTransitionSettings::new(self.max_distance, params, self.substring_mode),
-                ),
-            };
-            if let Some(next_state) = next_state {
-                let parent_path = match child_parent_path {
-                    Some(path) => path,
-                    None => {
-                        let path = match intersection.label {
-                            Some(current_label) => {
-                                self.push_path_node(current_label, intersection.parent)
-                            }
-                            None => NO_PATH,
-                        };
-                        child_parent_path = Some(path);
-                        path
-                    }
+        intersection
+            .node
+            .visit_edges_and_finality(|label, child_node| {
+                crate::causal_perf::record_edges_enumerated(1);
+                let next_state = match self.variant {
+                    QueryVariant::Unit(algorithm) => self.unit_transitions.transition(
+                        &intersection.state,
+                        &mut self.state_pool,
+                        &self.policy,
+                        label,
+                        &self.query,
+                        TransitionSettings::new(self.max_distance, algorithm, self.substring_mode),
+                    ),
+                    QueryVariant::Affine(params) => self.unit_transitions.transition_affine(
+                        &intersection.state,
+                        &mut self.state_pool,
+                        &self.policy,
+                        label,
+                        &self.query,
+                        AffineTransitionSettings::new(
+                            self.max_distance,
+                            params,
+                            self.substring_mode,
+                        ),
+                    ),
                 };
+                if let Some(next_state) = next_state {
+                    crate::causal_perf::record_transition_accepted(1);
+                    let position_count = next_state.len();
+                    crate::causal_perf::record_state_positions_enqueued(position_count as u64);
+                    crate::causal_perf::record_state_bytes_enqueued(
+                        position_count.saturating_mul(std::mem::size_of::<Position>()) as u64,
+                    );
+                    let parent_path = match child_parent_path {
+                        Some(path) => path,
+                        None => {
+                            let path = match intersection.label {
+                                Some(current_label) => {
+                                    self.push_path_node(current_label, intersection.parent)
+                                }
+                                None => NO_PATH,
+                            };
+                            child_parent_path = Some(path);
+                            path
+                        }
+                    };
 
-                let child =
-                    QueryIntersection::with_parent(label, child_node, next_state, parent_path);
+                    let child =
+                        QueryIntersection::with_parent(label, child_node, next_state, parent_path);
 
-                self.pending.push_back(child);
-            }
-        }
+                    self.pending.push_back(child);
+                    crate::causal_perf::record_pending_queue_size(self.pending.len());
+                }
+            })
     }
 
     #[inline]

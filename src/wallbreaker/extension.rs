@@ -364,7 +364,7 @@ where
         let query_char = query_suffix[query_idx];
 
         // Try all forward edges
-        for (label, child) in state.node.edges() {
+        state.node.for_each_edge(|label, child| {
             let matches = label_matches_char(label, query_char);
 
             if matches {
@@ -388,7 +388,7 @@ where
                 };
                 results.extend(self.extend_right_recursive(new_state, query_suffix));
             }
-        }
+        });
 
         // Insertion (skip query char)
         if state.distance < self.max_distance {
@@ -402,7 +402,7 @@ where
         }
 
         // Deletion (skip dictionary edge)
-        for (label, child) in state.node.edges() {
+        state.node.for_each_edge(|label, child| {
             if state.distance < self.max_distance {
                 let new_labels = labels_with_appended(&state.suffix_labels, label);
                 let new_state = RightExtensionState {
@@ -413,7 +413,7 @@ where
                 };
                 results.extend(self.extend_right_recursive(new_state, query_suffix));
             }
-        }
+        });
 
         results
     }

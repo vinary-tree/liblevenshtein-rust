@@ -62,6 +62,14 @@ LLEV_API char* llev_string_dup(const char* value);
 LLEV_API LlevStatus llev_transducer_new(const VtResource* dictionary,
                                         uint32_t algorithm,
                                         LlevTransducer** out_transducer);
+/**
+ * Capture one immutable revision for a read-only query batch. The returned
+ * transducer does not observe later dictionary mutations and shares validated
+ * provider-node data across its query cursors.
+ */
+LLEV_API LlevStatus llev_transducer_snapshot(
+    const LlevTransducer* transducer,
+    LlevTransducer** out_transducer);
 LLEV_API void llev_transducer_free(LlevTransducer* transducer);
 LLEV_API LlevStatus llev_transducer_unit_domain(
     const LlevTransducer* transducer,

@@ -7,7 +7,7 @@
 //! `enter(unit, depth)` remains active until that exact subtree is exhausted,
 //! then receives one matching `leave(unit, depth)`.
 
-use super::transition::{initial_state, transition_state_pooled_ref, TransitionSettings};
+use super::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
 use super::{
     Algorithm, NoPruning, PrefixPruner, State, StatePool, SubstitutionPolicy,
     SubstitutionPolicyFor, Unrestricted,
@@ -39,21 +39,22 @@ pub struct PrefixQueryMatch<U: CharUnit> {
 }
 
 struct Frame<N: DictionaryNode> {
-    node: N,
     edges: std::vec::IntoIter<(N::Unit, N)>,
     state: State,
     entered_by: Option<N::Unit>,
+    is_final: bool,
     final_checked: bool,
 }
 
 impl<N: DictionaryNode> Frame<N> {
     fn new(node: N, state: State, entered_by: Option<N::Unit>) -> Self {
-        let edges = node.edges().collect::<Vec<_>>().into_iter();
+        let mut edges = Vec::with_capacity(node.edge_count().unwrap_or(0));
+        let is_final = node.visit_edges_and_finality(|label, child| edges.push((label, child)));
         Self {
-            node,
-            edges,
+            edges: edges.into_iter(),
             state,
             entered_by,
+            is_final,
             final_checked: false,
         }
     }
@@ -80,6 +81,7 @@ where
     stack: Vec<Frame<N>>,
     prefix: Vec<N::Unit>,
     state_pool: StatePool,
+    unit_transitions: CachedUnitTransitions<N::Unit>,
     stats: PrefixQueryStats,
 }
 
@@ -140,7 +142,8 @@ where
         prefix_pruner: P,
         substring_mode: bool,
     ) -> Self {
-        let initial = initial_state(query.len(), max_distance, algorithm);
+        let query_length = query.len();
+        let initial = initial_state(query_length, max_distance, algorithm);
         Self {
             query,
             max_distance,
@@ -151,6 +154,7 @@ where
             stack: vec![Frame::new(root, initial, None)],
             prefix: Vec::new(),
             state_pool: StatePool::new(),
+            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
             stats: PrefixQueryStats {
                 nodes_visited: 1,
                 ..PrefixQueryStats::default()
@@ -223,7 +227,7 @@ where
                 } else {
                     frame.final_checked = true;
                     Some((
-                        frame.node.is_final(),
+                        frame.is_final,
                         if self.substring_mode {
                             frame.state.min_distance()
                         } else {
@@ -271,7 +275,7 @@ where
                         .last()
                         .expect("the DFS parent remains on the stack")
                         .state;
-                    transition_state_pooled_ref(
+                    self.unit_transitions.transition(
                         parent_state,
                         &mut self.state_pool,
                         &self.substitution_policy,

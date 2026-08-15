@@ -66,6 +66,12 @@ struct	VtDictionaryVTable	node_transition	72	8	44	4	-	Option<unsafe extern C fn>
 struct	VtDictionaryVTable	node_edges	80	8	48	4	-	Option<unsafe extern C fn>; paged edge expansion (null niche)
 struct	VtDictionaryVTable	__size	-	88	-	56	-	total size in bytes per target
 struct	VtDictionaryVTable	__align	-	8	-	8	-	alignment in bytes per target
+struct	VtDictionaryVisitVTable	struct_size	0	8	0	4	-	usize; struct size in bytes for additive interface evolution
+struct	VtDictionaryVisitVTable	interface_version	8	4	4	4	-	u32; at least VT_DICTIONARY_VISIT_INTERFACE_VERSION
+struct	VtDictionaryVisitVTable	reserved	12	4	8	4	-	u32; reserved, must be zero
+struct	VtDictionaryVisitVTable	node_visit	16	8	12	4	-	Option<unsafe extern C fn>; fused finality and paged edge expansion (null niche)
+struct	VtDictionaryVisitVTable	__size	-	24	-	16	-	total size in bytes per target
+struct	VtDictionaryVisitVTable	__align	-	8	-	4	-	alignment in bytes per target
 struct	VtWfstArc	input_label	0	8	0	8	-	u64; meaningful only when has_input is one
 struct	VtWfstArc	output_label	8	8	8	8	-	u64; meaningful only when has_output is one
 struct	VtWfstArc	target_state	16	8	16	8	-	u64; target state within the retained snapshot
@@ -119,8 +125,10 @@ flag	wfst_flags	LAZY	-	-	-	-	4	bit 2; states or arcs may be expanded on demand
 flag	wfst_flags	ACYCLIC	-	-	-	-	8	bit 3; reachable graph guaranteed acyclic
 const	u32	VT_ABI_VERSION	-	-	-	-	1	current base resource ABI version
 const	u32	VT_DICTIONARY_INTERFACE_VERSION	-	-	-	-	1	version of VtDictionaryVTable
+const	u32	VT_DICTIONARY_VISIT_INTERFACE_VERSION	-	-	-	-	1	version of VtDictionaryVisitVTable
 const	u32	VT_WFST_INTERFACE_VERSION	-	-	-	-	1	version of VtWfstVTable
 const	usize	VT_RECOMMENDED_EDGE_BATCH	-	-	-	-	256	recommended provider edges requested per call
 const	usize	VT_RECOMMENDED_ARC_BATCH	-	-	-	-	256	recommended WFST arcs requested per call
 const	VtInterfaceId	VT_DICTIONARY_INTERFACE_ID	-	-	-	-	vt.dictionary.v1	16 ASCII bytes, no NUL terminator; compared byte-for-byte across the ABI
+const	VtInterfaceId	VT_DICTIONARY_VISIT_INTERFACE_ID	-	-	-	-	vt.dict.visit.v1	16 ASCII bytes, no NUL terminator; optional fused node inspection
 const	VtInterfaceId	VT_WFST_INTERFACE_ID	-	-	-	-	vt.scalar-wfst.1	16 ASCII bytes, no NUL terminator; compared byte-for-byte across the ABI

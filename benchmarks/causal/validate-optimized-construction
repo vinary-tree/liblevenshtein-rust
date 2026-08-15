@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Rebuild and validate both accepted freeze-once construction paths.
+
+set -euo pipefail
+
+repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+scratch=$(mktemp -d /tmp/liblev-optimized-construction.XXXXXX)
+keep=1
+
+cleanup() {
+    if [[ $keep -eq 0 ]]; then
+        rm -rf -- "$scratch"
+    else
+        printf 'validate-optimized-construction: retained failure evidence at %s\n' "$scratch" >&2
+    fi
+}
+trap cleanup EXIT
+
+cd "$repo"
+cargo build --release --features perf-instrumentation --bin causal_query_profile \
+    >"$scratch/build.log" 2>&1
+
+common=(
+    --dictionary benchmarks/cross-language/workload/dictionary.txt
+    --queries benchmarks/cross-language/workload/queries/std-d2.txt
+    --domain byte
+    --algorithm standard
+    --max-distance 2
+    --passes 1
+)
+
+target/release/causal_query_profile "${common[@]}" --constructor from_sorted_terms \
+    >"$scratch/sorted.json" 2>"$scratch/sorted.err"
+target/release/causal_query_profile "${common[@]}" --constructor from_terms \
+    >"$scratch/unordered.json" 2>"$scratch/unordered.err"
+
+python3 benchmarks/causal/validate_optimized_construction.py \
+    --sorted "$scratch/sorted.json" \
+    --unordered "$scratch/unordered.json"
+keep=0

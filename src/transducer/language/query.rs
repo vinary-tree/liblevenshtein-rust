@@ -148,17 +148,11 @@ where
             {
                 self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
             }
-            let distance = entry
-                .node
-                .is_final()
-                .then(|| self.product.min_accepting_distance(&entry.frontier))
-                .flatten();
-
             let child_parent = match entry.label {
                 Some(label) => self.push_path(label, entry.parent),
                 None => entry.parent,
             };
-            for (unit, child) in entry.node.edges() {
+            let is_final = entry.node.visit_edges_and_finality(|unit, child| {
                 #[cfg(feature = "perf-instrumentation")]
                 {
                     self.stats.edges_enumerated = self.stats.edges_enumerated.saturating_add(1);
@@ -172,7 +166,10 @@ where
                         frontier,
                     });
                 }
-            }
+            });
+            let distance = is_final
+                .then(|| self.product.min_accepting_distance(&entry.frontier))
+                .flatten();
 
             if let Some(distance) = distance {
                 return Some(LanguageMatch {

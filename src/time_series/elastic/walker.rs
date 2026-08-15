@@ -481,7 +481,7 @@ where
                 .get(final_row)
                 .is_some_and(|cost| K::Monoid::within(*cost, ctx.tau));
         if node.is_final() && relaxed_admits {
-            if let Some(bucket_id) = node.value() {
+            if let Some(bucket_id) = node.value_at_final() {
                 let ids = &self.buckets[bucket_id];
                 for id in ids {
                     if let Some(stored) = self.originals.get(id) {
@@ -503,16 +503,16 @@ where
             }
         }
 
-        for (unit, child) in node.edges() {
-            let Some(child_depth) = depth.checked_add(1) else {
-                return;
-            };
+        let Some(child_depth) = depth.checked_add(1) else {
+            return;
+        };
+        node.for_each_edge(|unit, child| {
             let interval = self.bin_bounds_for(unit);
             let prefix_lower_bound =
                 self.kernel
                     .prefix_lower_bound(ctx.query, interval, carry, child_depth, ctx.plan);
             if !K::Monoid::within(prefix_lower_bound, ctx.tau) {
-                continue;
+                return;
             }
             if ctx.columns.len() <= child_depth {
                 let Some(required_depth_count) = child_depth.checked_add(1) else {
@@ -537,7 +537,7 @@ where
             if K::Monoid::within(child_lower_bound, ctx.tau) {
                 self.walk_range(&child, child_depth, Some(child_carry), ctx);
             }
-        }
+        });
     }
 
     /// Exact k-nearest-neighbor search by kernel distance.
@@ -614,7 +614,7 @@ where
                         .get(final_row)
                         .is_some_and(|cost| K::Monoid::within(*cost, kth_distance)))
             {
-                if let Some(bucket_id) = current.node.value() {
+                if let Some(bucket_id) = current.node.value_at_final() {
                     let ids = &self.buckets[bucket_id];
                     for id in ids {
                         if let Some(stored) = self.originals.get(id) {
@@ -656,11 +656,11 @@ where
                 }
             }
 
-            for (unit, child) in current.node.edges() {
+            current.node.for_each_edge(|unit, child| {
                 stats.visited_edges = stats.visited_edges.saturating_add(1);
                 let interval = self.bin_bounds_for(unit);
                 let Some(child_depth) = current.depth.checked_add(1) else {
-                    continue;
+                    return;
                 };
                 let prefix_lower_bound = self.kernel.prefix_lower_bound(
                     query,
@@ -671,7 +671,7 @@ where
                 );
                 if best.len() >= k && !K::Monoid::within(prefix_lower_bound, kth_distance) {
                     stats.prefix_pruned = stats.prefix_pruned.saturating_add(1);
-                    continue;
+                    return;
                 }
                 let mut child_column = Vec::with_capacity(column_width);
                 stats.columns_built = stats.columns_built.saturating_add(1);
@@ -686,7 +686,7 @@ where
                 );
                 if best.len() < k || K::Monoid::within(lower_bound, kth_distance) {
                     let Some(child_sequence) = next_sequence(&mut sequence) else {
-                        continue;
+                        return;
                     };
                     queue.push(KnnQueueNode {
                         lower_bound,
@@ -699,7 +699,7 @@ where
                 } else {
                     stats.column_pruned = stats.column_pruned.saturating_add(1);
                 }
-            }
+            });
         }
 
         debug_assert!(stats.accounting_is_consistent());

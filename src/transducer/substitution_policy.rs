@@ -83,6 +83,9 @@ pub trait SubstitutionPolicy: Clone {
     ///
     /// This method should be marked `#[inline(always)]` to enable
     /// aggressive compiler optimization, especially for the `Unrestricted` case.
+    /// Implementations must be deterministic and side-effect free for the
+    /// lifetime of a query: transition engines may cache the result for each
+    /// `(dict_char, query_char)` pair and reuse it across dictionary nodes.
     fn is_allowed(&self, dict_char: u8, query_char: u8) -> bool;
 }
 
@@ -153,6 +156,9 @@ pub trait SubstitutionPolicyFor<U: CharUnit>: SubstitutionPolicy {
     ///
     /// This method should be marked `#[inline(always)]` to enable aggressive optimization,
     /// especially for the `Unrestricted` case where it compiles to a constant `false`.
+    /// The result must remain deterministic and side-effect free for the
+    /// lifetime of a query because monomorphized transition engines cache unit
+    /// equivalence vectors by dictionary label.
     fn is_allowed_for(&self, dict_unit: U, query_unit: U) -> bool;
 }
 

@@ -21,8 +21,8 @@ gates — and, as importantly, what it does **not**.
 | Counter | Today | Gates | Checked where | Does not gate |
 |---|---|---|---|---|
 | `VT_ABI_VERSION` | 1 | The **base resource protocol**: the layout and meaning of `VtResource` and `VtResourceVTable` — two words, retain/release semantics, the `query_interface` signature. | Written by every provider into `VtResourceVTable.abi_version`; the reference consumer checks **exact equality** (`validate_base` in liblevenshtein `src/bindings.rs` rejects any value other than 1). A bump is therefore a coordinated, family-wide flag day: every producer and consumer rebuilds together. | Interface contracts, project C surfaces, package versions. |
-| Interface version (`VT_DICTIONARY_INTERFACE_VERSION` = 1, `VT_WFST_INTERFACE_VERSION` = 1) | 1 / 1 | **One interface's contract** under one 16-byte identifier: its vtable's guaranteed prefix and operation semantics. | Negotiated per resource: the consumer passes its `minimum_version` to `query_interface`; the provider answers `Unsupported` if it cannot honor it. Consumers validate the discovered vtable with a **minimum** check (`interface_version >=`), never equality. The identifier string itself (`…v1`, `….1`) carries the *fork* counter for breaking revisions. | The base protocol; sibling interfaces; anything outside the named interface. |
-| Project API revision (llev 1 · ldict 4 · lling 1 · duallity 1) | see left | Each project's **own C surface** above the interop layer: an additive counter bumped when the project adds `llev_*` / `ldict_*` / `lling_*` / `duallity_*` functions. Declared as `apiRevision` in each repo's `bindings/api.json` and surfaced at runtime where the project exposes it (e.g. `LDICT_API_REVISION` = 4 in libdictenstein `src/ffi.rs`, returned by `ldict_api_revision()`). | Facade preflight checks in the language bindings: a facade built against revision $`n`$ refuses a library reporting less than $`n`$. | The interop structs — a project may add fifty functions without touching this crate. |
+| Interface version (`VT_DICTIONARY_INTERFACE_VERSION` = 1, `VT_DICTIONARY_VISIT_INTERFACE_VERSION` = 1, `VT_WFST_INTERFACE_VERSION` = 1) | 1 / 1 / 1 | **One interface's contract** under one 16-byte identifier: its vtable's guaranteed prefix and operation semantics. | Negotiated per resource: the consumer passes its `minimum_version` to `query_interface`; the provider answers `Unsupported` if it cannot honor it. Consumers validate the discovered vtable with a **minimum** check (`interface_version >=`), never equality. The identifier string itself (`…v1`, `….1`) carries the *fork* counter for breaking revisions. | The base protocol; sibling interfaces; anything outside the named interface. |
+| Project API revision (llev 2 · ldict 4 · lling 1 · duallity 1) | see left | Each project's **own C surface** above the interop layer: an additive counter bumped when the project adds `llev_*` / `ldict_*` / `lling_*` / `duallity_*` functions. Declared as `apiRevision` in each repo's `bindings/api.json` and surfaced at runtime where the project exposes it (e.g. `LDICT_API_REVISION` = 4 in libdictenstein `src/ffi.rs`, returned by `ldict_api_revision()`). | Facade preflight checks in the language bindings: a facade built against revision $`n`$ refuses a library reporting less than $`n`$. | The interop structs — a project may add fifty functions without touching this crate. |
 | Package semver (interop 0.1.0 · llev 0.10.0 · ldict 0.2.1 · lling 0.2.0 · duallity 0.3.0) | see left | **Distribution only**: crates.io / npm / PyPI / Maven coordinates and the version pins between packages. | Package managers and each repo's `bindings/related-projects.json` pins. | Any byte of the ABI. A patch release must not change layouts; conversely an additive interface version may ship in a minor package release. |
 
 The separation is what makes mixed deployments work: a Python wheel built
@@ -66,9 +66,11 @@ A new capability ships as a **fresh 16-byte identifier** plus its own vtable
 type and version constant — never as a semantic change to an existing
 interface. Legacy consumers ask for identifiers they know and receive
 `Unsupported` for ones the provider lacks; negotiation degrades gracefully
-in both directions. (This is also the mechanism for breaking forks, § 3:
-`vt.dictionary.v2` is "a new optional interface" from the protocol's point
-of view.)
+in both directions. The published `vt.dict.visit.v1` interface demonstrates
+this rule: it fuses finality and one edge page for consumers that can exploit
+it while leaving every byte and operation of `vt.dictionary.v1` unchanged.
+(This is also the mechanism for breaking forks, § 3: `vt.dictionary.v2` is
+"a new optional interface" from the protocol's point of view.)
 
 ### 2.3 New enum values — per-enum rules
 
@@ -256,8 +258,9 @@ not quoted from memory.
 |---|---|---|---|---|
 | Base resource ABI | `VT_ABI_VERSION` = 1 | all four projects | all four projects | `src/lib.rs` · header · `tests/layout_contract.rs` (`published_constants_are_pinned`) |
 | `vt.dictionary.v1` | interface version 1 | libdictenstein (4 backends) | liblevenshtein · duallity | `VT_DICTIONARY_INTERFACE_VERSION` in `src/lib.rs` / header; negotiation pinned by `tests/vtable_evolution.rs` |
+| `vt.dict.visit.v1` | interface version 1 | libdictenstein (all resource-backed dictionary variants through `SnapshotOps`) | liblevenshtein | `VT_DICTIONARY_VISIT_INTERFACE_VERSION` in `src/lib.rs` / header; layout pinned by `tests/layout_contract.rs` |
 | `vt.scalar-wfst.1` | interface version 1 | lling-llang · duallity | lling-llang (composition) · duallity | `VT_WFST_INTERFACE_VERSION` in `src/lib.rs` / header |
-| liblevenshtein C surface | apiRevision 1 · package 0.10.0 | — | 15 language facades | `bindings/api.json` |
+| liblevenshtein C surface | apiRevision 2 · package 0.10.0 | — | 15 language facades | `bindings/api.json` |
 | libdictenstein C surface | apiRevision 4 · package 0.2.1 | — | 13 language facades | `bindings/api.json`; `LDICT_API_REVISION` in `src/ffi.rs` via `ldict_api_revision()` |
 | lling-llang C surface | apiRevision 1 · package 0.2.0 | — | JS + C/C++ facades | `bindings/api.json` |
 | duallity C surface | apiRevision 1 · package 0.3.0 | — | JS + C/C++ facades | `bindings/api.json` |

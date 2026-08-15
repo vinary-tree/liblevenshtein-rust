@@ -29,5 +29,9 @@ lazy, closeable, batch-aware, and retains the immutable dictionary
 revision visible at query start. It never holds a read lock while JVM code
 processes results. The ordinary iterator materializes one batch at a time;
 `forEachBatch` exposes callback-scoped `MemorySegment` views for the
-allocation-minimizing path. Cursors and transducers use `Cleaner` only as a
-leak-safety fallback; applications should close them deterministically.
+allocation-minimizing path. `BorrowedMatchBatch` provides direct indexed
+`distance`, `id`, `unitDomain`, `termLength`, `byteLength`, `bytes`, `utf8`, and
+`u64` accessors that do not allocate a per-match wrapper; `get(index)` remains
+the convenient object view. Every borrowed view expires when its batch callback
+returns. Cursors and transducers use `Cleaner` only as a leak-safety fallback;
+applications should close them deterministically.

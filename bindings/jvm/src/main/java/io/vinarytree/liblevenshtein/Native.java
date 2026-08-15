@@ -39,6 +39,7 @@ final class Native {
     private static final Linker LINKER = Linker.nativeLinker();
     private static final MethodHandle LAST_ERROR;
     private static final MethodHandle TRANSDUCER_NEW;
+    private static final MethodHandle TRANSDUCER_SNAPSHOT;
     private static final MethodHandle TRANSDUCER_FREE;
     private static final MethodHandle QUERY_UTF8;
     private static final MethodHandle QUERY_BYTES;
@@ -65,6 +66,8 @@ final class Native {
         LAST_ERROR = downcall(symbols, "llev_last_error_message", FunctionDescriptor.of(ADDRESS));
         TRANSDUCER_NEW = downcall(symbols, "llev_transducer_new",
                 FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_INT, ADDRESS));
+        TRANSDUCER_SNAPSHOT = downcall(symbols, "llev_transducer_snapshot",
+                FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS));
         TRANSDUCER_FREE = downcall(symbols, "llev_transducer_free", FunctionDescriptor.ofVoid(ADDRESS));
         QUERY_UTF8 = queryHandle(symbols, "llev_transducer_query_utf8");
         QUERY_BYTES = queryHandle(symbols, "llev_transducer_query_bytes");
@@ -122,6 +125,7 @@ final class Native {
     }
 
     static int transducerNew(MemorySegment resource, int algorithm, MemorySegment out) { return call(TRANSDUCER_NEW, resource, algorithm, out); }
+    static int transducerSnapshot(MemorySegment transducer, MemorySegment out) { return call(TRANSDUCER_SNAPSHOT, transducer, out); }
     static void transducerFree(MemorySegment value) { run(TRANSDUCER_FREE, value); }
     static int queryUtf8(MemorySegment value, MemorySegment query, long len, long distance, int order, MemorySegment out) { return call(QUERY_UTF8, value, query, len, distance, order, out); }
     static int queryBytes(MemorySegment value, MemorySegment query, long len, long distance, int order, MemorySegment out) { return call(QUERY_BYTES, value, query, len, distance, order, out); }

@@ -53,7 +53,7 @@ accounts every cell; a single aggregator renders the evidence.
 | `schema/` | `result.schema.json` (one JSON per cell), `environment.schema.json` (one per run). |
 | `harnesses/<lang>/` | One harness per language, each implementing PROTOCOL.md. |
 | `legacy/javascript/vendor/` | The vendored 2.0.4 legacy JS + `provenance.json` + license. |
-| `scripts/` | `doctor.sh` (readiness), `run-one.sh` / `run-all.sh` (orchestration), `gate.py` (correctness pre-gate vs the Rust oracle), `aggregate.py` (stats + tables), `jmh_to_result.py`, `env-capture.sh`, `vendor-legacy-js.sh`. |
+| `scripts/` | `doctor.sh` (readiness), `run-one.sh` / `run-all.sh` (orchestration), `gate.py` (correctness pre-gate vs the Rust oracle), `aggregate.py` (stats + tables), `jmh_to_result.py`, `env-capture.py`, `vendor-legacy-js.sh`. |
 | `targets.tsv` | Declarative target manifest (backends, cpusets, phases). |
 | `results/` | Git-ignored; timestamped run directories. |
 | `.stage/` | Git-ignored; build staging (Haskell pkg-config prefix, Lua modules, compiled harness binaries). |
@@ -74,6 +74,32 @@ scripts/run-all.sh --results results/$(date +%Y%m%d_%H%M%S)
 # 3. aggregate + render tables
 scripts/aggregate.py results/<run-id>
 ```
+
+For a focused Java closing run, stage the exact release natives once and use
+the resumable pair driver. `parity` first captures full-query exact twins, then
+alternates the vinary and legacy arms at each of their 45 shared coordinates.
+The optional compiler-load gate refuses to begin or accept a JMH cell while an
+unrelated Cargo/rustc build is visible:
+
+```bash
+scripts/run-jvm-pair.sh stage
+mkdir -p results/java-parity
+XL_REQUIRE_COMPILER_QUIET=1 scripts/run-jvm-pair.sh parity results/java-parity
+```
+
+One preregistered coordinate can be measured with an explicit transport mode
+without weakening its exact-result evidence:
+
+```bash
+mkdir -p results/java-cell
+XL_REQUIRE_COMPILER_QUIET=1 XL_JMH_EXTRA_PARAMS=resultMode=materialized \
+  scripts/run-jvm-pair.sh jmh-cell results/java-cell \
+  jvm-vinary dynamic_dawg transposition 2 tr-d2 3 17
+```
+
+Focused commands create `environment.json` before the first cell; post-fill
+now rejects a dangling environment reference instead of emitting incomplete
+provenance.
 
 Every raw log is teed into the results directory; `environment.json` pins
 toolchain versions, git commits, artifact SHA-256s, governor, and cpusets.
@@ -149,7 +175,7 @@ resamples, SplitMix64 seed 42), never bare means.
   construction timing on all sides.
 - Legacy JS runs with `sort_candidates(false)` — the new stack returns
   traversal order, so result sorting would be uncompensated extra work.
-- Timed loops carry an O(1) accumulator triple, not per-byte hashing;
+- Timed loops carry an $`O(1)`$ accumulator triple, not per-byte hashing;
   checksums are computed in untimed gate passes only.
 - Both sides of each head-to-head share one JDK/Node, one cpuset, one heap
   configuration; deviations from language defaults are pinned in PROTOCOL.md

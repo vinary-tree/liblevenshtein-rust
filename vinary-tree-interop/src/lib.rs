@@ -22,6 +22,9 @@ pub const VT_ABI_VERSION: u32 = 1;
 /// Version of [`VtDictionaryVTable`].
 pub const VT_DICTIONARY_INTERFACE_VERSION: u32 = 1;
 
+/// Version of [`VtDictionaryVisitVTable`].
+pub const VT_DICTIONARY_VISIT_INTERFACE_VERSION: u32 = 1;
+
 /// Version of [`VtWfstVTable`].
 pub const VT_WFST_INTERFACE_VERSION: u32 = 1;
 
@@ -34,6 +37,14 @@ pub const VT_RECOMMENDED_ARC_BATCH: usize = 256;
 /// Stable 128-bit identifier for the dictionary provider interface.
 pub const VT_DICTIONARY_INTERFACE_ID: VtInterfaceId = VtInterfaceId {
     bytes: *b"vt.dictionary.v1",
+};
+
+/// Stable identifier for fused dictionary-node inspection.
+///
+/// This is a separate optional interface so providers compiled against the
+/// original [`VtDictionaryVTable`] remain binary compatible.
+pub const VT_DICTIONARY_VISIT_INTERFACE_ID: VtInterfaceId = VtInterfaceId {
+    bytes: *b"vt.dict.visit.v1",
 };
 
 /// Stable 128-bit identifier for the scalar WFST provider interface.
@@ -275,6 +286,35 @@ pub struct VtDictionaryVTable {
             context: *mut c_void,
             node: u64,
             start: usize,
+            out_edges: *mut VtDictionaryEdge,
+            capacity: usize,
+            out_written: *mut usize,
+            out_total: *mut usize,
+        ) -> u32,
+    >,
+}
+
+/// Optional fused dictionary-node inspection interface.
+///
+/// Consumers that need both finality and outgoing edges can discover this
+/// interface through [`VtResourceVTable::query_interface`]. A provider can
+/// then validate and lock a node once instead of once per property. Providers
+/// that do not expose it remain usable through [`VtDictionaryVTable`].
+#[repr(C)]
+pub struct VtDictionaryVisitVTable {
+    /// Size of this struct in bytes, for additive interface evolution.
+    pub struct_size: usize,
+    /// Must be at least [`VT_DICTIONARY_VISIT_INTERFACE_VERSION`].
+    pub interface_version: u32,
+    /// Reserved; must be zero.
+    pub reserved: u32,
+    /// Read finality and copy one page of outgoing edges in one call.
+    pub node_visit: Option<
+        unsafe extern "C" fn(
+            context: *mut c_void,
+            node: u64,
+            start: usize,
+            out_is_final: *mut u8,
             out_edges: *mut VtDictionaryEdge,
             capacity: usize,
             out_written: *mut usize,

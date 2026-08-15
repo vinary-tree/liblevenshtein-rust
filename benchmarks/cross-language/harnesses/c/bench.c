@@ -216,6 +216,20 @@ static LlevAlgorithm parse_algorithm(const char* name) {
     return LLEV_ALGORITHM_STANDARD; /* unreachable */
 }
 
+static LlevTransducer* build_snapshot_transducer(const VtResource* resource,
+                                                 LlevAlgorithm algorithm) {
+    LlevTransducer* live = NULL;
+    LlevTransducer* snapshot = NULL;
+    if (llev_transducer_new(resource, algorithm, &live) != LLEV_STATUS_OK)
+        die2("transducer_new failed", llev_last_error_message());
+    if (llev_transducer_snapshot(live, &snapshot) != LLEV_STATUS_OK) {
+        llev_transducer_free(live);
+        die2("transducer_snapshot failed", llev_last_error_message());
+    }
+    llev_transducer_free(live);
+    return snapshot;
+}
+
 /* ------------------------------------------------------------------ */
 /* Dictionary construction                                             */
 /* ------------------------------------------------------------------ */
@@ -269,12 +283,41 @@ static bool triple_eq(Triple a, Triple b) {
     return a.matches == b.matches && a.bytes == b.bytes && a.dist == b.dist;
 }
 
-static void drain_query(LlevTransducer* transducer,
-                        const char* query,
-                        size_t query_len,
-                        long max_distance,
-                        Triple* triple,
-                        uint64_t* checksum /* nullable */) {
+/* Drains one query and RETURNS its totals rather than accumulating through
+ * caller-supplied pointers.
+ *
+ * The pointer-accumulating form of this function measurably distorted the
+ * benchmark. Writing `triple->matches += 1` (and the checksum) inside the hot
+ * per-match loop forces the compiler to treat every match as a store to
+ * possibly-aliasing memory: `triple` and `checksum` are non-const pointers into
+ * the caller's frame, and nothing in the translation unit proves they do not
+ * alias the cursor's match arena, so the accumulators cannot stay in registers
+ * across `llev_query_cursor_next_batch`. The C harness was therefore ~11%
+ * slower than the C++ harness while crossing the *identical* ABI with the same
+ * batch capacity — an artifact of the measuring instrument, not of the boundary
+ * being measured, which inflated the reported C-ABI overhead floor.
+ *
+ * Accumulating into locals and folding once per query keeps the inner loop in
+ * registers and costs three additions per query instead of three stores per
+ * match. This mirrors what harnesses/cpp/bench.cpp already does by inlining its
+ * drain into the pass, which is why that harness was the faster of the two.
+ *
+ * `want_checksum` is hoisted out of the loop for the same reason: the timed
+ * passes call with `checksum == NULL`, and the FNV hash must NOT be computed on
+ * that path — doing it unconditionally would add real per-match work to exactly
+ * the measurement this function exists to take.
+ */
+static Triple drain_query(LlevTransducer* transducer,
+                          const char* query,
+                          size_t query_len,
+                          long max_distance,
+                          uint64_t* checksum /* nullable */) {
+    uint64_t matches = 0;
+    uint64_t bytes = 0;
+    uint64_t dist = 0;
+    uint64_t sum = 0;
+    const bool want_checksum = (checksum != NULL);
+
     LlevQueryCursor* cursor = NULL;
     LlevStatus status = llev_transducer_query_utf8(
         transducer, query, query_len, (size_t)max_distance, LLEV_QUERY_ORDER_TRAVERSAL, &cursor);
@@ -286,12 +329,12 @@ static void drain_query(LlevTransducer* transducer,
         if (status != LLEV_STATUS_OK) die2("next_batch failed", llev_last_error_message());
         for (size_t i = 0; i < batch.len; ++i) {
             const LlevMatch* match = &batch.matches[i];
-            triple->matches += 1;
-            triple->bytes += (uint64_t)match->byte_len;
-            triple->dist += (uint64_t)match->distance;
-            if (checksum) {
-                *checksum += entry_hash((const uint8_t*)match->term_data, match->byte_len,
-                                        (uint64_t)match->distance);
+            matches += 1;
+            bytes += (uint64_t)match->byte_len;
+            dist += (uint64_t)match->distance;
+            if (want_checksum) {
+                sum += entry_hash((const uint8_t*)match->term_data, match->byte_len,
+                                  (uint64_t)match->distance);
             }
         }
         if (llev_query_cursor_release_batch(cursor, batch.generation) != LLEV_STATUS_OK)
@@ -299,6 +342,10 @@ static void drain_query(LlevTransducer* transducer,
     }
     if (llev_query_cursor_free(cursor) != LLEV_STATUS_OK)
         die2("cursor_free failed", llev_last_error_message());
+
+    if (want_checksum) *checksum += sum;
+    Triple triple = {matches, bytes, dist};
+    return triple;
 }
 
 static Triple full_pass(LlevTransducer* transducer,
@@ -306,11 +353,18 @@ static Triple full_pass(LlevTransducer* transducer,
                         long max_distance,
                         size_t limit,
                         uint64_t* checksum /* nullable */) {
-    Triple triple = {0, 0, 0};
+    uint64_t matches = 0;
+    uint64_t bytes = 0;
+    uint64_t dist = 0;
     size_t n = limit < queries->count ? limit : queries->count;
-    for (size_t i = 0; i < n; ++i)
-        drain_query(transducer, queries->ptrs[i], queries->lens[i], max_distance, &triple,
-                    checksum);
+    for (size_t i = 0; i < n; ++i) {
+        Triple one = drain_query(transducer, queries->ptrs[i], queries->lens[i], max_distance,
+                                 checksum);
+        matches += one.matches;
+        bytes += one.bytes;
+        dist += one.dist;
+    }
+    Triple triple = {matches, bytes, dist};
     return triple;
 }
 
@@ -630,9 +684,7 @@ int main(int argc, char** argv) {
             LlevAlgorithm algorithm = parse_algorithm(fields[0]);
             long max_distance = strtol(fields[1], NULL, 10);
             Lines queries = read_lines(fields[2]);
-            LlevTransducer* transducer = NULL;
-            if (llev_transducer_new(&resource, algorithm, &transducer) != LLEV_STATUS_OK)
-                die2("transducer_new failed", llev_last_error_message());
+            LlevTransducer* transducer = build_snapshot_transducer(&resource, algorithm);
             if (strcmp(args.mode, "verify") == 0) {
                 /* Batched verify: the gate uses this to amortize one DAT
                  * build across all 27 oracle-comparison cells. */
@@ -680,9 +732,7 @@ int main(int argc, char** argv) {
         if (!args.out) die("--out is required");
         LlevAlgorithm algorithm = parse_algorithm(args.algorithm);
         Lines queries = read_lines(args.queries);
-        LlevTransducer* transducer = NULL;
-        if (llev_transducer_new(&resource, algorithm, &transducer) != LLEV_STATUS_OK)
-            die2("transducer_new failed", llev_last_error_message());
+        LlevTransducer* transducer = build_snapshot_transducer(&resource, algorithm);
 
         if (strcmp(args.mode, "query") == 0) {
             run_query_cell(transducer, &queries, &args, args.algorithm, args.max_distance,

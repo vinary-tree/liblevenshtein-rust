@@ -1,7 +1,7 @@
 //! Lazy value-aware queries ordered by distance and derived confidence.
 
 use super::suggestion::{Suggestion, SuggestionScorer};
-use super::transition::{initial_state, transition_state_pooled_ref, TransitionSettings};
+use super::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
 use super::{Algorithm, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::value::DictionaryValue;
 use libdictenstein::{CharUnit, MappedDictionaryNode};
@@ -22,6 +22,7 @@ struct RankedIntersection<N: MappedDictionaryNode> {
     state: State,
     parent: usize,
     children_queued: bool,
+    is_final: bool,
 }
 
 impl<N: MappedDictionaryNode> RankedIntersection<N> {
@@ -32,6 +33,7 @@ impl<N: MappedDictionaryNode> RankedIntersection<N> {
             state,
             parent: NO_PATH,
             children_queued: false,
+            is_final: false,
         }
     }
 
@@ -42,6 +44,7 @@ impl<N: MappedDictionaryNode> RankedIntersection<N> {
             state,
             parent,
             children_queued: false,
+            is_final: false,
         }
     }
 
@@ -83,6 +86,7 @@ where
     scorer: S,
     policy: P,
     state_pool: StatePool,
+    unit_transitions: CachedUnitTransitions<N::Unit>,
     path_arena: Vec<RankedPathNode<N::Unit>>,
     seen: FxHashSet<String>,
     sorted_buffer: Vec<Suggestion<N::Value>>,
@@ -140,7 +144,8 @@ where
         scorer: S,
         policy: P,
     ) -> Self {
-        let initial = initial_state(query.len(), max_distance, algorithm);
+        let query_length = query.len();
+        let initial = initial_state(query_length, max_distance, algorithm);
         let mut pending_by_distance = (0..=max_distance)
             .map(|_| VecDeque::with_capacity(32))
             .collect::<Vec<_>>();
@@ -154,6 +159,7 @@ where
             scorer,
             policy,
             state_pool: StatePool::new(),
+            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
             path_arena: Vec::with_capacity(64),
             seen: FxHashSet::default(),
             sorted_buffer: Vec::with_capacity(64),
@@ -185,14 +191,14 @@ where
         index
     }
 
-    fn queue_children(&mut self, intersection: &mut RankedIntersection<N>) {
+    fn queue_children_and_finality(&mut self, intersection: &mut RankedIntersection<N>) -> bool {
         if intersection.children_queued {
-            return;
+            return intersection.is_final;
         }
         intersection.children_queued = true;
         let mut parent_path = None;
-        for (label, child) in intersection.node.edges() {
-            if let Some(state) = transition_state_pooled_ref(
+        intersection.is_final = intersection.node.visit_edges_and_finality(|label, child| {
+            if let Some(state) = self.unit_transitions.transition(
                 &intersection.state,
                 &mut self.state_pool,
                 &self.policy,
@@ -214,7 +220,8 @@ where
                     self.state_pool.release(state);
                 }
             }
-        }
+        });
+        intersection.is_final
     }
 
     fn normalized_confidence(&self, term: &str, distance: usize, value: &N::Value) -> f64 {
@@ -246,19 +253,19 @@ where
             while let Some(mut intersection) =
                 self.pending_by_distance[self.current_distance].pop_front()
             {
-                if intersection.node.is_final() {
+                let is_final = self.queue_children_and_finality(&mut intersection);
+                if is_final {
                     let distance = intersection
                         .state
                         .infer_distance(self.query.len())
                         .unwrap_or(usize::MAX);
                     if distance <= self.max_distance {
                         if distance > self.current_distance {
-                            self.queue_children(&mut intersection);
                             self.pending_by_distance[distance].push_back(intersection);
                             continue;
                         }
                         if distance == self.current_distance {
-                            if let Some(value) = intersection.node.value() {
+                            if let Some(value) = intersection.node.value_at_final() {
                                 let term = intersection.term(&self.path_arena);
                                 if self.seen.insert(term.clone()) {
                                     let confidence =
@@ -274,7 +281,6 @@ where
                         }
                     }
                 }
-                self.queue_children(&mut intersection);
             }
 
             if !self.sorted_buffer.is_empty() {

@@ -127,6 +127,15 @@ def load_cells(results_dir: Path) -> tuple[list[dict], list[str]]:
 
 
 def check_digest_consistency(cells: list[dict], environment: dict) -> list[str]:
+    """Refuse to summarize cells that did not all run against the same inputs.
+
+    Two independent hazards are checked. The workload digest catches a
+    regenerated dictionary or query set. The native-library digests catch a
+    rebuild partway through a multi-hour run — cells on either side of it would
+    otherwise be averaged together under one run_id while actually measuring two
+    different binaries. Cells predating the native-digest field, and pure-legacy
+    cells that link none of these libraries, are skipped rather than faulted.
+    """
     problems = []
     expected_dict = environment["workload"]["dictionary_sha256"]
     for cell in cells:
@@ -135,6 +144,20 @@ def check_digest_consistency(cells: list[dict], environment: dict) -> list[str]:
                 f"{cell['_file']}: dictionary digest {cell['dictionary']['sha256'][:12]}… "
                 f"differs from environment {expected_dict[:12]}…"
             )
+
+    pinned = {
+        name: spec["sha256"]
+        for name, spec in (environment.get("native_artifacts") or {}).items()
+        if isinstance(spec, dict) and "sha256" in spec
+    }
+    for cell in cells:
+        for name, digest in (cell.get("native_digests") or {}).items():
+            expected = pinned.get(name)
+            if expected is not None and digest != expected:
+                problems.append(
+                    f"{cell['_file']}: {name} digest {digest[:12]}… differs from the "
+                    f"environment pin {expected[:12]}… (library rebuilt mid-run?)"
+                )
     return problems
 
 
@@ -232,9 +255,17 @@ def atlas_table(query_cells: dict[str, dict]) -> list[dict]:
         for e in query_cells.values()
         if e["target"] == "rust" and e["backend"] == "dynamic_dawg"
     }
+    # This table measures BINDING overhead: how much a language facade costs on
+    # top of the same Rust core. Competing implementations do not belong in it —
+    # their ratio against the anchor is a different quantity (implementation
+    # speed, not binding cost) and belongs in the pair tables. cpp-legacy is
+    # listed explicitly because it is currently excluded only incidentally, by
+    # the dynamic_dawg backend filter below; relaxing that filter without this
+    # line would silently relabel a rival implementation as binding overhead.
     rows = []
     targets = sorted(
-        {e["target"] for e in query_cells.values()} - {"rust", "jvm-legacy", "js-legacy"}
+        {e["target"] for e in query_cells.values()}
+        - {"rust", "jvm-legacy", "js-legacy", "cpp-legacy"}
     )
     for target in targets:
         entries = [
@@ -298,6 +329,34 @@ def main() -> int:
     if not environment_path.exists():
         raise SystemExit(f"aggregate: {environment_path} missing (run env-capture.py)")
     environment = json.loads(environment_path.read_text())
+
+    # Stamp `contended: true` on any cell whose timed region overlapped a
+    # foreign harness invocation before the cells are read, so the flag is on
+    # disk and in this summary rather than discovered after publication. Load
+    # average alone misses this: a profiler pinned to one core barely moves the
+    # 1-minute average yet competes directly for the cell's core.
+    # The marker's own report is authoritative for this list rather than a scan
+    # of the loaded cells: load_cells() drops schema-invalid cells, and a cell
+    # awaiting post-fill is invalid, so deriving the count from loaded cells
+    # would silently report "0 contended" for exactly the in-flight batch that
+    # the contention hit.
+    foreign_contended: list[str] = []
+    marker = Path(__file__).resolve().parent / "mark-contended-cells.py"
+    if (results_dir / "foreign-contention.jsonl").exists() and marker.exists():
+        marked = subprocess.run(
+            [sys.executable, str(marker), str(results_dir), "--annotate", "--json"],
+            capture_output=True,
+            text=True,
+        )
+        for line in marked.stderr.splitlines():
+            print(f"aggregate: contention: {line}", file=sys.stderr)
+        if marked.returncode != 0:
+            raise SystemExit("aggregate: foreign-contention marking failed; refusing to "
+                             "summarize cells whose contention status is unknown")
+        report = json.loads(marked.stdout or '{"affected": []}')
+        foreign_contended = sorted(
+            row["cell"].removesuffix(".json") for row in report.get("affected", [])
+        )
 
     cells, validation_errors = load_cells(results_dir)
     for error in validation_errors:
@@ -439,6 +498,25 @@ def main() -> int:
         )
     )
 
+    # The C++ pair has a single new-stack leg: the vinary C++ facade is built
+    # against DynamicDawg only (see targets.tsv), unlike the JVM pair which
+    # carries both dictionary backends.
+    cpp_rows = pair_table(query_cells, "cpp-legacy", [("cpp", "dynamic_dawg")])
+    (tables_dir / "pair_cpp.md").write_text(
+        markdown_table(
+            cpp_rows,
+            [
+                ("algorithm", "algorithm"),
+                ("max_distance", "d"),
+                ("queryset", "query set"),
+                ("legacy_us_per_query", "legacy C++ µs/q"),
+                ("cpp(dynamic_dawg)_us_per_query", "vinary C++ µs/q"),
+                ("cpp(dynamic_dawg)_speedup", "speedup"),
+            ],
+            "C++ vs C++ — liblevenshtein-cpp ÷ vinary-tree 0.10.0 C++ facade",
+        )
+    )
+
     js_rows = pair_table(
         query_cells,
         "js-legacy",
@@ -535,6 +613,23 @@ def main() -> int:
             )
     contended.sort(key=lambda r: -r["load_avg_1m"])
     quiet_count = len(cells) - len(contended) - len(missing_snapshot)
+
+    # A second, independent contention signal (computed above from the marker's
+    # own report): cells whose timed region overlapped a harness binary invoked
+    # outside the runner — another agent, a profiler. These need not show an
+    # elevated load average, since a single core-pinned profiler competes
+    # directly for the measured core while barely moving a 32-core average, so
+    # they are counted separately rather than folded into that population.
+    foreign_note = (
+        f"{len(foreign_contended)} cell(s) overlapped a harness process invoked outside "
+        f"the runner's control (see foreign-contention.jsonl for the offending command "
+        f"lines and their intervals). These are flagged independently of load average "
+        f"because a core-pinned profiler contends for the measured core without moving "
+        f"a 32-core load average."
+        if foreign_contended
+        else "No cell overlapped a harness process invoked outside the runner's control."
+    )
+
     contention_note = (
         f"{len(contended)} of {len(cells)} cells were measured with a 1-minute load "
         f"average above {CONTENTION_THRESHOLD} on a 32-core host; {quiet_count} were "
@@ -542,18 +637,20 @@ def main() -> int:
         f"receives one when its batch completes, so in-flight batches appear here). "
         f"Contention inflates dispersion rather than shifting medians systematically, "
         f"which is why medians with MAD and bootstrap intervals are reported instead "
-        f"of means; cells listed below can be re-measured on a quiet machine."
+        f"of means; cells listed below can be re-measured on a quiet machine. "
+        f"{foreign_note}"
     )
-    (tables_dir / "contention.md").write_text(
-        f"# Cells measured under external load\n\n{contention_note}\n\n"
-        + markdown_table(
+    contention_md = f"# Cells measured under external load\n\n{contention_note}\n"
+    if contended:
+        contention_md += "\n" + markdown_table(
             contended,
             [("cell", "cell"), ("load_avg_1m", "1-min load"), ("status", "status")],
             "Cells with load average above the threshold",
         )
-        if contended
-        else f"# Cells measured under external load\n\n{contention_note}\n"
-    )
+    if foreign_contended:
+        contention_md += "\n\n## Cells overlapping a foreign harness invocation\n\n"
+        contention_md += "\n".join(f"- `{name}`" for name in foreign_contended) + "\n"
+    (tables_dir / "contention.md").write_text(contention_md)
 
     (tables_dir / "not_measured.md").write_text(
         markdown_table(
@@ -575,6 +672,7 @@ def main() -> int:
         "memory": memory_rows,
         "pair_java": java_rows,
         "pair_javascript": js_rows,
+        "pair_cpp": cpp_rows,
         "atlas_overhead": atlas_rows,
         "not_measured": not_measured,
         "contention": {
@@ -584,6 +682,11 @@ def main() -> int:
             "cells_without_snapshot": len(missing_snapshot),
             "note": contention_note,
             "cells": contended,
+            "foreign_harness_overlap": {
+                "cells": foreign_contended,
+                "count": len(foreign_contended),
+                "ledger": "foreign-contention.jsonl",
+            },
         },
     }
     (results_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# The shared gate validates ordered and unordered adapters against one kernel.
+
+set -euo pipefail
+
+repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+exec "$repo/benchmarks/causal/validate-optimized-construction"

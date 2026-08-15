@@ -1,0 +1,71 @@
+@startuml java-parity-causal-flow
+' Root causes and accepted closure mechanisms from the Java-parity campaign.
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontName "DejaVu Sans"
+skinparam ArrowColor #37474F
+skinparam TitleFontSize 16
+
+title Java parity campaign — measured causes and retained closures
+
+legend right
+  |= color |= meaning |
+  |<#FFCCBC>| historical excess work |
+  |<#C8E6C9>| retained optimized path |
+  |<#D1C4E9>| resource / ABI mechanism |
+  |<#BBDEFB>| measured outcome |
+endlegend
+
+package "Construction" #FFF8E1 {
+  [unordered terms] as Unordered #FFE0B2
+  [sorted terms] as Sorted #FFE0B2
+  [historical bulk path\nfull walk + path copy + root CAS\nfor every term] as OldBuild #FFCCBC
+  [sort once] as SortOnce #C8E6C9
+  [generic freeze-once\nminimal DAWG builder] as MinimalBuild #A5D6A7
+  [minimal graph\n29,133 identity nodes] as MinimalGraph #81C784
+  [sorted: 11.085 ms\nunordered: 19.805 ms] as BuildOutcome #BBDEFB
+
+  Unordered ..> OldBuild : historical
+  Sorted ..> OldBuild : historical
+  Unordered --> SortOnce
+  SortOnce --> MinimalBuild
+  Sorted --> MinimalBuild
+  MinimalBuild --> MinimalGraph : publish once
+  MinimalGraph --> BuildOutcome
+}
+
+package "Native matching" #F1F8E9 {
+  [dictionary node] as DictNode #DCEDC8
+  [historical\nboxed edge copy + repeated closure\n+ per-position query scans] as OldQuery #FFCCBC
+  [borrowed / fused\nDictionaryNode visit] as NodeVisit #A5D6A7
+  [query-owned\ncharacteristic cache] as CharCache #81C784
+  [epsilon-closed state\ntransition once per accepted edge] as ClosedState #66BB6A
+  [39.976 ms standard/d1/hits\n1.28x faster than Java reference] as NativeOutcome #BBDEFB
+
+  DictNode ..> OldQuery : historical
+  DictNode --> NodeVisit
+  NodeVisit --> CharCache
+  CharCache --> ClosedState
+  ClosedState --> NativeOutcome
+}
+
+package "Resource and JVM binding" #F3E5F5 {
+  [historical cold snapshot per query\n3.50M locks + 7.00M descriptor clones] as OldBoundary #FFCCBC
+  [one pinned immutable snapshot] as Pinned #D1C4E9
+  [fused node visit\n+ borrowed edge page] as Fused #B39DDB
+  [snapshot-local node-ID cache] as NodeCache #9575CD
+  [borrowed JVM result batches] as Results #7E57C2
+  [resource/direct = 1.132x\nbefore JVM result experiment] as BoundaryOutcome #BBDEFB
+
+  OldBoundary ..> Pinned : replaced by explicit batch path
+  Pinned --> Fused
+  Fused --> NodeCache
+  NodeCache --> Results
+  NodeCache --> BoundaryOutcome
+}
+
+MinimalGraph --> DictNode
+ClosedState --> Pinned : same exact query signature
+Results --> [post-optimization Java matrix] #90CAF9
+@enduml

@@ -1,9 +1,5 @@
 package io.vinarytree.liblevenshtein;
 
-import static java.lang.foreign.MemoryLayout.PathElement.groupElement;
-import static java.lang.foreign.ValueLayout.ADDRESS;
-import static java.lang.foreign.ValueLayout.JAVA_LONG;
-
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.ref.Cleaner;
@@ -15,9 +11,6 @@ import java.util.Objects;
 /** One-shot lazy query stream retaining its query-start dictionary snapshot. */
 public final class QueryCursor implements Iterator<Match>, Iterable<Match>, AutoCloseable {
     private static final Cleaner CLEANER = Cleaner.create();
-    private static final long MATCHES = Native.BATCH.byteOffset(groupElement("matches"));
-    private static final long LEN = Native.BATCH.byteOffset(groupElement("len"));
-    private static final long GENERATION = Native.BATCH.byteOffset(groupElement("generation"));
 
     private final Arena arena = Arena.ofShared();
     private final MemorySegment batchOut = arena.allocate(Native.BATCH);
@@ -45,21 +38,11 @@ public final class QueryCursor implements Iterator<Match>, Iterable<Match>, Auto
 
     private boolean withNextBatch(BorrowedBatchConsumer consumer) {
         MemorySegment handle = state.handle();
-        int status = Native.nextBatch(handle, GeneratedAbi.DEFAULT_MATCH_BATCH, batchOut);
-        if (status == Native.END) { exhausted = true; return false; }
-        Native.check(status);
-        long length = batchOut.get(JAVA_LONG, LEN);
-        long generation = batchOut.get(JAVA_LONG, GENERATION);
-        MemorySegment pointer = batchOut.get(ADDRESS, MATCHES);
-        BorrowedMatchBatch batch = new BorrowedMatchBatch(
-                pointer.reinterpret(length * Native.MATCH.byteSize()), Math.toIntExact(length));
-        try {
-            consumer.accept(batch);
-        } finally {
-            batch.invalidate();
-            Native.check(Native.releaseBatch(handle, generation));
+        boolean available = NativeQueryBatches.withNextBatch(handle, batchOut, consumer);
+        if (!available) {
+            exhausted = true;
         }
-        return true;
+        return available;
     }
 
     private void fillMaterialized() {

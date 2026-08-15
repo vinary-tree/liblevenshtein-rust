@@ -4,8 +4,10 @@
 The Java pair is the one harness whose timing JMH owns (forks, managed
 warmup). Its benchmark method executes ONE FULL PASS over the query set per
 invocation, so `primaryMetric.rawData` (per-fork arrays of per-iteration
-average times) flattens directly into `measurements.samples_ns` with the
-same sample definition every self-timed harness uses.
+average times) flattens directly into `measurements.samples_ns`. The vinary
+benchmark also records whether results were materialized as managed objects or
+reduced through the borrowed descriptor view; the emitted sample definition
+must preserve that distinction.
 
 Checksums/triples are NOT produced by JMH runs; they come from the twin
 verify cells (VerifyMain/LegacyVerifyMain runs recorded by the gate). This
@@ -78,6 +80,16 @@ def main() -> int:
         algorithm = params["algorithm"]
         distance = int(params["distance"])
         queryset = params["queryset"]
+        result_mode = (
+            params.get("resultMode", "materialized")
+            if args.target == "jvm-vinary"
+            else "materialized"
+        )
+        if result_mode not in ("borrowed", "materialized"):
+            raise SystemExit(
+                f"jmh_to_result: unknown resultMode {result_mode!r} in "
+                f"{record['benchmark']}"
+            )
         metric = record["primaryMetric"]
         unit = metric["scoreUnit"]
         if unit not in TIME_UNIT_TO_NS:
@@ -169,7 +181,11 @@ def main() -> int:
                 "samples_requested": forks * measurement_iterations,
                 "sample_definition": (
                     "one full pass over the query set; every cursor fully drained and "
-                    "(term, distance) materialized"
+                    + (
+                        "(term bytes, distance) consumed through borrowed descriptors"
+                        if result_mode == "borrowed"
+                        else "(term, distance) materialized"
+                    )
                 ),
                 "batch_size": None if args.target == "jvm-legacy" else 256,
                 "wall_cap_seconds": 0,
@@ -191,6 +207,7 @@ def main() -> int:
             "status": "ok",
             "notes": [
                 f"converted from JMH record {record['benchmark']}",
+                f"JVM result transport: {result_mode}",
                 (
                     "correctness evidence (triple+checksum) copied from the full-coverage "
                     f"verify twin over all {twin_queries} queries — the same pass JMH timed"

@@ -34,7 +34,12 @@ fn div_ceil(numerator: usize, denominator: usize) -> usize {
 /// Drain a fresh query completely at batch capacity `cap`, returning
 /// `(matches, next_batch_calls)`. `next_batch_calls` counts every crossing of the
 /// consumer↔cursor boundary, including the terminal pull that returns `End`.
-fn drain_at_capacity(dictionary: &TestDictionary, query: &str, k: usize, cap: usize) -> (usize, usize) {
+fn drain_at_capacity(
+    dictionary: &TestDictionary,
+    query: &str,
+    k: usize,
+    cap: usize,
+) -> (usize, usize) {
     let transducer =
         unsafe { ResourceTransducer::from_resource(dictionary.resource(), Algorithm::Standard) }
             .expect("resource accepted");

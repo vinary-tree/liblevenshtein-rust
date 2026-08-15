@@ -6,6 +6,7 @@ use super::{
     Algorithm, Position, PositionKind, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor,
 };
 use libdictenstein::CharUnit;
+use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
 /// Configuration shared by pooled state transitions.
@@ -163,6 +164,137 @@ pub(crate) fn transition_window_size(max_distance: usize, query_length: usize) -
     let distance_window = checked_successor_or_max(max_distance);
     let query_window = checked_successor_or_max(query_length).max(1);
     distance_window.min(query_window)
+}
+
+/// Query-local cache of complete label/query equivalence vectors.
+///
+/// Values include a false suffix as wide as any unit-cost transition window.
+/// A transition can therefore borrow an offset window directly, including at
+/// the end of the query, without rebuilding a `SmallVec` for every state
+/// position. The cache is unit- and substitution-policy-generic.
+pub(crate) struct CharacteristicCache<U: CharUnit> {
+    vectors: FxHashMap<U, Box<[bool]>>,
+    query_length: usize,
+    padding: usize,
+}
+
+/// Query-local unit-transition engine shared by every iterator surface.
+///
+/// It owns the lazy characteristic cache and centralizes the epsilon-closed
+/// queued-state invariant. Concrete unit, substitution-policy, and automaton
+/// variant types are still monomorphized; this abstraction introduces no
+/// trait objects or indirect calls in the transition loop.
+pub(crate) struct CachedUnitTransitions<U: CharUnit> {
+    cache: CharacteristicCache<U>,
+    max_distance: usize,
+}
+
+impl<U: CharUnit> CachedUnitTransitions<U> {
+    pub(crate) fn new(query_length: usize, max_distance: usize) -> Self {
+        Self {
+            cache: CharacteristicCache::new(query_length, max_distance),
+            max_distance,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn transition<P>(
+        &mut self,
+        state: &State,
+        pool: &mut StatePool,
+        policy: &P,
+        dict_unit: U,
+        query: &[U],
+        settings: TransitionSettings,
+    ) -> Option<State>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        debug_assert_eq!(settings.max_distance, self.max_distance);
+        let matches = self.cache.matches_for(policy, dict_unit, query);
+        transition_epsilon_closed_state_pooled_cached(state, pool, matches, query.len(), settings)
+    }
+
+    /// Transition an affine-gap state through the same query-local
+    /// characteristic cache and epsilon-closed queue invariant.
+    #[inline]
+    pub(crate) fn transition_affine<P>(
+        &mut self,
+        state: &State,
+        pool: &mut StatePool,
+        policy: &P,
+        dict_unit: U,
+        query: &[U],
+        settings: AffineTransitionSettings,
+    ) -> Option<State>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        debug_assert_eq!(settings.max_cost, self.max_distance);
+
+        // An affine query gap can inspect every remaining query unit when its
+        // extension cost is zero. Grow the false suffix once before borrowing
+        // the label vector so every legal window remains a direct slice.
+        self.cache.ensure_padding(query.len().saturating_add(1));
+        let matches = self.cache.matches_for(policy, dict_unit, query);
+        let ctx = TransitionCtx::new(
+            query.len(),
+            settings.max_cost,
+            settings.prefix_mode,
+            settings.params,
+        );
+        let characteristics = CachedCharacteristics::new(matches, query.len());
+        transition_epsilon_closed_state_pooled_with::<AffineV, _>(
+            state,
+            pool,
+            &characteristics,
+            &ctx,
+        )
+    }
+}
+
+impl<U: CharUnit> CharacteristicCache<U> {
+    pub(crate) fn new(query_length: usize, max_distance: usize) -> Self {
+        Self {
+            vectors: FxHashMap::default(),
+            query_length,
+            padding: transition_window_size(max_distance, query_length),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn matches_for<P>(&mut self, policy: &P, dict_unit: U, query: &[U]) -> &[bool]
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        debug_assert_eq!(query.len(), self.query_length);
+        let matches = self.vectors.entry(dict_unit).or_insert_with(|| {
+            let mut matches = Vec::with_capacity(query.len().saturating_add(self.padding));
+            matches.extend(query.iter().copied().map(|query_unit| {
+                query_unit == dict_unit || policy.is_allowed_for(dict_unit, query_unit)
+            }));
+            matches.resize(query.len().saturating_add(self.padding), false);
+            matches.into_boxed_slice()
+        });
+        &**matches
+    }
+
+    /// Ensure cached vectors contain at least `padding` false units after the
+    /// query. Existing vectors are extended in place only when a specialized
+    /// automaton requires a wider look-ahead window.
+    pub(crate) fn ensure_padding(&mut self, padding: usize) {
+        if padding <= self.padding {
+            return;
+        }
+
+        let length = self.query_length.saturating_add(padding);
+        for matches in self.vectors.values_mut() {
+            let mut extended = std::mem::take(matches).into_vec();
+            extended.resize(length, false);
+            *matches = extended.into_boxed_slice();
+        }
+        self.padding = padding;
+    }
 }
 
 #[inline(always)]
@@ -961,6 +1093,7 @@ fn transition_state_inner<
     query: &[U],
     ctx: &TransitionCtx<V::Params>,
 ) -> Option<State> {
+    crate::causal_perf::record_transition_attempts(1);
     if ctx.max_distance == 0
         && V::supports_zero_distance_fast_path(ctx)
         && supports_zero_distance_fast_path(state)
@@ -1065,6 +1198,133 @@ pub(crate) fn transition_state_pooled_ref<
     })
 }
 
+/// Transition from a state that is already epsilon-closed and close the
+/// accepted result before returning it.
+///
+/// This is the query-iterator fast path. Its caller maintains the invariant
+/// that the initial state and every queued successor are epsilon-closed for
+/// the same transition context. A dictionary node can therefore share one
+/// closure across all of its outgoing labels instead of copying and closing
+/// the source independently for every edge.
+#[inline]
+pub(crate) fn transition_epsilon_closed_state_pooled_cached(
+    state: &State,
+    pool: &mut StatePool,
+    matches: &[bool],
+    query_length: usize,
+    settings: TransitionSettings,
+) -> Option<State> {
+    settings
+        .algorithm
+        .assert_supported_max_distance(settings.max_distance);
+    let ctx = TransitionCtx::unit(query_length, settings.max_distance, settings.prefix_mode);
+    let characteristics = CachedCharacteristics {
+        matches,
+        query_length,
+    };
+    with_variant!(VariantSpec::from(settings.algorithm), |V| {
+        transition_epsilon_closed_state_pooled_with::<V, _>(state, pool, &characteristics, &ctx)
+    })
+}
+
+pub(crate) trait CharacteristicProvider {
+    fn query_length(&self) -> usize;
+
+    fn window<'a>(
+        &'a self,
+        offset: usize,
+        window_size: usize,
+        scratch: &'a mut SmallVec<[bool; 8]>,
+    ) -> &'a [bool];
+}
+
+pub(crate) struct OnDemandCharacteristics<'a, U: CharUnit, P> {
+    policy: &'a P,
+    dict_unit: U,
+    query: &'a [U],
+}
+
+impl<'a, U: CharUnit, P> OnDemandCharacteristics<'a, U, P> {
+    pub(crate) const fn new(policy: &'a P, dict_unit: U, query: &'a [U]) -> Self {
+        Self {
+            policy,
+            dict_unit,
+            query,
+        }
+    }
+}
+
+impl<U, P> CharacteristicProvider for OnDemandCharacteristics<'_, U, P>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    #[inline(always)]
+    fn query_length(&self) -> usize {
+        self.query.len()
+    }
+
+    #[inline(always)]
+    fn window<'a>(
+        &'a self,
+        offset: usize,
+        window_size: usize,
+        scratch: &'a mut SmallVec<[bool; 8]>,
+    ) -> &'a [bool] {
+        characteristic_vector(
+            self.policy,
+            self.dict_unit,
+            self.query,
+            window_size,
+            offset,
+            scratch,
+        )
+    }
+}
+
+pub(crate) struct CachedCharacteristics<'a> {
+    matches: &'a [bool],
+    query_length: usize,
+}
+
+impl<'a> CachedCharacteristics<'a> {
+    pub(crate) const fn new(matches: &'a [bool], query_length: usize) -> Self {
+        Self {
+            matches,
+            query_length,
+        }
+    }
+}
+
+impl CharacteristicProvider for CachedCharacteristics<'_> {
+    #[inline(always)]
+    fn query_length(&self) -> usize {
+        self.query_length
+    }
+
+    #[inline(always)]
+    fn window<'a>(
+        &'a self,
+        offset: usize,
+        window_size: usize,
+        scratch: &'a mut SmallVec<[bool; 8]>,
+    ) -> &'a [bool] {
+        let start = offset.min(self.query_length);
+        if let Some(end) = start.checked_add(window_size) {
+            if let Some(window) = self.matches.get(start..end) {
+                return window;
+            }
+        }
+
+        // Defensive fallback for a caller whose requested window exceeds the
+        // cache's construction bound. Public distance validation normally
+        // makes this unreachable, but retaining it keeps extreme inputs safe.
+        scratch.clear();
+        scratch.resize(window_size, false);
+        scratch.as_slice()
+    }
+}
+
 #[inline]
 fn transition_state_pooled_inner<
     U: CharUnit,
@@ -1078,17 +1338,31 @@ fn transition_state_pooled_inner<
     query: &[U],
     ctx: &TransitionCtx<V::Params>,
 ) -> Option<State> {
+    let characteristics = OnDemandCharacteristics {
+        policy,
+        dict_unit,
+        query,
+    };
+    transition_state_pooled_with::<V, _>(state, pool, &characteristics, ctx)
+}
+
+#[inline]
+fn transition_state_pooled_with<V: AutomatonVariant, C: CharacteristicProvider>(
+    state: &State,
+    pool: &mut StatePool,
+    characteristics: &C,
+    ctx: &TransitionCtx<V::Params>,
+) -> Option<State> {
+    crate::causal_perf::record_transition_attempts(1);
     if ctx.max_distance == 0
         && V::supports_zero_distance_fast_path(ctx)
         && supports_zero_distance_fast_path(state)
     {
         let mut next_state = pool.acquire();
-        transition_zero_distance_into::<U, P, V>(
+        transition_zero_distance_with_characteristics::<V, C>(
             state,
             &mut next_state,
-            policy,
-            dict_unit,
-            query,
+            characteristics,
             ctx,
         );
 
@@ -1104,24 +1378,18 @@ fn transition_state_pooled_inner<
     let mut expanded_state = pool.acquire();
 
     // Compute epsilon closure into the pooled state (no clone!)
+    crate::causal_perf::record_epsilon_input_positions(state.len() as u64);
     epsilon_closure_into::<V>(state, &mut expanded_state, ctx);
+    crate::causal_perf::record_epsilon_output_positions(expanded_state.len() as u64);
 
     // Acquire another state from pool for next state
     let mut next_state = pool.acquire();
-    let mut cv = SmallVec::<[bool; 8]>::new();
-    let mut next_positions = SmallVec::<[Position; 4]>::new();
-
-    for position in expanded_state.positions() {
-        let offset = position.term_index;
-        let window_size = V::skip_window(position, ctx);
-        let cv = characteristic_vector(policy, dict_unit, query, window_size, offset, &mut cv);
-
-        next_positions.clear();
-        V::successors(*position, cv, ctx, &mut next_positions);
-        for next_pos in next_positions.iter().copied() {
-            next_state.insert_with::<V>(next_pos, ctx);
-        }
-    }
+    transition_epsilon_closed_state_into::<V, C>(
+        &expanded_state,
+        &mut next_state,
+        characteristics,
+        ctx,
+    );
 
     // Return expanded_state to pool (no longer needed)
     pool.release(expanded_state);
@@ -1132,6 +1400,115 @@ fn transition_state_pooled_inner<
         None
     } else {
         Some(next_state)
+    }
+}
+
+/// Pooled transition kernel for the epsilon-closed queued-state invariant.
+///
+/// The source closure is label-independent, so the iterator stores it once.
+/// The non-empty output is closed in place before it is queued. Both this
+/// path and the compatibility path above share the same monomorphized
+/// per-position transition kernel.
+#[inline]
+fn transition_epsilon_closed_state_pooled_with<V: AutomatonVariant, C: CharacteristicProvider>(
+    state: &State,
+    pool: &mut StatePool,
+    characteristics: &C,
+    ctx: &TransitionCtx<V::Params>,
+) -> Option<State> {
+    crate::causal_perf::record_transition_attempts(1);
+    let mut next_state = pool.acquire();
+
+    if ctx.max_distance == 0
+        && V::supports_zero_distance_fast_path(ctx)
+        && supports_zero_distance_fast_path(state)
+    {
+        transition_zero_distance_with_characteristics::<V, C>(
+            state,
+            &mut next_state,
+            characteristics,
+            ctx,
+        );
+    } else {
+        transition_epsilon_closed_state_into::<V, C>(state, &mut next_state, characteristics, ctx);
+    }
+
+    if next_state.is_empty() {
+        pool.release(next_state);
+        return None;
+    }
+
+    // Establish the invariant consumed by the next dictionary node. Closing
+    // here performs the work once per accepted state rather than once per
+    // outgoing edge of that state.
+    crate::causal_perf::record_epsilon_input_positions(next_state.len() as u64);
+    epsilon_closure_mut::<V>(&mut next_state, ctx);
+    crate::causal_perf::record_epsilon_output_positions(next_state.len() as u64);
+
+    Some(next_state)
+}
+
+/// Consume one dictionary unit from an epsilon-closed source state.
+///
+/// Keeping this as the single generic inner loop avoids duplicating the hot
+/// algorithm logic between the public compatibility path and the queued-state
+/// fast path. `V` and `C` remain statically dispatched and monomorphized.
+#[inline]
+fn transition_epsilon_closed_state_into<V: AutomatonVariant, C: CharacteristicProvider>(
+    state: &State,
+    next_state: &mut State,
+    characteristics: &C,
+    ctx: &TransitionCtx<V::Params>,
+) {
+    let mut cv = SmallVec::<[bool; 8]>::new();
+    let mut next_positions = SmallVec::<[Position; 4]>::new();
+
+    for position in state.positions() {
+        let offset = position.term_index;
+        let window_size = V::skip_window(position, ctx);
+        crate::causal_perf::record_characteristic_vectors(1);
+        crate::causal_perf::record_characteristic_units(window_size as u64);
+        let cv = characteristics.window(offset, window_size, &mut cv);
+
+        next_positions.clear();
+        V::successors(*position, cv, ctx, &mut next_positions);
+        crate::causal_perf::record_successor_candidates(next_positions.len() as u64);
+        for next_pos in next_positions.iter().copied() {
+            next_state.insert_with::<V>(next_pos, ctx);
+        }
+    }
+}
+
+#[inline]
+fn transition_zero_distance_with_characteristics<V: AutomatonVariant, C: CharacteristicProvider>(
+    state: &State,
+    target: &mut State,
+    characteristics: &C,
+    ctx: &TransitionCtx<V::Params>,
+) {
+    let query_length = characteristics.query_length();
+    let mut scratch = SmallVec::<[bool; 8]>::new();
+
+    for position in state.positions() {
+        if ctx.prefix_mode && position.term_index >= query_length {
+            target.insert_with::<V>(Position::new(position.term_index, position.num_errors), ctx);
+            continue;
+        }
+        if position.num_errors != 0 {
+            continue;
+        }
+        if characteristics
+            .window(position.term_index, 1, &mut scratch)
+            .first()
+            .copied()
+            .unwrap_or(false)
+        {
+            if let Some(next_position) =
+                checked_position_with_offsets(position.term_index, 1, position.num_errors, 0)
+            {
+                target.insert_with::<V>(next_position, ctx);
+            }
+        }
     }
 }
 
@@ -1175,28 +1552,6 @@ pub(crate) fn initial_state_affine(
     initial_state_with::<AffineV>(&ctx)
 }
 
-/// Transition a scaled affine-gap state with a borrowed substitution policy.
-#[inline]
-pub(crate) fn transition_state_pooled_affine_ref<
-    U: CharUnit,
-    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
->(
-    state: &State,
-    pool: &mut StatePool,
-    policy: &P,
-    dict_unit: U,
-    query: &[U],
-    settings: AffineTransitionSettings,
-) -> Option<State> {
-    let ctx = TransitionCtx::new(
-        query.len(),
-        settings.max_cost,
-        settings.prefix_mode,
-        settings.params,
-    );
-    transition_state_pooled_inner::<U, P, AffineV>(state, pool, policy, dict_unit, query, &ctx)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1228,6 +1583,22 @@ mod tests {
 
         assert_eq!(cv.len(), 12);
         assert!(cv[9]);
+    }
+
+    #[test]
+    fn characteristic_cache_extends_existing_vectors_for_specialized_windows() {
+        let query = b"test";
+        let policy = Unrestricted;
+        let mut cache = CharacteristicCache::new(query.len(), 1);
+
+        let before = cache.matches_for(&policy, b't', query).to_vec();
+        assert_eq!(before.len(), query.len() + 2);
+
+        cache.ensure_padding(8);
+        let after = cache.matches_for(&policy, b't', query);
+        assert_eq!(after.len(), query.len() + 8);
+        assert_eq!(&after[..query.len()], &[true, false, false, true]);
+        assert!(after[query.len()..].iter().all(|matched| !matched));
     }
 
     #[test]

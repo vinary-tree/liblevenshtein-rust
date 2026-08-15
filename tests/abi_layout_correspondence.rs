@@ -32,10 +32,11 @@ use core::mem::{align_of, offset_of, size_of};
 use std::collections::{BTreeMap, BTreeSet};
 
 use vinary_tree_interop::{
-    dictionary_flags, wfst_flags, VtDictionaryEdge, VtDictionaryVTable, VtInterfaceId,
-    VtOptionalU64, VtResource, VtResourceVTable, VtStatus, VtUnitDomain, VtValueDomain,
-    VtWeightDomain, VtWfstArc, VtWfstVTable, VT_ABI_VERSION, VT_DICTIONARY_INTERFACE_ID,
-    VT_DICTIONARY_INTERFACE_VERSION, VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH,
+    dictionary_flags, wfst_flags, VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable,
+    VtInterfaceId, VtOptionalU64, VtResource, VtResourceVTable, VtStatus, VtUnitDomain,
+    VtValueDomain, VtWeightDomain, VtWfstArc, VtWfstVTable, VT_ABI_VERSION,
+    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
+    VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH,
     VT_WFST_INTERFACE_ID, VT_WFST_INTERFACE_VERSION,
 };
 
@@ -191,6 +192,18 @@ fn live_field(ty: &str, member: &str) -> Option<(usize, usize, usize)> {
             entry!(VtDictionaryVTable, node_transition, FnPtr)
         }
         ("VtDictionaryVTable", "node_edges") => entry!(VtDictionaryVTable, node_edges, FnPtr),
+        ("VtDictionaryVisitVTable", "struct_size") => {
+            entry!(VtDictionaryVisitVTable, struct_size, usize)
+        }
+        ("VtDictionaryVisitVTable", "interface_version") => {
+            entry!(VtDictionaryVisitVTable, interface_version, u32)
+        }
+        ("VtDictionaryVisitVTable", "reserved") => {
+            entry!(VtDictionaryVisitVTable, reserved, u32)
+        }
+        ("VtDictionaryVisitVTable", "node_visit") => {
+            entry!(VtDictionaryVisitVTable, node_visit, FnPtr)
+        }
         ("VtWfstArc", "input_label") => entry!(VtWfstArc, input_label, u64),
         ("VtWfstArc", "output_label") => entry!(VtWfstArc, output_label, u64),
         ("VtWfstArc", "target_state") => entry!(VtWfstArc, target_state, u64),
@@ -230,6 +243,10 @@ fn live_struct(ty: &str) -> Option<(usize, usize)> {
         "VtDictionaryVTable" => Some((
             size_of::<VtDictionaryVTable>(),
             align_of::<VtDictionaryVTable>(),
+        )),
+        "VtDictionaryVisitVTable" => Some((
+            size_of::<VtDictionaryVisitVTable>(),
+            align_of::<VtDictionaryVisitVTable>(),
         )),
         "VtWfstArc" => Some((size_of::<VtWfstArc>(), align_of::<VtWfstArc>())),
         "VtWfstVTable" => Some((size_of::<VtWfstVTable>(), align_of::<VtWfstVTable>())),
@@ -286,6 +303,9 @@ fn live_constant(name: &str) -> Option<u64> {
     match name {
         "VT_ABI_VERSION" => Some(u64::from(VT_ABI_VERSION)),
         "VT_DICTIONARY_INTERFACE_VERSION" => Some(u64::from(VT_DICTIONARY_INTERFACE_VERSION)),
+        "VT_DICTIONARY_VISIT_INTERFACE_VERSION" => {
+            Some(u64::from(VT_DICTIONARY_VISIT_INTERFACE_VERSION))
+        }
         "VT_WFST_INTERFACE_VERSION" => Some(u64::from(VT_WFST_INTERFACE_VERSION)),
         "VT_RECOMMENDED_EDGE_BATCH" => Some(VT_RECOMMENDED_EDGE_BATCH as u64),
         "VT_RECOMMENDED_ARC_BATCH" => Some(VT_RECOMMENDED_ARC_BATCH as u64),
@@ -297,6 +317,9 @@ fn live_constant(name: &str) -> Option<u64> {
 fn live_interface_id(name: &str) -> Option<(&'static [u8; 16], &'static str)> {
     match name {
         "VT_DICTIONARY_INTERFACE_ID" => Some((&VT_DICTIONARY_INTERFACE_ID.bytes, "dictionary")),
+        "VT_DICTIONARY_VISIT_INTERFACE_ID" => {
+            Some((&VT_DICTIONARY_VISIT_INTERFACE_ID.bytes, "dictionary_visit"))
+        }
         "VT_WFST_INTERFACE_ID" => Some((&VT_WFST_INTERFACE_ID.bytes, "wfst")),
         _ => None,
     }
@@ -340,6 +363,7 @@ const EXPECTED_FIELD_COUNTS: &[(&str, usize)] = &[
     ("VtOptionalU64", 3),
     ("VtDictionaryEdge", 2),
     ("VtDictionaryVTable", 12),
+    ("VtDictionaryVisitVTable", 4),
     ("VtWfstArc", 7),
     ("VtWfstVTable", 11),
 ];
@@ -353,8 +377,8 @@ const EXPECTED_ENUM_COUNTS: &[(&str, usize)] = &[
 
 const EXPECTED_FLAG_COUNTS: &[(&str, usize)] = &[("dictionary_flags", 3), ("wfst_flags", 4)];
 
-const EXPECTED_NUMERIC_CONSTANTS: usize = 5;
-const EXPECTED_INTERFACE_IDS: usize = 2;
+const EXPECTED_NUMERIC_CONSTANTS: usize = 6;
+const EXPECTED_INTERFACE_IDS: usize = 3;
 
 #[test]
 fn manifest_shape_is_complete_and_unique() {

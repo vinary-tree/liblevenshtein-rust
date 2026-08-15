@@ -42,6 +42,11 @@ jmh {
             benchmarkParameters.put(key, objects.listProperty(String::class.java).value(listOf(value)))
         }
     }
+    // Keep diagnostic profiler selection symmetric with the vinary arm while
+    // leaving the default parity run profiler-free.
+    providers.gradleProperty("jmh.profilers").orNull?.let { csv ->
+        profilers = csv.split(",").map(String::trim).filter(String::isNotEmpty)
+    }
 }
 
 // Protobuf-beta-3 containment proof: a smoke run of the transduce path with

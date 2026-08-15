@@ -1,11 +1,14 @@
 package io.vinarytree.liblevenshtein;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vinarytree.interop.UnicodeDictionaryResource;
 import io.vinarytree.interop.UnicodeDictionarySnapshot;
+import java.lang.foreign.ValueLayout;
 import java.lang.ref.WeakReference;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -80,6 +83,76 @@ final class LeakDisciplineTest {
             }
         };
         assertHeapSteadyState(cycle);
+    }
+
+    @Test
+    void tenThousandLexicalDrainCyclesReachHeapSteadyState() {
+        TrieSnapshot snapshot = fixture();
+        Runnable cycle = () -> {
+            try (UnicodeDictionaryResource dictionary =
+                            new UnicodeDictionaryResource(() -> snapshot);
+                    Transducer transducer = new Transducer(dictionary)) {
+                List<Match> matches = new ArrayList<>();
+                transducer.forEachMatch("cat", 2, matches::add);
+                assertEquals(4, matches.size());
+            }
+        };
+        assertHeapSteadyState(cycle);
+    }
+
+    @Test
+    void lexicalDrainMatchesTheLazyIteratorAndReleasesAfterConsumerFailure() {
+        TrieSnapshot snapshot = fixture();
+        try (UnicodeDictionaryResource dictionary =
+                        new UnicodeDictionaryResource(() -> snapshot);
+                Transducer transducer = new Transducer(dictionary)) {
+            List<Match> expected = new ArrayList<>();
+            try (QueryCursor cursor = transducer.query("cat", 2)) {
+                cursor.forEachRemaining(expected::add);
+            }
+            List<Match> actual = new ArrayList<>();
+            transducer.forEachMatch("cat", 2, actual::add);
+            assertEquals(expected, actual);
+
+            IllegalStateException marker = new IllegalStateException("consumer marker");
+            IllegalStateException observed = assertThrows(
+                    IllegalStateException.class,
+                    () -> transducer.forEachMatch("cat", 2, match -> { throw marker; }));
+            assertTrue(observed == marker);
+
+            List<Match> afterFailure = new ArrayList<>();
+            transducer.forEachMatch("cat", 0, afterFailure::add);
+            assertEquals(List.of(new Match(
+                    new Term.Utf8("cat"), 0, OptionalLong.of(1))), afterFailure);
+        }
+    }
+
+    @Test
+    void indexedBorrowedViewsExposeExactFieldsAndExpireWithTheBatch() {
+        TrieSnapshot snapshot = fixture();
+        BorrowedMatchBatch[] escaped = new BorrowedMatchBatch[1];
+        Map<String, Long> values = new TreeMap<>();
+        try (UnicodeDictionaryResource dictionary =
+                        new UnicodeDictionaryResource(() -> snapshot);
+                Transducer transducer = new Transducer(dictionary)) {
+            transducer.query("cat", 0).forEachBatch(batch -> {
+                escaped[0] = batch;
+                for (int index = 0; index < batch.size(); index++) {
+                    assertEquals(Native.DOMAIN_UNICODE, batch.unitDomain(index));
+                    assertEquals(batch.byteLength(index), batch.bytes(index).byteSize());
+                    String term = batch.utf8(index);
+                    assertEquals(batch.termLength(index), term.codePointCount(0, term.length()));
+                    assertEquals(0L, batch.distance(index));
+                    values.put(
+                            new String(
+                                    batch.bytes(index).toArray(ValueLayout.JAVA_BYTE),
+                                    StandardCharsets.UTF_8),
+                            batch.id(index).orElse(-1L));
+                }
+            });
+        }
+        assertEquals(Map.of("cat", 1L), values);
+        assertThrows(IllegalStateException.class, () -> escaped[0].distance(0));
     }
 
     private static void assertHeapSteadyState(Runnable cycle) {

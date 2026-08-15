@@ -214,6 +214,36 @@
 (define-fun sz32_VtDictionaryVTable () Int 56)
 (define-fun al32_VtDictionaryVTable () Int 8)
 
+; ── VtDictionaryVisitVTable ───────────────────────────────────────────────────
+(define-fun o64_VtDictionaryVisitVTable_struct_size () Int 0)
+(define-fun s64_VtDictionaryVisitVTable_struct_size () Int 8)
+(define-fun a64_VtDictionaryVisitVTable_struct_size () Int 8)
+(define-fun o32_VtDictionaryVisitVTable_struct_size () Int 0)
+(define-fun s32_VtDictionaryVisitVTable_struct_size () Int 4)
+(define-fun a32_VtDictionaryVisitVTable_struct_size () Int 4)
+(define-fun o64_VtDictionaryVisitVTable_interface_version () Int 8)
+(define-fun s64_VtDictionaryVisitVTable_interface_version () Int 4)
+(define-fun a64_VtDictionaryVisitVTable_interface_version () Int 4)
+(define-fun o32_VtDictionaryVisitVTable_interface_version () Int 4)
+(define-fun s32_VtDictionaryVisitVTable_interface_version () Int 4)
+(define-fun a32_VtDictionaryVisitVTable_interface_version () Int 4)
+(define-fun o64_VtDictionaryVisitVTable_reserved () Int 12)
+(define-fun s64_VtDictionaryVisitVTable_reserved () Int 4)
+(define-fun a64_VtDictionaryVisitVTable_reserved () Int 4)
+(define-fun o32_VtDictionaryVisitVTable_reserved () Int 8)
+(define-fun s32_VtDictionaryVisitVTable_reserved () Int 4)
+(define-fun a32_VtDictionaryVisitVTable_reserved () Int 4)
+(define-fun o64_VtDictionaryVisitVTable_node_visit () Int 16)
+(define-fun s64_VtDictionaryVisitVTable_node_visit () Int 8)
+(define-fun a64_VtDictionaryVisitVTable_node_visit () Int 8)
+(define-fun o32_VtDictionaryVisitVTable_node_visit () Int 12)
+(define-fun s32_VtDictionaryVisitVTable_node_visit () Int 4)
+(define-fun a32_VtDictionaryVisitVTable_node_visit () Int 4)
+(define-fun sz64_VtDictionaryVisitVTable () Int 24)
+(define-fun al64_VtDictionaryVisitVTable () Int 8)
+(define-fun sz32_VtDictionaryVisitVTable () Int 16)
+(define-fun al32_VtDictionaryVisitVTable () Int 4)
+
 ; ── VtWfstArc ──────────────────────────────────────────────────────────────────
 (define-fun o64_VtWfstArc_input_label () Int 0)
 (define-fun s64_VtWfstArc_input_label () Int 8)
@@ -370,6 +400,7 @@
 ; ── published constants ─────────────────────────────────────────────────────
 (define-fun c_VT_ABI_VERSION () Int 1)
 (define-fun c_VT_DICTIONARY_INTERFACE_VERSION () Int 1)
+(define-fun c_VT_DICTIONARY_VISIT_INTERFACE_VERSION () Int 1)
 (define-fun c_VT_WFST_INTERFACE_VERSION () Int 1)
 (define-fun c_VT_RECOMMENDED_EDGE_BATCH () Int 256)
 (define-fun c_VT_RECOMMENDED_ARC_BATCH () Int 256)
@@ -393,6 +424,24 @@
 (define-fun id_dictionary_13 () Int 46) ; '.'
 (define-fun id_dictionary_14 () Int 118) ; 'v'
 (define-fun id_dictionary_15 () Int 49) ; '1'
+; VT_DICTIONARY_VISIT_INTERFACE_ID = "vt.dict.visit.v1"
+(define-fun id_dictionary_visit_len () Int 16)
+(define-fun id_dictionary_visit_0 () Int 118) ; 'v'
+(define-fun id_dictionary_visit_1 () Int 116) ; 't'
+(define-fun id_dictionary_visit_2 () Int 46) ; '.'
+(define-fun id_dictionary_visit_3 () Int 100) ; 'd'
+(define-fun id_dictionary_visit_4 () Int 105) ; 'i'
+(define-fun id_dictionary_visit_5 () Int 99) ; 'c'
+(define-fun id_dictionary_visit_6 () Int 116) ; 't'
+(define-fun id_dictionary_visit_7 () Int 46) ; '.'
+(define-fun id_dictionary_visit_8 () Int 118) ; 'v'
+(define-fun id_dictionary_visit_9 () Int 105) ; 'i'
+(define-fun id_dictionary_visit_10 () Int 115) ; 's'
+(define-fun id_dictionary_visit_11 () Int 105) ; 'i'
+(define-fun id_dictionary_visit_12 () Int 116) ; 't'
+(define-fun id_dictionary_visit_13 () Int 46) ; '.'
+(define-fun id_dictionary_visit_14 () Int 118) ; 'v'
+(define-fun id_dictionary_visit_15 () Int 49) ; '1'
 ; VT_WFST_INTERFACE_ID = "vt.scalar-wfst.1"
 (define-fun id_wfst_len () Int 16)
 (define-fun id_wfst_0 () Int 118) ; 'v'
@@ -1305,6 +1354,7 @@
 (assert (not (and
   (and (<= 1 c_VT_ABI_VERSION) (< c_VT_ABI_VERSION 4294967296))
   (and (<= 1 c_VT_DICTIONARY_INTERFACE_VERSION) (< c_VT_DICTIONARY_INTERFACE_VERSION 4294967296))
+  (and (<= 1 c_VT_DICTIONARY_VISIT_INTERFACE_VERSION) (< c_VT_DICTIONARY_VISIT_INTERFACE_VERSION 4294967296))
   (and (<= 1 c_VT_WFST_INTERFACE_VERSION) (< c_VT_WFST_INTERFACE_VERSION 4294967296))
   (and (<= 1 c_VT_RECOMMENDED_EDGE_BATCH) (< c_VT_RECOMMENDED_EDGE_BATCH 4294967296))
   (and (<= 1 c_VT_RECOMMENDED_ARC_BATCH) (< c_VT_RECOMMENDED_ARC_BATCH 4294967296))
@@ -1312,3 +1362,75 @@
 (check-sat)
 (pop)
 
+; (l) Optional fused dictionary visit vtable obeys the complete layout laws on
+; both published tiers. It is kept as one local obligation so adding an
+; optional interface does not perturb the established v1 proof blocks above.
+(echo "[l] VtDictionaryVisitVTable layout laws")
+(push)
+(assert (not (and
+  (disj o64_VtDictionaryVisitVTable_struct_size s64_VtDictionaryVisitVTable_struct_size o64_VtDictionaryVisitVTable_interface_version s64_VtDictionaryVisitVTable_interface_version)
+  (disj o64_VtDictionaryVisitVTable_struct_size s64_VtDictionaryVisitVTable_struct_size o64_VtDictionaryVisitVTable_reserved s64_VtDictionaryVisitVTable_reserved)
+  (disj o64_VtDictionaryVisitVTable_struct_size s64_VtDictionaryVisitVTable_struct_size o64_VtDictionaryVisitVTable_node_visit s64_VtDictionaryVisitVTable_node_visit)
+  (disj o64_VtDictionaryVisitVTable_interface_version s64_VtDictionaryVisitVTable_interface_version o64_VtDictionaryVisitVTable_reserved s64_VtDictionaryVisitVTable_reserved)
+  (disj o64_VtDictionaryVisitVTable_interface_version s64_VtDictionaryVisitVTable_interface_version o64_VtDictionaryVisitVTable_node_visit s64_VtDictionaryVisitVTable_node_visit)
+  (disj o64_VtDictionaryVisitVTable_reserved s64_VtDictionaryVisitVTable_reserved o64_VtDictionaryVisitVTable_node_visit s64_VtDictionaryVisitVTable_node_visit)
+  (inside o64_VtDictionaryVisitVTable_struct_size s64_VtDictionaryVisitVTable_struct_size sz64_VtDictionaryVisitVTable)
+  (inside o64_VtDictionaryVisitVTable_interface_version s64_VtDictionaryVisitVTable_interface_version sz64_VtDictionaryVisitVTable)
+  (inside o64_VtDictionaryVisitVTable_reserved s64_VtDictionaryVisitVTable_reserved sz64_VtDictionaryVisitVTable)
+  (inside o64_VtDictionaryVisitVTable_node_visit s64_VtDictionaryVisitVTable_node_visit sz64_VtDictionaryVisitVTable)
+  (aligned o64_VtDictionaryVisitVTable_struct_size a64_VtDictionaryVisitVTable_struct_size)
+  (aligned o64_VtDictionaryVisitVTable_interface_version a64_VtDictionaryVisitVTable_interface_version)
+  (aligned o64_VtDictionaryVisitVTable_reserved a64_VtDictionaryVisitVTable_reserved)
+  (aligned o64_VtDictionaryVisitVTable_node_visit a64_VtDictionaryVisitVTable_node_visit)
+  (aligned sz64_VtDictionaryVisitVTable al64_VtDictionaryVisitVTable)
+  (< o64_VtDictionaryVisitVTable_struct_size o64_VtDictionaryVisitVTable_interface_version)
+  (< o64_VtDictionaryVisitVTable_interface_version o64_VtDictionaryVisitVTable_reserved)
+  (< o64_VtDictionaryVisitVTable_reserved o64_VtDictionaryVisitVTable_node_visit)
+  (disj o32_VtDictionaryVisitVTable_struct_size s32_VtDictionaryVisitVTable_struct_size o32_VtDictionaryVisitVTable_interface_version s32_VtDictionaryVisitVTable_interface_version)
+  (disj o32_VtDictionaryVisitVTable_struct_size s32_VtDictionaryVisitVTable_struct_size o32_VtDictionaryVisitVTable_reserved s32_VtDictionaryVisitVTable_reserved)
+  (disj o32_VtDictionaryVisitVTable_struct_size s32_VtDictionaryVisitVTable_struct_size o32_VtDictionaryVisitVTable_node_visit s32_VtDictionaryVisitVTable_node_visit)
+  (disj o32_VtDictionaryVisitVTable_interface_version s32_VtDictionaryVisitVTable_interface_version o32_VtDictionaryVisitVTable_reserved s32_VtDictionaryVisitVTable_reserved)
+  (disj o32_VtDictionaryVisitVTable_interface_version s32_VtDictionaryVisitVTable_interface_version o32_VtDictionaryVisitVTable_node_visit s32_VtDictionaryVisitVTable_node_visit)
+  (disj o32_VtDictionaryVisitVTable_reserved s32_VtDictionaryVisitVTable_reserved o32_VtDictionaryVisitVTable_node_visit s32_VtDictionaryVisitVTable_node_visit)
+  (inside o32_VtDictionaryVisitVTable_struct_size s32_VtDictionaryVisitVTable_struct_size sz32_VtDictionaryVisitVTable)
+  (inside o32_VtDictionaryVisitVTable_interface_version s32_VtDictionaryVisitVTable_interface_version sz32_VtDictionaryVisitVTable)
+  (inside o32_VtDictionaryVisitVTable_reserved s32_VtDictionaryVisitVTable_reserved sz32_VtDictionaryVisitVTable)
+  (inside o32_VtDictionaryVisitVTable_node_visit s32_VtDictionaryVisitVTable_node_visit sz32_VtDictionaryVisitVTable)
+  (aligned o32_VtDictionaryVisitVTable_struct_size a32_VtDictionaryVisitVTable_struct_size)
+  (aligned o32_VtDictionaryVisitVTable_interface_version a32_VtDictionaryVisitVTable_interface_version)
+  (aligned o32_VtDictionaryVisitVTable_reserved a32_VtDictionaryVisitVTable_reserved)
+  (aligned o32_VtDictionaryVisitVTable_node_visit a32_VtDictionaryVisitVTable_node_visit)
+  (aligned sz32_VtDictionaryVisitVTable al32_VtDictionaryVisitVTable)
+  (< o32_VtDictionaryVisitVTable_struct_size o32_VtDictionaryVisitVTable_interface_version)
+  (< o32_VtDictionaryVisitVTable_interface_version o32_VtDictionaryVisitVTable_reserved)
+  (< o32_VtDictionaryVisitVTable_reserved o32_VtDictionaryVisitVTable_node_visit)
+)))
+(check-sat)
+(pop)
+
+; (m) The optional interface identifier is a distinct exact 16-byte value.
+(echo "[m] dictionary visit identifier is exact and distinct")
+(push)
+(assert (not (and
+  (= id_dictionary_visit_len 16)
+  (and (<= 0 id_dictionary_visit_0) (< id_dictionary_visit_0 256))
+  (and (<= 0 id_dictionary_visit_1) (< id_dictionary_visit_1 256))
+  (and (<= 0 id_dictionary_visit_2) (< id_dictionary_visit_2 256))
+  (and (<= 0 id_dictionary_visit_3) (< id_dictionary_visit_3 256))
+  (and (<= 0 id_dictionary_visit_4) (< id_dictionary_visit_4 256))
+  (and (<= 0 id_dictionary_visit_5) (< id_dictionary_visit_5 256))
+  (and (<= 0 id_dictionary_visit_6) (< id_dictionary_visit_6 256))
+  (and (<= 0 id_dictionary_visit_7) (< id_dictionary_visit_7 256))
+  (and (<= 0 id_dictionary_visit_8) (< id_dictionary_visit_8 256))
+  (and (<= 0 id_dictionary_visit_9) (< id_dictionary_visit_9 256))
+  (and (<= 0 id_dictionary_visit_10) (< id_dictionary_visit_10 256))
+  (and (<= 0 id_dictionary_visit_11) (< id_dictionary_visit_11 256))
+  (and (<= 0 id_dictionary_visit_12) (< id_dictionary_visit_12 256))
+  (and (<= 0 id_dictionary_visit_13) (< id_dictionary_visit_13 256))
+  (and (<= 0 id_dictionary_visit_14) (< id_dictionary_visit_14 256))
+  (and (<= 0 id_dictionary_visit_15) (< id_dictionary_visit_15 256))
+  (or (distinct id_dictionary_visit_0 id_dictionary_0) (distinct id_dictionary_visit_1 id_dictionary_1) (distinct id_dictionary_visit_2 id_dictionary_2) (distinct id_dictionary_visit_3 id_dictionary_3) (distinct id_dictionary_visit_4 id_dictionary_4) (distinct id_dictionary_visit_5 id_dictionary_5) (distinct id_dictionary_visit_6 id_dictionary_6) (distinct id_dictionary_visit_7 id_dictionary_7) (distinct id_dictionary_visit_8 id_dictionary_8) (distinct id_dictionary_visit_9 id_dictionary_9) (distinct id_dictionary_visit_10 id_dictionary_10) (distinct id_dictionary_visit_11 id_dictionary_11) (distinct id_dictionary_visit_12 id_dictionary_12) (distinct id_dictionary_visit_13 id_dictionary_13) (distinct id_dictionary_visit_14 id_dictionary_14) (distinct id_dictionary_visit_15 id_dictionary_15))
+  (or (distinct id_dictionary_visit_0 id_wfst_0) (distinct id_dictionary_visit_1 id_wfst_1) (distinct id_dictionary_visit_2 id_wfst_2) (distinct id_dictionary_visit_3 id_wfst_3) (distinct id_dictionary_visit_4 id_wfst_4) (distinct id_dictionary_visit_5 id_wfst_5) (distinct id_dictionary_visit_6 id_wfst_6) (distinct id_dictionary_visit_7 id_wfst_7) (distinct id_dictionary_visit_8 id_wfst_8) (distinct id_dictionary_visit_9 id_wfst_9) (distinct id_dictionary_visit_10 id_wfst_10) (distinct id_dictionary_visit_11 id_wfst_11) (distinct id_dictionary_visit_12 id_wfst_12) (distinct id_dictionary_visit_13 id_wfst_13) (distinct id_dictionary_visit_14 id_wfst_14) (distinct id_dictionary_visit_15 id_wfst_15))
+)))
+(check-sat)
+(pop)

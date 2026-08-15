@@ -100,11 +100,14 @@ impl StatePool {
     /// which is the primary performance benefit.
     #[inline]
     pub fn acquire(&mut self) -> State {
+        crate::causal_perf::record_pool_acquires(1);
         if let Some(mut state) = self.pool.pop() {
+            crate::causal_perf::record_pool_reuses(1);
             state.clear(); // Clear positions but keep Vec capacity
             self.reuses += 1;
             state
         } else {
+            crate::causal_perf::record_pool_misses(1);
             self.allocations += 1;
             State::new()
         }
@@ -122,6 +125,7 @@ impl StatePool {
     /// The state's internal `Vec<Position>` allocation is preserved for reuse.
     #[inline]
     pub fn release(&mut self, state: State) {
+        crate::causal_perf::record_pool_releases(1);
         if self.pool.len() < Self::MAX_POOL_SIZE {
             self.pool.push(state);
         }

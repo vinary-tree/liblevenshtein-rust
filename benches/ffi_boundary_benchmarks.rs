@@ -81,7 +81,10 @@ fn bench_resource_handoff_flat(criterion: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
             b.iter(|| {
                 let transducer = unsafe {
-                    ResourceTransducer::from_resource(black_box(source.as_raw()), Algorithm::Standard)
+                    ResourceTransducer::from_resource(
+                        black_box(source.as_raw()),
+                        Algorithm::Standard,
+                    )
                 }
                 .expect("resource accepted");
                 let cursor = transducer
@@ -94,5 +97,9 @@ fn bench_resource_handoff_flat(criterion: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_cursor_drain_by_batch, bench_resource_handoff_flat);
+criterion_group!(
+    benches,
+    bench_cursor_drain_by_batch,
+    bench_resource_handoff_flat
+);
 criterion_main!(benches);

@@ -44,7 +44,7 @@ def validate(model: dict) -> None:
     }
     if model.get("interop") != expected_interop:
         raise SystemExit("binding model changed the shared interop identity")
-    if model.get("abiVersion") != 1 or model.get("apiRevision") != 1:
+    if model.get("abiVersion") != 1 or model.get("apiRevision") != 2:
         raise SystemExit("unexpected ABI/API revision")
     if model.get("defaultMatchBatch") != 256:
         raise SystemExit("default match batch must remain 256 in ABI v1")

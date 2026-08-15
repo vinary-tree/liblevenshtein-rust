@@ -14,14 +14,16 @@ use crate::transducer::{
 };
 use libdictenstein::value::DictionaryValue;
 use libdictenstein::{CharUnit, DictionaryNode, MappedDictionaryNode};
+use rustc_hash::FxHashMap;
 use std::ffi::c_void;
 use std::fmt;
 use std::marker::PhantomData;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use vinary_tree_interop::{
-    dictionary_flags, VtDictionaryEdge, VtDictionaryVTable, VtOptionalU64, VtResource,
-    VtResourceVTable, VtStatus, VtUnitDomain, VtValueDomain, VT_ABI_VERSION,
-    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_RECOMMENDED_EDGE_BATCH,
+    dictionary_flags, VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable, VtOptionalU64,
+    VtResource, VtResourceVTable, VtStatus, VtUnitDomain, VtValueDomain, VT_ABI_VERSION,
+    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
+    VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_EDGE_BATCH,
 };
 
 /// Default number of results transferred across a managed-language boundary.
@@ -125,8 +127,15 @@ enum CallGate {
 struct Provider {
     resource: VtResource,
     dictionary: *const VtDictionaryVTable,
+    visit: Option<*const VtDictionaryVisitVTable>,
     gate: CallGate,
     fault: Arc<Mutex<Option<BindingError>>>,
+    node_cache: RwLock<FxHashMap<u64, Arc<CachedForeignNode>>>,
+}
+
+struct CachedForeignNode {
+    is_final: bool,
+    edges: Box<[VtDictionaryEdge]>,
 }
 
 // Raw provider pointers are never dereferenced outside `call`, and `call`
@@ -213,17 +222,43 @@ impl Provider {
         } else {
             CallGate::Serial(Mutex::new(()))
         };
+        let mut visit: *const c_void = std::ptr::null();
+        let visit_status = query(
+            resource.context,
+            &VT_DICTIONARY_VISIT_INTERFACE_ID,
+            VT_DICTIONARY_VISIT_INTERFACE_VERSION,
+            &mut visit,
+        );
+        let visit = if VtStatus::from_raw(visit_status) == Some(VtStatus::Unsupported) {
+            None
+        } else {
+            status(visit_status)?;
+            if visit.is_null() {
+                return Err(BindingError::InvalidProviderOutput(
+                    "node-visit query returned a null vtable",
+                ));
+            }
+            let visit = visit.cast::<VtDictionaryVisitVTable>();
+            validate_dictionary_visit(&*visit)?;
+            Some(visit)
+        };
         Ok(Arc::new(Self {
             resource,
             dictionary,
+            visit,
             gate,
             fault: Arc::new(Mutex::new(None)),
+            node_cache: RwLock::new(FxHashMap::default()),
         }))
     }
 
     fn vtable(&self) -> &VtDictionaryVTable {
         // Validated for the lifetime of the retained resource at construction.
         unsafe { &*self.dictionary }
+    }
+
+    fn visit_vtable(&self) -> Option<&VtDictionaryVisitVTable> {
+        self.visit.map(|visit| unsafe { &*visit })
     }
 
     fn call<T>(&self, operation: impl FnOnce() -> T) -> T {
@@ -253,7 +288,28 @@ impl Provider {
             .take()
     }
 
+    fn cached_node(&self, node: u64) -> Option<Arc<CachedForeignNode>> {
+        self.node_cache
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(&node)
+            .cloned()
+    }
+
+    fn cache_node(&self, node: u64, value: Arc<CachedForeignNode>) -> Arc<CachedForeignNode> {
+        Arc::clone(
+            self.node_cache
+                .write()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .entry(node)
+                .or_insert(value),
+        )
+    }
+
     fn snapshot(self: &Arc<Self>) -> Result<Arc<Self>, BindingError> {
+        if self.vtable().flags & dictionary_flags::IMMUTABLE != 0 {
+            return Ok(Arc::clone(self));
+        }
         let callback = self
             .vtable()
             .snapshot
@@ -335,6 +391,17 @@ fn validate_dictionary(vtable: &VtDictionaryVTable) -> Result<(), BindingError> 
         return Err(BindingError::IncompatibleDictionaryInterface);
     }
     if vtable.value_domain == VtValueDomain::OptionalU64 && vtable.node_value_u64.is_none() {
+        return Err(BindingError::IncompatibleDictionaryInterface);
+    }
+    Ok(())
+}
+
+fn validate_dictionary_visit(vtable: &VtDictionaryVisitVTable) -> Result<(), BindingError> {
+    if vtable.struct_size < std::mem::size_of::<VtDictionaryVisitVTable>()
+        || vtable.interface_version < VT_DICTIONARY_VISIT_INTERFACE_VERSION
+        || vtable.reserved != 0
+        || vtable.node_visit.is_none()
+    {
         return Err(BindingError::IncompatibleDictionaryInterface);
     }
     Ok(())
@@ -425,26 +492,27 @@ impl<U: InteropUnit> ForeignNode<U> {
         fallback
     }
 
-    fn expanded_edges(&self) -> Vec<(U, Self)> {
-        let callback = match self.provider.vtable().node_edges {
-            Some(callback) => callback,
-            None => {
-                return self.callback_failed(BindingError::IncompatibleDictionaryInterface, vec![])
-            }
-        };
-        // Every page requests the same recommended capacity. The result Vec
-        // grows only from edges actually delivered — never from the
-        // provider-claimed `total`, whose inflation would otherwise drive a
-        // preallocation abort (finding LLEV-B8). The per-page acceptance
-        // check below is exactly the predicate proved in
-        // docs/verification/abi/theories/ConsumerAcceptance.v `accepts_dec`.
-        let mut result = Vec::with_capacity(VT_RECOMMENDED_EDGE_BATCH);
+    #[inline]
+    fn try_for_each_expanded_edge<F>(&self, mut visitor: F) -> Result<(), BindingError>
+    where
+        F: FnMut(U, Self),
+    {
+        let callback = self
+            .provider
+            .vtable()
+            .node_edges
+            .ok_or(BindingError::IncompatibleDictionaryInterface)?;
         let mut start = 0usize;
         loop {
-            let capacity = VT_RECOMMENDED_EDGE_BATCH;
-            let mut page = vec![VtDictionaryEdge::default(); capacity];
+            // The ABI's recommended page is a fixed upper bound. Keeping that
+            // page on the stack avoids one allocation for every visited
+            // dictionary node without changing pagination or acceptance.
+            let mut page = [VtDictionaryEdge::default(); VT_RECOMMENDED_EDGE_BATCH];
+            let capacity = page.len();
             let mut written = 0usize;
             let mut total = 0usize;
+            crate::causal_perf::record_foreign_edge_pages(1);
+            crate::causal_perf::record_foreign_edge_callbacks(1);
             let callback_status = self.provider.call(|| unsafe {
                 callback(
                     self.provider.resource.context,
@@ -456,37 +524,142 @@ impl<U: InteropUnit> ForeignNode<U> {
                     &mut total,
                 )
             });
-            if let Err(error) = status(callback_status) {
-                return self.callback_failed(error, vec![]);
-            }
-            // ConsumerAcceptance.accepts_dec, in order: written<=capacity;
-            // written<=total-start; and empty-page-only-when-exhausted
-            // (progress). The claimed-total ceiling of the model is realized
-            // structurally — no allocation is ever sized from `total` — so a
-            // fabricated total cannot force an abort; it can only fail the
-            // written<=total-start bound above.
+            status(callback_status)?;
             if written > capacity
                 || written > total.saturating_sub(start)
                 || (written == 0 && start < total)
             {
-                return self.callback_failed(
-                    BindingError::InvalidProviderOutput("invalid edge page lengths"),
-                    vec![],
-                );
+                return Err(BindingError::InvalidProviderOutput(
+                    "invalid edge page lengths",
+                ));
             }
+            crate::causal_perf::record_foreign_edge_descriptors(written as u64);
             for edge in page.into_iter().take(written) {
-                let Some(label) = U::from_abi(edge.label) else {
-                    return self.callback_failed(
-                        BindingError::InvalidProviderOutput("edge label is outside its domain"),
-                        vec![],
-                    );
-                };
-                result.push((label, Self::new(Arc::clone(&self.provider), edge.node)));
+                let label = U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
+                    "edge label is outside its domain",
+                ))?;
+                visitor(label, Self::new(Arc::clone(&self.provider), edge.node));
             }
             start = start.saturating_add(written);
             if start >= total {
-                break;
+                return Ok(());
             }
+        }
+    }
+
+    #[inline]
+    fn try_inspect_node(&self) -> Result<Arc<CachedForeignNode>, BindingError> {
+        if let Some(cached) = self.provider.cached_node(self.id) {
+            crate::causal_perf::record_foreign_node_cache_hits(1);
+            return Ok(cached);
+        }
+        crate::causal_perf::record_foreign_node_cache_misses(1);
+        let callback = self
+            .provider
+            .visit_vtable()
+            .and_then(|vtable| vtable.node_visit)
+            .ok_or(BindingError::IncompatibleDictionaryInterface)?;
+        let mut start = 0usize;
+        let mut observed_finality = None;
+        let mut edges = Vec::new();
+        loop {
+            let mut page = [VtDictionaryEdge::default(); VT_RECOMMENDED_EDGE_BATCH];
+            let capacity = page.len();
+            let mut is_final = 0u8;
+            let mut written = 0usize;
+            let mut total = 0usize;
+            crate::causal_perf::record_foreign_edge_pages(1);
+            crate::causal_perf::record_foreign_edge_callbacks(1);
+            let callback_status = self.provider.call(|| unsafe {
+                callback(
+                    self.provider.resource.context,
+                    self.id,
+                    start,
+                    &mut is_final,
+                    page.as_mut_ptr(),
+                    capacity,
+                    &mut written,
+                    &mut total,
+                )
+            });
+            status(callback_status)?;
+            let is_final = match is_final {
+                0 => false,
+                1 => true,
+                _ => {
+                    return Err(BindingError::InvalidProviderOutput(
+                        "fused is_final was not zero or one",
+                    ))
+                }
+            };
+            if observed_finality
+                .replace(is_final)
+                .is_some_and(|old| old != is_final)
+            {
+                return Err(BindingError::InvalidProviderOutput(
+                    "fused is_final changed between edge pages",
+                ));
+            }
+            if written > capacity
+                || written > total.saturating_sub(start)
+                || (written == 0 && start < total)
+            {
+                return Err(BindingError::InvalidProviderOutput(
+                    "invalid fused edge page lengths",
+                ));
+            }
+            crate::causal_perf::record_foreign_edge_descriptors(written as u64);
+            for edge in page.into_iter().take(written) {
+                U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
+                    "edge label is outside its domain",
+                ))?;
+                edges.push(edge);
+            }
+            start = start.saturating_add(written);
+            if start >= total {
+                let cached = self.provider.cache_node(
+                    self.id,
+                    Arc::new(CachedForeignNode {
+                        is_final,
+                        edges: edges.into_boxed_slice(),
+                    }),
+                );
+                return Ok(cached);
+            }
+        }
+    }
+
+    #[inline]
+    fn try_visit_edges_and_finality<F>(&self, mut visitor: F) -> Result<bool, BindingError>
+    where
+        F: FnMut(U, Self),
+    {
+        let cached = self.try_inspect_node()?;
+        for edge in &cached.edges {
+            let label = U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
+                "edge label is outside its domain",
+            ))?;
+            visitor(label, Self::new(Arc::clone(&self.provider), edge.node));
+        }
+        Ok(cached.is_final)
+    }
+
+    fn expanded_edges(&self) -> Vec<(U, Self)> {
+        // Every page requests the same recommended capacity. The result Vec
+        // grows only from edges actually delivered — never from the
+        // provider-claimed `total`, whose inflation would otherwise drive a
+        // preallocation abort (finding LLEV-B8). The per-page acceptance
+        // check below is exactly the predicate proved in
+        // docs/verification/abi/theories/ConsumerAcceptance.v `accepts_dec`.
+        let mut result = Vec::with_capacity(VT_RECOMMENDED_EDGE_BATCH);
+        let visit = |label, child| result.push((label, child));
+        let expanded = if self.provider.visit_vtable().is_some() {
+            self.try_visit_edges_and_finality(visit).map(|_| ())
+        } else {
+            self.try_for_each_expanded_edge(visit)
+        };
+        if let Err(error) = expanded {
+            return self.callback_failed(error, vec![]);
         }
         result
     }
@@ -496,12 +669,19 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
     type Unit = U;
 
     fn is_final(&self) -> bool {
+        if self.provider.visit_vtable().is_some() {
+            return match self.try_inspect_node() {
+                Ok(cached) => cached.is_final,
+                Err(error) => self.callback_failed(error, false),
+            };
+        }
         let callback = match self.provider.vtable().node_is_final {
             Some(callback) => callback,
             None => {
                 return self.callback_failed(BindingError::IncompatibleDictionaryInterface, false)
             }
         };
+        crate::causal_perf::record_foreign_is_final_callbacks(1);
         let mut final_node = 0u8;
         let callback_status = self
             .provider
@@ -557,6 +737,37 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
         Box::new(self.expanded_edges().into_iter())
     }
 
+    #[inline]
+    fn for_each_edge<F>(&self, visitor: F)
+    where
+        F: FnMut(Self::Unit, Self),
+    {
+        let result = if self.provider.visit_vtable().is_some() {
+            self.try_visit_edges_and_finality(visitor).map(|_| ())
+        } else {
+            self.try_for_each_expanded_edge(visitor)
+        };
+        if let Err(error) = result {
+            self.provider.record_fault(error);
+        }
+    }
+
+    #[inline]
+    fn visit_edges_and_finality<F>(&self, visitor: F) -> bool
+    where
+        F: FnMut(Self::Unit, Self),
+    {
+        if self.provider.visit_vtable().is_none() {
+            let is_final = self.is_final();
+            self.for_each_edge(visitor);
+            return is_final;
+        }
+        match self.try_visit_edges_and_finality(visitor) {
+            Ok(is_final) => is_final,
+            Err(error) => self.callback_failed(error, false),
+        }
+    }
+
     fn edge_count(&self) -> Option<usize> {
         None
     }
@@ -569,6 +780,10 @@ impl<U: InteropUnit> MappedDictionaryNode for ForeignNode<U> {
         if !self.is_final() {
             return None;
         }
+        self.value_at_final()
+    }
+
+    fn value_at_final(&self) -> Option<Self::Value> {
         if self.provider.vtable().value_domain == VtValueDomain::Unit {
             return Some(BindingValue { id: None });
         }
@@ -630,6 +845,22 @@ impl ForeignDictionary {
             Self::Byte(_) => VtUnitDomain::Byte,
             Self::Unicode(_) => VtUnitDomain::UnicodeScalar,
             Self::U64(_) => VtUnitDomain::U64,
+        }
+    }
+
+    fn snapshot(&self) -> Result<Self, BindingError> {
+        fn immutable_or_snapshot(provider: &Arc<Provider>) -> Result<Arc<Provider>, BindingError> {
+            if provider.vtable().flags & dictionary_flags::IMMUTABLE != 0 {
+                Ok(Arc::clone(provider))
+            } else {
+                provider.snapshot()
+            }
+        }
+
+        match self {
+            Self::Byte(provider) => Ok(Self::Byte(immutable_or_snapshot(provider)?)),
+            Self::Unicode(provider) => Ok(Self::Unicode(immutable_or_snapshot(provider)?)),
+            Self::U64(provider) => Ok(Self::U64(immutable_or_snapshot(provider)?)),
         }
     }
 }
@@ -863,6 +1094,20 @@ impl ResourceTransducer {
     /// Unit domain required by this transducer's query entry point.
     pub fn unit_domain(&self) -> VtUnitDomain {
         self.dictionary.unit_domain()
+    }
+
+    /// Capture one immutable dictionary revision for reuse across queries.
+    ///
+    /// The returned transducer deliberately does not observe later mutations
+    /// to the source resource. Its provider snapshot, lazy node arena, and
+    /// validated edge pages are shared by every cursor, amortizing traversal
+    /// discovery for read-only query batches. Calling this on an already
+    /// immutable transducer is O(1).
+    pub fn snapshot(&self) -> Result<Self, BindingError> {
+        Ok(Self {
+            dictionary: self.dictionary.snapshot()?,
+            algorithm: self.algorithm,
+        })
     }
 
     /// Start a lazy Unicode query over the revision visible now.

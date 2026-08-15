@@ -1,0 +1,148 @@
+{
+  "schema": "liblevenshtein.java-parity-causal-observations.v1",
+  "date": "2026-08-14",
+  "environment": {
+    "cpu": "AMD Ryzen Threadripper PRO 5975WX 32-Cores",
+    "kernel": "Linux 7.1.6-arch1-1 x86_64",
+    "rustc": "1.97.1 (8bab26f4f 2026-07-14)",
+    "java": "OpenJDK 26.0.2",
+    "amd_uprof": "5.3.521.0",
+    "profile_cpu": 3,
+    "liblevenshtein_rust_commit": "7a7c39e86e2c25a8d5e3270bf7c35e0171b560f7",
+    "libdictenstein_commit": "c5e0bc43350e6a751f5846076df50fc965a63c53"
+  },
+  "anchor": {
+    "dictionary_terms": 79343,
+    "dictionary_units": 673918,
+    "dictionary_sha256": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23",
+    "query_set": "standard/d2/std-d2",
+    "queries": 1000,
+    "matches": 18514,
+    "term_bytes": 82131,
+    "distance_sum": 36201,
+    "checksum_u64": 7775666136087164888
+  },
+  "construction": {
+    "timing_controls_ns": {
+      "from_terms_median": 71323231,
+      "from_sorted_terms_median": 63896480.5,
+      "sorted_stream_median": 63746105.5,
+      "clone_input_median": 2416887,
+      "clone_and_sort_input_median": 2862552.5,
+      "repetitions": 30
+    },
+    "java_sorted_dawg_profile_median_ns": 34207472,
+    "java_sorted_dawg_profile_repetitions": 100,
+    "rust_work": {
+      "term_insert_attempts": 79343,
+      "input_units": 673918,
+      "version_loads": 79343,
+      "path_units_walked": 673918,
+      "edge_lists_cloned": 673918,
+      "edge_arcs_cloned": 2948511,
+      "nodes_created": 937426,
+      "nodes_dropped": 753261,
+      "live_nodes": 184165,
+      "graph_versions_created": 79344,
+      "cas_publications": 79343,
+      "cas_retries": 0
+    },
+    "identity_graph": {
+      "rust_live_nodes": 184165,
+      "java_identity_nodes": 29133,
+      "java_physical_edges": 63431,
+      "java_final_nodes": 5247
+    },
+    "rust_uprof_self_percent": {
+      "LockFreeDawgNode_drop": 36.65,
+      "insert_units": 28.8,
+      "SmallVec_Arc_clone": 16.23,
+      "ArcSwap_debt_pay_all": 4.71,
+      "malloc": 2.62,
+      "free": 1.57
+    },
+    "rust_heaptrack": {
+      "builds": 3,
+      "allocations": 4466530,
+      "allocations_per_build": 1488843.3333333333,
+      "allocations_per_term_per_build": 18.76590642735515
+    },
+    "java_serial_gc": {
+      "builds": 50,
+      "timed_build_sum_ns": 2006130080,
+      "young_collections": 9,
+      "pause_total_ms": 93.812,
+      "pause_fraction_of_timed_build_sum": 0.0467627183427937
+    },
+    "shape_matrix": [
+      {"shape": "anchor-full", "sorted_median_ns": 64066110, "shuffled_median_ns": 108030548, "sorted_arc_clones": 2948511, "shuffled_arc_clones": 5394299, "live_nodes": 184165},
+      {"shape": "prefix-heavy-25k", "sorted_median_ns": 30839953, "shuffled_median_ns": 37857594, "sorted_arc_clones": 1287936, "shuffled_arc_clones": 1851212, "live_nodes": 26015},
+      {"shape": "suffix-heavy-25k", "sorted_median_ns": 29763502.5, "shuffled_median_ns": 38220497, "sorted_arc_clones": 987948, "shuffled_arc_clones": 1551224, "live_nodes": 326003},
+      {"shape": "unicode-mixed-25k", "sorted_median_ns": 17312595, "shuffled_median_ns": 26212715, "sorted_arc_clones": 799387, "shuffled_arc_clones": 1332698, "live_nodes": 55016}
+    ]
+  },
+  "native_query": {
+    "java_profile_median_ns": 427708454.5,
+    "java_profile_repetitions": 10,
+    "rust_profile_median_ns": 769143839.5,
+    "rust_profile_repetitions": 20,
+    "rust_uprof_self_percent": {
+      "transition_state_pooled_ref": 28.01,
+      "characteristic_vector": 27.0,
+      "queue_children": 13.33,
+      "State_copy_from": 6.72,
+      "advance": 5.27,
+      "State_insert_with": 4.2,
+      "malloc": 1.74,
+      "free": 0.84
+    },
+    "rust_work": {
+      "dictionary_intersections": 1731660,
+      "final_checks": 1731660,
+      "edges_enumerated": 6996242,
+      "transition_attempts": 6996242,
+      "transition_accepted": 1730660,
+      "epsilon_input_positions": 14972940,
+      "epsilon_output_positions": 14972940,
+      "characteristic_vectors": 14972940,
+      "characteristic_units": 44897283,
+      "successor_candidates": 3931103,
+      "state_insert_attempts": 5535780,
+      "state_insert_retained": 3375478,
+      "subsumption_checks": 7695105,
+      "state_copy_calls": 6996242,
+      "state_positions_copied": 14972940,
+      "state_bytes_copied": 359350560,
+      "state_positions_enqueued": 3319400,
+      "state_bytes_enqueued": 79665600,
+      "pending_queue_peak": 1263,
+      "pool_acquires": 13992484,
+      "pool_reuses": 12264173,
+      "pool_misses": 1728311,
+      "pool_releases": 12261824
+    },
+    "rust_heaptrack": {
+      "passes_in_capture": 4,
+      "queue_children_allocations": 13426944,
+      "queue_children_allocations_per_pass": 3356736
+    },
+    "java_gc": {
+      "young_collections": 20,
+      "pause_total_ms": 128.712
+    }
+  },
+  "resource_boundary": {
+    "batch_size": 256,
+    "nonempty_batches": 1018,
+    "snapshots_created": 1000,
+    "arena_locks": 3500348,
+    "is_final_calls": 1750174,
+    "value_calls": 18514,
+    "edges_calls": 1731660,
+    "edge_cache_misses": 1731660,
+    "native_edges_enumerated": 6996242,
+    "nodes_materialized": 6997242,
+    "descriptors_cloned": 6996242,
+    "batch_sizes_with_identical_work": [1, 256, 65536]
+  }
+}

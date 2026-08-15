@@ -23,9 +23,10 @@ use core::ffi::c_void;
 use core::mem::{align_of, offset_of, size_of};
 
 use vinary_tree_interop::{
-    VtDictionaryEdge, VtDictionaryVTable, VtInterfaceId, VtOptionalU64, VtResource,
-    VtResourceVTable, VtWfstArc, VtWfstVTable, VT_ABI_VERSION, VT_DICTIONARY_INTERFACE_ID,
-    VT_DICTIONARY_INTERFACE_VERSION, VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH,
+    VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable, VtInterfaceId, VtOptionalU64,
+    VtResource, VtResourceVTable, VtWfstArc, VtWfstVTable, VT_ABI_VERSION,
+    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
+    VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH,
     VT_WFST_INTERFACE_ID, VT_WFST_INTERFACE_VERSION,
 };
 
@@ -177,6 +178,29 @@ fn every_struct_is_packed_in_declaration_order() {
         ],
     );
     assert_packed_in_order(
+        "VtDictionaryVisitVTable",
+        size_of::<VtDictionaryVisitVTable>(),
+        align_of::<VtDictionaryVisitVTable>(),
+        &[
+            (
+                "struct_size",
+                offset_of!(VtDictionaryVisitVTable, struct_size),
+                WORD,
+            ),
+            (
+                "interface_version",
+                offset_of!(VtDictionaryVisitVTable, interface_version),
+                4,
+            ),
+            ("reserved", offset_of!(VtDictionaryVisitVTable, reserved), 4),
+            (
+                "node_visit",
+                offset_of!(VtDictionaryVisitVTable, node_visit),
+                fnp,
+            ),
+        ],
+    );
+    assert_packed_in_order(
         "VtWfstArc",
         size_of::<VtWfstArc>(),
         align_of::<VtWfstArc>(),
@@ -259,6 +283,16 @@ mod exact_64 {
     }
 
     #[test]
+    fn vt_dictionary_visit_vtable_layout() {
+        assert_eq!(size_of::<VtDictionaryVisitVTable>(), 24);
+        assert_eq!(align_of::<VtDictionaryVisitVTable>(), 8);
+        assert_eq!(offset_of!(VtDictionaryVisitVTable, struct_size), 0);
+        assert_eq!(offset_of!(VtDictionaryVisitVTable, interface_version), 8);
+        assert_eq!(offset_of!(VtDictionaryVisitVTable, reserved), 12);
+        assert_eq!(offset_of!(VtDictionaryVisitVTable, node_visit), 16);
+    }
+
+    #[test]
     fn vt_wfst_vtable_layout() {
         assert_eq!(size_of::<VtWfstVTable>(), 72);
         assert_eq!(align_of::<VtWfstVTable>(), 8);
@@ -318,6 +352,16 @@ mod exact_32_arm {
         assert_eq!(offset_of!(VtDictionaryVTable, node_value_u64), 40);
         assert_eq!(offset_of!(VtDictionaryVTable, node_transition), 44);
         assert_eq!(offset_of!(VtDictionaryVTable, node_edges), 48);
+    }
+
+    #[test]
+    fn vt_dictionary_visit_vtable_layout() {
+        assert_eq!(size_of::<VtDictionaryVisitVTable>(), 16);
+        assert_eq!(align_of::<VtDictionaryVisitVTable>(), 4);
+        assert_eq!(offset_of!(VtDictionaryVisitVTable, struct_size), 0);
+        assert_eq!(offset_of!(VtDictionaryVisitVTable, interface_version), 4);
+        assert_eq!(offset_of!(VtDictionaryVisitVTable, reserved), 8);
+        assert_eq!(offset_of!(VtDictionaryVisitVTable, node_visit), 12);
     }
 
     #[test]
@@ -411,8 +455,10 @@ fn interface_identifiers_are_exact_sixteen_byte_strings() {
     // VT-ABI-4: identifiers are compared byte-for-byte across the ABI; both
     // published identifiers are exactly 16 bytes with no NUL terminator.
     assert_eq!(&VT_DICTIONARY_INTERFACE_ID.bytes, b"vt.dictionary.v1");
+    assert_eq!(&VT_DICTIONARY_VISIT_INTERFACE_ID.bytes, b"vt.dict.visit.v1");
     assert_eq!(&VT_WFST_INTERFACE_ID.bytes, b"vt.scalar-wfst.1");
     assert_ne!(VT_DICTIONARY_INTERFACE_ID, VT_WFST_INTERFACE_ID);
+    assert_ne!(VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_VISIT_INTERFACE_ID);
     assert_eq!(VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_ID);
 }
 
@@ -420,6 +466,7 @@ fn interface_identifiers_are_exact_sixteen_byte_strings() {
 fn published_constants_are_pinned() {
     assert_eq!(VT_ABI_VERSION, 1);
     assert_eq!(VT_DICTIONARY_INTERFACE_VERSION, 1);
+    assert_eq!(VT_DICTIONARY_VISIT_INTERFACE_VERSION, 1);
     assert_eq!(VT_WFST_INTERFACE_VERSION, 1);
     assert_eq!(VT_RECOMMENDED_EDGE_BATCH, 256);
     assert_eq!(VT_RECOMMENDED_ARC_BATCH, 256);

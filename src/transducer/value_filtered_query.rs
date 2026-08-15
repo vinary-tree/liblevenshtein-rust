@@ -5,9 +5,7 @@
 //! materializing term strings, which can improve performance when many results
 //! match the distance threshold but few match the value filter.
 
-use crate::transducer::transition::{
-    initial_state, transition_state_pooled_ref, TransitionSettings,
-};
+use crate::transducer::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
 use crate::transducer::{
     Algorithm, Candidate, State, StatePool, SubstitutionPolicyFor, Unrestricted,
 };
@@ -107,11 +105,6 @@ impl<N: MappedDictionaryNode> ValueQueryIntersection<N> {
     #[inline]
     fn term(&self, path_arena: &[ValueQueryPathNode<N::Unit>]) -> String {
         N::Unit::to_string(&self.units(path_arena))
-    }
-
-    #[inline(always)]
-    fn is_final(&self) -> bool {
-        self.node.is_final()
     }
 }
 
@@ -224,6 +217,8 @@ where
     seen: SeenTerms,
     /// State pool for efficient state allocation reuse
     state_pool: StatePool,
+    /// Shared cached transition kernel; queued states are epsilon-closed.
+    unit_transitions: CachedUnitTransitions<N::Unit>,
     /// Iterator finished flag
     finished: bool,
 }
@@ -250,7 +245,8 @@ where
         filter: F,
     ) -> Self {
         let query_units = N::Unit::from_str(&term);
-        let initial = initial_state(query_units.len(), max_distance, algorithm);
+        let query_length = query_units.len();
+        let initial = initial_state(query_length, max_distance, algorithm);
 
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
@@ -264,6 +260,7 @@ where
             path_arena: Vec::with_capacity(64),
             seen: SeenTerms::default(),
             state_pool: StatePool::new(),
+            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
             finished: false,
         }
     }
@@ -284,8 +281,9 @@ where
         }
 
         while let Some(intersection) = self.pending.pop_front() {
+            let is_final = self.queue_children_and_finality(&intersection);
             // Check if this is a final node
-            if intersection.is_final() {
+            if is_final {
                 // Infer distance (standard mode - penalize remaining query characters)
                 let distance = intersection
                     .state
@@ -294,14 +292,12 @@ where
 
                 if distance <= self.max_distance {
                     // CRITICAL: Check value filter BEFORE materializing term.
-                    let Some(value) = intersection.node.value() else {
-                        self.queue_children(&intersection);
+                    let Some(value) = intersection.node.value_at_final() else {
                         continue;
                     };
 
                     if !(self.filter)(&value) {
-                        // Value doesn't match filter - queue children but skip this match.
-                        self.queue_children(&intersection);
+                        // Value doesn't match filter; children were already queued.
                         continue;
                     }
 
@@ -310,19 +306,10 @@ where
 
                     // Deduplicate
                     if mark_seen_term(&mut self.seen, &term) {
-                        // Queue children for further exploration
-                        self.queue_children(&intersection);
-
                         // Return the candidate
                         return Some(Candidate { term, distance });
                     }
-                } else {
-                    // Even if this final node is too far, still explore its children
-                    self.queue_children(&intersection);
                 }
-            } else {
-                // Not final: queue children to continue exploring
-                self.queue_children(&intersection);
             }
         }
 
@@ -340,44 +327,50 @@ where
 {
     /// Queue child intersections for exploration
     #[inline]
-    fn queue_children(&mut self, intersection: &ValueQueryIntersection<N>) {
+    fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
         let mut child_parent_path = None;
 
-        for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled_ref(
-                &intersection.state,
-                &mut self.state_pool,
-                &Unrestricted, // Default policy: allow all substitutions
-                label,
-                &self.query,
-                TransitionSettings::new(
-                    self.max_distance,
-                    self.algorithm,
-                    false, // standard mode (not substring mode)
-                ),
-            ) {
-                let parent_path = match child_parent_path {
-                    Some(path) => path,
-                    None => {
-                        let path = match intersection.label {
-                            Some(current_label) => push_path_node(
-                                &mut self.path_arena,
-                                current_label,
-                                intersection.parent,
-                            ),
-                            None => NO_PATH,
-                        };
-                        child_parent_path = Some(path);
-                        path
-                    }
-                };
+        intersection
+            .node
+            .visit_edges_and_finality(|label, child_node| {
+                if let Some(next_state) = self.unit_transitions.transition(
+                    &intersection.state,
+                    &mut self.state_pool,
+                    &Unrestricted, // Default policy: allow all substitutions
+                    label,
+                    &self.query,
+                    TransitionSettings::new(
+                        self.max_distance,
+                        self.algorithm,
+                        false, // standard mode (not substring mode)
+                    ),
+                ) {
+                    let parent_path = match child_parent_path {
+                        Some(path) => path,
+                        None => {
+                            let path = match intersection.label {
+                                Some(current_label) => push_path_node(
+                                    &mut self.path_arena,
+                                    current_label,
+                                    intersection.parent,
+                                ),
+                                None => NO_PATH,
+                            };
+                            child_parent_path = Some(path);
+                            path
+                        }
+                    };
 
-                let child =
-                    ValueQueryIntersection::with_parent(label, child_node, next_state, parent_path);
+                    let child = ValueQueryIntersection::with_parent(
+                        label,
+                        child_node,
+                        next_state,
+                        parent_path,
+                    );
 
-                self.pending.push_back(child);
-            }
-        }
+                    self.pending.push_back(child);
+                }
+            })
     }
 }
 
@@ -403,6 +396,8 @@ where
     seen: FxHashSet<T>,
     /// State pool for efficient state allocation reuse
     state_pool: StatePool,
+    /// Shared cached transition kernel; queued states are epsilon-closed.
+    unit_transitions: CachedUnitTransitions<N::Unit>,
     /// Iterator finished flag
     finished: bool,
 }
@@ -451,7 +446,8 @@ where
         max_distance: usize,
         algorithm: Algorithm,
     ) -> Self {
-        let initial = initial_state(query_units.len(), max_distance, algorithm);
+        let query_length = query_units.len();
+        let initial = initial_state(query_length, max_distance, algorithm);
 
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
@@ -464,6 +460,7 @@ where
             path_arena: Vec::with_capacity(64),
             seen: FxHashSet::default(),
             state_pool: StatePool::new(),
+            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
             finished: false,
         }
     }
@@ -485,7 +482,10 @@ where
         }
 
         while let Some(intersection) = self.pending.pop_front() {
-            if intersection.is_final() {
+            crate::causal_perf::record_dictionary_intersections(1);
+            crate::causal_perf::record_final_checks(1);
+            let is_final = self.queue_children_and_finality(&intersection);
+            if is_final {
                 let distance = intersection
                     .state
                     .infer_distance(self.query.len())
@@ -498,19 +498,14 @@ where
                     // value-filtered iterator's discipline). `insert` returns
                     // `true` the first time a term is seen.
                     if self.seen.insert(term.clone()) {
-                        self.queue_children(&intersection);
                         // Read the value during traversal — no second lookup.
-                        if let Some(value) = intersection.node.value() {
+                        if let Some(value) = intersection.node.value_at_final() {
+                            crate::causal_perf::record_matches_materialized(1);
                             return Some((term, distance, value));
                         }
                         // Final but valueless: keep exploring.
                     }
-                } else {
-                    // Too far, but its children may still be in range.
-                    self.queue_children(&intersection);
                 }
-            } else {
-                self.queue_children(&intersection);
             }
         }
 
@@ -528,40 +523,56 @@ where
     /// Queue child intersections for exploration (identical traversal to the
     /// value-filtered iterator).
     #[inline]
-    fn queue_children(&mut self, intersection: &ValueQueryIntersection<N>) {
+    fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
         let mut child_parent_path = None;
 
-        for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled_ref(
-                &intersection.state,
-                &mut self.state_pool,
-                &Unrestricted,
-                label,
-                &self.query,
-                TransitionSettings::new(self.max_distance, self.algorithm, false),
-            ) {
-                let parent_path = match child_parent_path {
-                    Some(path) => path,
-                    None => {
-                        let path = match intersection.label {
-                            Some(current_label) => push_path_node(
-                                &mut self.path_arena,
-                                current_label,
-                                intersection.parent,
-                            ),
-                            None => NO_PATH,
-                        };
-                        child_parent_path = Some(path);
-                        path
-                    }
-                };
+        intersection
+            .node
+            .visit_edges_and_finality(|label, child_node| {
+                crate::causal_perf::record_edges_enumerated(1);
+                if let Some(next_state) = self.unit_transitions.transition(
+                    &intersection.state,
+                    &mut self.state_pool,
+                    &Unrestricted,
+                    label,
+                    &self.query,
+                    TransitionSettings::new(self.max_distance, self.algorithm, false),
+                ) {
+                    crate::causal_perf::record_transition_accepted(1);
+                    let position_count = next_state.len();
+                    crate::causal_perf::record_state_positions_enqueued(position_count as u64);
+                    crate::causal_perf::record_state_bytes_enqueued(
+                        position_count
+                            .saturating_mul(std::mem::size_of::<crate::transducer::Position>())
+                            as u64,
+                    );
+                    let parent_path = match child_parent_path {
+                        Some(path) => path,
+                        None => {
+                            let path = match intersection.label {
+                                Some(current_label) => push_path_node(
+                                    &mut self.path_arena,
+                                    current_label,
+                                    intersection.parent,
+                                ),
+                                None => NO_PATH,
+                            };
+                            child_parent_path = Some(path);
+                            path
+                        }
+                    };
 
-                let child =
-                    ValueQueryIntersection::with_parent(label, child_node, next_state, parent_path);
+                    let child = ValueQueryIntersection::with_parent(
+                        label,
+                        child_node,
+                        next_state,
+                        parent_path,
+                    );
 
-                self.pending.push_back(child);
-            }
-        }
+                    self.pending.push_back(child);
+                    crate::causal_perf::record_pending_queue_size(self.pending.len());
+                }
+            })
     }
 }
 
@@ -634,6 +645,8 @@ where
     seen: SeenTerms,
     /// State pool for efficient state allocation reuse
     state_pool: StatePool,
+    /// Shared cached transition kernel; queued states are epsilon-closed.
+    unit_transitions: CachedUnitTransitions<N::Unit>,
     /// Iterator finished flag
     finished: bool,
 }
@@ -689,7 +702,8 @@ where
         value_set: ValueSetMembership<'a, V>,
     ) -> Self {
         let query_units = N::Unit::from_str(&term);
-        let initial = initial_state(query_units.len(), max_distance, algorithm);
+        let query_length = query_units.len();
+        let initial = initial_state(query_length, max_distance, algorithm);
 
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
@@ -703,6 +717,7 @@ where
             path_arena: Vec::with_capacity(64),
             seen: SeenTerms::default(),
             state_pool: StatePool::new(),
+            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
             finished: false,
         }
     }
@@ -722,8 +737,9 @@ where
         }
 
         while let Some(intersection) = self.pending.pop_front() {
+            let is_final = self.queue_children_and_finality(&intersection);
             // Check if this is a final node
-            if intersection.is_final() {
+            if is_final {
                 // Infer distance (standard mode - penalize remaining query characters)
                 let distance = intersection
                     .state
@@ -732,14 +748,12 @@ where
 
                 if distance <= self.max_distance {
                     // CRITICAL: Check value set membership BEFORE materializing term.
-                    let Some(value) = intersection.node.value() else {
-                        self.queue_children(&intersection);
+                    let Some(value) = intersection.node.value_at_final() else {
                         continue;
                     };
 
                     if !self.value_set.contains(&value) {
-                        // Value not in set - queue children but skip this match.
-                        self.queue_children(&intersection);
+                        // Value not in set; children were already queued.
                         continue;
                     }
 
@@ -748,19 +762,10 @@ where
 
                     // Deduplicate
                     if mark_seen_term(&mut self.seen, &term) {
-                        // Queue children for further exploration
-                        self.queue_children(&intersection);
-
                         // Return the candidate
                         return Some(Candidate { term, distance });
                     }
-                } else {
-                    // Even if this final node is too far, still explore its children
-                    self.queue_children(&intersection);
                 }
-            } else {
-                // Not final: queue children to continue exploring
-                self.queue_children(&intersection);
             }
         }
 
@@ -777,44 +782,50 @@ where
 {
     /// Queue child intersections for exploration
     #[inline]
-    fn queue_children(&mut self, intersection: &ValueQueryIntersection<N>) {
+    fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
         let mut child_parent_path = None;
 
-        for (label, child_node) in intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled_ref(
-                &intersection.state,
-                &mut self.state_pool,
-                &Unrestricted, // Default policy: allow all substitutions
-                label,
-                &self.query,
-                TransitionSettings::new(
-                    self.max_distance,
-                    self.algorithm,
-                    false, // standard mode (not substring mode)
-                ),
-            ) {
-                let parent_path = match child_parent_path {
-                    Some(path) => path,
-                    None => {
-                        let path = match intersection.label {
-                            Some(current_label) => push_path_node(
-                                &mut self.path_arena,
-                                current_label,
-                                intersection.parent,
-                            ),
-                            None => NO_PATH,
-                        };
-                        child_parent_path = Some(path);
-                        path
-                    }
-                };
+        intersection
+            .node
+            .visit_edges_and_finality(|label, child_node| {
+                if let Some(next_state) = self.unit_transitions.transition(
+                    &intersection.state,
+                    &mut self.state_pool,
+                    &Unrestricted, // Default policy: allow all substitutions
+                    label,
+                    &self.query,
+                    TransitionSettings::new(
+                        self.max_distance,
+                        self.algorithm,
+                        false, // standard mode (not substring mode)
+                    ),
+                ) {
+                    let parent_path = match child_parent_path {
+                        Some(path) => path,
+                        None => {
+                            let path = match intersection.label {
+                                Some(current_label) => push_path_node(
+                                    &mut self.path_arena,
+                                    current_label,
+                                    intersection.parent,
+                                ),
+                                None => NO_PATH,
+                            };
+                            child_parent_path = Some(path);
+                            path
+                        }
+                    };
 
-                let child =
-                    ValueQueryIntersection::with_parent(label, child_node, next_state, parent_path);
+                    let child = ValueQueryIntersection::with_parent(
+                        label,
+                        child_node,
+                        next_state,
+                        parent_path,
+                    );
 
-                self.pending.push_back(child);
-            }
-        }
+                    self.pending.push_back(child);
+                }
+            })
     }
 }
 

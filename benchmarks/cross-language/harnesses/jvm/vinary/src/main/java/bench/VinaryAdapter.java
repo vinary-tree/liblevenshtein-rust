@@ -78,7 +78,9 @@ public final class VinaryAdapter implements HarnessAdapter {
         if (transducer != null) {
             transducer.close();
         }
-        transducer = new Transducer(dictionary, parseAlgorithm(algorithm));
+        try (Transducer live = new Transducer(dictionary, parseAlgorithm(algorithm))) {
+            transducer = live.snapshot();
+        }
     }
 
     public static Algorithm parseAlgorithm(String algorithm) {
@@ -93,24 +95,60 @@ public final class VinaryAdapter implements HarnessAdapter {
 
     @Override
     public PassResult pass(List<String> queries, int maxDistance, boolean withChecksum) {
-        long matches = 0;
-        long bytes = 0;
-        long distanceSum = 0;
-        long checksum = 0;
+        PassAccumulator result = new PassAccumulator(withChecksum);
+        for (String query : queries) {
+            transducer.forEachMatch(query, maxDistance, result::acceptMaterialized);
+        }
+        return result.finish();
+    }
+
+    /** Causal treatment that reduces borrowed descriptors without decoding terms. */
+    public PassResult passBorrowed(
+            List<String> queries, int maxDistance, boolean withChecksum) {
+        PassAccumulator result = new PassAccumulator(withChecksum);
         for (String query : queries) {
             try (QueryCursor cursor = transducer.query(query, maxDistance)) {
-                for (Match match : cursor) {
-                    String term = ((Term.Utf8) match.term()).value();
-                    matches++;
-                    bytes += term.length();   // ASCII workload: length == UTF-8 bytes;
-                    distanceSum += match.distance();   // gate assert catches violations
-                    if (withChecksum) {
-                        checksum += Fnv.entryAscii(term, match.distance());
+                cursor.forEachBatch(batch -> {
+                    for (int index = 0; index < batch.size(); index++) {
+                        long distance = batch.distance(index);
+                        result.matches++;
+                        result.bytes += batch.byteLength(index);
+                        result.distanceSum += distance;
+                        if (result.withChecksum) {
+                            result.checksum += Fnv.entry(batch.bytes(index), distance);
+                        }
                     }
-                }
+                });
             }
         }
-        return new PassResult(matches, bytes, distanceSum, checksum);
+        return new PassResult(
+            result.matches, result.bytes, result.distanceSum, result.checksum);
+    }
+
+    private static final class PassAccumulator {
+        private final boolean withChecksum;
+        private long matches;
+        private long bytes;
+        private long distanceSum;
+        private long checksum;
+
+        private PassAccumulator(boolean withChecksum) {
+            this.withChecksum = withChecksum;
+        }
+
+        private void acceptMaterialized(Match match) {
+            String term = ((Term.Utf8) match.term()).value();
+            matches++;
+            bytes += term.length();
+            distanceSum += match.distance();
+            if (withChecksum) {
+                checksum += Fnv.entryAscii(term, match.distance());
+            }
+        }
+
+        private PassResult finish() {
+            return new PassResult(matches, bytes, distanceSum, checksum);
+        }
     }
 
     @Override

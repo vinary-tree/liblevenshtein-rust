@@ -103,6 +103,20 @@ path = "src/lib.rs"
 # Rust consumers use the rlib; native packages ship both shared and static C ABI libraries.
 crate-type = ["rlib", "cdylib", "staticlib"]
 
+[[bin]]
+name = "causal_query_profile"
+path = "src/bin/causal_query_profile.rs"
+required-features = ["perf-instrumentation"]
+
+[[bin]]
+name = "causal_resource_profile"
+path = "src/bin/causal_resource_profile.rs"
+required-features = ["causal-resource-profiling"]
+
+[[bin]]
+name = "causal_construction_bench"
+path = "src/bin/causal_construction_bench.rs"
+
 [[bench]]
 name = "benchmarks"
 harness = false
@@ -424,7 +438,12 @@ compression = ["flate2", "serialization", "libdictenstein/compression"]
 phonetic-rules = ["unicode-normalization"]  # Phonetic rewrite rules with formal verification
 embedded-rules = ["phonetic-rules"]  # Pre-compiled English phonetic rules embedded in binary
 parallel-grep = ["rayon", "phonetic-rules"]  # Parallel phonetic grep with Rayon for multi-core document scanning
-perf-instrumentation = []  # Performance instrumentation for optimization analysis (dev only)
+perf-instrumentation = ["libdictenstein/perf-instrumentation"]  # Causal work counters (dev only)
+causal-resource-profiling = [
+    "bindings-core",
+    "perf-instrumentation",
+    "libdictenstein/bindings-core",
+]
 
 # Eviction wrapper optimization features
 eviction-parking-lot = ["parking_lot"]

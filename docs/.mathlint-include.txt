@@ -45,6 +45,10 @@ docs/algorithms/README.md
 docs/architecture/overview.md
 docs/architecture/README.md
 docs/benchmarks/README.md
+docs/benchmarks/cross-language/RESULTS.md
+docs/benchmarks/cross-language/cpp-comparison.md
+docs/benchmarks/cross-language/java-comparison.md
+docs/benchmarks/cross-language/methodology.md
 docs/bug-reports/README.md
 docs/completion-reports/README.md
 docs/concepts/LAZY_VS_EAGER_AUTOMATA.md

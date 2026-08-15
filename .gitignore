@@ -65,6 +65,8 @@ flamegraph_*.svg
 flamegraphs/
 perf.data*
 perf-*.data*
+# AMD uProf session metadata (machine-local paths and capture settings).
+*.ri
 
 # Benchmark results and logs
 *_results.log

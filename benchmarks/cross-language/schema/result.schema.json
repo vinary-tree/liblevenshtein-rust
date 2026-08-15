@@ -146,7 +146,16 @@
     },
     "environment_ref": { "type": "string" },
     "status": { "enum": ["ok", "degraded", "failed"] },
-    "notes": { "type": "array", "items": { "type": "string" } }
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "contended": {
+      "type": "boolean",
+      "description": "True when this cell's timed region overlapped a harness process invoked outside the runner's control (another agent, a profiler). Set by scripts/mark-contended-cells.py from the intervals in foreign-contention.jsonl. Independent of cell_snapshot.load_avg_1m, which a single core-pinned competitor barely moves on a 32-core host."
+    },
+    "native_digests": {
+      "type": "object",
+      "description": "SHA-256 of each native library this cell loaded, recorded per cell so a rebuild partway through a run cannot silently split one run_id across two binaries. Compared against environment.json native_artifacts by scripts/aggregate.py. Absent for pure-legacy targets, which load none of them.",
+      "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    }
   },
   "allOf": [
     {

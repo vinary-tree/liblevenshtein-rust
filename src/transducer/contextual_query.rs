@@ -196,11 +196,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(pending) = self.pending.pop_front() {
             self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
-            let accepted = pending.node.is_final()
-                && pending.column[self.query.len()] <= self.max_cost
-                && self.seen.insert(pending.prefix.clone());
-
-            for (unit, child) in pending.node.edges() {
+            let is_final = pending.node.visit_edges_and_finality(|unit, child| {
                 self.stats.edges_enumerated = self.stats.edges_enumerated.saturating_add(1);
                 let column = self.child_column(&pending, unit);
                 if column.iter().any(|cost| *cost <= self.max_cost) {
@@ -214,7 +210,10 @@ where
                 } else {
                     self.stats.subtrees_pruned = self.stats.subtrees_pruned.saturating_add(1);
                 }
-            }
+            });
+            let accepted = is_final
+                && pending.column[self.query.len()] <= self.max_cost
+                && self.seen.insert(pending.prefix.clone());
 
             if accepted {
                 return Some(ContextualCandidate {

@@ -4,6 +4,35 @@ Performance benchmarks, measurements, and comparative analysis.
 
 ## Contents
 
+### Cross-Language Benchmark Program
+
+Measured comparisons between the Rust-backed language bindings and the legacy
+implementations they replace, plus a binding-overhead atlas against the pure
+Rust core. All arms run one normative protocol over one committed workload and
+must pass a correctness gate against a Rust oracle before any timing is
+accepted.
+
+#### [Results](cross-language/RESULTS.md)
+Every measurement taken, with an explicit accounting of what was *not* measured
+and which figures are provisional. Start here.
+
+#### [Methodology](cross-language/methodology.md)
+Strategy, procedure, integrity constraints, and how each is validated —
+including the procedure for re-measuring after a code change. Read before
+running or extending the program.
+
+#### [Java vs Java](cross-language/java-comparison.md)
+Legacy `liblevenshtein-java` 3.0.0 against the Java 22 FFM binding, calibrated
+against a third implementation so the result is not misread.
+
+#### [C++ vs C++](cross-language/cpp-comparison.md)
+Legacy `liblevenshtein-cpp` against the Rust-backed C++ facade, with the
+core / ABI / facade cost decomposition.
+
+The normative harness contract (CLI surface, timed loop, checksum bit-layout,
+per-language clocks, fairness rules) lives separately in
+[`benchmarks/cross-language/harnesses/common/PROTOCOL.md`](../../benchmarks/cross-language/harnesses/common/PROTOCOL.md).
+
 ### Backend Comparisons
 
 #### [Backend Performance Comparison](BACKEND_PERFORMANCE_COMPARISON.md)
@@ -53,6 +82,16 @@ Comprehensive analysis of DAT implementation:
 - Performance characteristics
 
 ### Algorithm-Specific Analysis
+
+#### [Java Performance-Parity Causal Analysis](cross-language/java-parity-causal-analysis.md)
+Profile- and work-counter-backed explanation of the construction, native
+matching, and resource-boundary gaps against `liblevenshtein-java`, plus the
+ranked hypotheses that gate the optimization campaign.
+
+#### [Optimization Propagation Matrix](optimization-propagation.md)
+Backend-by-backend and query-surface-by-query-surface classification of every
+accepted parity optimization, including the generic invariant, specialized
+adaptations, explicit inapplicability reasons, and completion gates.
 
 #### [Academic Benchmark Reproduction](academic-benchmarks.md)
 Repeatable commands for the UCR/UEA MSM archive benchmark and the CMUdict

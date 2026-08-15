@@ -6,6 +6,7 @@ the merged result against schema/result.schema.json:
 
   - run_id (results directory name)
   - dictionary.sha256 / workload.sha256 (computed once, cached per run)
+  - native_digests {lib: sha256} for every non-legacy cell
   - environment_ref
   - cell_snapshot {cpuset, cpu_mhz_start, cpu_mhz_end, load_avg_1m}
   - memory {max_rss_kib, measured_by, child_cmdline}  (memory mode only,
@@ -29,6 +30,19 @@ from pathlib import Path
 SCRIPTS_DIR = Path(__file__).resolve().parent
 SCHEMA = SCRIPTS_DIR.parent / "schema" / "result.schema.json"
 
+# Repo roots, derived the same way doctor.sh derives them.
+LR = SCRIPTS_DIR.parent.parent.parent
+LD = LR.parent / "libdictenstein"
+
+# Every non-legacy target reaches the core through these two cdylibs. Their
+# digests are recorded per cell because the run spans many hours: a rebuild
+# partway through would otherwise split one run_id silently across two
+# different binaries, and nothing in the cell would show it.
+NATIVE_LIBS = {
+    "libliblevenshtein.so": LR / "target" / "release" / "libliblevenshtein.so",
+    "liblibdictenstein.so": LD / "target" / "release" / "liblibdictenstein.so",
+}
+
 sys.path.insert(0, str(SCRIPTS_DIR))
 from schema_check import validate_file  # noqa: E402  # type: ignore[import-not-found]
 
@@ -40,6 +54,31 @@ def sha256_cached(results_dir: Path, path: Path) -> str:
     if cache_path.exists():
         cache = json.loads(cache_path.read_text())
     key = str(path.resolve())
+    if key not in cache:
+        h = hashlib.sha256()
+        with path.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+        cache[key] = h.hexdigest()
+        cache_path.write_text(json.dumps(cache, indent=2, sort_keys=True) + "\n")
+    return cache[key]
+
+
+def sha256_volatile(results_dir: Path, path: Path) -> str:
+    """Digest a file that may legitimately change during the run.
+
+    ``sha256_cached`` keys on the path alone, which is correct for the committed
+    workload artifacts but wrong for build outputs: were a library rebuilt
+    mid-run, a path-keyed cache would keep returning the pre-rebuild digest and
+    hide exactly the event this digest exists to expose. Keying on
+    (path, mtime_ns, size) keeps the cache while making any rewrite a miss.
+    """
+    stat = path.stat()
+    cache_path = results_dir / ".sha256-volatile-cache.json"
+    cache: dict[str, str] = {}
+    if cache_path.exists():
+        cache = json.loads(cache_path.read_text())
+    key = f"{path.resolve()}:{stat.st_mtime_ns}:{stat.st_size}"
     if key not in cache:
         h = hashlib.sha256()
         with path.open("rb") as fh:
@@ -71,6 +110,11 @@ def main() -> int:
     args = parser.parse_args()
 
     cell = json.loads(args.cell_json.read_text())
+    environment_path = args.results_dir / "environment.json"
+    if not environment_path.is_file():
+        raise SystemExit(
+            f"postfill: missing {environment_path}; run env-capture.py before cells"
+        )
     cell["run_id"] = args.results_dir.name
     cell["environment_ref"] = "../environment.json"
     cell["cell_snapshot"] = {
@@ -84,6 +128,18 @@ def main() -> int:
     workload_file = Path(cell["workload"]["file"])
     cell["dictionary"]["sha256"] = sha256_cached(args.results_dir, dictionary_file)
     cell["workload"]["sha256"] = sha256_cached(args.results_dir, workload_file)
+
+    # Legacy targets (liblevenshtein-java, the vendored CoffeeScript build,
+    # liblevenshtein-cpp) link none of our cdylibs, so attributing digests to
+    # them would misreport what they actually ran.
+    if cell["target"]["implementation"] != "legacy":
+        digests = {
+            name: sha256_volatile(args.results_dir, path)
+            for name, path in NATIVE_LIBS.items()
+            if path.exists()
+        }
+        if digests:
+            cell["native_digests"] = digests
 
     if cell["mode"] == "memory":
         if not args.time_v_log:

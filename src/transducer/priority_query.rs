@@ -36,7 +36,7 @@
 //! }
 //! ```
 
-use super::transition::{initial_state, transition_state_pooled_ref, TransitionSettings};
+use super::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
 use super::{Algorithm, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::cmp::Ordering;
@@ -52,11 +52,6 @@ impl<N: DictionaryNode> PriorityIntersection<N> {
     #[inline]
     fn new(node: N, state: State) -> Self {
         Self { node, state }
-    }
-
-    #[inline(always)]
-    fn is_final(&self) -> bool {
-        self.node.is_final()
     }
 }
 
@@ -152,6 +147,8 @@ pub struct PriorityQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unre
     policy: P,
     /// State pool for allocation reuse
     state_pool: StatePool,
+    /// Shared cached transition kernel; queued states are epsilon-closed.
+    unit_transitions: CachedUnitTransitions<N::Unit>,
 }
 
 impl<N: DictionaryNode> PriorityQueryIterator<N, Unrestricted> {
@@ -211,6 +208,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             algorithm,
             policy,
             state_pool: StatePool::new(),
+            unit_transitions: CachedUnitTransitions::new(query_len, max_distance),
         }
     }
 
@@ -235,8 +233,9 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
     /// Get the next match from the priority queue.
     fn advance(&mut self) -> Option<PriorityCandidate> {
         while let Some(entry) = self.queue.pop() {
+            let is_final = self.expand_children_and_finality(&entry);
             // Check if this is a final match
-            if entry.intersection.is_final() {
+            if is_final {
                 let distance = entry
                     .intersection
                     .state
@@ -244,18 +243,12 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                     .unwrap_or(usize::MAX);
 
                 if distance <= self.max_distance {
-                    // Found a valid match - queue children before returning
-                    self.expand_children(&entry);
-
                     return Some(PriorityCandidate {
                         term: N::Unit::to_string(&entry.term_units),
                         distance,
                     });
                 }
             }
-
-            // Expand children regardless of finality
-            self.expand_children(&entry);
         }
 
         None
@@ -263,46 +256,49 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
     /// Expand children of a search entry into the priority queue.
     #[inline]
-    fn expand_children(&mut self, entry: &SearchEntry<N>) {
-        for (label, child_node) in entry.intersection.node.edges() {
-            if let Some(next_state) = transition_state_pooled_ref(
-                &entry.intersection.state,
-                &mut self.state_pool,
-                &self.policy,
-                label,
-                &self.query,
-                TransitionSettings::new(
-                    self.max_distance,
-                    self.algorithm,
-                    false, // Not prefix mode
-                ),
-            ) {
-                // Compute costs for child
-                let g_cost = next_state.min_distance().unwrap_or(0);
+    fn expand_children_and_finality(&mut self, entry: &SearchEntry<N>) -> bool {
+        entry
+            .intersection
+            .node
+            .visit_edges_and_finality(|label, child_node| {
+                if let Some(next_state) = self.unit_transitions.transition(
+                    &entry.intersection.state,
+                    &mut self.state_pool,
+                    &self.policy,
+                    label,
+                    &self.query,
+                    TransitionSettings::new(
+                        self.max_distance,
+                        self.algorithm,
+                        false, // Not prefix mode
+                    ),
+                ) {
+                    // Compute costs for child
+                    let g_cost = next_state.min_distance().unwrap_or(0);
 
-                // Prune if already over max distance
-                if g_cost > self.max_distance {
-                    self.state_pool.release(next_state);
-                    continue;
+                    // Prune if already over max distance
+                    if g_cost > self.max_distance {
+                        self.state_pool.release(next_state);
+                        return;
+                    }
+
+                    // Heuristic: remaining query characters that haven't been consumed
+                    // This is used for priority ordering, not for pruning
+                    let h_cost = self.heuristic(&next_state);
+
+                    let child_intersection = PriorityIntersection::new(child_node, next_state);
+
+                    let mut child_term_units = entry.term_units.clone();
+                    child_term_units.push(label);
+
+                    self.queue.push(SearchEntry::new(
+                        child_intersection,
+                        child_term_units,
+                        g_cost,
+                        h_cost,
+                    ));
                 }
-
-                // Heuristic: remaining query characters that haven't been consumed
-                // This is used for priority ordering, not for pruning
-                let h_cost = self.heuristic(&next_state);
-
-                let child_intersection = PriorityIntersection::new(child_node, next_state);
-
-                let mut child_term_units = entry.term_units.clone();
-                child_term_units.push(label);
-
-                self.queue.push(SearchEntry::new(
-                    child_intersection,
-                    child_term_units,
-                    g_cost,
-                    h_cost,
-                ));
-            }
-        }
+            })
     }
 }
 

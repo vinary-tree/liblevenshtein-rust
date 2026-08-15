@@ -46,6 +46,10 @@ public class VinaryBench {
     @Param({"dynamic_dawg", "double_array_trie"})
     public String backend;
 
+    /** Causal result-transport selector; parity runs retain managed materialization. */
+    @Param({"materialized"})
+    public String resultMode;
+
     private VinaryAdapter adapter;
     private List<String> queries;
     private PassResult reference;
@@ -71,7 +75,11 @@ public class VinaryBench {
 
     @Benchmark
     public long fullPass() {
-        PassResult result = adapter.pass(queries, distance, false);
+        PassResult result = switch (resultMode) {
+            case "borrowed" -> adapter.passBorrowed(queries, distance, false);
+            case "materialized" -> adapter.pass(queries, distance, false);
+            default -> throw new IllegalArgumentException("unknown result mode: " + resultMode);
+        };
         if (!result.tripleEquals(reference)) {
             throw new IllegalStateException("nondeterministic result during measurement");
         }

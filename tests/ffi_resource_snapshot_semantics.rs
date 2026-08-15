@@ -242,6 +242,46 @@ unsafe fn c_drain(
     all
 }
 
+unsafe fn c_query(
+    transducer: *mut LlevTransducer,
+    query: &str,
+    max_distance: usize,
+    batch_size: usize,
+) -> Vec<(String, usize, Option<u64>)> {
+    let cursor = c_open(transducer, query, max_distance);
+    let matches = c_drain(cursor, batch_size);
+    assert_eq!(llev_query_cursor_free(cursor), LlevStatus::Ok);
+    matches
+}
+
+#[test]
+fn c_snapshot_transducer_pins_one_revision_across_queries() {
+    unsafe {
+        let dictionary = TestDictionary::new([
+            ("cat".to_owned(), Some(1)),
+            ("cot".to_owned(), Some(2)),
+            ("cut".to_owned(), Some(3)),
+        ]);
+        let resource = dictionary.resource();
+        let mut live = ptr::null_mut();
+        assert_eq!(
+            llev_transducer_new(&resource, LlevAlgorithm::Standard as u32, &mut live),
+            LlevStatus::Ok
+        );
+        let mut pinned = ptr::null_mut();
+        assert_eq!(llev_transducer_snapshot(live, &mut pinned), LlevStatus::Ok);
+        let frozen = c_query(pinned, "cat", 2, 8);
+
+        dictionary.remove("cot");
+        dictionary.insert("cit", Some(5));
+
+        assert_eq!(c_query(pinned, "cat", 2, 8), frozen);
+        assert_ne!(c_query(live, "cat", 2, 8), frozen);
+        llev_transducer_free(pinned);
+        llev_transducer_free(live);
+    }
+}
+
 /// The canonical cross-language fixture
 /// (vinary-tree-interop/conformance/query_start_snapshot.tsv) replayed
 /// through the C ABI. The frozen and post-mutation result sets asserted

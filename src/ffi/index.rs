@@ -261,6 +261,33 @@ pub unsafe extern "C" fn llev_transducer_new(
     })
 }
 
+/// Capture one immutable revision and construct a read-only batch transducer.
+///
+/// Queries created from the returned handle share the same provider snapshot
+/// and its validated node cache. Later mutations visible through
+/// `transducer` are deliberately not observed by the returned handle.
+///
+/// # Safety
+///
+/// `transducer` and `out_transducer` must be readable/writable respectively.
+#[no_mangle]
+pub unsafe extern "C" fn llev_transducer_snapshot(
+    transducer: *const LlevTransducer,
+    out_transducer: *mut *mut LlevTransducer,
+) -> LlevStatus {
+    boundary(|| {
+        let transducer = transducer
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "transducer is null".into()))?;
+        if out_transducer.is_null() {
+            return Err((LlevStatus::NullPointer, "out_transducer is null".into()));
+        }
+        let inner = binding(transducer.inner.snapshot())?;
+        out_transducer.write(Box::into_raw(Box::new(LlevTransducer { inner })));
+        Ok(LlevStatus::Ok)
+    })
+}
+
 /// Release a transducer retain. Existing query cursors remain valid.
 ///
 /// # Safety
@@ -454,6 +481,8 @@ fn fill_batch(
             }
         };
         cursor.offsets.push(offset);
+        crate::causal_perf::record_ffi_matches_packed(1);
+        crate::causal_perf::record_ffi_bytes_packed(byte_len as u64);
         cursor.views.push(LlevMatch {
             term_data: ptr::null(),
             term_len,
