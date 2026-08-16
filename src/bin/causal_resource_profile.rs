@@ -151,6 +151,13 @@ fn main() {
         }
     }
     let query_ns = query_start.elapsed().as_nanos();
+    // Reclamation is deliberately outside `query_ns`: release every producer
+    // and consumer owner so the provider's synchronous arena-drop counters are
+    // observable without folding teardown into query latency.
+    drop(transducer);
+    drop(live_transducer);
+    drop(resource);
+    drop(dictionary);
     print_json(
         &args,
         terms.len(),
@@ -248,6 +255,9 @@ fn print_json(
         ),
         ("nodes_materialized", provider.resource_nodes_materialized),
         ("descriptors_cloned", provider.resource_descriptors_cloned),
+        ("nodes_reclaimed", provider.resource_nodes_reclaimed),
+        ("reclaim_nanos", provider.resource_reclaim_nanos),
+        ("reclaim_max_nanos", provider.resource_reclaim_max_nanos),
     ];
     write_fields(&mut json, &provider_fields);
     writeln!(&mut json, "  }}").unwrap();

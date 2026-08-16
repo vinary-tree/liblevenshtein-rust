@@ -25,6 +25,9 @@ pub const VT_DICTIONARY_INTERFACE_VERSION: u32 = 1;
 /// Version of [`VtDictionaryVisitVTable`].
 pub const VT_DICTIONARY_VISIT_INTERFACE_VERSION: u32 = 1;
 
+/// Version of [`VtSnapshotIdentityVTable`].
+pub const VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION: u32 = 1;
+
 /// Version of [`VtWfstVTable`].
 pub const VT_WFST_INTERFACE_VERSION: u32 = 1;
 
@@ -45,6 +48,14 @@ pub const VT_DICTIONARY_INTERFACE_ID: VtInterfaceId = VtInterfaceId {
 /// original [`VtDictionaryVTable`] remain binary compatible.
 pub const VT_DICTIONARY_VISIT_INTERFACE_ID: VtInterfaceId = VtInterfaceId {
     bytes: *b"vt.dict.visit.v1",
+};
+
+/// Stable identifier for immutable snapshot identity metadata.
+///
+/// This optional interface lets consumers share caches across independently
+/// retained resource handles that name the same producer revision.
+pub const VT_SNAPSHOT_IDENTITY_INTERFACE_ID: VtInterfaceId = VtInterfaceId {
+    bytes: *b"vt.snapshot.id.1",
 };
 
 /// Stable 128-bit identifier for the scalar WFST provider interface.
@@ -232,6 +243,16 @@ pub struct VtDictionaryEdge {
     pub node: u64,
 }
 
+/// Stable identity of one immutable producer revision.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub struct VtSnapshotIdentity {
+    /// Stable identifier of the shared producer for its process lifetime.
+    pub producer: u64,
+    /// Monotone semantic revision within `producer`.
+    pub revision: u64,
+}
+
 /// Versioned immutable dictionary-snapshot interface.
 ///
 /// Node identifiers are valid only while the snapshot resource is retained.
@@ -320,6 +341,25 @@ pub struct VtDictionaryVisitVTable {
             out_written: *mut usize,
             out_total: *mut usize,
         ) -> u32,
+    >,
+}
+
+/// Optional immutable snapshot-identity interface.
+///
+/// Providers return this vtable only for immutable resources. Consumers must
+/// treat identity as an optimization hint scoped to the current process; it is
+/// not a persistent or globally unique identifier.
+#[repr(C)]
+pub struct VtSnapshotIdentityVTable {
+    /// Size of this struct in bytes, for additive interface evolution.
+    pub struct_size: usize,
+    /// Must be at least [`VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION`].
+    pub interface_version: u32,
+    /// Reserved; must be zero.
+    pub reserved: u32,
+    /// Read the immutable resource's producer/revision identity.
+    pub identity: Option<
+        unsafe extern "C" fn(context: *mut c_void, out_identity: *mut VtSnapshotIdentity) -> u32,
     >,
 }
 
@@ -442,6 +482,7 @@ const _: () = {
     assert!(core::mem::align_of::<VtInterfaceId>() == 1);
     assert!(core::mem::size_of::<VtOptionalU64>() == 16);
     assert!(core::mem::size_of::<VtDictionaryEdge>() == 16);
+    assert!(core::mem::size_of::<VtSnapshotIdentity>() == 16);
     assert!(core::mem::size_of::<VtWfstArc>() == 40);
     // Absent vtable operations are NULL on the C side: the Option-of-function
     // null-pointer optimization is load-bearing for the whole vtable ABI.

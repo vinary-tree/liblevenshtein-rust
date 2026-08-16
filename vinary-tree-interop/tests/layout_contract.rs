@@ -24,10 +24,11 @@ use core::mem::{align_of, offset_of, size_of};
 
 use vinary_tree_interop::{
     VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable, VtInterfaceId, VtOptionalU64,
-    VtResource, VtResourceVTable, VtWfstArc, VtWfstVTable, VT_ABI_VERSION,
-    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
-    VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH,
-    VT_WFST_INTERFACE_ID, VT_WFST_INTERFACE_VERSION,
+    VtResource, VtResourceVTable, VtSnapshotIdentity, VtSnapshotIdentityVTable, VtWfstArc,
+    VtWfstVTable, VT_ABI_VERSION, VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION,
+    VT_DICTIONARY_VISIT_INTERFACE_ID, VT_DICTIONARY_VISIT_INTERFACE_VERSION,
+    VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH, VT_WFST_INTERFACE_ID,
+    VT_WFST_INTERFACE_VERSION,
 };
 
 /// One machine word.
@@ -127,6 +128,15 @@ fn every_struct_is_packed_in_declaration_order() {
         ],
     );
     assert_packed_in_order(
+        "VtSnapshotIdentity",
+        size_of::<VtSnapshotIdentity>(),
+        align_of::<VtSnapshotIdentity>(),
+        &[
+            ("producer", offset_of!(VtSnapshotIdentity, producer), 8),
+            ("revision", offset_of!(VtSnapshotIdentity, revision), 8),
+        ],
+    );
+    assert_packed_in_order(
         "VtDictionaryVTable",
         size_of::<VtDictionaryVTable>(),
         align_of::<VtDictionaryVTable>(),
@@ -196,6 +206,33 @@ fn every_struct_is_packed_in_declaration_order() {
             (
                 "node_visit",
                 offset_of!(VtDictionaryVisitVTable, node_visit),
+                fnp,
+            ),
+        ],
+    );
+    assert_packed_in_order(
+        "VtSnapshotIdentityVTable",
+        size_of::<VtSnapshotIdentityVTable>(),
+        align_of::<VtSnapshotIdentityVTable>(),
+        &[
+            (
+                "struct_size",
+                offset_of!(VtSnapshotIdentityVTable, struct_size),
+                WORD,
+            ),
+            (
+                "interface_version",
+                offset_of!(VtSnapshotIdentityVTable, interface_version),
+                4,
+            ),
+            (
+                "reserved",
+                offset_of!(VtSnapshotIdentityVTable, reserved),
+                4,
+            ),
+            (
+                "identity",
+                offset_of!(VtSnapshotIdentityVTable, identity),
                 fnp,
             ),
         ],
@@ -293,6 +330,16 @@ mod exact_64 {
     }
 
     #[test]
+    fn vt_snapshot_identity_vtable_layout() {
+        assert_eq!(size_of::<VtSnapshotIdentityVTable>(), 24);
+        assert_eq!(align_of::<VtSnapshotIdentityVTable>(), 8);
+        assert_eq!(offset_of!(VtSnapshotIdentityVTable, struct_size), 0);
+        assert_eq!(offset_of!(VtSnapshotIdentityVTable, interface_version), 8);
+        assert_eq!(offset_of!(VtSnapshotIdentityVTable, reserved), 12);
+        assert_eq!(offset_of!(VtSnapshotIdentityVTable, identity), 16);
+    }
+
+    #[test]
     fn vt_wfst_vtable_layout() {
         assert_eq!(size_of::<VtWfstVTable>(), 72);
         assert_eq!(align_of::<VtWfstVTable>(), 8);
@@ -365,6 +412,16 @@ mod exact_32_arm {
     }
 
     #[test]
+    fn vt_snapshot_identity_vtable_layout() {
+        assert_eq!(size_of::<VtSnapshotIdentityVTable>(), 16);
+        assert_eq!(align_of::<VtSnapshotIdentityVTable>(), 4);
+        assert_eq!(offset_of!(VtSnapshotIdentityVTable, struct_size), 0);
+        assert_eq!(offset_of!(VtSnapshotIdentityVTable, interface_version), 4);
+        assert_eq!(offset_of!(VtSnapshotIdentityVTable, reserved), 8);
+        assert_eq!(offset_of!(VtSnapshotIdentityVTable, identity), 12);
+    }
+
+    #[test]
     fn vt_wfst_vtable_layout() {
         assert_eq!(size_of::<VtWfstVTable>(), 56);
         assert_eq!(align_of::<VtWfstVTable>(), 8);
@@ -400,6 +457,10 @@ fn pod_payload_layouts_are_word_size_independent() {
     assert_eq!(size_of::<VtDictionaryEdge>(), 16);
     assert_eq!(offset_of!(VtDictionaryEdge, label), 0);
     assert_eq!(offset_of!(VtDictionaryEdge, node), 8);
+
+    assert_eq!(size_of::<VtSnapshotIdentity>(), 16);
+    assert_eq!(offset_of!(VtSnapshotIdentity, producer), 0);
+    assert_eq!(offset_of!(VtSnapshotIdentity, revision), 8);
 
     assert_eq!(size_of::<VtWfstArc>(), 40);
     assert_eq!(offset_of!(VtWfstArc, input_label), 0);
@@ -441,7 +502,7 @@ fn null_resource_semantics_are_either_word() {
         "a null context must make the resource null even with a valid vtable"
     );
     let vtable_null = VtResource {
-        context: 0x1usize as *mut c_void,
+        context: core::ptr::dangling_mut::<c_void>(),
         vtable: core::ptr::null(),
     };
     assert!(

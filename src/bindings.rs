@@ -18,12 +18,14 @@ use rustc_hash::FxHashMap;
 use std::ffi::c_void;
 use std::fmt;
 use std::marker::PhantomData;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, OnceLock, RwLock, Weak};
 use vinary_tree_interop::{
     dictionary_flags, VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable, VtOptionalU64,
-    VtResource, VtResourceVTable, VtStatus, VtUnitDomain, VtValueDomain, VT_ABI_VERSION,
-    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
+    VtResource, VtResourceVTable, VtSnapshotIdentity, VtSnapshotIdentityVTable, VtStatus,
+    VtUnitDomain, VtValueDomain, VT_ABI_VERSION, VT_DICTIONARY_INTERFACE_ID,
+    VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
     VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_EDGE_BATCH,
+    VT_SNAPSHOT_IDENTITY_INTERFACE_ID, VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION,
 };
 
 /// Default number of results transferred across a managed-language boundary.
@@ -130,12 +132,34 @@ struct Provider {
     visit: Option<*const VtDictionaryVisitVTable>,
     gate: CallGate,
     fault: Arc<Mutex<Option<BindingError>>>,
-    node_cache: RwLock<FxHashMap<u64, Arc<CachedForeignNode>>>,
+    identity: Option<VtSnapshotIdentity>,
+    node_cache: Arc<NodeCache>,
 }
 
 struct CachedForeignNode {
     is_final: bool,
     edges: Box<[VtDictionaryEdge]>,
+}
+
+type NodeCache = RwLock<FxHashMap<u64, Arc<CachedForeignNode>>>;
+type NodeCacheRegistry = Mutex<FxHashMap<VtSnapshotIdentity, Weak<NodeCache>>>;
+
+fn shared_node_cache(identity: Option<VtSnapshotIdentity>) -> Arc<NodeCache> {
+    let Some(identity) = identity else {
+        return Arc::new(RwLock::new(FxHashMap::default()));
+    };
+    static REGISTRY: OnceLock<NodeCacheRegistry> = OnceLock::new();
+    let mut registry = REGISTRY
+        .get_or_init(|| Mutex::new(FxHashMap::default()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some(cache) = registry.get(&identity).and_then(Weak::upgrade) {
+        return cache;
+    }
+    registry.retain(|_, cache| cache.strong_count() != 0);
+    let cache = Arc::new(RwLock::new(FxHashMap::default()));
+    registry.insert(identity, Arc::downgrade(&cache));
+    cache
 }
 
 // Raw provider pointers are never dereferenced outside `call`, and `call`
@@ -242,13 +266,51 @@ impl Provider {
             validate_dictionary_visit(&*visit)?;
             Some(visit)
         };
+        let identity = if descriptor.flags & dictionary_flags::IMMUTABLE != 0 {
+            let mut identity_vtable: *const c_void = std::ptr::null();
+            let identity_status = query(
+                resource.context,
+                &VT_SNAPSHOT_IDENTITY_INTERFACE_ID,
+                VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION,
+                &mut identity_vtable,
+            );
+            if VtStatus::from_raw(identity_status) == Some(VtStatus::Unsupported) {
+                None
+            } else {
+                status(identity_status)?;
+                if identity_vtable.is_null() {
+                    return Err(BindingError::InvalidProviderOutput(
+                        "snapshot-identity query returned a null vtable",
+                    ));
+                }
+                let identity_vtable = &*identity_vtable.cast::<VtSnapshotIdentityVTable>();
+                validate_snapshot_identity(identity_vtable)?;
+                let callback = identity_vtable
+                    .identity
+                    .ok_or(BindingError::IncompatibleDictionaryInterface)?;
+                let mut identity = VtSnapshotIdentity::default();
+                let raw = match &gate {
+                    CallGate::Parallel => callback(resource.context, &mut identity),
+                    CallGate::Serial(lock) => {
+                        let _guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+                        callback(resource.context, &mut identity)
+                    }
+                };
+                status(raw)?;
+                Some(identity)
+            }
+        } else {
+            None
+        };
+        let node_cache = shared_node_cache(identity);
         Ok(Arc::new(Self {
             resource,
             dictionary,
             visit,
             gate,
             fault: Arc::new(Mutex::new(None)),
-            node_cache: RwLock::new(FxHashMap::default()),
+            identity,
+            node_cache,
         }))
     }
 
@@ -401,6 +463,17 @@ fn validate_dictionary_visit(vtable: &VtDictionaryVisitVTable) -> Result<(), Bin
         || vtable.interface_version < VT_DICTIONARY_VISIT_INTERFACE_VERSION
         || vtable.reserved != 0
         || vtable.node_visit.is_none()
+    {
+        return Err(BindingError::IncompatibleDictionaryInterface);
+    }
+    Ok(())
+}
+
+fn validate_snapshot_identity(vtable: &VtSnapshotIdentityVTable) -> Result<(), BindingError> {
+    if vtable.struct_size < std::mem::size_of::<VtSnapshotIdentityVTable>()
+        || vtable.interface_version < VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION
+        || vtable.reserved != 0
+        || vtable.identity.is_none()
     {
         return Err(BindingError::IncompatibleDictionaryInterface);
     }
@@ -991,6 +1064,19 @@ impl fmt::Debug for QueryCursor {
 }
 
 impl QueryCursor {
+    /// Process-local producer/revision identity when the provider advertises it.
+    pub fn snapshot_identity(&self) -> Option<(u64, u64)> {
+        self.provider
+            .identity
+            .map(|identity| (identity.producer, identity.revision))
+    }
+
+    /// Whether two cursors share the same identity-keyed foreign-node cache.
+    #[cfg(feature = "perf-instrumentation")]
+    pub fn shares_node_cache_with(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.provider.node_cache, &other.provider.node_cache)
+    }
+
     fn next_match(&mut self) -> Result<Option<Match>, BindingError> {
         if let Some(error) = self.provider.take_fault() {
             return Err(error);

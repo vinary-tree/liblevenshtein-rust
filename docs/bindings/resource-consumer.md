@@ -20,7 +20,7 @@ error path.
 
 | Type | Visibility | Role |
 |---|---|---|
-| `Provider` | private | One owned retain of a resource + its discovered dictionary vtable + the per-object call gate + the fault latch. Always handled as `Arc<Provider>`. |
+| `Provider` | private | One owned retain of a resource + its discovered dictionary/optional visit/optional snapshot-identity vtables + the per-object call gate, fault latch, and identity-keyed node cache. Always handled as `Arc<Provider>`. |
 | `ForeignNode<U>` | private | One dictionary node identifier bound to its snapshot `Provider`; implements the crate's `DictionaryNode`/`MappedDictionaryNode` traits so the automaton engine traverses foreign dictionaries exactly like native ones. |
 | `ResourceTransducer` | public | The automaton configuration: a validated `Provider` (the *source*) plus an `Algorithm`. Construction is $`\mathcal{O}(1)`$. |
 | `QueryCursor` | public | One lazy query over the *snapshot* `Provider` captured at query start. May outlive the transducer and every other handle to the dictionary. |
@@ -79,6 +79,10 @@ against the counting provider in `tests/support/interop_dictionary.rs`.
 - The reserved `Bytes` value domain is rejected as
   `UnsupportedValueDomain` — declared in the ABI, usable only under a future
   interface version.
+- Immutable resources optionally negotiate `vt.snapshot.id.1`. A successful
+  response is validated for size, minimum version, zero reserved field, and a
+  non-null callback before reading the opaque `(producer, revision)` pair.
+  `Unsupported` is the ordinary fallback, not an error.
 
 Finally the unit domain selects the typed arm (`ForeignDictionary::{Byte,
 Unicode, U64}`), which fixes which query entry points the transducer
@@ -127,6 +131,24 @@ Expansion cost per node: $`\lceil \deg(v) / 256 \rceil`$ boundary crossings;
 the batch-not-per-edge shape is pinned by
 `provider_edges_cross_the_abi_in_batches_not_per_edge` in
 [`tests/binding_snapshot_semantics.rs`](../../tests/binding_snapshot_semantics.rs).
+
+### 3.1 Revision-wide node memoization
+
+Finality and the complete validated edge array are cached by ABI node id after
+the first inspection. Without snapshot identity, the cache belongs only to one
+`Provider`, preserving compatibility with every v1 producer. With
+`vt.snapshot.id.1`, `Provider::from_owned` obtains a weak entry from a
+process-local registry keyed by `(producer, revision)`: separately minted
+resources for the same immutable graph then share one `Arc<NodeCache>` and one
+warm traversal. A mutation changes the revision identity, so the successor
+cannot observe predecessor entries.
+
+The registry stores `Weak` values. It does not prolong snapshots or caches;
+dead entries are pruned while installing misses. Cache values contain only
+already validated finality and edges, and insertion uses a write-side double
+check so racing inspectors converge on one published value. The test
+`distinct_snapshot_resources_share_identity_keyed_node_caches` pins reuse for
+equal identities and isolation after mutation.
 
 ## 4. The call gate
 
@@ -251,6 +273,8 @@ Each `query_*` on `ResourceTransducer`:
    $`\mathcal{O}(1)`$ capture — and **re-validates the snapshot as a full
    resource** via `from_owned` (a snapshot is a new resource: it gets its
    own base validation, interface negotiation, own gate, own fault latch);
+   when the snapshot advertises identity, this step also joins the revision's
+   shared validated-node cache;
 3. rejects a snapshot whose unit or value domain differs from its source
    (`InvalidProviderOutput` — a revision cannot change what its labels
    mean);

@@ -453,7 +453,9 @@ The `context` passed to every op is the resource's context word.
 - **`root(context, out_node)`** — the root node identifier of this
   *immutable* resource. Node identifiers are provider-defined opaque
   `uint64_t` values scoped to the captured snapshot: **valid only while the
-  snapshot resource is retained**, never comparable across snapshots.
+  snapshot resource is retained**. They are comparable across distinct
+  resources only when both opt into `vt.snapshot.id.1` and report the same
+  identity (defined below).
 - **`len(context, out_len, out_known)`** — the stored-term count *when
   cheaply available*. A provider that would have to walk its structure to
   count writes `out_known = 0` instead of stalling; `out_len` is meaningful
@@ -504,6 +506,39 @@ provider to validate a node and acquire its internal synchronization once;
 it does not weaken output validation or snapshot lifetime rules. A consumer
 must fall back to `node_is_final` plus `node_edges` when negotiation returns
 `Unsupported`.
+
+#### Optional snapshot identity: `vt.snapshot.id.1`
+
+An immutable dictionary snapshot may expose a process-local identity for
+sharing derived traversal caches across separately retained resources:
+
+```c
+typedef struct VtSnapshotIdentity {
+    uint64_t producer;
+    uint64_t revision;
+} VtSnapshotIdentity;
+
+typedef struct VtSnapshotIdentityVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*identity)(void* context, VtSnapshotIdentity* out_identity);
+} VtSnapshotIdentityVTable;
+```
+
+The capability is optional and valid only on resources that advertise
+`IMMUTABLE`. Within one process, equal pairs are a provider guarantee that the
+resources expose the same immutable graph, including the same node-id
+namespace and fixed edge ordering. Different logical revisions of one
+producer must have different pairs, and an identity must never be reused while
+any resource carrying it can remain alive. The pair is opaque: consumers may
+compare or hash it but must not infer ordering, persistence, or cross-process
+meaning from either integer.
+
+Consumers must fall back to resource-local caches when negotiation returns
+`Unsupported`. A provider may therefore add this capability without changing
+`vt.dictionary.v1`; it is an optimization contract, not a prerequisite for
+correct traversal.
 
 Only `snapshot`, `root`, `node_is_final`, and `node_edges` are unconditionally
 required by the reference consumer; `len` and `node_transition` are optional
@@ -570,8 +605,11 @@ q(\sigma \text{ at } t) \;=\; q(D_{t_0}),
 i.e. every read through $`\sigma`$ — `root`, `node_is_final`,
 `node_transition`, `node_edges`, `node_value_u64` — observes the captured
 revision forever, regardless of how the source has mutated since. Node
-identifiers read from $`\sigma`$ are valid while $`\mathrm{live}(\sigma) > 0`$
-and carry no meaning against any other snapshot. The consumer-side law is
+identifiers read from $`\sigma`$ are valid while $`\mathrm{live}(\sigma) > 0`$.
+They carry no meaning against another resource unless both resources expose
+the same `vt.snapshot.id.1` value; equality explicitly extends the identifier
+namespace and fixed-edge-order guarantee across those resources. The
+consumer-side law is
 formalized in `CursorSnapshotSemantics.v` (VT-SNAP-1 through VT-SNAP-3) and
 exercised by liblevenshtein's `tests/query_start_snapshot_semantics.rs`.
 

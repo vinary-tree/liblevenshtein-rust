@@ -276,7 +276,7 @@ impl<U: CharUnit> CharacteristicCache<U> {
             matches.resize(query.len().saturating_add(self.padding), false);
             matches.into_boxed_slice()
         });
-        &**matches
+        matches
     }
 
     /// Ensure cached vectors contain at least `padding` false units after the

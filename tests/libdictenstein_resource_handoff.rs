@@ -81,6 +81,41 @@ fn real_libdictenstein_resource_has_one_query_start_revision() {
 }
 
 #[test]
+#[cfg(feature = "perf-instrumentation")]
+fn distinct_snapshot_resources_share_identity_keyed_node_caches() {
+    let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
+    for term in ["cat", "cot", "cut", "scat"] {
+        dictionary
+            .insert_text(term.as_bytes(), None)
+            .expect("seed insert");
+    }
+    let resource = dictionary.resource();
+    let transducer = unsafe {
+        ResourceTransducer::from_resource(resource.as_raw(), Algorithm::Standard).unwrap()
+    };
+
+    let first = transducer
+        .query_utf8("cat", 2, QueryOrder::Traversal)
+        .unwrap();
+    let second = transducer
+        .query_utf8("cat", 2, QueryOrder::Traversal)
+        .unwrap();
+    assert_eq!(first.snapshot_identity(), second.snapshot_identity());
+    assert!(first.snapshot_identity().is_some());
+    assert!(first.shares_node_cache_with(&second));
+
+    dictionary.insert_text(b"cit", None).expect("mutate");
+    let next = transducer
+        .query_utf8("cat", 2, QueryOrder::Traversal)
+        .unwrap();
+    let (producer, revision) = first.snapshot_identity().unwrap();
+    let (next_producer, next_revision) = next.snapshot_identity().unwrap();
+    assert_eq!(producer, next_producer);
+    assert!(next_revision > revision);
+    assert!(!first.shares_node_cache_with(&next));
+}
+
+#[test]
 fn double_array_trie_resource_composes_without_serialization() {
     let dictionary = DoubleArrayTrieBinding::from_unicode_terms([
         ("café", Some(7)),

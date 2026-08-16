@@ -33,11 +33,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use vinary_tree_interop::{
     dictionary_flags, wfst_flags, VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable,
-    VtInterfaceId, VtOptionalU64, VtResource, VtResourceVTable, VtStatus, VtUnitDomain,
-    VtValueDomain, VtWeightDomain, VtWfstArc, VtWfstVTable, VT_ABI_VERSION,
-    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
-    VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH,
-    VT_WFST_INTERFACE_ID, VT_WFST_INTERFACE_VERSION,
+    VtInterfaceId, VtOptionalU64, VtResource, VtResourceVTable, VtSnapshotIdentity,
+    VtSnapshotIdentityVTable, VtStatus, VtUnitDomain, VtValueDomain, VtWeightDomain, VtWfstArc,
+    VtWfstVTable, VT_ABI_VERSION, VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION,
+    VT_DICTIONARY_VISIT_INTERFACE_ID, VT_DICTIONARY_VISIT_INTERFACE_VERSION,
+    VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH, VT_SNAPSHOT_IDENTITY_INTERFACE_ID,
+    VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION, VT_WFST_INTERFACE_ID, VT_WFST_INTERFACE_VERSION,
 };
 
 const MANIFEST: &str = include_str!("../docs/verification/ABI_LAYOUT_MANIFEST.tsv");
@@ -204,6 +205,20 @@ fn live_field(ty: &str, member: &str) -> Option<(usize, usize, usize)> {
         ("VtDictionaryVisitVTable", "node_visit") => {
             entry!(VtDictionaryVisitVTable, node_visit, FnPtr)
         }
+        ("VtSnapshotIdentity", "producer") => entry!(VtSnapshotIdentity, producer, u64),
+        ("VtSnapshotIdentity", "revision") => entry!(VtSnapshotIdentity, revision, u64),
+        ("VtSnapshotIdentityVTable", "struct_size") => {
+            entry!(VtSnapshotIdentityVTable, struct_size, usize)
+        }
+        ("VtSnapshotIdentityVTable", "interface_version") => {
+            entry!(VtSnapshotIdentityVTable, interface_version, u32)
+        }
+        ("VtSnapshotIdentityVTable", "reserved") => {
+            entry!(VtSnapshotIdentityVTable, reserved, u32)
+        }
+        ("VtSnapshotIdentityVTable", "identity") => {
+            entry!(VtSnapshotIdentityVTable, identity, FnPtr)
+        }
         ("VtWfstArc", "input_label") => entry!(VtWfstArc, input_label, u64),
         ("VtWfstArc", "output_label") => entry!(VtWfstArc, output_label, u64),
         ("VtWfstArc", "target_state") => entry!(VtWfstArc, target_state, u64),
@@ -247,6 +262,14 @@ fn live_struct(ty: &str) -> Option<(usize, usize)> {
         "VtDictionaryVisitVTable" => Some((
             size_of::<VtDictionaryVisitVTable>(),
             align_of::<VtDictionaryVisitVTable>(),
+        )),
+        "VtSnapshotIdentity" => Some((
+            size_of::<VtSnapshotIdentity>(),
+            align_of::<VtSnapshotIdentity>(),
+        )),
+        "VtSnapshotIdentityVTable" => Some((
+            size_of::<VtSnapshotIdentityVTable>(),
+            align_of::<VtSnapshotIdentityVTable>(),
         )),
         "VtWfstArc" => Some((size_of::<VtWfstArc>(), align_of::<VtWfstArc>())),
         "VtWfstVTable" => Some((size_of::<VtWfstVTable>(), align_of::<VtWfstVTable>())),
@@ -306,6 +329,9 @@ fn live_constant(name: &str) -> Option<u64> {
         "VT_DICTIONARY_VISIT_INTERFACE_VERSION" => {
             Some(u64::from(VT_DICTIONARY_VISIT_INTERFACE_VERSION))
         }
+        "VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION" => {
+            Some(u64::from(VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION))
+        }
         "VT_WFST_INTERFACE_VERSION" => Some(u64::from(VT_WFST_INTERFACE_VERSION)),
         "VT_RECOMMENDED_EDGE_BATCH" => Some(VT_RECOMMENDED_EDGE_BATCH as u64),
         "VT_RECOMMENDED_ARC_BATCH" => Some(VT_RECOMMENDED_ARC_BATCH as u64),
@@ -320,6 +346,10 @@ fn live_interface_id(name: &str) -> Option<(&'static [u8; 16], &'static str)> {
         "VT_DICTIONARY_VISIT_INTERFACE_ID" => {
             Some((&VT_DICTIONARY_VISIT_INTERFACE_ID.bytes, "dictionary_visit"))
         }
+        "VT_SNAPSHOT_IDENTITY_INTERFACE_ID" => Some((
+            &VT_SNAPSHOT_IDENTITY_INTERFACE_ID.bytes,
+            "snapshot_identity",
+        )),
         "VT_WFST_INTERFACE_ID" => Some((&VT_WFST_INTERFACE_ID.bytes, "wfst")),
         _ => None,
     }
@@ -364,6 +394,8 @@ const EXPECTED_FIELD_COUNTS: &[(&str, usize)] = &[
     ("VtDictionaryEdge", 2),
     ("VtDictionaryVTable", 12),
     ("VtDictionaryVisitVTable", 4),
+    ("VtSnapshotIdentity", 2),
+    ("VtSnapshotIdentityVTable", 4),
     ("VtWfstArc", 7),
     ("VtWfstVTable", 11),
 ];
@@ -377,8 +409,8 @@ const EXPECTED_ENUM_COUNTS: &[(&str, usize)] = &[
 
 const EXPECTED_FLAG_COUNTS: &[(&str, usize)] = &[("dictionary_flags", 3), ("wfst_flags", 4)];
 
-const EXPECTED_NUMERIC_CONSTANTS: usize = 6;
-const EXPECTED_INTERFACE_IDS: usize = 3;
+const EXPECTED_NUMERIC_CONSTANTS: usize = 7;
+const EXPECTED_INTERFACE_IDS: usize = 4;
 
 #[test]
 fn manifest_shape_is_complete_and_unique() {

@@ -72,6 +72,16 @@ struct	VtDictionaryVisitVTable	reserved	12	4	8	4	-	u32; reserved, must be zero
 struct	VtDictionaryVisitVTable	node_visit	16	8	12	4	-	Option<unsafe extern C fn>; fused finality and paged edge expansion (null niche)
 struct	VtDictionaryVisitVTable	__size	-	24	-	16	-	total size in bytes per target
 struct	VtDictionaryVisitVTable	__align	-	8	-	4	-	alignment in bytes per target
+struct	VtSnapshotIdentity	producer	0	8	0	8	-	process-local producer identity
+struct	VtSnapshotIdentity	revision	8	8	8	8	-	immutable revision identity within producer
+struct	VtSnapshotIdentity	__size	-	16	-	16	-	total size in bytes per target
+struct	VtSnapshotIdentity	__align	-	8	-	8	-	alignment in bytes per target
+struct	VtSnapshotIdentityVTable	struct_size	0	8	0	4	-	usize; struct size in bytes for additive interface evolution
+struct	VtSnapshotIdentityVTable	interface_version	8	4	4	4	-	u32; at least VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION
+struct	VtSnapshotIdentityVTable	reserved	12	4	8	4	-	u32; reserved, must be zero
+struct	VtSnapshotIdentityVTable	identity	16	8	12	4	-	Option<unsafe extern C fn>; read opaque producer/revision pair (null niche)
+struct	VtSnapshotIdentityVTable	__size	-	24	-	16	-	total size in bytes per target
+struct	VtSnapshotIdentityVTable	__align	-	8	-	4	-	alignment in bytes per target
 struct	VtWfstArc	input_label	0	8	0	8	-	u64; meaningful only when has_input is one
 struct	VtWfstArc	output_label	8	8	8	8	-	u64; meaningful only when has_output is one
 struct	VtWfstArc	target_state	16	8	16	8	-	u64; target state within the retained snapshot
@@ -126,9 +136,11 @@ flag	wfst_flags	ACYCLIC	-	-	-	-	8	bit 3; reachable graph guaranteed acyclic
 const	u32	VT_ABI_VERSION	-	-	-	-	1	current base resource ABI version
 const	u32	VT_DICTIONARY_INTERFACE_VERSION	-	-	-	-	1	version of VtDictionaryVTable
 const	u32	VT_DICTIONARY_VISIT_INTERFACE_VERSION	-	-	-	-	1	version of VtDictionaryVisitVTable
+const	u32	VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION	-	-	-	-	1	version of VtSnapshotIdentityVTable
 const	u32	VT_WFST_INTERFACE_VERSION	-	-	-	-	1	version of VtWfstVTable
 const	usize	VT_RECOMMENDED_EDGE_BATCH	-	-	-	-	256	recommended provider edges requested per call
 const	usize	VT_RECOMMENDED_ARC_BATCH	-	-	-	-	256	recommended WFST arcs requested per call
 const	VtInterfaceId	VT_DICTIONARY_INTERFACE_ID	-	-	-	-	vt.dictionary.v1	16 ASCII bytes, no NUL terminator; compared byte-for-byte across the ABI
 const	VtInterfaceId	VT_DICTIONARY_VISIT_INTERFACE_ID	-	-	-	-	vt.dict.visit.v1	16 ASCII bytes, no NUL terminator; optional fused node inspection
+const	VtInterfaceId	VT_SNAPSHOT_IDENTITY_INTERFACE_ID	-	-	-	-	vt.snapshot.id.1	16 ASCII bytes, no NUL terminator; optional immutable revision identity
 const	VtInterfaceId	VT_WFST_INTERFACE_ID	-	-	-	-	vt.scalar-wfst.1	16 ASCII bytes, no NUL terminator; compared byte-for-byte across the ABI

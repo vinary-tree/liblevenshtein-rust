@@ -244,6 +244,54 @@
 (define-fun sz32_VtDictionaryVisitVTable () Int 16)
 (define-fun al32_VtDictionaryVisitVTable () Int 4)
 
+; ── VtSnapshotIdentity ────────────────────────────────────────────────────────
+(define-fun o64_VtSnapshotIdentity_producer () Int 0)
+(define-fun s64_VtSnapshotIdentity_producer () Int 8)
+(define-fun a64_VtSnapshotIdentity_producer () Int 8)
+(define-fun o32_VtSnapshotIdentity_producer () Int 0)
+(define-fun s32_VtSnapshotIdentity_producer () Int 8)
+(define-fun a32_VtSnapshotIdentity_producer () Int 8)
+(define-fun o64_VtSnapshotIdentity_revision () Int 8)
+(define-fun s64_VtSnapshotIdentity_revision () Int 8)
+(define-fun a64_VtSnapshotIdentity_revision () Int 8)
+(define-fun o32_VtSnapshotIdentity_revision () Int 8)
+(define-fun s32_VtSnapshotIdentity_revision () Int 8)
+(define-fun a32_VtSnapshotIdentity_revision () Int 8)
+(define-fun sz64_VtSnapshotIdentity () Int 16)
+(define-fun al64_VtSnapshotIdentity () Int 8)
+(define-fun sz32_VtSnapshotIdentity () Int 16)
+(define-fun al32_VtSnapshotIdentity () Int 8)
+
+; ── VtSnapshotIdentityVTable ──────────────────────────────────────────────────
+(define-fun o64_VtSnapshotIdentityVTable_struct_size () Int 0)
+(define-fun s64_VtSnapshotIdentityVTable_struct_size () Int 8)
+(define-fun a64_VtSnapshotIdentityVTable_struct_size () Int 8)
+(define-fun o32_VtSnapshotIdentityVTable_struct_size () Int 0)
+(define-fun s32_VtSnapshotIdentityVTable_struct_size () Int 4)
+(define-fun a32_VtSnapshotIdentityVTable_struct_size () Int 4)
+(define-fun o64_VtSnapshotIdentityVTable_interface_version () Int 8)
+(define-fun s64_VtSnapshotIdentityVTable_interface_version () Int 4)
+(define-fun a64_VtSnapshotIdentityVTable_interface_version () Int 4)
+(define-fun o32_VtSnapshotIdentityVTable_interface_version () Int 4)
+(define-fun s32_VtSnapshotIdentityVTable_interface_version () Int 4)
+(define-fun a32_VtSnapshotIdentityVTable_interface_version () Int 4)
+(define-fun o64_VtSnapshotIdentityVTable_reserved () Int 12)
+(define-fun s64_VtSnapshotIdentityVTable_reserved () Int 4)
+(define-fun a64_VtSnapshotIdentityVTable_reserved () Int 4)
+(define-fun o32_VtSnapshotIdentityVTable_reserved () Int 8)
+(define-fun s32_VtSnapshotIdentityVTable_reserved () Int 4)
+(define-fun a32_VtSnapshotIdentityVTable_reserved () Int 4)
+(define-fun o64_VtSnapshotIdentityVTable_identity () Int 16)
+(define-fun s64_VtSnapshotIdentityVTable_identity () Int 8)
+(define-fun a64_VtSnapshotIdentityVTable_identity () Int 8)
+(define-fun o32_VtSnapshotIdentityVTable_identity () Int 12)
+(define-fun s32_VtSnapshotIdentityVTable_identity () Int 4)
+(define-fun a32_VtSnapshotIdentityVTable_identity () Int 4)
+(define-fun sz64_VtSnapshotIdentityVTable () Int 24)
+(define-fun al64_VtSnapshotIdentityVTable () Int 8)
+(define-fun sz32_VtSnapshotIdentityVTable () Int 16)
+(define-fun al32_VtSnapshotIdentityVTable () Int 4)
+
 ; ── VtWfstArc ──────────────────────────────────────────────────────────────────
 (define-fun o64_VtWfstArc_input_label () Int 0)
 (define-fun s64_VtWfstArc_input_label () Int 8)
@@ -401,6 +449,7 @@
 (define-fun c_VT_ABI_VERSION () Int 1)
 (define-fun c_VT_DICTIONARY_INTERFACE_VERSION () Int 1)
 (define-fun c_VT_DICTIONARY_VISIT_INTERFACE_VERSION () Int 1)
+(define-fun c_VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION () Int 1)
 (define-fun c_VT_WFST_INTERFACE_VERSION () Int 1)
 (define-fun c_VT_RECOMMENDED_EDGE_BATCH () Int 256)
 (define-fun c_VT_RECOMMENDED_ARC_BATCH () Int 256)
@@ -442,6 +491,24 @@
 (define-fun id_dictionary_visit_13 () Int 46) ; '.'
 (define-fun id_dictionary_visit_14 () Int 118) ; 'v'
 (define-fun id_dictionary_visit_15 () Int 49) ; '1'
+; VT_SNAPSHOT_IDENTITY_INTERFACE_ID = "vt.snapshot.id.1"
+(define-fun id_snapshot_identity_len () Int 16)
+(define-fun id_snapshot_identity_0 () Int 118) ; 'v'
+(define-fun id_snapshot_identity_1 () Int 116) ; 't'
+(define-fun id_snapshot_identity_2 () Int 46) ; '.'
+(define-fun id_snapshot_identity_3 () Int 115) ; 's'
+(define-fun id_snapshot_identity_4 () Int 110) ; 'n'
+(define-fun id_snapshot_identity_5 () Int 97) ; 'a'
+(define-fun id_snapshot_identity_6 () Int 112) ; 'p'
+(define-fun id_snapshot_identity_7 () Int 115) ; 's'
+(define-fun id_snapshot_identity_8 () Int 104) ; 'h'
+(define-fun id_snapshot_identity_9 () Int 111) ; 'o'
+(define-fun id_snapshot_identity_10 () Int 116) ; 't'
+(define-fun id_snapshot_identity_11 () Int 46) ; '.'
+(define-fun id_snapshot_identity_12 () Int 105) ; 'i'
+(define-fun id_snapshot_identity_13 () Int 100) ; 'd'
+(define-fun id_snapshot_identity_14 () Int 46) ; '.'
+(define-fun id_snapshot_identity_15 () Int 49) ; '1'
 ; VT_WFST_INTERFACE_ID = "vt.scalar-wfst.1"
 (define-fun id_wfst_len () Int 16)
 (define-fun id_wfst_0 () Int 118) ; 'v'
@@ -639,6 +706,99 @@
   (disj o64_VtWfstVTable_num_states s64_VtWfstVTable_num_states o64_VtWfstVTable_state_info s64_VtWfstVTable_state_info)
   (disj o64_VtWfstVTable_num_states s64_VtWfstVTable_num_states o64_VtWfstVTable_state_arcs s64_VtWfstVTable_state_arcs)
   (disj o64_VtWfstVTable_state_info s64_VtWfstVTable_state_info o64_VtWfstVTable_state_arcs s64_VtWfstVTable_state_arcs)
+)))
+(check-sat)
+(pop)
+
+; (n) Snapshot identity payload and vtable obey both published-tier layouts.
+(echo "[n] snapshot identity layouts")
+(push)
+(assert (not (and
+  (disj o64_VtSnapshotIdentity_producer s64_VtSnapshotIdentity_producer o64_VtSnapshotIdentity_revision s64_VtSnapshotIdentity_revision)
+  (inside o64_VtSnapshotIdentity_producer s64_VtSnapshotIdentity_producer sz64_VtSnapshotIdentity)
+  (inside o64_VtSnapshotIdentity_revision s64_VtSnapshotIdentity_revision sz64_VtSnapshotIdentity)
+  (aligned o64_VtSnapshotIdentity_producer a64_VtSnapshotIdentity_producer)
+  (aligned o64_VtSnapshotIdentity_revision a64_VtSnapshotIdentity_revision)
+  (aligned sz64_VtSnapshotIdentity al64_VtSnapshotIdentity)
+  (< o64_VtSnapshotIdentity_producer o64_VtSnapshotIdentity_revision)
+  (disj o32_VtSnapshotIdentity_producer s32_VtSnapshotIdentity_producer o32_VtSnapshotIdentity_revision s32_VtSnapshotIdentity_revision)
+  (inside o32_VtSnapshotIdentity_producer s32_VtSnapshotIdentity_producer sz32_VtSnapshotIdentity)
+  (inside o32_VtSnapshotIdentity_revision s32_VtSnapshotIdentity_revision sz32_VtSnapshotIdentity)
+  (aligned o32_VtSnapshotIdentity_producer a32_VtSnapshotIdentity_producer)
+  (aligned o32_VtSnapshotIdentity_revision a32_VtSnapshotIdentity_revision)
+  (aligned sz32_VtSnapshotIdentity al32_VtSnapshotIdentity)
+  (< o32_VtSnapshotIdentity_producer o32_VtSnapshotIdentity_revision)
+)))
+(check-sat)
+(pop)
+
+(echo "[n] VtSnapshotIdentityVTable layout laws")
+(push)
+(assert (not (and
+  (disj o64_VtSnapshotIdentityVTable_struct_size s64_VtSnapshotIdentityVTable_struct_size o64_VtSnapshotIdentityVTable_interface_version s64_VtSnapshotIdentityVTable_interface_version)
+  (disj o64_VtSnapshotIdentityVTable_struct_size s64_VtSnapshotIdentityVTable_struct_size o64_VtSnapshotIdentityVTable_reserved s64_VtSnapshotIdentityVTable_reserved)
+  (disj o64_VtSnapshotIdentityVTable_struct_size s64_VtSnapshotIdentityVTable_struct_size o64_VtSnapshotIdentityVTable_identity s64_VtSnapshotIdentityVTable_identity)
+  (disj o64_VtSnapshotIdentityVTable_interface_version s64_VtSnapshotIdentityVTable_interface_version o64_VtSnapshotIdentityVTable_reserved s64_VtSnapshotIdentityVTable_reserved)
+  (disj o64_VtSnapshotIdentityVTable_interface_version s64_VtSnapshotIdentityVTable_interface_version o64_VtSnapshotIdentityVTable_identity s64_VtSnapshotIdentityVTable_identity)
+  (disj o64_VtSnapshotIdentityVTable_reserved s64_VtSnapshotIdentityVTable_reserved o64_VtSnapshotIdentityVTable_identity s64_VtSnapshotIdentityVTable_identity)
+  (inside o64_VtSnapshotIdentityVTable_struct_size s64_VtSnapshotIdentityVTable_struct_size sz64_VtSnapshotIdentityVTable)
+  (inside o64_VtSnapshotIdentityVTable_interface_version s64_VtSnapshotIdentityVTable_interface_version sz64_VtSnapshotIdentityVTable)
+  (inside o64_VtSnapshotIdentityVTable_reserved s64_VtSnapshotIdentityVTable_reserved sz64_VtSnapshotIdentityVTable)
+  (inside o64_VtSnapshotIdentityVTable_identity s64_VtSnapshotIdentityVTable_identity sz64_VtSnapshotIdentityVTable)
+  (aligned o64_VtSnapshotIdentityVTable_struct_size a64_VtSnapshotIdentityVTable_struct_size)
+  (aligned o64_VtSnapshotIdentityVTable_interface_version a64_VtSnapshotIdentityVTable_interface_version)
+  (aligned o64_VtSnapshotIdentityVTable_reserved a64_VtSnapshotIdentityVTable_reserved)
+  (aligned o64_VtSnapshotIdentityVTable_identity a64_VtSnapshotIdentityVTable_identity)
+  (aligned sz64_VtSnapshotIdentityVTable al64_VtSnapshotIdentityVTable)
+  (< o64_VtSnapshotIdentityVTable_struct_size o64_VtSnapshotIdentityVTable_interface_version)
+  (< o64_VtSnapshotIdentityVTable_interface_version o64_VtSnapshotIdentityVTable_reserved)
+  (< o64_VtSnapshotIdentityVTable_reserved o64_VtSnapshotIdentityVTable_identity)
+  (disj o32_VtSnapshotIdentityVTable_struct_size s32_VtSnapshotIdentityVTable_struct_size o32_VtSnapshotIdentityVTable_interface_version s32_VtSnapshotIdentityVTable_interface_version)
+  (disj o32_VtSnapshotIdentityVTable_struct_size s32_VtSnapshotIdentityVTable_struct_size o32_VtSnapshotIdentityVTable_reserved s32_VtSnapshotIdentityVTable_reserved)
+  (disj o32_VtSnapshotIdentityVTable_struct_size s32_VtSnapshotIdentityVTable_struct_size o32_VtSnapshotIdentityVTable_identity s32_VtSnapshotIdentityVTable_identity)
+  (disj o32_VtSnapshotIdentityVTable_interface_version s32_VtSnapshotIdentityVTable_interface_version o32_VtSnapshotIdentityVTable_reserved s32_VtSnapshotIdentityVTable_reserved)
+  (disj o32_VtSnapshotIdentityVTable_interface_version s32_VtSnapshotIdentityVTable_interface_version o32_VtSnapshotIdentityVTable_identity s32_VtSnapshotIdentityVTable_identity)
+  (disj o32_VtSnapshotIdentityVTable_reserved s32_VtSnapshotIdentityVTable_reserved o32_VtSnapshotIdentityVTable_identity s32_VtSnapshotIdentityVTable_identity)
+  (inside o32_VtSnapshotIdentityVTable_struct_size s32_VtSnapshotIdentityVTable_struct_size sz32_VtSnapshotIdentityVTable)
+  (inside o32_VtSnapshotIdentityVTable_interface_version s32_VtSnapshotIdentityVTable_interface_version sz32_VtSnapshotIdentityVTable)
+  (inside o32_VtSnapshotIdentityVTable_reserved s32_VtSnapshotIdentityVTable_reserved sz32_VtSnapshotIdentityVTable)
+  (inside o32_VtSnapshotIdentityVTable_identity s32_VtSnapshotIdentityVTable_identity sz32_VtSnapshotIdentityVTable)
+  (aligned o32_VtSnapshotIdentityVTable_struct_size a32_VtSnapshotIdentityVTable_struct_size)
+  (aligned o32_VtSnapshotIdentityVTable_interface_version a32_VtSnapshotIdentityVTable_interface_version)
+  (aligned o32_VtSnapshotIdentityVTable_reserved a32_VtSnapshotIdentityVTable_reserved)
+  (aligned o32_VtSnapshotIdentityVTable_identity a32_VtSnapshotIdentityVTable_identity)
+  (aligned sz32_VtSnapshotIdentityVTable al32_VtSnapshotIdentityVTable)
+  (< o32_VtSnapshotIdentityVTable_struct_size o32_VtSnapshotIdentityVTable_interface_version)
+  (< o32_VtSnapshotIdentityVTable_interface_version o32_VtSnapshotIdentityVTable_reserved)
+  (< o32_VtSnapshotIdentityVTable_reserved o32_VtSnapshotIdentityVTable_identity)
+)))
+(check-sat)
+(pop)
+
+; (o) The snapshot identity capability has an exact, distinct identifier.
+(echo "[o] snapshot identity identifier is exact and distinct")
+(push)
+(assert (not (and
+  (= id_snapshot_identity_len 16)
+  (and (<= 0 id_snapshot_identity_0) (< id_snapshot_identity_0 256))
+  (and (<= 0 id_snapshot_identity_1) (< id_snapshot_identity_1 256))
+  (and (<= 0 id_snapshot_identity_2) (< id_snapshot_identity_2 256))
+  (and (<= 0 id_snapshot_identity_3) (< id_snapshot_identity_3 256))
+  (and (<= 0 id_snapshot_identity_4) (< id_snapshot_identity_4 256))
+  (and (<= 0 id_snapshot_identity_5) (< id_snapshot_identity_5 256))
+  (and (<= 0 id_snapshot_identity_6) (< id_snapshot_identity_6 256))
+  (and (<= 0 id_snapshot_identity_7) (< id_snapshot_identity_7 256))
+  (and (<= 0 id_snapshot_identity_8) (< id_snapshot_identity_8 256))
+  (and (<= 0 id_snapshot_identity_9) (< id_snapshot_identity_9 256))
+  (and (<= 0 id_snapshot_identity_10) (< id_snapshot_identity_10 256))
+  (and (<= 0 id_snapshot_identity_11) (< id_snapshot_identity_11 256))
+  (and (<= 0 id_snapshot_identity_12) (< id_snapshot_identity_12 256))
+  (and (<= 0 id_snapshot_identity_13) (< id_snapshot_identity_13 256))
+  (and (<= 0 id_snapshot_identity_14) (< id_snapshot_identity_14 256))
+  (and (<= 0 id_snapshot_identity_15) (< id_snapshot_identity_15 256))
+  (or (distinct id_snapshot_identity_0 id_dictionary_0) (distinct id_snapshot_identity_1 id_dictionary_1) (distinct id_snapshot_identity_2 id_dictionary_2) (distinct id_snapshot_identity_3 id_dictionary_3) (distinct id_snapshot_identity_4 id_dictionary_4) (distinct id_snapshot_identity_5 id_dictionary_5) (distinct id_snapshot_identity_6 id_dictionary_6) (distinct id_snapshot_identity_7 id_dictionary_7) (distinct id_snapshot_identity_8 id_dictionary_8) (distinct id_snapshot_identity_9 id_dictionary_9) (distinct id_snapshot_identity_10 id_dictionary_10) (distinct id_snapshot_identity_11 id_dictionary_11) (distinct id_snapshot_identity_12 id_dictionary_12) (distinct id_snapshot_identity_13 id_dictionary_13) (distinct id_snapshot_identity_14 id_dictionary_14) (distinct id_snapshot_identity_15 id_dictionary_15))
+  (or (distinct id_snapshot_identity_0 id_dictionary_visit_0) (distinct id_snapshot_identity_1 id_dictionary_visit_1) (distinct id_snapshot_identity_2 id_dictionary_visit_2) (distinct id_snapshot_identity_3 id_dictionary_visit_3) (distinct id_snapshot_identity_4 id_dictionary_visit_4) (distinct id_snapshot_identity_5 id_dictionary_visit_5) (distinct id_snapshot_identity_6 id_dictionary_visit_6) (distinct id_snapshot_identity_7 id_dictionary_visit_7) (distinct id_snapshot_identity_8 id_dictionary_visit_8) (distinct id_snapshot_identity_9 id_dictionary_visit_9) (distinct id_snapshot_identity_10 id_dictionary_visit_10) (distinct id_snapshot_identity_11 id_dictionary_visit_11) (distinct id_snapshot_identity_12 id_dictionary_visit_12) (distinct id_snapshot_identity_13 id_dictionary_visit_13) (distinct id_snapshot_identity_14 id_dictionary_visit_14) (distinct id_snapshot_identity_15 id_dictionary_visit_15))
+  (or (distinct id_snapshot_identity_0 id_wfst_0) (distinct id_snapshot_identity_1 id_wfst_1) (distinct id_snapshot_identity_2 id_wfst_2) (distinct id_snapshot_identity_3 id_wfst_3) (distinct id_snapshot_identity_4 id_wfst_4) (distinct id_snapshot_identity_5 id_wfst_5) (distinct id_snapshot_identity_6 id_wfst_6) (distinct id_snapshot_identity_7 id_wfst_7) (distinct id_snapshot_identity_8 id_wfst_8) (distinct id_snapshot_identity_9 id_wfst_9) (distinct id_snapshot_identity_10 id_wfst_10) (distinct id_snapshot_identity_11 id_wfst_11) (distinct id_snapshot_identity_12 id_wfst_12) (distinct id_snapshot_identity_13 id_wfst_13) (distinct id_snapshot_identity_14 id_wfst_14) (distinct id_snapshot_identity_15 id_wfst_15))
 )))
 (check-sat)
 (pop)
@@ -1355,6 +1515,7 @@
   (and (<= 1 c_VT_ABI_VERSION) (< c_VT_ABI_VERSION 4294967296))
   (and (<= 1 c_VT_DICTIONARY_INTERFACE_VERSION) (< c_VT_DICTIONARY_INTERFACE_VERSION 4294967296))
   (and (<= 1 c_VT_DICTIONARY_VISIT_INTERFACE_VERSION) (< c_VT_DICTIONARY_VISIT_INTERFACE_VERSION 4294967296))
+  (and (<= 1 c_VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION) (< c_VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION 4294967296))
   (and (<= 1 c_VT_WFST_INTERFACE_VERSION) (< c_VT_WFST_INTERFACE_VERSION 4294967296))
   (and (<= 1 c_VT_RECOMMENDED_EDGE_BATCH) (< c_VT_RECOMMENDED_EDGE_BATCH 4294967296))
   (and (<= 1 c_VT_RECOMMENDED_ARC_BATCH) (< c_VT_RECOMMENDED_ARC_BATCH 4294967296))

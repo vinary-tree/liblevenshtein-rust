@@ -258,6 +258,7 @@ not quoted from memory.
 |---|---|---|---|---|
 | Base resource ABI | `VT_ABI_VERSION` = 1 | all four projects | all four projects | `src/lib.rs` · header · `tests/layout_contract.rs` (`published_constants_are_pinned`) |
 | `vt.dictionary.v1` | interface version 1 | libdictenstein (4 backends) | liblevenshtein · duallity | `VT_DICTIONARY_INTERFACE_VERSION` in `src/lib.rs` / header; negotiation pinned by `tests/vtable_evolution.rs` |
+| `vt.snapshot.id.1` | interface version 1 | libdictenstein immutable snapshots | liblevenshtein | `VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION` in `src/lib.rs` / header; layout pinned by `tests/layout_contract.rs` |
 | `vt.dict.visit.v1` | interface version 1 | libdictenstein (all resource-backed dictionary variants through `SnapshotOps`) | liblevenshtein | `VT_DICTIONARY_VISIT_INTERFACE_VERSION` in `src/lib.rs` / header; layout pinned by `tests/layout_contract.rs` |
 | `vt.scalar-wfst.1` | interface version 1 | lling-llang · duallity | lling-llang (composition) · duallity | `VT_WFST_INTERFACE_VERSION` in `src/lib.rs` / header |
 | liblevenshtein C surface | apiRevision 2 · package 0.10.0 | — | 15 language facades | `bindings/api.json` |

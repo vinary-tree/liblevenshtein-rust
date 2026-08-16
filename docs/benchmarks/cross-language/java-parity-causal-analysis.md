@@ -556,6 +556,51 @@ arena cleanup. Their generic
 contracts and backend applicability are inventoried in
 [`optimization-propagation.md`](../optimization-propagation.md).
 
+#### Post-H-O26 snapshot-stack hardening
+
+The follow-up snapshot implementation removes three sources of work that were
+still hidden behind the accepted H-O23 through H-O26 treatments. First, a
+producer memo retains one immutable snapshot per source revision. Second, the
+optional `vt.snapshot.id.1` interface identifies that revision as the pair
+`(producer, revision)`, allowing separately minted resource contexts to share a
+consumer node cache without equating mutable resources. Third, the producer
+arena is a 256-slot chunked, append-only directory: readers use an atomically
+published chunk vector and write-once slots, while only directory growth takes
+the arena mutex. The last arena owner reclaims all chunks synchronously; no
+background reclaimer or unbounded deferred queue is involved.
+
+The same 79,343-term, 1,000-query `standard/d2/std-d2` causal workload retained
+the exact result signature (`18,514` matches, `82,131` returned term bytes,
+distance sum `36,201`, checksum `7,775,666,136,087,164,888`). Its provider work
+changed as follows relative to the original resource-boundary observation:
+
+| causal work | original boundary | hardened stack | reduction |
+|---|---:|---:|---:|
+| snapshots created | 1,000 | 1 | 99.90% |
+| arena mutex acquisitions | 3,500,348 | 345 | 99.990% |
+| provider edge callbacks/cache misses | 1,731,660 | 58,677 | 96.61% |
+| native edges enumerated | 6,996,242 | 88,326 | 98.74% |
+| nodes materialized | 6,997,242 | 88,327 | 98.74% |
+| descriptor clones | 6,996,242 | 0 | 100% |
+
+These are causal work counters, not a new latency experiment: the counter build
+is instrumented and the uProf run is a single diagnostic sample, so its timing
+must not be compared with the uninstrumented 51-sample medians above. A
+headless AMD uProf 5.3 hotspots capture instead answers the mechanistic
+question. The hottest sampled function was the epsilon-closed transition
+kernel at 30.16% self CPU. Consumer cache lookup accounted for 4.76%, producer
+node copying for 1.59%, and neither snapshot capture nor producer arena locking
+appeared as a sampled hotspot. The profile therefore corroborates the counter
+result: the remaining work is primarily query-transition and cache-access work,
+not repeated snapshot construction or a global producer-arena lock.
+
+A separate teardown-aware counter run released every producer and consumer
+owner after stopping `query_ns`. It synchronously reclaimed all `88,327`
+materialized nodes in 33.61 ms on that diagnostic run. The equality between
+materialized and reclaimed counts is the bounded-lifetime gate; the single
+latency observation is diagnostic rather than a distributional performance
+claim.
+
 H-O30 generalized the lexical drain across string, byte, packed-`u64`, and
 phonetic query forms. One confined arena now owns the whole synchronous drain,
 ordinary owned `Match` values cross the public callback, and cleanup is
