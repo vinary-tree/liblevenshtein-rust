@@ -5,10 +5,10 @@
 //! materializing term strings, which can improve performance when many results
 //! match the distance threshold but few match the value filter.
 
-use crate::transducer::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
-use crate::transducer::{
-    Algorithm, Candidate, State, StatePool, SubstitutionPolicyFor, Unrestricted,
+use crate::transducer::transition::{
+    initial_state, CachedUnitTransitions, GeneratedStateId, TransitionSettings,
 };
+use crate::transducer::{Algorithm, Candidate, StatePool, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::value::DictionaryValue;
 use libdictenstein::{CharUnit, MappedDictionaryNode};
 use rustc_hash::FxHashSet;
@@ -51,13 +51,13 @@ struct ValueQueryPathNode<U: CharUnit> {
 struct ValueQueryIntersection<N: MappedDictionaryNode> {
     label: Option<N::Unit>,
     node: N,
-    state: State,
+    state: GeneratedStateId,
     parent: usize,
 }
 
 impl<N: MappedDictionaryNode> ValueQueryIntersection<N> {
     #[inline]
-    fn new(node: N, state: State) -> Self {
+    fn new(node: N, state: GeneratedStateId) -> Self {
         Self {
             label: None,
             node,
@@ -67,7 +67,7 @@ impl<N: MappedDictionaryNode> ValueQueryIntersection<N> {
     }
 
     #[inline]
-    fn with_parent(label: N::Unit, node: N, state: State, parent: usize) -> Self {
+    fn with_parent(label: N::Unit, node: N, state: GeneratedStateId, parent: usize) -> Self {
         Self {
             label: Some(label),
             node,
@@ -108,6 +108,18 @@ impl<N: MappedDictionaryNode> ValueQueryIntersection<N> {
     }
 }
 
+fn seeded_transitions<U: CharUnit>(
+    query_length: usize,
+    max_distance: usize,
+    algorithm: Algorithm,
+) -> (CachedUnitTransitions<U>, GeneratedStateId) {
+    let initial = initial_state(query_length, max_distance, algorithm);
+    let settings = TransitionSettings::new(max_distance, algorithm, false);
+    let mut transitions = CachedUnitTransitions::new(query_length, max_distance);
+    let root = transitions.seed_generated_state(&initial, settings);
+    (transitions, root)
+}
+
 #[inline]
 fn push_path_node<U: CharUnit>(
     path_arena: &mut Vec<ValueQueryPathNode<U>>,
@@ -126,6 +138,75 @@ fn push_path_node<U: CharUnit>(
         parent,
     });
     index
+}
+
+struct ValueTransitionSettings<'a, U> {
+    query: &'a [U],
+    max_distance: usize,
+    algorithm: Algorithm,
+}
+
+#[inline]
+fn queue_value_children_and_finality<N>(
+    intersection: &ValueQueryIntersection<N>,
+    pending: &mut VecDeque<ValueQueryIntersection<N>>,
+    path_arena: &mut Vec<ValueQueryPathNode<N::Unit>>,
+    state_pool: &mut StatePool,
+    unit_transitions: &mut CachedUnitTransitions<N::Unit>,
+    settings: ValueTransitionSettings<'_, N::Unit>,
+) -> bool
+where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    Unrestricted: SubstitutionPolicyFor<N::Unit>,
+{
+    let mut child_parent_path = None;
+    intersection.node.filter_map_edges_and_finality(
+        |label| {
+            crate::causal_perf::record_edges_enumerated(1);
+            unit_transitions
+                .transition_generated(
+                    intersection.state,
+                    state_pool,
+                    &Unrestricted,
+                    label,
+                    settings.query,
+                    TransitionSettings::new(settings.max_distance, settings.algorithm, false),
+                )
+                .map(|state| {
+                    let position_count = unit_transitions.generated_position_count(state);
+                    (state, position_count)
+                })
+        },
+        |label, child_node, (next_state, position_count)| {
+            crate::causal_perf::record_transition_accepted(1);
+            crate::causal_perf::record_state_positions_enqueued(position_count as u64);
+            crate::causal_perf::record_state_bytes_enqueued(
+                position_count.saturating_mul(std::mem::size_of::<crate::transducer::Position>())
+                    as u64,
+            );
+            let parent_path = match child_parent_path {
+                Some(path) => path,
+                None => {
+                    let path = match intersection.label {
+                        Some(current_label) => {
+                            push_path_node(path_arena, current_label, intersection.parent)
+                        }
+                        None => NO_PATH,
+                    };
+                    child_parent_path = Some(path);
+                    path
+                }
+            };
+            pending.push_back(ValueQueryIntersection::with_parent(
+                label,
+                child_node,
+                next_state,
+                parent_path,
+            ));
+            crate::causal_perf::record_pending_queue_size(pending.len());
+        },
+    )
 }
 
 #[inline]
@@ -246,7 +327,7 @@ where
     ) -> Self {
         let query_units = N::Unit::from_str(&term);
         let query_length = query_units.len();
-        let initial = initial_state(query_length, max_distance, algorithm);
+        let (unit_transitions, initial) = seeded_transitions(query_length, max_distance, algorithm);
 
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
@@ -260,7 +341,7 @@ where
             path_arena: Vec::with_capacity(64),
             seen: SeenTerms::default(),
             state_pool: StatePool::new(),
-            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
+            unit_transitions,
             finished: false,
         }
     }
@@ -285,8 +366,9 @@ where
             // Check if this is a final node
             if is_final {
                 // Infer distance (standard mode - penalize remaining query characters)
-                let distance = intersection
-                    .state
+                let distance = self
+                    .unit_transitions
+                    .generated_frontier_state(intersection.state)
                     .infer_distance(self.query.len())
                     .unwrap_or(usize::MAX);
 
@@ -328,49 +410,18 @@ where
     /// Queue child intersections for exploration
     #[inline]
     fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
-        let mut child_parent_path = None;
-
-        intersection
-            .node
-            .visit_edges_and_finality(|label, child_node| {
-                if let Some(next_state) = self.unit_transitions.transition(
-                    &intersection.state,
-                    &mut self.state_pool,
-                    &Unrestricted, // Default policy: allow all substitutions
-                    label,
-                    &self.query,
-                    TransitionSettings::new(
-                        self.max_distance,
-                        self.algorithm,
-                        false, // standard mode (not substring mode)
-                    ),
-                ) {
-                    let parent_path = match child_parent_path {
-                        Some(path) => path,
-                        None => {
-                            let path = match intersection.label {
-                                Some(current_label) => push_path_node(
-                                    &mut self.path_arena,
-                                    current_label,
-                                    intersection.parent,
-                                ),
-                                None => NO_PATH,
-                            };
-                            child_parent_path = Some(path);
-                            path
-                        }
-                    };
-
-                    let child = ValueQueryIntersection::with_parent(
-                        label,
-                        child_node,
-                        next_state,
-                        parent_path,
-                    );
-
-                    self.pending.push_back(child);
-                }
-            })
+        queue_value_children_and_finality(
+            intersection,
+            &mut self.pending,
+            &mut self.path_arena,
+            &mut self.state_pool,
+            &mut self.unit_transitions,
+            ValueTransitionSettings {
+                query: &self.query,
+                max_distance: self.max_distance,
+                algorithm: self.algorithm,
+            },
+        )
     }
 }
 
@@ -447,7 +498,7 @@ where
         algorithm: Algorithm,
     ) -> Self {
         let query_length = query_units.len();
-        let initial = initial_state(query_length, max_distance, algorithm);
+        let (unit_transitions, initial) = seeded_transitions(query_length, max_distance, algorithm);
 
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
@@ -460,7 +511,7 @@ where
             path_arena: Vec::with_capacity(64),
             seen: FxHashSet::default(),
             state_pool: StatePool::new(),
-            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
+            unit_transitions,
             finished: false,
         }
     }
@@ -486,8 +537,9 @@ where
             crate::causal_perf::record_final_checks(1);
             let is_final = self.queue_children_and_finality(&intersection);
             if is_final {
-                let distance = intersection
-                    .state
+                let distance = self
+                    .unit_transitions
+                    .generated_frontier_state(intersection.state)
                     .infer_distance(self.query.len())
                     .unwrap_or(usize::MAX);
 
@@ -524,55 +576,18 @@ where
     /// value-filtered iterator).
     #[inline]
     fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
-        let mut child_parent_path = None;
-
-        intersection
-            .node
-            .visit_edges_and_finality(|label, child_node| {
-                crate::causal_perf::record_edges_enumerated(1);
-                if let Some(next_state) = self.unit_transitions.transition(
-                    &intersection.state,
-                    &mut self.state_pool,
-                    &Unrestricted,
-                    label,
-                    &self.query,
-                    TransitionSettings::new(self.max_distance, self.algorithm, false),
-                ) {
-                    crate::causal_perf::record_transition_accepted(1);
-                    let position_count = next_state.len();
-                    crate::causal_perf::record_state_positions_enqueued(position_count as u64);
-                    crate::causal_perf::record_state_bytes_enqueued(
-                        position_count
-                            .saturating_mul(std::mem::size_of::<crate::transducer::Position>())
-                            as u64,
-                    );
-                    let parent_path = match child_parent_path {
-                        Some(path) => path,
-                        None => {
-                            let path = match intersection.label {
-                                Some(current_label) => push_path_node(
-                                    &mut self.path_arena,
-                                    current_label,
-                                    intersection.parent,
-                                ),
-                                None => NO_PATH,
-                            };
-                            child_parent_path = Some(path);
-                            path
-                        }
-                    };
-
-                    let child = ValueQueryIntersection::with_parent(
-                        label,
-                        child_node,
-                        next_state,
-                        parent_path,
-                    );
-
-                    self.pending.push_back(child);
-                    crate::causal_perf::record_pending_queue_size(self.pending.len());
-                }
-            })
+        queue_value_children_and_finality(
+            intersection,
+            &mut self.pending,
+            &mut self.path_arena,
+            &mut self.state_pool,
+            &mut self.unit_transitions,
+            ValueTransitionSettings {
+                query: &self.query,
+                max_distance: self.max_distance,
+                algorithm: self.algorithm,
+            },
+        )
     }
 }
 
@@ -703,7 +718,7 @@ where
     ) -> Self {
         let query_units = N::Unit::from_str(&term);
         let query_length = query_units.len();
-        let initial = initial_state(query_length, max_distance, algorithm);
+        let (unit_transitions, initial) = seeded_transitions(query_length, max_distance, algorithm);
 
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
@@ -717,7 +732,7 @@ where
             path_arena: Vec::with_capacity(64),
             seen: SeenTerms::default(),
             state_pool: StatePool::new(),
-            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
+            unit_transitions,
             finished: false,
         }
     }
@@ -741,8 +756,9 @@ where
             // Check if this is a final node
             if is_final {
                 // Infer distance (standard mode - penalize remaining query characters)
-                let distance = intersection
-                    .state
+                let distance = self
+                    .unit_transitions
+                    .generated_frontier_state(intersection.state)
                     .infer_distance(self.query.len())
                     .unwrap_or(usize::MAX);
 
@@ -783,49 +799,18 @@ where
     /// Queue child intersections for exploration
     #[inline]
     fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
-        let mut child_parent_path = None;
-
-        intersection
-            .node
-            .visit_edges_and_finality(|label, child_node| {
-                if let Some(next_state) = self.unit_transitions.transition(
-                    &intersection.state,
-                    &mut self.state_pool,
-                    &Unrestricted, // Default policy: allow all substitutions
-                    label,
-                    &self.query,
-                    TransitionSettings::new(
-                        self.max_distance,
-                        self.algorithm,
-                        false, // standard mode (not substring mode)
-                    ),
-                ) {
-                    let parent_path = match child_parent_path {
-                        Some(path) => path,
-                        None => {
-                            let path = match intersection.label {
-                                Some(current_label) => push_path_node(
-                                    &mut self.path_arena,
-                                    current_label,
-                                    intersection.parent,
-                                ),
-                                None => NO_PATH,
-                            };
-                            child_parent_path = Some(path);
-                            path
-                        }
-                    };
-
-                    let child = ValueQueryIntersection::with_parent(
-                        label,
-                        child_node,
-                        next_state,
-                        parent_path,
-                    );
-
-                    self.pending.push_back(child);
-                }
-            })
+        queue_value_children_and_finality(
+            intersection,
+            &mut self.pending,
+            &mut self.path_arena,
+            &mut self.state_pool,
+            &mut self.unit_transitions,
+            ValueTransitionSettings {
+                query: &self.query,
+                max_distance: self.max_distance,
+                algorithm: self.algorithm,
+            },
+        )
     }
 }
 

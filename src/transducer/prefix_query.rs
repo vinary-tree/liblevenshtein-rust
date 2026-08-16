@@ -7,10 +7,12 @@
 //! `enter(unit, depth)` remains active until that exact subtree is exhausted,
 //! then receives one matching `leave(unit, depth)`.
 
-use super::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
+use super::transition::{
+    initial_state, CachedUnitTransitions, GeneratedStateId, TransitionSettings,
+};
 use super::{
-    Algorithm, NoPruning, PrefixPruner, State, StatePool, SubstitutionPolicy,
-    SubstitutionPolicyFor, Unrestricted,
+    Algorithm, NoPruning, PrefixPruner, StatePool, SubstitutionPolicy, SubstitutionPolicyFor,
+    Unrestricted,
 };
 use libdictenstein::{CharUnit, Dictionary, DictionaryNode};
 
@@ -40,14 +42,14 @@ pub struct PrefixQueryMatch<U: CharUnit> {
 
 struct Frame<N: DictionaryNode> {
     edges: std::vec::IntoIter<(N::Unit, N)>,
-    state: State,
+    state: GeneratedStateId,
     entered_by: Option<N::Unit>,
     is_final: bool,
     final_checked: bool,
 }
 
 impl<N: DictionaryNode> Frame<N> {
-    fn new(node: N, state: State, entered_by: Option<N::Unit>) -> Self {
+    fn new(node: N, state: GeneratedStateId, entered_by: Option<N::Unit>) -> Self {
         let mut edges = Vec::with_capacity(node.edge_count().unwrap_or(0));
         let is_final = node.visit_edges_and_finality(|label, child| edges.push((label, child)));
         Self {
@@ -144,6 +146,9 @@ where
     ) -> Self {
         let query_length = query.len();
         let initial = initial_state(query_length, max_distance, algorithm);
+        let settings = TransitionSettings::new(max_distance, algorithm, substring_mode);
+        let mut unit_transitions = CachedUnitTransitions::new(query_length, max_distance);
+        let initial = unit_transitions.seed_generated_state(&initial, settings);
         Self {
             query,
             max_distance,
@@ -154,7 +159,7 @@ where
             stack: vec![Frame::new(root, initial, None)],
             prefix: Vec::new(),
             state_pool: StatePool::new(),
-            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
+            unit_transitions,
             stats: PrefixQueryStats {
                 nodes_visited: 1,
                 ..PrefixQueryStats::default()
@@ -193,7 +198,6 @@ where
 
     fn unwind(&mut self) {
         while let Some(frame) = self.stack.pop() {
-            self.state_pool.release(frame.state);
             if let Some(unit) = frame.entered_by {
                 let depth = self.prefix.len();
                 let popped = self.prefix.pop();
@@ -227,12 +231,13 @@ where
                     None
                 } else {
                     frame.final_checked = true;
+                    let state = self.unit_transitions.generated_frontier_state(frame.state);
                     Some((
                         frame.is_final,
                         if self.substring_mode {
-                            frame.state.min_distance()
+                            state.min_distance()
                         } else {
-                            frame.state.infer_distance(self.query.len())
+                            state.infer_distance(self.query.len())
                         },
                     ))
                 }
@@ -271,12 +276,12 @@ where
                 let settings =
                     TransitionSettings::new(self.max_distance, self.algorithm, self.substring_mode);
                 let next_state = {
-                    let parent_state = &self
+                    let parent_state = self
                         .stack
                         .last()
                         .expect("the DFS parent remains on the stack")
                         .state;
-                    self.unit_transitions.transition(
+                    self.unit_transitions.transition_generated(
                         parent_state,
                         &mut self.state_pool,
                         &self.substitution_policy,
@@ -302,7 +307,6 @@ where
                 .stack
                 .pop()
                 .expect("the DFS stack was observed non-empty");
-            self.state_pool.release(frame.state);
             if let Some(unit) = frame.entered_by {
                 let depth = self.prefix.len();
                 let popped = self.prefix.pop();

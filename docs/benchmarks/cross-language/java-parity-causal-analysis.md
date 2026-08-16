@@ -1,11 +1,14 @@
 # Root causes and closure of the liblevenshtein-java performance gap
 
-**Status:** causal gate closed on 2026-08-15. Controlled production experiments
-H-O9 through H-O30 are decided, and their accepted mechanisms are implemented.
+**Status:** causal gate closed on 2026-08-16. Controlled production experiments
+H-O9 through H-O33 are decided, and their accepted mechanisms are implemented.
 Direct Rust now passes the core Java-parity latency gate; provider traversal is
 within its resource/direct target; and the JVM result-delivery bottleneck has
 been reduced. The complete post-optimization cross-language matrix is now
-closed with exact results across all 45 shared coordinates.
+closed with exact results across all 45 shared coordinates. The follow-up
+structural wave also replaces the producer arena's read lock, queues compact
+generated-state IDs, rejects dictionary edges before materializing children,
+and isolates each foreign query's owner and fault channel.
 
 This report explains the construction and matching gaps reported in
 [the Java comparison](java-comparison.md). It separates three systems that
@@ -27,6 +30,8 @@ copies.
 
 The machine-readable measurements behind every exact number below are in
 [`observations.json`](../../../benchmarks/causal/evidence/2026-08-14/observations.json).
+The structural follow-up, including rejected alternatives, is in
+[`structural-wave.json`](../../../benchmarks/causal/evidence/2026-08-16/structural-wave.json).
 The diagnostic counters are compiled out unless `perf-instrumentation` is
 enabled; timings and counters were therefore collected in separate runs.
 
@@ -229,20 +234,23 @@ are:
 
 | input and constructor | terms | median build |
 |---|---:|---:|
-| unordered bytes, `from_terms` | 79,343 | 21.416 ms |
-| pre-ordered bytes, `from_sorted_terms` | 79,343 | 11.076 ms |
+| unordered bytes, `from_terms` | 79,343 | 14.702 ms |
+| pre-ordered bytes, `from_sorted_terms` | 79,343 | 12.023 ms |
 | unordered packed `u64`, `from_terms` | 79,343 | 10.486 ms |
 | pre-ordered packed `u64`, `from_sorted_terms` | 79,343 | 5.186 ms |
-| legacy Java ordered reference | 79,343 | 41.2 ms |
+| legacy Java ordered reference | 79,343 | 34.207 ms |
+| ordered incremental Rust `insert` stream | 79,343 | 67.165 ms |
 
-The optimized unordered byte constructor is therefore 1.92× faster than the
+The optimized unordered byte constructor is therefore 2.33× faster than the
 published Java ordered reference, and the explicit ordered constructor is
-3.72× faster. The Java value was collected in the original parity window, not
-time-adjacent to this closing native matrix, so these ratios are closure
-indicators rather than paired causal estimates. The more important invariant
-is architectural: unordered and ordered construction now share the same
-unit-generic minimal-builder kernel, while the ordered API avoids sorting and
-the unordered API remains free to accept arbitrary input order.
+2.85× faster. The incremental stream remains intentionally distinct: it
+publishes an independently observable persistent revision per term and is not
+the bulk-construction path. The Java value was collected in the original
+parity window, not time-adjacent to this closing native matrix, so these ratios
+are closure indicators rather than paired causal estimates. The more important
+invariant is architectural: unordered and ordered construction now share the
+same unit-generic minimal-builder kernel, while the ordered API avoids sorting
+and the unordered API remains free to accept arbitrary input order.
 
 The adversarial shapes remain informative after optimization. Prefix-heavy
 25k input builds in 3.705 ms unordered and 1.119 ms ordered; suffix-heavy input
@@ -377,6 +385,40 @@ belongs to frontier advancement and the optimized transition kernel itself.
 A future campaign would therefore need a compact/generated small-distance OSA
 engine or a materially different frontier/state representation; isolated
 characteristic or allocation tweaks are no longer supported by the profile.
+
+### 3.7 Compact frontier and characteristic-class follow-up
+
+The structural wave removed the remaining ownership mismatch between the
+generated transition table and the traversal frontier. Canonical position
+slices now live once in the table, while queued built-in unit-cost
+intersections carry a `GeneratedStateId`. The ordinary, ordered, priority,
+ranked-value, value-filtered/value-yielding, and prefix-DFS schedulers share
+that handle representation. Weighted, contextual, language-product, and
+zipper-navigation states remain separate where an ID would either lose state
+information or force materialization at the public navigation boundary.
+
+One instrumented anchor pass contained 6,747,684 generated-table hits and
+248,558 misses. Temporary transition-state pool misses fell to zero and the
+hot traversal frontier no longer copies positional states. A checked sentinel
+guard prevents an impossible ID from aliasing the `EMPTY` or `UNCOMPUTED`
+transition-table values.
+
+The label cache was then split into a hot classification path and a cold
+pattern path. Direct byte labels and overflow labels retain only a compact
+class ID; one central class table owns each characteristic pattern. H-O32
+reduced the resource-path median from 204.104 ms to 190.242 ms across 54
+samples per arm (6.79%, Welch `p = 1.323e-11`, Cohen's `d = -1.657`) and was
+retained. Two superficially more compact layouts were rejected after exact
+result-preserving measurements: a flat generated transition matrix regressed
+153.245 ms to 179.958 ms, and structure-of-arrays foreign edges regressed
+189.383 ms to 199.141 ms.
+
+The closing independent pure-Rust harness measured 138.927 ms across 51
+samples (range 136.889–141.828 ms), compared with 382.407 ms across 30 legacy
+Java samples (range 380.230–387.886 ms). Both returned the exact anchor
+signature. Rust is therefore 2.75× faster on the original
+`standard/d2/std-d2` workload; this is a direct-core comparison and should not
+be conflated with the JVM binding matrix discussed below.
 
 ## 4. Resource and language boundary
 
@@ -548,6 +590,9 @@ interfaces, while nonempty dictionaries retain incremental update semantics.
 | H-O26 | cache validated nodes by immutable snapshot node ID | 588.835 → 473.051 ms, 19.66% lower | retain, 20% magnitude clause missed | Callbacks fell 96.61%, locks fell 95.59%, and the contemporaneous resource/direct ratio reached 1.132× |
 | H-O27 | reduce borrowed JVM descriptors instead of materializing `Match`/`String` objects | 68.994 → 69.078 ms, 0.12% slower | reject as parity default | Repeated foreign-memory descriptor access cost at least as much as the removed allocations; this timing alone does not establish whether scalar replacement contributed |
 | H-O30 | drain every query through one confined foreign-memory arena and a lexical `forEachMatch` callback | 68.994 → 58.327 ms, 15.46% lower | retain | Per-query shared arenas had forced 68,001 JVM all-thread handshakes; the lexical path required two |
+| H-O31 | replace each cached foreign child pointer with only its numeric node ID | 200.549 → 284.595 ms, 41.91% slower | reject and revert | Re-resolving accepted children through the hybrid directory cost more than the pointer saved on every edge |
+| H-O32 | store only characteristic class IDs in direct and overflow label caches | 204.104 → 190.242 ms, 6.79% lower | retain | Removed duplicate pattern ownership and kept full pattern access on the cold generated-table miss path |
+| H-O33 | split cached foreign labels and child metadata into parallel arrays | 189.383 → 199.141 ms, 5.15% slower | reject and revert | Extra indexing and lost edge-record locality outweighed denser label scanning |
 
 The retained boundary treatments compose because they remove different work:
 snapshot construction, provider-side descriptor cloning, redundant property
@@ -555,6 +600,16 @@ callbacks, repeated inspection of an immutable node, and per-query foreign
 arena cleanup. Their generic
 contracts and backend applicability are inventoried in
 [`optimization-propagation.md`](../optimization-propagation.md).
+
+The follow-up resource architecture additionally separates one retained
+query-local provider owner from copy-only node keys, isolates callback faults
+per cursor, and keys shared immutable caches by snapshot identity plus provider
+and dictionary vtable lineage. Its dense-prefix/sparse-overflow directory is
+lock-free on lookup and publication, bounds dense allocation, and immediately
+reclaims losing publications. Failed producer-arena growth does not consume an
+ID, so capacity failure cannot leave a permanently unpublishable hole. These
+changes close concurrency defects as well as removing millions of `Arc`
+increments/decrements and lock acquisitions.
 
 #### Post-H-O26 snapshot-stack hardening
 
@@ -565,8 +620,9 @@ optional `vt.snapshot.id.1` interface identifies that revision as the pair
 `(producer, revision)`, allowing separately minted resource contexts to share a
 consumer node cache without equating mutable resources. Third, the producer
 arena is a 256-slot chunked, append-only directory: readers use an atomically
-published chunk vector and write-once slots, while only directory growth takes
-the arena mutex. The last arena owner reclaims all chunks synchronously; no
+published chunk vector and write-once slots, and growth publishes a fallibly
+allocated geometric directory with compare-and-swap. No arena operation takes
+a mutex. The last arena owner reclaims all chunks synchronously; no
 background reclaimer or unbounded deferred queue is involved.
 
 The same 79,343-term, 1,000-query `standard/d2/std-d2` causal workload retained
@@ -577,7 +633,7 @@ changed as follows relative to the original resource-boundary observation:
 | causal work | original boundary | hardened stack | reduction |
 |---|---:|---:|---:|
 | snapshots created | 1,000 | 1 | 99.90% |
-| arena mutex acquisitions | 3,500,348 | 345 | 99.990% |
+| arena mutex acquisitions | 3,500,348 | 0 | 100% |
 | provider edge callbacks/cache misses | 1,731,660 | 58,677 | 96.61% |
 | native edges enumerated | 6,996,242 | 88,326 | 98.74% |
 | nodes materialized | 6,997,242 | 88,327 | 98.74% |
@@ -587,12 +643,13 @@ These are causal work counters, not a new latency experiment: the counter build
 is instrumented and the uProf run is a single diagnostic sample, so its timing
 must not be compared with the uninstrumented 51-sample medians above. A
 headless AMD uProf 5.3 hotspots capture instead answers the mechanistic
-question. The hottest sampled function was the epsilon-closed transition
-kernel at 30.16% self CPU. Consumer cache lookup accounted for 4.76%, producer
-node copying for 1.59%, and neither snapshot capture nor producer arena locking
-appeared as a sampled hotspot. The profile therefore corroborates the counter
-result: the remaining work is primarily query-transition and cache-access work,
-not repeated snapshot construction or a global producer-arena lock.
+question. After the structural wave, predicate-first foreign-edge processing
+accounted for 30.26% self CPU, generated transitions for 21.49%, cursor advance
+for 11.40%, and the epsilon kernel for 5.70%. Dense arena lookup and growth
+each accounted for 0.44%; no arena lock remained. The profile therefore
+corroborates the counter result: the remaining work is primarily
+query-transition and frontier work, not repeated snapshot construction or a
+global producer-arena lock.
 
 A separate teardown-aware counter run released every producer and consumer
 owner after stopping `query_ns`. It synchronously reclaimed all `88,327`

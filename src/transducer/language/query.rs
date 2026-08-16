@@ -100,21 +100,6 @@ where
         self.stats
     }
 
-    fn push_path(&mut self, label: N::Unit, parent: usize) -> usize {
-        let depth = if parent == NO_PARENT {
-            1
-        } else {
-            self.path[parent].depth.saturating_add(1)
-        };
-        let index = self.path.len();
-        self.path.push(PathUnit {
-            unit: label,
-            parent,
-            depth,
-        });
-        index
-    }
-
     fn materialize(&self, label: Option<N::Unit>, parent: usize) -> Vec<N::Unit> {
         let mut result = Vec::with_capacity(if parent == NO_PARENT {
             usize::from(label.is_some())
@@ -148,25 +133,47 @@ where
             {
                 self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
             }
-            let child_parent = match entry.label {
-                Some(label) => self.push_path(label, entry.parent),
-                None => entry.parent,
-            };
-            let is_final = entry.node.visit_edges_and_finality(|unit, child| {
-                #[cfg(feature = "perf-instrumentation")]
-                {
-                    self.stats.edges_enumerated = self.stats.edges_enumerated.saturating_add(1);
-                }
-                let frontier = self.product.step(&entry.frontier, &unit);
-                if !frontier.is_empty() {
-                    self.pending.push_back(Pending {
+            let mut child_parent = None;
+            let product = &mut self.product;
+            let pending = &mut self.pending;
+            let path = &mut self.path;
+            #[cfg(feature = "perf-instrumentation")]
+            let stats = &mut self.stats;
+            let is_final = entry.node.filter_map_edges_and_finality(
+                |unit| {
+                    #[cfg(feature = "perf-instrumentation")]
+                    {
+                        stats.edges_enumerated = stats.edges_enumerated.saturating_add(1);
+                    }
+                    let frontier = product.step(&entry.frontier, &unit);
+                    (!frontier.is_empty()).then_some(frontier)
+                },
+                |unit, child, frontier| {
+                    let parent = *child_parent.get_or_insert_with(|| match entry.label {
+                        Some(label) => {
+                            let depth = if entry.parent == NO_PARENT {
+                                1
+                            } else {
+                                path[entry.parent].depth.saturating_add(1)
+                            };
+                            let index = path.len();
+                            path.push(PathUnit {
+                                unit: label,
+                                parent: entry.parent,
+                                depth,
+                            });
+                            index
+                        }
+                        None => entry.parent,
+                    });
+                    pending.push_back(Pending {
                         node: child,
                         label: Some(unit),
-                        parent: child_parent,
+                        parent,
                         frontier,
                     });
-                }
-            });
+                },
+            );
             let distance = is_final
                 .then(|| self.product.min_accepting_distance(&entry.frontier))
                 .flatten();

@@ -20,9 +20,13 @@ sorted cells call `from_sorted_terms` and shuffled cells call the unordered
 bulk `from_terms`; online `insert` publication is a distinct API and is
 measured only when `--constructor stream` is requested explicitly.
 
-Build the work-counter drivers separately from timing binaries:
+Build timing and work-counter drivers separately. `resource-profiling` enables
+the resource harness without hot-loop counters; `causal-resource-profiling`
+adds both consumer and provider work counters:
 
 ```console
+cargo build --release --bin causal_query_profile
+cargo build --release --features resource-profiling --bin causal_resource_profile
 cargo build --release --features perf-instrumentation --bin causal_query_profile
 cargo build --release --features causal-resource-profiling --bin causal_resource_profile
 cargo build --release --bin causal_construction_bench

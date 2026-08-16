@@ -8,6 +8,8 @@ use super::{
 use libdictenstein::CharUnit;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
+use std::ptr::NonNull;
+use std::sync::Arc;
 
 /// Configuration shared by pooled state transitions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -173,9 +175,51 @@ pub(crate) fn transition_window_size(max_distance: usize, query_length: usize) -
 /// the end of the query, without rebuilding a `SmallVec` for every state
 /// position. The cache is unit- and substitution-policy-generic.
 pub(crate) struct CharacteristicCache<U: CharUnit> {
-    vectors: FxHashMap<U, Box<[bool]>>,
+    direct: [Option<(U, u32)>; 256],
+    overflow: FxHashMap<U, u32>,
+    classes: FxHashMap<Arc<[bool]>, u32>,
+    class_patterns: Vec<Arc<[bool]>>,
     query_length: usize,
     padding: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct GeneratedStateId(usize);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct GeneratedTarget(usize);
+
+impl GeneratedTarget {
+    const UNCOMPUTED: Self = Self(usize::MAX);
+    const EMPTY: Self = Self(usize::MAX - 1);
+
+    #[inline(always)]
+    const fn state(id: GeneratedStateId) -> Self {
+        Self(id.0)
+    }
+
+    #[inline(always)]
+    const fn state_id(self) -> GeneratedStateId {
+        debug_assert!(self.0 < Self::EMPTY.0);
+        GeneratedStateId(self.0)
+    }
+}
+
+impl GeneratedStateId {
+    #[inline]
+    fn next(rows: &[GeneratedRow]) -> Self {
+        let id = rows.len();
+        assert!(
+            id < GeneratedTarget::EMPTY.0,
+            "query-local generated state identifiers exhausted"
+        );
+        Self(id)
+    }
+}
+
+struct GeneratedRow {
+    source: Box<[Position]>,
+    transitions: Vec<GeneratedTarget>,
 }
 
 /// Query-local unit-transition engine shared by every iterator surface.
@@ -186,6 +230,9 @@ pub(crate) struct CharacteristicCache<U: CharUnit> {
 /// trait objects or indirect calls in the transition loop.
 pub(crate) struct CachedUnitTransitions<U: CharUnit> {
     cache: CharacteristicCache<U>,
+    generated_config: Option<(Algorithm, bool)>,
+    generated_rows: Vec<GeneratedRow>,
+    generated_states: FxHashMap<u64, SmallVec<[GeneratedStateId; 1]>>,
     max_distance: usize,
 }
 
@@ -193,8 +240,135 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
     pub(crate) fn new(query_length: usize, max_distance: usize) -> Self {
         Self {
             cache: CharacteristicCache::new(query_length, max_distance),
+            generated_config: None,
+            generated_rows: Vec::new(),
+            generated_states: FxHashMap::default(),
             max_distance,
         }
+    }
+
+    /// Intern the root of a unit-cost query and return its compact frontier ID.
+    ///
+    /// IDs are local to this transition engine and keep the traversal queue
+    /// independent of the canonical position allocation's representation.
+    pub(crate) fn seed_generated_state(
+        &mut self,
+        state: &State,
+        settings: TransitionSettings,
+    ) -> GeneratedStateId {
+        debug_assert_eq!(settings.max_distance, self.max_distance);
+        let config = (settings.algorithm, settings.prefix_mode);
+        match self.generated_config {
+            Some(existing) => assert_eq!(existing, config, "generated transition mode changed"),
+            None => self.generated_config = Some(config),
+        }
+
+        if self.generated_rows.is_empty() {
+            let id = GeneratedStateId(0);
+            self.generated_rows.push(GeneratedRow {
+                source: state.positions().into(),
+                transitions: Vec::new(),
+            });
+            self.generated_states
+                .entry(state.transition_fingerprint())
+                .or_default()
+                .push(id);
+            id
+        } else {
+            self.intern_positions(state.positions(), state.transition_fingerprint())
+        }
+    }
+
+    /// Transition a compact query-local frontier without materializing a
+    /// `State` in the dictionary traversal queue.
+    #[inline]
+    pub(crate) fn transition_generated<P>(
+        &mut self,
+        source: GeneratedStateId,
+        pool: &mut StatePool,
+        policy: &P,
+        dict_unit: U,
+        query: &[U],
+        settings: TransitionSettings,
+    ) -> Option<GeneratedStateId>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        debug_assert_eq!(settings.max_distance, self.max_distance);
+        let cacheable = self.generated_config == Some((settings.algorithm, settings.prefix_mode));
+        let characteristic_class = self.cache.class_for(policy, dict_unit, query);
+
+        if cacheable {
+            if let Some(&target) = self.generated_rows[source.0]
+                .transitions
+                .get(characteristic_class as usize)
+            {
+                if target != GeneratedTarget::UNCOMPUTED {
+                    crate::causal_perf::record_transition_attempts(1);
+                    crate::causal_perf::record_generated_transition_hits(1);
+                    return (target != GeneratedTarget::EMPTY).then(|| target.state_id());
+                }
+            }
+        }
+
+        crate::causal_perf::record_generated_transition_misses(1);
+        let matches = self.cache.matches(characteristic_class);
+        let source_state = State::from_canonical_positions(
+            self.generated_positions(source),
+            Self::nonzero_state_tag(source),
+        );
+        let generated = transition_epsilon_closed_state_pooled_cached(
+            &source_state,
+            pool,
+            matches,
+            query.len(),
+            settings,
+        );
+        let target = match generated {
+            Some(state) => {
+                let id = self.intern_positions(state.positions(), state.transition_fingerprint());
+                pool.release(state);
+                GeneratedTarget::state(id)
+            }
+            None => GeneratedTarget::EMPTY,
+        };
+        let result = (target != GeneratedTarget::EMPTY).then(|| target.state_id());
+        if cacheable {
+            let row = &mut self.generated_rows[source.0];
+            let class = characteristic_class as usize;
+            if row.transitions.len() <= class {
+                row.transitions
+                    .resize(class + 1, GeneratedTarget::UNCOMPUTED);
+            }
+            row.transitions[class] = target;
+        }
+        result
+    }
+
+    #[inline(always)]
+    pub(crate) fn generated_state(&self, id: GeneratedStateId) -> State {
+        State::from_canonical_positions(
+            self.generated_positions(id),
+            u64::try_from(id.0).expect("generated state identifier exceeds u64"),
+        )
+    }
+
+    #[inline(always)]
+    pub(crate) fn generated_frontier_state(&self, id: GeneratedStateId) -> State {
+        State::from_canonical_positions(self.generated_positions(id), Self::nonzero_state_tag(id))
+    }
+
+    #[inline(always)]
+    pub(crate) fn generated_position_count(&self, id: GeneratedStateId) -> usize {
+        self.generated_rows[id.0].source.len()
+    }
+
+    #[inline(always)]
+    fn nonzero_state_tag(id: GeneratedStateId) -> u64 {
+        u64::try_from(id.0)
+            .expect("generated state identifier exceeds u64")
+            .checked_add(1)
+            .expect("generated state identifier exhausts nonzero tags")
     }
 
     #[inline]
@@ -211,8 +385,123 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
     {
         debug_assert_eq!(settings.max_distance, self.max_distance);
-        let matches = self.cache.matches_for(policy, dict_unit, query);
-        transition_epsilon_closed_state_pooled_cached(state, pool, matches, query.len(), settings)
+        let characteristic_class = self.cache.class_for(policy, dict_unit, query);
+        let config = (settings.algorithm, settings.prefix_mode);
+        if self.generated_config.is_none() {
+            self.generated_config = Some(config);
+            self.generated_rows.push(GeneratedRow {
+                source: state.positions().into(),
+                transitions: Vec::new(),
+            });
+        }
+        let row_index = usize::try_from(state.generated_id()).ok();
+        let cacheable = self.generated_config == Some(config)
+            && row_index
+                .and_then(|index| self.generated_rows.get(index))
+                .is_some_and(|row| {
+                    if state.generated_id() == 0 {
+                        row.source.as_ref() == state.positions()
+                    } else {
+                        std::ptr::eq(row.source.as_ref(), state.positions())
+                    }
+                });
+
+        if let Some(&target) = row_index.filter(|_| cacheable).and_then(|index| {
+            self.generated_rows[index]
+                .transitions
+                .get(characteristic_class as usize)
+        }) {
+            if target != GeneratedTarget::UNCOMPUTED {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_generated_transition_hits(1);
+                return (target != GeneratedTarget::EMPTY)
+                    .then(|| self.generated_state(target.state_id()));
+            }
+        };
+
+        crate::causal_perf::record_generated_transition_misses(1);
+        let matches = self.cache.matches(characteristic_class);
+        let mut generated = transition_epsilon_closed_state_pooled_cached(
+            state,
+            pool,
+            matches,
+            query.len(),
+            settings,
+        );
+        if cacheable {
+            let target = match generated.as_mut() {
+                Some(target) => {
+                    let (id, positions) = self.intern_generated_state(target);
+                    let raw_id =
+                        u64::try_from(id.0).expect("query-local generated state count exceeds u64");
+                    if let Some(reusable) = target.adopt_canonical_positions(positions, raw_id) {
+                        pool.release(reusable);
+                    }
+                    GeneratedTarget::state(id)
+                }
+                None => GeneratedTarget::EMPTY,
+            };
+            let row = &mut self.generated_rows[row_index.expect("cacheable row")];
+            let class = characteristic_class as usize;
+            if row.transitions.len() <= class {
+                row.transitions
+                    .resize(class + 1, GeneratedTarget::UNCOMPUTED);
+            }
+            row.transitions[class] = target;
+        }
+        generated
+    }
+
+    fn generated_positions(&self, id: GeneratedStateId) -> NonNull<[Position]> {
+        NonNull::from(self.generated_rows[id.0].source.as_ref())
+    }
+
+    fn intern_generated_state(
+        &mut self,
+        state: &mut State,
+    ) -> (GeneratedStateId, NonNull<[Position]>) {
+        let fingerprint = state.transition_fingerprint();
+        if let Some(states) = self.generated_states.get(&fingerprint) {
+            if let Some(&id) = states
+                .iter()
+                .find(|&&id| self.generated_rows[id.0].source.as_ref() == state.positions())
+            {
+                return (id, self.generated_positions(id));
+            }
+        }
+
+        let id = GeneratedStateId::next(&self.generated_rows);
+        self.generated_rows.push(GeneratedRow {
+            source: state.positions().into(),
+            transitions: Vec::new(),
+        });
+        self.generated_states
+            .entry(fingerprint)
+            .or_default()
+            .push(id);
+        (id, self.generated_positions(id))
+    }
+
+    fn intern_positions(&mut self, positions: &[Position], fingerprint: u64) -> GeneratedStateId {
+        if let Some(states) = self.generated_states.get(&fingerprint) {
+            if let Some(&id) = states
+                .iter()
+                .find(|&&id| self.generated_rows[id.0].source.as_ref() == positions)
+            {
+                return id;
+            }
+        }
+
+        let id = GeneratedStateId::next(&self.generated_rows);
+        self.generated_rows.push(GeneratedRow {
+            source: positions.into(),
+            transitions: Vec::new(),
+        });
+        self.generated_states
+            .entry(fingerprint)
+            .or_default()
+            .push(id);
+        id
     }
 
     /// Transition an affine-gap state through the same query-local
@@ -232,11 +521,29 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
     {
         debug_assert_eq!(settings.max_cost, self.max_distance);
 
+        // A unit-cost result may borrow its positions from `generated_rows`.
+        // Mixed internal use is unusual, but it is legal: materialize that
+        // input before invalidating the unit-cost table below. Ordinary query
+        // surfaces select exactly one transition mode and never pay this copy.
+        let materialized_state = state
+            .borrows_canonical_positions()
+            .then(|| State::from_positions(state.positions().to_vec()));
+        let state = materialized_state.as_ref().unwrap_or(state);
+
+        // Characteristic-class identifiers are local to the current padding
+        // layout. Affine queries may widen that layout, so discard any unit-
+        // cost generated table before remapping classes. Normal query
+        // surfaces select exactly one mode; this protects mixed internal use.
+        if self.generated_config.take().is_some() {
+            self.generated_rows.clear();
+            self.generated_states.clear();
+        }
+
         // An affine query gap can inspect every remaining query unit when its
         // extension cost is zero. Grow the false suffix once before borrowing
         // the label vector so every legal window remains a direct slice.
         self.cache.ensure_padding(query.len().saturating_add(1));
-        let matches = self.cache.matches_for(policy, dict_unit, query);
+        let (matches, _) = self.cache.matches_for(policy, dict_unit, query);
         let ctx = TransitionCtx::new(
             query.len(),
             settings.max_cost,
@@ -256,27 +563,98 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
 impl<U: CharUnit> CharacteristicCache<U> {
     pub(crate) fn new(query_length: usize, max_distance: usize) -> Self {
         Self {
-            vectors: FxHashMap::default(),
+            direct: std::array::from_fn(|_| None),
+            overflow: FxHashMap::default(),
+            classes: FxHashMap::default(),
+            class_patterns: Vec::new(),
             query_length,
             padding: transition_window_size(max_distance, query_length),
         }
     }
 
+    /// Classify one dictionary unit without borrowing its full characteristic
+    /// vector. Generated-table hits need only this compact identifier.
     #[inline]
-    pub(crate) fn matches_for<P>(&mut self, policy: &P, dict_unit: U, query: &[U]) -> &[bool]
+    pub(crate) fn class_for<P>(&mut self, policy: &P, dict_unit: U, query: &[U]) -> u32
     where
         P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
     {
         debug_assert_eq!(query.len(), self.query_length);
-        let matches = self.vectors.entry(dict_unit).or_insert_with(|| {
-            let mut matches = Vec::with_capacity(query.len().saturating_add(self.padding));
-            matches.extend(query.iter().copied().map(|query_unit| {
-                query_unit == dict_unit || policy.is_allowed_for(dict_unit, query_unit)
-            }));
-            matches.resize(query.len().saturating_add(self.padding), false);
-            matches.into_boxed_slice()
-        });
-        matches
+        let direct_index = dict_unit.to_dat_offset();
+        if direct_index < self.direct.len() {
+            let slot = &mut self.direct[direct_index];
+            if let Some((unit, class)) = slot {
+                if *unit == dict_unit {
+                    return *class;
+                }
+            }
+            if slot.is_none() {
+                let class = Self::build_pattern(
+                    &mut self.classes,
+                    &mut self.class_patterns,
+                    self.padding,
+                    policy,
+                    dict_unit,
+                    query,
+                );
+                *slot = Some((dict_unit, class));
+                return class;
+            }
+        }
+
+        let classes = &mut self.classes;
+        let class_patterns = &mut self.class_patterns;
+        let padding = self.padding;
+        self.overflow
+            .entry(dict_unit)
+            .or_insert_with(|| {
+                Self::build_pattern(classes, class_patterns, padding, policy, dict_unit, query)
+            })
+            .to_owned()
+    }
+
+    #[inline(always)]
+    fn matches(&self, class: u32) -> &[bool] {
+        self.class_patterns[class as usize].as_ref()
+    }
+
+    #[inline]
+    pub(crate) fn matches_for<P>(&mut self, policy: &P, dict_unit: U, query: &[U]) -> (&[bool], u32)
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        let class = self.class_for(policy, dict_unit, query);
+        (self.matches(class), class)
+    }
+
+    fn build_pattern<P>(
+        classes: &mut FxHashMap<Arc<[bool]>, u32>,
+        class_patterns: &mut Vec<Arc<[bool]>>,
+        padding: usize,
+        policy: &P,
+        dict_unit: U,
+        query: &[U],
+    ) -> u32
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        let mut matches = Vec::with_capacity(query.len().saturating_add(padding));
+        matches.extend(query.iter().copied().map(|query_unit| {
+            query_unit == dict_unit || policy.is_allowed_for(dict_unit, query_unit)
+        }));
+        matches.resize(query.len().saturating_add(padding), false);
+        let matches: Arc<[bool]> = matches.into();
+        let class = match classes.get(matches.as_ref()) {
+            Some(class) => *class,
+            None => {
+                let class = u32::try_from(classes.len())
+                    .expect("query characteristic class count exceeds u32");
+                classes.insert(Arc::clone(&matches), class);
+                class_patterns.push(Arc::clone(&matches));
+                class
+            }
+        };
+        class
     }
 
     /// Ensure cached vectors contain at least `padding` false units after the
@@ -288,10 +666,16 @@ impl<U: CharUnit> CharacteristicCache<U> {
         }
 
         let length = self.query_length.saturating_add(padding);
-        for matches in self.vectors.values_mut() {
-            let mut extended = std::mem::take(matches).into_vec();
+        self.classes.clear();
+        for (class, pattern) in self.class_patterns.iter_mut().enumerate() {
+            let mut extended = pattern.as_ref().to_vec();
             extended.resize(length, false);
-            *matches = extended.into_boxed_slice();
+            *pattern = extended.into();
+            let previous = self.classes.insert(
+                Arc::clone(pattern),
+                u32::try_from(class).expect("query characteristic class count exceeds u32"),
+            );
+            debug_assert!(previous.is_none());
         }
         self.padding = padding;
     }
@@ -1558,6 +1942,21 @@ mod tests {
     use crate::transducer::{Restricted, SubstitutionSet, Unrestricted};
 
     #[test]
+    fn compact_generated_transition_cells_are_one_machine_word() {
+        assert_eq!(
+            std::mem::size_of::<GeneratedStateId>(),
+            std::mem::size_of::<usize>()
+        );
+        assert_eq!(
+            std::mem::size_of::<GeneratedTarget>(),
+            std::mem::size_of::<usize>()
+        );
+        const {
+            assert!(GeneratedTarget::EMPTY.0 < GeneratedTarget::UNCOMPUTED.0);
+        }
+    }
+
+    #[test]
     fn test_characteristic_vector() {
         let query = b"test";
         let policy = Unrestricted;
@@ -1591,14 +1990,139 @@ mod tests {
         let policy = Unrestricted;
         let mut cache = CharacteristicCache::new(query.len(), 1);
 
-        let before = cache.matches_for(&policy, b't', query).to_vec();
+        let before = cache.matches_for(&policy, b't', query).0.to_vec();
         assert_eq!(before.len(), query.len() + 2);
 
         cache.ensure_padding(8);
-        let after = cache.matches_for(&policy, b't', query);
+        let after = cache.matches_for(&policy, b't', query).0;
         assert_eq!(after.len(), query.len() + 8);
         assert_eq!(&after[..query.len()], &[true, false, false, true]);
         assert!(after[query.len()..].iter().all(|matched| !matched));
+    }
+
+    #[test]
+    fn characteristic_cache_handles_colliding_u64_direct_offsets_exactly() {
+        let high = (1u64 << 32) | 1;
+        let query = [1u64, high, 2];
+        let policy = Unrestricted;
+        let mut cache = CharacteristicCache::new(query.len(), 2);
+
+        let low_matches = cache.matches_for(&policy, 1, &query).0.to_vec();
+        let high_matches = cache.matches_for(&policy, high, &query).0.to_vec();
+
+        assert_eq!(&low_matches[..query.len()], &[true, false, false]);
+        assert_eq!(&high_matches[..query.len()], &[false, true, false]);
+        assert_eq!(cache.matches_for(&policy, 1, &query).0, low_matches);
+        assert_eq!(cache.matches_for(&policy, high, &query).0, high_matches);
+    }
+
+    #[test]
+    fn generated_transition_table_matches_positional_kernel_for_every_unit_variant() {
+        const ALGORITHMS: [Algorithm; 4] = [
+            Algorithm::Standard,
+            Algorithm::Transposition,
+            Algorithm::MergeAndSplit,
+            Algorithm::DamerauLevenshtein,
+        ];
+        let query = b"abca";
+        let labels = *b"abcx";
+        let policy = Unrestricted;
+
+        for algorithm in ALGORITHMS {
+            for max_distance in 0..=3 {
+                for prefix_mode in [false, true] {
+                    let settings = TransitionSettings::new(max_distance, algorithm, prefix_mode);
+                    let mut generated = CachedUnitTransitions::new(query.len(), max_distance);
+                    let initial = initial_state(query.len(), max_distance, algorithm);
+                    let mut frontier = vec![(initial.clone(), initial)];
+                    let mut generated_pool = StatePool::new();
+                    let mut reference_pool = StatePool::new();
+
+                    for _depth in 0..4 {
+                        let mut next_frontier = Vec::new();
+                        for (generated_state, reference_state) in frontier {
+                            for label in labels {
+                                let actual = generated.transition(
+                                    &generated_state,
+                                    &mut generated_pool,
+                                    &policy,
+                                    label,
+                                    query,
+                                    settings,
+                                );
+                                let mut matches = query
+                                    .iter()
+                                    .map(|query_unit| *query_unit == label)
+                                    .collect::<Vec<_>>();
+                                matches.resize(
+                                    query.len() + transition_window_size(max_distance, query.len()),
+                                    false,
+                                );
+                                let expected = transition_epsilon_closed_state_pooled_cached(
+                                    &reference_state,
+                                    &mut reference_pool,
+                                    &matches,
+                                    query.len(),
+                                    settings,
+                                );
+
+                                assert_eq!(
+                                    actual.as_ref().map(State::positions),
+                                    expected.as_ref().map(State::positions),
+                                    "algorithm={algorithm:?} distance={max_distance} prefix={prefix_mode} label={label:?}",
+                                );
+                                if let (Some(actual), Some(expected)) = (actual, expected) {
+                                    next_frontier.push((actual, expected));
+                                }
+                            }
+                        }
+                        frontier = next_frontier;
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn affine_transition_materializes_a_borrowed_unit_cost_frontier_before_reset() {
+        let query = b"abca";
+        let policy = Unrestricted;
+        let max_cost = 2;
+        let mut mixed = CachedUnitTransitions::new(query.len(), max_cost);
+        let mut mixed_pool = StatePool::new();
+        let initial = initial_state(query.len(), max_cost, Algorithm::Standard);
+        let borrowed = mixed
+            .transition(
+                &initial,
+                &mut mixed_pool,
+                &policy,
+                b'a',
+                query,
+                TransitionSettings::new(max_cost, Algorithm::Standard, false),
+            )
+            .expect("unit-cost transition");
+        assert!(borrowed.borrows_canonical_positions());
+
+        let owned = State::from_positions(borrowed.positions().to_vec());
+        let params = AffineGapParams::new(1.0, 1.0, 1.0).expect("unit affine costs");
+        let settings = AffineTransitionSettings::new(max_cost, params, false);
+        let actual =
+            mixed.transition_affine(&borrowed, &mut mixed_pool, &policy, b'b', query, settings);
+
+        let mut reference = CachedUnitTransitions::new(query.len(), max_cost);
+        let mut reference_pool = StatePool::new();
+        let expected = reference.transition_affine(
+            &owned,
+            &mut reference_pool,
+            &policy,
+            b'b',
+            query,
+            settings,
+        );
+        assert_eq!(
+            actual.as_ref().map(State::positions),
+            expected.as_ref().map(State::positions)
+        );
     }
 
     #[test]

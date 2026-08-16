@@ -210,7 +210,7 @@ impl<U: CharUnit> CachedF64Transitions<U> {
     {
         debug_assert_eq!(query.len(), self.query_length);
         debug_assert_eq!(settings.max_cost.to_bits(), self.max_cost_bits);
-        let matches = self.cache.matches_for(policy, dict_unit, query);
+        let (matches, _) = self.cache.matches_for(policy, dict_unit, query);
         transition_epsilon_closed_state_pooled_f64_cached(
             state,
             pool,

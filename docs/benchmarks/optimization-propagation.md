@@ -41,7 +41,7 @@ concrete dictionary backend or immutable foreign snapshot
                          |
                          v
          DictionaryNode generic visitation contract
-       for_each_edge / visit_edges_and_finality
+ filter_map_edges / filter_map_edges_and_finality
                          |
                          v
            query-surface traversal and scheduling
@@ -69,13 +69,18 @@ boundary adapter where their preconditions exist.
 | Static double-array-trie construction | Adapted for byte and char double-array tries | Double-array-specific arena construction and placement | Array base/check placement is not a DAWG-equivalence registry and cannot reuse Daciuk minimization |
 | Borrowed edge visitation | Direct for every production node backend | Generic `DictionaryNode::for_each_edge` seam with backend overrides | Backend can enumerate native edge storage while cloning only the returned child handle |
 | Fused finality plus edge visitation | Direct for every query surface that always expands a popped node; compatible fallback elsewhere | `DictionaryNode::visit_edges_and_finality` | The query scheduler inspects finality and outgoing edges in the same logical node step |
+| Predicate-first child materialization | Direct for every production node backend and applicable query scheduler | Generic `DictionaryNode::filter_map_edges` and `filter_map_edges_and_finality` seams with storage-specific overrides | The label projection is pure with respect to dictionary storage; a child handle is created exactly once only when projection accepts the label; traversal order and finality observation are unchanged |
 | Per-query characteristic-vector cache | Direct for byte, char, and `u64` unit-cost, affine-gap, and f64-weighted queries | Shared `CharacteristicCache<U>` behind `CachedUnitTransitions<U>` and `CachedF64Transitions<U>` | Query is immutable for the iterator lifetime and equality of units determines the characteristic vector; operation costs affect successors, not unit equivalence |
+| Class-only characteristic label cache | Direct for byte, char, and `u64` unit-cost queries | `CharacteristicCache<U>` maps hot labels to compact class IDs and owns each pattern once in a central class table | Exact label equality is retained for direct-table collision checks; a pattern is fetched only when the generated transition table misses |
 | Epsilon-closed queued states | Direct for all built-in unit-cost, affine-gap, and f64-weighted variants | Generic integer `AutomatonVariant` kernel and the corresponding weighted kernel | Initial and enqueued states are epsilon-closed exactly once |
+| Compact generated-state frontiers | Direct for queued built-in unit-cost ordinary, ordered, priority, ranked-value, value-filtered/value-yielding, and prefix-DFS iterators | `GeneratedStateId` and canonical transition rows in `CachedUnitTransitions<U>` | IDs and rows are query-local and append-only; sentinels cannot collide with a valid ID; collision buckets compare canonical position slices; public/stateful navigation may materialize a `State` adapter |
 | Bulk state-position copy | Direct for integer and f64 states with contiguous `Copy` positions | `extend_from_slice` in each state representation | Position layout is contiguous and copying preserves order and bit identity |
 | Pinned immutable provider snapshot | Direct for all resource-backed unit domains and algorithms | `ResourceTransducer::snapshot` and provider snapshot reuse | Provider honors immutable revision and stable node-identifier lifetime contracts |
 | Revision-memoized producer snapshot | Direct for DynamicDawg byte/char/`u64`, persistent ARTrie byte/char/`u64`/vocabulary, DAT byte/char, and SCDAWG byte/char resources | Unit-agnostic `SnapshotMemo` owned by each shared producer; successful mutations invalidate the cached revision | Snapshot capture and invalidation serialize on one short memo lock; mutation never holds a backend lock while invalidating; immutable backends retain revision zero indefinitely |
 | Cross-resource immutable node cache | Direct for every provider advertising `vt.snapshot.id.1`; private-cache fallback for older providers | Process-wide weak registry keyed by `(producer, revision)` and shared by all `Provider<U>` unit domains | The producer guarantees identity uniqueness and revision immutability; the weak registry does not extend snapshot lifetime; absence or rejection of the optional interface preserves existing behavior |
-| Chunked append-only provider arena | Direct for every producer snapshot node type | Unit- and backend-generic `NodeArena<N>` with atomically published 256-slot chunks, atomic ID-range reservation, and per-slot/per-edge `OnceLock`s | IDs are immutable for the snapshot lifetime; only directory growth locks; each expanded edge list is initialized once; releasing the last snapshot synchronously reclaims its chunks |
+| Chunked append-only provider arena | Direct for every producer snapshot node type | Unit- and backend-generic `NodeArena<N>` over `DenseArcSlots` with atomically published 256-slot chunks, fallible growth, atomic ID reservation, and per-edge publication cells | IDs are immutable for the snapshot lifetime; reads, growth, and publication are lock-free; a failed reservation consumes no ID; releasing the last snapshot synchronously reclaims its chunks |
+| Hybrid immutable consumer cache | Direct for every resource-backed node domain | `HybridOnceBoxSlots` shares one bounded dense prefix and sharded sparse overflow across unit domains | Cached entries are immutable and append-only for the query-owner lifetime; losing publications are reclaimed immediately; provider/vtable lineage prevents cross-provider identity aliasing |
+| Owner/key split and query-local faults | Direct for all resource cursors | One retained `Arc<Provider>` in `QueryCursor`, copy-only `ProviderRef`/foreign-node keys, and `AtomicTakeBox<BindingError>` per cursor | Cursor field drop order outlives every non-owning key; provider allocation never moves; each query observes only its own callback failure |
 | Atomic persistent root cardinality | Direct for persistent ARTrie byte/char/`u64`/vocabulary overlays | Generic counted `AtomicNodePtr<K,V>` publishes immutable root and exact term count in one ArcSwap CAS | Every membership-creating/removing CAS applies `+1`/`-1`; value-only and structural publications apply zero; prebuilt roots seed the count once; root and length are captured from the same revision |
 | Stack-paged provider edges | Direct for all foreign node domains | Generic `ForeignNode<U>` edge page | ABI edge descriptor has a fixed representation and the recommended page has a bounded stack size |
 | Fused provider node callback | Direct for providers advertising the optional interface | `VtDictionaryVisitVTable::node_visit` | Provider can return finality and one edge page under one validation/lock operation |
@@ -95,17 +100,17 @@ reintroduce allocation. The inventory is:
 
 | Family | Unit domains and node representations | Query optimization status | Construction status |
 |---|---|---|---|
-| Dynamic DAWG | `DynamicDawgNode`, `DynamicDawgCharNode`, `DynamicDawgU64Node` | Direct: borrowed/fused traversal and generic unit transition cache | Direct: sorted minimal and unordered sort-plus-minimal builders for set, mapped, and empty binding-batch dictionaries |
-| Double-array trie | `DoubleArrayTrieNode`, `DoubleArrayTrieCharNode` | Direct: borrowed/fused traversal and generic unit transition cache | Adapted: static double-array placement builder |
-| Path map | `TrieRefNode`, `TrieRefNodeChar` | Direct: borrowed/fused traversal and generic unit transition cache | Inapplicable: path-map persistence and snapshot ownership are not minimal-DAWG construction |
-| Suffix automaton | `SuffixNodeHandle`, `SuffixNodeCharHandle` | Direct: borrowed/fused traversal and generic unit transition cache | Inapplicable: suffix-link construction indexes substrings rather than a finite term language |
-| SCDAWG | `ScdawgNodeHandle`, `ScdawgCharNodeHandle` | Direct: borrowed/fused traversal and generic unit transition cache | Inapplicable: compact suffix-DAWG topology and end-position semantics differ from term-DAWG minimization |
-| Persistent suffix automaton | byte and char persistent node handles | Direct: borrowed/fused traversal and generic unit transition cache | Inapplicable: persistence, suffix links, and durable publication are defining invariants |
-| Persistent suffix tree | byte and char persistent node handles | Direct: borrowed/fused traversal and generic unit transition cache | Inapplicable: compressed suffix edges and durable arena ownership differ |
-| Persistent SCDAWG | byte and char persistent node handles | Direct: borrowed/fused traversal and generic unit transition cache | Inapplicable: persistent compact-suffix topology differs |
-| Persistent ARTrie overlay | generic key-encoding overlay node | Direct: borrowed/fused traversal and generic unit transition cache for supported key encodings | Inapplicable: adaptive-radix layout, transactional publication, and persistence replace finite-language minimization |
-| Transparent decorators | `AgeNode`, `CostAwareNode`, `LfuNode`, `LruNode`, `LruOptimizedNode`, `MemoryPressureNode`, `NoopNode`, `TtlNode`, and `PhoneticNormalizedNode` | Direct: generic child wrapping delegates both borrowed and fused visitation; mapped decorators delegate `value_at_final` | Inapplicable: decorators do not own construction topology |
-| Foreign resource | generic `ForeignNode<U>` | Direct: paged/fused provider visitation and immutable node caching | Inapplicable: the provider owns construction |
+| Dynamic DAWG | `DynamicDawgNode`, `DynamicDawgCharNode`, `DynamicDawgU64Node` | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Direct: sorted minimal and unordered sort-plus-minimal builders for set, mapped, and empty binding-batch dictionaries |
+| Double-array trie | `DoubleArrayTrieNode`, `DoubleArrayTrieCharNode` | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Adapted: static double-array placement builder |
+| Path map | `TrieRefNode`, `TrieRefNodeChar` | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Inapplicable: path-map persistence and snapshot ownership are not minimal-DAWG construction |
+| Suffix automaton | `SuffixNodeHandle`, `SuffixNodeCharHandle` | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Inapplicable: suffix-link construction indexes substrings rather than a finite term language |
+| SCDAWG | `ScdawgNodeHandle`, `ScdawgCharNodeHandle` | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Inapplicable: compact suffix-DAWG topology and end-position semantics differ from term-DAWG minimization |
+| Persistent suffix automaton | byte and char persistent node handles | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Inapplicable: persistence, suffix links, and durable publication are defining invariants |
+| Persistent suffix tree | byte and char persistent node handles | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Inapplicable: compressed suffix edges and durable arena ownership differ |
+| Persistent SCDAWG | byte and char persistent node handles | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Inapplicable: persistent compact-suffix topology differs |
+| Persistent ARTrie overlay | generic key-encoding overlay node | Direct: predicate-first borrowed/fused traversal and generic unit transition cache for supported key encodings | Inapplicable: adaptive-radix layout, transactional publication, and persistence replace finite-language minimization |
+| Transparent decorators | `AgeNode`, `CostAwareNode`, `LfuNode`, `LruNode`, `LruOptimizedNode`, `MemoryPressureNode`, `NoopNode`, `TtlNode`, and `PhoneticNormalizedNode` | Direct: generic child wrapping delegates borrowed, fused, and predicate-first visitation; mapped decorators delegate `value_at_final` | Inapplicable: decorators do not own construction topology |
+| Foreign resource | generic `ForeignNode<U>` | Direct: predicate-first paged/fused provider visitation and immutable node caching | Inapplicable: the provider owns construction |
 
 The persistent byte, char, vocabulary, and `u64` ARTrie public types reach the
 query engine through the overlay node implementation; compact and
@@ -125,17 +130,19 @@ nodes built from its output inherit the traversal seams listed above.
 Standard Levenshtein, optimal string alignment (the public `Transposition`
 variant), merge-and-split, and unrestricted Damerau-Levenshtein queries share
 the `AutomatonVariant` state machinery. `CachedUnitTransitions<U>` owns the
-characteristic cache and invokes the monomorphized variant kernel. Affine-gap
-queries share that cache and epsilon-closed queue invariant while supplying
-their exact fixed-point parameters to the statically dispatched `AffineV`
-kernel. The following public query
-surfaces use the shared cache for their unit-cost variants:
+characteristic-class cache, canonical generated-state rows, and monomorphized
+variant kernel. Queued unit-cost schedulers retain only `GeneratedStateId`
+handles; the materializing transition adapter remains available to stateful
+navigation APIs. Affine-gap queries share characteristic caching and the
+epsilon-closed queue invariant while supplying their exact fixed-point
+parameters to the statically dispatched `AffineV` kernel. The following public
+query surfaces use the shared cache for their unit-cost variants:
 
 - breadth-first traversal and value-yielding traversal;
 - ordered, prefix-ordered, ranked-value, and priority traversal;
 - value-predicate and value-set filtering;
 - prefix-pruned depth-first traversal; and
-- zipper traversal.
+- zipper traversal (with a materialized state at the navigation boundary).
 
 Match-mode wrappers, filtered-ordered wrappers, and resource cursors delegate to
 one of these iterators and therefore inherit the same kernel.

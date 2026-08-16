@@ -1,8 +1,10 @@
 //! Lazy value-aware queries ordered by distance and derived confidence.
 
 use super::suggestion::{Suggestion, SuggestionScorer};
-use super::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
-use super::{Algorithm, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
+use super::transition::{
+    initial_state, CachedUnitTransitions, GeneratedStateId, TransitionSettings,
+};
+use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::value::DictionaryValue;
 use libdictenstein::{CharUnit, MappedDictionaryNode};
 use rustc_hash::FxHashSet;
@@ -19,14 +21,14 @@ struct RankedPathNode<U: CharUnit> {
 struct RankedIntersection<N: MappedDictionaryNode> {
     label: Option<N::Unit>,
     node: N,
-    state: State,
+    state: GeneratedStateId,
     parent: usize,
     children_queued: bool,
     is_final: bool,
 }
 
 impl<N: MappedDictionaryNode> RankedIntersection<N> {
-    fn root(node: N, state: State) -> Self {
+    fn root(node: N, state: GeneratedStateId) -> Self {
         Self {
             label: None,
             node,
@@ -37,7 +39,7 @@ impl<N: MappedDictionaryNode> RankedIntersection<N> {
         }
     }
 
-    fn child(label: N::Unit, node: N, state: State, parent: usize) -> Self {
+    fn child(label: N::Unit, node: N, state: GeneratedStateId, parent: usize) -> Self {
         Self {
             label: Some(label),
             node,
@@ -146,6 +148,9 @@ where
     ) -> Self {
         let query_length = query.len();
         let initial = initial_state(query_length, max_distance, algorithm);
+        let settings = TransitionSettings::new(max_distance, algorithm, false);
+        let mut unit_transitions = CachedUnitTransitions::new(query_length, max_distance);
+        let initial = unit_transitions.seed_generated_state(&initial, settings);
         let mut pending_by_distance = (0..=max_distance)
             .map(|_| VecDeque::with_capacity(32))
             .collect::<Vec<_>>();
@@ -159,7 +164,7 @@ where
             scorer,
             policy,
             state_pool: StatePool::new(),
-            unit_transitions: CachedUnitTransitions::new(query_length, max_distance),
+            unit_transitions,
             path_arena: Vec::with_capacity(64),
             seen: FxHashSet::default(),
             sorted_buffer: Vec::with_capacity(64),
@@ -176,51 +181,57 @@ where
         self.sorted_buffer.len()
     }
 
-    fn push_path(&mut self, label: N::Unit, parent: usize) -> usize {
-        let depth = if parent == NO_PATH {
-            1
-        } else {
-            self.path_arena[parent].depth.saturating_add(1)
-        };
-        let index = self.path_arena.len();
-        self.path_arena.push(RankedPathNode {
-            label,
-            depth,
-            parent,
-        });
-        index
-    }
-
     fn queue_children_and_finality(&mut self, intersection: &mut RankedIntersection<N>) -> bool {
         if intersection.children_queued {
             return intersection.is_final;
         }
         intersection.children_queued = true;
         let mut parent_path = None;
-        intersection.is_final = intersection.node.visit_edges_and_finality(|label, child| {
-            if let Some(state) = self.unit_transitions.transition(
-                &intersection.state,
-                &mut self.state_pool,
-                &self.policy,
-                label,
-                &self.query,
-                TransitionSettings::new(self.max_distance, self.algorithm, false),
-            ) {
-                if let Some(distance) = state
+        let state_pool = &mut self.state_pool;
+        let unit_transitions = &mut self.unit_transitions;
+        let policy = &self.policy;
+        let query = &self.query;
+        let max_distance = self.max_distance;
+        let algorithm = self.algorithm;
+        let paths = &mut self.path_arena;
+        let pending = &mut self.pending_by_distance;
+        intersection.is_final = intersection.node.filter_map_edges_and_finality(
+            |label| {
+                let state = unit_transitions.transition_generated(
+                    intersection.state,
+                    state_pool,
+                    policy,
+                    label,
+                    query,
+                    TransitionSettings::new(max_distance, algorithm, false),
+                )?;
+                let state_view = unit_transitions.generated_frontier_state(state);
+                state_view
                     .min_distance()
-                    .filter(|distance| *distance <= self.max_distance)
-                {
-                    let parent = *parent_path.get_or_insert_with(|| match intersection.label {
-                        Some(current) => self.push_path(current, intersection.parent),
-                        None => NO_PATH,
-                    });
-                    self.pending_by_distance[distance]
-                        .push_back(RankedIntersection::child(label, child, state, parent));
-                } else {
-                    self.state_pool.release(state);
-                }
-            }
-        });
+                    .filter(|distance| *distance <= max_distance)
+                    .map(|distance| (state, distance))
+            },
+            |label, child, (state, distance)| {
+                let parent = *parent_path.get_or_insert_with(|| match intersection.label {
+                    Some(current) => {
+                        let depth = if intersection.parent == NO_PATH {
+                            1
+                        } else {
+                            paths[intersection.parent].depth.saturating_add(1)
+                        };
+                        let index = paths.len();
+                        paths.push(RankedPathNode {
+                            label: current,
+                            depth,
+                            parent: intersection.parent,
+                        });
+                        index
+                    }
+                    None => NO_PATH,
+                });
+                pending[distance].push_back(RankedIntersection::child(label, child, state, parent));
+            },
+        );
         intersection.is_final
     }
 
@@ -255,8 +266,9 @@ where
             {
                 let is_final = self.queue_children_and_finality(&mut intersection);
                 if is_final {
-                    let distance = intersection
-                        .state
+                    let distance = self
+                        .unit_transitions
+                        .generated_frontier_state(intersection.state)
                         .infer_distance(self.query.len())
                         .unwrap_or(usize::MAX);
                     if distance <= self.max_distance {

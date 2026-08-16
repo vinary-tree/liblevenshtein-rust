@@ -1,0 +1,164 @@
+{
+  "schema": "liblevenshtein.structural-optimization-wave.v1",
+  "date_utc": "2026-08-16",
+  "environment": {
+    "cpu": "AMD Ryzen Threadripper PRO 5975WX 32-Cores",
+    "kernel": "Linux 7.1.6-arch1-1 x86_64",
+    "rustc": "1.97.1 (8bab26f4f 2026-07-14)",
+    "java": "OpenJDK 26.0.2",
+    "amd_uprof": "5.3.521.0",
+    "timing_cpu": 3,
+    "liblevenshtein_rust_base_commit": "7c6a69b148d6d3d45e6fc1e7b73c4e781227a216",
+    "libdictenstein_base_commit": "750df4b2b0fb8ed905a14d5ecc53cc47a38b4d3b"
+  },
+  "anchor": {
+    "dictionary_terms": 79343,
+    "query_set": "standard/d2/std-d2",
+    "queries": 1000,
+    "matches": 18514,
+    "term_bytes": 82131,
+    "distance_sum": 36201,
+    "checksum_u64": 7775666136087164888,
+    "checksum_hex": "6be8b7274d8277d8"
+  },
+  "retained_mechanisms": [
+    {
+      "name": "compact-generated-state-frontiers",
+      "scope": "queued built-in unit-cost query iterators",
+      "mechanism": "queue GeneratedStateId handles and retain canonical position slices in the transition table",
+      "causal_gate": {
+        "generated_transition_hits": 6747684,
+        "generated_transition_misses": 248558,
+        "temporary_pool_misses": 0,
+        "state_copy_calls": 0,
+        "pending_queue_peak": 1263
+      }
+    },
+    {
+      "name": "predicate-first-dictionary-visitation",
+      "scope": "all production DictionaryNode backends with representation-specific overrides",
+      "mechanism": "compute transition acceptance from the edge label before cloning or constructing the child handle",
+      "causal_gate": {
+        "edges_enumerated": 6996242,
+        "accepted_edges": 1730660,
+        "rejected_edges_avoiding_child_materialization": 5265582
+      }
+    },
+    {
+      "name": "lock-free-bounded-snapshot-storage",
+      "scope": "producer arena, consumer immutable-node cache, and query fault delivery",
+      "mechanism": "append-only atomic slots with fallible growth, dense-prefix/sparse-overflow lookup, query-local fault mailboxes, and owner/key separation",
+      "causal_gate": {
+        "snapshots_created": 1,
+        "provider_arena_locks": 0,
+        "provider_edge_callbacks": 58677,
+        "foreign_node_cache_hits": 1672983,
+        "foreign_node_cache_misses": 58677,
+        "nodes_materialized": 88327,
+        "nodes_reclaimed": 88327
+      }
+    },
+    {
+      "name": "class-only-characteristic-label-cache",
+      "scope": "CachedUnitTransitions for byte, char, and u64 labels",
+      "mechanism": "direct and overflow label entries retain only a compact class ID; one central class table owns each characteristic pattern",
+      "experiment": "H-O32",
+      "control_samples": 54,
+      "control_median_ns": 204104158,
+      "treatment_samples": 54,
+      "treatment_median_ns": 190241696,
+      "median_reduction_fraction": 0.067916,
+      "welch_p": 1.323e-11,
+      "cohen_d": -1.6567,
+      "decision": "retain"
+    }
+  ],
+  "rejected_mechanisms": [
+    {
+      "name": "flat-contiguous-generated-transition-matrix",
+      "control_median_ns": 153245114,
+      "treatment_median_ns": 179958171,
+      "decision": "revert",
+      "interpretation": "row expansion and copying outweighed any indexing or locality benefit"
+    },
+    {
+      "name": "compact-foreign-edge-child-identifiers",
+      "experiment": "H-O31",
+      "control_samples": 54,
+      "control_median_ns": 200548795,
+      "treatment_samples": 54,
+      "treatment_median_ns": 284594556,
+      "cohen_d": 5.35,
+      "decision": "revert",
+      "interpretation": "re-resolving accepted children in the hybrid directory cost more than the removed per-edge atomic pointer"
+    },
+    {
+      "name": "foreign-node-structure-of-arrays",
+      "experiment": "H-O33",
+      "control_samples": 54,
+      "control_median_ns": 189383281,
+      "treatment_samples": 54,
+      "treatment_median_ns": 199140787,
+      "cohen_d": 3.19,
+      "decision": "revert",
+      "interpretation": "parallel-array indexing and lost edge-record locality outweighed the denser label scan"
+    }
+  ],
+  "final_query_parity": {
+    "pure_rust": {
+      "samples": 51,
+      "median_ns": 138926647,
+      "min_ns": 136888573,
+      "max_ns": 141828048
+    },
+    "legacy_java": {
+      "samples": 30,
+      "median_ns": 382407341,
+      "min_ns": 380229772,
+      "max_ns": 387885628
+    },
+    "legacy_java_over_pure_rust_median": 2.7526,
+    "resource_rust": {
+      "samples": 54,
+      "median_ns": 189383281,
+      "min_ns": 183617055,
+      "max_ns": 195604413
+    },
+    "resource_over_pure_rust_median": 1.2826
+  },
+  "final_construction": {
+    "rust_unordered_bulk": {
+      "samples": 30,
+      "median_ns": 14701753,
+      "min_ns": 14295684,
+      "max_ns": 16387092
+    },
+    "rust_preordered_bulk": {
+      "samples": 30,
+      "median_ns": 12022522,
+      "min_ns": 11719660,
+      "max_ns": 12603031
+    },
+    "rust_incremental_stream": {
+      "samples": 10,
+      "median_ns": 67165189,
+      "min_ns": 66292808,
+      "max_ns": 67259728
+    },
+    "legacy_java_preordered_median_ns": 34207472
+  },
+  "post_treatment_uprof": {
+    "passes": 15,
+    "query_ns": 2165633492,
+    "self_cpu_percent": {
+      "foreign_predicate_first_edge_loop": 30.26,
+      "generated_transition": 21.49,
+      "query_cursor_next_match": 11.40,
+      "epsilon_closed_transition_kernel": 5.70,
+      "foreign_node_inspection": 4.82,
+      "dense_arena_lookup": 0.44,
+      "dense_arena_growth": 0.44
+    },
+    "interpretation": "transition and frontier processing remain dominant; arena locking is absent and atomic arena lookup is below one percent self CPU in this sample"
+  }
+}

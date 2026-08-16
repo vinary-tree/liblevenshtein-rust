@@ -4,7 +4,30 @@ use super::algorithm::Algorithm;
 use super::position::Position;
 use super::variant::{with_variant, AutomatonVariant, TransitionCtx, VariantSpec};
 use super::variants::StandardV;
+use rustc_hash::FxHasher;
 use smallvec::SmallVec;
+use std::hash::{Hash, Hasher};
+use std::ptr::NonNull;
+
+#[derive(Debug, Clone)]
+enum PositionStorage {
+    /// Mutable transition scratch. Boxing keeps queued `State` values compact.
+    Owned(Box<SmallVec<[Position; 8]>>),
+    /// Immutable positions owned by one query's generated-state table.
+    ///
+    /// The table allocation is stable and outlives every state in the query's
+    /// frontier. A non-owning slice pointer makes frontier cloning a plain
+    /// pointer copy instead of an atomic reference-count operation.
+    BorrowedCanonical(NonNull<[Position]>),
+}
+
+// SAFETY: `BorrowedCanonical` points only to immutable `Position` slices. Its
+// constructor is crate-private and is used solely by query iterators whose
+// generated-state table is declared after (and therefore dropped after) every
+// frontier that can contain the pointer. Owned storage has the ordinary
+// `SmallVec` auto-traits.
+unsafe impl Send for PositionStorage {}
+unsafe impl Sync for PositionStorage {}
 
 /// A state in the Levenshtein automaton.
 ///
@@ -12,11 +35,14 @@ use smallvec::SmallVec;
 /// Duplicate and subsumed positions are automatically removed to
 /// minimize state space.
 ///
-/// # SmallVec Optimization
+/// # Compact frontier representation
 ///
-/// Uses SmallVec with inline size of 8 to avoid heap allocations for typical states.
-/// This optimization is theoretically justified by the **bounded diagonal property**
-/// (Theorem 8.2, Mitankin et al., TCS 2011).
+/// Mutable transition scratch uses a pooled `SmallVec` with inline size 8. The
+/// `SmallVec` is boxed so a pending dictionary intersection does not carry its
+/// 192-byte inline buffer through the traversal queue. Once a state is interned
+/// by the query-local generated transition table, it instead borrows one
+/// canonical immutable position slice from that table. Query iterators own the
+/// table until after their pending frontiers are dropped.
 ///
 /// For Standard Levenshtein with error bound n=2:
 /// - Diagonal bound c = 2
@@ -40,19 +66,29 @@ use smallvec::SmallVec;
 ///   410(37-39):2339-2358.
 /// - See: `docs/research/universal-levenshtein/TCS_2011_LAZY_APPLICABILITY.md`
 ///   Section 1.1 for detailed analysis
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct State {
     /// Positions in this state, maintained in sorted order.
-    /// SmallVec avoids heap allocation for states with ≤ 8 positions (the typical case).
-    /// Profiling shows most states have 2-5 positions, making this optimization effective.
-    positions: SmallVec<[Position; 8]>,
+    positions: PositionStorage,
+    /// Query-local generated-table identity. Zero denotes an external or
+    /// otherwise non-interned state and is never used as a trusted identity.
+    generated_id: u64,
 }
+
+impl PartialEq for State {
+    fn eq(&self, other: &Self) -> bool {
+        self.positions() == other.positions()
+    }
+}
+
+impl Eq for State {}
 
 impl State {
     /// Create a new empty state
     pub fn new() -> Self {
         Self {
-            positions: SmallVec::new(),
+            positions: PositionStorage::Owned(Box::default()),
+            generated_id: 0,
         }
     }
 
@@ -60,7 +96,10 @@ impl State {
     pub fn single(position: Position) -> Self {
         let mut positions = SmallVec::new();
         positions.push(position);
-        Self { positions }
+        Self {
+            positions: PositionStorage::Owned(Box::new(positions)),
+            generated_id: 0,
+        }
     }
 
     /// Create a state from a vector of positions
@@ -70,7 +109,8 @@ impl State {
         positions.sort();
         positions.dedup();
         Self {
-            positions: SmallVec::from_vec(positions),
+            positions: PositionStorage::Owned(Box::new(SmallVec::from_vec(positions))),
+            generated_id: 0,
         }
     }
 
@@ -134,7 +174,7 @@ impl State {
     ) -> bool {
         crate::causal_perf::record_state_insert_attempts(1);
         // Check if this position is subsumed by an existing one
-        for existing in &self.positions {
+        for existing in self.positions() {
             // Exact identity is independent of algorithmic dominance. In
             // particular, MergeAndSplit dominance is intentionally strict and
             // therefore irreflexive, but a canonical state must still reject
@@ -148,18 +188,18 @@ impl State {
             }
         }
 
+        self.generated_id = 0;
+        let positions = self.owned_positions_mut();
+
         // Remove any positions that this new position subsumes
-        self.positions.retain(|p| {
+        positions.retain(|p| {
             crate::causal_perf::record_subsumption_checks(1);
             !V::subsumes(&position, p, ctx)
         });
 
         // Insert in sorted position
-        let insert_pos = self
-            .positions
-            .binary_search(&position)
-            .unwrap_or_else(|pos| pos);
-        self.positions.insert(insert_pos, position);
+        let insert_pos = positions.binary_search(&position).unwrap_or_else(|pos| pos);
+        positions.insert(insert_pos, position);
         crate::causal_perf::record_state_insert_retained(1);
         true
     }
@@ -178,37 +218,121 @@ impl State {
         other: &State,
         ctx: &TransitionCtx<V::Params>,
     ) {
-        for position in &other.positions {
+        for position in other.positions() {
             self.insert_with::<V>(*position, ctx);
         }
     }
 
     /// Get the head (first) position
     pub fn head(&self) -> Option<&Position> {
-        self.positions.first()
+        self.positions().first()
     }
 
     /// Get all positions
     #[inline(always)]
     pub fn positions(&self) -> &[Position] {
-        &self.positions
+        match &self.positions {
+            PositionStorage::Owned(positions) => positions,
+            PositionStorage::BorrowedCanonical(positions) => {
+                // SAFETY: see the `PositionStorage` invariant. The pointee is
+                // immutable and remains live for every use of this State.
+                unsafe { positions.as_ref() }
+            }
+        }
+    }
+
+    /// Content fingerprint used by the query-local generated transition table.
+    ///
+    /// This is only an index accelerator. The memoizer compares the complete
+    /// canonical position slice as well, so a collision cannot affect results.
+    #[inline]
+    pub(crate) fn transition_fingerprint(&self) -> u64 {
+        let mut hasher = FxHasher::default();
+        self.positions().hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[inline(always)]
+    pub(crate) const fn generated_id(&self) -> u64 {
+        self.generated_id
+    }
+
+    #[inline(always)]
+    pub(crate) const fn borrows_canonical_positions(&self) -> bool {
+        matches!(self.positions, PositionStorage::BorrowedCanonical(_))
+    }
+
+    #[inline(always)]
+    pub(crate) fn from_canonical_positions(
+        positions: NonNull<[Position]>,
+        generated_id: u64,
+    ) -> Self {
+        debug_assert_ne!(generated_id, 0);
+        Self {
+            positions: PositionStorage::BorrowedCanonical(positions),
+            generated_id,
+        }
+    }
+
+    /// Replace mutable transition scratch with one canonical shared slice and
+    /// return the scratch allocation in a pool-ready state.
+    #[inline]
+    pub(crate) fn adopt_canonical_positions(
+        &mut self,
+        positions: NonNull<[Position]>,
+        generated_id: u64,
+    ) -> Option<Self> {
+        debug_assert_ne!(generated_id, 0);
+        let previous = std::mem::replace(
+            &mut self.positions,
+            PositionStorage::BorrowedCanonical(positions),
+        );
+        self.generated_id = generated_id;
+        match previous {
+            PositionStorage::Owned(positions) => Some(Self {
+                positions: PositionStorage::Owned(positions),
+                generated_id: 0,
+            }),
+            PositionStorage::BorrowedCanonical(_) => None,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn has_owned_positions(&self) -> bool {
+        matches!(self.positions, PositionStorage::Owned(_))
+    }
+
+    #[inline]
+    fn owned_positions_mut(&mut self) -> &mut SmallVec<[Position; 8]> {
+        if let PositionStorage::BorrowedCanonical(positions) = self.positions {
+            // SAFETY: copy while the canonical table still owns the immutable
+            // slice, before replacing the non-owning pointer.
+            let owned = unsafe { SmallVec::from_slice(positions.as_ref()) };
+            self.positions = PositionStorage::Owned(Box::new(owned));
+        }
+        match &mut self.positions {
+            PositionStorage::Owned(positions) => positions,
+            PositionStorage::BorrowedCanonical(_) => {
+                unreachable!("canonical state was materialized")
+            }
+        }
     }
 
     /// Check if this state is empty
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
-        self.positions.is_empty()
+        self.positions().is_empty()
     }
 
     /// Get the number of positions
     #[inline(always)]
     pub fn len(&self) -> usize {
-        self.positions.len()
+        self.positions().len()
     }
 
     /// Iterate over positions
     pub fn iter(&self) -> impl Iterator<Item = &Position> {
-        self.positions.iter()
+        self.positions().iter()
     }
 
     /// Clear all positions from this state.
@@ -223,7 +347,8 @@ impl State {
     /// - Memory: Vec capacity is preserved for reuse
     #[inline]
     pub fn clear(&mut self) {
-        self.positions.clear();
+        self.owned_positions_mut().clear();
+        self.generated_id = 0;
     }
 
     /// Copy all positions from another state into this one.
@@ -238,17 +363,21 @@ impl State {
     /// - Position is Copy, so this is a fast memcpy of the positions
     #[inline]
     pub fn copy_from(&mut self, other: &State) {
+        let other_positions = other.positions();
         crate::causal_perf::record_state_copy_calls(1);
-        crate::causal_perf::record_state_positions_copied(other.positions.len() as u64);
+        crate::causal_perf::record_state_positions_copied(other_positions.len() as u64);
         crate::causal_perf::record_state_bytes_copied(
-            other
-                .positions
+            other_positions
                 .len()
                 .saturating_mul(std::mem::size_of::<Position>()) as u64,
         );
-        self.positions.clear();
-        self.positions.reserve(other.positions.len());
-        self.positions.extend_from_slice(&other.positions);
+        // `copy_from` is public, so never propagate the table-owned borrowed
+        // representation into an independently retained destination.
+        let positions = self.owned_positions_mut();
+        positions.clear();
+        positions.reserve(other_positions.len());
+        positions.extend_from_slice(other_positions);
+        self.generated_id = 0;
     }
 
     /// Get the minimum edit distance in this state
@@ -258,25 +387,26 @@ impl State {
     pub fn min_distance(&self) -> Option<usize> {
         // Optimization: positions are sorted, and since we maintain subsumption,
         // the first position often has the minimum errors. Check it first.
-        self.positions.first().map(|first| {
+        let positions = self.positions();
+        positions.first().map(|first| {
             // Fast path: if we only have one position, return it immediately
-            if self.positions.len() == 1 {
+            if positions.len() == 1 {
                 return first.num_errors;
             }
 
             // SIMD path: use vectorized horizontal minimum for 4-8 positions
             #[cfg(target_arch = "x86_64")]
             {
-                let len = self.positions.len();
+                let len = positions.len();
                 if (4..=8).contains(&len) {
                     let errors: smallvec::SmallVec<[usize; 8]> =
-                        self.positions.iter().map(|p| p.num_errors).collect();
+                        positions.iter().map(|p| p.num_errors).collect();
                     return super::simd::find_minimum_simd(&errors, len);
                 }
             }
 
             // Scalar fallback for len > 8 or when SIMD unavailable.
-            self.positions[1..]
+            positions[1..]
                 .iter()
                 .fold(first.num_errors, |min_errors, p| {
                     min_errors.min(p.num_errors)
@@ -305,14 +435,15 @@ impl State {
         params: V::Params,
     ) -> Option<usize> {
         // Fast path: single position (common case)
-        if self.positions.len() == 1 {
-            return V::finish_cost(&self.positions[0], query_length, params);
+        let positions = self.positions();
+        if positions.len() == 1 {
+            return V::finish_cost(&positions[0], query_length, params);
         }
 
         // General case: find minimum across all NON-SPECIAL positions
         // Special positions are intermediate states for transposition/merge/split
         // and should not contribute to the final distance calculation
-        self.positions
+        positions
             .iter()
             .filter_map(|p| V::finish_cost(p, query_length, params))
             .min()
@@ -328,8 +459,9 @@ impl State {
     #[inline]
     pub fn infer_prefix_distance(&self, query_length: usize) -> Option<usize> {
         // Fast path: single position
-        if self.positions.len() == 1 {
-            let p = &self.positions[0];
+        let positions = self.positions();
+        if positions.len() == 1 {
+            let p = &positions[0];
             return if p.term_index >= query_length {
                 Some(p.num_errors)
             } else {
@@ -338,7 +470,7 @@ impl State {
         }
 
         // General case: find minimum among positions that consumed the full query
-        self.positions
+        positions
             .iter()
             .filter(|p| p.term_index >= query_length)
             .map(|p| p.num_errors)

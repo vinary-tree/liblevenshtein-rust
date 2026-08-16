@@ -19,6 +19,7 @@ struct Args {
     queries: PathBuf,
     max_distance: usize,
     batch_size: usize,
+    passes: usize,
 }
 
 fn fail(message: impl AsRef<str>) -> ! {
@@ -31,6 +32,7 @@ fn parse_args() -> Args {
     let mut queries = None;
     let mut max_distance = None;
     let mut batch_size = 256usize;
+    let mut passes = 1usize;
     let mut argv = std::env::args().skip(1);
     while let Some(flag) = argv.next() {
         let value = argv
@@ -51,17 +53,26 @@ fn parse_args() -> Args {
                     .parse()
                     .unwrap_or_else(|_| fail("--batch-size must be a positive integer"))
             }
+            "--passes" => {
+                passes = value
+                    .parse()
+                    .unwrap_or_else(|_| fail("--passes must be a positive integer"))
+            }
             _ => fail(format!("unknown flag {flag:?}")),
         }
     }
     if batch_size == 0 {
         fail("--batch-size must be positive");
     }
+    if passes == 0 {
+        fail("--passes must be positive");
+    }
     Args {
         dictionary: dictionary.unwrap_or_else(|| fail("--dictionary is required")),
         queries: queries.unwrap_or_else(|| fail("--queries is required")),
         max_distance: max_distance.unwrap_or_else(|| fail("--max-distance is required")),
         batch_size,
+        passes,
     }
 }
 
@@ -127,26 +138,28 @@ fn main() {
     let mut distance_sum = 0u64;
     let mut checksum = 0u64;
     let mut batches = 0u64;
-    for query in &queries {
-        let mut cursor = transducer
-            .query_utf8(query, args.max_distance, QueryOrder::Traversal)
-            .unwrap_or_else(|error| fail(format!("query creation failed: {error}")));
-        loop {
-            let count = cursor
-                .next_batch(&mut batch, args.batch_size)
-                .unwrap_or_else(|error| fail(format!("query traversal failed: {error}")));
-            if count == 0 {
-                break;
-            }
-            batches = batches.saturating_add(1);
-            for item in batch.as_slice() {
-                let MatchTerm::Utf8(term) = &item.term else {
-                    fail("Unicode resource returned a non-UTF-8 term");
-                };
-                matches = matches.saturating_add(1);
-                term_bytes = term_bytes.saturating_add(term.len() as u64);
-                distance_sum = distance_sum.saturating_add(item.distance as u64);
-                checksum = checksum.wrapping_add(entry_hash(term, item.distance));
+    for _ in 0..args.passes {
+        for query in &queries {
+            let mut cursor = transducer
+                .query_utf8(query, args.max_distance, QueryOrder::Traversal)
+                .unwrap_or_else(|error| fail(format!("query creation failed: {error}")));
+            loop {
+                let count = cursor
+                    .next_batch(&mut batch, args.batch_size)
+                    .unwrap_or_else(|error| fail(format!("query traversal failed: {error}")));
+                if count == 0 {
+                    break;
+                }
+                batches = batches.saturating_add(1);
+                for item in batch.as_slice() {
+                    let MatchTerm::Utf8(term) = &item.term else {
+                        fail("Unicode resource returned a non-UTF-8 term");
+                    };
+                    matches = matches.saturating_add(1);
+                    term_bytes = term_bytes.saturating_add(term.len() as u64);
+                    distance_sum = distance_sum.saturating_add(item.distance as u64);
+                    checksum = checksum.wrapping_add(entry_hash(term, item.distance));
+                }
             }
         }
     }
@@ -200,6 +213,7 @@ fn print_json(
     writeln!(&mut json, "  \"query_count\": {query_count},").unwrap();
     writeln!(&mut json, "  \"max_distance\": {},", args.max_distance).unwrap();
     writeln!(&mut json, "  \"batch_size\": {},", args.batch_size).unwrap();
+    writeln!(&mut json, "  \"passes\": {},", args.passes).unwrap();
     writeln!(&mut json, "  \"build_ns\": {build_ns},").unwrap();
     writeln!(&mut json, "  \"query_ns\": {query_ns},").unwrap();
     writeln!(&mut json, "  \"matches\": {matches},").unwrap();
@@ -217,6 +231,14 @@ fn print_json(
         ("edges_enumerated", consumer.edges_enumerated),
         ("transition_attempts", consumer.transition_attempts),
         ("transition_accepted", consumer.transition_accepted),
+        (
+            "generated_transition_hits",
+            consumer.generated_transition_hits,
+        ),
+        (
+            "generated_transition_misses",
+            consumer.generated_transition_misses,
+        ),
         ("characteristic_vectors", consumer.characteristic_vectors),
         ("characteristic_units", consumer.characteristic_units),
         ("state_bytes_copied", consumer.state_bytes_copied),

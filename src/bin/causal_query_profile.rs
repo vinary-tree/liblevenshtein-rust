@@ -268,6 +268,11 @@ fn print_json(args: &Args, measurement: &Measurement) {
         ("edges_enumerated", stats.edges_enumerated),
         ("transition_attempts", stats.transition_attempts),
         ("transition_accepted", stats.transition_accepted),
+        ("generated_transition_hits", stats.generated_transition_hits),
+        (
+            "generated_transition_misses",
+            stats.generated_transition_misses,
+        ),
         ("epsilon_input_positions", stats.epsilon_input_positions),
         ("epsilon_output_positions", stats.epsilon_output_positions),
         ("characteristic_vectors", stats.characteristic_vectors),

@@ -58,9 +58,9 @@ missed. Experiment 205 is therefore rejected. Practical matrix parity does not
 retroactively satisfy that stronger target.
 
 Construction moved beyond parity as well. The current direct Rust medians are
-21.416 ms for arbitrary-order byte terms and 11.076 ms for the explicit
-pre-ordered constructor, versus the historical 41.2 ms Java ordered-build
-reference. The binding-owned freeze build measured 26.547 ms after H-O28,
+14.702 ms for arbitrary-order byte terms and 12.023 ms for the explicit
+pre-ordered constructor, versus the contemporaneous causal-profile median of
+34.207 ms for Java's ordered builder. The binding-owned freeze build measured 26.547 ms after H-O28,
 down from 96.271 ms. These values show that the former construction deficit
 was architectural path-copy/publication work, not an inherent Rust or
 reclamation disadvantage.
@@ -70,6 +70,13 @@ measured 42.057 ms over 51 samples, with a 95% bootstrap median interval of
 [41.959, 42.396] ms. It passes the 51.2 ms core threshold by 17.9%, confirming
 that the remaining JVM-level differences are boundary/runtime effects rather
 than a slower native standard-Levenshtein kernel.
+
+The 2026-08-16 structural follow-up independently reran the original
+`standard/d2/std-d2` direct-core comparison. Pure Rust measured 138.927 ms
+across 51 samples, while legacy pure Java measured 382.407 ms across 30
+samples, with the exact same 18,514-match checksum. This 2.75× direct-core
+lead does not replace the Java-to-Java matrix above: it isolates the native
+algorithm from FFM and managed result delivery.
 
 The current recommendation is consequently different from the phase-0 one:
 query throughput is no longer a reason to reject migration for workloads

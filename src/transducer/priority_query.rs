@@ -36,8 +36,10 @@
 //! }
 //! ```
 
-use super::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
-use super::{Algorithm, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
+use super::transition::{
+    initial_state, CachedUnitTransitions, GeneratedStateId, TransitionSettings,
+};
+use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::{CharUnit, DictionaryNode};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -45,12 +47,12 @@ use std::collections::BinaryHeap;
 /// Dictionary node paired with the current Levenshtein automaton state.
 struct PriorityIntersection<N: DictionaryNode> {
     node: N,
-    state: State,
+    state: GeneratedStateId,
 }
 
 impl<N: DictionaryNode> PriorityIntersection<N> {
     #[inline]
-    fn new(node: N, state: State) -> Self {
+    fn new(node: N, state: GeneratedStateId) -> Self {
         Self { node, state }
     }
 }
@@ -185,6 +187,9 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         let query_units = N::Unit::from_str(query);
         let query_len = query_units.len();
         let initial = initial_state(query_len, max_distance, algorithm);
+        let settings = TransitionSettings::new(max_distance, algorithm, false);
+        let mut unit_transitions = CachedUnitTransitions::new(query_len, max_distance);
+        let initial = unit_transitions.seed_generated_state(&initial, settings);
 
         let mut queue = BinaryHeap::with_capacity(64);
 
@@ -208,26 +213,8 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             algorithm,
             policy,
             state_pool: StatePool::new(),
-            unit_transitions: CachedUnitTransitions::new(query_len, max_distance),
+            unit_transitions,
         }
-    }
-
-    /// Compute the heuristic cost for a state.
-    ///
-    /// The heuristic is the minimum number of operations needed to reach
-    /// a final state, which is the number of unconsumed query characters.
-    #[inline]
-    fn heuristic(&self, state: &State) -> usize {
-        // Find the maximum term_index across all positions
-        // This represents how much of the query has been consumed
-        let max_consumed = state
-            .positions()
-            .iter()
-            .map(|p| p.term_index)
-            .max()
-            .unwrap_or(0);
-
-        self.query_len.saturating_sub(max_consumed)
     }
 
     /// Get the next match from the priority queue.
@@ -236,9 +223,9 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             let is_final = self.expand_children_and_finality(&entry);
             // Check if this is a final match
             if is_final {
-                let distance = entry
-                    .intersection
-                    .state
+                let distance = self
+                    .unit_transitions
+                    .generated_frontier_state(entry.intersection.state)
                     .infer_distance(self.query_len)
                     .unwrap_or(usize::MAX);
 
@@ -257,48 +244,51 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
     /// Expand children of a search entry into the priority queue.
     #[inline]
     fn expand_children_and_finality(&mut self, entry: &SearchEntry<N>) -> bool {
-        entry
-            .intersection
-            .node
-            .visit_edges_and_finality(|label, child_node| {
-                if let Some(next_state) = self.unit_transitions.transition(
-                    &entry.intersection.state,
-                    &mut self.state_pool,
-                    &self.policy,
+        let query_len = self.query_len;
+        let max_distance = self.max_distance;
+        let algorithm = self.algorithm;
+        let query = &self.query;
+        let policy = &self.policy;
+        let state_pool = &mut self.state_pool;
+        let unit_transitions = &mut self.unit_transitions;
+        let queue = &mut self.queue;
+
+        entry.intersection.node.filter_map_edges_and_finality(
+            |label| {
+                let next_state = unit_transitions.transition_generated(
+                    entry.intersection.state,
+                    state_pool,
+                    policy,
                     label,
-                    &self.query,
-                    TransitionSettings::new(
-                        self.max_distance,
-                        self.algorithm,
-                        false, // Not prefix mode
-                    ),
-                ) {
-                    // Compute costs for child
-                    let g_cost = next_state.min_distance().unwrap_or(0);
-
-                    // Prune if already over max distance
-                    if g_cost > self.max_distance {
-                        self.state_pool.release(next_state);
-                        return;
-                    }
-
-                    // Heuristic: remaining query characters that haven't been consumed
-                    // This is used for priority ordering, not for pruning
-                    let h_cost = self.heuristic(&next_state);
-
-                    let child_intersection = PriorityIntersection::new(child_node, next_state);
-
-                    let mut child_term_units = entry.term_units.clone();
-                    child_term_units.push(label);
-
-                    self.queue.push(SearchEntry::new(
-                        child_intersection,
-                        child_term_units,
-                        g_cost,
-                        h_cost,
-                    ));
+                    query,
+                    TransitionSettings::new(max_distance, algorithm, false),
+                )?;
+                let state = unit_transitions.generated_frontier_state(next_state);
+                let g_cost = state.min_distance().unwrap_or(0);
+                if g_cost > max_distance {
+                    return None;
                 }
-            })
+                let max_consumed = state
+                    .positions()
+                    .iter()
+                    .map(|position| position.term_index)
+                    .max()
+                    .unwrap_or(0);
+                let h_cost = query_len.saturating_sub(max_consumed);
+                Some((next_state, g_cost, h_cost))
+            },
+            |label, child_node, (next_state, g_cost, h_cost)| {
+                let child_intersection = PriorityIntersection::new(child_node, next_state);
+                let mut child_term_units = entry.term_units.clone();
+                child_term_units.push(label);
+                queue.push(SearchEntry::new(
+                    child_intersection,
+                    child_term_units,
+                    g_cost,
+                    h_cost,
+                ));
+            },
+        )
     }
 }
 

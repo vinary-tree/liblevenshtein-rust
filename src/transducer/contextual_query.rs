@@ -144,45 +144,54 @@ where
     pub fn stats(&self) -> ContextualQueryStats {
         self.stats
     }
-
-    fn cost_or_infinity(&mut self, cost: Option<f64>) -> f64 {
-        match cost.and_then(valid_cost) {
-            Some(cost) => cost,
-            None => {
-                self.stats.invalid_costs_rejected =
-                    self.stats.invalid_costs_rejected.saturating_add(1);
-                f64::INFINITY
-            }
-        }
-    }
-
-    fn child_column(&mut self, pending: &Pending<N>, unit: N::Unit) -> Vec<f64> {
-        let mut current = vec![f64::INFINITY; self.query.len() + 1];
-        let insertion_context = EditContext::new(&self.query, 0, &pending.prefix, Some(unit));
-        current[0] = pending.column[0]
-            + self.cost_or_infinity(self.costs.insertion_cost(&insertion_context, unit));
-
-        for index in 1..=self.query.len() {
-            let query_unit = self.query[index - 1];
-            let (insertion_cost, deletion_cost, substitution_cost) = {
-                let context = EditContext::new(&self.query, index - 1, &pending.prefix, Some(unit));
-                (
-                    self.costs.insertion_cost(&context, unit),
-                    self.costs.deletion_cost(&context, query_unit),
-                    self.costs.substitution_cost(&context, query_unit, unit),
-                )
-            };
-            let insertion = pending.column[index] + self.cost_or_infinity(insertion_cost);
-            let deletion = current[index - 1] + self.cost_or_infinity(deletion_cost);
-            let substitution = pending.column[index - 1] + self.cost_or_infinity(substitution_cost);
-            current[index] = insertion.min(deletion).min(substitution);
-        }
-        current
-    }
 }
 
 fn valid_cost(cost: f64) -> Option<f64> {
     (cost.is_finite() && cost >= 0.0).then_some(cost)
+}
+
+fn cost_or_infinity(stats: &mut ContextualQueryStats, cost: Option<f64>) -> f64 {
+    match cost.and_then(valid_cost) {
+        Some(cost) => cost,
+        None => {
+            stats.invalid_costs_rejected = stats.invalid_costs_rejected.saturating_add(1);
+            f64::INFINITY
+        }
+    }
+}
+
+fn child_column<U, C>(
+    query: &[U],
+    costs: &C,
+    stats: &mut ContextualQueryStats,
+    pending: &Pending<impl DictionaryNode<Unit = U>>,
+    unit: U,
+) -> Vec<f64>
+where
+    U: CharUnit,
+    C: ContextualCost<U>,
+{
+    let mut current = vec![f64::INFINITY; query.len() + 1];
+    let insertion_context = EditContext::new(query, 0, &pending.prefix, Some(unit));
+    current[0] =
+        pending.column[0] + cost_or_infinity(stats, costs.insertion_cost(&insertion_context, unit));
+
+    for index in 1..=query.len() {
+        let query_unit = query[index - 1];
+        let (insertion_cost, deletion_cost, substitution_cost) = {
+            let context = EditContext::new(query, index - 1, &pending.prefix, Some(unit));
+            (
+                costs.insertion_cost(&context, unit),
+                costs.deletion_cost(&context, query_unit),
+                costs.substitution_cost(&context, query_unit, unit),
+            )
+        };
+        let insertion = pending.column[index] + cost_or_infinity(stats, insertion_cost);
+        let deletion = current[index - 1] + cost_or_infinity(stats, deletion_cost);
+        let substitution = pending.column[index - 1] + cost_or_infinity(stats, substitution_cost);
+        current[index] = insertion.min(deletion).min(substitution);
+    }
+    current
 }
 
 impl<N, C> Iterator for ContextualQueryIterator<N, C>
@@ -196,21 +205,32 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(pending) = self.pending.pop_front() {
             self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
-            let is_final = pending.node.visit_edges_and_finality(|unit, child| {
-                self.stats.edges_enumerated = self.stats.edges_enumerated.saturating_add(1);
-                let column = self.child_column(&pending, unit);
-                if column.iter().any(|cost| *cost <= self.max_cost) {
+            let query = &self.query;
+            let costs = &self.costs;
+            let stats = &mut self.stats;
+            let queue = &mut self.pending;
+            let max_cost = self.max_cost;
+            let is_final = pending.node.filter_map_edges_and_finality(
+                |unit| {
+                    stats.edges_enumerated = stats.edges_enumerated.saturating_add(1);
+                    let column = child_column(query, costs, stats, &pending, unit);
+                    if column.iter().any(|cost| *cost <= max_cost) {
+                        Some(column)
+                    } else {
+                        stats.subtrees_pruned = stats.subtrees_pruned.saturating_add(1);
+                        None
+                    }
+                },
+                |unit, child, column| {
                     let mut prefix = pending.prefix.clone();
                     prefix.push(unit);
-                    self.pending.push_back(Pending {
+                    queue.push_back(Pending {
                         node: child,
                         prefix,
                         column,
                     });
-                } else {
-                    self.stats.subtrees_pruned = self.stats.subtrees_pruned.saturating_add(1);
-                }
-            });
+                },
+            );
             let accepted = is_final
                 && pending.column[self.query.len()] <= self.max_cost
                 && self.seen.insert(pending.prefix.clone());

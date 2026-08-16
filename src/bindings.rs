@@ -12,13 +12,17 @@ use crate::transducer::language::{LanguageProduct, LanguageQueryIterator};
 use crate::transducer::{
     Algorithm, RankedValueQueryIterator, Suggestion, ValueYieldingQueryIterator,
 };
+use libdictenstein::concurrent_slots::{AtomicOnceBox, AtomicTakeBox, HybridOnceBoxSlots};
 use libdictenstein::value::DictionaryValue;
 use libdictenstein::{CharUnit, DictionaryNode, MappedDictionaryNode};
 use rustc_hash::FxHashMap;
 use std::ffi::c_void;
 use std::fmt;
 use std::marker::PhantomData;
-use std::sync::{Arc, Mutex, OnceLock, RwLock, Weak};
+use std::ops::Deref;
+use std::ptr::NonNull;
+use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::{Arc, Mutex, OnceLock, Weak};
 use vinary_tree_interop::{
     dictionary_flags, VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable, VtOptionalU64,
     VtResource, VtResourceVTable, VtSnapshotIdentity, VtSnapshotIdentityVTable, VtStatus,
@@ -117,9 +121,10 @@ fn status(raw: u32) -> Result<(), BindingError> {
     }
 }
 
+#[derive(Clone)]
 enum CallGate {
     Parallel,
-    Serial(Mutex<()>),
+    Serial(Arc<Mutex<()>>),
 }
 
 /// One owned retain of a provider resource plus its discovered dictionary
@@ -131,34 +136,75 @@ struct Provider {
     dictionary: *const VtDictionaryVTable,
     visit: Option<*const VtDictionaryVisitVTable>,
     gate: CallGate,
-    fault: Arc<Mutex<Option<BindingError>>>,
+    fault: AtomicTakeBox<BindingError>,
     identity: Option<VtSnapshotIdentity>,
     node_cache: Arc<NodeCache>,
 }
 
 struct CachedForeignNode {
     is_final: bool,
-    edges: Box<[VtDictionaryEdge]>,
+    edges: Box<[CachedForeignEdge]>,
 }
 
-type NodeCache = RwLock<FxHashMap<u64, Arc<CachedForeignNode>>>;
-type NodeCacheRegistry = Mutex<FxHashMap<VtSnapshotIdentity, Weak<NodeCache>>>;
+/// Immutable edge descriptor plus a non-owning shortcut to its child cache.
+/// The shortcut is populated after the child is first inspected and remains
+/// valid until the query provider releases the append-only node cache.
+struct CachedForeignEdge {
+    label: u64,
+    node: u64,
+    cached_child: AtomicPtr<CachedForeignEntry>,
+}
 
-fn shared_node_cache(identity: Option<VtSnapshotIdentity>) -> Arc<NodeCache> {
-    let Some(identity) = identity else {
-        return Arc::new(RwLock::new(FxHashMap::default()));
+/// Stable node identity and its lazily published immutable descriptor.
+/// Foreign handles point directly at this append-only entry, so the traversal
+/// queue does not carry a redundant numeric ID plus an optional cache hint.
+struct CachedForeignEntry {
+    node: u64,
+    descriptor: AtomicOnceBox<CachedForeignNode>,
+}
+
+impl CachedForeignEntry {
+    fn new(node: u64) -> Self {
+        Self {
+            node,
+            descriptor: AtomicOnceBox::new(),
+        }
+    }
+}
+
+const NODE_CACHE_CHUNK_SIZE: usize = 256;
+const NODE_CACHE_DENSE_CHUNKS: usize = 512;
+const NODE_CACHE_SHARDS: usize = 64;
+type NodeCache = HybridOnceBoxSlots<
+    CachedForeignEntry,
+    NODE_CACHE_CHUNK_SIZE,
+    NODE_CACHE_DENSE_CHUNKS,
+    NODE_CACHE_SHARDS,
+>;
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct NodeCacheKey {
+    identity: VtSnapshotIdentity,
+    resource_vtable: usize,
+    dictionary_vtable: usize,
+}
+
+type NodeCacheRegistry = Mutex<FxHashMap<NodeCacheKey, Weak<NodeCache>>>;
+
+fn shared_node_cache(key: Option<NodeCacheKey>) -> Arc<NodeCache> {
+    let Some(key) = key else {
+        return Arc::new(NodeCache::new());
     };
     static REGISTRY: OnceLock<NodeCacheRegistry> = OnceLock::new();
     let mut registry = REGISTRY
         .get_or_init(|| Mutex::new(FxHashMap::default()))
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if let Some(cache) = registry.get(&identity).and_then(Weak::upgrade) {
+    if let Some(cache) = registry.get(&key).and_then(Weak::upgrade) {
         return cache;
     }
     registry.retain(|_, cache| cache.strong_count() != 0);
-    let cache = Arc::new(RwLock::new(FxHashMap::default()));
-    registry.insert(identity, Arc::downgrade(&cache));
+    let cache = Arc::new(NodeCache::new());
+    registry.insert(key, Arc::downgrade(&cache));
     cache
 }
 
@@ -244,7 +290,7 @@ impl Provider {
         let gate = if descriptor.flags & dictionary_flags::PARALLEL_REENTRANT != 0 {
             CallGate::Parallel
         } else {
-            CallGate::Serial(Mutex::new(()))
+            CallGate::Serial(Arc::new(Mutex::new(())))
         };
         let mut visit: *const c_void = std::ptr::null();
         let visit_status = query(
@@ -302,13 +348,21 @@ impl Provider {
         } else {
             None
         };
-        let node_cache = shared_node_cache(identity);
+        // Snapshot producer/revision tokens are scoped to the provider
+        // implementation that minted them. Including both ABI vtable
+        // addresses prevents independent providers or separately loaded DSO
+        // copies with equal numeric tokens from sharing incompatible nodes.
+        let node_cache = shared_node_cache(identity.map(|identity| NodeCacheKey {
+            identity,
+            resource_vtable: resource.vtable as usize,
+            dictionary_vtable: dictionary as usize,
+        }));
         Ok(Arc::new(Self {
             resource,
             dictionary,
             visit,
             gate,
-            fault: Arc::new(Mutex::new(None)),
+            fault: AtomicTakeBox::new(),
             identity,
             node_cache,
         }))
@@ -334,38 +388,52 @@ impl Provider {
     }
 
     fn record_fault(&self, error: BindingError) {
-        let mut fault = self
-            .fault
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if fault.is_none() {
-            *fault = Some(error);
-        }
+        self.fault.publish_if_empty(error);
     }
 
     fn take_fault(&self) -> Option<BindingError> {
-        self.fault
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .take()
+        self.fault.take()
     }
 
-    fn cached_node(&self, node: u64) -> Option<Arc<CachedForeignNode>> {
+    /// Retain one query-local provider owner while sharing only immutable
+    /// snapshot state, the callback gate, and the append-only node cache.
+    ///
+    /// Keeping the fault mailbox query-local prevents concurrent cursors over
+    /// the same snapshot from consuming one another's provider errors. The
+    /// retained allocation also becomes the stable owner behind copy-only
+    /// [`ProviderRef`] node keys for the entire cursor lifetime.
+    fn fork_query_owner(&self) -> Arc<Self> {
+        let retain = unsafe {
+            (*self.resource.vtable)
+                .retain
+                .expect("validated providers always publish retain")
+        };
+        self.call(|| unsafe { retain(self.resource.context) });
+        Arc::new(Self {
+            resource: self.resource,
+            dictionary: self.dictionary,
+            visit: self.visit,
+            gate: self.gate.clone(),
+            fault: AtomicTakeBox::new(),
+            identity: self.identity,
+            node_cache: Arc::clone(&self.node_cache),
+        })
+    }
+
+    fn node_entry(&self, node: u64) -> &CachedForeignEntry {
+        if let Some(entry) = self.node_cache.get(node) {
+            return entry;
+        }
         self.node_cache
-            .read()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .get(&node)
-            .cloned()
+            .install_if_absent(node, CachedForeignEntry::new(node))
     }
 
-    fn cache_node(&self, node: u64, value: Arc<CachedForeignNode>) -> Arc<CachedForeignNode> {
-        Arc::clone(
-            self.node_cache
-                .write()
-                .unwrap_or_else(|poisoned| poisoned.into_inner())
-                .entry(node)
-                .or_insert(value),
-        )
+    fn cache_node<'a>(
+        &self,
+        entry: &'a CachedForeignEntry,
+        value: CachedForeignNode,
+    ) -> &'a CachedForeignNode {
+        entry.descriptor.publish_if_absent(value)
     }
 
     fn snapshot(self: &Arc<Self>) -> Result<Arc<Self>, BindingError> {
@@ -495,6 +563,9 @@ trait InteropUnit: CharUnit {
     const DOMAIN: VtUnitDomain;
 
     fn from_abi(label: u64) -> Option<Self>;
+    /// Decode an edge that was already validated before entering the immutable
+    /// foreign-node cache.
+    fn from_validated_abi(label: u64) -> Self;
     fn to_abi(self) -> u64;
 }
 
@@ -503,6 +574,11 @@ impl InteropUnit for u8 {
 
     fn from_abi(label: u64) -> Option<Self> {
         u8::try_from(label).ok()
+    }
+
+    #[inline(always)]
+    fn from_validated_abi(label: u64) -> Self {
+        label as u8
     }
 
     fn to_abi(self) -> u64 {
@@ -517,6 +593,14 @@ impl InteropUnit for char {
         u32::try_from(label).ok().and_then(char::from_u32)
     }
 
+    #[inline(always)]
+    fn from_validated_abi(label: u64) -> Self {
+        // SAFETY: `try_inspect_node` validates every raw label with
+        // `from_abi` before publishing its immutable cache entry. Providers
+        // and unit domains are fixed for the lifetime of that cache.
+        unsafe { char::from_u32_unchecked(label as u32) }
+    }
+
     fn to_abi(self) -> u64 {
         u64::from(u32::from(self))
     }
@@ -529,35 +613,119 @@ impl InteropUnit for u64 {
         Some(label)
     }
 
+    #[inline(always)]
+    fn from_validated_abi(label: u64) -> Self {
+        label
+    }
+
     fn to_abi(self) -> u64 {
         self
     }
 }
 
-#[derive(Clone)]
+/// Non-owning pointer to the provider allocation retained by a [`QueryCursor`].
+///
+/// This is the owner/key split for foreign traversal: queued intersections
+/// copy only this pointer and a node identifier instead of incrementing and
+/// decrementing an `Arc` for every accepted dictionary edge.
+#[derive(Clone, Copy)]
+struct ProviderRef(NonNull<Provider>);
+
+impl ProviderRef {
+    fn new(owner: &Arc<Provider>) -> Self {
+        Self(NonNull::from(owner.as_ref()))
+    }
+}
+
+impl Deref for ProviderRef {
+    type Target = Provider;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        // SAFETY: `ProviderRef` is constructed only from the query-local
+        // `Arc<Provider>` stored in `QueryCursor`. `QueryCursor` declares its
+        // traversal field before that owner, so all node keys are destroyed
+        // before the final retain is released. Arc allocations do not move.
+        unsafe { self.0.as_ref() }
+    }
+}
+
+// SAFETY: the pointee is `Send + Sync`, the pointer is immutable, and the
+// enclosing cursor retains its allocation until every copied key is dropped.
+unsafe impl Send for ProviderRef {}
+unsafe impl Sync for ProviderRef {}
+
+#[derive(Clone, Copy)]
 struct ForeignNode<U: InteropUnit> {
-    provider: Arc<Provider>,
-    id: u64,
+    provider: ProviderRef,
+    entry: NonNull<CachedForeignEntry>,
     _unit: PhantomData<fn() -> U>,
 }
+
+// SAFETY: both non-owning pointers refer into append-only allocations retained
+// by the cursor's `Arc<Provider>`. The entry's descriptor publication cell
+// supplies its own synchronization and published descriptors are immutable.
+unsafe impl<U: InteropUnit> Send for ForeignNode<U> {}
+unsafe impl<U: InteropUnit> Sync for ForeignNode<U> {}
 
 impl<U: InteropUnit> fmt::Debug for ForeignNode<U> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("ForeignNode")
-            .field("id", &self.id)
+            .field("id", &self.id())
             .field("domain", &U::DOMAIN)
             .finish()
     }
 }
 
 impl<U: InteropUnit> ForeignNode<U> {
-    fn new(provider: Arc<Provider>, id: u64) -> Self {
+    fn new(provider: ProviderRef, id: u64) -> Self {
+        let entry = NonNull::from(provider.node_entry(id));
         Self {
             provider,
-            id,
+            entry,
             _unit: PhantomData,
         }
+    }
+
+    fn from_entry(provider: ProviderRef, entry: NonNull<CachedForeignEntry>) -> Self {
+        Self {
+            provider,
+            entry,
+            _unit: PhantomData,
+        }
+    }
+
+    #[inline(always)]
+    fn entry(&self) -> &CachedForeignEntry {
+        // SAFETY: entries live in the append-only cache owned by `provider` and
+        // the query cursor drops all node handles before releasing that owner.
+        unsafe { self.entry.as_ref() }
+    }
+
+    #[inline(always)]
+    fn id(&self) -> u64 {
+        self.entry().node
+    }
+
+    #[inline]
+    fn child_from_edge(&self, edge: &CachedForeignEdge) -> Self {
+        let cached = edge.cached_child.load(Ordering::Acquire);
+        let entry = if let Some(entry) = NonNull::new(cached) {
+            entry
+        } else {
+            let canonical = NonNull::from(self.provider.node_entry(edge.node));
+            match edge.cached_child.compare_exchange(
+                std::ptr::null_mut(),
+                canonical.as_ptr(),
+                Ordering::Release,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => canonical,
+                Err(existing) => NonNull::new(existing).expect("published child entry"),
+            }
+        };
+        Self::from_entry(self.provider, entry)
     }
 
     fn callback_failed<T>(&self, error: BindingError, fallback: T) -> T {
@@ -566,9 +734,14 @@ impl<U: InteropUnit> ForeignNode<U> {
     }
 
     #[inline]
-    fn try_for_each_expanded_edge<F>(&self, mut visitor: F) -> Result<(), BindingError>
+    fn try_filter_map_expanded_edges<T, P, F>(
+        &self,
+        mut project: P,
+        mut visitor: F,
+    ) -> Result<(), BindingError>
     where
-        F: FnMut(U, Self),
+        P: FnMut(U) -> Option<T>,
+        F: FnMut(U, Self, T),
     {
         let callback = self
             .provider
@@ -589,7 +762,7 @@ impl<U: InteropUnit> ForeignNode<U> {
             let callback_status = self.provider.call(|| unsafe {
                 callback(
                     self.provider.resource.context,
-                    self.id,
+                    self.id(),
                     start,
                     page.as_mut_ptr(),
                     capacity,
@@ -611,7 +784,9 @@ impl<U: InteropUnit> ForeignNode<U> {
                 let label = U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
                     "edge label is outside its domain",
                 ))?;
-                visitor(label, Self::new(Arc::clone(&self.provider), edge.node));
+                if let Some(projected) = project(label) {
+                    visitor(label, Self::new(self.provider, edge.node), projected);
+                }
             }
             start = start.saturating_add(written);
             if start >= total {
@@ -621,8 +796,17 @@ impl<U: InteropUnit> ForeignNode<U> {
     }
 
     #[inline]
-    fn try_inspect_node(&self) -> Result<Arc<CachedForeignNode>, BindingError> {
-        if let Some(cached) = self.provider.cached_node(self.id) {
+    fn try_for_each_expanded_edge<F>(&self, mut visitor: F) -> Result<(), BindingError>
+    where
+        F: FnMut(U, Self),
+    {
+        self.try_filter_map_expanded_edges(|_| Some(()), |label, child, ()| visitor(label, child))
+    }
+
+    #[inline]
+    fn try_inspect_node(&self) -> Result<&CachedForeignNode, BindingError> {
+        let entry = self.entry();
+        if let Some(cached) = entry.descriptor.get() {
             crate::causal_perf::record_foreign_node_cache_hits(1);
             return Ok(cached);
         }
@@ -646,7 +830,7 @@ impl<U: InteropUnit> ForeignNode<U> {
             let callback_status = self.provider.call(|| unsafe {
                 callback(
                     self.provider.resource.context,
-                    self.id,
+                    self.id(),
                     start,
                     &mut is_final,
                     page.as_mut_ptr(),
@@ -686,16 +870,20 @@ impl<U: InteropUnit> ForeignNode<U> {
                 U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
                     "edge label is outside its domain",
                 ))?;
-                edges.push(edge);
+                edges.push(CachedForeignEdge {
+                    label: edge.label,
+                    node: edge.node,
+                    cached_child: AtomicPtr::new(std::ptr::null_mut()),
+                });
             }
             start = start.saturating_add(written);
             if start >= total {
                 let cached = self.provider.cache_node(
-                    self.id,
-                    Arc::new(CachedForeignNode {
+                    entry,
+                    CachedForeignNode {
                         is_final,
                         edges: edges.into_boxed_slice(),
-                    }),
+                    },
                 );
                 return Ok(cached);
             }
@@ -703,18 +891,34 @@ impl<U: InteropUnit> ForeignNode<U> {
     }
 
     #[inline]
+    fn try_filter_map_inspected_edges_and_finality<T, P, F>(
+        &self,
+        mut project: P,
+        mut visitor: F,
+    ) -> Result<bool, BindingError>
+    where
+        P: FnMut(U) -> Option<T>,
+        F: FnMut(U, Self, T),
+    {
+        let cached = self.try_inspect_node()?;
+        for edge in &cached.edges {
+            let label = U::from_validated_abi(edge.label);
+            if let Some(projected) = project(label) {
+                visitor(label, self.child_from_edge(edge), projected);
+            }
+        }
+        Ok(cached.is_final)
+    }
+
+    #[inline]
     fn try_visit_edges_and_finality<F>(&self, mut visitor: F) -> Result<bool, BindingError>
     where
         F: FnMut(U, Self),
     {
-        let cached = self.try_inspect_node()?;
-        for edge in &cached.edges {
-            let label = U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
-                "edge label is outside its domain",
-            ))?;
-            visitor(label, Self::new(Arc::clone(&self.provider), edge.node));
-        }
-        Ok(cached.is_final)
+        self.try_filter_map_inspected_edges_and_finality(
+            |_| Some(()),
+            |label, child, ()| visitor(label, child),
+        )
     }
 
     fn expanded_edges(&self) -> Vec<(U, Self)> {
@@ -756,9 +960,9 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
         };
         crate::causal_perf::record_foreign_is_final_callbacks(1);
         let mut final_node = 0u8;
-        let callback_status = self
-            .provider
-            .call(|| unsafe { callback(self.provider.resource.context, self.id, &mut final_node) });
+        let callback_status = self.provider.call(|| unsafe {
+            callback(self.provider.resource.context, self.id(), &mut final_node)
+        });
         if let Err(error) = status(callback_status) {
             return self.callback_failed(error, false);
         }
@@ -787,7 +991,7 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
         let callback_status = self.provider.call(|| unsafe {
             callback(
                 self.provider.resource.context,
-                self.id,
+                self.id(),
                 label.to_abi(),
                 &mut child,
                 &mut found,
@@ -798,7 +1002,7 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
         }
         match found {
             0 => None,
-            1 => Some(Self::new(Arc::clone(&self.provider), child)),
+            1 => Some(Self::new(self.provider, child)),
             _ => self.callback_failed(
                 BindingError::InvalidProviderOutput("transition found was not zero or one"),
                 None,
@@ -826,6 +1030,23 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
     }
 
     #[inline]
+    fn filter_map_edges<T, P, F>(&self, project: P, visitor: F)
+    where
+        P: FnMut(Self::Unit) -> Option<T>,
+        F: FnMut(Self::Unit, Self, T),
+    {
+        let result = if self.provider.visit_vtable().is_some() {
+            self.try_filter_map_inspected_edges_and_finality(project, visitor)
+                .map(|_| ())
+        } else {
+            self.try_filter_map_expanded_edges(project, visitor)
+        };
+        if let Err(error) = result {
+            self.provider.record_fault(error);
+        }
+    }
+
+    #[inline]
     fn visit_edges_and_finality<F>(&self, visitor: F) -> bool
     where
         F: FnMut(Self::Unit, Self),
@@ -836,6 +1057,23 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
             return is_final;
         }
         match self.try_visit_edges_and_finality(visitor) {
+            Ok(is_final) => is_final,
+            Err(error) => self.callback_failed(error, false),
+        }
+    }
+
+    #[inline]
+    fn filter_map_edges_and_finality<T, P, F>(&self, project: P, visitor: F) -> bool
+    where
+        P: FnMut(Self::Unit) -> Option<T>,
+        F: FnMut(Self::Unit, Self, T),
+    {
+        if self.provider.visit_vtable().is_none() {
+            let is_final = self.is_final();
+            self.filter_map_edges(project, visitor);
+            return is_final;
+        }
+        match self.try_filter_map_inspected_edges_and_finality(project, visitor) {
             Ok(is_final) => is_final,
             Err(error) => self.callback_failed(error, false),
         }
@@ -869,7 +1107,7 @@ impl<U: InteropUnit> MappedDictionaryNode for ForeignNode<U> {
         let mut value = VtOptionalU64::default();
         let callback_status = self
             .provider
-            .call(|| unsafe { callback(self.provider.resource.context, self.id, &mut value) });
+            .call(|| unsafe { callback(self.provider.resource.context, self.id(), &mut value) });
         if let Err(error) = status(callback_status) {
             return self.callback_failed(error, None);
         }
@@ -1038,6 +1276,10 @@ fn term_only_score(_term: &str, _distance: usize, _value: &BindingValue) -> f64 
     0.0
 }
 
+// Query cursors are already uniquely owned and frequently created. Keeping
+// every variant inline avoids one heap allocation per query; the larger enum
+// is an intentional hot-path space/time tradeoff.
+#[allow(clippy::large_enum_variant)]
 enum CursorInner {
     CharTraversal(CharTraversal),
     ByteTraversal(ByteTraversal),
@@ -1050,6 +1292,8 @@ enum CursorInner {
 /// Lazy query cursor retaining the exact provider snapshot captured at query
 /// start. It may outlive the transducer and source dictionary resources.
 pub struct QueryCursor {
+    // Rust drops fields in declaration order. The traversal (and every
+    // non-owning ProviderRef it contains) must therefore precede `provider`.
     inner: CursorInner,
     provider: Arc<Provider>,
 }
@@ -1148,6 +1392,51 @@ impl QueryCursor {
     }
 }
 
+#[cfg(test)]
+mod compact_foreign_handle_tests {
+    use super::*;
+    #[cfg(feature = "resource-profiling")]
+    use libdictenstein::bindings::{BindingUnitDomain, DynamicDawgBinding};
+
+    #[test]
+    fn foreign_node_is_exactly_an_owner_pointer_and_entry_pointer() {
+        assert_eq!(
+            std::mem::size_of::<ForeignNode<char>>(),
+            2 * std::mem::size_of::<usize>()
+        );
+    }
+
+    #[cfg(feature = "resource-profiling")]
+    #[test]
+    fn forked_query_owners_have_independent_fault_mailboxes() {
+        let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
+        let resource = dictionary.resource();
+        let transducer = unsafe {
+            ResourceTransducer::from_resource(resource.as_raw(), Algorithm::Standard)
+                .expect("libdictenstein resource")
+        };
+        let ForeignDictionary::Unicode(provider) = &transducer.dictionary else {
+            panic!("Unicode dictionary must retain a Unicode provider");
+        };
+        let first = provider.fork_query_owner();
+        let second = provider.fork_query_owner();
+
+        first.record_fault(BindingError::Provider(VtStatus::Closed));
+        second.record_fault(BindingError::Provider(VtStatus::IoError));
+
+        assert_eq!(
+            first.take_fault(),
+            Some(BindingError::Provider(VtStatus::Closed))
+        );
+        assert_eq!(
+            second.take_fault(),
+            Some(BindingError::Provider(VtStatus::IoError))
+        );
+        assert_eq!(first.take_fault(), None);
+        assert_eq!(second.take_fault(), None);
+    }
+}
+
 /// A Levenshtein automaton configuration retaining a live dictionary resource.
 ///
 /// Constructing this object is O(1): the resource is retained, not serialized.
@@ -1210,7 +1499,8 @@ impl ResourceTransducer {
             });
         };
         let snapshot = provider.snapshot()?;
-        let root = ForeignNode::<char>::new(Arc::clone(&snapshot), snapshot.root()?);
+        let owner = snapshot.fork_query_owner();
+        let root = ForeignNode::<char>::new(ProviderRef::new(&owner), owner.root()?);
         let inner = match order {
             QueryOrder::Traversal => CursorInner::CharTraversal(ValueYieldingQueryIterator::new(
                 root,
@@ -1230,7 +1520,7 @@ impl ResourceTransducer {
         };
         Ok(QueryCursor {
             inner,
-            provider: snapshot,
+            provider: owner,
         })
     }
 
@@ -1251,7 +1541,8 @@ impl ResourceTransducer {
             return Err(BindingError::UnsupportedOrdering(VtUnitDomain::Byte));
         }
         let snapshot = provider.snapshot()?;
-        let root = ForeignNode::<u8>::new(Arc::clone(&snapshot), snapshot.root()?);
+        let owner = snapshot.fork_query_owner();
+        let root = ForeignNode::<u8>::new(ProviderRef::new(&owner), owner.root()?);
         Ok(QueryCursor {
             inner: CursorInner::ByteTraversal(ValueYieldingQueryIterator::with_unit_query(
                 root,
@@ -1259,7 +1550,7 @@ impl ResourceTransducer {
                 max_distance,
                 self.algorithm,
             )),
-            provider: snapshot,
+            provider: owner,
         })
     }
 
@@ -1280,7 +1571,8 @@ impl ResourceTransducer {
             return Err(BindingError::UnsupportedOrdering(VtUnitDomain::U64));
         }
         let snapshot = provider.snapshot()?;
-        let root = ForeignNode::<u64>::new(Arc::clone(&snapshot), snapshot.root()?);
+        let owner = snapshot.fork_query_owner();
+        let root = ForeignNode::<u64>::new(ProviderRef::new(&owner), owner.root()?);
         Ok(QueryCursor {
             inner: CursorInner::U64Traversal(ValueYieldingQueryIterator::with_unit_query(
                 root,
@@ -1288,7 +1580,7 @@ impl ResourceTransducer {
                 max_distance,
                 self.algorithm,
             )),
-            provider: snapshot,
+            provider: owner,
         })
     }
 
@@ -1306,13 +1598,14 @@ impl ResourceTransducer {
             });
         };
         let snapshot = provider.snapshot()?;
-        let root = ForeignNode::<char>::new(Arc::clone(&snapshot), snapshot.root()?);
+        let owner = snapshot.fork_query_owner();
+        let root = ForeignNode::<char>::new(ProviderRef::new(&owner), owner.root()?);
         Ok(QueryCursor {
             inner: CursorInner::CharLanguage(LanguageQueryIterator::new(
                 root,
                 LanguageProduct::new(pattern.nfa.clone(), max_distance),
             )),
-            provider: snapshot,
+            provider: owner,
         })
     }
 }

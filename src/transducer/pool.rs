@@ -126,7 +126,7 @@ impl StatePool {
     #[inline]
     pub fn release(&mut self, state: State) {
         crate::causal_perf::record_pool_releases(1);
-        if self.pool.len() < Self::MAX_POOL_SIZE {
+        if state.has_owned_positions() && self.pool.len() < Self::MAX_POOL_SIZE {
             self.pool.push(state);
         }
         // Otherwise drop the state (let it deallocate)

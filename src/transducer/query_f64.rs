@@ -348,63 +348,61 @@ impl<
     /// Queue child intersections for exploration
     fn queue_children_and_finality(&mut self, intersection: &QueryIntersectionF64<N>) -> bool {
         let mut child_parent_path = None;
+        let query = &self.query;
+        let policy = &self.policy;
+        let costs = &self.costs;
+        let max_cost = self.max_cost;
+        let algorithm = self.algorithm;
+        let substring_mode = self.substring_mode;
+        let unit_transitions = &mut self.unit_transitions;
+        let state_pool = &mut self.state_pool;
+        let path_arena = &mut self.path_arena;
+        let pending = &mut self.pending;
 
-        intersection
-            .node
-            .visit_edges_and_finality(|label, child_node| {
-                if let Some(next_state) = self.unit_transitions.transition(
+        intersection.node.filter_map_edges_and_finality(
+            |label| {
+                unit_transitions.transition(
                     &intersection.state,
-                    &mut self.state_pool,
-                    &self.policy,
+                    state_pool,
+                    policy,
                     label,
-                    &self.query,
-                    TransitionSettingsF64::new(
-                        self.max_cost,
-                        self.algorithm,
-                        &self.costs,
-                        self.substring_mode,
-                    ),
-                ) {
-                    let parent_path = match child_parent_path {
-                        Some(path) => path,
-                        None => {
-                            let path = match intersection.label {
-                                Some(current_label) => {
-                                    self.push_path_node(current_label, intersection.parent)
-                                }
-                                None => NO_PATH,
-                            };
-                            child_parent_path = Some(path);
-                            path
-                        }
-                    };
-
-                    let child = QueryIntersectionF64::with_parent(
-                        label,
-                        child_node,
-                        next_state,
-                        parent_path,
-                    );
-
-                    self.pending.push_back(child);
-                }
-            })
-    }
-
-    #[inline]
-    fn push_path_node(&mut self, label: N::Unit, parent: usize) -> usize {
-        let depth = if parent == NO_PATH {
-            1
-        } else {
-            self.path_arena[parent].depth.saturating_add(1)
-        };
-        let index = self.path_arena.len();
-        self.path_arena.push(QueryPathNodeF64 {
-            label,
-            depth,
-            parent,
-        });
-        index
+                    query,
+                    TransitionSettingsF64::new(max_cost, algorithm, costs, substring_mode),
+                )
+            },
+            |label, child_node, next_state| {
+                let parent_path = match child_parent_path {
+                    Some(path) => path,
+                    None => {
+                        let path = match intersection.label {
+                            Some(current_label) => {
+                                let depth = if intersection.parent == NO_PATH {
+                                    1
+                                } else {
+                                    path_arena[intersection.parent].depth.saturating_add(1)
+                                };
+                                let index = path_arena.len();
+                                path_arena.push(QueryPathNodeF64 {
+                                    label: current_label,
+                                    depth,
+                                    parent: intersection.parent,
+                                });
+                                index
+                            }
+                            None => NO_PATH,
+                        };
+                        child_parent_path = Some(path);
+                        path
+                    }
+                };
+                pending.push_back(QueryIntersectionF64::with_parent(
+                    label,
+                    child_node,
+                    next_state,
+                    parent_path,
+                ));
+            },
+        )
     }
 }
 
