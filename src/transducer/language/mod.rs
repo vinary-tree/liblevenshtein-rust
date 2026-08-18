@@ -19,6 +19,8 @@ pub use dyck::{
     DYCK_CORRECTION_MAX_WORK,
 };
 pub use product::{Frontier, LanguageProduct};
+#[cfg(feature = "bindings-phonetic")]
+pub(crate) use query::MappedLanguageQueryIterator;
 pub use query::{LanguageMatch, LanguageQueryIterator, LanguageQueryStats};
 
 /// Default state-count ceiling for automata compiled from untrusted input.

@@ -8,29 +8,36 @@
 #[cfg(feature = "bindings-phonetic")]
 use crate::phonetic::nfa::NFAChar;
 #[cfg(feature = "bindings-phonetic")]
-use crate::transducer::language::{LanguageProduct, LanguageQueryIterator};
+use crate::transducer::language::{LanguageProduct, MappedLanguageQueryIterator};
 use crate::transducer::{
     Algorithm, RankedValueQueryIterator, Suggestion, ValueYieldingQueryIterator,
 };
 use libdictenstein::concurrent_slots::{AtomicOnceBox, AtomicTakeBox, HybridOnceBoxSlots};
 use libdictenstein::value::DictionaryValue;
-use libdictenstein::{CharUnit, DictionaryNode, MappedDictionaryNode};
+use libdictenstein::{
+    CharUnit, DictionaryNode, DictionaryTraversalRoot, MappedDictionaryNode,
+    SnapshotTraversalCursor, SnapshotTraversalEdge, SnapshotTraversalGraph, SnapshotTraversalNode,
+};
 use rustc_hash::FxHashMap;
 use std::ffi::c_void;
 use std::fmt;
 use std::marker::PhantomData;
+use std::num::NonZeroUsize;
 use std::ops::Deref;
 use std::ptr::NonNull;
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 use vinary_tree_interop::{
-    dictionary_flags, VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable, VtOptionalU64,
-    VtResource, VtResourceVTable, VtSnapshotIdentity, VtSnapshotIdentityVTable, VtStatus,
-    VtUnitDomain, VtValueDomain, VT_ABI_VERSION, VT_DICTIONARY_INTERFACE_ID,
-    VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
+    dictionary_flags, VtDictionaryEdge, VtDictionaryGraphVTable, VtDictionaryGraphView,
+    VtDictionaryVTable, VtDictionaryVisitVTable, VtOptionalU64, VtResource, VtResourceVTable,
+    VtSnapshotIdentity, VtSnapshotIdentityVTable, VtStatus, VtUnitDomain, VtValueDomain,
+    VT_ABI_VERSION, VT_DICTIONARY_GRAPH_INTERFACE_ID, VT_DICTIONARY_GRAPH_INTERFACE_VERSION,
+    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
     VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_EDGE_BATCH,
     VT_SNAPSHOT_IDENTITY_INTERFACE_ID, VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION,
 };
+#[cfg(test)]
+use vinary_tree_interop::{VtDictionaryGraphEdge, VtDictionaryGraphNode};
 
 /// Default number of results transferred across a managed-language boundary.
 pub const DEFAULT_MATCH_BATCH: usize = 256;
@@ -131,17 +138,54 @@ enum CallGate {
 /// interface. All callbacks for the default custom-provider mode are serialized
 /// on the caller's thread. Providers opt into concurrent/reentrant calls by
 /// publishing [`dictionary_flags::PARALLEL_REENTRANT`].
+#[derive(Clone)]
+enum ForeignCapturedGraph {
+    Byte(Arc<SnapshotTraversalGraph<u8>>),
+    Unicode(Arc<SnapshotTraversalGraph<char>>),
+    U64(Arc<SnapshotTraversalGraph<u64>>),
+}
+
+enum WeakForeignCapturedGraph {
+    Byte(Weak<SnapshotTraversalGraph<u8>>),
+    Unicode(Weak<SnapshotTraversalGraph<char>>),
+    U64(Weak<SnapshotTraversalGraph<u64>>),
+}
+
+impl ForeignCapturedGraph {
+    fn downgrade(&self) -> WeakForeignCapturedGraph {
+        match self {
+            Self::Byte(graph) => WeakForeignCapturedGraph::Byte(Arc::downgrade(graph)),
+            Self::Unicode(graph) => WeakForeignCapturedGraph::Unicode(Arc::downgrade(graph)),
+            Self::U64(graph) => WeakForeignCapturedGraph::U64(Arc::downgrade(graph)),
+        }
+    }
+}
+
+impl WeakForeignCapturedGraph {
+    fn upgrade(&self) -> Option<ForeignCapturedGraph> {
+        match self {
+            Self::Byte(graph) => graph.upgrade().map(ForeignCapturedGraph::Byte),
+            Self::Unicode(graph) => graph.upgrade().map(ForeignCapturedGraph::Unicode),
+            Self::U64(graph) => graph.upgrade().map(ForeignCapturedGraph::U64),
+        }
+    }
+}
+
 struct Provider {
     resource: VtResource,
     dictionary: *const VtDictionaryVTable,
     visit: Option<*const VtDictionaryVisitVTable>,
+    graph_vtable: Option<*const VtDictionaryGraphVTable>,
+    graph: Option<ForeignCapturedGraph>,
     gate: CallGate,
     fault: AtomicTakeBox<BindingError>,
     identity: Option<VtSnapshotIdentity>,
     node_cache: Arc<NodeCache>,
+    graph_memo: Arc<CapturedGraphMemo>,
 }
 
 struct CachedForeignNode {
+    node: u64,
     is_final: bool,
     edges: Box<[CachedForeignEdge]>,
 }
@@ -152,7 +196,7 @@ struct CachedForeignNode {
 struct CachedForeignEdge {
     label: u64,
     node: u64,
-    cached_child: AtomicPtr<CachedForeignEntry>,
+    cached_child: AtomicUsize,
 }
 
 /// Stable node identity and its lazily published immutable descriptor.
@@ -172,6 +216,162 @@ impl CachedForeignEntry {
     }
 }
 
+const FOREIGN_TARGET_READY_TAG: usize = 1;
+
+/// One-word, non-owning target for a foreign snapshot cursor.
+///
+/// Pending targets name the stable cache entry whose descriptor may not have
+/// been populated yet. Ready targets name the immutable descriptor directly.
+/// Both allocations are at least two-byte aligned, so the low bit distinguishes
+/// the two states without changing the size of a queued dictionary node.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(transparent)]
+struct ForeignTarget(NonZeroUsize);
+
+impl ForeignTarget {
+    #[inline]
+    fn pending(entry: NonNull<CachedForeignEntry>) -> Self {
+        let address = entry.as_ptr().expose_provenance();
+        debug_assert_eq!(address & FOREIGN_TARGET_READY_TAG, 0);
+        Self(NonZeroUsize::new(address).expect("foreign cache entries are non-null"))
+    }
+
+    #[inline]
+    fn ready(node: NonNull<CachedForeignNode>) -> Self {
+        let address = node.as_ptr().expose_provenance();
+        debug_assert_eq!(address & FOREIGN_TARGET_READY_TAG, 0);
+        Self(
+            NonZeroUsize::new(address | FOREIGN_TARGET_READY_TAG)
+                .expect("foreign cached nodes are non-null"),
+        )
+    }
+
+    #[inline]
+    fn from_encoded(encoded: usize) -> Option<Self> {
+        NonZeroUsize::new(encoded).map(Self)
+    }
+
+    #[inline]
+    fn encoded(self) -> usize {
+        self.0.get()
+    }
+
+    #[inline]
+    fn is_ready(self) -> bool {
+        self.encoded() & FOREIGN_TARGET_READY_TAG != 0
+    }
+
+    #[inline]
+    fn pending_entry(self) -> Option<NonNull<CachedForeignEntry>> {
+        if self.is_ready() {
+            return None;
+        }
+        // SAFETY: pending targets are encoded only from live append-only cache
+        // entries, and the owning Provider outlives every traversal cursor.
+        Some(unsafe {
+            NonNull::new_unchecked(std::ptr::with_exposed_provenance_mut(self.encoded()))
+        })
+    }
+
+    #[inline]
+    fn ready_node(self) -> Option<NonNull<CachedForeignNode>> {
+        if !self.is_ready() {
+            return None;
+        }
+        let address = self.encoded() & !FOREIGN_TARGET_READY_TAG;
+        // SAFETY: ready targets are encoded only from published immutable
+        // descriptors retained by the same append-only cache as their entry.
+        Some(unsafe { NonNull::new_unchecked(std::ptr::with_exposed_provenance_mut(address)) })
+    }
+
+    #[inline]
+    fn ready_if_published(self) -> Option<Self> {
+        let entry = self.pending_entry()?;
+        crate::causal_perf::record_foreign_pending_descriptor_loads(1);
+        // SAFETY: target construction and Provider ownership keep the entry
+        // alive. Acquire publication inside AtomicOnceBox makes the immutable
+        // descriptor fully visible before its pointer is encoded as ready.
+        unsafe { entry.as_ref() }
+            .descriptor
+            .get()
+            .map(|node| Self::ready(NonNull::from(node)))
+    }
+}
+
+const _: () = assert!(std::mem::align_of::<CachedForeignEntry>() >= 2);
+const _: () = assert!(std::mem::align_of::<CachedForeignNode>() >= 2);
+
+/// Promote an already-published child target without invoking a provider.
+/// State is monotonic (`pending -> ready`), and both allocations remain live
+/// until the snapshot cache is exclusively released, so no ABA is possible.
+#[inline]
+fn promote_published_foreign_target(slot: &AtomicUsize, target: ForeignTarget) -> ForeignTarget {
+    if target.is_ready() {
+        return target;
+    }
+    let Some(ready) = target.ready_if_published() else {
+        return target;
+    };
+    match slot.compare_exchange(
+        target.encoded(),
+        ready.encoded(),
+        Ordering::AcqRel,
+        Ordering::Acquire,
+    ) {
+        Ok(_) => {
+            crate::causal_perf::record_foreign_edge_cursor_promotions(1);
+            ready
+        }
+        Err(observed) => ForeignTarget::from_encoded(observed)
+            .expect("foreign child target cannot return to the empty state"),
+    }
+}
+
+#[inline(always)]
+fn foreign_ready_cursors_enabled() -> bool {
+    #[cfg(feature = "resource-profiling")]
+    {
+        static ENABLED: OnceLock<bool> = OnceLock::new();
+        *ENABLED.get_or_init(|| {
+            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_FOREIGN_READY_CURSORS").is_none()
+        })
+    }
+    #[cfg(not(feature = "resource-profiling"))]
+    {
+        true
+    }
+}
+
+#[inline(always)]
+fn monolithic_foreign_inspection_enabled() -> bool {
+    #[cfg(feature = "resource-profiling")]
+    {
+        static ENABLED: OnceLock<bool> = OnceLock::new();
+        *ENABLED.get_or_init(|| {
+            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_MONOLITHIC_FOREIGN_INSPECT").is_some()
+        })
+    }
+    #[cfg(not(feature = "resource-profiling"))]
+    {
+        false
+    }
+}
+
+#[inline(always)]
+fn foreign_snapshot_graph_enabled() -> bool {
+    #[cfg(feature = "resource-profiling")]
+    {
+        static ENABLED: OnceLock<bool> = OnceLock::new();
+        *ENABLED.get_or_init(|| {
+            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_FOREIGN_SNAPSHOT_GRAPH").is_none()
+        })
+    }
+    #[cfg(not(feature = "resource-profiling"))]
+    {
+        true
+    }
+}
+
 const NODE_CACHE_CHUNK_SIZE: usize = 256;
 const NODE_CACHE_DENSE_CHUNKS: usize = 512;
 const NODE_CACHE_SHARDS: usize = 64;
@@ -186,6 +386,15 @@ struct NodeCacheKey {
     identity: VtSnapshotIdentity,
     resource_vtable: usize,
     dictionary_vtable: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct GraphCacheKey {
+    identity: VtSnapshotIdentity,
+    resource_vtable: usize,
+    dictionary_vtable: usize,
+    graph_vtable: usize,
+    unit_domain: u32,
 }
 
 type NodeCacheRegistry = Mutex<FxHashMap<NodeCacheKey, Weak<NodeCache>>>;
@@ -206,6 +415,54 @@ fn shared_node_cache(key: Option<NodeCacheKey>) -> Arc<NodeCache> {
     let cache = Arc::new(NodeCache::new());
     registry.insert(key, Arc::downgrade(&cache));
     cache
+}
+
+type GraphCacheRegistry = Mutex<FxHashMap<GraphCacheKey, WeakForeignCapturedGraph>>;
+type CapturedGraphMemo = Mutex<Option<(GraphCacheKey, ForeignCapturedGraph)>>;
+
+fn shared_captured_graph(
+    key: Option<GraphCacheKey>,
+    memo: &CapturedGraphMemo,
+    decode: impl FnOnce() -> Result<ForeignCapturedGraph, BindingError>,
+) -> Result<ForeignCapturedGraph, BindingError> {
+    let Some(key) = key else {
+        return decode();
+    };
+    {
+        let current = memo.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some((cached_key, graph)) = current.as_ref().filter(|(cached, _)| *cached == key) {
+            debug_assert_eq!(*cached_key, key);
+            return Ok(graph.clone());
+        }
+    }
+    static REGISTRY: OnceLock<GraphCacheRegistry> = OnceLock::new();
+    let registry = REGISTRY.get_or_init(|| Mutex::new(FxHashMap::default()));
+    {
+        let locked = registry
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(graph) = locked.get(&key).and_then(WeakForeignCapturedGraph::upgrade) {
+            *memo.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
+                Some((key, graph.clone()));
+            return Ok(graph);
+        }
+    }
+
+    // Validation and copying may walk the complete graph. Keep that work out
+    // of the process-wide registry lock, then resolve a concurrent race with a
+    // second lookup before publishing this weak entry.
+    let decoded = decode()?;
+    let mut locked = registry
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some(graph) = locked.get(&key).and_then(WeakForeignCapturedGraph::upgrade) {
+        *memo.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some((key, graph.clone()));
+        return Ok(graph);
+    }
+    locked.retain(|_, graph| graph.upgrade().is_some());
+    locked.insert(key, decoded.downgrade());
+    *memo.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some((key, decoded.clone()));
+    Ok(decoded)
 }
 
 // Raw provider pointers are never dereferenced outside `call`, and `call`
@@ -248,7 +505,7 @@ impl Provider {
         let retain = base.retain.ok_or(BindingError::IncompatibleResourceAbi)?;
         let release = base.release.ok_or(BindingError::IncompatibleResourceAbi)?;
         retain(resource.context);
-        match Self::from_owned(resource) {
+        match Self::from_owned_with_graph_memo(resource, Arc::new(Mutex::new(None))) {
             Ok(provider) => Ok(provider),
             Err(error) => {
                 release(resource.context);
@@ -257,7 +514,10 @@ impl Provider {
         }
     }
 
-    unsafe fn from_owned(resource: VtResource) -> Result<Arc<Self>, BindingError> {
+    unsafe fn from_owned_with_graph_memo(
+        resource: VtResource,
+        graph_memo: Arc<CapturedGraphMemo>,
+    ) -> Result<Arc<Self>, BindingError> {
         validate_base(resource)?;
         let base = &*resource.vtable;
         let query = base
@@ -348,6 +608,59 @@ impl Provider {
         } else {
             None
         };
+        let mut graph_vtable: *const c_void = std::ptr::null();
+        let graph_status = if foreign_snapshot_graph_enabled() {
+            query(
+                resource.context,
+                &VT_DICTIONARY_GRAPH_INTERFACE_ID,
+                VT_DICTIONARY_GRAPH_INTERFACE_VERSION,
+                &mut graph_vtable,
+            )
+        } else {
+            VtStatus::Unsupported.to_raw()
+        };
+        let (graph_vtable, graph) = if VtStatus::from_raw(graph_status)
+            == Some(VtStatus::Unsupported)
+        {
+            (None, None)
+        } else {
+            status(graph_status)?;
+            if descriptor.flags & dictionary_flags::IMMUTABLE == 0 {
+                return Err(BindingError::InvalidProviderOutput(
+                    "mutable resource exposed an immutable snapshot graph",
+                ));
+            }
+            if graph_vtable.is_null() {
+                return Err(BindingError::InvalidProviderOutput(
+                    "snapshot-graph query returned a null vtable",
+                ));
+            }
+            let graph_vtable = graph_vtable.cast::<VtDictionaryGraphVTable>();
+            validate_dictionary_graph(&*graph_vtable, descriptor.value_domain)?;
+            let graph_key = identity.map(|identity| GraphCacheKey {
+                identity,
+                resource_vtable: resource.vtable as usize,
+                dictionary_vtable: dictionary as usize,
+                graph_vtable: graph_vtable as usize,
+                unit_domain: descriptor.unit_domain as u32,
+            });
+            let graph = shared_captured_graph(graph_key, &graph_memo, || {
+                let callback = (*graph_vtable)
+                    .graph
+                    .ok_or(BindingError::IncompatibleDictionaryInterface)?;
+                let mut view = VtDictionaryGraphView::default();
+                let raw = match &gate {
+                    CallGate::Parallel => callback(resource.context, &mut view),
+                    CallGate::Serial(lock) => {
+                        let _guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+                        callback(resource.context, &mut view)
+                    }
+                };
+                status(raw)?;
+                decode_captured_graph(descriptor.unit_domain, view)
+            })?;
+            (Some(graph_vtable), Some(graph))
+        };
         // Snapshot producer/revision tokens are scoped to the provider
         // implementation that minted them. Including both ABI vtable
         // addresses prevents independent providers or separately loaded DSO
@@ -361,10 +674,13 @@ impl Provider {
             resource,
             dictionary,
             visit,
+            graph_vtable,
+            graph,
             gate,
             fault: AtomicTakeBox::new(),
             identity,
             node_cache,
+            graph_memo,
         }))
     }
 
@@ -413,10 +729,13 @@ impl Provider {
             resource: self.resource,
             dictionary: self.dictionary,
             visit: self.visit,
+            graph_vtable: self.graph_vtable,
+            graph: self.graph.clone(),
             gate: self.gate.clone(),
             fault: AtomicTakeBox::new(),
             identity: self.identity,
             node_cache: Arc::clone(&self.node_cache),
+            graph_memo: Arc::clone(&self.graph_memo),
         })
     }
 
@@ -451,7 +770,9 @@ impl Provider {
                 "snapshot returned a null resource",
             ));
         }
-        let snapshot = match unsafe { Provider::from_owned(snapshot) } {
+        let snapshot = match unsafe {
+            Provider::from_owned_with_graph_memo(snapshot, Arc::clone(&self.graph_memo))
+        } {
             Ok(provider) => provider,
             Err(error) => {
                 // The provider transferred ONE owned retain with the snapshot
@@ -537,6 +858,21 @@ fn validate_dictionary_visit(vtable: &VtDictionaryVisitVTable) -> Result<(), Bin
     Ok(())
 }
 
+fn validate_dictionary_graph(
+    vtable: &VtDictionaryGraphVTable,
+    value_domain: VtValueDomain,
+) -> Result<(), BindingError> {
+    if vtable.struct_size < std::mem::size_of::<VtDictionaryGraphVTable>()
+        || vtable.interface_version < VT_DICTIONARY_GRAPH_INTERFACE_VERSION
+        || vtable.reserved != 0
+        || vtable.graph.is_none()
+        || (value_domain == VtValueDomain::OptionalU64 && vtable.node_value_u64.is_none())
+    {
+        return Err(BindingError::IncompatibleDictionaryInterface);
+    }
+    Ok(())
+}
+
 fn validate_snapshot_identity(vtable: &VtSnapshotIdentityVTable) -> Result<(), BindingError> {
     if vtable.struct_size < std::mem::size_of::<VtSnapshotIdentityVTable>()
         || vtable.interface_version < VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION
@@ -567,6 +903,7 @@ trait InteropUnit: CharUnit {
     /// foreign-node cache.
     fn from_validated_abi(label: u64) -> Self;
     fn to_abi(self) -> u64;
+    fn captured_graph(provider: &Provider) -> Option<Arc<SnapshotTraversalGraph<Self>>>;
 }
 
 impl InteropUnit for u8 {
@@ -583,6 +920,13 @@ impl InteropUnit for u8 {
 
     fn to_abi(self) -> u64 {
         u64::from(self)
+    }
+
+    fn captured_graph(provider: &Provider) -> Option<Arc<SnapshotTraversalGraph<Self>>> {
+        match provider.graph.as_ref()? {
+            ForeignCapturedGraph::Byte(graph) => Some(Arc::clone(graph)),
+            ForeignCapturedGraph::Unicode(_) | ForeignCapturedGraph::U64(_) => None,
+        }
     }
 }
 
@@ -604,6 +948,13 @@ impl InteropUnit for char {
     fn to_abi(self) -> u64 {
         u64::from(u32::from(self))
     }
+
+    fn captured_graph(provider: &Provider) -> Option<Arc<SnapshotTraversalGraph<Self>>> {
+        match provider.graph.as_ref()? {
+            ForeignCapturedGraph::Unicode(graph) => Some(Arc::clone(graph)),
+            ForeignCapturedGraph::Byte(_) | ForeignCapturedGraph::U64(_) => None,
+        }
+    }
 }
 
 impl InteropUnit for u64 {
@@ -620,6 +971,108 @@ impl InteropUnit for u64 {
 
     fn to_abi(self) -> u64 {
         self
+    }
+
+    fn captured_graph(provider: &Provider) -> Option<Arc<SnapshotTraversalGraph<Self>>> {
+        match provider.graph.as_ref()? {
+            ForeignCapturedGraph::U64(graph) => Some(Arc::clone(graph)),
+            ForeignCapturedGraph::Byte(_) | ForeignCapturedGraph::Unicode(_) => None,
+        }
+    }
+}
+
+fn validate_graph_slice<T>(pointer: *const T, len: usize) -> Result<(), BindingError> {
+    if len == 0 {
+        return Ok(());
+    }
+    if pointer.is_null() || !pointer.is_aligned() {
+        return Err(BindingError::InvalidProviderOutput(
+            "snapshot graph slice pointer was null or misaligned",
+        ));
+    }
+    let bytes =
+        len.checked_mul(std::mem::size_of::<T>())
+            .ok_or(BindingError::InvalidProviderOutput(
+                "snapshot graph slice length overflowed",
+            ))?;
+    if bytes > isize::MAX as usize {
+        return Err(BindingError::InvalidProviderOutput(
+            "snapshot graph slice exceeded the addressable range",
+        ));
+    }
+    Ok(())
+}
+
+fn decode_graph<U: InteropUnit>(
+    view: VtDictionaryGraphView,
+) -> Result<Arc<SnapshotTraversalGraph<U>>, BindingError> {
+    crate::causal_perf::record_foreign_graph_decodes(1);
+    if view.reserved != 0 || view.node_count == 0 {
+        return Err(BindingError::InvalidProviderOutput(
+            "snapshot graph header was invalid",
+        ));
+    }
+    validate_graph_slice(view.nodes, view.node_count)?;
+    validate_graph_slice(view.edges, view.edge_count)?;
+    let root = u32::try_from(view.root)
+        .map_err(|_| BindingError::InvalidProviderOutput("snapshot graph root exceeded u32"))?;
+    // SAFETY: the retained provider owns both immutable slices. Their
+    // pointers, alignment, and byte lengths were validated above, and the
+    // provider's successful callback guarantees readable initialized POD.
+    let raw_nodes = unsafe { std::slice::from_raw_parts(view.nodes, view.node_count) };
+    // SAFETY: same retained-view argument as for `raw_nodes`.
+    let raw_edges = unsafe { std::slice::from_raw_parts(view.edges, view.edge_count) };
+    let mut nodes = Vec::with_capacity(raw_nodes.len());
+    for node in raw_nodes {
+        if node.reserved != [0; 7] || node.is_final > 1 {
+            return Err(BindingError::InvalidProviderOutput(
+                "snapshot graph node flags were invalid",
+            ));
+        }
+        let edge_start = u32::try_from(node.edge_start).map_err(|_| {
+            BindingError::InvalidProviderOutput("snapshot graph edge start exceeded u32")
+        })?;
+        let edge_len = u32::try_from(node.edge_len).map_err(|_| {
+            BindingError::InvalidProviderOutput("snapshot graph edge length exceeded u32")
+        })?;
+        let value_cursor = usize::try_from(node.value_cursor)
+            .ok()
+            .and_then(SnapshotTraversalCursor::new)
+            .ok_or(BindingError::InvalidProviderOutput(
+                "snapshot graph value cursor was invalid",
+            ))?;
+        nodes.push(SnapshotTraversalNode::new(
+            edge_start,
+            edge_len,
+            node.is_final == 1,
+            value_cursor,
+        ));
+    }
+    let mut edges = Vec::with_capacity(raw_edges.len());
+    for edge in raw_edges {
+        let label = U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
+            "snapshot graph label was outside its unit domain",
+        ))?;
+        let target = u32::try_from(edge.target).map_err(|_| {
+            BindingError::InvalidProviderOutput("snapshot graph target exceeded u32")
+        })?;
+        edges.push(SnapshotTraversalEdge::new(label, target));
+    }
+    SnapshotTraversalGraph::new(nodes, edges, root)
+        .map(Arc::new)
+        .ok_or(BindingError::InvalidProviderOutput(
+            "snapshot graph ranges, targets, or label order were invalid",
+        ))
+}
+
+fn decode_captured_graph(
+    domain: VtUnitDomain,
+    view: VtDictionaryGraphView,
+) -> Result<ForeignCapturedGraph, BindingError> {
+    match domain {
+        VtUnitDomain::Byte => decode_graph(view).map(ForeignCapturedGraph::Byte),
+        VtUnitDomain::UnicodeScalar => decode_graph(view).map(ForeignCapturedGraph::Unicode),
+        VtUnitDomain::U64 => decode_graph(view).map(ForeignCapturedGraph::U64),
     }
 }
 
@@ -658,7 +1111,7 @@ unsafe impl Sync for ProviderRef {}
 #[derive(Clone, Copy)]
 struct ForeignNode<U: InteropUnit> {
     provider: ProviderRef,
-    entry: NonNull<CachedForeignEntry>,
+    target: ForeignTarget,
     _unit: PhantomData<fn() -> U>,
 }
 
@@ -681,51 +1134,121 @@ impl<U: InteropUnit> fmt::Debug for ForeignNode<U> {
 impl<U: InteropUnit> ForeignNode<U> {
     fn new(provider: ProviderRef, id: u64) -> Self {
         let entry = NonNull::from(provider.node_entry(id));
-        Self {
-            provider,
-            entry,
-            _unit: PhantomData,
+        Self::from_entry(provider, entry)
+    }
+
+    fn traversal_root(owner: &Arc<Provider>, id: u64) -> DictionaryTraversalRoot<Self> {
+        let node = Self::new(ProviderRef::new(owner), id);
+        match U::captured_graph(owner) {
+            Some(graph) => DictionaryTraversalRoot::captured(node, graph),
+            None => DictionaryTraversalRoot::owned(node),
         }
     }
 
     fn from_entry(provider: ProviderRef, entry: NonNull<CachedForeignEntry>) -> Self {
+        let pending = ForeignTarget::pending(entry);
+        let target = if foreign_ready_cursors_enabled() {
+            pending.ready_if_published().unwrap_or(pending)
+        } else {
+            pending
+        };
+        Self::from_target(provider, target)
+    }
+
+    #[inline]
+    fn from_target(provider: ProviderRef, target: ForeignTarget) -> Self {
         Self {
             provider,
-            entry,
+            target,
             _unit: PhantomData,
         }
     }
 
+    #[inline]
+    fn traversal_cursor(self) -> libdictenstein::SnapshotTraversalCursor {
+        if self.target.is_ready() {
+            crate::causal_perf::record_foreign_ready_cursors_emitted(1);
+        } else {
+            crate::causal_perf::record_foreign_pending_cursors_emitted(1);
+        }
+        libdictenstein::SnapshotTraversalCursor::new(self.target.encoded())
+            .expect("foreign traversal targets are non-null")
+    }
+
+    /// Reconstitute a lightweight node view while the query-local provider
+    /// owner retains the append-only cache entry.
+    ///
+    /// # Safety
+    ///
+    /// `cursor` must have originated from this provider and query snapshot.
+    #[inline]
+    unsafe fn from_traversal_cursor(
+        provider: ProviderRef,
+        cursor: libdictenstein::SnapshotTraversalCursor,
+    ) -> Self {
+        let target = ForeignTarget::from_encoded(cursor.get())
+            .expect("snapshot traversal cursors are non-null");
+        Self::from_target(provider, target)
+    }
+
     #[inline(always)]
-    fn entry(&self) -> &CachedForeignEntry {
+    fn pending_entry(&self) -> Option<&CachedForeignEntry> {
+        let entry = self.target.pending_entry()?;
         // SAFETY: entries live in the append-only cache owned by `provider` and
         // the query cursor drops all node handles before releasing that owner.
-        unsafe { self.entry.as_ref() }
+        Some(unsafe { entry.as_ref() })
+    }
+
+    #[inline(always)]
+    fn ready_node(&self) -> Option<&CachedForeignNode> {
+        let node = self.target.ready_node()?;
+        // SAFETY: descriptors are immutable after publication and retained by
+        // the append-only cache owned by `provider`.
+        Some(unsafe { node.as_ref() })
     }
 
     #[inline(always)]
     fn id(&self) -> u64 {
-        self.entry().node
+        if let Some(node) = self.ready_node() {
+            node.node
+        } else {
+            self.pending_entry()
+                .expect("foreign target is pending or ready")
+                .node
+        }
     }
 
     #[inline]
     fn child_from_edge(&self, edge: &CachedForeignEdge) -> Self {
-        let cached = edge.cached_child.load(Ordering::Acquire);
-        let entry = if let Some(entry) = NonNull::new(cached) {
-            entry
-        } else {
+        let ready_cursors = foreign_ready_cursors_enabled();
+        let mut encoded = edge.cached_child.load(Ordering::Acquire);
+        if encoded == 0 {
+            crate::causal_perf::record_foreign_child_directory_lookups(1);
             let canonical = NonNull::from(self.provider.node_entry(edge.node));
+            let pending = ForeignTarget::pending(canonical);
+            let candidate = if ready_cursors {
+                pending.ready_if_published().unwrap_or(pending)
+            } else {
+                pending
+            };
             match edge.cached_child.compare_exchange(
-                std::ptr::null_mut(),
-                canonical.as_ptr(),
+                0,
+                candidate.encoded(),
                 Ordering::Release,
                 Ordering::Acquire,
             ) {
-                Ok(_) => canonical,
-                Err(existing) => NonNull::new(existing).expect("published child entry"),
+                // This thread just checked descriptor publication while
+                // choosing `candidate`; a second acquire load cannot improve
+                // this visit and would double the cold-edge lookup work.
+                Ok(_) => return Self::from_target(self.provider, candidate),
+                Err(existing) => encoded = existing,
             }
-        };
-        Self::from_entry(self.provider, entry)
+        }
+        let mut target = ForeignTarget::from_encoded(encoded).expect("published child target");
+        if ready_cursors {
+            target = promote_published_foreign_target(&edge.cached_child, target);
+        }
+        Self::from_target(self.provider, target)
     }
 
     fn callback_failed<T>(&self, error: BindingError, fallback: T) -> T {
@@ -803,13 +1326,61 @@ impl<U: InteropUnit> ForeignNode<U> {
         self.try_filter_map_expanded_edges(|_| Some(()), |label, child, ()| visitor(label, child))
     }
 
-    #[inline]
+    /// Inspect a node without bringing the provider's large pagination frame
+    /// into the overwhelmingly common ready/published-descriptor path.
+    #[inline(always)]
     fn try_inspect_node(&self) -> Result<&CachedForeignNode, BindingError> {
-        let entry = self.entry();
+        #[cfg(feature = "resource-profiling")]
+        if monolithic_foreign_inspection_enabled() {
+            return self.try_inspect_node_slow_or_monolithic(None);
+        }
+
+        if let Some(cached) = self.ready_node() {
+            crate::causal_perf::record_foreign_ready_descriptor_reads(1);
+            crate::causal_perf::record_foreign_node_cache_hits(1);
+            return Ok(cached);
+        }
+        let entry = self
+            .pending_entry()
+            .expect("foreign target is pending or ready");
+        crate::causal_perf::record_foreign_pending_descriptor_loads(1);
         if let Some(cached) = entry.descriptor.get() {
             crate::causal_perf::record_foreign_node_cache_hits(1);
             return Ok(cached);
         }
+        self.try_inspect_node_slow_or_monolithic(Some(entry))
+    }
+
+    /// Populate an unpublished descriptor. In profiling builds, `None` also
+    /// preserves the former monolithic ready path as a same-binary causal
+    /// control. In production this function is cold and reached only for a
+    /// genuine cache miss, so its 256-edge stack page and provider machinery
+    /// never impose stack probes on warm traversal.
+    #[cfg_attr(not(feature = "resource-profiling"), cold)]
+    #[inline(never)]
+    fn try_inspect_node_slow_or_monolithic<'a>(
+        &'a self,
+        known_miss: Option<&'a CachedForeignEntry>,
+    ) -> Result<&'a CachedForeignNode, BindingError> {
+        let entry = match known_miss {
+            Some(entry) => entry,
+            None => {
+                if let Some(cached) = self.ready_node() {
+                    crate::causal_perf::record_foreign_ready_descriptor_reads(1);
+                    crate::causal_perf::record_foreign_node_cache_hits(1);
+                    return Ok(cached);
+                }
+                let entry = self
+                    .pending_entry()
+                    .expect("foreign target is pending or ready");
+                crate::causal_perf::record_foreign_pending_descriptor_loads(1);
+                if let Some(cached) = entry.descriptor.get() {
+                    crate::causal_perf::record_foreign_node_cache_hits(1);
+                    return Ok(cached);
+                }
+                entry
+            }
+        };
         crate::causal_perf::record_foreign_node_cache_misses(1);
         let callback = self
             .provider
@@ -873,7 +1444,7 @@ impl<U: InteropUnit> ForeignNode<U> {
                 edges.push(CachedForeignEdge {
                     label: edge.label,
                     node: edge.node,
-                    cached_child: AtomicPtr::new(std::ptr::null_mut()),
+                    cached_child: AtomicUsize::new(0),
                 });
             }
             start = start.saturating_add(written);
@@ -881,6 +1452,7 @@ impl<U: InteropUnit> ForeignNode<U> {
                 let cached = self.provider.cache_node(
                     entry,
                     CachedForeignNode {
+                        node: entry.node,
                         is_final,
                         edges: edges.into_boxed_slice(),
                     },
@@ -901,6 +1473,9 @@ impl<U: InteropUnit> ForeignNode<U> {
         F: FnMut(U, Self, T),
     {
         let cached = self.try_inspect_node()?;
+        if cached.edges.is_empty() {
+            crate::causal_perf::record_foreign_leaf_expansions(1);
+        }
         for edge in &cached.edges {
             let label = U::from_validated_abi(edge.label);
             if let Some(projected) = project(label) {
@@ -944,6 +1519,52 @@ impl<U: InteropUnit> ForeignNode<U> {
 
 impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
     type Unit = U;
+
+    #[inline]
+    fn snapshot_root_cursor(&self) -> Option<libdictenstein::SnapshotTraversalCursor> {
+        self.provider
+            .visit_vtable()
+            .is_some()
+            .then(|| (*self).traversal_cursor())
+    }
+
+    #[inline]
+    fn supports_snapshot_cursor_nodes(&self) -> bool {
+        self.provider.visit_vtable().is_some()
+    }
+
+    #[inline]
+    unsafe fn snapshot_cursor_node(
+        &self,
+        cursor: libdictenstein::SnapshotTraversalCursor,
+    ) -> Option<Self> {
+        self.provider.visit_vtable()?;
+        // SAFETY: inherited from the DictionaryNode cursor contract.
+        Some(unsafe { Self::from_traversal_cursor(self.provider, cursor) })
+    }
+
+    #[inline]
+    unsafe fn filter_map_snapshot_cursor_edges_and_finality<T, P, F>(
+        &self,
+        cursor: libdictenstein::SnapshotTraversalCursor,
+        project: P,
+        mut visitor: F,
+    ) -> Option<bool>
+    where
+        P: FnMut(Self::Unit) -> Option<T>,
+        F: FnMut(Self::Unit, libdictenstein::SnapshotTraversalCursor, T),
+    {
+        self.provider.visit_vtable()?;
+        // SAFETY: inherited from the DictionaryNode cursor contract.
+        let node = unsafe { Self::from_traversal_cursor(self.provider, cursor) };
+        match node
+            .try_filter_map_inspected_edges_and_finality(project, |label, child, projected| {
+                visitor(label, child.traversal_cursor(), projected)
+            }) {
+            Ok(is_final) => Some(is_final),
+            Err(error) => Some(node.callback_failed(error, false)),
+        }
+    }
 
     fn is_final(&self) -> bool {
         if self.provider.visit_vtable().is_some() {
@@ -1132,6 +1753,71 @@ impl<U: InteropUnit> MappedDictionaryNode for ForeignNode<U> {
         };
         Some(BindingValue { id })
     }
+
+    #[inline]
+    fn supports_snapshot_cursor_values(&self) -> bool {
+        self.provider.visit_vtable().is_some()
+    }
+
+    #[inline]
+    fn supports_snapshot_graph_values(&self) -> bool {
+        U::captured_graph(&self.provider).is_some() && self.provider.graph_vtable.is_some()
+    }
+
+    #[inline]
+    unsafe fn snapshot_cursor_value(
+        &self,
+        cursor: libdictenstein::SnapshotTraversalCursor,
+    ) -> Option<Option<Self::Value>> {
+        self.provider.visit_vtable()?;
+        // SAFETY: inherited from the MappedDictionaryNode cursor contract.
+        let node = unsafe { Self::from_traversal_cursor(self.provider, cursor) };
+        let is_final = match node.try_inspect_node() {
+            Ok(cached) => cached.is_final,
+            Err(error) => return Some(node.callback_failed(error, None)),
+        };
+        Some(is_final.then(|| node.value_at_final()).flatten())
+    }
+
+    #[inline]
+    unsafe fn snapshot_graph_cursor_value(
+        &self,
+        graph: &SnapshotTraversalGraph<U>,
+        cursor: SnapshotTraversalCursor,
+    ) -> Option<Option<Self::Value>> {
+        let graph_vtable = self.provider.graph_vtable?;
+        if self.provider.vtable().value_domain == VtValueDomain::Unit {
+            return Some(Some(BindingValue { id: None }));
+        }
+        // SAFETY: the interface was validated while constructing the retained
+        // provider and remains immutable for that provider's lifetime.
+        let callback = unsafe { (*graph_vtable).node_value_u64 }?;
+        let value_cursor = u64::try_from(graph.value_cursor(cursor).get()).ok()?;
+        let mut value = VtOptionalU64::default();
+        let callback_status = self
+            .provider
+            .call(|| unsafe { callback(self.provider.resource.context, value_cursor, &mut value) });
+        if let Err(error) = status(callback_status) {
+            return Some(self.callback_failed(error, None));
+        }
+        if value.reserved != [0; 7] {
+            return Some(self.callback_failed(
+                BindingError::InvalidProviderOutput("graph value reserved bytes were not zero"),
+                None,
+            ));
+        }
+        let id = match value.has_value {
+            0 => None,
+            1 => Some(value.value),
+            _ => {
+                return Some(self.callback_failed(
+                    BindingError::InvalidProviderOutput("graph value presence was not zero or one"),
+                    None,
+                ))
+            }
+        };
+        Some(Some(BindingValue { id }))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -1270,7 +1956,7 @@ type U64Traversal = ValueYieldingQueryIterator<ForeignNode<u64>, Vec<u64>>;
 type CharScorer = fn(&str, usize, &BindingValue) -> f64;
 type CharOrdered = RankedValueQueryIterator<ForeignNode<char>, CharScorer>;
 #[cfg(feature = "bindings-phonetic")]
-type CharLanguage = LanguageQueryIterator<ForeignNode<char>, NFAChar>;
+type CharLanguage = MappedLanguageQueryIterator<ForeignNode<char>, NFAChar>;
 
 fn term_only_score(_term: &str, _distance: usize, _value: &BindingValue) -> f64 {
     0.0
@@ -1363,7 +2049,7 @@ impl QueryCursor {
             CursorInner::CharLanguage(cursor) => cursor.next().map(|item| Match {
                 term: MatchTerm::Utf8(item.units.into_iter().collect()),
                 distance: usize::from(item.distance),
-                id: item.node.value().and_then(|value| value.id),
+                id: item.value.and_then(|value| value.id),
             }),
         };
         if let Some(error) = self.provider.take_fault() {
@@ -1406,6 +2092,90 @@ mod compact_foreign_handle_tests {
         );
     }
 
+    #[test]
+    fn foreign_targets_round_trip_pending_and_ready_pointers() {
+        let entry = Box::new(CachedForeignEntry::new(42));
+        let node = Box::new(CachedForeignNode {
+            node: 42,
+            is_final: true,
+            edges: Box::new([]),
+        });
+
+        let pending = ForeignTarget::pending(NonNull::from(entry.as_ref()));
+        assert!(!pending.is_ready());
+        assert_eq!(
+            unsafe { pending.pending_entry().unwrap().as_ref() }.node,
+            42
+        );
+        assert!(pending.ready_node().is_none());
+        assert_eq!(
+            ForeignTarget::from_encoded(pending.encoded()),
+            Some(pending)
+        );
+
+        let ready = ForeignTarget::ready(NonNull::from(node.as_ref()));
+        assert!(ready.is_ready());
+        assert!(ready.pending_entry().is_none());
+        assert_eq!(unsafe { ready.ready_node().unwrap().as_ref() }.node, 42);
+        assert_eq!(ForeignTarget::from_encoded(ready.encoded()), Some(ready));
+    }
+
+    #[test]
+    fn published_foreign_target_promotion_is_monotonic() {
+        let entry = Box::new(CachedForeignEntry::new(7));
+        let pending = ForeignTarget::pending(NonNull::from(entry.as_ref()));
+        let published = entry.descriptor.publish_if_absent(CachedForeignNode {
+            node: 7,
+            is_final: false,
+            edges: Box::new([]),
+        });
+        let slot = AtomicUsize::new(pending.encoded());
+
+        let ready = promote_published_foreign_target(&slot, pending);
+        assert!(ready.is_ready());
+        assert_eq!(
+            unsafe { ready.ready_node().unwrap().as_ref() } as *const CachedForeignNode,
+            published as *const CachedForeignNode
+        );
+        assert_eq!(slot.load(Ordering::Acquire), ready.encoded());
+        assert_eq!(promote_published_foreign_target(&slot, ready), ready);
+    }
+
+    #[test]
+    fn concurrent_foreign_target_promoters_converge_on_one_ready_descriptor() {
+        let entry = Box::new(CachedForeignEntry::new(99));
+        let pending = ForeignTarget::pending(NonNull::from(entry.as_ref()));
+        let published = entry.descriptor.publish_if_absent(CachedForeignNode {
+            node: 99,
+            is_final: true,
+            edges: Box::new([]),
+        });
+        let slot = AtomicUsize::new(pending.encoded());
+
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..16)
+                .map(|_| {
+                    scope.spawn(|| {
+                        let observed = ForeignTarget::from_encoded(slot.load(Ordering::Acquire))
+                            .expect("slot is initialized");
+                        promote_published_foreign_target(&slot, observed)
+                    })
+                })
+                .collect();
+            for handle in handles {
+                let target = handle.join().expect("promoter thread");
+                assert!(target.is_ready());
+                assert_eq!(
+                    unsafe { target.ready_node().unwrap().as_ref() } as *const CachedForeignNode,
+                    published as *const CachedForeignNode
+                );
+            }
+        });
+
+        let final_target = ForeignTarget::from_encoded(slot.load(Ordering::Acquire)).unwrap();
+        assert!(final_target.is_ready());
+    }
+
     #[cfg(feature = "resource-profiling")]
     #[test]
     fn forked_query_owners_have_independent_fault_mailboxes() {
@@ -1437,11 +2207,167 @@ mod compact_foreign_handle_tests {
     }
 }
 
+#[cfg(test)]
+mod snapshot_graph_decode_tests {
+    use super::*;
+
+    fn node(
+        edge_start: u64,
+        edge_len: u64,
+        value_cursor: u64,
+        is_final: u8,
+    ) -> VtDictionaryGraphNode {
+        VtDictionaryGraphNode {
+            edge_start,
+            edge_len,
+            value_cursor,
+            is_final,
+            reserved: [0; 7],
+        }
+    }
+
+    fn edge(label: u64, target: u64) -> VtDictionaryGraphEdge {
+        VtDictionaryGraphEdge { label, target }
+    }
+
+    fn view(
+        nodes: &[VtDictionaryGraphNode],
+        edges: &[VtDictionaryGraphEdge],
+        root: u64,
+    ) -> VtDictionaryGraphView {
+        VtDictionaryGraphView {
+            nodes: nodes.as_ptr(),
+            node_count: nodes.len(),
+            edges: edges.as_ptr(),
+            edge_count: edges.len(),
+            root,
+            reserved: 0,
+        }
+    }
+
+    fn fixture() -> ([VtDictionaryGraphNode; 3], [VtDictionaryGraphEdge; 2]) {
+        (
+            [node(0, 2, 11, 0), node(2, 0, 12, 1), node(2, 0, 13, 1)],
+            [edge(u64::from(b'a'), 1), edge(u64::from(b'z'), 2)],
+        )
+    }
+
+    fn assert_invalid<U: InteropUnit>(view: VtDictionaryGraphView) {
+        assert!(matches!(
+            decode_graph::<U>(view),
+            Err(BindingError::InvalidProviderOutput(_))
+        ));
+    }
+
+    #[test]
+    fn valid_views_decode_every_unit_domain() {
+        let (nodes, byte_edges) = fixture();
+        let byte = decode_graph::<u8>(view(&nodes, &byte_edges, 0)).expect("byte graph");
+        assert_eq!(byte.node_count(), 3);
+        assert_eq!(byte.root_cursor().get(), 1);
+
+        let char_edges = [edge(u64::from('a'), 1), edge(u64::from('\u{10ffff}'), 2)];
+        let unicode = decode_graph::<char>(view(&nodes, &char_edges, 0)).expect("Unicode graph");
+        assert_eq!(unicode.node_count(), 3);
+
+        let token_edges = [edge(1u64 << 40, 1), edge(u64::MAX, 2)];
+        let tokens = decode_graph::<u64>(view(&nodes, &token_edges, 0)).expect("u64 graph");
+        assert_eq!(tokens.node_count(), 3);
+    }
+
+    #[test]
+    fn graph_header_and_slice_bounds_are_validated_before_dereference() {
+        let (nodes, edges) = fixture();
+
+        let mut malformed = view(&nodes, &edges, 0);
+        malformed.reserved = 1;
+        assert_invalid::<u8>(malformed);
+
+        malformed = view(&nodes, &edges, 0);
+        malformed.node_count = 0;
+        assert_invalid::<u8>(malformed);
+
+        malformed = view(&nodes, &edges, 0);
+        malformed.nodes = std::ptr::null();
+        assert_invalid::<u8>(malformed);
+
+        malformed = view(&nodes, &edges, 0);
+        malformed.nodes = std::ptr::without_provenance(1);
+        assert_invalid::<u8>(malformed);
+
+        malformed = view(&nodes, &edges, 0);
+        malformed.node_count = usize::MAX;
+        assert_invalid::<u8>(malformed);
+
+        malformed = view(&nodes, &edges, 0);
+        malformed.edge_count = usize::MAX;
+        assert_invalid::<u8>(malformed);
+
+        malformed = view(&nodes, &edges, u64::MAX);
+        assert_invalid::<u8>(malformed);
+    }
+
+    #[test]
+    fn node_flags_ranges_value_cursors_and_root_are_validated() {
+        let (mut nodes, edges) = fixture();
+        nodes[0].reserved[3] = 1;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (mut nodes, edges) = fixture();
+        nodes[1].is_final = 2;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (mut nodes, edges) = fixture();
+        nodes[2].value_cursor = 0;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (mut nodes, edges) = fixture();
+        nodes[0].edge_start = u64::MAX;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (mut nodes, edges) = fixture();
+        nodes[0].edge_len = u64::MAX;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (nodes, edges) = fixture();
+        assert_invalid::<u8>(view(&nodes, &edges, nodes.len() as u64));
+    }
+
+    #[test]
+    fn edge_targets_labels_and_per_node_order_are_validated() {
+        let (nodes, mut edges) = fixture();
+        edges[0].target = u64::MAX;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (nodes, mut edges) = fixture();
+        edges[0].target = nodes.len() as u64;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (nodes, mut edges) = fixture();
+        edges[0].label = 256;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (nodes, _) = fixture();
+        let surrogate_edges = [edge(0xd800, 1), edge(0xe000, 2)];
+        assert_invalid::<char>(view(&nodes, &surrogate_edges, 0));
+
+        let (nodes, mut edges) = fixture();
+        edges.swap(0, 1);
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+
+        let (nodes, mut edges) = fixture();
+        edges[1].label = edges[0].label;
+        assert_invalid::<u8>(view(&nodes, &edges, 0));
+    }
+}
+
 /// A Levenshtein automaton configuration retaining a live dictionary resource.
 ///
 /// Constructing this object is O(1): the resource is retained, not serialized.
 /// Each query invokes the provider's O(1) `snapshot` callback before any node is
-/// read, which is the binding-level query-start snapshot boundary.
+/// read, which is the binding-level query-start snapshot boundary. The first
+/// compact-graph negotiation for one immutable revision may validate and import
+/// that graph in O(nodes + edges); later queries share the memoized graph.
 #[derive(Clone, Debug)]
 pub struct ResourceTransducer {
     dictionary: ForeignDictionary,
@@ -1474,10 +2400,11 @@ impl ResourceTransducer {
     /// Capture one immutable dictionary revision for reuse across queries.
     ///
     /// The returned transducer deliberately does not observe later mutations
-    /// to the source resource. Its provider snapshot, lazy node arena, and
-    /// validated edge pages are shared by every cursor, amortizing traversal
-    /// discovery for read-only query batches. Calling this on an already
-    /// immutable transducer is O(1).
+    /// to the source resource. Its preferred compact traversal graph, or its
+    /// fallback lazy node arena and validated edge pages, is shared by every
+    /// cursor. The provider revision capture is O(1). A cold optional graph is
+    /// validated and imported once in O(nodes + edges), outside provider locks;
+    /// calling this on an already imported immutable revision is O(1).
     pub fn snapshot(&self) -> Result<Self, BindingError> {
         Ok(Self {
             dictionary: self.dictionary.snapshot()?,
@@ -1500,17 +2427,19 @@ impl ResourceTransducer {
         };
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
-        let root = ForeignNode::<char>::new(ProviderRef::new(&owner), owner.root()?);
+        let root_id = owner.root()?;
         let inner = match order {
-            QueryOrder::Traversal => CursorInner::CharTraversal(ValueYieldingQueryIterator::new(
-                root,
-                query.to_owned(),
-                max_distance,
-                self.algorithm,
-            )),
+            QueryOrder::Traversal => {
+                CursorInner::CharTraversal(ValueYieldingQueryIterator::with_traversal_root(
+                    ForeignNode::<char>::traversal_root(&owner, root_id),
+                    query.to_owned(),
+                    max_distance,
+                    self.algorithm,
+                ))
+            }
             QueryOrder::DistanceThenTerm => {
-                CursorInner::CharOrdered(RankedValueQueryIterator::new(
-                    root,
+                CursorInner::CharOrdered(RankedValueQueryIterator::with_traversal_root(
+                    ForeignNode::<char>::traversal_root(&owner, root_id),
                     query.to_owned(),
                     max_distance,
                     self.algorithm,
@@ -1542,14 +2471,16 @@ impl ResourceTransducer {
         }
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
-        let root = ForeignNode::<u8>::new(ProviderRef::new(&owner), owner.root()?);
+        let root_id = owner.root()?;
         Ok(QueryCursor {
-            inner: CursorInner::ByteTraversal(ValueYieldingQueryIterator::with_unit_query(
-                root,
-                query.to_vec(),
-                max_distance,
-                self.algorithm,
-            )),
+            inner: CursorInner::ByteTraversal(
+                ValueYieldingQueryIterator::with_unit_query_traversal_root(
+                    ForeignNode::<u8>::traversal_root(&owner, root_id),
+                    query.to_vec(),
+                    max_distance,
+                    self.algorithm,
+                ),
+            ),
             provider: owner,
         })
     }
@@ -1572,14 +2503,16 @@ impl ResourceTransducer {
         }
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
-        let root = ForeignNode::<u64>::new(ProviderRef::new(&owner), owner.root()?);
+        let root_id = owner.root()?;
         Ok(QueryCursor {
-            inner: CursorInner::U64Traversal(ValueYieldingQueryIterator::with_unit_query(
-                root,
-                query.to_vec(),
-                max_distance,
-                self.algorithm,
-            )),
+            inner: CursorInner::U64Traversal(
+                ValueYieldingQueryIterator::with_unit_query_traversal_root(
+                    ForeignNode::<u64>::traversal_root(&owner, root_id),
+                    query.to_vec(),
+                    max_distance,
+                    self.algorithm,
+                ),
+            ),
             provider: owner,
         })
     }
@@ -1599,10 +2532,10 @@ impl ResourceTransducer {
         };
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
-        let root = ForeignNode::<char>::new(ProviderRef::new(&owner), owner.root()?);
+        let root_id = owner.root()?;
         Ok(QueryCursor {
-            inner: CursorInner::CharLanguage(LanguageQueryIterator::new(
-                root,
+            inner: CursorInner::CharLanguage(MappedLanguageQueryIterator::from_traversal_root(
+                ForeignNode::<char>::traversal_root(&owner, root_id),
                 LanguageProduct::new(pattern.nfa.clone(), max_distance),
             )),
             provider: owner,

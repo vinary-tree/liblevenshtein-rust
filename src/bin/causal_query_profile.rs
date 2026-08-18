@@ -268,10 +268,49 @@ fn print_json(args: &Args, measurement: &Measurement) {
         ("edges_enumerated", stats.edges_enumerated),
         ("transition_attempts", stats.transition_attempts),
         ("transition_accepted", stats.transition_accepted),
+        ("packed_standard_queries", stats.packed_standard_queries),
+        ("positional_unit_queries", stats.positional_unit_queries),
+        (
+            "packed_standard_transition_attempts",
+            stats.packed_standard_transition_attempts,
+        ),
+        (
+            "packed_standard_transition_dead",
+            stats.packed_standard_transition_dead,
+        ),
+        ("packed_dfa_queries", stats.packed_dfa_queries),
+        (
+            "packed_dfa_transition_hits",
+            stats.packed_dfa_transition_hits,
+        ),
+        (
+            "packed_dfa_transition_misses",
+            stats.packed_dfa_transition_misses,
+        ),
+        (
+            "packed_dfa_states_interned",
+            stats.packed_dfa_states_interned,
+        ),
         ("generated_transition_hits", stats.generated_transition_hits),
         (
             "generated_transition_misses",
             stats.generated_transition_misses,
+        ),
+        (
+            "generated_product_expansions",
+            stats.generated_product_expansions,
+        ),
+        (
+            "generated_product_identity_expansions",
+            stats.generated_product_identity_expansions,
+        ),
+        (
+            "generated_product_unique_expansions",
+            stats.generated_product_unique_expansions,
+        ),
+        (
+            "generated_product_repeated_expansions",
+            stats.generated_product_repeated_expansions,
         ),
         ("epsilon_input_positions", stats.epsilon_input_positions),
         ("epsilon_output_positions", stats.epsilon_output_positions),

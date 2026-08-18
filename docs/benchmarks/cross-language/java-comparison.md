@@ -78,6 +78,37 @@ samples, with the exact same 18,514-match checksum. This 2.75× direct-core
 lead does not replace the Java-to-Java matrix above: it isolates the native
 algorithm from FFM and managed result delivery.
 
+The 2026-08-17 closure rerun measures the subsequent packed lazy-DFA,
+generated-transition, and immutable snapshot-graph changes. Its complete
+pure-Rust matrix contains 60 cells: four algorithms, distances one through
+three, five query shapes, and 30 full-query-set samples per cell. The table
+reports the geometric mean of the five cell medians at each coordinate; the
+range is the minimum and maximum cell median.
+
+| algorithm | d = 1 | d = 2 | d = 3 |
+|---|---:|---:|---:|
+| Standard | 9.800 ms [7.035, 12.127] | 67.908 ms [49.672, 80.556] | 301.221 ms [225.535, 346.011] |
+| transposition | 19.752 ms [14.789, 24.082] | 119.577 ms [88.860, 140.550] | 497.265 ms [373.618, 570.880] |
+| merge-and-split | 59.433 ms [49.625, 67.059] | 658.763 ms [576.171, 708.427] | 2500.528 ms [2065.579, 2754.241] |
+| unrestricted Damerau | 19.464 ms [14.638, 23.688] | 121.498 ms [89.681, 142.892] | 524.424 ms [390.241, 603.158] |
+
+On the original `standard/d1/hits` anchor, pure Rust now measures 12.127 ms
+per 1,000-query pass. A fresh legacy-Java JMH pair measures 50.522 ms with the
+same `3bdc59281f42611a` checksum, a 4.17× direct-core lead. The adjacent
+`standard/d1/std-d1` pair is likewise 11.050 ms for pure Rust and 44.686 ms
+for legacy Java, a 4.04× lead with checksum `1433160a7d157f4d`. Explicit
+pre-ordered Rust dictionary construction measures 14.546 ms over ten builds,
+range [14.219, 16.528] ms, versus the 34.207 ms Java ordered-builder result
+above.
+
+The matching fresh Rust-backed JVM cells are 30.801 ms (`hits`) and 27.291 ms
+(`std-d1`), 1.64× faster than legacy Java in both coordinates. These are clean
+compiler-guarded pairs, but they do **not** supersede the completed 45-pair
+breadth result: unrelated host compiler jobs repeatedly turned the guard red
+before later coordinates began. The runner is resumable and rejects a cell
+when a compiler appears before or after its timed fork; the partial values are
+recorded as fresh confirmation, not presented as a complete matrix verdict.
+
 The current recommendation is consequently different from the phase-0 one:
 query throughput is no longer a reason to reject migration for workloads
 represented by this matrix. Transposition is slightly ahead, standard is at

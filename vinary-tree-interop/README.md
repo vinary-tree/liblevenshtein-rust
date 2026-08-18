@@ -57,6 +57,9 @@ version:
 | Interface ID | Version | Payloads | What it is |
 |---|---|---|---|
 | `vt.dictionary.v1` | 1 (`VT_DICTIONARY_INTERFACE_VERSION`) | `VtDictionaryEdge`, `VtOptionalU64` | Immutable dictionary snapshots: root/final/transition queries plus batched edge paging, over byte, Unicode-scalar, or `u64` label domains, with optional `u64` values. |
+| `vt.dict.visit.v1` | 1 (`VT_DICTIONARY_VISIT_INTERFACE_VERSION`) | `VtDictionaryEdge` | Optional fused finality and edge-page inspection for callback-based dictionary traversal. |
+| `vt.dict.graph.v1` | 1 (`VT_DICTIONARY_GRAPH_INTERFACE_VERSION`) | `VtDictionaryGraphNode`, `VtDictionaryGraphEdge`, `VtDictionaryGraphView` | Optional compact immutable snapshot graph. A consumer validates the complete borrowed view once, retains its owner, and thereafter traverses dense node/edge arrays without provider callbacks or consumer cache publication. |
+| `vt.snapshot.id.1` | 1 (`VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION`) | `VtSnapshotIdentity` | Optional process-local immutable producer/revision identity for safely sharing derived state across separately retained views of the same snapshot. |
 | `vt.scalar-wfst.1` | 1 (`VT_WFST_INTERFACE_VERSION`) | `VtWfstArc` | Immutable scalar-weighted FSTs: start/finality/arc paging with `f64` weights in one of seven declared semirings, epsilon labels encoded by flag (never by magic value), lazy and acyclic capability claims. |
 
 Base protocol version: `VT_ABI_VERSION` = 1. The full change rules — what
@@ -65,11 +68,11 @@ counters — are the [ABI evolution policy](docs/abi-evolution.md).
 
 ## Who produces and consumes what
 
-| Repository | `vt.dictionary.v1` | `vt.scalar-wfst.1` | Notes |
+| Repository | Dictionary + optional graph | Scalar WFST | Notes |
 |---|---|---|---|
-| [libdictenstein](https://github.com/vinary-tree/libdictenstein) | **produces** | — | Four dictionary backends published as resources. |
-| [liblevenshtein](https://github.com/vinary-tree/liblevenshtein-rust) | **consumes** | — | Runs Levenshtein-automaton queries over any conforming dictionary provider; hosts this crate. |
-| [duallity](https://github.com/vinary-tree/duallity) | **consumes** | **produces** | Builds Levenshtein/fuzzy WFSTs *from* consumed dictionary resources. |
+| [libdictenstein](https://github.com/vinary-tree/libdictenstein) | **produces** | — | Dictionary resources publish the base interface; immutable DynamicDawg snapshots additionally publish compact graphs in all three unit domains. Other backends retain the callback fallback until they can expose the same immutable representation without copying at query start. |
+| [liblevenshtein](https://github.com/vinary-tree/liblevenshtein-rust) | **consumes** | — | Validates compact graphs at snapshot acquisition and routes every applicable automaton through the shared captured-graph traversal seam; falls back to fused or paged callbacks for older providers. |
+| [duallity](https://github.com/vinary-tree/duallity) | **consumes base dictionary** | **produces** | Builds Levenshtein/fuzzy WFSTs *from* consumed dictionary resources. |
 | [lling-llang](https://github.com/vinary-tree/lling-llang) | — | **produces + consumes** | Publishes vector WFSTs and lazily composes consumed ones. |
 | umbrella JS runtime ([`bindings/javascript-runtime`](../bindings/javascript-runtime)) | hosts | hosts | Depends on all four projects plus this crate; the one sanctioned all-of-family surface (Node, WASI, browser). |
 

@@ -39,6 +39,7 @@ mod builder_api;
 mod contextual_costs;
 mod contextual_query;
 pub mod costs_f64;
+mod dictionary_traversal;
 pub mod generalized;
 pub mod helpers;
 mod intersection;
@@ -55,6 +56,8 @@ mod operation_set_gzip;
 mod operation_set_protobuf;
 pub mod operation_type;
 mod ordered_query;
+mod packed_lanes;
+mod packed_standard;
 pub mod phonetic;
 #[cfg(feature = "phonetic-rules")]
 pub mod phonetic_transducer;
@@ -547,8 +550,8 @@ impl<
     ///
     /// Returns an iterator over matching terms (strings only)
     pub fn query(&self, term: &str, max_distance: usize) -> QueryIterator<D::Node, String, P> {
-        QueryIterator::with_policy_and_substring(
-            self.dictionary.root(),
+        QueryIterator::with_traversal_root_and_policy(
+            self.dictionary.traversal_root(),
             term.to_string(),
             max_distance,
             self.algorithm,
@@ -566,8 +569,8 @@ impl<
         term: &str,
         max_distance: usize,
     ) -> QueryIterator<D::Node, Candidate, P> {
-        QueryIterator::with_policy_and_substring(
-            self.dictionary.root(),
+        QueryIterator::with_traversal_root_and_policy(
+            self.dictionary.traversal_root(),
             term.to_string(),
             max_distance,
             self.algorithm,
@@ -630,8 +633,8 @@ impl<
         units: &[<D::Node as DictionaryNode>::Unit],
         max_distance: usize,
     ) -> QueryIterator<D::Node, Vec<<D::Node as DictionaryNode>::Unit>, P> {
-        QueryIterator::with_units(
-            self.dictionary.root(),
+        QueryIterator::with_traversal_root_and_units(
+            self.dictionary.traversal_root(),
             units.to_vec(),
             max_distance,
             self.algorithm,
@@ -651,8 +654,8 @@ impl<
         units: &[<D::Node as DictionaryNode>::Unit],
         max_distance: usize,
     ) -> QueryIterator<D::Node, UnitCandidate<<D::Node as DictionaryNode>::Unit>, P> {
-        QueryIterator::with_units(
-            self.dictionary.root(),
+        QueryIterator::with_traversal_root_and_units(
+            self.dictionary.traversal_root(),
             units.to_vec(),
             max_distance,
             self.algorithm,
@@ -693,8 +696,8 @@ impl<
         max_cost: f64,
         costs: OperationCostsF64,
     ) -> QueryIteratorF64<D::Node, UnitCandidateF64<<D::Node as DictionaryNode>::Unit>, P> {
-        QueryIteratorF64::with_units(
-            self.dictionary.root(),
+        QueryIteratorF64::with_traversal_root_and_units(
+            self.dictionary.traversal_root(),
             units.to_vec(),
             max_cost,
             self.algorithm,

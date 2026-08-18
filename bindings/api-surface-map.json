@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 35 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against the facade sources and regenerates bindings/conformance/completeness-matrix.tsv from this file. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 36 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against the facade sources and regenerates bindings/conformance/completeness-matrix.tsv from this file. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -79,6 +79,9 @@
         },
         "llev_transducer_new": {
           "symbol": "llev_transducer_new"
+        },
+        "llev_transducer_snapshot": {
+          "symbol": "llev_transducer_snapshot"
         },
         "llev_transducer_free": {
           "symbol": "llev_transducer_free"
@@ -238,6 +241,10 @@
         },
         "llev_transducer_new": {
           "symbol": "transducer"
+        },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
         },
         "llev_transducer_free": {
           "symbol": "close!"
@@ -414,6 +421,10 @@
         "llev_transducer_new": {
           "symbol": "vinary_tree::liblevenshtein::transducer"
         },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
+        },
         "llev_transducer_free": {
           "symbol": "vinary_tree::liblevenshtein::transducer::~transducer"
         },
@@ -584,6 +595,10 @@
         "llev_transducer_new": {
           "symbol": "Transducer"
         },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
+        },
         "llev_transducer_free": {
           "symbol": "Transducer.Dispose"
         },
@@ -741,6 +756,10 @@
         "llev_transducer_new": {
           "symbol": "new_transducer"
         },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
+        },
         "llev_transducer_free": {
           "symbol": "transducer%close"
         },
@@ -894,6 +913,10 @@
         "llev_transducer_new": {
           "symbol": "NewTransducer"
         },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
+        },
         "llev_transducer_free": {
           "symbol": "Transducer.Close"
         },
@@ -1046,6 +1069,10 @@
         },
         "llev_transducer_new": {
           "symbol": "transducer"
+        },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
         },
         "llev_transducer_free": {
           "symbol": "closeTransducer"
@@ -1217,6 +1244,10 @@
         "llev_transducer_new": {
           "symbol": "transducer"
         },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
+        },
         "llev_transducer_free": {
           "symbol": "Transducer.close"
         },
@@ -1383,6 +1414,10 @@
         },
         "llev_transducer_new": {
           "symbol": "liblevenshtein.transducer"
+        },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
         },
         "llev_transducer_free": {
           "symbol": "Transducer.close"
@@ -1564,6 +1599,9 @@
         "llev_transducer_new": {
           "symbol": "Transducer"
         },
+        "llev_transducer_snapshot": {
+          "symbol": "Transducer.snapshot"
+        },
         "llev_transducer_free": {
           "symbol": "Transducer.close"
         },
@@ -1725,6 +1763,10 @@
         "llev_transducer_new": {
           "symbol": "transducer"
         },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
+        },
         "llev_transducer_free": {
           "symbol": "transducer:close"
         },
@@ -1885,6 +1927,10 @@
         },
         "llev_transducer_new": {
           "symbol": "transducer"
+        },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
         },
         "llev_transducer_free": {
           "symbol": "close_transducer"
@@ -2055,6 +2101,10 @@
         "llev_transducer_new": {
           "symbol": "Transducer.__init__"
         },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
+        },
         "llev_transducer_free": {
           "symbol": "Transducer.close"
         },
@@ -2214,6 +2264,10 @@
         "llev_transducer_new": {
           "symbol": "Transducer#initialize"
         },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
+        },
         "llev_transducer_free": {
           "symbol": "Transducer#close"
         },
@@ -2369,6 +2423,10 @@
         },
         "llev_transducer_new": {
           "symbol": "Transducer.init"
+        },
+        "llev_transducer_snapshot": {
+          "symbol": null,
+          "_reason": "not exposed as a separate facade operation; ordinary query construction already captures a query-start snapshot and this facade has no explicit reusable snapshot object"
         },
         "llev_transducer_free": {
           "symbol": "Transducer.close"

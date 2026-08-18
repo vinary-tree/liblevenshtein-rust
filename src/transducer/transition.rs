@@ -1,5 +1,6 @@
 //! State transition logic for Levenshtein automata.
 
+use super::packed_standard::PackedStandardMachine;
 use super::variant::{with_variant, AutomatonVariant, TransitionCtx, VariantSpec};
 use super::variants::{AffineGapParams, AffineV};
 use super::{
@@ -183,8 +184,340 @@ pub(crate) struct CharacteristicCache<U: CharUnit> {
     padding: usize,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub(crate) struct GeneratedStateId(usize);
+
+/// Opaque eight-byte frontier carried by unit-cost dictionary traversals.
+///
+/// Packed Standard queries store their complete reachability relation directly
+/// in this word. Positional fallbacks store a query-local generated-state ID.
+/// Keeping the representation opaque lets every traversal scheduler share one
+/// transition façade without growing its queue entries.
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub(crate) struct UnitCostFrontier(u64);
+
+/// Final-distance interpretation for a unit-cost frontier.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FinishMode {
+    /// Match the entire dictionary term against the entire query.
+    Complete,
+    /// A suffix-based dictionary may accept any live query position.
+    Substring,
+    /// The entire query must have been consumed, while the dictionary term may
+    /// continue through the zero-cost terminal sink.
+    Prefix,
+}
+
+/// Query-local unit-cost transition façade.
+///
+/// Eligible short Standard queries use a one-word bounded NFA. Every other
+/// algorithm, budget, or query width keeps the established positional engine
+/// as an exact fallback. The enum is selected once per query; schedulers never
+/// branch on or duplicate the two representations themselves.
+// Keep the positional engine inline. Boxing it adds an allocation and pointer
+// indirection to every query solely to reduce this query-local stack value.
+#[allow(clippy::large_enum_variant)]
+pub(crate) enum UnitCostMachine<U: CharUnit> {
+    PackedStandard(PackedStandardMachine<U>),
+    Positional(CachedUnitTransitions<U>),
+}
+
+impl<U: CharUnit> UnitCostMachine<U> {
+    pub(crate) fn unseeded_positional(query_length: usize, max_distance: usize) -> Self {
+        Self::Positional(CachedUnitTransitions::new(query_length, max_distance))
+    }
+
+    pub(crate) fn seeded<P>(query: &[U], settings: TransitionSettings) -> (Self, UnitCostFrontier)
+    where
+        P: SubstitutionPolicy,
+    {
+        if !packed_standard_disabled() {
+            if let Some(machine) = PackedStandardMachine::new::<P>(query, settings) {
+                let seed = UnitCostFrontier(machine.seed());
+                crate::causal_perf::record_packed_standard_queries(1);
+                return (Self::PackedStandard(machine), seed);
+            }
+        }
+        Self::seeded_positional(query.len(), settings)
+    }
+
+    pub(crate) fn seeded_positional(
+        query_length: usize,
+        settings: TransitionSettings,
+    ) -> (Self, UnitCostFrontier) {
+        let initial = initial_state(query_length, settings.max_distance, settings.algorithm);
+        let mut transitions = CachedUnitTransitions::new(query_length, settings.max_distance);
+        let root = transitions.seed_generated_state(&initial, settings);
+        crate::causal_perf::record_positional_unit_queries(1);
+        (
+            Self::Positional(transitions),
+            UnitCostFrontier(
+                u64::try_from(root.0).expect("generated state identifier exceeds u64"),
+            ),
+        )
+    }
+
+    /// Apply one unit-cost transition. The packed arm remains small enough to
+    /// inline into dictionary traversal; the substantially larger positional
+    /// engine is outlined behind a cold-for-this-query call boundary.
+    #[inline(always)]
+    pub(crate) fn step<P>(
+        &mut self,
+        source: UnitCostFrontier,
+        pool: &mut StatePool,
+        policy: &P,
+        label: U,
+        query: &[U],
+        settings: TransitionSettings,
+    ) -> Option<UnitCostFrontier>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        #[cfg(feature = "resource-profiling")]
+        if monolithic_unit_step_enabled() {
+            return self.step_monolithic(source, pool, policy, label, query, settings);
+        }
+
+        match self {
+            Self::PackedStandard(machine) => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_standard_transition_attempts(1);
+                let target = machine
+                    .step(source.0, policy, label, query, settings)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_standard_transition_dead(1);
+                }
+                target
+            }
+            Self::Positional(transitions) => {
+                Self::step_positional(transitions, source, pool, policy, label, query, settings)
+            }
+        }
+    }
+
+    #[inline(never)]
+    fn step_positional<P>(
+        transitions: &mut CachedUnitTransitions<U>,
+        source: UnitCostFrontier,
+        pool: &mut StatePool,
+        policy: &P,
+        label: U,
+        query: &[U],
+        settings: TransitionSettings,
+    ) -> Option<UnitCostFrontier>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        transitions
+            .transition_generated(
+                GeneratedStateId(
+                    usize::try_from(source.0).expect("generated state identifier exceeds usize"),
+                ),
+                pool,
+                policy,
+                label,
+                query,
+                settings,
+            )
+            .map(|id| {
+                UnitCostFrontier(
+                    u64::try_from(id.0).expect("generated state identifier exceeds u64"),
+                )
+            })
+    }
+
+    /// Same-binary reference for the former mixed hot/cold façade. This arm is
+    /// compiled only for causal resource profiling and intentionally retains
+    /// the positional body beside the packed arm so its code shape matches the
+    /// pre-outline implementation.
+    #[cfg(feature = "resource-profiling")]
+    #[inline(never)]
+    fn step_monolithic<P>(
+        &mut self,
+        source: UnitCostFrontier,
+        pool: &mut StatePool,
+        policy: &P,
+        label: U,
+        query: &[U],
+        settings: TransitionSettings,
+    ) -> Option<UnitCostFrontier>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        match self {
+            Self::PackedStandard(machine) => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_standard_transition_attempts(1);
+                let target = machine
+                    .step(source.0, policy, label, query, settings)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_standard_transition_dead(1);
+                }
+                target
+            }
+            Self::Positional(transitions) => transitions
+                .transition_generated(
+                    GeneratedStateId(
+                        usize::try_from(source.0)
+                            .expect("generated state identifier exceeds usize"),
+                    ),
+                    pool,
+                    policy,
+                    label,
+                    query,
+                    settings,
+                )
+                .map(|id| {
+                    UnitCostFrontier(
+                        u64::try_from(id.0).expect("generated state identifier exceeds u64"),
+                    )
+                }),
+        }
+    }
+
+    pub(crate) fn finish_distance(
+        &self,
+        frontier: UnitCostFrontier,
+        mode: FinishMode,
+        query_length: usize,
+    ) -> Option<usize> {
+        match self {
+            Self::PackedStandard(machine) => match mode {
+                FinishMode::Complete => machine.complete_distance(frontier.0),
+                FinishMode::Substring => machine.min_distance(frontier.0),
+                FinishMode::Prefix => machine.prefix_distance(frontier.0),
+            },
+            Self::Positional(transitions) => {
+                let state = transitions.generated_frontier_state(GeneratedStateId(
+                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
+                ));
+                match mode {
+                    FinishMode::Complete => state.infer_distance(query_length),
+                    FinishMode::Substring => state.min_distance(),
+                    FinishMode::Prefix => state.infer_prefix_distance(query_length),
+                }
+            }
+        }
+    }
+
+    pub(crate) fn min_distance(&self, frontier: UnitCostFrontier) -> Option<usize> {
+        match self {
+            Self::PackedStandard(machine) => machine.min_distance(frontier.0),
+            Self::Positional(transitions) => transitions
+                .generated_frontier_state(GeneratedStateId(
+                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
+                ))
+                .min_distance(),
+        }
+    }
+
+    pub(crate) fn max_consumed(&self, frontier: UnitCostFrontier) -> usize {
+        match self {
+            Self::PackedStandard(machine) => machine.max_consumed(frontier.0),
+            Self::Positional(transitions) => transitions
+                .generated_frontier_state(GeneratedStateId(
+                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
+                ))
+                .positions()
+                .iter()
+                .map(|position| position.term_index)
+                .max()
+                .unwrap_or(0),
+        }
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    pub(crate) fn active_len(&self, frontier: UnitCostFrontier) -> usize {
+        match self {
+            Self::PackedStandard(machine) => machine.active_len(frontier.0),
+            Self::Positional(transitions) => {
+                transitions.generated_position_count(GeneratedStateId(
+                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
+                ))
+            }
+        }
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    pub(crate) fn frontier_storage_bytes(&self, frontier: UnitCostFrontier) -> usize {
+        match self {
+            Self::PackedStandard(_) => std::mem::size_of::<UnitCostFrontier>(),
+            Self::Positional(_) => self
+                .active_len(frontier)
+                .saturating_mul(std::mem::size_of::<Position>()),
+        }
+    }
+
+    pub(crate) fn transition_affine<P>(
+        &mut self,
+        state: &State,
+        pool: &mut StatePool,
+        policy: &P,
+        label: U,
+        query: &[U],
+        settings: AffineTransitionSettings,
+    ) -> Option<State>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        match self {
+            Self::Positional(transitions) => {
+                transitions.transition_affine(state, pool, policy, label, query, settings)
+            }
+            Self::PackedStandard(_) => {
+                unreachable!("affine queries always select the positional transition machine")
+            }
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn seeded_packed_for_test<P>(
+        query: &[U],
+        settings: TransitionSettings,
+    ) -> Option<(Self, UnitCostFrontier)>
+    where
+        P: SubstitutionPolicy,
+    {
+        PackedStandardMachine::new::<P>(query, settings).map(|machine| {
+            let root = UnitCostFrontier(machine.seed());
+            (Self::PackedStandard(machine), root)
+        })
+    }
+}
+
+#[inline]
+fn packed_standard_disabled() -> bool {
+    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    {
+        use std::sync::OnceLock;
+        static DISABLED: OnceLock<bool> = OnceLock::new();
+        *DISABLED.get_or_init(|| {
+            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_STANDARD").is_some()
+        })
+    }
+    #[cfg(not(any(feature = "perf-instrumentation", feature = "resource-profiling")))]
+    {
+        false
+    }
+}
+
+#[cfg(feature = "resource-profiling")]
+#[inline(always)]
+fn monolithic_unit_step_enabled() -> bool {
+    use std::sync::OnceLock;
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_MONOLITHIC_UNIT_STEP").is_some()
+    })
+}
+
+#[cfg(feature = "resource-profiling")]
+fn jagged_generated_targets_enabled() -> bool {
+    std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_JAGGED_GENERATED_TARGETS").is_some()
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct GeneratedTarget(usize);
@@ -207,8 +540,8 @@ impl GeneratedTarget {
 
 impl GeneratedStateId {
     #[inline]
-    fn next(rows: &[GeneratedRow]) -> Self {
-        let id = rows.len();
+    fn next(sources: &[Box<[Position]>]) -> Self {
+        let id = sources.len();
         assert!(
             id < GeneratedTarget::EMPTY.0,
             "query-local generated state identifiers exhausted"
@@ -217,9 +550,77 @@ impl GeneratedStateId {
     }
 }
 
-struct GeneratedRow {
-    source: Box<[Position]>,
-    transitions: Vec<GeneratedTarget>,
+/// Contiguous row-major transition targets for generated positional states.
+///
+/// Canonical position slices remain separately boxed because queued `State`
+/// values borrow their stable addresses. Targets have no such stability
+/// requirement, so keeping them in one allocation removes the second pointer
+/// chase from the overwhelmingly common cache-hit path. The row width is a
+/// fixed power of two derived from query length. Exact matching never exceeds
+/// that bound; custom substitution policies may create more classes, whose
+/// genuinely sparse cells use the overflow map without widening every row.
+struct DenseGeneratedTargets {
+    values: Vec<GeneratedTarget>,
+    row_shift: u32,
+    overflow: FxHashMap<(GeneratedStateId, usize), GeneratedTarget>,
+}
+
+impl DenseGeneratedTargets {
+    fn new(initial_class_capacity: usize) -> Self {
+        let capacity = initial_class_capacity
+            .max(1)
+            .checked_next_power_of_two()
+            .expect("query-local characteristic class capacity exceeds usize");
+        Self {
+            values: Vec::new(),
+            row_shift: capacity.trailing_zeros(),
+            overflow: FxHashMap::default(),
+        }
+    }
+
+    #[inline(always)]
+    fn stride(&self) -> usize {
+        1usize << self.row_shift
+    }
+
+    #[inline(always)]
+    fn index(&self, state: GeneratedStateId, class: usize) -> usize {
+        debug_assert!(class < self.stride());
+        (state.0 << self.row_shift) | class
+    }
+
+    fn push_row(&mut self) {
+        self.values.extend(std::iter::repeat_n(
+            GeneratedTarget::UNCOMPUTED,
+            self.stride(),
+        ));
+    }
+
+    #[inline(always)]
+    fn get(&self, state: GeneratedStateId, class: usize) -> GeneratedTarget {
+        if class >= self.stride() {
+            return self
+                .overflow
+                .get(&(state, class))
+                .copied()
+                .unwrap_or(GeneratedTarget::UNCOMPUTED);
+        }
+        self.values[self.index(state, class)]
+    }
+
+    fn set(&mut self, state: GeneratedStateId, class: usize, target: GeneratedTarget) {
+        if class >= self.stride() {
+            self.overflow.insert((state, class), target);
+            return;
+        }
+        let index = self.index(state, class);
+        self.values[index] = target;
+    }
+
+    fn clear(&mut self) {
+        self.values.clear();
+        self.overflow.clear();
+    }
 }
 
 /// Query-local unit-transition engine shared by every iterator surface.
@@ -231,7 +632,12 @@ struct GeneratedRow {
 pub(crate) struct CachedUnitTransitions<U: CharUnit> {
     cache: CharacteristicCache<U>,
     generated_config: Option<(Algorithm, bool)>,
-    generated_rows: Vec<GeneratedRow>,
+    generated_sources: Vec<Box<[Position]>>,
+    dense_targets: DenseGeneratedTargets,
+    #[cfg(feature = "resource-profiling")]
+    jagged_targets: Vec<Vec<GeneratedTarget>>,
+    #[cfg(feature = "resource-profiling")]
+    use_jagged_targets: bool,
     generated_states: FxHashMap<u64, SmallVec<[GeneratedStateId; 1]>>,
     max_distance: usize,
 }
@@ -241,10 +647,67 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         Self {
             cache: CharacteristicCache::new(query_length, max_distance),
             generated_config: None,
-            generated_rows: Vec::new(),
+            generated_sources: Vec::new(),
+            dense_targets: DenseGeneratedTargets::new(query_length.saturating_add(1)),
+            #[cfg(feature = "resource-profiling")]
+            jagged_targets: Vec::new(),
+            #[cfg(feature = "resource-profiling")]
+            use_jagged_targets: jagged_generated_targets_enabled(),
             generated_states: FxHashMap::default(),
             max_distance,
         }
+    }
+
+    fn push_generated_source(&mut self, source: Box<[Position]>) -> GeneratedStateId {
+        let id = GeneratedStateId::next(&self.generated_sources);
+        self.generated_sources.push(source);
+        #[cfg(feature = "resource-profiling")]
+        if self.use_jagged_targets {
+            self.jagged_targets.push(Vec::new());
+        } else {
+            self.dense_targets.push_row();
+        }
+        #[cfg(not(feature = "resource-profiling"))]
+        self.dense_targets.push_row();
+        id
+    }
+
+    #[inline(always)]
+    fn cached_generated_target(&self, source: GeneratedStateId, class: usize) -> GeneratedTarget {
+        #[cfg(feature = "resource-profiling")]
+        if self.use_jagged_targets {
+            return self.jagged_targets[source.0]
+                .get(class)
+                .copied()
+                .unwrap_or(GeneratedTarget::UNCOMPUTED);
+        }
+        self.dense_targets.get(source, class)
+    }
+
+    #[inline]
+    fn store_generated_target(
+        &mut self,
+        source: GeneratedStateId,
+        class: usize,
+        target: GeneratedTarget,
+    ) {
+        #[cfg(feature = "resource-profiling")]
+        if self.use_jagged_targets {
+            let row = &mut self.jagged_targets[source.0];
+            if row.len() <= class {
+                row.resize(class + 1, GeneratedTarget::UNCOMPUTED);
+            }
+            row[class] = target;
+            return;
+        }
+        self.dense_targets.set(source, class, target);
+    }
+
+    fn clear_generated_table(&mut self) {
+        self.generated_sources.clear();
+        self.dense_targets.clear();
+        #[cfg(feature = "resource-profiling")]
+        self.jagged_targets.clear();
     }
 
     /// Intern the root of a unit-cost query and return its compact frontier ID.
@@ -263,12 +726,9 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
             None => self.generated_config = Some(config),
         }
 
-        if self.generated_rows.is_empty() {
-            let id = GeneratedStateId(0);
-            self.generated_rows.push(GeneratedRow {
-                source: state.positions().into(),
-                transitions: Vec::new(),
-            });
+        if self.generated_sources.is_empty() {
+            let id = self.push_generated_source(state.positions().into());
+            debug_assert_eq!(id, GeneratedStateId(0));
             self.generated_states
                 .entry(state.transition_fingerprint())
                 .or_default()
@@ -299,15 +759,11 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         let characteristic_class = self.cache.class_for(policy, dict_unit, query);
 
         if cacheable {
-            if let Some(&target) = self.generated_rows[source.0]
-                .transitions
-                .get(characteristic_class as usize)
-            {
-                if target != GeneratedTarget::UNCOMPUTED {
-                    crate::causal_perf::record_transition_attempts(1);
-                    crate::causal_perf::record_generated_transition_hits(1);
-                    return (target != GeneratedTarget::EMPTY).then(|| target.state_id());
-                }
+            let target = self.cached_generated_target(source, characteristic_class as usize);
+            if target != GeneratedTarget::UNCOMPUTED {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_generated_transition_hits(1);
+                return (target != GeneratedTarget::EMPTY).then(|| target.state_id());
             }
         }
 
@@ -334,13 +790,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         };
         let result = (target != GeneratedTarget::EMPTY).then(|| target.state_id());
         if cacheable {
-            let row = &mut self.generated_rows[source.0];
-            let class = characteristic_class as usize;
-            if row.transitions.len() <= class {
-                row.transitions
-                    .resize(class + 1, GeneratedTarget::UNCOMPUTED);
-            }
-            row.transitions[class] = target;
+            self.store_generated_target(source, characteristic_class as usize, target);
         }
         result
     }
@@ -359,8 +809,9 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
     }
 
     #[inline(always)]
+    #[cfg(feature = "perf-instrumentation")]
     pub(crate) fn generated_position_count(&self, id: GeneratedStateId) -> usize {
-        self.generated_rows[id.0].source.len()
+        self.generated_sources[id.0].len()
     }
 
     #[inline(always)]
@@ -389,28 +840,24 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         let config = (settings.algorithm, settings.prefix_mode);
         if self.generated_config.is_none() {
             self.generated_config = Some(config);
-            self.generated_rows.push(GeneratedRow {
-                source: state.positions().into(),
-                transitions: Vec::new(),
-            });
+            let id = self.push_generated_source(state.positions().into());
+            debug_assert_eq!(id, GeneratedStateId(0));
         }
         let row_index = usize::try_from(state.generated_id()).ok();
         let cacheable = self.generated_config == Some(config)
             && row_index
-                .and_then(|index| self.generated_rows.get(index))
-                .is_some_and(|row| {
+                .and_then(|index| self.generated_sources.get(index))
+                .is_some_and(|source| {
                     if state.generated_id() == 0 {
-                        row.source.as_ref() == state.positions()
+                        source.as_ref() == state.positions()
                     } else {
-                        std::ptr::eq(row.source.as_ref(), state.positions())
+                        std::ptr::eq(source.as_ref(), state.positions())
                     }
                 });
 
-        if let Some(&target) = row_index.filter(|_| cacheable).and_then(|index| {
-            self.generated_rows[index]
-                .transitions
-                .get(characteristic_class as usize)
-        }) {
+        if let Some(index) = row_index.filter(|_| cacheable) {
+            let target = self
+                .cached_generated_target(GeneratedStateId(index), characteristic_class as usize);
             if target != GeneratedTarget::UNCOMPUTED {
                 crate::causal_perf::record_transition_attempts(1);
                 crate::causal_perf::record_generated_transition_hits(1);
@@ -441,19 +888,17 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
                 }
                 None => GeneratedTarget::EMPTY,
             };
-            let row = &mut self.generated_rows[row_index.expect("cacheable row")];
-            let class = characteristic_class as usize;
-            if row.transitions.len() <= class {
-                row.transitions
-                    .resize(class + 1, GeneratedTarget::UNCOMPUTED);
-            }
-            row.transitions[class] = target;
+            self.store_generated_target(
+                GeneratedStateId(row_index.expect("cacheable row")),
+                characteristic_class as usize,
+                target,
+            );
         }
         generated
     }
 
     fn generated_positions(&self, id: GeneratedStateId) -> NonNull<[Position]> {
-        NonNull::from(self.generated_rows[id.0].source.as_ref())
+        NonNull::from(self.generated_sources[id.0].as_ref())
     }
 
     fn intern_generated_state(
@@ -464,17 +909,13 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         if let Some(states) = self.generated_states.get(&fingerprint) {
             if let Some(&id) = states
                 .iter()
-                .find(|&&id| self.generated_rows[id.0].source.as_ref() == state.positions())
+                .find(|&&id| self.generated_sources[id.0].as_ref() == state.positions())
             {
                 return (id, self.generated_positions(id));
             }
         }
 
-        let id = GeneratedStateId::next(&self.generated_rows);
-        self.generated_rows.push(GeneratedRow {
-            source: state.positions().into(),
-            transitions: Vec::new(),
-        });
+        let id = self.push_generated_source(state.positions().into());
         self.generated_states
             .entry(fingerprint)
             .or_default()
@@ -486,17 +927,13 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         if let Some(states) = self.generated_states.get(&fingerprint) {
             if let Some(&id) = states
                 .iter()
-                .find(|&&id| self.generated_rows[id.0].source.as_ref() == positions)
+                .find(|&&id| self.generated_sources[id.0].as_ref() == positions)
             {
                 return id;
             }
         }
 
-        let id = GeneratedStateId::next(&self.generated_rows);
-        self.generated_rows.push(GeneratedRow {
-            source: positions.into(),
-            transitions: Vec::new(),
-        });
+        let id = self.push_generated_source(positions.into());
         self.generated_states
             .entry(fingerprint)
             .or_default()
@@ -521,7 +958,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
     {
         debug_assert_eq!(settings.max_cost, self.max_distance);
 
-        // A unit-cost result may borrow its positions from `generated_rows`.
+        // A unit-cost result may borrow its positions from `generated_sources`.
         // Mixed internal use is unusual, but it is legal: materialize that
         // input before invalidating the unit-cost table below. Ordinary query
         // surfaces select exactly one transition mode and never pay this copy.
@@ -535,7 +972,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         // cost generated table before remapping classes. Normal query
         // surfaces select exactly one mode; this protects mixed internal use.
         if self.generated_config.take().is_some() {
-            self.generated_rows.clear();
+            self.clear_generated_table();
             self.generated_states.clear();
         }
 
@@ -1941,6 +2378,135 @@ mod tests {
     use super::*;
     use crate::transducer::{Restricted, SubstitutionSet, Unrestricted};
 
+    fn short_words<U: CharUnit>(alphabet: &[U], max_len: usize) -> Vec<Vec<U>> {
+        let mut words = vec![Vec::new()];
+        let mut level = vec![Vec::new()];
+        for _ in 0..max_len {
+            let mut next = Vec::new();
+            for prefix in &level {
+                for &unit in alphabet {
+                    let mut word = prefix.clone();
+                    word.push(unit);
+                    words.push(word.clone());
+                    next.push(word);
+                }
+            }
+            level = next;
+        }
+        words
+    }
+
+    fn assert_packed_matches_positional<U, P>(
+        corpus: &[Vec<U>],
+        max_distance: usize,
+        prefix_mode: bool,
+        policy: &P,
+    ) where
+        U: CharUnit,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        let settings = TransitionSettings::new(max_distance, Algorithm::Standard, prefix_mode);
+        for query in corpus {
+            let Some((mut packed, packed_root)) =
+                UnitCostMachine::seeded_packed_for_test::<P>(query, settings)
+            else {
+                continue;
+            };
+            for term in corpus {
+                let (mut positional, positional_root) =
+                    UnitCostMachine::seeded_positional(query.len(), settings);
+                let mut packed_frontier = Some(packed_root);
+                let mut positional_frontier = Some(positional_root);
+                let mut packed_pool = StatePool::new();
+                let mut positional_pool = StatePool::new();
+                for &label in term {
+                    packed_frontier = packed_frontier.and_then(|frontier| {
+                        packed.step(frontier, &mut packed_pool, policy, label, query, settings)
+                    });
+                    positional_frontier = positional_frontier.and_then(|frontier| {
+                        positional.step(
+                            frontier,
+                            &mut positional_pool,
+                            policy,
+                            label,
+                            query,
+                            settings,
+                        )
+                    });
+                }
+                assert_eq!(
+                    packed_frontier.is_some(),
+                    positional_frontier.is_some(),
+                    "query={query:?} term={term:?} d={max_distance} prefix={prefix_mode}",
+                );
+                let (Some(packed_frontier), Some(positional_frontier)) =
+                    (packed_frontier, positional_frontier)
+                else {
+                    continue;
+                };
+                assert_eq!(
+                    packed.min_distance(packed_frontier),
+                    positional.min_distance(positional_frontier),
+                    "minimum distance: query={query:?} term={term:?} d={max_distance} prefix={prefix_mode}",
+                );
+                for mode in [FinishMode::Complete, FinishMode::Substring] {
+                    assert_eq!(
+                        packed
+                            .finish_distance(packed_frontier, mode, query.len())
+                            .filter(|distance| *distance <= max_distance),
+                        positional
+                            .finish_distance(positional_frontier, mode, query.len())
+                            .filter(|distance| *distance <= max_distance),
+                        "finish={mode:?}: query={query:?} term={term:?} d={max_distance} prefix={prefix_mode}",
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn packed_and_positional_standard_frontiers_are_exhaustively_equivalent() {
+        let byte_words = short_words(b"ab", 5);
+        let char_words = short_words(&['a', 'é'], 4);
+        let token_words = short_words(&[7u64, u64::MAX], 4);
+        for max_distance in 0..=3 {
+            for prefix_mode in [false, true] {
+                assert_packed_matches_positional(
+                    &byte_words,
+                    max_distance,
+                    prefix_mode,
+                    &Unrestricted,
+                );
+                assert_packed_matches_positional(
+                    &char_words,
+                    max_distance,
+                    prefix_mode,
+                    &Unrestricted,
+                );
+                assert_packed_matches_positional(
+                    &token_words,
+                    max_distance,
+                    prefix_mode,
+                    &Unrestricted,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn packed_directional_restricted_masks_match_the_positional_oracle() {
+        let corpus = short_words(b"abc", 4);
+        let mut substitutions = SubstitutionSet::new();
+        substitutions.allow_byte(b'a', b'b');
+        substitutions.allow_byte(b'c', b'a');
+        let policy = Restricted::new(&substitutions);
+        for max_distance in 0..=3 {
+            for prefix_mode in [false, true] {
+                assert_packed_matches_positional(&corpus, max_distance, prefix_mode, &policy);
+            }
+        }
+    }
+
     #[test]
     fn compact_generated_transition_cells_are_one_machine_word() {
         assert_eq!(
@@ -1954,6 +2520,38 @@ mod tests {
         const {
             assert!(GeneratedTarget::EMPTY.0 < GeneratedTarget::UNCOMPUTED.0);
         }
+    }
+
+    #[test]
+    fn dense_generated_targets_keep_custom_policy_classes_in_sparse_overflow() {
+        let mut targets = DenseGeneratedTargets::new(2);
+        let row_zero = GeneratedStateId(0);
+        let row_one = GeneratedStateId(1);
+        targets.push_row();
+        targets.push_row();
+        targets.set(row_zero, 0, GeneratedTarget::state(GeneratedStateId(7)));
+        targets.set(row_one, 1, GeneratedTarget::EMPTY);
+
+        targets.set(row_zero, 5, GeneratedTarget::state(GeneratedStateId(9)));
+
+        assert_eq!(targets.stride(), 2);
+        assert_eq!(
+            targets.get(row_zero, 0),
+            GeneratedTarget::state(GeneratedStateId(7))
+        );
+        assert_eq!(targets.get(row_one, 1), GeneratedTarget::EMPTY);
+        assert_eq!(
+            targets.get(row_zero, 5),
+            GeneratedTarget::state(GeneratedStateId(9))
+        );
+        assert_eq!(targets.get(row_one, 5), GeneratedTarget::UNCOMPUTED);
+
+        let row_two = GeneratedStateId(2);
+        targets.push_row();
+        for class in 0..targets.stride() {
+            assert_eq!(targets.get(row_two, class), GeneratedTarget::UNCOMPUTED);
+        }
+        assert_eq!(targets.get(row_two, 5), GeneratedTarget::UNCOMPUTED);
     }
 
     #[test]

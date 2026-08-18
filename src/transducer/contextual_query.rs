@@ -1,8 +1,10 @@
 //! Opt-in trie traversal for context-dependent edit costs.
 
 use super::{ContextualCost, EditContext};
-use libdictenstein::{CharUnit, Dictionary, DictionaryNode};
-use rustc_hash::FxHashSet;
+use crate::transducer::dictionary_traversal::TraversalSession;
+use libdictenstein::{
+    CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor,
+};
 use std::collections::VecDeque;
 use std::error::Error;
 use std::fmt::{self, Display};
@@ -57,9 +59,18 @@ pub struct ContextualQueryStats {
     pub invalid_costs_rejected: usize,
 }
 
-struct Pending<N: DictionaryNode> {
-    node: N,
-    prefix: Vec<N::Unit>,
+const NO_PATH: usize = usize::MAX;
+
+struct ContextualPathNode<U: CharUnit> {
+    label: U,
+    parent: usize,
+    depth: usize,
+}
+
+struct Pending<U: CharUnit> {
+    position: SnapshotTraversalCursor,
+    label: Option<U>,
+    parent: usize,
     column: Vec<f64>,
 }
 
@@ -76,8 +87,11 @@ where
     query: Vec<N::Unit>,
     max_cost: f64,
     costs: C,
-    pending: VecDeque<Pending<N>>,
-    seen: FxHashSet<Vec<N::Unit>>,
+    pending: VecDeque<Pending<N::Unit>>,
+    traversal: TraversalSession<N>,
+    path_arena: Vec<ContextualPathNode<N::Unit>>,
+    prefix_scratch: Vec<N::Unit>,
+    column_pool: Vec<Vec<f64>>,
     stats: ContextualQueryStats,
 }
 
@@ -90,6 +104,15 @@ where
     /// Construct from a root node and native query units.
     pub fn try_new(
         root: N,
+        query: Vec<N::Unit>,
+        max_cost: f64,
+        costs: C,
+    ) -> Result<Self, ContextualQueryError> {
+        Self::try_from_traversal_root(DictionaryTraversalRoot::owned(root), query, max_cost, costs)
+    }
+
+    fn try_from_traversal_root(
+        root: DictionaryTraversalRoot<N>,
         query: Vec<N::Unit>,
         max_cost: f64,
         costs: C,
@@ -111,10 +134,12 @@ where
                 .and_then(valid_cost)
                 .map_or(f64::INFINITY, |cost| initial[index - 1] + cost);
         }
+        let (traversal, root) = TraversalSession::capture(root);
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(Pending {
-            node: root,
-            prefix: Vec::new(),
+            position: root,
+            label: None,
+            parent: NO_PATH,
             column: initial,
         });
         Ok(Self {
@@ -122,7 +147,10 @@ where
             max_cost,
             costs,
             pending,
-            seen: FxHashSet::default(),
+            traversal,
+            path_arena: Vec::with_capacity(64),
+            prefix_scratch: Vec::with_capacity(64),
+            column_pool: Vec::with_capacity(32),
             stats: ContextualQueryStats::default(),
         })
     }
@@ -137,12 +165,30 @@ where
     where
         D: Dictionary<Node = N>,
     {
-        Self::try_new(dictionary.root(), query, max_cost, costs)
+        Self::try_from_traversal_root(dictionary.traversal_root(), query, max_cost, costs)
     }
 
     /// Snapshot traversal and fail-closed validation counters.
     pub fn stats(&self) -> ContextualQueryStats {
         self.stats
+    }
+
+    fn materialize_prefix_into(
+        entry: &Pending<N::Unit>,
+        path_arena: &[ContextualPathNode<N::Unit>],
+        output: &mut Vec<N::Unit>,
+    ) {
+        output.clear();
+        if let Some(label) = entry.label {
+            output.push(label);
+        }
+        let mut current = entry.parent;
+        while current != NO_PATH {
+            let node = &path_arena[current];
+            output.push(node.label);
+            current = node.parent;
+        }
+        output.reverse();
     }
 }
 
@@ -164,31 +210,34 @@ fn child_column<U, C>(
     query: &[U],
     costs: &C,
     stats: &mut ContextualQueryStats,
-    pending: &Pending<impl DictionaryNode<Unit = U>>,
+    parent_column: &[f64],
+    prefix: &[U],
     unit: U,
+    mut current: Vec<f64>,
 ) -> Vec<f64>
 where
     U: CharUnit,
     C: ContextualCost<U>,
 {
-    let mut current = vec![f64::INFINITY; query.len() + 1];
-    let insertion_context = EditContext::new(query, 0, &pending.prefix, Some(unit));
+    current.clear();
+    current.resize(query.len() + 1, f64::INFINITY);
+    let insertion_context = EditContext::new(query, 0, prefix, Some(unit));
     current[0] =
-        pending.column[0] + cost_or_infinity(stats, costs.insertion_cost(&insertion_context, unit));
+        parent_column[0] + cost_or_infinity(stats, costs.insertion_cost(&insertion_context, unit));
 
     for index in 1..=query.len() {
         let query_unit = query[index - 1];
         let (insertion_cost, deletion_cost, substitution_cost) = {
-            let context = EditContext::new(query, index - 1, &pending.prefix, Some(unit));
+            let context = EditContext::new(query, index - 1, prefix, Some(unit));
             (
                 costs.insertion_cost(&context, unit),
                 costs.deletion_cost(&context, query_unit),
                 costs.substitution_cost(&context, query_unit, unit),
             )
         };
-        let insertion = pending.column[index] + cost_or_infinity(stats, insertion_cost);
+        let insertion = parent_column[index] + cost_or_infinity(stats, insertion_cost);
         let deletion = current[index - 1] + cost_or_infinity(stats, deletion_cost);
-        let substitution = pending.column[index - 1] + cost_or_infinity(stats, substitution_cost);
+        let substitution = parent_column[index - 1] + cost_or_infinity(stats, substitution_cost);
         current[index] = insertion.min(deletion).min(substitution);
     }
     current
@@ -205,40 +254,66 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(pending) = self.pending.pop_front() {
             self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
+            Self::materialize_prefix_into(&pending, &self.path_arena, &mut self.prefix_scratch);
+            let mut child_parent = None;
             let query = &self.query;
             let costs = &self.costs;
             let stats = &mut self.stats;
             let queue = &mut self.pending;
+            let paths = &mut self.path_arena;
+            let prefix = &self.prefix_scratch;
+            let parent_column = &pending.column;
+            let column_pool = &mut self.column_pool;
             let max_cost = self.max_cost;
-            let is_final = pending.node.filter_map_edges_and_finality(
+            let is_final = self.traversal.filter_map_edges_and_finality(
+                pending.position,
                 |unit| {
                     stats.edges_enumerated = stats.edges_enumerated.saturating_add(1);
-                    let column = child_column(query, costs, stats, &pending, unit);
+                    let reusable = column_pool.pop().unwrap_or_default();
+                    let column =
+                        child_column(query, costs, stats, parent_column, prefix, unit, reusable);
                     if column.iter().any(|cost| *cost <= max_cost) {
                         Some(column)
                     } else {
                         stats.subtrees_pruned = stats.subtrees_pruned.saturating_add(1);
+                        column_pool.push(column);
                         None
                     }
                 },
-                |unit, child, column| {
-                    let mut prefix = pending.prefix.clone();
-                    prefix.push(unit);
+                |unit, child_position, column| {
+                    let parent = *child_parent.get_or_insert_with(|| match pending.label {
+                        Some(label) => {
+                            let depth = if pending.parent == NO_PATH {
+                                1
+                            } else {
+                                paths[pending.parent].depth.saturating_add(1)
+                            };
+                            let index = paths.len();
+                            paths.push(ContextualPathNode {
+                                label,
+                                parent: pending.parent,
+                                depth,
+                            });
+                            index
+                        }
+                        None => NO_PATH,
+                    });
                     queue.push_back(Pending {
-                        node: child,
-                        prefix,
+                        position: child_position,
+                        label: Some(unit),
+                        parent,
                         column,
                     });
                 },
             );
-            let accepted = is_final
-                && pending.column[self.query.len()] <= self.max_cost
-                && self.seen.insert(pending.prefix.clone());
+            let distance = pending.column[self.query.len()];
+            self.column_pool.push(pending.column);
+            let accepted = is_final && distance <= self.max_cost;
 
             if accepted {
                 return Some(ContextualCandidate {
-                    units: pending.prefix,
-                    distance: pending.column[self.query.len()],
+                    units: self.prefix_scratch.clone(),
+                    distance,
                 });
             }
         }

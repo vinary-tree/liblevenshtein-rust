@@ -23,12 +23,14 @@ use core::ffi::c_void;
 use core::mem::{align_of, offset_of, size_of};
 
 use vinary_tree_interop::{
-    VtDictionaryEdge, VtDictionaryVTable, VtDictionaryVisitVTable, VtInterfaceId, VtOptionalU64,
-    VtResource, VtResourceVTable, VtSnapshotIdentity, VtSnapshotIdentityVTable, VtWfstArc,
-    VtWfstVTable, VT_ABI_VERSION, VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION,
-    VT_DICTIONARY_VISIT_INTERFACE_ID, VT_DICTIONARY_VISIT_INTERFACE_VERSION,
-    VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH, VT_WFST_INTERFACE_ID,
-    VT_WFST_INTERFACE_VERSION,
+    VtDictionaryEdge, VtDictionaryGraphEdge, VtDictionaryGraphNode, VtDictionaryGraphVTable,
+    VtDictionaryGraphView, VtDictionaryVTable, VtDictionaryVisitVTable, VtInterfaceId,
+    VtOptionalU64, VtResource, VtResourceVTable, VtSnapshotIdentity, VtSnapshotIdentityVTable,
+    VtWfstArc, VtWfstVTable, VT_ABI_VERSION, VT_DICTIONARY_GRAPH_INTERFACE_ID,
+    VT_DICTIONARY_GRAPH_INTERFACE_VERSION, VT_DICTIONARY_INTERFACE_ID,
+    VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
+    VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH,
+    VT_WFST_INTERFACE_ID, VT_WFST_INTERFACE_VERSION,
 };
 
 /// One machine word.
@@ -128,6 +130,56 @@ fn every_struct_is_packed_in_declaration_order() {
         ],
     );
     assert_packed_in_order(
+        "VtDictionaryGraphNode",
+        size_of::<VtDictionaryGraphNode>(),
+        align_of::<VtDictionaryGraphNode>(),
+        &[
+            (
+                "edge_start",
+                offset_of!(VtDictionaryGraphNode, edge_start),
+                8,
+            ),
+            ("edge_len", offset_of!(VtDictionaryGraphNode, edge_len), 8),
+            (
+                "value_cursor",
+                offset_of!(VtDictionaryGraphNode, value_cursor),
+                8,
+            ),
+            ("is_final", offset_of!(VtDictionaryGraphNode, is_final), 1),
+            ("reserved", offset_of!(VtDictionaryGraphNode, reserved), 7),
+        ],
+    );
+    assert_packed_in_order(
+        "VtDictionaryGraphEdge",
+        size_of::<VtDictionaryGraphEdge>(),
+        align_of::<VtDictionaryGraphEdge>(),
+        &[
+            ("label", offset_of!(VtDictionaryGraphEdge, label), 8),
+            ("target", offset_of!(VtDictionaryGraphEdge, target), 8),
+        ],
+    );
+    assert_packed_in_order(
+        "VtDictionaryGraphView",
+        size_of::<VtDictionaryGraphView>(),
+        align_of::<VtDictionaryGraphView>(),
+        &[
+            ("nodes", offset_of!(VtDictionaryGraphView, nodes), ptr),
+            (
+                "node_count",
+                offset_of!(VtDictionaryGraphView, node_count),
+                WORD,
+            ),
+            ("edges", offset_of!(VtDictionaryGraphView, edges), ptr),
+            (
+                "edge_count",
+                offset_of!(VtDictionaryGraphView, edge_count),
+                WORD,
+            ),
+            ("root", offset_of!(VtDictionaryGraphView, root), 8),
+            ("reserved", offset_of!(VtDictionaryGraphView, reserved), 8),
+        ],
+    );
+    assert_packed_in_order(
         "VtSnapshotIdentity",
         size_of::<VtSnapshotIdentity>(),
         align_of::<VtSnapshotIdentity>(),
@@ -206,6 +258,30 @@ fn every_struct_is_packed_in_declaration_order() {
             (
                 "node_visit",
                 offset_of!(VtDictionaryVisitVTable, node_visit),
+                fnp,
+            ),
+        ],
+    );
+    assert_packed_in_order(
+        "VtDictionaryGraphVTable",
+        size_of::<VtDictionaryGraphVTable>(),
+        align_of::<VtDictionaryGraphVTable>(),
+        &[
+            (
+                "struct_size",
+                offset_of!(VtDictionaryGraphVTable, struct_size),
+                WORD,
+            ),
+            (
+                "interface_version",
+                offset_of!(VtDictionaryGraphVTable, interface_version),
+                4,
+            ),
+            ("reserved", offset_of!(VtDictionaryGraphVTable, reserved), 4),
+            ("graph", offset_of!(VtDictionaryGraphVTable, graph), fnp),
+            (
+                "node_value_u64",
+                offset_of!(VtDictionaryGraphVTable, node_value_u64),
                 fnp,
             ),
         ],
@@ -330,6 +406,29 @@ mod exact_64 {
     }
 
     #[test]
+    fn vt_dictionary_graph_vtable_layout() {
+        assert_eq!(size_of::<VtDictionaryGraphVTable>(), 32);
+        assert_eq!(align_of::<VtDictionaryGraphVTable>(), 8);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, struct_size), 0);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, interface_version), 8);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, reserved), 12);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, graph), 16);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, node_value_u64), 24);
+    }
+
+    #[test]
+    fn vt_dictionary_graph_view_layout() {
+        assert_eq!(size_of::<VtDictionaryGraphView>(), 48);
+        assert_eq!(align_of::<VtDictionaryGraphView>(), 8);
+        assert_eq!(offset_of!(VtDictionaryGraphView, nodes), 0);
+        assert_eq!(offset_of!(VtDictionaryGraphView, node_count), 8);
+        assert_eq!(offset_of!(VtDictionaryGraphView, edges), 16);
+        assert_eq!(offset_of!(VtDictionaryGraphView, edge_count), 24);
+        assert_eq!(offset_of!(VtDictionaryGraphView, root), 32);
+        assert_eq!(offset_of!(VtDictionaryGraphView, reserved), 40);
+    }
+
+    #[test]
     fn vt_snapshot_identity_vtable_layout() {
         assert_eq!(size_of::<VtSnapshotIdentityVTable>(), 24);
         assert_eq!(align_of::<VtSnapshotIdentityVTable>(), 8);
@@ -412,6 +511,29 @@ mod exact_32_arm {
     }
 
     #[test]
+    fn vt_dictionary_graph_vtable_layout() {
+        assert_eq!(size_of::<VtDictionaryGraphVTable>(), 20);
+        assert_eq!(align_of::<VtDictionaryGraphVTable>(), 4);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, struct_size), 0);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, interface_version), 4);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, reserved), 8);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, graph), 12);
+        assert_eq!(offset_of!(VtDictionaryGraphVTable, node_value_u64), 16);
+    }
+
+    #[test]
+    fn vt_dictionary_graph_view_layout() {
+        assert_eq!(size_of::<VtDictionaryGraphView>(), 32);
+        assert_eq!(align_of::<VtDictionaryGraphView>(), 8);
+        assert_eq!(offset_of!(VtDictionaryGraphView, nodes), 0);
+        assert_eq!(offset_of!(VtDictionaryGraphView, node_count), 4);
+        assert_eq!(offset_of!(VtDictionaryGraphView, edges), 8);
+        assert_eq!(offset_of!(VtDictionaryGraphView, edge_count), 12);
+        assert_eq!(offset_of!(VtDictionaryGraphView, root), 16);
+        assert_eq!(offset_of!(VtDictionaryGraphView, reserved), 24);
+    }
+
+    #[test]
     fn vt_snapshot_identity_vtable_layout() {
         assert_eq!(size_of::<VtSnapshotIdentityVTable>(), 16);
         assert_eq!(align_of::<VtSnapshotIdentityVTable>(), 4);
@@ -457,6 +579,17 @@ fn pod_payload_layouts_are_word_size_independent() {
     assert_eq!(size_of::<VtDictionaryEdge>(), 16);
     assert_eq!(offset_of!(VtDictionaryEdge, label), 0);
     assert_eq!(offset_of!(VtDictionaryEdge, node), 8);
+
+    assert_eq!(size_of::<VtDictionaryGraphNode>(), 32);
+    assert_eq!(offset_of!(VtDictionaryGraphNode, edge_start), 0);
+    assert_eq!(offset_of!(VtDictionaryGraphNode, edge_len), 8);
+    assert_eq!(offset_of!(VtDictionaryGraphNode, value_cursor), 16);
+    assert_eq!(offset_of!(VtDictionaryGraphNode, is_final), 24);
+    assert_eq!(offset_of!(VtDictionaryGraphNode, reserved), 25);
+
+    assert_eq!(size_of::<VtDictionaryGraphEdge>(), 16);
+    assert_eq!(offset_of!(VtDictionaryGraphEdge, label), 0);
+    assert_eq!(offset_of!(VtDictionaryGraphEdge, target), 8);
 
     assert_eq!(size_of::<VtSnapshotIdentity>(), 16);
     assert_eq!(offset_of!(VtSnapshotIdentity, producer), 0);
@@ -517,6 +650,7 @@ fn interface_identifiers_are_exact_sixteen_byte_strings() {
     // published identifiers are exactly 16 bytes with no NUL terminator.
     assert_eq!(&VT_DICTIONARY_INTERFACE_ID.bytes, b"vt.dictionary.v1");
     assert_eq!(&VT_DICTIONARY_VISIT_INTERFACE_ID.bytes, b"vt.dict.visit.v1");
+    assert_eq!(&VT_DICTIONARY_GRAPH_INTERFACE_ID.bytes, b"vt.dict.graph.v1");
     assert_eq!(&VT_WFST_INTERFACE_ID.bytes, b"vt.scalar-wfst.1");
     assert_ne!(VT_DICTIONARY_INTERFACE_ID, VT_WFST_INTERFACE_ID);
     assert_ne!(VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_VISIT_INTERFACE_ID);
@@ -528,6 +662,7 @@ fn published_constants_are_pinned() {
     assert_eq!(VT_ABI_VERSION, 1);
     assert_eq!(VT_DICTIONARY_INTERFACE_VERSION, 1);
     assert_eq!(VT_DICTIONARY_VISIT_INTERFACE_VERSION, 1);
+    assert_eq!(VT_DICTIONARY_GRAPH_INTERFACE_VERSION, 1);
     assert_eq!(VT_WFST_INTERFACE_VERSION, 1);
     assert_eq!(VT_RECOMMENDED_EDGE_BATCH, 256);
     assert_eq!(VT_RECOMMENDED_ARC_BATCH, 256);

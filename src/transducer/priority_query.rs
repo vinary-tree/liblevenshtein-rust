@@ -36,43 +36,42 @@
 //! }
 //! ```
 
-use super::transition::{
-    initial_state, CachedUnitTransitions, GeneratedStateId, TransitionSettings,
-};
+use super::transition::{FinishMode, TransitionSettings, UnitCostFrontier, UnitCostMachine};
 use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
-use libdictenstein::{CharUnit, DictionaryNode};
+use crate::transducer::dictionary_traversal::TraversalSession;
+use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
 /// Dictionary node paired with the current Levenshtein automaton state.
-struct PriorityIntersection<N: DictionaryNode> {
-    node: N,
-    state: GeneratedStateId,
+struct PriorityIntersection {
+    position: SnapshotTraversalCursor,
+    state: UnitCostFrontier,
 }
 
-impl<N: DictionaryNode> PriorityIntersection<N> {
+impl PriorityIntersection {
     #[inline]
-    fn new(node: N, state: GeneratedStateId) -> Self {
-        Self { node, state }
+    fn new(position: SnapshotTraversalCursor, state: UnitCostFrontier) -> Self {
+        Self { position, state }
     }
 }
 
 /// Entry in the priority queue for A* search.
-struct SearchEntry<N: DictionaryNode> {
+struct SearchEntry<U: CharUnit> {
     /// Current dictionary node and automaton state.
-    intersection: PriorityIntersection<N>,
+    intersection: PriorityIntersection,
     /// Cached path units for deterministic heap tie-breaking.
-    term_units: Vec<N::Unit>,
+    term_units: Vec<U>,
     /// Actual cost so far (minimum errors in state)
     g_cost: usize,
     /// f-cost = g-cost + heuristic, used for priority ordering
     f_cost: usize,
 }
 
-impl<N: DictionaryNode> SearchEntry<N> {
+impl<U: CharUnit> SearchEntry<U> {
     fn new(
-        intersection: PriorityIntersection<N>,
-        term_units: Vec<N::Unit>,
+        intersection: PriorityIntersection,
+        term_units: Vec<U>,
         g_cost: usize,
         h_cost: usize,
     ) -> Self {
@@ -86,7 +85,7 @@ impl<N: DictionaryNode> SearchEntry<N> {
 }
 
 // Implement ordering for min-heap (lower f-cost = higher priority)
-impl<N: DictionaryNode> Ord for SearchEntry<N> {
+impl<U: CharUnit> Ord for SearchEntry<U> {
     fn cmp(&self, other: &Self) -> Ordering {
         // Primary: lower f-cost has higher priority (reverse for max-heap → min-heap)
         // Secondary: lower g-cost has higher priority (prefer actual progress)
@@ -101,13 +100,13 @@ impl<N: DictionaryNode> Ord for SearchEntry<N> {
     }
 }
 
-impl<N: DictionaryNode> PartialOrd for SearchEntry<N> {
+impl<U: CharUnit> PartialOrd for SearchEntry<U> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<N: DictionaryNode> PartialEq for SearchEntry<N> {
+impl<U: CharUnit> PartialEq for SearchEntry<U> {
     fn eq(&self, other: &Self) -> bool {
         self.f_cost == other.f_cost
             && self.g_cost == other.g_cost
@@ -115,7 +114,7 @@ impl<N: DictionaryNode> PartialEq for SearchEntry<N> {
     }
 }
 
-impl<N: DictionaryNode> Eq for SearchEntry<N> {}
+impl<U: CharUnit> Eq for SearchEntry<U> {}
 
 /// Priority queue-based query result.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -136,7 +135,9 @@ pub struct PriorityCandidate {
 /// * `N` - Dictionary node type
 pub struct PriorityQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unrestricted> {
     /// Priority queue ordered by f-cost
-    queue: BinaryHeap<SearchEntry<N>>,
+    queue: BinaryHeap<SearchEntry<N::Unit>>,
+    /// Retained snapshot owner and cursor traversal backend.
+    traversal: TraversalSession<N>,
     /// Query units (bytes or chars)
     query: Vec<N::Unit>,
     /// Query length for heuristic computation
@@ -150,7 +151,7 @@ pub struct PriorityQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unre
     /// State pool for allocation reuse
     state_pool: StatePool,
     /// Shared cached transition kernel; queued states are epsilon-closed.
-    unit_transitions: CachedUnitTransitions<N::Unit>,
+    unit_transitions: UnitCostMachine<N::Unit>,
 }
 
 impl<N: DictionaryNode> PriorityQueryIterator<N, Unrestricted> {
@@ -186,12 +187,12 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
     ) -> Self {
         let query_units = N::Unit::from_str(query);
         let query_len = query_units.len();
-        let initial = initial_state(query_len, max_distance, algorithm);
         let settings = TransitionSettings::new(max_distance, algorithm, false);
-        let mut unit_transitions = CachedUnitTransitions::new(query_len, max_distance);
-        let initial = unit_transitions.seed_generated_state(&initial, settings);
+        let (unit_transitions, initial) = UnitCostMachine::seeded::<P>(&query_units, settings);
 
         let mut queue = BinaryHeap::with_capacity(64);
+
+        let (traversal, root) = TraversalSession::capture(DictionaryTraversalRoot::owned(root));
 
         // Initialize with root node
         let root_intersection = PriorityIntersection::new(root, initial);
@@ -207,6 +208,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
         Self {
             queue,
+            traversal,
             query: query_units,
             query_len,
             max_distance,
@@ -225,8 +227,11 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             if is_final {
                 let distance = self
                     .unit_transitions
-                    .generated_frontier_state(entry.intersection.state)
-                    .infer_distance(self.query_len)
+                    .finish_distance(
+                        entry.intersection.state,
+                        FinishMode::Complete,
+                        self.query_len,
+                    )
                     .unwrap_or(usize::MAX);
 
                 if distance <= self.max_distance {
@@ -243,7 +248,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
     /// Expand children of a search entry into the priority queue.
     #[inline]
-    fn expand_children_and_finality(&mut self, entry: &SearchEntry<N>) -> bool {
+    fn expand_children_and_finality(&mut self, entry: &SearchEntry<N::Unit>) -> bool {
         let query_len = self.query_len;
         let max_distance = self.max_distance;
         let algorithm = self.algorithm;
@@ -253,9 +258,10 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         let unit_transitions = &mut self.unit_transitions;
         let queue = &mut self.queue;
 
-        entry.intersection.node.filter_map_edges_and_finality(
+        self.traversal.filter_map_edges_and_finality(
+            entry.intersection.position,
             |label| {
-                let next_state = unit_transitions.transition_generated(
+                let next_state = unit_transitions.step(
                     entry.intersection.state,
                     state_pool,
                     policy,
@@ -263,22 +269,16 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                     query,
                     TransitionSettings::new(max_distance, algorithm, false),
                 )?;
-                let state = unit_transitions.generated_frontier_state(next_state);
-                let g_cost = state.min_distance().unwrap_or(0);
+                let g_cost = unit_transitions.min_distance(next_state).unwrap_or(0);
                 if g_cost > max_distance {
                     return None;
                 }
-                let max_consumed = state
-                    .positions()
-                    .iter()
-                    .map(|position| position.term_index)
-                    .max()
-                    .unwrap_or(0);
+                let max_consumed = unit_transitions.max_consumed(next_state);
                 let h_cost = query_len.saturating_sub(max_consumed);
                 Some((next_state, g_cost, h_cost))
             },
-            |label, child_node, (next_state, g_cost, h_cost)| {
-                let child_intersection = PriorityIntersection::new(child_node, next_state);
+            |label, child_position, (next_state, g_cost, h_cost)| {
+                let child_intersection = PriorityIntersection::new(child_position, next_state);
                 let mut child_term_units = entry.term_units.clone();
                 child_term_units.push(label);
                 queue.push(SearchEntry::new(

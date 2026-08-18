@@ -7,14 +7,15 @@
 //! `enter(unit, depth)` remains active until that exact subtree is exhausted,
 //! then receives one matching `leave(unit, depth)`.
 
-use super::transition::{
-    initial_state, CachedUnitTransitions, GeneratedStateId, TransitionSettings,
-};
+use super::transition::{FinishMode, TransitionSettings, UnitCostFrontier, UnitCostMachine};
 use super::{
     Algorithm, NoPruning, PrefixPruner, StatePool, SubstitutionPolicy, SubstitutionPolicyFor,
     Unrestricted,
 };
-use libdictenstein::{CharUnit, Dictionary, DictionaryNode};
+use crate::transducer::dictionary_traversal::TraversalSession;
+use libdictenstein::{
+    CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor,
+};
 
 /// Work counters for a prefix-pruned fuzzy DFS.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -40,18 +41,30 @@ pub struct PrefixQueryMatch<U: CharUnit> {
     pub score: Option<f64>,
 }
 
-struct Frame<N: DictionaryNode> {
-    edges: std::vec::IntoIter<(N::Unit, N)>,
-    state: GeneratedStateId,
-    entered_by: Option<N::Unit>,
+struct Frame<U: CharUnit> {
+    edges: std::vec::IntoIter<(U, SnapshotTraversalCursor)>,
+    state: UnitCostFrontier,
+    entered_by: Option<U>,
     is_final: bool,
     final_checked: bool,
 }
 
-impl<N: DictionaryNode> Frame<N> {
-    fn new(node: N, state: GeneratedStateId, entered_by: Option<N::Unit>) -> Self {
-        let mut edges = Vec::with_capacity(node.edge_count().unwrap_or(0));
-        let is_final = node.visit_edges_and_finality(|label, child| edges.push((label, child)));
+impl<U: CharUnit> Frame<U> {
+    fn new<N>(
+        position: SnapshotTraversalCursor,
+        state: UnitCostFrontier,
+        entered_by: Option<U>,
+        traversal: &mut TraversalSession<N>,
+    ) -> Self
+    where
+        N: DictionaryNode<Unit = U>,
+    {
+        let mut edges = Vec::new();
+        let is_final = traversal.filter_map_edges_and_finality(
+            position,
+            |label| Some(label),
+            |label, child, _| edges.push((label, child)),
+        );
         Self {
             edges: edges.into_iter(),
             state,
@@ -80,10 +93,11 @@ where
     substitution_policy: S,
     prefix_pruner: Option<P>,
     substring_mode: bool,
-    stack: Vec<Frame<N>>,
+    stack: Vec<Frame<N::Unit>>,
+    traversal: TraversalSession<N>,
     prefix: Vec<N::Unit>,
     state_pool: StatePool,
-    unit_transitions: CachedUnitTransitions<N::Unit>,
+    unit_transitions: UnitCostMachine<N::Unit>,
     stats: PrefixQueryStats,
 }
 
@@ -115,8 +129,8 @@ where
     where
         D: Dictionary<Node = N>,
     {
-        Self::with_policy_and_pruner(
-            dictionary.root(),
+        Self::with_traversal_root(
+            dictionary.traversal_root(),
             query,
             max_distance,
             algorithm,
@@ -144,11 +158,31 @@ where
         prefix_pruner: P,
         substring_mode: bool,
     ) -> Self {
-        let query_length = query.len();
-        let initial = initial_state(query_length, max_distance, algorithm);
+        Self::with_traversal_root(
+            DictionaryTraversalRoot::owned(root),
+            query,
+            max_distance,
+            algorithm,
+            substitution_policy,
+            prefix_pruner,
+            substring_mode,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn with_traversal_root(
+        root: DictionaryTraversalRoot<N>,
+        query: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+        substitution_policy: S,
+        prefix_pruner: P,
+        substring_mode: bool,
+    ) -> Self {
         let settings = TransitionSettings::new(max_distance, algorithm, substring_mode);
-        let mut unit_transitions = CachedUnitTransitions::new(query_length, max_distance);
-        let initial = unit_transitions.seed_generated_state(&initial, settings);
+        let (unit_transitions, initial) = UnitCostMachine::seeded::<S>(&query, settings);
+        let (mut traversal, root) = TraversalSession::capture(root);
+        let root_frame = Frame::new(root, initial, None, &mut traversal);
         Self {
             query,
             max_distance,
@@ -156,7 +190,8 @@ where
             substitution_policy,
             prefix_pruner: Some(prefix_pruner),
             substring_mode,
-            stack: vec![Frame::new(root, initial, None)],
+            stack: vec![root_frame],
+            traversal,
             prefix: Vec::new(),
             state_pool: StatePool::new(),
             unit_transitions,
@@ -231,14 +266,17 @@ where
                     None
                 } else {
                     frame.final_checked = true;
-                    let state = self.unit_transitions.generated_frontier_state(frame.state);
                     Some((
                         frame.is_final,
-                        if self.substring_mode {
-                            state.min_distance()
-                        } else {
-                            state.infer_distance(self.query.len())
-                        },
+                        self.unit_transitions.finish_distance(
+                            frame.state,
+                            if self.substring_mode {
+                                FinishMode::Substring
+                            } else {
+                                FinishMode::Complete
+                            },
+                            self.query.len(),
+                        ),
                     ))
                 }
             };
@@ -263,13 +301,14 @@ where
                 .expect("the DFS stack was observed non-empty")
                 .edges
                 .next();
-            if let Some((unit, child)) = edge {
+            if let Some((unit, child_position)) = edge {
                 self.stats.edges_enumerated = self.stats.edges_enumerated.saturating_add(1);
                 let depth = self.prefix.len().saturating_add(1);
                 if !self.pruner_mut().enter(unit, depth) {
                     self.stats.externally_pruned_subtrees =
                         self.stats.externally_pruned_subtrees.saturating_add(1);
                     self.pruner_mut().leave(unit, depth);
+                    self.traversal.discard_unexpanded(child_position);
                     continue;
                 }
 
@@ -281,7 +320,7 @@ where
                         .last()
                         .expect("the DFS parent remains on the stack")
                         .state;
-                    self.unit_transitions.transition_generated(
+                    self.unit_transitions.step(
                         parent_state,
                         &mut self.state_pool,
                         &self.substitution_policy,
@@ -293,12 +332,14 @@ where
 
                 if let Some(state) = next_state {
                     self.prefix.push(unit);
-                    self.stack.push(Frame::new(child, state, Some(unit)));
+                    let frame = Frame::new(child_position, state, Some(unit), &mut self.traversal);
+                    self.stack.push(frame);
                     self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
                 } else {
                     self.stats.automaton_pruned_subtrees =
                         self.stats.automaton_pruned_subtrees.saturating_add(1);
                     self.pruner_mut().leave(unit, depth);
+                    self.traversal.discard_unexpanded(child_position);
                 }
                 continue;
             }

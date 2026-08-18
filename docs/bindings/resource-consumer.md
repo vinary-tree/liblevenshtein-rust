@@ -5,7 +5,7 @@ safe-Rust layer between the [`llev_*` C ABI](c-abi-reference.md) above it and
 the [interop contract](../../vinary-tree-interop/docs/abi-reference.md) below
 it. This is the reference for binding authors and reviewers who need to know
 exactly what happens between a `VtResource` arriving and a match leaving —
-validation, gating, fault handling, and the arena discipline, each tied to
+validation, graph import, callback fallback, fault handling, and ownership, each tied to
 its formal home and its tests.
 
 The through-line: **the consumer trusts nothing it did not compute.** Every
@@ -20,7 +20,7 @@ error path.
 
 | Type | Visibility | Role |
 |---|---|---|
-| `Provider` | private | One owned retain of a resource + its discovered dictionary/optional visit/optional snapshot-identity vtables + the per-object call gate, fault latch, and identity-keyed node cache. Always handled as `Arc<Provider>`. |
+| `Provider` | private | One owned retain of a resource + its discovered dictionary/optional visit/optional compact-graph/optional snapshot-identity vtables + the per-object call gate, fault latch, identity-keyed fallback node cache, and one-revision graph memo. Always handled as `Arc<Provider>`. |
 | `ForeignNode<U>` | private | One dictionary node identifier bound to its snapshot `Provider`; implements the crate's `DictionaryNode`/`MappedDictionaryNode` traits so the automaton engine traverses foreign dictionaries exactly like native ones. |
 | `ResourceTransducer` | public | The automaton configuration: a validated `Provider` (the *source*) plus an `Algorithm`. Construction is $`\mathcal{O}(1)`$. |
 | `QueryCursor` | public | One lazy query over the *snapshot* `Provider` captured at query start. May outlive the transducer and every other handle to the dictionary. |
@@ -83,6 +83,12 @@ against the counting provider in `tests/support/interop_dictionary.rs`.
   response is validated for size, minimum version, zero reserved field, and a
   non-null callback before reading the opaque `(producer, revision)` pair.
   `Unsupported` is the ordinary fallback, not an error.
+- Immutable resources also optionally negotiate `vt.dict.graph.v1`. The
+  consumer validates the vtable before invoking `graph`, then validates every
+  pointer, count, range, flag, reserved byte, label, target, root, and nonzero
+  value cursor before publishing a native `SnapshotTraversalGraph<U>`. A live
+  resource advertising this immutable interface is rejected. `Unsupported`
+  selects the callback-and-node-cache fallback described in § 3.1.
 
 Finally the unit domain selects the typed arm (`ForeignDictionary::{Byte,
 Unicode, U64}`), which fixes which query entry points the transducer
@@ -105,8 +111,18 @@ would silently alias distinct labels, the exact failure mode the
 [security model](../../vinary-tree-interop/docs/security-model.md#5-input-validation-duties)
 forbids.
 
-`ForeignNode<U>` implements the traversal traits by calling through the
-provider vtable, validating every output:
+For DynamicDAWG snapshots, `ForeignNode<U>` normally supplies one retained
+`SnapshotTraversalGraph<U>` to `TraversalSession`. Queued intersections then
+contain one copy-only dense cursor. Finality and sorted edge ranges are read
+directly from immutable arrays with no lock, provider callback, child-handle
+construction, or reference-count traffic. Only an accepted final match crosses
+the boundary through the graph vtable's value callback. Its `value_cursor` is
+an opaque graph-local token; the producer validates it before translating it to
+backend state.
+
+When compact-graph negotiation is unsupported, `ForeignNode<U>` implements the
+same traversal traits through the base/visit vtables and validates every
+output:
 
 - `is_final` — accepts only zero or one; anything else is a fault.
 - `transition(label)` — uses the provider's `node_transition` when present
@@ -127,12 +143,12 @@ provider vtable, validating every output:
   [LLEV-B7 / F2](FINDINGS_LEDGER.md), harmonizing with lling-llang's
   existing `VtWfstArc.reserved` validation under VT-ABI-5.
 
-Expansion cost per node: $`\lceil \deg(v) / 256 \rceil`$ boundary crossings;
+Fallback expansion cost per node is $`\lceil \deg(v) / 256 \rceil`$ boundary crossings;
 the batch-not-per-edge shape is pinned by
 `provider_edges_cross_the_abi_in_batches_not_per_edge` in
 [`tests/binding_snapshot_semantics.rs`](../../tests/binding_snapshot_semantics.rs).
 
-### 3.1 Revision-wide node memoization
+### 3.1 Revision-wide fallback node memoization
 
 Finality and the complete validated edge array are cached by ABI node id after
 the first inspection. Without snapshot identity, the cache belongs only to one
@@ -149,6 +165,27 @@ already validated finality and edges, and insertion uses a write-side double
 check so racing inspectors converge on one published value. The test
 `distinct_snapshot_resources_share_identity_keyed_node_caches` pins reuse for
 equal identities and isolation after mutation.
+
+### 3.2 Revision-wide compact-graph memoization
+
+Graph validation and import are $`\Theta(\lvert V\rvert + \lvert E\rvert)`$
+for graph nodes $`V`$ and edges $`E`$, so they occur once per immutable
+revision rather than once per cursor. A provider-scoped strong memo retains the
+latest decoded graph while that source is live. A process-local weak registry,
+keyed by snapshot identity plus resource, dictionary, graph-vtable, and unit
+domain lineage, lets separately returned resources for the same revision share
+the same `Arc`. Decode work happens outside the registry mutex; publication
+uses a second lookup so racing decoders converge without holding a global lock
+during validation.
+
+The producer similarly publishes its native graph and ABI projection through
+revision-local `OnceLock` cells. Snapshot capture itself remains
+$`\mathcal{O}(1)`$; the first graph negotiation for a revision pays the linear
+projection/import cost, and subsequent query starts reuse it in
+$`\mathcal{O}(1)`$. `tests/resource_snapshot_graph_path.rs` proves this for
+byte, Unicode-scalar, and `u64` DynamicDAWGs, across mutation and the phonetic
+language-product surface: one projection/decode per revision, zero legacy
+edge/finality calls, and graph-value calls only for returned mapped values.
 
 ## 4. The call gate
 
@@ -234,8 +271,8 @@ procedure next_match():
     return Ok(item)                                     ▷ mid-pull surfaces now
 ```
 
-The latch (`fault: Arc<Mutex<Option<BindingError>>>`, `src/bindings.rs:121`)
-holds at most one `BindingError` per provider, so a misbehaving provider
+The latch (`AtomicTakeBox<BindingError>`) holds at most one `BindingError` per
+query-local provider owner, so a misbehaving provider
 cannot flood memory with messages; the double check around each pull bounds
 fault latency to one match.
 

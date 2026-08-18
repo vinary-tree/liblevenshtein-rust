@@ -2,7 +2,7 @@
 
 This document is the literate, normative walk of
 [`include/vinary_tree_interop.h`](../include/vinary_tree_interop.h) — the
-166-line C header that *is* the family ABI. Every declaration is quoted and
+canonical C header that *is* the family ABI. Every declaration is quoted and
 then explained: what it means, who may rely on it, and which law it carries.
 The Rust definitions in [`src/lib.rs`](../src/lib.rs) are the same ABI spelled
 in a second language; the two are kept bit-identical by the executable
@@ -40,6 +40,8 @@ Every symbol and acronym used below, defined before use:
 | semiring | An algebraic structure $`\langle K, \oplus, \otimes, \bar{0}, \bar{1} \rangle`$: a carrier set with two associative operations, where $`\oplus`$ (path alternation) is commutative with identity $`\bar{0}`$, $`\otimes`$ (path extension) has identity $`\bar{1}`$, $`\otimes`$ distributes over $`\oplus`$, and $`\bar{0}`$ annihilates $`\otimes`$. |
 | epsilon label | The empty label $`\varepsilon`$ on a transducer arc — consumed no input or emitted no output. Encoded here by a *flag*, never by a magic label value. |
 | page / paging | Transferring a variable-length edge or arc list through a fixed-capacity caller-owned buffer, in one or more calls. |
+| compact graph | A complete immutable dictionary revision projected into dense node and edge arrays. It is optional: consumers retain callback paging as the compatibility path. |
+| value cursor | An opaque snapshot-local token attached to a compact-graph node and passed only to that graph interface's value callback. It is deliberately independent of the dense graph index and base-interface node identifier. |
 | POD | Plain Old Data: a struct of scalar fields with no pointers, invariant layout across targets. |
 | `no_std` | A Rust crate attribute: no standard library, no allocator — nothing but type definitions can hide here. |
 | null-pointer optimization (NPO) | Rust's guarantee that `Option<extern "C" fn>` occupies exactly one pointer with `None` represented as the null pointer — what lets a NULL C function pointer and a Rust `None` be the same bytes. |
@@ -79,12 +81,15 @@ vinary-tree project.
 ```c
 #define VT_ABI_VERSION 1u
 #define VT_DICTIONARY_INTERFACE_VERSION 1u
+#define VT_DICTIONARY_VISIT_INTERFACE_VERSION 1u
+#define VT_DICTIONARY_GRAPH_INTERFACE_VERSION 1u
+#define VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION 1u
 #define VT_WFST_INTERFACE_VERSION 1u
 #define VT_RECOMMENDED_EDGE_BATCH 256u
 #define VT_RECOMMENDED_ARC_BATCH 256u
 ```
 
-Three of these are version counters with precisely delimited jurisdictions
+These version counters have precisely delimited jurisdictions
 (the full model is the [evolution policy](abi-evolution.md)):
 
 - `VT_ABI_VERSION` gates the **base resource protocol** — the layout and
@@ -92,9 +97,11 @@ Three of these are version counters with precisely delimited jurisdictions
   checks it for *exact equality* (`validate_base` in liblevenshtein's
   `src/bindings.rs` rejects `abi_version != 1`), so bumping it is a
   coordinated, family-wide breaking event.
-- `VT_DICTIONARY_INTERFACE_VERSION` and `VT_WFST_INTERFACE_VERSION` each gate
-  **one interface's contract** and are negotiated per-resource through
-  `query_interface` as a minimum, not an exact match.
+- Every `VT_*_INTERFACE_VERSION` constant gates exactly **one interface's
+  contract** and is negotiated per-resource through `query_interface` as a
+  minimum, not an exact match. Optional dictionary visit, compact-graph, and
+  snapshot-identity capabilities therefore evolve independently from both
+  the base dictionary interface and one another.
 
 The two batch constants are *recommendations*, not limits: a consumer that
 expands a node through a 256-entry buffer completes almost every expansion in
@@ -170,10 +177,11 @@ typedef struct VtInterfaceId { uint8_t bytes[16]; } VtInterfaceId;
 ```
 
 An interface identifier is sixteen bytes compared **byte-for-byte** — no
-hashing, no case folding, no NUL terminator, no registry. The three published
+hashing, no case folding, no NUL terminator, no registry. The five published
 identifiers (quoted in [§ 8.1](#81-the-published-identifiers)) are ASCII
 mnemonics with an explicit version suffix: `vt.dictionary.v1`,
-`vt.dict.visit.v1`, and `vt.scalar-wfst.1`. Exactness is the point: two
+`vt.dict.visit.v1`, `vt.dict.graph.v1`, `vt.snapshot.id.1`, and
+`vt.scalar-wfst.1`. Exactness is the point: two
 independently built binaries agree on an interface exactly when they contain
 the same sixteen bytes, and a *breaking* interface revision changes the
 string itself so the two contracts can never be confused
@@ -507,6 +515,81 @@ it does not weaken output validation or snapshot lifetime rules. A consumer
 must fall back to `node_is_final` plus `node_edges` when negotiation returns
 `Unsupported`.
 
+#### Optional compact snapshot graph: `vt.dict.graph.v1`
+
+An immutable dictionary resource may expose its complete traversal projection
+as two borrowed, contiguous slices. This capability removes repeated provider
+callbacks and consumer-side lazy node publication from steady matching while
+leaving `vt.dictionary.v1` byte-for-byte unchanged:
+
+```c
+typedef struct VtDictionaryGraphNode {
+    uint64_t edge_start;
+    uint64_t edge_len;
+    uint64_t value_cursor;
+    uint8_t is_final;
+    uint8_t reserved[7];
+} VtDictionaryGraphNode;
+
+typedef struct VtDictionaryGraphEdge {
+    uint64_t label;
+    uint64_t target;
+} VtDictionaryGraphEdge;
+
+typedef struct VtDictionaryGraphView {
+    const VtDictionaryGraphNode* nodes;
+    size_t node_count;
+    const VtDictionaryGraphEdge* edges;
+    size_t edge_count;
+    uint64_t root;
+    uint64_t reserved;
+} VtDictionaryGraphView;
+
+typedef struct VtDictionaryGraphVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*graph)(void* context, VtDictionaryGraphView* out_graph);
+    VtStatus (*node_value_u64)(void* context, uint64_t value_cursor,
+                               VtOptionalU64* out_value);
+} VtDictionaryGraphVTable;
+```
+
+The interface is legal only when the base dictionary advertises `IMMUTABLE`.
+On `Ok`, both slices remain readable and unchanged for the lifetime of the
+retained resource. A null pointer is legal exactly when its corresponding
+count is zero. `root` and every edge `target` are zero-based indices into
+`nodes`; each node's half-open edge range indexes `edges`; labels within one
+node are strictly increasing; `is_final` is zero or one; every reserved field
+is zero. `value_cursor` is nonzero and opaque. When the base value domain is
+`OPTIONAL_U64`, `node_value_u64` is required and receives this cursor—not the
+dense node index. The token is never trusted merely because it is nonzero: the
+provider must reject any token not minted for this retained graph before
+dereferencing or translating backend state. Consumers must not mix tokens
+between graph revisions.
+
+The consumer performs one complete validation pass before publishing a safe
+graph. In literate pseudocode:
+
+```text
+capture_graph(snapshot):
+    require snapshot advertises IMMUTABLE
+    negotiate vt.dict.graph.v1
+    call graph(snapshot, &view)
+    validate header, pointers, byte-size arithmetic, and root
+    for each node:
+        validate flags, reserved bytes, value cursor, and edge range
+    for each edge in each node range:
+        validate label domain, target index, and strict label order
+    publish graph only after every check succeeds
+```
+
+This is an optimization contract, not a new correctness prerequisite. If
+negotiation returns `Unsupported`, consumers fall back to fused visit or base
+edge paging. The callback fallback is also the appropriate path for a backend
+that cannot expose an immutable complete graph without violating the
+$`\mathcal{O}(1)`$ query-start snapshot law.
+
 #### Optional snapshot identity: `vt.snapshot.id.1`
 
 An immutable dictionary snapshot may expose a process-local identity for
@@ -543,7 +626,8 @@ correct traversal.
 Only `snapshot`, `root`, `node_is_final`, and `node_edges` are unconditionally
 required by the reference consumer; `len` and `node_transition` are optional
 accelerations, and `node_value_u64` is conditionally required as stated
-above.
+above. Visit, compact-graph, and snapshot-identity interfaces are independently
+optional accelerations.
 
 ### 6.5 The dictionary laws
 
@@ -839,17 +923,26 @@ static const VtInterfaceId VT_DICTIONARY_VISIT_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','.','v','i','s','i','t','.','v','1' }
 };
 
+static const VtInterfaceId VT_DICTIONARY_GRAPH_INTERFACE_ID = {
+    { 'v','t','.','d','i','c','t','.','g','r','a','p','h','.','v','1' }
+};
+
+static const VtInterfaceId VT_SNAPSHOT_IDENTITY_INTERFACE_ID = {
+    { 'v','t','.','s','n','a','p','s','h','o','t','.','i','d','.','1' }
+};
+
 static const VtInterfaceId VT_WFST_INTERFACE_ID = {
     { 'v','t','.','s','c','a','l','a','r','-','w','f','s','t','.','1' }
 };
 ```
 
-The three constants are spelled as character arrays so byte exactness is
-visible: `vt.dictionary.v1`, `vt.dict.visit.v1`, and `vt.scalar-wfst.1`
-(16 bytes each). They are `static const` so the header stays usable from any
-C translation unit without a home object file. Only the base dictionary and
-WFST interfaces are mandatory for their respective providers; fused visit is
-an optional negotiated capability.
+The five constants are spelled as character arrays so byte exactness is
+visible: `vt.dictionary.v1`, `vt.dict.visit.v1`, `vt.dict.graph.v1`,
+`vt.snapshot.id.1`, and `vt.scalar-wfst.1` (16 bytes each). They are
+`static const` so the header stays usable from any C translation unit without
+a home object file. Only the base dictionary and WFST interfaces are mandatory
+for their respective providers; visit, compact graph, and snapshot identity
+are optional negotiated capabilities.
 
 ### 8.2 The C++ guard
 

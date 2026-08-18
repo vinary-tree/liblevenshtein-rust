@@ -17,17 +17,29 @@ fn native_query_counters_partition_observed_work() {
     assert_eq!(stats.final_checks, stats.dictionary_intersections);
     assert_eq!(stats.edges_enumerated, stats.transition_attempts);
     assert!(stats.transition_accepted <= stats.transition_attempts);
+    assert_eq!(stats.packed_standard_queries, 1);
+    assert_eq!(stats.positional_unit_queries, 0);
+    assert_eq!(
+        stats.packed_standard_transition_attempts,
+        stats.transition_attempts
+    );
+    assert_eq!(
+        stats.packed_standard_transition_dead,
+        stats.transition_attempts - stats.transition_accepted
+    );
     assert_eq!(stats.matches_materialized, matches.len() as u64);
-    assert!(stats.characteristic_vectors >= stats.transition_attempts);
-    assert!(stats.characteristic_units >= stats.characteristic_vectors);
-    assert!(stats.state_insert_attempts >= stats.state_insert_retained);
+    assert_eq!(stats.characteristic_vectors, 0);
+    assert_eq!(stats.characteristic_units, 0);
+    assert_eq!(stats.state_insert_attempts, 0);
+    assert_eq!(stats.state_insert_retained, 0);
     assert!(stats.state_positions_enqueued >= stats.transition_accepted);
     assert_eq!(
         stats.state_bytes_enqueued,
         stats
-            .state_positions_enqueued
-            .saturating_mul(std::mem::size_of::<liblevenshtein::transducer::Position>() as u64)
+            .transition_accepted
+            .saturating_mul(std::mem::size_of::<u64>() as u64)
     );
-    assert!(stats.pool_acquires >= stats.pool_reuses);
-    assert_eq!(stats.pool_acquires, stats.pool_reuses + stats.pool_misses);
+    assert_eq!(stats.pool_acquires, 0);
+    assert_eq!(stats.pool_reuses, 0);
+    assert_eq!(stats.pool_misses, 0);
 }

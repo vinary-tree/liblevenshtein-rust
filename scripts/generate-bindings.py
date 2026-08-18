@@ -40,6 +40,9 @@ def validate(model: dict) -> None:
         "javaPackage": "io.vinarytree.interop",
         "resourceLayout": ["context", "vtable"],
         "dictionaryInterfaceVersion": 1,
+        "dictionaryVisitInterfaceVersion": 1,
+        "dictionaryGraphInterfaceVersion": 1,
+        "snapshotIdentityInterfaceVersion": 1,
         "scalarWfstInterfaceVersion": 1,
     }
     if model.get("interop") != expected_interop:

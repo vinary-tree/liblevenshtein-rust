@@ -5,23 +5,28 @@
 //! materializing term strings, which can improve performance when many results
 //! match the distance threshold but few match the value filter.
 
+use crate::transducer::dictionary_traversal::{MappedValueSource, TraversalSession};
 use crate::transducer::transition::{
-    initial_state, CachedUnitTransitions, GeneratedStateId, TransitionSettings,
+    FinishMode, TransitionSettings, UnitCostFrontier, UnitCostMachine,
 };
 use crate::transducer::{Algorithm, Candidate, StatePool, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::value::DictionaryValue;
-use libdictenstein::{CharUnit, MappedDictionaryNode};
-use rustc_hash::FxHashSet;
+use libdictenstein::{
+    CharUnit, DictionaryTraversalRoot, MappedDictionaryNode, SnapshotTraversalCursor,
+};
 use std::collections::{HashSet, VecDeque};
 use std::hash::Hash;
+use std::marker::PhantomData;
 
-type SeenTerms = FxHashSet<Box<str>>;
+#[cfg(feature = "perf-instrumentation")]
+use crate::transducer::dictionary_traversal::TraversalProductIdentity;
+#[cfg(feature = "perf-instrumentation")]
+use rustc_hash::FxHashSet;
 
 /// The emitted term type for [`ValueYieldingQueryIterator`]: either the
 /// reconstructed text (`String`) or the raw unit sequence (`Vec<U>`, lossless for
-/// `u64` token dictionaries whose `to_string` is a lossy byte-unpack). The type
-/// doubles as the per-term deduplication key, so it must be `Eq + Hash`.
-pub trait ValueTerm<U: CharUnit>: Clone + Eq + Hash {
+/// `u64` token dictionaries whose `to_string` is a lossy byte-unpack).
+pub trait ValueTerm<U: CharUnit>: Sized {
     /// Build the term from the matched unit sequence.
     fn from_units(units: &[U]) -> Self;
 }
@@ -48,36 +53,41 @@ struct ValueQueryPathNode<U: CharUnit> {
     parent: usize,
 }
 
-struct ValueQueryIntersection<N: MappedDictionaryNode> {
-    label: Option<N::Unit>,
-    node: N,
-    state: GeneratedStateId,
+struct ValueQueryIntersection<U: CharUnit> {
+    label: Option<U>,
+    position: SnapshotTraversalCursor,
+    state: UnitCostFrontier,
     parent: usize,
 }
 
-impl<N: MappedDictionaryNode> ValueQueryIntersection<N> {
+impl<U: CharUnit> ValueQueryIntersection<U> {
     #[inline]
-    fn new(node: N, state: GeneratedStateId) -> Self {
+    fn new(position: SnapshotTraversalCursor, state: UnitCostFrontier) -> Self {
         Self {
             label: None,
-            node,
+            position,
             state,
             parent: NO_PATH,
         }
     }
 
     #[inline]
-    fn with_parent(label: N::Unit, node: N, state: GeneratedStateId, parent: usize) -> Self {
+    fn with_parent(
+        label: U,
+        position: SnapshotTraversalCursor,
+        state: UnitCostFrontier,
+        parent: usize,
+    ) -> Self {
         Self {
             label: Some(label),
-            node,
+            position,
             state,
             parent,
         }
     }
 
     /// Reconstruct the matched term as its raw unit sequence (root → this node).
-    fn units(&self, path_arena: &[ValueQueryPathNode<N::Unit>]) -> Vec<N::Unit> {
+    fn units(&self, path_arena: &[ValueQueryPathNode<U>]) -> Vec<U> {
         let parent_depth = if self.parent == NO_PATH {
             0
         } else {
@@ -103,21 +113,18 @@ impl<N: MappedDictionaryNode> ValueQueryIntersection<N> {
 
     /// Reconstruct the matched term as text (via [`CharUnit::to_string`]).
     #[inline]
-    fn term(&self, path_arena: &[ValueQueryPathNode<N::Unit>]) -> String {
-        N::Unit::to_string(&self.units(path_arena))
+    fn term(&self, path_arena: &[ValueQueryPathNode<U>]) -> String {
+        U::to_string(&self.units(path_arena))
     }
 }
 
 fn seeded_transitions<U: CharUnit>(
-    query_length: usize,
+    query: &[U],
     max_distance: usize,
     algorithm: Algorithm,
-) -> (CachedUnitTransitions<U>, GeneratedStateId) {
-    let initial = initial_state(query_length, max_distance, algorithm);
+) -> (UnitCostMachine<U>, UnitCostFrontier) {
     let settings = TransitionSettings::new(max_distance, algorithm, false);
-    let mut transitions = CachedUnitTransitions::new(query_length, max_distance);
-    let root = transitions.seed_generated_state(&initial, settings);
-    (transitions, root)
+    UnitCostMachine::seeded::<Unrestricted>(query, settings)
 }
 
 #[inline]
@@ -146,26 +153,74 @@ struct ValueTransitionSettings<'a, U> {
     algorithm: Algorithm,
 }
 
+struct ValueTransitionStep {
+    state: UnitCostFrontier,
+    #[cfg(feature = "perf-instrumentation")]
+    position_count: usize,
+    #[cfg(feature = "perf-instrumentation")]
+    storage_bytes: usize,
+}
+
+#[inline(always)]
+fn queue_value_child<U: CharUnit>(
+    intersection: &ValueQueryIntersection<U>,
+    pending: &mut VecDeque<ValueQueryIntersection<U>>,
+    path_arena: &mut Vec<ValueQueryPathNode<U>>,
+    child_parent_path: &mut Option<usize>,
+    label: U,
+    child_position: SnapshotTraversalCursor,
+    step: ValueTransitionStep,
+) {
+    crate::causal_perf::record_transition_accepted(1);
+    #[cfg(feature = "perf-instrumentation")]
+    {
+        crate::causal_perf::record_state_positions_enqueued(step.position_count as u64);
+        crate::causal_perf::record_state_bytes_enqueued(step.storage_bytes as u64);
+    }
+    let parent_path = match *child_parent_path {
+        Some(path) => path,
+        None => {
+            let path = match intersection.label {
+                Some(current_label) => {
+                    push_path_node(path_arena, current_label, intersection.parent)
+                }
+                None => NO_PATH,
+            };
+            *child_parent_path = Some(path);
+            path
+        }
+    };
+    pending.push_back(ValueQueryIntersection::with_parent(
+        label,
+        child_position,
+        step.state,
+        parent_path,
+    ));
+    crate::causal_perf::record_pending_queue_size(pending.len());
+}
+
 #[inline]
 fn queue_value_children_and_finality<N>(
-    intersection: &ValueQueryIntersection<N>,
-    pending: &mut VecDeque<ValueQueryIntersection<N>>,
+    intersection: &ValueQueryIntersection<N::Unit>,
+    traversal: &mut TraversalSession<N>,
+    pending: &mut VecDeque<ValueQueryIntersection<N::Unit>>,
     path_arena: &mut Vec<ValueQueryPathNode<N::Unit>>,
     state_pool: &mut StatePool,
-    unit_transitions: &mut CachedUnitTransitions<N::Unit>,
+    unit_transitions: &mut UnitCostMachine<N::Unit>,
     settings: ValueTransitionSettings<'_, N::Unit>,
-) -> bool
+) -> Option<MappedValueSource<N>>
 where
     N: MappedDictionaryNode,
     N::Value: DictionaryValue,
     Unrestricted: SubstitutionPolicyFor<N::Unit>,
 {
     let mut child_parent_path = None;
-    intersection.node.filter_map_edges_and_finality(
+    traversal.filter_map_edges_and_final_source(
+        intersection.position,
         |label| {
             crate::causal_perf::record_edges_enumerated(1);
             unit_transitions
-                .transition_generated(
+                .step(
                     intersection.state,
                     state_pool,
                     &Unrestricted,
@@ -173,49 +228,26 @@ where
                     settings.query,
                     TransitionSettings::new(settings.max_distance, settings.algorithm, false),
                 )
-                .map(|state| {
-                    let position_count = unit_transitions.generated_position_count(state);
-                    (state, position_count)
+                .map(|state| ValueTransitionStep {
+                    state,
+                    #[cfg(feature = "perf-instrumentation")]
+                    position_count: unit_transitions.active_len(state),
+                    #[cfg(feature = "perf-instrumentation")]
+                    storage_bytes: unit_transitions.frontier_storage_bytes(state),
                 })
         },
-        |label, child_node, (next_state, position_count)| {
-            crate::causal_perf::record_transition_accepted(1);
-            crate::causal_perf::record_state_positions_enqueued(position_count as u64);
-            crate::causal_perf::record_state_bytes_enqueued(
-                position_count.saturating_mul(std::mem::size_of::<crate::transducer::Position>())
-                    as u64,
-            );
-            let parent_path = match child_parent_path {
-                Some(path) => path,
-                None => {
-                    let path = match intersection.label {
-                        Some(current_label) => {
-                            push_path_node(path_arena, current_label, intersection.parent)
-                        }
-                        None => NO_PATH,
-                    };
-                    child_parent_path = Some(path);
-                    path
-                }
-            };
-            pending.push_back(ValueQueryIntersection::with_parent(
+        |label, child_position, step| {
+            queue_value_child(
+                intersection,
+                pending,
+                path_arena,
+                &mut child_parent_path,
                 label,
-                child_node,
-                next_state,
-                parent_path,
-            ));
-            crate::causal_perf::record_pending_queue_size(pending.len());
+                child_position,
+                step,
+            );
         },
     )
-}
-
-#[inline]
-fn mark_seen_term(seen: &mut SeenTerms, term: &str) -> bool {
-    if seen.contains(term) {
-        return false;
-    }
-    seen.insert(term.to_owned().into_boxed_str());
-    true
 }
 
 /// Iterator that yields candidates filtered by their associated values.
@@ -291,15 +323,15 @@ where
     /// Value filter predicate
     filter: F,
     /// Queue of pending intersections to explore
-    pending: VecDeque<ValueQueryIntersection<N>>,
+    pending: VecDeque<ValueQueryIntersection<N::Unit>>,
+    /// Retained snapshot owner and cursor traversal backend.
+    traversal: TraversalSession<N>,
     /// Arena of shared parent path nodes used to reconstruct yielded terms.
     path_arena: Vec<ValueQueryPathNode<N::Unit>>,
-    /// Set of seen terms (for deduplication)
-    seen: SeenTerms,
     /// State pool for efficient state allocation reuse
     state_pool: StatePool,
     /// Shared cached transition kernel; queued states are epsilon-closed.
-    unit_transitions: CachedUnitTransitions<N::Unit>,
+    unit_transitions: UnitCostMachine<N::Unit>,
     /// Iterator finished flag
     finished: bool,
 }
@@ -326,9 +358,10 @@ where
         filter: F,
     ) -> Self {
         let query_units = N::Unit::from_str(&term);
-        let query_length = query_units.len();
-        let (unit_transitions, initial) = seeded_transitions(query_length, max_distance, algorithm);
+        let (unit_transitions, initial) = seeded_transitions(&query_units, max_distance, algorithm);
 
+        let (traversal, root) =
+            TraversalSession::capture_mapped(DictionaryTraversalRoot::owned(root));
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
 
@@ -338,8 +371,8 @@ where
             algorithm,
             filter,
             pending,
+            traversal,
             path_arena: Vec::with_capacity(64),
-            seen: SeenTerms::default(),
             state_pool: StatePool::new(),
             unit_transitions,
             finished: false,
@@ -362,19 +395,18 @@ where
         }
 
         while let Some(intersection) = self.pending.pop_front() {
-            let is_final = self.queue_children_and_finality(&intersection);
+            let final_source = self.queue_children_and_finality(&intersection);
             // Check if this is a final node
-            if is_final {
+            if let Some(final_source) = final_source {
                 // Infer distance (standard mode - penalize remaining query characters)
                 let distance = self
                     .unit_transitions
-                    .generated_frontier_state(intersection.state)
-                    .infer_distance(self.query.len())
+                    .finish_distance(intersection.state, FinishMode::Complete, self.query.len())
                     .unwrap_or(usize::MAX);
 
                 if distance <= self.max_distance {
                     // CRITICAL: Check value filter BEFORE materializing term.
-                    let Some(value) = intersection.node.value_at_final() else {
+                    let Some(value) = self.traversal.resolve_final_value(final_source) else {
                         continue;
                     };
 
@@ -386,11 +418,7 @@ where
                     // Materialize term string
                     let term = intersection.term(&self.path_arena);
 
-                    // Deduplicate
-                    if mark_seen_term(&mut self.seen, &term) {
-                        // Return the candidate
-                        return Some(Candidate { term, distance });
-                    }
+                    return Some(Candidate { term, distance });
                 }
             }
         }
@@ -409,9 +437,13 @@ where
 {
     /// Queue child intersections for exploration
     #[inline]
-    fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
+    fn queue_children_and_finality(
+        &mut self,
+        intersection: &ValueQueryIntersection<N::Unit>,
+    ) -> Option<MappedValueSource<N>> {
         queue_value_children_and_finality(
             intersection,
+            &mut self.traversal,
             &mut self.pending,
             &mut self.path_arena,
             &mut self.state_pool,
@@ -440,17 +472,21 @@ where
     /// Algorithm (Standard or Transposition)
     algorithm: Algorithm,
     /// Queue of pending intersections to explore
-    pending: VecDeque<ValueQueryIntersection<N>>,
+    pending: VecDeque<ValueQueryIntersection<N::Unit>>,
+    /// Retained snapshot owner and cursor traversal backend.
+    traversal: TraversalSession<N>,
     /// Arena of shared parent path nodes used to reconstruct yielded terms.
     path_arena: Vec<ValueQueryPathNode<N::Unit>>,
-    /// Set of seen terms (for deduplication), keyed on the emitted term type `T`.
-    seen: FxHashSet<T>,
     /// State pool for efficient state allocation reuse
     state_pool: StatePool,
     /// Shared cached transition kernel; queued states are epsilon-closed.
-    unit_transitions: CachedUnitTransitions<N::Unit>,
+    unit_transitions: UnitCostMachine<N::Unit>,
     /// Iterator finished flag
     finished: bool,
+    #[cfg(feature = "perf-instrumentation")]
+    generated_products: FxHashSet<(TraversalProductIdentity, UnitCostFrontier)>,
+    /// Selects text versus native-unit results without runtime storage.
+    _term_type: PhantomData<T>,
 }
 
 impl<N> ValueYieldingQueryIterator<N, String>
@@ -463,6 +499,22 @@ where
     /// [`with_unit_query`](ValueYieldingQueryIterator::with_unit_query) instead —
     /// `from_str` byte-packs the query.
     pub fn new(root: N, term: String, max_distance: usize, algorithm: Algorithm) -> Self {
+        let query_units = N::Unit::from_str(&term);
+        Self::with_units(
+            DictionaryTraversalRoot::owned(root),
+            query_units,
+            max_distance,
+            algorithm,
+        )
+    }
+
+    #[cfg(feature = "bindings-core")]
+    pub(crate) fn with_traversal_root(
+        root: DictionaryTraversalRoot<N>,
+        term: String,
+        max_distance: usize,
+        algorithm: Algorithm,
+    ) -> Self {
         let query_units = N::Unit::from_str(&term);
         Self::with_units(root, query_units, max_distance, algorithm)
     }
@@ -481,6 +533,21 @@ where
         max_distance: usize,
         algorithm: Algorithm,
     ) -> Self {
+        Self::with_units(
+            DictionaryTraversalRoot::owned(root),
+            query_units,
+            max_distance,
+            algorithm,
+        )
+    }
+
+    #[cfg(feature = "bindings-core")]
+    pub(crate) fn with_unit_query_traversal_root(
+        root: DictionaryTraversalRoot<N>,
+        query_units: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+    ) -> Self {
         Self::with_units(root, query_units, max_distance, algorithm)
     }
 }
@@ -492,14 +559,14 @@ where
     /// Shared constructor from a pre-computed unit query. The emitted term type `T`
     /// (`String` or `Vec<Unit>`) is chosen by the caller / return type.
     fn with_units(
-        root: N,
+        root: DictionaryTraversalRoot<N>,
         query_units: Vec<N::Unit>,
         max_distance: usize,
         algorithm: Algorithm,
     ) -> Self {
-        let query_length = query_units.len();
-        let (unit_transitions, initial) = seeded_transitions(query_length, max_distance, algorithm);
+        let (unit_transitions, initial) = seeded_transitions(&query_units, max_distance, algorithm);
 
+        let (traversal, root) = TraversalSession::capture_mapped(root);
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
 
@@ -508,11 +575,14 @@ where
             max_distance,
             algorithm,
             pending,
+            traversal,
             path_arena: Vec::with_capacity(64),
-            seen: FxHashSet::default(),
             state_pool: StatePool::new(),
             unit_transitions,
             finished: false,
+            #[cfg(feature = "perf-instrumentation")]
+            generated_products: FxHashSet::default(),
+            _term_type: PhantomData,
         }
     }
 }
@@ -535,28 +605,34 @@ where
         while let Some(intersection) = self.pending.pop_front() {
             crate::causal_perf::record_dictionary_intersections(1);
             crate::causal_perf::record_final_checks(1);
-            let is_final = self.queue_children_and_finality(&intersection);
-            if is_final {
+            crate::causal_perf::record_generated_product_expansions(1);
+            #[cfg(feature = "perf-instrumentation")]
+            if let Some(node) = self.traversal.product_identity(intersection.position) {
+                crate::causal_perf::record_generated_product_identity_expansions(1);
+                if self.generated_products.insert((node, intersection.state)) {
+                    crate::causal_perf::record_generated_product_unique_expansions(1);
+                } else {
+                    crate::causal_perf::record_generated_product_repeated_expansions(1);
+                }
+            }
+            let final_source = self.queue_children_and_finality(&intersection);
+            if let Some(final_source) = final_source {
                 let distance = self
                     .unit_transitions
-                    .generated_frontier_state(intersection.state)
-                    .infer_distance(self.query.len())
+                    .finish_distance(intersection.state, FinishMode::Complete, self.query.len())
                     .unwrap_or(usize::MAX);
 
                 if distance <= self.max_distance {
-                    let term = T::from_units(&intersection.units(&self.path_arena));
-                    // Deduplicate by term; children are queued exactly once,
-                    // on the first visit of each term (matching the
-                    // value-filtered iterator's discipline). `insert` returns
-                    // `true` the first time a term is seen.
-                    if self.seen.insert(term.clone()) {
-                        // Read the value during traversal — no second lookup.
-                        if let Some(value) = intersection.node.value_at_final() {
-                            crate::causal_perf::record_matches_materialized(1);
-                            return Some((term, distance, value));
-                        }
-                        // Final but valueless: keep exploring.
+                    // Read the value before materializing the term. A
+                    // deterministic DictionaryNode has one root-to-word path,
+                    // so a separate seen-term set would only clone and retain
+                    // every yielded term.
+                    if let Some(value) = self.traversal.resolve_final_value(final_source) {
+                        let term = T::from_units(&intersection.units(&self.path_arena));
+                        crate::causal_perf::record_matches_materialized(1);
+                        return Some((term, distance, value));
                     }
+                    // Final but valueless: keep exploring.
                 }
             }
         }
@@ -575,9 +651,13 @@ where
     /// Queue child intersections for exploration (identical traversal to the
     /// value-filtered iterator).
     #[inline]
-    fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
+    fn queue_children_and_finality(
+        &mut self,
+        intersection: &ValueQueryIntersection<N::Unit>,
+    ) -> Option<MappedValueSource<N>> {
         queue_value_children_and_finality(
             intersection,
+            &mut self.traversal,
             &mut self.pending,
             &mut self.path_arena,
             &mut self.state_pool,
@@ -653,15 +733,15 @@ where
     /// Value set for membership testing
     value_set: ValueSetMembership<'a, V>,
     /// Queue of pending intersections to explore
-    pending: VecDeque<ValueQueryIntersection<N>>,
+    pending: VecDeque<ValueQueryIntersection<N::Unit>>,
+    /// Retained snapshot owner and cursor traversal backend.
+    traversal: TraversalSession<N>,
     /// Arena of shared parent path nodes used to reconstruct yielded terms.
     path_arena: Vec<ValueQueryPathNode<N::Unit>>,
-    /// Set of seen terms (for deduplication)
-    seen: SeenTerms,
     /// State pool for efficient state allocation reuse
     state_pool: StatePool,
     /// Shared cached transition kernel; queued states are epsilon-closed.
-    unit_transitions: CachedUnitTransitions<N::Unit>,
+    unit_transitions: UnitCostMachine<N::Unit>,
     /// Iterator finished flag
     finished: bool,
 }
@@ -717,9 +797,10 @@ where
         value_set: ValueSetMembership<'a, V>,
     ) -> Self {
         let query_units = N::Unit::from_str(&term);
-        let query_length = query_units.len();
-        let (unit_transitions, initial) = seeded_transitions(query_length, max_distance, algorithm);
+        let (unit_transitions, initial) = seeded_transitions(&query_units, max_distance, algorithm);
 
+        let (traversal, root) =
+            TraversalSession::capture_mapped(DictionaryTraversalRoot::owned(root));
         let mut pending = VecDeque::with_capacity(1);
         pending.push_back(ValueQueryIntersection::new(root, initial));
 
@@ -729,8 +810,8 @@ where
             algorithm,
             value_set,
             pending,
+            traversal,
             path_arena: Vec::with_capacity(64),
-            seen: SeenTerms::default(),
             state_pool: StatePool::new(),
             unit_transitions,
             finished: false,
@@ -752,19 +833,18 @@ where
         }
 
         while let Some(intersection) = self.pending.pop_front() {
-            let is_final = self.queue_children_and_finality(&intersection);
+            let final_source = self.queue_children_and_finality(&intersection);
             // Check if this is a final node
-            if is_final {
+            if let Some(final_source) = final_source {
                 // Infer distance (standard mode - penalize remaining query characters)
                 let distance = self
                     .unit_transitions
-                    .generated_frontier_state(intersection.state)
-                    .infer_distance(self.query.len())
+                    .finish_distance(intersection.state, FinishMode::Complete, self.query.len())
                     .unwrap_or(usize::MAX);
 
                 if distance <= self.max_distance {
                     // CRITICAL: Check value set membership BEFORE materializing term.
-                    let Some(value) = intersection.node.value_at_final() else {
+                    let Some(value) = self.traversal.resolve_final_value(final_source) else {
                         continue;
                     };
 
@@ -776,11 +856,7 @@ where
                     // Materialize term string
                     let term = intersection.term(&self.path_arena);
 
-                    // Deduplicate
-                    if mark_seen_term(&mut self.seen, &term) {
-                        // Return the candidate
-                        return Some(Candidate { term, distance });
-                    }
+                    return Some(Candidate { term, distance });
                 }
             }
         }
@@ -798,9 +874,13 @@ where
 {
     /// Queue child intersections for exploration
     #[inline]
-    fn queue_children_and_finality(&mut self, intersection: &ValueQueryIntersection<N>) -> bool {
+    fn queue_children_and_finality(
+        &mut self,
+        intersection: &ValueQueryIntersection<N::Unit>,
+    ) -> Option<MappedValueSource<N>> {
         queue_value_children_and_finality(
             intersection,
+            &mut self.traversal,
             &mut self.pending,
             &mut self.path_arena,
             &mut self.state_pool,
@@ -949,7 +1029,7 @@ mod tests {
 /// final nodes whose value is `None`.
 #[cfg(test)]
 mod value_yielding_tests {
-    use super::{mark_seen_term, SeenTerms};
+    use super::ValueQueryIntersection;
     use crate::transducer::{Algorithm, Candidate, Transducer};
     use libdictenstein::double_array_trie::{DoubleArrayTrie, DoubleArrayTrieBuilder};
     use std::collections::HashSet;
@@ -960,13 +1040,8 @@ mod value_yielding_tests {
     }
 
     #[test]
-    fn mark_seen_term_deduplicates_with_borrowed_lookup() {
-        let mut seen = SeenTerms::default();
-
-        assert!(mark_seen_term(&mut seen, "test"));
-        assert!(!mark_seen_term(&mut seen, "test"));
-        assert!(seen.contains("test"));
-        assert_eq!(seen.len(), 1);
+    fn queued_value_intersection_is_compact() {
+        assert!(std::mem::size_of::<ValueQueryIntersection<char>>() <= 32);
     }
 
     #[test]
@@ -1037,7 +1112,7 @@ mod value_yielding_tests {
     #[test]
     fn test_value_yielding_query_dedup() {
         // "abc" is reachable from query "abd" by substitution, "ab" by deletion;
-        // the BFS may revisit a term via multiple states. Assert each term once.
+        // deterministic dictionary traversal still has one path per term.
         let dict: DoubleArrayTrie<u32> =
             DoubleArrayTrie::from_terms_with_values(vec![("ab", 7u32), ("abc", 8), ("abd", 9)]);
         let transducer = Transducer::new(dict, Algorithm::Standard);

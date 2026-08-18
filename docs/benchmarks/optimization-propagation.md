@@ -37,26 +37,43 @@ the hot seam with their native representation.
 The accepted query optimizations are deliberately layered:
 
 ```text
-concrete dictionary backend or immutable foreign snapshot
-                         |
-                         v
-         DictionaryNode generic visitation contract
- filter_map_edges / filter_map_edges_and_finality
-                         |
-                         v
-           query-surface traversal and scheduling
-                         |
-                         v
- CachedUnitTransitions / CachedF64Transitions<Unit>
-                         |
-                         v
-   monomorphized AutomatonVariant transition kernel
+native DictionaryTraversalRoot          retained foreign snapshot
+       |                                     |
+       |                           vt.dict.graph.v1, when available
+       +----------------------+--------------+
+                              |
+                              v
+              TraversalSession<DictionaryNode>
+        one owner + copy-only SnapshotTraversalCursor queue
+                              |
+                              v
+                 query-surface scheduler
+                              |
+                  +-----------+-----------+
+                  |                       |
+                  v                       v
+       packed Standard DFA       dense positional target table
+       exact-cost u64 lanes       all unit-cost algorithms
+                  |                       |
+                  +-----------+-----------+
+                              |
+                              v
+                   match/value materialization
 ```
 
-The resource adapter implements the same node contract. Consequently,
-algorithmic optimizations are shared by native and foreign dictionaries, while
-snapshot pinning, fused ABI visitation, and node caching are confined to the
-boundary adapter where their preconditions exist.
+`TraversalSession` is the generic ownership boundary. An immutable native or
+foreign graph keeps one retained owner and queues one-word copy cursors. A
+backend with native stable cursors supplies the same contract without a graph
+conversion. The compatibility arm stores owned nodes in a query-local recycling
+arena and consumes each slot once. Query schedulers therefore do not duplicate
+backend ownership logic.
+
+The resource adapter validates an optional compact graph once and routes it
+through the same session. Providers without that interface retain the fused
+callback and immutable-node-cache fallback. Transition optimizations are
+selected independently: eligible short Standard queries use the packed DFA;
+Transposition, Merge-and-Split, unrestricted Damerau-Levenshtein, and
+ineligible Standard queries share the dense positional engine.
 
 ## Accepted optimization matrix
 
@@ -74,6 +91,10 @@ boundary adapter where their preconditions exist.
 | Class-only characteristic label cache | Direct for byte, char, and `u64` unit-cost queries | `CharacteristicCache<U>` maps hot labels to compact class IDs and owns each pattern once in a central class table | Exact label equality is retained for direct-table collision checks; a pattern is fetched only when the generated transition table misses |
 | Epsilon-closed queued states | Direct for all built-in unit-cost, affine-gap, and f64-weighted variants | Generic integer `AutomatonVariant` kernel and the corresponding weighted kernel | Initial and enqueued states are epsilon-closed exactly once |
 | Compact generated-state frontiers | Direct for queued built-in unit-cost ordinary, ordered, priority, ranked-value, value-filtered/value-yielding, and prefix-DFS iterators | `GeneratedStateId` and canonical transition rows in `CachedUnitTransitions<U>` | IDs and rows are query-local and append-only; sentinels cannot collide with a valid ID; collision buckets compare canonical position slices; public/stateful navigation may materialize a `State` adapter |
+| Snapshot-scoped cursor traversal | Direct for every scheduler whose dictionary walk does not expose child handles; adapted for schedulers that must materialize an accepting node | Generic `TraversalSession<N>` plus `SnapshotTraversalCursor`; `DeferredNodeSource<N>` delays accepting-node materialization | One retained revision owns every cursor; a cursor belongs to exactly one session; owned-fallback slots are consumed or explicitly discarded exactly once |
+| Packed exact-cost edit lanes | Direct for byte, Unicode-scalar, and `u64` Standard queries whose `query_length + 1` lanes at distances 0–3 fit in one `u64` | `PackedEditLaneLayout` stores exact-cost lanes and computes one-to-three-deletion closure with fixed masks and shifts | Standard unit costs and bounded width; prefix sinks remain explicit; all other cases fall back to the positional engine |
+| Lazy compact packed DFA | Direct for eligible unrestricted Standard queries on all three unit domains | `PackedStandardDfa<U>` interns reached packed frontiers and stores row-major targets by exact label-equivalence class | The query is immutable; exact label classes preserve collisions; only states reached by the concrete dictionary walk are generated |
+| Flat dense positional target table | Direct for Standard fallback, Transposition, Merge-and-Split, and unrestricted Damerau-Levenshtein across all query schedulers and unit domains | `DenseGeneratedTargets` owns one fixed-stride row-major matrix beside stable boxed canonical position slices, plus sparse overflow for custom-policy classes | Generated state IDs are dense and query-local; exact classes remain within the query-derived stride; an arbitrary substitution policy cannot widen every existing row |
 | Bulk state-position copy | Direct for integer and f64 states with contiguous `Copy` positions | `extend_from_slice` in each state representation | Position layout is contiguous and copying preserves order and bit identity |
 | Pinned immutable provider snapshot | Direct for all resource-backed unit domains and algorithms | `ResourceTransducer::snapshot` and provider snapshot reuse | Provider honors immutable revision and stable node-identifier lifetime contracts |
 | Revision-memoized producer snapshot | Direct for DynamicDawg byte/char/`u64`, persistent ARTrie byte/char/`u64`/vocabulary, DAT byte/char, and SCDAWG byte/char resources | Unit-agnostic `SnapshotMemo` owned by each shared producer; successful mutations invalidate the cached revision | Snapshot capture and invalidation serialize on one short memo lock; mutation never holds a backend lock while invalidating; immutable backends retain revision zero indefinitely |
@@ -85,6 +106,8 @@ boundary adapter where their preconditions exist.
 | Stack-paged provider edges | Direct for all foreign node domains | Generic `ForeignNode<U>` edge page | ABI edge descriptor has a fixed representation and the recommended page has a bounded stack size |
 | Fused provider node callback | Direct for providers advertising the optional interface | `VtDictionaryVisitVTable::node_visit` | Provider can return finality and one edge page under one validation/lock operation |
 | Immutable provider node cache | Direct for all resource-backed queries | Provider-wide node-ID cache shared by snapshot cursors | Node ID, finality, and edges are immutable within the retained snapshot |
+| Direct immutable resource snapshot graph | Direct for byte, Unicode-scalar, and `u64` providers advertising `vt.dict.graph.v1`; optional fallback elsewhere | `VtDictionaryGraphVTable` exposes one immutable node/edge view; producer and consumer revision memos publish their projection/import once, then every scheduler uses `TraversalSession` | The view belongs to a retained immutable snapshot; ranges, targets, label order/domain, flags, reserved bytes, root, and value cursors validate before traversal; mapped values resolve through checked graph-local cursors only at accepting nodes |
+| Packed graph finality | Direct for every native or resource scheduler using `SnapshotTraversalGraph<U>` | Finality occupies the high bit of the existing 64-bit edge-range descriptor | One node has fewer than $`2^{31}`$ outgoing edges; construction validates the range before publication; the descriptor remains eight bytes |
 | Borrowed result-batch consumption | Direct at the JVM cursor API; rejected as the parity-harness default by H-O27 | `QueryCursor.forEachBatch` plus descriptor/byte views; the ordinary harness path continues to materialize managed matches | Consumer finishes reading a borrowed batch before the callback returns; callers choose it for lazy decoding or allocation control rather than assuming a throughput win |
 | Lexical JVM whole-query drain | Direct for every JVM transducer algorithm and string, byte, packed-`u64`, and phonetic query form | `NativeQueryBatches` centralizes one confined arena and batch lease; `Transducer.forEachMatch` supplies typed public overloads | The callback is synchronous, each delivered `Match` owns its managed data, and arena/batch cleanup remains deterministic when either native traversal or the consumer throws |
 
@@ -110,7 +133,7 @@ reintroduce allocation. The inventory is:
 | Persistent SCDAWG | byte and char persistent node handles | Direct: predicate-first borrowed/fused traversal and generic unit transition cache | Inapplicable: persistent compact-suffix topology differs |
 | Persistent ARTrie overlay | generic key-encoding overlay node | Direct: predicate-first borrowed/fused traversal and generic unit transition cache for supported key encodings | Inapplicable: adaptive-radix layout, transactional publication, and persistence replace finite-language minimization |
 | Transparent decorators | `AgeNode`, `CostAwareNode`, `LfuNode`, `LruNode`, `LruOptimizedNode`, `MemoryPressureNode`, `NoopNode`, `TtlNode`, and `PhoneticNormalizedNode` | Direct: generic child wrapping delegates borrowed, fused, and predicate-first visitation; mapped decorators delegate `value_at_final` | Inapplicable: decorators do not own construction topology |
-| Foreign resource | generic `ForeignNode<U>` | Direct: predicate-first paged/fused provider visitation and immutable node caching | Inapplicable: the provider owns construction |
+| Foreign resource | generic `ForeignNode<U>` | Direct: compact snapshot graph when advertised; predicate-first paged/fused visitation and immutable node caching as fallback | Inapplicable: the provider owns construction |
 
 The persistent byte, char, vocabulary, and `u64` ARTrie public types reach the
 query engine through the overlay node implementation; compact and
@@ -127,16 +150,20 @@ nodes built from its output inherit the traversal seams listed above.
 
 ### Unit-cost integer variants
 
-Standard Levenshtein, optimal string alignment (the public `Transposition`
-variant), merge-and-split, and unrestricted Damerau-Levenshtein queries share
-the `AutomatonVariant` state machinery. `CachedUnitTransitions<U>` owns the
-characteristic-class cache, canonical generated-state rows, and monomorphized
-variant kernel. Queued unit-cost schedulers retain only `GeneratedStateId`
-handles; the materializing transition adapter remains available to stateful
-navigation APIs. Affine-gap queries share characteristic caching and the
-epsilon-closed queue invariant while supplying their exact fixed-point
+Eligible short Standard Levenshtein queries use `PackedStandardMachine<U>`:
+one-word exact-cost lanes feed a lazily generated dense deterministic finite
+automaton (DFA). Standard fallbacks, optimal string alignment (the public
+`Transposition` variant), merge-and-split, and unrestricted
+Damerau-Levenshtein share `CachedUnitTransitions<U>`. That engine owns the
+characteristic-class cache, stable canonical generated-state slices, one flat
+row-major target table, and the monomorphized `AutomatonVariant` kernel. Queued
+unit-cost schedulers retain only a `UnitCostFrontier`, whose representation is
+chosen once per query; the schedulers do not branch on the automaton algorithm
+or duplicate the transition logic. The materializing adapter remains available
+to stateful navigation APIs. Affine-gap queries share characteristic caching
+and the epsilon-closed queue invariant while supplying their exact fixed-point
 parameters to the statically dispatched `AffineV` kernel. The following public
-query surfaces use the shared cache for their unit-cost variants:
+query surfaces inherit this selection for their unit-cost variants:
 
 - breadth-first traversal and value-yielding traversal;
 - ordered, prefix-ordered, ranked-value, and priority traversal;
@@ -161,9 +188,9 @@ implementation unless it introduces a genuinely different query descriptor.
 |---|---|---|
 | f64 weighted query | Borrowed/fused node visitation, shared characteristic caching, epsilon-closed queued states, and bulk contiguous state copy | `CachedF64Transitions<U>` retains the weighted successor/pruning kernel because operation costs remain f64 values |
 | Contextual query | Borrowed/fused node visitation | Each child column depends on contextual cost callbacks and prefix context |
-| Language-product query | Borrowed/fused node visitation | The frontier is a product of edit and language states, so a unit-only cached transition is insufficient |
-| Character phonetic query | Borrowed/fused node visitation when children are expandable | Candidate admission uses the phonetic product and optional articulatory costs |
-| Byte phonetic query | Inherits language-query fused traversal | Byte phonetic traversal delegates to the language-product iterator |
+| Language-product query | Copy-cursor traversal; mapped resource queries use the compact graph and resolve only accepted final values | The frontier is a product of edit and language states, so a unit-only cached transition is insufficient |
+| Character phonetic query | Copy-cursor traversal, including the compact resource graph when children are expandable | Candidate admission uses the phonetic product and optional articulatory costs |
+| Byte phonetic query | Inherits language-query cursor traversal | Byte phonetic traversal delegates to the language-product iterator |
 | Subsequence query | Fused node inspection during explicit DFS-frame construction | It has no edit-distance state transition to cache |
 | Generalized and universal automata | Bulk contiguous state operations where representation permits; their existing subsumption kernels remain intact | They expose different state algebras and are not routed through the built-in `AutomatonVariant` transition function |
 | Quantized time-series trie | Borrowed/fused dictionary visitation plus the shared unit transition cache for its Levenshtein candidate filter | Elastic DTW, ERP, Fréchet, MSM, and TWED walkers use kernel-specific dynamic-programming columns; they inherit borrowed edge visitation but not string characteristic vectors |
@@ -188,18 +215,20 @@ forcing fused edge enumeration.
 
 ## ABI evolution and compatibility
 
-`VtDictionaryVisitVTable` is an optional, separately discoverable interface,
-not an appended mandatory field. An older provider continues to work through
-`VtDictionaryVTable`; its default `DictionaryNode` adaptation composes
-`is_final` and `for_each_edge`. A newer provider can implement `node_visit` and
-amortize validation, synchronization, and pagination. This preserves binary
-compatibility while allowing a monomorphized query iterator to express one
-logical node operation.
+`VtDictionaryGraphVTable` and `VtDictionaryVisitVTable` are optional,
+separately discoverable interfaces, not fields appended to the mandatory
+dictionary vtable. A graph-capable immutable snapshot supplies one contiguous
+node/edge view and an optional mapped-value lookup. A provider without the
+graph interface continues through `node_visit`, when available, or the
+original finality and paged-edge callbacks. This preserves binary compatibility
+while letting the hottest path avoid callbacks, cache-directory lookups,
+atomic child promotion, and provider-arena synchronization altogether.
 
-`ResourceTransducer::snapshot` is additive. A caller that needs a live source
+`ResourceTransducer::snapshot` and the C ABI's
+`llev_transducer_snapshot` are additive. A caller that needs a live source
 revision may retain the existing behavior; a read-mostly batch can explicitly
-pin one immutable revision and share the lazily populated node cache across all
-its cursors.
+pin one immutable revision and share its validated graph or lazily populated
+fallback node cache across all cursors.
 
 ## Correctness and performance gates
 

@@ -17,7 +17,8 @@ use super::{
     Algorithm, OperationCostsF64, StateF64, StatePoolF64, SubstitutionPolicy,
     SubstitutionPolicyFor, Unrestricted,
 };
-use libdictenstein::{CharUnit, DictionaryNode};
+use crate::transducer::dictionary_traversal::TraversalSession;
+use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 
@@ -53,36 +54,41 @@ struct QueryPathNodeF64<U: CharUnit> {
     parent: usize,
 }
 
-struct QueryIntersectionF64<N: DictionaryNode> {
-    label: Option<N::Unit>,
-    node: N,
+struct QueryIntersectionF64<U: CharUnit> {
+    label: Option<U>,
+    position: SnapshotTraversalCursor,
     state: StateF64,
     parent: usize,
 }
 
-impl<N: DictionaryNode> QueryIntersectionF64<N> {
+impl<U: CharUnit> QueryIntersectionF64<U> {
     #[inline]
-    fn new(node: N, state: StateF64) -> Self {
+    fn new(position: SnapshotTraversalCursor, state: StateF64) -> Self {
         Self {
             label: None,
-            node,
+            position,
             state,
             parent: NO_PATH,
         }
     }
 
     #[inline]
-    fn with_parent(label: N::Unit, node: N, state: StateF64, parent: usize) -> Self {
+    fn with_parent(
+        label: U,
+        position: SnapshotTraversalCursor,
+        state: StateF64,
+        parent: usize,
+    ) -> Self {
         Self {
             label: Some(label),
-            node,
+            position,
             state,
             parent,
         }
     }
 
     /// Reconstruct the matched term as its raw unit sequence (root → this node).
-    fn units(&self, path_arena: &[QueryPathNodeF64<N::Unit>]) -> Vec<N::Unit> {
+    fn units(&self, path_arena: &[QueryPathNodeF64<U>]) -> Vec<U> {
         let parent_depth = if self.parent == NO_PATH {
             0
         } else {
@@ -193,7 +199,8 @@ impl<U: CharUnit> QueryResultF64<U> for UnitCandidateF64<U> {
 /// }
 /// ```
 pub struct QueryIteratorF64<N: DictionaryNode, R = String, P: SubstitutionPolicy = Unrestricted> {
-    pending: VecDeque<QueryIntersectionF64<N>>,
+    pending: VecDeque<QueryIntersectionF64<N::Unit>>,
+    traversal: TraversalSession<N>,
     query: Vec<N::Unit>,
     max_cost: f64,
     algorithm: Algorithm,
@@ -296,14 +303,37 @@ impl<
         policy: P,
         substring_mode: bool,
     ) -> Self {
+        Self::with_traversal_root_and_units(
+            DictionaryTraversalRoot::owned(root),
+            query_units,
+            max_cost,
+            algorithm,
+            costs,
+            policy,
+            substring_mode,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn with_traversal_root_and_units(
+        root: DictionaryTraversalRoot<N>,
+        query_units: Vec<N::Unit>,
+        max_cost: f64,
+        algorithm: Algorithm,
+        costs: OperationCostsF64,
+        policy: P,
+        substring_mode: bool,
+    ) -> Self {
         let initial = initial_state_f64(query_units.len(), max_cost, algorithm, &costs);
         let unit_transitions = CachedF64Transitions::new(query_units.len(), max_cost, &costs);
 
+        let (traversal, root) = TraversalSession::capture(root);
         let mut pending = VecDeque::new();
         pending.push_back(QueryIntersectionF64::new(root, initial));
 
         Self {
             pending,
+            traversal,
             query: query_units,
             max_cost,
             algorithm,
@@ -346,7 +376,10 @@ impl<
     }
 
     /// Queue child intersections for exploration
-    fn queue_children_and_finality(&mut self, intersection: &QueryIntersectionF64<N>) -> bool {
+    fn queue_children_and_finality(
+        &mut self,
+        intersection: &QueryIntersectionF64<N::Unit>,
+    ) -> bool {
         let mut child_parent_path = None;
         let query = &self.query;
         let policy = &self.policy;
@@ -359,7 +392,8 @@ impl<
         let path_arena = &mut self.path_arena;
         let pending = &mut self.pending;
 
-        intersection.node.filter_map_edges_and_finality(
+        self.traversal.filter_map_edges_and_finality(
+            intersection.position,
             |label| {
                 unit_transitions.transition(
                     &intersection.state,
@@ -370,7 +404,7 @@ impl<
                     TransitionSettingsF64::new(max_cost, algorithm, costs, substring_mode),
                 )
             },
-            |label, child_node, next_state| {
+            |label, child_position, next_state| {
                 let parent_path = match child_parent_path {
                     Some(path) => path,
                     None => {
@@ -397,7 +431,7 @@ impl<
                 };
                 pending.push_back(QueryIntersectionF64::with_parent(
                     label,
-                    child_node,
+                    child_position,
                     next_state,
                     parent_path,
                 ));

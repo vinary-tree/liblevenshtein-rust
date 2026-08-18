@@ -12,6 +12,7 @@ extern "C" {
 #define VT_ABI_VERSION 1u
 #define VT_DICTIONARY_INTERFACE_VERSION 1u
 #define VT_DICTIONARY_VISIT_INTERFACE_VERSION 1u
+#define VT_DICTIONARY_GRAPH_INTERFACE_VERSION 1u
 #define VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION 1u
 #define VT_WFST_INTERFACE_VERSION 1u
 #define VT_RECOMMENDED_EDGE_BATCH 256u
@@ -107,6 +108,46 @@ typedef struct VtDictionaryVisitVTable {
                            size_t* out_written, size_t* out_total);
 } VtDictionaryVisitVTable;
 
+/* One node in an immutable compact dictionary graph. The edge range indexes
+ * VtDictionaryGraphView.edges. value_cursor is an opaque snapshot-local token
+ * consumed only by VtDictionaryGraphVTable.node_value_u64. */
+typedef struct VtDictionaryGraphNode {
+    uint64_t edge_start;
+    uint64_t edge_len;
+    uint64_t value_cursor;
+    uint8_t is_final;
+    uint8_t reserved[7];
+} VtDictionaryGraphNode;
+
+/* One compact-graph edge. target is a zero-based node-array index. */
+typedef struct VtDictionaryGraphEdge {
+    uint64_t label;
+    uint64_t target;
+} VtDictionaryGraphEdge;
+
+/* Borrowed immutable slices owned by the retained snapshot resource. Null is
+ * permitted only for an empty slice. Providers must write reserved as zero. */
+typedef struct VtDictionaryGraphView {
+    const VtDictionaryGraphNode* nodes;
+    size_t node_count;
+    const VtDictionaryGraphEdge* edges;
+    size_t edge_count;
+    uint64_t root;
+    uint64_t reserved;
+} VtDictionaryGraphView;
+
+/* Optional compact immutable snapshot-graph interface. It is legal only for
+ * dictionary resources advertising VT_DICTIONARY_FLAG_IMMUTABLE. Returned
+ * slices remain valid and unchanged while the resource is retained. */
+typedef struct VtDictionaryGraphVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*graph)(void* context, VtDictionaryGraphView* out_graph);
+    VtStatus (*node_value_u64)(void* context, uint64_t value_cursor,
+                               VtOptionalU64* out_value);
+} VtDictionaryGraphVTable;
+
 /* Optional process-local immutable producer/revision identity. */
 typedef struct VtSnapshotIdentity {
     uint64_t producer;
@@ -178,6 +219,10 @@ static const VtInterfaceId VT_DICTIONARY_INTERFACE_ID = {
 
 static const VtInterfaceId VT_DICTIONARY_VISIT_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','.','v','i','s','i','t','.','v','1' }
+};
+
+static const VtInterfaceId VT_DICTIONARY_GRAPH_INTERFACE_ID = {
+    { 'v','t','.','d','i','c','t','.','g','r','a','p','h','.','v','1' }
 };
 
 static const VtInterfaceId VT_SNAPSHOT_IDENTITY_INTERFACE_ID = {

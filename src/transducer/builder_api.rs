@@ -105,8 +105,8 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
     where
         P: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
     {
-        QueryIterator::with_policy_and_substring(
-            self.dictionary.root(),
+        QueryIterator::with_traversal_root_and_policy(
+            self.dictionary.traversal_root(),
             self.term,
             self.max_distance,
             self.algorithm,

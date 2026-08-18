@@ -56,6 +56,14 @@ use std::sync::Arc;
 /// character-level (`char`) dictionaries, use [`SubstitutionPolicyChar`] or
 /// [`SubstitutionPolicyFor<char>`] with [`RestrictedChar`].
 pub trait SubstitutionPolicy: Clone {
+    /// Whether the policy can make two distinct units equivalent at zero cost.
+    ///
+    /// Transition engines use this capability to reuse exact-match masks for
+    /// policies such as [`Unrestricted`]. Custom policies conservatively
+    /// default to `true`, preserving their semantics without requiring an API
+    /// change.
+    const MAY_MATCH_DISTINCT_UNITS: bool = true;
+
     /// Check if substituting `dict_char` with `query_char` is allowed as a zero-cost operation.
     ///
     /// # Parameters
@@ -191,6 +199,8 @@ pub trait SubstitutionPolicyFor<U: CharUnit>: SubstitutionPolicy {
 pub struct Unrestricted;
 
 impl SubstitutionPolicy for Unrestricted {
+    const MAY_MATCH_DISTINCT_UNITS: bool = false;
+
     #[inline(always)]
     fn is_allowed(&self, _dict_char: u8, _query_char: u8) -> bool {
         // Unrestricted means standard Levenshtein: NO zero-cost substitutions.

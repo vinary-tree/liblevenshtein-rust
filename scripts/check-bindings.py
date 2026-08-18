@@ -57,6 +57,18 @@ require(
 require(
     interop["scalarWfstInterfaceVersion"] == 1, "wrong scalar WFST interface version"
 )
+require(
+    interop["dictionaryVisitInterfaceVersion"] == 1,
+    "wrong dictionary visit interface version",
+)
+require(
+    interop["dictionaryGraphInterfaceVersion"] == 1,
+    "wrong dictionary graph interface version",
+)
+require(
+    interop["snapshotIdentityInterfaceVersion"] == 1,
+    "wrong snapshot identity interface version",
+)
 
 # Public symbol model, Rust exports, and C declarations must agree exactly.
 modeled = {item["name"] for item in MODEL["cFunctions"]}
@@ -101,6 +113,16 @@ for marker in (
     "state_arcs",
 ):
     require(marker in interop_header, f"scalar WFST ABI is missing {marker}")
+
+for marker in (
+    "VT_DICTIONARY_GRAPH_INTERFACE_VERSION 1u",
+    "VtDictionaryGraphNode",
+    "VtDictionaryGraphEdge",
+    "VtDictionaryGraphView",
+    "VtDictionaryGraphVTable",
+    "VT_DICTIONARY_GRAPH_INTERFACE_ID",
+):
+    require(marker in interop_header, f"dictionary graph ABI is missing {marker}")
 
 # Clean ownership migration: no publishable liblevenshtein facade may construct
 # libdictenstein dictionaries or expose old CRUD symbols.

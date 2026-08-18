@@ -43,12 +43,16 @@ use crate::phonetic::nfa::{NFAChar, NFA};
 #[cfg(feature = "phonetic-rules")]
 use crate::transducer::articulatory_costs::ArticulatoryCosts;
 #[cfg(feature = "phonetic-rules")]
+use crate::transducer::dictionary_traversal::TraversalSession;
+#[cfg(feature = "phonetic-rules")]
 use crate::transducer::language::{LanguageProduct, LanguageQueryIterator};
 #[cfg(feature = "phonetic-rules")]
 use crate::transducer::Algorithm;
 use libdictenstein::{Dictionary, DictionaryNode};
 #[cfg(feature = "phonetic-rules")]
-use libdictenstein::{MappedDictionary, MappedDictionaryNode};
+use libdictenstein::{
+    DictionaryTraversalRoot, MappedDictionary, MappedDictionaryNode, SnapshotTraversalCursor,
+};
 
 use std::{
     cmp::Ordering,
@@ -68,19 +72,19 @@ struct PhoneticPathNode<U: Copy> {
 }
 
 #[cfg(feature = "phonetic-rules")]
-struct PhoneticTraversal<N: DictionaryNode> {
-    node: N,
-    label: Option<N::Unit>,
+struct PhoneticTraversal<U: Copy> {
+    position: SnapshotTraversalCursor,
+    label: Option<U>,
     parent: usize,
     depth: usize,
 }
 
 #[cfg(feature = "phonetic-rules")]
-impl<N: DictionaryNode> PhoneticTraversal<N> {
+impl<U: Copy> PhoneticTraversal<U> {
     #[inline]
-    fn root(node: N) -> Self {
+    fn root(position: SnapshotTraversalCursor) -> Self {
         Self {
-            node,
+            position,
             label: None,
             parent: PHONETIC_NO_PATH,
             depth: 0,
@@ -88,9 +92,9 @@ impl<N: DictionaryNode> PhoneticTraversal<N> {
     }
 
     #[inline]
-    fn child(node: N, label: N::Unit, parent: usize, depth: usize) -> Self {
+    fn child(position: SnapshotTraversalCursor, label: U, parent: usize, depth: usize) -> Self {
         Self {
-            node,
+            position,
             label: Some(label),
             parent,
             depth,
@@ -482,7 +486,9 @@ where
     /// Frontier-pruned generic language query on the unit-cost path.
     language_query: Option<LanguageQueryIterator<D::Node, NFAChar>>,
     /// Queue of dictionary nodes to explore.
-    queue: VecDeque<PhoneticTraversal<D::Node>>,
+    queue: VecDeque<PhoneticTraversal<char>>,
+    /// Snapshot cursor backend used only by the articulatory full scan.
+    traversal: Option<TraversalSession<D::Node>>,
     /// Parent-path arena for reconstructing terms without per-edge path clones.
     path_arena: Vec<PhoneticPathNode<char>>,
     /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
@@ -531,9 +537,15 @@ where
 
         // The scan queue is retained only for fractional articulatory costs,
         // whose exact full-string Dijkstra matcher is not the unit-cost product.
-        let mut queue = VecDeque::with_capacity(usize::from(language_query.is_none()));
-        if language_query.is_none() {
-            queue.push_back(PhoneticTraversal::root(dictionary.root()));
+        let (traversal, root) = if language_query.is_none() {
+            let (session, root) = TraversalSession::capture(dictionary.traversal_root());
+            (Some(session), Some(root))
+        } else {
+            (None, None)
+        };
+        let mut queue = VecDeque::with_capacity(usize::from(root.is_some()));
+        if let Some(root) = root {
+            queue.push_back(PhoneticTraversal::root(root));
         }
 
         // Max depth: reasonable buffer for dictionary traversal
@@ -543,6 +555,7 @@ where
             product,
             language_query,
             queue,
+            traversal,
             path_arena: Vec::with_capacity(64),
             _dictionary: PhantomData,
             max_depth,
@@ -551,23 +564,7 @@ where
     }
 
     #[inline]
-    fn push_path_node(&mut self, label: char, parent: usize) -> usize {
-        let depth = if parent == PHONETIC_NO_PATH {
-            1
-        } else {
-            self.path_arena[parent].depth.saturating_add(1)
-        };
-        let index = self.path_arena.len();
-        self.path_arena.push(PhoneticPathNode {
-            label,
-            parent,
-            depth,
-        });
-        index
-    }
-
-    #[inline]
-    fn materialize_path(&self, entry: &PhoneticTraversal<D::Node>) -> String {
+    fn materialize_path(&self, entry: &PhoneticTraversal<char>) -> String {
         collect_path_units(entry.label, entry.parent, &self.path_arena)
             .into_iter()
             .collect()
@@ -594,6 +591,10 @@ where
         while let Some(entry) = self.queue.pop_front() {
             // Depth limit to prevent infinite exploration
             if entry.depth > self.max_depth {
+                self.traversal
+                    .as_mut()
+                    .expect("articulatory scans retain a traversal session")
+                    .discard_unexpanded(entry.position);
                 continue;
             }
 
@@ -602,18 +603,42 @@ where
             // boundary-backed dictionaries fuse their lock/callback work.
             let child_depth = phonetic_child_depth(entry.depth)
                 .filter(|child_depth| *child_depth <= self.max_depth);
-            let is_final = if let Some(child_depth) = child_depth {
-                let parent = match entry.label {
-                    Some(label) => self.push_path_node(label, entry.parent),
-                    None => entry.parent,
-                };
-                entry.node.visit_edges_and_finality(|c, child| {
-                    self.queue
-                        .push_back(PhoneticTraversal::child(child, c, parent, child_depth));
-                })
-            } else {
-                entry.node.is_final()
-            };
+            let mut child_parent = None;
+            let paths = &mut self.path_arena;
+            let queue = &mut self.queue;
+            let traversal = self
+                .traversal
+                .as_mut()
+                .expect("articulatory scans retain a traversal session");
+            let is_final = traversal.filter_map_edges_and_finality(
+                entry.position,
+                |_| child_depth,
+                |c, child_position, child_depth| {
+                    let parent = *child_parent.get_or_insert_with(|| match entry.label {
+                        Some(label) => {
+                            let depth = if entry.parent == PHONETIC_NO_PATH {
+                                1
+                            } else {
+                                paths[entry.parent].depth.saturating_add(1)
+                            };
+                            let index = paths.len();
+                            paths.push(PhoneticPathNode {
+                                label,
+                                parent: entry.parent,
+                                depth,
+                            });
+                            index
+                        }
+                        None => entry.parent,
+                    });
+                    queue.push_back(PhoneticTraversal::child(
+                        child_position,
+                        c,
+                        parent,
+                        child_depth,
+                    ));
+                },
+            );
 
             // Determine whether this node yields a candidate after its children
             // are enqueued, so extensions of a matched prefix are never skipped.
@@ -673,7 +698,9 @@ where
     /// Frontier-pruned generic language query on the unit-cost path.
     language_query: Option<LanguageQueryIterator<D::Node, NFAChar>>,
     /// Queue of dictionary nodes to explore.
-    queue: VecDeque<PhoneticTraversal<D::Node>>,
+    queue: VecDeque<PhoneticTraversal<char>>,
+    /// Snapshot cursor backend used only by the articulatory full scan.
+    traversal: Option<TraversalSession<D::Node>>,
     /// Parent-path arena for reconstructing terms without per-edge path clones.
     path_arena: Vec<PhoneticPathNode<char>>,
     /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
@@ -712,15 +739,23 @@ where
             )
         });
 
-        let mut queue = VecDeque::with_capacity(usize::from(language_query.is_none()));
-        if language_query.is_none() {
-            queue.push_back(PhoneticTraversal::root(dictionary.root()));
+        let (traversal, root) = if language_query.is_none() {
+            let (session, root) =
+                TraversalSession::capture_mapped(DictionaryTraversalRoot::owned(dictionary.root()));
+            (Some(session), Some(root))
+        } else {
+            (None, None)
+        };
+        let mut queue = VecDeque::with_capacity(usize::from(root.is_some()));
+        if let Some(root) = root {
+            queue.push_back(PhoneticTraversal::root(root));
         }
 
         Self {
             product,
             language_query,
             queue,
+            traversal,
             path_arena: Vec::with_capacity(64),
             _dictionary: PhantomData,
             max_depth: 100,
@@ -728,23 +763,7 @@ where
     }
 
     #[inline]
-    fn push_path_node(&mut self, label: char, parent: usize) -> usize {
-        let depth = if parent == PHONETIC_NO_PATH {
-            1
-        } else {
-            self.path_arena[parent].depth.saturating_add(1)
-        };
-        let index = self.path_arena.len();
-        self.path_arena.push(PhoneticPathNode {
-            label,
-            parent,
-            depth,
-        });
-        index
-    }
-
-    #[inline]
-    fn materialize_path(&self, entry: &PhoneticTraversal<D::Node>) -> String {
+    fn materialize_path(&self, entry: &PhoneticTraversal<char>) -> String {
         collect_path_units(entry.label, entry.parent, &self.path_arena)
             .into_iter()
             .collect()
@@ -790,39 +809,65 @@ where
 
         while let Some(entry) = self.queue.pop_front() {
             if entry.depth > self.max_depth {
+                self.traversal
+                    .as_mut()
+                    .expect("articulatory scans retain a traversal session")
+                    .discard_unexpanded(entry.position);
                 continue;
             }
 
             let child_depth = phonetic_child_depth(entry.depth)
                 .filter(|child_depth| *child_depth <= self.max_depth);
-            let is_final = if let Some(child_depth) = child_depth {
-                let parent = match entry.label {
-                    Some(label) => self.push_path_node(label, entry.parent),
-                    None => entry.parent,
-                };
-                entry.node.visit_edges_and_finality(|c, child| {
-                    self.queue
-                        .push_back(PhoneticTraversal::child(child, c, parent, child_depth));
-                })
-            } else {
-                entry.node.is_final()
-            };
+            let mut child_parent = None;
+            let paths = &mut self.path_arena;
+            let queue = &mut self.queue;
+            let traversal = self
+                .traversal
+                .as_mut()
+                .expect("articulatory scans retain a traversal session");
+            let final_source = traversal.filter_map_edges_and_final_source(
+                entry.position,
+                |_| child_depth,
+                |c, child_position, child_depth| {
+                    let parent = *child_parent.get_or_insert_with(|| match entry.label {
+                        Some(label) => {
+                            let depth = if entry.parent == PHONETIC_NO_PATH {
+                                1
+                            } else {
+                                paths[entry.parent].depth.saturating_add(1)
+                            };
+                            let index = paths.len();
+                            paths.push(PhoneticPathNode {
+                                label,
+                                parent: entry.parent,
+                                depth,
+                            });
+                            index
+                        }
+                        None => entry.parent,
+                    });
+                    queue.push_back(PhoneticTraversal::child(
+                        child_position,
+                        c,
+                        parent,
+                        child_depth,
+                    ));
+                },
+            );
 
             // A candidate requires a stored value at this terminal and a
             // phonetic/edit match. Children have already been enqueued.
-            let candidate = if is_final {
-                let Some(value) = entry.node.value_at_final() else {
-                    continue;
-                };
+            let candidate = if let Some(final_source) = final_source {
                 let path = self.materialize_path(&entry);
                 if let Some(distance) = self.product.min_distance(&path) {
-                    let phonetic_cost = self.phonetic_cost(&path, distance);
-                    Some(PhoneticValueCandidate::new(
-                        path,
-                        distance,
-                        phonetic_cost,
-                        value,
-                    ))
+                    self.traversal
+                        .as_ref()
+                        .expect("articulatory scans retain a traversal session")
+                        .resolve_final_value(final_source)
+                        .map(|value| {
+                            let phonetic_cost = self.phonetic_cost(&path, distance);
+                            PhoneticValueCandidate::new(path, distance, phonetic_cost, value)
+                        })
                 } else {
                     None
                 }

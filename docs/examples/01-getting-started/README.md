@@ -30,9 +30,12 @@ automaton**: the set of still-viable $`\langle \text{position}, \text{errors}\ra
 *exactly* the strings within distance $`k`$ of $`W`$. It then walks that automaton
 **in lock-step** with the dictionary trie — advancing both one symbol at a time and
 **pruning** a branch the instant no automaton state survives. The automaton is
-*simulated on the fly*, never compiled into a standalone table, so per-query setup is
-$`\mathcal{O}(\lvert W\rvert)`$ and each automaton step costs $`\mathcal{O}(k)`$ (a constant for fixed $`k`$). The total
-work tracks the explored near-match frontier, not $`\lvert D\rvert`$.
+simulated and determinized lazily: only state/class transitions reached during
+the walk are stored, rather than compiling an eager standalone table. Per-query
+setup is $`\mathcal{O}(\lvert W\rvert)`$; the first computation of a transition costs
+$`\mathcal{O}(k)`$ (a constant for fixed $`k`$), while a repeated transition is a
+table lookup. The total work tracks the explored near-match frontier, not
+$`\lvert D\rvert`$.
 
 > Terms defined: $`W`$ = the query string, $`\lvert W\rvert`$ = its length, $`s`$ = a candidate from the
 > dictionary, $`D`$ = the dictionary, $`\lvert D\rvert`$ = its number of edges, $`k`$ = the maximum edit

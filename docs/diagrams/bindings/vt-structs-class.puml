@@ -1,7 +1,7 @@
 @startuml vt-structs-class
 ' Every #[repr(C)] type the vinary-tree interop ABI publishes, as one class
 ' model: the two-word VtResource handle, the base VtResourceVTable it points
-' at, the two interface vtables discovered through query_interface, the POD
+' at, the interface vtables discovered through query_interface, the POD
 ' payload types that cross in caller-owned pages, and the shared enums.
 ' Color: VtResource handle concept = #DCEDC8 (border #33691E); the dictionary
 '   interface = dictionary-backend green #C8E6C9 (#2E7D32); the scalar-WFST
@@ -32,7 +32,7 @@ skinparam note {
 skinparam ArrowColor #37474F
 skinparam ArrowThickness 2
 
-title vinary-tree-interop — the published ABI surface (one handle, one base vtable, two interfaces)
+title vinary-tree-interop — the published ABI surface (base, dictionary capabilities, and WFST)
 
 class "VtResource" as Resource #DCEDC8 {
   context : void*
@@ -68,6 +68,9 @@ class "VtInterfaceId" as Id #F9FBE7 {
 note bottom of Id #F9FBE7
   <b>Published identifiers</b> (VT-ABI-4)
   "vt.dictionary.v1" — dictionary interface
+  "vt.dict.visit.v1" — fused node visit
+  "vt.dict.graph.v1" — immutable compact graph
+  "vt.snapshot.id.1" — revision identity
   "vt.scalar-wfst.1" — scalar-WFST interface
   (exactly 16 bytes, no NUL terminator)
 end note
@@ -105,6 +108,43 @@ note left of Dict #E8F5E9
   sharing; node ids valid only while
   the snapshot resource stays retained.
 end note
+
+class "VtDictionaryVisitVTable" as Visit #DCEDC8 {
+  struct_size : size_t
+  interface_version : uint32_t
+  reserved : uint32_t «must be 0»
+  --
+  node_visit(context, node, start, final, out, capacity, written, total) : VtStatus
+}
+
+class "VtDictionaryGraphVTable" as Graph #A5D6A7 {
+  struct_size : size_t
+  interface_version : uint32_t
+  reserved : uint32_t «must be 0»
+  --
+  graph(context, out_graph) : VtStatus
+  node_value_u64(context, value_cursor, out_value) : VtStatus
+}
+note left of Graph #E8F5E9
+  <b>Immutable graph law</b>
+  Validate the complete view once while
+  retaining its snapshot owner. Steady
+  traversal then needs no callback, lock,
+  atomic publication, or node-cache layer.
+end note
+
+class "VtSnapshotIdentityVTable" as Identity #F0F4C3 {
+  struct_size : size_t
+  interface_version : uint32_t
+  reserved : uint32_t «must be 0»
+  --
+  identity(context, out_identity) : VtStatus
+}
+
+class "VtSnapshotIdentity (16 B)" as IdentityValue #F9FBE7 {
+  producer : uint64_t
+  revision : uint64_t
+}
 
 class "VtWfstVTable" as Wfst #B3E5FC {
   struct_size : size_t
@@ -148,6 +188,28 @@ class "VtDictionaryEdge (16 B)" as Edge #FFECB3 {
   node : uint64_t
 }
 
+class "VtDictionaryGraphNode (32 B)" as GraphNode #C5E1A5 {
+  edge_start : uint64_t
+  edge_len : uint64_t
+  value_cursor : uint64_t
+  is_final : uint8_t «0 or 1»
+  reserved : uint8_t[7] «must be 0»
+}
+
+class "VtDictionaryGraphEdge (16 B)" as GraphEdge #C5E1A5 {
+  label : uint64_t
+  target : uint64_t «dense node index»
+}
+
+class "VtDictionaryGraphView" as GraphView #C5E1A5 {
+  nodes : const VtDictionaryGraphNode*
+  node_count : size_t
+  edges : const VtDictionaryGraphEdge*
+  edge_count : size_t
+  root : uint64_t
+  reserved : uint64_t «must be 0»
+}
+
 class "VtOptionalU64 (16 B)" as Opt #FFECB3 {
   value : uint64_t
   has_value : uint8_t
@@ -173,6 +235,9 @@ end note
 Resource o--> "1" Base : vtable
 Base .[#33691E].> Id : compares
 Base .[#2E7D32].> Dict : query_interface\n("vt.dictionary.v1", ≥1)
+Base .[#558B2F].> Visit : query_interface\n("vt.dict.visit.v1", ≥1)
+Base .[#33691E].> Graph : query_interface\n("vt.dict.graph.v1", ≥1)
+Base .[#827717].> Identity : query_interface\n("vt.snapshot.id.1", ≥1)
 Base .[#0277BD].> Wfst : query_interface\n("vt.scalar-wfst.1", ≥1)
 Base .[#9E9D24].> Status : returns
 Dict -[#2E7D32]-> Unit : labels
@@ -180,6 +245,15 @@ Dict -[#2E7D32]-> Value : values
 Dict .[#FF6F00].> Edge : node_edges pages
 Dict .[#FF6F00].> Opt : node_value_u64
 Dict .[#9E9D24].> Status : every op returns
+Visit .[#FF6F00].> Edge : fused edge pages
+Visit .[#9E9D24].> Status : returns
+Graph .[#558B2F].> GraphView : borrows complete view
+GraphView *-[#558B2F]-> GraphNode : contiguous nodes
+GraphView *-[#558B2F]-> GraphEdge : contiguous edges
+Graph .[#FF6F00].> Opt : value_cursor lookup
+Graph .[#9E9D24].> Status : returns
+Identity .[#827717].> IdentityValue : writes
+Identity .[#9E9D24].> Status : returns
 Wfst -[#0277BD]-> Unit : labels
 Wfst -[#0277BD]-> Weight : scalar semiring
 Wfst .[#FF6F00].> Arc : state_arcs pages

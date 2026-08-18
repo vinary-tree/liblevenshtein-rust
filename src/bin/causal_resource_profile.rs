@@ -20,6 +20,31 @@ struct Args {
     max_distance: usize,
     batch_size: usize,
     passes: usize,
+    constructor: Constructor,
+    algorithm: Algorithm,
+}
+
+#[derive(Clone, Copy)]
+enum Constructor {
+    Incremental,
+    Batch,
+}
+
+impl Constructor {
+    fn parse(value: &str) -> Self {
+        match value {
+            "incremental" => Self::Incremental,
+            "batch" => Self::Batch,
+            _ => fail("--constructor must be incremental or batch"),
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Incremental => "incremental",
+            Self::Batch => "batch",
+        }
+    }
 }
 
 fn fail(message: impl AsRef<str>) -> ! {
@@ -33,6 +58,8 @@ fn parse_args() -> Args {
     let mut max_distance = None;
     let mut batch_size = 256usize;
     let mut passes = 1usize;
+    let mut constructor = Constructor::Incremental;
+    let mut algorithm = Algorithm::Standard;
     let mut argv = std::env::args().skip(1);
     while let Some(flag) = argv.next() {
         let value = argv
@@ -58,6 +85,12 @@ fn parse_args() -> Args {
                     .parse()
                     .unwrap_or_else(|_| fail("--passes must be a positive integer"))
             }
+            "--constructor" => constructor = Constructor::parse(&value),
+            "--algorithm" => {
+                algorithm = value
+                    .parse()
+                    .unwrap_or_else(|error| fail(format!("invalid --algorithm: {error}")))
+            }
             _ => fail(format!("unknown flag {flag:?}")),
         }
     }
@@ -73,6 +106,8 @@ fn parse_args() -> Args {
         max_distance: max_distance.unwrap_or_else(|| fail("--max-distance is required")),
         batch_size,
         passes,
+        constructor,
+        algorithm,
     }
 }
 
@@ -114,15 +149,24 @@ fn main() {
 
     let build_start = Instant::now();
     let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
-    for term in &terms {
-        dictionary
-            .insert_text(term.as_bytes(), None)
-            .unwrap_or_else(|error| fail(format!("dictionary insertion failed: {error}")));
+    match args.constructor {
+        Constructor::Incremental => {
+            for term in &terms {
+                dictionary
+                    .insert_text(term.as_bytes(), None)
+                    .unwrap_or_else(|error| fail(format!("dictionary insertion failed: {error}")));
+            }
+        }
+        Constructor::Batch => {
+            dictionary
+                .insert_text_batch(terms.iter().map(|term| (term.as_bytes(), None)))
+                .unwrap_or_else(|error| fail(format!("batch construction failed: {error}")));
+        }
     }
     let build_ns = build_start.elapsed().as_nanos();
     let resource = dictionary.resource();
     let live_transducer = unsafe {
-        ResourceTransducer::from_resource(resource.as_raw(), Algorithm::Standard)
+        ResourceTransducer::from_resource(resource.as_raw(), args.algorithm)
             .unwrap_or_else(|error| fail(format!("resource validation failed: {error}")))
     };
 
@@ -137,9 +181,17 @@ fn main() {
     let mut term_bytes = 0u64;
     let mut distance_sum = 0u64;
     let mut checksum = 0u64;
+    let mut order_checksum = FNV_OFFSET;
     let mut batches = 0u64;
-    for _ in 0..args.passes {
+    for pass in 0..args.passes {
         for query in &queries {
+            for byte in (pass as u64).to_le_bytes() {
+                order_checksum = hash_byte(order_checksum, byte);
+            }
+            for byte in query.bytes() {
+                order_checksum = hash_byte(order_checksum, byte);
+            }
+            order_checksum = hash_byte(order_checksum, 0xff);
             let mut cursor = transducer
                 .query_utf8(query, args.max_distance, QueryOrder::Traversal)
                 .unwrap_or_else(|error| fail(format!("query creation failed: {error}")));
@@ -158,7 +210,11 @@ fn main() {
                     matches = matches.saturating_add(1);
                     term_bytes = term_bytes.saturating_add(term.len() as u64);
                     distance_sum = distance_sum.saturating_add(item.distance as u64);
-                    checksum = checksum.wrapping_add(entry_hash(term, item.distance));
+                    let hash = entry_hash(term, item.distance);
+                    checksum = checksum.wrapping_add(hash);
+                    for byte in hash.to_le_bytes() {
+                        order_checksum = hash_byte(order_checksum, byte);
+                    }
                 }
             }
         }
@@ -181,6 +237,7 @@ fn main() {
         term_bytes,
         distance_sum,
         checksum,
+        order_checksum,
         batches,
         causal_perf_stats(),
         causal_construction_stats(),
@@ -198,6 +255,7 @@ fn print_json(
     term_bytes: u64,
     distance_sum: u64,
     checksum: u64,
+    order_checksum: u64,
     batches: u64,
     consumer: CausalPerfStats,
     provider: CausalConstructionStats,
@@ -206,7 +264,7 @@ fn print_json(
     writeln!(&mut json, "{{").unwrap();
     writeln!(
         &mut json,
-        "  \"schema\": \"liblevenshtein.causal-resource-work.v1\","
+        "  \"schema\": \"liblevenshtein.causal-resource-work.v2\","
     )
     .unwrap();
     writeln!(&mut json, "  \"term_count\": {term_count},").unwrap();
@@ -214,12 +272,20 @@ fn print_json(
     writeln!(&mut json, "  \"max_distance\": {},", args.max_distance).unwrap();
     writeln!(&mut json, "  \"batch_size\": {},", args.batch_size).unwrap();
     writeln!(&mut json, "  \"passes\": {},", args.passes).unwrap();
+    writeln!(
+        &mut json,
+        "  \"constructor\": \"{}\",",
+        args.constructor.name()
+    )
+    .unwrap();
+    writeln!(&mut json, "  \"algorithm\": \"{}\",", args.algorithm.name()).unwrap();
     writeln!(&mut json, "  \"build_ns\": {build_ns},").unwrap();
     writeln!(&mut json, "  \"query_ns\": {query_ns},").unwrap();
     writeln!(&mut json, "  \"matches\": {matches},").unwrap();
     writeln!(&mut json, "  \"term_bytes\": {term_bytes},").unwrap();
     writeln!(&mut json, "  \"distance_sum\": {distance_sum},").unwrap();
     writeln!(&mut json, "  \"checksum_u64\": {checksum},").unwrap();
+    writeln!(&mut json, "  \"order_checksum_u64\": {order_checksum},").unwrap();
     writeln!(&mut json, "  \"nonempty_batches\": {batches},").unwrap();
     writeln!(&mut json, "  \"consumer_work\": {{").unwrap();
     let consumer_fields = [
@@ -231,6 +297,29 @@ fn print_json(
         ("edges_enumerated", consumer.edges_enumerated),
         ("transition_attempts", consumer.transition_attempts),
         ("transition_accepted", consumer.transition_accepted),
+        ("packed_standard_queries", consumer.packed_standard_queries),
+        ("positional_unit_queries", consumer.positional_unit_queries),
+        (
+            "packed_standard_transition_attempts",
+            consumer.packed_standard_transition_attempts,
+        ),
+        (
+            "packed_standard_transition_dead",
+            consumer.packed_standard_transition_dead,
+        ),
+        ("packed_dfa_queries", consumer.packed_dfa_queries),
+        (
+            "packed_dfa_transition_hits",
+            consumer.packed_dfa_transition_hits,
+        ),
+        (
+            "packed_dfa_transition_misses",
+            consumer.packed_dfa_transition_misses,
+        ),
+        (
+            "packed_dfa_states_interned",
+            consumer.packed_dfa_states_interned,
+        ),
         (
             "generated_transition_hits",
             consumer.generated_transition_hits,
@@ -238,6 +327,22 @@ fn print_json(
         (
             "generated_transition_misses",
             consumer.generated_transition_misses,
+        ),
+        (
+            "generated_product_expansions",
+            consumer.generated_product_expansions,
+        ),
+        (
+            "generated_product_identity_expansions",
+            consumer.generated_product_identity_expansions,
+        ),
+        (
+            "generated_product_unique_expansions",
+            consumer.generated_product_unique_expansions,
+        ),
+        (
+            "generated_product_repeated_expansions",
+            consumer.generated_product_repeated_expansions,
         ),
         ("characteristic_vectors", consumer.characteristic_vectors),
         ("characteristic_units", consumer.characteristic_units),
@@ -260,6 +365,32 @@ fn print_json(
             "foreign_node_cache_misses",
             consumer.foreign_node_cache_misses,
         ),
+        (
+            "foreign_pending_cursors_emitted",
+            consumer.foreign_pending_cursors_emitted,
+        ),
+        (
+            "foreign_ready_cursors_emitted",
+            consumer.foreign_ready_cursors_emitted,
+        ),
+        (
+            "foreign_edge_cursor_promotions",
+            consumer.foreign_edge_cursor_promotions,
+        ),
+        (
+            "foreign_pending_descriptor_loads",
+            consumer.foreign_pending_descriptor_loads,
+        ),
+        (
+            "foreign_ready_descriptor_reads",
+            consumer.foreign_ready_descriptor_reads,
+        ),
+        (
+            "foreign_child_directory_lookups",
+            consumer.foreign_child_directory_lookups,
+        ),
+        ("foreign_leaf_expansions", consumer.foreign_leaf_expansions),
+        ("foreign_graph_decodes", consumer.foreign_graph_decodes),
     ];
     write_fields(&mut json, &consumer_fields);
     writeln!(&mut json, "  }},").unwrap();
@@ -269,6 +400,9 @@ fn print_json(
         ("arena_locks", provider.resource_arena_locks),
         ("is_final_calls", provider.resource_is_final_calls),
         ("value_calls", provider.resource_value_calls),
+        ("graph_projections", provider.resource_graph_projections),
+        ("graph_calls", provider.resource_graph_calls),
+        ("graph_value_calls", provider.resource_graph_value_calls),
         ("edges_calls", provider.resource_edges_calls),
         ("edge_cache_misses", provider.resource_edge_cache_misses),
         (

@@ -409,9 +409,11 @@ class ID; one central class table owns each characteristic pattern. H-O32
 reduced the resource-path median from 204.104 ms to 190.242 ms across 54
 samples per arm (6.79%, Welch `p = 1.323e-11`, Cohen's `d = -1.657`) and was
 retained. Two superficially more compact layouts were rejected after exact
-result-preserving measurements: a flat generated transition matrix regressed
-153.245 ms to 179.958 ms, and structure-of-arrays foreign edges regressed
-189.383 ms to 199.141 ms.
+result-preserving measurements: the first flat generated-transition prototype,
+which retained the old growth and lookup shape, regressed 153.245 ms to
+179.958 ms; structure-of-arrays foreign edges regressed 189.383 ms to
+199.141 ms. The later accepted dense target table in § 3.8 changed the row
+layout and widening invariant rather than reviving that rejected prototype.
 
 The closing independent pure-Rust harness measured 138.927 ms across 51
 samples (range 136.889–141.828 ms), compared with 382.407 ms across 30 legacy
@@ -419,6 +421,49 @@ Java samples (range 380.230–387.886 ms). Both returned the exact anchor
 signature. Rust is therefore 2.75× faster on the original
 `standard/d2/std-d2` workload; this is a direct-core comparison and should not
 be conflated with the JVM binding matrix discussed below.
+
+### 3.8 Exact-cost packed lanes and dense generated transitions
+
+The next headless AMD uProf pass separated two residual transition regimes.
+Eligible short Standard queries spent repeated work maintaining cumulative
+edit-budget lanes and recomputing already-seen packed frontiers. The other
+three unit-cost algorithms still used positional frontiers whose cached target
+rows were separately allocated and pointer-chased.
+
+For Standard, `PackedEditLaneLayout` now stores positions at one *exact* edit
+cost per lane. One-to-three-query-deletion closure is the fixed expression
+
+```math
+T = I \mathbin{\lor} \bigvee_{j=1}^{k}
+    \left((I \mathbin{\land} D_j) \ll j(w+1)\right),
+```
+
+where `I` is the consuming-transition frontier, `k` is the maximum distance,
+`w` is the lane width, and `D_j` masks the positions from which exactly `j`
+deletions remain valid. Every shifted term reads from `I`, so the kernel avoids
+the cumulative-lane promotion chain. The production-only comparison reduced
+the direct Unicode Standard distance-2 median from 77.703 ms to 72.379 ms
+(6.852%) across 51 alternating pinned samples. Distance controls were d0
++0.154%, d1 -7.156%, and d3 -5.968%; exhaustive tests cover distances 0–3,
+all three unit domains, and the bit-63 boundary.
+
+The packed frontier is then interned lazily as a dense state identifier. A
+row-major table indexed by `(state, exact-label-class)` stores the next state.
+Only states reached by the concrete dictionary walk are constructed. The
+Standard distance-2 median fell from 85.694 ms to 80.427 ms (6.146%); an
+instrumented run observed 6,748,273 table hits and 247,969 misses, a 96.46%
+hit rate.
+
+For the positional engine, `DenseGeneratedTargets` retains canonical position
+slices in stable boxes but stores every target in one row-major allocation. A
+power-of-two row width grows losslessly only if a substitution policy creates
+more label classes than the query-length-derived initial bound. This reduced
+Transposition distance-2 from 132.211 ms to 125.787 ms (4.858%),
+Merge-and-Split distance-2 from 758.19 ms to 718.33 ms (5.26%), and
+unrestricted Damerau distance-2 from 154.76 ms to 135.17 ms (12.66%). A
+follow-up `u32` target encoding improved only 0.182%, missed its 3% gate, and
+was reverted. The result supports dense locality, not narrowing IDs at the
+cost of checked conversions.
 
 ## 4. Resource and language boundary
 
@@ -550,6 +595,10 @@ changes were reverted while their experiment records remain immutable.
 | H-O20 | accumulated-cost guard before subsumption dispatch | 4.722% lower; checks only 1.65% lower | reject and revert | It missed the 5% engineering gate and did not remove meaningful structural work |
 | H-O21 | batch-sort and normalize raw successors | 317.033 → 352.388 ms, 11.15% slower | reject and revert | Sorting tiny candidate sets cost more than the 4.72% reduction in dispatched comparisons |
 | H-O28 | freeze-build an empty binding-owned dictionary from one validated batch | 96.271 → 26.547 ms, 3.626× | retain | One foreign call had still executed 79,343 incremental insertions internally; the treatment routes byte, Unicode-scalar, and packed-`u64` batches through the same unit-generic minimal builder |
+| 238 | production exact-cost packed lanes | 77.703 → 72.379 ms, 6.852% lower | retain | Exact-cost lanes and closed-form deletion closure remove cumulative-budget promotion from every eligible Standard transition |
+| 242 | lazy compact packed DFA | 85.694 → 80.427 ms, 6.146% lower | retain | Reached packed frontiers and exact label classes form a 96.46%-hit dense query-local transition table |
+| 245 | flat dense positional target table | Transposition 132.211 → 125.787 ms, 4.858% lower | retain | One row-major target matrix removes per-state target allocations and pointer chasing; Merge-and-Split and true Damerau improved 5.26% and 12.66% |
+| 247 | encode positional targets as `u32` | 126.388 → 126.157 ms, 0.182% lower | reject and revert | Smaller targets did not repay checked conversion and missed the 3% practical gate |
 
 H-O2's proposed public `Position` size of at most eight bytes was cancelled at
 the feasibility gate rather than implemented lossily. The public structure
@@ -593,6 +642,7 @@ interfaces, while nonempty dictionaries retain incremental update semantics.
 | H-O31 | replace each cached foreign child pointer with only its numeric node ID | 200.549 → 284.595 ms, 41.91% slower | reject and revert | Re-resolving accepted children through the hybrid directory cost more than the pointer saved on every edge |
 | H-O32 | store only characteristic class IDs in direct and overflow label caches | 204.104 → 190.242 ms, 6.79% lower | retain | Removed duplicate pattern ownership and kept full pattern access on the cold generated-table miss path |
 | H-O33 | split cached foreign labels and child metadata into parallel arrays | 189.383 → 199.141 ms, 5.15% slower | reject and revert | Extra indexing and lost edge-record locality outweighed denser label scanning |
+| 239 | direct immutable resource snapshot graph | 118.325 → 85.916 ms, 27.39% lower | retain | One validated compact graph removes steady-state node callbacks, consumer cache-directory lookup, and atomic child promotion |
 
 The retained boundary treatments compose because they remove different work:
 snapshot construction, provider-side descriptor cloning, redundant property
@@ -657,6 +707,72 @@ materialized nodes in 33.61 ms on that diagnostic run. The equality between
 materialized and reclaimed counts is the bounded-lifetime gate; the single
 latency observation is diagnostic rather than a distributional performance
 claim.
+
+#### Direct immutable graph traversal and packed finality
+
+The warmed callback arena was still an indirect representation of an already
+immutable DynamicDAWG revision. The accepted successor exposes one optional
+`vt.dict.graph.v1` view: dense node descriptors, sorted flat edges, and opaque
+value cursors. Producer and consumer each publish their derived representation
+once per `(producer, revision)` identity. Snapshot capture remains
+$`\mathcal{O}(1)`$; only the first graph request pays
+$`\Theta(\lvert V\rvert + \lvert E\rvert)`$ projection and validation, outside
+the backend and registry locks.
+
+On the same committed Standard distance-2 workload, with only
+`resource-profiling` controls enabled and hot-loop counters compiled out, nine
+runs gave these exact medians:
+
+| resource traversal | median for 1,000 queries | relative to callback fallback |
+|---|---:|---:|
+| identity-cached callback/page fallback | 147.825 ms | control |
+| immutable flat graph | 85.639 ms | -42.07% |
+
+Every run retained `18,514` matches, `82,131` returned bytes, distance sum
+`36,201`, checksum `7,775,666,136,087,164,888`, and order checksum
+`16,014,396,901,440,918,890`. The instrumented work run explains the change:
+one graph projection, one consumer decode, zero arena locks, zero finality or
+edge callbacks, and exactly one graph-value call per returned match. The
+callback control made `22,514` finality calls and edge-page calls, copied
+`53,227` edge descriptors, and reclaimed `26,068` materialized handles; the
+graph path reclaimed only its root fallback handle.
+
+The same graph format now packs node finality into the high bit of its existing
+64-bit edge-range word. This preserves the eight-byte hot descriptor and
+removes the separate finality allocation and load for every automaton that uses
+`TraversalSession`. A before/after diagnostic moved the median from 85.639 ms
+to 82.076 ms (-4.16%) with the exact signature unchanged. The raw producer ABI
+also uses checked one-based dense value tokens: zero, out-of-range, and forged
+cursors fail before any backend pointer is touched.
+
+#### Why bounded approximate LFU was rejected
+
+The product-reuse trace motivated a bounded lossy-cache investigation rather
+than an unbounded memo table. TinyLFU and W-TinyLFU use approximate frequency
+sketches and admission to resist one-hit pollution [[3]](#references); related
+low-mutation policies include CLOCK-Pro [[5]](#references), S3-FIFO
+[[6]](#references), and SIEVE [[7]](#references). Those algorithms are most
+valuable when a miss is expensive and frequency predicts saved work. Neither
+condition held here.
+
+Across `16,807,209` product expansions, `4,557,624` products repeated, but only
+`572,729` maximum-capacity hits (3.4% of all products) had outgoing edges.
+`87.3%` of captured hits were zero-edge leaves, and the avoided transitions
+were already cheap generated-table hits. Most decisively, every one of the
+`433,681` expensive generated-transition misses remained a miss. A full 4 MiB
+TinyLFU prototype observed 99.3% of repeated keys yet slowed the workload
+because sketch hashing and counter updates exceeded recomputation cost. The
+smallest application-specific alternative—a 64 KiB, degree-at-least-four,
+two-way approximate-LFU table—achieved only a 0.36% hit ratio and avoided
+`40,813` edge scans, also insufficient to pay for lookup.
+
+This is a workload conclusion, not a claim that approximate LFU is ineffective
+in general. Count-Min sketches provide a sound fixed-space frequency estimator
+[[4]](#references), but frequency estimates cannot recover value when the
+frequent records are cheap leaves. Production therefore retains no second-
+level product cache. The accepted query-local transition tables already cache
+the expensive recurrence at its semantic key, with constant bounded state and
+no eviction policy.
 
 H-O30 generalized the lexical drain across string, byte, packed-`u64`, and
 phonetic query forms. One confined arena now owns the whole synchronous drain,
@@ -776,3 +892,17 @@ batch-size controls.
 2. K. U. Schulz and S. Mihov. “Fast String Correction with Levenshtein
    Automata.” *International Journal on Document Analysis and Recognition*
    5(1), 2002. [doi:10.1007/s10032-002-0082-8](https://doi.org/10.1007/s10032-002-0082-8).
+3. G. Einziger, R. Friedman, and B. Manes. “TinyLFU: A Highly Efficient Cache
+   Admission Policy.” *ACM Transactions on Storage* 13(4), 2017.
+   [doi:10.1145/3149371](https://doi.org/10.1145/3149371).
+4. G. Cormode and S. Muthukrishnan. “An Improved Data Stream Summary: The
+   Count-Min Sketch and Its Applications.” *Journal of Algorithms* 55(1),
+   2005. [doi:10.1016/j.jalgor.2003.12.001](https://doi.org/10.1016/j.jalgor.2003.12.001).
+5. S. Jiang, F. Chen, and X. Zhang. “CLOCK-Pro: An Effective Improvement of
+   the CLOCK Replacement.” *USENIX Annual Technical Conference*, 2005.
+   [USENIX](https://www.usenix.org/conference/2005-usenix-annual-technical-conference/clock-pro-effective-improvement-clock-replacement).
+6. J. Yang et al. “FIFO Queues Are All You Need for Cache Eviction.” *SOSP*,
+   2023. [doi:10.1145/3600006.3613147](https://doi.org/10.1145/3600006.3613147).
+7. Y. Zhang et al. “SIEVE Is Simpler than LRU: An Efficient Turn-Key Eviction
+   Algorithm for Web Caches.” *NSDI*, 2024.
+   [USENIX](https://www.usenix.org/conference/nsdi24/presentation/zhang-yazhuo).

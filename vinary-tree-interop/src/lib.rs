@@ -25,6 +25,9 @@ pub const VT_DICTIONARY_INTERFACE_VERSION: u32 = 1;
 /// Version of [`VtDictionaryVisitVTable`].
 pub const VT_DICTIONARY_VISIT_INTERFACE_VERSION: u32 = 1;
 
+/// Version of [`VtDictionaryGraphVTable`].
+pub const VT_DICTIONARY_GRAPH_INTERFACE_VERSION: u32 = 1;
+
 /// Version of [`VtSnapshotIdentityVTable`].
 pub const VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION: u32 = 1;
 
@@ -48,6 +51,16 @@ pub const VT_DICTIONARY_INTERFACE_ID: VtInterfaceId = VtInterfaceId {
 /// original [`VtDictionaryVTable`] remain binary compatible.
 pub const VT_DICTIONARY_VISIT_INTERFACE_ID: VtInterfaceId = VtInterfaceId {
     bytes: *b"vt.dict.visit.v1",
+};
+
+/// Stable identifier for a compact immutable dictionary-snapshot graph.
+///
+/// This optional interface lets a consumer validate and capture one complete
+/// graph at snapshot acquisition instead of rediscovering nodes through
+/// callbacks while matching. The returned slices remain owned by the retained
+/// immutable snapshot resource.
+pub const VT_DICTIONARY_GRAPH_INTERFACE_ID: VtInterfaceId = VtInterfaceId {
+    bytes: *b"vt.dict.graph.v1",
 };
 
 /// Stable identifier for immutable snapshot identity metadata.
@@ -243,6 +256,72 @@ pub struct VtDictionaryEdge {
     pub node: u64,
 }
 
+/// One node in a compact immutable dictionary-snapshot graph.
+///
+/// `edge_start..edge_start + edge_len` indexes the graph view's edge slice.
+/// `value_cursor` is an opaque provider token passed only to the graph
+/// interface's value callback; it is deliberately independent of the dense
+/// graph index and the base dictionary interface's node identifiers.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct VtDictionaryGraphNode {
+    /// First outgoing edge in [`VtDictionaryGraphView::edges`].
+    pub edge_start: u64,
+    /// Number of outgoing edges.
+    pub edge_len: u64,
+    /// Provider-defined value cursor valid for this retained snapshot.
+    pub value_cursor: u64,
+    /// Zero or one.
+    pub is_final: u8,
+    /// Reserved; providers must write zero.
+    pub reserved: [u8; 7],
+}
+
+/// One edge in a compact immutable dictionary-snapshot graph.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct VtDictionaryGraphEdge {
+    /// Label represented in the provider's [`VtUnitDomain`].
+    pub label: u64,
+    /// Zero-based target index in [`VtDictionaryGraphView::nodes`].
+    pub target: u64,
+}
+
+/// Borrowed immutable graph slices owned by a retained snapshot resource.
+///
+/// A successful callback may use null pointers only for empty slices. The
+/// consumer validates all counts, ranges, targets, labels, flags, reserved
+/// bytes, and the root before publishing a safe traversal graph.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct VtDictionaryGraphView {
+    /// Contiguous graph nodes.
+    pub nodes: *const VtDictionaryGraphNode,
+    /// Number of graph nodes.
+    pub node_count: usize,
+    /// Contiguous graph edges.
+    pub edges: *const VtDictionaryGraphEdge,
+    /// Number of graph edges.
+    pub edge_count: usize,
+    /// Zero-based root node index.
+    pub root: u64,
+    /// Reserved; providers must write zero.
+    pub reserved: u64,
+}
+
+impl Default for VtDictionaryGraphView {
+    fn default() -> Self {
+        Self {
+            nodes: core::ptr::null(),
+            node_count: 0,
+            edges: core::ptr::null(),
+            edge_count: 0,
+            root: 0,
+            reserved: 0,
+        }
+    }
+}
+
 /// Stable identity of one immutable producer revision.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
@@ -340,6 +419,38 @@ pub struct VtDictionaryVisitVTable {
             capacity: usize,
             out_written: *mut usize,
             out_total: *mut usize,
+        ) -> u32,
+    >,
+}
+
+/// Optional compact immutable dictionary-snapshot graph interface.
+///
+/// Providers expose this interface only on immutable snapshot resources. The
+/// graph callback returns borrowed slices whose lifetime is exactly the
+/// lifetime of the retained resource. Consumers copy or otherwise validate
+/// the full view before traversal, so no provider callback, lock, or atomic
+/// cache publication is required while enumerating edges.
+#[repr(C)]
+pub struct VtDictionaryGraphVTable {
+    /// Size of this struct in bytes, for additive interface evolution.
+    pub struct_size: usize,
+    /// Must be at least [`VT_DICTIONARY_GRAPH_INTERFACE_VERSION`].
+    pub interface_version: u32,
+    /// Reserved; must be zero.
+    pub reserved: u32,
+    /// Borrow the complete compact graph owned by this immutable snapshot.
+    pub graph: Option<
+        unsafe extern "C" fn(context: *mut c_void, out_graph: *mut VtDictionaryGraphView) -> u32,
+    >,
+    /// Read the optional u64 value for a final graph node's opaque cursor.
+    ///
+    /// The provider must validate that the cursor belongs to this retained
+    /// graph before translating it to or dereferencing backend state.
+    pub node_value_u64: Option<
+        unsafe extern "C" fn(
+            context: *mut c_void,
+            value_cursor: u64,
+            out_value: *mut VtOptionalU64,
         ) -> u32,
     >,
 }
@@ -482,6 +593,8 @@ const _: () = {
     assert!(core::mem::align_of::<VtInterfaceId>() == 1);
     assert!(core::mem::size_of::<VtOptionalU64>() == 16);
     assert!(core::mem::size_of::<VtDictionaryEdge>() == 16);
+    assert!(core::mem::size_of::<VtDictionaryGraphNode>() == 32);
+    assert!(core::mem::size_of::<VtDictionaryGraphEdge>() == 16);
     assert!(core::mem::size_of::<VtSnapshotIdentity>() == 16);
     assert!(core::mem::size_of::<VtWfstArc>() == 40);
     // Absent vtable operations are NULL on the C side: the Option-of-function

@@ -1,18 +1,22 @@
 //! Lazy query iterators for approximate string matching.
 
+use super::dictionary_traversal::TraversalSession;
 use super::query_result::QueryResult;
 use super::state::State;
 use super::transition::{
-    initial_state, initial_state_affine, AffineTransitionSettings, CachedUnitTransitions,
-    GeneratedStateId, TransitionSettings,
+    initial_state_affine, AffineTransitionSettings, FinishMode, TransitionSettings,
+    UnitCostFrontier, UnitCostMachine,
 };
 use super::variants::{AffineGapParams, AffineV};
-use super::{
-    Algorithm, Position, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted,
-};
-use libdictenstein::{CharUnit, DictionaryNode};
+#[cfg(feature = "perf-instrumentation")]
+use super::Position;
+use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
+use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
+
+#[cfg(feature = "perf-instrumentation")]
+use rustc_hash::FxHashSet;
 
 /// Query result containing term and distance.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,40 +91,193 @@ struct QueryPathNode<U: CharUnit> {
     parent: usize,
 }
 
-struct QueryIntersection<N: DictionaryNode> {
-    label: Option<N::Unit>,
-    node: N,
-    state: QueryFrontier,
+struct QueryIntersection<U: CharUnit, F> {
+    label: Option<U>,
+    position: SnapshotTraversalCursor,
+    state: F,
     parent: usize,
 }
 
-enum QueryFrontier {
-    Unit(GeneratedStateId),
-    Affine(State),
+struct QueryStep<F> {
+    frontier: F,
+    #[cfg(feature = "perf-instrumentation")]
+    position_count: usize,
+    #[cfg(feature = "perf-instrumentation")]
+    storage_bytes: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
-enum QueryVariant {
-    Unit(Algorithm),
-    Affine(AffineGapParams),
+trait QueryKernel<U, P>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    type Frontier;
+
+    // Keep the transition inputs flat: this is a hot interface implemented by
+    // distinct kernels, and aggregating them would obscure their independent
+    // lifetimes without reducing call-site work.
+    #[allow(clippy::too_many_arguments)]
+    fn step(
+        &mut self,
+        frontier: &Self::Frontier,
+        state_pool: &mut StatePool,
+        policy: &P,
+        label: U,
+        query: &[U],
+        max_distance: usize,
+        substring_mode: bool,
+    ) -> Option<QueryStep<Self::Frontier>>;
+
+    fn finish_distance(
+        &self,
+        frontier: &Self::Frontier,
+        query_length: usize,
+        substring_mode: bool,
+    ) -> Option<usize>;
+
+    fn unit_frontier(&self, _frontier: &Self::Frontier) -> Option<UnitCostFrontier> {
+        None
+    }
 }
 
-impl<N: DictionaryNode> QueryIntersection<N> {
+struct UnitCostQueryKernel<U: CharUnit> {
+    algorithm: Algorithm,
+    transitions: UnitCostMachine<U>,
+}
+
+impl<U, P> QueryKernel<U, P> for UnitCostQueryKernel<U>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    type Frontier = UnitCostFrontier;
+
     #[inline]
-    fn new(node: N, state: QueryFrontier) -> Self {
+    fn step(
+        &mut self,
+        frontier: &Self::Frontier,
+        state_pool: &mut StatePool,
+        policy: &P,
+        label: U,
+        query: &[U],
+        max_distance: usize,
+        substring_mode: bool,
+    ) -> Option<QueryStep<Self::Frontier>> {
+        self.transitions
+            .step(
+                *frontier,
+                state_pool,
+                policy,
+                label,
+                query,
+                TransitionSettings::new(max_distance, self.algorithm, substring_mode),
+            )
+            .map(|frontier| QueryStep {
+                #[cfg(feature = "perf-instrumentation")]
+                position_count: self.transitions.active_len(frontier),
+                #[cfg(feature = "perf-instrumentation")]
+                storage_bytes: self.transitions.frontier_storage_bytes(frontier),
+                frontier,
+            })
+    }
+
+    #[inline]
+    fn finish_distance(
+        &self,
+        frontier: &Self::Frontier,
+        query_length: usize,
+        substring_mode: bool,
+    ) -> Option<usize> {
+        self.transitions.finish_distance(
+            *frontier,
+            if substring_mode {
+                FinishMode::Substring
+            } else {
+                FinishMode::Complete
+            },
+            query_length,
+        )
+    }
+
+    fn unit_frontier(&self, frontier: &Self::Frontier) -> Option<UnitCostFrontier> {
+        Some(*frontier)
+    }
+}
+
+struct AffineQueryKernel<U: CharUnit> {
+    params: AffineGapParams,
+    transitions: UnitCostMachine<U>,
+}
+
+impl<U, P> QueryKernel<U, P> for AffineQueryKernel<U>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    type Frontier = State;
+
+    #[inline]
+    fn step(
+        &mut self,
+        frontier: &Self::Frontier,
+        state_pool: &mut StatePool,
+        policy: &P,
+        label: U,
+        query: &[U],
+        max_distance: usize,
+        substring_mode: bool,
+    ) -> Option<QueryStep<Self::Frontier>> {
+        self.transitions
+            .transition_affine(
+                frontier,
+                state_pool,
+                policy,
+                label,
+                query,
+                AffineTransitionSettings::new(max_distance, self.params, substring_mode),
+            )
+            .map(|frontier| QueryStep {
+                #[cfg(feature = "perf-instrumentation")]
+                position_count: frontier.len(),
+                #[cfg(feature = "perf-instrumentation")]
+                storage_bytes: frontier
+                    .len()
+                    .saturating_mul(std::mem::size_of::<Position>()),
+                frontier,
+            })
+    }
+
+    #[inline]
+    fn finish_distance(
+        &self,
+        frontier: &Self::Frontier,
+        query_length: usize,
+        substring_mode: bool,
+    ) -> Option<usize> {
+        if substring_mode {
+            frontier.min_distance()
+        } else {
+            frontier.infer_distance_with::<AffineV>(query_length, self.params)
+        }
+    }
+}
+
+impl<U: CharUnit, F> QueryIntersection<U, F> {
+    #[inline]
+    fn new(position: SnapshotTraversalCursor, state: F) -> Self {
         Self {
             label: None,
-            node,
+            position,
             state,
             parent: NO_PATH,
         }
     }
 
     #[inline]
-    fn with_parent(label: N::Unit, node: N, state: QueryFrontier, parent: usize) -> Self {
+    fn with_parent(label: U, position: SnapshotTraversalCursor, state: F, parent: usize) -> Self {
         Self {
             label: Some(label),
-            node,
+            position,
             state,
             parent,
         }
@@ -131,7 +288,7 @@ impl<N: DictionaryNode> QueryIntersection<N> {
     /// Result types convert this via [`QueryResult::from_match`]; `String`/`Candidate`
     /// apply `CharUnit::to_string`, while `Vec<U>`/`UnitCandidate` keep the units
     /// verbatim (lossless for `u64` token sequences).
-    fn units(&self, path_arena: &[QueryPathNode<N::Unit>]) -> Vec<N::Unit> {
+    fn units(&self, path_arena: &[QueryPathNode<U>]) -> Vec<U> {
         let parent_depth = if self.parent == NO_PATH {
             0
         } else {
@@ -206,15 +363,33 @@ impl<N: DictionaryNode> QueryIntersection<N> {
 /// }
 /// ```
 pub struct QueryIterator<N: DictionaryNode, R = String, P: SubstitutionPolicy = Unrestricted> {
-    pending: VecDeque<QueryIntersection<N>>,
+    inner: QueryIteratorInner<N, R, P>,
+}
+
+enum QueryIteratorInner<N: DictionaryNode, R, P: SubstitutionPolicy> {
+    Unit(QueryIteratorCore<N, R, P, UnitCostQueryKernel<N::Unit>, UnitCostFrontier>),
+    Affine(QueryIteratorCore<N, R, P, AffineQueryKernel<N::Unit>, State>),
+}
+
+struct QueryIteratorCore<N, R, P, K, F>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy,
+{
+    pending: VecDeque<QueryIntersection<N::Unit, F>>,
+    traversal: TraversalSession<N>,
     query: Vec<N::Unit>,
     max_distance: usize,
-    variant: QueryVariant,
     policy: P, // Substitution policy for matching
     path_arena: Vec<QueryPathNode<N::Unit>>,
     finished: bool,
     state_pool: StatePool, // Pool for State allocation reuse
-    unit_transitions: CachedUnitTransitions<N::Unit>,
+    kernel: K,
+    #[cfg(feature = "perf-instrumentation")]
+    generated_products: FxHashSet<(
+        super::dictionary_traversal::TraversalProductIdentity,
+        UnitCostFrontier,
+    )>,
     substring_mode: bool, // Enable substring matching (for suffix automata)
     _result_type: PhantomData<R>, // Zero-sized marker for result type
 }
@@ -273,8 +448,26 @@ impl<
         // `from_str` derives units from the query string. For `u8`/`char` alphabets
         // this is the term itself; for a `u64` token alphabet it byte-packs the UTF-8
         // (lossy) — such callers must use [`with_units`](Self::with_units) instead.
+        Self::with_traversal_root_and_policy(
+            DictionaryTraversalRoot::owned(root),
+            query,
+            max_distance,
+            algorithm,
+            policy,
+            substring_mode,
+        )
+    }
+
+    pub(crate) fn with_traversal_root_and_policy(
+        root: DictionaryTraversalRoot<N>,
+        query: String,
+        max_distance: usize,
+        algorithm: Algorithm,
+        policy: P,
+        substring_mode: bool,
+    ) -> Self {
         let query_units = N::Unit::from_str(&query);
-        Self::with_units(
+        Self::with_traversal_root_and_units(
             root,
             query_units,
             max_distance,
@@ -301,17 +494,44 @@ impl<
         policy: P,
         substring_mode: bool,
     ) -> Self {
-        let initial = initial_state(query_units.len(), max_distance, algorithm);
-
-        Self::with_units_and_variant(
-            root,
+        Self::with_traversal_root_and_units(
+            DictionaryTraversalRoot::owned(root),
             query_units,
             max_distance,
-            QueryVariant::Unit(algorithm),
+            algorithm,
             policy,
             substring_mode,
-            initial,
         )
+    }
+
+    pub(crate) fn with_traversal_root_and_units(
+        root: DictionaryTraversalRoot<N>,
+        query_units: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+        policy: P,
+        substring_mode: bool,
+    ) -> Self {
+        let (transitions, frontier) = UnitCostMachine::seeded::<P>(
+            &query_units,
+            TransitionSettings::new(max_distance, algorithm, substring_mode),
+        );
+        let (traversal, root) = TraversalSession::capture(root);
+        Self {
+            inner: QueryIteratorInner::Unit(QueryIteratorCore::new(
+                root,
+                traversal,
+                frontier,
+                query_units,
+                max_distance,
+                policy,
+                substring_mode,
+                UnitCostQueryKernel {
+                    algorithm,
+                    transitions,
+                },
+            )),
+        }
     }
 
     /// Create a scaled affine-gap iterator from a query string.
@@ -337,60 +557,65 @@ impl<
         substring_mode: bool,
     ) -> Self {
         let initial = initial_state_affine(query_units.len(), max_cost, params);
-        Self::with_units_and_variant(
-            root,
-            query_units,
-            max_cost,
-            QueryVariant::Affine(params),
-            policy,
-            substring_mode,
-            initial,
-        )
+        let transitions = UnitCostMachine::unseeded_positional(query_units.len(), max_cost);
+        let (traversal, root) = TraversalSession::capture(DictionaryTraversalRoot::owned(root));
+        Self {
+            inner: QueryIteratorInner::Affine(QueryIteratorCore::new(
+                root,
+                traversal,
+                initial,
+                query_units,
+                max_cost,
+                policy,
+                substring_mode,
+                AffineQueryKernel {
+                    params,
+                    transitions,
+                },
+            )),
+        }
     }
+}
 
-    fn with_units_and_variant(
-        root: N,
-        query_units: Vec<N::Unit>,
+impl<N, R, P, K, F> QueryIteratorCore<N, R, P, K, F>
+where
+    N: DictionaryNode,
+    R: QueryResult<N::Unit>,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    K: QueryKernel<N::Unit, P, Frontier = F>,
+{
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        root: SnapshotTraversalCursor,
+        traversal: TraversalSession<N>,
+        frontier: F,
+        query: Vec<N::Unit>,
         max_distance: usize,
-        variant: QueryVariant,
         policy: P,
         substring_mode: bool,
-        initial: State,
+        kernel: K,
     ) -> Self {
         let mut pending = VecDeque::new();
-        let query_length = query_units.len();
-        let mut unit_transitions = CachedUnitTransitions::new(query_length, max_distance);
-        let frontier = match variant {
-            QueryVariant::Unit(algorithm) => {
-                let id = unit_transitions.seed_generated_state(
-                    &initial,
-                    TransitionSettings::new(max_distance, algorithm, substring_mode),
-                );
-                QueryFrontier::Unit(id)
-            }
-            QueryVariant::Affine(_) => QueryFrontier::Affine(initial),
-        };
-
-        // Always add root to pending queue - it will be checked for finality in advance()
-        // and its children will be queued normally
         pending.push_back(QueryIntersection::new(root, frontier));
-
         Self {
             pending,
-            query: query_units,
+            traversal,
+            query,
             max_distance,
-            variant,
             policy,
             path_arena: Vec::with_capacity(64),
             finished: false,
-            state_pool: StatePool::new(), // Create pool for this query
-            unit_transitions,
+            state_pool: StatePool::new(),
+            kernel,
+            #[cfg(feature = "perf-instrumentation")]
+            generated_products: FxHashSet::default(),
             substring_mode,
-            _result_type: PhantomData, // Zero-sized, no runtime cost
+            _result_type: PhantomData,
         }
     }
 
     /// Advance to the next match
+    #[inline]
     fn advance(&mut self) -> Option<R> {
         while let Some(intersection) = self.pending.pop_front() {
             crate::causal_perf::record_dictionary_intersections(1);
@@ -398,25 +623,10 @@ impl<
             let is_final = self.queue_children_and_finality(&intersection);
             // Check if this is a final match
             if is_final {
-                // Infer the distance based on matching mode
-                let state = match &intersection.state {
-                    QueryFrontier::Unit(id) => self.unit_transitions.generated_frontier_state(*id),
-                    QueryFrontier::Affine(state) => state.clone(),
-                };
-                let distance = if self.substring_mode {
-                    // Substring mode: don't penalize unmatched query suffix
-                    state.min_distance().unwrap_or(usize::MAX)
-                } else {
-                    // Standard mode: penalize remaining query characters
-                    match self.variant {
-                        QueryVariant::Unit(_) => {
-                            state.infer_distance(self.query.len()).unwrap_or(usize::MAX)
-                        }
-                        QueryVariant::Affine(params) => state
-                            .infer_distance_with::<AffineV>(self.query.len(), params)
-                            .unwrap_or(usize::MAX),
-                    }
-                };
+                let distance = self
+                    .kernel
+                    .finish_distance(&intersection.state, self.query.len(), self.substring_mode)
+                    .unwrap_or(usize::MAX);
 
                 if distance <= self.max_distance {
                     let units = intersection.units(&self.path_arena);
@@ -436,61 +646,56 @@ impl<
     }
 
     /// Queue child intersections for exploration
-    fn queue_children_and_finality(&mut self, intersection: &QueryIntersection<N>) -> bool {
+    #[inline]
+    fn queue_children_and_finality(
+        &mut self,
+        intersection: &QueryIntersection<N::Unit, F>,
+    ) -> bool {
+        if let Some(_state) = self.kernel.unit_frontier(&intersection.state) {
+            crate::causal_perf::record_generated_product_expansions(1);
+            #[cfg(feature = "perf-instrumentation")]
+            if let Some(node) = self.traversal.product_identity(intersection.position) {
+                crate::causal_perf::record_generated_product_identity_expansions(1);
+                if self.generated_products.insert((node, _state)) {
+                    crate::causal_perf::record_generated_product_unique_expansions(1);
+                } else {
+                    crate::causal_perf::record_generated_product_repeated_expansions(1);
+                }
+            }
+        }
         let mut child_parent_path = None;
-        let variant = self.variant;
         let max_distance = self.max_distance;
         let substring_mode = self.substring_mode;
         let query = &self.query;
         let policy = &self.policy;
-        let unit_transitions = &mut self.unit_transitions;
+        let kernel = &mut self.kernel;
         let state_pool = &mut self.state_pool;
         let pending = &mut self.pending;
         let path_arena = &mut self.path_arena;
         let current_label = intersection.label;
         let current_parent = intersection.parent;
 
-        intersection.node.filter_map_edges_and_finality(
+        self.traversal.filter_map_edges_and_finality(
+            intersection.position,
             |label| {
                 crate::causal_perf::record_edges_enumerated(1);
-                match (variant, &intersection.state) {
-                    (QueryVariant::Unit(algorithm), QueryFrontier::Unit(state)) => unit_transitions
-                        .transition_generated(
-                            *state,
-                            state_pool,
-                            policy,
-                            label,
-                            query,
-                            TransitionSettings::new(max_distance, algorithm, substring_mode),
-                        )
-                        .map(|id| {
-                            let position_count = unit_transitions.generated_position_count(id);
-                            (QueryFrontier::Unit(id), position_count)
-                        }),
-                    (QueryVariant::Affine(params), QueryFrontier::Affine(state)) => {
-                        unit_transitions
-                            .transition_affine(
-                                state,
-                                state_pool,
-                                policy,
-                                label,
-                                query,
-                                AffineTransitionSettings::new(max_distance, params, substring_mode),
-                            )
-                            .map(|state| {
-                                let position_count = state.len();
-                                (QueryFrontier::Affine(state), position_count)
-                            })
-                    }
-                    _ => unreachable!("query variant/frontier mismatch"),
-                }
+                kernel.step(
+                    &intersection.state,
+                    state_pool,
+                    policy,
+                    label,
+                    query,
+                    max_distance,
+                    substring_mode,
+                )
             },
-            |label, child_node, (next_state, position_count)| {
+            |label, child_position, step| {
                 crate::causal_perf::record_transition_accepted(1);
-                crate::causal_perf::record_state_positions_enqueued(position_count as u64);
-                crate::causal_perf::record_state_bytes_enqueued(
-                    position_count.saturating_mul(std::mem::size_of::<Position>()) as u64,
-                );
+                #[cfg(feature = "perf-instrumentation")]
+                {
+                    crate::causal_perf::record_state_positions_enqueued(step.position_count as u64);
+                    crate::causal_perf::record_state_bytes_enqueued(step.storage_bytes as u64);
+                }
                 let parent_path = match child_parent_path {
                     Some(path) => path,
                     None => {
@@ -518,8 +723,8 @@ impl<
 
                 pending.push_back(QueryIntersection::with_parent(
                     label,
-                    child_node,
-                    next_state,
+                    child_position,
+                    step.frontier,
                     parent_path,
                 ));
                 crate::causal_perf::record_pending_queue_size(pending.len());
@@ -536,11 +741,23 @@ impl<
 {
     type Item = R;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.finished {
-            None
-        } else {
-            self.advance()
+        match &mut self.inner {
+            QueryIteratorInner::Unit(core) => {
+                if core.finished {
+                    None
+                } else {
+                    core.advance()
+                }
+            }
+            QueryIteratorInner::Affine(core) => {
+                if core.finished {
+                    None
+                } else {
+                    core.advance()
+                }
+            }
         }
     }
 }
@@ -571,6 +788,14 @@ mod tests {
     use super::*;
     use libdictenstein::double_array_trie::DoubleArrayTrie;
     use libdictenstein::Dictionary;
+
+    #[test]
+    fn unit_cost_queue_entries_remain_cache_compact() {
+        assert!(
+            std::mem::size_of::<QueryIntersection<char, UnitCostFrontier>>() <= 32,
+            "unit-cost traversal queue entries must not inherit affine State storage"
+        );
+    }
 
     #[test]
     fn test_query_exact_match() {

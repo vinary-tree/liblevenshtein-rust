@@ -1,7 +1,7 @@
 # The `llev_*` C ABI, function by function
 
 This is the normative reference for liblevenshtein's project-owned C surface:
-all **35 exported `llev_*` functions**, each with its exact header signature,
+all **36 exported `llev_*` functions**, each with its exact header signature,
 preconditions, the complete set of statuses it can return (read from the
 implementation, not aspirationally), ownership rules, thread-safety truth, and
 cost. It is the **project layer above the family canon**: everything about the
@@ -45,14 +45,14 @@ $`\deg(v)`$ a dictionary node's out-degree.
 
 ![Three-layer architecture: language facades over the four project C ABIs over the shared vinary-tree-interop resource plane, governed by bindings/api.json.](../diagrams/bindings/three-layer-architecture.svg)
 
-The 35 functions divide into five groups:
+The 36 functions divide into five groups:
 
 | Group | Count | Functions |
 |---|---|---|
 | [Introspection](#4-introspection-4) | 4 | `llev_abi_version` · `llev_api_revision` · `llev_build_features` · `llev_last_error_message` |
 | [Strings (legacy)](#5-string-helpers-3-legacy) | 3 | `llev_string_free` · `llev_string_array_free` · `llev_string_dup` |
 | [Distances](#6-distance-functions-6) | 6 | `llev_distance` · `llev_distance_threshold` · `llev_damerau_distance` · `llev_damerau_distance_threshold` · `llev_true_damerau_distance` · `llev_true_damerau_distance_threshold` |
-| [Transducer + cursor](#7-transducer-and-cursor-10) | 10 | `llev_transducer_new` · `llev_transducer_free` · `llev_transducer_unit_domain` · `llev_transducer_query_utf8` · `llev_transducer_query_bytes` · `llev_transducer_query_u64` · `llev_query_cursor_next_batch` · `llev_query_cursor_release_batch` · `llev_query_cursor_reduce` · `llev_query_cursor_free` |
+| [Transducer + cursor](#7-transducer-and-cursor-11) | 11 | `llev_transducer_new` · `llev_transducer_snapshot` · `llev_transducer_free` · `llev_transducer_unit_domain` · `llev_transducer_query_utf8` · `llev_transducer_query_bytes` · `llev_transducer_query_u64` · `llev_query_cursor_next_batch` · `llev_query_cursor_release_batch` · `llev_query_cursor_reduce` · `llev_query_cursor_free` |
 | [Phonetic](#8-phonetic-surface-12) | 12 | `llev_owned_string_free` · `llev_phonetic_pattern_compile_regex` · `llev_phonetic_pattern_compile_llre` · `llev_phonetic_pattern_free` · `llev_phonetic_pattern_size` · `llev_phonetic_pattern_matches` · `llev_transducer_query_pattern` · `llev_phonetic_rules_parse` · `llev_phonetic_rules_builtin` · `llev_phonetic_rules_free` · `llev_phonetic_rules_len` · `llev_phonetic_rules_apply` |
 
 Headers: [`include/liblevenshtein.h`](../../include/liblevenshtein.h)
@@ -268,7 +268,7 @@ $`k`$.
 
 ---
 
-## 7. Transducer and cursor (10)
+## 7. Transducer and cursor (11)
 
 The heart of the ABI. The full object flow, end to end:
 
@@ -315,7 +315,39 @@ when the value domain is `OPTIONAL_U64`).
 - **Complexity:** $`\mathcal{O}(1)`$ — a retain, one `query_interface`, and
   constant-size validation; the dictionary is never copied or walked.
 
-### 7.2 `llev_transducer_free`
+### 7.2 `llev_transducer_snapshot`
+
+```c
+LlevStatus llev_transducer_snapshot(const LlevTransducer* transducer,
+                                    LlevTransducer** out_transducer);
+```
+
+Captures the source revision visible at the call and returns a read-only
+transducer pinned to that immutable provider snapshot. Every cursor created
+from the returned handle shares the same validated compact graph, when the
+provider implements `vt.dict.graph.v1`, or the same fallback immutable
+node cache. Later mutations visible through the original transducer are not
+visible through this handle. Calling the function on an already immutable
+transducer is $`\mathcal{O}(1)`$.
+
+- **Preconditions:** `transducer` and `out_transducer` are non-NULL and
+  `transducer` is a live handle.
+- **Statuses:** `OK` · `NULL_POINTER` · `INVALID_ARGUMENT` · `UNSUPPORTED` ·
+  `IO_ERROR` · `CLOSED` · `LIMIT_EXCEEDED` (provider status mapping) ·
+  `PROVIDER_ERROR` (a null or malformed snapshot, changed domains, or invalid
+  optional graph) · `PANIC`.
+- **Ownership:** on `OK`, `*out_transducer` is a new caller-owned handle
+  settled by exactly one `llev_transducer_free`; the input remains owned by
+  its caller. On failure, `*out_transducer` is untouched.
+- **Thread safety:** safe to call concurrently. The returned handle is
+  shareable for concurrent queries; each query still owns an independent
+  cursor and fault channel.
+- **Complexity:** $`\mathcal{O}(1)`$ for a memoized or already immutable
+  provider snapshot. A provider's first compact-graph publication may perform
+  its documented snapshot preparation outside this ABI's control; traversal
+  never copies that graph per cursor.
+
+### 7.3 `llev_transducer_free`
 
 ```c
 void llev_transducer_free(LlevTransducer* transducer);
@@ -328,7 +360,7 @@ remain valid** — each owns its own snapshot retain. Statuses: none (void);
 infallible by construction. Complexity: $`\mathcal{O}(1)`$ plus the
 provider's `release`.
 
-### 7.3 `llev_transducer_unit_domain`
+### 7.4 `llev_transducer_unit_domain`
 
 ```c
 LlevStatus llev_transducer_unit_domain(const LlevTransducer* transducer,
@@ -339,7 +371,7 @@ Reports which of the three query entry points this dictionary accepts.
 **Statuses:** `OK` · `NULL_POINTER` · `PANIC`. Thread-safe (pure read).
 $`\mathcal{O}(1)`$.
 
-### 7.4 The three query starts
+### 7.5 The three query starts
 
 ```c
 LlevStatus llev_transducer_query_utf8(const LlevTransducer* transducer,
@@ -359,8 +391,12 @@ LlevStatus llev_transducer_query_u64(const LlevTransducer* transducer,
 Each captures the provider's revision **now** — one $`\mathcal{O}(1)`$
 `snapshot` callback plus one `root` read — and returns a lazy cursor pinned
 to that revision forever (the query-start snapshot boundary; laws and proofs
-in [snapshot semantics](../theory/snapshot-semantics.md)). Nothing else is
-traversed at query start; matches are computed on demand.
+in [snapshot semantics](../theory/snapshot-semantics.md)). Match traversal is
+lazy. If the immutable provider advertises `vt.dict.graph.v1`, the first
+consumer of that revision may additionally pay
+$`\Theta(\lvert V\rvert + \lvert E\rvert)`$ once to validate and import its
+compact graph; producer and consumer revision memos amortize that work across
+later query starts.
 
 - **Preconditions:** `transducer` and `out_cursor` non-NULL; the query buffer
   valid for its length when nonzero (`query_len` in bytes for UTF-8, elements
@@ -386,10 +422,14 @@ traversed at query start; matches are computed on demand.
 - **Thread safety:** concurrent query starts on one shared transducer are
   safe; callbacks to a non-reentrant provider serialize on its
   [call gate](resource-consumer.md#4-the-call-gate).
-- **Complexity:** $`\mathcal{O}(\lvert q \rvert)`$ to copy the query plus
-  $`\mathcal{O}(1)`$ capture — independent of dictionary size.
+- **Complexity:** warm revision:
+  $`\mathcal{O}(\lvert q \rvert)`$ to copy the query plus
+  $`\mathcal{O}(1)`$ capture. Cold compact-graph revision:
+  $`\mathcal{O}(\lvert q \rvert + \lvert V\rvert + \lvert E\rvert)`$ for the
+  first validating import only. Providers without the optional graph retain
+  the $`\mathcal{O}(\lvert q \rvert)`$ lazy callback path.
 
-### 7.5 The lease protocol
+### 7.6 The lease protocol
 
 The batch path is a strict finite-state machine; every transition below is
 exactly what `src/ffi/index.rs` implements:
@@ -430,7 +470,7 @@ over the refilled arenas, and hands out one lease:
   `CLOSED` / `LIMIT_EXCEEDED` / `PROVIDER_ERROR`) · `PANIC`.
 - **Preconditions:** `cursor` and `out_batch` valid; the cursor **must not**
   be used from two threads at once (leases are single-owner state; see
-  § 7.9).
+  § 7.10).
 
 **`llev_query_cursor_release_batch`** settles the lease:
 
@@ -473,7 +513,7 @@ node expansion inside the traversal costs the provider
 $`\lceil \deg(v) / 256 \rceil`$ crossings
 ([canon § 2](../../vinary-tree-interop/docs/abi-reference.md#2-prologue-what-kind-of-header-this-is)).
 
-### 7.6 `llev_query_cursor_reduce`
+### 7.7 `llev_query_cursor_reduce`
 
 ```c
 LlevStatus llev_query_cursor_reduce(LlevQueryCursor* cursor,
@@ -511,7 +551,7 @@ procedure reduce(cursor, B, f, ctx):
   returned by `reduce` itself) · `BATCH_IN_USE` (a lease from `next_batch`
   is live) · `NULL_POINTER` (cursor, reducer, or `out_count` NULL) ·
   `INVALID_ARGUMENT` (`batch_size` = 0) · traversal provider-fault mappings
-  as in § 7.5 · **any status the reducer returned, verbatim** (the abort
+  as in § 7.6 · **any status the reducer returned, verbatim** (the abort
   channel; the message slot then reads "batch reducer aborted the query") ·
   `PANIC`.
 - After an abort the cursor is **not poisoned**: the lease was released and
@@ -528,7 +568,7 @@ procedure reduce(cursor, B, f, ctx):
 - **Complexity:** $`\lceil n / B \rceil`$ callback crossings for the
   remaining $`n`$ matches.
 
-### 7.7 `llev_query_cursor_free`
+### 7.8 `llev_query_cursor_free`
 
 ```c
 LlevStatus llev_query_cursor_free(LlevQueryCursor* cursor);
@@ -545,7 +585,7 @@ use-after-free factory; release the batch first). NULL is a no-op `OK`.
 - **Complexity:** $`\mathcal{O}(1)`$ plus the provider's `release` (through
   the gate).
 
-### 7.8 Cursor memory model
+### 7.9 Cursor memory model
 
 `LlevQueryCursor` owns: the retained snapshot provider, the safe-Rust batch,
 the descriptor `views`, an `offsets` scratch vector, and the two term arenas.
@@ -558,7 +598,7 @@ invariant (`ffi-leased-batch-aliasing`; Verus obligation LLEV-ARENA-1..3,
 this wave). Details with the Rust types:
 [resource-consumer.md](resource-consumer.md).
 
-### 7.9 Thread-safety summary
+### 7.10 Thread-safety summary
 
 | Object | Concurrent use |
 |---|---|
@@ -626,7 +666,7 @@ LlevStatus llev_transducer_query_pattern(const LlevTransducer* transducer,
 Starts a lazy query for dictionary terms within `max_distance` of the
 pattern's **language** — the dictionary × language product. Unicode
 dictionaries only (`DOMAIN_MISMATCH` otherwise). Captures a snapshot exactly
-like the § 7.4 query starts and returns the same cursor type with the same
+like the § 7.5 query starts and returns the same cursor type with the same
 lease protocol. **Statuses:** `OK` · `NULL_POINTER` · `DOMAIN_MISMATCH` ·
 `UNSUPPORTED` (feature off, or provider `Unsupported`) · `INVALID_ARGUMENT`
 / `IO_ERROR` / `CLOSED` / `LIMIT_EXCEEDED` (provider verbatim) ·

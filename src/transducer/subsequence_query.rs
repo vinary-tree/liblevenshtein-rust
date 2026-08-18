@@ -6,7 +6,10 @@
 //! [`PrefixPruner`](super::PrefixPruner).
 
 use super::{NoPruning, PrefixPruner};
-use libdictenstein::{CharUnit, Dictionary, DictionaryNode};
+use crate::transducer::dictionary_traversal::TraversalSession;
+use libdictenstein::{
+    CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor,
+};
 
 /// Work counters for a subsequence traversal.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -28,34 +31,34 @@ pub struct SubsequenceMatch<U: CharUnit> {
     pub score: Option<f64>,
 }
 
-struct Frame<N: DictionaryNode> {
-    edges: std::vec::IntoIter<(N::Unit, N)>,
+struct Frame<U: CharUnit> {
+    edges: std::vec::IntoIter<(U, SnapshotTraversalCursor)>,
     matched: usize,
-    entered_by: Option<N::Unit>,
+    entered_by: Option<U>,
     is_final: bool,
     final_checked: bool,
 }
 
-impl<N: DictionaryNode> Frame<N> {
-    fn root(node: N) -> Self {
-        let mut edges = Vec::with_capacity(node.edge_count().unwrap_or(0));
-        let is_final = node.visit_edges_and_finality(|label, child| edges.push((label, child)));
-        Self {
-            edges: edges.into_iter(),
-            matched: 0,
-            entered_by: None,
-            is_final,
-            final_checked: false,
-        }
-    }
-
-    fn child(node: N, entered_by: N::Unit, matched: usize) -> Self {
-        let mut edges = Vec::with_capacity(node.edge_count().unwrap_or(0));
-        let is_final = node.visit_edges_and_finality(|label, child| edges.push((label, child)));
+impl<U: CharUnit> Frame<U> {
+    fn new<N>(
+        position: SnapshotTraversalCursor,
+        entered_by: Option<U>,
+        matched: usize,
+        traversal: &mut TraversalSession<N>,
+    ) -> Self
+    where
+        N: DictionaryNode<Unit = U>,
+    {
+        let mut edges = Vec::new();
+        let is_final = traversal.filter_map_edges_and_finality(
+            position,
+            |label| Some(label),
+            |label, child, _| edges.push((label, child)),
+        );
         Self {
             edges: edges.into_iter(),
             matched,
-            entered_by: Some(entered_by),
+            entered_by,
             is_final,
             final_checked: false,
         }
@@ -69,7 +72,8 @@ where
     P: PrefixPruner<N::Unit>,
 {
     query: Vec<N::Unit>,
-    stack: Vec<Frame<N>>,
+    stack: Vec<Frame<N::Unit>>,
+    traversal: TraversalSession<N>,
     prefix: Vec<N::Unit>,
     pruner: Option<P>,
     stats: SubsequenceQueryStats,
@@ -89,7 +93,7 @@ where
     where
         D: Dictionary<Node = N>,
     {
-        Self::new(dictionary.root(), query)
+        Self::with_traversal_root(dictionary.traversal_root(), query, NoPruning)
     }
 }
 
@@ -100,9 +104,20 @@ where
 {
     /// Traverse from `root` with a stateful, balanced prefix visitor.
     pub fn with_pruner(root: N, query: Vec<N::Unit>, pruner: P) -> Self {
+        Self::with_traversal_root(DictionaryTraversalRoot::owned(root), query, pruner)
+    }
+
+    fn with_traversal_root(
+        root: DictionaryTraversalRoot<N>,
+        query: Vec<N::Unit>,
+        pruner: P,
+    ) -> Self {
+        let (mut traversal, root) = TraversalSession::capture(root);
+        let root_frame = Frame::new(root, None, 0, &mut traversal);
         Self {
             query,
-            stack: vec![Frame::root(root)],
+            stack: vec![root_frame],
+            traversal,
             prefix: Vec::new(),
             pruner: Some(pruner),
             stats: SubsequenceQueryStats {
@@ -197,12 +212,13 @@ where
                     .next()
                     .map(|(unit, child)| (unit, child, frame.matched))
             };
-            if let Some((unit, child, parent_matched)) = edge {
+            if let Some((unit, child_position, parent_matched)) = edge {
                 self.stats.edges_enumerated = self.stats.edges_enumerated.saturating_add(1);
                 let depth = self.prefix.len().saturating_add(1);
                 if !self.pruner_mut().enter(unit, depth) {
                     self.stats.subtrees_pruned = self.stats.subtrees_pruned.saturating_add(1);
                     self.pruner_mut().leave(unit, depth);
+                    self.traversal.discard_unexpanded(child_position);
                     continue;
                 }
 
@@ -214,7 +230,8 @@ where
                         .matches_query_unit(unit, self.query[parent_matched]);
                 let matched = parent_matched + usize::from(matches_next);
                 self.prefix.push(unit);
-                self.stack.push(Frame::child(child, unit, matched));
+                let frame = Frame::new(child_position, Some(unit), matched, &mut self.traversal);
+                self.stack.push(frame);
                 self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
                 continue;
             }

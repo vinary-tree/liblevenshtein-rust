@@ -27,7 +27,7 @@ resource consumer, the cursor laws, and the JS/WASM topology.
 
 | Document | What it specifies |
 |---|---|
-| [c-abi-reference.md](c-abi-reference.md) | All 35 `llev_*` functions: signatures, preconditions, exact returnable status sets, ownership, thread safety, complexity; the 13-value status table and its `VtStatus` mapping; the lease protocol with literate batch-loop and reducer pseudocode; a compile-checked complete C consumer. |
+| [c-abi-reference.md](c-abi-reference.md) | All 36 `llev_*` functions: signatures, preconditions, exact returnable status sets, ownership, thread safety, complexity; the 13-value status table and its `VtStatus` mapping; the lease protocol with literate batch-loop and reducer pseudocode; a compile-checked complete C consumer. |
 | [resource-consumer.md](resource-consumer.md) | The safe-Rust layer under the C ABI: intake (retain-validate-else-release), `ForeignNode` domains, the `CallGate` (VT-GATE-1..3), the status wire rule and fault latch, the total `BindingError` map, and the two-pass arena fixup. |
 | [wasm-topology.md](wasm-topology.md) | The JS exception to modular packaging: the `@vinary-tree/vinary-tree` umbrella, the three runtime paths, the runtime-identity guard, WASI preopen policy, and panic-versus-status discipline. |
 | [../theory/snapshot-semantics.md](../theory/snapshot-semantics.md) | The cursor laws S1-S6 as display math, the $`\mathcal{O}(1)`$-capture argument from path-copied revisions, the partial-persistence classification, the refcount lineage, and the law ↔ model ↔ test correspondence table. |
@@ -39,7 +39,7 @@ resource consumer, the cursor laws, and the JS/WASM topology.
 
 | Artifact | Role |
 |---|---|
-| [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order enums, the 35 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical snapshot fixture. `scripts/generate-bindings.py` emits the headers/constants; `--check` pins them in CI. |
+| [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order enums, the 36 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical snapshot fixture. `scripts/generate-bindings.py` emits the headers/constants; `--check` pins them in CI. |
 | [`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) | The per-facade completeness model driving the coverage matrix. |
 | [`bindings/conformance/`](../../bindings/conformance) | Generated conformance fixtures (query-start snapshot TSV, completeness matrix) every language suite replays. |
 | [`scripts/check-bindings.py`](../../scripts/check-bindings.py) | The contract gate: symbol parity model ↔ Rust ↔ header, forbidden retired APIs, umbrella identity guard, coordinates, feature-alias policy. |
