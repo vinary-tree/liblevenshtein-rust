@@ -1,10 +1,11 @@
 //! Opt-in trie traversal for context-dependent edit costs.
 
 use super::{ContextualCost, EditContext};
-use crate::transducer::dictionary_traversal::TraversalSession;
-use libdictenstein::{
-    CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor,
+use crate::transducer::dictionary_traversal::{
+    acquire_traversal_buffers_with_capacity, release_traversal_buffers, TraversalCursor,
+    TraversalSession,
 };
+use libdictenstein::{CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot};
 use std::collections::VecDeque;
 use std::error::Error;
 use std::fmt::{self, Display};
@@ -67,8 +68,8 @@ struct ContextualPathNode<U: CharUnit> {
     depth: usize,
 }
 
-struct Pending<U: CharUnit> {
-    position: SnapshotTraversalCursor,
+struct Pending<U: CharUnit, C: Copy> {
+    position: TraversalCursor<C>,
     label: Option<U>,
     parent: usize,
     column: Vec<f64>,
@@ -87,7 +88,7 @@ where
     query: Vec<N::Unit>,
     max_cost: f64,
     costs: C,
-    pending: VecDeque<Pending<N::Unit>>,
+    pending: VecDeque<Pending<N::Unit, N::SnapshotCursor>>,
     traversal: TraversalSession<N>,
     path_arena: Vec<ContextualPathNode<N::Unit>>,
     prefix_scratch: Vec<N::Unit>,
@@ -135,7 +136,7 @@ where
                 .map_or(f64::INFINITY, |cost| initial[index - 1] + cost);
         }
         let (traversal, root) = TraversalSession::capture(root);
-        let mut pending = VecDeque::with_capacity(1);
+        let (mut pending, path_arena) = acquire_traversal_buffers_with_capacity(1, 64);
         pending.push_back(Pending {
             position: root,
             label: None,
@@ -148,7 +149,7 @@ where
             costs,
             pending,
             traversal,
-            path_arena: Vec::with_capacity(64),
+            path_arena,
             prefix_scratch: Vec::with_capacity(64),
             column_pool: Vec::with_capacity(32),
             stats: ContextualQueryStats::default(),
@@ -174,7 +175,7 @@ where
     }
 
     fn materialize_prefix_into(
-        entry: &Pending<N::Unit>,
+        entry: &Pending<N::Unit, N::SnapshotCursor>,
         path_arena: &[ContextualPathNode<N::Unit>],
         output: &mut Vec<N::Unit>,
     ) {
@@ -189,6 +190,18 @@ where
             current = node.parent;
         }
         output.reverse();
+    }
+}
+
+impl<N, C> Drop for ContextualQueryIterator<N, C>
+where
+    N: DictionaryNode,
+    C: ContextualCost<N::Unit>,
+{
+    fn drop(&mut self) {
+        let pending = std::mem::take(&mut self.pending);
+        let path_arena = std::mem::take(&mut self.path_arena);
+        release_traversal_buffers(pending, path_arena);
     }
 }
 
@@ -311,6 +324,9 @@ where
             let accepted = is_final && distance <= self.max_cost;
 
             if accepted {
+                if !self.traversal.accepts_final_units(&self.prefix_scratch) {
+                    continue;
+                }
                 return Some(ContextualCandidate {
                     units: self.prefix_scratch.clone(),
                     distance,

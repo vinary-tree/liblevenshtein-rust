@@ -1,7 +1,7 @@
 use super::{unit_finish_cost, unit_skip_window};
 use crate::cost::{subsumes_with, SubsumptionMode, UnitCost};
 use crate::transducer::transition::transition_merge_split_into;
-use crate::transducer::variant::{AutomatonVariant, TransitionCtx};
+use crate::transducer::variant::{AutomatonVariant, SubsumptionScope, TransitionCtx};
 use crate::transducer::Position;
 use smallvec::SmallVec;
 
@@ -11,6 +11,10 @@ pub(crate) struct MergeSplitV;
 
 impl AutomatonVariant for MergeSplitV {
     type Params = ();
+
+    // Merge/split dominance requires equal term indices. Specialness and cost
+    // remain checked by `subsumes`, so this narrows only the search domain.
+    const SUBSUMPTION_SCOPE: SubsumptionScope = SubsumptionScope::SameTermIndex;
 
     #[inline(always)]
     fn successors(

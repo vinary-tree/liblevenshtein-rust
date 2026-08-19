@@ -1,6 +1,8 @@
 //! Work-counter driver for the dictionary-resource query path.
 
-use libdictenstein::bindings::{BindingUnitDomain, DynamicDawgBinding};
+use libdictenstein::bindings::{
+    BindingUnitDomain, DoubleArrayTrieBinding, DynamicDawgBinding, OwnedDictionaryResource,
+};
 use libdictenstein::{
     causal_construction_stats, reset_causal_construction_stats, CausalConstructionStats,
 };
@@ -10,6 +12,7 @@ use liblevenshtein::{causal_perf_stats, reset_causal_perf_stats, CausalPerfStats
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+use vinary_tree_interop::VtUnitDomain;
 
 const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
@@ -21,7 +24,36 @@ struct Args {
     batch_size: usize,
     passes: usize,
     constructor: Constructor,
+    backend: Backend,
     algorithm: Algorithm,
+}
+
+#[derive(Clone, Copy)]
+enum Backend {
+    DynamicDawgUnicode,
+    DoubleArrayByte,
+    DoubleArrayUnicode,
+}
+
+impl Backend {
+    fn parse(value: &str) -> Self {
+        match value {
+            "dynamic-dawg-unicode" => Self::DynamicDawgUnicode,
+            "double-array-byte" => Self::DoubleArrayByte,
+            "double-array-unicode" => Self::DoubleArrayUnicode,
+            _ => fail(
+                "--backend must be dynamic-dawg-unicode, double-array-byte, or double-array-unicode",
+            ),
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::DynamicDawgUnicode => "dynamic-dawg-unicode",
+            Self::DoubleArrayByte => "double-array-byte",
+            Self::DoubleArrayUnicode => "double-array-unicode",
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -59,6 +91,7 @@ fn parse_args() -> Args {
     let mut batch_size = 256usize;
     let mut passes = 1usize;
     let mut constructor = Constructor::Incremental;
+    let mut backend = Backend::DynamicDawgUnicode;
     let mut algorithm = Algorithm::Standard;
     let mut argv = std::env::args().skip(1);
     while let Some(flag) = argv.next() {
@@ -86,6 +119,7 @@ fn parse_args() -> Args {
                     .unwrap_or_else(|_| fail("--passes must be a positive integer"))
             }
             "--constructor" => constructor = Constructor::parse(&value),
+            "--backend" => backend = Backend::parse(&value),
             "--algorithm" => {
                 algorithm = value
                     .parse()
@@ -107,6 +141,7 @@ fn parse_args() -> Args {
         batch_size,
         passes,
         constructor,
+        backend,
         algorithm,
     }
 }
@@ -130,9 +165,9 @@ fn hash_byte(hash: u64, byte: u8) -> u64 {
     (hash ^ u64::from(byte)).wrapping_mul(FNV_PRIME)
 }
 
-fn entry_hash(term: &str, distance: usize) -> u64 {
+fn entry_hash(term: &[u8], distance: usize) -> u64 {
     let mut hash = FNV_OFFSET;
-    for byte in term.bytes() {
+    for &byte in term {
         hash = hash_byte(hash, byte);
     }
     hash = hash_byte(hash, 0);
@@ -142,29 +177,162 @@ fn entry_hash(term: &str, distance: usize) -> u64 {
     hash
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ResultTotals {
+    matches: u64,
+    term_bytes: u64,
+    distance_sum: u64,
+    checksum: u64,
+    order_checksum: u64,
+    batches: u64,
+}
+
+impl Default for ResultTotals {
+    fn default() -> Self {
+        Self {
+            matches: 0,
+            term_bytes: 0,
+            distance_sum: 0,
+            checksum: 0,
+            order_checksum: FNV_OFFSET,
+            batches: 0,
+        }
+    }
+}
+
+fn query_pass<const WITH_CHECKSUM: bool>(
+    transducer: &ResourceTransducer,
+    queries: &[String],
+    max_distance: usize,
+    batch_size: usize,
+    passes: usize,
+) -> ResultTotals {
+    let mut totals = ResultTotals::default();
+    let mut batch = MatchBatch::default();
+    for pass in 0..passes {
+        for query in queries {
+            if WITH_CHECKSUM {
+                for byte in (pass as u64).to_le_bytes() {
+                    totals.order_checksum = hash_byte(totals.order_checksum, byte);
+                }
+                for byte in query.bytes() {
+                    totals.order_checksum = hash_byte(totals.order_checksum, byte);
+                }
+                totals.order_checksum = hash_byte(totals.order_checksum, 0xff);
+            }
+            let mut cursor = match transducer.unit_domain() {
+                VtUnitDomain::UnicodeScalar => {
+                    transducer.query_utf8(query, max_distance, QueryOrder::Traversal)
+                }
+                VtUnitDomain::Byte => {
+                    transducer.query_bytes(query.as_bytes(), max_distance, QueryOrder::Traversal)
+                }
+                VtUnitDomain::U64 => fail("the causal resource driver has no text-to-u64 codec"),
+            }
+            .unwrap_or_else(|error| fail(format!("query creation failed: {error}")));
+            loop {
+                let count = cursor
+                    .next_batch(&mut batch, batch_size)
+                    .unwrap_or_else(|error| fail(format!("query traversal failed: {error}")));
+                if count == 0 {
+                    break;
+                }
+                totals.batches = totals.batches.saturating_add(1);
+                for item in batch.as_slice() {
+                    let term = match &item.term {
+                        MatchTerm::Utf8(term) => term.as_bytes(),
+                        MatchTerm::Bytes(term) => term.as_slice(),
+                        MatchTerm::U64(_) => fail("text resource returned a u64 term"),
+                    };
+                    totals.matches = totals.matches.saturating_add(1);
+                    totals.term_bytes = totals.term_bytes.saturating_add(term.len() as u64);
+                    totals.distance_sum = totals.distance_sum.saturating_add(item.distance as u64);
+                    if WITH_CHECKSUM {
+                        let hash = entry_hash(term, item.distance);
+                        totals.checksum = totals.checksum.wrapping_add(hash);
+                        for byte in hash.to_le_bytes() {
+                            totals.order_checksum = hash_byte(totals.order_checksum, byte);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    totals
+}
+
+fn build_resource(args: &Args, terms: &[String]) -> OwnedDictionaryResource {
+    match args.backend {
+        Backend::DynamicDawgUnicode => {
+            let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
+            match args.constructor {
+                Constructor::Incremental => {
+                    for term in terms {
+                        dictionary
+                            .insert_text(term.as_bytes(), None)
+                            .unwrap_or_else(|error| {
+                                fail(format!("dictionary insertion failed: {error}"))
+                            });
+                    }
+                }
+                Constructor::Batch => {
+                    dictionary
+                        .insert_text_batch(terms.iter().map(|term| (term.as_bytes(), None)))
+                        .unwrap_or_else(|error| {
+                            fail(format!("batch construction failed: {error}"))
+                        });
+                }
+            }
+            dictionary.resource()
+        }
+        Backend::DoubleArrayByte => {
+            if !matches!(args.constructor, Constructor::Batch) {
+                fail("double-array backends require --constructor batch");
+            }
+            DoubleArrayTrieBinding::from_byte_terms(terms.iter().map(|term| (term, None)))
+                .resource()
+        }
+        Backend::DoubleArrayUnicode => {
+            if !matches!(args.constructor, Constructor::Batch) {
+                fail("double-array backends require --constructor batch");
+            }
+            DoubleArrayTrieBinding::from_unicode_terms(terms.iter().map(|term| (term, None)))
+                .resource()
+        }
+    }
+}
+
 fn main() {
     let args = parse_args();
     let terms = read_lines(&args.dictionary);
     let queries = read_lines(&args.queries);
 
+    // The checksum gate deliberately uses a different producer identity from
+    // the measured resource. Foreign traversal caches are revision-keyed and
+    // shared across snapshots, so reusing one producer here would warm the
+    // exact provider/consumer snapshot path the benchmark is meant to measure.
+    let gate_resource = build_resource(&args, &terms);
+    let gate_live = unsafe {
+        ResourceTransducer::from_resource(gate_resource.as_raw(), args.algorithm)
+            .unwrap_or_else(|error| fail(format!("gate resource validation failed: {error}")))
+    };
+    let gate_transducer = gate_live
+        .snapshot()
+        .unwrap_or_else(|error| fail(format!("resource gate snapshot failed: {error}")));
+    let gate = query_pass::<true>(
+        &gate_transducer,
+        &queries,
+        args.max_distance,
+        args.batch_size,
+        args.passes,
+    );
+    drop(gate_transducer);
+    drop(gate_live);
+    drop(gate_resource);
+
     let build_start = Instant::now();
-    let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
-    match args.constructor {
-        Constructor::Incremental => {
-            for term in &terms {
-                dictionary
-                    .insert_text(term.as_bytes(), None)
-                    .unwrap_or_else(|error| fail(format!("dictionary insertion failed: {error}")));
-            }
-        }
-        Constructor::Batch => {
-            dictionary
-                .insert_text_batch(terms.iter().map(|term| (term.as_bytes(), None)))
-                .unwrap_or_else(|error| fail(format!("batch construction failed: {error}")));
-        }
-    }
+    let resource = build_resource(&args, &terms);
     let build_ns = build_start.elapsed().as_nanos();
-    let resource = dictionary.resource();
     let live_transducer = unsafe {
         ResourceTransducer::from_resource(resource.as_raw(), args.algorithm)
             .unwrap_or_else(|error| fail(format!("resource validation failed: {error}")))
@@ -176,69 +344,47 @@ fn main() {
         .snapshot()
         .unwrap_or_else(|error| fail(format!("resource snapshot failed: {error}")));
     let query_start = Instant::now();
-    let mut batch = MatchBatch::default();
-    let mut matches = 0u64;
-    let mut term_bytes = 0u64;
-    let mut distance_sum = 0u64;
-    let mut checksum = 0u64;
-    let mut order_checksum = FNV_OFFSET;
-    let mut batches = 0u64;
-    for pass in 0..args.passes {
-        for query in &queries {
-            for byte in (pass as u64).to_le_bytes() {
-                order_checksum = hash_byte(order_checksum, byte);
-            }
-            for byte in query.bytes() {
-                order_checksum = hash_byte(order_checksum, byte);
-            }
-            order_checksum = hash_byte(order_checksum, 0xff);
-            let mut cursor = transducer
-                .query_utf8(query, args.max_distance, QueryOrder::Traversal)
-                .unwrap_or_else(|error| fail(format!("query creation failed: {error}")));
-            loop {
-                let count = cursor
-                    .next_batch(&mut batch, args.batch_size)
-                    .unwrap_or_else(|error| fail(format!("query traversal failed: {error}")));
-                if count == 0 {
-                    break;
-                }
-                batches = batches.saturating_add(1);
-                for item in batch.as_slice() {
-                    let MatchTerm::Utf8(term) = &item.term else {
-                        fail("Unicode resource returned a non-UTF-8 term");
-                    };
-                    matches = matches.saturating_add(1);
-                    term_bytes = term_bytes.saturating_add(term.len() as u64);
-                    distance_sum = distance_sum.saturating_add(item.distance as u64);
-                    let hash = entry_hash(term, item.distance);
-                    checksum = checksum.wrapping_add(hash);
-                    for byte in hash.to_le_bytes() {
-                        order_checksum = hash_byte(order_checksum, byte);
-                    }
-                }
-            }
-        }
-    }
+    let measured = query_pass::<false>(
+        &transducer,
+        &queries,
+        args.max_distance,
+        args.batch_size,
+        args.passes,
+    );
     let query_ns = query_start.elapsed().as_nanos();
+    assert_eq!(
+        (
+            measured.matches,
+            measured.term_bytes,
+            measured.distance_sum,
+            measured.batches,
+        ),
+        (
+            gate.matches,
+            gate.term_bytes,
+            gate.distance_sum,
+            gate.batches,
+        ),
+        "timed resource traversal must match the checksum gate",
+    );
     // Reclamation is deliberately outside `query_ns`: release every producer
     // and consumer owner so the provider's synchronous arena-drop counters are
     // observable without folding teardown into query latency.
     drop(transducer);
     drop(live_transducer);
     drop(resource);
-    drop(dictionary);
     print_json(
         &args,
         terms.len(),
         queries.len(),
         build_ns,
         query_ns,
-        matches,
-        term_bytes,
-        distance_sum,
-        checksum,
-        order_checksum,
-        batches,
+        measured.matches,
+        measured.term_bytes,
+        measured.distance_sum,
+        gate.checksum,
+        gate.order_checksum,
+        measured.batches,
         causal_perf_stats(),
         causal_construction_stats(),
     );
@@ -278,6 +424,14 @@ fn print_json(
         args.constructor.name()
     )
     .unwrap();
+    writeln!(&mut json, "  \"backend\": \"{}\",", args.backend.name()).unwrap();
+    let dat_snapshot_mode =
+        if std::env::var_os("LIBDICTENSTEIN_CAUSAL_DISABLE_DAT_CURSOR_SNAPSHOTS").is_some() {
+            "legacy-arena"
+        } else {
+            "native-cursor"
+        };
+    writeln!(&mut json, "  \"dat_snapshot_mode\": {dat_snapshot_mode:?},").unwrap();
     writeln!(&mut json, "  \"algorithm\": \"{}\",", args.algorithm.name()).unwrap();
     writeln!(&mut json, "  \"build_ns\": {build_ns},").unwrap();
     writeln!(&mut json, "  \"query_ns\": {query_ns},").unwrap();
@@ -293,6 +447,10 @@ fn print_json(
             "dictionary_intersections",
             consumer.dictionary_intersections,
         ),
+        (
+            "owned_traversal_arena_insertions",
+            consumer.owned_traversal_arena_insertions,
+        ),
         ("final_checks", consumer.final_checks),
         ("edges_enumerated", consumer.edges_enumerated),
         ("transition_attempts", consumer.transition_attempts),
@@ -307,6 +465,51 @@ fn print_json(
             "packed_standard_transition_dead",
             consumer.packed_standard_transition_dead,
         ),
+        ("packed_osa_queries", consumer.packed_osa_queries),
+        (
+            "packed_osa_fallback_policy",
+            consumer.packed_osa_fallback_policy,
+        ),
+        (
+            "packed_osa_fallback_prefix",
+            consumer.packed_osa_fallback_prefix,
+        ),
+        (
+            "packed_osa_fallback_width",
+            consumer.packed_osa_fallback_width,
+        ),
+        (
+            "packed_osa_transition_attempts",
+            consumer.packed_osa_transition_attempts,
+        ),
+        (
+            "packed_osa_transition_dead",
+            consumer.packed_osa_transition_dead,
+        ),
+        (
+            "packed_merge_split_queries",
+            consumer.packed_merge_split_queries,
+        ),
+        (
+            "packed_merge_split_fallback_policy",
+            consumer.packed_merge_split_fallback_policy,
+        ),
+        (
+            "packed_merge_split_fallback_prefix",
+            consumer.packed_merge_split_fallback_prefix,
+        ),
+        (
+            "packed_merge_split_fallback_width",
+            consumer.packed_merge_split_fallback_width,
+        ),
+        (
+            "packed_merge_split_transition_attempts",
+            consumer.packed_merge_split_transition_attempts,
+        ),
+        (
+            "packed_merge_split_transition_dead",
+            consumer.packed_merge_split_transition_dead,
+        ),
         ("packed_dfa_queries", consumer.packed_dfa_queries),
         (
             "packed_dfa_transition_hits",
@@ -319,6 +522,22 @@ fn print_json(
         (
             "packed_dfa_states_interned",
             consumer.packed_dfa_states_interned,
+        ),
+        (
+            "packed_dfa_source_rows_prepared",
+            consumer.packed_dfa_source_rows_prepared,
+        ),
+        (
+            "packed_dfa_class_zero_probes",
+            consumer.packed_dfa_class_zero_probes,
+        ),
+        (
+            "packed_dfa_class_zero_reusable_probes",
+            consumer.packed_dfa_class_zero_reusable_probes,
+        ),
+        (
+            "packed_dfa_physical_target_probes",
+            consumer.packed_dfa_physical_target_probes,
         ),
         (
             "generated_transition_hits",

@@ -56,7 +56,9 @@ mod operation_set_gzip;
 mod operation_set_protobuf;
 pub mod operation_type;
 mod ordered_query;
+mod packed_dfa;
 mod packed_lanes;
+mod packed_special;
 mod packed_standard;
 pub mod phonetic;
 #[cfg(feature = "phonetic-rules")]
@@ -130,7 +132,10 @@ pub use query::{
     AffineCandidate, AffineQueryIterator, Candidate, CandidateIterator, QueryIterator,
     StringQueryIterator, UnitCandidate, UnitCandidateIterator, UnitQueryIterator,
 };
-pub use query_cache::VersionedQueryCache;
+pub use query_cache::{
+    DefaultQueryCacheWeigher, QueryCacheLimits, QueryCacheStats, QueryCacheWeigher,
+    VersionedQueryCache,
+};
 pub use query_f64::{
     CandidateF64, CandidateIteratorF64, QueryIteratorF64, QueryResultF64, StringQueryIteratorF64,
     UnitCandidateF64, UnitCandidateIteratorF64, UnitQueryIteratorF64,
@@ -605,8 +610,8 @@ impl<
         max_cost: usize,
         params: AffineGapParams,
     ) -> QueryIterator<D::Node, Candidate, P> {
-        QueryIterator::with_affine_policy_and_substring(
-            self.dictionary.root(),
+        QueryIterator::with_affine_traversal_root_and_substring(
+            self.dictionary.traversal_root(),
             term.to_string(),
             max_cost,
             params,
@@ -671,8 +676,8 @@ impl<
         max_cost: usize,
         params: AffineGapParams,
     ) -> QueryIterator<D::Node, UnitCandidate<<D::Node as DictionaryNode>::Unit>, P> {
-        QueryIterator::with_affine_units(
-            self.dictionary.root(),
+        QueryIterator::with_affine_traversal_root_and_units(
+            self.dictionary.traversal_root(),
             units.to_vec(),
             max_cost,
             params,
@@ -740,8 +745,8 @@ impl<
         term: &str,
         max_distance: usize,
     ) -> OrderedQueryIterator<D::Node, P> {
-        OrderedQueryIterator::with_policy_and_substring(
-            self.dictionary.root(),
+        OrderedQueryIterator::with_traversal_root_and_policy_and_substring(
+            self.dictionary.traversal_root(),
             term.to_string(),
             max_distance,
             self.algorithm,
@@ -800,8 +805,8 @@ impl<
     where
         R: PrefixPruner<<D::Node as DictionaryNode>::Unit>,
     {
-        PrefixQueryIterator::with_policy_and_pruner(
-            self.dictionary.root(),
+        PrefixQueryIterator::with_traversal_root(
+            self.dictionary.traversal_root(),
             <D::Node as DictionaryNode>::Unit::from_str(term),
             max_distance,
             self.algorithm,
@@ -821,8 +826,8 @@ impl<
     where
         R: PrefixPruner<<D::Node as DictionaryNode>::Unit>,
     {
-        PrefixQueryIterator::with_policy_and_pruner(
-            self.dictionary.root(),
+        PrefixQueryIterator::with_traversal_root(
+            self.dictionary.traversal_root(),
             units.to_vec(),
             max_distance,
             self.algorithm,
@@ -927,8 +932,8 @@ where
         S: SuggestionScorer<D::Value>,
         P: Clone,
     {
-        RankedValueQueryIterator::with_policy(
-            self.dictionary.root(),
+        RankedValueQueryIterator::with_policy_traversal_root(
+            self.dictionary.traversal_root(),
             term.to_owned(),
             max_distance,
             self.algorithm,
@@ -948,8 +953,8 @@ where
         S: SuggestionScorer<D::Value>,
         P: Clone,
     {
-        RankedValueQueryIterator::with_units(
-            self.dictionary.root(),
+        RankedValueQueryIterator::with_units_traversal_root(
+            self.dictionary.traversal_root(),
             units.to_vec(),
             max_distance,
             self.algorithm,
@@ -1012,8 +1017,8 @@ where
     where
         F: Fn(&D::Value) -> bool,
     {
-        ValueFilteredQueryIterator::new(
-            self.dictionary.root(),
+        ValueFilteredQueryIterator::with_traversal_root(
+            self.dictionary.traversal_root(),
             term.to_string(),
             max_distance,
             self.algorithm,
@@ -1029,8 +1034,8 @@ where
         term: &str,
         max_distance: usize,
     ) -> ValueYieldingQueryIterator<D::Node> {
-        ValueYieldingQueryIterator::new(
-            self.dictionary.root(),
+        ValueYieldingQueryIterator::with_traversal_root(
+            self.dictionary.traversal_root(),
             term.to_string(),
             max_distance,
             self.algorithm,
@@ -1051,8 +1056,8 @@ where
         units: &[<D::Node as DictionaryNode>::Unit],
         max_distance: usize,
     ) -> ValueYieldingQueryIterator<D::Node, Vec<<D::Node as DictionaryNode>::Unit>> {
-        ValueYieldingQueryIterator::with_unit_query(
-            self.dictionary.root(),
+        ValueYieldingQueryIterator::with_unit_query_traversal_root(
+            self.dictionary.traversal_root(),
             units.to_vec(),
             max_distance,
             self.algorithm,
@@ -1108,8 +1113,8 @@ where
     where
         D::Value: Eq + std::hash::Hash,
     {
-        ValueSetFilteredQueryIterator::new_borrowed(
-            self.dictionary.root(),
+        ValueSetFilteredQueryIterator::new_borrowed_traversal_root(
+            self.dictionary.traversal_root(),
             term.to_string(),
             max_distance,
             self.algorithm,

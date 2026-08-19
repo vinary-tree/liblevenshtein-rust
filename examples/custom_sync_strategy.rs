@@ -60,6 +60,8 @@ impl Dictionary for PersistentDictionary {
 
 impl DictionaryNode for PersistentNode {
     type Unit = u8;
+    type SnapshotCursor = libdictenstein::SnapshotTraversalCursor;
+    type SnapshotGraphValueHandle = libdictenstein::SnapshotTraversalCursor;
 
     fn is_final(&self) -> bool {
         self.terms.iter().any(|t| t == &self.prefix)

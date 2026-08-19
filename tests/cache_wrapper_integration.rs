@@ -247,3 +247,75 @@ mod wrapper_composition {
         assert_eq!(lru.inner().access_count("data"), None);
     }
 }
+
+mod native_traversal_propagation {
+    use libdictenstein::dynamic_dawg::DynamicDawg;
+    use libdictenstein::suffix_automaton::SuffixAutomaton;
+    use libdictenstein::{Dictionary, MappedDictionary, MappedDictionaryNode};
+    use liblevenshtein::cache::eviction::{
+        Age, CostAware, Lfu, Lru, LruOptimized, MemoryPressure, Noop, Ttl,
+    };
+    use liblevenshtein::transducer::{Algorithm, Transducer};
+    use std::time::Duration;
+
+    fn mapped_dictionary() -> DynamicDawg<u64> {
+        DynamicDawg::from_sorted_terms_with_values([("cat", 7_u64), ("dog", 8)])
+    }
+
+    fn assert_native_mapped_query<D>(dictionary: D)
+    where
+        D: MappedDictionary<Value = u64>,
+        D::Node: MappedDictionaryNode<Value = u64>,
+    {
+        let (graph, owner) = dictionary
+            .traversal_root()
+            .into_parts()
+            .into_projection_and_root();
+        assert!(graph.is_some(), "the wrapper discarded the compact graph");
+        assert!(
+            owner.supports_snapshot_graph_values(),
+            "the wrapper discarded native graph-value resolution"
+        );
+
+        let matches: Vec<_> = Transducer::new(dictionary, Algorithm::Standard)
+            .query_values("cat", 0)
+            .collect();
+        assert_eq!(matches, [("cat".to_owned(), 0, 7)]);
+    }
+
+    #[test]
+    fn transparent_eviction_wrappers_preserve_native_mapped_traversal() {
+        assert_native_mapped_query(Noop::new(mapped_dictionary()));
+        assert_native_mapped_query(Age::new(mapped_dictionary()));
+        assert_native_mapped_query(CostAware::new(mapped_dictionary()));
+        assert_native_mapped_query(Lfu::new(mapped_dictionary()));
+        assert_native_mapped_query(Lru::new(mapped_dictionary()));
+        assert_native_mapped_query(LruOptimized::new(mapped_dictionary()));
+        assert_native_mapped_query(MemoryPressure::new(mapped_dictionary()));
+    }
+
+    #[test]
+    fn nested_transparent_wrappers_preserve_one_native_snapshot() {
+        assert_native_mapped_query(Noop::new(Lru::new(Age::new(mapped_dictionary()))));
+    }
+
+    #[test]
+    fn semantic_ttl_wrapper_preserves_native_term_aware_value_traversal() {
+        let dictionary = Ttl::new(mapped_dictionary(), Duration::from_secs(60));
+        let (graph, owner) = dictionary
+            .traversal_root()
+            .into_parts()
+            .into_projection_and_root();
+        assert!(graph.is_some(), "TTL discarded the compact topology");
+        assert!(
+            owner.supports_snapshot_graph_values(),
+            "TTL discarded term-aware graph-value resolution"
+        );
+    }
+
+    #[test]
+    fn wrappers_preserve_suffix_dictionary_query_semantics() {
+        let dictionary = Noop::new(Age::new(SuffixAutomaton::<()>::from_text("banana")));
+        assert!(dictionary.is_suffix_based());
+    }
+}

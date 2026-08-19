@@ -1,0 +1,3 @@
+arm,live_iterators,iterator_inline_bytes,retained_inline_bytes,allocation_calls,temporary_allocations,peak_heap_reported,peak_rss_reported,total_memory_leaked_bytes,recording_mode,binary_sha256
+control,10000,712,7120000,676412,146242,223.79M,127.15M,544,heaptrack-record-only-and-heaptrack_print,05d2010e8318852fb205ad1aff42b84aae17e2eab32c59be8355c78c6574319b
+treatment,10000,432,4320000,626396,146241,191.07M,93.92M,544,heaptrack-record-only-and-heaptrack_print,05d2010e8318852fb205ad1aff42b84aae17e2eab32c59be8355c78c6574319b

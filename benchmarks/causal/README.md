@@ -53,6 +53,69 @@ The Heaptrack path always passes `--record-only` and analyzes only with
 `heaptrack_print`. It must never call `heaptrack --analyze`, `heaptrack -a`, or
 `heaptrack_gui`.
 
+Paired timing runners call `host-load-admission.py` before warmup and before
+every measured pair. The gate samples host-wide `/proc/stat` counters, resolves
+the selected CPU's hardware-thread and last-level-cache topology from sysfs,
+and rejects direct-core, sibling, or shared-cache contention. Load on other
+Threadripper CCDs is retained in the adjacent `*-host-load.jsonl` evidence but
+does not waste otherwise independent cores. A rejected gate exits with status
+3 before another pair is measured; the existing CSV remains auditable and must
+not be presented as a complete experiment. Every load record carries `warmup`
+or `pair-N` as its label. A rejected `pair-N` record proves that the runner
+stopped before measuring that pair.
+
+The bounded query-cache policy matrix is deterministic and fixes the
+benchmark-only AHash key before constructing any cache. Production caches keep
+independent randomized keys:
+
+```console
+cargo run --release --features benchmark-controls --example query_cache_policy_matrix
+```
+
+The victim-planning experiment uses the same compiled binary for both arms,
+alternates arm order, fixes the benchmark-only hash seed, and compares the
+allocating transactional reference with the production circular-span planner:
+
+```console
+cargo build --release --features benchmark-controls --bin causal_query_cache_profile
+benchmarks/causal/run-query-cache-victim-plan-experiment.sh \
+  target/release/causal_query_cache_profile /tmp/query-cache-victim-plan.csv
+```
+
+The accepted 2026-08-18 evidence is
+`allocation-free-in-place-query-cache-victim-planning.csv`, with its complete
+topology ledger in the adjacent `*-host-load.jsonl` file. The preserved
+`invalidated-mark-array-query-cache-victim-planning.csv` is deliberately not
+decision evidence: its arms used independent randomized hash keys and its
+first in-place implementation mutated the SIEVE hand/reference state when an
+admission was rejected. Its filename records that invalidation so it cannot be
+silently mistaken for the corrected result.
+
+The transition/traversal residual experiments use the same topology gate and
+retain exact result and work signatures. The class-zero runner compares the
+source-row-local packed-DFA result cache with the ordinary physical target
+probe. The generic environment runner compares any single same-binary
+resource-profiling control; it was used for static packed-row dispatch. The
+parent-path runner is intentionally a two-binary comparison because it changes
+type layout, and records both executable digests in every row:
+
+```console
+benchmarks/causal/run-class-zero-row-cache-experiment.sh \
+  BINARY DICTIONARY QUERIES OUTPUT.csv
+benchmarks/causal/run-resource-env-experiment.sh \
+  BINARY DICTIONARY QUERIES OUTPUT.csv \
+  LIBLEVENSHTEIN_CAUSAL_DISABLE_STATIC_PACKED_ROWS
+benchmarks/causal/run-parent-path-compaction-experiment.sh \
+  CONTROL_BINARY TREATMENT_BINARY DICTIONARY QUERIES OUTPUT.csv
+```
+
+The accepted evidence is `class-zero-row-cache.csv`,
+`static-packed-source-row-dispatch.csv`, and
+`compact-parent-path-metadata.csv`, each with its adjacent host-load ledger.
+The latter also has two headless Heaptrack captures summarized in
+`compact-parent-path-metadata-heaptrack.csv`; collection used
+`heaptrack --record-only` and analysis used only `heaptrack_print`.
+
 `validate_gate.py` checks exact-result equivalence and the construction,
 native-query, resource-boundary, and batch-size counter identities. Passing
 these identities validates the observations; it does not by itself authorize

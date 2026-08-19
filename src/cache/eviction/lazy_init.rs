@@ -73,7 +73,218 @@
 //! }
 //! ```
 
-use libdictenstein::{Dictionary, DictionaryValue, MappedDictionary, SyncStrategy};
+use crate::dictionary::node_adapter::{
+    impl_semantic_dictionary_node_generic, map_transparent_traversal_root,
+};
+use libdictenstein::{
+    Dictionary, DictionaryNode, DictionaryTraversalRoot, DictionaryValue, MappedDictionary,
+    MappedDictionaryNode, SnapshotTraversalCursor, SnapshotTraversalGraph, SyncStrategy,
+};
+use std::sync::Arc;
+
+/// Statically dispatched policy for synthesizing a missing final-node value.
+#[doc(hidden)]
+pub trait MissingValueInitializer<V: DictionaryValue>: Clone + Send + Sync {
+    fn initialize(&self) -> V;
+}
+
+/// `Default`-based missing-value policy.
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct DefaultValueInitializer;
+
+impl<V> MissingValueInitializer<V> for DefaultValueInitializer
+where
+    V: DictionaryValue + Default,
+{
+    #[inline]
+    fn initialize(&self) -> V {
+        V::default()
+    }
+}
+
+/// Function-pointer missing-value policy.
+#[doc(hidden)]
+pub struct FunctionValueInitializer<V: DictionaryValue>(fn() -> V);
+
+impl<V: DictionaryValue> Clone for FunctionValueInitializer<V> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<V: DictionaryValue> Copy for FunctionValueInitializer<V> {}
+
+impl<V: DictionaryValue> MissingValueInitializer<V> for FunctionValueInitializer<V> {
+    #[inline]
+    fn initialize(&self) -> V {
+        (self.0)()
+    }
+}
+
+/// Closure-backed missing-value policy. The closure is allocated once when
+/// the dictionary wrapper is constructed and shared by every retained node.
+#[doc(hidden)]
+pub struct ClosureValueInitializer<F>(Arc<F>);
+
+impl<F> Clone for ClosureValueInitializer<F> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+
+impl<F, V> MissingValueInitializer<V> for ClosureValueInitializer<F>
+where
+    F: Fn() -> V + Send + Sync,
+    V: DictionaryValue,
+{
+    #[inline]
+    fn initialize(&self) -> V {
+        (self.0)()
+    }
+}
+
+/// Node decorator shared by every lazy-initialization strategy.
+#[doc(hidden)]
+pub struct LazyInitNode<N, I> {
+    inner: N,
+    initializer: I,
+}
+
+impl<N: Clone, I: Clone> Clone for LazyInitNode<N, I> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            initializer: self.initializer.clone(),
+        }
+    }
+}
+
+impl<N, I> LazyInitNode<N, I> {
+    #[inline]
+    fn new(inner: N, initializer: I) -> Self {
+        Self { inner, initializer }
+    }
+}
+
+impl_semantic_dictionary_node_generic!(
+    [N, I],
+    LazyInitNode<N, I>,
+    [N: DictionaryNode, I: Clone + Send + Sync],
+    |owner, child| LazyInitNode::new(child, owner.initializer.clone()),
+    |owner| owner.inner.requires_final_units(),
+    |owner, units| owner.inner.accepts_final_units(units)
+);
+
+impl<N, I, V> MappedDictionaryNode for LazyInitNode<N, I>
+where
+    N: MappedDictionaryNode<Value = V>,
+    I: MissingValueInitializer<V>,
+    V: DictionaryValue,
+{
+    type Value = V;
+
+    #[inline]
+    fn value(&self) -> Option<Self::Value> {
+        self.inner.value().or_else(|| {
+            (!self.inner.requires_final_units() && self.inner.is_final())
+                .then(|| self.initializer.initialize())
+        })
+    }
+
+    #[inline]
+    fn value_at_final(&self) -> Option<Self::Value> {
+        self.inner
+            .value_at_final()
+            .or_else(|| (!self.inner.requires_final_units()).then(|| self.initializer.initialize()))
+    }
+
+    #[inline]
+    fn value_at_final_with_units(&self, units: &[Self::Unit]) -> Option<Self::Value> {
+        if !self.inner.accepts_final_units(units) {
+            return None;
+        }
+        self.inner
+            .value_at_final_with_units(units)
+            .or_else(|| Some(self.initializer.initialize()))
+    }
+
+    #[inline]
+    fn supports_snapshot_cursor_values(&self) -> bool {
+        self.inner.supports_snapshot_cursor_values()
+    }
+
+    #[inline]
+    fn supports_snapshot_graph_values(&self) -> bool {
+        self.inner.supports_snapshot_graph_values()
+    }
+
+    #[inline]
+    fn snapshot_traversal_graph(
+        &self,
+    ) -> Option<Arc<SnapshotTraversalGraph<Self::Unit, Self::SnapshotGraphValueHandle>>> {
+        self.inner.snapshot_traversal_graph()
+    }
+
+    #[inline]
+    unsafe fn snapshot_cursor_value(
+        &self,
+        cursor: Self::SnapshotCursor,
+    ) -> Option<Option<Self::Value>> {
+        // SAFETY: this decorator retains the exact inner cursor owner.
+        unsafe { self.inner.snapshot_cursor_value(cursor) }.map(|value| {
+            value.or_else(|| {
+                (!self.inner.requires_final_units()).then(|| self.initializer.initialize())
+            })
+        })
+    }
+
+    #[inline]
+    unsafe fn snapshot_cursor_value_with_units(
+        &self,
+        cursor: Self::SnapshotCursor,
+        units: &[Self::Unit],
+    ) -> Option<Option<Self::Value>> {
+        if !self.inner.accepts_final_units(units) {
+            return Some(None);
+        }
+        // SAFETY: cursor and root-relative units name the retained inner node.
+        unsafe { self.inner.snapshot_cursor_value_with_units(cursor, units) }
+            .map(|value| Some(value.unwrap_or_else(|| self.initializer.initialize())))
+    }
+
+    #[inline]
+    unsafe fn snapshot_graph_cursor_value(
+        &self,
+        graph: &SnapshotTraversalGraph<Self::Unit, Self::SnapshotGraphValueHandle>,
+        cursor: SnapshotTraversalCursor,
+    ) -> Option<Option<Self::Value>> {
+        // SAFETY: this decorator retains the exact inner graph/cursor owner.
+        unsafe { self.inner.snapshot_graph_cursor_value(graph, cursor) }.map(|value| {
+            value.or_else(|| {
+                (!self.inner.requires_final_units()).then(|| self.initializer.initialize())
+            })
+        })
+    }
+
+    #[inline]
+    unsafe fn snapshot_graph_cursor_value_with_units(
+        &self,
+        graph: &SnapshotTraversalGraph<Self::Unit, Self::SnapshotGraphValueHandle>,
+        cursor: SnapshotTraversalCursor,
+        units: &[Self::Unit],
+    ) -> Option<Option<Self::Value>> {
+        if !self.inner.accepts_final_units(units) {
+            return Some(None);
+        }
+        // SAFETY: graph, cursor, and units name the retained inner node.
+        unsafe {
+            self.inner
+                .snapshot_graph_cursor_value_with_units(graph, cursor, units)
+        }
+        .map(|value| Some(value.unwrap_or_else(|| self.initializer.initialize())))
+    }
+}
 
 //==============================================================================
 // LazyInitDefault - Zero-cost wrapper for Default values
@@ -129,15 +340,24 @@ impl<D> LazyInitDefault<D> {
     }
 }
 
-impl<D> Dictionary for LazyInitDefault<D>
+impl<D, V> Dictionary for LazyInitDefault<D>
 where
-    D: Dictionary,
+    D: MappedDictionary<Value = V>,
+    D::Node: MappedDictionaryNode<Value = V>,
+    V: DictionaryValue + Default,
 {
-    type Node = D::Node;
+    type Node = LazyInitNode<D::Node, DefaultValueInitializer>;
 
     #[inline]
     fn root(&self) -> Self::Node {
-        self.inner.root()
+        LazyInitNode::new(self.inner.root(), DefaultValueInitializer)
+    }
+
+    #[inline]
+    fn traversal_root(&self) -> DictionaryTraversalRoot<Self::Node> {
+        map_transparent_traversal_root(self.inner.traversal_root(), |node| {
+            LazyInitNode::new(node, DefaultValueInitializer)
+        })
     }
 
     #[inline]
@@ -154,11 +374,17 @@ where
     fn sync_strategy(&self) -> SyncStrategy {
         self.inner.sync_strategy()
     }
+
+    #[inline]
+    fn is_suffix_based(&self) -> bool {
+        self.inner.is_suffix_based()
+    }
 }
 
 impl<D, V> MappedDictionary for LazyInitDefault<D>
 where
     D: MappedDictionary<Value = V>,
+    D::Node: MappedDictionaryNode<Value = V>,
     V: DictionaryValue + Default,
 {
     type Value = V;
@@ -260,14 +486,26 @@ impl<D, V> LazyInitFn<D, V> {
 
 impl<D, V> Dictionary for LazyInitFn<D, V>
 where
-    D: Dictionary,
+    D: MappedDictionary<Value = V>,
+    D::Node: MappedDictionaryNode<Value = V>,
     V: DictionaryValue,
 {
-    type Node = D::Node;
+    type Node = LazyInitNode<D::Node, FunctionValueInitializer<V>>;
 
     #[inline]
     fn root(&self) -> Self::Node {
-        self.inner.root()
+        LazyInitNode::new(
+            self.inner.root(),
+            FunctionValueInitializer(self.initializer),
+        )
+    }
+
+    #[inline]
+    fn traversal_root(&self) -> DictionaryTraversalRoot<Self::Node> {
+        let initializer = FunctionValueInitializer(self.initializer);
+        map_transparent_traversal_root(self.inner.traversal_root(), |node| {
+            LazyInitNode::new(node, initializer)
+        })
     }
 
     #[inline]
@@ -284,11 +522,17 @@ where
     fn sync_strategy(&self) -> SyncStrategy {
         self.inner.sync_strategy()
     }
+
+    #[inline]
+    fn is_suffix_based(&self) -> bool {
+        self.inner.is_suffix_based()
+    }
 }
 
 impl<D, V> MappedDictionary for LazyInitFn<D, V>
 where
     D: MappedDictionary<Value = V>,
+    D::Node: MappedDictionaryNode<Value = V>,
     V: DictionaryValue,
 {
     type Value = V;
@@ -342,10 +586,18 @@ where
 ///
 /// - `D`: Inner dictionary type
 /// - `F`: Closure type that returns values
-#[derive(Clone)]
 pub struct LazyInit<D, F> {
     inner: D,
-    initializer: F,
+    initializer: Arc<F>,
+}
+
+impl<D: Clone, F> Clone for LazyInit<D, F> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            initializer: Arc::clone(&self.initializer),
+        }
+    }
 }
 
 impl<D, F> LazyInit<D, F> {
@@ -373,7 +625,7 @@ impl<D, F> LazyInit<D, F> {
     pub fn new(dict: D, initializer: F) -> Self {
         Self {
             inner: dict,
-            initializer,
+            initializer: Arc::new(initializer),
         }
     }
 
@@ -390,15 +642,29 @@ impl<D, F> LazyInit<D, F> {
     }
 }
 
-impl<D, F> Dictionary for LazyInit<D, F>
+impl<D, F, V> Dictionary for LazyInit<D, F>
 where
-    D: Dictionary,
+    D: MappedDictionary<Value = V>,
+    D::Node: MappedDictionaryNode<Value = V>,
+    F: Fn() -> V + Send + Sync,
+    V: DictionaryValue,
 {
-    type Node = D::Node;
+    type Node = LazyInitNode<D::Node, ClosureValueInitializer<F>>;
 
     #[inline]
     fn root(&self) -> Self::Node {
-        self.inner.root()
+        LazyInitNode::new(
+            self.inner.root(),
+            ClosureValueInitializer(Arc::clone(&self.initializer)),
+        )
+    }
+
+    #[inline]
+    fn traversal_root(&self) -> DictionaryTraversalRoot<Self::Node> {
+        let initializer = ClosureValueInitializer(Arc::clone(&self.initializer));
+        map_transparent_traversal_root(self.inner.traversal_root(), |node| {
+            LazyInitNode::new(node, initializer)
+        })
     }
 
     #[inline]
@@ -415,12 +681,18 @@ where
     fn sync_strategy(&self) -> SyncStrategy {
         self.inner.sync_strategy()
     }
+
+    #[inline]
+    fn is_suffix_based(&self) -> bool {
+        self.inner.is_suffix_based()
+    }
 }
 
 impl<D, F, V> MappedDictionary for LazyInit<D, F>
 where
     D: MappedDictionary<Value = V>,
-    F: Fn() -> V,
+    D::Node: MappedDictionaryNode<Value = V>,
+    F: Fn() -> V + Send + Sync,
     V: DictionaryValue,
 {
     type Value = V;
@@ -582,5 +854,137 @@ mod tests {
 
         // Term doesn't exist
         assert!(!lazy.contains_with_value("missing", |v| *v == 0));
+    }
+}
+
+#[cfg(test)]
+mod semantic_traversal_tests {
+    use super::*;
+    use crate::cache::eviction::Ttl;
+    use crate::transducer::{Algorithm, Transducer};
+    use libdictenstein::dynamic_dawg::DynamicDawg;
+    use std::collections::HashSet;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+
+    fn sparse_dictionary() -> DynamicDawg<u64> {
+        let dictionary = DynamicDawg::new();
+        dictionary.insert("cat");
+        dictionary.insert_with_value("dog", 9);
+        dictionary
+    }
+
+    fn eleven() -> u64 {
+        11
+    }
+
+    fn assert_native_graph<D>(dictionary: &D)
+    where
+        D: Dictionary,
+        D::Node: MappedDictionaryNode<Value = u64>,
+    {
+        let (graph, owner) = dictionary
+            .traversal_root()
+            .into_parts()
+            .into_projection_and_root();
+        assert!(graph.is_some());
+        assert!(owner.supports_snapshot_graph_values());
+    }
+
+    #[test]
+    fn every_lazy_policy_initializes_missing_values_during_native_traversal() {
+        let default = LazyInitDefault::new(sparse_dictionary());
+        assert_native_graph(&default);
+        assert_eq!(
+            Transducer::new(default, Algorithm::Standard)
+                .query_values("cat", 0)
+                .collect::<Vec<_>>(),
+            [("cat".to_owned(), 0, 0)]
+        );
+
+        let function = LazyInitFn::new(sparse_dictionary(), eleven);
+        assert_native_graph(&function);
+        assert_eq!(
+            Transducer::new(function, Algorithm::Standard)
+                .query_values("cat", 0)
+                .collect::<Vec<_>>(),
+            [("cat".to_owned(), 0, 11)]
+        );
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let observed_calls = Arc::clone(&calls);
+        let closure = LazyInit::new(sparse_dictionary(), move || {
+            observed_calls.fetch_add(1, Ordering::Relaxed);
+            13
+        });
+        assert_native_graph(&closure);
+        let transducer = Transducer::new(closure, Algorithm::Standard);
+
+        assert_eq!(
+            transducer.query_values("cat", 0).collect::<Vec<_>>(),
+            [("cat".to_owned(), 0, 13)]
+        );
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
+
+        assert_eq!(
+            transducer.query_values("dog", 0).collect::<Vec<_>>(),
+            [("dog".to_owned(), 0, 9)]
+        );
+        assert!(transducer.query_values("owl", 0).next().is_none());
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn lazy_semantics_cover_filtered_set_and_ranked_value_queries() {
+        let dictionary = LazyInitFn::new(sparse_dictionary(), eleven);
+        let transducer = Transducer::new(dictionary, Algorithm::Standard);
+
+        assert_eq!(
+            transducer
+                .query_filtered("cat", 0, |value| *value == 11)
+                .map(|candidate| candidate.term)
+                .collect::<Vec<_>>(),
+            ["cat"]
+        );
+
+        let values = HashSet::from([11_u64]);
+        assert_eq!(
+            transducer
+                .query_by_value_set("cat", 0, &values)
+                .map(|candidate| candidate.term)
+                .collect::<Vec<_>>(),
+            ["cat"]
+        );
+
+        let suggestions: Vec<_> = transducer
+            .query_suggestions("cat", 0, |_term: &str, _distance, value: &u64| {
+                *value as f64
+            })
+            .collect();
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].term, "cat");
+        assert_eq!(suggestions[0].value, 11);
+    }
+
+    #[test]
+    fn lazy_and_ttl_compose_without_resurrecting_expired_missing_values() {
+        let ttl_outside = Ttl::new(
+            LazyInitDefault::new(sparse_dictionary()),
+            Duration::from_secs(1),
+        );
+        assert_eq!(ttl_outside.get_value("cat"), Some(0));
+        ttl_outside.set_entry_age_for_test("cat", Duration::from_secs(2));
+        assert!(Transducer::new(ttl_outside, Algorithm::Standard)
+            .query_values("cat", 0)
+            .next()
+            .is_none());
+
+        let ttl_inside = Ttl::new(sparse_dictionary(), Duration::from_secs(1));
+        ttl_inside.set_entry_age_for_test("cat", Duration::from_secs(2));
+        let lazy_outside = LazyInitDefault::new(ttl_inside);
+        assert!(Transducer::new(lazy_outside, Algorithm::Standard)
+            .query_values("cat", 0)
+            .next()
+            .is_none());
     }
 }

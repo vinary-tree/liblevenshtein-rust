@@ -2,7 +2,9 @@
 
 use super::algorithm::Algorithm;
 use super::position::Position;
-use super::variant::{with_variant, AutomatonVariant, TransitionCtx, VariantSpec};
+use super::variant::{
+    with_variant, AutomatonVariant, SubsumptionScope, TransitionCtx, VariantSpec,
+};
 use super::variants::StandardV;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
@@ -172,9 +174,38 @@ impl State {
         position: Position,
         ctx: &TransitionCtx<V::Params>,
     ) -> bool {
+        let scope = if use_legacy_global_subsumption_scan() {
+            SubsumptionScope::Global
+        } else {
+            V::SUBSUMPTION_SCOPE
+        };
+        self.insert_with_scope::<V>(position, ctx, scope)
+    }
+
+    #[inline(always)]
+    fn insert_with_scope<V: AutomatonVariant>(
+        &mut self,
+        position: Position,
+        ctx: &TransitionCtx<V::Params>,
+        scope: SubsumptionScope,
+    ) -> bool {
         crate::causal_perf::record_state_insert_attempts(1);
+
+        let positions = self.positions();
+        let (candidate_start, candidate_end) = match scope {
+            SubsumptionScope::Global => (0, positions.len()),
+            SubsumptionScope::SameTermIndex => {
+                let start =
+                    positions.partition_point(|existing| existing.term_index < position.term_index);
+                let end = start
+                    + positions[start..]
+                        .partition_point(|existing| existing.term_index == position.term_index);
+                (start, end)
+            }
+        };
+
         // Check if this position is subsumed by an existing one
-        for existing in self.positions() {
+        for existing in &positions[candidate_start..candidate_end] {
             // Exact identity is independent of algorithmic dominance. In
             // particular, MergeAndSplit dominance is intentionally strict and
             // therefore irreflexive, but a canonical state must still reject
@@ -192,10 +223,29 @@ impl State {
         let positions = self.owned_positions_mut();
 
         // Remove any positions that this new position subsumes
-        positions.retain(|p| {
-            crate::causal_perf::record_subsumption_checks(1);
-            !V::subsumes(&position, p, ctx)
-        });
+        match scope {
+            SubsumptionScope::Global => positions.retain(|existing| {
+                crate::causal_perf::record_subsumption_checks(1);
+                !V::subsumes(&position, existing, ctx)
+            }),
+            SubsumptionScope::SameTermIndex => {
+                // Preserve even malformed/publicly constructed representatives:
+                // equal-cost distinct continuation kinds can coexist, and a
+                // cheaper candidate may dominate more than one of them.
+                let mut dominated = SmallVec::<[usize; 4]>::new();
+                for (offset, existing) in
+                    positions[candidate_start..candidate_end].iter().enumerate()
+                {
+                    crate::causal_perf::record_subsumption_checks(1);
+                    if V::subsumes(&position, existing, ctx) {
+                        dominated.push(candidate_start + offset);
+                    }
+                }
+                for index in dominated.into_iter().rev() {
+                    positions.remove(index);
+                }
+            }
+        }
 
         // Insert in sorted position
         let insert_pos = positions.binary_search(&position).unwrap_or_else(|pos| pos);
@@ -478,6 +528,23 @@ impl State {
     }
 }
 
+#[cfg(feature = "resource-profiling")]
+#[inline]
+fn use_legacy_global_subsumption_scan() -> bool {
+    use std::sync::OnceLock;
+
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_GLOBAL_SUBSUMPTION_SCAN").is_some()
+    })
+}
+
+#[cfg(not(feature = "resource-profiling"))]
+#[inline(always)]
+const fn use_legacy_global_subsumption_scan() -> bool {
+    false
+}
+
 impl Default for State {
     fn default() -> Self {
         Self::new()
@@ -493,6 +560,8 @@ impl FromIterator<Position> for State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transducer::variants::MergeSplitV;
+    use proptest::prelude::*;
 
     #[test]
     fn test_state_creation() {
@@ -561,6 +630,48 @@ mod tests {
         assert!(state.insert(position, Algorithm::MergeAndSplit, 3));
         assert!(!state.insert(position, Algorithm::MergeAndSplit, 3));
         assert_eq!(state.positions(), &[position]);
+    }
+
+    proptest! {
+        #[test]
+        fn merge_split_local_scope_is_extensionally_equal_to_global_scanning(
+            query_length in 0usize..24,
+            candidates in prop::collection::vec(
+                (0usize..32, 0usize..8, any::<bool>(), 0u8..4, 0u8..4),
+                0..128,
+            ),
+        ) {
+            let ctx = TransitionCtx::unit(query_length, 7, false);
+            let mut local = State::new();
+            let mut global = State::new();
+
+            for (term_index, num_errors, special, kind_selector, aux) in candidates {
+                let kind = if special {
+                    match kind_selector {
+                        0 => super::super::variant::PositionKind::OsaTransposing,
+                        1 => super::super::variant::PositionKind::Splitting,
+                        2 => super::super::variant::PositionKind::AffineQueryGap,
+                        _ => super::super::variant::PositionKind::DamerauPending,
+                    }
+                } else {
+                    super::super::variant::PositionKind::Normal
+                };
+                let position = Position::with_kind(term_index, num_errors, kind, aux);
+                let local_retained = local.insert_with_scope::<MergeSplitV>(
+                    position,
+                    &ctx,
+                    SubsumptionScope::SameTermIndex,
+                );
+                let global_retained = global.insert_with_scope::<MergeSplitV>(
+                    position,
+                    &ctx,
+                    SubsumptionScope::Global,
+                );
+
+                prop_assert_eq!(local_retained, global_retained);
+                prop_assert_eq!(local.positions(), global.positions());
+            }
+        }
     }
 
     #[test]

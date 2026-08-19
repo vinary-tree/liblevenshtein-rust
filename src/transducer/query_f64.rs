@@ -17,8 +17,11 @@ use super::{
     Algorithm, OperationCostsF64, StateF64, StatePoolF64, SubstitutionPolicy,
     SubstitutionPolicyFor, Unrestricted,
 };
-use crate::transducer::dictionary_traversal::TraversalSession;
-use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor};
+use crate::transducer::dictionary_traversal::{
+    CursorNativePath, ParentArenaPath, PathFrontier, ResultPathStrategy, TraversalCursor,
+    TraversalSession,
+};
+use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 
@@ -44,73 +47,6 @@ pub struct UnitCandidateF64<U: CharUnit> {
     pub term: Vec<U>,
     /// Weighted edit distance from the query (float).
     pub distance: f64,
-}
-
-const NO_PATH: usize = usize::MAX;
-
-struct QueryPathNodeF64<U: CharUnit> {
-    label: U,
-    depth: usize,
-    parent: usize,
-}
-
-struct QueryIntersectionF64<U: CharUnit> {
-    label: Option<U>,
-    position: SnapshotTraversalCursor,
-    state: StateF64,
-    parent: usize,
-}
-
-impl<U: CharUnit> QueryIntersectionF64<U> {
-    #[inline]
-    fn new(position: SnapshotTraversalCursor, state: StateF64) -> Self {
-        Self {
-            label: None,
-            position,
-            state,
-            parent: NO_PATH,
-        }
-    }
-
-    #[inline]
-    fn with_parent(
-        label: U,
-        position: SnapshotTraversalCursor,
-        state: StateF64,
-        parent: usize,
-    ) -> Self {
-        Self {
-            label: Some(label),
-            position,
-            state,
-            parent,
-        }
-    }
-
-    /// Reconstruct the matched term as its raw unit sequence (root → this node).
-    fn units(&self, path_arena: &[QueryPathNodeF64<U>]) -> Vec<U> {
-        let parent_depth = if self.parent == NO_PATH {
-            0
-        } else {
-            path_arena[self.parent].depth
-        };
-        let capacity = parent_depth + usize::from(self.label.is_some());
-        let mut units = Vec::with_capacity(capacity);
-
-        if let Some(label) = self.label {
-            units.push(label);
-        }
-
-        let mut current = self.parent;
-        while current != NO_PATH {
-            let node = &path_arena[current];
-            units.push(node.label);
-            current = node.parent;
-        }
-
-        units.reverse();
-        units
-    }
 }
 
 /// Trait for converting a match (matched units + float distance) into a result type.
@@ -199,20 +135,35 @@ impl<U: CharUnit> QueryResultF64<U> for UnitCandidateF64<U> {
 /// }
 /// ```
 pub struct QueryIteratorF64<N: DictionaryNode, R = String, P: SubstitutionPolicy = Unrestricted> {
-    pending: VecDeque<QueryIntersectionF64<N::Unit>>,
+    inner: PathQueryIteratorF64<N, R, P>,
+}
+
+enum PathQueryIteratorF64<N: DictionaryNode, R, P: SubstitutionPolicy> {
+    Parent(QueryIteratorF64Core<N, R, P, ParentArenaPath>),
+    Cursor(QueryIteratorF64Core<N, R, P, CursorNativePath>),
+}
+
+struct QueryIteratorF64Core<N, R, P, S>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy,
+    S: ResultPathStrategy<N>,
+{
+    pending: VecDeque<PathFrontier<S::Trace, StateF64>>,
     traversal: TraversalSession<N>,
     query: Vec<N::Unit>,
     max_cost: f64,
     algorithm: Algorithm,
     costs: OperationCostsF64,
     policy: P,
-    path_arena: Vec<QueryPathNodeF64<N::Unit>>,
+    path_storage: S::Storage,
     finished: bool,
     state_pool: StatePoolF64,
     /// Shared weighted transition cache; queued states are epsilon-closed.
     unit_transitions: CachedF64Transitions<N::Unit>,
     substring_mode: bool,
     _result_type: PhantomData<R>,
+    _path_strategy: PhantomData<fn() -> S>,
 }
 
 impl<N: DictionaryNode, R: QueryResultF64<N::Unit>> QueryIteratorF64<N, R, Unrestricted> {
@@ -328,23 +279,126 @@ impl<
         let unit_transitions = CachedF64Transitions::new(query_units.len(), max_cost, &costs);
 
         let (traversal, root) = TraversalSession::capture(root);
-        let mut pending = VecDeque::new();
-        pending.push_back(QueryIntersectionF64::new(root, initial));
+        Self {
+            inner: PathQueryIteratorF64::new(
+                root,
+                traversal,
+                initial,
+                query_units,
+                max_cost,
+                algorithm,
+                costs,
+                policy,
+                unit_transitions,
+                substring_mode,
+            ),
+        }
+    }
+}
 
+impl<N, R, P> PathQueryIteratorF64<N, R, P>
+where
+    N: DictionaryNode,
+    R: QueryResultF64<N::Unit>,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+{
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        root: TraversalCursor<N::SnapshotCursor>,
+        traversal: TraversalSession<N>,
+        initial: StateF64,
+        query: Vec<N::Unit>,
+        max_cost: f64,
+        algorithm: Algorithm,
+        costs: OperationCostsF64,
+        policy: P,
+        unit_transitions: CachedF64Transitions<N::Unit>,
+        substring_mode: bool,
+    ) -> Self {
+        if traversal.supports_cursor_key_units() {
+            Self::Cursor(QueryIteratorF64Core::new(
+                root,
+                traversal,
+                initial,
+                query,
+                max_cost,
+                algorithm,
+                costs,
+                policy,
+                unit_transitions,
+                substring_mode,
+            ))
+        } else {
+            Self::Parent(QueryIteratorF64Core::new(
+                root,
+                traversal,
+                initial,
+                query,
+                max_cost,
+                algorithm,
+                costs,
+                policy,
+                unit_transitions,
+                substring_mode,
+            ))
+        }
+    }
+
+    #[inline]
+    fn next_match(&mut self) -> Option<R> {
+        match self {
+            Self::Parent(core) => core.next_match(),
+            Self::Cursor(core) => core.next_match(),
+        }
+    }
+}
+
+impl<N, R, P, S> QueryIteratorF64Core<N, R, P, S>
+where
+    N: DictionaryNode,
+    R: QueryResultF64<N::Unit>,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    S: ResultPathStrategy<N>,
+{
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        root: TraversalCursor<N::SnapshotCursor>,
+        traversal: TraversalSession<N>,
+        initial: StateF64,
+        query: Vec<N::Unit>,
+        max_cost: f64,
+        algorithm: Algorithm,
+        costs: OperationCostsF64,
+        policy: P,
+        unit_transitions: CachedF64Transitions<N::Unit>,
+        substring_mode: bool,
+    ) -> Self {
+        let (mut pending, path_storage) = S::acquire_queue();
+        pending.push_back(PathFrontier::new(S::root(root), initial));
         Self {
             pending,
             traversal,
-            query: query_units,
+            query,
             max_cost,
             algorithm,
             costs,
             policy,
-            path_arena: Vec::with_capacity(64),
+            path_storage,
             finished: false,
             state_pool: StatePoolF64::new(),
             unit_transitions,
             substring_mode,
             _result_type: PhantomData,
+            _path_strategy: PhantomData,
+        }
+    }
+
+    #[inline]
+    fn next_match(&mut self) -> Option<R> {
+        if self.finished {
+            None
+        } else {
+            self.advance()
         }
     }
 
@@ -356,17 +410,27 @@ impl<
             if is_final {
                 // Infer the distance based on matching mode
                 let distance = if self.substring_mode {
-                    intersection.state.min_distance().unwrap_or(f64::INFINITY)
+                    &intersection
+                        .frontier
+                        .min_distance()
+                        .unwrap_or(f64::INFINITY)
                 } else {
-                    intersection
-                        .state
+                    &intersection
+                        .frontier
                         .infer_distance(self.query.len(), self.costs.deletion)
                         .unwrap_or(f64::INFINITY)
                 };
 
-                if distance <= self.max_cost + 1e-9 {
-                    let units = intersection.units(&self.path_arena);
-                    return Some(R::from_match(&units, distance));
+                if *distance <= self.max_cost + 1e-9 {
+                    let units = S::materialize_units(
+                        &intersection.trace,
+                        &self.traversal,
+                        &self.path_storage,
+                    );
+                    if !self.traversal.accepts_final_units(&units) {
+                        continue;
+                    }
+                    return Some(R::from_match(&units, *distance));
                 }
             }
         }
@@ -378,9 +442,9 @@ impl<
     /// Queue child intersections for exploration
     fn queue_children_and_finality(
         &mut self,
-        intersection: &QueryIntersectionF64<N::Unit>,
+        intersection: &PathFrontier<S::Trace, StateF64>,
     ) -> bool {
-        let mut child_parent_path = None;
+        let mut expansion = S::begin_expansion(&intersection.trace);
         let query = &self.query;
         let policy = &self.policy;
         let costs = &self.costs;
@@ -389,14 +453,14 @@ impl<
         let substring_mode = self.substring_mode;
         let unit_transitions = &mut self.unit_transitions;
         let state_pool = &mut self.state_pool;
-        let path_arena = &mut self.path_arena;
+        let path_storage = &mut self.path_storage;
         let pending = &mut self.pending;
 
         self.traversal.filter_map_edges_and_finality(
-            intersection.position,
+            S::position(&intersection.trace),
             |label| {
                 unit_transitions.transition(
-                    &intersection.state,
+                    &intersection.frontier,
                     state_pool,
                     policy,
                     label,
@@ -405,38 +469,31 @@ impl<
                 )
             },
             |label, child_position, next_state| {
-                let parent_path = match child_parent_path {
-                    Some(path) => path,
-                    None => {
-                        let path = match intersection.label {
-                            Some(current_label) => {
-                                let depth = if intersection.parent == NO_PATH {
-                                    1
-                                } else {
-                                    path_arena[intersection.parent].depth.saturating_add(1)
-                                };
-                                let index = path_arena.len();
-                                path_arena.push(QueryPathNodeF64 {
-                                    label: current_label,
-                                    depth,
-                                    parent: intersection.parent,
-                                });
-                                index
-                            }
-                            None => NO_PATH,
-                        };
-                        child_parent_path = Some(path);
-                        path
-                    }
-                };
-                pending.push_back(QueryIntersectionF64::with_parent(
-                    label,
-                    child_position,
+                pending.push_back(PathFrontier::new(
+                    S::child_trace(
+                        &intersection.trace,
+                        &mut expansion,
+                        label,
+                        child_position,
+                        path_storage,
+                    ),
                     next_state,
-                    parent_path,
                 ));
             },
         )
+    }
+}
+
+impl<N, R, P, S> Drop for QueryIteratorF64Core<N, R, P, S>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy,
+    S: ResultPathStrategy<N>,
+{
+    fn drop(&mut self) {
+        let pending = std::mem::take(&mut self.pending);
+        let path_storage = std::mem::take(&mut self.path_storage);
+        S::release_queue(pending, path_storage);
     }
 }
 
@@ -449,11 +506,7 @@ impl<
     type Item = R;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.finished {
-            None
-        } else {
-            self.advance()
-        }
+        self.inner.next_match()
     }
 }
 

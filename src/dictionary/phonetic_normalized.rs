@@ -67,7 +67,10 @@
 //! - [`crate::phonetic`] module for phonetic rule definitions
 
 use crate::cache::multimap::FuzzyMultiMap;
-use crate::dictionary::node_adapter::{for_each_wrapped_edge, visit_wrapped_edges_and_finality};
+use crate::dictionary::node_adapter::{
+    impl_transparent_dictionary_node, impl_transparent_mapped_dictionary_node,
+    map_transparent_traversal_root,
+};
 use crate::distance::standard_distance;
 use crate::phonetic::expansion::expand_phonetic_alternatives_char;
 use crate::phonetic::nfa::{compile as compile_nfa, ProductAutomatonChar};
@@ -79,8 +82,9 @@ use crate::transducer::Algorithm;
 use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
 use libdictenstein::dynamic_dawg::char_zipper::DynamicDawgCharZipper;
 use libdictenstein::{
-    DictZipper, Dictionary, DictionaryNode, DictionaryValue, MappedDictionary,
-    MappedDictionaryNode, MutableMappedDictionary, SyncStrategy, ValuedDictZipper,
+    DictZipper, Dictionary, DictionaryNode, DictionaryTraversalRoot, DictionaryValue,
+    MappedDictionary, MappedDictionaryNode, MutableMappedDictionary, SyncStrategy,
+    ValuedDictZipper,
 };
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -457,72 +461,10 @@ pub struct PhoneticNormalizedNode<N: DictionaryNode> {
     inner: N,
 }
 
-impl<N: DictionaryNode> DictionaryNode for PhoneticNormalizedNode<N> {
-    type Unit = N::Unit;
-
-    fn is_final(&self) -> bool {
-        self.inner.is_final()
-    }
-
-    fn transition(&self, label: Self::Unit) -> Option<Self> {
-        self.inner
-            .transition(label)
-            .map(|n| PhoneticNormalizedNode { inner: n })
-    }
-
-    fn edges(&self) -> Box<dyn Iterator<Item = (Self::Unit, Self)> + '_> {
-        Box::new(
-            self.inner
-                .edges()
-                .map(|(label, node)| (label, PhoneticNormalizedNode { inner: node })),
-        )
-    }
-
-    #[inline]
-    fn for_each_edge<F>(&self, visitor: F)
-    where
-        F: FnMut(Self::Unit, Self),
-    {
-        for_each_wrapped_edge(
-            &self.inner,
-            |inner| PhoneticNormalizedNode { inner },
-            visitor,
-        );
-    }
-
-    #[inline]
-    fn visit_edges_and_finality<F>(&self, visitor: F) -> bool
-    where
-        F: FnMut(Self::Unit, Self),
-    {
-        visit_wrapped_edges_and_finality(
-            &self.inner,
-            |inner| PhoneticNormalizedNode { inner },
-            visitor,
-        )
-    }
-
-    fn has_edge(&self, label: Self::Unit) -> bool {
-        self.inner.has_edge(label)
-    }
-
-    fn edge_count(&self) -> Option<usize> {
-        self.inner.edge_count()
-    }
-}
-
-impl<N: MappedDictionaryNode> MappedDictionaryNode for PhoneticNormalizedNode<N> {
-    type Value = N::Value;
-
-    fn value(&self) -> Option<Self::Value> {
-        self.inner.value()
-    }
-
-    #[inline]
-    fn value_at_final(&self) -> Option<Self::Value> {
-        self.inner.value_at_final()
-    }
-}
+impl_transparent_dictionary_node!(PhoneticNormalizedNode, |_owner, child| {
+    PhoneticNormalizedNode { inner: child }
+});
+impl_transparent_mapped_dictionary_node!(PhoneticNormalizedNode);
 
 // ============================================================================
 // ZIPPER WRAPPER
@@ -585,6 +527,13 @@ where
         }
     }
 
+    #[inline]
+    fn traversal_root(&self) -> DictionaryTraversalRoot<Self::Node> {
+        map_transparent_traversal_root(self.originals.traversal_root(), |inner| {
+            PhoneticNormalizedNode { inner }
+        })
+    }
+
     fn contains(&self, term: &str) -> bool {
         self.originals.contains(term)
     }
@@ -600,6 +549,11 @@ where
     fn sync_strategy(&self) -> SyncStrategy {
         // Our normalized_index uses internal sync, but defer to backend for originals
         SyncStrategy::InternalSync
+    }
+
+    #[inline]
+    fn is_suffix_based(&self) -> bool {
+        self.originals.is_suffix_based()
     }
 }
 

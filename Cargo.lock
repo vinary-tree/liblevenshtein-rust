@@ -641,6 +641,7 @@ dependencies = [
 name = "liblevenshtein"
 version = "0.10.0"
 dependencies = [
+ "ahash",
  "arc-swap",
  "bincode-next",
  "bytes",

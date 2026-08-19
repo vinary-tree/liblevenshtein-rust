@@ -34,7 +34,6 @@
 //! - **Insert + Remove**: [`DynamicDawg`](libdictenstein::dynamic_dawg::DynamicDawg)
 //! - **Substring search**: [`SuffixAutomaton`](libdictenstein::suffix_automaton::SuffixAutomaton)
 
-#[cfg(any(feature = "phonetic-rules", test))]
 pub(crate) mod node_adapter;
 
 // Keep phonetic_normalized locally since it depends on liblevenshtein's phonetic NFAs

@@ -19,7 +19,7 @@ pub use dyck::{
     DYCK_CORRECTION_MAX_WORK,
 };
 pub use product::{Frontier, LanguageProduct};
-#[cfg(feature = "bindings-phonetic")]
+#[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
 pub(crate) use query::MappedLanguageQueryIterator;
 pub use query::{LanguageMatch, LanguageQueryIterator, LanguageQueryStats};
 

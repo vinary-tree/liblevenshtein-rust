@@ -86,7 +86,8 @@ against the counting provider in `tests/support/interop_dictionary.rs`.
 - Immutable resources also optionally negotiate `vt.dict.graph.v1`. The
   consumer validates the vtable before invoking `graph`, then validates every
   pointer, count, range, flag, reserved byte, label, target, root, and nonzero
-  value cursor before publishing a native `SnapshotTraversalGraph<U>`. A live
+  value cursor before publishing a native
+  `SnapshotTraversalGraph<U, ForeignGraphValueHandle>`. A live
   resource advertising this immutable interface is rejected. `Unsupported`
   selects the callback-and-node-cache fallback described in § 3.1.
 
@@ -112,13 +113,24 @@ would silently alias distinct labels, the exact failure mode the
 forbids.
 
 For DynamicDAWG snapshots, `ForeignNode<U>` normally supplies one retained
-`SnapshotTraversalGraph<U>` to `TraversalSession`. Queued intersections then
-contain one copy-only dense cursor. Finality and sorted edge ranges are read
-directly from immutable arrays with no lock, provider callback, child-handle
-construction, or reference-count traffic. Only an accepted final match crosses
-the boundary through the graph vtable's value callback. Its `value_cursor` is
-an opaque graph-local token; the producer validates it before translating it to
-backend state.
+`SnapshotTraversalGraph<U, ForeignGraphValueHandle>` to `TraversalSession`.
+Queued intersections then contain one copy-only dense cursor. Finality and
+sorted edge ranges are read directly from immutable arrays with no lock,
+provider callback, child-handle construction, or reference-count traffic.
+Only an accepted final match crosses the boundary through the graph vtable's
+value callback. Its `ForeignGraphValueHandle` is an opaque graph-local token;
+the producer validates it before translating it to backend state.
+
+Native Rust dictionaries select their own associated direct-cursor and graph
+value-handle types. DynamicDAWG direct traversal retains an opaque
+strict-provenance pointer capability; DAT and compact graph traversal use a
+nonzero dense position. `TraversalCursor<C>` is a union whose active member is
+selected once by the containing session mode, so every hot queue entry remains
+one machine word for built-in backends without pointer tagging or an
+address-to-integer round trip. Reading a member is confined to the matching
+session arm. In the graph arm, the graph field is declared before the retained
+owner, making Rust destroy all native handles before the revision that owns
+them.
 
 When compact-graph negotiation is unsupported, `ForeignNode<U>` implements the
 same traversal traits through the base/visit vtables and validates every

@@ -45,6 +45,9 @@ smallvec = { version = "1.13", features = ["serde"] }
 typed-arena = { version = "2.0", optional = true }
 # Fast non-cryptographic hashing for internal use
 rustc-hash = "2.1"
+# Per-cache keyed hashing for adversarially supplied query text without the
+# latency cost of the standard library's SipHash-based RandomState.
+ahash = "0.8"
 # Lock-free atomic Arc swapping for DynamicDawgU64
 arc-swap = "1.7"
 # Error handling
@@ -106,6 +109,16 @@ crate-type = ["rlib", "cdylib", "staticlib"]
 [[bin]]
 name = "causal_query_profile"
 path = "src/bin/causal_query_profile.rs"
+
+[[bin]]
+name = "causal_phonetic_profile"
+path = "src/bin/causal_phonetic_profile.rs"
+required-features = ["phonetic-rules", "benchmark-controls"]
+
+[[bin]]
+name = "causal_query_cache_profile"
+path = "src/bin/causal_query_cache_profile.rs"
+required-features = ["benchmark-controls"]
 
 [[bin]]
 name = "causal_resource_profile"
@@ -417,6 +430,17 @@ required-features = ["pathmap-backend"]
 name = "phonetic_iteration_analysis"
 required-features = ["phonetic-rules"]
 
+[[example]]
+name = "concurrent_resource_snapshot_experiment"
+required-features = ["causal-resource-profiling"]
+
+[[example]]
+name = "query_cache_policy_experiment"
+
+[[example]]
+name = "query_cache_policy_matrix"
+required-features = ["benchmark-controls"]
+
 [profile.release]
 opt-level = 3
 lto = true
@@ -439,6 +463,7 @@ embedded-rules = ["phonetic-rules"]  # Pre-compiled English phonetic rules embed
 parallel-grep = ["rayon", "phonetic-rules"]  # Parallel phonetic grep with Rayon for multi-core document scanning
 perf-instrumentation = ["libdictenstein/perf-instrumentation"]  # Causal work counters (dev only)
 resource-profiling = ["bindings-core", "libdictenstein/bindings-core"]
+benchmark-controls = ["libdictenstein/benchmark-controls"]  # Same-binary A/B switches without causal counters
 causal-resource-profiling = [
     "resource-profiling",
     "perf-instrumentation",

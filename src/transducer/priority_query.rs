@@ -36,85 +36,230 @@
 //! }
 //! ```
 
-use super::transition::{FinishMode, TransitionSettings, UnitCostFrontier, UnitCostMachine};
+use super::transition::{
+    with_prepared_unit_cost_row, FinishMode, PreparedUnitCostRow, TransitionSettings,
+    UnitCostFrontier, UnitCostMachine,
+};
 use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
-use crate::transducer::dictionary_traversal::TraversalSession;
-use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor};
+use crate::transducer::dictionary_traversal::{
+    compare_parent_paths, materialize_parent_path, new_path_arena, push_parent_path, ContextHeap,
+    ParentPathKey, ParentPathNode, TraversalCursor, TraversalSession,
+};
+use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot};
 use std::cmp::Ordering;
+#[cfg(feature = "benchmark-controls")]
 use std::collections::BinaryHeap;
 
 /// Dictionary node paired with the current Levenshtein automaton state.
-struct PriorityIntersection {
-    position: SnapshotTraversalCursor,
+struct PriorityIntersection<N: DictionaryNode> {
+    position: TraversalCursor<N::SnapshotCursor>,
     state: UnitCostFrontier,
 }
 
-impl PriorityIntersection {
+impl<N: DictionaryNode> PriorityIntersection<N> {
     #[inline]
-    fn new(position: SnapshotTraversalCursor, state: UnitCostFrontier) -> Self {
+    fn new(position: TraversalCursor<N::SnapshotCursor>, state: UnitCostFrontier) -> Self {
         Self { position, state }
     }
 }
 
 /// Entry in the priority queue for A* search.
-struct SearchEntry<U: CharUnit> {
+struct SearchEntry<N: DictionaryNode, K> {
     /// Current dictionary node and automaton state.
-    intersection: PriorityIntersection,
-    /// Cached path units for deterministic heap tie-breaking.
-    term_units: Vec<U>,
+    intersection: PriorityIntersection<N>,
+    /// Constant-size key into the query-local parent-path arena.
+    path: K,
     /// Actual cost so far (minimum errors in state)
     g_cost: usize,
     /// f-cost = g-cost + heuristic, used for priority ordering
     f_cost: usize,
 }
 
-impl<U: CharUnit> SearchEntry<U> {
-    fn new(
-        intersection: PriorityIntersection,
-        term_units: Vec<U>,
-        g_cost: usize,
-        h_cost: usize,
-    ) -> Self {
+impl<N: DictionaryNode, K> SearchEntry<N, K> {
+    fn new(intersection: PriorityIntersection<N>, path: K, g_cost: usize, h_cost: usize) -> Self {
         Self {
             intersection,
-            term_units,
+            path,
             g_cost,
             f_cost: g_cost.saturating_add(h_cost),
         }
     }
 }
 
-// Implement ordering for min-heap (lower f-cost = higher priority)
-impl<U: CharUnit> Ord for SearchEntry<U> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // Primary: lower f-cost has higher priority (reverse for max-heap → min-heap)
-        // Secondary: lower g-cost has higher priority (prefer actual progress)
-        // Tertiary: lexicographic on term for determinism
-        match other.f_cost.cmp(&self.f_cost) {
-            Ordering::Equal => match other.g_cost.cmp(&self.g_cost) {
-                Ordering::Equal => self.term_units.cmp(&other.term_units),
-                ord => ord,
+/// Preserve the historical `BinaryHeap<SearchEntry>` ordering exactly while
+/// comparing compact parent-path keys against shared arena storage.
+#[inline]
+fn compare_arena_search_entries<N: DictionaryNode>(
+    paths: &[ParentPathNode<N::Unit>],
+    left: &SearchEntry<N, ArenaPath<N::Unit>>,
+    right: &SearchEntry<N, ArenaPath<N::Unit>>,
+) -> Ordering {
+    match right.f_cost.cmp(&left.f_cost) {
+        Ordering::Equal => match right.g_cost.cmp(&left.g_cost) {
+            Ordering::Equal => match left.path.first.cmp(&right.path.first) {
+                Ordering::Equal => compare_parent_paths(paths, left.path.key, right.path.key),
+                ordering => ordering,
             },
-            ord => ord,
+            ordering => ordering,
+        },
+        ordering => ordering,
+    }
+}
+
+trait PriorityPathStrategy<N: DictionaryNode>: 'static {
+    type Path;
+    type Queue;
+    type Storage;
+
+    fn new_queue() -> Self::Queue;
+    fn new_storage() -> Self::Storage;
+    fn root() -> Self::Path;
+    fn child(storage: &mut Self::Storage, parent: &Self::Path, label: N::Unit) -> Self::Path;
+    fn push(queue: &mut Self::Queue, storage: &Self::Storage, entry: SearchEntry<N, Self::Path>);
+    fn pop(queue: &mut Self::Queue, storage: &Self::Storage) -> Option<SearchEntry<N, Self::Path>>;
+    fn with_units<R>(
+        storage: &Self::Storage,
+        path: &Self::Path,
+        operation: impl FnOnce(&[N::Unit]) -> R,
+    ) -> R;
+}
+
+struct ArenaPriorityPath;
+
+#[derive(Clone, Copy)]
+struct ArenaPath<U: CharUnit> {
+    key: ParentPathKey,
+    /// Resolves comparisons across root branches without walking either
+    /// parent chain; equal first units retain the exact arena fallback.
+    first: Option<U>,
+}
+
+impl<N: DictionaryNode> PriorityPathStrategy<N> for ArenaPriorityPath {
+    type Path = ArenaPath<N::Unit>;
+    type Queue = ContextHeap<SearchEntry<N, Self::Path>>;
+    type Storage = Vec<ParentPathNode<N::Unit>>;
+
+    fn new_queue() -> Self::Queue {
+        ContextHeap::with_capacity(64)
+    }
+
+    fn new_storage() -> Self::Storage {
+        new_path_arena()
+    }
+
+    fn root() -> Self::Path {
+        ArenaPath {
+            key: ParentPathKey::ROOT,
+            first: None,
+        }
+    }
+
+    fn child(storage: &mut Self::Storage, parent: &Self::Path, label: N::Unit) -> Self::Path {
+        ArenaPath {
+            key: push_parent_path(storage, parent.key, label),
+            first: parent.first.or(Some(label)),
+        }
+    }
+
+    fn push(queue: &mut Self::Queue, storage: &Self::Storage, entry: SearchEntry<N, Self::Path>) {
+        queue.push_by(entry, |left, right| {
+            compare_arena_search_entries(storage, left, right)
+        });
+    }
+
+    fn pop(queue: &mut Self::Queue, storage: &Self::Storage) -> Option<SearchEntry<N, Self::Path>> {
+        queue.pop_by(|left, right| compare_arena_search_entries(storage, left, right))
+    }
+
+    fn with_units<R>(
+        storage: &Self::Storage,
+        path: &Self::Path,
+        operation: impl FnOnce(&[N::Unit]) -> R,
+    ) -> R {
+        let units = materialize_parent_path(storage, path.key);
+        operation(&units)
+    }
+}
+
+#[cfg(feature = "benchmark-controls")]
+struct LegacyPriorityPath;
+
+#[cfg(feature = "benchmark-controls")]
+struct LegacySearchEntry<N: DictionaryNode>(SearchEntry<N, Vec<N::Unit>>);
+
+#[cfg(feature = "benchmark-controls")]
+impl<N: DictionaryNode> Ord for LegacySearchEntry<N> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let left = &self.0;
+        let right = &other.0;
+        match right.f_cost.cmp(&left.f_cost) {
+            Ordering::Equal => match right.g_cost.cmp(&left.g_cost) {
+                Ordering::Equal => left.path.cmp(&right.path),
+                ordering => ordering,
+            },
+            ordering => ordering,
         }
     }
 }
 
-impl<U: CharUnit> PartialOrd for SearchEntry<U> {
+#[cfg(feature = "benchmark-controls")]
+impl<N: DictionaryNode> PartialOrd for LegacySearchEntry<N> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<U: CharUnit> PartialEq for SearchEntry<U> {
+#[cfg(feature = "benchmark-controls")]
+impl<N: DictionaryNode> PartialEq for LegacySearchEntry<N> {
     fn eq(&self, other: &Self) -> bool {
-        self.f_cost == other.f_cost
-            && self.g_cost == other.g_cost
-            && self.term_units == other.term_units
+        self.cmp(other) == Ordering::Equal
     }
 }
 
-impl<U: CharUnit> Eq for SearchEntry<U> {}
+#[cfg(feature = "benchmark-controls")]
+impl<N: DictionaryNode> Eq for LegacySearchEntry<N> {}
+
+#[cfg(feature = "benchmark-controls")]
+impl<N: DictionaryNode> PriorityPathStrategy<N> for LegacyPriorityPath {
+    type Path = Vec<N::Unit>;
+    type Queue = BinaryHeap<LegacySearchEntry<N>>;
+    type Storage = ();
+
+    fn new_queue() -> Self::Queue {
+        BinaryHeap::with_capacity(64)
+    }
+
+    fn new_storage() -> Self::Storage {}
+
+    fn root() -> Self::Path {
+        Vec::new()
+    }
+
+    fn child(_storage: &mut Self::Storage, parent: &Self::Path, label: N::Unit) -> Self::Path {
+        let mut child = parent.clone();
+        child.push(label);
+        child
+    }
+
+    fn push(queue: &mut Self::Queue, _storage: &Self::Storage, entry: SearchEntry<N, Self::Path>) {
+        queue.push(LegacySearchEntry(entry));
+    }
+
+    fn pop(
+        queue: &mut Self::Queue,
+        _storage: &Self::Storage,
+    ) -> Option<SearchEntry<N, Self::Path>> {
+        queue.pop().map(|entry| entry.0)
+    }
+
+    fn with_units<R>(
+        _storage: &Self::Storage,
+        path: &Self::Path,
+        operation: impl FnOnce(&[N::Unit]) -> R,
+    ) -> R {
+        operation(path)
+    }
+}
 
 /// Priority queue-based query result.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -134,8 +279,25 @@ pub struct PriorityCandidate {
 ///
 /// * `N` - Dictionary node type
 pub struct PriorityQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unrestricted> {
+    inner: PriorityQueryMode<N, P>,
+}
+
+enum PriorityQueryMode<N: DictionaryNode, P: SubstitutionPolicy> {
+    Arena(PriorityQueryCore<N, P, ArenaPriorityPath>),
+    #[cfg(feature = "benchmark-controls")]
+    Legacy(PriorityQueryCore<N, P, LegacyPriorityPath>),
+}
+
+struct PriorityQueryCore<N, P, S>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy,
+    S: PriorityPathStrategy<N>,
+{
     /// Priority queue ordered by f-cost
-    queue: BinaryHeap<SearchEntry<N::Unit>>,
+    queue: S::Queue,
+    /// Statically selected parent-path representation and storage.
+    path_storage: S::Storage,
     /// Retained snapshot owner and cursor traversal backend.
     traversal: TraversalSession<N>,
     /// Query units (bytes or chars)
@@ -185,12 +347,45 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         algorithm: Algorithm,
         policy: P,
     ) -> Self {
+        #[cfg(feature = "benchmark-controls")]
+        if legacy_priority_paths_requested() {
+            return Self {
+                inner: PriorityQueryMode::Legacy(PriorityQueryCore::new(
+                    root,
+                    query,
+                    max_distance,
+                    algorithm,
+                    policy,
+                )),
+            };
+        }
+
+        Self {
+            inner: PriorityQueryMode::Arena(PriorityQueryCore::new(
+                root,
+                query,
+                max_distance,
+                algorithm,
+                policy,
+            )),
+        }
+    }
+}
+
+impl<N, P, S> PriorityQueryCore<N, P, S>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    S: PriorityPathStrategy<N>,
+{
+    fn new(root: N, query: &str, max_distance: usize, algorithm: Algorithm, policy: P) -> Self {
         let query_units = N::Unit::from_str(query);
         let query_len = query_units.len();
         let settings = TransitionSettings::new(max_distance, algorithm, false);
         let (unit_transitions, initial) = UnitCostMachine::seeded::<P>(&query_units, settings);
 
-        let mut queue = BinaryHeap::with_capacity(64);
+        let mut queue = S::new_queue();
+        let path_storage = S::new_storage();
 
         let (traversal, root) = TraversalSession::capture(DictionaryTraversalRoot::owned(root));
 
@@ -199,15 +394,15 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         let g_cost = 0; // No errors yet at root
         let h_cost = query_len; // Must consume all query characters
 
-        queue.push(SearchEntry::new(
-            root_intersection,
-            Vec::new(),
-            g_cost,
-            h_cost,
-        ));
+        S::push(
+            &mut queue,
+            &path_storage,
+            SearchEntry::new(root_intersection, S::root(), g_cost, h_cost),
+        );
 
         Self {
             queue,
+            path_storage,
             traversal,
             query: query_units,
             query_len,
@@ -221,7 +416,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
     /// Get the next match from the priority queue.
     fn advance(&mut self) -> Option<PriorityCandidate> {
-        while let Some(entry) = self.queue.pop() {
+        while let Some(entry) = S::pop(&mut self.queue, &self.path_storage) {
             let is_final = self.expand_children_and_finality(&entry);
             // Check if this is a final match
             if is_final {
@@ -235,10 +430,17 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                     .unwrap_or(usize::MAX);
 
                 if distance <= self.max_distance {
-                    return Some(PriorityCandidate {
-                        term: N::Unit::to_string(&entry.term_units),
-                        distance,
+                    let candidate = S::with_units(&self.path_storage, &entry.path, |term_units| {
+                        self.traversal
+                            .accepts_final_units(term_units)
+                            .then(|| PriorityCandidate {
+                                term: N::Unit::to_string(term_units),
+                                distance,
+                            })
                     });
+                    if candidate.is_some() {
+                        return candidate;
+                    }
                 }
             }
         }
@@ -248,7 +450,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
 
     /// Expand children of a search entry into the priority queue.
     #[inline]
-    fn expand_children_and_finality(&mut self, entry: &SearchEntry<N::Unit>) -> bool {
+    fn expand_children_and_finality(&mut self, entry: &SearchEntry<N, S::Path>) -> bool {
         let query_len = self.query_len;
         let max_distance = self.max_distance;
         let algorithm = self.algorithm;
@@ -257,37 +459,37 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         let state_pool = &mut self.state_pool;
         let unit_transitions = &mut self.unit_transitions;
         let queue = &mut self.queue;
-
-        self.traversal.filter_map_edges_and_finality(
-            entry.intersection.position,
-            |label| {
-                let next_state = unit_transitions.step(
-                    entry.intersection.state,
-                    state_pool,
-                    policy,
-                    label,
-                    query,
-                    TransitionSettings::new(max_distance, algorithm, false),
-                )?;
-                let g_cost = unit_transitions.min_distance(next_state).unwrap_or(0);
-                if g_cost > max_distance {
-                    return None;
-                }
-                let max_consumed = unit_transitions.max_consumed(next_state);
-                let h_cost = query_len.saturating_sub(max_consumed);
-                Some((next_state, g_cost, h_cost))
-            },
-            |label, child_position, (next_state, g_cost, h_cost)| {
-                let child_intersection = PriorityIntersection::new(child_position, next_state);
-                let mut child_term_units = entry.term_units.clone();
-                child_term_units.push(label);
-                queue.push(SearchEntry::new(
-                    child_intersection,
-                    child_term_units,
-                    g_cost,
-                    h_cost,
-                ));
-            },
+        let path_storage = &mut self.path_storage;
+        let settings = TransitionSettings::new(max_distance, algorithm, false);
+        with_prepared_unit_cost_row!(
+            unit_transitions,
+            entry.intersection.state,
+            state_pool,
+            policy,
+            query,
+            settings,
+            |row| self.traversal.filter_map_edges_and_finality(
+                entry.intersection.position,
+                |label| {
+                    let next_state = row.step(label)?;
+                    let g_cost = row.min_distance(next_state).unwrap_or(0);
+                    if g_cost > max_distance {
+                        return None;
+                    }
+                    let max_consumed = row.max_consumed(next_state);
+                    let h_cost = query_len.saturating_sub(max_consumed);
+                    Some((next_state, g_cost, h_cost))
+                },
+                |label, child_position, (next_state, g_cost, h_cost)| {
+                    let child_intersection = PriorityIntersection::new(child_position, next_state);
+                    let child_path = S::child(path_storage, &entry.path, label);
+                    S::push(
+                        queue,
+                        path_storage,
+                        SearchEntry::new(child_intersection, child_path, g_cost, h_cost),
+                    );
+                },
+            )
         )
     }
 }
@@ -298,8 +500,21 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
     type Item = PriorityCandidate;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.advance()
+        match &mut self.inner {
+            PriorityQueryMode::Arena(core) => core.advance(),
+            #[cfg(feature = "benchmark-controls")]
+            PriorityQueryMode::Legacy(core) => core.advance(),
+        }
     }
+}
+
+#[cfg(feature = "benchmark-controls")]
+fn legacy_priority_paths_requested() -> bool {
+    use std::sync::OnceLock;
+    static REQUESTED: OnceLock<bool> = OnceLock::new();
+    *REQUESTED.get_or_init(|| {
+        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_CLONED_PRIORITY_PATHS").is_some()
+    })
 }
 
 /// Convenience function to create a priority query iterator.
@@ -432,6 +647,44 @@ mod tests {
         results.sort();
 
         assert_eq!(results, vec!["care", "cars", "cart"]);
+    }
+
+    #[cfg(feature = "benchmark-controls")]
+    #[test]
+    fn arena_paths_preserve_legacy_priority_order_exactly() {
+        let dictionary = DoubleArrayTrie::from_terms([
+            "a",
+            "aa",
+            "ab",
+            "aba",
+            "abb",
+            "b",
+            "ba",
+            "care",
+            "cars",
+            "cart",
+            "long-shared-prefix-a",
+            "long-shared-prefix-b",
+        ]);
+        for (query, distance) in [("a", 2), ("car", 2), ("long-shared-prefix", 2)] {
+            let mut arena = PriorityQueryCore::<_, _, ArenaPriorityPath>::new(
+                dictionary.root(),
+                query,
+                distance,
+                Algorithm::Standard,
+                Unrestricted,
+            );
+            let mut legacy = PriorityQueryCore::<_, _, LegacyPriorityPath>::new(
+                dictionary.root(),
+                query,
+                distance,
+                Algorithm::Standard,
+                Unrestricted,
+            );
+            let arena_results: Vec<_> = std::iter::from_fn(|| arena.advance()).collect();
+            let legacy_results: Vec<_> = std::iter::from_fn(|| legacy.advance()).collect();
+            assert_eq!(arena_results, legacy_results, "query={query:?}");
+        }
     }
 
     #[test]

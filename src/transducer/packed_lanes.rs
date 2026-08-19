@@ -116,10 +116,24 @@ impl PackedEditLaneLayout {
         self.lane_starts
     }
 
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
     #[inline(always)]
     pub(crate) fn active_mask(self) -> u64 {
         self.active_mask
+    }
+
+    /// Bits in exact-cost lanes that may still spend one edit.
+    #[inline(always)]
+    pub(crate) fn error_source_bits(self) -> u64 {
+        low_bits(self.max_distance * self.lane_width)
+    }
+
+    /// Query positions from which a two-unit operation can consume both units.
+    #[inline(always)]
+    pub(crate) fn two_unit_source_bits(self) -> u64 {
+        if self.query_length < 2 {
+            return 0;
+        }
+        self.lane_starts * low_bits(self.query_length - 1)
     }
 
     #[inline(always)]
@@ -190,6 +204,26 @@ impl PackedEditLaneLayout {
             packed
         } else {
             (packed >> (edit * self.lane_width)) & self.lane_mask
+        }
+    }
+
+    /// Visit every set `(edit cost, query position)` pair in an exact-cost
+    /// packed frontier.
+    ///
+    /// This is deliberately the single decoding seam shared by Standard,
+    /// OSA, and MergeSplit. Normal query traversal never decodes packed
+    /// frontiers; the operation exists for cold compatibility boundaries such
+    /// as converting a partially consumed ordered iterator to its legacy
+    /// positional prefix representation.
+    #[inline]
+    pub(crate) fn for_each_set_position(self, packed: u64, mut visit: impl FnMut(usize, usize)) {
+        for edit in 0..=self.max_distance {
+            let mut positions = self.lane(packed, edit);
+            while positions != 0 {
+                let position = positions.trailing_zeros() as usize;
+                visit(edit, position);
+                positions &= positions - 1;
+            }
         }
     }
 

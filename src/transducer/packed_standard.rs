@@ -20,6 +20,7 @@
 //! then shifts the consumed frontier by `k * (lane_width + 1)` for `k` query
 //! deletions. This retains exact edit costs without cumulative lane promotion.
 
+use super::packed_dfa::{ExactLabelDfa, ExactLabelDfaRow};
 use super::packed_lanes::PackedEditLaneLayout;
 use super::transition::TransitionSettings;
 use super::{Algorithm, SubstitutionPolicy, SubstitutionPolicyFor};
@@ -105,76 +106,6 @@ impl<U: CharUnit> ExactMaskResolver<U> {
     }
 }
 
-/// Query-local equivalence classes for exact matching.
-///
-/// Class zero denotes every unit absent from the query.  Every distinct query
-/// unit receives one non-zero class whose payload is the repeated packed match
-/// mask for that unit.  Dense byte-range units use one array load; arbitrary
-/// Unicode scalars and `u64` tokens retain the generic hash-map fallback.
-#[derive(Debug)]
-struct ExactLabelClasses<U: CharUnit> {
-    direct: [u8; DIRECT_MASK_SLOTS],
-    overflow: FxHashMap<U, u8>,
-    repeated_masks: Box<[u64]>,
-}
-
-impl<U: CharUnit> ExactLabelClasses<U> {
-    fn new(query: &[U], lane_starts: u64) -> Self {
-        let mut direct = [0u8; DIRECT_MASK_SLOTS];
-        let mut overflow = FxHashMap::default();
-        let mut repeated_masks = vec![0u64];
-
-        for (position, &unit) in query.iter().enumerate() {
-            let existing = match unit.to_dense_index() {
-                Some(slot) => direct[usize::from(slot)],
-                None => overflow.get(&unit).copied().unwrap_or(0),
-            };
-            let class = if existing == 0 {
-                let class = u8::try_from(repeated_masks.len())
-                    .expect("a packed query has fewer than 256 label classes");
-                repeated_masks.push(0);
-                match unit.to_dense_index() {
-                    Some(slot) => direct[usize::from(slot)] = class,
-                    None => {
-                        overflow.insert(unit, class);
-                    }
-                }
-                class
-            } else {
-                existing
-            };
-            repeated_masks[usize::from(class)] |= lane_starts << position;
-        }
-
-        Self {
-            direct,
-            overflow,
-            repeated_masks: repeated_masks.into_boxed_slice(),
-        }
-    }
-
-    #[inline(always)]
-    fn class_for(&self, unit: U) -> usize {
-        usize::from(match unit.to_dense_index() {
-            Some(slot) => self.direct[usize::from(slot)],
-            None => self.overflow.get(&unit).copied().unwrap_or(0),
-        })
-    }
-
-    #[inline(always)]
-    fn class_count(&self) -> usize {
-        self.repeated_masks.len()
-    }
-
-    #[inline(always)]
-    fn repeated_mask(&self, class: usize) -> u64 {
-        self.repeated_masks[class]
-    }
-}
-
-const DFA_TARGET_DEAD: u32 = u32::MAX;
-const DFA_TARGET_UNCOMPUTED: u32 = u32::MAX - 1;
-
 /// Lazy deterministic form of the packed bounded NFA.
 ///
 /// Queued frontiers become dense state identifiers.  The first visit to a
@@ -184,81 +115,55 @@ const DFA_TARGET_UNCOMPUTED: u32 = u32::MAX - 1;
 /// the concrete dictionary walk.
 #[derive(Debug)]
 struct PackedStandardDfa<U: CharUnit> {
-    classes: ExactLabelClasses<U>,
-    frontiers: Vec<u64>,
-    frontier_ids: FxHashMap<u64, u32>,
-    targets: Vec<u32>,
+    core: ExactLabelDfa<U, u64>,
 }
 
 impl<U: CharUnit> PackedStandardDfa<U> {
     fn new(query: &[U], layout: PackedEditLaneLayout) -> Self {
-        let classes = ExactLabelClasses::new(query, layout.lane_starts());
-        let seed = layout.exact_seed();
-        let mut frontier_ids = FxHashMap::default();
-        frontier_ids.insert(seed, 0);
-        let targets = vec![DFA_TARGET_UNCOMPUTED; classes.class_count()];
-        crate::causal_perf::record_packed_dfa_queries(1);
-        crate::causal_perf::record_packed_dfa_states_interned(1);
         Self {
-            classes,
-            frontiers: vec![seed],
-            frontier_ids,
-            targets,
+            core: ExactLabelDfa::new(query, layout.lane_starts(), layout.exact_seed()),
         }
     }
 
     #[inline(always)]
     fn seed(&self) -> u64 {
-        0
+        self.core.seed()
     }
 
     #[inline(always)]
     fn frontier(&self, state: u64) -> u64 {
-        self.frontiers[usize::try_from(state).expect("packed DFA state exceeds usize")]
+        self.core.frontier(state)
+    }
+
+    #[inline(always)]
+    fn prepare_row(&self, state: u64) -> ExactLabelDfaRow {
+        self.core.prepare_row(state)
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    #[inline(always)]
+    fn source_row_label_is_class_zero(&self, label: U) -> bool {
+        self.core.source_row_label_is_class_zero(label)
     }
 
     #[inline(always)]
     fn step(&mut self, state: u64, label: U, layout: PackedEditLaneLayout) -> Option<u64> {
-        let state = usize::try_from(state).expect("packed DFA state exceeds usize");
-        let class = self.classes.class_for(label);
-        let cell = state
-            .checked_mul(self.classes.class_count())
-            .and_then(|row| row.checked_add(class))
-            .expect("packed DFA transition index overflow");
-        let cached = self.targets[cell];
-        if cached != DFA_TARGET_UNCOMPUTED {
-            crate::causal_perf::record_packed_dfa_transition_hits(1);
-            return (cached != DFA_TARGET_DEAD).then_some(u64::from(cached));
-        }
+        self.core.step(state, label, |source, repeated_matches| {
+            step_word_exact_layout(layout, source, repeated_matches)
+        })
+    }
 
-        crate::causal_perf::record_packed_dfa_transition_misses(1);
-        let source = self.frontiers[state];
-        let repeated_matches = self.classes.repeated_mask(class);
-        let target = step_word_exact_layout(layout, source, repeated_matches);
-        let encoded = match target {
-            None => DFA_TARGET_DEAD,
-            Some(frontier) => match self.frontier_ids.get(&frontier).copied() {
-                Some(id) => id,
-                None => {
-                    let id = u32::try_from(self.frontiers.len())
-                        .expect("packed DFA state identifier exceeds u32");
-                    assert!(
-                        id < DFA_TARGET_UNCOMPUTED,
-                        "packed DFA state identifier space exhausted"
-                    );
-                    self.frontiers.push(frontier);
-                    self.frontier_ids.insert(frontier, id);
-                    self.targets.extend(std::iter::repeat_n(
-                        DFA_TARGET_UNCOMPUTED,
-                        self.classes.class_count(),
-                    ));
-                    crate::causal_perf::record_packed_dfa_states_interned(1);
-                    id
-                }
-            },
-        };
-        self.targets[cell] = encoded;
-        (encoded != DFA_TARGET_DEAD).then_some(u64::from(encoded))
+    #[inline(always)]
+    fn step_in_row(
+        &mut self,
+        row: &mut ExactLabelDfaRow,
+        label: U,
+        layout: PackedEditLaneLayout,
+    ) -> Option<u64> {
+        self.core
+            .step_in_row(row, label, |source, repeated_matches| {
+                step_word_exact_layout(layout, source, repeated_matches)
+            })
     }
 }
 
@@ -482,7 +387,22 @@ impl<U: CharUnit> PackedStandardMachine<U> {
         debug_assert_eq!(settings.max_distance, self.layout.max_distance());
         debug_assert_eq!(settings.algorithm, Algorithm::Standard);
         debug_assert_eq!(settings.prefix_mode, self.layout.terminal_bits() != 0);
+        self.step_prepared(source, policy, label, query)
+    }
 
+    /// Apply a transition whose query/configuration was validated when its
+    /// sibling edge row was prepared.
+    #[inline(always)]
+    pub(crate) fn step_prepared<P>(
+        &mut self,
+        source: u64,
+        policy: &P,
+        label: U,
+        query: &[U],
+    ) -> Option<u64>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
         if let Some(dfa) = &mut self.dfa {
             return dfa.step(source, label, self.layout);
         }
@@ -550,7 +470,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
             return self.step_lanewise(
                 source,
                 matches & (self.layout.lane_mask() >> 1),
-                settings.prefix_mode,
+                self.layout.terminal_bits() != 0,
             );
         }
 
@@ -560,6 +480,40 @@ impl<U: CharUnit> PackedStandardMachine<U> {
         }
 
         self.step_word_exact(source, matches)
+    }
+
+    #[inline(always)]
+    pub(crate) fn prepare_source_row(&self, source: u64) -> Option<ExactLabelDfaRow> {
+        self.dfa.as_ref().map(|dfa| dfa.prepare_row(source))
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    #[inline(always)]
+    pub(crate) fn source_row_label_is_class_zero(&self, label: U) -> bool {
+        self.dfa
+            .as_ref()
+            .is_some_and(|dfa| dfa.source_row_label_is_class_zero(label))
+    }
+
+    #[inline(always)]
+    pub(crate) fn step_prepared_source_row<P>(
+        &mut self,
+        source: &mut ExactLabelDfaRow,
+        _policy: &P,
+        label: U,
+        query: &[U],
+    ) -> Option<u64>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        if let Some(dfa) = &mut self.dfa {
+            return dfa.step_in_row(source, label, self.layout);
+        }
+        unreachable!(
+            "source-fixed rows are prepared only for an exact-label packed Standard DFA: policy={}, query_len={}",
+            std::any::type_name::<P>(),
+            query.len()
+        )
     }
 
     /// Apply every exact-cost edit lane simultaneously and close deletions in
@@ -677,6 +631,30 @@ impl<U: CharUnit> PackedStandardMachine<U> {
             };
         }
         self.layout.max_consumed(frontier)
+    }
+
+    /// Decode a packed frontier into the canonical positional Standard
+    /// antichain used by compatibility schedulers.
+    ///
+    /// The packed query path never calls this. It is a cold representation
+    /// bridge for APIs that can change execution semantics after iteration has
+    /// begun, notably ordered-to-prefix conversion.
+    pub(crate) fn canonical_state(&self, frontier: u64) -> super::State {
+        use super::variant::TransitionCtx;
+        use super::variants::StandardV;
+        use super::{Position, State};
+
+        let mut state = State::new();
+        let ctx = TransitionCtx::unit(
+            self.layout.query_length(),
+            self.layout.max_distance(),
+            false,
+        );
+        self.layout
+            .for_each_set_position(self.frontier_bits(frontier), |edit, position| {
+                state.insert_with::<StandardV>(Position::new(position, edit), &ctx);
+            });
+        state
     }
 
     #[inline(always)]

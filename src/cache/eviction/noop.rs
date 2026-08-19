@@ -26,10 +26,12 @@
 //! assert!(wrapped.contains("world"));
 //! ```
 
-use crate::dictionary::node_adapter::{for_each_wrapped_edge, visit_wrapped_edges_and_finality};
+use crate::dictionary::node_adapter::{
+    impl_transparent_dictionary_node, impl_transparent_mapped_dictionary_node,
+    map_transparent_traversal_root,
+};
 use libdictenstein::{
-    Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
-    SyncStrategy,
+    Dictionary, DictionaryTraversalRoot, DictionaryValue, MappedDictionary, SyncStrategy,
 };
 
 /// Identity wrapper that provides no eviction behavior.
@@ -114,6 +116,11 @@ where
     }
 
     #[inline]
+    fn traversal_root(&self) -> DictionaryTraversalRoot<Self::Node> {
+        map_transparent_traversal_root(self.inner.traversal_root(), NoopNode::new)
+    }
+
+    #[inline]
     fn len(&self) -> Option<usize> {
         self.inner.len()
     }
@@ -126,6 +133,11 @@ where
     #[inline]
     fn sync_strategy(&self) -> SyncStrategy {
         self.inner.sync_strategy()
+    }
+
+    #[inline]
+    fn is_suffix_based(&self) -> bool {
+        self.inner.is_suffix_based()
     }
 }
 
@@ -150,76 +162,15 @@ where
     }
 }
 
-impl<N> DictionaryNode for NoopNode<N>
-where
-    N: DictionaryNode,
-{
-    type Unit = N::Unit;
-
-    #[inline]
-    fn is_final(&self) -> bool {
-        self.inner.is_final()
-    }
-
-    #[inline]
-    fn transition(&self, label: Self::Unit) -> Option<Self> {
-        self.inner.transition(label).map(NoopNode::new)
-    }
-
-    #[inline]
-    fn edges(&self) -> Box<dyn Iterator<Item = (Self::Unit, Self)> + '_> {
-        Box::new(
-            self.inner
-                .edges()
-                .map(|(label, node)| (label, NoopNode::new(node))),
-        )
-    }
-
-    #[inline]
-    fn for_each_edge<F>(&self, visitor: F)
-    where
-        F: FnMut(Self::Unit, Self),
-    {
-        for_each_wrapped_edge(&self.inner, NoopNode::new, visitor);
-    }
-
-    #[inline]
-    fn visit_edges_and_finality<F>(&self, visitor: F) -> bool
-    where
-        F: FnMut(Self::Unit, Self),
-    {
-        visit_wrapped_edges_and_finality(&self.inner, NoopNode::new, visitor)
-    }
-
-    #[inline]
-    fn edge_count(&self) -> Option<usize> {
-        self.inner.edge_count()
-    }
-}
-
-impl<N, V> MappedDictionaryNode for NoopNode<N>
-where
-    N: MappedDictionaryNode<Value = V>,
-    V: DictionaryValue,
-{
-    type Value = V;
-
-    #[inline]
-    fn value(&self) -> Option<Self::Value> {
-        self.inner.value()
-    }
-
-    #[inline]
-    fn value_at_final(&self) -> Option<Self::Value> {
-        self.inner.value_at_final()
-    }
-}
+impl_transparent_dictionary_node!(NoopNode, |_owner, child| NoopNode::new(child));
+impl_transparent_mapped_dictionary_node!(NoopNode);
 
 #[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
     #[cfg(feature = "pathmap-backend")]
     use libdictenstein::pathmap::PathMapDictionary;
+    use libdictenstein::DictionaryNode;
 
     #[test]
     #[cfg(feature = "pathmap-backend")]

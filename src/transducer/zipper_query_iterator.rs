@@ -5,6 +5,7 @@
 //! zipper architecture and enables performance comparison with the existing
 //! node-based QueryIterator.
 
+use crate::transducer::dictionary_traversal::new_traversal_queue;
 use crate::transducer::transition::CachedUnitTransitions;
 use crate::transducer::{Algorithm, AutomatonZipper, Candidate, IntersectionZipper, StatePool};
 use libdictenstein::zipper::DictZipper;
@@ -105,7 +106,7 @@ where
         let automaton = AutomatonZipper::new(query.as_bytes(), max_distance, algorithm);
         let intersection = IntersectionZipper::new(dict_zipper, automaton);
 
-        let mut queue = VecDeque::with_capacity(64);
+        let mut queue = new_traversal_queue();
         queue.push_back(intersection);
 
         ZipperQueryIterator {

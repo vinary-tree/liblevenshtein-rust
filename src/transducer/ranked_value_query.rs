@@ -1,76 +1,32 @@
 //! Lazy value-aware queries ordered by distance and derived confidence.
 
 use super::suggestion::{Suggestion, SuggestionScorer};
-use super::transition::{FinishMode, TransitionSettings, UnitCostFrontier, UnitCostMachine};
-use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
-use crate::transducer::dictionary_traversal::{MappedValueSource, TraversalSession};
-use libdictenstein::value::DictionaryValue;
-use libdictenstein::{
-    CharUnit, DictionaryTraversalRoot, MappedDictionaryNode, SnapshotTraversalCursor,
+use super::transition::{
+    with_prepared_unit_cost_row, FinishMode, PreparedUnitCostRow, TransitionSettings,
+    UnitCostFrontier, UnitCostMachine,
 };
+use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
+use crate::transducer::dictionary_traversal::{
+    CursorNativePath, MappedValueSource, ParentArenaPath, PathFrontier, ResultPathStrategy,
+    TraversalCursor, TraversalSession,
+};
+use libdictenstein::value::DictionaryValue;
+use libdictenstein::{CharUnit, DictionaryTraversalRoot, MappedDictionaryNode};
 use std::collections::VecDeque;
 
-const NO_PATH: usize = usize::MAX;
-
-struct RankedPathNode<U: CharUnit> {
-    label: U,
-    depth: usize,
-    parent: usize,
-}
-
-struct RankedIntersection<N: MappedDictionaryNode> {
-    label: Option<N::Unit>,
-    position: SnapshotTraversalCursor,
-    state: UnitCostFrontier,
-    parent: usize,
+struct RankedIntersection<N: MappedDictionaryNode, E> {
+    path: E,
     children_queued: bool,
     final_source: Option<MappedValueSource<N>>,
 }
 
-impl<N: MappedDictionaryNode> RankedIntersection<N> {
-    fn root(position: SnapshotTraversalCursor, state: UnitCostFrontier) -> Self {
+impl<N: MappedDictionaryNode, E> RankedIntersection<N, E> {
+    fn new(path: E) -> Self {
         Self {
-            label: None,
-            position,
-            state,
-            parent: NO_PATH,
+            path,
             children_queued: false,
             final_source: None,
         }
-    }
-
-    fn child(
-        label: N::Unit,
-        position: SnapshotTraversalCursor,
-        state: UnitCostFrontier,
-        parent: usize,
-    ) -> Self {
-        Self {
-            label: Some(label),
-            position,
-            state,
-            parent,
-            children_queued: false,
-            final_source: None,
-        }
-    }
-
-    fn term(&self, paths: &[RankedPathNode<N::Unit>]) -> String {
-        let mut units = Vec::with_capacity(if self.parent == NO_PATH {
-            usize::from(self.label.is_some())
-        } else {
-            paths[self.parent].depth + usize::from(self.label.is_some())
-        });
-        if let Some(label) = self.label {
-            units.push(label);
-        }
-        let mut cursor = self.parent;
-        while cursor != NO_PATH {
-            units.push(paths[cursor].label);
-            cursor = paths[cursor].parent;
-        }
-        units.reverse();
-        N::Unit::to_string(&units)
     }
 }
 
@@ -85,17 +41,76 @@ where
     N: MappedDictionaryNode,
     S: SuggestionScorer<N::Value>,
 {
-    pending_by_distance: Vec<VecDeque<RankedIntersection<N>>>,
+    inner: PathRankedValueQueryIterator<N, S, P>,
+}
+
+enum PathRankedValueQueryIterator<N, C, P>
+where
+    N: MappedDictionaryNode,
+    C: SuggestionScorer<N::Value>,
+    P: SubstitutionPolicy,
+{
+    Parent(RankedValueQueryCore<N, C, P, ParentArenaPath>),
+    Cursor(RankedValueQueryCore<N, C, P, CursorNativePath>),
+}
+
+type RankedPending<N, T> = Vec<VecDeque<RankedIntersection<N, PathFrontier<T, UnitCostFrontier>>>>;
+
+fn queue_ranked_children_with_prepared_row<N, K, R>(
+    intersection: &mut RankedIntersection<N, PathFrontier<K::Trace, UnitCostFrontier>>,
+    traversal: &mut TraversalSession<N>,
+    row: &mut R,
+    max_distance: usize,
+    path_storage: &mut K::Storage,
+    pending: &mut RankedPending<N, K::Trace>,
+) where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    K: ResultPathStrategy<N>,
+    R: PreparedUnitCostRow<N::Unit>,
+{
+    let mut expansion = K::begin_expansion(&intersection.path.trace);
+    intersection.final_source = traversal.filter_map_edges_and_final_source(
+        K::position(&intersection.path.trace),
+        |label| {
+            let state = row.step(label)?;
+            row.min_distance(state)
+                .filter(|distance| *distance <= max_distance)
+                .map(|distance| (state, distance))
+        },
+        |label, child_position, (state, distance)| {
+            pending[distance].push_back(RankedIntersection::new(PathFrontier::new(
+                K::child_trace(
+                    &intersection.path.trace,
+                    &mut expansion,
+                    label,
+                    child_position,
+                    path_storage,
+                ),
+                state,
+            )));
+        },
+    );
+}
+
+struct RankedValueQueryCore<N, C, P, K>
+where
+    N: MappedDictionaryNode,
+    C: SuggestionScorer<N::Value>,
+    P: SubstitutionPolicy,
+    K: ResultPathStrategy<N>,
+{
+    pending_by_distance: RankedPending<N, K::Trace>,
     traversal: TraversalSession<N>,
     current_distance: usize,
     max_distance: usize,
     query: Vec<N::Unit>,
     algorithm: Algorithm,
-    scorer: S,
+    scorer: C,
     policy: P,
     state_pool: StatePool,
     unit_transitions: UnitCostMachine<N::Unit>,
-    path_arena: Vec<RankedPathNode<N::Unit>>,
+    path_storage: K::Storage,
     sorted_buffer: Vec<Suggestion<N::Value>>,
 }
 
@@ -150,7 +165,25 @@ where
         scorer: S,
         policy: P,
     ) -> Self {
-        Self::with_units(
+        Self::with_policy_traversal_root(
+            DictionaryTraversalRoot::owned(root),
+            query,
+            max_distance,
+            algorithm,
+            scorer,
+            policy,
+        )
+    }
+
+    pub(crate) fn with_policy_traversal_root(
+        root: DictionaryTraversalRoot<N>,
+        query: String,
+        max_distance: usize,
+        algorithm: Algorithm,
+        scorer: S,
+        policy: P,
+    ) -> Self {
+        Self::with_units_root(
             root,
             N::Unit::from_str(&query),
             max_distance,
@@ -169,7 +202,7 @@ where
         scorer: S,
         policy: P,
     ) -> Self {
-        Self::with_units_root(
+        Self::with_units_traversal_root(
             DictionaryTraversalRoot::owned(root),
             query,
             max_distance,
@@ -177,6 +210,17 @@ where
             scorer,
             policy,
         )
+    }
+
+    pub(crate) fn with_units_traversal_root(
+        root: DictionaryTraversalRoot<N>,
+        query: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+        scorer: S,
+        policy: P,
+    ) -> Self {
+        Self::with_units_root(root, query, max_distance, algorithm, scorer, policy)
     }
 
     fn with_units_root(
@@ -189,11 +233,127 @@ where
     ) -> Self {
         let settings = TransitionSettings::new(max_distance, algorithm, false);
         let (unit_transitions, initial) = UnitCostMachine::seeded::<P>(&query, settings);
-        let mut pending_by_distance = (0..=max_distance)
-            .map(|_| VecDeque::with_capacity(32))
-            .collect::<Vec<_>>();
         let (traversal, root) = TraversalSession::capture_mapped(root);
-        pending_by_distance[0].push_back(RankedIntersection::root(root, initial));
+        Self {
+            inner: PathRankedValueQueryIterator::new(
+                root,
+                traversal,
+                query,
+                max_distance,
+                algorithm,
+                scorer,
+                policy,
+                unit_transitions,
+                initial,
+            ),
+        }
+    }
+
+    /// Current result distance layer. Exposed for streaming instrumentation.
+    pub fn current_distance(&self) -> usize {
+        self.inner.current_distance()
+    }
+
+    /// Number of materialized results in the current layer.
+    pub fn buffered_results(&self) -> usize {
+        self.inner.buffered_results()
+    }
+}
+
+impl<N, C, P> PathRankedValueQueryIterator<N, C, P>
+where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    C: SuggestionScorer<N::Value>,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+{
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        root: TraversalCursor<N::SnapshotCursor>,
+        traversal: TraversalSession<N>,
+        query: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+        scorer: C,
+        policy: P,
+        unit_transitions: UnitCostMachine<N::Unit>,
+        initial: UnitCostFrontier,
+    ) -> Self {
+        if traversal.supports_cursor_key_units() {
+            Self::Cursor(RankedValueQueryCore::new(
+                root,
+                traversal,
+                query,
+                max_distance,
+                algorithm,
+                scorer,
+                policy,
+                unit_transitions,
+                initial,
+            ))
+        } else {
+            Self::Parent(RankedValueQueryCore::new(
+                root,
+                traversal,
+                query,
+                max_distance,
+                algorithm,
+                scorer,
+                policy,
+                unit_transitions,
+                initial,
+            ))
+        }
+    }
+
+    fn current_distance(&self) -> usize {
+        match self {
+            Self::Parent(core) => core.current_distance,
+            Self::Cursor(core) => core.current_distance,
+        }
+    }
+
+    fn buffered_results(&self) -> usize {
+        match self {
+            Self::Parent(core) => core.sorted_buffer.len(),
+            Self::Cursor(core) => core.sorted_buffer.len(),
+        }
+    }
+
+    fn advance(&mut self) -> Option<Suggestion<N::Value>> {
+        match self {
+            Self::Parent(core) => core.advance(),
+            Self::Cursor(core) => core.advance(),
+        }
+    }
+}
+
+impl<N, C, P, K> RankedValueQueryCore<N, C, P, K>
+where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    C: SuggestionScorer<N::Value>,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    K: ResultPathStrategy<N>,
+{
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        root: TraversalCursor<N::SnapshotCursor>,
+        traversal: TraversalSession<N>,
+        query: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+        scorer: C,
+        policy: P,
+        unit_transitions: UnitCostMachine<N::Unit>,
+        initial: UnitCostFrontier,
+    ) -> Self {
+        let (mut pending_by_distance, path_storage) =
+            K::cold_buckets(max_distance.saturating_add(1));
+        pending_by_distance[0].push_back(RankedIntersection::new(PathFrontier::new(
+            K::root(root),
+            initial,
+        )));
         Self {
             pending_by_distance,
             traversal,
@@ -205,76 +365,43 @@ where
             policy,
             state_pool: StatePool::new(),
             unit_transitions,
-            path_arena: Vec::with_capacity(64),
+            path_storage,
             sorted_buffer: Vec::with_capacity(64),
         }
     }
 
-    /// Current result distance layer. Exposed for streaming instrumentation.
-    pub fn current_distance(&self) -> usize {
-        self.current_distance
-    }
-
-    /// Number of materialized results in the current layer.
-    pub fn buffered_results(&self) -> usize {
-        self.sorted_buffer.len()
-    }
-
-    fn queue_children_and_finality(&mut self, intersection: &mut RankedIntersection<N>) -> bool {
+    fn queue_children_and_finality(
+        &mut self,
+        intersection: &mut RankedIntersection<N, PathFrontier<K::Trace, UnitCostFrontier>>,
+    ) -> bool {
         if intersection.children_queued {
             return intersection.final_source.is_some();
         }
         intersection.children_queued = true;
-        let mut parent_path = None;
         let state_pool = &mut self.state_pool;
         let unit_transitions = &mut self.unit_transitions;
         let policy = &self.policy;
         let query = &self.query;
         let max_distance = self.max_distance;
         let algorithm = self.algorithm;
-        let paths = &mut self.path_arena;
+        let path_storage = &mut self.path_storage;
         let pending = &mut self.pending_by_distance;
-        intersection.final_source = self.traversal.filter_map_edges_and_final_source(
-            intersection.position,
-            |label| {
-                let state = unit_transitions.step(
-                    intersection.state,
-                    state_pool,
-                    policy,
-                    label,
-                    query,
-                    TransitionSettings::new(max_distance, algorithm, false),
-                )?;
-                unit_transitions
-                    .min_distance(state)
-                    .filter(|distance| *distance <= max_distance)
-                    .map(|distance| (state, distance))
-            },
-            |label, child_position, (state, distance)| {
-                let parent = *parent_path.get_or_insert_with(|| match intersection.label {
-                    Some(current) => {
-                        let depth = if intersection.parent == NO_PATH {
-                            1
-                        } else {
-                            paths[intersection.parent].depth.saturating_add(1)
-                        };
-                        let index = paths.len();
-                        paths.push(RankedPathNode {
-                            label: current,
-                            depth,
-                            parent: intersection.parent,
-                        });
-                        index
-                    }
-                    None => NO_PATH,
-                });
-                pending[distance].push_back(RankedIntersection::child(
-                    label,
-                    child_position,
-                    state,
-                    parent,
-                ));
-            },
+        let settings = TransitionSettings::new(max_distance, algorithm, false);
+        with_prepared_unit_cost_row!(
+            unit_transitions,
+            intersection.path.frontier,
+            state_pool,
+            policy,
+            query,
+            settings,
+            |row| queue_ranked_children_with_prepared_row::<N, K, _>(
+                intersection,
+                &mut self.traversal,
+                &mut row,
+                max_distance,
+                path_storage,
+                pending,
+            )
         );
         intersection.final_source.is_some()
     }
@@ -312,7 +439,11 @@ where
                 if is_final {
                     let distance = self
                         .unit_transitions
-                        .finish_distance(intersection.state, FinishMode::Complete, self.query.len())
+                        .finish_distance(
+                            intersection.path.frontier,
+                            FinishMode::Complete,
+                            self.query.len(),
+                        )
                         .unwrap_or(usize::MAX);
                     if distance <= self.max_distance {
                         if distance > self.current_distance {
@@ -324,8 +455,31 @@ where
                                 .final_source
                                 .take()
                                 .expect("a final ranked intersection retains its value source");
-                            if let Some(value) = self.traversal.resolve_final_value(final_source) {
-                                let term = intersection.term(&self.path_arena);
+                            let final_units = self.traversal.requires_final_units().then(|| {
+                                K::materialize_units(
+                                    &intersection.path.trace,
+                                    &self.traversal,
+                                    &self.path_storage,
+                                )
+                            });
+                            if final_units
+                                .as_deref()
+                                .is_some_and(|units| !self.traversal.accepts_final_units(units))
+                            {
+                                continue;
+                            }
+                            if let Some(value) = self
+                                .traversal
+                                .resolve_final_value(final_source, final_units.as_deref())
+                            {
+                                let units = final_units.unwrap_or_else(|| {
+                                    K::materialize_units(
+                                        &intersection.path.trace,
+                                        &self.traversal,
+                                        &self.path_storage,
+                                    )
+                                });
+                                let term = N::Unit::to_string(&units);
                                 let confidence =
                                     self.normalized_confidence(&term, distance, &value);
                                 self.sorted_buffer.push(Suggestion {
@@ -360,7 +514,7 @@ where
     type Item = Suggestion<N::Value>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.advance()
+        self.inner.advance()
     }
 }
 

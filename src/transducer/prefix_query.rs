@@ -12,10 +12,8 @@ use super::{
     Algorithm, NoPruning, PrefixPruner, StatePool, SubstitutionPolicy, SubstitutionPolicyFor,
     Unrestricted,
 };
-use crate::transducer::dictionary_traversal::TraversalSession;
-use libdictenstein::{
-    CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor,
-};
+use crate::transducer::dictionary_traversal::{DfsNodeEdges, TraversalCursor, TraversalSession};
+use libdictenstein::{CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot};
 
 /// Work counters for a prefix-pruned fuzzy DFS.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -41,32 +39,25 @@ pub struct PrefixQueryMatch<U: CharUnit> {
     pub score: Option<f64>,
 }
 
-struct Frame<U: CharUnit> {
-    edges: std::vec::IntoIter<(U, SnapshotTraversalCursor)>,
+struct Frame<N: DictionaryNode> {
+    edges: DfsNodeEdges<N>,
     state: UnitCostFrontier,
-    entered_by: Option<U>,
+    entered_by: Option<N::Unit>,
     is_final: bool,
     final_checked: bool,
 }
 
-impl<U: CharUnit> Frame<U> {
-    fn new<N>(
-        position: SnapshotTraversalCursor,
+impl<N: DictionaryNode> Frame<N> {
+    fn new(
+        position: TraversalCursor<N::SnapshotCursor>,
         state: UnitCostFrontier,
-        entered_by: Option<U>,
+        entered_by: Option<N::Unit>,
         traversal: &mut TraversalSession<N>,
-    ) -> Self
-    where
-        N: DictionaryNode<Unit = U>,
-    {
-        let mut edges = Vec::new();
-        let is_final = traversal.filter_map_edges_and_finality(
-            position,
-            |label| Some(label),
-            |label, child, _| edges.push((label, child)),
-        );
+    ) -> Self {
+        let edges = traversal.open_dfs_node(position);
+        let is_final = edges.is_final();
         Self {
-            edges: edges.into_iter(),
+            edges,
             state,
             entered_by,
             is_final,
@@ -93,7 +84,7 @@ where
     substitution_policy: S,
     prefix_pruner: Option<P>,
     substring_mode: bool,
-    stack: Vec<Frame<N::Unit>>,
+    stack: Vec<Frame<N>>,
     traversal: TraversalSession<N>,
     prefix: Vec<N::Unit>,
     state_pool: StatePool,
@@ -170,7 +161,7 @@ where
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn with_traversal_root(
+    pub(crate) fn with_traversal_root(
         root: DictionaryTraversalRoot<N>,
         query: Vec<N::Unit>,
         max_distance: usize,
@@ -284,6 +275,9 @@ where
             if let Some((true, Some(distance))) = unchecked_final {
                 if distance <= self.max_distance {
                     let prefix = self.prefix.clone();
+                    if !self.traversal.accepts_final_units(&prefix) {
+                        continue;
+                    }
                     if self.pruner_mut().permits_accept(&prefix) {
                         let score = self.pruner_mut().accept(&prefix);
                         return Some(PrefixQueryMatch {
@@ -295,12 +289,13 @@ where
                 }
             }
 
-            let edge = self
-                .stack
-                .last_mut()
-                .expect("the DFS stack was observed non-empty")
-                .edges
-                .next();
+            let edge = self.traversal.next_dfs_edge(
+                &mut self
+                    .stack
+                    .last_mut()
+                    .expect("the DFS stack was observed non-empty")
+                    .edges,
+            );
             if let Some((unit, child_position)) = edge {
                 self.stats.edges_enumerated = self.stats.edges_enumerated.saturating_add(1);
                 let depth = self.prefix.len().saturating_add(1);

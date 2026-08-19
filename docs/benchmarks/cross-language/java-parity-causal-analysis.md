@@ -745,7 +745,7 @@ to 82.076 ms (-4.16%) with the exact signature unchanged. The raw producer ABI
 also uses checked one-based dense value tokens: zero, out-of-range, and forged
 cursors fail before any backend pointer is touched.
 
-#### Why bounded approximate LFU was rejected
+#### Why bounded approximate LFU was rejected for product expansions
 
 The product-reuse trace motivated a bounded lossy-cache investigation rather
 than an unbounded memo table. TinyLFU and W-TinyLFU use approximate frequency
@@ -773,6 +773,154 @@ frequent records are cheap leaves. Production therefore retains no second-
 level product cache. The accepted query-local transition tables already cache
 the expensive recurrence at its semantic key, with constant bounded state and
 no eviction policy.
+
+#### Why bounded approximate LFU was accepted for complete query results
+
+The complete-query cache is a different reuse boundary. Its miss cost is the
+entire dictionary/automaton product walk and its keys recur across calls, so
+frequency can predict substantial saved work. `VersionedQueryCache<V>` uses a
+four-row packed 4-bit frequency sketch and two-probe doorkeeper for TinyLFU
+admission, with periodic aging, plus one SIEVE reference bit per resident for
+low-mutation victim selection. Entry count and caller-defined logical weight
+are independent hard bounds; hash collisions still compare the complete query
+text and distance; distance variants share one `Arc<str>`; and an immutable
+result slice is shared only after exact computation. A dictionary-version
+change clears both residency and policy. The cache is deliberately
+single-owner and synchronization-free so callers can shard ownership without
+paying for a lock or atomic protocol on every hit.
+
+The deterministic 128-entry policy matrix separates scan resistance,
+adaptation, and Zipf locality:
+
+| policy | hot entries after scan | rounds to 95% in a disjoint phase | phase hit rate | Zipf hit rate |
+|---|---:|---:|---:|---:|
+| FIFO | 0 | 1 | 0.984375 | 0.549617 |
+| LRU | 0 | 1 | 0.984375 | 0.603128 |
+| SIEVE alone | 0 | 1 | 0.984375 | 0.615622 |
+| aging exact LFU | 127 | 25 | 0.609619 | 0.661372 |
+| TinyLFU + SIEVE | 128 | 9 | 0.864258 | 0.672367 |
+
+TinyLFU + SIEVE is the only candidate that retained the complete hot set under
+the one-hit scan while adapting substantially faster than exact LFU and also
+producing the best Zipf hit rate. The machine-readable matrix is
+[`query-cache-policy-matrix.csv`](../../../benchmarks/causal/evidence/2026-08-18/query-cache-policy-matrix.csv).
+
+The first allocation-reuse timing was invalidated rather than rationalized. It
+gave each process an independent randomized AHash key and its treatment moved
+the SIEVE hand and cleared reference bits even when admission was rejected,
+whereas the allocating reference rolled the transaction back. The preserved
+invalid file is named explicitly in the evidence directory.
+
+The corrected planner encodes the transaction as a circular span instead of
+per-slot generation marks. The first pass considers every unreferenced
+resident and virtually clears referenced residents; a second pass can consider
+only those formerly referenced residents. Every live resident has therefore
+been selected or rejected after at most two passes. Rejection discards only a
+length and leaves the hand and reference bits untouched. Successful admission
+replays the first-pass span once to commit reference clears, then removes the
+small victim list. This removes allocation, two per-slot mark arrays, and the
+rejected-path write log without weakening rollback semantics.
+
+In 51 alternating, CPU-3-pinned pairs with a fixed benchmark-only AHash seed
+and topology admission before every pair, the allocating transactional
+reference averaged 1,553,788 ns and the circular-span planner averaged
+1,227,706 ns: a 20.99% reduction. The paired mean delta was -326,082 ns with a
+95% confidence interval of [-329,649, -322,516] ns (`p = 2.05e-72`, paired
+`d_z = -25.71`). Every pair agreed on checksum, hot-set retention, resident
+entries and weight, hits, misses, admissions, rejections, and evictions. The
+[timings](../../../benchmarks/causal/evidence/2026-08-18/allocation-free-in-place-query-cache-victim-planning.csv)
+and [host-load ledger](../../../benchmarks/causal/evidence/2026-08-18/allocation-free-in-place-query-cache-victim-planning-host-load.jsonl)
+are retained together.
+
+#### Query-lifetime phonetic mode selection
+
+Character-phonetic queries have two mutually exclusive engines. Unit-cost
+queries use incremental dictionary/language-product intersection; articulatory
+costs require the fractional-cost product scanner. The former iterator used to
+retain the latter engine's cloned `ProductAutomatonChar`, empty queue, optional
+traversal session, capacity-64 parent-path arena, and depth guard even though
+none could be observed. A query-lifetime enum now owns exactly one engine. The
+value-returning mapped iterator uses the same split and routes incremental
+matches through `MappedLanguageQueryIterator`, so compact cursor-native graph
+traversal is shared instead of reimplemented.
+
+The causal control is a separate benchmark-only concrete type with the exact
+historical field construction and drop order. Arm selection occurs once before
+the measured loop, and first-result/full-order checksums are computed outside
+that loop; consequently the production iterator contains no control `Option`
+and the result check does not become part of the treatment.
+
+On the current post-propagation binary, 51 topology-admitted alternating pairs
+of 1,000,000 construct/drop iterations reduced mean time from 1,061,038,836 ns
+to 717,876,938 ns (-32.34%). The paired mean delta was -343,161,898 ns with a
+95% confidence interval of [-346,665,371, -339,658,426] ns
+(`p = 6.55e-74`). Every pair retained identical first-result and full-consume
+match, byte, distance, checksum, and order signatures. Inline iterator size
+fell from 712 to 432 bytes.
+
+Fresh headless Heaptrack captures of 10,000 simultaneously live iterators on
+the same binary reproduced 676,412 to 626,396 allocation calls, 223.79 MiB to
+191.07 MiB reported peak heap, and 127.15 MiB to 93.92 MiB reported peak RSS.
+Both arms used `heaptrack --record-only` followed by `heaptrack_print`; no GUI
+analyzer was launched. The [timing CSV](../../../benchmarks/causal/evidence/2026-08-18/mode-specific-phonetic-query-state-retention.csv),
+[timing host ledger](../../../benchmarks/causal/evidence/2026-08-18/mode-specific-phonetic-query-state-retention-host-load.jsonl),
+[Heaptrack summary](../../../benchmarks/causal/evidence/2026-08-18/mode-specific-phonetic-query-state-retention-heaptrack.csv),
+and [Heaptrack host ledger](../../../benchmarks/causal/evidence/2026-08-18/mode-specific-phonetic-query-state-retention-heaptrack-host-load.jsonl)
+are retained together.
+
+#### Residual transition and parent-path work
+
+After graph capture and lock removal, instrumented resource traversal recorded
+zero provider-arena acquisitions. Its remaining Standard distance-2 work was
+6,996,242 logical packed transitions, of which 4,400,619 labels belonged to
+class zero (absent from the query) and 3,083,387 repeated class zero within the
+same dictionary-node expansion. A source-row-local exact result slot therefore
+reuses both live targets and the dead sentinel without hashing, allocation, or
+growth. Across 51 topology-admitted same-binary pairs it reduced physical DFA
+target probes from 6,996,242 to 3,912,855 (-44.07%) and mean query time from
+192.622 ms to 189.100 ms (-1.83%). The paired median reduction was 1.91%, the
+95% confidence interval for the mean delta was [-4.509, -2.535] ms, and every
+result and logical-work signature was identical. The more invasive earlier
+attempt to broadcast class-zero results through a separate expansion grouping
+was rejected because its bookkeeping made the same workload 15.16% slower.
+
+Schedulers that own a representation-erased `UnitCostMachine` formerly
+matched that enum again in every sibling transition. A crate-private
+`PreparedUnitCostRow<U>` seam and centralized macro now select Standard, OSA,
+merge/split, or positional rows once per dictionary node; the expansion body
+is monomorphized for the concrete packed type and has no vtable. Fifty-one
+same-binary pairs reduced mean resource query time from 180.569 ms to 175.904
+ms (-2.58%), with a 2.51% paired-median reduction and a mean-delta confidence
+interval of [-5.548, -3.783] ms. Exact result, transition, graph, value, and
+zero-lock counters agreed in every pair. The same seam is used by value,
+ranked-value, ordered, and priority schedulers; the direct query kernel already
+performs equivalent query-lifetime concrete selection.
+
+Finally, the generic append-only reconstruction arena used machine-word keys
+and depths even though one query cannot approach that space. Checked `u32`
+keys and depths reduce `ParentPathKey` from eight to four bytes and the common
+`ParentPathNode<char>` from 24 to 12 bytes, reserving `u32::MAX` as the root
+sentinel and rejecting exhaustion. Fifty-one alternating, digest-recorded
+two-binary pairs reduced mean query time from 99.352 ms to 96.873 ms (-2.50%);
+the paired-median reduction was 2.72% and the confidence interval for the mean
+delta was [-2.899, -2.061] ms. Headless Heaptrack reported identical 744,467
+allocation calls, 249,845 temporary allocations, and 672 leaked bytes; peak
+heap moved from 18.63 MiB to 18.59 MiB and peak RSS from 27.58 MiB to 27.35
+MiB. The [class-zero timings](../../../benchmarks/causal/evidence/2026-08-18/class-zero-row-cache.csv),
+[static-dispatch timings](../../../benchmarks/causal/evidence/2026-08-18/static-packed-source-row-dispatch.csv),
+[parent-path timings](../../../benchmarks/causal/evidence/2026-08-18/compact-parent-path-metadata.csv),
+and [headless allocation summary](../../../benchmarks/causal/evidence/2026-08-18/compact-parent-path-metadata-heaptrack.csv)
+are retained with adjacent host-load ledgers.
+
+A closing headless AMD uProf capture after these changes measured 1.119 s for
+15 complete 1,000-query resource passes (74.62 ms/pass). No arena lock appears.
+The remaining named costs are the packed-DFA class-zero/cache branch (9.13%),
+flat-graph edge projection (8.70%), queue movement, parent-path insertion, and
+final-distance calculation, all individually single-digit percentages. This
+marks the transition from architectural bottlenecks to micro-optimization:
+further changes require their own causal controls and should not reintroduce
+grouping, hashing, synchronization, or unbounded memoization merely to remove
+a predictable branch or array probe.
 
 H-O30 generalized the lexical drain across string, byte, packed-`u64`, and
 phonetic query forms. One confined arena now owns the whole synchronous drain,
@@ -802,6 +950,30 @@ Individual cells ranged from 1.064× (Damerau distance 2, out-of-vocabulary) to
 retained as a tail target rather than hidden by the aggregate result.
 
 ### 6.3 Final parity position
+
+A fresh pure-language closing run on 2026-08-18 isolates the Rust core from
+the JVM binding. Both arms were pinned to CPU 0 and admitted before and after
+measurement against the complete shared LLC group (CPUs 0--7); unrelated work
+on other LLC groups was recorded but did not invalidate the pair. For the
+`standard/d2/std-d2` 1,000-query pass, pure Rust measured 86.384 ms median
+(MAD 0.239 ms, 51 samples) versus 456.396 ms for legacy pure Java (MAD 10.448
+ms, 51 samples): Rust is 81.07% lower latency, or 5.28x faster. Every sample
+had the identical 18,514-match, 82,131-byte, distance-sum-36,201 signature and
+checksum `6be8b7274d8277d8`. Construction from the same pre-sorted 79,343-term
+in-memory list measured 14.751 ms for Rust (MAD 0.271 ms) versus 66.881 ms for
+legacy Java (MAD 21.384 ms), ten in-process builds each: Rust is 77.94% lower
+latency, or 4.53x faster. The large Java construction MAD is reported rather
+than filtered; it is consistent with JIT and collection variability and does
+not alter the direction of the result. The committed
+[closing summary](../../../benchmarks/causal/evidence/2026-08-18/pure-rust-vs-legacy-java-postopt.csv)
+and retained raw distributions replace the earlier contaminated Rust-only
+attempt, whose post-run LLC gate failed and which is explicitly quarantined.
+
+This resolves the original native comparison: optimized `liblevenshtein-rust`
+is no longer slower than `liblevenshtein-java` in either construction or
+matching on the parity workload. Any remaining JVM-to-JVM deficit is therefore
+binding, cursor-delivery, and managed-materialization overhead, not a slower
+Rust dictionary or transition engine.
 
 The post-H-O16 direct Rust `standard/d1/hits` median was approximately
 39.976 ms per full 1,000-query pass. The final H-O7 compiler-guarded rerun

@@ -1,0 +1,5 @@
+phase,target,backend,samples,median_ns,mean_ns,mad_ns,rust_relative_to_java_percent,java_over_rust_x,match_count,term_bytes,distance_sum,checksum,host_gate
+query,rust,rust-core-native,51,86383972,86687021,238934,-81.072570,5.283337,18514,82131,36201,6be8b7274d8277d8,pre_and_post_admitted_cpu0_llc0_7
+query,legacy_java,jvm-legacy-jar,51,456395671,459736528,10447667,0.000000,1.000000,18514,82131,36201,6be8b7274d8277d8,pre_and_post_admitted_cpu0_llc0_7
+construct,rust,dynamic_dawg,10,14751099,15644459,271328,-77.944145,4.533944,79343,,,,pre_and_post_admitted_cpu0_llc0_7
+construct,legacy_java,own,10,66880650,70454857,21384259,0.000000,1.000000,79343,,,,pre_and_post_admitted_cpu0_llc0_7

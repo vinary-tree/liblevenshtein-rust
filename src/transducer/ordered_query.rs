@@ -6,11 +6,19 @@
 //!
 //! This ordering enables efficient "top-k" queries and take-while patterns.
 
-use super::transition::{FinishMode, TransitionSettings, UnitCostFrontier, UnitCostMachine};
+use super::transition::{
+    with_prepared_unit_cost_row, FinishMode, PreparedUnitCostRow, TransitionSettings,
+    UnitCostFrontier, UnitCostMachine,
+};
 use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
-use crate::transducer::dictionary_traversal::TraversalSession;
-use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor};
+use crate::transducer::dictionary_traversal::{
+    CursorNativePath, ParentArenaPath, PathFrontier, ResultPathStrategy, TraversalCursor,
+    TraversalSession,
+};
+use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot};
 use std::collections::VecDeque;
+#[cfg(feature = "resource-profiling")]
+use std::sync::OnceLock;
 
 /// Query result containing term and distance.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -21,75 +29,20 @@ pub struct OrderedCandidate {
     pub term: String,
 }
 
-const NO_PATH: usize = usize::MAX;
-
-struct OrderedPathNode<U: CharUnit> {
-    label: U,
-    depth: usize,
-    parent: usize,
-}
-
-struct OrderedIntersection<U: CharUnit> {
-    label: Option<U>,
-    position: SnapshotTraversalCursor,
-    state: UnitCostFrontier,
-    parent: usize,
+struct OrderedIntersection<E> {
+    path: E,
     children_queued: bool,
     is_final: bool,
 }
 
-impl<U: CharUnit> OrderedIntersection<U> {
+impl<E> OrderedIntersection<E> {
     #[inline]
-    fn new(position: SnapshotTraversalCursor, state: UnitCostFrontier) -> Self {
+    fn new(path: E) -> Self {
         Self {
-            label: None,
-            position,
-            state,
-            parent: NO_PATH,
+            path,
             children_queued: false,
             is_final: false,
         }
-    }
-
-    #[inline]
-    fn with_parent(
-        label: U,
-        position: SnapshotTraversalCursor,
-        state: UnitCostFrontier,
-        parent: usize,
-    ) -> Self {
-        Self {
-            label: Some(label),
-            position,
-            state,
-            parent,
-            children_queued: false,
-            is_final: false,
-        }
-    }
-
-    fn term(&self, path_arena: &[OrderedPathNode<U>]) -> String {
-        let parent_depth = if self.parent == NO_PATH {
-            0
-        } else {
-            path_arena[self.parent].depth
-        };
-        let capacity = parent_depth + usize::from(self.label.is_some());
-        let mut units = Vec::with_capacity(capacity);
-
-        if let Some(label) = self.label {
-            units.push(label);
-        }
-
-        let mut current = self.parent;
-        while current != NO_PATH {
-            let node = &path_arena[current];
-            units.push(node.label);
-            current = node.parent;
-        }
-
-        units.reverse();
-        U::to_string(&units)
     }
 }
 
@@ -135,8 +88,24 @@ impl<U: CharUnit> OrderedIntersection<U> {
 /// }
 /// ```
 pub struct OrderedQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unrestricted> {
+    inner: PathOrderedQueryIterator<N, P>,
+}
+
+enum PathOrderedQueryIterator<N: DictionaryNode, P: SubstitutionPolicy> {
+    Parent(OrderedQueryCore<N, P, ParentArenaPath>),
+    Cursor(OrderedQueryCore<N, P, CursorNativePath>),
+}
+
+type OrderedPending<T> = Vec<VecDeque<OrderedIntersection<PathFrontier<T, UnitCostFrontier>>>>;
+
+struct OrderedQueryCore<N, P, S>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy,
+    S: ResultPathStrategy<N>,
+{
     /// Pending intersections grouped by minimum distance
-    pending_by_distance: Vec<VecDeque<OrderedIntersection<N::Unit>>>,
+    pending_by_distance: OrderedPending<S::Trace>,
     /// Retained snapshot owner and cursor traversal backend.
     traversal: TraversalSession<N>,
     /// Current distance level being explored
@@ -153,8 +122,11 @@ pub struct OrderedQueryIterator<N: DictionaryNode, P: SubstitutionPolicy = Unres
     state_pool: StatePool,
     /// Shared cached transition kernel; queued states are epsilon-closed.
     unit_transitions: UnitCostMachine<N::Unit>,
-    /// Per-query parent-path arena for reconstructing candidate terms.
-    path_arena: Vec<OrderedPathNode<N::Unit>>,
+    /// Whether the deferred root frontier has been encoded into the selected
+    /// query-lifetime transition representation.
+    activated: bool,
+    /// Statically selected result-path storage (parent arena or no storage).
+    path_storage: S::Storage,
     /// Substring matching mode (for suffix automata)
     substring_mode: bool,
     /// Sorted buffer for current distance level (ensures lexicographic ordering)
@@ -209,44 +181,236 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         policy: P,
         substring_mode: bool,
     ) -> Self {
+        Self::with_traversal_root_and_policy_and_substring(
+            DictionaryTraversalRoot::owned(root),
+            query,
+            max_distance,
+            algorithm,
+            policy,
+            substring_mode,
+        )
+    }
+
+    pub(crate) fn with_traversal_root_and_policy_and_substring(
+        root: DictionaryTraversalRoot<N>,
+        query: String,
+        max_distance: usize,
+        algorithm: Algorithm,
+        policy: P,
+        substring_mode: bool,
+    ) -> Self {
         let query_units = N::Unit::from_str(&query);
-        let settings = TransitionSettings::new(max_distance, algorithm, substring_mode);
-        // This public iterator can be converted into the legacy prefix
-        // scheduler after construction. Prefix finality observes the positional
-        // Standard antichain (not merely its accepted language), so retain the
-        // exact positional representation for this mode-switchable surface.
-        let (unit_transitions, initial) =
-            UnitCostMachine::seeded_positional(query_units.len(), settings);
+        // Machine selection is deferred until the first poll. An ordinary
+        // ordered query may therefore select the same packed representation as
+        // unordered traversal, while `.prefix()` before polling can directly
+        // select the legacy positional representation without constructing and
+        // discarding a packed machine.
+        let unit_transitions =
+            UnitCostMachine::unseeded_positional(query_units.len(), max_distance);
+        let (traversal, root) = TraversalSession::capture(root);
+        Self {
+            inner: PathOrderedQueryIterator::new(
+                root,
+                traversal,
+                query_units,
+                max_distance,
+                algorithm,
+                policy,
+                unit_transitions,
+                substring_mode,
+            ),
+        }
+    }
 
-        // Create buckets for each distance level (0..=max_distance)
-        // Pre-allocate capacity to reduce reallocations during traversal
-        let mut pending_by_distance: Vec<VecDeque<_>> = (0..=max_distance)
-            .map(|_| VecDeque::with_capacity(32))
-            .collect();
+    #[cfg(test)]
+    fn activate(&mut self, require_positional: bool) {
+        self.inner.activate(require_positional);
+    }
 
-        // Start with root at distance 0 - it will be checked for finality in advance()
-        let (traversal, root) = TraversalSession::capture(DictionaryTraversalRoot::owned(root));
-        pending_by_distance[0].push_back(OrderedIntersection::new(root, initial));
+    #[cfg(test)]
+    fn unit_transitions(&self) -> &UnitCostMachine<N::Unit> {
+        match &self.inner {
+            PathOrderedQueryIterator::Parent(core) => &core.unit_transitions,
+            PathOrderedQueryIterator::Cursor(core) => &core.unit_transitions,
+        }
+    }
 
+    #[inline]
+    fn advance(&mut self) -> Option<OrderedCandidate> {
+        self.inner.advance()
+    }
+}
+
+impl<N, P> PathOrderedQueryIterator<N, P>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+{
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        root: TraversalCursor<N::SnapshotCursor>,
+        traversal: TraversalSession<N>,
+        query: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+        policy: P,
+        unit_transitions: UnitCostMachine<N::Unit>,
+        substring_mode: bool,
+    ) -> Self {
+        if traversal.supports_cursor_key_units() {
+            Self::Cursor(OrderedQueryCore::new(
+                root,
+                traversal,
+                query,
+                max_distance,
+                algorithm,
+                policy,
+                unit_transitions,
+                substring_mode,
+            ))
+        } else {
+            Self::Parent(OrderedQueryCore::new(
+                root,
+                traversal,
+                query,
+                max_distance,
+                algorithm,
+                policy,
+                unit_transitions,
+                substring_mode,
+            ))
+        }
+    }
+
+    #[cfg(test)]
+    #[inline]
+    fn activate(&mut self, require_positional: bool) {
+        match self {
+            Self::Parent(core) => core.activate(require_positional),
+            Self::Cursor(core) => core.activate(require_positional),
+        }
+    }
+
+    #[inline]
+    fn enable_prefix(&mut self) {
+        match self {
+            Self::Parent(core) => core.enable_prefix(),
+            Self::Cursor(core) => core.enable_prefix(),
+        }
+    }
+
+    #[inline]
+    fn advance(&mut self) -> Option<OrderedCandidate> {
+        match self {
+            Self::Parent(core) => core.advance(),
+            Self::Cursor(core) => core.advance(),
+        }
+    }
+
+    #[inline]
+    fn advance_prefix(&mut self) -> Option<OrderedCandidate> {
+        match self {
+            Self::Parent(core) => core.advance_prefix(),
+            Self::Cursor(core) => core.advance_prefix(),
+        }
+    }
+}
+
+impl<N, P, S> OrderedQueryCore<N, P, S>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    S: ResultPathStrategy<N>,
+{
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        root: TraversalCursor<N::SnapshotCursor>,
+        traversal: TraversalSession<N>,
+        query: Vec<N::Unit>,
+        max_distance: usize,
+        algorithm: Algorithm,
+        policy: P,
+        unit_transitions: UnitCostMachine<N::Unit>,
+        substring_mode: bool,
+    ) -> Self {
+        let (mut pending_by_distance, path_storage) =
+            S::acquire_buckets(max_distance.saturating_add(1));
+        pending_by_distance[0].push_back(OrderedIntersection::new(PathFrontier::new(
+            S::root(root),
+            UnitCostFrontier(0),
+        )));
         Self {
             pending_by_distance,
             traversal,
             current_distance: 0,
             max_distance,
-            query: query_units,
+            query,
             algorithm,
             policy,
             state_pool: StatePool::new(),
             unit_transitions,
-            path_arena: Vec::with_capacity(64),
+            activated: false,
+            path_storage,
             substring_mode,
-            sorted_buffer: Vec::with_capacity(64), // Heuristic: typical max results per distance
+            sorted_buffer: Vec::with_capacity(64),
         }
+    }
+
+    /// Select one transition representation for the lifetime of an unpolled
+    /// iterator and encode its deferred root frontier.
+    fn activate(&mut self, require_positional: bool) {
+        if self.activated {
+            return;
+        }
+        let settings =
+            TransitionSettings::new(self.max_distance, self.algorithm, self.substring_mode);
+        let (unit_transitions, initial) =
+            if require_positional || force_positional_ordered_enabled() {
+                UnitCostMachine::seeded_positional(self.query.len(), settings)
+            } else {
+                UnitCostMachine::seeded::<P>(&self.query, settings)
+            };
+        let root = self.pending_by_distance[0]
+            .front_mut()
+            .expect("deferred ordered iterator lost its root intersection");
+        root.path.frontier = initial;
+        self.unit_transitions = unit_transitions;
+        self.activated = true;
+    }
+
+    /// Convert every queued frontier to the canonical positional antichain
+    /// under prefix settings while preserving bucket membership and FIFO order.
+    ///
+    /// This cold path supports the unusual but valid sequence `next();
+    /// prefix()`. Ordinary ordered traversal never materializes packed states.
+    fn convert_active_to_prefix_positional(&mut self) {
+        debug_assert!(self.activated);
+        let settings = TransitionSettings::new(self.max_distance, self.algorithm, true);
+        let frontiers = self
+            .pending_by_distance
+            .iter()
+            .flat_map(|bucket| bucket.iter().map(|intersection| intersection.path.frontier))
+            .collect::<Vec<_>>();
+        let (unit_transitions, mapping) =
+            self.unit_transitions
+                .reencode_as_positional(self.query.len(), settings, frontiers);
+        for intersection in self
+            .pending_by_distance
+            .iter_mut()
+            .flat_map(|bucket| bucket.iter_mut())
+        {
+            intersection.path.frontier = *mapping
+                .get(&intersection.path.frontier)
+                .expect("ordered prefix conversion omitted a queued frontier");
+        }
+        self.unit_transitions = unit_transitions;
     }
 
     /// Advance to the next match in order
     #[inline]
     fn advance(&mut self) -> Option<OrderedCandidate> {
+        self.activate(false);
+
         // First, check if we have buffered results to yield
         if let Some(result) = self.sorted_buffer.pop() {
             return Some(result);
@@ -261,6 +425,8 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
             while let Some(mut intersection) =
                 self.pending_by_distance[self.current_distance].pop_front()
             {
+                crate::causal_perf::record_dictionary_intersections(1);
+                crate::causal_perf::record_final_checks(1);
                 // Expand each dictionary cursor once. A final whose completed
                 // distance belongs to a later layer retains only this compact
                 // intersection when requeued; its children are not duplicated.
@@ -269,7 +435,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                     let distance = self
                         .unit_transitions
                         .finish_distance(
-                            intersection.state,
+                            intersection.path.frontier,
                             if self.substring_mode {
                                 FinishMode::Substring
                             } else {
@@ -282,7 +448,16 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
                     if distance <= self.max_distance {
                         if distance == self.current_distance {
                             // Distance matches current level - add to buffer
-                            let term = intersection.term(&self.path_arena);
+                            let units = S::materialize_units(
+                                &intersection.path.trace,
+                                &self.traversal,
+                                &self.path_storage,
+                            );
+                            if !self.traversal.accepts_final_units(&units) {
+                                continue;
+                            }
+                            let term = N::Unit::to_string(&units);
+                            crate::causal_perf::record_matches_materialized(1);
                             self.sorted_buffer.push(OrderedCandidate { distance, term });
                         } else if distance > self.current_distance {
                             // Actual distance is higher than bucket - requeue to correct bucket
@@ -313,13 +488,13 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
     #[inline]
     fn queue_children_and_finality(
         &mut self,
-        intersection: &mut OrderedIntersection<N::Unit>,
+        intersection: &mut OrderedIntersection<PathFrontier<S::Trace, UnitCostFrontier>>,
     ) -> bool {
         if intersection.children_queued {
             return intersection.is_final;
         }
         intersection.children_queued = true;
-        let mut child_parent_path = None;
+        let mut expansion = S::begin_expansion(&intersection.path.trace);
         let state_pool = &mut self.state_pool;
         let unit_transitions = &mut self.unit_transitions;
         let policy = &self.policy;
@@ -327,57 +502,64 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         let max_distance = self.max_distance;
         let algorithm = self.algorithm;
         let substring_mode = self.substring_mode;
-        let paths = &mut self.path_arena;
+        let path_storage = &mut self.path_storage;
         let pending = &mut self.pending_by_distance;
-
-        intersection.is_final = self.traversal.filter_map_edges_and_finality(
-            intersection.position,
-            |label| {
-                let next_state = unit_transitions.step(
-                    intersection.state,
-                    state_pool,
-                    policy,
-                    label,
-                    query,
-                    TransitionSettings::new(max_distance, algorithm, substring_mode),
-                )?;
-                unit_transitions
-                    .min_distance(next_state)
-                    .filter(|&min_dist| min_dist <= max_distance)
-                    .map(|min_dist| (next_state, min_dist))
-            },
-            |label, child_position, (next_state, min_dist)| {
-                let parent_path = match child_parent_path {
-                    Some(path) => path,
-                    None => {
-                        let path = match intersection.label {
-                            Some(current_label) => {
-                                let depth = if intersection.parent == NO_PATH {
-                                    1
-                                } else {
-                                    paths[intersection.parent].depth.saturating_add(1)
-                                };
-                                let index = paths.len();
-                                paths.push(OrderedPathNode {
-                                    label: current_label,
-                                    depth,
-                                    parent: intersection.parent,
-                                });
-                                index
+        let settings = TransitionSettings::new(max_distance, algorithm, substring_mode);
+        intersection.is_final = with_prepared_unit_cost_row!(
+            unit_transitions,
+            intersection.path.frontier,
+            state_pool,
+            policy,
+            query,
+            settings,
+            |row| self.traversal.filter_map_edges_and_finality(
+                S::position(&intersection.path.trace),
+                |label| {
+                    crate::causal_perf::record_edges_enumerated(1);
+                    let next_state = row.step(label)?;
+                    row.min_distance(next_state)
+                        .filter(|&min_dist| min_dist <= max_distance)
+                        .map(|min_dist| {
+                            #[cfg(feature = "perf-instrumentation")]
+                            {
+                                (
+                                    next_state,
+                                    min_dist,
+                                    row.active_len(next_state),
+                                    row.frontier_storage_bytes(next_state),
+                                )
                             }
-                            None => NO_PATH,
-                        };
-                        child_parent_path = Some(path);
-                        path
+                            #[cfg(not(feature = "perf-instrumentation"))]
+                            {
+                                (next_state, min_dist, 0usize, 0usize)
+                            }
+                        })
+                },
+                |label, child_position, (next_state, min_dist, position_count, storage_bytes)| {
+                    crate::causal_perf::record_transition_accepted(1);
+                    #[cfg(feature = "perf-instrumentation")]
+                    {
+                        crate::causal_perf::record_state_positions_enqueued(position_count as u64);
+                        crate::causal_perf::record_state_bytes_enqueued(storage_bytes as u64);
                     }
-                };
-                pending[min_dist].push_back(OrderedIntersection::with_parent(
-                    label,
-                    child_position,
-                    next_state,
-                    parent_path,
-                ));
-            },
+                    #[cfg(not(feature = "perf-instrumentation"))]
+                    let _ = (position_count, storage_bytes);
+                    pending[min_dist].push_back(OrderedIntersection::new(PathFrontier::new(
+                        S::child_trace(
+                            &intersection.path.trace,
+                            &mut expansion,
+                            label,
+                            child_position,
+                            path_storage,
+                        ),
+                        next_state,
+                    )));
+                    #[cfg(feature = "perf-instrumentation")]
+                    crate::causal_perf::record_pending_queue_size(
+                        pending.iter().map(VecDeque::len).sum(),
+                    );
+                },
+            )
         );
         intersection.is_final
     }
@@ -402,6 +584,70 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
         }
     }
 
+    fn enable_prefix(&mut self) {
+        self.substring_mode = true;
+        if self.activated {
+            self.convert_active_to_prefix_positional();
+        } else {
+            self.activate(true);
+        }
+    }
+
+    #[inline]
+    fn advance_prefix(&mut self) -> Option<OrderedCandidate> {
+        if let Some(result) = self.sorted_buffer.pop() {
+            return Some(result);
+        }
+
+        let query_len = self.query.len();
+        while self.current_distance <= self.max_distance {
+            self.sorted_buffer.clear();
+            while let Some(mut intersection) =
+                self.pending_by_distance[self.current_distance].pop_front()
+            {
+                crate::causal_perf::record_dictionary_intersections(1);
+                crate::causal_perf::record_final_checks(1);
+                let is_final = self.queue_children_and_finality(&mut intersection);
+                let matched_distance = if is_final {
+                    self.unit_transitions
+                        .finish_distance(intersection.path.frontier, FinishMode::Prefix, query_len)
+                        .filter(|&distance| {
+                            distance <= self.max_distance && distance == self.current_distance
+                        })
+                } else {
+                    None
+                };
+
+                if let Some(distance) = matched_distance {
+                    let units = S::materialize_units(
+                        &intersection.path.trace,
+                        &self.traversal,
+                        &self.path_storage,
+                    );
+                    if !self.traversal.accepts_final_units(&units) {
+                        continue;
+                    }
+                    let term = N::Unit::to_string(&units);
+                    crate::causal_perf::record_matches_materialized(1);
+                    self.sorted_buffer.push(OrderedCandidate { distance, term });
+                }
+            }
+
+            if !self.sorted_buffer.is_empty() {
+                self.sort_buffer_for_pop();
+                return self.sorted_buffer.pop();
+            }
+            self.current_distance += 1;
+        }
+        None
+    }
+}
+
+impl<N, P> OrderedQueryIterator<N, P>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+{
     /// Add a filter predicate to this iterator.
     ///
     /// Returns a new iterator that only yields candidates matching the predicate.
@@ -443,10 +689,35 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
     /// query.prefix()
     /// ```
     pub fn prefix(mut self) -> PrefixOrderedQueryIterator<N, P> {
-        // Enable substring mode for prefix matching
-        // This allows matching terms that start with the query without penalizing the unmatched suffix
-        self.substring_mode = true;
+        self.inner.enable_prefix();
         PrefixOrderedQueryIterator { inner: self }
+    }
+}
+
+#[cfg(feature = "resource-profiling")]
+fn force_positional_ordered_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_FORCE_POSITIONAL_ORDERED").is_some()
+    })
+}
+
+#[cfg(not(feature = "resource-profiling"))]
+#[inline(always)]
+const fn force_positional_ordered_enabled() -> bool {
+    false
+}
+
+impl<N, P, S> Drop for OrderedQueryCore<N, P, S>
+where
+    N: DictionaryNode,
+    P: SubstitutionPolicy,
+    S: ResultPathStrategy<N>,
+{
+    fn drop(&mut self) {
+        let pending_by_distance = std::mem::take(&mut self.pending_by_distance);
+        let path_storage = std::mem::take(&mut self.path_storage);
+        S::release_buckets(pending_by_distance, path_storage);
     }
 }
 
@@ -509,55 +780,7 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
     /// Advance to the next prefix match in order
     #[inline]
     fn advance_prefix(&mut self) -> Option<OrderedCandidate> {
-        if let Some(result) = self.inner.sorted_buffer.pop() {
-            return Some(result);
-        }
-
-        let query_len = self.inner.query.len();
-
-        // Explore distance levels in ascending order
-        while self.inner.current_distance <= self.inner.max_distance {
-            self.inner.sorted_buffer.clear();
-
-            // Collect all prefix matches at this distance level so ties can be
-            // returned lexicographically, matching OrderedQueryIterator.
-            while let Some(mut intersection) =
-                self.inner.pending_by_distance[self.inner.current_distance].pop_front()
-            {
-                // Check if this is a complete word (final node) that matches our prefix
-                let is_final = self.inner.queue_children_and_finality(&mut intersection);
-                let matched_distance = if is_final {
-                    // For prefix matching: check if we've consumed the entire query
-                    self.inner
-                        .unit_transitions
-                        .finish_distance(intersection.state, FinishMode::Prefix, query_len)
-                        .filter(|&distance| {
-                            distance <= self.inner.max_distance
-                                && distance == self.inner.current_distance
-                        })
-                } else {
-                    None
-                };
-
-                // Return the result if it's a complete word matching our prefix
-                if let Some(distance) = matched_distance {
-                    let term = intersection.term(&self.inner.path_arena);
-                    self.inner
-                        .sorted_buffer
-                        .push(OrderedCandidate { distance, term });
-                }
-            }
-
-            if !self.inner.sorted_buffer.is_empty() {
-                self.inner.sort_buffer_for_pop();
-                return self.inner.sorted_buffer.pop();
-            }
-
-            // Current distance level exhausted, move to next
-            self.inner.current_distance += 1;
-        }
-
-        None
+        self.inner.inner.advance_prefix()
     }
 }
 
@@ -576,6 +799,8 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
 mod tests {
     use super::*;
     use libdictenstein::double_array_trie::DoubleArrayTrie;
+    use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
+    use libdictenstein::dynamic_dawg::DynamicDawgU64;
     use libdictenstein::Dictionary;
 
     #[test]
@@ -588,6 +813,39 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].term, "test");
         assert_eq!(results[0].distance, 0);
+    }
+
+    #[test]
+    fn test_ordered_buffers_reuse_after_partial_drop_preserves_order() {
+        let dict = DoubleArrayTrie::from_terms(vec!["cat", "bat", "car", "dog"]);
+        let mut partial =
+            OrderedQueryIterator::new(dict.root(), "cat".to_string(), 3, Algorithm::Standard);
+        assert_eq!(
+            partial.next().map(|candidate| candidate.term),
+            Some("cat".to_owned())
+        );
+        drop(partial);
+
+        let reused =
+            OrderedQueryIterator::new(dict.root(), "cat".to_string(), 1, Algorithm::Standard)
+                .collect::<Vec<_>>();
+        assert_eq!(
+            reused,
+            vec![
+                OrderedCandidate {
+                    distance: 0,
+                    term: "cat".to_owned(),
+                },
+                OrderedCandidate {
+                    distance: 1,
+                    term: "bat".to_owned(),
+                },
+                OrderedCandidate {
+                    distance: 1,
+                    term: "car".to_owned(),
+                },
+            ]
+        );
     }
 
     #[test]
@@ -1062,5 +1320,126 @@ mod tests {
         assert!(results.iter().any(|c| c.term == "testMethod"));
         assert!(results.iter().any(|c| c.term == "testHelper"));
         assert!(!results.iter().any(|c| c.term == "TestCase"));
+    }
+
+    #[test]
+    fn ordinary_ordered_queries_activate_the_shared_packed_machines() {
+        let dict = DoubleArrayTrie::from_terms(vec!["ab", "ba", "aab", "abb"]);
+
+        let mut standard =
+            OrderedQueryIterator::new(dict.root(), "ab".to_owned(), 2, Algorithm::Standard);
+        standard.activate(false);
+        assert!(matches!(
+            standard.unit_transitions(),
+            UnitCostMachine::PackedStandard(_)
+        ));
+
+        let mut osa =
+            OrderedQueryIterator::new(dict.root(), "ab".to_owned(), 2, Algorithm::Transposition);
+        osa.activate(false);
+        assert!(matches!(
+            osa.unit_transitions(),
+            UnitCostMachine::PackedOsa(_)
+        ));
+
+        let mut merge_split =
+            OrderedQueryIterator::new(dict.root(), "ab".to_owned(), 2, Algorithm::MergeAndSplit);
+        merge_split.activate(false);
+        assert!(matches!(
+            merge_split.unit_transitions(),
+            UnitCostMachine::PackedMergeSplit(_)
+        ));
+    }
+
+    #[test]
+    fn fresh_prefix_activates_positional_without_building_a_packed_machine() {
+        let dict = DoubleArrayTrie::from_terms(vec!["pre", "prefix", "present"]);
+        let prefix =
+            OrderedQueryIterator::new(dict.root(), "pre".to_owned(), 1, Algorithm::Standard)
+                .prefix();
+
+        assert!(matches!(
+            prefix.inner.unit_transitions(),
+            UnitCostMachine::Positional(_)
+        ));
+    }
+
+    #[test]
+    fn partial_packed_to_prefix_conversion_matches_positional_continuation() {
+        let dict = DoubleArrayTrie::from_terms(vec![
+            "bat", "bats", "car", "cat", "cater", "cats", "cut", "scat",
+        ]);
+
+        for algorithm in [
+            Algorithm::Standard,
+            Algorithm::Transposition,
+            Algorithm::MergeAndSplit,
+        ] {
+            let mut packed = OrderedQueryIterator::new(dict.root(), "cat".to_owned(), 2, algorithm);
+            let packed_first = packed.next();
+            assert!(matches!(
+                (packed.unit_transitions(), algorithm),
+                (UnitCostMachine::PackedStandard(_), Algorithm::Standard)
+                    | (UnitCostMachine::PackedOsa(_), Algorithm::Transposition)
+                    | (
+                        UnitCostMachine::PackedMergeSplit(_),
+                        Algorithm::MergeAndSplit
+                    )
+            ));
+            let packed_remainder = packed.prefix().collect::<Vec<_>>();
+
+            let mut positional =
+                OrderedQueryIterator::new(dict.root(), "cat".to_owned(), 2, algorithm);
+            positional.activate(true);
+            let positional_first = positional.next();
+            let positional_remainder = positional.prefix().collect::<Vec<_>>();
+
+            assert_eq!(packed_first, positional_first, "algorithm={algorithm:?}");
+            assert_eq!(
+                packed_remainder, positional_remainder,
+                "algorithm={algorithm:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn packed_ordered_execution_is_unit_generic_for_char_and_u64_domains() {
+        let char_dict = DynamicDawgChar::<()>::from_terms(["café", "cafe", "cafés", "safe"]);
+        for algorithm in [
+            Algorithm::Standard,
+            Algorithm::Transposition,
+            Algorithm::MergeAndSplit,
+        ] {
+            let mut query =
+                OrderedQueryIterator::new(char_dict.root(), "café".to_owned(), 2, algorithm);
+            query.activate(false);
+            assert!(!matches!(
+                query.unit_transitions(),
+                UnitCostMachine::Positional(_)
+            ));
+            let results = query.collect::<Vec<_>>();
+            assert!(results
+                .iter()
+                .any(|candidate| candidate.term == "café" && candidate.distance == 0));
+        }
+
+        let u64_dict = DynamicDawgU64::<()>::from_terms(["alpha", "alpah", "alfa", "beta"]);
+        for algorithm in [
+            Algorithm::Standard,
+            Algorithm::Transposition,
+            Algorithm::MergeAndSplit,
+        ] {
+            let mut query =
+                OrderedQueryIterator::new(u64_dict.root(), "alpha".to_owned(), 2, algorithm);
+            query.activate(false);
+            assert!(!matches!(
+                query.unit_transitions(),
+                UnitCostMachine::Positional(_)
+            ));
+            let results = query.collect::<Vec<_>>();
+            assert!(results
+                .iter()
+                .any(|candidate| candidate.term == "alpha" && candidate.distance == 0));
+        }
     }
 }

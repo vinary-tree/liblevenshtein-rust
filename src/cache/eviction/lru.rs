@@ -30,11 +30,13 @@
 //! assert_eq!(lru.get_value("foo"), Some(42));
 //! ```
 
-use crate::dictionary::node_adapter::{for_each_wrapped_edge, visit_wrapped_edges_and_finality};
+use crate::dictionary::node_adapter::{
+    impl_transparent_dictionary_node, impl_transparent_mapped_dictionary_node,
+    map_transparent_traversal_root,
+};
 use crate::sync_compat::RwLock;
 use libdictenstein::{
-    Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
-    SyncStrategy,
+    Dictionary, DictionaryTraversalRoot, DictionaryValue, MappedDictionary, SyncStrategy,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -191,6 +193,14 @@ where
     }
 
     #[inline]
+    fn traversal_root(&self) -> DictionaryTraversalRoot<Self::Node> {
+        let metadata = Arc::clone(&self.metadata);
+        map_transparent_traversal_root(self.inner.traversal_root(), |inner| {
+            LruNode::new(inner, metadata)
+        })
+    }
+
+    #[inline]
     fn len(&self) -> Option<usize> {
         self.inner.len()
     }
@@ -203,6 +213,11 @@ where
     #[inline]
     fn sync_strategy(&self) -> SyncStrategy {
         self.inner.sync_strategy()
+    }
+
+    #[inline]
+    fn is_suffix_based(&self) -> bool {
+        self.inner.is_suffix_based()
     }
 }
 
@@ -244,89 +259,18 @@ impl<N> LruNode<N> {
     }
 }
 
-impl<N> DictionaryNode for LruNode<N>
-where
-    N: DictionaryNode,
-{
-    type Unit = N::Unit;
-
-    #[inline]
-    fn is_final(&self) -> bool {
-        self.inner.is_final()
-    }
-
-    #[inline]
-    fn transition(&self, label: Self::Unit) -> Option<Self> {
-        self.inner
-            .transition(label)
-            .map(|node| LruNode::new(node, Arc::clone(&self.metadata)))
-    }
-
-    #[inline]
-    fn edges(&self) -> Box<dyn Iterator<Item = (Self::Unit, Self)> + '_> {
-        let metadata = Arc::clone(&self.metadata);
-        Box::new(
-            self.inner
-                .edges()
-                .map(move |(label, node)| (label, LruNode::new(node, Arc::clone(&metadata)))),
-        )
-    }
-
-    #[inline]
-    fn for_each_edge<F>(&self, visitor: F)
-    where
-        F: FnMut(Self::Unit, Self),
-    {
-        let metadata = Arc::clone(&self.metadata);
-        for_each_wrapped_edge(
-            &self.inner,
-            |node| LruNode::new(node, Arc::clone(&metadata)),
-            visitor,
-        );
-    }
-
-    #[inline]
-    fn visit_edges_and_finality<F>(&self, visitor: F) -> bool
-    where
-        F: FnMut(Self::Unit, Self),
-    {
-        let metadata = Arc::clone(&self.metadata);
-        visit_wrapped_edges_and_finality(
-            &self.inner,
-            |node| LruNode::new(node, Arc::clone(&metadata)),
-            visitor,
-        )
-    }
-
-    #[inline]
-    fn edge_count(&self) -> Option<usize> {
-        self.inner.edge_count()
-    }
-}
-
-impl<N, V> MappedDictionaryNode for LruNode<N>
-where
-    N: MappedDictionaryNode<Value = V>,
-    V: DictionaryValue,
-{
-    type Value = V;
-
-    #[inline]
-    fn value(&self) -> Option<Self::Value> {
-        self.inner.value()
-    }
-
-    #[inline]
-    fn value_at_final(&self) -> Option<Self::Value> {
-        self.inner.value_at_final()
-    }
-}
+impl_transparent_dictionary_node!(LruNode, |owner, child| LruNode::new(
+    child,
+    Arc::clone(&owner.metadata),
+));
+impl_transparent_mapped_dictionary_node!(LruNode);
 
 #[cfg(all(test, feature = "pathmap-backend"))]
 mod tests {
     use super::*;
     #[cfg(feature = "pathmap-backend")]
     use libdictenstein::pathmap::PathMapDictionary;
+    use libdictenstein::DictionaryNode;
     use std::thread;
     use std::time::Duration;
 

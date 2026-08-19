@@ -1,0 +1,3 @@
+arm,parent_path_key_bytes,parent_path_node_char_bytes,allocation_calls,temporary_allocations,peak_heap_reported,peak_rss_reported,total_memory_leaked_bytes,recording_mode,binary_sha256
+control,8,24,744467,249845,18.63M,27.58M,672,heaptrack-record-only-and-heaptrack_print,c140d452fc72d151d93c53215567344fc406b7036793843090e299b466c27fe2
+treatment,4,12,744467,249845,18.59M,27.35M,672,heaptrack-record-only-and-heaptrack_print,3227ef94d95b36618d5944e80e41215ec00f92587f90ac2a89be37179a686d05

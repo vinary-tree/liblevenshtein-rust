@@ -43,16 +43,16 @@ use crate::phonetic::nfa::{NFAChar, NFA};
 #[cfg(feature = "phonetic-rules")]
 use crate::transducer::articulatory_costs::ArticulatoryCosts;
 #[cfg(feature = "phonetic-rules")]
-use crate::transducer::dictionary_traversal::TraversalSession;
+use crate::transducer::dictionary_traversal::{TraversalCursor, TraversalSession};
 #[cfg(feature = "phonetic-rules")]
-use crate::transducer::language::{LanguageProduct, LanguageQueryIterator};
+use crate::transducer::language::{
+    LanguageProduct, LanguageQueryIterator, MappedLanguageQueryIterator,
+};
 #[cfg(feature = "phonetic-rules")]
 use crate::transducer::Algorithm;
 use libdictenstein::{Dictionary, DictionaryNode};
 #[cfg(feature = "phonetic-rules")]
-use libdictenstein::{
-    DictionaryTraversalRoot, MappedDictionary, MappedDictionaryNode, SnapshotTraversalCursor,
-};
+use libdictenstein::{MappedDictionary, MappedDictionaryNode};
 
 use std::{
     cmp::Ordering,
@@ -72,17 +72,17 @@ struct PhoneticPathNode<U: Copy> {
 }
 
 #[cfg(feature = "phonetic-rules")]
-struct PhoneticTraversal<U: Copy> {
-    position: SnapshotTraversalCursor,
-    label: Option<U>,
+struct PhoneticTraversal<C: Copy> {
+    position: TraversalCursor<C>,
+    label: Option<char>,
     parent: usize,
     depth: usize,
 }
 
 #[cfg(feature = "phonetic-rules")]
-impl<U: Copy> PhoneticTraversal<U> {
+impl<C: Copy> PhoneticTraversal<C> {
     #[inline]
-    fn root(position: SnapshotTraversalCursor) -> Self {
+    fn root(position: TraversalCursor<C>) -> Self {
         Self {
             position,
             label: None,
@@ -92,7 +92,7 @@ impl<U: Copy> PhoneticTraversal<U> {
     }
 
     #[inline]
-    fn child(position: SnapshotTraversalCursor, label: U, parent: usize, depth: usize) -> Self {
+    fn child(position: TraversalCursor<C>, label: char, parent: usize, depth: usize) -> Self {
         Self {
             position,
             label: Some(label),
@@ -129,6 +129,68 @@ fn collect_path_units<U: Copy>(
 
     units.reverse();
     units
+}
+
+/// State retained only by the fractional articulatory full-dictionary scan.
+///
+/// Unit-cost phonetic queries use the incremental language-product
+/// intersection and therefore never construct this queue, traversal session,
+/// or parent-path arena. Mapped and unmapped scans share the same storage and
+/// release policy; they differ only in how an accepting terminal is resolved.
+#[cfg(feature = "phonetic-rules")]
+struct ArticulatoryScan<N>
+where
+    N: DictionaryNode<Unit = char>,
+{
+    product: ProductAutomatonChar,
+    queue: VecDeque<PhoneticTraversal<N::SnapshotCursor>>,
+    traversal: TraversalSession<N>,
+    path_arena: Vec<PhoneticPathNode<char>>,
+    max_depth: usize,
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<N> ArticulatoryScan<N>
+where
+    N: DictionaryNode<Unit = char>,
+{
+    fn from_root(
+        root: libdictenstein::DictionaryTraversalRoot<N>,
+        product: ProductAutomatonChar,
+    ) -> Self {
+        let (traversal, root) = TraversalSession::capture(root);
+        Self::from_session(traversal, root, product)
+    }
+
+    fn from_session(
+        traversal: TraversalSession<N>,
+        root: TraversalCursor<N::SnapshotCursor>,
+        product: ProductAutomatonChar,
+    ) -> Self {
+        let mut queue = VecDeque::with_capacity(1);
+        queue.push_back(PhoneticTraversal::root(root));
+        Self {
+            product,
+            queue,
+            traversal,
+            path_arena: Vec::with_capacity(64),
+            max_depth: 100,
+        }
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<N> ArticulatoryScan<N>
+where
+    N: MappedDictionaryNode + DictionaryNode<Unit = char>,
+{
+    fn from_mapped_root(
+        root: libdictenstein::DictionaryTraversalRoot<N>,
+        product: ProductAutomatonChar,
+    ) -> Self {
+        let (traversal, root) = TraversalSession::capture_mapped(root);
+        Self::from_session(traversal, root, product)
+    }
 }
 
 // ============================================================================
@@ -387,7 +449,9 @@ where
 
     /// Query for dictionary terms matching the phonetic pattern.
     ///
-    /// Returns an iterator over [`PhoneticCandidate`] results, ordered by total cost.
+    /// Returns an iterator over [`PhoneticCandidate`] results in dictionary
+    /// traversal order. Use [`query_sorted`](Self::query_sorted) when total-cost
+    /// ordering is required.
     pub fn query(&self, input: &str) -> PhoneticQueryIteratorChar<'_, D> {
         PhoneticQueryIteratorChar::new(
             &self.dictionary,
@@ -396,6 +460,32 @@ where
             self.max_distance,
             self.phonetic_weight,
             self.articulatory_costs,
+        )
+    }
+
+    /// Construct the historical unit-cost iterator layout for a same-binary
+    /// causal benchmark.
+    ///
+    /// This surface exists only with `benchmark-controls`. It recreates the
+    /// pre-mode-split field, construction, dispatch, and drop order while
+    /// delegating results to the same incremental language-product engine.
+    /// Production builds expose neither this type nor this constructor.
+    #[cfg(feature = "benchmark-controls")]
+    #[doc(hidden)]
+    pub fn query_legacy_unit_cost_retention_control(
+        &self,
+        input: &str,
+    ) -> LegacyPhoneticQueryIteratorChar<'_, D> {
+        assert!(
+            self.articulatory_costs.is_none(),
+            "the legacy retention control models only unit-cost phonetic queries"
+        );
+        LegacyPhoneticQueryIteratorChar::new(
+            &self.dictionary,
+            &self.nfa,
+            input,
+            self.max_distance,
+            self.phonetic_weight,
         )
     }
 
@@ -477,24 +567,109 @@ where
 
 /// Iterator over phonetic query results.
 #[cfg(feature = "phonetic-rules")]
+enum PhoneticQueryModeChar<N>
+where
+    N: DictionaryNode<Unit = char>,
+{
+    Incremental(LanguageQueryIterator<N, NFAChar>),
+    Articulatory(ArticulatoryScan<N>),
+}
+
+/// Historical character-phonetic iterator retained solely as an exact
+/// same-binary experimental control.
+///
+/// Field order is intentional: before query-lifetime mode selection, the
+/// dormant product was constructed first and dropped before the active
+/// language iterator, followed by the unused scan state. Keeping this as a
+/// distinct type means the treatment retains the actual production iterator
+/// layout rather than an inline optional control payload.
+#[cfg(all(feature = "phonetic-rules", feature = "benchmark-controls"))]
+#[doc(hidden)]
+pub struct LegacyPhoneticQueryIteratorChar<'a, D: Dictionary>
+where
+    D::Node: DictionaryNode<Unit = char>,
+{
+    _product: ProductAutomatonChar,
+    language_query: Option<LanguageQueryIterator<D::Node, NFAChar>>,
+    _queue: VecDeque<PhoneticTraversal<<D::Node as DictionaryNode>::SnapshotCursor>>,
+    _traversal: Option<TraversalSession<D::Node>>,
+    _path_arena: Vec<PhoneticPathNode<char>>,
+    _dictionary: PhantomData<&'a D>,
+    _max_depth: usize,
+    _phonetic_weight: f64,
+}
+
+#[cfg(all(feature = "phonetic-rules", feature = "benchmark-controls"))]
+impl<'a, D: Dictionary> LegacyPhoneticQueryIteratorChar<'a, D>
+where
+    D::Node: DictionaryNode<Unit = char>,
+{
+    fn new(
+        dictionary: &'a D,
+        nfa: &NFAChar,
+        _input: &str,
+        max_distance: u8,
+        phonetic_weight: f64,
+    ) -> Self {
+        let product = ProductAutomatonChar::new(nfa.clone(), max_distance);
+        let language_query = product.supports_incremental_trie_intersection().then(|| {
+            LanguageQueryIterator::from_dictionary(
+                dictionary,
+                LanguageProduct::new(nfa.clone(), max_distance),
+            )
+        });
+        let (traversal, root) = if language_query.is_none() {
+            let (session, root) = TraversalSession::capture(dictionary.traversal_root());
+            (Some(session), Some(root))
+        } else {
+            (None, None)
+        };
+        let mut queue = VecDeque::with_capacity(usize::from(root.is_some()));
+        if let Some(root) = root {
+            queue.push_back(PhoneticTraversal::root(root));
+        }
+
+        Self {
+            _product: product,
+            language_query,
+            _queue: queue,
+            _traversal: traversal,
+            _path_arena: Vec::with_capacity(64),
+            _dictionary: PhantomData,
+            _max_depth: 100,
+            _phonetic_weight: phonetic_weight,
+        }
+    }
+}
+
+#[cfg(all(feature = "phonetic-rules", feature = "benchmark-controls"))]
+impl<D: Dictionary> Iterator for LegacyPhoneticQueryIteratorChar<'_, D>
+where
+    D::Node: DictionaryNode<Unit = char>,
+{
+    type Item = PhoneticCandidate;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let matched = self.language_query.as_mut()?.next()?;
+        Some(PhoneticCandidate::new(
+            matched.units.into_iter().collect(),
+            matched.distance,
+            0.0,
+        ))
+    }
+}
+
+/// Iterator over phonetic query results.
+#[cfg(feature = "phonetic-rules")]
 pub struct PhoneticQueryIteratorChar<'a, D: Dictionary>
 where
     D::Node: DictionaryNode<Unit = char>,
 {
-    /// Product automaton for matching
-    product: ProductAutomatonChar,
-    /// Frontier-pruned generic language query on the unit-cost path.
-    language_query: Option<LanguageQueryIterator<D::Node, NFAChar>>,
-    /// Queue of dictionary nodes to explore.
-    queue: VecDeque<PhoneticTraversal<char>>,
-    /// Snapshot cursor backend used only by the articulatory full scan.
-    traversal: Option<TraversalSession<D::Node>>,
-    /// Parent-path arena for reconstructing terms without per-edge path clones.
-    path_arena: Vec<PhoneticPathNode<char>>,
+    /// Query-lifetime dispatch keeps mutually exclusive traversal machinery in
+    /// distinct variants rather than retaining unused queues and automata.
+    mode: PhoneticQueryModeChar<D::Node>,
     /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
     _dictionary: PhantomData<&'a D>,
-    /// Maximum depth (prevents infinite exploration)
-    max_depth: usize,
     /// Phonetic weight
     _phonetic_weight: f64,
 }
@@ -512,62 +687,30 @@ where
         phonetic_weight: f64,
         articulatory_costs: Option<ArticulatoryCosts>,
     ) -> Self {
-        // Create product automaton for this query. With articulatory costs the
-        // product accumulates fractional feature-distance substitution cost (so
-        // `min_cost` yields a phonetically weighted total); otherwise it is a
-        // pure integer edit-distance automaton (`min_distance` only). The
-        // articulatory product uses the same `Algorithm::Standard` and
-        // `max_distance`-as-cost budget as [`ProductAutomatonChar::new`].
-        let product = match articulatory_costs {
-            Some(costs) => ProductAutomatonChar::with_articulatory_costs(
-                nfa.clone(),
-                f64::from(max_distance),
-                Algorithm::Standard,
-                costs,
-            ),
-            None => ProductAutomatonChar::new(nfa.clone(), max_distance),
-        };
-
-        let language_query = product.supports_incremental_trie_intersection().then(|| {
-            LanguageQueryIterator::from_dictionary(
+        let mode = match articulatory_costs {
+            Some(costs) => {
+                let product = ProductAutomatonChar::with_articulatory_costs(
+                    nfa.clone(),
+                    f64::from(max_distance),
+                    Algorithm::Standard,
+                    costs,
+                );
+                PhoneticQueryModeChar::Articulatory(ArticulatoryScan::from_root(
+                    dictionary.traversal_root(),
+                    product,
+                ))
+            }
+            None => PhoneticQueryModeChar::Incremental(LanguageQueryIterator::from_dictionary(
                 dictionary,
                 LanguageProduct::new(nfa.clone(), max_distance),
-            )
-        });
-
-        // The scan queue is retained only for fractional articulatory costs,
-        // whose exact full-string Dijkstra matcher is not the unit-cost product.
-        let (traversal, root) = if language_query.is_none() {
-            let (session, root) = TraversalSession::capture(dictionary.traversal_root());
-            (Some(session), Some(root))
-        } else {
-            (None, None)
+            )),
         };
-        let mut queue = VecDeque::with_capacity(usize::from(root.is_some()));
-        if let Some(root) = root {
-            queue.push_back(PhoneticTraversal::root(root));
-        }
-
-        // Max depth: reasonable buffer for dictionary traversal
-        let max_depth = 100;
 
         Self {
-            product,
-            language_query,
-            queue,
-            traversal,
-            path_arena: Vec::with_capacity(64),
+            mode,
             _dictionary: PhantomData,
-            max_depth,
             _phonetic_weight: phonetic_weight,
         }
-    }
-
-    #[inline]
-    fn materialize_path(&self, entry: &PhoneticTraversal<char>) -> String {
-        collect_path_units(entry.label, entry.parent, &self.path_arena)
-            .into_iter()
-            .collect()
     }
 }
 
@@ -579,22 +722,22 @@ where
     type Item = PhoneticCandidate;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(query) = &mut self.language_query {
-            let matched = query.next()?;
-            return Some(PhoneticCandidate::new(
-                matched.units.into_iter().collect(),
-                matched.distance,
-                0.0,
-            ));
-        }
+        let scan = match &mut self.mode {
+            PhoneticQueryModeChar::Incremental(query) => {
+                let matched = query.next()?;
+                return Some(PhoneticCandidate::new(
+                    matched.units.into_iter().collect(),
+                    matched.distance,
+                    0.0,
+                ));
+            }
+            PhoneticQueryModeChar::Articulatory(scan) => scan,
+        };
 
-        while let Some(entry) = self.queue.pop_front() {
+        while let Some(entry) = scan.queue.pop_front() {
             // Depth limit to prevent infinite exploration
-            if entry.depth > self.max_depth {
-                self.traversal
-                    .as_mut()
-                    .expect("articulatory scans retain a traversal session")
-                    .discard_unexpanded(entry.position);
+            if entry.depth > scan.max_depth {
+                scan.traversal.discard_unexpanded(entry.position);
                 continue;
             }
 
@@ -602,15 +745,11 @@ where
             // operation whenever this node is expandable. This lets
             // boundary-backed dictionaries fuse their lock/callback work.
             let child_depth = phonetic_child_depth(entry.depth)
-                .filter(|child_depth| *child_depth <= self.max_depth);
+                .filter(|child_depth| *child_depth <= scan.max_depth);
             let mut child_parent = None;
-            let paths = &mut self.path_arena;
-            let queue = &mut self.queue;
-            let traversal = self
-                .traversal
-                .as_mut()
-                .expect("articulatory scans retain a traversal session");
-            let is_final = traversal.filter_map_edges_and_finality(
+            let paths = &mut scan.path_arena;
+            let queue = &mut scan.queue;
+            let is_final = scan.traversal.filter_map_edges_and_finality(
                 entry.position,
                 |_| child_depth,
                 |c, child_position, child_depth| {
@@ -644,27 +783,25 @@ where
             // are enqueued, so extensions of a matched prefix are never skipped.
             let candidate = if is_final {
                 // Check if the product automaton accepts this path
-                let path = self.materialize_path(&entry);
-                self.product.min_distance(&path).map(|distance| {
-                    // Default (integer) path: phonetic_cost = 0. Articulatory
-                    // path: the signed articulatory discount
-                    // `min_cost − edit_distance` (≤ 0), so that
-                    // `total_cost = edit_distance + phonetic_cost = min_cost`
-                    // ranks sound-alike matches ahead of phonetically distant
-                    // ones at the same edit distance. The candidate is already
-                    // admitted (within `max_distance` edits), so `min_cost`
-                    // (≤ `min_distance`) is always `Some`.
-                    let phonetic_cost = if self.product.articulatory_costs().is_some() {
-                        let total = self
+                let path: String = collect_path_units(entry.label, entry.parent, paths)
+                    .into_iter()
+                    .collect();
+                let visible = !scan.traversal.requires_final_units() || {
+                    let units: Vec<_> = path.chars().collect();
+                    scan.traversal.accepts_final_units(&units)
+                };
+                visible
+                    .then(|| scan.product.min_distance(&path))
+                    .flatten()
+                    .map(|distance| {
+                        // The full scan exists only for articulatory scoring, so
+                        // `min_cost − edit_distance` is the signed discount.
+                        let total = scan
                             .product
                             .min_cost(&path)
                             .unwrap_or_else(|| f64::from(distance));
-                        total - f64::from(distance)
-                    } else {
-                        0.0
-                    };
-                    PhoneticCandidate::new(path, distance, phonetic_cost)
-                })
+                        PhoneticCandidate::new(path, distance, total - f64::from(distance))
+                    })
             } else {
                 None
             };
@@ -689,24 +826,29 @@ where
 /// dictionary to be a [`MappedDictionary`] whose nodes are
 /// [`MappedDictionaryNode`]s (e.g. a term → term-id vocabulary trie).
 #[cfg(feature = "phonetic-rules")]
+enum PhoneticValueQueryModeChar<N>
+where
+    N: MappedDictionaryNode + DictionaryNode<Unit = char>,
+{
+    Incremental(MappedLanguageQueryIterator<N, NFAChar>),
+    Articulatory(ArticulatoryScan<N>),
+}
+
+/// Iterator over value-returning character-level phonetic query results.
+///
+/// The iterator selects either incremental language-product traversal or the
+/// fractional articulatory full scan when it is created, retaining storage for
+/// only that execution mode.
+#[cfg(feature = "phonetic-rules")]
 pub struct PhoneticValueQueryIteratorChar<'a, D: MappedDictionary>
 where
     D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = char>,
 {
-    /// Product automaton for matching (articulatory-aware when configured).
-    product: ProductAutomatonChar,
-    /// Frontier-pruned generic language query on the unit-cost path.
-    language_query: Option<LanguageQueryIterator<D::Node, NFAChar>>,
-    /// Queue of dictionary nodes to explore.
-    queue: VecDeque<PhoneticTraversal<char>>,
-    /// Snapshot cursor backend used only by the articulatory full scan.
-    traversal: Option<TraversalSession<D::Node>>,
-    /// Parent-path arena for reconstructing terms without per-edge path clones.
-    path_arena: Vec<PhoneticPathNode<char>>,
+    /// Query-lifetime dispatch for the mutually exclusive incremental and
+    /// articulatory traversal engines.
+    mode: PhoneticValueQueryModeChar<D::Node>,
     /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
     _dictionary: PhantomData<&'a D>,
-    /// Maximum depth (prevents infinite exploration).
-    max_depth: usize,
 }
 
 #[cfg(feature = "phonetic-rules")]
@@ -721,66 +863,30 @@ where
         max_distance: u8,
         articulatory_costs: Option<ArticulatoryCosts>,
     ) -> Self {
-        // Same product construction as `PhoneticQueryIteratorChar::new`.
-        let product = match articulatory_costs {
-            Some(costs) => ProductAutomatonChar::with_articulatory_costs(
-                nfa.clone(),
-                f64::from(max_distance),
-                Algorithm::Standard,
-                costs,
+        let mode = match articulatory_costs {
+            Some(costs) => {
+                let product = ProductAutomatonChar::with_articulatory_costs(
+                    nfa.clone(),
+                    f64::from(max_distance),
+                    Algorithm::Standard,
+                    costs,
+                );
+                PhoneticValueQueryModeChar::Articulatory(ArticulatoryScan::from_mapped_root(
+                    dictionary.traversal_root(),
+                    product,
+                ))
+            }
+            None => PhoneticValueQueryModeChar::Incremental(
+                MappedLanguageQueryIterator::from_traversal_root(
+                    dictionary.traversal_root(),
+                    LanguageProduct::new(nfa.clone(), max_distance),
+                ),
             ),
-            None => ProductAutomatonChar::new(nfa.clone(), max_distance),
         };
-
-        let language_query = product.supports_incremental_trie_intersection().then(|| {
-            LanguageQueryIterator::from_dictionary(
-                dictionary,
-                LanguageProduct::new(nfa.clone(), max_distance),
-            )
-        });
-
-        let (traversal, root) = if language_query.is_none() {
-            let (session, root) =
-                TraversalSession::capture_mapped(DictionaryTraversalRoot::owned(dictionary.root()));
-            (Some(session), Some(root))
-        } else {
-            (None, None)
-        };
-        let mut queue = VecDeque::with_capacity(usize::from(root.is_some()));
-        if let Some(root) = root {
-            queue.push_back(PhoneticTraversal::root(root));
-        }
 
         Self {
-            product,
-            language_query,
-            queue,
-            traversal,
-            path_arena: Vec::with_capacity(64),
+            mode,
             _dictionary: PhantomData,
-            max_depth: 100,
-        }
-    }
-
-    #[inline]
-    fn materialize_path(&self, entry: &PhoneticTraversal<char>) -> String {
-        collect_path_units(entry.label, entry.parent, &self.path_arena)
-            .into_iter()
-            .collect()
-    }
-
-    /// Articulatory discount for an admitted path; `0.0` on the default path.
-    /// See [`PhoneticCandidate::phonetic_cost`].
-    #[inline]
-    fn phonetic_cost(&self, path: &str, distance: u8) -> f64 {
-        if self.product.articulatory_costs().is_some() {
-            let total = self
-                .product
-                .min_cost(path)
-                .unwrap_or_else(|| f64::from(distance));
-            total - f64::from(distance)
-        } else {
-            0.0
         }
     }
 }
@@ -793,39 +899,35 @@ where
     type Item = PhoneticValueCandidate<D::Value>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(query) = &mut self.language_query {
-            for matched in query {
-                if let Some(value) = matched.node.value_at_final() {
-                    return Some(PhoneticValueCandidate::new(
-                        matched.units.into_iter().collect(),
-                        matched.distance,
-                        0.0,
-                        value,
-                    ));
+        let scan = match &mut self.mode {
+            PhoneticValueQueryModeChar::Incremental(query) => {
+                for matched in query {
+                    if let Some(value) = matched.value {
+                        return Some(PhoneticValueCandidate::new(
+                            matched.units.into_iter().collect(),
+                            matched.distance,
+                            0.0,
+                            value,
+                        ));
+                    }
                 }
+                return None;
             }
-            return None;
-        }
+            PhoneticValueQueryModeChar::Articulatory(scan) => scan,
+        };
 
-        while let Some(entry) = self.queue.pop_front() {
-            if entry.depth > self.max_depth {
-                self.traversal
-                    .as_mut()
-                    .expect("articulatory scans retain a traversal session")
-                    .discard_unexpanded(entry.position);
+        while let Some(entry) = scan.queue.pop_front() {
+            if entry.depth > scan.max_depth {
+                scan.traversal.discard_unexpanded(entry.position);
                 continue;
             }
 
             let child_depth = phonetic_child_depth(entry.depth)
-                .filter(|child_depth| *child_depth <= self.max_depth);
+                .filter(|child_depth| *child_depth <= scan.max_depth);
             let mut child_parent = None;
-            let paths = &mut self.path_arena;
-            let queue = &mut self.queue;
-            let traversal = self
-                .traversal
-                .as_mut()
-                .expect("articulatory scans retain a traversal session");
-            let final_source = traversal.filter_map_edges_and_final_source(
+            let paths = &mut scan.path_arena;
+            let queue = &mut scan.queue;
+            let final_source = scan.traversal.filter_map_edges_and_final_source(
                 entry.position,
                 |_| child_depth,
                 |c, child_position, child_depth| {
@@ -858,16 +960,35 @@ where
             // A candidate requires a stored value at this terminal and a
             // phonetic/edit match. Children have already been enqueued.
             let candidate = if let Some(final_source) = final_source {
-                let path = self.materialize_path(&entry);
-                if let Some(distance) = self.product.min_distance(&path) {
-                    self.traversal
-                        .as_ref()
-                        .expect("articulatory scans retain a traversal session")
-                        .resolve_final_value(final_source)
-                        .map(|value| {
-                            let phonetic_cost = self.phonetic_cost(&path, distance);
-                            PhoneticValueCandidate::new(path, distance, phonetic_cost, value)
-                        })
+                let path: String = collect_path_units(entry.label, entry.parent, paths)
+                    .into_iter()
+                    .collect();
+                if let Some(distance) = scan.product.min_distance(&path) {
+                    let final_units = scan
+                        .traversal
+                        .requires_final_units()
+                        .then(|| path.chars().collect::<Vec<_>>());
+                    if final_units
+                        .as_deref()
+                        .is_some_and(|units| !scan.traversal.accepts_final_units(units))
+                    {
+                        None
+                    } else {
+                        scan.traversal
+                            .resolve_final_value(final_source, final_units.as_deref())
+                            .map(|value| {
+                                let total = scan
+                                    .product
+                                    .min_cost(&path)
+                                    .unwrap_or_else(|| f64::from(distance));
+                                PhoneticValueCandidate::new(
+                                    path,
+                                    distance,
+                                    total - f64::from(distance),
+                                    value,
+                                )
+                            })
+                    }
                 } else {
                     None
                 }
@@ -1191,7 +1312,7 @@ where
     D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = u8>,
 {
     /// Frontier-pruned generic language query.
-    language_query: LanguageQueryIterator<D::Node, NFA>,
+    language_query: MappedLanguageQueryIterator<D::Node, NFA>,
     /// Keeps the iterator lifetime tied to the dictionary that produced its nodes.
     _dictionary: PhantomData<&'a D>,
 }
@@ -1203,8 +1324,8 @@ where
 {
     fn new(dictionary: &'a D, nfa: &NFA, _input: &[u8], max_distance: u8) -> Self {
         Self {
-            language_query: LanguageQueryIterator::from_dictionary(
-                dictionary,
+            language_query: MappedLanguageQueryIterator::from_traversal_root(
+                dictionary.traversal_root(),
                 LanguageProduct::new(nfa.clone(), max_distance),
             ),
             _dictionary: PhantomData,
@@ -1221,7 +1342,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         for matched in &mut self.language_query {
-            if let Some(value) = matched.node.value() {
+            if let Some(value) = matched.value {
                 return Some(PhoneticValueCandidateByte::new(
                     matched.units,
                     matched.distance,
@@ -1260,6 +1381,59 @@ mod tests {
     fn test_phonetic_child_depth_rejects_overflow() {
         assert_eq!(phonetic_child_depth(0), Some(1));
         assert_eq!(phonetic_child_depth(usize::MAX), None);
+    }
+
+    #[test]
+    fn character_query_retains_only_its_selected_execution_mode() {
+        let nfa = compile(&parse("phone").expect("parse")).expect("compile");
+        let incremental = PhoneticTransducerChar::new(
+            DoubleArrayTrieChar::from_terms(["phone", "fone"]),
+            nfa.clone(),
+            1,
+        );
+        assert!(matches!(
+            incremental.query("phone").mode,
+            PhoneticQueryModeChar::Incremental(_)
+        ));
+
+        let articulatory = PhoneticTransducerChar::with_articulatory_costs(
+            DoubleArrayTrieChar::from_terms(["phone", "fone"]),
+            nfa,
+            1,
+            ArticulatoryCosts::default(),
+        );
+        let query = articulatory.query("phone");
+        let PhoneticQueryModeChar::Articulatory(scan) = query.mode else {
+            panic!("articulatory scoring requires the full-scan mode");
+        };
+        assert_eq!(scan.queue.len(), 1);
+        assert!(scan.path_arena.is_empty());
+    }
+
+    #[cfg(feature = "benchmark-controls")]
+    #[test]
+    fn legacy_phonetic_retention_control_is_exact_and_layout_distinct() {
+        let nfa = compile(&parse("phone").expect("parse")).expect("compile");
+        let transducer = PhoneticTransducerChar::new(
+            DoubleArrayTrieChar::from_terms(["phone", "phones", "fone", "stone"]),
+            nfa,
+            2,
+        );
+
+        let current = transducer.query("phone");
+        let legacy = transducer.query_legacy_unit_cost_retention_control("phone");
+        assert!(legacy.language_query.is_some());
+        assert!(legacy._queue.is_empty());
+        assert_eq!(legacy._queue.capacity(), 0);
+        assert!(legacy._traversal.is_none());
+        assert!(legacy._path_arena.is_empty());
+        assert_eq!(legacy._path_arena.capacity(), 64);
+        assert_eq!(legacy._max_depth, 100);
+        assert!(std::mem::size_of_val(&legacy) > std::mem::size_of_val(&current));
+
+        let current: Vec<_> = current.collect();
+        let legacy: Vec<_> = legacy.collect();
+        assert_eq!(legacy, current);
     }
 
     #[test]

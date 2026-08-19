@@ -85,9 +85,6 @@ pub(crate) fn saturating_usize_difference_i64(left: usize, right: usize) -> i64 
 /// Convert a [`Duration`](std::time::Duration) to whole milliseconds as `u64`,
 /// saturating to `u64::MAX` when the millisecond count exceeds `u64::MAX`.
 ///
-/// Gated to the same feature set as its sole consumer (the `cache` module), so
-/// this shared copy is compiled exactly when it is used.
-#[cfg(any(feature = "pathmap-backend", feature = "phonetic-rules"))]
 #[inline]
 pub(crate) fn duration_millis_u64_saturating(duration: std::time::Duration) -> u64 {
     u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
@@ -232,7 +229,6 @@ mod tests {
         }
     }
 
-    #[cfg(any(feature = "pathmap-backend", feature = "phonetic-rules"))]
     #[test]
     fn duration_millis_u64_saturating_contract() {
         use std::time::Duration;

@@ -128,8 +128,8 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
         P: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
     {
         let max_cost = params.scale_cost(max_cost)?;
-        let inner = QueryIterator::with_affine_policy_and_substring(
-            self.dictionary.root(),
+        let inner = QueryIterator::with_affine_traversal_root_and_substring(
+            self.dictionary.traversal_root(),
             self.term,
             max_cost,
             params,
@@ -171,8 +171,8 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
     where
         P: SubstitutionPolicyFor<<D::Node as crate::dictionary::DictionaryNode>::Unit>,
     {
-        OrderedQueryIterator::with_policy_and_substring(
-            self.dictionary.root(),
+        OrderedQueryIterator::with_traversal_root_and_policy_and_substring(
+            self.dictionary.traversal_root(),
             self.term,
             self.max_distance,
             self.algorithm,

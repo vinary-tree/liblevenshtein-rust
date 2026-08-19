@@ -1,0 +1,6 @@
+policy,scan_hot_retained,phase_rounds_to_95,phase_hit_rate,zipf_hit_rate
+fifo,0,1,0.984375,0.549617
+lru,0,1,0.984375,0.603128
+sieve,0,1,0.984375,0.615622
+aging-exact-lfu,127,25,0.609619,0.661372
+tinylfu-sieve,128,9,0.864258,0.672367

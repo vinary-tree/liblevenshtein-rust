@@ -37,11 +37,13 @@
 //! assert_eq!(ttl_dict.get_value("foo"), Some(42));
 //! ```
 
-use crate::dictionary::node_adapter::{for_each_wrapped_edge, visit_wrapped_edges_and_finality};
+use crate::dictionary::node_adapter::{
+    impl_semantic_dictionary_node, map_transparent_traversal_root,
+};
 use crate::sync_compat::RwLock;
 use libdictenstein::{
-    Dictionary, DictionaryNode, DictionaryValue, MappedDictionary, MappedDictionaryNode,
-    SyncStrategy,
+    CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot, DictionaryValue,
+    MappedDictionary, MappedDictionaryNode, SyncStrategy,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -54,18 +56,14 @@ struct EntryMetadata {
 }
 
 impl EntryMetadata {
-    fn new() -> Self {
-        Self {
-            inserted_at: Instant::now(),
-        }
+    fn new(inserted_at: Instant) -> Self {
+        Self { inserted_at }
     }
 
-    fn age(&self) -> Duration {
-        self.inserted_at.elapsed()
-    }
-
-    fn is_expired(&self, ttl: Duration) -> bool {
-        self.age() > ttl
+    fn is_expired_at(&self, ttl: Duration, observed_at: Instant) -> bool {
+        observed_at
+            .checked_duration_since(self.inserted_at)
+            .is_some_and(|age| age > ttl)
     }
 }
 
@@ -95,13 +93,21 @@ impl EntryMetadata {
 /// assert_eq!(ttl.get_value("hello"), Some(1));
 /// ```
 #[derive(Clone)]
-pub struct Ttl<D> {
+pub struct Ttl<D>
+where
+    D: Dictionary,
+{
     inner: D,
     ttl: Duration,
-    metadata: Arc<RwLock<HashMap<String, EntryMetadata>>>,
+    metadata: TtlMetadata<<D::Node as DictionaryNode>::Unit>,
 }
 
-impl<D> Ttl<D> {
+type TtlMetadata<U> = Arc<RwLock<HashMap<Vec<U>, EntryMetadata>>>;
+
+impl<D> Ttl<D>
+where
+    D: Dictionary,
+{
     /// Creates a new TTL wrapper with the given duration.
     ///
     /// # Arguments
@@ -149,30 +155,57 @@ impl<D> Ttl<D> {
     }
 
     /// Checks if an entry is expired.
-    fn is_expired(&self, term: &str) -> bool {
+    fn is_expired_at(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        observed_at: Instant,
+    ) -> bool {
         let metadata = self.metadata.read();
-        if let Some(entry_meta) = metadata.get(term) {
-            entry_meta.is_expired(self.ttl)
+        if let Some(entry_meta) = metadata.get(units) {
+            entry_meta.is_expired_at(self.ttl, observed_at)
         } else {
             // No metadata means entry was never accessed, treat as not expired
             false
         }
     }
 
-    /// Records an entry access (updates metadata).
-    fn record_access(&self, term: &str) {
+    /// Start the lifetime of one successfully resolved entry, if necessary.
+    fn record_access_at(&self, units: &[<D::Node as DictionaryNode>::Unit], observed_at: Instant) {
         let mut metadata = self.metadata.write();
         metadata
-            .entry(term.to_string())
-            .or_insert_with(EntryMetadata::new);
+            .entry(units.to_vec())
+            .or_insert_with(|| EntryMetadata::new(observed_at));
     }
 
     /// Removes expired entries from metadata.
     ///
     /// This is a maintenance operation to prevent unbounded metadata growth.
+    /// Because this wrapper is a non-owning view and cannot delete the inner
+    /// value, a subsequent successful access begins a fresh lifetime.
     pub fn cleanup_expired(&self) {
+        let observed_at = Instant::now();
         let mut metadata = self.metadata.write();
-        metadata.retain(|_, entry_meta| !entry_meta.is_expired(self.ttl));
+        metadata.retain(|_, entry_meta| !entry_meta.is_expired_at(self.ttl, observed_at));
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_entry_age_for_test(&self, term: &str, age: Duration) {
+        let units = <D::Node as DictionaryNode>::Unit::from_str(term);
+        self.set_units_age_for_test(&units, age);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_units_age_for_test(
+        &self,
+        units: &[<D::Node as DictionaryNode>::Unit],
+        age: Duration,
+    ) {
+        let inserted_at = Instant::now()
+            .checked_sub(age)
+            .expect("test age must fit within the monotonic clock epoch");
+        self.metadata
+            .write()
+            .insert(units.to_vec(), EntryMetadata::new(inserted_at));
     }
 }
 
@@ -184,7 +217,22 @@ where
 
     #[inline]
     fn root(&self) -> Self::Node {
-        TtlNode::new(self.inner.root(), self.ttl, Arc::clone(&self.metadata))
+        TtlNode::new(
+            self.inner.root(),
+            self.ttl,
+            Arc::clone(&self.metadata),
+            Instant::now(),
+        )
+    }
+
+    #[inline]
+    fn traversal_root(&self) -> DictionaryTraversalRoot<Self::Node> {
+        let ttl = self.ttl;
+        let metadata = Arc::clone(&self.metadata);
+        let observed_at = Instant::now();
+        map_transparent_traversal_root(self.inner.traversal_root(), |inner| {
+            TtlNode::new(inner, ttl, metadata, observed_at)
+        })
     }
 
     #[inline]
@@ -194,7 +242,8 @@ where
 
     #[inline]
     fn contains(&self, term: &str) -> bool {
-        if self.is_expired(term) {
+        let units = <D::Node as DictionaryNode>::Unit::from_str(term);
+        if self.is_expired_at(&units, Instant::now()) {
             return false;
         }
         self.inner.contains(term)
@@ -203,6 +252,11 @@ where
     #[inline]
     fn sync_strategy(&self) -> SyncStrategy {
         self.inner.sync_strategy()
+    }
+
+    #[inline]
+    fn is_suffix_based(&self) -> bool {
+        self.inner.is_suffix_based()
     }
 }
 
@@ -215,16 +269,17 @@ where
 
     #[inline]
     fn get_value(&self, term: &str) -> Option<Self::Value> {
+        let observed_at = Instant::now();
+        let units = <D::Node as DictionaryNode>::Unit::from_str(term);
         // Check if expired first
-        if self.is_expired(term) {
+        if self.is_expired_at(&units, observed_at) {
             return None;
         }
 
-        // Record access
-        self.record_access(term);
-
-        // Get value from inner dictionary
-        self.inner.get_value(term)
+        // Only existing, valued terms consume metadata capacity.
+        let value = self.inner.get_value(term)?;
+        self.record_access_at(&units, observed_at);
+        Some(value)
     }
 
     #[inline]
@@ -232,93 +287,71 @@ where
     where
         F: Fn(&Self::Value) -> bool,
     {
-        if self.is_expired(term) {
+        let observed_at = Instant::now();
+        let units = <D::Node as DictionaryNode>::Unit::from_str(term);
+        if self.is_expired_at(&units, observed_at) {
             return false;
         }
-        self.inner.contains_with_value(term, predicate)
+        let matches = self.inner.contains_with_value(term, predicate);
+        if matches {
+            self.record_access_at(&units, observed_at);
+        }
+        matches
     }
 }
 
 /// Node wrapper for TTL dictionary.
 #[derive(Clone)]
-pub struct TtlNode<N> {
+pub struct TtlNode<N: DictionaryNode> {
     inner: N,
     ttl: Duration,
-    metadata: Arc<RwLock<HashMap<String, EntryMetadata>>>,
+    metadata: Arc<RwLock<HashMap<Vec<N::Unit>, EntryMetadata>>>,
+    observed_at: Instant,
 }
 
-impl<N> TtlNode<N> {
-    fn new(inner: N, ttl: Duration, metadata: Arc<RwLock<HashMap<String, EntryMetadata>>>) -> Self {
+impl<N: DictionaryNode> TtlNode<N> {
+    fn new(
+        inner: N,
+        ttl: Duration,
+        metadata: Arc<RwLock<HashMap<Vec<N::Unit>, EntryMetadata>>>,
+        observed_at: Instant,
+    ) -> Self {
         Self {
             inner,
             ttl,
             metadata,
+            observed_at,
         }
     }
-}
-
-impl<N> DictionaryNode for TtlNode<N>
-where
-    N: DictionaryNode,
-{
-    type Unit = N::Unit;
 
     #[inline]
-    fn is_final(&self) -> bool {
-        self.inner.is_final()
+    fn is_expired(&self, units: &[N::Unit]) -> bool {
+        self.metadata
+            .read()
+            .get(units)
+            .is_some_and(|entry| entry.is_expired_at(self.ttl, self.observed_at))
     }
 
     #[inline]
-    fn transition(&self, label: Self::Unit) -> Option<Self> {
-        self.inner
-            .transition(label)
-            .map(|node| TtlNode::new(node, self.ttl, Arc::clone(&self.metadata)))
-    }
-
-    #[inline]
-    fn edges(&self) -> Box<dyn Iterator<Item = (Self::Unit, Self)> + '_> {
-        let ttl = self.ttl;
-        let metadata = Arc::clone(&self.metadata);
-        Box::new(
-            self.inner
-                .edges()
-                .map(move |(label, node)| (label, TtlNode::new(node, ttl, Arc::clone(&metadata)))),
-        )
-    }
-
-    #[inline]
-    fn for_each_edge<F>(&self, visitor: F)
-    where
-        F: FnMut(Self::Unit, Self),
-    {
-        let ttl = self.ttl;
-        let metadata = Arc::clone(&self.metadata);
-        for_each_wrapped_edge(
-            &self.inner,
-            |node| TtlNode::new(node, ttl, Arc::clone(&metadata)),
-            visitor,
-        );
-    }
-
-    #[inline]
-    fn visit_edges_and_finality<F>(&self, visitor: F) -> bool
-    where
-        F: FnMut(Self::Unit, Self),
-    {
-        let ttl = self.ttl;
-        let metadata = Arc::clone(&self.metadata);
-        visit_wrapped_edges_and_finality(
-            &self.inner,
-            |node| TtlNode::new(node, ttl, Arc::clone(&metadata)),
-            visitor,
-        )
-    }
-
-    #[inline]
-    fn edge_count(&self) -> Option<usize> {
-        self.inner.edge_count()
+    fn record_successful_access(&self, units: &[N::Unit]) {
+        self.metadata
+            .write()
+            .entry(units.to_vec())
+            .or_insert_with(|| EntryMetadata::new(Instant::now()));
     }
 }
+
+impl_semantic_dictionary_node!(
+    TtlNode,
+    |owner, child| TtlNode::new(
+        child,
+        owner.ttl,
+        Arc::clone(&owner.metadata),
+        owner.observed_at,
+    ),
+    |_owner| true,
+    |owner, units| owner.inner.accepts_final_units(units) && !owner.is_expired(units)
+);
 
 impl<N, V> MappedDictionaryNode for TtlNode<N>
 where
@@ -335,6 +368,92 @@ where
     #[inline]
     fn value_at_final(&self) -> Option<Self::Value> {
         self.inner.value_at_final()
+    }
+
+    #[inline]
+    fn value_at_final_with_units(&self, units: &[Self::Unit]) -> Option<Self::Value> {
+        if !self.accepts_final_units(units) {
+            return None;
+        }
+        let value = self.inner.value_at_final_with_units(units)?;
+        self.record_successful_access(units);
+        Some(value)
+    }
+
+    #[inline]
+    fn supports_snapshot_cursor_values(&self) -> bool {
+        self.inner.supports_snapshot_cursor_values()
+    }
+
+    #[inline]
+    fn supports_snapshot_graph_values(&self) -> bool {
+        self.inner.supports_snapshot_graph_values()
+    }
+
+    #[inline]
+    fn snapshot_traversal_graph(
+        &self,
+    ) -> Option<
+        Arc<libdictenstein::SnapshotTraversalGraph<Self::Unit, Self::SnapshotGraphValueHandle>>,
+    > {
+        self.inner.snapshot_traversal_graph()
+    }
+
+    #[inline]
+    unsafe fn snapshot_cursor_value(
+        &self,
+        cursor: Self::SnapshotCursor,
+    ) -> Option<Option<Self::Value>> {
+        // SAFETY: this node retains the same inner revision and cursor owner.
+        unsafe { self.inner.snapshot_cursor_value(cursor) }
+    }
+
+    #[inline]
+    unsafe fn snapshot_cursor_value_with_units(
+        &self,
+        cursor: Self::SnapshotCursor,
+        units: &[Self::Unit],
+    ) -> Option<Option<Self::Value>> {
+        if !self.accepts_final_units(units) {
+            return Some(None);
+        }
+        // SAFETY: cursor and units come from this exact retained revision.
+        let value = unsafe { self.inner.snapshot_cursor_value_with_units(cursor, units) }?;
+        if value.is_some() {
+            self.record_successful_access(units);
+        }
+        Some(value)
+    }
+
+    #[inline]
+    unsafe fn snapshot_graph_cursor_value(
+        &self,
+        graph: &libdictenstein::SnapshotTraversalGraph<Self::Unit, Self::SnapshotGraphValueHandle>,
+        cursor: libdictenstein::SnapshotTraversalCursor,
+    ) -> Option<Option<Self::Value>> {
+        // SAFETY: this node retains the same graph, cursor, and inner owner.
+        unsafe { self.inner.snapshot_graph_cursor_value(graph, cursor) }
+    }
+
+    #[inline]
+    unsafe fn snapshot_graph_cursor_value_with_units(
+        &self,
+        graph: &libdictenstein::SnapshotTraversalGraph<Self::Unit, Self::SnapshotGraphValueHandle>,
+        cursor: libdictenstein::SnapshotTraversalCursor,
+        units: &[Self::Unit],
+    ) -> Option<Option<Self::Value>> {
+        if !self.accepts_final_units(units) {
+            return Some(None);
+        }
+        // SAFETY: graph, cursor, and units come from this retained revision.
+        let value = unsafe {
+            self.inner
+                .snapshot_graph_cursor_value_with_units(graph, cursor, units)
+        }?;
+        if value.is_some() {
+            self.record_successful_access(units);
+        }
+        Some(value)
     }
 }
 
@@ -475,5 +594,85 @@ mod tests {
 
         assert_eq!(original.len(), Some(1));
         assert_eq!(original.get_value("foo"), Some(42));
+    }
+}
+
+#[cfg(test)]
+mod semantic_query_tests {
+    use super::*;
+    use crate::transducer::{Algorithm, NoPruning, SubsequenceQueryIterator, Transducer};
+    use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
+    use libdictenstein::dynamic_dawg::{DynamicDawg, DynamicDawgU64};
+    use std::collections::HashSet;
+
+    fn expired_ascii() -> Ttl<DynamicDawg<u64>> {
+        let dictionary = DynamicDawg::from_sorted_terms_with_values([("cat", 7_u64), ("dog", 8)]);
+        let ttl = Ttl::new(dictionary, Duration::from_secs(1));
+        ttl.set_entry_age_for_test("cat", Duration::from_secs(2));
+        ttl
+    }
+
+    #[test]
+    fn every_query_surface_hides_expired_terminals() {
+        let ttl = expired_ascii();
+        assert!(!ttl.contains("cat"));
+        assert_eq!(ttl.get_value("cat"), None);
+
+        let subsequence: Vec<_> =
+            SubsequenceQueryIterator::from_dictionary(&ttl, b"cat".to_vec()).collect();
+        assert!(subsequence.is_empty());
+
+        let transducer = Transducer::new(ttl, Algorithm::Standard);
+        assert!(transducer.query_with_distance("cat", 0).next().is_none());
+        assert!(transducer.query_ordered("cat", 0).next().is_none());
+        assert!(transducer
+            .query_with_pruner("cat", 0, NoPruning)
+            .next()
+            .is_none());
+        assert!(transducer.query_values("cat", 0).next().is_none());
+        assert!(transducer
+            .query_filtered("cat", 0, |_| true)
+            .next()
+            .is_none());
+        let values = HashSet::from([7_u64]);
+        assert!(transducer
+            .query_by_value_set("cat", 0, &values)
+            .next()
+            .is_none());
+        assert!(transducer
+            .query_suggestions("cat", 0, |_term: &str, _distance, value: &u64| {
+                *value as f64
+            })
+            .next()
+            .is_none());
+    }
+
+    #[test]
+    fn ttl_uses_exact_unicode_and_native_u64_keys() {
+        let unicode = Ttl::new(
+            DynamicDawgChar::from_sorted_terms_with_values([("cafe", 1_u64), ("café", 2)]),
+            Duration::from_secs(1),
+        );
+        unicode.set_entry_age_for_test("café", Duration::from_secs(2));
+        let unicode_query = Transducer::new(unicode, Algorithm::Standard);
+        assert!(unicode_query.query_values("café", 0).next().is_none());
+        assert_eq!(
+            unicode_query.query_values("cafe", 0).collect::<Vec<_>>(),
+            [("cafe".to_owned(), 0, 1)]
+        );
+
+        let tokens = DynamicDawgU64::new();
+        tokens.insert_sequence_with_value(&[1], 10_u64);
+        tokens.insert_sequence_with_value(&[1, 0], 20_u64);
+        let tokens = Ttl::new(tokens, Duration::from_secs(1));
+        tokens.set_units_age_for_test(&[1], Duration::from_secs(2));
+        let token_query = Transducer::new(tokens, Algorithm::Standard);
+        assert!(token_query.query_units_values(&[1], 0).next().is_none());
+        assert_eq!(
+            token_query
+                .query_units_values(&[1, 0], 0)
+                .collect::<Vec<_>>(),
+            [(vec![1, 0], 0, 20)]
+        );
     }
 }

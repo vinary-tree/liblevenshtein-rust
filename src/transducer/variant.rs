@@ -48,6 +48,21 @@ pub(crate) struct TransitionCtx<P: Copy> {
     pub(crate) params: P,
 }
 
+/// Exact search domain required by one variant's subsumption relation.
+///
+/// This is a semantic property, not a tuning hint: selecting a narrower scope
+/// asserts that representatives outside it can never dominate one another.
+/// [`State`](super::State) uses the scope to avoid irrelevant pairwise checks
+/// while retaining the variant's ordinary [`AutomatonVariant::subsumes`] rule
+/// as the single source of truth.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SubsumptionScope {
+    /// Any representative in the canonical state may participate.
+    Global,
+    /// Only representatives with the candidate's `term_index` may participate.
+    SameTermIndex,
+}
+
 impl<P: Copy> TransitionCtx<P> {
     #[inline(always)]
     pub(crate) const fn new(
@@ -80,6 +95,9 @@ impl TransitionCtx<()> {
 /// increase the minimum cost reported for any possible dictionary suffix.
 pub(crate) trait AutomatonVariant: Copy + 'static {
     type Params: Copy;
+
+    /// Smallest exact candidate domain for this variant's dominance relation.
+    const SUBSUMPTION_SCOPE: SubsumptionScope = SubsumptionScope::Global;
 
     /// Fill `out` with successors of `position`.
     ///

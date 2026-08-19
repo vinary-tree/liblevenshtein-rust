@@ -1,15 +1,14 @@
 //! Iterative dictionary × language-product traversal.
 
 use super::{Frontier, LanguageAutomaton, LanguageProduct};
-use crate::transducer::dictionary_traversal::{DeferredNodeSource, TraversalSession};
-#[cfg(feature = "bindings-phonetic")]
-use libdictenstein::MappedDictionaryNode;
-use libdictenstein::{
-    CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor,
+use crate::transducer::dictionary_traversal::{
+    CursorNativePath, DeferredNodeSource, ParentArenaPath, PathFrontier, ResultPathStrategy,
+    TraversalCursor, TraversalSession,
 };
+#[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
+use libdictenstein::MappedDictionaryNode;
+use libdictenstein::{CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot};
 use std::collections::VecDeque;
-
-const NO_PARENT: usize = usize::MAX;
 
 /// Actual traversal work performed by [`LanguageQueryIterator`].
 ///
@@ -21,21 +20,6 @@ pub struct LanguageQueryStats {
     pub nodes_visited: usize,
     /// Outgoing dictionary edges enumerated before frontier pruning.
     pub edges_enumerated: usize,
-}
-
-#[derive(Clone, Debug)]
-struct PathUnit<U> {
-    unit: U,
-    parent: usize,
-    depth: usize,
-}
-
-#[derive(Clone, Debug)]
-struct Pending<U: CharUnit, S> {
-    position: SnapshotTraversalCursor,
-    label: Option<U>,
-    parent: usize,
-    frontier: Frontier<S>,
 }
 
 /// One accepting dictionary node reached by a language-product traversal.
@@ -50,7 +34,7 @@ pub struct LanguageMatch<N: DictionaryNode> {
 }
 
 /// One accepting dictionary value reached by a mapped language-product walk.
-#[cfg(feature = "bindings-phonetic")]
+#[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
 pub(crate) struct MappedLanguageMatch<N: MappedDictionaryNode> {
     pub(crate) units: Vec<N::Unit>,
     pub(crate) distance: u8,
@@ -72,10 +56,28 @@ where
     N: DictionaryNode,
     L: LanguageAutomaton<N::Unit>,
 {
+    inner: PathLanguageQuery<N, L>,
+}
+
+enum PathLanguageQuery<N, L>
+where
+    N: DictionaryNode,
+    L: LanguageAutomaton<N::Unit>,
+{
+    Parent(LanguageQueryCore<N, L, ParentArenaPath>),
+    Cursor(LanguageQueryCore<N, L, CursorNativePath>),
+}
+
+struct LanguageQueryCore<N, L, K>
+where
+    N: DictionaryNode,
+    L: LanguageAutomaton<N::Unit>,
+    K: ResultPathStrategy<N>,
+{
     product: LanguageProduct<N::Unit, L>,
-    pending: VecDeque<Pending<N::Unit, L::StateSet>>,
+    pending: VecDeque<PathFrontier<K::Trace, Frontier<L::StateSet>>>,
     traversal: TraversalSession<N>,
-    path: Vec<PathUnit<N::Unit>>,
+    path_storage: K::Storage,
     stats: LanguageQueryStats,
 }
 
@@ -83,7 +85,7 @@ where
 ///
 /// It permits compact flat-graph traversal because an accepting node escapes
 /// only as its resolved value, never as a backend-owned child handle.
-#[cfg(feature = "bindings-phonetic")]
+#[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
 pub(crate) struct MappedLanguageQueryIterator<N, L>
 where
     N: MappedDictionaryNode,
@@ -112,23 +114,11 @@ where
 
     fn from_session(
         traversal: TraversalSession<N>,
-        root: SnapshotTraversalCursor,
+        root: TraversalCursor<N::SnapshotCursor>,
         product: LanguageProduct<N::Unit, L>,
     ) -> Self {
-        let frontier = product.initial_frontier();
-        let mut pending = VecDeque::with_capacity(1);
-        pending.push_back(Pending {
-            position: root,
-            label: None,
-            parent: NO_PARENT,
-            frontier,
-        });
         Self {
-            product,
-            pending,
-            traversal,
-            path: Vec::new(),
-            stats: LanguageQueryStats::default(),
+            inner: PathLanguageQuery::new(root, traversal, product),
         }
     }
 
@@ -145,49 +135,116 @@ where
 
     /// Borrow the language product driving the traversal.
     pub fn product(&self) -> &LanguageProduct<N::Unit, L> {
-        &self.product
+        self.inner.product()
     }
 
     /// Snapshot traversal counters.
     pub fn stats(&self) -> LanguageQueryStats {
-        self.stats
+        self.inner.stats()
     }
 
-    fn materialize(&self, label: Option<N::Unit>, parent: usize) -> Vec<N::Unit> {
-        let mut result = Vec::with_capacity(if parent == NO_PARENT {
-            usize::from(label.is_some())
-        } else {
-            self.path[parent].depth + usize::from(label.is_some())
-        });
-        if let Some(unit) = label {
-            result.push(unit);
-        }
-        let mut cursor = parent;
-        while cursor != NO_PARENT {
-            result.push(self.path[cursor].unit);
-            cursor = self.path[cursor].parent;
-        }
-        result.reverse();
-        result
+    #[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
+    fn traversal(&self) -> &TraversalSession<N> {
+        self.inner.traversal()
     }
 
     fn next_source(&mut self) -> Option<PendingLanguageMatch<N>>
     where
         N::Unit: CharUnit,
     {
+        self.inner.next_source()
+    }
+
+    fn resolve_node(&self, source: DeferredNodeSource<N>) -> N {
+        self.inner.traversal().resolve_node(source)
+    }
+}
+
+impl<N, L> PathLanguageQuery<N, L>
+where
+    N: DictionaryNode,
+    N::Unit: CharUnit,
+    L: LanguageAutomaton<N::Unit>,
+{
+    fn new(
+        root: TraversalCursor<N::SnapshotCursor>,
+        traversal: TraversalSession<N>,
+        product: LanguageProduct<N::Unit, L>,
+    ) -> Self {
+        if traversal.supports_cursor_key_units() {
+            Self::Cursor(LanguageQueryCore::new(root, traversal, product))
+        } else {
+            Self::Parent(LanguageQueryCore::new(root, traversal, product))
+        }
+    }
+
+    fn product(&self) -> &LanguageProduct<N::Unit, L> {
+        match self {
+            Self::Parent(core) => &core.product,
+            Self::Cursor(core) => &core.product,
+        }
+    }
+
+    fn stats(&self) -> LanguageQueryStats {
+        match self {
+            Self::Parent(core) => core.stats,
+            Self::Cursor(core) => core.stats,
+        }
+    }
+
+    fn traversal(&self) -> &TraversalSession<N> {
+        match self {
+            Self::Parent(core) => &core.traversal,
+            Self::Cursor(core) => &core.traversal,
+        }
+    }
+
+    fn next_source(&mut self) -> Option<PendingLanguageMatch<N>> {
+        match self {
+            Self::Parent(core) => core.next_source(),
+            Self::Cursor(core) => core.next_source(),
+        }
+    }
+}
+
+impl<N, L, K> LanguageQueryCore<N, L, K>
+where
+    N: DictionaryNode,
+    N::Unit: CharUnit,
+    L: LanguageAutomaton<N::Unit>,
+    K: ResultPathStrategy<N>,
+{
+    fn new(
+        root: TraversalCursor<N::SnapshotCursor>,
+        traversal: TraversalSession<N>,
+        product: LanguageProduct<N::Unit, L>,
+    ) -> Self {
+        let frontier = product.initial_frontier();
+        let (mut pending, path_storage) = K::cold_queue();
+        pending.push_back(PathFrontier::new(K::root(root), frontier));
+        Self {
+            product,
+            pending,
+            traversal,
+            path_storage,
+            stats: LanguageQueryStats::default(),
+        }
+    }
+
+    fn next_source(&mut self) -> Option<PendingLanguageMatch<N>> {
         while let Some(entry) = self.pending.pop_front() {
             #[cfg(feature = "perf-instrumentation")]
             {
                 self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
             }
-            let mut child_parent = None;
+            let mut expansion = K::begin_expansion(&entry.trace);
             let product = &mut self.product;
             let pending = &mut self.pending;
-            let path = &mut self.path;
+            let path_storage = &mut self.path_storage;
             #[cfg(feature = "perf-instrumentation")]
             let stats = &mut self.stats;
             let final_source = self.traversal.filter_map_edges_and_final_source(
-                entry.position,
+                K::position(&entry.trace),
                 |unit| {
                     #[cfg(feature = "perf-instrumentation")]
                     {
@@ -197,29 +254,16 @@ where
                     (!frontier.is_empty()).then_some(frontier)
                 },
                 |unit, child_position, frontier| {
-                    let parent = *child_parent.get_or_insert_with(|| match entry.label {
-                        Some(label) => {
-                            let depth = if entry.parent == NO_PARENT {
-                                1
-                            } else {
-                                path[entry.parent].depth.saturating_add(1)
-                            };
-                            let index = path.len();
-                            path.push(PathUnit {
-                                unit: label,
-                                parent: entry.parent,
-                                depth,
-                            });
-                            index
-                        }
-                        None => entry.parent,
-                    });
-                    pending.push_back(Pending {
-                        position: child_position,
-                        label: Some(unit),
-                        parent,
+                    pending.push_back(PathFrontier::new(
+                        K::child_trace(
+                            &entry.trace,
+                            &mut expansion,
+                            unit,
+                            child_position,
+                            path_storage,
+                        ),
                         frontier,
-                    });
+                    ));
                 },
             );
             let distance = final_source
@@ -227,8 +271,12 @@ where
                 .and_then(|_| self.product.min_accepting_distance(&entry.frontier));
 
             if let Some(distance) = distance {
+                let units = K::materialize_units(&entry.trace, &self.traversal, &self.path_storage);
+                if !self.traversal.accepts_final_units(&units) {
+                    continue;
+                }
                 return Some(PendingLanguageMatch {
-                    units: self.materialize(entry.label, entry.parent),
+                    units,
                     distance,
                     source: final_source.expect("an accepting final retains its node source"),
                 });
@@ -238,7 +286,7 @@ where
     }
 }
 
-#[cfg(feature = "bindings-phonetic")]
+#[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
 impl<N, L> MappedLanguageQueryIterator<N, L>
 where
     N: MappedDictionaryNode,
@@ -256,7 +304,7 @@ where
     }
 }
 
-#[cfg(feature = "bindings-phonetic")]
+#[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
 impl<N, L> Iterator for MappedLanguageQueryIterator<N, L>
 where
     N: MappedDictionaryNode,
@@ -267,10 +315,11 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let match_source = self.inner.next_source()?;
-        let value = self
-            .inner
-            .traversal
-            .resolve_final_value(match_source.source);
+        let requires_units = self.inner.traversal().requires_final_units();
+        let value = self.inner.traversal().resolve_final_value(
+            match_source.source,
+            requires_units.then_some(match_source.units.as_slice()),
+        );
         Some(MappedLanguageMatch {
             units: match_source.units,
             distance: match_source.distance,
@@ -289,7 +338,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let match_source = self.next_source()?;
-        let node = self.traversal.resolve_node(match_source.source);
+        let node = self.resolve_node(match_source.source);
         Some(LanguageMatch {
             units: match_source.units,
             distance: match_source.distance,

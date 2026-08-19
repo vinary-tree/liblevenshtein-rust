@@ -12,6 +12,7 @@ use liblevenshtein::bindings::{
 };
 use liblevenshtein::transducer::Algorithm;
 use liblevenshtein::{causal_perf_stats, reset_causal_perf_stats};
+use std::sync::{Arc, Barrier};
 
 fn drain(cursor: &mut QueryCursor) -> Vec<Match> {
     let mut output = Vec::new();
@@ -29,6 +30,60 @@ fn transducer(dictionary: &DynamicDawgBinding) -> ResourceTransducer {
     let resource = dictionary.resource();
     unsafe { ResourceTransducer::from_resource(resource.as_raw(), Algorithm::Standard) }
         .expect("retain real DynamicDawg resource")
+}
+
+#[test]
+fn concurrent_cold_queries_import_one_graph_without_registry_locking() {
+    const THREADS: usize = 16;
+    let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
+    for index in 0..512 {
+        dictionary
+            .insert_text(format!("term-{index:04}").as_bytes(), Some(index))
+            .expect("seed insert");
+    }
+    let transducer = Arc::new(transducer(&dictionary));
+    let barrier = Arc::new(Barrier::new(THREADS));
+
+    reset_causal_perf_stats();
+    reset_causal_construction_stats();
+    let workers = (0..THREADS)
+        .map(|_| {
+            let transducer = Arc::clone(&transducer);
+            let barrier = Arc::clone(&barrier);
+            std::thread::spawn(move || {
+                barrier.wait();
+                drain(
+                    &mut transducer
+                        .query_utf8("term-0010", 1, QueryOrder::Traversal)
+                        .expect("concurrent graph query"),
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let mut reference = None;
+    for worker in workers {
+        let matches = worker.join().expect("query thread");
+        if let Some(reference) = &reference {
+            assert_eq!(&matches, reference);
+        } else {
+            reference = Some(matches);
+        }
+    }
+    let consumer = causal_perf_stats();
+    assert_eq!(
+        consumer.foreign_graph_decodes, 1,
+        "one revision cell must single-flight the complete graph import: {consumer:?}"
+    );
+    assert_eq!(consumer.foreign_node_cache_hits, 0);
+    assert_eq!(consumer.foreign_node_cache_misses, 0);
+
+    let provider = causal_construction_stats();
+    assert_eq!(provider.resource_snapshots_created, 1);
+    assert_eq!(provider.resource_graph_projections, 1);
+    assert_eq!(provider.resource_graph_calls, 1);
+    assert_eq!(provider.resource_edges_calls, 0);
+    assert_eq!(provider.resource_is_final_calls, 0);
 }
 
 #[test]

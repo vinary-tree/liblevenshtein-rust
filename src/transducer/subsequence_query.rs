@@ -6,10 +6,8 @@
 //! [`PrefixPruner`](super::PrefixPruner).
 
 use super::{NoPruning, PrefixPruner};
-use crate::transducer::dictionary_traversal::TraversalSession;
-use libdictenstein::{
-    CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot, SnapshotTraversalCursor,
-};
+use crate::transducer::dictionary_traversal::{DfsNodeEdges, TraversalCursor, TraversalSession};
+use libdictenstein::{CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot};
 
 /// Work counters for a subsequence traversal.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -31,32 +29,29 @@ pub struct SubsequenceMatch<U: CharUnit> {
     pub score: Option<f64>,
 }
 
-struct Frame<U: CharUnit> {
-    edges: std::vec::IntoIter<(U, SnapshotTraversalCursor)>,
+struct Frame<N: DictionaryNode> {
+    edges: DfsNodeEdges<N>,
     matched: usize,
-    entered_by: Option<U>,
+    entered_by: Option<N::Unit>,
     is_final: bool,
     final_checked: bool,
 }
 
-impl<U: CharUnit> Frame<U> {
-    fn new<N>(
-        position: SnapshotTraversalCursor,
-        entered_by: Option<U>,
+impl<N: DictionaryNode> Frame<N> {
+    fn new(
+        position: TraversalCursor<N::SnapshotCursor>,
+        entered_by: Option<N::Unit>,
         matched: usize,
         traversal: &mut TraversalSession<N>,
-    ) -> Self
-    where
-        N: DictionaryNode<Unit = U>,
-    {
-        let mut edges = Vec::new();
-        let is_final = traversal.filter_map_edges_and_finality(
-            position,
-            |label| Some(label),
-            |label, child, _| edges.push((label, child)),
-        );
+    ) -> Self {
+        // Subsequence traversal has no automaton-dead edge pruning: no-match
+        // queries exhaust almost every node, so paged refills add overhead
+        // without reducing descriptor work. Retain the shared eager backend;
+        // prefix DFS selects the bounded pager where pruning makes it useful.
+        let edges = traversal.open_eager_dfs_node(position);
+        let is_final = edges.is_final();
         Self {
-            edges: edges.into_iter(),
+            edges,
             matched,
             entered_by,
             is_final,
@@ -72,7 +67,7 @@ where
     P: PrefixPruner<N::Unit>,
 {
     query: Vec<N::Unit>,
-    stack: Vec<Frame<N::Unit>>,
+    stack: Vec<Frame<N>>,
     traversal: TraversalSession<N>,
     prefix: Vec<N::Unit>,
     pruner: Option<P>,
@@ -193,6 +188,9 @@ where
             };
             if accepts_subsequence {
                 let prefix = self.prefix.clone();
+                if !self.traversal.accepts_final_units(&prefix) {
+                    continue;
+                }
                 if self.pruner_mut().permits_accept(&prefix) {
                     let score = self.pruner_mut().accept(&prefix);
                     return Some(SubsequenceMatch {
@@ -207,9 +205,8 @@ where
                     .stack
                     .last_mut()
                     .expect("the DFS stack was observed non-empty");
-                frame
-                    .edges
-                    .next()
+                self.traversal
+                    .next_dfs_edge(&mut frame.edges)
                     .map(|(unit, child)| (unit, child, frame.matched))
             };
             if let Some((unit, child_position, parent_matched)) = edge {

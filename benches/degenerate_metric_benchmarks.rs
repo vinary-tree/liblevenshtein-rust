@@ -84,6 +84,8 @@ struct CountingNode<N> {
 
 impl<N: DictionaryNode> DictionaryNode for CountingNode<N> {
     type Unit = N::Unit;
+    type SnapshotCursor = N::SnapshotCursor;
+    type SnapshotGraphValueHandle = N::SnapshotGraphValueHandle;
 
     fn is_final(&self) -> bool {
         self.inner.is_final()

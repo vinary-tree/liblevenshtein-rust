@@ -12,6 +12,7 @@ use crate::transducer::language::{LanguageProduct, MappedLanguageQueryIterator};
 use crate::transducer::{
     Algorithm, RankedValueQueryIterator, Suggestion, ValueYieldingQueryIterator,
 };
+use arc_swap::ArcSwapOption;
 use libdictenstein::concurrent_slots::{AtomicOnceBox, AtomicTakeBox, HybridOnceBoxSlots};
 use libdictenstein::value::DictionaryValue;
 use libdictenstein::{
@@ -22,7 +23,7 @@ use rustc_hash::FxHashMap;
 use std::ffi::c_void;
 use std::fmt;
 use std::marker::PhantomData;
-use std::num::NonZeroUsize;
+use std::num::{NonZeroU64, NonZeroUsize};
 use std::ops::Deref;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -140,33 +141,19 @@ enum CallGate {
 /// publishing [`dictionary_flags::PARALLEL_REENTRANT`].
 #[derive(Clone)]
 enum ForeignCapturedGraph {
-    Byte(Arc<SnapshotTraversalGraph<u8>>),
-    Unicode(Arc<SnapshotTraversalGraph<char>>),
-    U64(Arc<SnapshotTraversalGraph<u64>>),
-}
-
-enum WeakForeignCapturedGraph {
-    Byte(Weak<SnapshotTraversalGraph<u8>>),
-    Unicode(Weak<SnapshotTraversalGraph<char>>),
-    U64(Weak<SnapshotTraversalGraph<u64>>),
+    Byte(Arc<SnapshotTraversalGraph<u8, ForeignGraphValueHandle>>),
+    Unicode(Arc<SnapshotTraversalGraph<char, ForeignGraphValueHandle>>),
+    U64(Arc<SnapshotTraversalGraph<u64, ForeignGraphValueHandle>>),
 }
 
 impl ForeignCapturedGraph {
-    fn downgrade(&self) -> WeakForeignCapturedGraph {
-        match self {
-            Self::Byte(graph) => WeakForeignCapturedGraph::Byte(Arc::downgrade(graph)),
-            Self::Unicode(graph) => WeakForeignCapturedGraph::Unicode(Arc::downgrade(graph)),
-            Self::U64(graph) => WeakForeignCapturedGraph::U64(Arc::downgrade(graph)),
-        }
-    }
-}
-
-impl WeakForeignCapturedGraph {
-    fn upgrade(&self) -> Option<ForeignCapturedGraph> {
-        match self {
-            Self::Byte(graph) => graph.upgrade().map(ForeignCapturedGraph::Byte),
-            Self::Unicode(graph) => graph.upgrade().map(ForeignCapturedGraph::Unicode),
-            Self::U64(graph) => graph.upgrade().map(ForeignCapturedGraph::U64),
+    #[cfg(feature = "perf-instrumentation")]
+    fn ptr_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Byte(left), Self::Byte(right)) => Arc::ptr_eq(left, right),
+            (Self::Unicode(left), Self::Unicode(right)) => Arc::ptr_eq(left, right),
+            (Self::U64(left), Self::U64(right)) => Arc::ptr_eq(left, right),
+            _ => false,
         }
     }
 }
@@ -180,7 +167,7 @@ struct Provider {
     gate: CallGate,
     fault: AtomicTakeBox<BindingError>,
     identity: Option<VtSnapshotIdentity>,
-    node_cache: Arc<NodeCache>,
+    node_cache: Option<Arc<NodeCache>>,
     graph_memo: Arc<CapturedGraphMemo>,
 }
 
@@ -227,6 +214,37 @@ const FOREIGN_TARGET_READY_TAG: usize = 1;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
 struct ForeignTarget(NonZeroUsize);
+
+/// Consumer-local pointer capability used only by native foreign traversal.
+///
+/// Keeping this opaque prevents a tagged cache pointer from being mistaken
+/// for either a dense graph index or a provider-owned ABI handle.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(transparent)]
+struct ForeignSnapshotCursor(ForeignTarget);
+
+/// Opaque non-zero provider handle retained by a captured foreign graph.
+///
+/// Unlike a native foreign cursor this value crosses the provider ABI and is
+/// passed back byte-for-byte to the graph value callback.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(transparent)]
+struct ForeignGraphValueHandle(NonZeroU64);
+
+impl ForeignGraphValueHandle {
+    #[inline]
+    const fn new(value: u64) -> Option<Self> {
+        match NonZeroU64::new(value) {
+            Some(value) => Some(Self(value)),
+            None => None,
+        }
+    }
+
+    #[inline]
+    const fn get(self) -> u64 {
+        self.0.get()
+    }
+}
 
 impl ForeignTarget {
     #[inline]
@@ -343,18 +361,12 @@ fn foreign_ready_cursors_enabled() -> bool {
 }
 
 #[inline(always)]
+#[cfg(feature = "resource-profiling")]
 fn monolithic_foreign_inspection_enabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
-    {
-        static ENABLED: OnceLock<bool> = OnceLock::new();
-        *ENABLED.get_or_init(|| {
-            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_MONOLITHIC_FOREIGN_INSPECT").is_some()
-        })
-    }
-    #[cfg(not(feature = "resource-profiling"))]
-    {
-        false
-    }
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_MONOLITHIC_FOREIGN_INSPECT").is_some()
+    })
 }
 
 #[inline(always)]
@@ -417,8 +429,39 @@ fn shared_node_cache(key: Option<NodeCacheKey>) -> Arc<NodeCache> {
     cache
 }
 
-type GraphCacheRegistry = Mutex<FxHashMap<GraphCacheKey, WeakForeignCapturedGraph>>;
-type CapturedGraphMemo = Mutex<Option<(GraphCacheKey, ForeignCapturedGraph)>>;
+struct CapturedGraphEntry {
+    key: GraphCacheKey,
+    graph: OnceLock<Result<ForeignCapturedGraph, BindingError>>,
+}
+
+/// Revision-keyed publication shared by a live resource and all snapshots it
+/// produces. Readers perform one atomic `Arc` load. The winning revision cell
+/// uses `OnceLock` for single-flight graph validation/import, so concurrent
+/// first queries neither serialize on a process-wide registry nor duplicate
+/// the O(nodes + edges) decode.
+struct CapturedGraphMemo {
+    current: ArcSwapOption<CapturedGraphEntry>,
+    #[cfg(feature = "resource-profiling")]
+    legacy_control: Mutex<Option<(GraphCacheKey, ForeignCapturedGraph)>>,
+}
+
+impl CapturedGraphMemo {
+    fn new() -> Self {
+        Self {
+            current: ArcSwapOption::empty(),
+            #[cfg(feature = "resource-profiling")]
+            legacy_control: Mutex::new(None),
+        }
+    }
+}
+
+#[cfg(feature = "resource-profiling")]
+fn legacy_snapshot_locks_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_LEGACY_SNAPSHOT_LOCKS").is_some()
+    })
+}
 
 fn shared_captured_graph(
     key: Option<GraphCacheKey>,
@@ -428,41 +471,55 @@ fn shared_captured_graph(
     let Some(key) = key else {
         return decode();
     };
-    {
-        let current = memo.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-        if let Some((cached_key, graph)) = current.as_ref().filter(|(cached, _)| *cached == key) {
-            debug_assert_eq!(*cached_key, key);
-            return Ok(graph.clone());
+
+    #[cfg(feature = "resource-profiling")]
+    if legacy_snapshot_locks_enabled() {
+        {
+            let current = memo
+                .legacy_control
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if let Some((_, graph)) = current.as_ref().filter(|(cached, _)| *cached == key) {
+                return Ok(graph.clone());
+            }
         }
-    }
-    static REGISTRY: OnceLock<GraphCacheRegistry> = OnceLock::new();
-    let registry = REGISTRY.get_or_init(|| Mutex::new(FxHashMap::default()));
-    {
-        let locked = registry
+        let decoded = decode()?;
+        let mut current = memo
+            .legacy_control
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if let Some(graph) = locked.get(&key).and_then(WeakForeignCapturedGraph::upgrade) {
-            *memo.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
-                Some((key, graph.clone()));
-            return Ok(graph);
+        if let Some((_, graph)) = current.as_ref().filter(|(cached, _)| *cached == key) {
+            return Ok(graph.clone());
         }
+        *current = Some((key, decoded.clone()));
+        return Ok(decoded);
     }
 
-    // Validation and copying may walk the complete graph. Keep that work out
-    // of the process-wide registry lock, then resolve a concurrent race with a
-    // second lookup before publishing this weak entry.
-    let decoded = decode()?;
-    let mut locked = registry
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if let Some(graph) = locked.get(&key).and_then(WeakForeignCapturedGraph::upgrade) {
-        *memo.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some((key, graph.clone()));
-        return Ok(graph);
+    let mut decode = Some(decode);
+    let candidate = Arc::new(CapturedGraphEntry {
+        key,
+        graph: OnceLock::new(),
+    });
+
+    loop {
+        let current = memo.current.load_full();
+        if let Some(entry) = current.as_ref().filter(|entry| entry.key == key) {
+            return entry
+                .graph
+                .get_or_init(|| decode.take().expect("the graph decoder runs at most once")())
+                .clone();
+        }
+
+        let previous = memo
+            .current
+            .compare_and_swap(&current, Some(Arc::clone(&candidate)));
+        if previous.as_ref().map(Arc::as_ptr) == current.as_ref().map(Arc::as_ptr) {
+            return candidate
+                .graph
+                .get_or_init(|| decode.take().expect("the graph decoder runs at most once")())
+                .clone();
+        }
     }
-    locked.retain(|_, graph| graph.upgrade().is_some());
-    locked.insert(key, decoded.downgrade());
-    *memo.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some((key, decoded.clone()));
-    Ok(decoded)
 }
 
 // Raw provider pointers are never dereferenced outside `call`, and `call`
@@ -505,7 +562,7 @@ impl Provider {
         let retain = base.retain.ok_or(BindingError::IncompatibleResourceAbi)?;
         let release = base.release.ok_or(BindingError::IncompatibleResourceAbi)?;
         retain(resource.context);
-        match Self::from_owned_with_graph_memo(resource, Arc::new(Mutex::new(None))) {
+        match Self::from_owned_with_graph_memo(resource, Arc::new(CapturedGraphMemo::new())) {
             Ok(provider) => Ok(provider),
             Err(error) => {
                 release(resource.context);
@@ -665,11 +722,13 @@ impl Provider {
         // implementation that minted them. Including both ABI vtable
         // addresses prevents independent providers or separately loaded DSO
         // copies with equal numeric tokens from sharing incompatible nodes.
-        let node_cache = shared_node_cache(identity.map(|identity| NodeCacheKey {
-            identity,
-            resource_vtable: resource.vtable as usize,
-            dictionary_vtable: dictionary as usize,
-        }));
+        let node_cache = graph.is_none().then(|| {
+            shared_node_cache(identity.map(|identity| NodeCacheKey {
+                identity,
+                resource_vtable: resource.vtable as usize,
+                dictionary_vtable: dictionary as usize,
+            }))
+        });
         Ok(Arc::new(Self {
             resource,
             dictionary,
@@ -734,17 +793,20 @@ impl Provider {
             gate: self.gate.clone(),
             fault: AtomicTakeBox::new(),
             identity: self.identity,
-            node_cache: Arc::clone(&self.node_cache),
+            node_cache: self.node_cache.clone(),
             graph_memo: Arc::clone(&self.graph_memo),
         })
     }
 
     fn node_entry(&self, node: u64) -> &CachedForeignEntry {
-        if let Some(entry) = self.node_cache.get(node) {
+        let node_cache = self
+            .node_cache
+            .as_ref()
+            .expect("compact graph traversal does not enter the legacy node cache");
+        if let Some(entry) = node_cache.get(node) {
             return entry;
         }
-        self.node_cache
-            .install_if_absent(node, CachedForeignEntry::new(node))
+        node_cache.install_if_absent(node, CachedForeignEntry::new(node))
     }
 
     fn cache_node<'a>(
@@ -903,7 +965,9 @@ trait InteropUnit: CharUnit {
     /// foreign-node cache.
     fn from_validated_abi(label: u64) -> Self;
     fn to_abi(self) -> u64;
-    fn captured_graph(provider: &Provider) -> Option<Arc<SnapshotTraversalGraph<Self>>>;
+    fn captured_graph(
+        provider: &Provider,
+    ) -> Option<Arc<SnapshotTraversalGraph<Self, ForeignGraphValueHandle>>>;
 }
 
 impl InteropUnit for u8 {
@@ -922,7 +986,9 @@ impl InteropUnit for u8 {
         u64::from(self)
     }
 
-    fn captured_graph(provider: &Provider) -> Option<Arc<SnapshotTraversalGraph<Self>>> {
+    fn captured_graph(
+        provider: &Provider,
+    ) -> Option<Arc<SnapshotTraversalGraph<Self, ForeignGraphValueHandle>>> {
         match provider.graph.as_ref()? {
             ForeignCapturedGraph::Byte(graph) => Some(Arc::clone(graph)),
             ForeignCapturedGraph::Unicode(_) | ForeignCapturedGraph::U64(_) => None,
@@ -949,7 +1015,9 @@ impl InteropUnit for char {
         u64::from(u32::from(self))
     }
 
-    fn captured_graph(provider: &Provider) -> Option<Arc<SnapshotTraversalGraph<Self>>> {
+    fn captured_graph(
+        provider: &Provider,
+    ) -> Option<Arc<SnapshotTraversalGraph<Self, ForeignGraphValueHandle>>> {
         match provider.graph.as_ref()? {
             ForeignCapturedGraph::Unicode(graph) => Some(Arc::clone(graph)),
             ForeignCapturedGraph::Byte(_) | ForeignCapturedGraph::U64(_) => None,
@@ -973,7 +1041,9 @@ impl InteropUnit for u64 {
         self
     }
 
-    fn captured_graph(provider: &Provider) -> Option<Arc<SnapshotTraversalGraph<Self>>> {
+    fn captured_graph(
+        provider: &Provider,
+    ) -> Option<Arc<SnapshotTraversalGraph<Self, ForeignGraphValueHandle>>> {
         match provider.graph.as_ref()? {
             ForeignCapturedGraph::U64(graph) => Some(Arc::clone(graph)),
             ForeignCapturedGraph::Byte(_) | ForeignCapturedGraph::Unicode(_) => None,
@@ -1005,7 +1075,7 @@ fn validate_graph_slice<T>(pointer: *const T, len: usize) -> Result<(), BindingE
 
 fn decode_graph<U: InteropUnit>(
     view: VtDictionaryGraphView,
-) -> Result<Arc<SnapshotTraversalGraph<U>>, BindingError> {
+) -> Result<Arc<SnapshotTraversalGraph<U, ForeignGraphValueHandle>>, BindingError> {
     crate::causal_perf::record_foreign_graph_decodes(1);
     if view.reserved != 0 || view.node_count == 0 {
         return Err(BindingError::InvalidProviderOutput(
@@ -1035,12 +1105,9 @@ fn decode_graph<U: InteropUnit>(
         let edge_len = u32::try_from(node.edge_len).map_err(|_| {
             BindingError::InvalidProviderOutput("snapshot graph edge length exceeded u32")
         })?;
-        let value_cursor = usize::try_from(node.value_cursor)
-            .ok()
-            .and_then(SnapshotTraversalCursor::new)
-            .ok_or(BindingError::InvalidProviderOutput(
-                "snapshot graph value cursor was invalid",
-            ))?;
+        let value_cursor = ForeignGraphValueHandle::new(node.value_cursor).ok_or(
+            BindingError::InvalidProviderOutput("snapshot graph value cursor was invalid"),
+        )?;
         nodes.push(SnapshotTraversalNode::new(
             edge_start,
             edge_len,
@@ -1111,7 +1178,10 @@ unsafe impl Sync for ProviderRef {}
 #[derive(Clone, Copy)]
 struct ForeignNode<U: InteropUnit> {
     provider: ProviderRef,
-    target: ForeignTarget,
+    /// `None` is the compact-graph owner sentinel. It is never expanded as an
+    /// ABI node: the captured graph supplies all traversal cursors, while this
+    /// value retains the provider and resolves graph-local values.
+    target: Option<ForeignTarget>,
     _unit: PhantomData<fn() -> U>,
 }
 
@@ -1125,7 +1195,7 @@ impl<U: InteropUnit> fmt::Debug for ForeignNode<U> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("ForeignNode")
-            .field("id", &self.id())
+            .field("id", &self.target.map(|_| self.id()))
             .field("domain", &U::DOMAIN)
             .finish()
     }
@@ -1137,12 +1207,24 @@ impl<U: InteropUnit> ForeignNode<U> {
         Self::from_entry(provider, entry)
     }
 
-    fn traversal_root(owner: &Arc<Provider>, id: u64) -> DictionaryTraversalRoot<Self> {
-        let node = Self::new(ProviderRef::new(owner), id);
-        match U::captured_graph(owner) {
-            Some(graph) => DictionaryTraversalRoot::captured(node, graph),
-            None => DictionaryTraversalRoot::owned(node),
+    fn traversal_root(
+        owner: &Arc<Provider>,
+    ) -> Result<DictionaryTraversalRoot<Self>, BindingError> {
+        let provider = ProviderRef::new(owner);
+        if let Some(graph) = U::captured_graph(owner) {
+            return Ok(DictionaryTraversalRoot::captured(
+                Self {
+                    provider,
+                    target: None,
+                    _unit: PhantomData,
+                },
+                graph,
+            ));
         }
+        Ok(DictionaryTraversalRoot::owned(Self::new(
+            provider,
+            owner.root()?,
+        )))
     }
 
     fn from_entry(provider: ProviderRef, entry: NonNull<CachedForeignEntry>) -> Self {
@@ -1159,20 +1241,22 @@ impl<U: InteropUnit> ForeignNode<U> {
     fn from_target(provider: ProviderRef, target: ForeignTarget) -> Self {
         Self {
             provider,
-            target,
+            target: Some(target),
             _unit: PhantomData,
         }
     }
 
     #[inline]
-    fn traversal_cursor(self) -> libdictenstein::SnapshotTraversalCursor {
-        if self.target.is_ready() {
+    fn traversal_cursor(self) -> ForeignSnapshotCursor {
+        let target = self
+            .target
+            .expect("compact-graph owners are never converted to native cursors");
+        if target.is_ready() {
             crate::causal_perf::record_foreign_ready_cursors_emitted(1);
         } else {
             crate::causal_perf::record_foreign_pending_cursors_emitted(1);
         }
-        libdictenstein::SnapshotTraversalCursor::new(self.target.encoded())
-            .expect("foreign traversal targets are non-null")
+        ForeignSnapshotCursor(target)
     }
 
     /// Reconstitute a lightweight node view while the query-local provider
@@ -1182,18 +1266,13 @@ impl<U: InteropUnit> ForeignNode<U> {
     ///
     /// `cursor` must have originated from this provider and query snapshot.
     #[inline]
-    unsafe fn from_traversal_cursor(
-        provider: ProviderRef,
-        cursor: libdictenstein::SnapshotTraversalCursor,
-    ) -> Self {
-        let target = ForeignTarget::from_encoded(cursor.get())
-            .expect("snapshot traversal cursors are non-null");
-        Self::from_target(provider, target)
+    unsafe fn from_traversal_cursor(provider: ProviderRef, cursor: ForeignSnapshotCursor) -> Self {
+        Self::from_target(provider, cursor.0)
     }
 
     #[inline(always)]
     fn pending_entry(&self) -> Option<&CachedForeignEntry> {
-        let entry = self.target.pending_entry()?;
+        let entry = self.target?.pending_entry()?;
         // SAFETY: entries live in the append-only cache owned by `provider` and
         // the query cursor drops all node handles before releasing that owner.
         Some(unsafe { entry.as_ref() })
@@ -1201,7 +1280,7 @@ impl<U: InteropUnit> ForeignNode<U> {
 
     #[inline(always)]
     fn ready_node(&self) -> Option<&CachedForeignNode> {
-        let node = self.target.ready_node()?;
+        let node = self.target?.ready_node()?;
         // SAFETY: descriptors are immutable after publication and retained by
         // the append-only cache owned by `provider`.
         Some(unsafe { node.as_ref() })
@@ -1519,9 +1598,11 @@ impl<U: InteropUnit> ForeignNode<U> {
 
 impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
     type Unit = U;
+    type SnapshotCursor = ForeignSnapshotCursor;
+    type SnapshotGraphValueHandle = ForeignGraphValueHandle;
 
     #[inline]
-    fn snapshot_root_cursor(&self) -> Option<libdictenstein::SnapshotTraversalCursor> {
+    fn snapshot_root_cursor(&self) -> Option<Self::SnapshotCursor> {
         self.provider
             .visit_vtable()
             .is_some()
@@ -1534,10 +1615,7 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
     }
 
     #[inline]
-    unsafe fn snapshot_cursor_node(
-        &self,
-        cursor: libdictenstein::SnapshotTraversalCursor,
-    ) -> Option<Self> {
+    unsafe fn snapshot_cursor_node(&self, cursor: Self::SnapshotCursor) -> Option<Self> {
         self.provider.visit_vtable()?;
         // SAFETY: inherited from the DictionaryNode cursor contract.
         Some(unsafe { Self::from_traversal_cursor(self.provider, cursor) })
@@ -1546,13 +1624,13 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
     #[inline]
     unsafe fn filter_map_snapshot_cursor_edges_and_finality<T, P, F>(
         &self,
-        cursor: libdictenstein::SnapshotTraversalCursor,
+        cursor: Self::SnapshotCursor,
         project: P,
         mut visitor: F,
     ) -> Option<bool>
     where
         P: FnMut(Self::Unit) -> Option<T>,
-        F: FnMut(Self::Unit, libdictenstein::SnapshotTraversalCursor, T),
+        F: FnMut(Self::Unit, Self::SnapshotCursor, T),
     {
         self.provider.visit_vtable()?;
         // SAFETY: inherited from the DictionaryNode cursor contract.
@@ -1767,7 +1845,7 @@ impl<U: InteropUnit> MappedDictionaryNode for ForeignNode<U> {
     #[inline]
     unsafe fn snapshot_cursor_value(
         &self,
-        cursor: libdictenstein::SnapshotTraversalCursor,
+        cursor: Self::SnapshotCursor,
     ) -> Option<Option<Self::Value>> {
         self.provider.visit_vtable()?;
         // SAFETY: inherited from the MappedDictionaryNode cursor contract.
@@ -1782,7 +1860,7 @@ impl<U: InteropUnit> MappedDictionaryNode for ForeignNode<U> {
     #[inline]
     unsafe fn snapshot_graph_cursor_value(
         &self,
-        graph: &SnapshotTraversalGraph<U>,
+        graph: &SnapshotTraversalGraph<U, Self::SnapshotGraphValueHandle>,
         cursor: SnapshotTraversalCursor,
     ) -> Option<Option<Self::Value>> {
         let graph_vtable = self.provider.graph_vtable?;
@@ -1792,7 +1870,7 @@ impl<U: InteropUnit> MappedDictionaryNode for ForeignNode<U> {
         // SAFETY: the interface was validated while constructing the retained
         // provider and remains immutable for that provider's lifetime.
         let callback = unsafe { (*graph_vtable).node_value_u64 }?;
-        let value_cursor = u64::try_from(graph.value_cursor(cursor).get()).ok()?;
+        let value_cursor = graph.value_handle(cursor).get();
         let mut value = VtOptionalU64::default();
         let callback_status = self
             .provider
@@ -2001,10 +2079,24 @@ impl QueryCursor {
             .map(|identity| (identity.producer, identity.revision))
     }
 
-    /// Whether two cursors share the same identity-keyed foreign-node cache.
+    /// Whether two cursors share the same identity-keyed traversal storage.
+    ///
+    /// Compact-graph providers share their validated immutable graph and do
+    /// not allocate a legacy foreign-node cache. Graphless providers retain
+    /// the identity-keyed node-cache behavior represented by this method's
+    /// historical name.
     #[cfg(feature = "perf-instrumentation")]
     pub fn shares_node_cache_with(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.provider.node_cache, &other.provider.node_cache)
+        match (
+            &self.provider.node_cache,
+            &other.provider.node_cache,
+            &self.provider.graph,
+            &other.provider.graph,
+        ) {
+            (Some(left), Some(right), _, _) => Arc::ptr_eq(left, right),
+            (None, None, Some(left), Some(right)) => left.ptr_eq(right),
+            _ => false,
+        }
     }
 
     fn next_match(&mut self) -> Result<Option<Match>, BindingError> {
@@ -2261,10 +2353,13 @@ mod snapshot_graph_decode_tests {
 
     #[test]
     fn valid_views_decode_every_unit_domain() {
-        let (nodes, byte_edges) = fixture();
+        let (mut nodes, byte_edges) = fixture();
+        nodes[2].value_cursor = u64::MAX;
         let byte = decode_graph::<u8>(view(&nodes, &byte_edges, 0)).expect("byte graph");
         assert_eq!(byte.node_count(), 3);
         assert_eq!(byte.root_cursor().get(), 1);
+        let last = SnapshotTraversalCursor::new(3).expect("three is non-zero");
+        assert_eq!(byte.value_handle(last).get(), u64::MAX);
 
         let char_edges = [edge(u64::from('a'), 1), edge(u64::from('\u{10ffff}'), 2)];
         let unicode = decode_graph::<char>(view(&nodes, &char_edges, 0)).expect("Unicode graph");
@@ -2427,11 +2522,10 @@ impl ResourceTransducer {
         };
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
-        let root_id = owner.root()?;
         let inner = match order {
             QueryOrder::Traversal => {
                 CursorInner::CharTraversal(ValueYieldingQueryIterator::with_traversal_root(
-                    ForeignNode::<char>::traversal_root(&owner, root_id),
+                    ForeignNode::<char>::traversal_root(&owner)?,
                     query.to_owned(),
                     max_distance,
                     self.algorithm,
@@ -2439,7 +2533,7 @@ impl ResourceTransducer {
             }
             QueryOrder::DistanceThenTerm => {
                 CursorInner::CharOrdered(RankedValueQueryIterator::with_traversal_root(
-                    ForeignNode::<char>::traversal_root(&owner, root_id),
+                    ForeignNode::<char>::traversal_root(&owner)?,
                     query.to_owned(),
                     max_distance,
                     self.algorithm,
@@ -2471,11 +2565,10 @@ impl ResourceTransducer {
         }
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
-        let root_id = owner.root()?;
         Ok(QueryCursor {
             inner: CursorInner::ByteTraversal(
                 ValueYieldingQueryIterator::with_unit_query_traversal_root(
-                    ForeignNode::<u8>::traversal_root(&owner, root_id),
+                    ForeignNode::<u8>::traversal_root(&owner)?,
                     query.to_vec(),
                     max_distance,
                     self.algorithm,
@@ -2503,11 +2596,10 @@ impl ResourceTransducer {
         }
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
-        let root_id = owner.root()?;
         Ok(QueryCursor {
             inner: CursorInner::U64Traversal(
                 ValueYieldingQueryIterator::with_unit_query_traversal_root(
-                    ForeignNode::<u64>::traversal_root(&owner, root_id),
+                    ForeignNode::<u64>::traversal_root(&owner)?,
                     query.to_vec(),
                     max_distance,
                     self.algorithm,
@@ -2532,10 +2624,9 @@ impl ResourceTransducer {
         };
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
-        let root_id = owner.root()?;
         Ok(QueryCursor {
             inner: CursorInner::CharLanguage(MappedLanguageQueryIterator::from_traversal_root(
-                ForeignNode::<char>::traversal_root(&owner, root_id),
+                ForeignNode::<char>::traversal_root(&owner)?,
                 LanguageProduct::new(pattern.nfa.clone(), max_distance),
             )),
             provider: owner,

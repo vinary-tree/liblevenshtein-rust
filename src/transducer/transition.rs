@@ -1,5 +1,9 @@
 //! State transition logic for Levenshtein automata.
 
+use super::packed_dfa::ExactLabelDfaRow;
+use super::packed_special::{
+    PackedMergeSplitMachine, PackedOsaMachine, PackedSpecialMachine, SpecialKernel,
+};
 use super::packed_standard::PackedStandardMachine;
 use super::variant::{with_variant, AutomatonVariant, TransitionCtx, VariantSpec};
 use super::variants::{AffineGapParams, AffineV};
@@ -32,6 +36,14 @@ impl TransitionSettings {
             prefix_mode,
         }
     }
+}
+
+/// Row-prepared configuration whose cache-admission decision is computed once
+/// and reused across every sibling transition.
+#[derive(Clone, Copy)]
+struct PreparedGeneratedTransition {
+    settings: TransitionSettings,
+    cacheable: bool,
 }
 
 /// Configuration shared by pooled affine-gap transitions.
@@ -176,12 +188,31 @@ pub(crate) fn transition_window_size(max_distance: usize, query_length: usize) -
 /// the end of the query, without rebuilding a `SmallVec` for every state
 /// position. The cache is unit- and substitution-policy-generic.
 pub(crate) struct CharacteristicCache<U: CharUnit> {
-    direct: [Option<(U, u32)>; 256],
-    overflow: FxHashMap<U, u32>,
+    index: CharacteristicClassIndex<U>,
     classes: FxHashMap<Arc<[bool]>, u32>,
     class_patterns: Vec<Arc<[bool]>>,
     query_length: usize,
     padding: usize,
+}
+
+/// Query-local label-to-characteristic-class index.
+///
+/// Standard edit distance has exact-only zero-cost matching, so its complete
+/// class universe is bounded by the query alphabet plus one all-false class.
+/// Policies that can equate distinct units retain the general lazy index: an
+/// external policy can legitimately produce a different vector for every
+/// dictionary label.
+enum CharacteristicClassIndex<U: CharUnit> {
+    Uninitialized,
+    Exact {
+        dense: [u32; 256],
+        sparse: SmallVec<[(U, u32); 16]>,
+        miss: u32,
+    },
+    General {
+        direct: [Option<(U, u32)>; 256],
+        overflow: FxHashMap<U, u32>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
@@ -195,7 +226,7 @@ pub(crate) struct GeneratedStateId(usize);
 /// transition façade without growing its queue entries.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-pub(crate) struct UnitCostFrontier(u64);
+pub(crate) struct UnitCostFrontier(pub(super) u64);
 
 /// Final-distance interpretation for a unit-cost frontier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -220,6 +251,8 @@ pub(crate) enum FinishMode {
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum UnitCostMachine<U: CharUnit> {
     PackedStandard(PackedStandardMachine<U>),
+    PackedOsa(PackedOsaMachine<U>),
+    PackedMergeSplit(PackedMergeSplitMachine<U>),
     Positional(CachedUnitTransitions<U>),
 }
 
@@ -232,6 +265,18 @@ impl<U: CharUnit> UnitCostMachine<U> {
     where
         P: SubstitutionPolicy,
     {
+        if settings.algorithm == Algorithm::Transposition && !packed_osa_disabled() {
+            if let Some(machine) = PackedOsaMachine::new::<P>(query, settings) {
+                let seed = UnitCostFrontier(machine.seed());
+                return (Self::PackedOsa(machine), seed);
+            }
+        }
+        if settings.algorithm == Algorithm::MergeAndSplit && !packed_merge_split_disabled() {
+            if let Some(machine) = PackedMergeSplitMachine::new::<P>(query, settings) {
+                let seed = UnitCostFrontier(machine.seed());
+                return (Self::PackedMergeSplit(machine), seed);
+            }
+        }
         if !packed_standard_disabled() {
             if let Some(machine) = PackedStandardMachine::new::<P>(query, settings) {
                 let seed = UnitCostFrontier(machine.seed());
@@ -256,6 +301,57 @@ impl<U: CharUnit> UnitCostMachine<U> {
                 u64::try_from(root.0).expect("generated state identifier exceeds u64"),
             ),
         )
+    }
+
+    /// Materialize one opaque frontier as the canonical positional antichain.
+    ///
+    /// This representation bridge is intentionally cold. Ordinary traversal
+    /// stays in its selected packed or generated representation for the whole
+    /// query; only APIs that change transition semantics after polling need to
+    /// decode queued frontiers.
+    pub(crate) fn canonical_state(&self, frontier: UnitCostFrontier) -> State {
+        match self {
+            Self::PackedStandard(machine) => machine.canonical_state(frontier.0),
+            Self::PackedOsa(machine) => machine.canonical_state(frontier.0),
+            Self::PackedMergeSplit(machine) => machine.canonical_state(frontier.0),
+            Self::Positional(transitions) => {
+                transitions.generated_frontier_state(GeneratedStateId(
+                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
+                ))
+            }
+        }
+    }
+
+    /// Re-encode a set of live frontiers into a fresh positional transition
+    /// engine configured for `settings`.
+    ///
+    /// Equal source frontiers are interned once and share the same generated
+    /// identifier in the target engine. The returned mapping is total over the
+    /// supplied source sequence. It is used by the ordered iterator's rare
+    /// mid-stream conversion to legacy prefix semantics.
+    pub(crate) fn reencode_as_positional(
+        &self,
+        query_length: usize,
+        settings: TransitionSettings,
+        frontiers: impl IntoIterator<Item = UnitCostFrontier>,
+    ) -> (Self, FxHashMap<UnitCostFrontier, UnitCostFrontier>) {
+        let mut transitions = CachedUnitTransitions::new(query_length, settings.max_distance);
+        let mut mapping = FxHashMap::default();
+        for source in frontiers {
+            if mapping.contains_key(&source) {
+                continue;
+            }
+            let state = self.canonical_state(source);
+            let target = transitions.seed_generated_state(&state, settings);
+            mapping.insert(
+                source,
+                UnitCostFrontier(
+                    u64::try_from(target.0).expect("generated state identifier exceeds u64"),
+                ),
+            );
+        }
+        crate::causal_perf::record_positional_unit_queries(1);
+        (Self::Positional(transitions), mapping)
     }
 
     /// Apply one unit-cost transition. The packed arm remains small enough to
@@ -291,9 +387,93 @@ impl<U: CharUnit> UnitCostMachine<U> {
                 }
                 target
             }
+            Self::PackedOsa(machine) => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_osa_transition_attempts(1);
+                let target = machine
+                    .step(source.0, policy, label, query, settings)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_osa_transition_dead(1);
+                }
+                target
+            }
+            Self::PackedMergeSplit(machine) => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_merge_split_transition_attempts(1);
+                let target = machine
+                    .step(source.0, policy, label, query, settings)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_merge_split_transition_dead(1);
+                }
+                target
+            }
             Self::Positional(transitions) => {
                 Self::step_positional(transitions, source, pool, policy, label, query, settings)
             }
+        }
+    }
+
+    /// Fix one source frontier and transition configuration for all outgoing
+    /// labels of a dictionary node.
+    ///
+    /// Dictionary schedulers expand a node as a slice of sibling edges. The
+    /// source frontier, pool, policy, query, and settings are invariant across
+    /// that slice; preparing them once keeps representation dispatch and
+    /// positional row selection out of the per-edge loop.
+    #[inline]
+    pub(crate) fn prepare_row<'a, P>(
+        &'a mut self,
+        source: UnitCostFrontier,
+        pool: &'a mut StatePool,
+        policy: &'a P,
+        query: &'a [U],
+        settings: TransitionSettings,
+    ) -> UnitCostTransitionRow<'a, U, P>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        let machine = match self {
+            Self::PackedStandard(machine) => match machine.prepare_source_row(source.0) {
+                Some(source) => PreparedUnitCostMachine::PackedStandardRow { machine, source },
+                None => PreparedUnitCostMachine::PackedStandard {
+                    machine,
+                    source: source.0,
+                },
+            },
+            Self::PackedOsa(machine) => PreparedUnitCostMachine::PackedOsaRow {
+                source: machine
+                    .prepare_source_row(source.0)
+                    .expect("packed OSA always has an exact-label DFA row"),
+                machine,
+            },
+            Self::PackedMergeSplit(machine) => PreparedUnitCostMachine::PackedMergeSplitRow {
+                source: machine
+                    .prepare_source_row(source.0)
+                    .expect("packed merge/split always has an exact-label DFA row"),
+                machine,
+            },
+            Self::Positional(transitions) => {
+                debug_assert_eq!(settings.max_distance, transitions.max_distance);
+                let source = GeneratedStateId(
+                    usize::try_from(source.0).expect("generated state identifier exceeds usize"),
+                );
+                let cacheable = transitions.generated_config
+                    == Some((settings.algorithm, settings.prefix_mode));
+                PreparedUnitCostMachine::Positional {
+                    transitions,
+                    source,
+                    cacheable,
+                }
+            }
+        };
+        UnitCostTransitionRow {
+            machine,
+            pool,
+            policy,
+            query,
+            settings,
         }
     }
 
@@ -358,6 +538,28 @@ impl<U: CharUnit> UnitCostMachine<U> {
                 }
                 target
             }
+            Self::PackedOsa(machine) => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_osa_transition_attempts(1);
+                let target = machine
+                    .step(source.0, policy, label, query, settings)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_osa_transition_dead(1);
+                }
+                target
+            }
+            Self::PackedMergeSplit(machine) => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_merge_split_transition_attempts(1);
+                let target = machine
+                    .step(source.0, policy, label, query, settings)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_merge_split_transition_dead(1);
+                }
+                target
+            }
             Self::Positional(transitions) => transitions
                 .transition_generated(
                     GeneratedStateId(
@@ -390,6 +592,18 @@ impl<U: CharUnit> UnitCostMachine<U> {
                 FinishMode::Substring => machine.min_distance(frontier.0),
                 FinishMode::Prefix => machine.prefix_distance(frontier.0),
             },
+            Self::PackedOsa(machine) => match mode {
+                FinishMode::Complete => machine.complete_distance(frontier.0),
+                FinishMode::Substring => machine.min_distance(frontier.0),
+                FinishMode::Prefix => unreachable!("exploratory packed OSA excludes prefix mode"),
+            },
+            Self::PackedMergeSplit(machine) => match mode {
+                FinishMode::Complete => machine.complete_distance(frontier.0),
+                FinishMode::Substring => machine.min_distance(frontier.0),
+                FinishMode::Prefix => {
+                    unreachable!("packed MergeSplit excludes prefix-mode queries")
+                }
+            },
             Self::Positional(transitions) => {
                 let state = transitions.generated_frontier_state(GeneratedStateId(
                     usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
@@ -403,9 +617,12 @@ impl<U: CharUnit> UnitCostMachine<U> {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn min_distance(&self, frontier: UnitCostFrontier) -> Option<usize> {
         match self {
             Self::PackedStandard(machine) => machine.min_distance(frontier.0),
+            Self::PackedOsa(machine) => machine.min_distance(frontier.0),
+            Self::PackedMergeSplit(machine) => machine.min_distance(frontier.0),
             Self::Positional(transitions) => transitions
                 .generated_frontier_state(GeneratedStateId(
                     usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
@@ -414,25 +631,12 @@ impl<U: CharUnit> UnitCostMachine<U> {
         }
     }
 
-    pub(crate) fn max_consumed(&self, frontier: UnitCostFrontier) -> usize {
-        match self {
-            Self::PackedStandard(machine) => machine.max_consumed(frontier.0),
-            Self::Positional(transitions) => transitions
-                .generated_frontier_state(GeneratedStateId(
-                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
-                ))
-                .positions()
-                .iter()
-                .map(|position| position.term_index)
-                .max()
-                .unwrap_or(0),
-        }
-    }
-
     #[cfg(feature = "perf-instrumentation")]
     pub(crate) fn active_len(&self, frontier: UnitCostFrontier) -> usize {
         match self {
             Self::PackedStandard(machine) => machine.active_len(frontier.0),
+            Self::PackedOsa(machine) => machine.active_len(frontier.0),
+            Self::PackedMergeSplit(machine) => machine.active_len(frontier.0),
             Self::Positional(transitions) => {
                 transitions.generated_position_count(GeneratedStateId(
                     usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
@@ -444,7 +648,9 @@ impl<U: CharUnit> UnitCostMachine<U> {
     #[cfg(feature = "perf-instrumentation")]
     pub(crate) fn frontier_storage_bytes(&self, frontier: UnitCostFrontier) -> usize {
         match self {
-            Self::PackedStandard(_) => std::mem::size_of::<UnitCostFrontier>(),
+            Self::PackedStandard(_) | Self::PackedOsa(_) | Self::PackedMergeSplit(_) => {
+                std::mem::size_of::<UnitCostFrontier>()
+            }
             Self::Positional(_) => self
                 .active_len(frontier)
                 .saturating_mul(std::mem::size_of::<Position>()),
@@ -467,7 +673,7 @@ impl<U: CharUnit> UnitCostMachine<U> {
             Self::Positional(transitions) => {
                 transitions.transition_affine(state, pool, policy, label, query, settings)
             }
-            Self::PackedStandard(_) => {
+            Self::PackedStandard(_) | Self::PackedOsa(_) | Self::PackedMergeSplit(_) => {
                 unreachable!("affine queries always select the positional transition machine")
             }
         }
@@ -481,12 +687,499 @@ impl<U: CharUnit> UnitCostMachine<U> {
     where
         P: SubstitutionPolicy,
     {
-        PackedStandardMachine::new::<P>(query, settings).map(|machine| {
-            let root = UnitCostFrontier(machine.seed());
-            (Self::PackedStandard(machine), root)
+        match settings.algorithm {
+            Algorithm::Standard => {
+                PackedStandardMachine::new::<P>(query, settings).map(|machine| {
+                    let root = UnitCostFrontier(machine.seed());
+                    (Self::PackedStandard(machine), root)
+                })
+            }
+            Algorithm::MergeAndSplit => {
+                PackedMergeSplitMachine::new::<P>(query, settings).map(|machine| {
+                    let root = UnitCostFrontier(machine.seed());
+                    (Self::PackedMergeSplit(machine), root)
+                })
+            }
+            Algorithm::Transposition => {
+                PackedOsaMachine::new::<P>(query, settings).map(|machine| {
+                    let root = UnitCostFrontier(machine.seed());
+                    (Self::PackedOsa(machine), root)
+                })
+            }
+            Algorithm::DamerauLevenshtein => None,
+        }
+    }
+}
+
+enum PreparedUnitCostMachine<'a, U: CharUnit> {
+    PackedStandard {
+        machine: &'a mut PackedStandardMachine<U>,
+        source: u64,
+    },
+    PackedStandardRow {
+        machine: &'a mut PackedStandardMachine<U>,
+        source: ExactLabelDfaRow,
+    },
+    PackedOsaRow {
+        machine: &'a mut PackedOsaMachine<U>,
+        source: ExactLabelDfaRow,
+    },
+    PackedMergeSplitRow {
+        machine: &'a mut PackedMergeSplitMachine<U>,
+        source: ExactLabelDfaRow,
+    },
+    Positional {
+        transitions: &'a mut CachedUnitTransitions<U>,
+        source: GeneratedStateId,
+        cacheable: bool,
+    },
+}
+
+/// Source-fixed transition row shared by unit-cost query schedulers.
+///
+/// This is a concrete enum over monomorphized engines, not a trait object. It
+/// introduces no virtual dispatch and borrows all query-local state for exactly
+/// one dictionary-node expansion.
+pub(crate) struct UnitCostTransitionRow<'a, U, P>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    machine: PreparedUnitCostMachine<'a, U>,
+    pool: &'a mut StatePool,
+    policy: &'a P,
+    query: &'a [U],
+    settings: TransitionSettings,
+}
+
+impl<U, P> UnitCostTransitionRow<'_, U, P>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    /// Apply one sibling label to the prepared source row.
+    #[inline(always)]
+    pub(crate) fn step(&mut self, label: U) -> Option<UnitCostFrontier> {
+        match &mut self.machine {
+            PreparedUnitCostMachine::PackedStandard { machine, source } => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_standard_transition_attempts(1);
+                let target = machine
+                    .step_prepared(*source, self.policy, label, self.query)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_standard_transition_dead(1);
+                }
+                target
+            }
+            PreparedUnitCostMachine::PackedStandardRow { machine, source } => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_standard_transition_attempts(1);
+                let target = machine
+                    .step_prepared_source_row(source, self.policy, label, self.query)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_standard_transition_dead(1);
+                }
+                target
+            }
+            PreparedUnitCostMachine::PackedOsaRow { machine, source } => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_osa_transition_attempts(1);
+                let target = machine
+                    .step_prepared_source_row(source, label)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_osa_transition_dead(1);
+                }
+                target
+            }
+            PreparedUnitCostMachine::PackedMergeSplitRow { machine, source } => {
+                crate::causal_perf::record_transition_attempts(1);
+                crate::causal_perf::record_packed_merge_split_transition_attempts(1);
+                let target = machine
+                    .step_prepared_source_row(source, label)
+                    .map(UnitCostFrontier);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_merge_split_transition_dead(1);
+                }
+                target
+            }
+            PreparedUnitCostMachine::Positional {
+                transitions,
+                source,
+                cacheable,
+            } => transitions
+                .transition_generated_prepared(
+                    *source,
+                    self.pool,
+                    self.policy,
+                    label,
+                    self.query,
+                    PreparedGeneratedTransition {
+                        settings: self.settings,
+                        cacheable: *cacheable,
+                    },
+                )
+                .map(|id| {
+                    UnitCostFrontier(
+                        u64::try_from(id.0).expect("generated state identifier exceeds u64"),
+                    )
+                }),
+        }
+    }
+
+    pub(crate) fn min_distance(&self, frontier: UnitCostFrontier) -> Option<usize> {
+        match &self.machine {
+            PreparedUnitCostMachine::PackedStandard { machine, .. }
+            | PreparedUnitCostMachine::PackedStandardRow { machine, .. } => {
+                machine.min_distance(frontier.0)
+            }
+            PreparedUnitCostMachine::PackedOsaRow { machine, .. } => {
+                machine.min_distance(frontier.0)
+            }
+            PreparedUnitCostMachine::PackedMergeSplitRow { machine, .. } => {
+                machine.min_distance(frontier.0)
+            }
+            PreparedUnitCostMachine::Positional { transitions, .. } => transitions
+                .generated_frontier_state(GeneratedStateId(
+                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
+                ))
+                .min_distance(),
+        }
+    }
+
+    pub(crate) fn max_consumed(&self, frontier: UnitCostFrontier) -> usize {
+        match &self.machine {
+            PreparedUnitCostMachine::PackedStandard { machine, .. }
+            | PreparedUnitCostMachine::PackedStandardRow { machine, .. } => {
+                machine.max_consumed(frontier.0)
+            }
+            PreparedUnitCostMachine::PackedOsaRow { machine, .. } => {
+                machine.max_consumed(frontier.0)
+            }
+            PreparedUnitCostMachine::PackedMergeSplitRow { machine, .. } => {
+                machine.max_consumed(frontier.0)
+            }
+            PreparedUnitCostMachine::Positional { transitions, .. } => transitions
+                .generated_frontier_state(GeneratedStateId(
+                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
+                ))
+                .positions()
+                .iter()
+                .map(|position| position.term_index)
+                .max()
+                .unwrap_or(0),
+        }
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    pub(crate) fn active_len(&self, frontier: UnitCostFrontier) -> usize {
+        match &self.machine {
+            PreparedUnitCostMachine::PackedStandard { machine, .. }
+            | PreparedUnitCostMachine::PackedStandardRow { machine, .. } => {
+                machine.active_len(frontier.0)
+            }
+            PreparedUnitCostMachine::PackedOsaRow { machine, .. } => machine.active_len(frontier.0),
+            PreparedUnitCostMachine::PackedMergeSplitRow { machine, .. } => {
+                machine.active_len(frontier.0)
+            }
+            PreparedUnitCostMachine::Positional { transitions, .. } => transitions
+                .generated_position_count(GeneratedStateId(
+                    usize::try_from(frontier.0).expect("generated state identifier exceeds usize"),
+                )),
+        }
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    pub(crate) fn frontier_storage_bytes(&self, frontier: UnitCostFrontier) -> usize {
+        match &self.machine {
+            PreparedUnitCostMachine::PackedStandard { .. }
+            | PreparedUnitCostMachine::PackedStandardRow { .. }
+            | PreparedUnitCostMachine::PackedOsaRow { .. }
+            | PreparedUnitCostMachine::PackedMergeSplitRow { .. } => {
+                std::mem::size_of::<UnitCostFrontier>()
+            }
+            PreparedUnitCostMachine::Positional { .. } => self
+                .active_len(frontier)
+                .saturating_mul(std::mem::size_of::<Position>()),
+        }
+    }
+}
+
+/// Statically dispatched source-row interface used by schedulers that select a
+/// packed representation once per dictionary node. The trait is crate-private
+/// and monomorphized; it introduces neither a vtable nor a function pointer.
+pub(crate) trait PreparedUnitCostRow<U: CharUnit> {
+    /// Apply one outgoing dictionary label to the fixed source frontier.
+    fn step(&mut self, label: U) -> Option<UnitCostFrontier>;
+
+    /// Minimum edit distance represented by a live target frontier.
+    fn min_distance(&self, frontier: UnitCostFrontier) -> Option<usize>;
+
+    /// Furthest query position consumed by a live target frontier.
+    fn max_consumed(&self, frontier: UnitCostFrontier) -> usize;
+
+    #[cfg(feature = "perf-instrumentation")]
+    fn active_len(&self, frontier: UnitCostFrontier) -> usize;
+
+    #[cfg(feature = "perf-instrumentation")]
+    fn frontier_storage_bytes(&self, frontier: UnitCostFrontier) -> usize;
+}
+
+impl<U, P> PreparedUnitCostRow<U> for UnitCostTransitionRow<'_, U, P>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    #[inline(always)]
+    fn step(&mut self, label: U) -> Option<UnitCostFrontier> {
+        UnitCostTransitionRow::step(self, label)
+    }
+
+    #[inline(always)]
+    fn min_distance(&self, frontier: UnitCostFrontier) -> Option<usize> {
+        UnitCostTransitionRow::min_distance(self, frontier)
+    }
+
+    #[inline(always)]
+    fn max_consumed(&self, frontier: UnitCostFrontier) -> usize {
+        UnitCostTransitionRow::max_consumed(self, frontier)
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    #[inline(always)]
+    fn active_len(&self, frontier: UnitCostFrontier) -> usize {
+        UnitCostTransitionRow::active_len(self, frontier)
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    #[inline(always)]
+    fn frontier_storage_bytes(&self, frontier: UnitCostFrontier) -> usize {
+        UnitCostTransitionRow::frontier_storage_bytes(self, frontier)
+    }
+}
+
+/// Concrete Standard row whose DFA representation has already been selected.
+pub(crate) struct PreparedPackedStandardTransitionRow<'a, U, P>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    machine: &'a mut PackedStandardMachine<U>,
+    source: ExactLabelDfaRow,
+    policy: &'a P,
+    query: &'a [U],
+}
+
+impl<'a, U, P> PreparedPackedStandardTransitionRow<'a, U, P>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    /// Prepare the exact-label DFA row, or return `None` when a profiling
+    /// control has selected the packed Standard recurrence without its DFA.
+    #[inline(always)]
+    pub(crate) fn new(
+        machine: &'a mut PackedStandardMachine<U>,
+        source: UnitCostFrontier,
+        policy: &'a P,
+        query: &'a [U],
+    ) -> Option<Self> {
+        let source = machine.prepare_source_row(source.0)?;
+        Some(Self {
+            machine,
+            source,
+            policy,
+            query,
         })
     }
 }
+
+impl<U, P> PreparedUnitCostRow<U> for PreparedPackedStandardTransitionRow<'_, U, P>
+where
+    U: CharUnit,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+{
+    #[inline(always)]
+    fn step(&mut self, label: U) -> Option<UnitCostFrontier> {
+        crate::causal_perf::record_transition_attempts(1);
+        crate::causal_perf::record_packed_standard_transition_attempts(1);
+        let target = self
+            .machine
+            .step_prepared_source_row(&mut self.source, self.policy, label, self.query)
+            .map(UnitCostFrontier);
+        if target.is_none() {
+            crate::causal_perf::record_packed_standard_transition_dead(1);
+        }
+        target
+    }
+
+    #[inline(always)]
+    fn min_distance(&self, frontier: UnitCostFrontier) -> Option<usize> {
+        self.machine.min_distance(frontier.0)
+    }
+
+    #[inline(always)]
+    fn max_consumed(&self, frontier: UnitCostFrontier) -> usize {
+        self.machine.max_consumed(frontier.0)
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    #[inline(always)]
+    fn active_len(&self, frontier: UnitCostFrontier) -> usize {
+        self.machine.active_len(frontier.0)
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    #[inline(always)]
+    fn frontier_storage_bytes(&self, _frontier: UnitCostFrontier) -> usize {
+        std::mem::size_of::<UnitCostFrontier>()
+    }
+}
+
+/// Concrete source row shared by packed continuation automata (OSA and
+/// merge/split). The recurrence kernel remains a compile-time marker.
+pub(crate) struct PreparedPackedSpecialTransitionRow<'a, U, K>
+where
+    U: CharUnit,
+    K: SpecialKernel,
+{
+    machine: &'a mut PackedSpecialMachine<U, K>,
+    source: ExactLabelDfaRow,
+}
+
+impl<'a, U, K> PreparedPackedSpecialTransitionRow<'a, U, K>
+where
+    U: CharUnit,
+    K: SpecialKernel,
+{
+    #[inline(always)]
+    pub(crate) fn new(
+        machine: &'a mut PackedSpecialMachine<U, K>,
+        source: UnitCostFrontier,
+    ) -> Self {
+        Self {
+            source: machine
+                .prepare_source_row(source.0)
+                .expect("a packed continuation automaton has an exact-label DFA row"),
+            machine,
+        }
+    }
+}
+
+impl<U, K> PreparedUnitCostRow<U> for PreparedPackedSpecialTransitionRow<'_, U, K>
+where
+    U: CharUnit,
+    K: SpecialKernel,
+{
+    #[inline(always)]
+    fn step(&mut self, label: U) -> Option<UnitCostFrontier> {
+        crate::causal_perf::record_transition_attempts(1);
+        let target = self
+            .machine
+            .step_prepared_source_row(&mut self.source, label)
+            .map(UnitCostFrontier);
+        match K::ALGORITHM {
+            Algorithm::Transposition => {
+                crate::causal_perf::record_packed_osa_transition_attempts(1);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_osa_transition_dead(1);
+                }
+            }
+            Algorithm::MergeAndSplit => {
+                crate::causal_perf::record_packed_merge_split_transition_attempts(1);
+                if target.is_none() {
+                    crate::causal_perf::record_packed_merge_split_transition_dead(1);
+                }
+            }
+            Algorithm::Standard | Algorithm::DamerauLevenshtein => {
+                unreachable!("a packed special row has a continuation algorithm")
+            }
+        }
+        target
+    }
+
+    #[inline(always)]
+    fn min_distance(&self, frontier: UnitCostFrontier) -> Option<usize> {
+        self.machine.min_distance(frontier.0)
+    }
+
+    #[inline(always)]
+    fn max_consumed(&self, frontier: UnitCostFrontier) -> usize {
+        self.machine.max_consumed(frontier.0)
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    #[inline(always)]
+    fn active_len(&self, frontier: UnitCostFrontier) -> usize {
+        self.machine.active_len(frontier.0)
+    }
+
+    #[cfg(feature = "perf-instrumentation")]
+    #[inline(always)]
+    fn frontier_storage_bytes(&self, _frontier: UnitCostFrontier) -> usize {
+        std::mem::size_of::<UnitCostFrontier>()
+    }
+}
+
+/// Execute a dictionary-node expansion with a statically dispatched prepared
+/// transition row whenever the query selected a packed automaton. The fallback
+/// preserves the positional engine and profiling controls exactly. Expansion
+/// bodies are monomorphized for the concrete row type, so this shared seam adds
+/// neither a vtable nor a per-edge representation branch.
+macro_rules! with_prepared_unit_cost_row {
+    (
+        $machine:expr,
+        $source:expr,
+        $pool:expr,
+        $policy:expr,
+        $query:expr,
+        $settings:expr,
+        |$row:ident| $body:expr
+    ) => {{
+        let __unit_cost_machine = &mut *$machine;
+        let __specialized_result = if !$crate::transducer::transition::static_packed_rows_disabled()
+        {
+            match __unit_cost_machine {
+                $crate::transducer::transition::UnitCostMachine::PackedStandard(__machine) => {
+                    $crate::transducer::transition::PreparedPackedStandardTransitionRow::new(
+                        __machine, $source, $policy, $query,
+                    )
+                    .map(|mut $row| $body)
+                }
+                $crate::transducer::transition::UnitCostMachine::PackedOsa(__machine) => {
+                    let mut $row =
+                        $crate::transducer::transition::PreparedPackedSpecialTransitionRow::new(
+                            __machine, $source,
+                        );
+                    Some($body)
+                }
+                $crate::transducer::transition::UnitCostMachine::PackedMergeSplit(__machine) => {
+                    let mut $row =
+                        $crate::transducer::transition::PreparedPackedSpecialTransitionRow::new(
+                            __machine, $source,
+                        );
+                    Some($body)
+                }
+                $crate::transducer::transition::UnitCostMachine::Positional(_) => None,
+            }
+        } else {
+            None
+        };
+
+        match __specialized_result {
+            Some(__result) => __result,
+            None => {
+                let mut $row =
+                    __unit_cost_machine.prepare_row($source, $pool, $policy, $query, $settings);
+                $body
+            }
+        }
+    }};
+}
+
+pub(crate) use with_prepared_unit_cost_row;
 
 #[inline]
 fn packed_standard_disabled() -> bool {
@@ -497,6 +1190,55 @@ fn packed_standard_disabled() -> bool {
         *DISABLED.get_or_init(|| {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_STANDARD").is_some()
         })
+    }
+    #[cfg(not(any(feature = "perf-instrumentation", feature = "resource-profiling")))]
+    {
+        false
+    }
+}
+
+/// Same-binary control for source-row specialization in schedulers that retain
+/// a representation-erased `UnitCostMachine` owner.
+#[inline(always)]
+pub(crate) fn static_packed_rows_disabled() -> bool {
+    #[cfg(feature = "resource-profiling")]
+    {
+        use std::sync::OnceLock;
+        static DISABLED: OnceLock<bool> = OnceLock::new();
+        *DISABLED.get_or_init(|| {
+            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_STATIC_PACKED_ROWS").is_some()
+        })
+    }
+    #[cfg(not(feature = "resource-profiling"))]
+    {
+        false
+    }
+}
+
+#[inline]
+fn packed_merge_split_disabled() -> bool {
+    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    {
+        use std::sync::OnceLock;
+        static DISABLED: OnceLock<bool> = OnceLock::new();
+        *DISABLED.get_or_init(|| {
+            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_MERGE_SPLIT").is_some()
+        })
+    }
+    #[cfg(not(any(feature = "perf-instrumentation", feature = "resource-profiling")))]
+    {
+        false
+    }
+}
+
+#[inline]
+fn packed_osa_disabled() -> bool {
+    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    {
+        use std::sync::OnceLock;
+        static DISABLED: OnceLock<bool> = OnceLock::new();
+        *DISABLED
+            .get_or_init(|| std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_OSA").is_some())
     }
     #[cfg(not(any(feature = "perf-instrumentation", feature = "resource-profiling")))]
     {
@@ -517,6 +1259,23 @@ fn monolithic_unit_step_enabled() -> bool {
 #[cfg(feature = "resource-profiling")]
 fn jagged_generated_targets_enabled() -> bool {
     std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_JAGGED_GENERATED_TARGETS").is_some()
+}
+
+#[inline(always)]
+fn legacy_characteristic_index_enabled() -> bool {
+    #[cfg(feature = "resource-profiling")]
+    {
+        use std::sync::OnceLock;
+        static ENABLED: OnceLock<bool> = OnceLock::new();
+        *ENABLED.get_or_init(|| {
+            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_DICTIONARY_LABEL_CHARACTERISTIC_INDEX")
+                .is_some()
+        })
+    }
+    #[cfg(not(feature = "resource-profiling"))]
+    {
+        false
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -756,9 +1515,37 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
     {
         debug_assert_eq!(settings.max_distance, self.max_distance);
         let cacheable = self.generated_config == Some((settings.algorithm, settings.prefix_mode));
+        self.transition_generated_prepared(
+            source,
+            pool,
+            policy,
+            dict_unit,
+            query,
+            PreparedGeneratedTransition {
+                settings,
+                cacheable,
+            },
+        )
+    }
+
+    /// Transition within a source-fixed row. `cacheable` is established once
+    /// when the row is prepared instead of being re-derived for every sibling.
+    #[inline]
+    fn transition_generated_prepared<P>(
+        &mut self,
+        source: GeneratedStateId,
+        pool: &mut StatePool,
+        policy: &P,
+        dict_unit: U,
+        query: &[U],
+        prepared: PreparedGeneratedTransition,
+    ) -> Option<GeneratedStateId>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
         let characteristic_class = self.cache.class_for(policy, dict_unit, query);
 
-        if cacheable {
+        if prepared.cacheable {
             let target = self.cached_generated_target(source, characteristic_class as usize);
             if target != GeneratedTarget::UNCOMPUTED {
                 crate::causal_perf::record_transition_attempts(1);
@@ -778,7 +1565,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
             pool,
             matches,
             query.len(),
-            settings,
+            prepared.settings,
         );
         let target = match generated {
             Some(state) => {
@@ -789,7 +1576,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
             None => GeneratedTarget::EMPTY,
         };
         let result = (target != GeneratedTarget::EMPTY).then(|| target.state_id());
-        if cacheable {
+        if prepared.cacheable {
             self.store_generated_target(source, characteristic_class as usize, target);
         }
         result
@@ -1000,8 +1787,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
 impl<U: CharUnit> CharacteristicCache<U> {
     pub(crate) fn new(query_length: usize, max_distance: usize) -> Self {
         Self {
-            direct: std::array::from_fn(|_| None),
-            overflow: FxHashMap::default(),
+            index: CharacteristicClassIndex::Uninitialized,
             classes: FxHashMap::default(),
             class_patterns: Vec::new(),
             query_length,
@@ -1017,37 +1803,70 @@ impl<U: CharUnit> CharacteristicCache<U> {
         P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
     {
         debug_assert_eq!(query.len(), self.query_length);
-        let direct_index = dict_unit.to_dat_offset();
-        if direct_index < self.direct.len() {
-            let slot = &mut self.direct[direct_index];
-            if let Some((unit, class)) = slot {
-                if *unit == dict_unit {
-                    return *class;
-                }
-            }
-            if slot.is_none() {
-                let class = Self::build_pattern(
+
+        if matches!(self.index, CharacteristicClassIndex::Uninitialized) {
+            let exact = !P::MAY_MATCH_DISTINCT_UNITS && !legacy_characteristic_index_enabled();
+            self.index = if exact {
+                Self::build_exact_index(
                     &mut self.classes,
                     &mut self.class_patterns,
                     self.padding,
                     policy,
-                    dict_unit,
                     query,
-                );
-                *slot = Some((dict_unit, class));
-                return class;
-            }
+                )
+            } else {
+                CharacteristicClassIndex::General {
+                    direct: std::array::from_fn(|_| None),
+                    overflow: FxHashMap::default(),
+                }
+            };
         }
 
-        let classes = &mut self.classes;
-        let class_patterns = &mut self.class_patterns;
-        let padding = self.padding;
-        self.overflow
-            .entry(dict_unit)
-            .or_insert_with(|| {
-                Self::build_pattern(classes, class_patterns, padding, policy, dict_unit, query)
-            })
-            .to_owned()
+        match &mut self.index {
+            CharacteristicClassIndex::Uninitialized => unreachable!("index initialized above"),
+            CharacteristicClassIndex::Exact {
+                dense,
+                sparse,
+                miss,
+            } => dict_unit.to_dense_index().map_or_else(
+                || {
+                    sparse
+                        .binary_search_by_key(&dict_unit, |&(unit, _)| unit)
+                        .map_or(*miss, |index| sparse[index].1)
+                },
+                |index| dense[usize::from(index)],
+            ),
+            CharacteristicClassIndex::General { direct, overflow } => {
+                let direct_index = dict_unit.to_dat_offset();
+                if direct_index < direct.len() {
+                    let slot = &mut direct[direct_index];
+                    if let Some((unit, class)) = slot {
+                        if *unit == dict_unit {
+                            return *class;
+                        }
+                    }
+                    if slot.is_none() {
+                        let class = Self::build_pattern(
+                            &mut self.classes,
+                            &mut self.class_patterns,
+                            self.padding,
+                            policy,
+                            dict_unit,
+                            query,
+                        );
+                        *slot = Some((dict_unit, class));
+                        return class;
+                    }
+                }
+
+                let classes = &mut self.classes;
+                let class_patterns = &mut self.class_patterns;
+                let padding = self.padding;
+                *overflow.entry(dict_unit).or_insert_with(|| {
+                    Self::build_pattern(classes, class_patterns, padding, policy, dict_unit, query)
+                })
+            }
+        }
     }
 
     #[inline(always)]
@@ -1092,6 +1911,44 @@ impl<U: CharUnit> CharacteristicCache<U> {
             }
         };
         class
+    }
+
+    fn build_exact_index<P>(
+        classes: &mut FxHashMap<Arc<[bool]>, u32>,
+        class_patterns: &mut Vec<Arc<[bool]>>,
+        padding: usize,
+        policy: &P,
+        query: &[U],
+    ) -> CharacteristicClassIndex<U>
+    where
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        debug_assert!(!P::MAY_MATCH_DISTINCT_UNITS);
+        let misses: Arc<[bool]> = vec![false; query.len().saturating_add(padding)].into();
+        let miss =
+            u32::try_from(classes.len()).expect("query characteristic class count exceeds u32");
+        let previous = classes.insert(Arc::clone(&misses), miss);
+        debug_assert!(previous.is_none());
+        class_patterns.push(misses);
+
+        let mut dense = [miss; 256];
+        let mut sparse = SmallVec::<[(U, u32); 16]>::new();
+        for &query_unit in query {
+            let class =
+                Self::build_pattern(classes, class_patterns, padding, policy, query_unit, query);
+            if let Some(index) = query_unit.to_dense_index() {
+                dense[usize::from(index)] = class;
+            } else {
+                sparse.push((query_unit, class));
+            }
+        }
+        sparse.sort_unstable_by_key(|&(unit, _)| unit);
+        sparse.dedup_by_key(|(unit, _)| *unit);
+        CharacteristicClassIndex::Exact {
+            dense,
+            sparse,
+            miss,
+        }
     }
 
     /// Ensure cached vectors contain at least `padding` false units after the
@@ -2464,6 +3321,111 @@ mod tests {
         }
     }
 
+    fn assert_packed_special_frontiers<U>(
+        queries: &[Vec<U>],
+        terms: &[Vec<U>],
+        max_distance: usize,
+        algorithm: Algorithm,
+    ) where
+        U: CharUnit + std::fmt::Debug,
+    {
+        let settings = TransitionSettings::new(max_distance, algorithm, false);
+        for query in queries {
+            let Some((mut packed, packed_root)) =
+                UnitCostMachine::seeded_packed_for_test::<Unrestricted>(query, settings)
+            else {
+                continue;
+            };
+            for term in terms {
+                let (mut positional, positional_root) =
+                    UnitCostMachine::seeded_positional(query.len(), settings);
+                let mut packed_frontier = Some(packed_root);
+                let mut positional_frontier = Some(positional_root);
+                let mut packed_pool = StatePool::new();
+                let mut positional_pool = StatePool::new();
+
+                for prefix_length in 0..=term.len() {
+                    assert_eq!(
+                        packed_frontier.is_some(),
+                        positional_frontier.is_some(),
+                        "viability: query={query:?} term={term:?} prefix={prefix_length} d={max_distance}",
+                    );
+                    if let (Some(packed_id), Some(positional_id)) =
+                        (packed_frontier, positional_frontier)
+                    {
+                        let packed_state = match &packed {
+                            UnitCostMachine::PackedOsa(machine) => {
+                                machine.canonical_state(packed_id.0)
+                            }
+                            UnitCostMachine::PackedMergeSplit(machine) => {
+                                machine.canonical_state(packed_id.0)
+                            }
+                            _ => unreachable!("special-frontier test selected another machine"),
+                        };
+                        let positional_state = match &positional {
+                            UnitCostMachine::Positional(transitions) => transitions
+                                .generated_frontier_state(GeneratedStateId(
+                                    usize::try_from(positional_id.0).unwrap(),
+                                )),
+                            _ => unreachable!("positional oracle selected a packed machine"),
+                        };
+                        // The positional compatibility kernel can retain a
+                        // semantically inert representative beyond the query
+                        // terminal when its padded characteristic window is
+                        // all false. Such a representative can never consume
+                        // or finish; compare the canonical language frontier.
+                        let positional_language_frontier: Vec<_> = positional_state
+                            .positions()
+                            .iter()
+                            .copied()
+                            .filter(|position| position.term_index <= query.len())
+                            .collect();
+                        assert_eq!(
+                            packed_state.positions(),
+                            positional_language_frontier,
+                            "frontier: query={query:?} term={term:?} prefix={prefix_length} d={max_distance}",
+                        );
+                        for mode in [FinishMode::Complete, FinishMode::Substring] {
+                            assert_eq!(
+                                packed
+                                    .finish_distance(packed_id, mode, query.len())
+                                    .filter(|distance| *distance <= max_distance),
+                                positional
+                                    .finish_distance(positional_id, mode, query.len())
+                                    .filter(|distance| *distance <= max_distance),
+                                "finish={mode:?}: query={query:?} term={term:?} prefix={prefix_length} d={max_distance}",
+                            );
+                        }
+                    }
+
+                    let Some(&label) = term.get(prefix_length) else {
+                        break;
+                    };
+                    packed_frontier = packed_frontier.and_then(|frontier| {
+                        packed.step(
+                            frontier,
+                            &mut packed_pool,
+                            &Unrestricted,
+                            label,
+                            query,
+                            settings,
+                        )
+                    });
+                    positional_frontier = positional_frontier.and_then(|frontier| {
+                        positional.step(
+                            frontier,
+                            &mut positional_pool,
+                            &Unrestricted,
+                            label,
+                            query,
+                            settings,
+                        )
+                    });
+                }
+            }
+        }
+    }
+
     #[test]
     fn packed_and_positional_standard_frontiers_are_exhaustively_equivalent() {
         let byte_words = short_words(b"ab", 5);
@@ -2505,6 +3467,102 @@ mod tests {
                 assert_packed_matches_positional(&corpus, max_distance, prefix_mode, &policy);
             }
         }
+    }
+
+    #[test]
+    fn packed_and_positional_merge_split_frontiers_are_exhaustively_equivalent() {
+        let byte_queries = short_words(b"ab", 5);
+        let byte_terms = short_words(b"ab", 7);
+        let char_queries = short_words(&['a', 'é'], 4);
+        let char_terms = short_words(&['a', 'é'], 5);
+        let token_queries = short_words(&[7u64, u64::MAX], 4);
+        let token_terms = short_words(&[7u64, u64::MAX], 5);
+        for max_distance in 0..=3 {
+            assert_packed_special_frontiers(
+                &byte_queries,
+                &byte_terms,
+                max_distance,
+                Algorithm::MergeAndSplit,
+            );
+            assert_packed_special_frontiers(
+                &char_queries,
+                &char_terms,
+                max_distance,
+                Algorithm::MergeAndSplit,
+            );
+            assert_packed_special_frontiers(
+                &token_queries,
+                &token_terms,
+                max_distance,
+                Algorithm::MergeAndSplit,
+            );
+        }
+    }
+
+    #[test]
+    fn packed_and_positional_osa_frontiers_are_exhaustively_equivalent() {
+        let byte_queries = short_words(b"ab", 5);
+        let byte_terms = short_words(b"ab", 7);
+        let byte_nonquery_terms = short_words(b"abx", 5);
+        let char_queries = short_words(&['a', 'é'], 4);
+        let char_terms = short_words(&['a', 'é'], 5);
+        let char_nonquery_terms = short_words(&['a', 'é', 'x'], 4);
+        let token_queries = short_words(&[7u64, u64::MAX], 4);
+        let token_terms = short_words(&[7u64, u64::MAX], 5);
+        let token_nonquery_terms = short_words(&[7u64, u64::MAX, 19], 4);
+        for max_distance in 0..=3 {
+            assert_packed_special_frontiers(
+                &byte_queries,
+                &byte_terms,
+                max_distance,
+                Algorithm::Transposition,
+            );
+            assert_packed_special_frontiers(
+                &byte_queries,
+                &byte_nonquery_terms,
+                max_distance,
+                Algorithm::Transposition,
+            );
+            assert_packed_special_frontiers(
+                &char_queries,
+                &char_terms,
+                max_distance,
+                Algorithm::Transposition,
+            );
+            assert_packed_special_frontiers(
+                &char_queries,
+                &char_nonquery_terms,
+                max_distance,
+                Algorithm::Transposition,
+            );
+            assert_packed_special_frontiers(
+                &token_queries,
+                &token_terms,
+                max_distance,
+                Algorithm::Transposition,
+            );
+            assert_packed_special_frontiers(
+                &token_queries,
+                &token_nonquery_terms,
+                max_distance,
+                Algorithm::Transposition,
+            );
+        }
+    }
+
+    #[test]
+    fn packed_merge_split_rejects_prefix_and_distinct_unit_policies() {
+        let prefix = TransitionSettings::new(2, Algorithm::MergeAndSplit, true);
+        assert!(PackedMergeSplitMachine::<u8>::new::<Unrestricted>(b"abc", prefix).is_none());
+
+        let exact = TransitionSettings::new(2, Algorithm::MergeAndSplit, false);
+        assert!(PackedMergeSplitMachine::<u8>::new::<Restricted<'static>>(b"abc", exact).is_none());
+
+        let prefix = TransitionSettings::new(2, Algorithm::Transposition, true);
+        assert!(PackedOsaMachine::<u8>::new::<Unrestricted>(b"abc", prefix).is_none());
+
+        let exact = TransitionSettings::new(2, Algorithm::Transposition, false);
+        assert!(PackedOsaMachine::<u8>::new::<Restricted<'static>>(b"abc", exact).is_none());
     }
 
     #[test]
@@ -2612,6 +3670,46 @@ mod tests {
         assert_eq!(&high_matches[..query.len()], &[false, true, false]);
         assert_eq!(cache.matches_for(&policy, 1, &query).0, low_matches);
         assert_eq!(cache.matches_for(&policy, high, &query).0, high_matches);
+    }
+
+    #[test]
+    fn exact_characteristic_index_is_bounded_by_the_query_alphabet() {
+        let query = ['α', 'β', 'α'];
+        let policy = Unrestricted;
+        let mut cache = CharacteristicCache::new(query.len(), 2);
+
+        for codepoint in 0x1000..0x5000 {
+            let label = char::from_u32(codepoint).expect("test range contains valid scalars");
+            let matches = cache.matches_for(&policy, label, &query).0;
+            assert!(matches.iter().all(|matched| !matched));
+        }
+        assert_eq!(cache.class_patterns.len(), 3);
+        match &cache.index {
+            CharacteristicClassIndex::Exact { sparse, .. } => {
+                assert_eq!(sparse.len(), 2);
+                assert!(sparse.binary_search_by_key(&'α', |&(unit, _)| unit).is_ok());
+                assert!(sparse.binary_search_by_key(&'β', |&(unit, _)| unit).is_ok());
+            }
+            CharacteristicClassIndex::Uninitialized | CharacteristicClassIndex::General { .. } => {
+                panic!("exact-only policy must use the query-bounded index")
+            }
+        }
+    }
+
+    #[test]
+    fn distinct_unit_substitution_policy_retains_the_general_index() {
+        let query = b"ab";
+        let mut substitutions = SubstitutionSet::new();
+        substitutions.allow_byte(b'x', b'a');
+        let policy = Restricted::new(&substitutions);
+        let mut cache = CharacteristicCache::new(query.len(), 1);
+
+        let matches = cache.matches_for(&policy, b'x', query).0;
+        assert!(matches[0]);
+        assert!(matches!(
+            cache.index,
+            CharacteristicClassIndex::General { .. }
+        ));
     }
 
     #[test]

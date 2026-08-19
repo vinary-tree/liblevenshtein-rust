@@ -122,7 +122,6 @@ pub mod serialization;
 ///
 /// Works with any `MappedDictionary` implementation including `DynamicDawgChar`,
 /// `PathMapDictionary`, `SuffixAutomaton`, etc.
-#[cfg(any(feature = "pathmap-backend", feature = "phonetic-rules"))]
 pub mod cache;
 
 /// WebAssembly bindings for browser and Node.js via wasm-bindgen
