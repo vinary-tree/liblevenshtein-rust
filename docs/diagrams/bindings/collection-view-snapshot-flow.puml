@@ -1,0 +1,40 @@
+@startuml
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam ArrowColor #415A77
+skinparam rectangleBorderColor #415A77
+skinparam rectangleBackgroundColor #F4F7FA
+
+title Collection traversal: one revision, two ownership products
+
+rectangle "Live Rust dictionary\n(any applicable automaton)" as live #D9EAD3
+rectangle "O(1) immutable\nsnapshot root / graph" as snap #D9EAD3
+rectangle "Generic monomorphic\nentry traversal" as walk #B6D7A8
+rectangle "Pure Rust\nIterator + fold/visitor" as rust #93C47D
+rectangle "Optional batched ABI\nvt.dictionary.entries.v1" as abi #FCE5CD
+rectangle "Host-owned immutable\nSet / Map / Iterable view" as materialized #CFE2F3
+rectangle "Closeable streaming\ncursor / reducer" as stream #9FC5E8
+
+live --> snap : capture once
+snap --> walk : pins revision
+walk --> rust : no FFI or vtable
+walk --> abi : descriptors + unit arena
+abi --> materialized : drain, validate, close\nbefore iterator escapes
+abi --> stream : bounded lease\nlexical close
+
+note bottom of snap
+Concurrent mutation publishes another revision.
+Existing iterators remain stable and hold no writer lock.
+end note
+
+note bottom of materialized
+Ordinary early loop exit is leak-safe:
+the native snapshot is already released.
+end note
+
+note bottom of stream
+Large dictionaries avoid O(output) host memory;
+try-with-resources / using / context manager.
+end note
+@enduml
