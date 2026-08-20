@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "jvm-parity-full",
+  "timestamp_utc": "2026-08-20T00:20:32+00:00",
+  "hostname": "arch-workstation",
+  "kernel": "Linux arch-workstation 7.1.6-arch1-1 #1 SMP PREEMPT_DYNAMIC Tue, 04 Aug 2026 11:19:27 +0000 x86_64",
+  "cpu": {
+    "model": "AMD Ryzen Threadripper PRO 5975WX 32-Cores",
+    "cores": 32,
+    "threads": 32,
+    "scaling_driver": "amd-pstate-epp",
+    "boost": "1",
+    "smt_sibling_map": {
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9"
+    }
+  },
+  "memory": {
+    "total_kib": 131724488
+  },
+  "governor": {
+    "2": "performance",
+    "3": "performance",
+    "4": "performance",
+    "5": "performance",
+    "6": "performance",
+    "7": "performance",
+    "8": "performance",
+    "9": "performance"
+  },
+  "cpusets": {
+    "single_threaded": "2",
+    "vm_runtimes": "2-9"
+  },
+  "toolchains": {
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+    "cc": "cc (GCC) 16.1.1 20260728",
+    "c++": "c++ (GCC) 16.1.1 20260728",
+    "java": "openjdk 26.0.2 2026-07-21",
+    "gradle-wrapper": "Gradle 9.6.1",
+    "node": "v26.6.0",
+    "npm": "12.0.2",
+    "python3": "Python 3.14.6",
+    "ruby": "ruby 3.4.10 (2026-06-30 revision 2b0b7728dc) +PRISM [x86_64-linux]",
+    "go": "go version go1.26.5-X:nodwarf5 linux/amd64",
+    "dotnet": "10.0.110",
+    "swift": "Swift version 6.3.3 (swift-6.3.3-RELEASE)",
+    "ghc": "The Glorious Glasgow Haskell Compilation System, version 9.12.2",
+    "cabal": "cabal-install version 3.14.2.0",
+    "ocaml": "The OCaml toplevel, version 5.4.1",
+    "dune": "3.23.1",
+    "opam": "2.5.2",
+    "gfortran": "GNU Fortran (GCC) 16.1.1 20260728",
+    "fpm": "Version:     0.13.0, alpha",
+    "lua5.4": "Lua 5.4.8  Copyright (C) 1994-2025 Lua.org, PUC-Rio",
+    "luarocks": "/usr/bin/luarocks 3.13.0",
+    "clojure": "Clojure CLI version 1.12.5.1664",
+    "wasm-pack": "wasm-pack 0.13.1",
+    "wasm-opt": "wasm-opt version 131 (version_131-41-gfc8f31cfe2)",
+    "node-gyp": "v13.0.1",
+    "taskset": "taskset from util-linux 2.42.2",
+    "time": "time (GNU Time) 1.10"
+  },
+  "rustflags": "-C target-cpu=native",
+  "repositories": {
+    "liblevenshtein-rust": {
+      "commit": "eafeddee3b12d32febd5892f624a7bab1130a343",
+      "branch": "master",
+      "dirty": true
+    },
+    "libdictenstein": {
+      "commit": "6a1b267a60fe9c445a0c8c7c8136e6dd40aedbf5",
+      "branch": "master",
+      "dirty": true
+    },
+    "lling-llang": {
+      "commit": "4a78e6c34b47c057e07982e6568b43f466d497ab",
+      "branch": "master",
+      "dirty": true
+    },
+    "duallity": {
+      "commit": "28b9c5e34633687f6954d23719155ef9d72631d2",
+      "branch": "master",
+      "dirty": true
+    }
+  },
+  "native_artifacts": {
+    "libliblevenshtein.so": {
+      "path": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/libliblevenshtein.so",
+      "sha256": "3b166329982de1ea1db734613f8bc525322196eed8addb0e6d893f4ae6769009"
+    },
+    "liblibdictenstein.so": {
+      "path": "/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/liblibdictenstein.so",
+      "sha256": "2f4d400828e0d34fdc160417a408e30b4ddf9145f95760cb5331ba62d108cad4"
+    },
+    "vinary_tree_native.node": {
+      "path": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/bindings/javascript-runtime/native/build/Release/vinary_tree_native.node",
+      "sha256": "af73c1dc24c902710051b15c1cee25a6aba980fa71a76b6cb47c7902afc9ed7e"
+    },
+    "vinary_tree_bg.wasm": {
+      "path": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/bindings/javascript-runtime/generated/wasm/vinary_tree_bg.wasm",
+      "sha256": "bef3878726abdd92a6eb916cffb04732b4bdefef9be4dc282da8317077c42663"
+    },
+    "vinary_tree_wasi.wasm": {
+      "path": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/bindings/javascript-runtime/generated/wasi/vinary_tree.wasm",
+      "sha256": "4beb6f535d10da5acb62b75584793c04a8fc0d4ee977d7572828f97e709f24be"
+    }
+  },
+  "legacy_artifacts": {
+    "js_ghpages_commit": "59934da81e56662bfe317aefd6877fc461a64438",
+    "js_vendor_sha256": {
+      "levenshtein-transducer.js": "10cb60a42865b8c00891f3b69fcb8a10e42cf62c4ffff4d841829670e0ccea7b",
+      "levenshtein-transducer.min.js": "156c59151c1aaeafcc747e2171500f0d54440f646ba020fef635236b497ecac7"
+    },
+    "js_npm_tarball_sha1": "caa72ae5d4bc79261ba4d4941a7116834f370dd1",
+    "java_maven_gav": "com.github.universal-automata:liblevenshtein:3.0.0"
+  },
+  "workload": {
+    "provenance_sha256": "28313fc41d33bc3ce2ac39ed807aac197b3600ab0106389819413a3c1a22981d",
+    "dictionary_sha256": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23"
+  },
+  "notes": []
+}

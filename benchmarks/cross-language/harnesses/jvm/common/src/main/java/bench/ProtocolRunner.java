@@ -129,6 +129,8 @@ public final class ProtocolRunner {
 
     private void runConstruct(Args args, List<String> terms) {
         adapter.buildDictionary(terms, args.backend);   // warmup build
+        HarnessAdapter.ConstructionProof constructionProof =
+            adapter.validateDictionary(terms);
         adapter.freeDictionary();
         long[] timesNs = new long[args.reps];
         for (int r = 0; r < args.reps; r++) {
@@ -139,7 +141,8 @@ public final class ProtocolRunner {
         }
         Path queries = args.queries != null ? args.queries : Path.of("workload/queries/hits.txt");
         writeResult(args.out, args, "construct", "standard", 1, queries, 1,
-            terms.size(), null, 1, new long[0], null, 0L, timesNs, "ok", List.of(
+            terms.size(), null, 1, new long[0], null, 0L, timesNs, constructionProof,
+            "ok", List.of(
                 "construct mode: timed region is the build from the pre-sorted in-memory list only"));
     }
 
@@ -183,13 +186,13 @@ public final class ProtocolRunner {
                 PassResult gateLimited = adapter.pass(subset, maxDistance, true);
                 writeResult(outPath, args, "verify", algorithm, maxDistance, queriesPath, limit,
                     terms.size(), constructNs, 0, new long[0], gateLimited,
-                    gateLimited.checksum(), null, "ok", List.of());
+                    gateLimited.checksum(), null, null, "ok", List.of());
             }
             case "memory-child" -> {
                 PassResult gate = adapter.pass(queries, maxDistance, true);
                 writeResult(outPath, args, "memory", algorithm, maxDistance,
                     queriesPath, queries.size(), terms.size(), constructNs, 0, new long[0], gate,
-                    gate.checksum(), null, "ok", List.of());
+                    gate.checksum(), null, null, "ok", List.of());
             }
             case "query" -> {
                 PassResult gate = adapter.pass(queries, maxDistance, true);
@@ -225,7 +228,7 @@ public final class ProtocolRunner {
                 }
                 writeResult(outPath, args, "query", algorithm, maxDistance, queriesPath,
                     queries.size(), terms.size(), constructNs, warmupPasses, samplesNs, gate,
-                    gate.checksum(), null, status, notes);
+                    gate.checksum(), null, null, status, notes);
             }
             default -> throw new IllegalStateException("unreachable mode " + args.mode);
         }
@@ -247,6 +250,7 @@ public final class ProtocolRunner {
                              int maxDistance, Path queriesPath, int queryCount, int termCount,
                              Long constructNs, int warmupPasses, long[] samplesNs,
                              PassResult gate, long checksum, long[] constructTimes,
+                             HarnessAdapter.ConstructionProof constructionProof,
                              String status, List<String> notes) {
         HarnessAdapter.TargetInfo info = adapter.targetInfo(args.backend);
         String queryset = queriesPath.getFileName().toString().replaceFirst("\\.txt$", "");
@@ -307,7 +311,14 @@ public final class ProtocolRunner {
             json.append("  \"construct\": {\n");
             json.append("    \"reps\": ").append(constructTimes.length).append(",\n");
             json.append("    \"times_ns\": [").append(joinLongs(constructTimes)).append("],\n");
-            json.append("    \"term_count\": ").append(termCount).append("\n");
+            json.append("    \"term_count\": ").append(termCount).append(",\n");
+            json.append("    \"semantic_term_count\": ")
+                .append(constructionProof.termCount()).append(",\n");
+            json.append("    \"semantic_membership_checks\": ")
+                .append(constructionProof.membershipChecks()).append(",\n");
+            json.append("    \"semantic_checksum_hex\": \"")
+                .append(String.format(Locale.ROOT, "%016x", constructionProof.checksum()))
+                .append("\"\n");
             json.append("  },\n");
         } else {
             json.append("  \"measurements\": {\n");

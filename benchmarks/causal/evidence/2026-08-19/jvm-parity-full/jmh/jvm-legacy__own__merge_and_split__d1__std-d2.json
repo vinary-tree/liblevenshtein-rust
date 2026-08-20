@@ -1,0 +1,80 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.LegacyBench.fullPass",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 2,
+        "jvm" : "/usr/lib/jvm/java-26-openjdk/bin/java",
+        "jvmArgs" : [
+            "-Dxl.workload=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload",
+            "-Xms2g",
+            "-Xmx2g"
+        ],
+        "jdkVersion" : "26.0.2",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "26.0.2",
+        "warmupIterations" : 5,
+        "warmupTime" : "2 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "2 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "algorithm" : "merge_and_split",
+            "distance" : "1",
+            "queryset" : "std-d2"
+        },
+        "primaryMetric" : {
+            "score" : 209395.25086000003,
+            "scoreError" : 5415.7804606976,
+            "scoreConfidence" : [
+                203979.47039930243,
+                214811.03132069763
+            ],
+            "scorePercentiles" : {
+                "0.0" : 201432.0553,
+                "50.0" : 210311.10215,
+                "90.0" : 216769.03124,
+                "95.0" : 217593.80689,
+                "99.0" : 217635.8458,
+                "99.9" : 217635.8458,
+                "99.99" : 217635.8458,
+                "99.999" : 217635.8458,
+                "99.9999" : 217635.8458,
+                "100.0" : 217635.8458
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    212625.2764,
+                    212619.1759,
+                    214473.6831,
+                    215194.1913,
+                    216386.7364,
+                    216795.0676,
+                    216534.704,
+                    214481.6563,
+                    215264.2311,
+                    217635.8458
+                ],
+                [
+                    208003.0284,
+                    205903.6148,
+                    203396.7746,
+                    203363.9945,
+                    201533.4356,
+                    201432.0553,
+                    203516.8954,
+                    204488.5517,
+                    202224.5189,
+                    202031.5801
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

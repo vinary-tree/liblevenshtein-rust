@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import subprocess
 import sys
@@ -247,6 +248,50 @@ def pair_table(
                 row[f"{column}_speedup"] = None
         rows.append(row)
     return rows
+
+
+def pair_ratio_summary(rows: list[dict], speedup_key: str) -> dict:
+    """Summarize one paired matrix without weighting slow cells more heavily.
+
+    ``speedup_key`` is a control/treatment time ratio (legacy/new for the Java
+    table), so values above one are treatment wins. The geometric mean is the
+    multiplicatively symmetric breadth statistic; the median and full range
+    are retained so one aggregate cannot conceal heterogeneous coordinates.
+    """
+
+    def summarize(selected: list[dict]) -> dict:
+        ratios = [row[speedup_key] for row in selected if row.get(speedup_key) is not None]
+        if not ratios:
+            return {
+                "cells": 0,
+                "geometric_mean": None,
+                "median": None,
+                "minimum": None,
+                "maximum": None,
+                "treatment_wins": 0,
+                "control_wins": 0,
+                "ties": 0,
+            }
+        return {
+            "cells": len(ratios),
+            "geometric_mean": math.exp(sum(math.log(value) for value in ratios) / len(ratios)),
+            "median": statistics.median(ratios),
+            "minimum": min(ratios),
+            "maximum": max(ratios),
+            "treatment_wins": sum(value > 1.0 for value in ratios),
+            "control_wins": sum(value < 1.0 for value in ratios),
+            "ties": sum(value == 1.0 for value in ratios),
+        }
+
+    algorithms = sorted({row["algorithm"] for row in rows})
+    return {
+        "ratio": "control_time_over_treatment_time",
+        "overall": summarize(rows),
+        "by_algorithm": {
+            algorithm: summarize([row for row in rows if row["algorithm"] == algorithm])
+            for algorithm in algorithms
+        },
+    }
 
 
 def atlas_table(query_cells: dict[str, dict]) -> list[dict]:
@@ -481,6 +526,9 @@ def main() -> int:
         "jvm-legacy",
         [("jvm-vinary", "dynamic_dawg"), ("jvm-vinary", "double_array_trie")],
     )
+    java_pair_summary = pair_ratio_summary(
+        java_rows, "jvm-vinary(dynamic_dawg)_speedup"
+    )
     (tables_dir / "pair_java.md").write_text(
         markdown_table(
             java_rows,
@@ -671,6 +719,7 @@ def main() -> int:
         "construct": construct_rows,
         "memory": memory_rows,
         "pair_java": java_rows,
+        "pair_java_summary": java_pair_summary,
         "pair_javascript": js_rows,
         "pair_cpp": cpp_rows,
         "atlas_overhead": atlas_rows,

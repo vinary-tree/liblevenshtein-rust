@@ -56,6 +56,8 @@ struct Model {
     misbehavior: Option<Misbehavior>,
     /// High-water mark of the largest capacity any node_edges call requested.
     max_capacity: AtomicUsize,
+    is_final_calls: AtomicUsize,
+    edge_calls: AtomicUsize,
 }
 
 struct Context {
@@ -131,7 +133,9 @@ unsafe extern "C" fn node_is_final(raw: *mut c_void, node: u64, out: *mut u8) ->
     if out.is_null() {
         return VtStatus::NullPointer.to_raw();
     }
-    let Some(node) = context(raw).model.nodes.get(node as usize) else {
+    let model = &context(raw).model;
+    model.is_final_calls.fetch_add(1, Ordering::Relaxed);
+    let Some(node) = model.nodes.get(node as usize) else {
         return VtStatus::InvalidArgument.to_raw();
     };
     out.write(u8::from(node.value.is_some()));
@@ -200,6 +204,7 @@ unsafe extern "C" fn node_edges(
         return VtStatus::NullPointer.to_raw();
     }
     let model = &context(raw).model;
+    model.edge_calls.fetch_add(1, Ordering::Relaxed);
     model.max_capacity.fetch_max(capacity, Ordering::Relaxed);
     let node_index = node as usize;
     let Some(node) = model.nodes.get(node_index) else {
@@ -316,6 +321,8 @@ impl HighDegreeDictionary {
             nodes,
             misbehavior,
             max_capacity: AtomicUsize::new(0),
+            is_final_calls: AtomicUsize::new(0),
+            edge_calls: AtomicUsize::new(0),
         }
     }
 
@@ -342,6 +349,8 @@ impl HighDegreeDictionary {
                 nodes,
                 misbehavior: None,
                 max_capacity: AtomicUsize::new(0),
+                is_final_calls: AtomicUsize::new(0),
+                edge_calls: AtomicUsize::new(0),
             },
             "z\u{100}".to_string(),
         )
@@ -415,6 +424,8 @@ impl HighDegreeDictionary {
                 nodes,
                 misbehavior: None,
                 max_capacity: AtomicUsize::new(0),
+                is_final_calls: AtomicUsize::new(0),
+                edge_calls: AtomicUsize::new(0),
             },
             String::new(),
         );
@@ -491,6 +502,14 @@ impl HighDegreeDictionary {
     /// The largest capacity any `node_edges` call has requested so far.
     pub fn max_edge_page_capacity(&self) -> usize {
         self.model.max_capacity.load(Ordering::Relaxed)
+    }
+
+    pub fn is_final_calls(&self) -> usize {
+        self.model.is_final_calls.load(Ordering::Relaxed)
+    }
+
+    pub fn edge_calls(&self) -> usize {
+        self.model.edge_calls.load(Ordering::Relaxed)
     }
 }
 

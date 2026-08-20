@@ -528,7 +528,7 @@ impl State {
     }
 }
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 #[inline]
 fn use_legacy_global_subsumption_scan() -> bool {
     use std::sync::OnceLock;
@@ -539,7 +539,7 @@ fn use_legacy_global_subsumption_scan() -> bool {
     })
 }
 
-#[cfg(not(feature = "resource-profiling"))]
+#[cfg(not(feature = "benchmark-controls"))]
 #[inline(always)]
 const fn use_legacy_global_subsumption_scan() -> bool {
     false

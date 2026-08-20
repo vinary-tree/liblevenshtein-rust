@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0.0",
+  "suite": "cross-language-v1",
+  "timestamp_utc": "2026-08-20T00:59:52+00:00",
+  "target": {
+    "language": "java",
+    "implementation": "legacy",
+    "backend": "jvm-legacy-jar",
+    "runtime_version": "openjdk 26.0.2 2026-07-21",
+    "library_version": "3.0.0",
+    "artifact": {
+      "kind": "maven",
+      "id": "com.github.universal-automata:liblevenshtein:3.0.0"
+    }
+  },
+  "dictionary": {
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/dictionary.txt",
+    "sha256": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23",
+    "term_count": 79343,
+    "structure": "legacy_sorted_dawg",
+    "unit_domain": "jvm_string"
+  },
+  "workload": {
+    "queryset": "oov",
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/oov.txt",
+    "sha256": "d65a5fe87e9a734c3a2869f561976e3e0ce4debd791a9e6ad5905b7347d033d4",
+    "query_count": 1000
+  },
+  "algorithm": "standard",
+  "max_distance": 1,
+  "mode": "query",
+  "protocol": {
+    "timer": "monotonic",
+    "harness": "jmh",
+    "warmup_seconds_min": 0,
+    "warmup_passes": 5,
+    "samples_requested": 20,
+    "sample_definition": "one full pass over the query set; every cursor fully drained and (term, distance) materialized",
+    "batch_size": null,
+    "wall_cap_seconds": 0,
+    "jmh": {
+      "forks": 2,
+      "warmup_iterations": 5,
+      "measurement_iterations": 10,
+      "iteration_seconds": 2
+    }
+  },
+  "measurements": {
+    "samples_ns": [
+      30764269,
+      30769781,
+      31203231,
+      30758615,
+      31142457,
+      30688625,
+      30635894,
+      30652688,
+      30547429,
+      30503404,
+      29760386,
+      29797932,
+      29801355,
+      29614010,
+      29541569,
+      29795341,
+      30228051,
+      29371183,
+      29347358,
+      29292802
+    ],
+    "sample_count": 20,
+    "matches_per_pass": 0,
+    "term_bytes_per_pass": 0,
+    "distance_sum_per_pass": 0,
+    "checksum_hex": "0000000000000000"
+  },
+  "status": "ok",
+  "notes": [
+    "converted from JMH record bench.LegacyBench.fullPass",
+    "JVM result transport: materialized",
+    "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+  ],
+  "run_id": "jvm-parity-full",
+  "environment_ref": "../environment.json",
+  "cell_snapshot": {
+    "cpuset": "2-9",
+    "cpu_mhz_start": 3558.4,
+    "cpu_mhz_end": 3568.1,
+    "load_avg_1m": 14.99
+  }
+}

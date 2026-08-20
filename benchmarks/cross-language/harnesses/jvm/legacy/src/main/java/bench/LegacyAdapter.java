@@ -45,6 +45,26 @@ public final class LegacyAdapter implements HarnessAdapter {
     }
 
     @Override
+    public ConstructionProof validateDictionary(List<String> expectedTerms) {
+        if (dawg == null) {
+            throw new IllegalStateException("dictionary has not been built");
+        }
+        if (dawg.size() != expectedTerms.size()) {
+            throw new IllegalStateException(
+                "semantic validation failed: dictionary size " + dawg.size()
+                    + ", expected " + expectedTerms.size());
+        }
+        for (String term : expectedTerms) {
+            if (!dawg.contains(term)) {
+                throw new IllegalStateException(
+                    "semantic validation failed: constructed dictionary lost " + term);
+            }
+        }
+        return new ConstructionProof(
+            expectedTerms.size(), expectedTerms.size(), Fnv.semanticTerms(expectedTerms));
+    }
+
+    @Override
     public void createTransducer(String algorithm) {
         // defaultMaxDistance is irrelevant for the transduce(term, n)
         // overload used by pass(); build with a sane default.

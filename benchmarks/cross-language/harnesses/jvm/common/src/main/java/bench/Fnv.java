@@ -3,6 +3,8 @@ package bench;
 import static java.lang.foreign.ValueLayout.JAVA_BYTE;
 
 import java.lang.foreign.MemorySegment;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * Normative checksum primitives (PROTOCOL.md §8).
@@ -25,6 +27,18 @@ public final class Fnv {
         long hash = OFFSET;
         for (byte b : data) {
             hash = update(hash, b);
+        }
+        return hash;
+    }
+
+    /** Order-sensitive construction proof over UTF-8 terms separated by 0xff. */
+    public static long semanticTerms(List<String> terms) {
+        long hash = OFFSET;
+        for (String term : terms) {
+            for (byte value : term.getBytes(StandardCharsets.UTF_8)) {
+                hash = update(hash, value);
+            }
+            hash = update(hash, (byte) 0xff);
         }
         return hash;
     }

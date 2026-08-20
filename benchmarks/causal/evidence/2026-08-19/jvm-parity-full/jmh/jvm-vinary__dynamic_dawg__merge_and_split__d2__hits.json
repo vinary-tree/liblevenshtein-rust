@@ -1,0 +1,84 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.VinaryBench.fullPass",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 2,
+        "jvm" : "/usr/lib/jvm/java-26-openjdk/bin/java",
+        "jvmArgs" : [
+            "--enable-native-access=ALL-UNNAMED",
+            "-Djava.library.path=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release:/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release",
+            "-Dxl.workload=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload",
+            "-Xms2g",
+            "-Xmx2g"
+        ],
+        "jdkVersion" : "26.0.2",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "26.0.2",
+        "warmupIterations" : 5,
+        "warmupTime" : "2 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "2 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "algorithm" : "merge_and_split",
+            "backend" : "dynamic_dawg",
+            "distance" : "2",
+            "queryset" : "hits",
+            "resultMode" : "materialized"
+        },
+        "primaryMetric" : {
+            "score" : 609760.9091750002,
+            "scoreError" : 7508.077452578916,
+            "scoreConfidence" : [
+                602252.8317224212,
+                617268.9866275791
+            ],
+            "scorePercentiles" : {
+                "0.0" : 599656.94625,
+                "50.0" : 609567.1981250001,
+                "90.0" : 622152.1024000001,
+                "95.0" : 622408.0170625,
+                "99.0" : 622413.5785,
+                "99.9" : 622413.5785,
+                "99.99" : 622413.5785,
+                "99.999" : 622413.5785,
+                "99.9999" : 622413.5785,
+                "100.0" : 622413.5785
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    601841.50925,
+                    620799.87625,
+                    622413.5785,
+                    609741.506,
+                    601335.29275,
+                    600479.7175,
+                    600407.07425,
+                    601207.845,
+                    613853.2385,
+                    622302.34975
+                ],
+                [
+                    609392.89025,
+                    620479.1195,
+                    615646.99875,
+                    601125.02875,
+                    601592.9755,
+                    604483.5215,
+                    599656.94625,
+                    611028.156,
+                    619447.00225,
+                    617983.557
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

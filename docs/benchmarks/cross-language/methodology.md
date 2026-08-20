@@ -185,6 +185,14 @@ Single-threaded targets are pinned to `taskset -c 2`; managed runtimes (JVM,
 Node, .NET, Go, ClojureScript) get `-c 2-9`, and **both arms of a pair always
 receive identical cpusets**.
 
+Serialization is defined over invocation trees, not process counts. A JMH cell
+has a Gradle launcher and forked benchmark JVMs whose command lines all name the
+benchmark; those descendants are one timed invocation. The continuous guard
+anchors ownership at the direct child of the monitor, collapses that complete
+tree to one identity, and rejects any runner-owned harness outside it. This
+retains the one-cell-at-a-time invariant without misclassifying a legitimate
+managed-runtime fork as concurrent work.
+
 ### 3.4 Pausing and resuming
 
 Every stage is resumable and skips work already on disk. To pause:
@@ -247,6 +255,14 @@ Two independent detectors are required because they fail differently:
 Foreign harness invocations are ledgered with their intervals, and cells whose
 timed window overlaps one are flagged `contended` (§4.6).
 
+The closing Java pair adds a stricter, topology-aware admission on both sides
+of every timed cell. It samples all CPUs in the managed-runtime cpuset plus
+their complete LLC groups immediately before and after JMH and enforces the
+recorded per-CPU and LLC thresholds. The two successful observations commit as
+one per-cell admission sidecar only after conversion and post-fill succeed.
+Rejected host observations and continuous-monitor failures are stored in
+separate ledgers; neither can enter the accepted aggregate.
+
 ### 4.4 A bounded, measured drift window
 
 Long campaigns drift: ambient load falls, thermals change, the machine gets
@@ -298,6 +314,12 @@ Interrupting a batch leaves such cells behind. They are moved to
 why, so nothing is lost and a `--resume` re-measures the coordinate rather than
 trusting a partial record.
 
+The closing runners use the same rule transactionally. A result is resumable
+only when its cell JSON and exact admission sidecar are both complete. Attempt
+ledgers are truncated on retry, accepted ledgers are rebuilt solely from
+committed sidecars, and a rejected raw JMH result moves under
+`jmh/invalid-retries/` before the coordinate runs again.
+
 ### 4.8 Fairness between arms
 
 Both arms of a pair must be given the same task, not merely a similar one:
@@ -329,11 +351,11 @@ How each constraint is actually enforced, and what a violation does:
 |---|---|---|---|
 | 4.1 | One binary | `postfill.py` records `native_digests`; `aggregate.py` `check_digest_consistency` | aggregation aborts |
 | 4.2 | One workload | per-cell dictionary/query SHA-256 vs `environment.json` | aggregation aborts |
-| 4.3 | Exclusive cores | `timed-proc-guard.sh` classifies MINE / FOREIGN / WRAPPER; `load_avg_1m` snapshot | protocol violation reported; foreign intervals ledgered |
+| 4.3 | Exclusive cores | `timed-proc-guard.sh` classifies invocation trees as MINE / FOREIGN / WRAPPER; topology-aware pre/post admission samples the full cpuset and LLC groups | protocol violation rejects the attempt; foreign intervals and host-load rejections are separately ledgered |
 | 4.4 | Drift | 3 fixed anchor cells every ~90 min | window annotated; atlas ratios held provisional |
 | 4.5 | Determinism | per-pass `(matches, checksum)` vs pinned reference | cell fails |
 | 4.6 | Contamination visible | `mark-contended-cells.py` interval intersection; `contended` declared in schema | cells flagged and listed in `tables/contention.md` |
-| 4.7 | Complete records | `postfill.py` + JSON-Schema validation | quarantined with manifest |
+| 4.7 | Complete records | `postfill.py` + JSON-Schema validation + per-cell committed admission sidecar | incomplete raw result quarantined; coordinate re-measured |
 | 4.8 | Fairness | gate equality on the result four-tuple; PROTOCOL.md §10 | gate fails |
 | 4.9 | Preregistration | pgmcp experiments with seeded criteria | verdict recorded as measured |
 
@@ -437,6 +459,41 @@ construction.
 
 The `phase0` campaign was paused rather than worktree-isolated for exactly this
 reason.
+
+### 6.5 Direct pure-Rust versus legacy-pure-Java closure
+
+This comparison is not `run-jvm-pair.sh parity`: that command compares the
+Rust-backed JVM facade with legacy Java. The direct-language runner accepts
+already-built executables and refuses to build while timing. It pins both arms
+to one CPU, places its observer on a separately selected CPU, applies the strict
+selected-core and complete-LLC gate before and after every child process, and
+alternates which arm runs first. Every query replicate must agree on match
+count, returned UTF-8 bytes, distance sum, and checksum before its atomically
+renamed replicate directory is accepted. The Java execution-closure digest
+includes the launcher, resolved JVM executable/version, runtime-classpath file,
+and a deterministic digest of every classpath file or directory tree, and is
+recomputed before and after every arm. A 51-pair run normally costs at least
+five minutes because every sample is a fresh process with a complete warmup;
+that deliberate isolation prevents one arm from inheriting another sample's
+JIT or allocator state.
+
+```bash
+cd benchmarks/cross-language
+scripts/run-pure-rust-legacy-java-pair.sh query \
+  harnesses/rust/target/release/bench-cross-rust \
+  .stage/jvm/legacy-launcher.sh \
+  workload/dictionary.txt workload/queries/std-d2.txt workload/provenance.json \
+  results/direct-standard-d2 51 0 standard 2 from_terms
+```
+
+The construction mode is run twice in fresh directories, once with
+`from_terms` and once with `from_sorted_terms`. The Rust harness default remains
+`from_terms` for compatibility; `--constructor from_sorted_terms` is explicit.
+Each child performs one untimed warm construction before its single measured
+construction. The causal construction matrix separately exercises genuinely
+shuffled corpora and rejects a constructor before timing unless an extra
+outside-timed build has the expected cardinality, contains every term, and
+emits the pinned deterministic semantic checksum.
 
 Note also that the two repositories are versioned separately: `liblevenshtein-rust`
 and its sibling `libdictenstein`, which supplies every dictionary implementation

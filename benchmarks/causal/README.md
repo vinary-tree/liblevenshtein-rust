@@ -6,8 +6,8 @@ gap with `liblevenshtein-java`. They do not change production algorithms.
 Generate and verify the deterministic anchor strata and structural shapes:
 
 ```console
-python3 benchmarks/causal/generate_corpora.py --output /tmp/liblev-corpora
-python3 benchmarks/causal/generate_corpora.py --output /tmp/liblev-corpora --verify
+python3 benchmarks/causal/generate_corpora.py --output target/benchmark-corpora/java-parity
+python3 benchmarks/causal/generate_corpora.py --output target/benchmark-corpora/java-parity --verify
 ```
 
 The manifest labels every cell with its explicit `unit_domain` and contains
@@ -35,10 +35,26 @@ cargo build --release --bin causal_construction_bench
 Run the complete structural work matrix after generating the corpora:
 
 ```console
-benchmarks/causal/run-counter-matrix.sh /tmp/liblev-corpora/manifest.json /tmp/liblev-counter-matrix
-benchmarks/causal/run-construction-matrix.sh /tmp/liblev-corpora/manifest.json /tmp/liblev-construction-matrix
+benchmarks/causal/run-counter-matrix.sh \
+  target/benchmark-corpora/java-parity/manifest.json \
+  target/benchmark-results/counter-matrix
+benchmarks/causal/run-construction-matrix.sh \
+  target/benchmark-corpora/java-parity/manifest.json \
+  target/benchmark-results/construction-matrix
 benchmarks/causal/run-legacy-structure-probe.sh benchmarks/cross-language/workload/dictionary.txt /tmp/liblev-java-structure
 ```
+
+The construction runner applies the strict selected-CPU and complete-LLC gate
+before and after every cell, continuously monitors competing benchmark
+processes, and records the executable and manifest SHA-256 digests. Generated
+corpora live under disk-backed `target/benchmark-corpora` rather than `/tmp`,
+which is commonly a RAM-backed `tmpfs` on benchmark hosts. Each cell hashes its
+dictionary and query file against the manifest before and after timing and
+records an outside-timed length, membership, and deterministic-checksum proof
+from an extra construction. Pass
+`--resume` to retain only contract-complete cells whose corpus, run
+configuration, and executable digest still match; a cell rejected before or
+after timing is rerun rather than partially admitted.
 
 Run AMD uProf, Heaptrack, or `perf stat` through the headless wrapper. The
 output directory must not already exist:
@@ -66,11 +82,62 @@ stopped before measuring that pair.
 
 The bounded query-cache policy matrix is deterministic and fixes the
 benchmark-only AHash key before constructing any cache. Production caches keep
-independent randomized keys:
+independent randomized keys. The matrix compares TinyLFU+SIEVE with dense,
+purpose-built FIFO, LRU, SIEVE-only, and aging exact-LFU controls across hot
+hits, scan pollution, a disjoint phase, and Zipf locality. Every raw row
+includes latency, allocator calls/bytes, cache quality, resident entries,
+logical weight, exact checksum, execution order, and binary SHA-256:
 
 ```console
 cargo run --release --features benchmark-controls --example query_cache_policy_matrix
 ```
+
+For decision evidence, build once and use the topology-gated 51-replicate
+runner. It writes the CSV and adjacent host-load ledger without overwriting
+existing evidence:
+
+```console
+cargo build --release --features benchmark-controls --example query_cache_policy_matrix
+benchmarks/causal/run-query-cache-policy-matrix-experiment.sh \
+  target/release/examples/query_cache_policy_matrix \
+  benchmarks/causal/evidence/YYYY-MM-DD/query-cache-policy-performance.csv
+```
+
+The complete fairness model, limitations, and interpretation rules are in
+[`docs/benchmarks/query-cache-policy-matrix.md`](../../docs/benchmarks/query-cache-policy-matrix.md);
+the row contract is
+[`schemas/query-cache-policy-matrix.schema.json`](schemas/query-cache-policy-matrix.schema.json).
+The completed 2026-08-19 evidence contains 51 replicates per arm and an
+accepted pgmcp experiment 299 decision for TinyLFU+SIEVE versus aging exact
+LFU on Zipf locality. The runner also supports strict `--resume`: it retains
+only complete, digest-matching replicates, rebuilds its accepted host-load
+ledger from committed per-replicate admission sidecars, separates rejected
+gates, and refuses any run with a nonempty foreign-contention ledger. Benign
+monitor diagnostics do not make the evidence unresumable.
+
+The all-backend propagation matrix exercises every production
+`DictionaryNode` family across its applicable byte, Unicode-scalar, and `u64`
+domains. It emits explicit inapplicable rows, construction and query resource
+metrics, and exact semantic checksums for Standard, OSA, merge-and-split, and
+unrestricted Damerau–Levenshtein:
+
+```console
+cargo build --release \
+  --example backend_propagation_matrix \
+  --features "benchmark-controls pathmap-backend persistent-artrie"
+benchmarks/causal/run-backend-propagation-matrix.sh \
+  target/release/examples/backend_propagation_matrix \
+  target/release/examples/backend_propagation_matrix \
+  benchmarks/causal/evidence/YYYY-MM-DD/backend-propagation-matrix.csv \
+  51 3 256 64 1 2
+```
+
+The complete admission, bounds, and comparison protocol is in
+[`docs/benchmarks/backend-propagation-evidence.md`](../../docs/benchmarks/backend-propagation-evidence.md);
+the row contract is
+[`schemas/backend-propagation-matrix.schema.json`](schemas/backend-propagation-matrix.schema.json).
+All runtime A/B switches are isolated behind `benchmark-controls`; ordinary
+production builds do not read causal-control environment variables.
 
 The victim-planning experiment uses the same compiled binary for both arms,
 alternates arm order, fixes the benchmark-only hash seed, and compares the

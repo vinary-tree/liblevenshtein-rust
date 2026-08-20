@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/vinary-tree/liblevenshtein-rust/benchmarks/causal/schemas/backend-propagation-matrix.schema.json",
+  "title": "All-backend propagation matrix CSV row",
+  "description": "Logical row schema for liblevenshtein.backend-propagation-matrix.v1. Empty CSV metrics are decoded as null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "replicate", "arm", "profile", "cell_order", "algorithm_order",
+    "backend_family", "backend", "unit_domain", "algorithm", "stage",
+    "applicability", "reason", "terms", "operations", "result_count",
+    "elapsed_ns", "ns_per_operation", "allocations", "allocated_bytes",
+    "deallocations", "deallocated_bytes", "peak_live_growth_bytes", "rss_bytes",
+    "checksum_u64", "max_terms", "max_operations", "max_results",
+    "max_allocated_bytes", "max_rss_bytes", "binary_sha256", "expected_rows"
+  ],
+  "properties": {
+    "schema": { "const": "liblevenshtein.backend-propagation-matrix.v1" },
+    "replicate": { "type": "integer", "minimum": 1 },
+    "arm": { "type": "string", "minLength": 1 },
+    "profile": { "enum": ["treatment", "legacy-shared-kernels", "inherited"] },
+    "cell_order": { "type": "integer", "minimum": 0, "maximum": 29 },
+    "algorithm_order": { "type": ["integer", "null"], "minimum": 0, "maximum": 3 },
+    "backend_family": {
+      "enum": [
+        "dynamic-dawg", "double-array-trie", "pathmap", "suffix-automaton",
+        "scdawg", "persistent-suffix-automaton", "persistent-suffix-tree",
+        "persistent-scdawg", "persistent-artrie", "persistent-vocabulary"
+      ]
+    },
+    "backend": { "type": "string", "minLength": 1 },
+    "unit_domain": { "enum": ["byte", "char", "u64"] },
+    "algorithm": {
+      "enum": ["none", "standard", "osa-transposition", "merge-and-split", "damerau-levenshtein"]
+    },
+    "stage": { "enum": ["construction", "query"] },
+    "applicability": { "enum": ["applicable", "inapplicable"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "terms": { "type": "integer", "minimum": 1 },
+    "operations": { "type": "integer", "minimum": 0 },
+    "result_count": { "type": "integer", "minimum": 0 },
+    "elapsed_ns": { "type": ["integer", "null"], "minimum": 1 },
+    "ns_per_operation": { "type": ["number", "null"], "minimum": 0 },
+    "allocations": { "type": ["integer", "null"], "minimum": 0 },
+    "allocated_bytes": { "type": ["integer", "null"], "minimum": 0 },
+    "deallocations": { "type": ["integer", "null"], "minimum": 0 },
+    "deallocated_bytes": { "type": ["integer", "null"], "minimum": 0 },
+    "peak_live_growth_bytes": { "type": ["integer", "null"], "minimum": 0 },
+    "rss_bytes": { "type": ["integer", "null"], "minimum": 0 },
+    "checksum_u64": { "type": "integer", "minimum": 0 },
+    "max_terms": { "type": "integer", "minimum": 1 },
+    "max_operations": { "type": "integer", "minimum": 1 },
+    "max_results": { "type": "integer", "minimum": 0 },
+    "max_allocated_bytes": { "type": "integer", "minimum": 1 },
+    "max_rss_bytes": { "type": "integer", "minimum": 1 },
+    "binary_sha256": { "type": "string", "pattern": "^(unrecorded|[0-9a-f]{64})$" },
+    "expected_rows": { "const": 150 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "applicability": { "const": "applicable" } } },
+      "then": {
+        "properties": {
+          "operations": { "minimum": 1 },
+          "elapsed_ns": { "type": "integer", "minimum": 1 },
+          "allocations": { "type": "integer", "minimum": 0 },
+          "allocated_bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "applicability": { "const": "inapplicable" } } },
+      "then": {
+        "properties": {
+          "operations": { "const": 0 },
+          "result_count": { "const": 0 },
+          "elapsed_ns": { "type": "null" },
+          "ns_per_operation": { "type": "null" },
+          "allocations": { "type": "null" },
+          "allocated_bytes": { "type": "null" },
+          "deallocations": { "type": "null" },
+          "deallocated_bytes": { "type": "null" },
+          "peak_live_growth_bytes": { "type": "null" },
+          "rss_bytes": { "type": "null" },
+          "checksum_u64": { "const": 0 }
+        }
+      }
+    }
+  ],
+  "x-cross-row-invariants": [
+    "Each arm/replicate contains exactly 150 rows: 30 family/domain cells times construction and four query variants.",
+    "Every family/domain cell has one construction row and four query rows, including inapplicable cells.",
+    "Control and treatment applicability, reason, result_count, and checksum match for every keyed row.",
+    "terms <= max_terms, operations <= max_operations, result_count <= max_results, allocated_bytes <= max_allocated_bytes, and rss_bytes <= max_rss_bytes when present."
+  ]
+}

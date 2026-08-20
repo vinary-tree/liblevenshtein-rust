@@ -18,7 +18,7 @@ pub(crate) struct PackedEditLaneLayout {
     active_mask: u64,
     nonterminal_bits: u64,
     terminal_bits: u64,
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(any(test, feature = "benchmark-controls"))]
     top_lane_mask: u64,
     deletion_source_masks: [u64; MAX_PACKED_DISTANCE],
 }
@@ -53,7 +53,7 @@ impl PackedEditLaneLayout {
         } else {
             0
         };
-        #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(any(test, feature = "benchmark-controls"))]
         let top_lane_mask = lane_mask << (max_distance * lane_width);
 
         let mut deletion_source_masks = [0u64; MAX_PACKED_DISTANCE];
@@ -79,7 +79,7 @@ impl PackedEditLaneLayout {
             active_mask,
             nonterminal_bits,
             terminal_bits,
-            #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+            #[cfg(any(test, feature = "benchmark-controls"))]
             top_lane_mask,
             deletion_source_masks,
         })
@@ -105,7 +105,7 @@ impl PackedEditLaneLayout {
         self.lane_mask
     }
 
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(any(test, feature = "benchmark-controls"))]
     #[inline(always)]
     pub(crate) fn end_bit(self) -> u64 {
         self.end_bit
@@ -146,7 +146,7 @@ impl PackedEditLaneLayout {
         self.terminal_bits
     }
 
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(any(test, feature = "benchmark-controls"))]
     #[inline(always)]
     pub(crate) fn top_lane_mask(self) -> u64 {
         self.top_lane_mask
@@ -160,7 +160,7 @@ impl PackedEditLaneLayout {
         packed
     }
 
-    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(feature = "benchmark-controls")]
     pub(crate) fn cumulative_seed(self) -> u64 {
         let mut packed = 0u64;
         for edit in 0..=self.max_distance {

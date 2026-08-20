@@ -79,7 +79,14 @@ For a focused Java closing run, stage the exact release natives once and use
 the resumable pair driver. `parity` first captures full-query exact twins, then
 alternates the vinary and legacy arms at each of their 45 shared coordinates.
 The optional compiler-load gate refuses to begin or accept a JMH cell while an
-unrelated Cargo/rustc build is visible:
+unrelated Cargo/rustc build is visible. Each arm is also admitted immediately
+before and after timing against every CPU in the measurement cpuset and their
+complete LLC groups. Admissions commit per cell; rejected admissions and
+monitor logs remain separate from the accepted ledger, and a retry can neither
+reuse an incomplete cell nor mix a rejected pre-gate into accepted evidence.
+The continuous process guard treats the Gradle launcher and its forked JMH JVMs
+as one identity-based invocation tree while still rejecting a second runner
+tree or a foreign benchmark process:
 
 ```bash
 scripts/run-jvm-pair.sh stage
@@ -100,6 +107,38 @@ XL_REQUIRE_COMPILER_QUIET=1 XL_JMH_EXTRA_PARAMS=resultMode=materialized \
 Focused commands create `environment.json` before the first cell; post-fill
 now rejects a dangling environment reference instead of emitting incomplete
 provenance.
+
+For the distinct direct-language question—pure Rust core versus legacy pure
+Java—build and stage both executables first, then use the strict pair runner.
+It never invokes a compiler. One process contributes one sample, pair order
+alternates, and both arms are admitted before and after timing against the
+selected CPU's complete LLC group. The manifest, corpora, executables, raw JSON,
+and run configuration are content-addressed. The Java pin covers the launcher,
+resolved JVM executable and version, runtime-classpath file, and every file or
+directory tree on that classpath; it is recomputed around every arm. `--resume`
+accepts only contiguous complete replicate directories with matching digests.
+Because every independent sample receives a fresh process and full warmup, the
+51-pair `standard/d2/std-d2` closure normally takes at least five minutes; this
+is intentional JIT/allocator-state isolation, not harness overhead hidden from
+the result.
+
+```bash
+RUSTFLAGS="-C target-cpu=native" cargo build --release \
+  --manifest-path harnesses/rust/Cargo.toml
+scripts/run-jvm-pair.sh stage
+
+scripts/run-pure-rust-legacy-java-pair.sh query \
+  harnesses/rust/target/release/bench-cross-rust \
+  .stage/jvm/legacy-launcher.sh \
+  workload/dictionary.txt workload/queries/std-d2.txt workload/provenance.json \
+  results/pure-rust-legacy-java-standard-d2 \
+  51 0 standard 2 from_terms
+```
+
+Use a separate `construct` result directory for each Rust construction API.
+`from_terms` is the optimized arbitrary-order API; `from_sorted_terms` is the
+explicit ordered fast path. Legacy Java always receives the manifest-proven
+sorted corpus and uses its `SortedDawg` constructor.
 
 Every raw log is teed into the results directory; `environment.json` pins
 toolchain versions, git commits, artifact SHA-256s, governor, and cpusets.

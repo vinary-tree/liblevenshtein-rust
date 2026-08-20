@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0.0",
+  "suite": "cross-language-v1",
+  "timestamp_utc": "2026-08-20T01:48:37+00:00",
+  "target": {
+    "language": "java",
+    "implementation": "vinary-tree",
+    "backend": "jvm-ffm",
+    "runtime_version": "openjdk 26.0.2 2026-07-21",
+    "library_version": "0.10.0",
+    "artifact": {
+      "kind": "local-build",
+      "id": "io.vinarytree:liblevenshtein:0.10.0"
+    }
+  },
+  "dictionary": {
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/dictionary.txt",
+    "sha256": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23",
+    "term_count": 79343,
+    "structure": "dynamic_dawg",
+    "unit_domain": "unicode_scalar"
+  },
+  "workload": {
+    "queryset": "tr-d3",
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/tr-d3.txt",
+    "sha256": "611f6af44bf4b7bd6c1ab477b24446cfc15906d3bb92822f6b4b20894955a1da",
+    "query_count": 1000
+  },
+  "algorithm": "transposition",
+  "max_distance": 1,
+  "mode": "query",
+  "protocol": {
+    "timer": "monotonic",
+    "harness": "jmh",
+    "warmup_seconds_min": 0,
+    "warmup_passes": 5,
+    "samples_requested": 20,
+    "sample_definition": "one full pass over the query set; every cursor fully drained and (term, distance) materialized",
+    "batch_size": 256,
+    "wall_cap_seconds": 0,
+    "jmh": {
+      "forks": 2,
+      "warmup_iterations": 5,
+      "measurement_iterations": 10,
+      "iteration_seconds": 2
+    }
+  },
+  "measurements": {
+    "samples_ns": [
+      14034431,
+      13654571,
+      13092420,
+      13042882,
+      13006757,
+      13223685,
+      13837148,
+      13783283,
+      13066458,
+      13056269,
+      14090769,
+      14106696,
+      13361545,
+      13260444,
+      13350881,
+      13272362,
+      13861437,
+      14058168,
+      13387950,
+      13227880
+    ],
+    "sample_count": 20,
+    "matches_per_pass": 444,
+    "term_bytes_per_pass": 1386,
+    "distance_sum_per_pass": 436,
+    "checksum_hex": "e034b4f84bb0c215"
+  },
+  "status": "ok",
+  "notes": [
+    "converted from JMH record bench.VinaryBench.fullPass",
+    "JVM result transport: materialized",
+    "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+  ],
+  "run_id": "jvm-parity-full",
+  "environment_ref": "../environment.json",
+  "cell_snapshot": {
+    "cpuset": "2-9",
+    "cpu_mhz_start": 1429.0,
+    "cpu_mhz_end": 1429.0,
+    "load_avg_1m": 5.49
+  },
+  "native_digests": {
+    "libliblevenshtein.so": "3b166329982de1ea1db734613f8bc525322196eed8addb0e6d893f4ae6769009",
+    "liblibdictenstein.so": "2f4d400828e0d34fdc160417a408e30b4ddf9145f95760cb5331ba62d108cad4"
+  }
+}

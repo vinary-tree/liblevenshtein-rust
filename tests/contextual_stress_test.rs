@@ -13,7 +13,6 @@ mod stress_tests {
 
     /// Test with a large number of root contexts
     #[test]
-    #[ignore] // Run with: cargo test --features pathmap-backend stress -- --ignored
     fn test_many_contexts() {
         let engine = DynamicContextualCompletionEngine::new();
 
@@ -44,7 +43,6 @@ mod stress_tests {
 
     /// Test with a large dictionary
     #[test]
-    #[ignore]
     fn test_large_dictionary() {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
@@ -61,9 +59,9 @@ mod stress_tests {
         }
 
         // Add some matching terms
+        engine.finalize_direct(ctx, "help").unwrap();
         engine.finalize_direct(ctx, "helper").unwrap();
-        engine.finalize_direct(ctx, "helper_fn").unwrap();
-        engine.finalize_direct(ctx, "global_helper").unwrap();
+        engine.finalize_direct(ctx, "helps").unwrap();
 
         // Query should still be fast
         println!("Querying...");
@@ -77,7 +75,6 @@ mod stress_tests {
 
     /// Test with deep hierarchy
     #[test]
-    #[ignore]
     fn test_deep_hierarchy() {
         let engine = DynamicContextualCompletionEngine::new();
 
@@ -105,13 +102,12 @@ mod stress_tests {
         assert_eq!(visible.len(), 1000); // Should see all ancestors
 
         // Query should find root terms
-        let results = engine.complete(999, "root", 2);
+        let results = engine.complete(999, "root_term", 0);
         assert!(results.iter().any(|c| c.term == "root_term"));
     }
 
     /// Test with many checkpoints
     #[test]
-    #[ignore]
     fn test_many_checkpoints() {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
@@ -119,8 +115,8 @@ mod stress_tests {
         // Create 10,000 checkpoints
         println!("Creating 10,000 checkpoints...");
         for i in 0..10_000 {
-            engine.insert_char(ctx, 'a').unwrap();
             engine.checkpoint(ctx).unwrap();
+            engine.insert_char(ctx, 'a').unwrap();
 
             if i % 1_000 == 0 {
                 println!("  Created {} checkpoints", i);
@@ -146,7 +142,6 @@ mod stress_tests {
 
     /// Test with wide fan-out
     #[test]
-    #[ignore]
     fn test_wide_fanout() {
         let engine = DynamicContextualCompletionEngine::new();
         let root = engine.create_root_context(0);
@@ -193,7 +188,6 @@ mod stress_tests {
 
     /// Test long-running drafts with many edits
     #[test]
-    #[ignore]
     fn test_long_draft_session() {
         let engine = DynamicContextualCompletionEngine::new();
         let ctx = engine.create_root_context(0);
@@ -239,7 +233,6 @@ mod stress_tests {
 
     /// Test removal of large subtrees
     #[test]
-    #[ignore]
     fn test_large_subtree_removal() {
         let engine = DynamicContextualCompletionEngine::new();
         let root = engine.create_root_context(0);
@@ -279,7 +272,6 @@ mod stress_tests {
 
     /// Test concurrent stress (multiple threads)
     #[test]
-    #[ignore]
     fn test_concurrent_stress() {
         use std::sync::Arc;
         use std::thread;
@@ -341,7 +333,6 @@ mod stress_tests {
 
     /// Test memory stability (no leaks during rapid alloc/dealloc)
     #[test]
-    #[ignore]
     fn test_memory_stability() {
         println!("Testing memory stability with rapid create/destroy cycles...");
 

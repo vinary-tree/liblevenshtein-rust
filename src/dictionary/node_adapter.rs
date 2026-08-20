@@ -35,7 +35,7 @@ where
 /// Same-binary causal control for transparent-wrapper cursor forwarding.
 #[inline]
 pub(crate) fn transparent_traversal_forwarding_disabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static DISABLED: OnceLock<bool> = OnceLock::new();
@@ -43,7 +43,7 @@ pub(crate) fn transparent_traversal_forwarding_disabled() -> bool {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_WRAPPER_TRAVERSAL_FORWARDING").is_some()
         })
     }
-    #[cfg(not(feature = "resource-profiling"))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }
@@ -283,6 +283,47 @@ macro_rules! impl_dictionary_node_adapter {
             }
 
             #[inline]
+            fn supports_efficient_edge_paging(&self) -> bool {
+                self.inner.supports_efficient_edge_paging()
+            }
+
+            #[inline]
+            fn visit_edge_page_and_finality<Visitor>(
+                &self,
+                start: usize,
+                capacity: usize,
+                mut visitor: Visitor,
+            ) -> (bool, usize)
+            where
+                Visitor: FnMut(Self::Unit, Self),
+            {
+                let $owner = self;
+                self.inner.visit_edge_page_and_finality(
+                    start,
+                    capacity,
+                    |label, $child| visitor(label, $wrap),
+                )
+            }
+
+            #[inline]
+            fn visit_edge_page<Visitor>(
+                &self,
+                start: usize,
+                capacity: usize,
+                mut visitor: Visitor,
+            ) -> usize
+            where
+                Visitor: FnMut(Self::Unit, Self),
+            {
+                let $owner = self;
+                self.inner.visit_edge_page(
+                    start,
+                    capacity,
+                    |label, $child| visitor(label, $wrap),
+                )
+            }
+
+            #[inline]
             fn has_edge(&self, label: Self::Unit) -> bool {
                 self.inner.has_edge(label)
             }
@@ -486,6 +527,7 @@ mod tests {
         boxed: AtomicUsize,
         direct: AtomicUsize,
         fused: AtomicUsize,
+        paged: AtomicUsize,
     }
 
     #[derive(Clone)]
@@ -538,6 +580,26 @@ mod tests {
             visitor(11, self.clone());
             self.final_node
         }
+
+        fn supports_efficient_edge_paging(&self) -> bool {
+            true
+        }
+
+        fn visit_edge_page_and_finality<F>(
+            &self,
+            start: usize,
+            capacity: usize,
+            mut visitor: F,
+        ) -> (bool, usize)
+        where
+            F: FnMut(Self::Unit, Self),
+        {
+            self.calls.paged.fetch_add(1, Ordering::Relaxed);
+            if start == 0 && capacity > 0 {
+                visitor(13, self.clone());
+            }
+            (self.final_node, 1)
+        }
     }
 
     #[test]
@@ -560,6 +622,18 @@ mod tests {
         assert!(final_node);
         assert_eq!(labels, [11]);
         assert_eq!(calls.fused.load(Ordering::Relaxed), 1);
+        assert_eq!(calls.boxed.load(Ordering::Relaxed), 0);
+
+        labels.clear();
+        assert!(node.supports_efficient_edge_paging());
+        let (final_node, total) = node.visit_edge_page_and_finality(0, 1, |label, child| {
+            labels.push(label);
+            assert!(child.inner.final_node);
+        });
+        assert!(final_node);
+        assert_eq!(total, 1);
+        assert_eq!(labels, [13]);
+        assert_eq!(calls.paged.load(Ordering::Relaxed), 1);
         assert_eq!(calls.boxed.load(Ordering::Relaxed), 0);
     }
 

@@ -1,0 +1,80 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.LegacyBench.fullPass",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 2,
+        "jvm" : "/usr/lib/jvm/java-26-openjdk/bin/java",
+        "jvmArgs" : [
+            "-Dxl.workload=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload",
+            "-Xms2g",
+            "-Xmx2g"
+        ],
+        "jdkVersion" : "26.0.2",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "26.0.2",
+        "warmupIterations" : 5,
+        "warmupTime" : "2 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "2 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "algorithm" : "standard",
+            "distance" : "2",
+            "queryset" : "std-d2"
+        },
+        "primaryMetric" : {
+            "score" : 465826.13929,
+            "scoreError" : 6385.282647068972,
+            "scoreConfidence" : [
+                459440.85664293106,
+                472211.421937069
+            ],
+            "scorePercentiles" : {
+                "0.0" : 458535.7336,
+                "50.0" : 464082.5642,
+                "90.0" : 478459.61319999996,
+                "95.0" : 483965.56284,
+                "99.0" : 484241.9242,
+                "99.9" : 484241.9242,
+                "99.99" : 484241.9242,
+                "99.999" : 484241.9242,
+                "99.9999" : 484241.9242,
+                "100.0" : 484241.9242
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    459704.8358,
+                    461090.7778,
+                    459675.0258,
+                    484241.9242,
+                    478714.697,
+                    476163.859,
+                    460106.7256,
+                    463455.6292,
+                    459586.153,
+                    458535.7336
+                ],
+                [
+                    464942.3702,
+                    475267.5628,
+                    469133.423,
+                    467720.8592,
+                    465349.4592,
+                    460182.431,
+                    462668.7792,
+                    465717.5178,
+                    459555.5232,
+                    464709.4992
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

@@ -1,0 +1,4267 @@
+{
+  "applicable_cells": 105,
+  "cells": [
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "double-array-trie-byte",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 23499.390625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.6713766100120895,
+          0.6716163549296482
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.6715169395410395,
+        "maximum": 0.6716163549296482,
+        "median": 0.6716163549296482,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.6713416053977103,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2983906128398395,
+          1.3108115700302858
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.3062697936418055,
+        "maximum": 1.3510089522746738,
+        "median": 1.3048345549216864,
+        "median_absolute_deviation": 0.011893945974702502,
+        "minimum": 1.274990655740369,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 18052.828125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "double-array-trie-byte",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 35521.734375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.568657616639707,
+          2.568657616639707
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.5686576636633274,
+        "maximum": 2.5686588157422983,
+        "median": 2.568657616639707,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.568657616639707,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          4.766756415894325,
+          4.845473282492069
+        ],
+        "control_wins": 0,
+        "geometric_mean": 4.789260368124108,
+        "maximum": 5.020631025569372,
+        "median": 4.800372595336823,
+        "median_absolute_deviation": 0.07086861554737744,
+        "minimum": 4.136409658459559,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 7378.53125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "double-array-trie-byte",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 796.9375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.976019069252714,
+          1.010107112279547
+        ],
+        "control_wins": 29,
+        "geometric_mean": 0.9933579464260834,
+        "maximum": 1.1063465866280946,
+        "median": 0.9943589842321096,
+        "median_absolute_deviation": 0.024737568856398107,
+        "minimum": 0.8962482153565069,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 22
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 809.152344,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "double-array-trie-byte",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 22734.359375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.2988271702540346,
+          2.301671933630217
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.299989622074396,
+        "maximum": 2.3016731421113374,
+        "median": 2.2988271702540346,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.2983929651042816,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.950656399093941,
+          2.982984975097422
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.9543431512734144,
+        "maximum": 3.052669857016102,
+        "median": 2.9682359173438435,
+        "median_absolute_deviation": 0.0387679497591118,
+        "minimum": 2.673005426182563,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 7645.28125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "double-array-trie-byte",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 21519.703125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2487847068481877,
+          1.2487847068481877
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2487847068481877,
+        "maximum": 1.2487847068481877,
+        "median": 1.2487847068481877,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.2487847068481877,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.489385733361752,
+          2.5116520944869527
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.503419420193689,
+        "maximum": 2.611745783827002,
+        "median": 2.498468686712615,
+        "median_absolute_deviation": 0.01752670226346975,
+        "minimum": 2.397940723666818,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 8598.171875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "double-array-trie-char",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 22792.28125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.7405779715824421,
+          0.7405779715824421
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.7405779715824421,
+        "maximum": 0.7405779715824421,
+        "median": 0.7405779715824421,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.7405779715824421,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.281040044948681,
+          1.2918510776712488
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2888907602325845,
+        "maximum": 1.341760999334752,
+        "median": 1.2873134626003426,
+        "median_absolute_deviation": 0.010146740400929444,
+        "minimum": 1.2617307049549569,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 17726.421875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "double-array-trie-char",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 35267.171875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.6352431493534363,
+          2.6352431493534363
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.635166203041952,
+        "maximum": 2.635244411680056,
+        "median": 2.6352431493534363,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.6313204902618192,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          4.630733323693359,
+          4.672928018947612
+        ],
+        "control_wins": 0,
+        "geometric_mean": 4.642819840719624,
+        "maximum": 4.816902027606938,
+        "median": 4.652452248986306,
+        "median_absolute_deviation": 0.04241387524936435,
+        "minimum": 4.159668979169148,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 7603.484375,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "double-array-trie-char",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 6460.097656,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9781737415806802,
+          1.0784012736645208
+        ],
+        "control_wins": 23,
+        "geometric_mean": 1.0179919959238521,
+        "maximum": 1.5921933612769321,
+        "median": 1.0213627665121803,
+        "median_absolute_deviation": 0.0945965726611977,
+        "minimum": 0.6115621094544444,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 28
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 6446.875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "double-array-trie-char",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 21821.6875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.3642203462874236,
+          2.3642203462874236
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.364220395994215,
+        "maximum": 2.364221613810936,
+        "median": 2.3642203462874236,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.3642203462874236,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.932275262245223,
+          2.9670182865470696
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.944682161819295,
+        "maximum": 3.0653135498320268,
+        "median": 2.954587278501677,
+        "median_absolute_deviation": 0.03307981972125296,
+        "minimum": 2.561926643294553,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 7385.109375,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "double-array-trie-char",
+      "backend_family": "double-array-trie",
+      "control_median_ns_per_operation": 21112.53125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.518286144888278,
+          1.518286144888278
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.5182570208726238,
+        "maximum": 1.518286144888278,
+        "median": 1.518286144888278,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.5168015321604458,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.4828209068536657,
+          2.50833089412857
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.496161421592638,
+        "maximum": 2.572058793443672,
+        "median": 2.4984156346248114,
+        "median_absolute_deviation": 0.02471104052377493,
+        "minimum": 2.411811473847578,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 8441.78125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "dynamic-dawg-byte",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 22939.28125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.6491990149560712,
+          0.6491990149560712
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.6491990149560712,
+        "maximum": 0.6491990149560712,
+        "median": 0.6491990149560712,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.6491990149560712,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2100163207900936,
+          1.222047967896203
+        ],
+        "control_wins": 1,
+        "geometric_mean": 1.199708509769179,
+        "maximum": 1.2611161219105056,
+        "median": 1.2155002203980472,
+        "median_absolute_deviation": 0.010852300495312273,
+        "minimum": 0.6014607061644073,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 50
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 18914.609375,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "dynamic-dawg-byte",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 35879.59375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.2999900999275398,
+          2.492706559349269
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.3774552720784614,
+        "maximum": 2.492706559349269,
+        "median": 2.2999900999275398,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.2996110137651002,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          4.11951831012298,
+          4.304896796017592
+        ],
+        "control_wins": 0,
+        "geometric_mean": 4.1669317011652,
+        "maximum": 4.472755487894711,
+        "median": 4.211801203140034,
+        "median_absolute_deviation": 0.15122221978782235,
+        "minimum": 3.5406844985739614,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 8626.96875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "dynamic-dawg-byte",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 961.746094,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9469067505146531,
+          1.1110175591977538
+        ],
+        "control_wins": 23,
+        "geometric_mean": 1.0259598191190942,
+        "maximum": 1.3091807394658113,
+        "median": 1.0309739852943398,
+        "median_absolute_deviation": 0.13402465747634607,
+        "minimum": 0.8218395376541108,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 28
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 928.402344,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "dynamic-dawg-byte",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 22094.390625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.227665960879698,
+          2.227665960879698
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.2276660083818376,
+        "maximum": 2.2276671721845642,
+        "median": 2.227665960879698,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.227665960879698,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.6814126803480303,
+          2.7187651699029125
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.690291554229037,
+        "maximum": 2.771839786636186,
+        "median": 2.689823932811582,
+        "median_absolute_deviation": 0.03160897739185797,
+        "minimum": 2.49089539966244,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 8236.5625,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "dynamic-dawg-byte",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 21348.75,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.186942589113095,
+          1.2066991917182455
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1985246030676764,
+        "maximum": 1.2066991917182455,
+        "median": 1.2066991917182455,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.186942589113095,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.5305606352351404,
+          2.5593701250470193
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.5558544260267078,
+        "maximum": 2.6893122128260596,
+        "median": 2.545528233065345,
+        "median_absolute_deviation": 0.03228898961405813,
+        "minimum": 2.451011535773605,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 8524.921875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "dynamic-dawg-char",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 22723.40625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.7147496212211931,
+          0.7243893466468965
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.7204036048276681,
+        "maximum": 0.7243893466468965,
+        "median": 0.7243893466468965,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.7147496212211931,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.218362662586075,
+          1.2277778903432346
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2243430952972747,
+        "maximum": 1.2774081474603902,
+        "median": 1.2226904237521707,
+        "median_absolute_deviation": 0.012925248420891933,
+        "minimum": 1.1903566762521705,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 18375.453125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "dynamic-dawg-char",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 34209.546875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.547984334941559,
+          2.547984334941559
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.5479843844193186,
+        "maximum": 2.5479855966247453,
+        "median": 2.547984334941559,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.547984334941559,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          4.35521152364204,
+          4.407824926995736
+        ],
+        "control_wins": 0,
+        "geometric_mean": 4.3584754431037425,
+        "maximum": 4.52517231937715,
+        "median": 4.3802428899239265,
+        "median_absolute_deviation": 0.04441289302401241,
+        "minimum": 3.9645498504012466,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 7830.171875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "dynamic-dawg-char",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 785.554688,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9937469231081163,
+          1.0226066107064382
+        ],
+        "control_wins": 22,
+        "geometric_mean": 1.0044822014272419,
+        "maximum": 1.1149757626408932,
+        "median": 1.0093049873925963,
+        "median_absolute_deviation": 0.02174911035067928,
+        "minimum": 0.8791056622773192,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 29
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 773.144531,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "dynamic-dawg-char",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 21366.140625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.1064978344230187,
+          2.2801808239449826
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.206986690258708,
+        "maximum": 2.280182090928902,
+        "median": 2.2801808239449826,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.106134810262747,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.662389176719593,
+          2.7114266202803727
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.687958818040414,
+        "maximum": 2.8322672715282895,
+        "median": 2.702842955541401,
+        "median_absolute_deviation": 0.04197932334765131,
+        "minimum": 2.5163783203937404,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 7917.828125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "dynamic-dawg-char",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 20217.390625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.46348934532047,
+          1.46348934532047
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.46348934532047,
+        "maximum": 1.46348934532047,
+        "median": 1.46348934532047,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.46348934532047,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.6321518406541635,
+          2.6609049740406507
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.6460812642809675,
+        "maximum": 2.773117233042035,
+        "median": 2.6515668173889138,
+        "median_absolute_deviation": 0.025186193870986084,
+        "minimum": 2.546284446552356,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 7628.0625,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "dynamic-dawg-u64",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 40832.734375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          8.98865738010073,
+          8.98865738010073
+        ],
+        "control_wins": 0,
+        "geometric_mean": 8.988657380100728,
+        "maximum": 8.98865738010073,
+        "median": 8.98865738010073,
+        "median_absolute_deviation": 0.0,
+        "minimum": 8.98865738010073,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.778741287862184,
+          2.8037931605575412
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.810970191559922,
+        "maximum": 3.0341902030377192,
+        "median": 2.7963588773365635,
+        "median_absolute_deviation": 0.0275383273369596,
+        "minimum": 2.7180183080130695,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 14591.890625,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "dynamic-dawg-u64",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 57638.96875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          4.170468960827028,
+          4.333919549889517
+        ],
+        "control_wins": 0,
+        "geometric_mean": 4.26584428129551,
+        "maximum": 4.333920361074788,
+        "median": 4.333919549889517,
+        "median_absolute_deviation": 0.0,
+        "minimum": 4.169957197483082,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.625870086870494,
+          2.6548467799967557
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.6370706657455716,
+        "maximum": 2.8180954674584524,
+        "median": 2.6433073465153565,
+        "median_absolute_deviation": 0.0318082378504454,
+        "minimum": 2.460951966089322,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 21837.1875,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "none",
+      "backend": "dynamic-dawg-u64",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 214.976562,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9952721685299777,
+          1.0093416882660318
+        ],
+        "control_wins": 24,
+        "geometric_mean": 0.9864176077247631,
+        "maximum": 1.0360363659276262,
+        "median": 1.001480056242137,
+        "median_absolute_deviation": 0.013765578063759998,
+        "minimum": 0.7756322525944482,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 27
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 214.351562,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "dynamic-dawg-u64",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 40614.515625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          10.660213789113259,
+          10.660213789113259
+        ],
+        "control_wins": 0,
+        "geometric_mean": 10.660213882102235,
+        "maximum": 10.66021616033235,
+        "median": 10.660213789113259,
+        "median_absolute_deviation": 0.0,
+        "minimum": 10.660213789113259,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          4.3178267560569354,
+          4.3620589078448235
+        ],
+        "control_wins": 0,
+        "geometric_mean": 4.326388708711074,
+        "maximum": 4.72989970953744,
+        "median": 4.353354818825043,
+        "median_absolute_deviation": 0.049336687338576546,
+        "minimum": 3.7155724101850116,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 9365.875,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "dynamic-dawg-u64",
+      "backend_family": "dynamic-dawg",
+      "control_median_ns_per_operation": 40927.296875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          3.5475336568995663,
+          3.684442958168996
+        ],
+        "control_wins": 0,
+        "geometric_mean": 3.603272181369539,
+        "maximum": 3.684442958168996,
+        "median": 3.5475336568995663,
+        "median_absolute_deviation": 0.0,
+        "minimum": 3.547094149098806,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          3.823501526665862,
+          3.8761071403129677
+        ],
+        "control_wins": 0,
+        "geometric_mean": 3.852162048596363,
+        "maximum": 4.136036699157614,
+        "median": 3.8417605932045977,
+        "median_absolute_deviation": 0.04496767285702141,
+        "minimum": 3.569049972572758,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 10642.515625,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "pathmap-byte",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 34895.21875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.6817293647960012,
+          0.6817293647960012
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.6817293647960012,
+        "maximum": 0.6817293647960012,
+        "median": 0.6817293647960012,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.6817293647960012,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0742841823315308,
+          1.0856127943359442
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.080034368200378,
+        "maximum": 1.1329866822305936,
+        "median": 1.080842198332317,
+        "median_absolute_deviation": 0.009170289429649703,
+        "minimum": 1.0135884312600965,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 32293.421875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "pathmap-byte",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 48818.34375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.717465101882732,
+          1.7260578817934562
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.7225077079734312,
+        "maximum": 1.7260585332486442,
+        "median": 1.7260578817934562,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.7172921804564885,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.0878756332024953,
+          2.128518805910361
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.1046830712441977,
+        "maximum": 2.233965595416386,
+        "median": 2.108025184483109,
+        "median_absolute_deviation": 0.03747047560417194,
+        "minimum": 1.9640836691077777,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 23040.234375,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "pathmap-byte",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 141.320312,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9806286959699086,
+          1.0071274457397483
+        ],
+        "control_wins": 30,
+        "geometric_mean": 0.9844760952917587,
+        "maximum": 1.282090559282752,
+        "median": 0.990563951043007,
+        "median_absolute_deviation": 0.05159777095491658,
+        "minimum": 0.7745720544670561,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 21
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 143.042969,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "pathmap-byte",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 33794.859375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.5929336789688422,
+          1.5929336789688422
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.5929337311544085,
+        "maximum": 1.59293434433494,
+        "median": 1.5929336789688422,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.5929336789688422,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.574667509253408,
+          1.6054032238848646
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.5837161831508397,
+        "maximum": 1.7064358097171566,
+        "median": 1.5934968842747514,
+        "median_absolute_deviation": 0.021800847821395575,
+        "minimum": 1.4638181198651132,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 21325.59375,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "pathmap-byte",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 33250.703125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.08237651874484,
+          1.0861943061008161
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0839439342947832,
+        "maximum": 1.0861943061008161,
+        "median": 1.08237651874484,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0823004702570214,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.5596608668762333,
+          1.57959787260898
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.5704105112092648,
+        "maximum": 1.6995468553381252,
+        "median": 1.5711765518401075,
+        "median_absolute_deviation": 0.021573655872996422,
+        "minimum": 1.4946240635212693,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 21066.8125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "pathmap-char",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 49747.4375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.8931059281852076,
+          0.8939627012461023
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.8936094801339346,
+        "maximum": 0.8939627012461023,
+        "median": 0.8939627012461023,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.893088969732788,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0398873163105649,
+          1.061549329327607
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0527858323977137,
+        "maximum": 1.1602789745530324,
+        "median": 1.0534451868791888,
+        "median_absolute_deviation": 0.018617991798007605,
+        "minimum": 1.0078669431417386,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 47518.6875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "pathmap-char",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 65316.5,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.1556570428939192,
+          1.1556570428939192
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1556570484460564,
+        "maximum": 1.1556571844734282,
+        "median": 1.1556570428939192,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.1556570428939192,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.7031691577017884,
+          1.724191903204249
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.7101609348951827,
+        "maximum": 1.8897166799977219,
+        "median": 1.7134321940561643,
+        "median_absolute_deviation": 0.024954329494623506,
+        "minimum": 1.5787141530027713,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 38117.421875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "pathmap-char",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 126.449219,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9927078269324259,
+          1.0111519549994215
+        ],
+        "control_wins": 24,
+        "geometric_mean": 0.9947255899945785,
+        "maximum": 1.1776858241925234,
+        "median": 1.0041323586806805,
+        "median_absolute_deviation": 0.016023357084732792,
+        "minimum": 0.7324821520036849,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 27
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 126.84375,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "pathmap-char",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 48888.328125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.1407319285419009,
+          1.1421341180590523
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1413085479499396,
+        "maximum": 1.1421342781113446,
+        "median": 1.1407319285419009,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.1407040316838875,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.4287667694597945,
+          1.448110462852069
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.4385510408678308,
+        "maximum": 1.5176147278100938,
+        "median": 1.4410320356413746,
+        "median_absolute_deviation": 0.021467397067988614,
+        "minimum": 1.3316804267453697,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 33903.65625,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "pathmap-char",
+      "backend_family": "pathmap",
+      "control_median_ns_per_operation": 47387.65625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0658227794626387,
+          1.0658227794626387
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0658227794626387,
+        "maximum": 1.0658227794626387,
+        "median": 1.0658227794626387,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0658227794626387,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.3896581062210427,
+          1.4052147393855554
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.3955581456252808,
+        "maximum": 1.5263518679145147,
+        "median": 1.3985717893345169,
+        "median_absolute_deviation": 0.021396282408946865,
+        "minimum": 1.2773249544631167,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 33666.953125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-artrie-byte",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 30792.453125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.7242564862364704,
+          0.7242564862364704
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.7242564862364704,
+        "maximum": 0.7242564862364704,
+        "median": 0.7242564862364704,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.7242564862364704,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.090823877787471,
+          1.1054546314507452
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0978636194260887,
+        "maximum": 1.1615414847806407,
+        "median": 1.0985190236735725,
+        "median_absolute_deviation": 0.010849891576706572,
+        "minimum": 1.0552715440158127,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 28000.75,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-artrie-byte",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 44143.0625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.5074435298408213,
+          1.5074435298408213
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.5074435476958592,
+        "maximum": 1.5074439851443562,
+        "median": 1.5074435298408213,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.5074435298408213,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.422011883282203,
+          2.4506005831308815
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.4324249289226936,
+        "maximum": 2.54800782319987,
+        "median": 2.432012095584448,
+        "median_absolute_deviation": 0.0360874210101918,
+        "minimum": 2.2763356074785164,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 18095.875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-artrie-byte",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 3705.578125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 12,
+        "geometric_mean": 1.000047526206805,
+        "maximum": 1.0024254697202415,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.9987899785107033,
+        "samples": 51,
+        "ties": 26,
+        "treatment_wins": 13
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9944506284396658,
+          1.0110510848823622
+        ],
+        "control_wins": 23,
+        "geometric_mean": 1.0186916004419269,
+        "maximum": 1.3490890181092297,
+        "median": 1.0041319391682557,
+        "median_absolute_deviation": 0.01796264503351297,
+        "minimum": 0.9429549265490008,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 28
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 3663.507812,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-artrie-byte",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 29755.171875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.43483685670286,
+          1.43483685670286
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.4348368758383967,
+        "maximum": 1.4348373446591236,
+        "median": 1.43483685670286,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.43483685670286,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.7483902442623345,
+          1.7684561649963286
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.7541370710132953,
+        "maximum": 1.856657638146722,
+        "median": 1.7570903483830138,
+        "median_absolute_deviation": 0.02053551663224429,
+        "minimum": 1.5899120502646165,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 16915.1875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-artrie-byte",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 29047.734375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0690923508960009,
+          1.0690923508960009
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.06891244756282,
+        "maximum": 1.0690923508960009,
+        "median": 1.0690923508960009,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0660180931026837,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.6226691856221602,
+          1.6512391202165422
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.6361165021994302,
+        "maximum": 1.7087448704493335,
+        "median": 1.6339519213194045,
+        "median_absolute_deviation": 0.02032084046268845,
+        "minimum": 1.4426233025121746,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 17732.671875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-artrie-char",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 29913.90625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.7745848651533679,
+          0.7745848651533679
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.7745848651533679,
+        "maximum": 0.7745848651533679,
+        "median": 0.7745848651533679,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.7745848651533679,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0907295762739868,
+          1.103135768674165
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1011165813237662,
+        "maximum": 1.3157359631230994,
+        "median": 1.0991398373750556,
+        "median_absolute_deviation": 0.011392438937569027,
+        "minimum": 1.0646270709632137,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 27306.453125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-artrie-char",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 43115.328125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.5102776601985728,
+          1.5102776601985728
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.510277669299129,
+        "maximum": 1.5102781243270138,
+        "median": 1.5102776601985728,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.5102776601985728,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.4176572586725014,
+          2.457758502640798
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.4389957639491358,
+        "maximum": 2.841014933973252,
+        "median": 2.446027272912624,
+        "median_absolute_deviation": 0.0402341721666053,
+        "minimum": 2.298374072801571,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 17721.875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-artrie-char",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 3292.140625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 15,
+        "geometric_mean": 0.9997987114781856,
+        "maximum": 1.0012856116706856,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.9974353708928508,
+        "samples": 51,
+        "ties": 27,
+        "treatment_wins": 9
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9943169132342681,
+          1.0046892222463712
+        ],
+        "control_wins": 26,
+        "geometric_mean": 0.9997715156207506,
+        "maximum": 1.0884766287333445,
+        "median": 0.9987893159779203,
+        "median_absolute_deviation": 0.012923942619060713,
+        "minimum": 0.9318090963075096,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 25
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 3296.289062,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-artrie-char",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 29150.265625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.442206531156945,
+          1.442206531156945
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.4418805849681218,
+        "maximum": 1.442206531156945,
+        "median": 1.442206531156945,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.4366020852553991,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.7305904686786422,
+          1.7558004602158026
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.7453778314206456,
+        "maximum": 2.11239994535243,
+        "median": 1.7419325575604532,
+        "median_absolute_deviation": 0.026168285193058916,
+        "minimum": 1.65425020595632,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 16661.75,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-artrie-char",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 27676.859375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.1805202693867958,
+          1.1805202693867958
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1805202693867958,
+        "maximum": 1.1805202693867958,
+        "median": 1.1805202693867958,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.1805202693867958,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.611743372655471,
+          1.6274780139620795
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.6254054276878034,
+        "maximum": 1.9601448148845853,
+        "median": 1.6197223134882106,
+        "median_absolute_deviation": 0.022465483744373183,
+        "minimum": 1.56400424269039,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 17105.390625,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-artrie-u64",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 54319.703125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.1265988423459015,
+          2.1265988423459015
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.126598842345901,
+        "maximum": 2.1265988423459015,
+        "median": 2.1265988423459015,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.1265988423459015,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.8161936440920323,
+          1.8306214599189843
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.824259282369396,
+        "maximum": 1.883388726040384,
+        "median": 1.8239623622695365,
+        "median_absolute_deviation": 0.013459055641897644,
+        "minimum": 1.7726734929676018,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 29769.09375,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-artrie-u64",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 75389.5,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.8188527897970197,
+          1.829833415178427
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.8242259120847344,
+        "maximum": 1.829833415178427,
+        "median": 1.8188527897970197,
+        "median_absolute_deviation": 6.503858571771381e-05,
+        "minimum": 1.818787751211302,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.8157158718676205,
+          1.8358073558748642
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.8236808502560489,
+        "maximum": 1.8955567338569168,
+        "median": 1.8249206344414068,
+        "median_absolute_deviation": 0.020113432719295554,
+        "minimum": 1.714543598735444,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 41132.359375,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-artrie-u64",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 1832.265625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9928327739235707,
+          1.0098411468709871
+        ],
+        "control_wins": 25,
+        "geometric_mean": 0.9997411261379255,
+        "maximum": 1.0476758510901927,
+        "median": 1.000473085913313,
+        "median_absolute_deviation": 0.011331660234265906,
+        "minimum": 0.948619288238707,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 26
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 1840.835938,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-artrie-u64",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 54131.703125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.182082267102607,
+          2.182082267102607
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.182082273625691,
+        "maximum": 2.1820825997799007,
+        "median": 2.182082267102607,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.182082267102607,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.2070498627337503,
+          2.237769013997335
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.2189227289591478,
+        "maximum": 2.3159273485922465,
+        "median": 2.2186985440472506,
+        "median_absolute_deviation": 0.028968282397483502,
+        "minimum": 2.0529414877132512,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 24372.625,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-artrie-u64",
+      "backend_family": "persistent-artrie",
+      "control_median_ns_per_operation": 54489.5625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.7122951495892287,
+          1.7240481945952995
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.7182768521380245,
+        "maximum": 1.7240481945952995,
+        "median": 1.7240481945952995,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.7122951495892287,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.0385162362152323,
+          2.060651162790698
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.052104737466692,
+        "maximum": 2.125725212038115,
+        "median": 2.0531202210457047,
+        "median_absolute_deviation": 0.021399830458147306,
+        "minimum": 1.9784682696202218,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 26478.484375,
+      "unit_domain": "u64"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-scdawg-byte",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 70648.328125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.1222711771025817,
+          1.1222711771025817
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.122041252165476,
+        "maximum": 1.1222711771025817,
+        "median": 1.1222711771025817,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.1183571292104055,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.9375947192798648,
+          1.9498775133849675
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.94242052772029,
+        "maximum": 2.051029043739489,
+        "median": 1.9462494554170955,
+        "median_absolute_deviation": 0.013619849985601507,
+        "minimum": 1.8868666636948568,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 36420.15625,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-scdawg-byte",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 215361.3125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.7644131216688397,
+          2.7644131216688397
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.7615790995687868,
+        "maximum": 2.7644131216688397,
+        "median": 2.7644131216688397,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.740416219774157,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.116664281339968,
+          2.1398703438773325
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.123622301917515,
+        "maximum": 2.219069486642515,
+        "median": 2.124736898929886,
+        "median_absolute_deviation": 0.026153777255184085,
+        "minimum": 1.9637070593342032,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 101637.875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-scdawg-byte",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 277551.976562,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9876753992700218,
+          1.0033524690777778
+        ],
+        "control_wins": 28,
+        "geometric_mean": 0.9961497012574193,
+        "maximum": 1.0336497880802509,
+        "median": 0.9967766576915829,
+        "median_absolute_deviation": 0.011448735769349572,
+        "minimum": 0.9491319063480543,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 23
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 278545.96875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-scdawg-byte",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 69126.53125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.129641822136115,
+          1.129641822136115
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1294078218931516,
+        "maximum": 1.1296420297008536,
+        "median": 1.129641822136115,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.125658399571443,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.9626549199145638,
+          1.9703040970375254
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.9651930179543664,
+        "maximum": 2.057446853714766,
+        "median": 1.967828522592757,
+        "median_absolute_deviation": 0.009324203322933267,
+        "minimum": 1.9063576150129387,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 35212.078125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-scdawg-byte",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 67170.15625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.7615529348398637,
+          2.7615529348398637
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.7615529348398633,
+        "maximum": 2.7615529348398637,
+        "median": 2.7615529348398637,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.7615529348398637,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          4.027117103755395,
+          4.058723483208609
+        ],
+        "control_wins": 0,
+        "geometric_mean": 4.045473676382107,
+        "maximum": 4.302875727782232,
+        "median": 4.04589651180073,
+        "median_absolute_deviation": 0.03093867086835278,
+        "minimum": 3.799640095025405,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 16577.515625,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-scdawg-char",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 68829.09375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2844197551593928,
+          1.2844197551593928
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2844197551593928,
+        "maximum": 1.2844197551593928,
+        "median": 1.2844197551593928,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.2844197551593928,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.9148996942248084,
+          1.9302241017312423
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.9241167668257004,
+        "maximum": 2.066528115298834,
+        "median": 1.926676615538031,
+        "median_absolute_deviation": 0.013246551645409,
+        "minimum": 1.8647201452263467,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 35843.890625,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-scdawg-char",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 216508.9375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.8600460981980156,
+          2.8600460981980156
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.856260409082012,
+        "maximum": 2.8600460981980156,
+        "median": 2.8600460981980156,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.8160113510069253,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.1267222663530223,
+          2.139358988960506
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.138145628582613,
+        "maximum": 2.321552093046164,
+        "median": 2.131867947151102,
+        "median_absolute_deviation": 0.010998782975204957,
+        "minimum": 2.058174219009806,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 101540.96875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-scdawg-char",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 284897.078125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9949361267263596,
+          1.003452196663377
+        ],
+        "control_wins": 25,
+        "geometric_mean": 0.9984923684700928,
+        "maximum": 1.0291069904985652,
+        "median": 1.0000130083058727,
+        "median_absolute_deviation": 0.006210016164702736,
+        "minimum": 0.9656408745585372,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 26
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 284776.121094,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-scdawg-char",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 67855.375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.285528444329447,
+          1.285528444329447
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2855284490140455,
+        "maximum": 1.2855286832439912,
+        "median": 1.285528444329447,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.285528444329447,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.9549225146165865,
+          1.9682110741316494
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.964277376155896,
+        "maximum": 2.107817575864512,
+        "median": 1.9616855626672853,
+        "median_absolute_deviation": 0.012383220044936971,
+        "minimum": 1.8955483065875605,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 34553.328125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-scdawg-char",
+      "backend_family": "persistent-scdawg",
+      "control_median_ns_per_operation": 66132.578125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          3.3876716556087025,
+          3.3876716556087025
+        ],
+        "control_wins": 0,
+        "geometric_mean": 3.3852030502700625,
+        "maximum": 3.3876716556087025,
+        "median": 3.3876716556087025,
+        "median_absolute_deviation": 0.0,
+        "minimum": 3.325280949928816,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          4.067680074971304,
+          4.112577161616309
+        ],
+        "control_wins": 0,
+        "geometric_mean": 4.091352492857657,
+        "maximum": 4.414593763437558,
+        "median": 4.080252489162022,
+        "median_absolute_deviation": 0.03649717256427554,
+        "minimum": 3.8882004978754687,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 16213.25,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-suffix-automaton-byte",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 53003.625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.8274968945580692,
+          0.8274968945580692
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.8273299808304916,
+        "maximum": 0.8274968945580692,
+        "median": 0.8274968945580692,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.8246555465634015,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2116944360701005,
+          1.2176024933213307
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2140816894093247,
+        "maximum": 1.259122212539107,
+        "median": 1.2141924804679025,
+        "median_absolute_deviation": 0.005480578573813677,
+        "minimum": 1.1730518424383594,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 43616.28125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-suffix-automaton-byte",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 143788.890625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.9114089734786721,
+          1.9114089734786721
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.9095106327076816,
+        "maximum": 1.9114089734786721,
+        "median": 1.9114089734786721,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.8953329296194623,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.175334423421319,
+          1.1951643107227587
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1855128785008748,
+        "maximum": 1.2377249254068696,
+        "median": 1.1838045572664377,
+        "median_absolute_deviation": 0.016533980676208593,
+        "minimum": 1.1304221899374043,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 120160.953125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-suffix-automaton-byte",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 339198.316406,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9975168064575328,
+          1.0075539384350356
+        ],
+        "control_wins": 21,
+        "geometric_mean": 1.0019204011638978,
+        "maximum": 1.1212593185156168,
+        "median": 1.0021169060066828,
+        "median_absolute_deviation": 0.00964193903662336,
+        "minimum": 0.88370050620139,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 30
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 338646.570312,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-suffix-automaton-byte",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 51563.234375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.8315103963396319,
+          0.8315103963396319
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.8313408472748405,
+        "maximum": 0.8315106006742224,
+        "median": 0.8315103963396319,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.8286241674285633,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2106524914804215,
+          1.2180817866817586
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2142321949892243,
+        "maximum": 1.2493425383441714,
+        "median": 1.215026782210053,
+        "median_absolute_deviation": 0.006624356500542383,
+        "minimum": 1.1798964339361788,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 42513.890625,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-suffix-automaton-byte",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 49763.734375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.9812641196697705,
+          1.9812641196697705
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.9812641196697705,
+        "maximum": 1.9812641196697705,
+        "median": 1.9812641196697705,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.9812641196697705,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.1601250806531542,
+          2.1770015009233536
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.1682065379844317,
+        "maximum": 2.252014504154377,
+        "median": 2.172749451940944,
+        "median_absolute_deviation": 0.014948073320418143,
+        "minimum": 2.089437528854822,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 22909.0625,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-suffix-automaton-char",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 50607.359375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9400997995502447,
+          0.9400997995502447
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.9400997995502447,
+        "maximum": 0.9400997995502447,
+        "median": 0.9400997995502447,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.9400997995502447,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2052621448646024,
+          1.2122110334866294
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2090796420212546,
+        "maximum": 1.2552680224557047,
+        "median": 1.2080013515871537,
+        "median_absolute_deviation": 0.006740267477778117,
+        "minimum": 1.1865556873702334,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 41939.828125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-suffix-automaton-char",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 140402.921875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.9629868936849084,
+          1.9629868936849084
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.9602217223012472,
+        "maximum": 1.9629868936849084,
+        "median": 1.9629868936849084,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.9351393325047814,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.1972217833219367,
+          1.20090102652665
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1985730683332283,
+        "maximum": 1.2089128322339162,
+        "median": 1.199309764546037,
+        "median_absolute_deviation": 0.0033011234405051493,
+        "minimum": 1.1775835426639367,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 117214.734375,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-suffix-automaton-char",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 271575.214844,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9961687423874782,
+          1.0027740398040417
+        ],
+        "control_wins": 26,
+        "geometric_mean": 1.0008563904168322,
+        "maximum": 1.0424160633744588,
+        "median": 0.9999327617694191,
+        "median_absolute_deviation": 0.009711693605896299,
+        "minimum": 0.9662597071569955,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 25
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 268670.058594,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-suffix-automaton-char",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 49253.6875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9396641582128277,
+          0.9396641582128277
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.9396641671710945,
+        "maximum": 0.9396643866486568,
+        "median": 0.9396641582128277,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.9396641582128277,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2091866035302874,
+          1.215238614380006
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2109568564285091,
+        "maximum": 1.2388614905779292,
+        "median": 1.2108516998065881,
+        "median_absolute_deviation": 0.005790566778964168,
+        "minimum": 1.184077957083282,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 40683.234375,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-suffix-automaton-char",
+      "backend_family": "persistent-suffix-automaton",
+      "control_median_ns_per_operation": 47781.53125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.296657395962093,
+          2.296657395962093
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.294416882868252,
+        "maximum": 2.296657395962093,
+        "median": 2.296657395962093,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.2587315059118045,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.1835697778209053,
+          2.2007593123724734
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.1901081358601546,
+        "maximum": 2.2532850122448633,
+        "median": 2.189538569488489,
+        "median_absolute_deviation": 0.01649119209816652,
+        "minimum": 2.0643899554315817,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 21790.21875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-suffix-tree-byte",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 5276862.671875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9935166684976119,
+          0.9935166684976119
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.9935166684976119,
+        "maximum": 0.9935166684976119,
+        "median": 0.9935166684976119,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.9935166684976119,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9921508352005285,
+          1.0058399953376274
+        ],
+        "control_wins": 23,
+        "geometric_mean": 1.000218904578684,
+        "maximum": 1.1476946264262042,
+        "median": 1.0013712684866785,
+        "median_absolute_deviation": 0.06472973167034568,
+        "minimum": 0.7119032129013332,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 28
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 4959983.703125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-suffix-tree-byte",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 17596395.453125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0011351591922295,
+          1.0011351591922295
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0011281132031324,
+        "maximum": 1.0011351591922295,
+        "median": 1.0011351591922295,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0010663887117937,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9917704746041232,
+          1.0065784902080703
+        ],
+        "control_wins": 22,
+        "geometric_mean": 0.9994296946354748,
+        "maximum": 1.1461729625183343,
+        "median": 1.0006629103391427,
+        "median_absolute_deviation": 0.06607105614391307,
+        "minimum": 0.710861367069519,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 29
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 16560873.5625,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-suffix-tree-byte",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 964114.425781,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9989995600520427,
+          1.0035249095130816
+        ],
+        "control_wins": 23,
+        "geometric_mean": 0.9995884641826422,
+        "maximum": 1.017295332833004,
+        "median": 1.0007971478885849,
+        "median_absolute_deviation": 0.0056088270716617705,
+        "minimum": 0.9463650323359122,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 28
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 962226.953125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-suffix-tree-byte",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 5277229.46875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9936144413904521,
+          0.9936144413904521
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.9936144416587772,
+        "maximum": 0.993614444811598,
+        "median": 0.9936144413904521,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.9936144413904521,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9909483384462959,
+          1.0081578202111225
+        ],
+        "control_wins": 25,
+        "geometric_mean": 0.9983444814602522,
+        "maximum": 1.1480156188064392,
+        "median": 1.0007538664856668,
+        "median_absolute_deviation": 0.0635683532052781,
+        "minimum": 0.7115528392501441,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 26
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 4993368.0625,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-suffix-tree-byte",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 5222147.1875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0032631222657056,
+          1.0032631222657056
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0032596207294313,
+        "maximum": 1.0032631222657056,
+        "median": 1.0032631222657056,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0032034192013428,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9747987439601401,
+          1.0119039043552949
+        ],
+        "control_wins": 21,
+        "geometric_mean": 1.0024958890298015,
+        "maximum": 1.1554642139170872,
+        "median": 1.0032805924000026,
+        "median_absolute_deviation": 0.06269528193257545,
+        "minimum": 0.7176401408655465,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 30
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 4950545.171875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-suffix-tree-char",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 5249419.421875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9957182273443229,
+          0.9957182273443229
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.995712610543561,
+        "maximum": 0.9957182273443229,
+        "median": 0.9957182273443229,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.9956224130079248,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9754278993895722,
+          1.0063181167603639
+        ],
+        "control_wins": 26,
+        "geometric_mean": 0.9915891326795943,
+        "maximum": 1.1136376608864291,
+        "median": 0.999018539921522,
+        "median_absolute_deviation": 0.0629291204763025,
+        "minimum": 0.8895044868510733,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 25
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 5476204.375,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-suffix-tree-char",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 17749871.8125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0018510765841007,
+          1.0018510765841007
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0018439738376268,
+        "maximum": 1.0018510765841007,
+        "median": 1.0018510765841007,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0017907045172056,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9624590246251185,
+          1.0065656140272177
+        ],
+        "control_wins": 25,
+        "geometric_mean": 0.9917226391636307,
+        "maximum": 1.110626595255948,
+        "median": 1.0001656810802302,
+        "median_absolute_deviation": 0.06604341758808452,
+        "minimum": 0.888844247635025,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 26
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 18569715.53125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-suffix-tree-char",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 1008603.867188,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9948106987671855,
+          1.0023717253853222
+        ],
+        "control_wins": 26,
+        "geometric_mean": 0.9995229036388659,
+        "maximum": 1.1222757712322495,
+        "median": 0.9980569390708428,
+        "median_absolute_deviation": 0.0055143241718372815,
+        "minimum": 0.9616786485200417,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 25
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 1011255.070312,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-suffix-tree-char",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 5246956.9375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9957154407658388,
+          0.9957154407658388
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.9957098237590711,
+        "maximum": 0.9957154440463966,
+        "median": 0.9957154407658388,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.9956196240012873,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9767764196801302,
+          1.0069355673064018
+        ],
+        "control_wins": 26,
+        "geometric_mean": 0.991158646912821,
+        "maximum": 1.1127259485948868,
+        "median": 0.9994210479954665,
+        "median_absolute_deviation": 0.06404016203371377,
+        "minimum": 0.8891204321840122,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 25
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 5486275.421875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-suffix-tree-char",
+      "backend_family": "persistent-suffix-tree",
+      "control_median_ns_per_operation": 5192595.28125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0040907371969598,
+          1.0040907371969598
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0040907371969598,
+        "maximum": 1.0040907371969598,
+        "median": 1.0040907371969598,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0040907371969598,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9803036244010993,
+          1.0121550725610187
+        ],
+        "control_wins": 25,
+        "geometric_mean": 0.9964020411369128,
+        "maximum": 1.1177301933415609,
+        "median": 1.0035933785869289,
+        "median_absolute_deviation": 0.06274901156606816,
+        "minimum": 0.893607383855686,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 26
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 5394645.515625,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "persistent-vocabulary-char",
+      "backend_family": "persistent-vocabulary",
+      "control_median_ns_per_operation": 30259.09375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.7745848651533679,
+          0.7745848651533679
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.7745848651533679,
+        "maximum": 0.7745848651533679,
+        "median": 0.7745848651533679,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.7745848651533679,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0827713983860052,
+          1.0933174294633916
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.090392916427527,
+        "maximum": 1.234313233773232,
+        "median": 1.0871031169435905,
+        "median_absolute_deviation": 0.009895212487993632,
+        "minimum": 1.0357201828170564,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 27797.5625,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "persistent-vocabulary-char",
+      "backend_family": "persistent-vocabulary",
+      "control_median_ns_per_operation": 43581.375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.5102776601985728,
+          1.5102776601985728
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.5102776783996854,
+        "maximum": 1.5102781243270138,
+        "median": 1.5102776601985728,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.5102776601985728,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.362136199674781,
+          2.392637268359643
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.3833241741475804,
+        "maximum": 2.581800438186561,
+        "median": 2.371108107090094,
+        "median_absolute_deviation": 0.029056928606916,
+        "minimum": 2.3171868970810947,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 18383.609375,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "persistent-vocabulary-char",
+      "backend_family": "persistent-vocabulary",
+      "control_median_ns_per_operation": 29474.242188,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9999401796399768,
+          1.0
+        ],
+        "control_wins": 19,
+        "geometric_mean": 0.9999976537405851,
+        "maximum": 1.000119655035661,
+        "median": 1.0,
+        "median_absolute_deviation": 5.982393871273306e-05,
+        "minimum": 0.9998803521225745,
+        "samples": 51,
+        "ties": 17,
+        "treatment_wins": 15
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.999504248836683,
+          1.0132958603302715
+        ],
+        "control_wins": 20,
+        "geometric_mean": 1.0140134316992064,
+        "maximum": 1.1178468432955555,
+        "median": 1.0082262454834676,
+        "median_absolute_deviation": 0.013381391994824576,
+        "minimum": 0.9038969752884269,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 31
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 29289.402344,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "persistent-vocabulary-char",
+      "backend_family": "persistent-vocabulary",
+      "control_median_ns_per_operation": 29347.828125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.442206531156945,
+          1.442206531156945
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.4422065506845265,
+        "maximum": 1.4422070291103564,
+        "median": 1.442206531156945,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.442206531156945,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.7101427036980206,
+          1.7331465452730195
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.7276742076065235,
+        "maximum": 1.9468337953302357,
+        "median": 1.723005986885174,
+        "median_absolute_deviation": 0.018705621832894037,
+        "minimum": 1.634416382540623,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 17086.921875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "persistent-vocabulary-char",
+      "backend_family": "persistent-vocabulary",
+      "control_median_ns_per_operation": 28553.359375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.1805202693867958,
+          1.1805202693867958
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1802970232161696,
+        "maximum": 1.1805202693867958,
+        "median": 1.1805202693867958,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.1767058980742295,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.5989979282351703,
+          1.6176746038052197
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.615707138705088,
+        "maximum": 1.8050374907958282,
+        "median": 1.6076031357796876,
+        "median_absolute_deviation": 0.021320236017053906,
+        "minimum": 1.5538712271392265,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 17754.453125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "scdawg-byte",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 44833.59375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.7712322758929968,
+          0.7712322758929968
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.7712322758929968,
+        "maximum": 0.7712322758929968,
+        "median": 0.7712322758929968,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.7712322758929968,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.2315576040665634,
+          1.2385285522183527
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.234436396682202,
+        "maximum": 1.2986778997662332,
+        "median": 1.2346550030992958,
+        "median_absolute_deviation": 0.006504793564661382,
+        "minimum": 1.1747946649667786,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 36291.78125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "scdawg-byte",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 101168.53125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          6.55613837218624,
+          6.55613837218624
+        ],
+        "control_wins": 0,
+        "geometric_mean": 6.526084781527342,
+        "maximum": 6.55613837218624,
+        "median": 6.55613837218624,
+        "median_absolute_deviation": 0.0,
+        "minimum": 6.269289533995416,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          3.097791630636904,
+          3.12866176218025
+        ],
+        "control_wins": 0,
+        "geometric_mean": 3.1128881049433232,
+        "maximum": 3.2316698348221453,
+        "median": 3.1100388596366852,
+        "median_absolute_deviation": 0.03178031808959414,
+        "minimum": 2.9861165239515124,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 32607.453125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "scdawg-byte",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 2018.710938,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9841665538809939,
+          1.0115077766137481
+        ],
+        "control_wins": 27,
+        "geometric_mean": 0.9899985717196984,
+        "maximum": 1.8727418287825908,
+        "median": 0.9991238680209822,
+        "median_absolute_deviation": 0.03261105008230125,
+        "minimum": 0.547031179225013,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 24
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 2375.796875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "scdawg-byte",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 43348.59375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.635665184844013,
+          2.635665184844013
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.6356652402490837,
+        "maximum": 2.6356658912587534,
+        "median": 2.635665184844013,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.635665184844013,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.508599212226363,
+          2.52913360568866
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.514808221120897,
+        "maximum": 2.660950850477411,
+        "median": 2.5206158678212356,
+        "median_absolute_deviation": 0.020499626597275,
+        "minimum": 2.3954751886207095,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 17167.546875,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "scdawg-byte",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 41878.3125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.8859957489187726,
+          1.8859957489187726
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.8850265274962419,
+        "maximum": 1.8859957489187726,
+        "median": 1.8859957489187726,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.8695367136222316,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.5267510374892996,
+          2.544409678765123
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.534428258857948,
+        "maximum": 2.6746111964314285,
+        "median": 2.5347000010392193,
+        "median_absolute_deviation": 0.020505242238600285,
+        "minimum": 2.43646580987669,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 16530.234375,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "scdawg-char",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 44479.328125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.8752133002674752,
+          0.8752133002674752
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.8748561656781115,
+        "maximum": 0.8752133002674752,
+        "median": 0.8752133002674752,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.8691409682096817,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.241119315703102,
+          1.249421413798347
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.24470818163638,
+        "maximum": 1.2782675254429974,
+        "median": 1.2443156453578996,
+        "median_absolute_deviation": 0.009565405885415545,
+        "minimum": 1.1922927933781853,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 35764.21875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "scdawg-char",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 106118.078125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          7.090129721234228,
+          7.090129721234228
+        ],
+        "control_wins": 0,
+        "geometric_mean": 7.053477879626761,
+        "maximum": 7.090129721234228,
+        "median": 7.090129721234228,
+        "median_absolute_deviation": 0.0,
+        "minimum": 6.784560983616677,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          3.253808950999132,
+          3.2694338926062607
+        ],
+        "control_wins": 0,
+        "geometric_mean": 3.250809260229458,
+        "maximum": 3.322665026956696,
+        "median": 3.265480598075031,
+        "median_absolute_deviation": 0.017366182696748833,
+        "minimum": 2.731992190952109,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 32505.6875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "scdawg-char",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 960.457031,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9736527989305153,
+          0.9965409880587583
+        ],
+        "control_wins": 33,
+        "geometric_mean": 0.955655916590438,
+        "maximum": 1.0851774065915458,
+        "median": 0.9846635425101448,
+        "median_absolute_deviation": 0.023775285861938333,
+        "minimum": 0.7911098913313833,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 18
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 962.371094,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "scdawg-char",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 43372.859375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.8494719133357864,
+          2.8494719133357864
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.845697004005328,
+        "maximum": 2.8494726929145644,
+        "median": 2.8494719133357864,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.7857514130149807,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.6414670701774923,
+          2.6621311981752953
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.6457087747549166,
+        "maximum": 2.7144955412457596,
+        "median": 2.6526835139536993,
+        "median_absolute_deviation": 0.016701203310474977,
+        "minimum": 2.340163053708772,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 16359.921875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "scdawg-char",
+      "backend_family": "scdawg",
+      "control_median_ns_per_operation": 41567.875,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.293483168970838,
+          2.293483168970838
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.293483168970838,
+        "maximum": 2.293483168970838,
+        "median": 2.293483168970838,
+        "median_absolute_deviation": 0.0,
+        "minimum": 2.293483168970838,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          2.6209320655561346,
+          2.635256965515193
+        ],
+        "control_wins": 0,
+        "geometric_mean": 2.623742253373629,
+        "maximum": 2.6749544461280963,
+        "median": 2.627547057535441,
+        "median_absolute_deviation": 0.017103833558507642,
+        "minimum": 2.412394249787056,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 15803.078125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "suffix-automaton-byte",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 79976.640625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.7088584104953015,
+          0.7098584227582864
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.7092204229309603,
+        "maximum": 0.7098584227582864,
+        "median": 0.7088584104953015,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.7080109896233711,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0381377589307952,
+          1.06498480031048
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0493119616467743,
+        "maximum": 1.0869603670875205,
+        "median": 1.0453662933467331,
+        "median_absolute_deviation": 0.017680113350157844,
+        "minimum": 1.0089248301774116,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 77530.125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "suffix-automaton-byte",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 195828.0,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.1002663133353123,
+          1.1002663133353123
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.1002663208625456,
+        "maximum": 1.1002664093075403,
+        "median": 1.1002663133353123,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.1002663133353123,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0284834548953665,
+          1.047929369132429
+        ],
+        "control_wins": 1,
+        "geometric_mean": 1.036942458056543,
+        "maximum": 1.0872337865988437,
+        "median": 1.0410894528015842,
+        "median_absolute_deviation": 0.012605997906217636,
+        "minimum": 0.9982737586646233,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 50
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 188985.8125,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "none",
+      "backend": "suffix-automaton-byte",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 1043.5,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9970723258330682,
+          1.0154974140716349
+        ],
+        "control_wins": 20,
+        "geometric_mean": 1.0155317287913646,
+        "maximum": 1.4755844439048467,
+        "median": 1.008478741027682,
+        "median_absolute_deviation": 0.017367367653563948,
+        "minimum": 0.7306086403592899,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 31
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 1032.816406,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "suffix-automaton-byte",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 79563.359375,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.7109014089239402,
+          0.711912636151017
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.7114459316855659,
+        "maximum": 0.7119127904975623,
+        "median": 0.711912636151017,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.7100446537498636,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0383641799677694,
+          1.061492587830908
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0474261970850731,
+        "maximum": 1.0759314039736534,
+        "median": 1.0459013886907966,
+        "median_absolute_deviation": 0.01747894036090658,
+        "minimum": 1.0094549250465479,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 77165.984375,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "suffix-automaton-byte",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 76201.65625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.260739660591665,
+          1.260739660591665
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.260739660591665,
+        "maximum": 1.260739660591665,
+        "median": 1.260739660591665,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.260739660591665,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.5884398905435195,
+          1.599710593485667
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.5972228675818396,
+        "maximum": 1.6970299087024845,
+        "median": 1.5942456356277626,
+        "median_absolute_deviation": 0.01226848088869148,
+        "minimum": 1.5369086001952907,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 47989.4375,
+      "unit_domain": "byte"
+    },
+    {
+      "algorithm": "damerau-levenshtein",
+      "backend": "suffix-automaton-char",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 83859.3125,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.8368602550112293,
+          0.8368602550112293
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.8368602550112293,
+        "maximum": 0.8368602550112293,
+        "median": 0.8368602550112293,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.8368602550112293,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0617266446971183,
+          1.0684914392229017
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0660373276565125,
+        "maximum": 1.1116411477854546,
+        "median": 1.0663819278103253,
+        "median_absolute_deviation": 0.006257051167594341,
+        "minimum": 1.0420341715078993,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 78616.71875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "merge-and-split",
+      "backend": "suffix-automaton-char",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 208050.5625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.121025485817463,
+          1.1226448396612423
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.121943549112521,
+        "maximum": 1.1226449068361408,
+        "median": 1.1226448396612423,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.1204367942116902,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0426103051592115,
+          1.049392244352241
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0464860684555048,
+        "maximum": 1.1052491310601973,
+        "median": 1.0455484805603994,
+        "median_absolute_deviation": 0.006434564679778765,
+        "minimum": 1.0244828595807396,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 199544.578125,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "none",
+      "backend": "suffix-automaton-char",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 983.113281,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0,
+          1.0
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0,
+        "maximum": 1.0,
+        "median": 1.0,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.0,
+        "samples": 51,
+        "ties": 51,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.9811560182715025,
+          1.0037553508869013
+        ],
+        "control_wins": 31,
+        "geometric_mean": 0.9893970096417625,
+        "maximum": 1.0633893300485635,
+        "median": 0.9931023849282359,
+        "median_absolute_deviation": 0.018544621635782854,
+        "minimum": 0.9314772754015903,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 20
+      },
+      "stage": "construction",
+      "treatment_median_ns_per_operation": 976.421875,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "osa-transposition",
+      "backend": "suffix-automaton-char",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 83270.390625,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          0.836375378744457,
+          0.836375378744457
+        ],
+        "control_wins": 51,
+        "geometric_mean": 0.8363753836574933,
+        "maximum": 0.8363755040268906,
+        "median": 0.836375378744457,
+        "median_absolute_deviation": 0.0,
+        "minimum": 0.836375378744457,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 0
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.0599551534588247,
+          1.069103908379271
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.0649255096948875,
+        "maximum": 1.1026324799083564,
+        "median": 1.0647036978608067,
+        "median_absolute_deviation": 0.008157595972680287,
+        "minimum": 1.0386146703058985,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 77948.890625,
+      "unit_domain": "char"
+    },
+    {
+      "algorithm": "standard",
+      "backend": "suffix-automaton-char",
+      "backend_family": "suffix-automaton",
+      "control_median_ns_per_operation": 80414.5,
+      "paired_allocated_bytes_ratio_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.225826014314251,
+          1.2307968349871206
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.2277655891117032,
+        "maximum": 1.2307968349871206,
+        "median": 1.225826014314251,
+        "median_absolute_deviation": 0.0,
+        "minimum": 1.2240250217353634,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "paired_speedup_control_over_treatment": {
+        "bootstrap_95_ci_of_median": [
+          1.459200180441532,
+          1.4785485212956366
+        ],
+        "control_wins": 0,
+        "geometric_mean": 1.4699551593203164,
+        "maximum": 1.540636680030061,
+        "median": 1.4671508421709998,
+        "median_absolute_deviation": 0.017453845884440433,
+        "minimum": 1.414760504342228,
+        "samples": 51,
+        "ties": 0,
+        "treatment_wins": 51
+      },
+      "stage": "query",
+      "treatment_median_ns_per_operation": 54613.40625,
+      "unit_domain": "char"
+    }
+  ],
+  "construction": {
+    "cells": 21,
+    "cells_control_won": 9,
+    "cells_tied": 0,
+    "cells_treatment_won": 12,
+    "geometric_mean_of_cell_paired_medians": 1.0021842735163569,
+    "maximum_cell_paired_median": 1.0309739852943398,
+    "median_of_cell_paired_medians": 1.000473085913313,
+    "minimum_cell_paired_median": 0.9846635425101448
+  },
+  "query": {
+    "cells": 84,
+    "cells_control_won": 2,
+    "cells_tied": 0,
+    "cells_treatment_won": 82,
+    "geometric_mean_of_cell_paired_medians": 1.7877120233001549,
+    "maximum_cell_paired_median": 4.800372595336823,
+    "median_of_cell_paired_medians": 1.7324692722228137,
+    "minimum_cell_paired_median": 0.999018539921522
+  },
+  "query_by_algorithm": {
+    "damerau-levenshtein": {
+      "cells": 21,
+      "cells_control_won": 1,
+      "cells_tied": 0,
+      "cells_treatment_won": 20,
+      "geometric_mean_of_cell_paired_medians": 1.2803094560317783,
+      "maximum_cell_paired_median": 2.7963588773365635,
+      "median_of_cell_paired_medians": 1.2141924804679025,
+      "minimum_cell_paired_median": 0.999018539921522
+    },
+    "merge-and-split": {
+      "cells": 21,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 21,
+      "geometric_mean_of_cell_paired_medians": 2.1210612501041326,
+      "maximum_cell_paired_median": 4.800372595336823,
+      "median_of_cell_paired_medians": 2.131867947151102,
+      "minimum_cell_paired_median": 1.0001656810802302
+    },
+    "osa-transposition": {
+      "cells": 21,
+      "cells_control_won": 1,
+      "cells_tied": 0,
+      "cells_treatment_won": 20,
+      "geometric_mean_of_cell_paired_medians": 1.8274749667139603,
+      "maximum_cell_paired_median": 4.353354818825043,
+      "median_of_cell_paired_medians": 1.7570903483830138,
+      "minimum_cell_paired_median": 0.9994210479954665
+    },
+    "standard": {
+      "cells": 21,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 21,
+      "geometric_mean_of_cell_paired_medians": 2.0581197703342067,
+      "maximum_cell_paired_median": 4.080252489162022,
+      "median_of_cell_paired_medians": 2.172749451940944,
+      "minimum_cell_paired_median": 1.0032805924000026
+    }
+  },
+  "query_by_backend_family": {
+    "double-array-trie": {
+      "cells": 8,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 8,
+      "geometric_mean_of_cell_paired_medians": 2.5945754770167193,
+      "maximum_cell_paired_median": 4.800372595336823,
+      "median_of_cell_paired_medians": 2.726527982607146,
+      "minimum_cell_paired_median": 1.2873134626003426
+    },
+    "dynamic-dawg": {
+      "cells": 12,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 12,
+      "geometric_mean_of_cell_paired_medians": 2.7232016940757497,
+      "maximum_cell_paired_median": 4.3802428899239265,
+      "median_of_cell_paired_medians": 2.6963334441764912,
+      "minimum_cell_paired_median": 1.2155002203980472
+    },
+    "pathmap": {
+      "cells": 8,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 8,
+      "geometric_mean_of_cell_paired_medians": 1.460936854662894,
+      "maximum_cell_paired_median": 2.108025184483109,
+      "median_of_cell_paired_medians": 1.5061042937407412,
+      "minimum_cell_paired_median": 1.0534451868791888
+    },
+    "persistent-artrie": {
+      "cells": 12,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 12,
+      "geometric_mean_of_cell_paired_medians": 1.7598018900474104,
+      "maximum_cell_paired_median": 2.446027272912624,
+      "median_of_cell_paired_medians": 1.7905263553262751,
+      "minimum_cell_paired_median": 1.0985190236735725
+    },
+    "persistent-scdawg": {
+      "cells": 8,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 8,
+      "geometric_mean_of_cell_paired_medians": 2.394963536945851,
+      "maximum_cell_paired_median": 4.080252489162022,
+      "median_of_cell_paired_medians": 2.0462827107613215,
+      "minimum_cell_paired_median": 1.926676615538031
+    },
+    "persistent-suffix-automaton": {
+      "cells": 8,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 8,
+      "geometric_mean_of_cell_paired_medians": 1.3978181458609262,
+      "maximum_cell_paired_median": 2.189538569488489,
+      "median_of_cell_paired_medians": 1.2125220901372453,
+      "minimum_cell_paired_median": 1.1838045572664377
+    },
+    "persistent-suffix-tree": {
+      "cells": 8,
+      "cells_control_won": 2,
+      "cells_tied": 0,
+      "cells_treatment_won": 6,
+      "geometric_mean_of_cell_paired_medians": 1.001032203459614,
+      "maximum_cell_paired_median": 1.0035933785869289,
+      "median_of_cell_paired_medians": 1.0007083884124048,
+      "minimum_cell_paired_median": 0.999018539921522
+    },
+    "persistent-vocabulary": {
+      "cells": 4,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 4,
+      "geometric_mean_of_cell_paired_medians": 1.6346392844294495,
+      "maximum_cell_paired_median": 2.371108107090094,
+      "median_of_cell_paired_medians": 1.6653045613324307,
+      "minimum_cell_paired_median": 1.0871031169435905
+    },
+    "scdawg": {
+      "cells": 8,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 8,
+      "geometric_mean_of_cell_paired_medians": 2.2658558885118976,
+      "maximum_cell_paired_median": 3.265480598075031,
+      "median_of_cell_paired_medians": 2.5811235292873302,
+      "minimum_cell_paired_median": 1.2346550030992958
+    },
+    "suffix-automaton": {
+      "cells": 8,
+      "cells_control_won": 0,
+      "cells_tied": 0,
+      "cells_treatment_won": 8,
+      "geometric_mean_of_cell_paired_medians": 1.1547032139938593,
+      "maximum_cell_paired_median": 1.5942456356277626,
+      "median_of_cell_paired_medians": 1.0553025432758016,
+      "minimum_cell_paired_median": 1.0410894528015842
+    }
+  },
+  "replicates": 51,
+  "schema": "liblevenshtein.backend-propagation-analysis.v1",
+  "source": "benchmarks/causal/evidence/2026-08-19/backend-propagation-matrix.csv"
+}

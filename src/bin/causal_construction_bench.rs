@@ -4,6 +4,7 @@ use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
 use libdictenstein::double_array_trie::{DoubleArrayTrie, DoubleArrayTrieBuilder};
 use libdictenstein::dynamic_dawg::char::DynamicDawgChar;
 use libdictenstein::dynamic_dawg::{DynamicDawg, DynamicDawgU64};
+use libdictenstein::Dictionary;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -75,10 +76,82 @@ fn read_lines(path: &Path) -> Vec<String> {
     lines
 }
 
-fn measure<D, F>(args: &Args, terms: &[String], build: F)
+#[derive(Clone, Copy)]
+struct SemanticEvidence {
+    term_count: usize,
+    membership_checks: usize,
+    checksum: u64,
+}
+
+const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+
+fn semantic_checksum(terms: &[String]) -> u64 {
+    let mut checksum = FNV_OFFSET;
+    for term in terms {
+        for &byte in term.as_bytes() {
+            checksum = (checksum ^ u64::from(byte)).wrapping_mul(FNV_PRIME);
+        }
+        checksum = (checksum ^ 0xff).wrapping_mul(FNV_PRIME);
+    }
+    checksum
+}
+
+fn validate_dictionary<D: Dictionary>(dictionary: &D, terms: &[String]) -> SemanticEvidence {
+    if dictionary.len() != Some(terms.len()) {
+        fail(format!(
+            "semantic validation failed: dictionary length {:?}, expected {}",
+            dictionary.len(),
+            terms.len()
+        ));
+    }
+    for term in terms {
+        if !dictionary.contains(term) {
+            fail(format!(
+                "semantic validation failed: constructed dictionary lost {term:?}"
+            ));
+        }
+    }
+    SemanticEvidence {
+        term_count: terms.len(),
+        membership_checks: terms.len(),
+        checksum: semantic_checksum(terms),
+    }
+}
+
+fn validate_preparation(prepared: &[String], terms: &[String], sorted: bool) -> SemanticEvidence {
+    let expected;
+    let expected = if sorted {
+        expected = {
+            let mut copy = terms.to_vec();
+            copy.sort_unstable();
+            copy
+        };
+        expected.as_slice()
+    } else {
+        terms
+    };
+    if prepared != expected {
+        fail("semantic validation failed: prepared terms differ from the expected sequence");
+    }
+    SemanticEvidence {
+        term_count: prepared.len(),
+        membership_checks: prepared.len(),
+        checksum: semantic_checksum(prepared),
+    }
+}
+
+fn measure<D, F, V>(args: &Args, terms: &[String], build: F, validate: V)
 where
     F: Fn(&[String]) -> D,
+    V: Fn(&D, &[String]) -> SemanticEvidence,
 {
+    // This build and its O(n) validation are deliberately outside every timed
+    // region. A constructor that loses terms or publishes an empty graph must
+    // fail before it can contribute a deceptively fast sample.
+    let validation_dictionary = build(terms);
+    let semantic = validate(&validation_dictionary, terms);
+    drop(validation_dictionary);
     for _ in 0..args.warmups {
         std::hint::black_box(build(terms));
     }
@@ -101,6 +174,24 @@ where
     writeln!(&mut json, "  \"domain\": {:?},", args.domain).unwrap();
     writeln!(&mut json, "  \"constructor\": {:?},", args.constructor).unwrap();
     writeln!(&mut json, "  \"term_count\": {},", terms.len()).unwrap();
+    writeln!(
+        &mut json,
+        "  \"semantic_term_count\": {},",
+        semantic.term_count
+    )
+    .unwrap();
+    writeln!(
+        &mut json,
+        "  \"semantic_membership_checks\": {},",
+        semantic.membership_checks
+    )
+    .unwrap();
+    writeln!(
+        &mut json,
+        "  \"semantic_checksum_hex\": \"{:016x}\",",
+        semantic.checksum
+    )
+    .unwrap();
     writeln!(&mut json, "  \"warmups\": {},", args.warmups).unwrap();
     writeln!(&mut json, "  \"samples_ns\": [").unwrap();
     for (index, sample) in samples.iter().enumerate() {
@@ -118,64 +209,66 @@ fn main() {
     match (args.domain.as_str(), args.constructor.as_str()) {
         ("byte", "from_terms") => measure(&args, &terms, |items| {
             DynamicDawg::<()>::from_terms(items.iter().map(String::as_str))
-        }),
+        }, validate_dictionary),
         ("byte", "from_sorted_terms") => measure(&args, &terms, |items| {
             DynamicDawg::<()>::from_sorted_terms(items.iter().map(String::as_str))
-        }),
+        }, validate_dictionary),
         ("byte", "stream") => measure(&args, &terms, |items| {
             let dictionary = DynamicDawg::<()>::new();
             for item in items {
                 dictionary.insert(item);
             }
             dictionary
-        }),
+        }, validate_dictionary),
         ("byte", "dat_static") => measure(&args, &terms, |items| {
             DoubleArrayTrie::<()>::from_terms(items.iter().map(String::as_str))
-        }),
+        }, validate_dictionary),
         ("byte", "dat_incremental") => measure(&args, &terms, |items| {
             let mut builder = DoubleArrayTrieBuilder::<()>::new();
             for item in items {
                 builder.insert(item);
             }
             builder.build()
-        }),
+        }, validate_dictionary),
         ("unicode", "from_terms") => measure(&args, &terms, |items| {
             DynamicDawgChar::<()>::from_terms(items.iter().map(String::as_str))
-        }),
+        }, validate_dictionary),
         ("unicode", "from_sorted_terms") => measure(&args, &terms, |items| {
             DynamicDawgChar::<()>::from_sorted_terms(items.iter().map(String::as_str))
-        }),
+        }, validate_dictionary),
         ("unicode", "stream") => measure(&args, &terms, |items| {
             let dictionary = DynamicDawgChar::<()>::new();
             for item in items {
                 dictionary.insert(item);
             }
             dictionary
-        }),
+        }, validate_dictionary),
         ("u64", "from_terms") => measure(&args, &terms, |items| {
             DynamicDawgU64::<()>::from_terms(items.iter().map(String::as_str))
-        }),
+        }, validate_dictionary),
         ("u64", "from_sorted_terms") => measure(&args, &terms, |items| {
             DynamicDawgU64::<()>::from_sorted_terms(items.iter().map(String::as_str))
-        }),
+        }, validate_dictionary),
         ("u64", "stream") => measure(&args, &terms, |items| {
             let dictionary = DynamicDawgU64::<()>::new();
             for item in items {
                 dictionary.insert(item);
             }
             dictionary
-        }),
+        }, validate_dictionary),
         ("unicode", "dat_static") => measure(&args, &terms, |items| {
             DoubleArrayTrieChar::<()>::from_terms(items.iter().map(String::as_str))
-        }),
+        }, validate_dictionary),
         ("byte" | "unicode" | "u64", "clone_input") => {
-            measure(&args, &terms, |items| items.to_vec())
+            measure(&args, &terms, |items| items.to_vec(), |prepared, source| {
+                validate_preparation(prepared, source, false)
+            })
         }
         ("byte" | "unicode" | "u64", "clone_and_sort_input") => measure(&args, &terms, |items| {
             let mut prepared = items.to_vec();
             prepared.sort_unstable();
             prepared
-        }),
+        }, |prepared, source| validate_preparation(prepared, source, true)),
         ("byte" | "unicode" | "u64", _) => {
             fail("unsupported constructor for this domain; expected from_terms, from_sorted_terms, stream, dat_static, dat_incremental (byte only), clone_input, or clone_and_sort_input")
         }

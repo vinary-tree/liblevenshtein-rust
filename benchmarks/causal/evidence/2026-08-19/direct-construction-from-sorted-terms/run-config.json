@@ -1,0 +1,128 @@
+{
+  "schema": "liblevenshtein.pure-rust-legacy-java-pair-config.v1",
+  "mode": "construct",
+  "rust_binary": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/harnesses/rust/target/release/bench-cross-rust",
+  "rust_binary_sha256": "ae4724d105d6401e66934e4caff45a76bfdaea79e890beafe643458e9c5b7576",
+  "java_binary": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/.stage/jvm/legacy-launcher.sh",
+  "java_binary_sha256": "aa44db8449f12ca02b62d3a9715b64708a3253cafae296487f50115284cc8529",
+  "java_execution_closure": {
+    "classpath_entries": [
+      {
+        "file_count": 2,
+        "kind": "directory-tree",
+        "path": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/harnesses/jvm/legacy/build/classes/java/main",
+        "sha256": "fc2c036254e79612365a1a51efe694281be3e893573c3e57fe9edb6b31f4fc45"
+      },
+      {
+        "file_count": 0,
+        "kind": "missing",
+        "path": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/harnesses/jvm/legacy/build/resources/main",
+        "sha256": "8055c8ac86be5ee642d6c02c6120ba0381a3def690899cff03b6c715862f979a"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/harnesses/jvm/common/build/libs/common.jar",
+        "sha256": "3e89a0dd62f987e10a526707b2bf8a842410b0f3039edb8ef994aa675b411b55"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/com.github.universal-automata/liblevenshtein/3.0.0/b18d00b0bdb4406bba8737cafa32e84dfb00b1cc/liblevenshtein-3.0.0.jar",
+        "sha256": "220e7857fa051505a4e10d84e01a28817a8dc39934430b711873eacddacc513b"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-nop/1.7.36/a3c1eb685d59414527faa93623acae311c184032/slf4j-nop-1.7.36.jar",
+        "sha256": "c214958b07816cb4412b30c7bdbd4308ffdc6ba2a83767b8f3a9229cbd9274d6"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/annotations/3.0.1/fc019a2216218990d64dfe756e7aa20f0069dea2/annotations-3.0.1.jar",
+        "sha256": "6b47ff0a6de0ce17cbedc3abb0828ca5bce3009d53ea47b3723ff023c4742f79"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-java-util/3.0.0-beta-3/5c39485775c197fc1938e594dc358bfec1c188a0/protobuf-java-util-3.0.0-beta-3.jar",
+        "sha256": "9c24205434d011422b2cbd649e6091f38a6291d9c6977215e7a1af59fe198d00"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/19.0/6ce200f6b23222af3d8abb6b6459e6c44f4bb0e9/guava-19.0.jar",
+        "sha256": "58d4cc2e05ebb012bbac568b032f75623be1cb6fb096f3c60c72a86f7f057de4"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-java/3.0.0-beta-3/ed8c2f9a63cfa770292f8173fd0172bdaa014fe3/protobuf-java-3.0.0-beta-3.jar",
+        "sha256": "9a99ae680c1e5682ed2bfee834d6f18f7772e6b7d338d38b210bf94b44247044"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil/7.0.12/9d9b3cfcf42706f3300e96c47c8df99194bf8d73/fastutil-7.0.12.jar",
+        "sha256": "1ffeaa2149471aee7a7cd3c0918373be5980ceea7e2a89e9164619b4c7d35d3d"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.4/5fe28b9518e58819180a43a850fbc0dd24b7c050/commons-lang3-3.4.jar",
+        "sha256": "734c8356420cc8e30c795d64fd1fcd5d44ea9d90342a2cc3262c5158fbc6d98b"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.16.8/2ce9de13f277ec1600e7e04231477e3e5f59d317/lombok-1.16.8.jar",
+        "sha256": "fe32b29b7b33eb2b19866cbc5345c59c9984a6036cc396856a04c0d09f99ea68"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/1.7.36/6c62681a2f655b49963a5983b8b0950a6120ae14/slf4j-api-1.7.36.jar",
+        "sha256": "d3ef575e3e4979678dc01bf1dcce51021493b4d11fb7f1be8ad982877c16a1c0"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/net.jcip/jcip-annotations/1.0/afba4942caaeaf46aab0b976afd57cc7c181467e/jcip-annotations-1.0.jar",
+        "sha256": "be5805392060c71474bf6c9a67a099471274d30b83eef84bfc4e0889a4f1dcc0"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.1/f7be08ec23c21485b9b5a1cf1654c2ec8c58168d/jsr305-3.0.1.jar",
+        "sha256": "c885ce34249682bc0236b4a7d56efcc12048e6135a5baf7a9cde8ad8cda13fcd"
+      },
+      {
+        "file_count": 1,
+        "kind": "file",
+        "path": "/home/dylon/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.3/5fc52c41ef0239d1093a1eb7c3697036183677ce/gson-2.3.jar",
+        "sha256": "9466512cd8cf0bd66a8a3661685373f7b3deafded11096e044926ff5c82c7a4c"
+      }
+    ],
+    "classpath_file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/harnesses/jvm/legacy/build/runtime-classpath.txt",
+    "classpath_file_sha256": "ef9fe7bcffc3f10ddf686e42a1e466038c0dc8f8005f13e15a9e3aa33764d86f",
+    "closure_sha256": "e2e13b5aca18fcb42f9bd9c5960200235127b0ecd3c5ab2b45ddaa90c947a0c7",
+    "java_executable": "/usr/lib/jvm/java-26-openjdk/bin/java",
+    "java_executable_sha256": "755c9c03730a21e4fbb95bfea296ab4643d8c0d63fa6e931690732ce4431ff9c",
+    "java_version": "openjdk 26.0.2 2026-07-21\nOpenJDK Runtime Environment (build 26.0.2)\nOpenJDK 64-Bit Server VM (build 26.0.2, mixed mode, sharing)",
+    "launcher": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/.stage/jvm/legacy-launcher.sh",
+    "launcher_sha256": "aa44db8449f12ca02b62d3a9715b64708a3253cafae296487f50115284cc8529"
+  },
+  "dictionary": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/dictionary.txt",
+  "dictionary_sha256": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23",
+  "queries": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/hits.txt",
+  "queries_sha256": "58ad53d48923b61d09e8115c96629e6010c94d289c67cc6a1cbc825b5be5a35e",
+  "manifest": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/provenance.json",
+  "manifest_sha256": "28313fc41d33bc3ce2ac39ed807aac197b3600ab0106389819413a3c1a22981d",
+  "samples": 51,
+  "cpu": 3,
+  "algorithm": "standard",
+  "distance": 1,
+  "rust_constructor": "from_sorted_terms",
+  "warmup_seconds": 0
+}

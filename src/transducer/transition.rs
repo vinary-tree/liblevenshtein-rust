@@ -370,7 +370,7 @@ impl<U: CharUnit> UnitCostMachine<U> {
     where
         P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
     {
-        #[cfg(feature = "resource-profiling")]
+        #[cfg(feature = "benchmark-controls")]
         if monolithic_unit_step_enabled() {
             return self.step_monolithic(source, pool, policy, label, query, settings);
         }
@@ -512,7 +512,7 @@ impl<U: CharUnit> UnitCostMachine<U> {
     /// compiled only for causal resource profiling and intentionally retains
     /// the positional body beside the packed arm so its code shape matches the
     /// pre-outline implementation.
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     #[inline(never)]
     fn step_monolithic<P>(
         &mut self,
@@ -1183,7 +1183,7 @@ pub(crate) use with_prepared_unit_cost_row;
 
 #[inline]
 fn packed_standard_disabled() -> bool {
-    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static DISABLED: OnceLock<bool> = OnceLock::new();
@@ -1191,7 +1191,7 @@ fn packed_standard_disabled() -> bool {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_STANDARD").is_some()
         })
     }
-    #[cfg(not(any(feature = "perf-instrumentation", feature = "resource-profiling")))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }
@@ -1201,7 +1201,7 @@ fn packed_standard_disabled() -> bool {
 /// a representation-erased `UnitCostMachine` owner.
 #[inline(always)]
 pub(crate) fn static_packed_rows_disabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static DISABLED: OnceLock<bool> = OnceLock::new();
@@ -1209,7 +1209,7 @@ pub(crate) fn static_packed_rows_disabled() -> bool {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_STATIC_PACKED_ROWS").is_some()
         })
     }
-    #[cfg(not(feature = "resource-profiling"))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }
@@ -1217,7 +1217,7 @@ pub(crate) fn static_packed_rows_disabled() -> bool {
 
 #[inline]
 fn packed_merge_split_disabled() -> bool {
-    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static DISABLED: OnceLock<bool> = OnceLock::new();
@@ -1225,7 +1225,7 @@ fn packed_merge_split_disabled() -> bool {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_MERGE_SPLIT").is_some()
         })
     }
-    #[cfg(not(any(feature = "perf-instrumentation", feature = "resource-profiling")))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }
@@ -1233,20 +1233,20 @@ fn packed_merge_split_disabled() -> bool {
 
 #[inline]
 fn packed_osa_disabled() -> bool {
-    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static DISABLED: OnceLock<bool> = OnceLock::new();
         *DISABLED
             .get_or_init(|| std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_OSA").is_some())
     }
-    #[cfg(not(any(feature = "perf-instrumentation", feature = "resource-profiling")))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }
 }
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 #[inline(always)]
 fn monolithic_unit_step_enabled() -> bool {
     use std::sync::OnceLock;
@@ -1256,14 +1256,14 @@ fn monolithic_unit_step_enabled() -> bool {
     })
 }
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 fn jagged_generated_targets_enabled() -> bool {
     std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_JAGGED_GENERATED_TARGETS").is_some()
 }
 
 #[inline(always)]
 fn legacy_characteristic_index_enabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static ENABLED: OnceLock<bool> = OnceLock::new();
@@ -1272,7 +1272,7 @@ fn legacy_characteristic_index_enabled() -> bool {
                 .is_some()
         })
     }
-    #[cfg(not(feature = "resource-profiling"))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }
@@ -1393,9 +1393,9 @@ pub(crate) struct CachedUnitTransitions<U: CharUnit> {
     generated_config: Option<(Algorithm, bool)>,
     generated_sources: Vec<Box<[Position]>>,
     dense_targets: DenseGeneratedTargets,
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     jagged_targets: Vec<Vec<GeneratedTarget>>,
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     use_jagged_targets: bool,
     generated_states: FxHashMap<u64, SmallVec<[GeneratedStateId; 1]>>,
     max_distance: usize,
@@ -1408,9 +1408,9 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
             generated_config: None,
             generated_sources: Vec::new(),
             dense_targets: DenseGeneratedTargets::new(query_length.saturating_add(1)),
-            #[cfg(feature = "resource-profiling")]
+            #[cfg(feature = "benchmark-controls")]
             jagged_targets: Vec::new(),
-            #[cfg(feature = "resource-profiling")]
+            #[cfg(feature = "benchmark-controls")]
             use_jagged_targets: jagged_generated_targets_enabled(),
             generated_states: FxHashMap::default(),
             max_distance,
@@ -1420,20 +1420,20 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
     fn push_generated_source(&mut self, source: Box<[Position]>) -> GeneratedStateId {
         let id = GeneratedStateId::next(&self.generated_sources);
         self.generated_sources.push(source);
-        #[cfg(feature = "resource-profiling")]
+        #[cfg(feature = "benchmark-controls")]
         if self.use_jagged_targets {
             self.jagged_targets.push(Vec::new());
         } else {
             self.dense_targets.push_row();
         }
-        #[cfg(not(feature = "resource-profiling"))]
+        #[cfg(not(feature = "benchmark-controls"))]
         self.dense_targets.push_row();
         id
     }
 
     #[inline(always)]
     fn cached_generated_target(&self, source: GeneratedStateId, class: usize) -> GeneratedTarget {
-        #[cfg(feature = "resource-profiling")]
+        #[cfg(feature = "benchmark-controls")]
         if self.use_jagged_targets {
             return self.jagged_targets[source.0]
                 .get(class)
@@ -1450,7 +1450,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         class: usize,
         target: GeneratedTarget,
     ) {
-        #[cfg(feature = "resource-profiling")]
+        #[cfg(feature = "benchmark-controls")]
         if self.use_jagged_targets {
             let row = &mut self.jagged_targets[source.0];
             if row.len() <= class {
@@ -1465,7 +1465,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
     fn clear_generated_table(&mut self) {
         self.generated_sources.clear();
         self.dense_targets.clear();
-        #[cfg(feature = "resource-profiling")]
+        #[cfg(feature = "benchmark-controls")]
         self.jagged_targets.clear();
     }
 

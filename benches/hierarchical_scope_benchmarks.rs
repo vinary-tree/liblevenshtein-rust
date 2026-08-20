@@ -188,7 +188,7 @@ fn approach2_bitmask(
 
 #[derive(Clone, Debug)]
 #[cfg_attr(
-    feature = "serialization",
+    any(feature = "serialization", feature = "persistent-artrie"),
     derive(serde::Serialize, serde::Deserialize)
 )]
 enum HybridScopeData {

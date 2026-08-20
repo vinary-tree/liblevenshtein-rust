@@ -1,0 +1,23 @@
+{
+  "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+  "replicate": 11,
+  "mode": "construct",
+  "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+  "exact_signature_equal": true,
+  "signature": {
+    "semantic_checksum_hex": "8da9c6f99f82a731",
+    "semantic_membership_checks": 79343,
+    "semantic_term_count": 79343,
+    "term_count": 79343
+  },
+  "rust": {
+    "raw_file": "rust.json",
+    "raw_sha256": "921f90395b886ce7044547445dfb0ab0f4b7dfbfed2bf10a34f1f330094bf7b1",
+    "elapsed_ns": 13994594
+  },
+  "java": {
+    "raw_file": "java.json",
+    "raw_sha256": "e96b2bc0fcd2462077353795f1f65a6de498c44143b9a13b14ffc7b8ce59e988",
+    "elapsed_ns": 174999344
+  }
+}

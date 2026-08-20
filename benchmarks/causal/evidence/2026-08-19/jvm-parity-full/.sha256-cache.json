@@ -1,0 +1,11 @@
+{
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/dictionary.txt": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23",
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/hits.txt": "58ad53d48923b61d09e8115c96629e6010c94d289c67cc6a1cbc825b5be5a35e",
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/oov.txt": "d65a5fe87e9a734c3a2869f561976e3e0ce4debd791a9e6ad5905b7347d033d4",
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/std-d1.txt": "5add495226b1db1f1a89af0dd2d4e9ead306e4d76bae8379f54aa3c13c4ec0d3",
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/std-d2.txt": "42e034ba6bf90e8153d1cd0cbcd091bf962208591ae0b4f1eca3a722d93812f2",
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/std-d3.txt": "d155a849587b295d09cb789665e9b51ee1b66a291c954aca1717f7cc3bad88f7",
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/tr-d1.txt": "1d6b1aba3768e83e35997bdab8b31507f875d036d38fd6604d3c686d140fe81a",
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/tr-d2.txt": "f0f2705764c6a7b8426d5ea50b1777703af7b55092157c47b73051151be21c15",
+  "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/tr-d3.txt": "611f6af44bf4b7bd6c1ab477b24446cfc15906d3bb92822f6b4b20894955a1da"
+}

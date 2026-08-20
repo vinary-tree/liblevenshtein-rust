@@ -1,0 +1,681 @@
+{
+    "auxiliary": {
+        "availablePages": "555959 MB",
+        "availableRam": "30337 MB",
+        "availableVirtualMemory": "N/A",
+        "cores": 32,
+        "cpuAgentCount": 0,
+        "cpuFamily": 25,
+        "cpuModel": 8,
+        "cpuModelName": "AMD Ryzen Threadripper PRO 5975WX 32-Cores",
+        "cpuTopology": [
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                1,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                2,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                3,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                4,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                5,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                6,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                7,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                1,
+                8,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                1,
+                9,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                1,
+                10,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                1,
+                11,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                1,
+                12,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                1,
+                13,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                1,
+                14,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                1,
+                15,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                2,
+                16,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                2,
+                17,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                2,
+                18,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                2,
+                19,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                2,
+                20,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                2,
+                21,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                2,
+                22,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                2,
+                23,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                3,
+                24,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                3,
+                25,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                3,
+                26,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                3,
+                27,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                3,
+                28,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                3,
+                29,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                3,
+                30,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                3,
+                31,
+                0,
+                0,
+                0,
+                0
+            ]
+        ],
+        "eventColumnIds": [
+            {
+                "category": 1,
+                "categoryName": "CPU PROFILE",
+                "events": [
+                    {
+                        "callstack": true,
+                        "category": 1,
+                        "cmask": 0,
+                        "description": "CPU Time is the time in which the CPU core is executing the code.",
+                        "encodedId": 562949953478656,
+                        "eventCategory": 2,
+                        "expression": "",
+                        "fetchL3MissOnly": false,
+                        "fetchLoadLatency": false,
+                        "frequency": 0,
+                        "hwEventId": 57344,
+                        "interval": 10,
+                        "invCmask": false,
+                        "isFrequencyMode": false,
+                        "isRawEvent": true,
+                        "isTimeSeriesData": true,
+                        "name": "CPU_TIME",
+                        "opDispatchedCount": false,
+                        "opL3MissOnly": false,
+                        "opLoadLatency": false,
+                        "opStreamStore": false,
+                        "osMode": false,
+                        "samples": 0,
+                        "smcSource": 0,
+                        "threshold": 0,
+                        "traceMode": 0,
+                        "unit": "",
+                        "unitMask": 0,
+                        "usrMode": false
+                    }
+                ]
+            }
+        ],
+        "guest": false,
+        "guestKallsyms": "",
+        "guestKmodules": "",
+        "guestPid": 15,
+        "guestSymPaths": "",
+        "host": false,
+        "hypervisorEnabled": false,
+        "hypervisorVendor": "",
+        "ibsIdentifiers": 1023,
+        "ibsOpSampling": false,
+        "isCacheline": false,
+        "isFreqMode": false,
+        "issmtEnabled": false,
+        "onlineCores": 32,
+        "osName": "Linux Arch Linux-64 Kernel:7.1.6-arch1-1",
+        "p0Freq": 4561833,
+        "profScope": "Single Application",
+        "profiledPids": "77;",
+        "totalPages": "555959 MB",
+        "totalRam": "128637 MB",
+        "totalVirtualMemory": "33554431 MB"
+    },
+    "categoriesCollected": [
+        "cpu"
+    ],
+    "collectCommand": "./AMDuProfCLI collect --config hotspots --call-graph-depth 64 --affinity 3 --output-dir benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/uprof target/release/causal_query_profile --dictionary benchmarks/cross-language/workload/dictionary.txt --queries benchmarks/cross-language/workload/queries/hits.txt --domain byte --constructor from_terms --algorithm standard --scheduler unordered --max-distance 1 --passes 500",
+    "collection": {
+        "branch-filter": 511,
+        "callstack": {
+            "callstackSize": 1024,
+            "fpo": false,
+            "interval": 1,
+            "scope": 1,
+            "unwindDepth": 64
+        },
+        "customProfileEventMap": {
+            "keys": null,
+            "values": null
+        },
+        "dataBufferCount": 0,
+        "events": {
+            "configName": "Hotspots",
+            "configType": 4,
+            "cpuTraceSourceMask": 0,
+            "ibsEvents": {
+                "cacheAnalysis": false,
+                "fetch": false,
+                "fetchCallstack": true,
+                "fetchInterval": 0,
+                "fetchL3Miss": false,
+                "fetchLoadLatency": 0,
+                "fetchOs": true,
+                "fetchUser": true,
+                "loadStoreOnly": false,
+                "op": false,
+                "opCallstack": true,
+                "opCycleCount": false,
+                "opInterval": 0,
+                "opL3Miss": false,
+                "opLoadLatency": 0,
+                "opOs": true,
+                "opStreamStore": false,
+                "opUser": true,
+                "randomize": true
+            },
+            "pmcEvents": null,
+            "predefinedProfileType": 0,
+            "samplingModeMask": 4,
+            "timerCallstack": true,
+            "timerInterval": 10.0,
+            "timerSamplingMode": 4
+        },
+        "flags": {
+            "collectSysModules": false,
+            "cssDefaultValues": false,
+            "defaultBranchAnalysis": false,
+            "hasCallstack": true,
+            "isThreadConcurrency": false,
+            "maxDataFileSize": 0,
+            "perEventCSSDefault": true,
+            "profileMpi": false,
+            "profileSamplinModeBpf": false,
+            "pythonTraceOptions": false,
+            "traceMpi": false,
+            "traceMpiMode": 0,
+            "traceOpenmp": false,
+            "traceOpenmpMode": 5,
+            "traceOpenmpType": 1
+        },
+        "globalFrequency": 0,
+        "globalSamplingInterval": 0,
+        "hostP0Freqs": [
+            {
+                "host": "arch-workstation",
+                "p0Freq": 3600.0
+            }
+        ],
+        "hotspotsProfilingSignal": 27,
+        "lbr": false,
+        "livePower": null,
+        "metadataSource": 1,
+        "mmapBuffer": 0,
+        "profileChildren": true,
+        "profileConfigFiles": [
+            "hotspots"
+        ],
+        "schedule": {
+            "categoryDurations": [
+                {
+                    "category": 1,
+                    "categoryName": "CPU PROFILE",
+                    "end": 1129480619812593,
+                    "start": 1129473061489577,
+                    "type": 0
+                },
+                {
+                    "category": 32768,
+                    "categoryName": "METADATA",
+                    "end": 1129480619812593,
+                    "start": 1129473061489577,
+                    "type": 0
+                }
+            ],
+            "elapsed": 7558,
+            "end": 1129480619812593,
+            "endTs": "Thu Aug 20 02:57:37 2026",
+            "hostDurations": [
+                {
+                    "end": 1129480619812593,
+                    "host": "arch-workstation",
+                    "start": 1129473061489577
+                }
+            ],
+            "profileCollectionDataLimitType": 0,
+            "profileDuration": 0,
+            "start": 1129473061489577,
+            "startDelay": 0,
+            "startTs": "Thu Aug 20 02:57:30 2026",
+            "type": 2
+        },
+        "sessionVersion": 9,
+        "target": {
+            "appArgs": "--dictionary benchmarks/cross-language/workload/dictionary.txt --queries benchmarks/cross-language/workload/queries/hits.txt --domain byte --constructor from_terms --algorithm standard --scheduler unordered --max-distance 1 --passes 500 ",
+            "coreAffinity": "8",
+            "coreMask": "FFFFFFFF",
+            "gpuCollectAgentVersion": 0,
+            "gpuFamily": "",
+            "gpuRocprofVersion": 0,
+            "launchApp": "target/release/causal_query_profile",
+            "profileCores": false,
+            "systemWide": false,
+            "terminateApp": false,
+            "workingDir": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust"
+        }
+    },
+    "deviceInfo": {
+        "keys": [
+            0
+        ],
+        "values": [
+            {
+                "keys": [
+                    25,
+                    4,
+                    17,
+                    0,
+                    29,
+                    13,
+                    26,
+                    14,
+                    1,
+                    30,
+                    3,
+                    16,
+                    7,
+                    28,
+                    15,
+                    2,
+                    31,
+                    23,
+                    18,
+                    5,
+                    9,
+                    24,
+                    11,
+                    21,
+                    22,
+                    12,
+                    20,
+                    10,
+                    8,
+                    19,
+                    6,
+                    27
+                ],
+                "values": [
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ],
+                    [
+                        1429008,
+                        4561833
+                    ]
+                ]
+            }
+        ]
+    },
+    "generatedDBs": [
+        {
+            "category": 8192,
+            "categoryName": "callstack",
+            "databaseName": "callstack"
+        },
+        {
+            "category": 1,
+            "categoryName": "cpu",
+            "databaseName": "cpu"
+        }
+    ],
+    "generatedReports": [
+        {
+            "category": 0,
+            "name": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/report.csv"
+        }
+    ],
+    "hpc": {
+        "hostName": "arch-workstation"
+    },
+    "profileType": 1,
+    "reportCommand": "./AMDuProfCLI report --input-dir benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/uprof --detail --show-percentage --cutoff 0 --report-output benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/report.csv",
+    "translateCommand": "",
+    "translation": [
+        {
+            "aggregateCoreLevel": false,
+            "aggregateInst": true,
+            "aggregateInterval": 1,
+            "asciiFlags": 0,
+            "cachePath": "",
+            "category": 1,
+            "categoryNames": "CPU PROFILE",
+            "dataCoarsenessLevel": 1,
+            "dbType": "duckdb",
+            "debugSymbolsPath": "",
+            "hostName": "",
+            "mpiInputDir": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/uprof/cpu",
+            "processInlineFunctions": false,
+            "showPyIntrepFrames": false,
+            "summaryTimelineSz": 5000,
+            "symbolServerDirs": "",
+            "useLegacySymbolDowloader": false
+        }
+    ]
+}

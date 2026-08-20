@@ -99,34 +99,79 @@ def topology(cpu: int) -> tuple[list[int], list[int], int, int]:
     return siblings, l3, core_id, package_id
 
 
-def sample(cpu: int, interval: float) -> dict[str, object]:
-    siblings, l3, core_id, package_id = topology(cpu)
+def sample(cpus: list[int], interval: float) -> dict[str, object]:
+    if not cpus:
+        raise ValueError("at least one CPU is required")
+    topology_by_cpu = {cpu: topology(cpu) for cpu in cpus}
     before = read_cpu_times()
     time.sleep(interval)
     after = read_cpu_times()
     busy = busy_percentages(before, after)
     all_cpus = sorted(busy)
-    return {
+    llc_groups = sorted(
+        {tuple(details[1]) for details in topology_by_cpu.values()},
+        key=lambda group: group[0],
+    )
+    sibling_groups = sorted(
+        {tuple(details[0]) for details in topology_by_cpu.values()},
+        key=lambda group: group[0],
+    )
+    record: dict[str, object] = {
         "schema": "liblevenshtein.causal-host-load.v1",
         "timestamp_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "pid": os.getpid(),
         "interval_seconds": interval,
-        "selected_cpu": cpu,
-        "core_id": core_id,
-        "physical_package_id": package_id,
-        "thread_siblings": siblings,
-        "last_level_cache_cpus": l3,
-        "selected_cpu_busy_percent": busy[cpu],
-        "thread_siblings_busy": group_statistics(busy, siblings),
-        "last_level_cache_busy": group_statistics(busy, l3),
+        "selected_cpus": cpus,
+        "selected_cpus_busy": group_statistics(busy, cpus),
+        "thread_sibling_groups": [
+            {
+                "cpus": list(group),
+                **group_statistics(busy, list(group)),
+            }
+            for group in sibling_groups
+        ],
+        "last_level_cache_groups": [
+            {
+                "cpus": list(group),
+                **group_statistics(busy, list(group)),
+            }
+            for group in llc_groups
+        ],
+        "core_ids": sorted({details[2] for details in topology_by_cpu.values()}),
+        "physical_package_ids": sorted(
+            {details[3] for details in topology_by_cpu.values()}
+        ),
         "package_busy": group_statistics(busy, all_cpus),
         "per_cpu_busy_percent": {str(key): value for key, value in busy.items()},
     }
+    # Preserve the original scalar fields for the existing single-CPU callers
+    # and their already-committed evidence readers.
+    if len(cpus) == 1:
+        cpu = cpus[0]
+        siblings, l3, core_id, package_id = topology_by_cpu[cpu]
+        record.update(
+            {
+                "selected_cpu": cpu,
+                "core_id": core_id,
+                "physical_package_id": package_id,
+                "thread_siblings": siblings,
+                "last_level_cache_cpus": l3,
+                "selected_cpu_busy_percent": busy[cpu],
+                "thread_siblings_busy": group_statistics(busy, siblings),
+                "last_level_cache_busy": group_statistics(busy, l3),
+            }
+        )
+    return record
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cpu", type=int, required=True)
+    selected = parser.add_mutually_exclusive_group(required=True)
+    selected.add_argument("--cpu", type=int)
+    selected.add_argument(
+        "--cpuset",
+        help="CPU list/ranges whose complete LLC-sharing groups must be quiet",
+    )
     parser.add_argument("--interval", type=float, default=0.25)
     parser.add_argument("--max-selected-busy", type=float, default=20.0)
     parser.add_argument("--max-sibling-busy", type=float, default=20.0)
@@ -147,32 +192,46 @@ def main() -> int:
         if not 0.0 <= value <= 100.0:
             parser.error(f"--{name.replace('_', '-')} must be between 0 and 100")
 
-    record = sample(args.cpu, args.interval)
+    try:
+        cpus = [args.cpu] if args.cpu is not None else parse_cpu_list(args.cpuset)
+    except ValueError as error:
+        parser.error(str(error))
+    record = sample(cpus, args.interval)
     record["label"] = args.label
-    selected = float(record["selected_cpu_busy_percent"])
-    siblings = record["thread_siblings_busy"]
-    llc = record["last_level_cache_busy"]
-    assert isinstance(siblings, dict) and isinstance(llc, dict)
+    selected_busy = record["selected_cpus_busy"]
+    sibling_groups = record["thread_sibling_groups"]
+    llc_groups = record["last_level_cache_groups"]
+    assert isinstance(selected_busy, dict)
+    assert isinstance(sibling_groups, list) and isinstance(llc_groups, list)
     reasons: list[str] = []
-    if selected > args.max_selected_busy:
+    if float(selected_busy["max_busy_percent"]) > args.max_selected_busy:
         reasons.append(
-            f"selected CPU busy {selected:.2f}% > {args.max_selected_busy:.2f}%"
+            "selected CPU busy "
+            f"{float(selected_busy['max_busy_percent']):.2f}% > "
+            f"{args.max_selected_busy:.2f}%"
         )
-    if float(siblings["max_busy_percent"]) > args.max_sibling_busy:
-        reasons.append(
-            "hardware-thread sibling busy "
-            f"{float(siblings['max_busy_percent']):.2f}% > {args.max_sibling_busy:.2f}%"
-        )
-    if float(llc["mean_busy_percent"]) > args.max_llc_mean_busy:
-        reasons.append(
-            f"LLC-group mean busy {float(llc['mean_busy_percent']):.2f}% "
-            f"> {args.max_llc_mean_busy:.2f}%"
-        )
-    if float(llc["max_busy_percent"]) > args.max_llc_peer_busy:
-        reasons.append(
-            f"LLC-group peer busy {float(llc['max_busy_percent']):.2f}% "
-            f"> {args.max_llc_peer_busy:.2f}%"
-        )
+    for group in sibling_groups:
+        assert isinstance(group, dict)
+        if float(group["max_busy_percent"]) > args.max_sibling_busy:
+            reasons.append(
+                f"hardware-thread sibling group {group['cpus']} busy "
+                f"{float(group['max_busy_percent']):.2f}% > "
+                f"{args.max_sibling_busy:.2f}%"
+            )
+    for group in llc_groups:
+        assert isinstance(group, dict)
+        if float(group["mean_busy_percent"]) > args.max_llc_mean_busy:
+            reasons.append(
+                f"LLC group {group['cpus']} mean busy "
+                f"{float(group['mean_busy_percent']):.2f}% > "
+                f"{args.max_llc_mean_busy:.2f}%"
+            )
+        if float(group["max_busy_percent"]) > args.max_llc_peer_busy:
+            reasons.append(
+                f"LLC group {group['cpus']} peer busy "
+                f"{float(group['max_busy_percent']):.2f}% > "
+                f"{args.max_llc_peer_busy:.2f}%"
+            )
 
     record["thresholds"] = {
         "max_selected_busy_percent": args.max_selected_busy,

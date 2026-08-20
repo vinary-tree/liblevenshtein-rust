@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "suite": "cross-language-v1",
+  "timestamp_utc": "2026-08-20T00:21:34Z",
+  "target": {
+    "language": "java",
+    "implementation": "vinary-tree",
+    "backend": "jvm-ffm",
+    "runtime_version": "OpenJDK 64-Bit Server VM 26.0.2",
+    "library_version": "0.10.0",
+    "artifact": {
+      "kind": "local-build",
+      "id": "io.vinarytree:liblevenshtein:0.10.0"
+    }
+  },
+  "dictionary": {
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/dictionary.txt",
+    "term_count": 79343,
+    "structure": "double_array_trie",
+    "unit_domain": "unicode_scalar",
+    "construct_ns": 294284362,
+    "sha256": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23"
+  },
+  "workload": {
+    "queryset": "hits",
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/hits.txt",
+    "query_count": 1000,
+    "sha256": "58ad53d48923b61d09e8115c96629e6010c94d289c67cc6a1cbc825b5be5a35e"
+  },
+  "algorithm": "damerau_levenshtein",
+  "max_distance": 1,
+  "mode": "verify",
+  "protocol": {
+    "timer": "monotonic",
+    "harness": "self-timed",
+    "warmup_seconds_min": 3.0,
+    "warmup_passes": 0,
+    "samples_requested": 0,
+    "sample_definition": "one full pass over the query set; every cursor fully drained and (term, distance) materialized",
+    "batch_size": 256,
+    "wall_cap_seconds": 300
+  },
+  "measurements": {
+    "samples_ns": [],
+    "sample_count": 0,
+    "matches_per_pass": 3634,
+    "term_bytes_per_pass": 24791,
+    "distance_sum_per_pass": 2634,
+    "checksum_hex": "527bb88ad1e839e5"
+  },
+  "status": "ok",
+  "notes": [],
+  "run_id": "jvm-parity-full",
+  "environment_ref": "../environment.json",
+  "cell_snapshot": {
+    "cpuset": "16-31",
+    "cpu_mhz_start": 3572.0,
+    "cpu_mhz_end": 3424.8,
+    "load_avg_1m": 5.07
+  },
+  "native_digests": {
+    "libliblevenshtein.so": "3b166329982de1ea1db734613f8bc525322196eed8addb0e6d893f4ae6769009",
+    "liblibdictenstein.so": "2f4d400828e0d34fdc160417a408e30b4ddf9145f95760cb5331ba62d108cad4"
+  }
+}

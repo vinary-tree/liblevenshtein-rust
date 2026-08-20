@@ -1,0 +1,9 @@
+{
+  "schema": "liblevenshtein.java-parity-construction-run.v1",
+  "binary": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_construction_bench",
+  "binary_sha256": "342024688d547867b6233ce9be2083b10db36a59ad0eed678e5b85f6a7c90911",
+  "manifest_sha256": "86c8b61e4bf30ad11e89b3505f9d664897a65c706e08d2e818955515b8bbd58a",
+  "cpu": 3,
+  "warmups": 5,
+  "reps": 30
+}

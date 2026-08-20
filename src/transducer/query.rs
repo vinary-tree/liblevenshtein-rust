@@ -1270,7 +1270,7 @@ impl<
 
 #[inline]
 fn static_packed_query_dispatch_disabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static DISABLED: OnceLock<bool> = OnceLock::new();
@@ -1278,7 +1278,7 @@ fn static_packed_query_dispatch_disabled() -> bool {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_STATIC_PACKED_DISPATCH").is_some()
         })
     }
-    #[cfg(not(feature = "resource-profiling"))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }

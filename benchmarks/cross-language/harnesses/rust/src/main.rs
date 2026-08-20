@@ -61,7 +61,10 @@ fn self_test() {
     assert_eq!(entry_hash("cat", 0), 0xb592_c147_5b35_95e5, "entry(cat,0)");
     assert_eq!(entry_hash("cot", 1), 0xb8ac_c5d3_816b_cdea, "entry(cot,1)");
     let combined = entry_hash("cat", 0).wrapping_add(entry_hash("cot", 1));
-    assert_eq!(combined, 0x6e3f_871a_dca1_63cf, "checksum{{(cat,0),(cot,1)}}");
+    assert_eq!(
+        combined, 0x6e3f_871a_dca1_63cf,
+        "checksum{{(cat,0),(cot,1)}}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -76,6 +79,7 @@ struct Args {
     dictionary: PathBuf,
     queries: Option<PathBuf>,
     backend: String,
+    constructor: String,
     out: Option<PathBuf>,
     samples: usize,
     warmup_seconds: f64,
@@ -97,6 +101,7 @@ fn parse_args() -> Args {
         dictionary: PathBuf::new(),
         queries: None,
         backend: String::new(),
+        constructor: "from_terms".to_string(),
         out: None,
         samples: 30,
         warmup_seconds: 3.0,
@@ -121,10 +126,13 @@ fn parse_args() -> Args {
             "--dictionary" => args.dictionary = PathBuf::from(value),
             "--queries" => args.queries = Some(PathBuf::from(value)),
             "--backend" => args.backend = value.clone(),
+            "--constructor" => args.constructor = value.clone(),
             "--out" => args.out = Some(PathBuf::from(value)),
             "--samples" => args.samples = value.parse().unwrap_or_else(|_| die("bad --samples")),
             "--warmup-seconds" => {
-                args.warmup_seconds = value.parse().unwrap_or_else(|_| die("bad --warmup-seconds"))
+                args.warmup_seconds = value
+                    .parse()
+                    .unwrap_or_else(|_| die("bad --warmup-seconds"))
             }
             "--gate-limit" => {
                 args.gate_limit = value.parse().unwrap_or_else(|_| die("bad --gate-limit"))
@@ -202,6 +210,46 @@ struct Triple {
     dist: u64,
 }
 
+#[derive(Clone, Copy)]
+struct SemanticEvidence {
+    term_count: usize,
+    membership_checks: usize,
+    checksum: u64,
+}
+
+fn semantic_checksum(terms: &[String]) -> u64 {
+    let mut checksum = FNV_OFFSET;
+    for term in terms {
+        for &byte in term.as_bytes() {
+            checksum = fnv_update(checksum, byte);
+        }
+        checksum = fnv_update(checksum, 0xff);
+    }
+    checksum
+}
+
+fn validate_dictionary<D: Dictionary>(dictionary: &D, terms: &[String]) -> SemanticEvidence {
+    if dictionary.len() != Some(terms.len()) {
+        die(&format!(
+            "semantic validation failed: dictionary length {:?}, expected {}",
+            dictionary.len(),
+            terms.len()
+        ));
+    }
+    for term in terms {
+        if !dictionary.contains(term) {
+            die(&format!(
+                "semantic validation failed: constructed dictionary lost {term:?}"
+            ));
+        }
+    }
+    SemanticEvidence {
+        term_count: terms.len(),
+        membership_checks: terms.len(),
+        checksum: semantic_checksum(terms),
+    }
+}
+
 fn full_pass<D>(transducer: &Transducer<D>, queries: &[String], max_distance: usize) -> Triple
 where
     D: Dictionary,
@@ -242,10 +290,8 @@ where
             matches += 1;
             bytes += candidate.term.len() as u64;
             dist += candidate.distance as u64;
-            checksum = checksum.wrapping_add(entry_hash(
-                &candidate.term,
-                candidate.distance as u64,
-            ));
+            checksum =
+                checksum.wrapping_add(entry_hash(&candidate.term, candidate.distance as u64));
         }
     }
     (
@@ -327,7 +373,7 @@ fn render_result_json(
     samples_ns: &[u64],
     triple: Triple,
     checksum: u64,
-    construct_times: Option<(usize, &[u64])>,
+    construct_times: Option<(usize, &[u64], SemanticEvidence)>,
     status: &str,
 ) -> String {
     let queryset = Path::new(&ctx.queries_file)
@@ -377,7 +423,10 @@ fn render_result_json(
     }
     out.push_str("  },\n");
     out.push_str("  \"workload\": {\n");
-    out.push_str(&format!("    \"queryset\": \"{}\",\n", json_escape(&queryset)));
+    out.push_str(&format!(
+        "    \"queryset\": \"{}\",\n",
+        json_escape(&queryset)
+    ));
     out.push_str(&format!(
         "    \"file\": \"{}\",\n",
         json_escape(&ctx.queries_file)
@@ -393,9 +442,7 @@ fn render_result_json(
     out.push_str("  \"protocol\": {\n");
     out.push_str("    \"timer\": \"monotonic\",\n");
     out.push_str("    \"harness\": \"self-timed\",\n");
-    out.push_str(&format!(
-        "    \"warmup_seconds_min\": {warmup_seconds},\n"
-    ));
+    out.push_str(&format!("    \"warmup_seconds_min\": {warmup_seconds},\n"));
     out.push_str(&format!("    \"warmup_passes\": {warmup_passes},\n"));
     out.push_str(&format!(
         "    \"samples_requested\": {samples_requested},\n"
@@ -407,12 +454,24 @@ fn render_result_json(
     out.push_str("    \"batch_size\": null,\n");
     out.push_str(&format!("    \"wall_cap_seconds\": {WALL_CAP_SECONDS}\n"));
     out.push_str("  },\n");
-    if let Some((reps, times)) = construct_times {
+    if let Some((reps, times, semantic)) = construct_times {
         out.push_str("  \"construct\": {\n");
         out.push_str(&format!("    \"reps\": {reps},\n"));
         let joined: Vec<String> = times.iter().map(|t| t.to_string()).collect();
         out.push_str(&format!("    \"times_ns\": [{}],\n", joined.join(", ")));
-        out.push_str(&format!("    \"term_count\": {}\n", ctx.term_count));
+        out.push_str(&format!("    \"term_count\": {},\n", ctx.term_count));
+        out.push_str(&format!(
+            "    \"semantic_term_count\": {},\n",
+            semantic.term_count
+        ));
+        out.push_str(&format!(
+            "    \"semantic_membership_checks\": {},\n",
+            semantic.membership_checks
+        ));
+        out.push_str(&format!(
+            "    \"semantic_checksum_hex\": \"{:016x}\"\n",
+            semantic.checksum
+        ));
         out.push_str("  },\n");
     } else {
         out.push_str("  \"measurements\": {\n");
@@ -425,9 +484,7 @@ fn render_result_json(
             "    \"distance_sum_per_pass\": {},\n",
             triple.dist
         ));
-        out.push_str(&format!(
-            "    \"checksum_hex\": \"{checksum:016x}\"\n"
-        ));
+        out.push_str(&format!("    \"checksum_hex\": \"{checksum:016x}\"\n"));
         out.push_str("  },\n");
     }
     out.push_str(&format!("  \"status\": \"{}\",\n", json_escape(status)));
@@ -458,6 +515,10 @@ fn base_notes() -> Vec<String> {
     vec![
         "anchor uses idiomatic byte-domain dictionaries; bindings use the ABI's unicode-scalar domain (identical results for this ASCII workload, verified by the gate)".to_string(),
     ]
+}
+
+fn constructor_note(constructor: &str) -> String {
+    format!("dynamic DAWG constructor: {constructor}")
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -560,9 +621,10 @@ where
 
     match args.mode.as_str() {
         "construct" => {
-            // One warmup build (also serves as the gate dictionary), then
-            // `reps` timed builds with the drop outside the timed window.
+            // One warmup build also serves as an outside-timing semantic
+            // gate, then `reps` timed builds with drop outside timing.
             let warm = build(terms);
+            let semantic = validate_dictionary(&warm, terms);
             drop(warm);
             let mut times_ns = Vec::with_capacity(args.reps);
             for _ in 0..args.reps {
@@ -592,6 +654,9 @@ where
                 construct_ns: None,
                 notes: base_notes(),
             };
+            if structure == "dynamic_dawg" {
+                ctx.notes.push(constructor_note(&args.constructor));
+            }
             ctx.notes.push(
                 "construct mode: timed region is the build from the pre-sorted in-memory list only"
                     .to_string(),
@@ -608,7 +673,7 @@ where
                     dist: 0,
                 },
                 0,
-                Some((args.reps, &times_ns)),
+                Some((args.reps, &times_ns, semantic)),
                 "ok",
             );
             write_out(&out, &json);
@@ -646,6 +711,9 @@ where
                     construct_ns: Some(construct_ns),
                     notes: base_notes(),
                 };
+                if structure == "dynamic_dawg" {
+                    ctx.notes.push(constructor_note(&args.constructor));
+                }
                 match args.mode.as_str() {
                     "verify" => {
                         let limit = std::cmp::min(args.gate_limit, queries.len());
@@ -733,10 +801,7 @@ where
                     .queries
                     .clone()
                     .unwrap_or_else(|| die("--queries is required"));
-                let out = args
-                    .out
-                    .clone()
-                    .unwrap_or_else(|| die("--out is required"));
+                let out = args.out.clone().unwrap_or_else(|| die("--out is required"));
                 run_single(&algorithm, max_distance, &queries, &out)
             }
         }
@@ -750,14 +815,28 @@ fn main() -> ExitCode {
 
     let terms = read_lines(&args.dictionary);
     assert_strictly_sorted(&terms, &args.dictionary);
+    if args.backend != "dynamic_dawg" && args.constructor != "from_terms" {
+        die("--constructor is only selectable for dynamic_dawg");
+    }
 
     match args.backend.as_str() {
-        "dynamic_dawg" => run_with_backend(
-            &args,
-            &terms,
-            |t| DynamicDawg::<()>::from_terms(t.iter().map(String::as_str)),
-            "dynamic_dawg",
-        ),
+        "dynamic_dawg" => match args.constructor.as_str() {
+            "from_terms" => run_with_backend(
+                &args,
+                &terms,
+                |t| DynamicDawg::<()>::from_terms(t.iter().map(String::as_str)),
+                "dynamic_dawg",
+            ),
+            "from_sorted_terms" => run_with_backend(
+                &args,
+                &terms,
+                |t| DynamicDawg::<()>::from_sorted_terms(t.iter().map(String::as_str)),
+                "dynamic_dawg",
+            ),
+            other => die(&format!(
+                "unknown DynamicDawg constructor: {other}; expected from_terms or from_sorted_terms"
+            )),
+        },
         "double_array_trie" => run_with_backend(
             &args,
             &terms,

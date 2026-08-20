@@ -16,6 +16,12 @@ public interface HarnessAdapter {
     /** Release the current dictionary (construct-mode reps; untimed). */
     void freeDictionary();
 
+    /**
+     * Validate the current dictionary outside every timed construction
+     * region. Implementations must check exact size and every input term.
+     */
+    ConstructionProof validateDictionary(List<String> terms);
+
     /** Create/replace the transducer for the given algorithm name. */
     void createTransducer(String algorithm);
 
@@ -27,6 +33,11 @@ public interface HarnessAdapter {
 
     /** Static facts for the result JSON. */
     TargetInfo targetInfo(String backend);
+
+    record ConstructionProof(
+        long termCount,
+        long membershipChecks,
+        long checksum) {}
 
     record TargetInfo(
         String implementation,   // "vinary-tree" | "legacy"

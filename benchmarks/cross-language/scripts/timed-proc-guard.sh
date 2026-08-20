@@ -5,9 +5,12 @@
 # harnesses/common/PROTOCOL.md, "Fairness"). This guard distinguishes three
 # populations that a naive `pgrep -f bench` conflates:
 #
-#   MINE     a harness binary whose ancestry reaches run-all.sh / run-one.sh.
-#            More than one of these at once is a PROTOCOL VIOLATION: the runner
-#            has lost serialization and the affected cells are invalid.
+#   MINE     one monitored invocation tree whose ancestry reaches the direct
+#            child of run-with-contention-monitor.sh. JMH legitimately has a
+#            Gradle launcher and one or more forked benchmark JVM processes in
+#            that single tree; they are one timed invocation, not competing
+#            cells. Any runner-owned harness outside that tree is a PROTOCOL
+#            VIOLATION: the runner has lost serialization.
 #
 #   FOREIGN  a harness binary invoked by something else (another agent, an
 #            interactive shell, a profiler). Not a protocol violation — the
@@ -30,21 +33,25 @@
 set -uo pipefail
 
 RESULTS="${1:?usage: timed-proc-guard.sh <results-dir>}"
-LEDGER="$RESULTS/foreign-contention.jsonl"
+LEDGER="${XL_CONTENTION_LEDGER:-$RESULTS/foreign-contention.jsonl}"
 
 # A timed pass always carries --mode; profiler shims never run the pass
 # themselves, they exec the binary that does.
-HARNESS_RE='bench-cross-rust|\.stage/[a-z-]+/bench|bench\.mjs|VinaryBench|LegacyBench'
-WRAPPER_RE='heaptrack|valgrind|massif|perf record|/bin/sh |/bin/zsh -c|/bin/bash -c'
+HARNESS_RE='bench-cross-rust|\.stage/[a-z-]+/bench|bench\.mjs|VinaryBench|LegacyBench|bench\.VerifyMain|bench\.LegacyVerifyMain|query_cache_policy_matrix|backend_propagation_matrix|causal_backend_matrix|causal_construction_bench'
+WRAPPER_RE='heaptrack|valgrind|massif|perf record|/bin/sh |/bin/zsh -c|/bin/bash -c|run-with-contention-monitor|run-pure-rust-legacy-java-pair\.sh|run-[^ ]*-(experiment|matrix)\.sh'
 
 # Walk the parent chain looking for the runner. Depth-capped so a pid-reuse
 # cycle cannot wedge the guard.
 descends_from_runner() {
     local pid="$1" depth=0 cmd
     while [ "$pid" -gt 1 ] && [ "$depth" -lt 12 ]; do
-        cmd="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)"
+        [ -r "/proc/$pid/cmdline" ] || return 1
+        # Install the stderr redirect before opening the racy procfs path. Bash
+        # processes redirects left-to-right, so the reverse order can leak an
+        # ENOENT when the process exits between the readability check and open.
+        cmd="$(tr '\0' ' ' 2>/dev/null < "/proc/$pid/cmdline")" || return 1
         case "$cmd" in
-            *run-one.sh*|*run-all.sh*|*run-remaining.sh*|*run-hypothesis-cells*|*run-jvm-pair*|*run-stream.sh*)
+            *run-one.sh*|*run-all.sh*|*run-remaining.sh*|*run-hypothesis-cells*|*run-jvm-pair*|*run-pure-rust-legacy-java-pair.sh*|*run-stream.sh*|*run-with-contention-monitor.sh*|*run-*-experiment.sh*)
                 return 0 ;;
         esac
         pid="$(awk '/^PPid:/{print $2}' "/proc/$pid/status" 2>/dev/null)"
@@ -54,7 +61,24 @@ descends_from_runner() {
     return 1
 }
 
-mine=0
+# Return success when PID is the monitored child or one of its descendants.
+# This is intentionally identity-based rather than command-line-based: JMH's
+# launcher and fork both contain the benchmark class name, while native
+# harnesses commonly exec in place and have only one matching process.
+descends_from_pid() {
+    local pid="$1" ancestor="$2" depth=0
+    [ -n "$ancestor" ] || return 1
+    while [ "$pid" -gt 1 ] && [ "$depth" -lt 32 ]; do
+        [ "$pid" = "$ancestor" ] && return 0
+        pid="$(awk '/^PPid:/{print $2}' "/proc/$pid/status" 2>/dev/null)"
+        [ -n "$pid" ] || return 1
+        depth=$((depth + 1))
+    done
+    return 1
+}
+
+mine_current=0
+mine_other=0
 declare -a foreign=()
 
 for proc in /proc/[0-9]*; do
@@ -63,7 +87,7 @@ for proc in /proc/[0-9]*; do
     # Processes routinely exit between the glob and the read; a vanished pid is
     # normal, not an error, so the redirect itself must not emit to stderr.
     [ -r "$proc/cmdline" ] || continue
-    cmd="$(tr '\0' ' ' < "$proc/cmdline" 2>/dev/null)" || continue
+    cmd="$(tr '\0' ' ' 2>/dev/null < "$proc/cmdline")" || continue
     [ -n "$cmd" ] || continue
     printf '%s' "$cmd" | grep -qE "$HARNESS_RE" || continue
     # Drop the profiler/shell shims and this guard's own probes.
@@ -75,8 +99,15 @@ for proc in /proc/[0-9]*; do
     }
     printf '%s' "$cmd" | grep -q 'timed-proc-guard' && continue
 
-    if descends_from_runner "$pid"; then
-        mine=$((mine + 1))
+    if descends_from_pid "$pid" "${XL_TIMED_CHILD_PID:-}"; then
+        # Collapse every launcher/runtime/fork process in this subtree into a
+        # single invocation. Their CPU work is precisely the work being timed.
+        mine_current=1
+    elif descends_from_runner "$pid"; then
+        # A runner-owned harness outside the monitored subtree means another
+        # cell is live concurrently. A boolean is sufficient: that other tree
+        # may itself contain several legitimate JMH processes.
+        mine_other=1
     else
         # The /proc/<pid> directory's mtime is the process start time, so
         # contention is dated from when it actually began rather than from the
@@ -88,9 +119,11 @@ done
 
 now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-# Protocol violation: the runner is timing more than one thing at once.
-if [ "$mine" -gt 1 ]; then
-    echo "PROTOCOL-VIOLATION $now: $mine concurrent timed processes owned by the runner (expected 1)"
+# Protocol violation: the runner is timing another invocation outside the one
+# this monitor owns. Multiple processes inside the current JMH invocation are
+# expected and do not weaken serialization.
+if [ "$mine_other" -ne 0 ]; then
+    echo "PROTOCOL-VIOLATION $now: runner-owned timed invocation exists outside monitored pid tree ${XL_TIMED_CHILD_PID:-unknown}"
 fi
 
 # Contention: someone else is running the harness binaries on our cores.
@@ -170,7 +203,7 @@ PY
     if [ "${#foreign[@]}" -eq 0 ]; then
         : # nothing foreign this poll; any departed pids were just bounded above
     elif [ "$status" -eq 0 ]; then
-        echo "FOREIGN-CONTENTION $now: ${#foreign[@]} harness process(es) not owned by the runner (recorded in foreign-contention.jsonl; runner still serial, mine=$mine)"
+        echo "FOREIGN-CONTENTION $now: ${#foreign[@]} harness process(es) not owned by the runner (recorded in foreign-contention.jsonl; runner still serial, current_tree=$mine_current)"
     else
         # Never claim the window was recorded when the write failed: an
         # unrecorded contention window is a silent hole in the evidence chain.

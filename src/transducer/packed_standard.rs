@@ -219,14 +219,14 @@ enum ActiveMaskResolver<U: CharUnit> {
 
 /// Former collision-tagged mask index retained only for same-binary causal
 /// comparison. Production builds contain only the dense active resolver.
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 #[derive(Debug)]
 struct LegacyQueryMaskIndex<U: CharUnit> {
     direct: [Option<(U, u64)>; DIRECT_MASK_SLOTS],
     overflow: FxHashMap<U, u64>,
 }
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 impl<U: CharUnit> LegacyQueryMaskIndex<U> {
     fn empty() -> Self {
         Self {
@@ -285,7 +285,7 @@ impl<U: CharUnit> LegacyQueryMaskIndex<U> {
     }
 }
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 struct LegacyPackedMasks<U: CharUnit> {
     exact: LegacyQueryMaskIndex<U>,
     policy: LegacyQueryMaskIndex<U>,
@@ -298,13 +298,13 @@ pub(crate) struct PackedStandardMachine<U: CharUnit> {
     /// redundant 2 KiB `u64` mask table.
     masks: Option<ActiveMaskResolver<U>>,
     dfa: Option<Box<PackedStandardDfa<U>>>,
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     legacy_masks: Box<LegacyPackedMasks<U>>,
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     use_legacy_masks: bool,
-    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(feature = "benchmark-controls")]
     use_word_kernel: bool,
-    #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(feature = "benchmark-controls")]
     use_exact_cost_lanes: bool,
 }
 
@@ -325,13 +325,13 @@ impl<U: CharUnit> PackedStandardMachine<U> {
         }
         let layout =
             PackedEditLaneLayout::new(query.len(), settings.max_distance, settings.prefix_mode)?;
-        #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(feature = "benchmark-controls")]
         let use_word_kernel = !word_kernel_disabled();
-        #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(feature = "benchmark-controls")]
         let use_exact_cost_lanes = use_word_kernel && exact_cost_lanes_enabled();
-        #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(feature = "benchmark-controls")]
         let use_dfa = use_exact_cost_lanes && packed_dfa_enabled();
-        #[cfg(not(any(feature = "perf-instrumentation", feature = "resource-profiling")))]
+        #[cfg(not(feature = "benchmark-controls"))]
         let use_dfa = true;
         let dfa = (!P::MAY_MATCH_DISTINCT_UNITS && use_dfa)
             .then(|| Box::new(PackedStandardDfa::new(query, layout)));
@@ -346,16 +346,16 @@ impl<U: CharUnit> PackedStandardMachine<U> {
             layout,
             masks,
             dfa,
-            #[cfg(feature = "resource-profiling")]
+            #[cfg(feature = "benchmark-controls")]
             legacy_masks: Box::new(LegacyPackedMasks {
                 exact: LegacyQueryMaskIndex::exact(query, layout.lane_starts()),
                 policy: LegacyQueryMaskIndex::empty(),
             }),
-            #[cfg(feature = "resource-profiling")]
+            #[cfg(feature = "benchmark-controls")]
             use_legacy_masks: legacy_mask_index_enabled(),
-            #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+            #[cfg(feature = "benchmark-controls")]
             use_word_kernel,
-            #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+            #[cfg(feature = "benchmark-controls")]
             use_exact_cost_lanes,
         })
     }
@@ -364,7 +364,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
         if let Some(dfa) = &self.dfa {
             return dfa.seed();
         }
-        #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(feature = "benchmark-controls")]
         if !self.use_exact_cost_lanes {
             return self.layout.cumulative_seed();
         }
@@ -407,7 +407,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
             return dfa.step(source, label, self.layout);
         }
 
-        #[cfg(feature = "resource-profiling")]
+        #[cfg(feature = "benchmark-controls")]
         let matches = if self.use_legacy_masks {
             if P::MAY_MATCH_DISTINCT_UNITS {
                 match self.legacy_masks.policy.get(label) {
@@ -443,7 +443,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
             resolver.get(label)
         };
 
-        #[cfg(not(feature = "resource-profiling"))]
+        #[cfg(not(feature = "benchmark-controls"))]
         let matches = if P::MAY_MATCH_DISTINCT_UNITS {
             let Some(ActiveMaskResolver::Policy(cache)) = &mut self.masks else {
                 unreachable!("packed mask resolver disagrees with substitution policy")
@@ -465,7 +465,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
             resolver.get(label)
         };
 
-        #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(feature = "benchmark-controls")]
         if !self.use_word_kernel {
             return self.step_lanewise(
                 source,
@@ -474,7 +474,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
             );
         }
 
-        #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(feature = "benchmark-controls")]
         if !self.use_exact_cost_lanes {
             return self.step_word_cumulative(source, matches);
         }
@@ -526,7 +526,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
 
     /// Former cumulative-lane kernel retained as a same-binary causal control
     /// and as the positional word-kernel oracle in tests.
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(any(test, feature = "benchmark-controls"))]
     #[inline(always)]
     fn step_word_cumulative(&self, source: u64, repeated_matches: u64) -> Option<u64> {
         if self.layout.max_distance() == 0 {
@@ -552,7 +552,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
         ((target & self.layout.top_lane_mask()) != 0).then_some(target)
     }
 
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(any(test, feature = "benchmark-controls"))]
     #[inline(always)]
     fn close_up_one_lane(&self, target: u64) -> u64 {
         (target
@@ -561,7 +561,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
             & self.layout.active_mask()
     }
 
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(any(test, feature = "benchmark-controls"))]
     #[inline(always)]
     fn step_lanewise(&self, source: u64, matches: u64, prefix_mode: bool) -> Option<u64> {
         let mut target = 0u64;
@@ -588,13 +588,13 @@ impl<U: CharUnit> PackedStandardMachine<U> {
         (self.lane(target, self.layout.max_distance()) != 0).then_some(target)
     }
 
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(any(test, feature = "benchmark-controls"))]
     #[inline(always)]
     fn lane(&self, packed: u64, edit: usize) -> u64 {
         self.layout.lane(packed, edit)
     }
 
-    #[cfg(any(test, feature = "perf-instrumentation", feature = "resource-profiling"))]
+    #[cfg(any(test, feature = "benchmark-controls"))]
     #[inline(always)]
     fn prefix_sink(&self, lane: u64, prefix_mode: bool) -> u64 {
         if prefix_mode {
@@ -621,7 +621,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
 
     pub(crate) fn max_consumed(&self, frontier: u64) -> usize {
         let frontier = self.frontier_bits(frontier);
-        #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(feature = "benchmark-controls")]
         if !self.use_exact_cost_lanes {
             let lane = self.lane(frontier, self.layout.max_distance());
             return if lane == 0 {
@@ -668,7 +668,7 @@ impl<U: CharUnit> PackedStandardMachine<U> {
     #[cfg(feature = "perf-instrumentation")]
     pub(crate) fn active_len(&self, frontier: u64) -> usize {
         let frontier = self.frontier_bits(frontier);
-        #[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+        #[cfg(feature = "benchmark-controls")]
         if !self.use_exact_cost_lanes {
             return self.lane(frontier, self.layout.max_distance()).count_ones() as usize;
         }
@@ -710,12 +710,12 @@ where
     mask
 }
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 fn legacy_mask_index_enabled() -> bool {
     std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_LEGACY_PACKED_MASKS").is_some()
 }
 
-#[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+#[cfg(feature = "benchmark-controls")]
 fn word_kernel_disabled() -> bool {
     use std::sync::OnceLock;
     static DISABLED: OnceLock<bool> = OnceLock::new();
@@ -724,28 +724,14 @@ fn word_kernel_disabled() -> bool {
     })
 }
 
-#[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+#[cfg(feature = "benchmark-controls")]
 fn exact_cost_lanes_enabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
-    {
-        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_EXACT_COST_PACKED_LANES").is_none()
-    }
-    #[cfg(not(feature = "resource-profiling"))]
-    {
-        true
-    }
+    std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_EXACT_COST_PACKED_LANES").is_none()
 }
 
-#[cfg(any(feature = "perf-instrumentation", feature = "resource-profiling"))]
+#[cfg(feature = "benchmark-controls")]
 fn packed_dfa_enabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
-    {
-        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_DFA").is_none()
-    }
-    #[cfg(not(feature = "resource-profiling"))]
-    {
-        true
-    }
+    std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_PACKED_DFA").is_none()
 }
 
 #[cfg(test)]

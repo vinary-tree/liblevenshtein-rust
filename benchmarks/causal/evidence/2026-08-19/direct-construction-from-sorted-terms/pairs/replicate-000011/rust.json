@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0.0",
+  "suite": "cross-language-v1",
+  "timestamp_utc": "2026-08-19T23:53:51Z",
+  "target": {
+    "language": "rust",
+    "implementation": "rust-core",
+    "backend": "native",
+    "runtime_version": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "library_version": "0.10.0",
+    "artifact": { "kind": "local-build", "id": "bench-cross-rust" }
+  },
+  "dictionary": {
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/dictionary.txt",
+    "term_count": 79343,
+    "structure": "dynamic_dawg",
+    "unit_domain": "byte"
+  },
+  "workload": {
+    "queryset": "hits",
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/hits.txt",
+    "query_count": 1
+  },
+  "algorithm": "standard",
+  "max_distance": 1,
+  "mode": "construct",
+  "protocol": {
+    "timer": "monotonic",
+    "harness": "self-timed",
+    "warmup_seconds_min": 3,
+    "warmup_passes": 1,
+    "samples_requested": 1,
+    "sample_definition": "one full pass over the query set; every cursor fully drained and (term, distance) materialized",
+    "batch_size": null,
+    "wall_cap_seconds": 300
+  },
+  "construct": {
+    "reps": 1,
+    "times_ns": [13994594],
+    "term_count": 79343,
+    "semantic_term_count": 79343,
+    "semantic_membership_checks": 79343,
+    "semantic_checksum_hex": "8da9c6f99f82a731"
+  },
+  "status": "ok",
+  "notes": ["anchor uses idiomatic byte-domain dictionaries; bindings use the ABI's unicode-scalar domain (identical results for this ASCII workload, verified by the gate)", "dynamic DAWG constructor: from_sorted_terms", "construct mode: timed region is the build from the pre-sorted in-memory list only"]
+}

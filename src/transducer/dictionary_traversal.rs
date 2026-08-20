@@ -546,8 +546,9 @@ type DfsEdgePage<N> = SmallVec<[DfsEdge<N>; DFS_EDGE_PAGE_CAPACITY]>;
 
 /// One DFS node's finality and lazily consumed outgoing edge source.
 ///
-/// Owned compatibility nodes and providers without O(1) paging remain eager;
-/// compact graphs and capable native cursors buffer at most one inline page.
+/// Nodes without bounded page addressing remain eager. Compact graphs,
+/// capable native cursors, and capable owned-node providers buffer at most one
+/// inline page.
 pub(crate) struct DfsNodeEdges<N: DictionaryNode> {
     is_final: bool,
     source: DfsEdgeSource<N>,
@@ -557,6 +558,10 @@ enum DfsEdgeSource<N: DictionaryNode> {
     Eager(std::vec::IntoIter<DfsEdge<N>>),
     Paged {
         position: TraversalCursor<N::SnapshotCursor>,
+        /// An owned parent is retained only for the graphless paging seam.
+        /// Captured graph/native modes keep their revision owner in the
+        /// traversal session and leave this empty.
+        owned: Option<N>,
         next: usize,
         total: usize,
         page: smallvec::IntoIter<[DfsEdge<N>; DFS_EDGE_PAGE_CAPACITY]>,
@@ -874,7 +879,7 @@ fn retain_traversal_storage<B: 'static>(buffers: B, logical_bytes: usize) {
 
 #[inline]
 fn traversal_buffer_reuse_disabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static DISABLED: OnceLock<bool> = OnceLock::new();
@@ -882,7 +887,7 @@ fn traversal_buffer_reuse_disabled() -> bool {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_TRAVERSAL_BUFFER_REUSE").is_some()
         })
     }
-    #[cfg(not(feature = "resource-profiling"))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }
@@ -990,14 +995,16 @@ impl<N: DictionaryNode> TraversalSession<N> {
             );
         }
 
-        if let Some(root) = owner.snapshot_root_cursor() {
-            return (
-                Self {
-                    mode: TraversalMode::Native { owner },
-                    owned_final_units_owner: None,
-                },
-                TraversalCursor::native(root),
-            );
+        if !owner.snapshot_cursor_requires_full_projection() {
+            if let Some(root) = owner.snapshot_root_cursor() {
+                return (
+                    Self {
+                        mode: TraversalMode::Native { owner },
+                        owned_final_units_owner: None,
+                    },
+                    TraversalCursor::native(root),
+                );
+            }
         }
 
         Self::owned(owner)
@@ -1021,7 +1028,10 @@ impl<N: DictionaryNode> TraversalSession<N> {
         root: DictionaryTraversalRoot<N>,
     ) -> (Self, TraversalCursor<N::SnapshotCursor>) {
         let (_, owner) = root.into_parts().into_projection_and_root();
-        if !cursor_traversal_disabled() && owner.supports_snapshot_cursor_nodes() {
+        if !cursor_traversal_disabled()
+            && !owner.snapshot_cursor_requires_full_projection()
+            && owner.supports_snapshot_cursor_nodes()
+        {
             if let Some(cursor) = owner.snapshot_root_cursor() {
                 return (
                     Self {
@@ -1047,6 +1057,38 @@ impl<N: DictionaryNode> TraversalSession<N> {
         }
 
         match &mut self.mode {
+            TraversalMode::Owned(arena) => {
+                // SAFETY: owned sessions construct only dense cursors. The
+                // expanded node moves into the DFS frame when it can page, so
+                // its captured revision and values outlive every page.
+                let node = arena.take(unsafe { cursor.dense_value() });
+                if node.supports_efficient_edge_paging() {
+                    let (is_final, total) = node.visit_edge_page_and_finality(0, 0, |_, _| {
+                        unreachable!("a zero-capacity page has no edge")
+                    });
+                    crate::causal_perf::record_dfs_nodes_paged(1);
+                    DfsNodeEdges {
+                        is_final,
+                        source: DfsEdgeSource::Paged {
+                            position: cursor,
+                            owned: Some(node),
+                            next: 0,
+                            total,
+                            page: DfsEdgePage::<N>::new().into_iter(),
+                        },
+                    }
+                } else {
+                    let mut buffered = Vec::new();
+                    let is_final = node.filter_map_edges_and_finality(
+                        |_| Some(()),
+                        |label, child, ()| {
+                            let child = arena.insert(child);
+                            buffered.push((label, TraversalCursor::dense(child)));
+                        },
+                    );
+                    Self::eager_dfs_node(is_final, buffered)
+                }
+            }
             TraversalMode::Graph { owner: _, graph } => {
                 // SAFETY: graph-mode cursors always originate from this exact
                 // immutable captured graph.
@@ -1056,6 +1098,7 @@ impl<N: DictionaryNode> TraversalSession<N> {
                     is_final: edges.is_final(),
                     source: DfsEdgeSource::Paged {
                         position: cursor,
+                        owned: None,
                         next: 0,
                         total: edges.edges().len(),
                         page: DfsEdgePage::<N>::new().into_iter(),
@@ -1079,15 +1122,25 @@ impl<N: DictionaryNode> TraversalSession<N> {
                     is_final,
                     source: DfsEdgeSource::Paged {
                         position: cursor,
+                        owned: None,
                         next: 0,
                         total,
                         page: DfsEdgePage::<N>::new().into_iter(),
                     },
                 }
             }
-            TraversalMode::Owned(_) | TraversalMode::Native { .. } => {
-                self.open_eager_dfs_node(cursor)
-            }
+            TraversalMode::Native { .. } => self.open_eager_dfs_node(cursor),
+        }
+    }
+
+    #[inline]
+    fn eager_dfs_node(is_final: bool, edges: Vec<DfsEdge<N>>) -> DfsNodeEdges<N> {
+        crate::causal_perf::record_dfs_nodes_eager(1);
+        crate::causal_perf::record_dfs_edges_fetched(edges.len() as u64);
+        crate::causal_perf::record_dfs_edge_buffer_size(edges.len());
+        DfsNodeEdges {
+            is_final,
+            source: DfsEdgeSource::Eager(edges.into_iter()),
         }
     }
 
@@ -1101,13 +1154,7 @@ impl<N: DictionaryNode> TraversalSession<N> {
             |_| Some(()),
             |label, child, ()| edges.push((label, child)),
         );
-        crate::causal_perf::record_dfs_nodes_eager(1);
-        crate::causal_perf::record_dfs_edges_fetched(edges.len() as u64);
-        crate::causal_perf::record_dfs_edge_buffer_size(edges.len());
-        DfsNodeEdges {
-            is_final,
-            source: DfsEdgeSource::Eager(edges.into_iter()),
-        }
+        Self::eager_dfs_node(is_final, edges)
     }
 
     /// Consume the next outgoing edge, refilling one bounded inline page only
@@ -1123,6 +1170,7 @@ impl<N: DictionaryNode> TraversalSession<N> {
             }
             DfsEdgeSource::Paged {
                 position,
+                owned,
                 next,
                 total,
                 page,
@@ -1139,8 +1187,16 @@ impl<N: DictionaryNode> TraversalSession<N> {
                 let mut refill = DfsEdgePage::<N>::new();
                 let page_capacity = dfs_edge_page_capacity();
                 crate::causal_perf::record_dfs_edge_page_requests(1);
-                match &self.mode {
-                    TraversalMode::Graph { owner: _, graph } => {
+                match (owned.as_ref(), &mut self.mode) {
+                    (Some(node), TraversalMode::Owned(arena)) => {
+                        let confirmed_total =
+                            node.visit_edge_page(start, page_capacity, |label, child| {
+                                let child = arena.insert(child);
+                                refill.push((label, TraversalCursor::dense(child)));
+                            });
+                        assert_eq!(confirmed_total, *total, "captured edge count changed");
+                    }
+                    (None, TraversalMode::Graph { owner: _, graph }) => {
                         // SAFETY: the frame retains a cursor from this exact
                         // immutable graph-mode session.
                         let node =
@@ -1151,7 +1207,7 @@ impl<N: DictionaryNode> TraversalSession<N> {
                             |edge| (edge.label(), TraversalCursor::dense(edge.target_cursor())),
                         ));
                     }
-                    TraversalMode::Native { owner } => {
+                    (None, TraversalMode::Native { owner }) => {
                         let (is_final, confirmed_total) = unsafe {
                             owner
                                 .visit_snapshot_cursor_edge_page(
@@ -1167,8 +1223,9 @@ impl<N: DictionaryNode> TraversalSession<N> {
                         assert_eq!(is_final, edges.is_final, "captured finality changed");
                         assert_eq!(confirmed_total, *total, "captured edge count changed");
                     }
-                    TraversalMode::Owned(_) => {
-                        unreachable!("owned DFS nodes use eager edge storage")
+                    (Some(_), TraversalMode::Graph { .. } | TraversalMode::Native { .. })
+                    | (None, TraversalMode::Owned(_)) => {
+                        unreachable!("DFS page origin and traversal mode remain paired")
                     }
                 }
                 assert!(
@@ -1441,7 +1498,7 @@ impl<N: DictionaryNode> TraversalSession<N> {
 
 #[inline]
 fn cursor_key_reconstruction_disabled() -> bool {
-    #[cfg(feature = "perf-instrumentation")]
+    #[cfg(feature = "benchmark-controls")]
     {
         use std::sync::OnceLock;
         static DISABLED: OnceLock<bool> = OnceLock::new();
@@ -1449,7 +1506,7 @@ fn cursor_key_reconstruction_disabled() -> bool {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_CURSOR_KEY_RECONSTRUCTION").is_some()
         })
     }
-    #[cfg(not(feature = "perf-instrumentation"))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         false
     }
@@ -1474,7 +1531,10 @@ impl<N: MappedDictionaryNode> TraversalSession<N> {
                 );
             }
         }
-        if !cursor_traversal_disabled() && owner.supports_snapshot_cursor_values() {
+        if !cursor_traversal_disabled()
+            && !owner.snapshot_cursor_requires_full_projection()
+            && owner.supports_snapshot_cursor_values()
+        {
             if let Some(cursor) = owner.snapshot_root_cursor() {
                 return (
                     Self {
@@ -1554,12 +1614,20 @@ pub(crate) enum TraversalProductIdentity {
     Cursor(SnapshotTraversalCursor),
 }
 
+#[inline]
 fn cursor_traversal_disabled() -> bool {
-    use std::sync::OnceLock;
-    static DISABLED: OnceLock<bool> = OnceLock::new();
-    *DISABLED.get_or_init(|| {
-        std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_SNAPSHOT_CURSORS").is_some()
-    })
+    #[cfg(feature = "benchmark-controls")]
+    {
+        use std::sync::OnceLock;
+        static DISABLED: OnceLock<bool> = OnceLock::new();
+        *DISABLED.get_or_init(|| {
+            std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_SNAPSHOT_CURSORS").is_some()
+        })
+    }
+    #[cfg(not(feature = "benchmark-controls"))]
+    {
+        false
+    }
 }
 
 #[inline]
@@ -1612,7 +1680,10 @@ mod tests {
     use libdictenstein::double_array_trie::char::DoubleArrayTrieChar;
     use libdictenstein::double_array_trie::DoubleArrayTrie;
     use libdictenstein::dynamic_dawg::char::{DynamicDawgChar, DynamicDawgCharNode};
-    use libdictenstein::Dictionary;
+    #[cfg(feature = "pathmap-backend")]
+    use libdictenstein::pathmap::{PathMapDictionary, PathMapDictionaryChar};
+    use libdictenstein::suffix_automaton::{SuffixAutomaton, SuffixAutomatonChar};
+    use libdictenstein::{CharUnit, Dictionary, MappedDictionaryNode};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
@@ -1755,6 +1826,42 @@ mod tests {
     }
 
     #[derive(Clone)]
+    struct FullProjectionNode;
+
+    impl DictionaryNode for FullProjectionNode {
+        type Unit = u8;
+        type SnapshotCursor = SnapshotTraversalCursor;
+        type SnapshotGraphValueHandle = SnapshotTraversalCursor;
+
+        fn snapshot_root_cursor(&self) -> Option<Self::SnapshotCursor> {
+            panic!("ordinary query capture must not construct a full projection")
+        }
+
+        fn snapshot_cursor_requires_full_projection(&self) -> bool {
+            true
+        }
+
+        fn is_final(&self) -> bool {
+            false
+        }
+
+        fn transition(&self, _label: u8) -> Option<Self> {
+            None
+        }
+
+        fn edges(&self) -> Box<dyn Iterator<Item = (u8, Self)> + '_> {
+            Box::new(std::iter::empty())
+        }
+    }
+
+    #[test]
+    fn ordinary_query_capture_keeps_full_projection_backends_lazy() {
+        let (session, _) =
+            TraversalSession::capture(DictionaryTraversalRoot::owned(FullProjectionNode));
+        assert!(matches!(session.mode, TraversalMode::Owned(_)));
+    }
+
+    #[derive(Clone)]
     struct OwnedChainNode {
         units: Arc<[u8]>,
         depth: usize,
@@ -1794,6 +1901,97 @@ mod tests {
     struct OwnedFanoutNode {
         labels: Arc<[u8]>,
         is_leaf: bool,
+    }
+
+    #[derive(Default)]
+    struct OwnedPageStats {
+        calls: AtomicUsize,
+        children_constructed: AtomicUsize,
+        max_capacity: AtomicUsize,
+    }
+
+    #[derive(Clone)]
+    struct OwnedPagedFanoutNode<U: CharUnit> {
+        labels: Arc<[U]>,
+        paging: bool,
+        revision: u64,
+        value: Option<u64>,
+        stats: Arc<OwnedPageStats>,
+    }
+
+    impl<U: CharUnit> OwnedPagedFanoutNode<U> {
+        fn child(&self, label: U) -> Self {
+            Self {
+                labels: Arc::from([]),
+                paging: self.paging,
+                revision: self.revision,
+                value: Some(self.revision ^ label.hash_to_u64()),
+                stats: Arc::clone(&self.stats),
+            }
+        }
+    }
+
+    impl<U: CharUnit> DictionaryNode for OwnedPagedFanoutNode<U> {
+        type Unit = U;
+        type SnapshotCursor = SnapshotTraversalCursor;
+        type SnapshotGraphValueHandle = SnapshotTraversalCursor;
+
+        fn is_final(&self) -> bool {
+            self.value.is_some()
+        }
+
+        fn transition(&self, label: U) -> Option<Self> {
+            self.labels
+                .binary_search(&label)
+                .is_ok()
+                .then(|| self.child(label))
+        }
+
+        fn edges(&self) -> Box<dyn Iterator<Item = (U, Self)> + '_> {
+            Box::new(
+                self.labels
+                    .iter()
+                    .copied()
+                    .map(|label| (label, self.child(label))),
+            )
+        }
+
+        fn supports_efficient_edge_paging(&self) -> bool {
+            self.paging
+        }
+
+        fn visit_edge_page_and_finality<F>(
+            &self,
+            start: usize,
+            capacity: usize,
+            mut visitor: F,
+        ) -> (bool, usize)
+        where
+            F: FnMut(U, Self),
+        {
+            self.stats.calls.fetch_add(1, Ordering::Relaxed);
+            self.stats
+                .max_capacity
+                .fetch_max(capacity, Ordering::Relaxed);
+            let total = self.labels.len();
+            let end = start.saturating_add(capacity).min(total);
+            let page = self.labels.get(start.min(total)..end).unwrap_or_default();
+            self.stats
+                .children_constructed
+                .fetch_add(page.len(), Ordering::Relaxed);
+            for label in page.iter().copied() {
+                visitor(label, self.child(label));
+            }
+            (self.is_final(), total)
+        }
+    }
+
+    impl<U: CharUnit> MappedDictionaryNode for OwnedPagedFanoutNode<U> {
+        type Value = u64;
+
+        fn value(&self) -> Option<Self::Value> {
+            self.value
+        }
     }
 
     impl DictionaryNode for OwnedFanoutNode {
@@ -1901,6 +2099,186 @@ mod tests {
             session.discard_unexpanded(child);
         }
         assert_eq!(session.owned_live_slot_count(), Some(0));
+    }
+
+    fn assert_owned_paging_domain<U: CharUnit + std::fmt::Debug>(labels: Vec<U>)
+    where
+        crate::transducer::Unrestricted: crate::transducer::SubstitutionPolicyFor<U>,
+    {
+        const REVISION: u64 = 0x52a1_9e37;
+        assert!(labels.windows(2).all(|pair| pair[0] < pair[1]));
+        assert!(labels.len() > DFS_EDGE_PAGE_CAPACITY);
+
+        let stats = Arc::new(OwnedPageStats::default());
+        let paged_root = OwnedPagedFanoutNode {
+            labels: Arc::from(labels.clone()),
+            paging: true,
+            revision: REVISION,
+            value: None,
+            stats: Arc::clone(&stats),
+        };
+        let (mut session, root) =
+            TraversalSession::capture_mapped(DictionaryTraversalRoot::owned(paged_root.clone()));
+        let mut edges = session.open_dfs_node(root);
+        assert!(!edges.is_final());
+        let DfsEdgeSource::Paged {
+            owned,
+            next,
+            total,
+            page,
+            ..
+        } = &edges.source
+        else {
+            panic!("an efficient owned-node pager must not use eager storage")
+        };
+        assert!(owned.is_some());
+        assert_eq!((*next, *total, page.len()), (0, labels.len(), 0));
+        assert_eq!(stats.calls.load(Ordering::Relaxed), 1);
+        assert_eq!(stats.children_constructed.load(Ordering::Relaxed), 0);
+        assert_eq!(session.owned_live_slot_count(), Some(0));
+
+        let (first_label, first_child) = session
+            .next_dfs_edge(&mut edges)
+            .expect("the first bounded page contains an edge");
+        assert_eq!(first_label, labels[0]);
+        assert!(session.owned_live_slot_count().unwrap() <= DFS_EDGE_PAGE_CAPACITY);
+        let source = session
+            .filter_map_edges_and_final_source(first_child, |_| None::<()>, |_, _, _| {})
+            .expect("every fanout child is final");
+        assert_eq!(
+            session.resolve_final_value(source, None),
+            Some(REVISION ^ first_label.hash_to_u64())
+        );
+
+        let mut observed = vec![first_label];
+        while let Some((label, child)) = session.next_dfs_edge(&mut edges) {
+            assert!(session.owned_live_slot_count().unwrap() <= DFS_EDGE_PAGE_CAPACITY);
+            observed.push(label);
+            session.discard_unexpanded(child);
+        }
+        assert_eq!(observed, labels);
+        assert_eq!(session.owned_live_slot_count(), Some(0));
+        assert_eq!(
+            stats.children_constructed.load(Ordering::Relaxed),
+            labels.len()
+        );
+        assert_eq!(
+            stats.max_capacity.load(Ordering::Relaxed),
+            DFS_EDGE_PAGE_CAPACITY
+        );
+        assert_eq!(
+            stats.calls.load(Ordering::Relaxed),
+            1 + labels.len().div_ceil(DFS_EDGE_PAGE_CAPACITY)
+        );
+
+        let eager_root = OwnedPagedFanoutNode {
+            labels: Arc::from(labels.clone()),
+            paging: false,
+            revision: REVISION,
+            value: None,
+            stats: Arc::new(OwnedPageStats::default()),
+        };
+        let (mut eager_session, eager_root_cursor) =
+            TraversalSession::capture(DictionaryTraversalRoot::owned(eager_root.clone()));
+        let mut eager = eager_session.open_dfs_node(eager_root_cursor);
+        assert!(matches!(&eager.source, DfsEdgeSource::Eager(_)));
+        let mut eager_observed = Vec::new();
+        while let Some((label, child)) = eager_session.next_dfs_edge(&mut eager) {
+            eager_observed.push(label);
+            eager_session.discard_unexpanded(child);
+        }
+        assert_eq!(eager_observed, labels);
+
+        let early_stats = Arc::new(OwnedPageStats::default());
+        let early_root = OwnedPagedFanoutNode {
+            labels: Arc::from(labels.clone()),
+            paging: true,
+            revision: REVISION,
+            value: None,
+            stats: Arc::clone(&early_stats),
+        };
+        let mut early = crate::transducer::PrefixQueryIterator::new(
+            early_root,
+            Vec::new(),
+            1,
+            crate::transducer::Algorithm::Standard,
+        );
+        assert_eq!(early.next().unwrap().units, vec![labels[0]]);
+        assert!(
+            early_stats.children_constructed.load(Ordering::Relaxed) <= DFS_EDGE_PAGE_CAPACITY,
+            "an early-stop query must construct at most one bounded edge page"
+        );
+        drop(early);
+
+        let paged_results = crate::transducer::PrefixQueryIterator::new(
+            paged_root,
+            Vec::new(),
+            1,
+            crate::transducer::Algorithm::Standard,
+        )
+        .map(|result| result.units)
+        .collect::<Vec<_>>();
+        let eager_results = crate::transducer::PrefixQueryIterator::new(
+            eager_root,
+            Vec::new(),
+            1,
+            crate::transducer::Algorithm::Standard,
+        )
+        .map(|result| result.units)
+        .collect::<Vec<_>>();
+        let expected = labels
+            .into_iter()
+            .map(|label| vec![label])
+            .collect::<Vec<_>>();
+        assert_eq!(paged_results, eager_results);
+        assert_eq!(paged_results, expected);
+    }
+
+    #[test]
+    fn owned_paging_is_lazy_bounded_and_exact_for_every_unit_domain() {
+        assert_owned_paging_domain((0_u8..96).collect());
+        assert_owned_paging_domain(
+            (0_u32..96)
+                .map(|offset| char::from_u32(0x400 + offset).unwrap())
+                .collect(),
+        );
+        assert_owned_paging_domain((0_u64..96).map(|offset| (offset << 40) | offset).collect());
+    }
+
+    #[test]
+    fn slice_backed_suffix_automata_select_owned_paging() {
+        let byte = SuffixAutomaton::<()>::from_texts(["alpha", "omega"]);
+        let (mut session, root) = TraversalSession::capture(byte.traversal_root());
+        let edges = session.open_dfs_node(root);
+        assert!(matches!(
+            edges.source,
+            DfsEdgeSource::Paged { owned: Some(_), .. }
+        ));
+
+        let chars = SuffixAutomatonChar::<()>::from_texts(["café", "東京"]);
+        let (mut session, root) = TraversalSession::capture(chars.traversal_root());
+        let edges = session.open_dfs_node(root);
+        assert!(matches!(
+            edges.source,
+            DfsEdgeSource::Paged { owned: Some(_), .. }
+        ));
+    }
+
+    #[cfg(feature = "pathmap-backend")]
+    #[test]
+    fn byte_pathmap_pages_by_mask_rank_while_char_pathmap_stays_exact_eager() {
+        let byte = PathMapDictionary::<()>::from_terms(["alpha", "omega"]);
+        let (mut session, root) = TraversalSession::capture(byte.traversal_root());
+        let edges = session.open_dfs_node(root);
+        assert!(matches!(
+            edges.source,
+            DfsEdgeSource::Paged { owned: Some(_), .. }
+        ));
+
+        let chars = PathMapDictionaryChar::<()>::from_terms(["café", "東京"]);
+        let (mut session, root) = TraversalSession::capture(chars.traversal_root());
+        let edges = session.open_dfs_node(root);
+        assert!(matches!(edges.source, DfsEdgeSource::Eager(_)));
     }
 
     #[test]

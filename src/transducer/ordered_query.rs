@@ -17,7 +17,7 @@ use crate::transducer::dictionary_traversal::{
 };
 use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot};
 use std::collections::VecDeque;
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 use std::sync::OnceLock;
 
 /// Query result containing term and distance.
@@ -694,7 +694,7 @@ where
     }
 }
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 fn force_positional_ordered_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
     *ENABLED.get_or_init(|| {
@@ -702,7 +702,7 @@ fn force_positional_ordered_enabled() -> bool {
     })
 }
 
-#[cfg(not(feature = "resource-profiling"))]
+#[cfg(not(feature = "benchmark-controls"))]
 #[inline(always)]
 const fn force_positional_ordered_enabled() -> bool {
     false

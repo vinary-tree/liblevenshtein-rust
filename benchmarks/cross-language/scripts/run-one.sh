@@ -383,7 +383,8 @@ run_cell() { # mode algorithm distance queryset
         cmd=(/usr/bin/time -v -o "$time_v_log" "${cmd[@]}")
     fi
 
-    if ! "${cmd[@]}" >"$log_file" 2>&1; then
+    if ! "$SCRIPT_DIR/run-with-contention-monitor.sh" "$RESULTS_DIR" -- \
+        "${cmd[@]}" >"$log_file" 2>&1; then
         fail_loudly "$log_file" "$cell_name"
     fi
     mhz_end="$(cpu_mhz)"
@@ -410,7 +411,8 @@ else
         --cells "$CELLS_TSV")
     if [ -n "${XL_SAMPLES:-}" ]; then batch_cmd+=(--samples "$XL_SAMPLES"); fi
     if [ -n "${XL_GATE_LIMIT:-}" ]; then batch_cmd+=(--gate-limit "$XL_GATE_LIMIT"); fi
-    if ! "${batch_cmd[@]}" >"$log_file" 2>&1; then
+    if ! "$SCRIPT_DIR/run-with-contention-monitor.sh" "$RESULTS_DIR" -- \
+        "${batch_cmd[@]}" >"$log_file" 2>&1; then
         fail_loudly "$log_file" "${TARGET}__${BACKEND} cells batch"
     fi
     mhz_end="$(cpu_mhz)"

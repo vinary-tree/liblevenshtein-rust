@@ -1,0 +1,1202 @@
+{
+  "schema": "liblevenshtein.pure-rust-legacy-java-pair-summary.v1",
+  "mode": "construct",
+  "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+  "samples_requested": 51,
+  "samples_completed": 51,
+  "exact_signature": {
+    "semantic_checksum_hex": "8da9c6f99f82a731",
+    "semantic_membership_checks": 79343,
+    "semantic_term_count": 79343,
+    "term_count": 79343
+  },
+  "rust": {
+    "samples": 51,
+    "median_ns": 13868491,
+    "mean_ns": 13994848.490196079,
+    "mad_ns": 179367
+  },
+  "java": {
+    "samples": 51,
+    "median_ns": 175527599,
+    "mean_ns": 177227427.88235295,
+    "mad_ns": 6942491
+  },
+  "java_over_rust_x": 12.656575181827641,
+  "rust_latency_change_percent": -92.09896843629701,
+  "pairs": [
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 1,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "a30a0e166e7de3d58256fc3cfd899f4d98e8f550dc141c99fd45c7e224390646",
+        "elapsed_ns": 13917110
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "00bc181e2a869d05c28d204c324ea2e81b6349bc49c99ce2053dfc417a570253",
+        "elapsed_ns": 179536043
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 2,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "0861ce3ea4595fa6d9cfd009707aa3478fd5d45c9361dcbb9a8057d502caba1e",
+        "elapsed_ns": 13730075
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "9b49a302f8e26818146421fe91ff1fe12f7de15e1596d7285079b46edec3b9ba",
+        "elapsed_ns": 171690738
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 3,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "b398bd22dd3dc10722c7413732b5e3ce3aeeac531584c2496c1565af0758ba25",
+        "elapsed_ns": 14073465
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "815d07a635a9edd433519939b3aa3ebffd7b073d4db4a71c668d519e93540dc6",
+        "elapsed_ns": 184156538
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 4,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "66be81668b643d61380c5b8ea17f83cf9aa7f64abb85cff9f9953fb6dbf4cf8c",
+        "elapsed_ns": 13864439
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "fffeaa6a422d9dbdeccde04f6e2bb822b3ef9cc00bb6549c77ccbc51d58745c4",
+        "elapsed_ns": 172426713
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 5,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "6d752dc10533091fb992656505153b4c95e73d38525e43249e59ddb00a382cd5",
+        "elapsed_ns": 13667737
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "44db91058bcfd9fa9033746fb36610105f6d27a681be55fd6f797aaead0929d5",
+        "elapsed_ns": 173097764
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 6,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "c60aff038f8e7864a26afbe638001818d5df1efea3cf683f8a5605c1a923020e",
+        "elapsed_ns": 13643651
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "f82cb7a668364741cf370e6167d9b4121224fb798948c5ea78342aa0a35f394b",
+        "elapsed_ns": 162279226
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 7,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "1bc441657d75d3a6c9de9f0e6162948d27930895de4e2659e5f994c952381261",
+        "elapsed_ns": 13951014
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "89203cd4397f8190752cfb5980a3ca1585d1e19a45915bf541d392b403042ba0",
+        "elapsed_ns": 158764176
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 8,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "1eb677d1e81ddc180c6c6c73007ec2e8677394d2275f6ad2503429af607fd75a",
+        "elapsed_ns": 14278714
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "685f1659869a972ac62a5416cef72176ddab480e4f31b84977b2781dca4aba6e",
+        "elapsed_ns": 181926031
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 9,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "e44ef94ae7c9222d18016761376bafb771d4dab9d0fae215afbda03ad8d9f25d",
+        "elapsed_ns": 13681242
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "2038956549c6bd3e9495203cd8399ae88160fca89312e3b24e72d7551e9f4d48",
+        "elapsed_ns": 199771330
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 10,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "556dbcad17fc68494253faa770cc9ee53e28822a2d2768bee3b9659cb57734b0",
+        "elapsed_ns": 13961973
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "41b25a6d425b94fa1c4484803d970f275c7789a3e505d743e5d31cde244a2104",
+        "elapsed_ns": 200156265
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 11,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "921f90395b886ce7044547445dfb0ab0f4b7dfbfed2bf10a34f1f330094bf7b1",
+        "elapsed_ns": 13994594
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "e96b2bc0fcd2462077353795f1f65a6de498c44143b9a13b14ffc7b8ce59e988",
+        "elapsed_ns": 174999344
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 12,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "d0171ffd8804e29f851414315ea99dc311a294daf6fdd66483a525ce5bc5844c",
+        "elapsed_ns": 14770332
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "5b96eef717aa3dc8bf87ee12cbe5f42dde234b8db7f081f7b0dea61528205ea1",
+        "elapsed_ns": 166948974
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 13,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "6cbe0434c8523f50b6b965e80373d2dba825b972d7d5de6f9e2ec97bb9afacc2",
+        "elapsed_ns": 13688239
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "0ab2b9820e69b8dac989aef8cf92a486b79d24cc4c7c4e37c5f71031b8787fb4",
+        "elapsed_ns": 193864070
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 14,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "57e35e2477c9c1f9b2632d34542a72bc511cd26ba2c76ab0311043b9d7790377",
+        "elapsed_ns": 13804258
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "418511532767b92ae7f2221b91faa72afc3ed010320c63336901939f517d638d",
+        "elapsed_ns": 175527599
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 15,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "c7259c7b49b415c5b27bccd50fb54642bae4ff7064f2fca78757cba5a26b126b",
+        "elapsed_ns": 13565217
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "b1fe3905d55ebdd826767829b26c5cbba66eabed4aaa887b93cb3e5db757f30d",
+        "elapsed_ns": 168589021
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 16,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "e29df63ebc86159a807c37b0b3cbe48d17328e63fbe95e70c3756f5942828798",
+        "elapsed_ns": 13826714
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "2b3bbcfa8c2c4361ff8614fea9d715319ee6500b0e0f4ac2a167c1406835d9ab",
+        "elapsed_ns": 159768135
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 17,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "53a0362357f1ba35c44f673121cd0bd94341759b27586f8d8b6552282ee4ce9d",
+        "elapsed_ns": 13588259
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "9d59cc85e26c79ae07aa8569733c4ad7dc6d30163b55d0c95efe84182ba9ec8d",
+        "elapsed_ns": 166542782
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 18,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "d379103a350ac5a0b4571256b79c91f0a45d2b3915828fea27300881639ce838",
+        "elapsed_ns": 13565094
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "a05256c3f1ba6c6cf284ab862216e5f52338aac18af042e0a65c74852fc4f250",
+        "elapsed_ns": 178100508
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 19,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "f4cff286cd6bffdd236bc5c5b38f2404b503c3412ea5e661da15fc29d370ba07",
+        "elapsed_ns": 13673190
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "708f90cbe9d6298e538147b4c5a34945736dc162a39968fd76f69428c0fa2a5e",
+        "elapsed_ns": 170673928
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 20,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "b788ba5d382bb9dd5c2461a95ab2802afff3f3dd7a4125365373eb16cb65dc9f",
+        "elapsed_ns": 14117805
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "fc203ba2c62dd06b18727ac41d278e2b3afad2d7564cdf484300eb5af981ce1f",
+        "elapsed_ns": 165087294
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 21,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "29cee0c3a597c50cab895bd77ac3adff30adaee7685f9e1cf2f2c225870d73d6",
+        "elapsed_ns": 14090783
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "24e779b3075da916d3230ebaef085e6af2bc2acd57ece3c97ee892ea09d99160",
+        "elapsed_ns": 182470090
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 22,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "ff9b92d5e8fdc7798eb41007823eccea8c39ab082dfe57f8bfe94c381a12a7a5",
+        "elapsed_ns": 13848931
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "f07445dddfa8b24ef65911ea658bba51231d00920532e2af7daea9b388033d29",
+        "elapsed_ns": 167674309
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 23,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "2e56a1317ef4b5601f1ed7fc9661b7e3ea0f3ef8cee2f1580053ffa9e5f67506",
+        "elapsed_ns": 13781192
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "4529f8f404ea5a040038fce79dbcafb84e0a7ff10050326381ac61aba7fd34e8",
+        "elapsed_ns": 179631843
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 24,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "4084e8c991806ebb94f2aae8f889e5aa2aaddcecc3191a1e379cffe88741ffc8",
+        "elapsed_ns": 14047858
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "3a8019ad2519ce56f292edb43380d8f4ad7b54862efe3595b00f43b610eed976",
+        "elapsed_ns": 177800289
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 25,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "19c53e79262111d3a1c53a3aed83d9cd72a79c927b0c97d4bafd73057f6d2a17",
+        "elapsed_ns": 13780328
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "c0097447951a7f1cd970b5adae05b4b412415b79947e2a80f33433b522d1d212",
+        "elapsed_ns": 192024716
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 26,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "9ce1ab144acf757ef9ffb212646adfe264370e9c1d7281197c371bf161304034",
+        "elapsed_ns": 13608530
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "1ca4bdfb725204337009aec728579fc1c8b48b5c0abdd21b2f60de044cde9c00",
+        "elapsed_ns": 163990514
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 27,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "1d30a9b281fa718f2b47b5590701306730896973d597edc4bd2e588279898aa1",
+        "elapsed_ns": 13786218
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "de2de658c99452ab6e94af2ca486264454e91a301460a5a8a664fbde78a57c6e",
+        "elapsed_ns": 188360217
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 28,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "f339debd9164df1098b8b3c8159dbf439eb236e700bfd3f785da431f4ca161ff",
+        "elapsed_ns": 14037214
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "59918971e84e740105f91d3a430514dcffe79e630071790ce0ec44e60c2e7737",
+        "elapsed_ns": 189069201
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 29,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "ccf5ccb665c195de3e5921c1d26d28cbb3bb366654197bfa9cdf457f18eb525a",
+        "elapsed_ns": 14920366
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "30ed470407f22affe4fda5bdff280fba49744f796d7351aba1209181f9d88f4a",
+        "elapsed_ns": 182375581
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 30,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "cbb89fe92c649d69bfb50260a3db206966491838bc1b7bb49cb28a7b12d31a77",
+        "elapsed_ns": 14119659
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "dbb5a56795a455fe7a07f2e09f3a1e7141ba70a31208d25a074b03eb5cf1ad27",
+        "elapsed_ns": 177407728
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 31,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "a831ef11198351a056c14f543011796849a7193f43344f5fa7c44f7bab4f8e87",
+        "elapsed_ns": 14335881
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "a60e4f2b397ac9e333844bb6cc1e08c1aea89a8a3a80e9bd0c97d94257f7261c",
+        "elapsed_ns": 182051363
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 32,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "0eacabd43fbb5c6a88fc8d51cec1bec7a48850abf71902e7dfb0be9cdbbf33b2",
+        "elapsed_ns": 14136871
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "7edaf99f3cf564603d2d8c54239061d8fffb792553c6f672e7c296992d01c35f",
+        "elapsed_ns": 195754893
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 33,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "a2973464ec9e82ee623f480e593fe6a8a8af6dac800f2bc8c2f50e06241a5148",
+        "elapsed_ns": 14168430
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "2cea9cb672aa448cae47b80b210bb6a7f57ed46e76949c92a4768270f8d9d500",
+        "elapsed_ns": 173215733
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 34,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "453fee06bee349958e173744b8123030e6059e62df4daccc1cfcf9534d14ff60",
+        "elapsed_ns": 13967376
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "cfb0425d5761b708cbf51003ccac7a70870cd35bc029dc792be8f166041b59e1",
+        "elapsed_ns": 172144078
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 35,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "1412ae9344c804b7d3ee5fd7db0406b22fb500aee9318d7f2b5e0b34f0f9198b",
+        "elapsed_ns": 14190080
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "6e1c315e6946a21382252ef018a9c5c830b87ac30013c1fa23d0b3af79e2093f",
+        "elapsed_ns": 167308159
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 36,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "ee3604bc4b723c3b7e5ba3c45ddf00b659b7113aaa3c2503c83d967a9c893cd0",
+        "elapsed_ns": 13951314
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "3b7711933e737006adc3cdacec3bcdda8dcc1d18e9c7a1c89fc483d47e85db95",
+        "elapsed_ns": 166833411
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 37,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "6183cdd7ed533accc7be9a179eaf1b7061f91ebc1c01c63f756e798dba220ad8",
+        "elapsed_ns": 14202112
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "8fc7c7cb17b979719ee181d018d2a0645de9cb5f626c0fe9738f2d8e8aee7b74",
+        "elapsed_ns": 184118606
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 38,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "a68b36de8368ddf6f928a7c63f4b6379291b691460212c0dbe813da19ab5d4d6",
+        "elapsed_ns": 13946554
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "fc01b95869ed382779368270db25b575698281281fbfd8ea6e0ea87aa62b8562",
+        "elapsed_ns": 165452824
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 39,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "6916939c8e7c39112612bf877f19a5b299da6d6045326630ce988c0440799ece",
+        "elapsed_ns": 13848747
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "b55f4f2821894c056ef71ed5e79dc94deba048f8c8b51c4813ab239a0c3963a8",
+        "elapsed_ns": 185342325
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 40,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "9a1dced0e3ff8e5bf4b7aa73ff0595668fb05d6baa628728b39eae4e55977392",
+        "elapsed_ns": 13840701
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "b69a5a91bc8073b83c1da3d7c6875d783711c0d1f3c75736c631c090421ee6bc",
+        "elapsed_ns": 173176816
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 41,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "4499b9686d5041fb70cb7b92bf56a5f9592ec22ec6211a8f67e19c59eae773d0",
+        "elapsed_ns": 13933537
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "25699b239db9133264e7398d374850684a15b8e34d1c7627c2e4a7bed80dd4aa",
+        "elapsed_ns": 165177259
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 42,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "648cb12744cc605f5e258f3e36d38beb12e5189205534d6f90f8c0523e2536ad",
+        "elapsed_ns": 14010823
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "776f145eb2f5c397fd179575154216c65b9124550568d9f96642125cac2097f4",
+        "elapsed_ns": 179886204
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 43,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "579a34b24c1941c368a86c9ad81f82dde568da1868e8eaae81627d021d3ced43",
+        "elapsed_ns": 14299713
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "3707f6793833a0215a542737c9edea3d4f0148b546403a85f4f7217c23f5c8a8",
+        "elapsed_ns": 175790948
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 44,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "961e82744a9a77c1c751b396381045376803caf991b266003f65e6c73ca78676",
+        "elapsed_ns": 13647421
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "f410b57e1a4d2bfb90a3c26abd077262038e68486bbbf97cd4f4fd916b28a9e8",
+        "elapsed_ns": 181430584
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 45,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "1c5d84b225665a3af20f74ffa73243279775d34d61379ac5edde2e4a166618e2",
+        "elapsed_ns": 13868491
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "1f6f1f40bec92d5faec0cabb96d402db9bd82fb14c54cbde4cb2d7a6f90ce81e",
+        "elapsed_ns": 193693955
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 46,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "70560014d076bd1f4b9191e78a72da6695e593dfdc9c7e9376ccfeca448c6266",
+        "elapsed_ns": 17185772
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "042855e1d39bfd798289b65e1d7bffe34fd3ff50651d9d07198b904372fda3fd",
+        "elapsed_ns": 173616576
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 47,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "20fe11f53b02d1b718ed1a2e4dd96e11a08aedf0b9caeded0de27ca6cb368e48",
+        "elapsed_ns": 13609416
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "86b6347808e915adfe77f546cf0aac652fe82c8247e00dc5d21fae8e59d9eb45",
+        "elapsed_ns": 170498360
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 48,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "2cf151acbe8ec20d2d799da6cf87051f9798f56a2066d5d2b503eb18bb4e104b",
+        "elapsed_ns": 13784779
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "104ab43bd0777673fab0a0056d3d9500b9691a450772ebbca27431c65acb27c4",
+        "elapsed_ns": 173941447
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 49,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "a97d87dbb6fe6a1f53b10d0c8f6fd82aec96c4341cd5981409bd5f9084d734f3",
+        "elapsed_ns": 13739302
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "90fa6c493e3aec490ce633a2f767e5b19515b42c7649dad284af794dcdd5cfaf",
+        "elapsed_ns": 181011054
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 50,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "cfefca4d3846ebab50dbb707b3107889c54e2a56ef0755cad3d6d7f377fad242",
+        "elapsed_ns": 13817580
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "07a3534d5a4424ffb6730c36ffc416a9106dadc2c50c7dcb994570ab19b69204",
+        "elapsed_ns": 165791503
+      }
+    },
+    {
+      "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+      "replicate": 51,
+      "mode": "construct",
+      "run_config_sha256": "f5352c69a90dbf765567b359cbfa305bae5f0bc98a881d4852f5887ac59170e3",
+      "exact_signature_equal": true,
+      "signature": {
+        "semantic_checksum_hex": "8da9c6f99f82a731",
+        "semantic_membership_checks": 79343,
+        "semantic_term_count": 79343,
+        "term_count": 79343
+      },
+      "rust": {
+        "raw_file": "rust.json",
+        "raw_sha256": "08d4c3f356ff2901360323c79a4d2b266241bcc7baa9626e7ee9a682fd275e60",
+        "elapsed_ns": 13868172
+      },
+      "java": {
+        "raw_file": "java.json",
+        "raw_sha256": "1aa22c9f5f4a2d6f13c5fcdd5ab09b3250f679726a1063eeec4aaad6e564dacd",
+        "elapsed_ns": 207651757
+      }
+    }
+  ]
+}

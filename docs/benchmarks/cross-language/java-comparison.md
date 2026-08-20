@@ -1,9 +1,11 @@
 # Java vs Java: liblevenshtein-java 3.0.0 against the Rust-backed JVM binding
 
-**Status:** phase-0 baseline and post-optimization closure measured. **Runs:**
-`phase0` and `liblev-h-o7-final`. **Current verdict:** practical query parity
-is achieved across the shared matrix; the preregistered 3x-throughput target
-is not achieved.
+**Status:** phase-0 baseline and definitive post-optimization closure measured.
+**Runs:** `phase0`, `liblev-h-o7-final`, `jvm-parity-full`, and the paired
+direct-core/construction gates from 2026-08-19. **Current verdict:** the
+Rust-backed JVM binding wins every shared query cell, by 4.88x on geometric
+mean; pure Rust is 3.31x faster on the original direct-core anchor; and Rust's
+unordered and ordered constructors are 10.19x and 12.66x faster respectively.
 
 This document reports the first *measured* comparison between the two Java
 options for `liblevenshtein`. Every previous statement on the subject — the
@@ -12,117 +14,71 @@ which speculated that "Rust is likely significantly faster than Java" — was
 feature analysis, not measurement. The measurement disagrees with the
 speculation, and this document reports what was measured.
 
-## 0. Post-optimization closure (2026-08-15)
+## 0. Definitive post-optimization closure (2026-08-19)
 
-The rest of this report preserves the original phase-0 baseline and causal
-motivation. After the controlled H-O9 through H-O30 campaign, the unchanged
-45-coordinate Java-to-Java matrix was rerun with the same dictionary, query
-sets, materializing drain contract, JDK, 2 GiB heaps, cpuset, and 2-fork x
-10-iteration JMH protocol. All 45 pairs reproduced the same result counts and
-checksums exactly.
+The unchanged 45-coordinate Java-to-Java matrix was rerun after the complete
+optimization campaign with the same 79,343-term dictionary, five query sets,
+materializing drain contract, JDK, fixed 2 GiB heaps, cpuset, and 2-fork x
+10-iteration JMH protocol. Every legacy/Vinary pair reproduced exactly equal
+result counts and checksums. Each timed cell also passed the selected CPU,
+SMT-sibling, and shared-LLC pre/post admission gates. The complete evidence is
+[`jvm-parity-full`](../../../benchmarks/causal/evidence/2026-08-19/jvm-parity-full/summary.json)
+(SHA-256 `d067689800c32fd76f2f1572c0481f7e874740627dc83a1535cccc3d8b54c4ba`).
 
-| post-optimization breadth result | value |
+A ratio above 1 means Vinary is faster:
+
+| definitive breadth result | legacy time / Vinary time |
 |---|---:|
-| geometric mean, legacy time / Vinary time | 0.965 |
-| median ratio | 0.974 |
-| range | [0.766, 1.109] |
-| Vinary wins | 16 / 45 |
-| legacy wins | 29 / 45 |
+| geometric mean over all 45 cells | **4.882x** |
+| median | **4.923x** |
+| range | **[2.910x, 11.828x]** |
+| Vinary wins | **45 / 45** |
+| legacy wins | **0 / 45** |
 
-A ratio above 1 means Vinary is faster. On geometric mean Vinary is therefore
-only 3.6% slower overall, rather than phase 0's 2.9x slowdown. The result is
-mixed by algorithm in a diagnostically useful way:
+The advantage is broad rather than the product of one favorable algorithm:
 
-| algorithm | Vinary wins | legacy / Vinary geometric mean | interpretation |
-|---|---:|---:|---|
-| standard | 5 / 15 | 0.983 | Vinary 1.8% slower |
-| transposition | 10 / 15 | 1.019 | Vinary 1.9% faster |
-| merge-and-split | 1 / 15 | 0.899 | Vinary 11.2% slower |
+| algorithm | Vinary wins | geometric mean | median | range |
+|---|---:|---:|---:|---:|
+| standard | 15 / 15 | **4.223x** | 4.298x | [2.910x, 6.457x] |
+| transposition | 15 / 15 | **4.449x** | 4.820x | [2.956x, 6.880x] |
+| merge-and-split | 15 / 15 | **6.193x** | 5.267x | [4.323x, 11.828x] |
 
-The original anchor is now 54.543 ms for Vinary versus 51.256 ms for legacy
-(`standard`, d = 1, `hits`), a 6.4% residual rather than a 3.09x deficit. At
-the formal H-J1 coordinate (`transposition`, d = 2, `tr-d2`), the breadth run
-measured 445.499 ms for Vinary versus 448.694 ms for legacy, making Vinary
-0.7% faster. The formal 51-sample pair, pooled from three independently
-compiler-guarded JVM forks per arm, measured:
+The final paired direct-core gate isolates native matching from FFM and JVM
+result delivery. It ran 51 independently admitted process pairs on the
+original `standard`, d = 1, `hits` anchor. Both implementations returned
+3,620 matches, 24,726 term bytes, distance sum 2,620, and checksum
+`3bdc59281f42611a` on every pass:
 
-| formal H-J1 arm | median pass | 95% bootstrap CI of median |
-|---|---:|---:|
-| legacy control | 455.861 ms | [455.223, 456.856] ms |
-| Vinary treatment | 466.581 ms | [463.029, 468.978] ms |
-
-At that depth Vinary was 2.35% slower. The preregistered one-sided Welch test
-did not support a Vinary improvement (`p = 0.664`, Cohen's `d = +0.084`), and
-the mandatory practical requirement—Vinary at least 3x as fast—was decisively
-missed. Experiment 205 is therefore rejected. Practical matrix parity does not
-retroactively satisfy that stronger target.
-
-Construction moved beyond parity as well. The current direct Rust medians are
-14.702 ms for arbitrary-order byte terms and 12.023 ms for the explicit
-pre-ordered constructor, versus the contemporaneous causal-profile median of
-34.207 ms for Java's ordered builder. The binding-owned freeze build measured 26.547 ms after H-O28,
-down from 96.271 ms. These values show that the former construction deficit
-was architectural path-copy/publication work, not an inherent Rust or
-reclamation disadvantage.
-
-The final compiler-guarded pure-Rust core gate (`standard`, d = 1, `hits`)
-measured 42.057 ms over 51 samples, with a 95% bootstrap median interval of
-[41.959, 42.396] ms. It passes the 51.2 ms core threshold by 17.9%, confirming
-that the remaining JVM-level differences are boundary/runtime effects rather
-than a slower native standard-Levenshtein kernel.
-
-The 2026-08-16 structural follow-up independently reran the original
-`standard/d2/std-d2` direct-core comparison. Pure Rust measured 138.927 ms
-across 51 samples, while legacy pure Java measured 382.407 ms across 30
-samples, with the exact same 18,514-match checksum. This 2.75× direct-core
-lead does not replace the Java-to-Java matrix above: it isolates the native
-algorithm from FFM and managed result delivery.
-
-The 2026-08-17 closure rerun measures the subsequent packed lazy-DFA,
-generated-transition, and immutable snapshot-graph changes. Its complete
-pure-Rust matrix contains 60 cells: four algorithms, distances one through
-three, five query shapes, and 30 full-query-set samples per cell. The table
-reports the geometric mean of the five cell medians at each coordinate; the
-range is the minimum and maximum cell median.
-
-| algorithm | d = 1 | d = 2 | d = 3 |
+| direct implementation | median per 1,000-query pass | median per query | MAD |
 |---|---:|---:|---:|
-| Standard | 9.800 ms [7.035, 12.127] | 67.908 ms [49.672, 80.556] | 301.221 ms [225.535, 346.011] |
-| transposition | 19.752 ms [14.789, 24.082] | 119.577 ms [88.860, 140.550] | 497.265 ms [373.618, 570.880] |
-| merge-and-split | 59.433 ms [49.625, 67.059] | 658.763 ms [576.171, 708.427] | 2500.528 ms [2065.579, 2754.241] |
-| unrestricted Damerau | 19.464 ms [14.638, 23.688] | 121.498 ms [89.681, 142.892] | 524.424 ms [390.241, 603.158] |
+| optimized pure Rust | **14.135 ms** | **14.135 us** | 0.063 ms |
+| legacy pure Java | 46.759 ms | 46.759 us | 0.963 ms |
 
-On the original `standard/d1/hits` anchor, pure Rust now measures 12.127 ms
-per 1,000-query pass. A fresh legacy-Java JMH pair measures 50.522 ms with the
-same `3bdc59281f42611a` checksum, a 4.17× direct-core lead. The adjacent
-`standard/d1/std-d1` pair is likewise 11.050 ms for pure Rust and 44.686 ms
-for legacy Java, a 4.04× lead with checksum `1433160a7d157f4d`. Explicit
-pre-ordered Rust dictionary construction measures 14.546 ms over ten builds,
-range [14.219, 16.528] ms, versus the 34.207 ms Java ordered-builder result
-above.
+Legacy/Rust latency is **3.308x**, so Rust lowers latency by 69.77%. The
+machine-readable result is
+[`direct-standard-d1-hits`](../../../benchmarks/causal/evidence/2026-08-19/direct-standard-d1-hits/summary.json)
+(SHA-256 `f8002b573a51d6d8bea4c3a553136ad91abb24d52484ff754a06fa385565d949`).
 
-The matching fresh Rust-backed JVM cells are 30.801 ms (`hits`) and 27.291 ms
-(`std-d1`), 1.64× faster than legacy Java in both coordinates. These are clean
-compiler-guarded pairs, but they do **not** supersede the completed 45-pair
-breadth result: unrelated host compiler jobs repeatedly turned the guard red
-before later coordinates began. The runner is resumable and rejects a cell
-when a compiler appears before or after its timed fork; the partial values are
-recorded as fresh confirmation, not presented as a complete matrix verdict.
+Construction is further ahead under the same 51-pair, exact-membership
+protocol. Arbitrary-order Rust construction takes **17.246 ms** versus
+175.798 ms for legacy Java, a **10.193x** advantage. The explicit pre-ordered
+Rust constructor takes **13.868 ms** versus 175.528 ms, a **12.657x**
+advantage. Both pairs validate all 79,343 memberships and semantic checksum
+`8da9c6f99f82a731`; see
+[`from_terms`](../../../benchmarks/causal/evidence/2026-08-19/direct-construction-from-terms/summary.json)
+and
+[`from_sorted_terms`](../../../benchmarks/causal/evidence/2026-08-19/direct-construction-from-sorted-terms/summary.json).
 
-The current recommendation is consequently different from the phase-0 one:
-query throughput is no longer a reason to reject migration for workloads
-represented by this matrix. Transposition is slightly ahead, standard is at
-near parity, and merge-and-split remains the clearest optimization target.
-The Rust-backed implementation retains its approximately 3x peak-RSS advantage
-and active-maintenance benefits. Users requiring a literal 3x query-throughput
-gain over legacy Java should not migrate on that expectation; the measured
-outcome is parity, not a threefold win.
+The earlier H-J1 rejection and the intermediate 0.965x matrix remain valid
+historical experimental outcomes for the binaries measured then; they are not
+retroactively edited. They are superseded for current-performance decisions by
+the complete final matrix above. The current recommendation is unambiguous:
+for workloads represented by this matrix, the Rust-backed binding is the
+throughput choice as well as the actively maintained and lower-peak-RSS choice.
 
-> **Read §0 before quoting the historical baseline in §2.** The phase-0
-> measurements showed legacy Java winning every query cell, but the completed
-> optimization campaign reduced that gap to practical matrix parity. The
-> original measurements remain below as an immutable baseline rather than a
-> statement of current performance.
+> **Read §0 before quoting the historical baseline in §2.** Phase 0 showed
+> legacy Java winning every query cell. The final implementation reverses all
+> 45 cells and exceeds the original 3x practical target on aggregate.
 
 ## 1. The two implementations
 

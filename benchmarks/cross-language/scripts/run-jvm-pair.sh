@@ -24,16 +24,46 @@ LR="$(cd "$XL/../.." && pwd)"
 LD_REPO="$(cd "$LR/../libdictenstein" && pwd)"
 JVM="$XL/harnesses/jvm"
 STAGE="$XL/.stage/jvm"
+HOST_LOAD_GATE="$LR/benchmarks/causal/host-load-admission.py"
+JVM_CPUSET="2-9"
 GRADLE_ARGS=(--no-daemon -PjavaToolchain=26 -PnativePlatforms=linux-x86_64)
 
 log() { printf '[jvm-pair %s] %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
 
 ensure_environment() {
     local results_dir="$1"
-    mkdir -p "$results_dir"
+    mkdir -p "$results_dir" "$results_dir/admissions"
     if [ ! -f "$results_dir/environment.json" ]; then
         python3 "$SCRIPT_DIR/env-capture.py" "$results_dir" >&2
     fi
+}
+
+rebuild_host_load_ledger() {
+    local results_dir="$1" admission temporary
+    temporary="$results_dir/host-load-admission.jsonl.tmp"
+    : >"$temporary"
+    for admission in "$results_dir"/admissions/*.jsonl; do
+        [ -f "$admission" ] || continue
+        cat "$admission" >>"$temporary"
+    done
+    mv "$temporary" "$results_dir/host-load-admission.jsonl"
+}
+
+validate_jmh_admission() {
+    local admission="$1" label="$2"
+    jq -s -e --arg label "$label" '
+        length == 2
+        and all(.[];
+            .schema == "liblevenshtein.causal-host-load.v1"
+            and .admitted == true
+            and .selected_cpus == [2,3,4,5,6,7,8,9]
+            and .thresholds.max_selected_busy_percent == 10
+            and .thresholds.max_sibling_busy_percent == 10
+            and .thresholds.max_llc_mean_busy_percent == 10
+            and .thresholds.max_llc_peer_busy_percent == 20)
+        and (([.[] | .label] | sort)
+             == (["pre-" + $label, "post-" + $label] | sort))
+    ' "$admission" >/dev/null
 }
 
 require_compiler_quiet() {
@@ -44,6 +74,20 @@ require_compiler_quiet() {
         printf 'run-jvm-pair: compiler-load gate is red:\n%s\n' "$active" >&2
         return 3
     fi
+}
+
+require_measurement_quiet() {
+    local results_dir="$1" label="$2" attempt_ledger="$3"
+    if python3 "$HOST_LOAD_GATE" --cpuset "$JVM_CPUSET" \
+        --max-selected-busy 10 \
+        --max-sibling-busy 10 \
+        --max-llc-mean-busy 10 \
+        --max-llc-peer-busy 20 \
+        --label "$label" --output "$attempt_ledger" >/dev/null; then
+        return 0
+    fi
+    tail -n 1 "$attempt_ledger" >>"$results_dir/host-load-rejections.jsonl"
+    return 3
 }
 
 cell_is_complete() {
@@ -141,16 +185,54 @@ jmh_cell() {
         mv "$rff" "$invalid_dir/$(basename "$rff" .json).${invalid_stamp}.json"
     fi
 
-    local mhz_start mhz_end load
+    local mhz_start mhz_end load cell_label admission_attempt admission_file
+    local contention_attempt contention_rejections contention_stamp
+    cell_label="${target}__${backend}__${algorithm}__d${distance}__${queryset}"
+    admission_attempt="$results_dir/.host-load-attempt-${cell_label}.jsonl"
+    admission_file="$results_dir/admissions/${cell_label}.jsonl"
+    contention_attempt="$results_dir/.contention-attempt-${cell_label}.log"
+    contention_rejections="$results_dir/contention-rejections"
+    : >"$admission_attempt"
+    : >"$contention_attempt"
     require_compiler_quiet
+    require_measurement_quiet "$results_dir" "pre-${cell_label}" "$admission_attempt"
     mhz_start="$(cat /sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq 2>/dev/null || echo 0)"
     load="$(cut -d' ' -f1 /proc/loadavg)"
 
-    (cd "$JVM" && taskset -c 2-9 ./gradlew "${GRADLE_ARGS[@]}" "$module" \
+    local monitor_status
+    set +e
+    (cd "$JVM" && XL_CONTENTION_LOG="$contention_attempt" \
+        "$SCRIPT_DIR/run-with-contention-monitor.sh" "$results_dir" -- \
+        taskset -c "$JVM_CPUSET" ./gradlew "${GRADLE_ARGS[@]}" "$module" \
         -Pjmh.includes="$include" -Pjmh.params="$params" \
         -Pjmh.forks="$forks" -Pjmh.iterations="$iters" \
         -Pjmh.rff="$rff" >&2)
+    monitor_status=$?
+    set -e
+    if [ "$monitor_status" -eq 75 ]; then
+        # A contention observation invalidates this attempt but not the
+        # experiment. Quarantine the monitor log; the raw JMH JSON is moved to
+        # invalid-retries at the next attempt. Discard the uncommitted
+        # pre-admission and ask the supervisor to retry the exact same cell.
+        contention_stamp="$(date -u +%Y%m%dT%H%M%S).$$"
+        mkdir -p "$contention_rejections"
+        mv "$contention_attempt" \
+            "$contention_rejections/${cell_label}.${contention_stamp}.log"
+        rm -f "$admission_attempt"
+        return 3
+    fi
+    if [ "$monitor_status" -ne 0 ]; then
+        return "$monitor_status"
+    fi
+    # The monitor is intentionally silent for one uncontended invocation.
+    # Retain no empty scratch file in the final evidence package.
+    if [ -s "$contention_attempt" ]; then
+        echo "run-jvm-pair: successful monitor emitted unexpected observations: $contention_attempt" >&2
+        return 74
+    fi
+    rm -f "$contention_attempt"
     require_compiler_quiet
+    require_measurement_quiet "$results_dir" "post-${cell_label}" "$admission_attempt"
     mhz_end="$(cat /sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq 2>/dev/null || echo 0)"
 
     XL_CELL_DIR_UNUSED=1 python3 "$SCRIPT_DIR/jmh_to_result.py" "$results_dir" "$rff" \
@@ -163,10 +245,13 @@ jmh_cell() {
         cell_json="$cell_dir/${target}__${backend}__query__${algorithm}__d${distance}__${queryset}.json"
     fi
     python3 "$SCRIPT_DIR/postfill.py" "$results_dir" "$cell_json" \
-        --cpuset "2-9" \
+        --cpuset "$JVM_CPUSET" \
         --mhz-start "$(awk -v k="$mhz_start" 'BEGIN{printf "%.1f", k/1000.0}')" \
         --mhz-end "$(awk -v k="$mhz_end" 'BEGIN{printf "%.1f", k/1000.0}')" \
         --loadavg "$load"
+    validate_jmh_admission "$admission_attempt" "$cell_label"
+    mv "$admission_attempt" "$admission_file"
+    rebuild_host_load_ledger "$results_dir"
     echo "$cell_json"
 }
 
@@ -250,6 +335,12 @@ parity_jmh() {
             read -r target backend <<< "$target_backend"
             cell_json="$results_dir/cells/${target}__${backend}__query__${algorithm}__d${distance}__${queryset}.json"
             if cell_is_complete "$cell_json"; then
+                cell_label="${target}__${backend}__${algorithm}__d${distance}__${queryset}"
+                validate_jmh_admission "$results_dir/admissions/${cell_label}.jsonl" \
+                    "$cell_label" || {
+                    echo "run-jvm-pair: complete cell has no valid committed admission: $cell_json" >&2
+                    exit 2
+                }
                 continue
             fi
             log "parity JMH cell: $target $backend $algorithm d$distance $queryset"
@@ -259,6 +350,26 @@ parity_jmh() {
         pair_index=$((pair_index + 1))
     done < <(python3 "$SCRIPT_DIR/matrix.py" cells --target jvm-legacy \
                 --backend own --mode query)
+
+    rebuild_host_load_ledger "$results_dir"
+    local expected_admissions=$((pair_index * 2 * 2))
+    jq -s -e --argjson expected "$expected_admissions" '
+        length == $expected and all(.[]; .admitted == true)
+    ' "$results_dir/host-load-admission.jsonl" >/dev/null || {
+        echo "run-jvm-pair: accepted parity admission ledger is incomplete" >&2
+        exit 2
+    }
+    if [ -s "$results_dir/host-load-rejections.jsonl" ]; then
+        jq -s -e 'length > 0 and all(.[]; .admitted == false)' \
+            "$results_dir/host-load-rejections.jsonl" >/dev/null || {
+            echo "run-jvm-pair: parity rejection ledger is malformed" >&2
+            exit 2
+        }
+    fi
+    if [ -s "$results_dir/foreign-contention.jsonl" ]; then
+        echo "run-jvm-pair: foreign contention evidence exists" >&2
+        exit 2
+    fi
 
     python3 "$SCRIPT_DIR/pgmcp-upload.py" "$results_dir" || \
         log "pgmcp upload FAILED — local cells intact; re-run scripts/pgmcp-upload.py"

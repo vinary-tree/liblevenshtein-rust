@@ -1,0 +1,3675 @@
+{
+  "run_id": "jvm-parity-full",
+  "environment_ref": "environment.json",
+  "cell_count": 90,
+  "validation_errors": [],
+  "query_cells": {
+    "jvm-legacy__own__query__merge_and_split__d1__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 7778,
+      "checksum_hex": "99a3be9fb989cba5",
+      "stats": {
+        "count": 20,
+        "median_ns": 225206868.0,
+        "mad_ns": 9291308.0,
+        "mean_ns": 225276629.65,
+        "p10_ns": 215769448.4,
+        "p90_ns": 234571541.20000002,
+        "median_ci95_ns": [
+          216207945.0,
+          234498176.0
+        ]
+      },
+      "us_per_query": 225.206868,
+      "queries_per_second": 4440.361916493594,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d1__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 175990186.0,
+        "mad_ns": 675206.0,
+        "mean_ns": 176293875.6,
+        "p10_ns": 175139660.70000002,
+        "p90_ns": 177464821.6,
+        "median_ci95_ns": [
+          175445549.0,
+          176787229.0
+        ]
+      },
+      "us_per_query": 175.990186,
+      "queries_per_second": 5682.135025415565,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d1__std-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 5359,
+      "checksum_hex": "2ab42aa7dc2ebaf0",
+      "stats": {
+        "count": 20,
+        "median_ns": 217989873.5,
+        "mad_ns": 9544016.0,
+        "mean_ns": 214761704.25,
+        "p10_ns": 202005578.3,
+        "p90_ns": 226724389.70000002,
+        "median_ci95_ns": [
+          202164470.0,
+          226510252.0
+        ]
+      },
+      "us_per_query": 217.9898735,
+      "queries_per_second": 4587.369055012548,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d1__std-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3717,
+      "checksum_hex": "461c95ff949c359b",
+      "stats": {
+        "count": 20,
+        "median_ns": 210311101.5,
+        "mad_ns": 6149618.5,
+        "mean_ns": 209395250.4,
+        "p10_ns": 201981765.5,
+        "p90_ns": 216560740.3,
+        "median_ci95_ns": [
+          203456834.5,
+          214837923.5
+        ]
+      },
+      "us_per_query": 210.31110149999998,
+      "queries_per_second": 4754.860741386017,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d1__std-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2837,
+      "checksum_hex": "9fd7deb34693dad4",
+      "stats": {
+        "count": 20,
+        "median_ns": 210965024.0,
+        "mad_ns": 1196762.0,
+        "mean_ns": 211149683.0,
+        "p10_ns": 209089228.70000002,
+        "p90_ns": 213787900.8,
+        "median_ci95_ns": [
+          210444679.0,
+          212004724.5
+        ]
+      },
+      "us_per_query": 210.965024,
+      "queries_per_second": 4740.12222992945,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d2__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 239776,
+      "checksum_hex": "c04d32913b117e29",
+      "stats": {
+        "count": 20,
+        "median_ns": 3097334763.5,
+        "mad_ns": 98093446.5,
+        "mean_ns": 3099330008.0,
+        "p10_ns": 2987819559.0,
+        "p90_ns": 3209279891.5,
+        "median_ci95_ns": [
+          2995291687.0,
+          3183268227.5
+        ]
+      },
+      "us_per_query": 3097.3347635,
+      "queries_per_second": 322.8582237168307,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d2__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 50,
+      "checksum_hex": "bd76ad229e022c33",
+      "stats": {
+        "count": 20,
+        "median_ns": 2624163413.0,
+        "mad_ns": 4201875.0,
+        "mean_ns": 2625004691.8,
+        "p10_ns": 2618880169.0,
+        "p90_ns": 2630989863.1,
+        "median_ci95_ns": [
+          2621668733.5,
+          2627736739.5
+        ]
+      },
+      "us_per_query": 2624.163413,
+      "queries_per_second": 381.07382910913253,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d2__std-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 226953,
+      "checksum_hex": "c29d6d544233ab28",
+      "stats": {
+        "count": 20,
+        "median_ns": 3023020420.5,
+        "mad_ns": 36926262.0,
+        "mean_ns": 3035774175.5,
+        "p10_ns": 2997775739.8,
+        "p90_ns": 3077432775.6,
+        "median_ci95_ns": [
+          3006558634.0,
+          3069101794.5
+        ]
+      },
+      "us_per_query": 3023.0204205,
+      "queries_per_second": 330.7949867684329,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d2__std-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 196361,
+      "checksum_hex": "b313534f4d28adb2",
+      "stats": {
+        "count": 20,
+        "median_ns": 3064029722.0,
+        "mad_ns": 13571465.5,
+        "mean_ns": 3064593243.7,
+        "p10_ns": 3033839905.4,
+        "p90_ns": 3085054294.6000004,
+        "median_ci95_ns": [
+          3056844790.0,
+          3076973571.5
+        ]
+      },
+      "us_per_query": 3064.029722,
+      "queries_per_second": 326.367591286701,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d2__std-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 150760,
+      "checksum_hex": "5de5ba4edd33fe6b",
+      "stats": {
+        "count": 20,
+        "median_ns": 2912854955.5,
+        "mad_ns": 91470826.0,
+        "mean_ns": 2931834437.2,
+        "p10_ns": 2804871035.0,
+        "p90_ns": 3198299547.4,
+        "median_ci95_ns": [
+          2821384129.5,
+          2946091854.5
+        ]
+      },
+      "us_per_query": 2912.8549555,
+      "queries_per_second": 343.305799731572,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d3__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3174488,
+      "checksum_hex": "059d9d5817e2e577",
+      "stats": {
+        "count": 20,
+        "median_ns": 23154169516.5,
+        "mad_ns": 116734311.0,
+        "mean_ns": 23115114161.55,
+        "p10_ns": 22890422896.9,
+        "p90_ns": 23300193833.1,
+        "median_ci95_ns": [
+          22965088396.0,
+          23216896813.0
+        ]
+      },
+      "us_per_query": 23154.1695165,
+      "queries_per_second": 43.188765603853135,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d3__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 17698,
+      "checksum_hex": "3f6f019ee106354a",
+      "stats": {
+        "count": 20,
+        "median_ns": 18994282141.5,
+        "mad_ns": 641714022.5,
+        "mean_ns": 19057053237.25,
+        "p10_ns": 18341308986.5,
+        "p90_ns": 19840714555.399998,
+        "median_ci95_ns": [
+          18519639336.5,
+          19651247175.0
+        ]
+      },
+      "us_per_query": 18994.2821415,
+      "queries_per_second": 52.64742265858692,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d3__std-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3133809,
+      "checksum_hex": "334f2a16bd293622",
+      "stats": {
+        "count": 20,
+        "median_ns": 23088852391.0,
+        "mad_ns": 208502920.5,
+        "mean_ns": 23182503950.05,
+        "p10_ns": 22851354591.800003,
+        "p90_ns": 23649513825.100002,
+        "median_ci95_ns": [
+          22963634005.5,
+          23352676420.5
+        ]
+      },
+      "us_per_query": 23088.852391,
+      "queries_per_second": 43.31094430617082,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d3__std-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2753507,
+      "checksum_hex": "fbe4853f17a50b0e",
+      "stats": {
+        "count": 20,
+        "median_ns": 22231222224.0,
+        "mad_ns": 486422235.5,
+        "mean_ns": 22362864839.45,
+        "p10_ns": 21706212382.5,
+        "p90_ns": 23045205175.6,
+        "median_ci95_ns": [
+          21843466898.5,
+          22939005863.5
+        ]
+      },
+      "us_per_query": 22231.222224,
+      "queries_per_second": 44.98178237453977,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__merge_and_split__d3__std-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2246246,
+      "checksum_hex": "902bb335a982dfd9",
+      "stats": {
+        "count": 20,
+        "median_ns": 21865209166.5,
+        "mad_ns": 227818322.0,
+        "mean_ns": 21827598051.9,
+        "p10_ns": 21573089264.7,
+        "p90_ns": 22117750832.300003,
+        "median_ci95_ns": [
+          21626385660.0,
+          21978331363.0
+        ]
+      },
+      "us_per_query": 21865.209166499997,
+      "queries_per_second": 45.73475572015631,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d1__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3620,
+      "checksum_hex": "3bdc59281f42611a",
+      "stats": {
+        "count": 20,
+        "median_ns": 50969215.0,
+        "mad_ns": 1499080.5,
+        "mean_ns": 51081117.25,
+        "p10_ns": 49141824.6,
+        "p90_ns": 53599476.699999996,
+        "median_ci95_ns": [
+          49470134.5,
+          52102950.5
+        ]
+      },
+      "us_per_query": 50.969215,
+      "queries_per_second": 19619.686118375572,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d1__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 27850827.5,
+        "mad_ns": 296254.0,
+        "mean_ns": 27852992.45,
+        "p10_ns": 27529602.2,
+        "p90_ns": 28179778.7,
+        "median_ci95_ns": [
+          27563147.0,
+          28121870.5
+        ]
+      },
+      "us_per_query": 27.8508275,
+      "queries_per_second": 35905.57587561806,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d1__std-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2069,
+      "checksum_hex": "1433160a7d157f4d",
+      "stats": {
+        "count": 20,
+        "median_ns": 50366779.0,
+        "mad_ns": 631594.5,
+        "mean_ns": 50242344.5,
+        "p10_ns": 49112075.7,
+        "p90_ns": 51008657.699999996,
+        "median_ci95_ns": [
+          49596709.5,
+          50762726.5
+        ]
+      },
+      "us_per_query": 50.366779,
+      "queries_per_second": 19854.356777510035,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d1__std-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 816,
+      "checksum_hex": "fc03894012946757",
+      "stats": {
+        "count": 20,
+        "median_ns": 45159188.5,
+        "mad_ns": 1956067.0,
+        "mean_ns": 45121671.2,
+        "p10_ns": 43003789.4,
+        "p90_ns": 47139879.5,
+        "median_ci95_ns": [
+          43202356.0,
+          46999479.5
+        ]
+      },
+      "us_per_query": 45.1591885,
+      "queries_per_second": 22143.887727300502,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d1__std-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 549,
+      "checksum_hex": "d48ff6007b82aea7",
+      "stats": {
+        "count": 20,
+        "median_ns": 38478824.5,
+        "mad_ns": 893433.5,
+        "mean_ns": 38169543.25,
+        "p10_ns": 36923544.9,
+        "p90_ns": 39190468.0,
+        "median_ci95_ns": [
+          37103476.5,
+          39040397.0
+        ]
+      },
+      "us_per_query": 38.4788245,
+      "queries_per_second": 25988.319887474732,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d2__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 30648,
+      "checksum_hex": "087f4fa50dd50816",
+      "stats": {
+        "count": 20,
+        "median_ns": 443895978.5,
+        "mad_ns": 8337452.5,
+        "mean_ns": 444155274.45,
+        "p10_ns": 435046338.09999996,
+        "p90_ns": 453564820.70000005,
+        "median_ci95_ns": [
+          435766053.5,
+          451436699.0
+        ]
+      },
+      "us_per_query": 443.8959785,
+      "queries_per_second": 2252.7800395470354,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d2__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 327391302.5,
+        "mad_ns": 2021677.0,
+        "mean_ns": 328982382.8,
+        "p10_ns": 324689895.6,
+        "p90_ns": 335106449.4,
+        "median_ci95_ns": [
+          326158596.5,
+          330239208.5
+        ]
+      },
+      "us_per_query": 327.3913025,
+      "queries_per_second": 3054.4488884215243,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d2__std-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 23839,
+      "checksum_hex": "d0687cddbf61529f",
+      "stats": {
+        "count": 20,
+        "median_ns": 433419425.0,
+        "mad_ns": 1838928.0,
+        "mean_ns": 430688220.15,
+        "p10_ns": 421335212.5,
+        "p90_ns": 435373550.3,
+        "median_ci95_ns": [
+          427256413.0,
+          434481300.0
+        ]
+      },
+      "us_per_query": 433.419425,
+      "queries_per_second": 2307.233922429757,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d2__std-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 18514,
+      "checksum_hex": "6be8b7274d8277d8",
+      "stats": {
+        "count": 20,
+        "median_ns": 401931707.5,
+        "mad_ns": 6698377.5,
+        "mean_ns": 402617581.1,
+        "p10_ns": 395212992.9,
+        "p90_ns": 410713905.9,
+        "median_ci95_ns": [
+          395635227.0,
+          409534594.5
+        ]
+      },
+      "us_per_query": 401.9317075,
+      "queries_per_second": 2487.9848525013417,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d2__std-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 12256,
+      "checksum_hex": "24f8455f763bc53e",
+      "stats": {
+        "count": 20,
+        "median_ns": 394590525.5,
+        "mad_ns": 11522419.5,
+        "mean_ns": 395521188.45,
+        "p10_ns": 383089936.4,
+        "p90_ns": 408909098.29999995,
+        "median_ci95_ns": [
+          383637979.5,
+          407112460.0
+        ]
+      },
+      "us_per_query": 394.5905255,
+      "queries_per_second": 2534.272708988295,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d3__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 255572,
+      "checksum_hex": "862c8c64f9bf70ba",
+      "stats": {
+        "count": 20,
+        "median_ns": 2470588685.5,
+        "mad_ns": 52508436.0,
+        "mean_ns": 2475959865.2,
+        "p10_ns": 2409644542.3,
+        "p90_ns": 2543303199.3,
+        "median_ci95_ns": [
+          2426375441.0,
+          2530162883.0
+        ]
+      },
+      "us_per_query": 2470.5886855000003,
+      "queries_per_second": 404.76183100369826,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d3__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 54,
+      "checksum_hex": "c57cc73bf4b4172e",
+      "stats": {
+        "count": 20,
+        "median_ns": 1825941810.0,
+        "mad_ns": 6796993.0,
+        "mean_ns": 1827959368.2,
+        "p10_ns": 1816633974.1,
+        "p90_ns": 1843727416.7,
+        "median_ci95_ns": [
+          1821500092.5,
+          1832460510.5
+        ]
+      },
+      "us_per_query": 1825.94181,
+      "queries_per_second": 547.662578579106,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d3__std-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 232931,
+      "checksum_hex": "366209cd0b558832",
+      "stats": {
+        "count": 20,
+        "median_ns": 2188993654.5,
+        "mad_ns": 5523590.0,
+        "mean_ns": 2187772713.75,
+        "p10_ns": 2175478511.5,
+        "p90_ns": 2197358989.9,
+        "median_ci95_ns": [
+          2183638431.5,
+          2192812298.0
+        ]
+      },
+      "us_per_query": 2188.9936545,
+      "queries_per_second": 456.83092682532947,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d3__std-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 192952,
+      "checksum_hex": "2f23f2f8e16c7d2e",
+      "stats": {
+        "count": 20,
+        "median_ns": 2192345308.5,
+        "mad_ns": 45950744.5,
+        "mean_ns": 2191525404.1,
+        "p10_ns": 2130570634.8000002,
+        "p90_ns": 2259185860.9,
+        "median_ci95_ns": [
+          2149074886.0,
+          2231656319.5
+        ]
+      },
+      "us_per_query": 2192.3453084999996,
+      "queries_per_second": 456.1325244353038,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__standard__d3__std-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 143127,
+      "checksum_hex": "cf40962f5afade10",
+      "stats": {
+        "count": 20,
+        "median_ns": 2280030234.0,
+        "mad_ns": 18470943.5,
+        "mean_ns": 2279522531.0,
+        "p10_ns": 2246020678.2,
+        "p90_ns": 2306810600.1,
+        "median_ci95_ns": [
+          2264988953.5,
+          2297408385.5
+        ]
+      },
+      "us_per_query": 2280.0302340000003,
+      "queries_per_second": 438.5906752848787,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d1__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3634,
+      "checksum_hex": "527bb88ad1e839e5",
+      "stats": {
+        "count": 20,
+        "median_ns": 53610355.5,
+        "mad_ns": 618045.0,
+        "mean_ns": 53686635.05,
+        "p10_ns": 52811739.3,
+        "p90_ns": 54618638.6,
+        "median_ci95_ns": [
+          53128037.5,
+          54015900.0
+        ]
+      },
+      "us_per_query": 53.6103555,
+      "queries_per_second": 18653.11264350784,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d1__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 29693847.5,
+        "mad_ns": 215271.5,
+        "mean_ns": 29694916.4,
+        "p10_ns": 29370235.2,
+        "p90_ns": 30081605.5,
+        "median_ci95_ns": [
+          29478576.0,
+          29852236.0
+        ]
+      },
+      "us_per_query": 29.6938475,
+      "queries_per_second": 33677.01002707716,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d1__tr-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2064,
+      "checksum_hex": "96aebe1f0b19cc1e",
+      "stats": {
+        "count": 20,
+        "median_ns": 51184705.0,
+        "mad_ns": 1209291.5,
+        "mean_ns": 51520701.25,
+        "p10_ns": 49883207.7,
+        "p90_ns": 53314557.2,
+        "median_ci95_ns": [
+          50674345.5,
+          52981764.0
+        ]
+      },
+      "us_per_query": 51.184705,
+      "queries_per_second": 19537.086322955267,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d1__tr-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 721,
+      "checksum_hex": "3169556f710807ff",
+      "stats": {
+        "count": 20,
+        "median_ns": 45188005.0,
+        "mad_ns": 1024875.5,
+        "mean_ns": 45198983.9,
+        "p10_ns": 43991927.5,
+        "p90_ns": 46338406.7,
+        "median_ci95_ns": [
+          44228707.5,
+          46185012.5
+        ]
+      },
+      "us_per_query": 45.188005,
+      "queries_per_second": 22129.7665165789,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d1__tr-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 444,
+      "checksum_hex": "e034b4f84bb0c215",
+      "stats": {
+        "count": 20,
+        "median_ns": 42762779.5,
+        "mad_ns": 1474003.5,
+        "mean_ns": 42743564.3,
+        "p10_ns": 40829547.6,
+        "p90_ns": 44712245.900000006,
+        "median_ci95_ns": [
+          41385657.5,
+          44072454.0
+        ]
+      },
+      "us_per_query": 42.76277949999999,
+      "queries_per_second": 23384.822307913826,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d2__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 31028,
+      "checksum_hex": "00d6987fcd026d76",
+      "stats": {
+        "count": 20,
+        "median_ns": 509655982.5,
+        "mad_ns": 5659669.5,
+        "mean_ns": 510986340.65,
+        "p10_ns": 503504881.8,
+        "p90_ns": 519694109.90000004,
+        "median_ci95_ns": [
+          505711684.5,
+          516216501.5
+        ]
+      },
+      "us_per_query": 509.6559825,
+      "queries_per_second": 1962.1078420285196,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d2__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 335698956.0,
+        "mad_ns": 974654.0,
+        "mean_ns": 336043318.35,
+        "p10_ns": 334174731.9,
+        "p90_ns": 337712802.5,
+        "median_ci95_ns": [
+          334857779.5,
+          336095990.5
+        ]
+      },
+      "us_per_query": 335.698956,
+      "queries_per_second": 2978.859427849993,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d2__tr-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 23294,
+      "checksum_hex": "60b4533c3ae282fe",
+      "stats": {
+        "count": 20,
+        "median_ns": 479896773.5,
+        "mad_ns": 2633526.5,
+        "mean_ns": 480915860.25,
+        "p10_ns": 475080533.09999996,
+        "p90_ns": 485337177.7,
+        "median_ci95_ns": [
+          478739515.5,
+          482530300.0
+        ]
+      },
+      "us_per_query": 479.8967735,
+      "queries_per_second": 2083.7814613896335,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d2__tr-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 18524,
+      "checksum_hex": "84f045e4f4a37a73",
+      "stats": {
+        "count": 20,
+        "median_ns": 475770664.5,
+        "mad_ns": 10651542.5,
+        "mean_ns": 477204898.3,
+        "p10_ns": 464783072.20000005,
+        "p90_ns": 489269857.6,
+        "median_ci95_ns": [
+          467609597.0,
+          486568426.0
+        ]
+      },
+      "us_per_query": 475.7706645,
+      "queries_per_second": 2101.8530031710266,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d2__tr-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 9799,
+      "checksum_hex": "7b9f330da003d987",
+      "stats": {
+        "count": 20,
+        "median_ns": 441276282.5,
+        "mad_ns": 4116121.5,
+        "mean_ns": 443987331.15,
+        "p10_ns": 435535523.2,
+        "p90_ns": 458202656.9,
+        "median_ci95_ns": [
+          438910474.5,
+          446454718.0
+        ]
+      },
+      "us_per_query": 441.2762825,
+      "queries_per_second": 2266.1539712368294,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d3__hits": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 259079,
+      "checksum_hex": "c6ef531cab1cd7e1",
+      "stats": {
+        "count": 20,
+        "median_ns": 2640696363.0,
+        "mad_ns": 30190185.0,
+        "mean_ns": 2628078608.7,
+        "p10_ns": 2576356281.5,
+        "p90_ns": 2671725670.8,
+        "median_ci95_ns": [
+          2598412848.5,
+          2657039502.5
+        ]
+      },
+      "us_per_query": 2640.696363,
+      "queries_per_second": 378.6879907934345,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d3__oov": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 54,
+      "checksum_hex": "c57cc73bf4b4172e",
+      "stats": {
+        "count": 20,
+        "median_ns": 1972377358.0,
+        "mad_ns": 15360351.5,
+        "mean_ns": 1974122362.75,
+        "p10_ns": 1947946820.1999998,
+        "p90_ns": 2005304444.6000001,
+        "median_ci95_ns": [
+          1958952458.5,
+          1981590526.0
+        ]
+      },
+      "us_per_query": 1972.377358,
+      "queries_per_second": 507.0023725145602,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d3__tr-d1": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 222623,
+      "checksum_hex": "c877ee566cbe385c",
+      "stats": {
+        "count": 20,
+        "median_ns": 2492857275.0,
+        "mad_ns": 5097217.0,
+        "mean_ns": 2493761317.4,
+        "p10_ns": 2484619697.7,
+        "p90_ns": 2506306124.7,
+        "median_ci95_ns": [
+          2488334132.5,
+          2495711437.0
+        ]
+      },
+      "us_per_query": 2492.857275,
+      "queries_per_second": 401.1461105409655,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d3__tr-d2": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 199638,
+      "checksum_hex": "69b2214a70728c77",
+      "stats": {
+        "count": 20,
+        "median_ns": 2449434061.0,
+        "mad_ns": 21766958.0,
+        "mean_ns": 2449526194.15,
+        "p10_ns": 2421785056.1,
+        "p90_ns": 2473440266.8999996,
+        "median_ci95_ns": [
+          2427667103.0,
+          2469919612.5
+        ]
+      },
+      "us_per_query": 2449.4340610000004,
+      "queries_per_second": 408.2575709720238,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-legacy__own__query__transposition__d3__tr-d3": {
+      "target": "jvm-legacy",
+      "backend": "legacy_sorted_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 127897,
+      "checksum_hex": "7813b6d28b4060b4",
+      "stats": {
+        "count": 20,
+        "median_ns": 2352716071.5,
+        "mad_ns": 13176987.0,
+        "mean_ns": 2355676393.4,
+        "p10_ns": 2339066314.2000003,
+        "p90_ns": 2377890630.8,
+        "median_ci95_ns": [
+          2341188251.5,
+          2367024753.5
+        ]
+      },
+      "us_per_query": 2352.7160715,
+      "queries_per_second": 425.0406634755715,
+      "notes": [
+        "converted from JMH record bench.LegacyBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d1__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 7778,
+      "checksum_hex": "99a3be9fb989cba5",
+      "stats": {
+        "count": 20,
+        "median_ns": 52095141.0,
+        "mad_ns": 449458.5,
+        "mean_ns": 52662340.2,
+        "p10_ns": 51664008.5,
+        "p90_ns": 54150590.900000006,
+        "median_ci95_ns": [
+          52057199.0,
+          53168382.5
+        ]
+      },
+      "us_per_query": 52.095141000000005,
+      "queries_per_second": 19195.6482083425,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d1__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 38031959.5,
+        "mad_ns": 567159.0,
+        "mean_ns": 37972020.5,
+        "p10_ns": 36885219.3,
+        "p90_ns": 39174415.599999994,
+        "median_ci95_ns": [
+          37255423.0,
+          38442649.5
+        ]
+      },
+      "us_per_query": 38.0319595,
+      "queries_per_second": 26293.675454718552,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d1__std-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 5359,
+      "checksum_hex": "2ab42aa7dc2ebaf0",
+      "stats": {
+        "count": 20,
+        "median_ns": 49199783.0,
+        "mad_ns": 271684.0,
+        "mean_ns": 49713796.7,
+        "p10_ns": 48910849.0,
+        "p90_ns": 51142415.1,
+        "median_ci95_ns": [
+          49042506.5,
+          50214704.0
+        ]
+      },
+      "us_per_query": 49.199783000000004,
+      "queries_per_second": 20325.29289814144,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d1__std-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3717,
+      "checksum_hex": "461c95ff949c359b",
+      "stats": {
+        "count": 20,
+        "median_ns": 47333671.0,
+        "mad_ns": 640970.5,
+        "mean_ns": 47424359.95,
+        "p10_ns": 46309785.5,
+        "p90_ns": 48548138.5,
+        "median_ci95_ns": [
+          46900912.5,
+          47974641.5
+        ]
+      },
+      "us_per_query": 47.333671,
+      "queries_per_second": 21126.60985031142,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d1__std-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2837,
+      "checksum_hex": "9fd7deb34693dad4",
+      "stats": {
+        "count": 20,
+        "median_ns": 45157681.0,
+        "mad_ns": 668165.0,
+        "mean_ns": 44988661.3,
+        "p10_ns": 44122349.699999996,
+        "p90_ns": 45825428.4,
+        "median_ci95_ns": [
+          44367781.5,
+          45507516.5
+        ]
+      },
+      "us_per_query": 45.157681,
+      "queries_per_second": 22144.626957261156,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d2__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 239776,
+      "checksum_hex": "c04d32913b117e29",
+      "stats": {
+        "count": 20,
+        "median_ns": 609567198.0,
+        "mad_ns": 8387856.0,
+        "mean_ns": 609760908.8,
+        "p10_ns": 600472452.7,
+        "p90_ns": 620950123.3000001,
+        "median_ci95_ns": [
+          601464133.5,
+          616815277.5
+        ]
+      },
+      "us_per_query": 609.567198,
+      "queries_per_second": 1640.508221703885,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d2__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 50,
+      "checksum_hex": "bd76ad229e022c33",
+      "stats": {
+        "count": 20,
+        "median_ns": 463994216.0,
+        "mad_ns": 683172.0,
+        "mean_ns": 464967485.5,
+        "p10_ns": 463189546.5,
+        "p90_ns": 468563338.5,
+        "median_ci95_ns": [
+          463895939.5,
+          464875000.0
+        ]
+      },
+      "us_per_query": 463.994216,
+      "queries_per_second": 2155.1992794668804,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d2__std-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 226953,
+      "checksum_hex": "c29d6d544233ab28",
+      "stats": {
+        "count": 20,
+        "median_ns": 595903300.0,
+        "mad_ns": 7161984.0,
+        "mean_ns": 597653032.5,
+        "p10_ns": 588418145.4,
+        "p90_ns": 608044568.5999999,
+        "median_ci95_ns": [
+          591504319.0,
+          603714797.0
+        ]
+      },
+      "us_per_query": 595.9033000000001,
+      "queries_per_second": 1678.1246218975461,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d2__std-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 196361,
+      "checksum_hex": "b313534f4d28adb2",
+      "stats": {
+        "count": 20,
+        "median_ns": 576895742.5,
+        "mad_ns": 4230416.5,
+        "mean_ns": 579991916.9,
+        "p10_ns": 572022584.8000001,
+        "p90_ns": 593558592.3,
+        "median_ci95_ns": [
+          574364674.5,
+          580190001.0
+        ]
+      },
+      "us_per_query": 576.8957425000001,
+      "queries_per_second": 1733.4154619801168,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d2__std-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 150760,
+      "checksum_hex": "5de5ba4edd33fe6b",
+      "stats": {
+        "count": 20,
+        "median_ns": 553055439.5,
+        "mad_ns": 3466232.5,
+        "mean_ns": 555505859.2,
+        "p10_ns": 549560283.5,
+        "p90_ns": 563393233.6,
+        "median_ci95_ns": [
+          550177877.5,
+          561206749.5
+        ]
+      },
+      "us_per_query": 553.0554395,
+      "queries_per_second": 1808.1369941936896,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d3__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3174488,
+      "checksum_hex": "059d9d5817e2e577",
+      "stats": {
+        "count": 20,
+        "median_ns": 2467415238.0,
+        "mad_ns": 27119425.5,
+        "mean_ns": 2466719351.8,
+        "p10_ns": 2432753591.3999996,
+        "p90_ns": 2496409816.6,
+        "median_ci95_ns": [
+          2438785354.0,
+          2485120244.0
+        ]
+      },
+      "us_per_query": 2467.415238,
+      "queries_per_second": 405.28241238007627,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d3__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 17698,
+      "checksum_hex": "3f6f019ee106354a",
+      "stats": {
+        "count": 20,
+        "median_ns": 1605864567.0,
+        "mad_ns": 9489190.5,
+        "mean_ns": 1607954492.9,
+        "p10_ns": 1592048701.0,
+        "p90_ns": 1620109347.6999998,
+        "median_ci95_ns": [
+          1602285718.0,
+          1616197488.5
+        ]
+      },
+      "us_per_query": 1605.864567,
+      "queries_per_second": 622.7175196150897,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d3__std-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3133809,
+      "checksum_hex": "334f2a16bd293622",
+      "stats": {
+        "count": 20,
+        "median_ns": 2421407252.0,
+        "mad_ns": 7640306.5,
+        "mean_ns": 2426109150.1,
+        "p10_ns": 2405991532.2999997,
+        "p90_ns": 2439668531.0,
+        "median_ci95_ns": [
+          2412743398.5,
+          2425111591.0
+        ]
+      },
+      "us_per_query": 2421.407252,
+      "queries_per_second": 412.9829871344583,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d3__std-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2753507,
+      "checksum_hex": "fbe4853f17a50b0e",
+      "stats": {
+        "count": 20,
+        "median_ns": 2322948531.5,
+        "mad_ns": 11539897.0,
+        "mean_ns": 2322868167.7,
+        "p10_ns": 2309783771.3,
+        "p90_ns": 2337073881.3,
+        "median_ci95_ns": [
+          2312300125.0,
+          2333794904.0
+        ]
+      },
+      "us_per_query": 2322.9485315,
+      "queries_per_second": 430.487368290622,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__merge_and_split__d3__std-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2246246,
+      "checksum_hex": "902bb335a982dfd9",
+      "stats": {
+        "count": 20,
+        "median_ns": 2195871950.5,
+        "mad_ns": 2342466.0,
+        "mean_ns": 2198485508.0,
+        "p10_ns": 2193578610.5,
+        "p90_ns": 2203266613.0,
+        "median_ci95_ns": [
+          2194615543.0,
+          2202226470.0
+        ]
+      },
+      "us_per_query": 2195.8719505,
+      "queries_per_second": 455.3999607182468,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d1__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3620,
+      "checksum_hex": "3bdc59281f42611a",
+      "stats": {
+        "count": 20,
+        "median_ns": 16975999.0,
+        "mad_ns": 53681.0,
+        "mean_ns": 17173121.35,
+        "p10_ns": 16910930.7,
+        "p90_ns": 17823414.0,
+        "median_ci95_ns": [
+          16951038.5,
+          17053503.5
+        ]
+      },
+      "us_per_query": 16.975998999999998,
+      "queries_per_second": 58906.69527018705,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d1__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 9571454.5,
+        "mad_ns": 17331.5,
+        "mean_ns": 9583264.3,
+        "p10_ns": 9551641.399999999,
+        "p90_ns": 9634560.8,
+        "median_ci95_ns": [
+          9560162.0,
+          9587226.5
+        ]
+      },
+      "us_per_query": 9.5714545,
+      "queries_per_second": 104477.32891589256,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d1__std-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2069,
+      "checksum_hex": "1433160a7d157f4d",
+      "stats": {
+        "count": 20,
+        "median_ns": 15319614.5,
+        "mad_ns": 34780.5,
+        "mean_ns": 15542873.75,
+        "p10_ns": 15292840.6,
+        "p90_ns": 16087278.5,
+        "median_ci95_ns": [
+          15312553.5,
+          15518998.0
+        ]
+      },
+      "us_per_query": 15.3196145,
+      "queries_per_second": 65275.79398293606,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d1__std-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 816,
+      "checksum_hex": "fc03894012946757",
+      "stats": {
+        "count": 20,
+        "median_ns": 13659712.0,
+        "mad_ns": 169737.0,
+        "mean_ns": 13806836.05,
+        "p10_ns": 13485466.0,
+        "p90_ns": 14360578.700000001,
+        "median_ci95_ns": [
+          13518494.5,
+          13933030.0
+        ]
+      },
+      "us_per_query": 13.659711999999999,
+      "queries_per_second": 73207.98564420684,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d1__std-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 549,
+      "checksum_hex": "d48ff6007b82aea7",
+      "stats": {
+        "count": 20,
+        "median_ns": 12543355.5,
+        "mad_ns": 21055.5,
+        "mean_ns": 12569876.3,
+        "p10_ns": 12528273.6,
+        "p90_ns": 12619574.6,
+        "median_ci95_ns": [
+          12535507.5,
+          12595590.0
+        ]
+      },
+      "us_per_query": 12.5433555,
+      "queries_per_second": 79723.48387957274,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d2__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 30648,
+      "checksum_hex": "087f4fa50dd50816",
+      "stats": {
+        "count": 20,
+        "median_ns": 108320568.5,
+        "mad_ns": 330731.5,
+        "mean_ns": 108306483.05,
+        "p10_ns": 107714034.9,
+        "p90_ns": 108849453.9,
+        "median_ci95_ns": [
+          108106460.0,
+          108609247.5
+        ]
+      },
+      "us_per_query": 108.3205685,
+      "queries_per_second": 9231.85701337969,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d2__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 65518922.5,
+        "mad_ns": 266361.0,
+        "mean_ns": 65384963.9,
+        "p10_ns": 64264937.5,
+        "p90_ns": 65937792.800000004,
+        "median_ci95_ns": [
+          65327479.5,
+          65731470.0
+        ]
+      },
+      "us_per_query": 65.5189225,
+      "queries_per_second": 15262.766264204054,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d2__std-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 23839,
+      "checksum_hex": "d0687cddbf61529f",
+      "stats": {
+        "count": 20,
+        "median_ns": 100848587.0,
+        "mad_ns": 306415.5,
+        "mean_ns": 100911232.95,
+        "p10_ns": 100457325.0,
+        "p90_ns": 101454524.7,
+        "median_ci95_ns": [
+          100647951.0,
+          101076935.5
+        ]
+      },
+      "us_per_query": 100.848587,
+      "queries_per_second": 9915.855340640519,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d2__std-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 18514,
+      "checksum_hex": "6be8b7274d8277d8",
+      "stats": {
+        "count": 20,
+        "median_ns": 95674694.0,
+        "mad_ns": 747593.5,
+        "mean_ns": 96333690.85,
+        "p10_ns": 94931003.3,
+        "p90_ns": 98584763.39999999,
+        "median_ci95_ns": [
+          95317430.5,
+          97051887.5
+        ]
+      },
+      "us_per_query": 95.674694,
+      "queries_per_second": 10452.084644242499,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d2__std-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 12256,
+      "checksum_hex": "24f8455f763bc53e",
+      "stats": {
+        "count": 20,
+        "median_ns": 89367363.0,
+        "mad_ns": 1296736.5,
+        "mean_ns": 89696700.45,
+        "p10_ns": 87971151.5,
+        "p90_ns": 91248813.5,
+        "median_ci95_ns": [
+          88096791.5,
+          90341122.0
+        ]
+      },
+      "us_per_query": 89.367363,
+      "queries_per_second": 11189.767342693103,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d3__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 255572,
+      "checksum_hex": "862c8c64f9bf70ba",
+      "stats": {
+        "count": 20,
+        "median_ns": 463593725.5,
+        "mad_ns": 4935327.5,
+        "mean_ns": 466490286.3,
+        "p10_ns": 458300559.5,
+        "p90_ns": 478915296.90000004,
+        "median_ci95_ns": [
+          459782226.0,
+          471314952.0
+        ]
+      },
+      "us_per_query": 463.5937255,
+      "queries_per_second": 2157.0611183778847,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d3__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 54,
+      "checksum_hex": "c57cc73bf4b4172e",
+      "stats": {
+        "count": 20,
+        "median_ns": 282772419.0,
+        "mad_ns": 2563094.0,
+        "mean_ns": 282822265.75,
+        "p10_ns": 280115149.2,
+        "p90_ns": 285740186.7,
+        "median_ci95_ns": [
+          280320912.5,
+          285291543.0
+        ]
+      },
+      "us_per_query": 282.772419,
+      "queries_per_second": 3536.412792790799,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d3__std-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 232931,
+      "checksum_hex": "366209cd0b558832",
+      "stats": {
+        "count": 20,
+        "median_ns": 444528968.5,
+        "mad_ns": 7357495.0,
+        "mean_ns": 445007546.65,
+        "p10_ns": 435079136.0,
+        "p90_ns": 456488070.0,
+        "median_ci95_ns": [
+          438815203.5,
+          450680603.0
+        ]
+      },
+      "us_per_query": 444.5289685,
+      "queries_per_second": 2249.5721783315007,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d3__std-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 192952,
+      "checksum_hex": "2f23f2f8e16c7d2e",
+      "stats": {
+        "count": 20,
+        "median_ns": 426527904.5,
+        "mad_ns": 4527820.5,
+        "mean_ns": 423338489.65,
+        "p10_ns": 414676561.9,
+        "p90_ns": 430778769.8,
+        "median_ci95_ns": [
+          415438995.0,
+          429378004.0
+        ]
+      },
+      "us_per_query": 426.5279045,
+      "queries_per_second": 2344.5124913275163,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__standard__d3__std-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 143127,
+      "checksum_hex": "cf40962f5afade10",
+      "stats": {
+        "count": 20,
+        "median_ns": 389366959.0,
+        "mad_ns": 502811.0,
+        "mean_ns": 389633674.25,
+        "p10_ns": 388749515.9,
+        "p90_ns": 390856271.7,
+        "median_ci95_ns": [
+          389087283.0,
+          390135130.5
+        ]
+      },
+      "us_per_query": 389.36695899999995,
+      "queries_per_second": 2568.271336038043,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d1__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 3634,
+      "checksum_hex": "527bb88ad1e839e5",
+      "stats": {
+        "count": 20,
+        "median_ns": 17575259.0,
+        "mad_ns": 80674.5,
+        "mean_ns": 17748262.85,
+        "p10_ns": 17489881.2,
+        "p90_ns": 18205758.6,
+        "median_ci95_ns": [
+          17517136.5,
+          17655372.0
+        ]
+      },
+      "us_per_query": 17.575259,
+      "queries_per_second": 56898.165768140316,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d1__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 10046209.5,
+        "mad_ns": 82866.0,
+        "mean_ns": 10170838.2,
+        "p10_ns": 9952187.600000001,
+        "p90_ns": 10636066.1,
+        "median_ci95_ns": [
+          9992637.0,
+          10116657.5
+        ]
+      },
+      "us_per_query": 10.046209500000002,
+      "queries_per_second": 99540.03049607914,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d1__tr-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 2064,
+      "checksum_hex": "96aebe1f0b19cc1e",
+      "stats": {
+        "count": 20,
+        "median_ns": 15710086.5,
+        "mad_ns": 44225.0,
+        "mean_ns": 15875386.85,
+        "p10_ns": 15644065.7,
+        "p90_ns": 16244777.1,
+        "median_ci95_ns": [
+          15681607.5,
+          15831658.5
+        ]
+      },
+      "us_per_query": 15.7100865,
+      "queries_per_second": 63653.37326436745,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d1__tr-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 721,
+      "checksum_hex": "3169556f710807ff",
+      "stats": {
+        "count": 20,
+        "median_ns": 14061795.5,
+        "mad_ns": 142685.5,
+        "mean_ns": 14288332.15,
+        "p10_ns": 13928986.8,
+        "p90_ns": 14834324.6,
+        "median_ci95_ns": [
+          14006236.0,
+          14575439.5
+        ]
+      },
+      "us_per_query": 14.0617955,
+      "queries_per_second": 71114.67379823579,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d1__tr-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 444,
+      "checksum_hex": "e034b4f84bb0c215",
+      "stats": {
+        "count": 20,
+        "median_ns": 13356213.0,
+        "mad_ns": 299151.0,
+        "mean_ns": 13488801.8,
+        "p10_ns": 13054930.3,
+        "p90_ns": 14061428.100000001,
+        "median_ci95_ns": [
+          13225782.5,
+          13810215.5
+        ]
+      },
+      "us_per_query": 13.356213,
+      "queries_per_second": 74871.52233945356,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d2__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 31028,
+      "checksum_hex": "00d6987fcd026d76",
+      "stats": {
+        "count": 20,
+        "median_ns": 111240172.5,
+        "mad_ns": 1092757.0,
+        "mean_ns": 112154126.9,
+        "p10_ns": 110119511.30000001,
+        "p90_ns": 115224833.7,
+        "median_ci95_ns": [
+          110665066.0,
+          113345722.0
+        ]
+      },
+      "us_per_query": 111.2401725,
+      "queries_per_second": 8989.558156249714,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d2__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 0,
+      "checksum_hex": "0000000000000000",
+      "stats": {
+        "count": 20,
+        "median_ns": 66054794.5,
+        "mad_ns": 688320.0,
+        "mean_ns": 66109041.55,
+        "p10_ns": 64994025.6,
+        "p90_ns": 66802518.5,
+        "median_ci95_ns": [
+          65857247.0,
+          66752964.0
+        ]
+      },
+      "us_per_query": 66.0547945,
+      "queries_per_second": 15138.946499939531,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d2__tr-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 23294,
+      "checksum_hex": "60b4533c3ae282fe",
+      "stats": {
+        "count": 20,
+        "median_ns": 102483059.0,
+        "mad_ns": 753287.5,
+        "mean_ns": 103237747.85,
+        "p10_ns": 101736959.10000001,
+        "p90_ns": 105592227.9,
+        "median_ci95_ns": [
+          101889485.5,
+          104248286.0
+        ]
+      },
+      "us_per_query": 102.483059,
+      "queries_per_second": 9757.710296293946,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d2__tr-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 18524,
+      "checksum_hex": "84f045e4f4a37a73",
+      "stats": {
+        "count": 20,
+        "median_ns": 98700804.0,
+        "mad_ns": 972851.5,
+        "mean_ns": 99553829.2,
+        "p10_ns": 97686333.2,
+        "p90_ns": 102565909.10000001,
+        "median_ci95_ns": [
+          97815844.0,
+          100413760.0
+        ]
+      },
+      "us_per_query": 98.700804,
+      "queries_per_second": 10131.629728163107,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d2__tr-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 9799,
+      "checksum_hex": "7b9f330da003d987",
+      "stats": {
+        "count": 20,
+        "median_ns": 89635719.5,
+        "mad_ns": 229735.5,
+        "mean_ns": 89677367.0,
+        "p10_ns": 89242168.5,
+        "p90_ns": 90115995.80000001,
+        "median_ci95_ns": [
+          89475865.5,
+          89873615.5
+        ]
+      },
+      "us_per_query": 89.63571950000001,
+      "queries_per_second": 11156.26678268589,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d3__hits": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "hits",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 259079,
+      "checksum_hex": "c6ef531cab1cd7e1",
+      "stats": {
+        "count": 20,
+        "median_ns": 473504698.5,
+        "mad_ns": 5328562.5,
+        "mean_ns": 477128064.2,
+        "p10_ns": 467190236.4,
+        "p90_ns": 491515406.7,
+        "median_ci95_ns": [
+          470770138.0,
+          478169102.5
+        ]
+      },
+      "us_per_query": 473.5046985,
+      "queries_per_second": 2111.9114618458216,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d3__oov": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "oov",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 54,
+      "checksum_hex": "c57cc73bf4b4172e",
+      "stats": {
+        "count": 20,
+        "median_ns": 286689833.0,
+        "mad_ns": 771280.5,
+        "mean_ns": 286524207.2,
+        "p10_ns": 285310457.1,
+        "p90_ns": 287508424.8,
+        "median_ci95_ns": [
+          285983159.0,
+          287108652.5
+        ]
+      },
+      "us_per_query": 286.68983299999996,
+      "queries_per_second": 3488.0902107191223,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d3__tr-d1": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d1",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 222623,
+      "checksum_hex": "c877ee566cbe385c",
+      "stats": {
+        "count": 20,
+        "median_ns": 456139851.0,
+        "mad_ns": 6906836.5,
+        "mean_ns": 459160275.85,
+        "p10_ns": 449006964.0,
+        "p90_ns": 469470104.5,
+        "median_ci95_ns": [
+          453352877.5,
+          465284881.5
+        ]
+      },
+      "us_per_query": 456.139851,
+      "queries_per_second": 2192.3100948265974,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d3__tr-d2": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d2",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 199638,
+      "checksum_hex": "69b2214a70728c77",
+      "stats": {
+        "count": 20,
+        "median_ns": 434344043.5,
+        "mad_ns": 6869611.0,
+        "mean_ns": 436852004.1,
+        "p10_ns": 427620802.5,
+        "p90_ns": 447526649.8,
+        "median_ci95_ns": [
+          428878268.0,
+          445716350.0
+        ]
+      },
+      "us_per_query": 434.34404350000005,
+      "queries_per_second": 2302.3223524417917,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    },
+    "jvm-vinary__dynamic_dawg__query__transposition__d3__tr-d3": {
+      "target": "jvm-vinary",
+      "backend": "dynamic_dawg",
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d3",
+      "status": "ok",
+      "harness": "jmh",
+      "query_count": 1000,
+      "matches_per_pass": 127897,
+      "checksum_hex": "7813b6d28b4060b4",
+      "stats": {
+        "count": 20,
+        "median_ns": 410121373.0,
+        "mad_ns": 8308865.5,
+        "mean_ns": 409422835.45,
+        "p10_ns": 398415569.2,
+        "p90_ns": 421482092.2,
+        "median_ci95_ns": [
+          400608679.0,
+          414256447.0
+        ]
+      },
+      "us_per_query": 410.121373,
+      "queries_per_second": 2438.30257536956,
+      "notes": [
+        "converted from JMH record bench.VinaryBench.fullPass",
+        "JVM result transport: materialized",
+        "correctness evidence (triple+checksum) copied from the full-coverage verify twin over all 1000 queries \u2014 the same pass JMH timed"
+      ]
+    }
+  },
+  "construct": [],
+  "memory": [],
+  "pair_java": [
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "hits",
+      "legacy_us_per_query": 225.206868,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 52.095141000000005,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.322991812230626,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "oov",
+      "legacy_us_per_query": 175.990186,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 38.0319595,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.627428833899552,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d1",
+      "legacy_us_per_query": 217.9898735,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 49.199783000000004,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.4307080277163005,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d2",
+      "legacy_us_per_query": 210.31110149999998,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 47.333671,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.443160588579744,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 1,
+      "queryset": "std-d3",
+      "legacy_us_per_query": 210.965024,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 45.157681,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.671741757509648,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "hits",
+      "legacy_us_per_query": 3097.3347635,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 609.567198,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.081203144891009,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "oov",
+      "legacy_us_per_query": 2624.163413,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 463.994216,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.655595096900949,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d1",
+      "legacy_us_per_query": 3023.0204205,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 595.9033000000001,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.073005000140123,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d2",
+      "legacy_us_per_query": 3064.029722,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 576.8957425000001,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.311236496081438,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 2,
+      "queryset": "std-d3",
+      "legacy_us_per_query": 2912.8549555,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 553.0554395,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.266840803759964,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "hits",
+      "legacy_us_per_query": 23154.1695165,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 2467.415238,
+      "jvm-vinary(dynamic_dawg)_speedup": 9.383977678304342,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "oov",
+      "legacy_us_per_query": 18994.2821415,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 1605.864567,
+      "jvm-vinary(dynamic_dawg)_speedup": 11.828072262024072,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d1",
+      "legacy_us_per_query": 23088.852391,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 2421.407252,
+      "jvm-vinary(dynamic_dawg)_speedup": 9.53530322994176,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d2",
+      "legacy_us_per_query": 22231.222224,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 2322.9485315,
+      "jvm-vinary(dynamic_dawg)_speedup": 9.570260349093749,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "merge_and_split",
+      "max_distance": 3,
+      "queryset": "std-d3",
+      "legacy_us_per_query": 21865.209166499997,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 2195.8719505,
+      "jvm-vinary(dynamic_dawg)_speedup": 9.95741539552035,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "hits",
+      "legacy_us_per_query": 50.969215,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 16.975998999999998,
+      "jvm-vinary(dynamic_dawg)_speedup": 3.0024280161656467,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "oov",
+      "legacy_us_per_query": 27.8508275,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 9.5714545,
+      "jvm-vinary(dynamic_dawg)_speedup": 2.909780065297286,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d1",
+      "legacy_us_per_query": 50.366779,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 15.3196145,
+      "jvm-vinary(dynamic_dawg)_speedup": 3.2877314895880705,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d2",
+      "legacy_us_per_query": 45.1591885,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 13.659711999999999,
+      "jvm-vinary(dynamic_dawg)_speedup": 3.306013223412031,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 1,
+      "queryset": "std-d3",
+      "legacy_us_per_query": 38.4788245,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 12.5433555,
+      "jvm-vinary(dynamic_dawg)_speedup": 3.0676659447306585,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "hits",
+      "legacy_us_per_query": 443.8959785,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 108.3205685,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.097984202326265,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "oov",
+      "legacy_us_per_query": 327.3913025,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 65.5189225,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.996896926990824,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d1",
+      "legacy_us_per_query": 433.419425,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 100.848587,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.297724320123593,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d2",
+      "legacy_us_per_query": 401.9317075,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 95.674694,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.2010242279949175,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 2,
+      "queryset": "std-d3",
+      "legacy_us_per_query": 394.5905255,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 89.367363,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.415376175976011,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "hits",
+      "legacy_us_per_query": 2470.5886855000003,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 463.5937255,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.329210792996379,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "oov",
+      "legacy_us_per_query": 1825.94181,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 282.772419,
+      "jvm-vinary(dynamic_dawg)_speedup": 6.457283975775586,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d1",
+      "legacy_us_per_query": 2188.9936545,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 444.5289685,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.924299223707397,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d2",
+      "legacy_us_per_query": 2192.3453084999996,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 426.5279045,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.139980961081527,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "standard",
+      "max_distance": 3,
+      "queryset": "std-d3",
+      "legacy_us_per_query": 2280.0302340000003,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 389.36695899999995,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.8557362952823135,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "hits",
+      "legacy_us_per_query": 53.6103555,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 17.575259,
+      "jvm-vinary(dynamic_dawg)_speedup": 3.050330894127933,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "oov",
+      "legacy_us_per_query": 29.6938475,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 10.046209500000002,
+      "jvm-vinary(dynamic_dawg)_speedup": 2.955726485695923,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d1",
+      "legacy_us_per_query": 51.184705,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 15.7100865,
+      "jvm-vinary(dynamic_dawg)_speedup": 3.258079132791535,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d2",
+      "legacy_us_per_query": 45.188005,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 14.0617955,
+      "jvm-vinary(dynamic_dawg)_speedup": 3.2135302351680477,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 1,
+      "queryset": "tr-d3",
+      "legacy_us_per_query": 42.76277949999999,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 13.356213,
+      "jvm-vinary(dynamic_dawg)_speedup": 3.201714400631376,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "hits",
+      "legacy_us_per_query": 509.6559825,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 111.2401725,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.581582094364336,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "oov",
+      "legacy_us_per_query": 335.698956,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 66.0547945,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.082128534969555,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d1",
+      "legacy_us_per_query": 479.8967735,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 102.483059,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.682693687939194,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d2",
+      "legacy_us_per_query": 475.7706645,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 98.700804,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.820332208236115,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 2,
+      "queryset": "tr-d3",
+      "legacy_us_per_query": 441.2762825,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 89.63571950000001,
+      "jvm-vinary(dynamic_dawg)_speedup": 4.922995932441864,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "hits",
+      "legacy_us_per_query": 2640.696363,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 473.5046985,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.576916916274274,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "oov",
+      "legacy_us_per_query": 1972.377358,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 286.68983299999996,
+      "jvm-vinary(dynamic_dawg)_speedup": 6.879830154283846,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d1",
+      "legacy_us_per_query": 2492.857275,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 456.139851,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.465116168944423,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d2",
+      "legacy_us_per_query": 2449.4340610000004,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 434.34404350000005,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.639386789472572,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    },
+    {
+      "algorithm": "transposition",
+      "max_distance": 3,
+      "queryset": "tr-d3",
+      "legacy_us_per_query": 2352.7160715,
+      "jvm-vinary(dynamic_dawg)_us_per_query": 410.121373,
+      "jvm-vinary(dynamic_dawg)_speedup": 5.736633656251804,
+      "jvm-vinary(double_array_trie)_us_per_query": null,
+      "jvm-vinary(double_array_trie)_speedup": null
+    }
+  ],
+  "pair_java_summary": {
+    "ratio": "control_time_over_treatment_time",
+    "overall": {
+      "cells": 45,
+      "geometric_mean": 4.8823661262483835,
+      "median": 4.922995932441864,
+      "minimum": 2.909780065297286,
+      "maximum": 11.828072262024072,
+      "treatment_wins": 45,
+      "control_wins": 0,
+      "ties": 0
+    },
+    "by_algorithm": {
+      "merge_and_split": {
+        "cells": 15,
+        "geometric_mean": 6.193393340721268,
+        "median": 5.266840803759964,
+        "minimum": 4.322991812230626,
+        "maximum": 11.828072262024072,
+        "treatment_wins": 15,
+        "control_wins": 0,
+        "ties": 0
+      },
+      "standard": {
+        "cells": 15,
+        "geometric_mean": 4.223296847043019,
+        "median": 4.297724320123593,
+        "minimum": 2.909780065297286,
+        "maximum": 6.457283975775586,
+        "treatment_wins": 15,
+        "control_wins": 0,
+        "ties": 0
+      },
+      "transposition": {
+        "cells": 15,
+        "geometric_mean": 4.449495383445564,
+        "median": 4.820332208236115,
+        "minimum": 2.955726485695923,
+        "maximum": 6.879830154283846,
+        "treatment_wins": 15,
+        "control_wins": 0,
+        "ties": 0
+      }
+    }
+  },
+  "pair_javascript": [],
+  "pair_cpp": [],
+  "atlas_overhead": [],
+  "not_measured": [
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d1__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d1__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d1__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d1__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d1__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d2__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d2__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d2__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d2__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d2__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d3__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d3__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d3__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d3__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__query__damerau_levenshtein__d3__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__construct__standard__d1__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__dynamic_dawg__memory__standard__d2__std-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d1__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d1__std-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d1__std-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d1__std-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d1__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d2__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d2__std-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d2__std-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d2__std-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d2__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d3__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d3__std-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d3__std-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d3__std-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__standard__d3__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d1__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d1__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d1__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d1__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d1__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d2__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d2__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d2__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d2__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d2__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d3__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d3__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d3__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d3__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__transposition__d3__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d1__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d1__std-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d1__std-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d1__std-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d1__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d2__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d2__std-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d2__std-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d2__std-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d2__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d3__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d3__std-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d3__std-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d3__std-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__merge_and_split__d3__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d1__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d1__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d1__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d1__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d1__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d2__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d2__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d2__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d2__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d2__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d3__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d3__tr-d1",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d3__tr-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d3__tr-d3",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__query__damerau_levenshtein__d3__oov",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__construct__standard__d1__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-vinary__double_array_trie__memory__standard__d2__std-d2",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-legacy__own__construct__standard__d1__hits",
+      "status": "missing"
+    },
+    {
+      "cell": "jvm-legacy__own__memory__standard__d2__std-d2",
+      "status": "missing"
+    }
+  ],
+  "contention": {
+    "threshold_load_avg_1m": 8.0,
+    "cells_under_load": 7,
+    "cells_quiet": 83,
+    "cells_without_snapshot": 0,
+    "note": "7 of 90 cells were measured with a 1-minute load average above 8.0 on a 32-core host; 83 were measured quiet and 0 lack a snapshot (a cell only receives one when its batch completes, so in-flight batches appear here). Contention inflates dispersion rather than shifting medians systematically, which is why medians with MAD and bootstrap intervals are reported instead of means; cells listed below can be re-measured on a quiet machine. No cell overlapped a harness process invoked outside the runner's control.",
+    "cells": [
+      {
+        "cell": "jvm-vinary__dynamic_dawg__query__transposition__d2__oov",
+        "load_avg_1m": 16.18,
+        "status": "ok"
+      },
+      {
+        "cell": "jvm-legacy__own__query__transposition__d3__tr-d1",
+        "load_avg_1m": 13.87,
+        "status": "ok"
+      },
+      {
+        "cell": "jvm-vinary__dynamic_dawg__query__transposition__d2__tr-d3",
+        "load_avg_1m": 12.62,
+        "status": "ok"
+      },
+      {
+        "cell": "jvm-legacy__own__query__merge_and_split__d3__oov",
+        "load_avg_1m": 11.12,
+        "status": "ok"
+      },
+      {
+        "cell": "jvm-vinary__dynamic_dawg__query__standard__d3__std-d3",
+        "load_avg_1m": 9.07,
+        "status": "ok"
+      },
+      {
+        "cell": "jvm-legacy__own__query__standard__d2__std-d2",
+        "load_avg_1m": 8.68,
+        "status": "ok"
+      },
+      {
+        "cell": "jvm-legacy__own__query__merge_and_split__d3__std-d3",
+        "load_avg_1m": 8.63,
+        "status": "ok"
+      }
+    ],
+    "foreign_harness_overlap": {
+      "cells": [],
+      "count": 0,
+      "ledger": "foreign-contention.jsonl"
+    }
+  }
+}

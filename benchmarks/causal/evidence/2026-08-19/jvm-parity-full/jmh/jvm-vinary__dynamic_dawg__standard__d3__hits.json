@@ -1,0 +1,84 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.VinaryBench.fullPass",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 2,
+        "jvm" : "/usr/lib/jvm/java-26-openjdk/bin/java",
+        "jvmArgs" : [
+            "--enable-native-access=ALL-UNNAMED",
+            "-Djava.library.path=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release:/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release",
+            "-Dxl.workload=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload",
+            "-Xms2g",
+            "-Xmx2g"
+        ],
+        "jdkVersion" : "26.0.2",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "26.0.2",
+        "warmupIterations" : 5,
+        "warmupTime" : "2 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "2 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "algorithm" : "standard",
+            "backend" : "dynamic_dawg",
+            "distance" : "3",
+            "queryset" : "hits",
+            "resultMode" : "materialized"
+        },
+        "primaryMetric" : {
+            "score" : 466490.28677,
+            "scoreError" : 7373.993254965743,
+            "scoreConfidence" : [
+                459116.29351503425,
+                473864.28002496576
+            ],
+            "scorePercentiles" : {
+                "0.0" : 456975.4476,
+                "50.0" : 463593.72589999996,
+                "90.0" : 480468.55254,
+                "95.0" : 480787.17459999997,
+                "99.0" : 480793.7254,
+                "99.9" : 480793.7254,
+                "99.99" : 480793.7254,
+                "99.999" : 480793.7254,
+                "99.9999" : 480793.7254,
+                "100.0" : 480793.7254
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    472935.0578,
+                    478721.1408,
+                    458135.5492,
+                    458318.8948,
+                    458997.9022,
+                    456975.4476,
+                    465890.1446,
+                    477725.8,
+                    477660.6284,
+                    463391.9802
+                ],
+                [
+                    480793.7254,
+                    463795.4716,
+                    460116.6786,
+                    460342.2944,
+                    466037.6774,
+                    480662.7094,
+                    469694.8476,
+                    460928.0292,
+                    459447.7748,
+                    459233.9814
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

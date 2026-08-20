@@ -1,0 +1,106 @@
+{
+  "accepted_admissions": 204,
+  "evidence": {
+    "accepted_admissions_sha256": "934ce00b51fdb9ac754f927a8ec28a3bf423c48ba74545ed27259fb6cc0a78f6",
+    "rejected_admissions_sha256": "7d4b404196df7f994e8c884ffb4d11f72dd6c801bec6d1bd628629e215f9c88d",
+    "run_config_sha256": "48cbc2d2007e4de53f0785f46ab76072797a2281a2bf152a22356d2ed9df4f78",
+    "runner_summary_sha256": "4bc672d31c904734604b4a703b8d5f15d20d87f355349d62ba016b11e17fe0e8",
+    "samples_csv_sha256": "09121fb9f115b2d071cc065d97bc3d4b3e34cfe93926ca07b551bd13cab6eb57"
+  },
+  "exact_signature": {
+    "semantic_checksum_hex": "8da9c6f99f82a731",
+    "semantic_membership_checks": 79343,
+    "semantic_term_count": 79343,
+    "term_count": 79343
+  },
+  "java": {
+    "count": 51,
+    "mad_ns": 8076013,
+    "mean_ns": 177818394.96078432,
+    "median_ci95_ns": [
+      171181102.0,
+      180142451.0
+    ],
+    "median_ns": 175798050,
+    "p10_ns": 164628537.0,
+    "p90_ns": 193711942.0
+  },
+  "java_median_ns_per_work_item": 2215.671829903079,
+  "java_over_rust_median_x": 10.193414946112593,
+  "median_ci95_nonoverlap": true,
+  "mode": "construct",
+  "paired_difference_ns": {
+    "count": 51,
+    "mad_ns": 7878809,
+    "mean_ns": -160509875.7647059,
+    "median_ci95_ns": [
+      -162378252.0,
+      -154220797.0
+    ],
+    "median_ns": -158826664,
+    "p10_ns": -176552400.0,
+    "p90_ns": -147731732.0
+  },
+  "protocol_closure": [
+    {
+      "path": "benchmarks/cross-language/scripts/run-pure-rust-legacy-java-pair.sh",
+      "sha256": "fc2cd7bad6edc06cd4289f9e437442c44706ea6bf7e5adf7a60b0b7c9cae1d8a"
+    },
+    {
+      "path": "benchmarks/cross-language/scripts/run-with-contention-monitor.sh",
+      "sha256": "e09c35324c9ab101090c1f360ecceb131f2f2c481b2252b58c57059383676d9d"
+    },
+    {
+      "path": "benchmarks/cross-language/scripts/timed-proc-guard.sh",
+      "sha256": "6f4b2911254b08f0484c3df4d659fa693ed5adb56c7a852198e7ebb625bc90de"
+    },
+    {
+      "path": "benchmarks/cross-language/scripts/java-execution-closure.py",
+      "sha256": "26d0576d8d13154fd437bbd066b114e6e97cc0920711a5d20277d86dc9aeea84"
+    },
+    {
+      "path": "benchmarks/cross-language/scripts/schema_check.py",
+      "sha256": "cfd573d9e5d07bf2279dea2a3a806d78c9d89817e108a4c1a1c3048d55e75ff7"
+    },
+    {
+      "path": "benchmarks/cross-language/scripts/aggregate.py",
+      "sha256": "9d67c490b02286709f4c886bcf2ce8ac8974d682fb08fbde2bfffbb9d415edf1"
+    },
+    {
+      "path": "benchmarks/causal/host-load-admission.py",
+      "sha256": "90a029b7e73a209bd370f187a5aa8ae9beb7da0f6b4ab4580a43a00c2ab0d1c5"
+    },
+    {
+      "path": "benchmarks/cross-language/schema/pure-rust-legacy-java-pair.schema.json",
+      "sha256": "277047da0cf19ce74b425e1429016dec56657359ca5724d1190a00ca03f76536"
+    },
+    {
+      "path": "benchmarks/cross-language/schema/result.schema.json",
+      "sha256": "4af79c89fff6694f03797796b18c1ba4217e7f67fa5a88800f7d97b658e4530e"
+    },
+    {
+      "path": "benchmarks/cross-language/scripts/analyze-pure-rust-legacy-java-pair.py",
+      "sha256": "d94aea679fc1494f28d84bcbc6e4b758005aadef70d055fc15a35841d59aa76f"
+    }
+  ],
+  "protocol_closure_sha256": "f7e0702843195c6937c7d98d992d1cbef6e4532d8967395414728d9cf0c45c7a",
+  "rejected_admissions": 1,
+  "rust": {
+    "count": 51,
+    "mad_ns": 230998,
+    "mean_ns": 17308519.19607843,
+    "median_ci95_ns": [
+      17079802.0,
+      17358810.0
+    ],
+    "median_ns": 17246237,
+    "p10_ns": 16935138.0,
+    "p90_ns": 17764199.0
+  },
+  "rust_median_ns_per_work_item": 217.36305660234677,
+  "rust_minus_java_pooled_cohens_d": -19.93233066356225,
+  "samples": 51,
+  "schema": "liblevenshtein.pure-rust-legacy-java-pair-analysis.v2",
+  "work_item_kind": "term",
+  "work_items_per_sample": 79343
+}

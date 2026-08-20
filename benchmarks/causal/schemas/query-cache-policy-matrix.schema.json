@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/vinary-tree/liblevenshtein-rust/benchmarks/causal/schemas/query-cache-policy-matrix.schema.json",
+  "title": "Query-cache policy matrix CSV row",
+  "description": "Logical schema and cross-row invariants for liblevenshtein.causal-query-cache-policy-matrix.v2 evidence. CSV readers must parse empty workload-inapplicable quality fields as null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "replicate",
+    "policy_order",
+    "workload_order",
+    "policy",
+    "workload",
+    "operations",
+    "elapsed_ns",
+    "ns_per_operation",
+    "allocations",
+    "allocations_per_operation",
+    "allocated_bytes",
+    "allocated_bytes_per_operation",
+    "deallocations",
+    "deallocated_bytes",
+    "hits",
+    "misses",
+    "hit_rate",
+    "resident_entries",
+    "resident_logical_weight",
+    "max_entries",
+    "max_logical_weight",
+    "checksum_u64",
+    "binary_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "liblevenshtein.causal-query-cache-policy-matrix.v2"
+    },
+    "replicate": { "type": "integer", "minimum": 1 },
+    "policy_order": { "type": "integer", "minimum": 0, "maximum": 4 },
+    "workload_order": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "policy": {
+      "enum": ["fifo", "lru", "sieve", "aging-exact-lfu", "tinylfu-sieve"]
+    },
+    "workload": {
+      "enum": ["hot-hits", "scan", "phase-shift", "zipf"]
+    },
+    "operations": { "type": "integer", "minimum": 1 },
+    "elapsed_ns": { "type": "integer", "minimum": 1 },
+    "ns_per_operation": { "type": "number", "minimum": 0 },
+    "allocations": { "type": "integer", "minimum": 0 },
+    "allocations_per_operation": { "type": "number", "minimum": 0 },
+    "allocated_bytes": { "type": "integer", "minimum": 0 },
+    "allocated_bytes_per_operation": { "type": "number", "minimum": 0 },
+    "deallocations": { "type": "integer", "minimum": 0 },
+    "deallocated_bytes": { "type": "integer", "minimum": 0 },
+    "hits": { "type": "integer", "minimum": 0 },
+    "misses": { "type": "integer", "minimum": 0 },
+    "hit_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+    "resident_entries": { "type": "integer", "minimum": 0 },
+    "resident_logical_weight": { "type": "integer", "minimum": 0 },
+    "max_entries": { "type": "integer", "minimum": 1 },
+    "max_logical_weight": { "type": "integer", "minimum": 1 },
+    "scan_hot_retained": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 128
+    },
+    "phase_rounds_to_95": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 64
+    },
+    "checksum_u64": { "type": "integer", "minimum": 0 },
+    "binary_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "x-cross-row-invariants": [
+    "Each replicate has exactly one row for every policy/workload pair (20 rows).",
+    "checksum_u64 is identical across all five policies within one replicate/workload.",
+    "resident_entries is no greater than max_entries.",
+    "resident_logical_weight is no greater than max_logical_weight.",
+    "scan_hot_retained is non-null only for scan rows.",
+    "phase_rounds_to_95 is non-null only when a phase-shift row reaches 95 percent residency within 64 rounds."
+  ]
+}

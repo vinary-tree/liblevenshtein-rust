@@ -1,0 +1,84 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.VinaryBench.fullPass",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 2,
+        "jvm" : "/usr/lib/jvm/java-26-openjdk/bin/java",
+        "jvmArgs" : [
+            "--enable-native-access=ALL-UNNAMED",
+            "-Djava.library.path=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release:/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release",
+            "-Dxl.workload=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload",
+            "-Xms2g",
+            "-Xmx2g"
+        ],
+        "jdkVersion" : "26.0.2",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "26.0.2",
+        "warmupIterations" : 5,
+        "warmupTime" : "2 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "2 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "algorithm" : "transposition",
+            "backend" : "dynamic_dawg",
+            "distance" : "2",
+            "queryset" : "tr-d1",
+            "resultMode" : "materialized"
+        },
+        "primaryMetric" : {
+            "score" : 103237.74839486842,
+            "scoreError" : 1405.488707822268,
+            "scoreConfidence" : [
+                101832.25968704616,
+                104643.23710269069
+            ],
+            "scorePercentiles" : {
+                "0.0" : 101506.06025,
+                "50.0" : 102483.05957499999,
+                "90.0" : 105782.98768421053,
+                "95.0" : 105842.76162894737,
+                "99.0" : 105844.65263157895,
+                "99.9" : 105844.65263157895,
+                "99.99" : 105844.65263157895,
+                "99.999" : 105844.65263157895,
+                "99.9999" : 105844.65263157895,
+                "100.0" : 105844.65263157895
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    102375.4082,
+                    102509.01855,
+                    105568.38363157895,
+                    105806.83257894737,
+                    104657.23485,
+                    101720.78795,
+                    101798.08555,
+                    103476.2856,
+                    103839.33895,
+                    102457.1006
+                ],
+                [
+                    101806.84105,
+                    101738.7565,
+                    105844.65263157895,
+                    105536.95289473684,
+                    105427.75321052631,
+                    101506.06025,
+                    101875.94255,
+                    102372.6664,
+                    101903.02995,
+                    102533.836
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

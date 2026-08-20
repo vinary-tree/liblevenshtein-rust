@@ -352,7 +352,7 @@ fn print_json(args: &Args, measurement: &Measurement) {
         "not-applicable"
     };
     writeln!(&mut json, "  \"dat_cursor_mode\": {dat_cursor_mode:?},").unwrap();
-    let parent_arena_requested = cfg!(feature = "perf-instrumentation")
+    let parent_arena_requested = cfg!(feature = "benchmark-controls")
         && std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_CURSOR_KEY_RECONSTRUCTION").is_some();
     let cursor_key_mode = if is_dat_constructor {
         if parent_arena_requested {

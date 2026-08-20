@@ -1,0 +1,23 @@
+{
+  "schema": "liblevenshtein.pure-rust-legacy-java-pair.v1",
+  "replicate": 44,
+  "mode": "query",
+  "run_config_sha256": "08f5430890f7b2efe2b21caeb2187f6588808414fd7359792da9734a4b705708",
+  "exact_signature_equal": true,
+  "signature": {
+    "checksum_hex": "3bdc59281f42611a",
+    "distance_sum_per_pass": 2620,
+    "matches_per_pass": 3620,
+    "term_bytes_per_pass": 24726
+  },
+  "rust": {
+    "raw_file": "rust.json",
+    "raw_sha256": "d185f06c8dcfefd78f5b4c9a181e3b7562da11f3aeda19f8057e530fda811310",
+    "elapsed_ns": 14140861
+  },
+  "java": {
+    "raw_file": "java.json",
+    "raw_sha256": "3096f3171584aa3c353572d4e62daca2df41885112aeb8750c424c3320b569f8",
+    "elapsed_ns": 44894175
+  }
+}

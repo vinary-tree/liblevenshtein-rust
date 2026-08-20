@@ -74,6 +74,26 @@ public final class VinaryAdapter implements HarnessAdapter {
     }
 
     @Override
+    public ConstructionProof validateDictionary(List<String> expectedTerms) {
+        if (dictionary == null) {
+            throw new IllegalStateException("dictionary has not been built");
+        }
+        if (dictionary.size() != expectedTerms.size()) {
+            throw new IllegalStateException(
+                "semantic validation failed: dictionary size " + dictionary.size()
+                    + ", expected " + expectedTerms.size());
+        }
+        for (String term : expectedTerms) {
+            if (!dictionary.contains(term)) {
+                throw new IllegalStateException(
+                    "semantic validation failed: constructed dictionary lost " + term);
+            }
+        }
+        return new ConstructionProof(
+            expectedTerms.size(), expectedTerms.size(), Fnv.semanticTerms(expectedTerms));
+    }
+
+    @Override
     public void createTransducer(String algorithm) {
         if (transducer != null) {
             transducer.close();

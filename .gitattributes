@@ -1,0 +1,4 @@
+# Profilers and benchmark engines write evidence files whose exact bytes are
+# hashed by the campaign manifests. Preserve those bytes verbatim and exclude
+# only this immutable evidence tree from source-code whitespace diagnostics.
+benchmarks/causal/evidence/** -whitespace

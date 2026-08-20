@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/vinary-tree/liblevenshtein-rust/benchmarks/causal/schemas/construction-matrix-cell.schema.json",
+  "title": "Validated causal construction matrix cell",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "domain", "constructor", "term_count",
+    "semantic_term_count", "semantic_membership_checks", "semantic_checksum_hex",
+    "warmups", "samples_ns", "cell", "order", "dictionary",
+    "dictionary_sha256", "queries", "queries_sha256", "binary_sha256"
+  ],
+  "properties": {
+    "schema": { "const": "liblevenshtein.causal-construction.v1" },
+    "domain": { "enum": ["byte", "unicode", "u64"] },
+    "constructor": {
+      "enum": [
+        "from_terms", "from_sorted_terms", "stream", "dat_static",
+        "dat_incremental", "clone_input", "clone_and_sort_input"
+      ]
+    },
+    "term_count": { "type": "integer", "minimum": 1 },
+    "semantic_term_count": { "type": "integer", "minimum": 1 },
+    "semantic_membership_checks": { "type": "integer", "minimum": 1 },
+    "semantic_checksum_hex": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+    "warmups": { "type": "integer", "minimum": 0 },
+    "samples_ns": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "integer", "minimum": 1 }
+    },
+    "cell": { "type": "string", "minLength": 1 },
+    "order": { "enum": ["sorted", "shuffled"] },
+    "dictionary": { "type": "string", "minLength": 1 },
+    "dictionary_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "queries": { "type": "string", "minLength": 1 },
+    "queries_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "binary_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

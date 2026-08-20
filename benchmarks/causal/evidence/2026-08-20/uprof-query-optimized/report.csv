@@ -1,0 +1,550 @@
+
+"AMD uProf (Version:5.3.521.0)"
+PERFORMANCE ANALYSIS REPORT
+
+EXECUTION
+Target Path:,"target/release/causal_query_profile"
+Command Line Arguments:,"--dictionary benchmarks/cross-language/workload/dictionary.txt --queries benchmarks/cross-language/workload/queries/hits.txt --domain byte --constructor from_terms --algorithm standard --scheduler unordered --max-distance 1 --passes 500 "
+Working Directory:,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust"
+Environment Variables:
+CPU Details:,"Family(0x19), Model(0x8), Number of Cores(32)"
+Operating System:,"Linux Arch Linux-64 Kernel:7.1.6-arch1-1"
+Collect Command:,"./AMDuProfCLI collect --config hotspots --call-graph-depth 64 --affinity 3 --output-dir benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/uprof target/release/causal_query_profile --dictionary benchmarks/cross-language/workload/dictionary.txt --queries benchmarks/cross-language/workload/queries/hits.txt --domain byte --constructor from_terms --algorithm standard --scheduler unordered --max-distance 1 --passes 500"
+Report Command:,"./AMDuProfCLI report --input-dir benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/uprof --detail --show-percentage --cutoff 0 --report-output benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/report.csv"
+
+PROFILE DETAILS
+Profile Session Type:,"Hotspots"
+Profile Scope:,"Single Application"
+CPU Mask:,"0-31"
+CPU Affinity Mask:,"3"
+Profile Start Time:,"Thu Aug 20 02:57:30 2026"
+Profile End Time:,"Thu Aug 20 02:57:37 2026"
+Profile Duration:,"7.558 seconds"
+Data Folder:,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/uprof"
+Virtual Machine:,"No"
+Timer Interval:,"10ms"
+Profiling Signal:,"27"
+Call Stack Sampling:,"True"
+Call Stack Overcome frame-pointer omission:,"False"
+Call Stack Unwind Depth:,"64"
+Selected View:,"Time based hotspots"
+
+MONITORED EVENTS
+TBP Events:,Name,Interval,Description
+,"CPU_TIME","10.000 milliseconds","CPU Time is the time in which the CPU core is executing the code."
+
+
+DERIVED METRICS
+Metric Name,Expression,Description
+"TOTAL_CPU_TIME (s)","CPU_TIME","The CPU time spent by a function and its children."
+
+
+APPLICATION PERFORMANCE SNAPSHOT
+Thread Count,"1"
+
+
+"HOTTEST FUNCTIONS (Sort Event - CPU_TIME)"
+FUNCTION,"CPU_TIME","TOTAL_CPU_TIME (s)",Module
+"_RNCINvXs2_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5queryINtB8_17PackedQueryKernelINtNtBa_15packed_standard21PackedStandardMachinehEEINtB8_11QueryKernelhNtNtBa_19substitution_policy12UnrestrictedE6expandINtNtNtNtBc_5cache8eviction4noop8NoopNodeIB3l_IB3l_NtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeEEENCNvMs8_B8_INtB8_17QueryIteratorCoreB3k_NtB8_9CandidateB2w_BY_NtNtBa_10transition16UnitCostFrontierNtNtBa_20dictionary_traversal15ParentArenaPathE27queue_children_and_finality0E0CsdjGytevN7f4_20causal_query_profile",47.47%,55.28%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvXsa_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5queryINtB5_13QueryIteratorNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeNtB5_9CandidateENtNtNtNtCs4NRVxsYgnAr_4core4iter6traits8iterator8Iterator4nextCsdjGytevN7f4_20causal_query_profile",36.47%,95.80%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal16push_parent_pathhECsdjGytevN7f4_20causal_query_profile",2.89%,2.89%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvMs1_NtCsgQfI1edjipl_9hashbrown3mapINtB5_7HashMapymNtCs7jcQXjtYeIp_10rustc_hash13FxBuildHasherE6insertCsdjGytevN7f4_20causal_query_profile",1.45%,3.33%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTymEE14reserve_rehashNCINvNtB8_3map11make_hasherymNtCs7jcQXjtYeIp_10rustc_hash13FxBuildHasherE0ECsdjGytevN7f4_20causal_query_profile",1.16%,1.88%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0xa6ea6",1.01%,1.01%,"/usr/lib/libc.so.6"
+"realloc",0.58%,4.63%,"/usr/lib/libc.so.6"
+"libc.so.6!0x173f64",0.58%,0.58%,"/usr/lib/libc.so.6"
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal23materialize_parent_pathhECsdjGytevN7f4_20causal_query_profile",0.58%,0.58%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer10packed_dfaINtB2_17ExactLabelClasseshE3newCsdjGytevN7f4_20causal_query_profile",0.43%,1.01%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0xa7d28",0.43%,0.43%,"/usr/lib/libc.so.6"
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsdjGytevN7f4_20causal_query_profile",0.29%,3.47%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0x173f73",0.29%,0.29%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6cd0",0.29%,0.29%,"/usr/lib/libc.so.6"
+"_RNvMs_NtCs5jP0jl1Mg7H_14liblevenshtein10transducerINtB4_10TransducerNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgE19query_with_distanceCsdjGytevN7f4_20causal_query_profile",0.29%,2.46%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"cfree",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa4c71",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer4poolNtB2_9StatePool3new",0.14%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0x173f80",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa5ed0",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa73cc",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6fc2",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa4dd8",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal39acquire_traversal_buffers_with_capacityINtB2_12PathFrontierINtB2_15ParentPathTracehINtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg25DynamicDawgSnapshotCursorhuEENtNtB4_10transition16UnitCostFrontierEINtB2_14ParentPathNodehEECsdjGytevN7f4_20causal_query_profile",0.14%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvXs2_NtNtCs4NRVxsYgnAr_4core3str5lossyNtB5_10Utf8ChunksNtNtNtNtB9_4iter6traits8iterator8Iterator4next",0.14%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0xa6c0b",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer12packed_lanesNtB2_20PackedEditLaneLayout3new",0.14%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0xa6082",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa7de3",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6bcb",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6f06",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0x173f7b",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6fcd",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6fde",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RINvMsa_NtCsgQfI1edjipl_9hashbrown3rawNtB6_13RawTableInner22fallible_with_capacityNtNtCscdodAO9FK5_5alloc5alloc6GlobalECsdjGytevN7f4_20causal_query_profile",0.14%,0.72%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0x173f69",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RNvMNtCscdodAO9FK5_5alloc6stringNtB2_6String15from_utf8_lossy",0.14%,0.29%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0x173f0b",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0x1747c4",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0x173f8a",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6fd4",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RNvMs6_NtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhuE11minimize_toCsdjGytevN7f4_20causal_query_profile",0.14%,0.29%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0xa4c55",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0x173f58",0.14%,0.14%,"/usr/lib/libc.so.6"
+"__libc_malloc",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RINvNvMs2_NtCscdodAO9FK5_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsdjGytevN7f4_20causal_query_profile",0.14%,3.62%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0x173f22",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6be5",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa7128",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6f0c",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6b60",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal16TraversalSessionNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeEECsdjGytevN7f4_20causal_query_profile",0.14%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"libc.so.6!0x1747e4",0.14%,0.14%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa770b",0.14%,0.14%,"/usr/lib/libc.so.6"
+"_RNvMs3_NtCscdodAO9FK5_5alloc7raw_vecINtB5_6RawVecjE8grow_oneCs5jP0jl1Mg7H_14liblevenshtein",0.14%,1.45%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_",0.00%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvMs0_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer10transitionINtB6_15UnitCostMachinehE6seededNtNtB8_19substitution_policy12UnrestrictedECsdjGytevN7f4_20causal_query_profile",0.00%,1.16%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCs5jP0jl1Mg7H_14liblevenshtein",0.00%,1.30%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer15packed_standard21PackedStandardMachinehEECsdjGytevN7f4_20causal_query_profile",0.00%,0.29%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtB4_4iter8adapters4take4TakeINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5query13QueryIteratorNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeNtB1e_9CandidateEEECsdjGytevN7f4_20causal_query_profile",0.00%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_start",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvMs3_NtCscdodAO9FK5_5alloc7raw_vecINtB5_6RawVechE8grow_oneB7_",0.00%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer15packed_standard17PackedStandardDfahEECsdjGytevN7f4_20causal_query_profile",0.00%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvNtNtCs2AWtUsOyxgP_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsdjGytevN7f4_20causal_query_profile",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvCsdjGytevN7f4_20causal_query_profile10query_passNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgKb1_EB2_",0.00%,0.14%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvMs6_NtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhuE6insertCsdjGytevN7f4_20causal_query_profile",0.00%,0.29%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"__libc_start_main",0.00%,100.00%,"/usr/lib/libc.so.6"
+"_RNvCsdjGytevN7f4_20causal_query_profile4main",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNCINvNtCs2AWtUsOyxgP_3std2rt10lang_startuE0CsdjGytevN7f4_20causal_query_profile",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RNvNtCs2AWtUsOyxgP_3std2rt19lang_start_internal",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"main",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvCsdjGytevN7f4_20causal_query_profile10query_passNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgKb0_EB2_",0.00%,99.57%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+"_RINvCsdjGytevN7f4_20causal_query_profile3runNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgNCNvB2_4main0EB2_",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile"
+
+"HOTTEST PROCESSES (Sort Event - CPU_TIME)"
+PROCESS,"CPU_TIME"
+"causal_query_pr (PID:77)",100.00%
+
+"HOTTEST MODULES (Sort Event - CPU_TIME)"
+MODULE,"CPU_TIME"
+"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile",92.47%
+"/usr/lib/libc.so.6",7.53%
+
+"HOTTEST THREADS (Sort Event - CPU_TIME)"
+THREAD,"CPU_TIME",THREAD ID
+"causal_query_pr (PID:77)",100.00%,"77"
+
+"ALL PROCESSES (Sort Event - CPU_TIME)"
+PROCESS,"CPU_TIME"
+"causal_query_pr (PID:77)",100.00%
+
+
+PROFILE REPORT FOR PROCESS - causal_query_pr (PID:77)
+PROCESS,"CPU_TIME"
+"causal_query_pr (PID:77)",100.00%
+
+THREAD SUMMARY
+THREAD,"CPU_TIME",THREAD ID
+"causal_query_pr (PID:77)",100.00%,"77"
+
+
+MODULE SUMMARY
+MODULE,"CPU_TIME"
+/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile,92.47%
+/usr/lib/libc.so.6,7.53%
+
+
+FUNCTION SUMMARY
+FUNCTION,"CPU_TIME","TOTAL_CPU_TIME (s)",MODULE
+"_RNCINvXs2_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5queryINtB8_17PackedQueryKernelINtNtBa_15packed_standard21PackedStandardMachinehEEINtB8_11QueryKernelhNtNtBa_19substitution_policy12UnrestrictedE6expandINtNtNtNtBc_5cache8eviction4noop8NoopNodeIB3l_IB3l_NtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeEEENCNvMs8_B8_INtB8_17QueryIteratorCoreB3k_NtB8_9CandidateB2w_BY_NtNtBa_10transition16UnitCostFrontierNtNtBa_20dictionary_traversal15ParentArenaPathE27queue_children_and_finality0E0CsdjGytevN7f4_20causal_query_profile",47.47%,55.28%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvXsa_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5queryINtB5_13QueryIteratorNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeNtB5_9CandidateENtNtNtNtCs4NRVxsYgnAr_4core4iter6traits8iterator8Iterator4nextCsdjGytevN7f4_20causal_query_profile",36.47%,95.80%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal16push_parent_pathhECsdjGytevN7f4_20causal_query_profile",2.89%,2.89%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvMs1_NtCsgQfI1edjipl_9hashbrown3mapINtB5_7HashMapymNtCs7jcQXjtYeIp_10rustc_hash13FxBuildHasherE6insertCsdjGytevN7f4_20causal_query_profile",1.45%,3.33%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTymEE14reserve_rehashNCINvNtB8_3map11make_hasherymNtCs7jcQXjtYeIp_10rustc_hash13FxBuildHasherE0ECsdjGytevN7f4_20causal_query_profile",1.16%,1.88%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0xa6ea6",1.01%,1.01%,/usr/lib/libc.so.6
+"realloc",0.58%,4.63%,/usr/lib/libc.so.6
+"libc.so.6!0x173f64",0.58%,0.58%,/usr/lib/libc.so.6
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal23materialize_parent_pathhECsdjGytevN7f4_20causal_query_profile",0.58%,0.58%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0xa7d28",0.43%,0.43%,/usr/lib/libc.so.6
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer10packed_dfaINtB2_17ExactLabelClasseshE3newCsdjGytevN7f4_20causal_query_profile",0.43%,1.01%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0x173f73",0.29%,0.29%,/usr/lib/libc.so.6
+"libc.so.6!0xa6cd0",0.29%,0.29%,/usr/lib/libc.so.6
+"_RNvMs_NtCs5jP0jl1Mg7H_14liblevenshtein10transducerINtB4_10TransducerNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgE19query_with_distanceCsdjGytevN7f4_20causal_query_profile",0.29%,2.46%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsdjGytevN7f4_20causal_query_profile",0.29%,3.47%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0xa6c0b",0.14%,0.14%,/usr/lib/libc.so.6
+"_RNvXs2_NtNtCs4NRVxsYgnAr_4core3str5lossyNtB5_10Utf8ChunksNtNtNtNtB9_4iter6traits8iterator8Iterator4next",0.14%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0x173f80",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0x173f0b",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6fcd",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0x173f7b",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6f06",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6bcb",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa7de3",0.14%,0.14%,/usr/lib/libc.so.6
+"_RNvMs6_NtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhuE11minimize_toCsdjGytevN7f4_20causal_query_profile",0.14%,0.29%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0xa4c55",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0x173f58",0.14%,0.14%,/usr/lib/libc.so.6
+"__libc_malloc",0.14%,0.14%,/usr/lib/libc.so.6
+"_RINvNvMs2_NtCscdodAO9FK5_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsdjGytevN7f4_20causal_query_profile",0.14%,3.62%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0x173f22",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6be5",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6b60",0.14%,0.14%,/usr/lib/libc.so.6
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal16TraversalSessionNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeEECsdjGytevN7f4_20causal_query_profile",0.14%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0xa7128",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6f0c",0.14%,0.14%,/usr/lib/libc.so.6
+"cfree",0.14%,0.14%,/usr/lib/libc.so.6
+"_RNvMNtCscdodAO9FK5_5alloc6stringNtB2_6String15from_utf8_lossy",0.14%,0.29%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0xa6082",0.14%,0.14%,/usr/lib/libc.so.6
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer12packed_lanesNtB2_20PackedEditLaneLayout3new",0.14%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvMs3_NtCscdodAO9FK5_5alloc7raw_vecINtB5_6RawVecjE8grow_oneCs5jP0jl1Mg7H_14liblevenshtein",0.14%,1.45%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0x1747c4",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0x173f8a",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa4c71",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0x173f69",0.14%,0.14%,/usr/lib/libc.so.6
+"_RINvMsa_NtCsgQfI1edjipl_9hashbrown3rawNtB6_13RawTableInner22fallible_with_capacityNtNtCscdodAO9FK5_5alloc5alloc6GlobalECsdjGytevN7f4_20causal_query_profile",0.14%,0.72%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0xa73cc",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa5ed0",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6fde",0.14%,0.14%,/usr/lib/libc.so.6
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal39acquire_traversal_buffers_with_capacityINtB2_12PathFrontierINtB2_15ParentPathTracehINtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg25DynamicDawgSnapshotCursorhuEENtNtB4_10transition16UnitCostFrontierEINtB2_14ParentPathNodehEECsdjGytevN7f4_20causal_query_profile",0.14%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"libc.so.6!0xa4dd8",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6fc2",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa6fd4",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0x1747e4",0.14%,0.14%,/usr/lib/libc.so.6
+"libc.so.6!0xa770b",0.14%,0.14%,/usr/lib/libc.so.6
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer4poolNtB2_9StatePool3new",0.14%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvMs0_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer10transitionINtB6_15UnitCostMachinehE6seededNtNtB8_19substitution_policy12UnrestrictedECsdjGytevN7f4_20causal_query_profile",0.00%,1.16%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNCINvNtCs2AWtUsOyxgP_3std2rt10lang_startuE0CsdjGytevN7f4_20causal_query_profile",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvCsdjGytevN7f4_20causal_query_profile3runNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgNCNvB2_4main0EB2_",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvNtCs2AWtUsOyxgP_3std2rt19lang_start_internal",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvCsdjGytevN7f4_20causal_query_profile10query_passNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgKb0_EB2_",0.00%,99.57%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"main",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_start",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtB4_4iter8adapters4take4TakeINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5query13QueryIteratorNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeNtB1e_9CandidateEEECsdjGytevN7f4_20causal_query_profile",0.00%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer15packed_standard21PackedStandardMachinehEECsdjGytevN7f4_20causal_query_profile",0.00%,0.29%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCs5jP0jl1Mg7H_14liblevenshtein",0.00%,1.30%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"__libc_start_main",0.00%,100.00%,/usr/lib/libc.so.6
+"_RINvCsdjGytevN7f4_20causal_query_profile10query_passNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgKb1_EB2_",0.00%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvMs6_NtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhuE6insertCsdjGytevN7f4_20causal_query_profile",0.00%,0.29%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvCsdjGytevN7f4_20causal_query_profile4main",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvNtNtCs2AWtUsOyxgP_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsdjGytevN7f4_20causal_query_profile",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer15packed_standard17PackedStandardDfahEECsdjGytevN7f4_20causal_query_profile",0.00%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_",0.00%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+"_RNvMs3_NtCscdodAO9FK5_5alloc7raw_vecINtB5_6RawVechE8grow_oneB7_",0.00%,0.14%,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release/causal_query_profile
+
+Function Detail Data
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNCINvXs2_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5queryINtB8_17PackedQueryKernelINtNtBa_15packed_standard21PackedStandardMachinehEEINtB8_11QueryKernelhNtNtBa_19substitution_policy12UnrestrictedE6expandINtNtNtNtBc_5cache8eviction4noop8NoopNodeIB3l_IB3l_NtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeEEENCNvMs8_B8_INtB8_17QueryIteratorCoreB3k_NtB8_9CandidateB2w_BY_NtNtBa_10transition16UnitCostFrontierNtNtBa_20dictionary_traversal15ParentArenaPathE27queue_children_and_finality0E0CsdjGytevN7f4_20causal_query_profile",,,,47.47%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs,1864,"            &*core::intrinsics::aggregate_raw_ptr::<*const [T], _, _>(self.as_ptr(), self.len)",1.30%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/../../stdarch/crates/core_arch/src/x86/sse2.rs,1615,"        simd_bitmask::<_, u16>(m) as u32 as i32",0.43%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/bool.rs,37,"        if self { Some(t) } else { None }",13.31%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/convert/num.rs,82,"                small as Self",0.72%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/intrinsics/mod.rs,436,"    if b {",0.29%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs,764,"        match *self {",0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/slice/index.rs,272,"        &(*slice)[self]",1.45%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/packed_dfa.rs,90,"            Some(slot) => self.direct[usize::from(slot)],",3.62%
+,,102,"        self.repeated_masks[class]",0.29%
+,,210,"        if class == 0 && self.uses_class_zero_row_cache() {",4.78%
+,,211,"            if let Some(cached) = row.class_zero_target {",0.29%
+,,218,"        if cached != DFA_TARGET_UNCOMPUTED {",5.50%
+,,220,"            if class == 0 && self.uses_class_zero_row_cache() {",0.14%
+,,227,"        let source = self.frontiers[row.frontier_index];",1.16%
+,,230,"        let encoded = match target {",0.43%
+,,254,"            row.class_zero_target = Some(encoded);",0.14%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/packed_lanes.rs,183,"            1 => initial | ((initial & self.deletion_source_masks[0]) << stride),",0.87%
+,,197,"        target & self.active_mask",0.43%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/packed_standard.rs,509,"        if let Some(dfa) = &mut self.dfa {",4.63%
+,,510,"            return dfa.step_in_row(source, label, self.layout);",4.20%
+,,685,"    if layout.max_distance() == 0 {",0.43%
+,,690,"    let initial = ((source & repeated_matches) << 1)",0.14%
+,,692,"        | ((source & layout.nonterminal_bits()) << (layout.lane_width() + 1))",0.29%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/query.rs,415,"                |label| {",1.01%
+,,427,"                    let target = transitions",0.14%
+,/rust/deps/hashbrown-0.17.1/src/control/bitmask.rs (SOURCE FILE NOT FOUND),40,,0.29%
+,/rust/deps/hashbrown-0.17.1/src/control/tag.rs (SOURCE FILE NOT FOUND),47,,0.29%
+,/rust/deps/hashbrown-0.17.1/src/map.rs (SOURCE FILE NOT FOUND),1284,,0.72%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvXsa_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5queryINtB5_13QueryIteratorNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeNtB5_9CandidateENtNtNtNtCs4NRVxsYgnAr_4core4iter6traits8iterator8Iterator4nextCsdjGytevN7f4_20causal_query_profile",,,,36.47%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/vec_deque/mod.rs,237,"        self.len == self.capacity()",0.29%
+,,2137,"        if self.is_empty() {",0.72%
+,,2142,"            self.len -= 1;",0.29%
+,,3639,"        if logical_index >= capacity {",0.87%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs,614,"        self.ptr.cast().as_non_null_ptr()",0.72%
+,,634,"        if elem_layout.size() == 0 || self.cap.as_inner() == 0 {",0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/sync.rs,2874,"            self.drop_slow();",2.60%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/intrinsics/mod.rs,459,"    if b {",0.58%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/iter/range.rs,1333,"            accum = f(accum, n)?;",0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs,742,"        match *self {",0.29%
+,,1039,"        match self {",0.29%
+,,2846,"    }",0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs,1733,"        crate::intrinsics::read_via_copy(src)",0.29%
+,,1933,"        intrinsics::write_via_move(dst, src)",1.88%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mut_ptr.rs,961,"        unsafe { intrinsics::offset(self, count) }",5.35%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/non_null.rs,1714,"        self.as_ptr() == other.as_ptr()",1.30%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/slice/index.rs,272,"        &(*slice)[self]",0.72%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/slice/iter/macros.rs,180,"                        if ptr == crate::intrinsics::transmute::<$ptr, NonNull<T>>(end_or_len) {",0.72%
+,/home/dylon/Workspace/f1r3fly.io/libdictenstein/src/lib.rs,307,"        self.0 & SNAPSHOT_RANGE_FINAL_BIT != 0",0.29%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/dictionary_traversal.rs,695,"        let parent_path = match *expansion {",1.16%
+,,699,"                    Some(parent_label) => push_parent_path(storage, trace.parent, parent_label),",0.58%
+,,1265,"        match &mut self.mode {",0.43%
+,,1284,"                    if let Some(value) = project(label) {",9.41%
+,,1285,"                        visitor(label, TraversalCursor::dense(edge.target_cursor()), value);",1.88%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/packed_dfa.rs,166,"        self.frontiers[usize::try_from(state).expect(""packed DFA state exceeds usize"")]",0.29%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/packed_standard.rs,662,"        match &self.dfa {",0.43%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/query.rs,408,"        if let Some(mut source) = self.transitions.prepare_source_row(frontier.0) {",0.72%
+,,415,"                |label| {",0.43%
+,,477,"        if substring_mode {",1.45%
+,,1139,"        while let Some(intersection) = self.pending.pop_front() {",0.58%
+,,1144,"            if is_final {",0.87%
+,,1174,"        self.finished = true;",0.43%
+,,1260,"    fn next(&mut self) -> Option<Self::Item> {",0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal16push_parent_pathhECsdjGytevN7f4_20causal_query_profile",,,,2.89%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs,1040,"        if len == self.buf.capacity() {",0.14%
+,,1046,"            self.len = len + 1;",1.30%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/convert/num.rs,301,"                if u > (Self::MAX as $source) {",0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/intrinsics/mod.rs,459,"    if b {",0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/num/uint_macros.rs,896,"            if intrinsics::unlikely(intrinsics::add_with_overflow(self, rhs).1) {",0.43%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs,1933,"        intrinsics::write_via_move(dst, src)",0.43%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mut_ptr.rs,961,"        unsafe { intrinsics::offset(self, count) }",0.14%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/dictionary_traversal.rs,415,"pub(crate) fn push_parent_path<U: CharUnit>(",0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMs1_NtCsgQfI1edjipl_9hashbrown3mapINtB5_7HashMapymNtCs7jcQXjtYeIp_10rustc_hash13FxBuildHasherE6insertCsdjGytevN7f4_20causal_query_profile",,,,1.45%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/../../stdarch/crates/core_arch/src/x86/sse2.rs,1615,"        simd_bitmask::<_, u16>(m) as u32 as i32",0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/intrinsics/mod.rs,459,"    if b {",0.29%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mut_ptr.rs,1072,"            unsafe { intrinsics::offset(self, intrinsics::unchecked_sub(0, count as isize)) }",0.14%
+,/rust/deps/hashbrown-0.17.1/src/control/tag.rs (SOURCE FILE NOT FOUND),47,,0.14%
+,/rust/deps/hashbrown-0.17.1/src/map.rs (SOURCE FILE NOT FOUND),1807,,0.14%
+,/rust/deps/hashbrown-0.17.1/src/raw.rs (SOURCE FILE NOT FOUND),1837,,0.29%
+,,2459,,0.29%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTymEE14reserve_rehashNCINvNtB8_3map11make_hasherymNtCs7jcQXjtYeIp_10rustc_hash13FxBuildHasherE0ECsdjGytevN7f4_20causal_query_profile",,,,1.16%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/../../stdarch/crates/core_arch/src/x86/sse2.rs,1615,"        simd_bitmask::<_, u16>(m) as u32 as i32",0.72%
+,/rust/deps/hashbrown-0.17.1/src/control/bitmask.rs (SOURCE FILE NOT FOUND),40,,0.14%
+,/rust/deps/hashbrown-0.17.1/src/control/tag.rs (SOURCE FILE NOT FOUND),17,,0.14%
+,/rust/deps/hashbrown-0.17.1/src/raw.rs (SOURCE FILE NOT FOUND),3992,,0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6ea6" (SYSTEM MODULE FUNCTION),1.01%
+
+Function,"CPU_TIME"
+"realloc" (SYSTEM MODULE FUNCTION),0.58%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f64" (SYSTEM MODULE FUNCTION),0.58%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal23materialize_parent_pathhECsdjGytevN7f4_20causal_query_profile",,,,0.58%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs,1040,"        if len == self.buf.capacity() {",0.29%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/dictionary_traversal.rs,452,"        let node = &arena[index];",0.14%
+,,458,"    units",0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa7d28" (SYSTEM MODULE FUNCTION),0.43%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer10packed_dfaINtB2_17ExactLabelClasseshE3newCsdjGytevN7f4_20causal_query_profile",,,,0.43%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/slice/index.rs,278,"        &mut (*slice)[self]",0.14%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/packed_dfa.rs,77,"            repeated_masks[usize::from(class)] |= lane_starts << position;",0.14%
+,,80,"        Self {",0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f73" (SYSTEM MODULE FUNCTION),0.29%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6cd0" (SYSTEM MODULE FUNCTION),0.29%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMs_NtCs5jP0jl1Mg7H_14liblevenshtein10transducerINtB4_10TransducerNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgE19query_with_distanceCsdjGytevN7f4_20causal_query_profile",,,,0.29%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs,460,"        if layout.size() == 0 {",0.14%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/mod.rs,572,"    pub fn query_with_distance(",0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsdjGytevN7f4_20causal_query_profile",,,,0.29%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs,564,"            Ok(memory) => Ok(memory),",0.14%
+,,565,"            Err(_) => Err(AllocError { layout: new_layout, non_exhaustive: () }.into()),",0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6c0b" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvXs2_NtNtCs4NRVxsYgnAr_4core3str5lossyNtB5_10Utf8ChunksNtNtNtNtB9_4iter6traits8iterator8Iterator4next",,,,0.14%
+,/rustc/8bab26f4f68e0e26f0bb7960be334d5b520ea452/library/core/src/str/lossy.rs (SOURCE FILE NOT FOUND),203,,0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f80" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f0b" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6fcd" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f7b" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6f06" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6bcb" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa7de3" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMs6_NtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhuE11minimize_toCsdjGytevN7f4_20causal_query_profile",,,,0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/slice/iter/macros.rs,284,"                    if i == len {",0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa4c55" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f58" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"__libc_malloc" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RINvNvMs2_NtCscdodAO9FK5_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsdjGytevN7f4_20causal_query_profile",,,,0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs,528,"        let ptr = unsafe { self.finish_grow(cap, elem_layout)? };",0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f22" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6be5" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6b60" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal16TraversalSessionNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeEECsdjGytevN7f4_20causal_query_profile",,,,0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/sync.rs,2831,"        if self.inner().strong.fetch_sub(1, Release) != 1 {",0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa7128" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6f0c" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"cfree" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMNtCscdodAO9FK5_5alloc6stringNtB2_6String15from_utf8_lossy",,,,0.14%
+,/rustc/8bab26f4f68e0e26f0bb7960be334d5b520ea452/library/alloc/src/string.rs (SOURCE FILE NOT FOUND),631,,0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6082" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer12packed_lanesNtB2_20PackedEditLaneLayout3new",,,,0.14%
+,/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/src/transducer/packed_lanes.rs,67,"                source_lane_starts |= 1u64 << (edit * lane_width);",0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMs3_NtCscdodAO9FK5_5alloc7raw_vecINtB5_6RawVecjE8grow_oneCs5jP0jl1Mg7H_14liblevenshtein",,,,0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs,777,"        self.cap = unsafe { Cap::new_unchecked(cap) };",0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x1747c4" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f8a" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa4c71" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173f69" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RINvMsa_NtCsgQfI1edjipl_9hashbrown3rawNtB6_13RawTableInner22fallible_with_capacityNtNtCscdodAO9FK5_5alloc5alloc6GlobalECsdjGytevN7f4_20causal_query_profile",,,,0.14%
+,/rust/deps/hashbrown-0.17.1/src/raw.rs (SOURCE FILE NOT FOUND),156,,0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa73cc" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa5ed0" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6fde" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RINvNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer20dictionary_traversal39acquire_traversal_buffers_with_capacityINtB2_12PathFrontierINtB2_15ParentPathTracehINtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg25DynamicDawgSnapshotCursorhuEENtNtB4_10transition16UnitCostFrontierEINtB2_14ParentPathNodehEECsdjGytevN7f4_20causal_query_profile",,,,0.14%
+,/home/dylon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/any.rs,764,"                        crate::mem::transmute::<_, u128>(*this) == crate::mem::transmute::<_, u128>(*other)",0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa4dd8" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6fc2" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6fd4" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0x1747e4" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa770b" (SYSTEM MODULE FUNCTION),0.14%
+
+Function,File,Line,SourceCode,"CPU_TIME"
+"_RNvMNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer4poolNtB2_9StatePool3new",,,,0.14%
+,/rustc/8bab26f4f68e0e26f0bb7960be334d5b520ea452/library/std/src/sys/alloc/unix.rs (SOURCE FILE NOT FOUND),14,,0.14%
+
+Function,"CPU_TIME"
+"_RINvMs0_NtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer10transitionINtB6_15UnitCostMachinehE6seededNtNtB8_19substitution_policy12UnrestrictedECsdjGytevN7f4_20causal_query_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNCINvNtCs2AWtUsOyxgP_3std2rt10lang_startuE0CsdjGytevN7f4_20causal_query_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvCsdjGytevN7f4_20causal_query_profile3runNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgNCNvB2_4main0EB2_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvNtCs2AWtUsOyxgP_3std2rt19lang_start_internal" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvCsdjGytevN7f4_20causal_query_profile10query_passNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgKb0_EB2_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"main" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_start" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtB4_4iter8adapters4take4TakeINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer5query13QueryIteratorNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii15DynamicDawgNodeNtB1e_9CandidateEEECsdjGytevN7f4_20causal_query_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer15packed_standard21PackedStandardMachinehEECsdjGytevN7f4_20causal_query_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCs5jP0jl1Mg7H_14liblevenshtein" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"__libc_start_main" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvCsdjGytevN7f4_20causal_query_profile10query_passNtNtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg5ascii11DynamicDawgKb1_EB2_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMs6_NtNtCsb6z66GJqLXQ_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhuE6insertCsdjGytevN7f4_20causal_query_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvCsdjGytevN7f4_20causal_query_profile4main" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtNtCs2AWtUsOyxgP_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsdjGytevN7f4_20causal_query_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs5jP0jl1Mg7H_14liblevenshtein10transducer15packed_standard17PackedStandardDfahEECsdjGytevN7f4_20causal_query_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMs3_NtCscdodAO9FK5_5alloc7raw_vecINtB5_6RawVechE8grow_oneB7_" (BINARY FILE NOT FOUND),0.00%
+

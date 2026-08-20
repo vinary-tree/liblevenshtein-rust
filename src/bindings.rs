@@ -40,6 +40,10 @@ use vinary_tree_interop::{
 #[cfg(test)]
 use vinary_tree_interop::{VtDictionaryGraphEdge, VtDictionaryGraphNode};
 
+#[cfg(test)]
+#[path = "../tests/support/high_degree_dictionary.rs"]
+mod graphless_test_provider;
+
 /// Default number of results transferred across a managed-language boundary.
 pub const DEFAULT_MATCH_BATCH: usize = 256;
 
@@ -347,21 +351,21 @@ fn promote_published_foreign_target(slot: &AtomicUsize, target: ForeignTarget) -
 
 #[inline(always)]
 fn foreign_ready_cursors_enabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     {
         static ENABLED: OnceLock<bool> = OnceLock::new();
         *ENABLED.get_or_init(|| {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_FOREIGN_READY_CURSORS").is_none()
         })
     }
-    #[cfg(not(feature = "resource-profiling"))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         true
     }
 }
 
 #[inline(always)]
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 fn monolithic_foreign_inspection_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
     *ENABLED.get_or_init(|| {
@@ -371,14 +375,14 @@ fn monolithic_foreign_inspection_enabled() -> bool {
 
 #[inline(always)]
 fn foreign_snapshot_graph_enabled() -> bool {
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     {
         static ENABLED: OnceLock<bool> = OnceLock::new();
         *ENABLED.get_or_init(|| {
             std::env::var_os("LIBLEVENSHTEIN_CAUSAL_DISABLE_FOREIGN_SNAPSHOT_GRAPH").is_none()
         })
     }
-    #[cfg(not(feature = "resource-profiling"))]
+    #[cfg(not(feature = "benchmark-controls"))]
     {
         true
     }
@@ -441,7 +445,7 @@ struct CapturedGraphEntry {
 /// the O(nodes + edges) decode.
 struct CapturedGraphMemo {
     current: ArcSwapOption<CapturedGraphEntry>,
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     legacy_control: Mutex<Option<(GraphCacheKey, ForeignCapturedGraph)>>,
 }
 
@@ -449,13 +453,13 @@ impl CapturedGraphMemo {
     fn new() -> Self {
         Self {
             current: ArcSwapOption::empty(),
-            #[cfg(feature = "resource-profiling")]
+            #[cfg(feature = "benchmark-controls")]
             legacy_control: Mutex::new(None),
         }
     }
 }
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 fn legacy_snapshot_locks_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
     *ENABLED.get_or_init(|| {
@@ -472,7 +476,7 @@ fn shared_captured_graph(
         return decode();
     };
 
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     if legacy_snapshot_locks_enabled() {
         {
             let current = memo
@@ -948,7 +952,7 @@ fn validate_snapshot_identity(vtable: &VtSnapshotIdentityVTable) -> Result<(), B
 
 #[derive(Clone, Debug, Default)]
 #[cfg_attr(
-    feature = "serialization",
+    any(feature = "serialization", feature = "persistent-artrie"),
     derive(serde::Serialize, serde::Deserialize)
 )]
 struct BindingValue {
@@ -1345,56 +1349,82 @@ impl<U: InteropUnit> ForeignNode<U> {
         P: FnMut(U) -> Option<T>,
         F: FnMut(U, Self, T),
     {
+        let mut start = 0usize;
+        loop {
+            let (written, total) = self.try_visit_expanded_edge_page(
+                start,
+                VT_RECOMMENDED_EDGE_BATCH,
+                |label, child| {
+                    if let Some(projected) = project(label) {
+                        visitor(label, child, projected);
+                    }
+                },
+            )?;
+            start = start
+                .checked_add(written)
+                .ok_or(BindingError::InvalidProviderOutput(
+                    "edge page offset overflowed",
+                ))?;
+            if start >= total {
+                return Ok(());
+            }
+        }
+    }
+
+    /// Visit at most one fixed-size stack page from the graphless ABI seam.
+    ///
+    /// A caller may request a smaller page, including a zero-capacity metadata
+    /// probe. Larger requests are deliberately capped at the ABI-recommended
+    /// page so temporary storage is independent of provider out-degree.
+    #[inline]
+    fn try_visit_expanded_edge_page<F>(
+        &self,
+        start: usize,
+        requested_capacity: usize,
+        mut visitor: F,
+    ) -> Result<(usize, usize), BindingError>
+    where
+        F: FnMut(U, Self),
+    {
         let callback = self
             .provider
             .vtable()
             .node_edges
             .ok_or(BindingError::IncompatibleDictionaryInterface)?;
-        let mut start = 0usize;
-        loop {
-            // The ABI's recommended page is a fixed upper bound. Keeping that
-            // page on the stack avoids one allocation for every visited
-            // dictionary node without changing pagination or acceptance.
-            let mut page = [VtDictionaryEdge::default(); VT_RECOMMENDED_EDGE_BATCH];
-            let capacity = page.len();
-            let mut written = 0usize;
-            let mut total = 0usize;
-            crate::causal_perf::record_foreign_edge_pages(1);
-            crate::causal_perf::record_foreign_edge_callbacks(1);
-            let callback_status = self.provider.call(|| unsafe {
-                callback(
-                    self.provider.resource.context,
-                    self.id(),
-                    start,
-                    page.as_mut_ptr(),
-                    capacity,
-                    &mut written,
-                    &mut total,
-                )
-            });
-            status(callback_status)?;
-            if written > capacity
-                || written > total.saturating_sub(start)
-                || (written == 0 && start < total)
-            {
-                return Err(BindingError::InvalidProviderOutput(
-                    "invalid edge page lengths",
-                ));
-            }
-            crate::causal_perf::record_foreign_edge_descriptors(written as u64);
-            for edge in page.into_iter().take(written) {
-                let label = U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
-                    "edge label is outside its domain",
-                ))?;
-                if let Some(projected) = project(label) {
-                    visitor(label, Self::new(self.provider, edge.node), projected);
-                }
-            }
-            start = start.saturating_add(written);
-            if start >= total {
-                return Ok(());
-            }
+        let mut page = [VtDictionaryEdge::default(); VT_RECOMMENDED_EDGE_BATCH];
+        let capacity = requested_capacity.min(page.len());
+        let mut written = 0usize;
+        let mut total = 0usize;
+        crate::causal_perf::record_foreign_edge_pages(1);
+        crate::causal_perf::record_foreign_edge_callbacks(1);
+        let callback_status = self.provider.call(|| unsafe {
+            callback(
+                self.provider.resource.context,
+                self.id(),
+                start,
+                page.as_mut_ptr(),
+                capacity,
+                &mut written,
+                &mut total,
+            )
+        });
+        status(callback_status)?;
+        if written > capacity
+            || written > total.saturating_sub(start)
+            || (capacity != 0 && written == 0 && start < total)
+        {
+            return Err(BindingError::InvalidProviderOutput(
+                "invalid edge page lengths",
+            ));
         }
+        crate::causal_perf::record_foreign_edge_descriptors(written as u64);
+        for edge in page.into_iter().take(written) {
+            let label = U::from_abi(edge.label).ok_or(BindingError::InvalidProviderOutput(
+                "edge label is outside its domain",
+            ))?;
+            visitor(label, Self::new(self.provider, edge.node));
+        }
+        Ok((written, total))
     }
 
     #[inline]
@@ -1409,7 +1439,7 @@ impl<U: InteropUnit> ForeignNode<U> {
     /// into the overwhelmingly common ready/published-descriptor path.
     #[inline(always)]
     fn try_inspect_node(&self) -> Result<&CachedForeignNode, BindingError> {
-        #[cfg(feature = "resource-profiling")]
+        #[cfg(feature = "benchmark-controls")]
         if monolithic_foreign_inspection_enabled() {
             return self.try_inspect_node_slow_or_monolithic(None);
         }
@@ -1435,7 +1465,7 @@ impl<U: InteropUnit> ForeignNode<U> {
     /// control. In production this function is cold and reached only for a
     /// genuine cache miss, so its 256-edge stack page and provider machinery
     /// never impose stack probes on warm traversal.
-    #[cfg_attr(not(feature = "resource-profiling"), cold)]
+    #[cfg_attr(not(feature = "benchmark-controls"), cold)]
     #[inline(never)]
     fn try_inspect_node_slow_or_monolithic<'a>(
         &'a self,
@@ -1775,6 +1805,58 @@ impl<U: InteropUnit> DictionaryNode for ForeignNode<U> {
         match self.try_filter_map_inspected_edges_and_finality(project, visitor) {
             Ok(is_final) => is_final,
             Err(error) => self.callback_failed(error, false),
+        }
+    }
+
+    #[inline]
+    fn supports_efficient_edge_paging(&self) -> bool {
+        self.provider.visit_vtable().is_none() && self.provider.vtable().node_edges.is_some()
+    }
+
+    #[inline]
+    fn visit_edge_page_and_finality<F>(
+        &self,
+        start: usize,
+        capacity: usize,
+        mut visitor: F,
+    ) -> (bool, usize)
+    where
+        F: FnMut(Self::Unit, Self),
+    {
+        if !self.supports_efficient_edge_paging() {
+            let end = start.saturating_add(capacity);
+            let mut total = 0usize;
+            let is_final = self.visit_edges_and_finality(|label, child| {
+                if total >= start && total < end {
+                    visitor(label, child);
+                }
+                total = total
+                    .checked_add(1)
+                    .expect("a foreign node's out-degree fits in usize");
+            });
+            return (is_final, total);
+        }
+
+        let is_final = self.is_final();
+        match self.try_visit_expanded_edge_page(start, capacity, visitor) {
+            Ok((_, total)) => (is_final, total),
+            Err(error) => self.callback_failed(error, (false, 0)),
+        }
+    }
+
+    #[inline]
+    fn visit_edge_page<F>(&self, start: usize, capacity: usize, visitor: F) -> usize
+    where
+        F: FnMut(Self::Unit, Self),
+    {
+        if !self.supports_efficient_edge_paging() {
+            return self
+                .visit_edge_page_and_finality(start, capacity, visitor)
+                .1;
+        }
+        match self.try_visit_expanded_edge_page(start, capacity, visitor) {
+            Ok((_, total)) => total,
+            Err(error) => self.callback_failed(error, 0),
         }
     }
 
@@ -2172,6 +2254,7 @@ impl QueryCursor {
 
 #[cfg(test)]
 mod compact_foreign_handle_tests {
+    use super::graphless_test_provider::HighDegreeDictionary;
     use super::*;
     #[cfg(feature = "resource-profiling")]
     use libdictenstein::bindings::{BindingUnitDomain, DynamicDawgBinding};
@@ -2266,6 +2349,68 @@ mod compact_foreign_handle_tests {
 
         let final_target = ForeignTarget::from_encoded(slot.load(Ordering::Acquire)).unwrap();
         assert!(final_target.is_ready());
+    }
+
+    #[test]
+    fn graphless_foreign_pages_are_lazy_ordered_and_value_exact() {
+        const DEGREE: usize = 73;
+        const PAGE: usize = 7;
+        let dictionary = HighDegreeDictionary::single_node(DEGREE);
+        let foreign = unsafe { ForeignDictionary::from_resource(dictionary.resource()) }
+            .expect("accept graphless test provider");
+        let ForeignDictionary::Unicode(provider) = foreign else {
+            panic!("the fixture publishes Unicode-scalar keys")
+        };
+        let snapshot = provider
+            .snapshot()
+            .expect("capture immutable provider revision");
+        let owner = snapshot.fork_query_owner();
+        let traversal =
+            ForeignNode::<char>::traversal_root(&owner).expect("capture traversal root");
+        let (graph, root) = traversal.into_parts().into_projection_and_root();
+        assert!(graph.is_none());
+        assert!(root.supports_efficient_edge_paging());
+
+        let mut metadata_edges = 0usize;
+        let (is_final, total) = root.visit_edge_page_and_finality(0, 0, |_, _| metadata_edges += 1);
+        assert!(!is_final);
+        assert_eq!(total, DEGREE);
+        assert_eq!(metadata_edges, 0, "metadata probes construct no children");
+
+        let mut start = 0usize;
+        let mut observed = Vec::new();
+        let mut values = Vec::new();
+        while start < total {
+            let before = observed.len();
+            let confirmed_total = root.visit_edge_page(start, PAGE, |label, child| {
+                observed.push(label);
+                values.push(child.value_at_final().and_then(|value| value.id));
+            });
+            assert_eq!(confirmed_total, total);
+            let written = observed.len() - before;
+            assert!(written > 0 && written <= PAGE);
+            start += written;
+        }
+
+        assert_eq!(
+            observed,
+            (0..DEGREE)
+                .map(|index| char::from_u32(0x100 + index as u32).unwrap())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            values,
+            (0..DEGREE)
+                .map(|index| Some(index as u64))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(dictionary.max_edge_page_capacity(), PAGE);
+        assert_eq!(
+            dictionary.is_final_calls(),
+            1,
+            "finality is captured once, not re-read on every edge page"
+        );
+        assert_eq!(dictionary.edge_calls(), 1 + DEGREE.div_ceil(PAGE));
     }
 
     #[cfg(feature = "resource-profiling")]

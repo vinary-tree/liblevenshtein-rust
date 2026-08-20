@@ -3,14 +3,14 @@
 use libdictenstein::CharUnit;
 use rustc_hash::FxHashMap;
 use std::hash::Hash;
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 use std::sync::OnceLock;
 
 const DIRECT_LABEL_SLOTS: usize = 256;
 const DFA_TARGET_DEAD: u32 = u32::MAX;
 const DFA_TARGET_UNCOMPUTED: u32 = u32::MAX - 1;
 
-#[cfg(feature = "resource-profiling")]
+#[cfg(feature = "benchmark-controls")]
 #[inline(always)]
 fn class_zero_row_cache_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
@@ -118,7 +118,7 @@ where
     frontiers: Vec<F>,
     frontier_ids: FxHashMap<F, u32>,
     targets: Vec<u32>,
-    #[cfg(feature = "resource-profiling")]
+    #[cfg(feature = "benchmark-controls")]
     class_zero_row_cache: bool,
 }
 
@@ -139,18 +139,18 @@ where
             frontiers: vec![seed],
             frontier_ids,
             targets,
-            #[cfg(feature = "resource-profiling")]
+            #[cfg(feature = "benchmark-controls")]
             class_zero_row_cache: class_zero_row_cache_enabled(),
         }
     }
 
     #[inline(always)]
     fn uses_class_zero_row_cache(&self) -> bool {
-        #[cfg(feature = "resource-profiling")]
+        #[cfg(feature = "benchmark-controls")]
         {
             self.class_zero_row_cache
         }
-        #[cfg(not(feature = "resource-profiling"))]
+        #[cfg(not(feature = "benchmark-controls"))]
         {
             true
         }

@@ -1,0 +1,84 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.VinaryBench.fullPass",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 2,
+        "jvm" : "/usr/lib/jvm/java-26-openjdk/bin/java",
+        "jvmArgs" : [
+            "--enable-native-access=ALL-UNNAMED",
+            "-Djava.library.path=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/target/release:/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release",
+            "-Dxl.workload=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload",
+            "-Xms2g",
+            "-Xmx2g"
+        ],
+        "jdkVersion" : "26.0.2",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "26.0.2",
+        "warmupIterations" : 5,
+        "warmupTime" : "2 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "2 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "algorithm" : "merge_and_split",
+            "backend" : "dynamic_dawg",
+            "distance" : "1",
+            "queryset" : "hits",
+            "resultMode" : "materialized"
+        },
+        "primaryMetric" : {
+            "score" : 53201.6664613561,
+            "scoreError" : 947.553752946473,
+            "scoreConfidence" : [
+                52254.11270840963,
+                54149.22021430257
+            ],
+            "scorePercentiles" : {
+                "0.0" : 51907.88848717949,
+                "50.0" : 52982.92848684211,
+                "90.0" : 55084.694462162166,
+                "95.0" : 55188.68348243243,
+                "99.0" : 55190.047324324325,
+                "99.9" : 55190.047324324325,
+                "99.99" : 55190.047324324325,
+                "99.999" : 55190.047324324325,
+                "99.9999" : 55190.047324324325,
+                "100.0" : 55190.047324324325
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    53406.30039473684,
+                    53529.03281578948,
+                    53921.83128947368,
+                    55162.770486486486,
+                    55190.047324324325,
+                    54227.071216216216,
+                    52760.62618421052,
+                    52722.33360526316,
+                    52676.17557894737,
+                    53205.23078947369
+                ],
+                [
+                    52435.81764102564,
+                    52245.344666666664,
+                    54011.92460526316,
+                    54382.01024324325,
+                    54314.19002702703,
+                    51958.50212820513,
+                    51969.57928205128,
+                    51907.88848717949,
+                    51945.24828205128,
+                    52061.40417948718
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

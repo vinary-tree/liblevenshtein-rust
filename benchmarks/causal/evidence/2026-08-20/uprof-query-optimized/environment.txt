@@ -1,0 +1,11 @@
+timestamp_utc=2026-08-20T06:57:29Z
+mode=uprof
+cpu=3
+kernel=Linux 7.1.6-arch1-1 #1 SMP PREEMPT_DYNAMIC Tue, 04 Aug 2026 11:19:27 +0000 x86_64 GNU/Linux
+cpu_model=AMD Ryzen Threadripper PRO 5975WX 32-Cores
+governor=performance
+rustc=rustc 1.97.1 (8bab26f4f 2026-07-14)
+java=openjdk 26.0.2 2026-07-21
+uprof=/usr/bin/AMDuProfCLI
+heaptrack=heaptrack 1.5.0
+command=target/release/causal_query_profile --dictionary benchmarks/cross-language/workload/dictionary.txt --queries benchmarks/cross-language/workload/queries/hits.txt --domain byte --constructor from_terms --algorithm standard --scheduler unordered --max-distance 1 --passes 500 

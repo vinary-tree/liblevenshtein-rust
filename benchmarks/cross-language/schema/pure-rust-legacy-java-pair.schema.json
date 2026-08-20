@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vinarytree.io/liblevenshtein/benchmarks/cross-language/pure-rust-legacy-java-pair.schema.json",
+  "title": "One direct pure-Rust versus legacy-pure-Java replicate pair",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "replicate", "mode", "run_config_sha256",
+    "exact_signature_equal", "signature", "rust", "java"
+  ],
+  "properties": {
+    "schema": { "const": "liblevenshtein.pure-rust-legacy-java-pair.v1" },
+    "replicate": { "type": "integer", "minimum": 1 },
+    "mode": { "enum": ["query", "construct"] },
+    "run_config_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "exact_signature_equal": { "const": true },
+    "signature": { "type": "object" },
+    "rust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_file", "raw_sha256", "elapsed_ns"],
+      "properties": {
+        "raw_file": { "const": "rust.json" },
+        "raw_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "elapsed_ns": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "java": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_file", "raw_sha256", "elapsed_ns"],
+      "properties": {
+        "raw_file": { "const": "java.json" },
+        "raw_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "elapsed_ns": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "query" } }, "required": ["mode"] },
+      "then": {
+        "properties": {
+          "signature": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "matches_per_pass", "term_bytes_per_pass",
+              "distance_sum_per_pass", "checksum_hex"
+            ],
+            "properties": {
+              "matches_per_pass": { "type": "integer", "minimum": 0 },
+              "term_bytes_per_pass": { "type": "integer", "minimum": 0 },
+              "distance_sum_per_pass": { "type": "integer", "minimum": 0 },
+              "checksum_hex": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "mode": { "const": "construct" } }, "required": ["mode"] },
+      "then": {
+        "properties": {
+          "signature": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "term_count", "semantic_term_count",
+              "semantic_membership_checks", "semantic_checksum_hex"
+            ],
+            "properties": {
+              "term_count": { "type": "integer", "minimum": 1 },
+              "semantic_term_count": { "type": "integer", "minimum": 1 },
+              "semantic_membership_checks": { "type": "integer", "minimum": 1 },
+              "semantic_checksum_hex": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

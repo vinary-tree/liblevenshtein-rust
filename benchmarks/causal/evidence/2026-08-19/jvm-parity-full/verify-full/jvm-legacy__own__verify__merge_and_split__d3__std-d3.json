@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "suite": "cross-language-v1",
+  "timestamp_utc": "2026-08-20T00:26:16Z",
+  "target": {
+    "language": "java",
+    "implementation": "legacy",
+    "backend": "jvm-legacy-jar",
+    "runtime_version": "OpenJDK 64-Bit Server VM 26.0.2",
+    "library_version": "3.0.0",
+    "artifact": {
+      "kind": "maven",
+      "id": "com.github.universal-automata:liblevenshtein:3.0.0"
+    }
+  },
+  "dictionary": {
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/dictionary.txt",
+    "term_count": 79343,
+    "structure": "legacy_sorted_dawg",
+    "unit_domain": "jvm_string",
+    "construct_ns": 222279525,
+    "sha256": "ec4c78c63325d87902c11ab65e16c6020ba478326a351acf632c44467e893f23"
+  },
+  "workload": {
+    "queryset": "std-d3",
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/std-d3.txt",
+    "query_count": 1000,
+    "sha256": "d155a849587b295d09cb789665e9b51ee1b66a291c954aca1717f7cc3bad88f7"
+  },
+  "algorithm": "merge_and_split",
+  "max_distance": 3,
+  "mode": "verify",
+  "protocol": {
+    "timer": "monotonic",
+    "harness": "self-timed",
+    "warmup_seconds_min": 3.0,
+    "warmup_passes": 0,
+    "samples_requested": 0,
+    "sample_definition": "one full pass over the query set; every cursor fully drained and (term, distance) materialized",
+    "batch_size": null,
+    "wall_cap_seconds": 300
+  },
+  "measurements": {
+    "samples_ns": [],
+    "sample_count": 0,
+    "matches_per_pass": 2246246,
+    "term_bytes_per_pass": 11866046,
+    "distance_sum_per_pass": 6585132,
+    "checksum_hex": "902bb335a982dfd9"
+  },
+  "status": "ok",
+  "notes": [],
+  "run_id": "jvm-parity-full",
+  "environment_ref": "../environment.json",
+  "cell_snapshot": {
+    "cpuset": "16-31",
+    "cpu_mhz_start": 3512.4,
+    "cpu_mhz_end": 3977.1,
+    "load_avg_1m": 4.87
+  }
+}

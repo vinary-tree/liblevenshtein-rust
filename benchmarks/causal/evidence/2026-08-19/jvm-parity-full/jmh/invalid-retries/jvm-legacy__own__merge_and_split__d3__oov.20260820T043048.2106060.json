@@ -1,0 +1,80 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.LegacyBench.fullPass",
+        "mode" : "avgt",
+        "threads" : 1,
+        "forks" : 2,
+        "jvm" : "/usr/lib/jvm/java-26-openjdk/bin/java",
+        "jvmArgs" : [
+            "-Dxl.workload=/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload",
+            "-Xms2g",
+            "-Xmx2g"
+        ],
+        "jdkVersion" : "26.0.2",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "26.0.2",
+        "warmupIterations" : 5,
+        "warmupTime" : "2 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "2 s",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "algorithm" : "merge_and_split",
+            "distance" : "3",
+            "queryset" : "oov"
+        },
+        "primaryMetric" : {
+            "score" : 1.8489065809E7,
+            "scoreError" : 171580.99463335605,
+            "scoreConfidence" : [
+                1.8317484814366646E7,
+                1.8660646803633355E7
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1.798051743E7,
+                "50.0" : 1.84976709355E7,
+                "90.0" : 1.8812500614000004E7,
+                "95.0" : 1.8859161776499998E7,
+                "99.0" : 1.8860519062E7,
+                "99.9" : 1.8860519062E7,
+                "99.99" : 1.8860519062E7,
+                "99.999" : 1.8860519062E7,
+                "99.9999" : 1.8860519062E7,
+                "100.0" : 1.8860519062E7
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    1.8454478743E7,
+                    1.8624645972E7,
+                    1.8350146742E7,
+                    1.8423431491E7,
+                    1.8515730932E7,
+                    1.8533747982E7,
+                    1.8479610939E7,
+                    1.8430293573E7,
+                    1.8227542716E7,
+                    1.8256485838E7
+                ],
+                [
+                    1.8860519062E7,
+                    1.8407949065E7,
+                    1.8585175577E7,
+                    1.8475268956E7,
+                    1.8833373352E7,
+                    1.8574263015E7,
+                    1.798051743E7,
+                    1.8562754973E7,
+                    1.8591982299E7,
+                    1.8613397523E7
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

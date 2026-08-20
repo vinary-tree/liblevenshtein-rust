@@ -789,21 +789,27 @@ change clears both residency and policy. The cache is deliberately
 single-owner and synchronization-free so callers can shard ownership without
 paying for a lock or atomic protocol on every hit.
 
-The deterministic 128-entry policy matrix separates scan resistance,
-adaptation, and Zipf locality:
+The final topology-gated, 51-replicate, 128-entry policy matrix separates scan
+resistance, adaptation, Zipf locality, and policy overhead:
 
-| policy | hot entries after scan | rounds to 95% in a disjoint phase | phase hit rate | Zipf hit rate |
-|---|---:|---:|---:|---:|
-| FIFO | 0 | 1 | 0.984375 | 0.549617 |
-| LRU | 0 | 1 | 0.984375 | 0.603128 |
-| SIEVE alone | 0 | 1 | 0.984375 | 0.615622 |
-| aging exact LFU | 127 | 25 | 0.609619 | 0.661372 |
-| TinyLFU + SIEVE | 128 | 9 | 0.864258 | 0.672367 |
+| policy | hot entries after scan | rounds to 95% in a disjoint phase | phase hit rate | Zipf hit rate | Zipf ns/op |
+|---|---:|---:|---:|---:|---:|
+| FIFO | 0 | 1 | 0.984375 | 0.549617 | 29.288 |
+| LRU | 0 | 1 | 0.984375 | 0.603128 | 29.159 |
+| SIEVE alone | 0 | 1 | 0.984375 | 0.615622 | 27.275 |
+| aging exact LFU | 127 | 25 | 0.609619 | 0.661372 | 199.165 |
+| TinyLFU + SIEVE | 128 | 19 | 0.837402 | 0.664172 | 61.409 |
 
 TinyLFU + SIEVE is the only candidate that retained the complete hot set under
-the one-hit scan while adapting substantially faster than exact LFU and also
-producing the best Zipf hit rate. The machine-readable matrix is
-[`query-cache-policy-matrix.csv`](../../../benchmarks/causal/evidence/2026-08-18/query-cache-policy-matrix.csv).
+the one-hit scan while adapting faster than exact LFU and also producing the
+best Zipf hit rate. It cut exact-LFU Zipf policy cost by 69.17%; pgmcp
+experiment 299 accepted that preregistered comparison (`p = 2.19e-112`, 51
+samples per arm). SIEVE alone remains a useful latency floor, but its 34.134
+ns/op advantage ceases to cover its lower hit rate when a miss costs more than
+approximately 703 ns. The complete matrix, host ledger, and interpretation are
+in the [policy report](../query-cache-policy-matrix.md); the primary
+machine-readable evidence is
+[`query-cache-policy-performance.csv`](../../../benchmarks/causal/evidence/2026-08-19/query-cache-policy-performance.csv).
 
 The first allocation-reuse timing was invalidated rather than rationalized. It
 gave each process an independent randomized AHash key and its treatment moved
@@ -949,7 +955,12 @@ Individual cells ranged from 1.064× (Damerau distance 2, out-of-vocabulary) to
 1.453× (merge-and-split distance 3, `std-d3`). The isolated worst cell is
 retained as a tail target rather than hidden by the aggregate result.
 
-### 6.3 Final parity position
+### 6.3 Intermediate JVM parity position (superseded)
+
+This section preserves the 2026-08-15/18 closure state and its rejected
+experiment as historical evidence. Section 6.5 is the definitive breadth
+measurement for the final binary; none of its later results are projected
+back onto the binaries measured here.
 
 A fresh pure-language closing run on 2026-08-18 isolates the Rust core from
 the JVM binding. Both arms were pinned to CPU 0 and admitted before and after
@@ -1014,6 +1025,151 @@ statistically and by its mandatory practical clause requiring Vinary median
 latency no greater than one third of legacy. The exact signature remained
 18,524 matches, 85,208 returned bytes, distance sum 36,314, and checksum
 `84f045e4f4a37a73` in every fork.
+
+### 6.4 Definitive paired native closure (2026-08-19)
+
+The final direct-language gate strengthens §6.3 with 51 independent processes
+per arm, alternating pair order and admitting each process immediately before
+and after timing against CPU 3 and its complete LLC group. Seven attempted
+query admissions were rejected and excluded. Every accepted
+`standard/d1/hits` sample returned the same 3,620 matches, 24,726 bytes,
+distance sum 2,620, and checksum `3bdc59281f42611a`:
+
+| direct query arm | median pass | 95% bootstrap CI | median per query |
+|---|---:|---:|---:|
+| optimized pure Rust | 14.135 ms | [14.113, 14.185] ms | 14.135 µs |
+| legacy pure Java | 46.759 ms | [46.496, 47.283] ms | 46.759 µs |
+
+The intervals do not overlap. Legacy/Rust median latency is 3.308×, Rust is
+69.77% lower, the pooled Cohen effect is -24.292, and the paired median
+difference is -32.600 ms. The preregistered post-optimization experiment was
+accepted after correcting its arm-label mapping from generic
+`control`/`treatment` names to the recorded `legacy_java`/`pure_rust` labels;
+the criterion and all samples were unchanged. The accepted Welch result is
+`t = -122.666`, `p = 1.11e-66`, with Cliff's delta -1. This is the definitive
+closure of the epic's 51.2 µs/query native gate: Rust is 72.4% below the
+threshold and every Rust sample is faster than every Java sample.
+
+The corresponding construction pair measures cold, one-shot construction:
+each sample is a fresh process, and the Java arm deliberately receives no
+in-process builder warmup. That answers the common build-once workload and is
+not interchangeable with the older warmed multi-build Java profile in §2.6.
+All accepted samples performed 79,343 successful membership checks and agreed
+on semantic checksum `8da9c6f99f82a731`.
+
+| construction API | Rust median | Rust CI95 | Java median | Java CI95 | Java / Rust |
+|---|---:|---:|---:|---:|---:|
+| arbitrary-order `from_terms` | 17.246 ms | [17.080, 17.359] ms | 175.798 ms | [171.181, 180.142] ms | 10.193× |
+| ordered `from_sorted_terms` | 13.868 ms | [13.818, 13.967] ms | 175.528 ms | [172.427, 179.886] ms | 12.657× |
+
+One and three attempted admissions respectively were rejected and excluded;
+each accepted arm has 51 samples and non-overlapping intervals. Because Java's
+builder requires ordered input, both causal pairs use the same manifest-proven
+ordered corpus. A separate 30-repetition structural matrix exercises the Rust
+arbitrary-order path with a seeded shuffle. On the full 79,343-term byte corpus,
+unordered construction is 22.065 ms versus 12.302 ms ordered (1.794×); it is
+still approximately 7.97× faster than the time-adjacent cold Java median. The
+same unit-generic builder also closes the packed-`u64` pair at 10.377 ms
+unordered and 5.466 ms ordered. Prefix-heavy, suffix-heavy, and mixed-Unicode
+cells preserve exact term membership and show that the remaining ordered versus
+unordered spread follows input structure rather than a byte-only specialization.
+
+The machine-readable evidence is the
+[`direct query analysis`](../../../benchmarks/causal/evidence/2026-08-19/direct-standard-d1-hits/analysis.json),
+the [`from_terms` construction analysis`](../../../benchmarks/causal/evidence/2026-08-19/direct-construction-from-terms/analysis.json),
+the [`from_sorted_terms` construction analysis`](../../../benchmarks/causal/evidence/2026-08-19/direct-construction-from-sorted-terms/analysis.json),
+and the [`structural construction matrix`](../../../benchmarks/causal/evidence/2026-08-19/construction-matrix-final/summary.json).
+
+### 6.5 Definitive JVM breadth closure (2026-08-19)
+
+The final binary was then measured across the complete, unchanged 45-cell JVM
+matrix: Standard, OSA/transposition, and merge-and-split; distances one through
+three; and five query shapes per algorithm. Every cell uses the same
+79,343-term dictionary, 1,000-query full-materialization pass, fixed 2 GiB
+heap, JDK, cpuset, and 2-fork x 10-iteration JMH protocol as the historical
+baseline. All 45 pairs agree exactly on result count and checksum. Each timed
+cell passed selected-CPU, SMT-sibling, and shared-LLC admission both before and
+after measurement.
+
+| final breadth grouping | cells | legacy / Vinary geomean | median | range | Vinary wins |
+|---|---:|---:|---:|---:|---:|
+| all shared cells | 45 | **4.882x** | 4.923x | [2.910x, 11.828x] | **45 / 45** |
+| standard | 15 | **4.223x** | 4.298x | [2.910x, 6.457x] | **15 / 15** |
+| transposition | 15 | **4.449x** | 4.820x | [2.956x, 6.880x] | **15 / 15** |
+| merge-and-split | 15 | **6.193x** | 5.267x | [4.323x, 11.828x] | **15 / 15** |
+
+This breadth result changes the engineering conclusion from the intermediate
+matrix in §6.3: managed boundary delivery is no longer a residual performance
+deficit, merge-and-split is no longer the lagging algorithm, and the original
+3x practical target is exceeded on aggregate. The old experiment remains
+rejected for its measured binary and locked criterion; the post-optimization
+experiment is accepted for the final binary and evidence.
+
+The authoritative
+[`jvm-parity-full summary`](../../../benchmarks/causal/evidence/2026-08-19/jvm-parity-full/summary.json)
+has SHA-256
+`d067689800c32fd76f2f1572c0481f7e874740627dc83a1535cccc3d8b54c4ba`.
+Together with §6.4, it proves both sides of the closure: the native engine is
+3.308x faster than legacy pure Java at the original anchor, and the complete
+Rust-backed JVM product wins every shared end-to-end coordinate.
+
+### 6.6 Closing headless AMD uProf profiles (2026-08-20)
+
+The final source was rebuilt with `-C target-cpu=native` and captured with AMD
+uProf 5.3.521.0 in CLI-only hotspot mode, pinned to CPU 3. The first post-build
+admission sample was rejected because its LLC mean was 11.49%; it was retained
+in the ledger and no profile was started. The retry and both pre/post profile
+gates passed the 10% selected/SMT/LLC-mean and 20% LLC-peer limits. No Heaptrack
+or profiler GUI was opened.
+
+The query profile ran 500 complete `standard/d1/hits` passes for 7.558 seconds.
+Its remaining samples are concentrated in the fused work that the algorithm
+must perform:
+
+| optimized query symbol/group | self CPU time | inclusive CPU time |
+|---|---:|---:|
+| packed `expand` / `queue_children_and_finality` | 47.47% | 55.28% |
+| `QueryIterator::next` | 36.47% | 95.80% |
+| append compact parent path | 2.89% | 2.89% |
+| frontier hash-map insertion | 1.45% | 3.33% |
+| frontier rehash/reserve | 1.16% | 1.88% |
+
+No arena lock, provider lock, `RwLock`, `Mutex`, or graph-projection builder
+has a nonzero sample. The earlier transition-processing and arena-locking
+bottlenecks have therefore not merely moved to another named synchronization
+path: the residual is the fused dictionary/DFA product expansion and iterator
+state machine itself. Parent reconstruction and frontier-table maintenance are
+already individually below 3%; further work there is micro-optimization, not
+another architectural campaign.
+
+The unordered-construction profile ran five warmups and 300 complete builds for
+8.560 seconds. Its leading named self-time samples are:
+
+| optimized construction symbol/group | self CPU time | inclusive CPU time |
+|---|---:|---:|
+| `SortedDawgBuilder::minimize_to` | 31.35% | 42.06% |
+| `SortedDawgBuilder::insert` | 8.99% | 51.06% |
+| unstable quicksort partitioning | 6.88% | 27.51% |
+| final frozen-node destruction | 5.16% | 7.28% |
+| `malloc` | 4.10% | 4.10% |
+| merge-registry reserve/rehash | 3.70% | 4.10% |
+
+There is no per-term root publication, arena lock, CAS retry loop, or ArcSwap
+debt hotspot. The remaining dominant work is exactly unordered construction's
+required sort followed by right-language minimization. This confirms the
+earlier causal conclusion: reclamation was dominant only when the old builder
+created obsolete persistent root paths; it is now a small final-graph cost.
+
+The authoritative
+[`query report`](../../../benchmarks/causal/evidence/2026-08-20/uprof-query-optimized/report.csv)
+has SHA-256
+`fc8bc953a3d94b733b4bb4dc6b45628ba1d2ffe09d923335039c6becbe070810`;
+the
+[`construction report`](../../../benchmarks/causal/evidence/2026-08-20/uprof-construction-optimized/report.csv)
+has SHA-256
+`c370d90ab6049bc500c5ad52b54b4db7ee38d75d4f061d96346407a888efa16e`.
+Their exact binary hashes and the immutable host-admission ledger are retained
+beside the reports.
 
 ## 7. Experiment order and stop conditions
 

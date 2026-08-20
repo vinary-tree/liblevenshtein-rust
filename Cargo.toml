@@ -440,6 +440,12 @@ name = "query_cache_policy_experiment"
 [[example]]
 name = "query_cache_policy_matrix"
 required-features = ["benchmark-controls"]
+test = true
+
+[[example]]
+name = "backend_propagation_matrix"
+required-features = ["benchmark-controls", "pathmap-backend", "persistent-artrie"]
+test = true
 
 [profile.release]
 opt-level = 3
@@ -461,8 +467,8 @@ compression = ["flate2", "serialization", "libdictenstein/compression"]
 phonetic-rules = ["unicode-normalization"]  # Phonetic rewrite rules with formal verification
 embedded-rules = ["phonetic-rules"]  # Pre-compiled English phonetic rules embedded in binary
 parallel-grep = ["rayon", "phonetic-rules"]  # Parallel phonetic grep with Rayon for multi-core document scanning
-perf-instrumentation = ["libdictenstein/perf-instrumentation"]  # Causal work counters (dev only)
-resource-profiling = ["bindings-core", "libdictenstein/bindings-core"]
+perf-instrumentation = ["benchmark-controls", "libdictenstein/perf-instrumentation"]  # Causal work counters (dev only); implies same-binary controls
+resource-profiling = ["benchmark-controls", "bindings-core", "libdictenstein/bindings-core"]  # Headless resource timing; implies same-binary controls
 benchmark-controls = ["libdictenstein/benchmark-controls"]  # Same-binary A/B switches without causal counters
 causal-resource-profiling = [
     "resource-profiling",

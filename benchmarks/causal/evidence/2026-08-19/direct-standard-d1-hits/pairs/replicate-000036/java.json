@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "suite": "cross-language-v1",
+  "timestamp_utc": "2026-08-19T23:08:46Z",
+  "target": {
+    "language": "java",
+    "implementation": "legacy",
+    "backend": "jvm-legacy-jar",
+    "runtime_version": "OpenJDK 64-Bit Server VM 26.0.2",
+    "library_version": "3.0.0",
+    "artifact": { "kind": "maven", "id": "com.github.universal-automata:liblevenshtein:3.0.0" }
+  },
+  "dictionary": {
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/dictionary.txt",
+    "term_count": 79343,
+    "structure": "legacy_sorted_dawg",
+    "unit_domain": "jvm_string",
+    "construct_ns": 425359891
+  },
+  "workload": {
+    "queryset": "hits",
+    "file": "/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust/benchmarks/cross-language/workload/queries/hits.txt",
+    "query_count": 1000
+  },
+  "algorithm": "standard",
+  "max_distance": 1,
+  "mode": "query",
+  "protocol": {
+    "timer": "monotonic",
+    "harness": "self-timed",
+    "warmup_seconds_min": 3.0,
+    "warmup_passes": 60,
+    "samples_requested": 1,
+    "sample_definition": "one full pass over the query set; every cursor fully drained and (term, distance) materialized",
+    "batch_size": null,
+    "wall_cap_seconds": 300
+  },
+  "measurements": {
+    "samples_ns": [50063746],
+    "sample_count": 1,
+    "matches_per_pass": 3620,
+    "term_bytes_per_pass": 24726,
+    "distance_sum_per_pass": 2620,
+    "checksum_hex": "3bdc59281f42611a"
+  },
+  "status": "ok",
+  "notes": []
+}
