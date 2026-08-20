@@ -2,6 +2,9 @@
 
 This directory contains diagnostic-only tools for explaining the performance
 gap with `liblevenshtein-java`. They do not change production algorithms.
+The normative experiment lifecycle, statistical model, profiling rules, and
+acceptance criteria are in
+[`docs/benchmarks/optimization-and-profiling-methodology.md`](../../docs/benchmarks/optimization-and-profiling-methodology.md).
 
 Generate and verify the deterministic anchor strata and structural shapes:
 

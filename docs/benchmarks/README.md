@@ -83,6 +83,11 @@ Comprehensive analysis of DAT implementation:
 
 ### Algorithm-Specific Analysis
 
+#### [Optimization and Profiling Methodology](optimization-and-profiling-methodology.md)
+The end-to-end hypothesis, correctness, host-admission, statistical,
+headless-profiler, visualization, acceptance, and propagation contract for the
+Java-parity optimization campaign.
+
 #### [Java Performance-Parity Causal Analysis](cross-language/java-parity-causal-analysis.md)
 Profile- and work-counter-backed explanation of the construction, native
 matching, and resource-boundary gaps against `liblevenshtein-java`, plus the
