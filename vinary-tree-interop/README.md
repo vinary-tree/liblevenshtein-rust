@@ -124,3 +124,26 @@ CI runs them on every push (`cargo test --locked -p vinary-tree-interop`):
 | Rust | edition 2021, `rust-version` 1.95, `#![no_std]` |
 | Dependencies | none |
 | License | Apache-2.0 |
+
+<!-- BEGIN GENERATED INTEROP LANGUAGE INDEX; DO NOT EDIT -->
+
+## Language adapter documentation
+
+Every published adapter uses the same retained-resource laws while mapping ownership and failures into its host language:
+
+| Language/runtime | Distribution | Guide |
+|---|---|---|
+| C/C++ | Native header and CMake/pkg-config package | This README and `docs/abi-reference.md` |
+| Python 3.10+ | `PyPI package `vinary-tree-interop`` | [`bindings/python/README.md`](bindings/python/README.md) |
+| Java 22+, Kotlin, and Scala | `Maven coordinate `io.vinarytree:vinary-tree-interop`` | [`bindings/jvm/README.md`](bindings/jvm/README.md) |
+| JavaScript, TypeScript, and ClojureScript on Node.js, browsers, or WASI | `npm package `@vinary-tree/interop`` | [`bindings/javascript/README.md`](bindings/javascript/README.md) |
+| Go 1.25+ with cgo | `Go module `github.com/vinary-tree/liblevenshtein-rust/vinary-tree-interop/bindings/go`` | [`bindings/go/README.md`](bindings/go/README.md) |
+| Swift 6+ through Swift Package Manager | `SwiftPM product `VinaryTreeInterop`` | [`bindings/swift/README.md`](bindings/swift/README.md) |
+| Fortran 2018 through fpm | `fpm package `vinary-tree-interop`` | [`bindings/fortran/README.md`](bindings/fortran/README.md) |
+| OCaml 5 through dune/opam | `opam package `vinary-tree-interop`` | [`bindings/ocaml/README.md`](bindings/ocaml/README.md) |
+| GHC through Cabal | `Hackage package `vinary-tree-interop`` | [`bindings/haskell/README.md`](bindings/haskell/README.md) |
+| Lua 5.4+ | `C adapter header bundled by dependent LuaRocks packages` | [`bindings/lua/README.md`](bindings/lua/README.md) |
+
+The adapters are intentionally policy-free. Concrete dictionary and automaton APIs live in their project packages; these guides explain only resource representation, discovery, ownership, and safe handoff.
+
+<!-- END GENERATED INTEROP LANGUAGE INDEX -->

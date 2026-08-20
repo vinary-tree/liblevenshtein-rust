@@ -1,13 +1,6 @@
-# @vinary-tree/interop
+# Vinary Tree Haskell interop binding
 
-Shared TypeScript and runtime guards for retained resources passed between
-modular Vinary Tree packages. The package does not create a second resource
-table: resources are created by the selected `@vinary-tree/vinary-tree`
-native, WASM, or WASI runtime and carry that runtime's identity.
-
-Project facades use `assertSameRuntime` before accepting a resource and use
-`assertDictionaryResource` to require `vt.dictionary.v1`. Concrete dictionary
-constructors and CRUD remain in `@vinary-tree/libdictenstein`.
+This package exposes the language-native representation of the stable Vinary Tree resource ABI. It is the neutral handoff layer used by dictionary, automaton, and WFST packages; it owns no algorithm-specific policy.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
@@ -15,12 +8,12 @@ constructors and CRUD remain in `@vinary-tree/libdictenstein`.
 
 | Property | Contract |
 |---|---|
-| Binding | JavaScript family |
-| Languages/runtime | JavaScript, TypeScript, and ClojureScript on Node.js, browsers, or WASI |
-| Support tier | Tier 1 |
-| Distribution | npm package `@vinary-tree/interop` |
+| Binding | Haskell |
+| Languages/runtime | GHC through Cabal |
+| Support tier | Tier 3 |
+| Distribution | Hackage package `vinary-tree-interop` |
 | Native boundary | This adapter represents the two-word `VtResource` capability and its versioned interfaces; it does not implement a dictionary or automaton. |
-| Canonical facade source | [`vinary-tree-interop/bindings/javascript`](../../../vinary-tree-interop/bindings/javascript) |
+| Canonical facade source | [`vinary-tree-interop/bindings/haskell`](../../../vinary-tree-interop/bindings/haskell) |
 
 The support tier controls release gating, not semantic quality: every tier has
 the same snapshot, ownership, status, and ABI compatibility laws. Consult the
@@ -32,11 +25,11 @@ and the [family hub](../../../docs/bindings/README.md) when combining independen
 ## Executable example and verification
 
 The repository's canonical executable example is
-[`bindings/javascript/test/facades.test.mjs`](../../../bindings/javascript/test/facades.test.mjs). It exercises the same public package a user
+[`bindings/haskell/test/Main.hs`](../../../bindings/haskell/test/Main.hs). It exercises the same public package a user
 installs and is run by the binding CI with:
 
 ```sh
-npm test --prefix bindings/javascript
+cabal test --project-file=bindings/haskell/cabal.project snapshot
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -66,7 +59,7 @@ exhaustive coverage is governed by [`bindings/api.json`](../../../bindings/api.j
 
 ## Ownership, snapshots, and resource handoff
 
-Use explicit resource management (`using`) where available or call `close()`/`close!` in `finally`. GC finalizers are fallback containment.
+Use `bracket`, `withresource`, and `withresource handle`; `ForeignPtr` finalizers protect abandoned exceptional paths.
 
 A borrowed resource becomes owned only after a successful `retain`. Interface
 discovery does not transfer ownership, and a failed validation must release any

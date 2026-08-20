@@ -1,0 +1,67 @@
+@startuml
+title Vinary Tree foreign-language runtime and package topology
+
+skinparam backgroundColor #FAFCFF
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam ArrowColor #455A64
+skinparam defaultFontName DejaVu Sans
+
+rectangle "Host-language packages" as hosts #E3F2FD {
+  component "C / C++\nmanual + RAII" as native_host #BBDEFB
+  component "Python · JVM · Clojure\n.NET · Go · Swift · Ruby\nFortran · OCaml · Haskell · Lua" as managed_host #90CAF9
+  component "JavaScript · TypeScript\nClojureScript" as js_host #64B5F6
+}
+
+rectangle "Project facades" as facades #E8F5E9 {
+  component "libdictenstein\ndictionary producer" as ldict #A5D6A7
+  component "liblevenshtein\ndictionary consumer" as llev #81C784
+  component "duallity\ndictionary → WFST" as dual #66BB6A
+  component "lling-llang\nWFST producer/consumer" as lling #4CAF50
+}
+
+rectangle "Runtime boundary" as runtime #FFF3E0 {
+  component "native shared/static library\nC ABI" as native #FFCC80
+  component "singleton N-API runtime" as napi #FFB74D
+  component "WebAssembly / WASI runtime" as wasm #FFA726
+}
+
+rectangle "Versioned family resources" as resources #F3E5F5 {
+  component "vt.dictionary.v1" as dict #CE93D8
+  component "vt.scalar-wfst.1" as wfst #BA68C8
+}
+
+native_host --> native : headers / status codes
+managed_host --> native : language FFI
+js_host --> napi : default Node export
+js_host --> wasm : explicit browser/WASI export
+
+native --> ldict
+native --> llev
+native --> dual
+native --> lling
+napi --> ldict
+napi --> llev
+napi --> dual
+napi --> lling
+wasm --> ldict
+wasm --> llev
+wasm --> dual
+wasm --> lling
+
+ldict --> dict : publishes retained snapshots
+dict --> llev : consumed without serialization
+dict --> dual : captured once
+dual --> wfst : publishes lazy transducer
+lling --> wfst : imports / composes
+wfst --> lling
+
+legend bottom
+|= Color |= Meaning |
+|<#90CAF9>| Host-language ownership and idioms |
+|<#81C784>| Project-specific public facade |
+|<#FFB74D>| Native, N-API, WASM, or WASI boundary |
+|<#CE93D8>| Stable retained cross-project resource |
+endlegend
+
+@enduml

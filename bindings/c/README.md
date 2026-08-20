@@ -1,31 +1,6 @@
-# C and C++ package
+# Vinary Tree C interop binding
 
-Release archives contain the stable C17 header, the header-only C++20 RAII
-facade, shared and static native libraries, a relocatable CMake config package,
-and `pkg-config` metadata. C23 and C++23 consumers are compile-checked as well.
-
-```cmake
-find_package(vinary-tree-interop CONFIG REQUIRED)
-find_package(liblevenshtein CONFIG REQUIRED)
-target_link_libraries(my_target PRIVATE liblevenshtein::liblevenshtein)
-```
-
-`liblevenshtein::liblevenshtein` selects the shared library by default. Set
-`LIBLEVENSHTEIN_LINKAGE=STATIC` before `find_package` for a fully static native
-link, or name `liblevenshtein::shared` / `liblevenshtein::static` explicitly.
-The static target propagates its platform system libraries. The equivalent
-command-line interface is `pkg-config liblevenshtein` for shared linking and
-`pkg-config --static liblevenshtein` for static linking.
-
-The shared form must remain available to the process at runtime. The static
-form has no runtime dependency on `liblevenshtein`; only ordinary operating
-system libraries remain.
-
-Construct dictionaries through libdictenstein (or implement
-`vt.dictionary.v1` as a host provider), then pass the two-word `VtResource` to
-the liblevenshtein transducer. The cursor retains its query-start revision and
-returns leased spans backed by contiguous term arenas; release each batch before
-advancing or destroying the cursor.
+This package exposes the language-native representation of the stable Vinary Tree resource ABI. It is the neutral handoff layer used by dictionary, automaton, and WFST packages; it owns no algorithm-specific policy.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
@@ -33,12 +8,12 @@ advancing or destroying the cursor.
 
 | Property | Contract |
 |---|---|
-| Binding | C and C++ |
-| Languages/runtime | C17/C23 and C++20/C++23 |
+| Binding | C |
+| Languages/runtime | C17 and C23 |
 | Support tier | Tier 1 |
 | Distribution | CMake package `liblevenshtein` and `pkg-config` module `liblevenshtein` |
-| Native boundary | The C surface calls `llev_*` directly; the C++ header adds move-only RAII and exceptions without another native boundary. |
-| Canonical facade source | [`include/liblevenshtein.h and include/liblevenshtein.hpp`](../../include/liblevenshtein.h and include/liblevenshtein.hpp) |
+| Native boundary | The public C header calls the `llev_*` ABI exported by the shared or static native library. |
+| Canonical facade source | [`include/liblevenshtein.h`](../../include/liblevenshtein.h) |
 
 The support tier controls release gating, not semantic quality: every tier has
 the same snapshot, ownership, status, and ABI compatibility laws. Consult the
@@ -50,11 +25,11 @@ and the [family hub](../../docs/bindings/README.md) when combining independently
 ## Executable example and verification
 
 The repository's canonical executable example is
-[`bindings/cpp/tests/snapshot.cpp`](../../bindings/cpp/tests/snapshot.cpp). It exercises the same public package a user
+[`bindings/c/tests/cross_project_snapshot.c`](../../bindings/c/tests/cross_project_snapshot.c). It exercises the same public package a user
 installs and is run by the binding CI with:
 
 ```sh
-cmake -S bindings/cpp/tests/package -B target/cpp-package && cmake --build target/cpp-package && ctest --test-dir target/cpp-package
+cc -std=c17 -Wall -Wextra -Werror -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include bindings/c/tests/cross_project_snapshot.c -Ltarget/debug -lliblevenshtein -L../libdictenstein/target/debug -llibdictenstein -Wl,-rpath,"$PWD/target/debug" -Wl,-rpath,"$PWD/../libdictenstein/target/debug" -o target/c-cross-project-snapshot && target/c-cross-project-snapshot
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -72,7 +47,7 @@ The idiomatic facade groups the stable surface into these concepts:
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
 
-C spans carry explicit lengths. C++ overloads accept byte, Unicode-scalar, and `uint64_t` views without sentinel termination. Empty terms, embedded zero bytes, non-ASCII text, and the full
+All strings and arrays use pointer-plus-length descriptors; embedded zero bytes and empty terms are valid where the function contract permits them. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
 
@@ -84,7 +59,7 @@ exhaustive coverage is governed by [`bindings/api-surface-map.json`](../../bindi
 
 ## Ownership, snapshots, and resource handoff
 
-Pair every C constructor with its documented free function. Prefer C++ scope-bound wrappers and never copy an owning raw handle.
+Balance every successful constructor/retain with its documented free/release function and release each cursor batch before advancing.
 
 A transducer retains the provider resource, and a query retains the revision
 visible at query start. Closing the original dictionary or publishing later
@@ -98,7 +73,7 @@ an API violation even when the next operation happens to reuse the same arena.
 
 ## Errors and failure containment
 
-C returns `LlevStatus` and a thread-local diagnostic; C++ converts non-OK statuses into `vinary_tree::liblevenshtein::error`.
+Functions return `LlevStatus`; inspect the enum first and copy `llev_last_error_message()` before making another call on that thread.
 
 Malformed utf-8, unsupported unit domains, incompatible resource versions, closed handles, invalid bounds, allocation failures, provider faults, and contained rust panics are distinct failures. Never parse diagnostic prose to
 branch on an error: inspect the typed status/exception first and treat the
@@ -107,7 +82,7 @@ call on the same thread.
 
 ## Concurrency and reentrancy
 
-Independent handles and captured queries are reentrant. A cursor is single-consumer, and a leased batch must be released before the next cursor operation.
+Independent handles are reentrant. A query cursor and its current lease are single-consumer resources.
 
 Snapshot capture is a linearization point, not a dictionary-wide query lock.
 First-party immutable snapshots can be walked concurrently. A foreign provider

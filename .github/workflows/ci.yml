@@ -151,6 +151,7 @@ jobs:
           distribution: temurin
           java-version: "25"
       - run: python3 scripts/check-bindings.py
+      - run: python3 scripts/check-binding-docs.py
       - run: cargo build --locked --features native-bindings-full
       - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - name: C17/C23 and C++23 headers

@@ -29,6 +29,7 @@ resource consumer, the cursor laws, and the JS/WASM topology.
 |---|---|
 | [c-abi-reference.md](c-abi-reference.md) | All 36 `llev_*` functions: signatures, preconditions, exact returnable status sets, ownership, thread safety, complexity; the 13-value status table and its `VtStatus` mapping; the lease protocol with literate batch-loop and reducer pseudocode; a compile-checked complete C consumer. |
 | [resource-consumer.md](resource-consumer.md) | The safe-Rust layer under the C ABI: intake (retain-validate-else-release), `ForeignNode` domains, the `CallGate` (VT-GATE-1..3), the status wire rule and fault latch, the total `BindingError` map, and the two-pass arena fixup. |
+| [collection-protocols.md](collection-protocols.md) | The approved native-Rust and foreign-language collection design: current gaps, generic snapshot traversal, idiomatic `Iterator`/`Set`/`Map` surfaces, batched ABI acceleration, lifecycle rules, gates, and implementation work packages. It is a roadmap, not a claim that every adapter already ships. |
 | [wasm-topology.md](wasm-topology.md) | The JS exception to modular packaging: the `@vinary-tree/vinary-tree` umbrella, the three runtime paths, the runtime-identity guard, WASI preopen policy, and panic-versus-status discipline. |
 | [../theory/snapshot-semantics.md](../theory/snapshot-semantics.md) | The cursor laws S1-S6 as display math, the $`\mathcal{O}(1)`$-capture argument from path-copied revisions, the partial-persistence classification, the refcount lineage, and the law ↔ model ↔ test correspondence table. |
 | [../security/binding-trust-model.md](../security/binding-trust-model.md) | The family trust model instantiated for this consumer: `boundary()`, the bounded error channel, the decoded status wire, lease-refusal as UAF prevention, duty status per hostile-input class. |
@@ -43,6 +44,8 @@ resource consumer, the cursor laws, and the JS/WASM topology.
 | [`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) | The per-facade completeness model driving the coverage matrix. |
 | [`bindings/conformance/`](../../bindings/conformance) | Generated conformance fixtures (query-start snapshot TSV, completeness matrix) every language suite replays. |
 | [`scripts/check-bindings.py`](../../scripts/check-bindings.py) | The contract gate: symbol parity model ↔ Rust ↔ header, forbidden retired APIs, umbrella identity guard, coordinates, feature-alias policy. |
+| [`scripts/generate-binding-guides.py`](../../scripts/generate-binding-guides.py) | Idempotently renders the shared operational contract in every project and interop package guide while preserving its hand-written tutorial. |
+| [`scripts/check-binding-docs.py`](../../scripts/check-binding-docs.py) | Fails closed on an undocumented declared language, missing required topic, stale generated section, absent executable example, untagged code fence, placeholder, or broken local link. |
 | [`docs/verification/ABI_INVARIANTS.tsv`](../verification/ABI_INVARIANTS.tsv) | The canonical invariant registry (VT-LIFE, VT-QI, VT-GATE, VT-ABI, and the wave-W3 rows as they land) tying each law to its model, test, and gate. |
 
 5. **Diagrams:** the binding suite lives in
@@ -53,6 +56,42 @@ resource consumer, the cursor laws, and the JS/WASM topology.
    family data flow, registry topology, resource handoff, lease lifecycle,
    cursor-lease FSM, resource-lifecycle FSM, reducer flow, call-gate
    serialization, WASM umbrella deployment).
+
+## Language coverage matrix
+
+Every check mark is a shipped package guide rather than an implementation-only
+directory. A shared-runtime guide contains separate executable idioms for each
+language named in its row. A dash means the project does not publish that
+foreign-language facade; it is not a documentation gap.
+
+![Foreign languages reach four project facades through native, N-API, WebAssembly, or WASI runtimes and exchange only versioned dictionary or scalar-WFST resources.](../diagrams/bindings/language-runtime-topology.svg)
+
+| Language/runtime | liblevenshtein | libdictenstein | lling-llang | duallity | interop |
+|---|---|---|---|---|---|
+| C | [guide](../../bindings/c/README.md) | [ABI and guide](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/c-abi-reference.md) | [ABI and guide](https://github.com/vinary-tree/lling-llang/blob/master/docs/api/c-abi-reference.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/docs/guides/07-language-bindings.md) | [native contract](../../vinary-tree-interop/README.md) |
+| C++ | [guide](../../bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/cpp/README.md) | [native contract](../../vinary-tree-interop/README.md) |
+| Python | [guide](../../bindings/python/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/python/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/python/README.md) |
+| Java, Kotlin, Scala | [JVM guide](../../bindings/jvm/README.md) | [JVM guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/jvm/README.md) | — | — | [JVM adapter](../../vinary-tree-interop/bindings/jvm/README.md) |
+| Clojure | [guide](../../bindings/clojure/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/clojure/README.md) | — | — | Delegates to JVM |
+| JavaScript, TypeScript, ClojureScript | [guide](../../bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/javascript/README.md) | [adapter guide](../../vinary-tree-interop/bindings/javascript/README.md) |
+| C# / .NET | [guide](../../bindings/dotnet/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/dotnet/README.md) | — | — | Included in the .NET package |
+| Go | [guide](../../bindings/go/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/go/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/go/README.md) |
+| Swift | [guide](../../bindings/swift/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/swift/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/swift/README.md) |
+| Ruby | [guide](../../bindings/ruby/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ruby/README.md) | — | — | Resource pair is mediated by project gems |
+| Fortran | [guide](../../bindings/fortran/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/fortran/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/fortran/README.md) |
+| OCaml | [guide](../../bindings/ocaml/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ocaml/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/ocaml/README.md) |
+| Haskell | [guide](../../bindings/haskell/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/haskell/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/haskell/README.md) |
+| Lua | [guide](../../bindings/lua/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/lua/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/lua/README.md) |
+
+The related `llattice` crate is Rust-only. It therefore appears in the family
+dependency graph but has no missing foreign-language guide.
+
+Collection-protocol parity is tracked separately from package availability.
+The [collection-protocol design](collection-protocols.md) records the current
+gaps and makes the optimized pure Rust API the baseline for Java `Set`/`Map`,
+.NET collection interfaces, Python collection ABCs, and the corresponding
+idioms in every applicable binding. Per-language guides continue to describe
+only functionality that has actually passed its conformance gates.
 
 ## The family, one hop away
 
