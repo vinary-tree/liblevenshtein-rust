@@ -508,6 +508,18 @@ impl<
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next_match()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<
+        N: DictionaryNode,
+        R: QueryResultF64<N::Unit>,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    > std::iter::FusedIterator for QueryIteratorF64<N, R, P>
+{
 }
 
 /// Type alias for float-weighted query iterator that returns just term strings.

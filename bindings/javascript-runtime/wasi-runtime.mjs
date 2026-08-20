@@ -3,6 +3,7 @@ import { WASI } from "node:wasi";
 
 const FAILURE = 0xffff_ffff;
 const RECORD_SIZE = 32;
+const ENTRY_RECORD_HEADER_SIZE = 24;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
@@ -57,6 +58,17 @@ export async function createWasiRuntime({
       ffi.vt_dealloc(pointer, encoded.length);
     }
   }
+  function withTokens(value, operation) {
+    if (!(value instanceof BigUint64Array)) {
+      throw new TypeError("u64 dictionary keys require BigUint64Array");
+    }
+    const encoded = new Uint8Array(value.length * 8);
+    const data = new DataView(encoded.buffer);
+    for (let index = 0; index < value.length; index += 1) {
+      data.setBigUint64(index * 8, value[index], true);
+    }
+    return withBytes(encoded, (pointer) => operation(pointer, value.length));
+  }
   function select(table, value, kind) {
     const selected = table.get(value);
     if (selected === undefined) throw new TypeError(`unknown ${kind}: ${value}`);
@@ -82,24 +94,40 @@ export async function createWasiRuntime({
     }
     get size() { return failure(ffi.vt_dictionary_len(this._handle)); }
     put(term, value = null) {
-      if (typeof term !== "string") throw new TypeError("WASI text dictionaries require a string term");
       if (value !== null && (typeof value !== "bigint" || value < 0n || value > 0xffff_ffff_ffff_ffffn)) {
         throw new RangeError("dictionary value must be null or an unsigned 64-bit bigint");
+      }
+      if (term instanceof BigUint64Array) {
+        return withTokens(term, (pointer, length) => Boolean(failure(
+          ffi.vt_dictionary_put_u64(this._handle, pointer, length, Number(value !== null), value ?? 0n),
+        )));
+      }
+      if (typeof term !== "string" && !(term instanceof Uint8Array)) {
+        throw new TypeError("dictionary key must be a string, Uint8Array, or BigUint64Array");
       }
       return withBytes(term, (pointer, length) => Boolean(failure(
         ffi.vt_dictionary_put_text(this._handle, pointer, length, Number(value !== null), value ?? 0n),
       )));
     }
+    putU64(term, value = null) { return this.put(term, value); }
+    set(term, value = null) { this.put(term, value); return this; }
     remove(term) {
+      if (term instanceof BigUint64Array) {
+        return withTokens(term, (pointer, length) => Boolean(failure(
+          ffi.vt_dictionary_remove_u64(this._handle, pointer, length),
+        )));
+      }
       return withBytes(term, (pointer, length) => Boolean(failure(
         ffi.vt_dictionary_remove_text(this._handle, pointer, length),
       )));
     }
-    get(term) {
-      return withBytes(term, (termPointer, termLength) => {
+    removeU64(term) { return this.remove(term); }
+    delete(term) { return this.remove(term); }
+    lookup(term) {
+      const decode = (termPointer, termLength, operation) => {
         const output = ffi.vt_alloc(16);
         try {
-          failure(ffi.vt_dictionary_get_text(this._handle, termPointer, termLength, output));
+          failure(operation(this._handle, termPointer, termLength, output));
           const memory = view();
           const found = memory.getUint32(output, true) !== 0;
           const present = memory.getUint32(output + 4, true) !== 0;
@@ -107,9 +135,40 @@ export async function createWasiRuntime({
         } finally {
           ffi.vt_dealloc(output, 16);
         }
-      });
+      };
+      return term instanceof BigUint64Array
+        ? withTokens(term, (pointer, length) => decode(pointer, length, ffi.vt_dictionary_get_u64))
+        : withBytes(term, (pointer, length) => decode(pointer, length, ffi.vt_dictionary_get_text));
     }
-    has(term) { return this.get(term).found; }
+    lookupU64(term) { return this.lookup(term); }
+    get(term) { const result = this.lookup(term); return result.found ? result.value : undefined; }
+    getU64(term) { return this.get(term); }
+    has(term) { return this.lookup(term).found; }
+    hasU64(term) { return this.has(term); }
+    streamEntries() { return new DictionaryEntryCursor(ffi.vt_dictionary_entries_open(this._handle)); }
+    snapshotEntries() {
+      const result = [];
+      const cursor = this.streamEntries();
+      try {
+        for (const [key, value] of cursor) result.push(Object.freeze([key, value]));
+      } finally {
+        cursor.close();
+      }
+      return Object.freeze(result);
+    }
+    entries() { return this.snapshotEntries()[Symbol.iterator](); }
+    [Symbol.iterator]() { return this.entries(); }
+    *keys() { for (const [key] of this) yield key; }
+    *values() { for (const [, value] of this) yield value; }
+    forEach(callback, thisArg = undefined) {
+      for (const [key, value] of this) callback.call(thisArg, value, key, this);
+    }
+    toMap() {
+      if (this.unitDomain !== "unicode") {
+        throw new TypeError("toMap is defined only for value-equal JavaScript string keys");
+      }
+      return new Map(this);
+    }
     clear() { failure(ffi.vt_dictionary_clear(this._handle)); }
     compact() { return failure(ffi.vt_dictionary_compact(this._handle)); }
     checkpoint() {
@@ -122,22 +181,140 @@ export async function createWasiRuntime({
         this.#handle = 0;
       }
     }
+    [Symbol.dispose]() { this.close(); }
   }
 
-  class QueryCursor {
+  class DictionaryEntryCursor {
     #handle;
     #pending = [];
-    constructor(handle) { this.#handle = failure(handle); }
+    #offset = 0;
+    constructor(handle) {
+      this.#handle = failure(handle);
+      this.size = failure(ffi.vt_entry_cursor_len(this.#handle));
+      this.identity = null;
+    }
     [Symbol.iterator]() { return this; }
     next() {
-      if (this.#pending.length === 0) this.#pending = this.nextBatch(256);
-      if (this.#pending.length === 0) return { done: true, value: undefined };
-      return { done: false, value: this.#pending.shift() };
+      if (this.#offset >= this.#pending.length) {
+        this.#pending = this.#fetch(256);
+        this.#offset = 0;
+      }
+      if (this.#pending.length === 0) {
+        this.close();
+        return { done: true, value: undefined };
+      }
+      return { done: false, value: this.#pending[this.#offset++] };
     }
     nextBatch(maximum) {
       if (!Number.isSafeInteger(maximum) || maximum <= 0) {
         throw new RangeError("batch size must be a positive safe integer");
       }
+      const result = [];
+      while (result.length < maximum) {
+        while (this.#offset < this.#pending.length && result.length < maximum) {
+          result.push(this.#pending[this.#offset++]);
+        }
+        if (result.length === maximum || this.#handle === 0) break;
+        this.#pending = this.#fetch(maximum - result.length);
+        this.#offset = 0;
+        if (this.#pending.length === 0) {
+          this.close();
+          break;
+        }
+      }
+      return result;
+    }
+    #fetch(maximum) {
+      if (this.#handle === 0) return [];
+      const count = failure(ffi.vt_entry_cursor_next_batch(this.#handle, maximum));
+      if (count === 0) return [];
+      let record = failure(ffi.vt_entry_cursor_batch_pointer(this.#handle));
+      const memory = view();
+      const output = [];
+      for (let index = 0; index < count; index += 1) {
+        const payloadLength = memory.getUint32(record, true);
+        const domain = memory.getUint32(record + 4, true);
+        const present = memory.getUint32(record + 8, true) !== 0;
+        const value = present ? memory.getBigUint64(record + 16, true) : null;
+        const payload = record + ENTRY_RECORD_HEADER_SIZE;
+        let key;
+        if (domain === 0) {
+          key = bytes().slice(payload, payload + payloadLength);
+        } else if (domain === 1) {
+          key = decoder.decode(bytes().slice(payload, payload + payloadLength));
+        } else {
+          if (payloadLength % 8 !== 0) throw new Error("invalid u64 dictionary entry payload");
+          key = new BigUint64Array(payloadLength / 8);
+          for (let token = 0; token < key.length; token += 1) {
+            key[token] = memory.getBigUint64(payload + token * 8, true);
+          }
+        }
+        output.push([key, value]);
+        record = payload + payloadLength;
+      }
+      return output;
+    }
+    reduceBatches(reducer, initial, batchSize = 256) {
+      let accumulator = initial;
+      try {
+        for (;;) {
+          const batch = this.nextBatch(batchSize);
+          if (batch.length === 0) return accumulator;
+          accumulator = reducer(accumulator, batch);
+        }
+      } finally {
+        this.close();
+      }
+    }
+    return() { this.close(); return { done: true, value: undefined }; }
+    close() {
+      if (this.#handle !== 0) {
+        ffi.vt_handle_close(this.#handle);
+        this.#handle = 0;
+        this.#pending = [];
+        this.#offset = 0;
+      }
+    }
+    [Symbol.dispose]() { this.close(); }
+  }
+
+  class QueryCursor {
+    #handle;
+    #pending = [];
+    #offset = 0;
+    constructor(handle) { this.#handle = failure(handle); }
+    [Symbol.iterator]() { return this; }
+    next() {
+      if (this.#offset >= this.#pending.length) {
+        this.#pending = this.#fetch(256);
+        this.#offset = 0;
+      }
+      if (this.#pending.length === 0) {
+        this.close();
+        return { done: true, value: undefined };
+      }
+      return { done: false, value: this.#pending[this.#offset++] };
+    }
+    nextBatch(maximum) {
+      if (!Number.isSafeInteger(maximum) || maximum <= 0) {
+        throw new RangeError("batch size must be a positive safe integer");
+      }
+      const result = [];
+      while (result.length < maximum) {
+        while (this.#offset < this.#pending.length && result.length < maximum) {
+          result.push(this.#pending[this.#offset++]);
+        }
+        if (result.length === maximum || this.#handle === 0) break;
+        this.#pending = this.#fetch(maximum - result.length);
+        this.#offset = 0;
+        if (this.#pending.length === 0) {
+          this.close();
+          break;
+        }
+      }
+      return result;
+    }
+    #fetch(maximum) {
       if (this.#handle === 0) return [];
       const count = failure(ffi.vt_cursor_next_batch(this.#handle, maximum));
       if (count === 0) return [];
@@ -173,18 +350,26 @@ export async function createWasiRuntime({
     }
     reduceBatches(reducer, initial, batchSize = 256) {
       let accumulator = initial;
-      for (;;) {
-        const batch = this.nextBatch(batchSize);
-        if (batch.length === 0) return accumulator;
-        accumulator = reducer(accumulator, batch);
+      try {
+        for (;;) {
+          const batch = this.nextBatch(batchSize);
+          if (batch.length === 0) return accumulator;
+          accumulator = reducer(accumulator, batch);
+        }
+      } finally {
+        this.close();
       }
     }
     close() {
       if (this.#handle !== 0) {
         ffi.vt_handle_close(this.#handle);
         this.#handle = 0;
+        this.#pending = [];
+        this.#offset = 0;
       }
     }
+    return() { this.close(); return { done: true, value: undefined }; }
+    [Symbol.dispose]() { this.close(); }
   }
 
   class Transducer {

@@ -496,6 +496,18 @@ where
             },
         )
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N, F> std::iter::FusedIterator for ValueFilteredQueryIterator<N, F>
+where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    F: Fn(&N::Value) -> bool,
+{
 }
 
 /// Iterator that yields `(term, distance, value)` for every match within the
@@ -607,6 +619,19 @@ where
             |units, distance, value| (T::from_units(&units), distance, value),
         )
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N, T> std::iter::FusedIterator for ValueYieldingQueryIterator<N, T>
+where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    T: ValueTerm<N::Unit>,
+    Unrestricted: SubstitutionPolicyFor<N::Unit>,
+{
 }
 
 enum ValueSetMembership<'a, V> {
@@ -759,6 +784,17 @@ where
             },
         )
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N, V> std::iter::FusedIterator for ValueSetFilteredQueryIterator<'_, N, V>
+where
+    N: MappedDictionaryNode<Value = V>,
+    V: DictionaryValue + Eq + Hash,
+{
 }
 
 #[cfg(test)]

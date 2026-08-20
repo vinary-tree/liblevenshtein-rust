@@ -83,6 +83,43 @@ not be presented as a complete experiment. Every load record carries `warmup`
 or `pair-N` as its label. A rejected `pair-N` record proves that the runner
 stopped before measuring that pair.
 
+The collection-traversal experiment uses the same admission and paired-order
+rules to compare two public producer arms from one release binary. Build the
+driver in `libdictenstein`, then run and analyze an immutable CSV:
+
+```console
+cargo build --release --manifest-path ../libdictenstein/Cargo.toml \
+  --features bindings-core --example collection_traversal_profile
+benchmarks/causal/run-collection-traversal-experiment.sh \
+  ../libdictenstein/target/release/examples/collection_traversal_profile \
+  benchmarks/causal/evidence/YYYY-MM-DD/collection-direct-vs-visitor.csv \
+  direct-owned direct-visitor 65536
+benchmarks/causal/analyze-collection-traversal.py \
+  benchmarks/causal/evidence/YYYY-MM-DD/collection-direct-vs-visitor.csv
+```
+
+If a later gate rejects contention, retain the files and pass `--resume` with
+the exact same arguments. The resume helper verifies every retained pair,
+binary digest, arm, workload, checksum, and admission label; moves trailing
+rejected/interrupted load records to `*-rejected-host-load.jsonl`; atomically
+rebuilds the accepted ledger; and continues at the first uncommitted pair.
+It never reuses a half pair or measurements from a changed executable.
+
+The driver constructs the corpus outside the timed region, reports a stable
+semantic checksum, and counts ABI boundary calls. The runner rejects digest,
+workload, checksum, or admission mismatches rather than silently combining
+unlike samples. The row contract is
+[`schemas/collection-traversal-sample.schema.json`](schemas/collection-traversal-sample.schema.json),
+and the interpretation and headless profiling protocol are documented in
+libdictenstein's
+[collection-traversal benchmark protocol](https://github.com/vinary-tree/libdictenstein/blob/master/docs/benchmarks/collection-traversal-and-bindings.md).
+Public foreign-package drivers emit the related
+[`libdictenstein.host-collection-traversal.v1` schema](schemas/host-collection-traversal-sample.schema.json),
+which records runtime warmup and whether the facade exposes its native batch
+policy. The two schemas deliberately remain distinct: ABI-boundary call counts
+exist only on the native control, while runtime allocation and garbage
+collection counters are interpreted within each host runtime.
+
 The bounded query-cache policy matrix is deterministic and fixes the
 benchmark-only AHash key before constructing any cache. Production caches keep
 independent randomized keys. The matrix compares TinyLFU+SIEVE with dense,

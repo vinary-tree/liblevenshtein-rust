@@ -7,6 +7,7 @@
 //! 4. Deduplication of results
 
 use std::collections::VecDeque;
+use std::marker::PhantomData;
 
 use crate::distance::{
     create_memo_cache, damerau_levenshtein_distance, merge_and_split_distance,
@@ -82,14 +83,21 @@ impl WallBreakerResult {
 /// 3. Extend each match bidirectionally using Levenshtein filters
 /// 4. Verify distance using the correct algorithm-specific function
 /// 5. Deduplicate and yield results
+///
+/// The iterator owns one retained dictionary root captured by [`Self::new`].
+/// Every pattern piece is searched in that same immutable revision; later
+/// mutation cannot mix candidates from different revisions.
 pub struct WallBreakerQuery<'a, D>
 where
     D: Dictionary + SubstringDictionary,
     D::Node: BidirectionalDictionaryNode,
     <D::Node as crate::dictionary::DictionaryNode>::Unit: Into<u32>,
 {
-    /// Reference to the dictionary.
-    dictionary: &'a D,
+    /// Root retaining the exact dictionary revision captured at query start.
+    snapshot_root: D::Node,
+
+    /// Preserve the public query lifetime while traversal owns its snapshot.
+    _dictionary: PhantomData<&'a D>,
 
     /// The query string.
     query: String,
@@ -140,7 +148,8 @@ where
         let algorithm = splitter.algorithm();
 
         WallBreakerQuery {
-            dictionary,
+            snapshot_root: dictionary.root(),
+            _dictionary: PhantomData,
             query: query.to_string(),
             max_distance,
             algorithm,
@@ -169,7 +178,8 @@ where
             }
 
             // Find exact substring matches for this piece
-            let substring_matches = self.dictionary.find_exact_substring(&piece.content);
+            let substring_matches =
+                D::find_exact_substring_in_snapshot(&self.snapshot_root, &piece.content);
 
             // Extend each match bidirectionally
             for match_info in &substring_matches {
@@ -210,6 +220,14 @@ where
 
         false
     }
+}
+
+impl<'a, D> std::iter::FusedIterator for WallBreakerQuery<'a, D>
+where
+    D: Dictionary + SubstringDictionary,
+    D::Node: BidirectionalDictionaryNode,
+    <D::Node as crate::dictionary::DictionaryNode>::Unit: Into<u32>,
+{
 }
 
 impl<'a, D> Iterator for WallBreakerQuery<'a, D>

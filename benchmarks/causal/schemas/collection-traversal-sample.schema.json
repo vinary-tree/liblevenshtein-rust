@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vinary-tree.org/schemas/libdictenstein-collection-traversal-sample-v1.json",
+  "title": "libdictenstein collection traversal sample",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "arm",
+    "dictionary_entries",
+    "consumed_entries_per_pass",
+    "passes",
+    "elapsed_ns",
+    "checksum",
+    "boundary_calls"
+  ],
+  "properties": {
+    "schema": {
+      "const": "libdictenstein.collection-traversal.v1"
+    },
+    "arm": {
+      "enum": [
+        "direct-owned",
+        "direct-visitor",
+        "direct-materialized",
+        "abi-64",
+        "abi-256",
+        "abi-1024",
+        "direct-cancel-64",
+        "abi-cancel-64"
+      ]
+    },
+    "dictionary_entries": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "consumed_entries_per_pass": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "passes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "elapsed_ns": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "checksum": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "boundary_calls": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

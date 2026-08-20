@@ -25,9 +25,10 @@ use core::mem::size_of;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use vinary_tree_interop::{
-    VtDictionaryVTable, VtInterfaceId, VtResource, VtResourceVTable, VtStatus, VtUnitDomain,
-    VtValueDomain, VT_ABI_VERSION, VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION,
-    VT_WFST_INTERFACE_ID,
+    VtDictionaryEntriesVTable, VtDictionaryVTable, VtInterfaceId, VtResource, VtResourceVTable,
+    VtStatus, VtUnitDomain, VtValueDomain, VT_ABI_VERSION, VT_DICTIONARY_ENTRIES_INTERFACE_ID,
+    VT_DICTIONARY_ENTRIES_INTERFACE_VERSION, VT_DICTIONARY_INTERFACE_ID,
+    VT_DICTIONARY_INTERFACE_VERSION, VT_WFST_INTERFACE_ID,
 };
 
 /// Provider context: one atomic ledger of live retains.
@@ -80,6 +81,35 @@ fn extended_dictionary_vtable() -> &'static ExtendedDictionaryVTable {
     &EXTENDED
 }
 
+/// A future entries vtable with the complete v1 prefix plus one trailing op.
+#[repr(C)]
+struct ExtendedDictionaryEntriesVTable {
+    base: VtDictionaryEntriesVTable,
+    remaining_hint: Option<unsafe extern "C" fn(cursor_context: *mut c_void) -> usize>,
+}
+
+unsafe extern "C" fn remaining_hint(_cursor_context: *mut c_void) -> usize {
+    17
+}
+
+fn extended_dictionary_entries_vtable() -> &'static ExtendedDictionaryEntriesVTable {
+    static EXTENDED: ExtendedDictionaryEntriesVTable = ExtendedDictionaryEntriesVTable {
+        base: VtDictionaryEntriesVTable {
+            struct_size: size_of::<ExtendedDictionaryEntriesVTable>(),
+            interface_version: VT_DICTIONARY_ENTRIES_INTERFACE_VERSION,
+            reserved: 0,
+            open: None,
+            next_batch: None,
+            release_batch: None,
+            reduce: None,
+            cancel: None,
+            close: None,
+        },
+        remaining_hint: Some(remaining_hint),
+    };
+    &EXTENDED
+}
+
 unsafe extern "C" fn counting_query_interface(
     _context: *mut c_void,
     interface_id: *const VtInterfaceId,
@@ -90,10 +120,37 @@ unsafe extern "C" fn counting_query_interface(
         return VtStatus::NullPointer.to_raw();
     }
     let requested = unsafe { *interface_id };
-    if requested != VT_DICTIONARY_INTERFACE_ID {
+    let discovered = if requested == VT_DICTIONARY_INTERFACE_ID {
+        if minimum_version > VT_DICTIONARY_INTERFACE_VERSION {
+            return VtStatus::Unsupported.to_raw();
+        }
+        (extended_dictionary_vtable() as *const ExtendedDictionaryVTable).cast()
+    } else if requested == VT_DICTIONARY_ENTRIES_INTERFACE_ID {
+        if minimum_version > VT_DICTIONARY_ENTRIES_INTERFACE_VERSION {
+            return VtStatus::Unsupported.to_raw();
+        }
+        (extended_dictionary_entries_vtable() as *const ExtendedDictionaryEntriesVTable).cast()
+    } else {
         return VtStatus::Unsupported.to_raw();
+    };
+    unsafe {
+        *out_vtable = discovered;
     }
-    if minimum_version > VT_DICTIONARY_INTERFACE_VERSION {
+    VtStatus::Ok.to_raw()
+}
+
+unsafe extern "C" fn legacy_dictionary_only_query_interface(
+    _context: *mut c_void,
+    interface_id: *const VtInterfaceId,
+    minimum_version: u32,
+    out_vtable: *mut *const c_void,
+) -> u32 {
+    if interface_id.is_null() || out_vtable.is_null() {
+        return VtStatus::NullPointer.to_raw();
+    }
+    if unsafe { *interface_id } != VT_DICTIONARY_INTERFACE_ID
+        || minimum_version > VT_DICTIONARY_INTERFACE_VERSION
+    {
         return VtStatus::Unsupported.to_raw();
     }
     unsafe {
@@ -109,6 +166,15 @@ static RESOURCE_VTABLE: VtResourceVTable = VtResourceVTable {
     retain: Some(counting_retain),
     release: Some(counting_release),
     query_interface: Some(counting_query_interface),
+};
+
+static LEGACY_RESOURCE_VTABLE: VtResourceVTable = VtResourceVTable {
+    struct_size: size_of::<VtResourceVTable>(),
+    abi_version: VT_ABI_VERSION,
+    reserved: 0,
+    retain: Some(counting_retain),
+    release: Some(counting_release),
+    query_interface: Some(legacy_dictionary_only_query_interface),
 };
 
 struct Provider {
@@ -129,6 +195,13 @@ impl Provider {
         VtResource {
             context: (&*self.context as *const CountingContext as *mut CountingContext).cast(),
             vtable: &RESOURCE_VTABLE,
+        }
+    }
+
+    fn legacy_resource(&self) -> VtResource {
+        VtResource {
+            context: (&*self.context as *const CountingContext as *mut CountingContext).cast(),
+            vtable: &LEGACY_RESOURCE_VTABLE,
         }
     }
 
@@ -259,6 +332,61 @@ fn successful_negotiation_yields_a_prefix_consumable_future_vtable() {
         .node_degree_hint
         .expect("extension operation present in the extended table");
     assert_eq!(unsafe { hint(provider.resource().context, 21) }, 42);
+}
+
+#[test]
+fn entries_is_optional_for_preexisting_providers() {
+    let provider = Provider::new();
+    let mut out = POISON;
+    let status = query(
+        provider.legacy_resource(),
+        &VT_DICTIONARY_ENTRIES_INTERFACE_ID,
+        VT_DICTIONARY_ENTRIES_INTERFACE_VERSION,
+        &mut out,
+    );
+    assert_eq!(status, VtStatus::Unsupported);
+    assert_eq!(out, POISON, "unsupported optional discovery writes nothing");
+}
+
+#[test]
+fn entries_negotiation_yields_a_prefix_consumable_future_vtable() {
+    let provider = Provider::new();
+    let mut out: *const c_void = core::ptr::null();
+    let status = query(
+        provider.resource(),
+        &VT_DICTIONARY_ENTRIES_INTERFACE_ID,
+        VT_DICTIONARY_ENTRIES_INTERFACE_VERSION,
+        &mut out,
+    );
+    assert_eq!(status, VtStatus::Ok);
+    assert!(!out.is_null());
+
+    let prefix = unsafe { &*(out as *const VtDictionaryEntriesVTable) };
+    assert_eq!(
+        prefix.interface_version,
+        VT_DICTIONARY_ENTRIES_INTERFACE_VERSION
+    );
+    assert_eq!(prefix.reserved, 0);
+    assert!(prefix.struct_size > size_of::<VtDictionaryEntriesVTable>());
+
+    assert!(prefix.struct_size >= size_of::<ExtendedDictionaryEntriesVTable>());
+    let extended = unsafe { &*(out as *const ExtendedDictionaryEntriesVTable) };
+    let hint = extended
+        .remaining_hint
+        .expect("extension operation present in the extended table");
+    assert_eq!(unsafe { hint(core::ptr::null_mut()) }, 17);
+
+    let mut untouched = POISON;
+    assert_eq!(
+        query(
+            provider.resource(),
+            &VT_DICTIONARY_ENTRIES_INTERFACE_ID,
+            VT_DICTIONARY_ENTRIES_INTERFACE_VERSION + 1,
+            &mut untouched,
+        ),
+        VtStatus::Unsupported
+    );
+    assert_eq!(untouched, POISON);
 }
 
 #[test]

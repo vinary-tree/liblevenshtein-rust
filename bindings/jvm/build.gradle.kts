@@ -57,6 +57,11 @@ tasks.test {
         "java.library.path",
         providers.gradleProperty("liblevenshtein.nativeDir").orElse("../../target/debug").get()
     )
+    systemProperty(
+        "libdictenstein.nativeDir",
+        providers.gradleProperty("libdictenstein.nativeDir")
+            .orElse("../../../libdictenstein/target/debug").get()
+    )
 }
 
 // --- C8 property-based tests (jqwik) --------------------------------------

@@ -12,7 +12,7 @@ rectangle "Live Rust dictionary\n(any applicable automaton)" as live #D9EAD3
 rectangle "O(1) immutable\nsnapshot root / graph" as snap #D9EAD3
 rectangle "Generic monomorphic\nentry traversal" as walk #B6D7A8
 rectangle "Pure Rust\nIterator + fold/visitor" as rust #93C47D
-rectangle "Optional batched ABI\nvt.dictionary.entries.v1" as abi #FCE5CD
+rectangle "Optional batched ABI\nvt.dict.entry.v1" as abi #FCE5CD
 rectangle "Host-owned immutable\nSet / Map / Iterable view" as materialized #CFE2F3
 rectangle "Closeable streaming\ncursor / reducer" as stream #9FC5E8
 

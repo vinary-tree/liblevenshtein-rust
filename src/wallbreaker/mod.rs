@@ -266,6 +266,23 @@ mod tests {
     }
 
     #[test]
+    fn query_owns_one_revision_across_every_pattern_piece() {
+        let dict = Scdawg::<()>::from_terms(["abcd", "omega"]);
+        let wb = WallBreaker::new(&dict, 1);
+        let mut captured = wb.query("abcd");
+
+        assert_eq!(
+            captured.next().map(|result| result.term),
+            Some("abcd".into())
+        );
+        assert!(dict.insert("abxd"));
+        assert!(captured.all(|result| result.term != "abxd"));
+
+        let fresh: Vec<_> = wb.query("abcd").collect();
+        assert!(fresh.iter().any(|result| result.term == "abxd"));
+    }
+
+    #[test]
     fn test_wallbreaker_no_match() {
         let dict = Scdawg::<()>::from_terms(vec!["hello", "world"]);
         let wb = WallBreaker::new(&dict, 1);

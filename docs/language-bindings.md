@@ -35,11 +35,14 @@ or monolithic native binding is involved.
 `VtResource` is two machine words: a context pointer and a resource vtable. Its
 base operations are retain, release, and query-interface. Handing a resource
 between projects is therefore $`\mathcal{O}(1)`$ — sixteen bytes on a 64-bit
-target, never a serialization. The first shipped
-interface is `vt.dictionary.v1`, which supports byte, Unicode-scalar, and `u64`
-unit domains and unit or optional-`u64` values; the second,
-`vt.scalar-wfst.1`, carries scalar-weighted transducers between the sibling
-projects. One dictionary feeds three consumers across two interfaces:
+target, never a serialization. The mandatory `vt.dictionary.v1` interface
+supports byte, Unicode-scalar, and `u64` unit domains and unit or optional-`u64`
+values. Optional dictionary visit, compact-graph, snapshot-identity, and
+entries-v1 interfaces add capabilities without enlarging the base resource;
+`vt.dict.entry.v1` is a finite lexicographic stream over one captured revision
+with one explicit generation lease at a time. `vt.scalar-wfst.1` carries
+scalar-weighted transducers between sibling projects. One dictionary feeds
+three consumers across two principal interfaces:
 
 ![Family data flow: a libdictenstein dictionary consumed by liblevenshtein cursors and by duallity's Levenshtein-WFST compiler, whose vt.scalar-wfst.1 output lling-llang lazily composes — every handoff the same two-word retained handle.](diagrams/bindings/family-data-flow.svg)
 
@@ -194,8 +197,10 @@ objects.
 
 Current implementation status is machine-checked in CI. Tier 1, Tier 2, and
 Tier 3 facades consume project resources and run the same cross-project
-query-start snapshot fixture. The tier is a maintenance and optimization
-priority; it is not a statement that lower-tier packages are incomplete.
+query-start snapshot fixture. Generator-owned native mirrors additionally
+replay the entries-v1 identity, status, flag, operation-order, and LP64/ARM32
+layout fixture. The tier is a maintenance and optimization priority; it is not
+a statement that lower-tier packages are incomplete.
 
 ## Distribution
 

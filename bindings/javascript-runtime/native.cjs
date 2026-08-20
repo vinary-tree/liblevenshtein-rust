@@ -38,6 +38,78 @@ function select(table, value, kind) {
   return selected;
 }
 
+class DictionaryEntryCursor {
+  #handle;
+  #pending = [];
+  #offset = 0;
+  constructor(opened) {
+    this.#handle = opened.handle;
+    this.size = opened.size;
+    this.identity = opened.identity === null ? null : Object.freeze(opened.identity);
+  }
+  [Symbol.iterator]() { return this; }
+  next() {
+    if (this.#offset >= this.#pending.length) {
+      this.#pending = this.#fetch(256);
+      this.#offset = 0;
+    }
+    if (this.#pending.length === 0) {
+      this.close();
+      return { done: true, value: undefined };
+    }
+    return { done: false, value: this.#pending[this.#offset++] };
+  }
+  nextBatch(maximum) {
+    if (!Number.isSafeInteger(maximum) || maximum <= 0) {
+      throw new RangeError("batch size must be a positive safe integer");
+    }
+    const result = [];
+    while (result.length < maximum) {
+      while (this.#offset < this.#pending.length && result.length < maximum) {
+        result.push(this.#pending[this.#offset++]);
+      }
+      if (result.length === maximum || this.#handle === null) break;
+      this.#pending = this.#fetch(maximum - result.length);
+      this.#offset = 0;
+      if (this.#pending.length === 0) {
+        this.close();
+        break;
+      }
+    }
+    return result;
+  }
+  #fetch(maximum) {
+    return this.#handle === null
+      ? []
+      : ffi.dictionaryEntryCursorNextBatch(this.#handle, maximum);
+  }
+  reduceBatches(reducer, initial, batchSize = 256) {
+    let accumulator = initial;
+    try {
+      for (;;) {
+        const batch = this.nextBatch(batchSize);
+        if (batch.length === 0) return accumulator;
+        accumulator = reducer(accumulator, batch);
+      }
+    } finally {
+      this.close();
+    }
+  }
+  return() {
+    this.close();
+    return { done: true, value: undefined };
+  }
+  close() {
+    if (this.#handle !== null) {
+      ffi.dictionaryEntryCursorClose(this.#handle);
+      this.#handle = null;
+      this.#pending = [];
+      this.#offset = 0;
+    }
+  }
+  [Symbol.dispose]() { this.close(); }
+}
+
 class Dictionary {
   #handle;
   #kind;
@@ -56,14 +128,54 @@ class Dictionary {
     return this.#handle;
   }
   get size() { return ffi.dictionaryLen(this._handle); }
-  put(term, value = null) { return ffi.dictionaryPutText(this._handle, term, value); }
+  put(term, value = null) {
+    if (term instanceof BigUint64Array) return ffi.dictionaryPutU64(this._handle, term, value);
+    if (term instanceof Uint8Array) return ffi.dictionaryPutBytes(this._handle, term, value);
+    return ffi.dictionaryPutText(this._handle, term, value);
+  }
   putU64(term, value = null) { return ffi.dictionaryPutU64(this._handle, term, value); }
-  remove(term) { return ffi.dictionaryRemoveText(this._handle, term); }
+  set(term, value = null) { this.put(term, value); return this; }
+  remove(term) {
+    if (term instanceof BigUint64Array) return ffi.dictionaryRemoveU64(this._handle, term);
+    if (term instanceof Uint8Array) return ffi.dictionaryRemoveBytes(this._handle, term);
+    return ffi.dictionaryRemoveText(this._handle, term);
+  }
+  delete(term) { return this.remove(term); }
   removeU64(term) { return ffi.dictionaryRemoveU64(this._handle, term); }
-  get(term) { return ffi.dictionaryGetText(this._handle, term); }
-  getU64(term) { return ffi.dictionaryGetU64(this._handle, term); }
-  has(term) { return this.get(term).found; }
-  hasU64(term) { return this.getU64(term).found; }
+  lookup(term) {
+    if (term instanceof BigUint64Array) return ffi.dictionaryGetU64(this._handle, term);
+    if (term instanceof Uint8Array) return ffi.dictionaryGetBytes(this._handle, term);
+    return ffi.dictionaryGetText(this._handle, term);
+  }
+  lookupU64(term) { return ffi.dictionaryGetU64(this._handle, term); }
+  get(term) { const result = this.lookup(term); return result.found ? result.value : undefined; }
+  getU64(term) { const result = this.lookupU64(term); return result.found ? result.value : undefined; }
+  has(term) { return this.lookup(term).found; }
+  hasU64(term) { return this.lookupU64(term).found; }
+  streamEntries() { return new DictionaryEntryCursor(ffi.dictionaryEntriesOpen(this._handle)); }
+  snapshotEntries() {
+    const result = [];
+    const cursor = this.streamEntries();
+    try {
+      for (const [key, value] of cursor) result.push(Object.freeze([key, value]));
+    } finally {
+      cursor.close();
+    }
+    return Object.freeze(result);
+  }
+  entries() { return this.snapshotEntries()[Symbol.iterator](); }
+  [Symbol.iterator]() { return this.entries(); }
+  *keys() { for (const [key] of this) yield key; }
+  *values() { for (const [, value] of this) yield value; }
+  forEach(callback, thisArg = undefined) {
+    for (const [key, value] of this) callback.call(thisArg, value, key, this);
+  }
+  toMap() {
+    if (this.unitDomain !== "unicode") {
+      throw new TypeError("toMap is defined only for value-equal JavaScript string keys");
+    }
+    return new Map(this);
+  }
   clear() { return ffi.dictionaryClear(this._handle); }
   compact() { return ffi.dictionaryCompact(this._handle); }
   checkpoint() { return ffi.dictionaryCheckpoint(this._handle); }
@@ -75,30 +187,57 @@ class Dictionary {
       this.#handle = null;
     }
   }
+  [Symbol.dispose]() { this.close(); }
   get kind() { return this.#kind; }
 }
 
 class QueryCursor {
   #handle;
   #pending = [];
+  #offset = 0;
   constructor(handle) { this.#handle = handle; }
   [Symbol.iterator]() { return this; }
   next() {
-    if (this.#pending.length === 0) this.#pending = this.nextBatch(256);
-    return this.#pending.length === 0
-      ? { done: true, value: undefined }
-      : { done: false, value: this.#pending.shift() };
+    if (this.#offset >= this.#pending.length) {
+      this.#pending = this.#fetch(256);
+      this.#offset = 0;
+    }
+    if (this.#pending.length === 0) {
+      this.close();
+      return { done: true, value: undefined };
+    }
+    return { done: false, value: this.#pending[this.#offset++] };
   }
   nextBatch(maximum) {
     if (!Number.isSafeInteger(maximum) || maximum <= 0) throw new RangeError("batch size must be positive");
+    const result = [];
+    while (result.length < maximum) {
+      while (this.#offset < this.#pending.length && result.length < maximum) {
+        result.push(this.#pending[this.#offset++]);
+      }
+      if (result.length === maximum || this.#handle === null) break;
+      this.#pending = this.#fetch(maximum - result.length);
+      this.#offset = 0;
+      if (this.#pending.length === 0) {
+        this.close();
+        break;
+      }
+    }
+    return result;
+  }
+  #fetch(maximum) {
     return this.#handle === null ? [] : ffi.cursorNextBatch(this.#handle, maximum);
   }
   reduceBatches(reducer, initial, batchSize = 256) {
     let accumulator = initial;
-    for (;;) {
-      const batch = this.nextBatch(batchSize);
-      if (batch.length === 0) return accumulator;
-      accumulator = reducer(accumulator, batch);
+    try {
+      for (;;) {
+        const batch = this.nextBatch(batchSize);
+        if (batch.length === 0) return accumulator;
+        accumulator = reducer(accumulator, batch);
+      }
+    } finally {
+      this.close();
     }
   }
   close() {
@@ -106,8 +245,11 @@ class QueryCursor {
       ffi.cursorClose(this.#handle);
       this.#handle = null;
       this.#pending = [];
+      this.#offset = 0;
     }
   }
+  return() { this.close(); return { done: true, value: undefined }; }
+  [Symbol.dispose]() { this.close(); }
 }
 
 class PhoneticPattern {

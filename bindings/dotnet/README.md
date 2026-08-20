@@ -12,6 +12,36 @@ enumerators deterministically; `SafeHandle` supplies the leak-safe fallback.
 Build and test with `dotnet run --project tests/VinaryTree.Liblevenshtein.Tests`.
 NuGet packaging is produced with `dotnet pack -c Release`.
 
+Dictionary producers implementing `IDictionaryResource` gain immutable native
+.NET collection views from `VinaryTree.Interop`:
+
+```csharp
+DictionarySnapshot snapshot = dictionary.SnapshotEntries();
+DictionaryKey key = DictionaryKey.FromString("café");
+bool present = snapshot.Entries.TryGetValue(key, out ulong? value);
+
+using DictionaryEntryStream entries = dictionary.StreamEntries();
+foreach (DictionaryEntry entry in entries)
+{
+    Console.WriteLine(entry);
+    if (ShouldStop(entry)) break;
+}
+```
+
+`DictionarySnapshot` implements `IReadOnlyCollection<DictionaryEntry>` and
+exposes ordered `IReadOnlySet<DictionaryKey>` and
+`IReadOnlyDictionary<DictionaryKey, ulong?>` views. `TryGetValue` distinguishes
+an absent key from a present key with no value. Keys preserve arbitrary bytes,
+Unicode scalars, and the complete `ulong` domain with value equality. Snapshot
+metadata carries exact length and revision identity. All three views share one
+ordered entry array and use binary-search lookup; they do not build duplicate
+output-sized hash tables or take a lazy-initialization lock. Set-relation calls
+accept every ordinary `IEnumerable<DictionaryKey>` and allocate temporary
+state only when the requested relation requires de-duplicating that external
+sequence. `OpenEntryEnumerator` and `StreamEntries` own a native cursor;
+dispose them after early termination. Enumeration copies and releases each
+bounded batch before yielding managed entries, and cleanup cancels unread work.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract

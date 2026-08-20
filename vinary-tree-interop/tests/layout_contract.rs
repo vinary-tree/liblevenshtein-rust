@@ -23,13 +23,17 @@ use core::ffi::c_void;
 use core::mem::{align_of, offset_of, size_of};
 
 use vinary_tree_interop::{
-    VtDictionaryEdge, VtDictionaryGraphEdge, VtDictionaryGraphNode, VtDictionaryGraphVTable,
-    VtDictionaryGraphView, VtDictionaryVTable, VtDictionaryVisitVTable, VtInterfaceId,
-    VtOptionalU64, VtResource, VtResourceVTable, VtSnapshotIdentity, VtSnapshotIdentityVTable,
-    VtWfstArc, VtWfstVTable, VT_ABI_VERSION, VT_DICTIONARY_GRAPH_INTERFACE_ID,
-    VT_DICTIONARY_GRAPH_INTERFACE_VERSION, VT_DICTIONARY_INTERFACE_ID,
-    VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
+    VtDictionaryEdge, VtDictionaryEntriesCursor, VtDictionaryEntriesInfo,
+    VtDictionaryEntriesVTable, VtDictionaryEntry, VtDictionaryEntryBatchLimits,
+    VtDictionaryEntryBatchView, VtDictionaryGraphEdge, VtDictionaryGraphNode,
+    VtDictionaryGraphVTable, VtDictionaryGraphView, VtDictionaryVTable, VtDictionaryVisitVTable,
+    VtInterfaceId, VtOptionalU64, VtResource, VtResourceVTable, VtSnapshotIdentity,
+    VtSnapshotIdentityVTable, VtWfstArc, VtWfstVTable, VT_ABI_VERSION,
+    VT_DICTIONARY_ENTRIES_INTERFACE_ID, VT_DICTIONARY_ENTRIES_INTERFACE_VERSION,
+    VT_DICTIONARY_GRAPH_INTERFACE_ID, VT_DICTIONARY_GRAPH_INTERFACE_VERSION,
+    VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_VERSION, VT_DICTIONARY_VISIT_INTERFACE_ID,
     VT_DICTIONARY_VISIT_INTERFACE_VERSION, VT_RECOMMENDED_ARC_BATCH, VT_RECOMMENDED_EDGE_BATCH,
+    VT_SNAPSHOT_IDENTITY_INTERFACE_ID, VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION,
     VT_WFST_INTERFACE_ID, VT_WFST_INTERFACE_VERSION,
 };
 
@@ -189,6 +193,148 @@ fn every_struct_is_packed_in_declaration_order() {
         ],
     );
     assert_packed_in_order(
+        "VtDictionaryEntry",
+        size_of::<VtDictionaryEntry>(),
+        align_of::<VtDictionaryEntry>(),
+        &[
+            (
+                "unit_offset",
+                offset_of!(VtDictionaryEntry, unit_offset),
+                WORD,
+            ),
+            ("unit_len", offset_of!(VtDictionaryEntry, unit_len), WORD),
+            (
+                "value_offset",
+                offset_of!(VtDictionaryEntry, value_offset),
+                WORD,
+            ),
+            ("value_len", offset_of!(VtDictionaryEntry, value_len), WORD),
+            ("reserved", offset_of!(VtDictionaryEntry, reserved), 8),
+        ],
+    );
+    assert_packed_in_order(
+        "VtDictionaryEntryBatchLimits",
+        size_of::<VtDictionaryEntryBatchLimits>(),
+        align_of::<VtDictionaryEntryBatchLimits>(),
+        &[
+            (
+                "max_entries",
+                offset_of!(VtDictionaryEntryBatchLimits, max_entries),
+                WORD,
+            ),
+            (
+                "max_units",
+                offset_of!(VtDictionaryEntryBatchLimits, max_units),
+                WORD,
+            ),
+            (
+                "max_values",
+                offset_of!(VtDictionaryEntryBatchLimits, max_values),
+                WORD,
+            ),
+            (
+                "reserved",
+                offset_of!(VtDictionaryEntryBatchLimits, reserved),
+                8,
+            ),
+        ],
+    );
+    assert_packed_in_order(
+        "VtDictionaryEntryBatchView",
+        size_of::<VtDictionaryEntryBatchView>(),
+        align_of::<VtDictionaryEntryBatchView>(),
+        &[
+            (
+                "entries",
+                offset_of!(VtDictionaryEntryBatchView, entries),
+                ptr,
+            ),
+            (
+                "entry_count",
+                offset_of!(VtDictionaryEntryBatchView, entry_count),
+                WORD,
+            ),
+            ("units", offset_of!(VtDictionaryEntryBatchView, units), ptr),
+            (
+                "unit_count",
+                offset_of!(VtDictionaryEntryBatchView, unit_count),
+                WORD,
+            ),
+            (
+                "values",
+                offset_of!(VtDictionaryEntryBatchView, values),
+                ptr,
+            ),
+            (
+                "value_count",
+                offset_of!(VtDictionaryEntryBatchView, value_count),
+                WORD,
+            ),
+            (
+                "generation",
+                offset_of!(VtDictionaryEntryBatchView, generation),
+                8,
+            ),
+            (
+                "reserved",
+                offset_of!(VtDictionaryEntryBatchView, reserved),
+                8,
+            ),
+        ],
+    );
+    assert_packed_in_order(
+        "VtDictionaryEntriesInfo",
+        size_of::<VtDictionaryEntriesInfo>(),
+        align_of::<VtDictionaryEntriesInfo>(),
+        &[
+            (
+                "unit_domain",
+                offset_of!(VtDictionaryEntriesInfo, unit_domain),
+                4,
+            ),
+            (
+                "value_domain",
+                offset_of!(VtDictionaryEntriesInfo, value_domain),
+                4,
+            ),
+            ("order", offset_of!(VtDictionaryEntriesInfo, order), 4),
+            (
+                "reserved0",
+                offset_of!(VtDictionaryEntriesInfo, reserved0),
+                4,
+            ),
+            ("flags", offset_of!(VtDictionaryEntriesInfo, flags), 8),
+            (
+                "exact_len",
+                offset_of!(VtDictionaryEntriesInfo, exact_len),
+                WORD,
+            ),
+            (
+                "identity",
+                offset_of!(VtDictionaryEntriesInfo, identity),
+                size_of::<VtSnapshotIdentity>(),
+            ),
+            (
+                "reserved",
+                offset_of!(VtDictionaryEntriesInfo, reserved),
+                16,
+            ),
+        ],
+    );
+    assert_packed_in_order(
+        "VtDictionaryEntriesCursor",
+        size_of::<VtDictionaryEntriesCursor>(),
+        align_of::<VtDictionaryEntriesCursor>(),
+        &[
+            (
+                "context",
+                offset_of!(VtDictionaryEntriesCursor, context),
+                ptr,
+            ),
+            ("vtable", offset_of!(VtDictionaryEntriesCursor, vtable), ptr),
+        ],
+    );
+    assert_packed_in_order(
         "VtDictionaryVTable",
         size_of::<VtDictionaryVTable>(),
         align_of::<VtDictionaryVTable>(),
@@ -311,6 +457,42 @@ fn every_struct_is_packed_in_declaration_order() {
                 offset_of!(VtSnapshotIdentityVTable, identity),
                 fnp,
             ),
+        ],
+    );
+    assert_packed_in_order(
+        "VtDictionaryEntriesVTable",
+        size_of::<VtDictionaryEntriesVTable>(),
+        align_of::<VtDictionaryEntriesVTable>(),
+        &[
+            (
+                "struct_size",
+                offset_of!(VtDictionaryEntriesVTable, struct_size),
+                WORD,
+            ),
+            (
+                "interface_version",
+                offset_of!(VtDictionaryEntriesVTable, interface_version),
+                4,
+            ),
+            (
+                "reserved",
+                offset_of!(VtDictionaryEntriesVTable, reserved),
+                4,
+            ),
+            ("open", offset_of!(VtDictionaryEntriesVTable, open), fnp),
+            (
+                "next_batch",
+                offset_of!(VtDictionaryEntriesVTable, next_batch),
+                fnp,
+            ),
+            (
+                "release_batch",
+                offset_of!(VtDictionaryEntriesVTable, release_batch),
+                fnp,
+            ),
+            ("reduce", offset_of!(VtDictionaryEntriesVTable, reduce), fnp),
+            ("cancel", offset_of!(VtDictionaryEntriesVTable, cancel), fnp),
+            ("close", offset_of!(VtDictionaryEntriesVTable, close), fnp),
         ],
     );
     assert_packed_in_order(
@@ -439,6 +621,63 @@ mod exact_64 {
     }
 
     #[test]
+    fn vt_dictionary_entries_layouts() {
+        assert_eq!(size_of::<VtDictionaryEntry>(), 40);
+        assert_eq!(align_of::<VtDictionaryEntry>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntry, unit_offset), 0);
+        assert_eq!(offset_of!(VtDictionaryEntry, unit_len), 8);
+        assert_eq!(offset_of!(VtDictionaryEntry, value_offset), 16);
+        assert_eq!(offset_of!(VtDictionaryEntry, value_len), 24);
+        assert_eq!(offset_of!(VtDictionaryEntry, reserved), 32);
+
+        assert_eq!(size_of::<VtDictionaryEntryBatchLimits>(), 32);
+        assert_eq!(align_of::<VtDictionaryEntryBatchLimits>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchLimits, max_entries), 0);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchLimits, max_units), 8);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchLimits, max_values), 16);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchLimits, reserved), 24);
+
+        assert_eq!(size_of::<VtDictionaryEntryBatchView>(), 64);
+        assert_eq!(align_of::<VtDictionaryEntryBatchView>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, entries), 0);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, entry_count), 8);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, units), 16);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, unit_count), 24);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, values), 32);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, value_count), 40);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, generation), 48);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, reserved), 56);
+
+        assert_eq!(size_of::<VtDictionaryEntriesInfo>(), 64);
+        assert_eq!(align_of::<VtDictionaryEntriesInfo>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, unit_domain), 0);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, value_domain), 4);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, order), 8);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, reserved0), 12);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, flags), 16);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, exact_len), 24);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, identity), 32);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, reserved), 48);
+
+        assert_eq!(size_of::<VtDictionaryEntriesCursor>(), 16);
+        assert_eq!(align_of::<VtDictionaryEntriesCursor>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntriesCursor, context), 0);
+        assert_eq!(offset_of!(VtDictionaryEntriesCursor, vtable), 8);
+
+        assert_eq!(size_of::<VtDictionaryEntriesVTable>(), 64);
+        assert_eq!(align_of::<VtDictionaryEntriesVTable>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, struct_size), 0);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, interface_version), 8);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, reserved), 12);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, open), 16);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, next_batch), 24);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, release_batch), 32);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, reduce), 40);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, cancel), 48);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, close), 56);
+    }
+
+    #[test]
     fn vt_wfst_vtable_layout() {
         assert_eq!(size_of::<VtWfstVTable>(), 72);
         assert_eq!(align_of::<VtWfstVTable>(), 8);
@@ -544,6 +783,63 @@ mod exact_32_arm {
     }
 
     #[test]
+    fn vt_dictionary_entries_layouts() {
+        assert_eq!(size_of::<VtDictionaryEntry>(), 24);
+        assert_eq!(align_of::<VtDictionaryEntry>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntry, unit_offset), 0);
+        assert_eq!(offset_of!(VtDictionaryEntry, unit_len), 4);
+        assert_eq!(offset_of!(VtDictionaryEntry, value_offset), 8);
+        assert_eq!(offset_of!(VtDictionaryEntry, value_len), 12);
+        assert_eq!(offset_of!(VtDictionaryEntry, reserved), 16);
+
+        assert_eq!(size_of::<VtDictionaryEntryBatchLimits>(), 24);
+        assert_eq!(align_of::<VtDictionaryEntryBatchLimits>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchLimits, max_entries), 0);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchLimits, max_units), 4);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchLimits, max_values), 8);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchLimits, reserved), 16);
+
+        assert_eq!(size_of::<VtDictionaryEntryBatchView>(), 40);
+        assert_eq!(align_of::<VtDictionaryEntryBatchView>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, entries), 0);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, entry_count), 4);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, units), 8);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, unit_count), 12);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, values), 16);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, value_count), 20);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, generation), 24);
+        assert_eq!(offset_of!(VtDictionaryEntryBatchView, reserved), 32);
+
+        assert_eq!(size_of::<VtDictionaryEntriesInfo>(), 64);
+        assert_eq!(align_of::<VtDictionaryEntriesInfo>(), 8);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, unit_domain), 0);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, value_domain), 4);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, order), 8);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, reserved0), 12);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, flags), 16);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, exact_len), 24);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, identity), 32);
+        assert_eq!(offset_of!(VtDictionaryEntriesInfo, reserved), 48);
+
+        assert_eq!(size_of::<VtDictionaryEntriesCursor>(), 8);
+        assert_eq!(align_of::<VtDictionaryEntriesCursor>(), 4);
+        assert_eq!(offset_of!(VtDictionaryEntriesCursor, context), 0);
+        assert_eq!(offset_of!(VtDictionaryEntriesCursor, vtable), 4);
+
+        assert_eq!(size_of::<VtDictionaryEntriesVTable>(), 36);
+        assert_eq!(align_of::<VtDictionaryEntriesVTable>(), 4);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, struct_size), 0);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, interface_version), 4);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, reserved), 8);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, open), 12);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, next_batch), 16);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, release_batch), 20);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, reduce), 24);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, cancel), 28);
+        assert_eq!(offset_of!(VtDictionaryEntriesVTable, close), 32);
+    }
+
+    #[test]
     fn vt_wfst_vtable_layout() {
         assert_eq!(size_of::<VtWfstVTable>(), 56);
         assert_eq!(align_of::<VtWfstVTable>(), 8);
@@ -613,6 +909,12 @@ fn vt_resource_is_exactly_two_machine_words() {
     assert_eq!(align_of::<VtResource>(), align_of::<usize>());
 }
 
+#[test]
+fn vt_entries_cursor_is_exactly_two_machine_words() {
+    assert_eq!(size_of::<VtDictionaryEntriesCursor>(), 2 * WORD);
+    assert_eq!(align_of::<VtDictionaryEntriesCursor>(), align_of::<usize>());
+}
+
 // ── null semantics and interface identifiers ────────────────────────────────
 
 #[test]
@@ -645,15 +947,60 @@ fn null_resource_semantics_are_either_word() {
 }
 
 #[test]
+fn null_entries_cursor_semantics_are_either_word() {
+    assert!(VtDictionaryEntriesCursor::NULL.is_null());
+    let vtable = VtDictionaryEntriesVTable {
+        struct_size: size_of::<VtDictionaryEntriesVTable>(),
+        interface_version: VT_DICTIONARY_ENTRIES_INTERFACE_VERSION,
+        reserved: 0,
+        open: None,
+        next_batch: None,
+        release_batch: None,
+        reduce: None,
+        cancel: None,
+        close: None,
+    };
+    let context_null = VtDictionaryEntriesCursor {
+        context: core::ptr::null_mut(),
+        vtable: &vtable,
+    };
+    assert!(context_null.is_null());
+    let vtable_null = VtDictionaryEntriesCursor {
+        context: core::ptr::dangling_mut::<c_void>(),
+        vtable: core::ptr::null(),
+    };
+    assert!(vtable_null.is_null());
+}
+
+#[test]
 fn interface_identifiers_are_exact_sixteen_byte_strings() {
-    // VT-ABI-4: identifiers are compared byte-for-byte across the ABI; both
+    // VT-ABI-4: identifiers are compared byte-for-byte across the ABI; all
     // published identifiers are exactly 16 bytes with no NUL terminator.
     assert_eq!(&VT_DICTIONARY_INTERFACE_ID.bytes, b"vt.dictionary.v1");
     assert_eq!(&VT_DICTIONARY_VISIT_INTERFACE_ID.bytes, b"vt.dict.visit.v1");
     assert_eq!(&VT_DICTIONARY_GRAPH_INTERFACE_ID.bytes, b"vt.dict.graph.v1");
+    assert_eq!(
+        &VT_DICTIONARY_ENTRIES_INTERFACE_ID.bytes,
+        b"vt.dict.entry.v1"
+    );
+    assert_eq!(
+        &VT_SNAPSHOT_IDENTITY_INTERFACE_ID.bytes,
+        b"vt.snapshot.id.1"
+    );
     assert_eq!(&VT_WFST_INTERFACE_ID.bytes, b"vt.scalar-wfst.1");
-    assert_ne!(VT_DICTIONARY_INTERFACE_ID, VT_WFST_INTERFACE_ID);
-    assert_ne!(VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_VISIT_INTERFACE_ID);
+    let ids = [
+        VT_DICTIONARY_INTERFACE_ID,
+        VT_DICTIONARY_VISIT_INTERFACE_ID,
+        VT_DICTIONARY_GRAPH_INTERFACE_ID,
+        VT_DICTIONARY_ENTRIES_INTERFACE_ID,
+        VT_SNAPSHOT_IDENTITY_INTERFACE_ID,
+        VT_WFST_INTERFACE_ID,
+    ];
+    for (index, left) in ids.iter().enumerate() {
+        for right in &ids[index + 1..] {
+            assert_ne!(left, right, "published interface IDs must be unique");
+        }
+    }
     assert_eq!(VT_DICTIONARY_INTERFACE_ID, VT_DICTIONARY_INTERFACE_ID);
 }
 
@@ -663,6 +1010,8 @@ fn published_constants_are_pinned() {
     assert_eq!(VT_DICTIONARY_INTERFACE_VERSION, 1);
     assert_eq!(VT_DICTIONARY_VISIT_INTERFACE_VERSION, 1);
     assert_eq!(VT_DICTIONARY_GRAPH_INTERFACE_VERSION, 1);
+    assert_eq!(VT_DICTIONARY_ENTRIES_INTERFACE_VERSION, 1);
+    assert_eq!(VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION, 1);
     assert_eq!(VT_WFST_INTERFACE_VERSION, 1);
     assert_eq!(VT_RECOMMENDED_EDGE_BATCH, 256);
     assert_eq!(VT_RECOMMENDED_ARC_BATCH, 256);

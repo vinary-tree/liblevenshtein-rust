@@ -3,6 +3,8 @@ import type { DictionaryResource, RuntimeIdentity, UnitDomain } from "@vinary-tr
 export type Algorithm = "standard" | "transposition" | "merge-and-split" | "damerau-levenshtein";
 export type QueryOrder = "traversal" | "distance-then-term";
 export type DictionaryValue = bigint | null;
+export type DictionaryKey = string | Uint8Array | BigUint64Array;
+export type DictionaryEntry = readonly [DictionaryKey, DictionaryValue];
 export interface Lookup { readonly found: boolean; readonly value: DictionaryValue; }
 export type Term =
   | { readonly domain: "unicode"; readonly value: string }
@@ -10,26 +12,52 @@ export type Term =
   | { readonly domain: "u64"; readonly value: BigUint64Array };
 export interface Match { readonly term: Term; readonly distance: number; readonly id: bigint | null; }
 
-export interface Dictionary extends DictionaryResource {
+export interface DictionaryEntryCursor extends IterableIterator<DictionaryEntry> {
   readonly size: number;
-  put(term: string, value?: DictionaryValue): boolean;
+  readonly identity: Readonly<{ producer: bigint; revision: bigint }> | null;
+  nextBatch(maximum: number): DictionaryEntry[];
+  reduceBatches<A>(
+    reducer: (accumulator: A, batch: readonly DictionaryEntry[]) => A,
+    initial: A,
+    batchSize?: number,
+  ): A;
+  close(): void;
+  [Symbol.dispose](): void;
+}
+export interface Dictionary extends DictionaryResource, Iterable<DictionaryEntry> {
+  readonly size: number;
+  put(term: DictionaryKey, value?: DictionaryValue): boolean;
   putU64(term: BigUint64Array, value?: DictionaryValue): boolean;
-  remove(term: string): boolean;
+  set(term: DictionaryKey, value?: DictionaryValue): this;
+  remove(term: DictionaryKey): boolean;
   removeU64(term: BigUint64Array): boolean;
-  has(term: string): boolean;
+  delete(term: DictionaryKey): boolean;
+  has(term: DictionaryKey): boolean;
   hasU64(term: BigUint64Array): boolean;
-  get(term: string): Lookup;
-  getU64(term: BigUint64Array): Lookup;
+  lookup(term: DictionaryKey): Lookup;
+  lookupU64(term: BigUint64Array): Lookup;
+  get(term: DictionaryKey): DictionaryValue | undefined;
+  getU64(term: BigUint64Array): DictionaryValue | undefined;
+  snapshotEntries(): readonly DictionaryEntry[];
+  entries(): IterableIterator<DictionaryEntry>;
+  keys(): IterableIterator<DictionaryKey>;
+  values(): IterableIterator<DictionaryValue>;
+  streamEntries(): DictionaryEntryCursor;
+  forEach(callback: (value: DictionaryValue, key: DictionaryKey, dictionary: Dictionary) => void, thisArg?: unknown): void;
+  toMap(): Map<string, DictionaryValue>;
   clear(): void;
   compact(): number;
   containsSubstring(term: string): boolean;
   substringFrequency(term: string): number;
+  close(): void;
+  [Symbol.dispose](): void;
 }
 
 export interface QueryCursor extends IterableIterator<Match> {
   nextBatch(maximum: number): Match[];
   reduceBatches<A>(reducer: (accumulator: A, batch: readonly Match[]) => A, initial: A, batchSize?: number): A;
   close(): void;
+  [Symbol.dispose](): void;
 }
 export interface AutomatonSize { readonly states: number; readonly transitions: number; }
 export interface PhoneticPattern { readonly size: AutomatonSize; matches(input: string): boolean; close(): void; }

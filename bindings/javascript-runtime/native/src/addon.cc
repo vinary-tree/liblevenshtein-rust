@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,6 +15,10 @@
 namespace {
 
 struct DictionaryHandle { LdictDictionary* value; };
+struct DictionaryEntryCursorHandle {
+  LdictEntryCursor* value;
+  uint32_t unit_domain;
+};
 struct TransducerHandle { LlevTransducer* value; };
 struct CursorHandle { LlevQueryCursor* value; };
 struct PatternHandle { LlevPhoneticPattern* value; };
@@ -140,6 +145,14 @@ void dictionary_finalize(napi_env, void* data, void*) {
   if (handle->value) ldict_dictionary_free(handle->value);
   delete handle;
 }
+void dictionary_entry_cursor_finalize(napi_env, void* data, void*) {
+  auto* handle = static_cast<DictionaryEntryCursorHandle*>(data);
+  if (handle->value) {
+    (void)ldict_entry_cursor_cancel(handle->value);
+    (void)ldict_entry_cursor_free(handle->value);
+  }
+  delete handle;
+}
 void transducer_finalize(napi_env, void* data, void*) {
   auto* handle = static_cast<TransducerHandle*>(data);
   if (handle->value) llev_transducer_free(handle->value);
@@ -181,6 +194,41 @@ napi_value dictionary_external(napi_env env, LdictDictionary* value) {
     return fail_napi(env, "napi_create_external", status);
   }
   return result;
+}
+
+napi_value dictionary_entry_cursor_external(
+    napi_env env, LdictEntryCursor* value, uint32_t unit_domain) {
+  napi_value result;
+  auto* handle = new DictionaryEntryCursorHandle{value, unit_domain};
+  const auto status = napi_create_external(
+      env, handle, dictionary_entry_cursor_finalize, nullptr, &result);
+  if (status != napi_ok) {
+    dictionary_entry_cursor_finalize(env, handle, nullptr);
+    return fail_napi(env, "napi_create_external", status);
+  }
+  return result;
+}
+
+bool append_utf8(std::string* output, uint32_t scalar) {
+  if (scalar >= 0xd800 && scalar <= 0xdfff) return false;
+  if (scalar <= 0x7f) {
+    output->push_back(static_cast<char>(scalar));
+  } else if (scalar <= 0x7ff) {
+    output->push_back(static_cast<char>(0xc0 | (scalar >> 6)));
+    output->push_back(static_cast<char>(0x80 | (scalar & 0x3f)));
+  } else if (scalar <= 0xffff) {
+    output->push_back(static_cast<char>(0xe0 | (scalar >> 12)));
+    output->push_back(static_cast<char>(0x80 | ((scalar >> 6) & 0x3f)));
+    output->push_back(static_cast<char>(0x80 | (scalar & 0x3f)));
+  } else if (scalar <= 0x10ffff) {
+    output->push_back(static_cast<char>(0xf0 | (scalar >> 18)));
+    output->push_back(static_cast<char>(0x80 | ((scalar >> 12) & 0x3f)));
+    output->push_back(static_cast<char>(0x80 | ((scalar >> 6) & 0x3f)));
+    output->push_back(static_cast<char>(0x80 | (scalar & 0x3f)));
+  } else {
+    return false;
+  }
+  return true;
 }
 
 napi_value ldict_error(napi_env env, LdictStatus status) {
@@ -298,6 +346,137 @@ napi_value dictionary_len(napi_env env, napi_callback_info info) {
   return status == LDICT_STATUS_OK ? number(env, static_cast<double>(length)) : ldict_error(env, status);
 }
 
+napi_value dictionary_entries_open(napi_env env, napi_callback_info info) {
+  const auto args = arguments(env, info, 1);
+  auto* dictionary = args.size() == 1
+      ? external<DictionaryHandle>(env, args[0])
+      : nullptr;
+  if (!dictionary || !dictionary->value) return ldict_error(env, LDICT_STATUS_CLOSED);
+
+  LdictEntryCursor* cursor = nullptr;
+  LdictEntriesInfo metadata{};
+  const auto status = ldict_dictionary_entries_open(
+      dictionary->value, &cursor, &metadata);
+  if (status != LDICT_STATUS_OK) return ldict_error(env, status);
+
+  napi_value result, identity;
+  napi_create_object(env, &result);
+  napi_create_object(env, &identity);
+  property(env, result, "handle",
+           dictionary_entry_cursor_external(env, cursor, metadata.unit_domain));
+  property(env, result, "size", number(env, static_cast<double>(metadata.exact_len)));
+  property(env, result, "unitDomain", number(env, metadata.unit_domain));
+  property(env, identity, "producer", bigint(env, metadata.identity.producer));
+  property(env, identity, "revision", bigint(env, metadata.identity.revision));
+  property(env, result, "identity", identity);
+  return result;
+}
+
+napi_value dictionary_entry_cursor_close(napi_env env, napi_callback_info info) {
+  const auto args = arguments(env, info, 1);
+  auto* handle = args.size() == 1
+      ? external<DictionaryEntryCursorHandle>(env, args[0])
+      : nullptr;
+  if (!handle) return nullptr;
+  if (handle->value) {
+    const auto cancel = ldict_entry_cursor_cancel(handle->value);
+    if (cancel != LDICT_STATUS_OK && cancel != LDICT_STATUS_END) {
+      return ldict_error(env, cancel);
+    }
+    const auto close = ldict_entry_cursor_free(handle->value);
+    if (close != LDICT_STATUS_OK) return ldict_error(env, close);
+    handle->value = nullptr;
+  }
+  return undefined(env);
+}
+
+napi_value dictionary_entry_cursor_next_batch(
+    napi_env env, napi_callback_info info) {
+  const auto args = arguments(env, info, 2);
+  auto* handle = args.size() == 2
+      ? external<DictionaryEntryCursorHandle>(env, args[0])
+      : nullptr;
+  size_t maximum = 0;
+  if (!handle || !handle->value || !size_value(env, args[1], &maximum) ||
+      maximum == 0) {
+    napi_throw_type_error(
+        env, nullptr, "entry cursor nextBatch requires an open cursor and positive batch size");
+    return nullptr;
+  }
+
+  const LdictEntryBatchLimits limits{
+      maximum,
+      std::numeric_limits<size_t>::max(),
+      maximum,
+      0,
+  };
+  LdictEntryBatch batch{};
+  const auto status = ldict_entry_cursor_next(handle->value, &limits, &batch);
+  if (status == LDICT_STATUS_END) {
+    napi_value empty;
+    napi_create_array(env, &empty);
+    return empty;
+  }
+  if (status != LDICT_STATUS_OK) return ldict_error(env, status);
+
+  napi_value output;
+  napi_create_array_with_length(env, batch.entry_count, &output);
+  bool valid = true;
+  for (size_t index = 0; index < batch.entry_count && valid; ++index) {
+    const auto& entry = batch.entries[index];
+    napi_value pair, key, value, null_value;
+    napi_create_array_with_length(env, 2, &pair);
+    napi_get_null(env, &null_value);
+
+    if (handle->unit_domain == VT_UNIT_DOMAIN_UNICODE_SCALAR) {
+      const auto* scalars = static_cast<const uint32_t*>(batch.units);
+      std::string utf8;
+      utf8.reserve(entry.unit_len);
+      for (size_t unit = 0; unit < entry.unit_len; ++unit) {
+        valid = append_utf8(&utf8, scalars[entry.unit_offset + unit]);
+        if (!valid) break;
+      }
+      if (valid) napi_create_string_utf8(env, utf8.data(), utf8.size(), &key);
+    } else {
+      const size_t width = handle->unit_domain == VT_UNIT_DOMAIN_U64
+          ? sizeof(uint64_t)
+          : sizeof(uint8_t);
+      const size_t byte_length = entry.unit_len * width;
+      const auto* units = static_cast<const uint8_t*>(batch.units);
+      void* destination = nullptr;
+      napi_value array_buffer;
+      napi_create_arraybuffer(env, byte_length, &destination, &array_buffer);
+      if (byte_length != 0) {
+        std::memcpy(destination, units + entry.unit_offset * width, byte_length);
+      }
+      napi_create_typedarray(
+          env,
+          handle->unit_domain == VT_UNIT_DOMAIN_U64
+              ? napi_biguint64_array
+              : napi_uint8_array,
+          entry.unit_len,
+          array_buffer,
+          0,
+          &key);
+    }
+
+    value = entry.value_len == 0
+        ? null_value
+        : bigint(env, batch.values[entry.value_offset]);
+    napi_set_element(env, pair, 0, key);
+    napi_set_element(env, pair, 1, value);
+    napi_set_element(env, output, static_cast<uint32_t>(index), pair);
+  }
+
+  const auto release = ldict_entry_cursor_release(handle->value, batch.generation);
+  if (release != LDICT_STATUS_OK) return ldict_error(env, release);
+  if (!valid) {
+    napi_throw_error(env, nullptr, "dictionary returned an invalid Unicode scalar");
+    return nullptr;
+  }
+  return output;
+}
+
 napi_value dictionary_put_text(napi_env env, napi_callback_info info) {
   const auto args = arguments(env, info, 3);
   auto* handle = args.size() == 3 ? external<DictionaryHandle>(env, args[0]) : nullptr;
@@ -333,6 +512,62 @@ napi_value dictionary_get_text(napi_env env, napi_callback_info info) {
   LdictOptionalU64 value{};
   const auto status = ldict_dictionary_get_text(handle->value,
       reinterpret_cast<const uint8_t*>(term.data()), term.size(), &found, &value);
+  if (status != LDICT_STATUS_OK) return ldict_error(env, status);
+  napi_value result, null_value;
+  napi_create_object(env, &result);
+  napi_get_null(env, &null_value);
+  property(env, result, "found", boolean(env, found != 0));
+  property(env, result, "value", value.has_value ? bigint(env, value.value) : null_value);
+  return result;
+}
+
+napi_value dictionary_put_bytes(napi_env env, napi_callback_info info) {
+  const auto args = arguments(env, info, 3);
+  auto* handle = args.size() == 3 ? external<DictionaryHandle>(env, args[0]) : nullptr;
+  void* data = nullptr;
+  size_t length = 0;
+  LdictOptionalU64 value{};
+  if (!handle || !handle->value ||
+      !typed_array(env, args[1], napi_uint8_array, &data, &length) ||
+      !optional_u64(env, args[2], &value)) {
+    napi_throw_type_error(env, nullptr,
+                          "putBytes requires dictionary, Uint8Array, and bigint/null");
+    return nullptr;
+  }
+  uint8_t inserted = 0;
+  const auto status = ldict_dictionary_insert_text(
+      handle->value, static_cast<const uint8_t*>(data), length, value, &inserted);
+  return status == LDICT_STATUS_OK
+      ? boolean(env, inserted != 0)
+      : ldict_error(env, status);
+}
+
+napi_value dictionary_remove_bytes(napi_env env, napi_callback_info info) {
+  const auto args = arguments(env, info, 2);
+  auto* handle = args.size() == 2 ? external<DictionaryHandle>(env, args[0]) : nullptr;
+  void* data = nullptr;
+  size_t length = 0;
+  if (!handle || !handle->value ||
+      !typed_array(env, args[1], napi_uint8_array, &data, &length)) return nullptr;
+  uint8_t removed = 0;
+  const auto status = ldict_dictionary_remove_text(
+      handle->value, static_cast<const uint8_t*>(data), length, &removed);
+  return status == LDICT_STATUS_OK
+      ? boolean(env, removed != 0)
+      : ldict_error(env, status);
+}
+
+napi_value dictionary_get_bytes(napi_env env, napi_callback_info info) {
+  const auto args = arguments(env, info, 2);
+  auto* handle = args.size() == 2 ? external<DictionaryHandle>(env, args[0]) : nullptr;
+  void* data = nullptr;
+  size_t length = 0;
+  if (!handle || !handle->value ||
+      !typed_array(env, args[1], napi_uint8_array, &data, &length)) return nullptr;
+  uint8_t found = 0;
+  LdictOptionalU64 value{};
+  const auto status = ldict_dictionary_get_text(
+      handle->value, static_cast<const uint8_t*>(data), length, &found, &value);
   if (status != LDICT_STATUS_OK) return ldict_error(env, status);
   napi_value result, null_value;
   napi_create_object(env, &result);
@@ -1017,9 +1252,15 @@ napi_value initialize(napi_env env, napi_value exports) {
     {"persistentARTrieOpen", nullptr, persistent_open, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"dictionaryClose", nullptr, dictionary_close, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"dictionaryLen", nullptr, dictionary_len, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"dictionaryEntriesOpen", nullptr, dictionary_entries_open, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"dictionaryEntryCursorNextBatch", nullptr, dictionary_entry_cursor_next_batch, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"dictionaryEntryCursorClose", nullptr, dictionary_entry_cursor_close, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"dictionaryPutText", nullptr, dictionary_put_text, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"dictionaryRemoveText", nullptr, dictionary_remove_text, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"dictionaryGetText", nullptr, dictionary_get_text, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"dictionaryPutBytes", nullptr, dictionary_put_bytes, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"dictionaryRemoveBytes", nullptr, dictionary_remove_bytes, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"dictionaryGetBytes", nullptr, dictionary_get_bytes, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"dictionaryPutU64", nullptr, dictionary_put_u64, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"dictionaryRemoveU64", nullptr, dictionary_remove_u64, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"dictionaryGetU64", nullptr, dictionary_get_u64, nullptr, nullptr, nullptr, napi_default, nullptr},

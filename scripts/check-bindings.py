@@ -66,6 +66,10 @@ require(
     "wrong dictionary graph interface version",
 )
 require(
+    interop["dictionaryEntriesInterfaceVersion"] == 1,
+    "wrong dictionary entries interface version",
+)
+require(
     interop["snapshotIdentityInterfaceVersion"] == 1,
     "wrong snapshot identity interface version",
 )
@@ -123,6 +127,91 @@ for marker in (
     "VT_DICTIONARY_GRAPH_INTERFACE_ID",
 ):
     require(marker in interop_header, f"dictionary graph ABI is missing {marker}")
+
+for marker in (
+    "VT_DICTIONARY_ENTRIES_INTERFACE_VERSION 1u",
+    "VT_STATUS_BATCH_IN_USE = 9",
+    "VT_DICTIONARY_ENTRY_ORDER_LEXICOGRAPHIC = 1",
+    "VT_DICTIONARY_ENTRIES_INFO_FLAG_EXACT_LEN UINT64_C(1)",
+    "VT_DICTIONARY_ENTRIES_INFO_FLAG_SNAPSHOT_IDENTITY UINT64_C(2)",
+    "VtDictionaryEntry",
+    "VtDictionaryEntryBatchLimits",
+    "VtDictionaryEntryBatchView",
+    "VtDictionaryEntriesInfo",
+    "VtDictionaryEntriesCursor",
+    "VtDictionaryEntriesVTable",
+    "VtDictionaryEntryReducer",
+    "next_batch",
+    "release_batch",
+    "reduce",
+    "cancel",
+    "close",
+    "VT_DICTIONARY_ENTRIES_INTERFACE_ID",
+):
+    require(marker in interop_header, f"dictionary entries ABI is missing {marker}")
+
+entries = interop["dictionaryEntries"]
+require(entries["interfaceId"] == "vt.dict.entry.v1", "wrong entries interface ID")
+require(
+    entries["statusValues"].get("BATCH_IN_USE") == 9,
+    "wrong dictionary entries live-batch status",
+)
+require(
+    entries["orderValues"] == {"LEXICOGRAPHIC": 1},
+    "wrong dictionary entries ordering contract",
+)
+require(
+    entries["infoFlags"] == {"EXACT_LEN": 1, "SNAPSHOT_IDENTITY": 2},
+    "wrong dictionary entries info flags",
+)
+require(
+    entries["vtableOperations"]
+    == ["open", "next_batch", "release_batch", "reduce", "cancel", "close"],
+    "wrong dictionary entries operation order",
+)
+require(
+    set(entries["layouts"]) == {"lp64", "arm32"},
+    "dictionary entries layouts must pin LP64 and ARM32",
+)
+require(
+    MODEL["objects"].get("DictionaryEntriesCursor")
+    == {
+        "interface": "vt.dict.entry.v1",
+        "ownership": "move-only-captured-revision-with-one-live-batch-lease",
+        "order": "lexicographic",
+        "methods": ["next_batch", "release_batch", "reduce", "cancel", "close"],
+    },
+    "dictionary entries cursor surface is missing or malformed",
+)
+
+for mirror in (
+    ROOT
+    / "vinary-tree-interop"
+    / "bindings"
+    / "haskell"
+    / "include"
+    / "vinary_tree_interop.h",
+    ROOT / "bindings" / "ocaml" / "include" / "vinary_tree_interop.h",
+):
+    require(
+        text(mirror) == interop_header,
+        f"interop header mirror is stale: {mirror.relative_to(ROOT)}",
+    )
+
+entries_fixture = text(ROOT / "bindings" / "conformance" / "dictionary_entries_v1.tsv")
+require(
+    entries_fixture
+    == text(ROOT / "vinary-tree-interop" / "conformance" / "dictionary_entries_v1.tsv"),
+    "dictionary entries conformance fixtures differ",
+)
+for marker in (
+    "interface\t-\tVtDictionaryEntriesVTable\tid\tvt.dict.entry.v1",
+    "status\t-\tVtStatus\tBATCH_IN_USE\t9",
+    "order\t-\tVtDictionaryEntryOrder\tLEXICOGRAPHIC\t1",
+    "layout\tlp64\tVtDictionaryEntriesVTable\tsize\t64",
+    "layout\tarm32\tVtDictionaryEntriesVTable\tsize\t36",
+):
+    require(marker in entries_fixture, f"entries fixture is missing {marker}")
 
 # Clean ownership migration: no publishable liblevenshtein facade may construct
 # libdictenstein dictionaries or expose old CRUD symbols.
@@ -779,7 +868,9 @@ def named_in(leaf: str, corpus: str) -> bool:
 
 def modeled_symbols(entry: object, context: str) -> list[str]:
     require(isinstance(entry, dict), f"{context} must be an object")
-    assert isinstance(entry, dict)  # require() exits above; this narrows for type checkers
+    assert isinstance(
+        entry, dict
+    )  # require() exits above; this narrows for type checkers
     require(
         not set(entry) - SYMBOL_KEYS,
         f"{context} carries unknown keys {sorted(set(entry) - SYMBOL_KEYS)}",
@@ -974,8 +1065,7 @@ matrix = "\n".join(
 matrix_path = ROOT / "bindings" / "conformance" / "completeness-matrix.tsv"
 if ARGS.check:
     require(
-        matrix_path.is_file()
-        and matrix_path.read_text(encoding="utf-8") == matrix,
+        matrix_path.is_file() and matrix_path.read_text(encoding="utf-8") == matrix,
         "completeness matrix is stale: rerun scripts/check-bindings.py to "
         "regenerate bindings/conformance/completeness-matrix.tsv",
     )

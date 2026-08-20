@@ -506,6 +506,15 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
             PriorityQueryMode::Legacy(core) => core.advance(),
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    std::iter::FusedIterator for PriorityQueryIterator<N, P>
+{
 }
 
 #[cfg(feature = "benchmark-controls")]

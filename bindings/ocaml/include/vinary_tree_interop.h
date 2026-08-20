@@ -13,6 +13,7 @@ extern "C" {
 #define VT_DICTIONARY_INTERFACE_VERSION 1u
 #define VT_DICTIONARY_VISIT_INTERFACE_VERSION 1u
 #define VT_DICTIONARY_GRAPH_INTERFACE_VERSION 1u
+#define VT_DICTIONARY_ENTRIES_INTERFACE_VERSION 1u
 #define VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION 1u
 #define VT_WFST_INTERFACE_VERSION 1u
 #define VT_RECOMMENDED_EDGE_BATCH 256u
@@ -31,7 +32,8 @@ typedef enum VtStatus {
     VT_STATUS_IO_ERROR = 5,
     VT_STATUS_CLOSED = 6,
     VT_STATUS_LIMIT_EXCEEDED = 7,
-    VT_STATUS_PROVIDER_ERROR = 8
+    VT_STATUS_PROVIDER_ERROR = 8,
+    VT_STATUS_BATCH_IN_USE = 9
 } VtStatus;
 
 typedef struct VtInterfaceId { uint8_t bytes[16]; } VtInterfaceId;
@@ -161,6 +163,91 @@ typedef struct VtSnapshotIdentityVTable {
     VtStatus (*identity)(void* context, VtSnapshotIdentity* out_identity);
 } VtSnapshotIdentityVTable;
 
+/* Ordering guaranteed by a dictionary-entries cursor. */
+typedef enum VtDictionaryEntryOrder {
+    VT_DICTIONARY_ENTRY_ORDER_LEXICOGRAPHIC = 1
+} VtDictionaryEntryOrder;
+
+#define VT_DICTIONARY_ENTRIES_INFO_FLAG_EXACT_LEN UINT64_C(1)
+#define VT_DICTIONARY_ENTRIES_INFO_FLAG_SNAPSHOT_IDENTITY UINT64_C(2)
+
+/* One entry descriptor into the parallel unit and optional-u64 arenas. All
+ * offsets and lengths count arena elements, not bytes. */
+typedef struct VtDictionaryEntry {
+    size_t unit_offset;
+    size_t unit_len;
+    size_t value_offset;
+    size_t value_len;
+    uint64_t reserved;
+} VtDictionaryEntry;
+
+/* Hard upper bounds for one returned batch. max_entries must be nonzero. */
+typedef struct VtDictionaryEntryBatchLimits {
+    size_t max_entries;
+    size_t max_units;
+    size_t max_values;
+    uint64_t reserved;
+} VtDictionaryEntryBatchLimits;
+
+/* Cursor-owned batch lease. Pointer element types are selected by unit_domain:
+ * uint8_t for BYTE, uint32_t for UNICODE_SCALAR, and uint64_t for U64. */
+typedef struct VtDictionaryEntryBatchView {
+    const VtDictionaryEntry* entries;
+    size_t entry_count;
+    const void* units;
+    size_t unit_count;
+    const uint64_t* values;
+    size_t value_count;
+    uint64_t generation;
+    uint64_t reserved;
+} VtDictionaryEntryBatchView;
+
+/* Immutable metadata captured with a cursor. Domain/order fields are raw
+ * discriminants so consumers can reject unknown values before enum conversion. */
+typedef struct VtDictionaryEntriesInfo {
+    uint32_t unit_domain;
+    uint32_t value_domain;
+    uint32_t order;
+    uint32_t reserved0;
+    uint64_t flags;
+    size_t exact_len;
+    VtSnapshotIdentity identity;
+    uint64_t reserved[2];
+} VtDictionaryEntriesInfo;
+
+struct VtDictionaryEntriesVTable;
+typedef struct VtDictionaryEntriesCursor {
+    void* context;
+    const struct VtDictionaryEntriesVTable* vtable;
+} VtDictionaryEntriesCursor;
+
+typedef VtStatus (*VtDictionaryEntryReducer)(
+    void* reducer_context,
+    const VtDictionaryEntryBatchView* batch);
+
+/* Optional finite lexicographic dictionary-entry stream. A cursor is a
+ * move-only two-word owned handle; copying its words does not duplicate it. */
+typedef struct VtDictionaryEntriesVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*open)(void* resource_context,
+                     VtDictionaryEntriesCursor* out_cursor,
+                     VtDictionaryEntriesInfo* out_info);
+    VtStatus (*next_batch)(VtDictionaryEntriesCursor* cursor,
+                           const VtDictionaryEntryBatchLimits* limits,
+                           VtDictionaryEntryBatchView* out_batch);
+    VtStatus (*release_batch)(VtDictionaryEntriesCursor* cursor,
+                              uint64_t generation);
+    VtStatus (*reduce)(VtDictionaryEntriesCursor* cursor,
+                       const VtDictionaryEntryBatchLimits* limits,
+                       VtDictionaryEntryReducer reducer,
+                       void* reducer_context,
+                       size_t* out_count);
+    VtStatus (*cancel)(VtDictionaryEntriesCursor* cursor);
+    VtStatus (*close)(VtDictionaryEntriesCursor* cursor);
+} VtDictionaryEntriesVTable;
+
 /* Scalar semirings with a portable f64 representation. */
 typedef enum VtWeightDomain {
     VT_WEIGHT_DOMAIN_TROPICAL_F64 = 1,
@@ -225,6 +312,10 @@ static const VtInterfaceId VT_DICTIONARY_GRAPH_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','.','g','r','a','p','h','.','v','1' }
 };
 
+static const VtInterfaceId VT_DICTIONARY_ENTRIES_INTERFACE_ID = {
+    { 'v','t','.','d','i','c','t','.','e','n','t','r','y','.','v','1' }
+};
+
 static const VtInterfaceId VT_SNAPSHOT_IDENTITY_INTERFACE_ID = {
     { 'v','t','.','s','n','a','p','s','h','o','t','.','i','d','.','1' }
 };
@@ -240,6 +331,8 @@ static const VtInterfaceId VT_WFST_INTERFACE_ID = {
 #if defined(__cplusplus)
 static_assert(sizeof(VtResource) == 2 * sizeof(void*),
               "VtResource must remain a two-word handle");
+static_assert(sizeof(VtDictionaryEntriesCursor) == 2 * sizeof(void*),
+              "VtDictionaryEntriesCursor must remain a two-word handle");
 #endif
 
 #endif /* VINARY_TREE_INTEROP_H */

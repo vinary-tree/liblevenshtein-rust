@@ -1,7 +1,8 @@
 //! Compact linear-memory ABI used by the Node WASI facade.
 
 use libdictenstein::bindings::{
-    BindingUnitDomain, DynamicDawgBinding, OwnedDictionaryResource, PersistentARTrieBinding,
+    BindingEntries, BindingTerm, BindingUnitDomain, DynamicDawgBinding, OwnedDictionaryResource,
+    PersistentARTrieBinding,
 };
 use liblevenshtein::bindings::{
     MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceTransducer,
@@ -20,6 +21,7 @@ use vinary_tree_interop::{
 
 const FAILURE: u32 = u32::MAX;
 const MATCH_RECORD_SIZE: usize = 32;
+const ENTRY_RECORD_HEADER_SIZE: usize = 24;
 
 #[derive(Clone)]
 enum Dictionary {
@@ -59,6 +61,30 @@ impl Dictionary {
         .map_err(|error| error.to_string())
     }
 
+    fn insert_u64(&self, term: &[u64], value: Option<u64>) -> Result<bool, String> {
+        match self {
+            Self::Dynamic(dictionary) => dictionary.insert_u64(term, value),
+            Self::Persistent(dictionary) => dictionary.insert_u64(term, value),
+        }
+        .map_err(|error| error.to_string())
+    }
+
+    fn remove_u64(&self, term: &[u64]) -> Result<bool, String> {
+        match self {
+            Self::Dynamic(dictionary) => dictionary.remove_u64(term),
+            Self::Persistent(dictionary) => dictionary.remove_u64(term),
+        }
+        .map_err(|error| error.to_string())
+    }
+
+    fn value_u64(&self, term: &[u64]) -> Result<Option<Option<u64>>, String> {
+        match self {
+            Self::Dynamic(dictionary) => dictionary.value_u64(term),
+            Self::Persistent(dictionary) => dictionary.value_u64(term),
+        }
+        .map_err(|error| error.to_string())
+    }
+
     fn len(&self) -> usize {
         match self {
             Self::Dynamic(dictionary) => dictionary.len(),
@@ -73,6 +99,12 @@ struct Cursor {
     encoded: Vec<u8>,
 }
 
+struct EntryCursor {
+    inner: BindingEntries,
+    exact_len: usize,
+    encoded: Vec<u8>,
+}
+
 struct WasiWfst {
     resource: OwnedWfstResource,
     encoded: Vec<u8>,
@@ -82,6 +114,7 @@ enum Handle {
     Dictionary(Dictionary),
     Transducer(ResourceTransducer),
     Cursor(Cursor),
+    EntryCursor(EntryCursor),
     WfstBuilder(VectorWfst<char, TropicalWeight>),
     Wfst(WasiWfst),
 }
@@ -187,6 +220,19 @@ unsafe fn bytes<'a>(pointer: u32, length: u32) -> &'a [u8] {
     } else {
         unsafe { slice::from_raw_parts(pointer as *const u8, length as usize) }
     }
+}
+
+unsafe fn tokens(pointer: u32, length: u32) -> Result<Vec<u64>, &'static str> {
+    let byte_length = length.checked_mul(8).ok_or("token byte length overflow")?;
+    let raw = unsafe { bytes(pointer, byte_length) };
+    Ok(raw
+        .chunks_exact(8)
+        .map(|chunk| {
+            let mut word = [0; 8];
+            word.copy_from_slice(chunk);
+            u64::from_le_bytes(word)
+        })
+        .collect())
 }
 
 fn put_u32(buffer: &mut [u8], offset: usize, value: u32) {
@@ -378,6 +424,191 @@ pub unsafe extern "C" fn vt_dictionary_get_text(
             0
         }
         Err(error) => registry.fail(error),
+    }
+}
+
+/// Insert or update a u64-token term.
+#[no_mangle]
+pub unsafe extern "C" fn vt_dictionary_put_u64(
+    handle: u32,
+    term_pointer: u32,
+    term_length: u32,
+    value_present: u32,
+    value: u64,
+) -> u32 {
+    let term = match unsafe { tokens(term_pointer, term_length) } {
+        Ok(term) => term,
+        Err(error) => return locked_registry().fail(error),
+    };
+    let mut registry = locked_registry();
+    let result = match registry.handles.get(&handle) {
+        Some(Handle::Dictionary(dictionary)) => {
+            dictionary.insert_u64(&term, (value_present != 0).then_some(value))
+        }
+        _ => Err("invalid dictionary handle".into()),
+    };
+    match result {
+        Ok(value) => u32::from(value),
+        Err(error) => registry.fail(error),
+    }
+}
+
+/// Remove a u64-token term.
+#[no_mangle]
+pub unsafe extern "C" fn vt_dictionary_remove_u64(
+    handle: u32,
+    term_pointer: u32,
+    term_length: u32,
+) -> u32 {
+    let term = match unsafe { tokens(term_pointer, term_length) } {
+        Ok(term) => term,
+        Err(error) => return locked_registry().fail(error),
+    };
+    let mut registry = locked_registry();
+    let result = match registry.handles.get(&handle) {
+        Some(Handle::Dictionary(dictionary)) => dictionary.remove_u64(&term),
+        _ => Err("invalid dictionary handle".into()),
+    };
+    match result {
+        Ok(value) => u32::from(value),
+        Err(error) => registry.fail(error),
+    }
+}
+
+/// Write a u64-token three-state lookup to a 16-byte record.
+#[no_mangle]
+pub unsafe extern "C" fn vt_dictionary_get_u64(
+    handle: u32,
+    term_pointer: u32,
+    term_length: u32,
+    output_pointer: u32,
+) -> u32 {
+    let term = match unsafe { tokens(term_pointer, term_length) } {
+        Ok(term) => term,
+        Err(error) => return locked_registry().fail(error),
+    };
+    let mut registry = locked_registry();
+    if output_pointer == 0 {
+        return registry.fail("output pointer is null");
+    }
+    let result = match registry.handles.get(&handle) {
+        Some(Handle::Dictionary(dictionary)) => dictionary.value_u64(&term),
+        _ => Err("invalid dictionary handle".into()),
+    };
+    match result {
+        Ok(value) => {
+            let output = unsafe { slice::from_raw_parts_mut(output_pointer as *mut u8, 16) };
+            put_u32(output, 0, u32::from(value.is_some()));
+            put_u32(output, 4, u32::from(value.flatten().is_some()));
+            put_u64(output, 8, value.flatten().unwrap_or_default());
+            0
+        }
+        Err(error) => registry.fail(error),
+    }
+}
+
+/// Capture a snapshot-owning entry cursor and return its handle.
+#[no_mangle]
+pub extern "C" fn vt_dictionary_entries_open(handle: u32) -> u32 {
+    let result = {
+        let registry = locked_registry();
+        match registry.handles.get(&handle) {
+            Some(Handle::Dictionary(dictionary)) => Ok(dictionary.resource().entries()),
+            _ => Err("invalid dictionary handle"),
+        }
+    };
+    let mut registry = locked_registry();
+    match result {
+        Ok(inner) => {
+            let exact_len = inner.size_hint().1.unwrap_or_default();
+            registry.insert(Handle::EntryCursor(EntryCursor {
+                inner,
+                exact_len,
+                encoded: Vec::new(),
+            }))
+        }
+        Err(error) => registry.fail(error),
+    }
+}
+
+/// Exact number of records captured by an entry cursor.
+#[no_mangle]
+pub extern "C" fn vt_entry_cursor_len(handle: u32) -> u32 {
+    let mut registry = locked_registry();
+    match registry.handles.get(&handle) {
+        Some(Handle::EntryCursor(cursor)) => match u32::try_from(cursor.exact_len) {
+            Ok(length) => length,
+            Err(_) => registry.fail("dictionary snapshot length exceeds WASI u32 range"),
+        },
+        _ => registry.fail("invalid dictionary entry cursor handle"),
+    }
+}
+
+/// Advance an entry cursor and encode copied records into linear memory.
+#[no_mangle]
+pub extern "C" fn vt_entry_cursor_next_batch(handle: u32, maximum: u32) -> u32 {
+    if maximum == 0 {
+        return locked_registry().fail("batch size must be positive");
+    }
+    let mut registry = locked_registry();
+    let result = match registry.handles.get_mut(&handle) {
+        Some(Handle::EntryCursor(cursor)) => (|| {
+            cursor.encoded.clear();
+            let mut count = 0u32;
+            while count < maximum {
+                let Some(entry) = cursor.inner.next() else {
+                    break;
+                };
+                let entry = entry
+                    .map_err(|status| format!("dictionary entry traversal failed: {status:?}"))?;
+                let (domain, payload) = match entry.term {
+                    BindingTerm::Bytes(bytes) => (0u32, bytes),
+                    BindingTerm::Unicode(text) => (1u32, text.into_bytes()),
+                    BindingTerm::U64(tokens) => {
+                        let mut bytes = vec![0; tokens.len() * 8];
+                        for (index, token) in tokens.into_iter().enumerate() {
+                            put_u64(&mut bytes, index * 8, token);
+                        }
+                        (2u32, bytes)
+                    }
+                };
+                let record = cursor.encoded.len();
+                cursor
+                    .encoded
+                    .resize(record + ENTRY_RECORD_HEADER_SIZE + payload.len(), 0);
+                put_u32(&mut cursor.encoded, record, payload.len() as u32);
+                put_u32(&mut cursor.encoded, record + 4, domain);
+                put_u32(
+                    &mut cursor.encoded,
+                    record + 8,
+                    u32::from(entry.value.is_some()),
+                );
+                put_u64(
+                    &mut cursor.encoded,
+                    record + 16,
+                    entry.value.unwrap_or_default(),
+                );
+                cursor.encoded[record + ENTRY_RECORD_HEADER_SIZE..][..payload.len()]
+                    .copy_from_slice(&payload);
+                count += 1;
+            }
+            Ok::<_, String>(count)
+        })(),
+        _ => Err("invalid dictionary entry cursor handle".into()),
+    };
+    match result {
+        Ok(count) => count,
+        Err(error) => registry.fail(error),
+    }
+}
+
+/// Pointer to the current copied entry batch.
+#[no_mangle]
+pub extern "C" fn vt_entry_cursor_batch_pointer(handle: u32) -> u32 {
+    let mut registry = locked_registry();
+    match registry.handles.get(&handle) {
+        Some(Handle::EntryCursor(cursor)) => cursor.encoded.as_ptr() as u32,
+        _ => registry.fail("invalid dictionary entry cursor handle"),
     }
 }
 

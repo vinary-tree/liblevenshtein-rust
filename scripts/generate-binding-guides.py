@@ -50,7 +50,7 @@ GUIDES: dict[str, Guide] = {
         "All strings and arrays use pointer-plus-length descriptors; embedded zero bytes and empty terms are valid where the function contract permits them.",
         "include/liblevenshtein.h",
         "bindings/c/tests/cross_project_snapshot.c",
-        "cc -std=c17 -Wall -Wextra -Werror -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include bindings/c/tests/cross_project_snapshot.c -Ltarget/debug -lliblevenshtein -L../libdictenstein/target/debug -llibdictenstein -Wl,-rpath,\"$PWD/target/debug\" -Wl,-rpath,\"$PWD/../libdictenstein/target/debug\" -o target/c-cross-project-snapshot && target/c-cross-project-snapshot",
+        'cc -std=c17 -Wall -Wextra -Werror -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include bindings/c/tests/cross_project_snapshot.c -Ltarget/debug -lliblevenshtein -L../libdictenstein/target/debug -llibdictenstein -Wl,-rpath,"$PWD/target/debug" -Wl,-rpath,"$PWD/../libdictenstein/target/debug" -o target/c-cross-project-snapshot && target/c-cross-project-snapshot',
     ),
     "cpp": Guide(
         "C and C++",
@@ -257,16 +257,30 @@ INTEROP_GUIDES: dict[str, Guide] = {
         guide.tier,
         INTEROP_PACKAGES[key],
         "This adapter represents the two-word `VtResource` capability and its versioned interfaces; it does not implement a dictionary or automaton.",
-        guide.cleanup.replace("Transducer", "resource").replace("QueryCursor", "resource handle").replace("cursor", "resource handle"),
+        guide.cleanup.replace("Transducer", "resource")
+        .replace("QueryCursor", "resource handle")
+        .replace("cursor", "resource handle")
+        + " Close every entries cursor, and release its current generation before advancing or closing it.",
         "Interop validation failures preserve `VtStatus`; project facades map that status into their own public error currency.",
-        "A retained resource may cross threads only when its advertised interface flags permit it. Retain and release remain balanced under every failure path.",
+        "A retained resource may cross threads only when its advertised interface flags permit it. Retain and release remain balanced under every failure path. One entries cursor and its live batch are single-consumer; reducer callbacks must not reenter that cursor.",
         "Unit and value domains are explicit enum fields on the discovered interface; adapters must never infer them from host container types.",
         f"vinary-tree-interop/bindings/{key}",
         guide.evidence,
         guide.command,
     )
     for key, guide in GUIDES.items()
-    if key in {"python", "jvm", "javascript", "go", "swift", "fortran", "ocaml", "haskell", "lua"}
+    if key
+    in {
+        "python",
+        "jvm",
+        "javascript",
+        "go",
+        "swift",
+        "fortran",
+        "ocaml",
+        "haskell",
+        "lua",
+    }
 }
 
 
@@ -286,18 +300,24 @@ def generated_block(guide: Guide, *, interop: bool = False) -> str:
 | `VtResource` | Two pointer-sized words: an opaque context and a base vtable. A borrowed value transfers no ownership. |
 | Base vtable | `struct_size`, ABI version, retain, release, and `query_interface`; it is the only mandatory interface. |
 | Dictionary interface | Snapshot capture, node paging, finality, optional values, unit/value domains, and capability flags. |
+| Dictionary entries interface | Optional finite lexicographic stream over one captured revision, with bounded arena batches, exact generation leases, cancellation, and a reducer path. |
 | Scalar-WFST interface | Snapshot capture, start state, final weights, paged arcs, label/weight domains, and capability flags. |"""
         ownership_detail = """A borrowed resource becomes owned only after a successful `retain`. Interface
 discovery does not transfer ownership, and a failed validation must release any
 retain already acquired. A captured snapshot owns an independent revision and
 may outlive the producing project handle. Release exactly once for every
 successful retain; never release an unretained borrowed pair."""
+        ownership_detail += """ An entries cursor is move-only and owns its
+captured revision until `close`. Exactly one generation may be live: release
+that exact generation before advancing, reducing, or closing; reducer batch
+views expire when their callback returns."""
         performance = """- Pass the two-word resource by value; do not serialize or copy the graph.
 - Capture one immutable snapshot and page nodes/arcs through bounded buffers.
+- Negotiate entries-v1 when exact lexicographic enumeration is needed; honor all entry/unit/value limits on every batch.
 - Cache a validated optional interface only while the owning resource remains retained.
 - Respect capability flags before enabling parallel callback entry.
 - Prefer a compact immutable graph interface when advertised; retain the paged callback fallback for compatibility."""
-        failure_scope = "null resource words, truncated vtables, incompatible interface identities or versions, invalid domains, forged node/state identifiers, malformed page counts, provider faults, and contained panics"
+        failure_scope = "null resource words, truncated vtables, incompatible interface identities or versions, invalid domains, forged node/state identifiers, malformed page counts or entry arenas, stale or mismatched batch generations, live-batch conflicts, provider faults, and contained panics"
         maintainer_first = "Update the interop generator model before changing a layout, identifier, flag, or enum."
         surface_contract = "[`bindings/api.json`](../../../bindings/api.json) and the generated interop constants"
     else:
@@ -332,7 +352,9 @@ No host wrapper should cache unbounded query results. Applications that add a
 memo use a revision key and a hard entry/weight bound; eviction may be
 approximate because all values remain derivable from the retained snapshot."""
         failure_scope = "malformed UTF-8, unsupported unit domains, incompatible resource versions, closed handles, invalid bounds, allocation failures, provider faults, and contained Rust panics"
-        maintainer_first = "Update the machine-readable binding model before changing a public symbol."
+        maintainer_first = (
+            "Update the machine-readable binding model before changing a public symbol."
+        )
         surface_contract = "[`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) and the [generated completeness matrix](../../bindings/conformance/completeness-matrix.tsv)"
 
     return f"""{MARKER}
@@ -487,6 +509,8 @@ def render_interop_root() -> tuple[Path, str]:
             "",
             "Every published adapter uses the same retained-resource laws while mapping ownership and failures into its host language:",
             "",
+            "The generated [`dictionary_entries_v1.tsv`](conformance/dictionary_entries_v1.tsv) fixture pins entries-v1 identifiers, statuses, flags, operation order, and LP64/ARM32 layouts for adapter conformance.",
+            "",
             "| Language/runtime | Distribution | Guide |",
             "|---|---|---|",
             *rows,
@@ -502,7 +526,9 @@ def render_interop_root() -> tuple[Path, str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true", help="fail if generated sections are stale")
+    parser.add_argument(
+        "--check", action="store_true", help="fail if generated sections are stale"
+    )
     args = parser.parse_args()
     outputs: list[tuple[Path, str]] = []
     for key, guide in GUIDES.items():
@@ -523,7 +549,9 @@ def main() -> None:
             path.write_text(rendered, encoding="utf-8")
     if stale:
         joined = "\n".join(f"  - {path}" for path in stale)
-        raise SystemExit(f"generated binding guides are stale:\n{joined}\nrun scripts/generate-binding-guides.py")
+        raise SystemExit(
+            f"generated binding guides are stale:\n{joined}\nrun scripts/generate-binding-guides.py"
+        )
 
 
 if __name__ == "__main__":

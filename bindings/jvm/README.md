@@ -36,6 +36,46 @@ the convenient object view. Every borrowed view expires when its batch callback
 returns. Cursors and transducers use `Cleaner` only as a leak-safety fallback;
 applications should close them deterministically.
 
+Dictionary resources also provide natural immutable collections through the
+neutral interop artifact. No Kotlin or Scala runtime is pulled into the Java
+artifact:
+
+```java
+DictionarySnapshot snapshot = dictionary.entriesSnapshot();
+boolean presentWithoutValue =
+    snapshot.entries().containsKey(DictionaryKey.unicode("café"))
+        && snapshot.entries().get(DictionaryKey.unicode("café")).isEmpty();
+
+try (var entries = dictionary.entryStream()) {
+    entries.limit(20).forEach(System.out::println);
+}
+```
+
+```kotlin
+val snapshot = dictionary.entriesSnapshot()
+val present = DictionaryKey.unicode("café") in snapshot.keys()
+dictionary.entryStream().use { entries ->
+    entries.limit(20).forEach(::println)
+}
+```
+
+```scala
+import scala.jdk.CollectionConverters.*
+import scala.util.Using
+
+val snapshot = dictionary.entriesSnapshot()
+val first = Using.resource(dictionary.entryIterator()) { cursor =>
+  cursor.asScala.take(20).toVector
+}
+```
+
+`DictionaryKey` preserves arbitrary bytes, exact Unicode scalars, and raw
+unsigned-64 token bits with value equality. Snapshot Set/Map and ordered-entry
+views are unmodifiable and retain native lexicographic order. A map contains
+every present key, so `containsKey` separates absence from an
+`Optional.empty()` present-unvalued entry. Exact length and snapshot identity
+are captured in `DictionarySnapshot.metadata()`.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract

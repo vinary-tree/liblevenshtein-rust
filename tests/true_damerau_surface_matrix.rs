@@ -146,7 +146,8 @@ fn persistent_byte_and_char_backends_share_exact_true_damerau_semantics() {
     }
 
     fn char_dictionary() -> PersistentARTrieChar<()> {
-        TERMS.into_iter().collect()
+        PersistentARTrieChar::try_from_iter(TERMS)
+            .expect("construct persistent true-Damerau character dictionary")
     }
 
     assert_string_backend(byte_dictionary);

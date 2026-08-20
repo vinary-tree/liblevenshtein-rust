@@ -516,6 +516,19 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.advance()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N, S, P> std::iter::FusedIterator for RankedValueQueryIterator<N, S, P>
+where
+    N: MappedDictionaryNode,
+    N::Value: DictionaryValue,
+    S: SuggestionScorer<N::Value>,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+{
 }
 
 #[cfg(test)]

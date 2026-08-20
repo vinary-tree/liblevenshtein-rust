@@ -86,7 +86,7 @@ test("one long-lived iterator has exact query-start snapshot semantics", () => {
 test("u64 dictionaries and batch reduction remain streaming", () => {
   const dictionary = libdictenstein.dynamicDawg("u64");
   dictionary.putU64(new BigUint64Array([1n, 2n]), 8n);
-  assert.deepEqual(dictionary.getU64(new BigUint64Array([1n, 2n])), { found: true, value: 8n });
+  assert.deepEqual(dictionary.lookupU64(new BigUint64Array([1n, 2n])), { found: true, value: 8n });
   const transducer = liblevenshtein.transducer(dictionary);
   const count = transducer
     .query(new BigUint64Array([1n, 3n]), 1)
@@ -94,6 +94,41 @@ test("u64 dictionaries and batch reduction remain streaming", () => {
   assert.equal(count, 1);
   transducer.close();
   dictionary.close();
+});
+
+test("browser dictionaries expose host-owned Map collection snapshots", () => {
+  const dictionary = libdictenstein.dynamicDawg();
+  dictionary.set("cat", 1n).set("caff", null).set("dog", 3n);
+  assert.equal(dictionary.get("cat"), 1n);
+  assert.equal(dictionary.get("caff"), null);
+  assert.equal(dictionary.get("absent"), undefined);
+
+  const entries = dictionary.entries();
+  const cursor = dictionary.streamEntries();
+  assert.equal(cursor.size, 3);
+  dictionary.delete("cat");
+  dictionary.set("zebra", 9n);
+  assert.deepEqual([...entries], [["caff", null], ["cat", 1n], ["dog", 3n]]);
+  assert.deepEqual([...cursor], [["caff", null], ["cat", 1n], ["dog", 3n]]);
+  assert.equal(Object.isFrozen(dictionary.snapshotEntries()), true);
+  assert.deepEqual([...dictionary.keys()], ["caff", "dog", "zebra"]);
+  assert.deepEqual([...dictionary.values()], [null, 3n, 9n]);
+  assert.deepEqual([...dictionary.toMap()], [...dictionary]);
+  dictionary.close();
+
+  const bytes = libdictenstein.dynamicDawg("byte");
+  bytes.set(new Uint8Array([0, 255]), 4n);
+  const [[byteKey, byteValue]] = [...bytes];
+  assert.deepEqual([...byteKey], [0, 255]);
+  assert.equal(byteValue, 4n);
+  bytes.close();
+
+  const tokens = libdictenstein.dynamicDawg("u64");
+  tokens.set(new BigUint64Array([0n, 2n ** 63n]), null);
+  const [[tokenKey, tokenValue]] = [...tokens];
+  assert.deepEqual([...tokenKey], [0n, 2n ** 63n]);
+  assert.equal(tokenValue, null);
+  tokens.close();
 });
 
 test("duallity WFST composes lazily with a lling-llang VectorWfst", () => {

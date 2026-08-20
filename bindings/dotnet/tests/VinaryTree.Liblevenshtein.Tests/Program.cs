@@ -53,6 +53,8 @@ if (builtin.Apply("phone").Length == 0) throw new Exception("built-in rule appli
 
 Console.WriteLine(".NET binding conformance passed");
 
+DictionaryCollectionTests.Run();
+
 PropertyTests.Run();
 
 LeakTests.Run();

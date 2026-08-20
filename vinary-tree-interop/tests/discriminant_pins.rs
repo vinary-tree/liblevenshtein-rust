@@ -15,7 +15,9 @@
 //! the Rust definitions match the manifest.
 
 use vinary_tree_interop::{
-    dictionary_flags, wfst_flags, VtDictionaryEdge, VtOptionalU64, VtStatus, VtUnitDomain,
+    dictionary_entries_info_flags, dictionary_flags, wfst_flags, VtDictionaryEdge,
+    VtDictionaryEntriesInfo, VtDictionaryEntry, VtDictionaryEntryBatchLimits,
+    VtDictionaryEntryBatchView, VtDictionaryEntryOrder, VtOptionalU64, VtStatus, VtUnitDomain,
     VtValueDomain, VtWeightDomain, VtWfstArc,
 };
 
@@ -32,10 +34,11 @@ fn status_discriminants_are_pinned() {
     assert_eq!(VtStatus::Closed as u32, 6);
     assert_eq!(VtStatus::LimitExceeded as u32, 7);
     assert_eq!(VtStatus::ProviderError as u32, 8);
+    assert_eq!(VtStatus::BatchInUse as u32, 9);
 }
 
 #[test]
-fn status_universe_is_exactly_nine_values() {
+fn status_universe_is_exactly_ten_values() {
     // Wildcard-free: a new variant fails compilation here by design.
     let universe = [
         VtStatus::Ok,
@@ -47,8 +50,9 @@ fn status_universe_is_exactly_nine_values() {
         VtStatus::Closed,
         VtStatus::LimitExceeded,
         VtStatus::ProviderError,
+        VtStatus::BatchInUse,
     ];
-    let mut seen = [false; 9];
+    let mut seen = [false; 10];
     for status in universe {
         let value = match status {
             VtStatus::Ok => 0u32,
@@ -60,6 +64,7 @@ fn status_universe_is_exactly_nine_values() {
             VtStatus::Closed => 6,
             VtStatus::LimitExceeded => 7,
             VtStatus::ProviderError => 8,
+            VtStatus::BatchInUse => 9,
         };
         assert_eq!(
             value, status as u32,
@@ -73,21 +78,21 @@ fn status_universe_is_exactly_nine_values() {
     }
     assert!(
         seen.iter().all(|&hit| hit),
-        "discriminants are not contiguous 0..=8"
+        "discriminants are not contiguous 0..=9"
     );
 }
 
 /// The wire codec is a bijection onto the published range: every in-range
 /// raw value decodes to the status that re-encodes to it, and nothing
-/// outside 0..=8 decodes at all (the from_raw half of the LLEV-B6 wire
+/// outside 0..=9 decodes at all (the from_raw half of the LLEV-B6 wire
 /// hardening — an out-of-range provider status is a VALUE, never UB).
 #[test]
 fn wire_round_trip_covers_exactly_the_published_range() {
-    for raw in 0u32..=8 {
+    for raw in 0u32..=9 {
         let status = VtStatus::from_raw(raw).expect("in-range wire value decodes");
         assert_eq!(status.to_raw(), raw);
     }
-    for raw in [9u32, 10, 42, u32::MAX] {
+    for raw in [10u32, 11, 42, u32::MAX] {
         assert!(
             VtStatus::from_raw(raw).is_none(),
             "out-of-range {raw} must not decode"
@@ -107,6 +112,7 @@ fn is_ok_holds_exactly_for_ok() {
         VtStatus::Closed,
         VtStatus::LimitExceeded,
         VtStatus::ProviderError,
+        VtStatus::BatchInUse,
     ];
     for status in universe {
         assert_eq!(
@@ -155,6 +161,15 @@ fn value_domain_discriminants_are_pinned() {
         };
         assert_eq!(value, domain as u32);
     }
+}
+
+#[test]
+fn dictionary_entry_order_discriminants_are_pinned() {
+    assert_eq!(VtDictionaryEntryOrder::Lexicographic as u32, 1);
+    let value = match VtDictionaryEntryOrder::Lexicographic {
+        VtDictionaryEntryOrder::Lexicographic => 1u32,
+    };
+    assert_eq!(value, VtDictionaryEntryOrder::Lexicographic as u32);
 }
 
 #[test]
@@ -213,6 +228,15 @@ fn dictionary_flag_bits_are_pinned_and_disjoint() {
 }
 
 #[test]
+fn dictionary_entries_info_flag_bits_are_pinned_and_disjoint() {
+    assert_eq!(dictionary_entries_info_flags::EXACT_LEN, 1 << 0);
+    assert_eq!(dictionary_entries_info_flags::SNAPSHOT_IDENTITY, 1 << 1);
+    let all =
+        dictionary_entries_info_flags::EXACT_LEN | dictionary_entries_info_flags::SNAPSHOT_IDENTITY;
+    assert_eq!(all.count_ones(), 2, "entries-info flag bits overlap");
+}
+
+#[test]
 fn wfst_flag_bits_are_pinned_and_disjoint() {
     assert_eq!(wfst_flags::PARALLEL_REENTRANT, 1 << 0);
     assert_eq!(wfst_flags::IMMUTABLE, 1 << 1);
@@ -237,6 +261,40 @@ fn defaults_are_all_zero_including_reserved_fields() {
     let edge = VtDictionaryEdge::default();
     assert_eq!(edge.label, 0);
     assert_eq!(edge.node, 0);
+
+    let entry = VtDictionaryEntry::default();
+    assert_eq!(entry.unit_offset, 0);
+    assert_eq!(entry.unit_len, 0);
+    assert_eq!(entry.value_offset, 0);
+    assert_eq!(entry.value_len, 0);
+    assert_eq!(entry.reserved, 0);
+
+    let limits = VtDictionaryEntryBatchLimits::default();
+    assert_eq!(limits.max_entries, 0);
+    assert_eq!(limits.max_units, 0);
+    assert_eq!(limits.max_values, 0);
+    assert_eq!(limits.reserved, 0);
+
+    let batch = VtDictionaryEntryBatchView::default();
+    assert!(batch.entries.is_null());
+    assert_eq!(batch.entry_count, 0);
+    assert!(batch.units.is_null());
+    assert_eq!(batch.unit_count, 0);
+    assert!(batch.values.is_null());
+    assert_eq!(batch.value_count, 0);
+    assert_eq!(batch.generation, 0);
+    assert_eq!(batch.reserved, 0);
+
+    let info = VtDictionaryEntriesInfo::default();
+    assert_eq!(info.unit_domain, 0);
+    assert_eq!(info.value_domain, 0);
+    assert_eq!(info.order, 0);
+    assert_eq!(info.reserved0, 0);
+    assert_eq!(info.flags, 0);
+    assert_eq!(info.exact_len, 0);
+    assert_eq!(info.identity.producer, 0);
+    assert_eq!(info.identity.revision, 0);
+    assert_eq!(info.reserved, [0u64; 2]);
 
     let arc = VtWfstArc::default();
     assert_eq!(arc.input_label, 0);

@@ -1,0 +1,7 @@
+operation,entries,allocations,deallocations,allocated_bytes,peak_bytes
+owned_entries,4096,4379,4378,227296,12257
+borrowed_visitor,4096,282,282,92000,12096
+materialized_vec,4096,4379,4379,391008,311104
+owned_entries,65536,69914,69914,3303264,12385
+borrowed_visitor,65536,4378,4378,1140576,12352
+materialized_vec,65536,69915,69915,5924704,4796480

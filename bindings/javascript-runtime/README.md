@@ -14,5 +14,15 @@ Query cursors stream bounded batches and retain query-start snapshot semantics:
 mutating or closing a dictionary after creating a cursor does not change that
 cursor's remaining results.
 
+Dictionaries follow the familiar synchronous `Map` shape: `size`, `set`,
+`get`, `has`, `delete`, `entries`, `keys`, `values`, `forEach`, and
+`[Symbol.iterator]`. Ordinary iteration materializes one host-owned immutable
+revision before returning, so an abandoned `for...of` loop owns no native
+resource. Large traversals opt into `streamEntries()`, a bounded
+`IterableIterator` with `nextBatch`, `reduceBatches`, `return`, `close`, and
+`Symbol.dispose`. Native Node, browser-WASM, and WASI expose the same split;
+all cursor hot loops use an index into each batch rather than shifting the
+remaining array.
+
 The package is licensed under Apache-2.0. Source and release documentation are
 available from the [Vinary Tree liblevenshtein repository](https://github.com/vinary-tree/liblevenshtein-rust).

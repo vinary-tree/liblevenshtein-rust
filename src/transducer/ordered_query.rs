@@ -730,6 +730,15 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
     fn next(&mut self) -> Option<Self::Item> {
         self.advance()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    std::iter::FusedIterator for OrderedQueryIterator<N, P>
+{
 }
 
 /// Filtered ordered query iterator.
@@ -761,6 +770,17 @@ where
             }
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>, F>
+    std::iter::FusedIterator for FilteredOrderedQueryIterator<N, P, F>
+where
+    F: Fn(&OrderedCandidate) -> bool,
+{
 }
 
 /// Prefix ordered query iterator.
@@ -793,6 +813,15 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
     fn next(&mut self) -> Option<Self::Item> {
         self.advance_prefix()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    std::iter::FusedIterator for PrefixOrderedQueryIterator<N, P>
+{
 }
 
 #[cfg(test)]

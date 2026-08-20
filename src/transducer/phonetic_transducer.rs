@@ -657,6 +657,16 @@ where
             0.0,
         ))
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+#[cfg(all(feature = "phonetic-rules", feature = "benchmark-controls"))]
+impl<D: Dictionary> std::iter::FusedIterator for LegacyPhoneticQueryIteratorChar<'_, D> where
+    D::Node: DictionaryNode<Unit = char>
+{
 }
 
 /// Iterator over phonetic query results.
@@ -813,6 +823,16 @@ where
 
         None
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<D: Dictionary> std::iter::FusedIterator for PhoneticQueryIteratorChar<'_, D> where
+    D::Node: DictionaryNode<Unit = char>
+{
 }
 
 // ============================================================================
@@ -1003,6 +1023,16 @@ where
 
         None
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<D: MappedDictionary> std::iter::FusedIterator for PhoneticValueQueryIteratorChar<'_, D> where
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = char>
+{
 }
 
 // ============================================================================
@@ -1293,6 +1323,16 @@ where
             .next()
             .map(|matched| PhoneticCandidateByte::new(matched.units, matched.distance, 0.0))
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<D: Dictionary> std::iter::FusedIterator for PhoneticQueryIterator<'_, D> where
+    D::Node: DictionaryNode<Unit = u8>
+{
 }
 
 // ============================================================================
@@ -1353,6 +1393,16 @@ where
         }
         None
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+impl<D: MappedDictionary> std::iter::FusedIterator for PhoneticValueQueryIterator<'_, D> where
+    D::Node: MappedDictionaryNode<Value = D::Value> + DictionaryNode<Unit = u8>
+{
 }
 
 // ============================================================================

@@ -72,8 +72,13 @@ impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>> 
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
+        (0, None)
     }
+}
+
+impl<N: DictionaryNode, P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>>
+    std::iter::FusedIterator for AffineQueryIterator<N, P>
+{
 }
 
 /// Query result containing the matched term as a raw unit sequence and its distance.
@@ -1266,6 +1271,18 @@ impl<
             QueryIteratorInner::Affine(core) => core.next_match(),
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<
+        N: DictionaryNode,
+        R: QueryResult<N::Unit>,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    > std::iter::FusedIterator for QueryIterator<N, R, P>
+{
 }
 
 #[inline]

@@ -145,7 +145,13 @@ where
 
         None
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
 }
+
+impl<D> std::iter::FusedIterator for ZipperQueryIterator<D> where D: DictZipper<Unit = u8> {}
 
 impl<D> ZipperQueryIterator<D>
 where

@@ -86,7 +86,7 @@ test("native N-API uses one cross-project runtime and exact snapshots", () => {
 
 test("native DAT, SCDAWG, phonetic, distances, and persistent ARTrie", async () => {
   const dat = libdictenstein.doubleArrayTrie([{ term: "café", value: 7n }, { term: "caff", value: null }]);
-  assert.deepEqual(dat.get("caff"), { found: true, value: null });
+  assert.deepEqual(dat.lookup("caff"), { found: true, value: null });
   dat.close();
   const suffixes = libdictenstein.scdawg();
   suffixes.put("cat", 1n);
@@ -107,11 +107,54 @@ test("native DAT, SCDAWG, phonetic, distances, and persistent ARTrie", async () 
     dictionary.checkpoint();
     dictionary.close();
     dictionary = libdictenstein.openPersistentARTrie(path);
-    assert.deepEqual(dictionary.get("cat"), { found: true, value: 1n });
+    assert.deepEqual(dictionary.lookup("cat"), { found: true, value: 1n });
     dictionary.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("native dictionaries implement snapshot-coherent Map collection idioms", () => {
+  const dictionary = libdictenstein.dynamicDawg();
+  assert.equal(dictionary.set("cat", 1n), dictionary);
+  dictionary.set("caff", null).set("dog", 3n);
+  assert.equal(dictionary.get("cat"), 1n);
+  assert.equal(dictionary.get("caff"), null);
+  assert.equal(dictionary.get("absent"), undefined);
+  assert.equal(dictionary.has("absent"), false);
+  assert.deepEqual([...dictionary], [["caff", null], ["cat", 1n], ["dog", 3n]]);
+  assert.deepEqual([...dictionary.keys()], ["caff", "cat", "dog"]);
+  assert.deepEqual([...dictionary.values()], [null, 1n, 3n]);
+  assert.deepEqual([...dictionary.toMap()], [...dictionary]);
+
+  const entries = dictionary.entries();
+  const cursor = dictionary.streamEntries();
+  assert.equal(cursor.size, 3);
+  dictionary.delete("cat");
+  dictionary.set("zebra", 9n);
+  assert.deepEqual([...entries], [["caff", null], ["cat", 1n], ["dog", 3n]]);
+  assert.deepEqual([...cursor], [["caff", null], ["cat", 1n], ["dog", 3n]]);
+  assert.equal(Object.isFrozen(dictionary.snapshotEntries()), true);
+
+  const visited = [];
+  dictionary.forEach((value, key, owner) => visited.push([key, value, owner === dictionary]));
+  assert.deepEqual(visited, [["caff", null, true], ["dog", 3n, true], ["zebra", 9n, true]]);
+  dictionary.close();
+
+  const bytes = libdictenstein.dynamicDawg("byte");
+  bytes.set(new Uint8Array([0, 255]), 4n);
+  const [[byteKey, byteValue]] = [...bytes];
+  assert.deepEqual([...byteKey], [0, 255]);
+  assert.equal(byteValue, 4n);
+  assert.throws(() => bytes.toMap(), /value-equal JavaScript string keys/);
+  bytes.close();
+
+  const tokens = libdictenstein.dynamicDawg("u64");
+  tokens.set(new BigUint64Array([0n, 2n ** 63n]), null);
+  const [[tokenKey, tokenValue]] = [...tokens];
+  assert.deepEqual([...tokenKey], [0n, 2n ** 63n]);
+  assert.equal(tokenValue, null);
+  tokens.close();
 });
 
 test("native byte and u64 domains remain typed and streaming", () => {
@@ -126,7 +169,7 @@ test("native byte and u64 domains remain typed and streaming", () => {
 
   const tokens = libdictenstein.dynamicDawg("u64");
   tokens.putU64(new BigUint64Array([1n, 2n]), 8n);
-  assert.deepEqual(tokens.getU64(new BigUint64Array([1n, 2n])), { found: true, value: 8n });
+  assert.deepEqual(tokens.lookupU64(new BigUint64Array([1n, 2n])), { found: true, value: 8n });
   const tokenTransducer = liblevenshtein.transducer(tokens);
   assert.deepEqual(collect(tokenTransducer.query(new BigUint64Array([1n, 3n]), 1)), [
     [new BigUint64Array([1n, 2n]), 1, 8n],
@@ -188,6 +231,7 @@ test("every index.d.ts member exists on the native path", async () => {
 
   const dictionary = libdictenstein.dynamicDawg();
   dictionary.put("cat", 1n);
+  const entryCursor = dictionary.streamEntries();
   const transducer = liblevenshtein.transducer(dictionary);
   const cursor = transducer.query("cat", 1);
   const pattern = liblevenshtein.phoneticPattern("c[ao]t");
@@ -201,6 +245,7 @@ test("every index.d.ts member exists on the native path", async () => {
   // cannot ship without a runtime member behind it.
   const instances = new Map([
     ["Dictionary", dictionary],
+    ["DictionaryEntryCursor", entryCursor],
     ["QueryCursor", cursor],
     ["PhoneticPattern", pattern],
     ["PhoneticRuleSet", rules],
@@ -236,6 +281,7 @@ test("every index.d.ts member exists on the native path", async () => {
       }
     }
   } finally {
+    entryCursor.close();
     cursor.close();
     wfst.close();
     builder.close();

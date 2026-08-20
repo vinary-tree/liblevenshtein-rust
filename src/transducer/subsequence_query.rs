@@ -242,6 +242,18 @@ where
             }
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N, P> std::iter::FusedIterator for SubsequenceQueryIterator<N, P>
+where
+    N: DictionaryNode,
+    N::Unit: CharUnit,
+    P: PrefixPruner<N::Unit>,
+{
 }
 
 impl<N, P> Drop for SubsequenceQueryIterator<N, P>

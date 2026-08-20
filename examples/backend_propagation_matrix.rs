@@ -877,11 +877,8 @@ fn run_supported(
         ),
         (Family::PersistentArtrie, Domain::Char) => {
             measure_backend(family, domain, cell_order, chars, config, || {
-                chars
-                    .terms
-                    .iter()
-                    .map(String::as_str)
-                    .collect::<PersistentARTrieChar<()>>()
+                PersistentARTrieChar::<()>::try_from_iter(chars.terms.iter().map(String::as_str))
+                    .expect("construct persistent character propagation backend")
             })
         }
         (Family::PersistentArtrie, Domain::U64) => {

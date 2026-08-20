@@ -335,6 +335,18 @@ where
         }
         None
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N, C> std::iter::FusedIterator for ContextualQueryIterator<N, C>
+where
+    N: DictionaryNode,
+    N::Unit: CharUnit + std::hash::Hash,
+    C: ContextualCost<N::Unit>,
+{
 }
 
 #[cfg(test)]

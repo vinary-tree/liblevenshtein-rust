@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vinary-tree.org/schemas/libdictenstein-host-collection-traversal-sample-v1.json",
+  "title": "libdictenstein host-language collection traversal sample",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "runtime",
+    "arm",
+    "dictionary_entries",
+    "consumed_entries_per_pass",
+    "passes",
+    "warmup_passes",
+    "batch_size",
+    "early_cancel",
+    "elapsed_ns",
+    "checksum"
+  ],
+  "properties": {
+    "schema": {
+      "const": "libdictenstein.host-collection-traversal.v1"
+    },
+    "runtime": {
+      "type": "string",
+      "minLength": 1
+    },
+    "arm": {
+      "enum": ["materialized", "stream", "stream-cancel", "reduce"]
+    },
+    "dictionary_entries": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "consumed_entries_per_pass": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "passes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "warmup_passes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "batch_size": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "early_cancel": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "elapsed_ns": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "checksum": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "native_boundary_calls": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "runtime_metrics": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"arm": {"const": "materialized"}}},
+      "then": {
+        "properties": {
+          "early_cancel": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"arm": {"const": "stream"}}},
+      "then": {
+        "properties": {
+          "batch_size": {"type": "integer", "minimum": 1},
+          "early_cancel": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"arm": {"const": "reduce"}}},
+      "then": {
+        "properties": {
+          "batch_size": {"type": "integer", "minimum": 1},
+          "early_cancel": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"arm": {"const": "stream-cancel"}}},
+      "then": {
+        "properties": {
+          "batch_size": {"type": "integer", "minimum": 1},
+          "early_cancel": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  ]
+}

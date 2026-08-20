@@ -154,7 +154,9 @@ fn expected_status(op: FaultOp, raw: u32) -> LlevStatus {
         Some(VtStatus::IoError) => LlevStatus::IoError,
         Some(VtStatus::Closed) => LlevStatus::Closed,
         Some(VtStatus::LimitExceeded) => LlevStatus::LimitExceeded,
-        Some(VtStatus::End | VtStatus::ProviderError) => LlevStatus::ProviderError,
+        Some(VtStatus::End | VtStatus::ProviderError | VtStatus::BatchInUse) => {
+            LlevStatus::ProviderError
+        }
         Some(VtStatus::Ok) => unreachable!("success is never injected as a fault"),
     }
 }
@@ -358,11 +360,11 @@ fn end_status_from_every_callback_is_a_provider_error() {
 }
 
 /// The LLEV-B6 regression: raw statuses with no `VtStatus` discriminant —
-/// including the first out-of-range value 9 and u32::MAX — become
+/// including the first out-of-range value 10 and u32::MAX — become
 /// `ProviderError` with the pinned decode message, never undefined behavior.
 #[test]
 fn out_of_range_status_codes_are_provider_errors() {
-    for raw in [9u32, 42, u32::MAX] {
+    for raw in [10u32, 42, u32::MAX] {
         for (op, surface) in [
             (FaultOp::Snapshot, Surface::AtQuery),
             (FaultOp::Root, Surface::AtQuery),

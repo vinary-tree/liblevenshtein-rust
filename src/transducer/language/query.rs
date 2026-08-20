@@ -326,6 +326,19 @@ where
             value,
         })
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+#[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
+impl<N, L> std::iter::FusedIterator for MappedLanguageQueryIterator<N, L>
+where
+    N: MappedDictionaryNode,
+    N::Unit: CharUnit,
+    L: LanguageAutomaton<N::Unit>,
+{
 }
 
 impl<N, L> Iterator for LanguageQueryIterator<N, L>
@@ -345,4 +358,16 @@ where
             node,
         })
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N, L> std::iter::FusedIterator for LanguageQueryIterator<N, L>
+where
+    N: DictionaryNode,
+    N::Unit: CharUnit,
+    L: LanguageAutomaton<N::Unit>,
+{
 }

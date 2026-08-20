@@ -33,6 +33,25 @@ The normative harness contract (CLI surface, timed loop, checksum bit-layout,
 per-language clocks, fairness rules) lives separately in
 [`benchmarks/cross-language/harnesses/common/PROTOCOL.md`](../../benchmarks/cross-language/harnesses/common/PROTOCOL.md).
 
+### Collection traversal and host-language protocols
+
+The dictionary producer's
+[collection traversal and binding protocol](https://github.com/vinary-tree/libdictenstein/blob/master/docs/benchmarks/collection-traversal-and-bindings.md)
+isolates owned Rust iteration, an allocation-reusing visitor, complete host
+materialization, bounded ABI batches, and early cancellation. The same-binary
+paired runner and deterministic analyzer live here because they reuse this
+repository's topology-aware admission and statistical contract:
+
+- [`run-collection-traversal-experiment.sh`](../../benchmarks/causal/run-collection-traversal-experiment.sh)
+- [`prepare-collection-traversal-resume.py`](../../benchmarks/causal/prepare-collection-traversal-resume.py)
+- [`analyze-collection-traversal.py`](../../benchmarks/causal/analyze-collection-traversal.py)
+- [`collection-traversal-sample.schema.json`](../../benchmarks/causal/schemas/collection-traversal-sample.schema.json)
+- [`host-collection-traversal-sample.schema.json`](../../benchmarks/causal/schemas/host-collection-traversal-sample.schema.json)
+
+Per-language package drivers emit the same checksum/work schema but time only
+their native collection view or closeable stream. Startup, construction, JIT
+warmup, and profiler instrumentation remain outside the admitted interval.
+
 ### Backend Comparisons
 
 #### [Backend Performance Comparison](BACKEND_PERFORMANCE_COMPARISON.md)

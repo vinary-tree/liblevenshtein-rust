@@ -40,6 +40,10 @@ Every symbol and acronym used below, defined before use:
 | semiring | An algebraic structure $`\langle K, \oplus, \otimes, \bar{0}, \bar{1} \rangle`$: a carrier set with two associative operations, where $`\oplus`$ (path alternation) is commutative with identity $`\bar{0}`$, $`\otimes`$ (path extension) has identity $`\bar{1}`$, $`\otimes`$ distributes over $`\oplus`$, and $`\bar{0}`$ annihilates $`\otimes`$. |
 | epsilon label | The empty label $`\varepsilon`$ on a transducer arc — consumed no input or emitted no output. Encoded here by a *flag*, never by a magic label value. |
 | page / paging | Transferring a variable-length edge or arc list through a fixed-capacity caller-owned buffer, in one or more calls. |
+| entry cursor | A move-only two-word owned handle that streams all entries from one captured immutable dictionary revision. It has its own lifetime and vtable, independent of the source resource after `open`. |
+| arena | One contiguous cursor-owned array shared by all descriptors in a batch. Entries use parallel descriptor, unit, and optional-`u64` value arenas. |
+| batch lease | The interval from a successful `next_batch` until its matching `release_batch`; the provider owns the pointed-to storage and the consumer may only borrow it during that interval. |
+| reducer | A consumer callback invoked with an automatically leased entry batch. It returns `Ok` to continue, `End` to stop successfully, or an error to abort. |
 | compact graph | A complete immutable dictionary revision projected into dense node and edge arrays. It is optional: consumers retain callback paging as the compatibility path. |
 | value cursor | An opaque snapshot-local token attached to a compact-graph node and passed only to that graph interface's value callback. It is deliberately independent of the dense graph index and base-interface node identifier. |
 | POD | Plain Old Data: a struct of scalar fields with no pointers, invariant layout across targets. |
@@ -83,6 +87,7 @@ vinary-tree project.
 #define VT_DICTIONARY_INTERFACE_VERSION 1u
 #define VT_DICTIONARY_VISIT_INTERFACE_VERSION 1u
 #define VT_DICTIONARY_GRAPH_INTERFACE_VERSION 1u
+#define VT_DICTIONARY_ENTRIES_INTERFACE_VERSION 1u
 #define VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION 1u
 #define VT_WFST_INTERFACE_VERSION 1u
 #define VT_RECOMMENDED_EDGE_BATCH 256u
@@ -99,9 +104,9 @@ These version counters have precisely delimited jurisdictions
   coordinated, family-wide breaking event.
 - Every `VT_*_INTERFACE_VERSION` constant gates exactly **one interface's
   contract** and is negotiated per-resource through `query_interface` as a
-  minimum, not an exact match. Optional dictionary visit, compact-graph, and
-  snapshot-identity capabilities therefore evolve independently from both
-  the base dictionary interface and one another.
+  minimum, not an exact match. Optional dictionary visit, compact graph,
+  dictionary entries, and snapshot-identity capabilities therefore evolve
+  independently from both the base dictionary interface and one another.
 
 The two batch constants are *recommendations*, not limits: a consumer that
 expands a node through a 256-entry buffer completes almost every expansion in
@@ -138,19 +143,20 @@ typedef enum VtStatus {
     VT_STATUS_IO_ERROR = 5,
     VT_STATUS_CLOSED = 6,
     VT_STATUS_LIMIT_EXCEEDED = 7,
-    VT_STATUS_PROVIDER_ERROR = 8
+    VT_STATUS_PROVIDER_ERROR = 8,
+    VT_STATUS_BATCH_IN_USE = 9
 } VtStatus;
 ```
 
 Every interop callback returns a `VtStatus`; there is no other error channel
 (no `errno`, no exceptions, no unwinding — see the
 [security model](security-model.md) for why unwinding across this boundary is
-forbidden). The nine values, their semantics, and who may return each:
+forbidden). The ten values, their semantics, and who may return each:
 
 | Value | Name | Meaning | Who returns it |
 |---|---|---|---|
 | 0 | `Ok` | The operation completed; every advertised output was written. | Any callback. The **only** success value: `is_ok()` holds exactly for `Ok`, pinned by `tests/discriminant_pins.rs`. |
-| 1 | `End` | An iterator or paginated stream is exhausted. | **Never legal from the interface callbacks in this header.** Paging termination is expressed through `out_written` / `out_total` (§ 7), so `End` is reserved for the project-level cursor surfaces built *above* this ABI (e.g. liblevenshtein's `llev_query_cursor_next`). The reference consumer treats any non-`Ok` interface return — including `End` — as a provider error (`status()` in liblevenshtein `src/bindings.rs`). This is family contract pin F5. |
+| 1 | `End` | A stream is exhausted, or a reducer requests successful early stop. | Legal only from entries-v1 `next_batch` and from a `VtDictionaryEntryReducer`. `reduce` translates reducer `End` to its own `Ok`. Existing dictionary/WFST paging still terminates through counts; `End` from any other current interface callback is a provider error. |
 | 2 | `InvalidArgument` | An argument was outside the callback's domain (e.g. an unknown node identifier). | Providers. |
 | 3 | `NullPointer` | A required pointer argument was NULL. Failed calls make **no partial writes**: outputs are untouched. | Providers; also the value consumers expect from `query_interface` given a NULL identifier or output slot (pinned by `tests/vtable_evolution.rs`). |
 | 4 | `Unsupported` | The requested interface, version, or operation is not offered. A *negotiation* outcome, not a fault. | `query_interface` (wrong identifier, or `minimum_version` above support); any op a provider legitimately cannot honor. |
@@ -158,15 +164,16 @@ forbidden). The nine values, their semantics, and who may return each:
 | 6 | `Closed` | The resource was already torn down. A best-effort courtesy: a consumer holding a retain must never *need* it. | Providers. |
 | 7 | `LimitExceeded` | A configured resource limit (memory, node budget, result cap) was hit. | Providers. |
 | 8 | `ProviderError` | The provider failed with no more specific portable status — including a panic or foreign exception the provider contained at its own boundary. | Providers; also what consumers map *unknown* future statuses to. |
+| 9 | `BatchInUse` | The cursor has a live manual or reducer-owned batch lease and the requested operation requires it to be lease-free. | Entries-v1 `next_batch`, `reduce`, or `close`; every same-cursor operation re-entered from a reducer is refused the same way. |
 
 Two hardening rules follow from the type being `#[repr(u32)]` on the Rust
 side. First, a consumer must receive the value from a foreign callback as a
-raw `uint32_t` and **validate it is in the range zero through eight before
+raw `uint32_t` and **validate it is in the range zero through nine before
 converting** — an out-of-range discriminant materialized as a Rust `VtStatus`
 is instant undefined behavior (family finding LLEV-B6, ledgered in
 liblevenshtein's `docs/bindings/FINDINGS_LEDGER.md`). Second, new statuses
 may only ever be *appended* (see the [evolution policy](abi-evolution.md)),
-so "in range for version 1" is a stable predicate.
+so the range known by a compiled consumer is a stable predicate.
 
 ---
 
@@ -177,11 +184,11 @@ typedef struct VtInterfaceId { uint8_t bytes[16]; } VtInterfaceId;
 ```
 
 An interface identifier is sixteen bytes compared **byte-for-byte** — no
-hashing, no case folding, no NUL terminator, no registry. The five published
+hashing, no case folding, no NUL terminator, no registry. The six published
 identifiers (quoted in [§ 8.1](#81-the-published-identifiers)) are ASCII
 mnemonics with an explicit version suffix: `vt.dictionary.v1`,
-`vt.dict.visit.v1`, `vt.dict.graph.v1`, `vt.snapshot.id.1`, and
-`vt.scalar-wfst.1`. Exactness is the point: two
+`vt.dict.visit.v1`, `vt.dict.graph.v1`, `vt.dict.entry.v1`,
+`vt.snapshot.id.1`, and `vt.scalar-wfst.1`. Exactness is the point: two
 independently built binaries agree on an interface exactly when they contain
 the same sixteen bytes, and a *breaking* interface revision changes the
 string itself so the two contracts can never be confused
@@ -623,11 +630,220 @@ Consumers must fall back to resource-local caches when negotiation returns
 `vt.dictionary.v1`; it is an optimization contract, not a prerequisite for
 correct traversal.
 
+#### Optional dictionary entries: `vt.dict.entry.v1`
+
+This interface streams a dictionary's complete finite entry set in strict
+lexicographic order without extending `VtDictionaryVTable` or imposing a new
+requirement on old providers. Its wire identifier is the exact sixteen bytes
+`vt.dict.entry.v1`; the descriptive name is “dictionary entries v1.”
+
+```c
+typedef enum VtDictionaryEntryOrder {
+    VT_DICTIONARY_ENTRY_ORDER_LEXICOGRAPHIC = 1
+} VtDictionaryEntryOrder;
+
+#define VT_DICTIONARY_ENTRIES_INFO_FLAG_EXACT_LEN UINT64_C(1)
+#define VT_DICTIONARY_ENTRIES_INFO_FLAG_SNAPSHOT_IDENTITY UINT64_C(2)
+
+typedef struct VtDictionaryEntry {
+    size_t unit_offset;
+    size_t unit_len;
+    size_t value_offset;
+    size_t value_len;
+    uint64_t reserved;
+} VtDictionaryEntry;
+
+typedef struct VtDictionaryEntryBatchLimits {
+    size_t max_entries;
+    size_t max_units;
+    size_t max_values;
+    uint64_t reserved;
+} VtDictionaryEntryBatchLimits;
+
+typedef struct VtDictionaryEntryBatchView {
+    const VtDictionaryEntry* entries;
+    size_t entry_count;
+    const void* units;
+    size_t unit_count;
+    const uint64_t* values;
+    size_t value_count;
+    uint64_t generation;
+    uint64_t reserved;
+} VtDictionaryEntryBatchView;
+
+typedef struct VtDictionaryEntriesInfo {
+    uint32_t unit_domain;
+    uint32_t value_domain;
+    uint32_t order;
+    uint32_t reserved0;
+    uint64_t flags;
+    size_t exact_len;
+    VtSnapshotIdentity identity;
+    uint64_t reserved[2];
+} VtDictionaryEntriesInfo;
+
+struct VtDictionaryEntriesVTable;
+typedef struct VtDictionaryEntriesCursor {
+    void* context;
+    const struct VtDictionaryEntriesVTable* vtable;
+} VtDictionaryEntriesCursor;
+
+typedef VtStatus (*VtDictionaryEntryReducer)(
+    void* reducer_context,
+    const VtDictionaryEntryBatchView* batch);
+
+typedef struct VtDictionaryEntriesVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*open)(void* resource_context,
+                     VtDictionaryEntriesCursor* out_cursor,
+                     VtDictionaryEntriesInfo* out_info);
+    VtStatus (*next_batch)(VtDictionaryEntriesCursor* cursor,
+                           const VtDictionaryEntryBatchLimits* limits,
+                           VtDictionaryEntryBatchView* out_batch);
+    VtStatus (*release_batch)(VtDictionaryEntriesCursor* cursor,
+                              uint64_t generation);
+    VtStatus (*reduce)(VtDictionaryEntriesCursor* cursor,
+                       const VtDictionaryEntryBatchLimits* limits,
+                       VtDictionaryEntryReducer reducer,
+                       void* reducer_context,
+                       size_t* out_count);
+    VtStatus (*cancel)(VtDictionaryEntriesCursor* cursor);
+    VtStatus (*close)(VtDictionaryEntriesCursor* cursor);
+} VtDictionaryEntriesVTable;
+```
+
+For version 1, `struct_size` covers the complete table, `interface_version`
+is at least `VT_DICTIONARY_ENTRIES_INTERFACE_VERSION`, the header reserved
+word is zero, and all six operations are non-NULL. The cursor vtable returned
+by `open` remains immutable and callable until `close`, even if the resource
+used for discovery is no longer retained.
+
+**Capture and metadata.** `open` is called with the context word of the
+resource on which the interface was discovered. It captures exactly the
+revision visible at entry, in $`\mathcal{O}(1)`$ through structural sharing
+or an equivalent immutable revision, and transfers one owned cursor to the
+caller. The cursor retains everything needed by its context and vtable, so
+the source resource may be released immediately after `open` succeeds.
+`out_cursor` and `out_info` are both required and remain untouched on
+failure.
+
+`VtDictionaryEntriesInfo` describes that captured revision. Its three
+discriminants are deliberately stored as raw `uint32_t`, not enum-typed
+fields: Rust consumers validate them before constructing enums. The captured
+unit and value domains equal those of the dictionary resource on which the
+interface was discovered. Version 1 accepts all three `VtUnitDomain` values,
+accepts only `UNIT` and
+`OPTIONAL_U64` value domains, and requires order value
+`LEXICOGRAPHIC = 1`; `BYTES` remains unsupported. `reserved0` and both
+reserved words are zero. Unknown flag bits are ignored. If `EXACT_LEN` is
+set, `exact_len` is the exact number of descriptors the cursor will yield in
+the absence of cancellation or reducer early stop; otherwise it is zero. If
+`SNAPSHOT_IDENTITY` is set, `identity` obeys the
+process-local immutable identity contract above; otherwise both identity
+words are zero.
+
+Lexicographic comparison is unsigned numeric comparison in the declared unit
+domain: at the first differing unit the smaller unit sorts first, and a key
+that is a proper prefix sorts before its extension. Keys are strictly
+increasing, so no key appears twice; the empty key, if present, is first. A
+trie/DAG implementation obtains this order by visiting a final node before
+its children and following child labels in ascending order. A shared DAG node
+reached by multiple prefixes represents multiple keys and must be visited
+once per path—global “visited node” suppression is incorrect.
+
+**Batch representation and validation.** Each descriptor selects one key
+from the unit arena and zero or one values from the compact `uint64_t` value
+arena. The unit arena's element type is `uint8_t` for `BYTE`, `uint32_t` for
+`UNICODE_SCALAR`, and `uint64_t` for `U64`; every offset, length, and limit
+counts elements of that type, never bytes. `UNIT` requires every
+`value_len = 0`. Under `OPTIONAL_U64`, `value_len = 0` means the key is
+present without a mapped value and `value_len = 1` selects its mapped value.
+Absence from the dictionary is represented by no descriptor, not by a value
+sentinel.
+
+Within a nonempty batch, descriptor ranges are canonical and packed. The
+first unit and value offsets are zero; each later offset equals the preceding
+offset plus length; and the final ends equal `unit_count` and `value_count`.
+All additions and element-size multiplications must be checked for overflow.
+Every reserved field is zero. A pointer may be NULL exactly when its count is
+zero; a non-NULL pointer has the alignment required by its element type. Byte
+labels are at most 255, Unicode-scalar units exclude surrogate code points
+and values above `0x10ffff`, and each complete batch preserves the strict
+global order established by preceding batches. Consumers validate the whole
+view before exposing slices or entries to safe code.
+
+**Limits, progress, and exhaustion.** `max_entries` must be positive and all
+limit reserved fields must be zero. `next_batch` never exceeds any of the
+three limits. If the first pending entry cannot fit, it returns
+`LimitExceeded`, does not advance, creates no lease, and leaves `out_batch`
+untouched. If at least one entry fits, it returns the maximal nonempty prefix
+that fits and retains the first non-fitting entry for the following call.
+Thus `Ok` always means a nonempty batch with a live lease. Exhaustion returns
+`End`, writes a canonical empty view (all pointers NULL and all counts,
+generation, and reserved fields zero), creates no lease, and is sticky.
+Version 1 promises a finite entry language and eventual `End`; a provider
+that cannot make that promise must not advertise this interface.
+
+**The lease state machine.** A successful `next_batch` assigns a nonzero
+generation strictly greater than every generation previously issued by that
+cursor. Generations never wrap or repeat; inability to issue the next value
+returns `LimitExceeded` without advancing. There is at most one live lease:
+
+| Cursor state | `next_batch` / `reduce` | `release_batch` | `cancel` | `close` |
+|---|---|---|---|---|
+| Open, no lease | progresses | `InvalidArgument` | `Ok`, enters cancelled state | `Ok`, frees and zeroes handle |
+| Live manual batch | `BatchInUse` | exact generation: `Ok`; zero/stale/wrong: `InvalidArgument` unchanged | `Ok`, lease remains valid | `BatchInUse` unchanged |
+| Inside reducer callback | `BatchInUse` | `BatchInUse` | `BatchInUse` | `BatchInUse` |
+| Exhausted/cancelled, no lease | sticky `End` / `Ok` reduction of zero entries | `InvalidArgument` | `Ok` | `Ok`, frees and zeroes handle |
+| Both handle words NULL | invalid except as noted | invalid | `Closed` | `Ok` (idempotent handle-level close) |
+
+A successful `release_batch` ends pointer validity immediately. `cancel` is
+idempotent and never invalidates a live view; after that lease is released,
+the cursor is sticky-exhausted. A successful `close` frees the cursor and
+writes NULL to both handle words. A half-NULL handle is malformed and yields
+`InvalidArgument`. `VtDictionaryEntriesCursor` is move-only: copying its two
+words does not retain or duplicate ownership. Callers must serialize use of
+one cursor; the state machine is not a synchronization primitive. Distinct
+cursors, including cursors opened on the same resource, are independent and
+may run concurrently.
+
+**Reducer semantics.** `reduce` applies the same limits and ordering as
+`next_batch`, but acquires and settles each lease internally. It refuses an
+existing lease with `BatchInUse` and rejects a NULL reducer or `out_count`.
+For every batch it invokes the reducer once, then settles the auto-lease
+*before* interpreting the returned raw status. `Ok` continues; `End` is a
+successful early stop and makes `reduce` return `Ok`; a known error is
+propagated; an unknown raw value becomes `InvalidArgument`. On `Ok`,
+`out_count` is the number of descriptors delivered to callbacks, including
+the batch whose callback returned `End`. On failure `out_count` is untouched.
+After a callback error the cursor remains valid and resumes after the batch
+already delivered. Every same-cursor re-entry from the reducer, including
+`cancel`, is refused with `BatchInUse`; return `End` from the reducer to stop
+successfully.
+
+The batch pointers are always cursor-owned: neither a `next_batch` consumer
+nor a reducer may store, free, resize, or mutate them. A reducer's pointers
+expire on callback return; a manual batch's pointers expire on successful
+`release_batch`. Failure outputs are otherwise untouched, and state-changing
+failures leave the cursor unchanged except that `reduce` has necessarily
+consumed any complete batches already delivered before a callback error.
+
+This capability is a semantic strengthening, not a reinterpretation of old
+paging. `vt.dictionary.v1` guarantees only provider-chosen stable sibling
+order, so a generic fallback cannot promise bounded-memory lexicographic
+streaming unless it has independently proved sorted finite traversal; it may
+need to materialize and sort. `vt.dict.graph.v1` has sorted child labels but
+does not itself claim acyclicity. Consumers must therefore negotiate entries
+v1 for this exact finite/ordered/leased contract or explicitly document a
+weaker fallback.
+
 Only `snapshot`, `root`, `node_is_final`, and `node_edges` are unconditionally
 required by the reference consumer; `len` and `node_transition` are optional
 accelerations, and `node_value_u64` is conditionally required as stated
-above. Visit, compact-graph, and snapshot-identity interfaces are independently
-optional accelerations.
+above. Visit, compact-graph, entries, and snapshot-identity interfaces are
+independently optional capabilities.
 
 ### 6.5 The dictionary laws
 
@@ -927,6 +1143,10 @@ static const VtInterfaceId VT_DICTIONARY_GRAPH_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','.','g','r','a','p','h','.','v','1' }
 };
 
+static const VtInterfaceId VT_DICTIONARY_ENTRIES_INTERFACE_ID = {
+    { 'v','t','.','d','i','c','t','.','e','n','t','r','y','.','v','1' }
+};
+
 static const VtInterfaceId VT_SNAPSHOT_IDENTITY_INTERFACE_ID = {
     { 'v','t','.','s','n','a','p','s','h','o','t','.','i','d','.','1' }
 };
@@ -936,13 +1156,14 @@ static const VtInterfaceId VT_WFST_INTERFACE_ID = {
 };
 ```
 
-The five constants are spelled as character arrays so byte exactness is
+The six constants are spelled as character arrays so byte exactness is
 visible: `vt.dictionary.v1`, `vt.dict.visit.v1`, `vt.dict.graph.v1`,
-`vt.snapshot.id.1`, and `vt.scalar-wfst.1` (16 bytes each). They are
+`vt.dict.entry.v1`, `vt.snapshot.id.1`, and `vt.scalar-wfst.1` (16 bytes
+each). They are
 `static const` so the header stays usable from any C translation unit without
 a home object file. Only the base dictionary and WFST interfaces are mandatory
-for their respective providers; visit, compact graph, and snapshot identity
-are optional negotiated capabilities.
+for their respective providers; visit, compact graph, dictionary entries, and
+snapshot identity are optional negotiated capabilities.
 
 ### 8.2 The C++ guard
 
@@ -950,20 +1171,22 @@ are optional negotiated capabilities.
 #if defined(__cplusplus)
 static_assert(sizeof(VtResource) == 2 * sizeof(void*),
               "VtResource must remain a two-word handle");
+static_assert(sizeof(VtDictionaryEntriesCursor) == 2 * sizeof(void*),
+              "VtDictionaryEntriesCursor must remain a two-word handle");
 #endif
 ```
 
-The two-word law (§ 5.1) re-asserted for C++ consumers at their own compile
-time — the third of the law's three enforcement points.
+The resource two-word law (§ 5.1) and entries cursor's corresponding layout
+law re-asserted for C++ consumers at their own compile time.
 
 ### 8.3 What is *not* in the header
 
-No allocation contract (each provider frees what it allocated, inside
-`release`), no thread identity rules (only the `PARALLEL_REENTRANT` claim),
-no string encoding (labels are integers; text encoding is a project-level
-concern), no I/O, and no functions. Everything a project adds — cursors,
-builders, error strings — lives in that project's own `*_abi` surface above
-this header.
+No cross-boundary allocator contract (resources free through `release`, entry
+cursors through `close`, and borrowed batches are never freed by consumers),
+no thread identity rules, no string encoding (labels are integers; text
+encoding is a project-level concern), no I/O, and no linked functions.
+Project-specific query cursors, builders, and error strings live in each
+project's own `*_abi` surface above this header.
 
 ---
 
@@ -975,9 +1198,9 @@ and any layout or semantic drift fails there before it can ship:
 
 | Suite | What it pins | Invariant hooks |
 |---|---|---|
-| [`layout_contract.rs`](../tests/layout_contract.rs) | Sizes, alignments, and every field offset of all eight `#[repr(C)]` types — exact tables for the 64-bit tier and the 32-bit ARM EABI tier, plus target-independent packing laws; the two-word law; either-word null semantics; byte-exact interface identifiers; the `Option<extern "C" fn>` null niche. | VT-ABI-1, VT-ABI-2, VT-ABI-3, VT-ABI-4, VT-ABI-6 |
+| [`layout_contract.rs`](../tests/layout_contract.rs) | Sizes, alignments, and every field offset of every published `#[repr(C)]` type — exact tables for the 64-bit tier and the 32-bit ARM EABI tier, plus target-independent packing laws; both two-word handles; null semantics; byte-exact interface identifiers; the `Option<extern "C" fn>` null niche. | VT-ABI-1, VT-ABI-2, VT-ABI-3, VT-ABI-4, VT-ABI-6 |
 | [`discriminant_pins.rs`](../tests/discriminant_pins.rs) | Every enum discriminant and flag bit, twice: exact numeric pins, and wildcard-free `match` tables so *adding* a variant fails compilation until the pins (and the [evolution policy](abi-evolution.md)) are consulted; zeroed defaults for all reserved fields. | VT-ABI-5 |
-| [`vtable_evolution.rs`](../tests/vtable_evolution.rs) | The `query_interface` negotiation surface against a hand-rolled provider: wrong identifier and future `minimum_version` yield `Unsupported` with the output untouched, NULL arguments yield `NullPointer`, success hands out a provider-owned vtable without retaining, the retain/release ledger balances, and a strictly larger future vtable remains consumable through its v1 prefix via `struct_size`. | VT-QI-1, VT-QI-2, VT-QI-3 |
+| [`vtable_evolution.rs`](../tests/vtable_evolution.rs) | The `query_interface` surface against hand-rolled current and legacy providers: unsupported identifiers and future versions leave output untouched; entries-v1 is optional for legacy providers; and strictly larger dictionary and entries vtables remain consumable through their v1 prefixes via `struct_size`. | VT-QI-1, VT-QI-2, VT-QI-3 |
 
 ---
 

@@ -1,0 +1,102 @@
+{
+  "schema": "libdictenstein.collection-traversal-analysis.v1",
+  "inputs": {
+    "samples": {
+      "path": "benchmarks/causal/evidence/2026-08-20/collection-direct-owned-vs-visitor.csv",
+      "sha256": "73cb2a93329d2c2deac92ff94c28228d2ca5a53797fcdb1e4a7f4e4020772287"
+    },
+    "host_admission": {
+      "sha256": "20a8a33bbdb46fa9cc3a8070bbe3876f6120c10536e4c092e4fd7e499ec2137f",
+      "records": 104,
+      "selected_cpus": [
+        3
+      ],
+      "all_admitted": true
+    }
+  },
+  "cell": {
+    "control_arm": "direct-owned",
+    "treatment_arm": "direct-visitor",
+    "binary_sha256": "14240c311ad855fc950071a7ced5ed00663b1b3932cd90a18843c70713f7987c",
+    "dictionary_entries": 65536,
+    "consumed_entries_per_pass": 65536,
+    "passes": 8,
+    "pairs": 51
+  },
+  "nanoseconds_per_consumed_entry": {
+    "control": {
+      "count": 51,
+      "median": 811.5445423126221,
+      "mad": 5.931972503662109,
+      "minimum": 795.3629188537598,
+      "maximum": 962.0989837646484,
+      "bootstrap_95_ci_of_median": [
+        808.2130374908447,
+        816.5809383392334
+      ]
+    },
+    "treatment": {
+      "count": 51,
+      "median": 782.140230178833,
+      "mad": 8.845701217651367,
+      "minimum": 764.0221748352051,
+      "maximum": 886.7002372741699,
+      "bootstrap_95_ci_of_median": [
+        777.5041942596436,
+        788.6863288879395
+      ]
+    },
+    "paired_difference_control_minus_treatment": {
+      "count": 51,
+      "median": 31.699512481689453,
+      "mad": 9.025999069213867,
+      "minimum": -74.71482467651367,
+      "maximum": 196.00183868408203,
+      "bootstrap_95_ci_of_median": [
+        28.812145233154297,
+        34.85251808166504
+      ]
+    }
+  },
+  "paired_speedup_control_over_treatment": {
+    "count": 51,
+    "median": 1.0405291931786216,
+    "mad": 0.01223598425613881,
+    "minimum": 0.9157383504190811,
+    "maximum": 1.2558446274636221,
+    "bootstrap_95_ci_of_median": [
+      1.0369677812051206,
+      1.0453883641336135
+    ],
+    "geometric_mean": 1.0440403439428
+  },
+  "foreign_boundary_calls_per_invocation": {
+    "control": {
+      "count": 51,
+      "median": 0.0,
+      "mad": 0.0,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "bootstrap_95_ci_of_median": [
+        0.0,
+        0.0
+      ]
+    },
+    "treatment": {
+      "count": 51,
+      "median": 0.0,
+      "mad": 0.0,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "bootstrap_95_ci_of_median": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "semantic_invariants": {
+    "paired_checksums_equal": true,
+    "paired_work_counts_equal": true,
+    "same_binary": true
+  }
+}

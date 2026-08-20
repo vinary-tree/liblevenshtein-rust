@@ -36,12 +36,49 @@ test("WASI persistent ARTrie checkpoints, reopens, and retains query snapshots",
     transducer.close();
 
     dictionary = runtime.libdictenstein.openPersistentARTrie("/data/words.artrie");
-    assert.deepEqual(dictionary.get("cit"), { found: true, value: 4n });
-    assert.deepEqual(dictionary.get("cot"), { found: false, value: null });
+    assert.deepEqual(dictionary.lookup("cit"), { found: true, value: 4n });
+    assert.deepEqual(dictionary.lookup("cot"), { found: false, value: null });
     dictionary.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("WASI dictionaries expose closeable snapshot collection iterators", async () => {
+  const runtime = await createWasiRuntime({ preopens: {} });
+  const dictionary = runtime.libdictenstein.dynamicDawg();
+  dictionary.set("cat", 1n).set("caff", null).set("dog", 3n);
+  assert.equal(dictionary.get("cat"), 1n);
+  assert.equal(dictionary.get("caff"), null);
+  assert.equal(dictionary.get("absent"), undefined);
+
+  const entries = dictionary.entries();
+  const cursor = dictionary.streamEntries();
+  assert.equal(cursor.size, 3);
+  dictionary.delete("cat");
+  dictionary.set("zebra", 9n);
+  assert.deepEqual([...entries], [["caff", null], ["cat", 1n], ["dog", 3n]]);
+  assert.deepEqual([...cursor], [["caff", null], ["cat", 1n], ["dog", 3n]]);
+  assert.equal(Object.isFrozen(dictionary.snapshotEntries()), true);
+  assert.deepEqual([...dictionary.keys()], ["caff", "dog", "zebra"]);
+  assert.deepEqual([...dictionary.values()], [null, 3n, 9n]);
+  assert.deepEqual([...dictionary.toMap()], [...dictionary]);
+  dictionary.close();
+
+  const bytes = runtime.libdictenstein.dynamicDawg("byte");
+  bytes.set(new Uint8Array([0, 255]), 4n);
+  const [[byteKey, byteValue]] = [...bytes];
+  assert.deepEqual([...byteKey], [0, 255]);
+  assert.equal(byteValue, 4n);
+  bytes.close();
+
+  const tokens = runtime.libdictenstein.dynamicDawg("u64");
+  tokens.set(new BigUint64Array([0n, 2n ** 63n]), null);
+  assert.equal(tokens.has(new BigUint64Array([0n, 2n ** 63n])), true);
+  const [[tokenKey, tokenValue]] = [...tokens];
+  assert.deepEqual([...tokenKey], [0n, 2n ** 63n]);
+  assert.equal(tokenValue, null);
+  tokens.close();
 });
 
 test("WASI dynamic cursor survives remove, update, clear, and compact", async () => {

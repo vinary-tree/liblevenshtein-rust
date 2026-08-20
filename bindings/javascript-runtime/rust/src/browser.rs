@@ -2,8 +2,8 @@
 
 use js_sys::{Array, BigInt, BigUint64Array, Object, Reflect, Uint8Array};
 use libdictenstein::bindings::{
-    BindingUnitDomain, DoubleArrayTrieBinding, DynamicDawgBinding, OwnedDictionaryResource,
-    ScdawgBinding,
+    BindingEntries, BindingEntry, BindingTerm, BindingUnitDomain, DoubleArrayTrieBinding,
+    DynamicDawgBinding, OwnedDictionaryResource, ScdawgBinding,
 };
 use liblevenshtein::bindings::{
     Match, MatchBatch, MatchTerm, PhoneticPattern, PhoneticRuleSet, QueryCursor, QueryOrder,
@@ -116,6 +116,26 @@ fn lookup(found: bool, value: Option<u64>) -> Result<JsValue, JsValue> {
     Ok(object.into())
 }
 
+fn dictionary_entry_pair(entry: BindingEntry) -> Array {
+    let pair = Array::new();
+    let key: JsValue = match entry.term {
+        BindingTerm::Bytes(bytes) => Uint8Array::from(bytes.as_slice()).into(),
+        BindingTerm::Unicode(text) => JsValue::from_str(&text),
+        BindingTerm::U64(tokens) => {
+            let output = BigUint64Array::new_with_length(tokens.len() as u32);
+            output.copy_from(&tokens);
+            output.into()
+        }
+    };
+    pair.push(&key);
+    pair.push(
+        &entry
+            .value
+            .map_or(JsValue::NULL, |value| BigInt::from(value).into()),
+    );
+    pair
+}
+
 enum DictionaryBackend {
     Dynamic(DynamicDawgBinding),
     Dat(DoubleArrayTrieBinding),
@@ -145,6 +165,56 @@ impl DictionaryBackend {
 #[wasm_bindgen(js_name = Dictionary)]
 pub struct JsDictionary {
     backend: Option<DictionaryBackend>,
+}
+
+/// Bounded browser-WASM traversal over one immutable dictionary revision.
+#[wasm_bindgen(js_name = DictionaryEntryCursor)]
+pub struct JsDictionaryEntryCursor {
+    entries: Option<BindingEntries>,
+    size: usize,
+}
+
+#[wasm_bindgen(js_class = DictionaryEntryCursor)]
+impl JsDictionaryEntryCursor {
+    /// Exact captured entry count.
+    #[wasm_bindgen(getter)]
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    /// Copy at most `maximum` entries into one host-owned JavaScript batch.
+    #[wasm_bindgen(js_name = nextBatch)]
+    pub fn next_batch(&mut self, maximum: usize) -> Result<Array, JsValue> {
+        if maximum == 0 {
+            return Err(error("batch size must be positive"));
+        }
+        let output = Array::new();
+        if self.entries.is_none() {
+            return Ok(output);
+        }
+        for _ in 0..maximum {
+            let next = self.entries.as_mut().and_then(Iterator::next);
+            match next {
+                Some(Ok(entry)) => output.push(&dictionary_entry_pair(entry)),
+                Some(Err(status)) => {
+                    self.entries = None;
+                    return Err(error(format!(
+                        "dictionary entry traversal failed: {status:?}"
+                    )));
+                }
+                None => {
+                    self.entries = None;
+                    break;
+                }
+            };
+        }
+        Ok(output)
+    }
+
+    /// Release the captured revision. Idempotent.
+    pub fn close(&mut self) {
+        self.entries = None;
+    }
 }
 
 #[wasm_bindgen(js_class = Dictionary)]
@@ -224,6 +294,19 @@ impl JsDictionary {
         }
     }
 
+    /// Insert or update an arbitrary byte term.
+    #[wasm_bindgen(js_name = putBytes)]
+    pub fn put_bytes(&self, term: &Uint8Array, value: JsValue) -> Result<bool, JsValue> {
+        let mut bytes = vec![0; term.length() as usize];
+        term.copy_to(&mut bytes);
+        match self.backend()? {
+            DictionaryBackend::Dynamic(dictionary) => dictionary
+                .insert_text(&bytes, optional_u64(value)?)
+                .map_err(error),
+            _ => Err(error("this backend does not accept arbitrary byte terms")),
+        }
+    }
+
     /// Insert or update a u64-token term.
     #[wasm_bindgen(js_name = putU64)]
     pub fn put_u64(&self, term: &BigUint64Array, value: JsValue) -> Result<bool, JsValue> {
@@ -247,6 +330,17 @@ impl JsDictionary {
         }
     }
 
+    /// Remove an arbitrary byte term.
+    #[wasm_bindgen(js_name = removeBytes)]
+    pub fn remove_bytes(&self, term: &Uint8Array) -> Result<bool, JsValue> {
+        let mut bytes = vec![0; term.length() as usize];
+        term.copy_to(&mut bytes);
+        match self.backend()? {
+            DictionaryBackend::Dynamic(dictionary) => dictionary.remove_text(&bytes).map_err(error),
+            _ => Err(error("this backend does not accept arbitrary byte terms")),
+        }
+    }
+
     /// Remove a u64-token term.
     #[wasm_bindgen(js_name = removeU64)]
     pub fn remove_u64(&self, term: &BigUint64Array) -> Result<bool, JsValue> {
@@ -266,6 +360,19 @@ impl JsDictionary {
             }
             DictionaryBackend::Dat(dictionary) => Ok(dictionary.contains(term)),
             DictionaryBackend::Scdawg(dictionary) => Ok(dictionary.contains(term)),
+        }
+    }
+
+    /// Test exact arbitrary-byte membership.
+    #[wasm_bindgen(js_name = hasBytes)]
+    pub fn has_bytes(&self, term: &Uint8Array) -> Result<bool, JsValue> {
+        let mut bytes = vec![0; term.length() as usize];
+        term.copy_to(&mut bytes);
+        match self.backend()? {
+            DictionaryBackend::Dynamic(dictionary) => {
+                dictionary.contains_text(&bytes).map_err(error)
+            }
+            _ => Err(error("this backend does not accept arbitrary byte terms")),
         }
     }
 
@@ -297,6 +404,23 @@ impl JsDictionary {
         }
     }
 
+    /// Three-state arbitrary-byte lookup.
+    #[wasm_bindgen(js_name = getBytes)]
+    pub fn get_bytes(&self, term: &Uint8Array) -> Result<JsValue, JsValue> {
+        let mut bytes = vec![0; term.length() as usize];
+        term.copy_to(&mut bytes);
+        let value = match self.backend()? {
+            DictionaryBackend::Dynamic(dictionary) => {
+                dictionary.value_text(&bytes).map_err(error)?
+            }
+            _ => return Err(error("this backend does not accept arbitrary byte terms")),
+        };
+        match value {
+            None => lookup(false, None),
+            Some(value) => lookup(true, value),
+        }
+    }
+
     /// Three-state u64-token lookup.
     #[wasm_bindgen(js_name = getU64)]
     pub fn get_u64(&self, term: &BigUint64Array) -> Result<JsValue, JsValue> {
@@ -312,6 +436,33 @@ impl JsDictionary {
             None => lookup(false, None),
             Some(value) => lookup(true, value),
         }
+    }
+
+    /// Materialize one immutable revision as lexicographic `[key, value]`
+    /// pairs. The JavaScript protocol layer builds ordinary collection views
+    /// over this host-owned array, so early loop exit retains no native cursor.
+    #[wasm_bindgen(js_name = snapshotEntries)]
+    pub fn snapshot_entries(&self) -> Result<Array, JsValue> {
+        let entries = Array::new();
+        for entry in self.backend()?.resource().entries() {
+            let entry = entry.map_err(|status| {
+                error(format!("dictionary entry traversal failed: {status:?}"))
+            })?;
+            entries.push(&dictionary_entry_pair(entry));
+        }
+        Ok(entries)
+    }
+
+    /// Open a bounded cursor over one immutable revision. The JavaScript
+    /// protocol adapter supplies iteration and explicit resource management.
+    #[wasm_bindgen(js_name = openEntryStream)]
+    pub fn open_entry_stream(&self) -> Result<JsDictionaryEntryCursor, JsValue> {
+        let entries = self.backend()?.resource().entries();
+        let size = entries.size_hint().1.unwrap_or(0);
+        Ok(JsDictionaryEntryCursor {
+            entries: Some(entries),
+            size,
+        })
     }
 
     /// Clear a DynamicDAWG.

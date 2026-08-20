@@ -34,6 +34,33 @@ sequence might not be consumed completely. `reduce-batches` is the expert
 callback-scoped, zero-copy path. Dictionary construction and CRUD intentionally
 remain in the libdictenstein Clojure facade.
 
+The same resource has an idiomatic lexicographic entry stream and immutable
+snapshot:
+
+```clojure
+(with-open [entries (llev/dictionary-entries dictionary)]
+  (reduce (fn [result entry]
+            (if (= "café" (:key entry))
+              (reduced entry)
+              result))
+          nil
+          entries))
+
+(let [{:keys [metadata keys entries ordered-entries]}
+      (llev/dictionary-snapshot dictionary)]
+  ;; A nil map value is still present; `contains?` distinguishes absence.
+  {:revision (:snapshot-identity metadata)
+   :contains-empty? (and (contains? entries "café")
+                         (nil? (get entries "café")))
+   :native-order ordered-entries})
+```
+
+Unicode keys are strings, byte keys are vectors of unsigned octets, u64 keys
+are vectors of unsigned big integers, and mapped values are unsigned big
+integers. `dictionary-snapshot` returns `:keys`, `:entries`,
+`:ordered-entries`, and exact domain/length/identity metadata. The entry cursor
+is one-shot and reducible; reduction closes on EOF, exceptions, and `reduced`.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract

@@ -45,6 +45,8 @@ pub mod helpers;
 mod intersection;
 mod intersection_f64;
 pub mod intersection_zipper;
+#[cfg(test)]
+mod iterator_laws;
 pub mod language;
 mod match_mode;
 pub mod operation_set;

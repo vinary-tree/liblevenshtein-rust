@@ -351,6 +351,18 @@ where
             }
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+impl<N, S, P> std::iter::FusedIterator for PrefixQueryIterator<N, S, P>
+where
+    N: DictionaryNode,
+    S: SubstitutionPolicy + SubstitutionPolicyFor<N::Unit>,
+    P: PrefixPruner<N::Unit>,
+{
 }
 
 impl<N, S, P> Drop for PrefixQueryIterator<N, S, P>

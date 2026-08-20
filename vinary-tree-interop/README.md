@@ -59,6 +59,7 @@ version:
 | `vt.dictionary.v1` | 1 (`VT_DICTIONARY_INTERFACE_VERSION`) | `VtDictionaryEdge`, `VtOptionalU64` | Immutable dictionary snapshots: root/final/transition queries plus batched edge paging, over byte, Unicode-scalar, or `u64` label domains, with optional `u64` values. |
 | `vt.dict.visit.v1` | 1 (`VT_DICTIONARY_VISIT_INTERFACE_VERSION`) | `VtDictionaryEdge` | Optional fused finality and edge-page inspection for callback-based dictionary traversal. |
 | `vt.dict.graph.v1` | 1 (`VT_DICTIONARY_GRAPH_INTERFACE_VERSION`) | `VtDictionaryGraphNode`, `VtDictionaryGraphEdge`, `VtDictionaryGraphView` | Optional compact immutable snapshot graph. A consumer validates the complete borrowed view once, retains its owner, and thereafter traverses dense node/edge arrays without provider callbacks or consumer cache publication. |
+| `vt.dict.entry.v1` | 1 (`VT_DICTIONARY_ENTRIES_INTERFACE_VERSION`) | `VtDictionaryEntry`, `VtDictionaryEntryBatchLimits`, `VtDictionaryEntryBatchView`, `VtDictionaryEntriesInfo`, `VtDictionaryEntriesCursor` | Optional finite lexicographic entry stream over one immutable revision. Cursor-owned arena batches use an explicit generation lease; `reduce` provides the same bounded stream through a callback. |
 | `vt.snapshot.id.1` | 1 (`VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION`) | `VtSnapshotIdentity` | Optional process-local immutable producer/revision identity for safely sharing derived state across separately retained views of the same snapshot. |
 | `vt.scalar-wfst.1` | 1 (`VT_WFST_INTERFACE_VERSION`) | `VtWfstArc` | Immutable scalar-weighted FSTs: start/finality/arc paging with `f64` weights in one of seven declared semirings, epsilon labels encoded by flag (never by magic value), lazy and acyclic capability claims. |
 
@@ -98,6 +99,13 @@ Each mirror is layout-checked against the canonical definitions by the
 repository's binding gates (`scripts/generate-bindings.py` and
 `scripts/check-bindings.py` at the repo root).
 
+The optional entries-v1 surface is canonical in the Rust crate, C header, and
+generator-owned bundled C-header mirrors. Its generated conformance fixture
+pins status, flag, operation-order, and LP64/ARM32 layout values. Higher-level
+language adapters that do not yet expose a typed entries cursor continue to
+negotiate only the interfaces they model; entries-v1 is never inferred from a
+partial hand-written definition.
+
 ## The executable contract
 
 Three test suites in [`tests/`](tests/) are the normative documents' teeth;
@@ -130,6 +138,8 @@ CI runs them on every push (`cargo test --locked -p vinary-tree-interop`):
 ## Language adapter documentation
 
 Every published adapter uses the same retained-resource laws while mapping ownership and failures into its host language:
+
+The generated [`dictionary_entries_v1.tsv`](conformance/dictionary_entries_v1.tsv) fixture pins entries-v1 identifiers, statuses, flags, operation order, and LP64/ARM32 layouts for adapter conformance.
 
 | Language/runtime | Distribution | Guide |
 |---|---|---|

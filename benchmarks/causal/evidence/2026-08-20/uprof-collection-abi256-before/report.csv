@@ -1,0 +1,490 @@
+
+"AMD uProf (Version:5.3.521.0)"
+PERFORMANCE ANALYSIS REPORT
+
+EXECUTION
+Target Path:,"../libdictenstein/target/release/examples/collection_traversal_profile"
+Command Line Arguments:,"--arm abi-256 --entries 65536 --passes 32 "
+Working Directory:,"/home/dylon/Workspace/f1r3fly.io/liblevenshtein-rust"
+Environment Variables:
+CPU Details:,"Family(0x19), Model(0x8), Number of Cores(32)"
+Operating System:,"Linux Arch Linux-64 Kernel:7.1.6-arch1-1"
+Collect Command:,"./AMDuProfCLI collect --config hotspots --call-graph-depth 64 --affinity 3 --output-dir /tmp/liblevenshtein_collection_uprof_abi256/uprof ../libdictenstein/target/release/examples/collection_traversal_profile --arm abi-256 --entries 65536 --passes 32"
+Report Command:,"./AMDuProfCLI report --input-dir /tmp/liblevenshtein_collection_uprof_abi256/uprof --detail --show-percentage --cutoff 0 --report-output /tmp/liblevenshtein_collection_uprof_abi256/report.csv"
+
+PROFILE DETAILS
+Profile Session Type:,"Hotspots"
+Profile Scope:,"Single Application"
+CPU Mask:,"0-31"
+CPU Affinity Mask:,"3"
+Profile Start Time:,"Thu Aug 20 17:39:44 2026"
+Profile End Time:,"Thu Aug 20 17:39:58 2026"
+Profile Duration:,"13.967 seconds"
+Data Folder:,"/tmp/liblevenshtein_collection_uprof_abi256/uprof"
+Virtual Machine:,"No"
+Timer Interval:,"10ms"
+Profiling Signal:,"27"
+Call Stack Sampling:,"True"
+Call Stack Overcome frame-pointer omission:,"False"
+Call Stack Unwind Depth:,"64"
+Selected View:,"Time based hotspots"
+
+MONITORED EVENTS
+TBP Events:,Name,Interval,Description
+,"CPU_TIME","10.000 milliseconds","CPU Time is the time in which the CPU core is executing the code."
+
+
+DERIVED METRICS
+Metric Name,Expression,Description
+"TOTAL_CPU_TIME (s)","CPU_TIME","The CPU time spent by a function and its children."
+
+
+APPLICATION PERFORMANCE SNAPSHOT
+Thread Count,"1"
+
+
+"HOTTEST FUNCTIONS (Sort Event - CPU_TIME)"
+FUNCTION,"CPU_TIME","TOTAL_CPU_TIME (s)",Module
+"_RNvXsy_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB5_17TraversalSnapshotINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeNtB5_12BindingValueEENtB5_11SnapshotOps9copy_nodeB7_",76.11%,78.14%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"cfree",2.25%,2.25%,"/usr/lib/libc.so.6"
+"_RNvMs6_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhNtNtB9_8bindings12BindingValueE11minimize_toCsbp7v9MKctkE_28collection_traversal_profile",2.18%,4.66%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMs0_NtNtCs1AesoRrg2R2_14libdictenstein8bindings7entriesNtB5_16EntryCursorState4fill",2.10%,85.95%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"__libc_malloc",1.88%,1.88%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa73cc",1.35%,1.35%,"/usr/lib/libc.so.6"
+"_RNvXsy_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB5_17TraversalSnapshotINtNtNtB7_12dynamic_dawg4char19DynamicDawgCharNodeNtB5_12BindingValueEENtB5_11SnapshotOps5valueB7_",1.35%,1.35%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehyEINtNtCscdodAO9FK5_5alloc4sync3ArcINtBT_16LockFreeDawgNodehyEEEE14reserve_rehashNCINvNtB8_3map11make_hasherBQ_B27_NtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherE0ECsbp7v9MKctkE_28collection_traversal_profile",1.20%,1.28%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa7128",1.20%,1.20%,"/usr/lib/libc.so.6"
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehNtNtBX_8bindings12BindingValueEINtNtCscdodAO9FK5_5alloc4sync3ArcINtBT_16LockFreeDawgNodehB25_EEEE14reserve_rehashNCINvNtB8_3map11make_hasherBQ_B2A_NtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherE0EBX_",1.20%,1.28%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMs6_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhyE11minimize_toCsbp7v9MKctkE_28collection_traversal_profile",1.13%,3.31%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa4c71",0.98%,0.98%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa4d3e",0.60%,0.60%,"/usr/lib/libc.so.6"
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCs1AesoRrg2R2_14libdictenstein",0.53%,2.93%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"munmap",0.38%,0.38%,"/usr/lib/libc.so.6"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtCs2AWtUsOyxgP_3std11collections4hash3map7HashMapINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehNtNtB1D_8bindings12BindingValueEINtNtCscdodAO9FK5_5alloc4sync3ArcINtB1z_16LockFreeDawgNodehB2L_EENtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherEECsbp7v9MKctkE_28collection_traversal_profile",0.30%,0.90%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0x173dd1",0.30%,0.30%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa5f05",0.30%,0.30%,"/usr/lib/libc.so.6"
+"_RNvXs1_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_16LockFreeDawgNodehNtNtB9_8bindings12BindingValueENtNtNtCs4NRVxsYgnAr_4core3ops4drop4Drop4dropB9_",0.30%,0.38%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNvMs2_NtCscdodAO9FK5_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECs1AesoRrg2R2_14libdictenstein",0.30%,3.23%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa6ea6",0.30%,0.30%,"/usr/lib/libc.so.6"
+"_RNvMs_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB4_17SnapshotTraversalINtNtNtB6_12dynamic_dawg5ascii15DynamicDawgNodeyEE12native_frameCsbp7v9MKctkE_28collection_traversal_profile",0.30%,0.53%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa7147",0.30%,0.30%,"/usr/lib/libc.so.6"
+"_RNCINvMs0_NtNtCs2AWtUsOyxgP_3std4sync4onceNtB8_4Once15call_once_forceNCINvMNtBa_9once_lockINtB1b_8OnceLockINtNtCs4NRVxsYgnAr_4core6result6ResultINtNtCscdodAO9FK5_5alloc3vec3VecTyyEENtCshJBJhIGKqbU_19vinary_tree_interop8VtStatusEE10initializeNCINvB1a_11get_or_initNCNvMsx_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB4l_17TraversalSnapshotINtNtNtB4n_12dynamic_dawg5ascii15DynamicDawgNodeNtB4l_12BindingValueEE5edges0E0zE0E0B4n_",0.30%,1.95%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa6068",0.15%,0.15%,"/usr/lib/libc.so.6"
+"_RNvXs1_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_16LockFreeDawgNodehyENtNtNtCs4NRVxsYgnAr_4core3ops4drop4Drop4dropCsbp7v9MKctkE_28collection_traversal_profile",0.15%,1.28%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMs_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB4_17SnapshotTraversalINtNtNtB6_12dynamic_dawg5ascii15DynamicDawgNodeyEE13next_terminalCsbp7v9MKctkE_28collection_traversal_profile",0.15%,0.83%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile4main",0.15%,100.00%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa4c7b",0.15%,0.15%,"/usr/lib/libc.so.6"
+"_RINvMsj_NtCs1AesoRrg2R2_14libdictenstein8bindingsNtB6_18DynamicDawgBinding17insert_text_batchINtNtNtNtCs4NRVxsYgnAr_4core4iter8adapters3map3MapINtNtNtB1C_5slice4iter4IterTINtNtCscdodAO9FK5_5alloc3vec3VechEyEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEB3o_",0.15%,5.86%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa7739",0.15%,0.15%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6bcb",0.15%,0.15%,"/usr/lib/libc.so.6"
+"_RINvNtNtNtNtCs4NRVxsYgnAr_4core5slice4sort6stable5drift4sortTINtNtCscdodAO9FK5_5alloc3vec3VechEINtNtBa_6option6OptionNtNtCs1AesoRrg2R2_14libdictenstein8bindings12BindingValueEENCINvMNtB12_5sliceSBW_7sort_byNCINvMsj_B1T_NtB1T_18DynamicDawgBinding17insert_text_batchINtNtNtNtBa_4iter8adapters3map3MapINtNtB8_4iter4IterTBX_yEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEs1_0E0EB5f_",0.08%,0.08%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa6048",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa72e1",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6fcd",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa76e0",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa5f79",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa6ea2",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa76e1",0.08%,0.08%,"/usr/lib/libc.so.6"
+"brk",0.08%,0.08%,"/usr/lib/libc.so.6"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtCs1AesoRrg2R2_14libdictenstein16concurrent_slots18SparseOnceBoxSlotsINtNtBG_8bindings9ArenaNodeINtNtNtBG_12dynamic_dawg5ascii15DynamicDawgNodeNtB1P_12BindingValueEEKj100_Kj40_EEBG_",0.08%,1.65%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0xa73c8",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0x173dc4",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa630d",0.08%,0.08%,"/usr/lib/libc.so.6"
+"_RNvMs0_NtNtNtNtCs2AWtUsOyxgP_3std3sys4sync4once5futexNtB5_4Once4call",0.08%,2.03%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile13abi_traversal",0.08%,86.03%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"libc.so.6!0x174812",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa4c63",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa5fa5",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa7171",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa771d",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa4df2",0.08%,0.08%,"/usr/lib/libc.so.6"
+"libc.so.6!0xa770b",0.08%,0.08%,"/usr/lib/libc.so.6"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehNtNtBM_8bindings12BindingValueEE9drop_slowBM_",0.00%,0.38%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree17SortedDawgBuilderhNtNtBI_8bindings12BindingValueEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,0.98%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcNtNtCs1AesoRrg2R2_14libdictenstein8bindings14CachedSnapshotE9drop_slowBJ_",0.00%,1.65%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcNtNtCs1AesoRrg2R2_14libdictenstein8bindings16SharedDictionaryE9drop_slowBJ_",0.00%,1.65%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"__default_morecore",0.00%,0.08%,"/usr/lib/libc.so.6"
+"_RNvXs7_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB5_26ExactSnapshotEntryIteratorINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeyEENtNtNtNtCs4NRVxsYgnAr_4core4iter6traits8iterator8Iterator4nextCsbp7v9MKctkE_28collection_traversal_profile",0.00%,0.45%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12LockFreeDawghyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"__libc_start_main",0.00%,100.00%,"/usr/lib/libc.so.6"
+"_RNvMsg_NtCs1AesoRrg2R2_14libdictenstein16concurrent_slotsINtB5_18HybridOnceBoxSlotsINtNtB7_8bindings9ArenaNodeINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeNtB1m_12BindingValueEEKj100_Kj40_KB2Y_E29install_if_absent_with_statusB7_",0.00%,0.53%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvMNtNtCs2AWtUsOyxgP_3std4sync9once_lockINtB3_8OnceLockINtNtCs4NRVxsYgnAr_4core6result6ResultINtNtCscdodAO9FK5_5alloc3vec3VecTyyEENtCshJBJhIGKqbU_19vinary_tree_interop8VtStatusEE10initializeNCINvB2_11get_or_initNCNvMsx_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB3x_17TraversalSnapshotINtNtNtB3z_12dynamic_dawg5ascii15DynamicDawgNodeNtB3x_12BindingValueEE5edges0E0zEB3z_",0.00%,2.03%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcDINtNtNtCs4NRVxsYgnAr_4core3ops8function2FnuEp6OutputINtNtB7_5boxed3BoxDNtNtNtNtBN_4iter6traits8iterator8Iteratorp4ItemTINtNtB7_3vec3VecyEINtNtBN_6option6OptionyEENtNtBN_6marker4SendEL_EB3i_NtB3k_4SyncEL_E9drop_slowCs1AesoRrg2R2_14libdictenstein",0.00%,1.65%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehNtNtBI_8bindings12BindingValueEEBI_",0.00%,0.15%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtNtCs2AWtUsOyxgP_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsbp7v9MKctkE_28collection_traversal_profile",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"main",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_start",0.00%,100.00%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12GraphVersionhyEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvNtNtCs1AesoRrg2R2_14libdictenstein8bindings7entries10next_batch",0.00%,85.95%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile14direct_visitor",0.00%,0.38%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtCs1AesoRrg2R2_14libdictenstein8bindings17TraversalSnapshotINtNtNtBG_12dynamic_dawg5ascii15DynamicDawgNodeNtBE_12BindingValueEEEBG_",0.00%,1.65%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtNtNtCs4NRVxsYgnAr_4core5slice4sort6stable14driftsort_mainTINtNtCscdodAO9FK5_5alloc3vec3VechEINtNtB8_6option6OptionNtNtCs1AesoRrg2R2_14libdictenstein8bindings12BindingValueEENCINvMNtB15_5sliceSBZ_7sort_byNCINvMsj_B1W_NtB1W_18DynamicDawgBinding17insert_text_batchINtNtNtNtB8_4iter8adapters3map3MapINtNtB6_4iter4IterTB10_yEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEs1_0E0IB11_BZ_EEB5j_",0.00%,0.08%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12LockFreeDawghyEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree17SortedDawgBuilderhyEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,0.75%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12GraphVersionhyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtCs2AWtUsOyxgP_3std11collections4hash3map7HashMapINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehyEINtNtCscdodAO9FK5_5alloc4sync3ArcINtB1z_16LockFreeDawgNodehyEENtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,0.68%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile12direct_owned",0.00%,0.45%,"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile"
+"sbrk",0.00%,0.08%,"/usr/lib/libc.so.6"
+
+"HOTTEST PROCESSES (Sort Event - CPU_TIME)"
+PROCESS,"CPU_TIME"
+"collection_trav (PID:17148)",100.00%
+
+"HOTTEST MODULES (Sort Event - CPU_TIME)"
+MODULE,"CPU_TIME"
+"/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile",88.20%
+"/usr/lib/libc.so.6",11.80%
+
+"HOTTEST THREADS (Sort Event - CPU_TIME)"
+THREAD,"CPU_TIME",THREAD ID
+"collection_trav (PID:17148)",100.00%,"17148"
+
+"ALL PROCESSES (Sort Event - CPU_TIME)"
+PROCESS,"CPU_TIME"
+"collection_trav (PID:17148)",100.00%
+
+
+PROFILE REPORT FOR PROCESS - collection_trav (PID:17148)
+PROCESS,"CPU_TIME"
+"collection_trav (PID:17148)",100.00%
+
+THREAD SUMMARY
+THREAD,"CPU_TIME",THREAD ID
+"collection_trav (PID:17148)",100.00%,"17148"
+
+
+MODULE SUMMARY
+MODULE,"CPU_TIME"
+/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile,88.20%
+/usr/lib/libc.so.6,11.80%
+
+
+FUNCTION SUMMARY
+FUNCTION,"CPU_TIME","TOTAL_CPU_TIME (s)",MODULE
+"_RNvXsy_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB5_17TraversalSnapshotINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeNtB5_12BindingValueEENtB5_11SnapshotOps9copy_nodeB7_",76.11%,78.14%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"cfree",2.25%,2.25%,/usr/lib/libc.so.6
+"_RNvMs6_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhNtNtB9_8bindings12BindingValueE11minimize_toCsbp7v9MKctkE_28collection_traversal_profile",2.18%,4.66%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMs0_NtNtCs1AesoRrg2R2_14libdictenstein8bindings7entriesNtB5_16EntryCursorState4fill",2.10%,85.95%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"__libc_malloc",1.88%,1.88%,/usr/lib/libc.so.6
+"libc.so.6!0xa73cc",1.35%,1.35%,/usr/lib/libc.so.6
+"_RNvXsy_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB5_17TraversalSnapshotINtNtNtB7_12dynamic_dawg4char19DynamicDawgCharNodeNtB5_12BindingValueEENtB5_11SnapshotOps5valueB7_",1.35%,1.35%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0xa7128",1.20%,1.20%,/usr/lib/libc.so.6
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehyEINtNtCscdodAO9FK5_5alloc4sync3ArcINtBT_16LockFreeDawgNodehyEEEE14reserve_rehashNCINvNtB8_3map11make_hasherBQ_B27_NtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherE0ECsbp7v9MKctkE_28collection_traversal_profile",1.20%,1.28%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehNtNtBX_8bindings12BindingValueEINtNtCscdodAO9FK5_5alloc4sync3ArcINtBT_16LockFreeDawgNodehB25_EEEE14reserve_rehashNCINvNtB8_3map11make_hasherBQ_B2A_NtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherE0EBX_",1.20%,1.28%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMs6_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhyE11minimize_toCsbp7v9MKctkE_28collection_traversal_profile",1.13%,3.31%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0xa4c71",0.98%,0.98%,/usr/lib/libc.so.6
+"libc.so.6!0xa4d3e",0.60%,0.60%,/usr/lib/libc.so.6
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCs1AesoRrg2R2_14libdictenstein",0.53%,2.93%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"munmap",0.38%,0.38%,/usr/lib/libc.so.6
+"libc.so.6!0xa7147",0.30%,0.30%,/usr/lib/libc.so.6
+"_RINvNvMs2_NtCscdodAO9FK5_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECs1AesoRrg2R2_14libdictenstein",0.30%,3.23%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0x173dd1",0.30%,0.30%,/usr/lib/libc.so.6
+"libc.so.6!0xa5f05",0.30%,0.30%,/usr/lib/libc.so.6
+"_RNvXs1_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_16LockFreeDawgNodehNtNtB9_8bindings12BindingValueENtNtNtCs4NRVxsYgnAr_4core3ops4drop4Drop4dropB9_",0.30%,0.38%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0xa6ea6",0.30%,0.30%,/usr/lib/libc.so.6
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtCs2AWtUsOyxgP_3std11collections4hash3map7HashMapINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehNtNtB1D_8bindings12BindingValueEINtNtCscdodAO9FK5_5alloc4sync3ArcINtB1z_16LockFreeDawgNodehB2L_EENtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherEECsbp7v9MKctkE_28collection_traversal_profile",0.30%,0.90%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNCINvMs0_NtNtCs2AWtUsOyxgP_3std4sync4onceNtB8_4Once15call_once_forceNCINvMNtBa_9once_lockINtB1b_8OnceLockINtNtCs4NRVxsYgnAr_4core6result6ResultINtNtCscdodAO9FK5_5alloc3vec3VecTyyEENtCshJBJhIGKqbU_19vinary_tree_interop8VtStatusEE10initializeNCINvB1a_11get_or_initNCNvMsx_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB4l_17TraversalSnapshotINtNtNtB4n_12dynamic_dawg5ascii15DynamicDawgNodeNtB4l_12BindingValueEE5edges0E0zE0E0B4n_",0.30%,1.95%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMs_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB4_17SnapshotTraversalINtNtNtB6_12dynamic_dawg5ascii15DynamicDawgNodeyEE12native_frameCsbp7v9MKctkE_28collection_traversal_profile",0.30%,0.53%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMs_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB4_17SnapshotTraversalINtNtNtB6_12dynamic_dawg5ascii15DynamicDawgNodeyEE13next_terminalCsbp7v9MKctkE_28collection_traversal_profile",0.15%,0.83%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile4main",0.15%,100.00%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0xa4c7b",0.15%,0.15%,/usr/lib/libc.so.6
+"_RINvMsj_NtCs1AesoRrg2R2_14libdictenstein8bindingsNtB6_18DynamicDawgBinding17insert_text_batchINtNtNtNtCs4NRVxsYgnAr_4core4iter8adapters3map3MapINtNtNtB1C_5slice4iter4IterTINtNtCscdodAO9FK5_5alloc3vec3VechEyEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEB3o_",0.15%,5.86%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvXs1_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_16LockFreeDawgNodehyENtNtNtCs4NRVxsYgnAr_4core3ops4drop4Drop4dropCsbp7v9MKctkE_28collection_traversal_profile",0.15%,1.28%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0xa7739",0.15%,0.15%,/usr/lib/libc.so.6
+"libc.so.6!0xa6bcb",0.15%,0.15%,/usr/lib/libc.so.6
+"libc.so.6!0xa6068",0.15%,0.15%,/usr/lib/libc.so.6
+"libc.so.6!0xa6fcd",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0x174812",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa771d",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa76e0",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa5f79",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa76e1",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa6ea2",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa72e1",0.08%,0.08%,/usr/lib/libc.so.6
+"brk",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa4c63",0.08%,0.08%,/usr/lib/libc.so.6
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtCs1AesoRrg2R2_14libdictenstein16concurrent_slots18SparseOnceBoxSlotsINtNtBG_8bindings9ArenaNodeINtNtNtBG_12dynamic_dawg5ascii15DynamicDawgNodeNtB1P_12BindingValueEEKj100_Kj40_EEBG_",0.08%,1.65%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0xa4df2",0.08%,0.08%,/usr/lib/libc.so.6
+"_RINvNtNtNtNtCs4NRVxsYgnAr_4core5slice4sort6stable5drift4sortTINtNtCscdodAO9FK5_5alloc3vec3VechEINtNtBa_6option6OptionNtNtCs1AesoRrg2R2_14libdictenstein8bindings12BindingValueEENCINvMNtB12_5sliceSBW_7sort_byNCINvMsj_B1T_NtB1T_18DynamicDawgBinding17insert_text_batchINtNtNtNtBa_4iter8adapters3map3MapINtNtB8_4iter4IterTBX_yEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEs1_0E0EB5f_",0.08%,0.08%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0xa770b",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa5fa5",0.08%,0.08%,/usr/lib/libc.so.6
+"_RNvMs0_NtNtNtNtCs2AWtUsOyxgP_3std3sys4sync4once5futexNtB5_4Once4call",0.08%,2.03%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile13abi_traversal",0.08%,86.03%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"libc.so.6!0xa73c8",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0x173dc4",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa630d",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa6048",0.08%,0.08%,/usr/lib/libc.so.6
+"libc.so.6!0xa7171",0.08%,0.08%,/usr/lib/libc.so.6
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile12direct_owned",0.00%,0.45%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"__default_morecore",0.00%,0.08%,/usr/lib/libc.so.6
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12GraphVersionhyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtCs2AWtUsOyxgP_3std11collections4hash3map7HashMapINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehyEINtNtCscdodAO9FK5_5alloc4sync3ArcINtB1z_16LockFreeDawgNodehyEENtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,0.68%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvXs7_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB5_26ExactSnapshotEntryIteratorINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeyEENtNtNtNtCs4NRVxsYgnAr_4core4iter6traits8iterator8Iterator4nextCsbp7v9MKctkE_28collection_traversal_profile",0.00%,0.45%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtNtCs2AWtUsOyxgP_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsbp7v9MKctkE_28collection_traversal_profile",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree17SortedDawgBuilderhNtNtBI_8bindings12BindingValueEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,0.98%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMsg_NtCs1AesoRrg2R2_14libdictenstein16concurrent_slotsINtB5_18HybridOnceBoxSlotsINtNtB7_8bindings9ArenaNodeINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeNtB1m_12BindingValueEEKj100_Kj40_KB2Y_E29install_if_absent_with_statusB7_",0.00%,0.53%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12LockFreeDawghyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtNtNtCs4NRVxsYgnAr_4core5slice4sort6stable14driftsort_mainTINtNtCscdodAO9FK5_5alloc3vec3VechEINtNtB8_6option6OptionNtNtCs1AesoRrg2R2_14libdictenstein8bindings12BindingValueEENCINvMNtB15_5sliceSBZ_7sort_byNCINvMsj_B1W_NtB1W_18DynamicDawgBinding17insert_text_batchINtNtNtNtB8_4iter8adapters3map3MapINtNtB6_4iter4IterTB10_yEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEs1_0E0IB11_BZ_EEB5j_",0.00%,0.08%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"sbrk",0.00%,0.08%,/usr/lib/libc.so.6
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcNtNtCs1AesoRrg2R2_14libdictenstein8bindings14CachedSnapshotE9drop_slowBJ_",0.00%,1.65%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcNtNtCs1AesoRrg2R2_14libdictenstein8bindings16SharedDictionaryE9drop_slowBJ_",0.00%,1.65%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"__libc_start_main",0.00%,100.00%,/usr/lib/libc.so.6
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehNtNtBM_8bindings12BindingValueEE9drop_slowBM_",0.00%,0.38%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehNtNtBI_8bindings12BindingValueEEBI_",0.00%,0.15%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcDINtNtNtCs4NRVxsYgnAr_4core3ops8function2FnuEp6OutputINtNtB7_5boxed3BoxDNtNtNtNtBN_4iter6traits8iterator8Iteratorp4ItemTINtNtB7_3vec3VecyEINtNtBN_6option6OptionyEENtNtBN_6marker4SendEL_EB3i_NtB3k_4SyncEL_E9drop_slowCs1AesoRrg2R2_14libdictenstein",0.00%,1.65%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"main",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_start",0.00%,100.00%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile14direct_visitor",0.00%,0.38%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvNtNtCs1AesoRrg2R2_14libdictenstein8bindings7entries10next_batch",0.00%,85.95%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12GraphVersionhyEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvMNtNtCs2AWtUsOyxgP_3std4sync9once_lockINtB3_8OnceLockINtNtCs4NRVxsYgnAr_4core6result6ResultINtNtCscdodAO9FK5_5alloc3vec3VecTyyEENtCshJBJhIGKqbU_19vinary_tree_interop8VtStatusEE10initializeNCINvB2_11get_or_initNCNvMsx_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB3x_17TraversalSnapshotINtNtNtB3z_12dynamic_dawg5ascii15DynamicDawgNodeNtB3x_12BindingValueEE5edges0E0zEB3z_",0.00%,2.03%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12LockFreeDawghyEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,1.28%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtCs1AesoRrg2R2_14libdictenstein8bindings17TraversalSnapshotINtNtNtBG_12dynamic_dawg5ascii15DynamicDawgNodeNtBE_12BindingValueEEEBG_",0.00%,1.65%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree17SortedDawgBuilderhyEECsbp7v9MKctkE_28collection_traversal_profile",0.00%,0.75%,/home/dylon/Workspace/f1r3fly.io/libdictenstein/target/release/examples/collection_traversal_profile
+
+Function Detail Data
+Function,"CPU_TIME"
+"_RNvXsy_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB5_17TraversalSnapshotINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeNtB5_12BindingValueEENtB5_11SnapshotOps9copy_nodeB7_" (DEBUG INFO NOT FOUND),76.11%
+
+Function,"CPU_TIME"
+"cfree" (SYSTEM MODULE FUNCTION),2.25%
+
+Function,"CPU_TIME"
+"_RNvMs6_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhNtNtB9_8bindings12BindingValueE11minimize_toCsbp7v9MKctkE_28collection_traversal_profile" (DEBUG INFO NOT FOUND),2.18%
+
+Function,"CPU_TIME"
+"_RNvMs0_NtNtCs1AesoRrg2R2_14libdictenstein8bindings7entriesNtB5_16EntryCursorState4fill" (DEBUG INFO NOT FOUND),2.10%
+
+Function,"CPU_TIME"
+"__libc_malloc" (SYSTEM MODULE FUNCTION),1.88%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa73cc" (SYSTEM MODULE FUNCTION),1.35%
+
+Function,"CPU_TIME"
+"_RNvXsy_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB5_17TraversalSnapshotINtNtNtB7_12dynamic_dawg4char19DynamicDawgCharNodeNtB5_12BindingValueEENtB5_11SnapshotOps5valueB7_" (DEBUG INFO NOT FOUND),1.35%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa7128" (SYSTEM MODULE FUNCTION),1.20%
+
+Function,"CPU_TIME"
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehyEINtNtCscdodAO9FK5_5alloc4sync3ArcINtBT_16LockFreeDawgNodehyEEEE14reserve_rehashNCINvNtB8_3map11make_hasherBQ_B27_NtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherE0ECsbp7v9MKctkE_28collection_traversal_profile" (DEBUG INFO NOT FOUND),1.20%
+
+Function,"CPU_TIME"
+"_RINvMs6_NtCsgQfI1edjipl_9hashbrown3rawINtB6_8RawTableTINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehNtNtBX_8bindings12BindingValueEINtNtCscdodAO9FK5_5alloc4sync3ArcINtBT_16LockFreeDawgNodehB25_EEEE14reserve_rehashNCINvNtB8_3map11make_hasherBQ_B2A_NtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherE0EBX_" (DEBUG INFO NOT FOUND),1.20%
+
+Function,"CPU_TIME"
+"_RNvMs6_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_17SortedDawgBuilderhyE11minimize_toCsbp7v9MKctkE_28collection_traversal_profile" (DEBUG INFO NOT FOUND),1.13%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa4c71" (SYSTEM MODULE FUNCTION),0.98%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa4d3e" (SYSTEM MODULE FUNCTION),0.60%
+
+Function,"CPU_TIME"
+"_RNvMs4_NtCscdodAO9FK5_5alloc7raw_vecNtB5_11RawVecInner11finish_growCs1AesoRrg2R2_14libdictenstein" (DEBUG INFO NOT FOUND),0.53%
+
+Function,"CPU_TIME"
+"munmap" (SYSTEM MODULE FUNCTION),0.38%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa7147" (SYSTEM MODULE FUNCTION),0.30%
+
+Function,"CPU_TIME"
+"_RINvNvMs2_NtCscdodAO9FK5_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECs1AesoRrg2R2_14libdictenstein" (DEBUG INFO NOT FOUND),0.30%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173dd1" (SYSTEM MODULE FUNCTION),0.30%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa5f05" (SYSTEM MODULE FUNCTION),0.30%
+
+Function,"CPU_TIME"
+"_RNvXs1_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_16LockFreeDawgNodehNtNtB9_8bindings12BindingValueENtNtNtCs4NRVxsYgnAr_4core3ops4drop4Drop4dropB9_" (DEBUG INFO NOT FOUND),0.30%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6ea6" (SYSTEM MODULE FUNCTION),0.30%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtCs2AWtUsOyxgP_3std11collections4hash3map7HashMapINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehNtNtB1D_8bindings12BindingValueEINtNtCscdodAO9FK5_5alloc4sync3ArcINtB1z_16LockFreeDawgNodehB2L_EENtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherEECsbp7v9MKctkE_28collection_traversal_profile" (DEBUG INFO NOT FOUND),0.30%
+
+Function,"CPU_TIME"
+"_RNCINvMs0_NtNtCs2AWtUsOyxgP_3std4sync4onceNtB8_4Once15call_once_forceNCINvMNtBa_9once_lockINtB1b_8OnceLockINtNtCs4NRVxsYgnAr_4core6result6ResultINtNtCscdodAO9FK5_5alloc3vec3VecTyyEENtCshJBJhIGKqbU_19vinary_tree_interop8VtStatusEE10initializeNCINvB1a_11get_or_initNCNvMsx_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB4l_17TraversalSnapshotINtNtNtB4n_12dynamic_dawg5ascii15DynamicDawgNodeNtB4l_12BindingValueEE5edges0E0zE0E0B4n_" (DEBUG INFO NOT FOUND),0.30%
+
+Function,"CPU_TIME"
+"_RNvMs_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB4_17SnapshotTraversalINtNtNtB6_12dynamic_dawg5ascii15DynamicDawgNodeyEE12native_frameCsbp7v9MKctkE_28collection_traversal_profile" (DEBUG INFO NOT FOUND),0.30%
+
+Function,"CPU_TIME"
+"_RNvMs_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB4_17SnapshotTraversalINtNtNtB6_12dynamic_dawg5ascii15DynamicDawgNodeyEE13next_terminalCsbp7v9MKctkE_28collection_traversal_profile" (DEBUG INFO NOT FOUND),0.15%
+
+Function,"CPU_TIME"
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile4main" (DEBUG INFO NOT FOUND),0.15%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa4c7b" (SYSTEM MODULE FUNCTION),0.15%
+
+Function,"CPU_TIME"
+"_RINvMsj_NtCs1AesoRrg2R2_14libdictenstein8bindingsNtB6_18DynamicDawgBinding17insert_text_batchINtNtNtNtCs4NRVxsYgnAr_4core4iter8adapters3map3MapINtNtNtB1C_5slice4iter4IterTINtNtCscdodAO9FK5_5alloc3vec3VechEyEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEB3o_" (DEBUG INFO NOT FOUND),0.15%
+
+Function,"CPU_TIME"
+"_RNvXs1_NtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfreeINtB5_16LockFreeDawgNodehyENtNtNtCs4NRVxsYgnAr_4core3ops4drop4Drop4dropCsbp7v9MKctkE_28collection_traversal_profile" (DEBUG INFO NOT FOUND),0.15%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa7739" (SYSTEM MODULE FUNCTION),0.15%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6bcb" (SYSTEM MODULE FUNCTION),0.15%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6068" (SYSTEM MODULE FUNCTION),0.15%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6fcd" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0x174812" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa771d" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa76e0" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa5f79" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa76e1" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6ea2" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa72e1" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"brk" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa4c63" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtCs1AesoRrg2R2_14libdictenstein16concurrent_slots18SparseOnceBoxSlotsINtNtBG_8bindings9ArenaNodeINtNtNtBG_12dynamic_dawg5ascii15DynamicDawgNodeNtB1P_12BindingValueEEKj100_Kj40_EEBG_" (DEBUG INFO NOT FOUND),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa4df2" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"_RINvNtNtNtNtCs4NRVxsYgnAr_4core5slice4sort6stable5drift4sortTINtNtCscdodAO9FK5_5alloc3vec3VechEINtNtBa_6option6OptionNtNtCs1AesoRrg2R2_14libdictenstein8bindings12BindingValueEENCINvMNtB12_5sliceSBW_7sort_byNCINvMsj_B1T_NtB1T_18DynamicDawgBinding17insert_text_batchINtNtNtNtBa_4iter8adapters3map3MapINtNtB8_4iter4IterTBX_yEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEs1_0E0EB5f_" (DEBUG INFO NOT FOUND),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa770b" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa5fa5" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"_RNvMs0_NtNtNtNtCs2AWtUsOyxgP_3std3sys4sync4once5futexNtB5_4Once4call" (DEBUG INFO NOT FOUND),0.08%
+
+Function,"CPU_TIME"
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile13abi_traversal" (DEBUG INFO NOT FOUND),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa73c8" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0x173dc4" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa630d" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa6048" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"libc.so.6!0xa7171" (SYSTEM MODULE FUNCTION),0.08%
+
+Function,"CPU_TIME"
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile12direct_owned" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"__default_morecore" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12GraphVersionhyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtNtCs2AWtUsOyxgP_3std11collections4hash3map7HashMapINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree14MergeSignaturehyEINtNtCscdodAO9FK5_5alloc4sync3ArcINtB1z_16LockFreeDawgNodehyEENtCs4tzvRFuyV6u_10rustc_hash13FxBuildHasherEECsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvXs7_NtCs1AesoRrg2R2_14libdictenstein10collectionINtB5_26ExactSnapshotEntryIteratorINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeyEENtNtNtNtCs4NRVxsYgnAr_4core4iter6traits8iterator8Iterator4nextCsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtNtCs2AWtUsOyxgP_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree17SortedDawgBuilderhNtNtBI_8bindings12BindingValueEECsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMsg_NtCs1AesoRrg2R2_14libdictenstein16concurrent_slotsINtB5_18HybridOnceBoxSlotsINtNtB7_8bindings9ArenaNodeINtNtNtB7_12dynamic_dawg5ascii15DynamicDawgNodeNtB1m_12BindingValueEEKj100_Kj40_KB2Y_E29install_if_absent_with_statusB7_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12LockFreeDawghyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtNtNtCs4NRVxsYgnAr_4core5slice4sort6stable14driftsort_mainTINtNtCscdodAO9FK5_5alloc3vec3VechEINtNtB8_6option6OptionNtNtCs1AesoRrg2R2_14libdictenstein8bindings12BindingValueEENCINvMNtB15_5sliceSBZ_7sort_byNCINvMsj_B1W_NtB1W_18DynamicDawgBinding17insert_text_batchINtNtNtNtB8_4iter8adapters3map3MapINtNtB6_4iter4IterTB10_yEENCNvCsbp7v9MKctkE_28collection_traversal_profile4mains_0EEs1_0E0IB11_BZ_EEB5j_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"sbrk" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcNtNtCs1AesoRrg2R2_14libdictenstein8bindings14CachedSnapshotE9drop_slowBJ_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcNtNtCs1AesoRrg2R2_14libdictenstein8bindings16SharedDictionaryE9drop_slowBJ_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"__libc_start_main" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehNtNtBM_8bindings12BindingValueEE9drop_slowBM_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehNtNtBI_8bindings12BindingValueEEBI_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcDINtNtNtCs4NRVxsYgnAr_4core3ops8function2FnuEp6OutputINtNtB7_5boxed3BoxDNtNtNtNtBN_4iter6traits8iterator8Iteratorp4ItemTINtNtB7_3vec3VecyEINtNtBN_6option6OptionyEENtNtBN_6marker4SendEL_EB3i_NtB3k_4SyncEL_E9drop_slowCs1AesoRrg2R2_14libdictenstein" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"main" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_start" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvCsbp7v9MKctkE_28collection_traversal_profile14direct_visitor" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvNtNtCs1AesoRrg2R2_14libdictenstein8bindings7entries10next_batch" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RNvMsn_NtCscdodAO9FK5_5alloc4syncINtB5_3ArcINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree16LockFreeDawgNodehyEE9drop_slowCsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12GraphVersionhyEECsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvMNtNtCs2AWtUsOyxgP_3std4sync9once_lockINtB3_8OnceLockINtNtCs4NRVxsYgnAr_4core6result6ResultINtNtCscdodAO9FK5_5alloc3vec3VecTyyEENtCshJBJhIGKqbU_19vinary_tree_interop8VtStatusEE10initializeNCINvB2_11get_or_initNCNvMsx_NtCs1AesoRrg2R2_14libdictenstein8bindingsINtB3x_17TraversalSnapshotINtNtNtB3z_12dynamic_dawg5ascii15DynamicDawgNodeNtB3x_12BindingValueEE5edges0E0zEB3z_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree12LockFreeDawghyEECsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtCs1AesoRrg2R2_14libdictenstein8bindings17TraversalSnapshotINtNtNtBG_12dynamic_dawg5ascii15DynamicDawgNodeNtBE_12BindingValueEEEBG_" (BINARY FILE NOT FOUND),0.00%
+
+Function,"CPU_TIME"
+"_RINvNtCs4NRVxsYgnAr_4core3ptr9drop_glueINtNtNtCs1AesoRrg2R2_14libdictenstein12dynamic_dawg8lockfree17SortedDawgBuilderhyEECsbp7v9MKctkE_28collection_traversal_profile" (BINARY FILE NOT FOUND),0.00%
+

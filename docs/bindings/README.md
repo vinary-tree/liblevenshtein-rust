@@ -40,10 +40,10 @@ resource consumer, the cursor laws, and the JS/WASM topology.
 
 | Artifact | Role |
 |---|---|
-| [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order enums, the 36 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical snapshot fixture. `scripts/generate-bindings.py` emits the headers/constants; `--check` pins them in CI. |
+| [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order enums, the 36 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical query snapshot fixture, and entries-v1 identity/status/flag/operation/layout pins. `scripts/generate-bindings.py` emits the headers, constants, and fixtures; `--check` pins them in CI. |
 | [`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) | The per-facade completeness model driving the coverage matrix. |
-| [`bindings/conformance/`](../../bindings/conformance) | Generated conformance fixtures (query-start snapshot TSV, completeness matrix) every language suite replays. |
-| [`scripts/check-bindings.py`](../../scripts/check-bindings.py) | The contract gate: symbol parity model ↔ Rust ↔ header, forbidden retired APIs, umbrella identity guard, coordinates, feature-alias policy. |
+| [`bindings/conformance/`](../../bindings/conformance) | Generated conformance fixtures: the query-start snapshot oracle, entries-v1 constants and LP64/ARM32 layouts, and the facade completeness matrix. |
+| [`scripts/check-bindings.py`](../../scripts/check-bindings.py) | The contract gate: symbol parity model ↔ Rust ↔ header, entries-v1 metadata/header/mirror/fixture agreement, forbidden retired APIs, umbrella identity guard, coordinates, feature-alias policy. |
 | [`scripts/generate-binding-guides.py`](../../scripts/generate-binding-guides.py) | Idempotently renders the shared operational contract in every project and interop package guide while preserving its hand-written tutorial. |
 | [`scripts/check-binding-docs.py`](../../scripts/check-binding-docs.py) | Fails closed on an undocumented declared language, missing required topic, stale generated section, absent executable example, untagged code fence, placeholder, or broken local link. |
 | [`docs/verification/ABI_INVARIANTS.tsv`](../verification/ABI_INVARIANTS.tsv) | The canonical invariant registry (VT-LIFE, VT-QI, VT-GATE, VT-ABI, and the wave-W3 rows as they land) tying each law to its model, test, and gate. |

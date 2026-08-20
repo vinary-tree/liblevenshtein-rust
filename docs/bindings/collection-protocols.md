@@ -1,9 +1,10 @@
 # Collection-protocol parity and native Rust idioms
 
-Status: **approved design and implementation roadmap; the protocol adapters in
-this document are not all shipped yet.** The per-language guides describe the
-current API. This document defines the target, the performance model, and the
-gates that must be satisfied before a guide may claim collection support.
+Status: **implemented collection contract and rollout specification.** The
+per-language guides are generated from the shipped public APIs and identify
+their executable conformance/benchmark entry points. This document explains
+the shared semantics, performance model, and evidence gates behind those
+language-native surfaces.
 
 The goal is broader than making a dictionary iterable. A Vinary dictionary may
 store byte strings, Unicode scalar sequences, or `u64` sequences; a final key
@@ -48,74 +49,66 @@ ecosystem even when that means the facades are intentionally not isomorphic.
 
 ![A single native snapshot traversal feeds optimized Rust iterators, a batched optional ABI, and leak-safe host collection adapters.](../diagrams/bindings/collection-view-snapshot-flow.svg)
 
-## Confirmed current gaps
+## Shipped surface matrix
 
-The existing Rust producer already has useful `iter*` methods and several
-borrowed `IntoIterator` implementations, but the surface is not uniform across
-all automata. Some persistent byte and character iterators collect the complete
-result before yielding, only selected types implement `FromIterator`, and the
-generic iterator types do not yet advertise all sound standard traits and size
-hints. `liblevenshtein` query result types implement `Iterator`, but collection
-construction and traversal belong primarily to `libdictenstein`.
+The shared implementation is intentionally asymmetric: Rust keeps a
+monomorphic traversal and borrowed visitor, while foreign facades consume the
+versioned batch ABI and translate into their standard protocols. Ordinary
+views own host data; large-dictionary streams own a closeable native snapshot.
 
-The current foreign facades expose resource ownership and lookup operations,
-not complete collection protocols:
-
-| Surface | Shipped idiom | Collection-parity gap |
+| Surface | Shipped idiom | Deterministic lifetime |
 |---|---|---|
-| Rust producer | Backend-specific `iter*`; borrowed `IntoIterator` on selected in-memory types; limited `FromIterator` | Uniform borrowed/snapshot/owned iteration, `Extend`/fallible construction, iterator metadata, all automata and unit domains |
-| Rust consumer | Lazy query iterators and reducers | Consistent `FusedIterator`, truthful `size_hint`, borrowed/owned result forms, collection conversion documentation |
-| Java/Kotlin/Scala | `AutoCloseable`; try-with-resources, `use`, and `Using` | No `Set`, `Map`, `Iterable`, `Iterator`, `Spliterator`, or stream view |
-| Clojure | Explicit resource facade | No reducible/sequence abstraction with bounded native lifetime |
-| .NET | `IDisposable` | No `IReadOnlySet`, `IReadOnlyDictionary`, `IEnumerable`, or async/cancellable stream |
-| Python | `len`, membership, lookup, context manager | No `collections.abc.Set`/`Mapping` view or iterator |
-| JavaScript/TypeScript | Disposable resource facade | No iterable/async-iterable collection view |
-| Ruby | Closeable object | No `Enumerable` entry/key traversal |
-| C++ | RAII wrapper | No standard range/view surface |
-| Go | Explicit `Close` | No idiomatic iterator sequence or range helper |
-| Swift | Explicit lifecycle wrapper | No `Sequence`/iterator view |
-| Fortran, OCaml, Haskell, Lua | Explicit facade functions | No language-idiomatic fold/sequence/table traversal |
+| Rust producer | `DictionaryEntries` plus `terms`/`keys`/`values`, borrowed folds, exact/fused snapshot iterators, owning `IntoIterator`, lazy zipper set algebra, optimized in-memory `FromIterator`/`Extend`, and explicit persistent `try_*` builders | Iterator/root owns one immutable revision; no lock spans user code |
+| Rust consumer | Fused lazy query adapters, reducers, and query-start roots—including multi-piece WallBreaker traversal | Drop cancels bounded state; every piece sees one retained revision |
+| C / C++ | Bounded generation-leased cursor and reducer; move-only C++20 input range | Explicit release/free in C; RAII range teardown in C++ |
+| Java/Kotlin/Scala | Immutable ordered `Set`/`Map` snapshot, `Iterable`, `Spliterator`, sequential `Stream`, Kotlin collection/use, Scala collection/`Using` | Java try-with-resources; Kotlin `use`; Scala `Using.resource` |
+| Clojure | Reducible/sequence adapters over the JVM facade | `with-open` and reducer-owned batches |
+| .NET | `IReadOnlyCollection`, `IReadOnlySet`, `IReadOnlyDictionary`, `IEnumerable`, closeable stream/enumerator | `IDisposable` and `using` |
+| Python | `collections.abc.Set`/`Mapping` snapshots and context-managed stream | `with`/`close`; host-owned ordinary iterators |
+| JavaScript/TypeScript/ClojureScript | `Map`-style operations, `[Symbol.iterator]`, keys/values/entries/forEach, explicit disposable stream on native, browser-WASM, and WASI paths | `using` where supported; otherwise `try/finally` |
+| Go | Host snapshots, `iter.Seq`/`Seq2`, and explicit `Next`/`Cancel`/`Close` stream | Range helpers close after EOF, early `break`, or panic; direct callers `defer Close` |
+| Swift | Host-owned `RandomAccessCollection` snapshot and throwing closeable stream | Explicit `close`/`cancel`, lexical `defer`, `deinit` fallback |
+| Ruby | `Enumerable#each`, no-block `Enumerator`, entries/keys/values, closeable stream | `ensure` closes after EOF, `break`, or exception |
+| Fortran | Counted copied batches and callback/fold procedures | Explicit derived-handle close/final fallback |
+| OCaml | Typed entries, `Seq`, protected fold, finalizable custom cursor | `Fun.protect`/scoped sequence; finalizer fallback |
+| Haskell | Bracketed stream/fold and materialized `Foldable` snapshot | `bracket` with asynchronous-exception masking |
+| Lua | `pairs`-style iteration/materialization and closeable stream | Lua 5.4 to-be-closed values or explicit `:close()` |
 
-This table is a gap inventory, not a promise that every mutable host interface
-is semantically valid. For example, Java `Map.put` cannot represent every
-backend's persistence error contract, so mutable mapping is an explicit adapter
-with documented exceptions rather than an unsafe claim that every dictionary is
-a general-purpose `Map`.
+This matrix does not claim that every mutable host interface is semantically
+valid. Java `Map.put`, for example, cannot express every persistent backend's
+I/O/atomicity contract. Mutable dictionary operations therefore remain explicit
+facade methods, while standard collection protocols describe immutable
+revision views.
 
 ## Native Rust baseline
 
 ### Generic capability traits
 
-Add narrow traits in `libdictenstein` and implement them through shared zipper,
+The narrow traits in `libdictenstein` are implemented through shared zipper,
 snapshot-root, and compact-graph machinery:
 
 ```rust,ignore
-pub trait DictionaryEntries: Dictionary {
-    type EntryValue: DictionaryValue;
-    type Entries<'a>: Iterator<
-            Item = DictionaryEntry<
-                <Self::Node as DictionaryNode>::Unit,
-                Self::EntryValue,
-            >,
-        >
-        + FusedIterator
-    where
-        Self: 'a;
+pub trait DictionaryEntries {
+    type Unit: CharUnit;
+    type Value: DictionaryValue;
+    type Entries: Iterator<Item = DictionaryEntry<Self::Unit, Self::Value>>
+        + FusedIterator;
 
-    fn entries(&self) -> Self::Entries<'_>;
-}
-
-pub trait SnapshotEntries: DictionaryEntries {
-    type Snapshot: DictionaryEntries + Clone + Send + Sync + 'static;
-    fn snapshot(&self) -> Self::Snapshot;
+    fn entries(&self) -> Self::Entries;
+    fn try_fold_entries<A, E>(
+        &self,
+        initial: A,
+        fold: impl FnMut(A, &[Self::Unit], Option<Self::Value>) -> Result<A, E>,
+    ) -> Result<A, E>;
 }
 ```
 
-The exact associated types should be selected during implementation; they must
-not force boxing or dynamic dispatch on monomorphic Rust callers. Separate
-capability traits are preferred to one oversized trait so read-only, mutable,
-mapped, bijective, substring, persistent, and unit-domain-specific automata do
-not pay for unsupported operations.
+`DictionaryTerms`, `DictionaryKeys`, and `DictionaryValues` derive aligned
+views from this lossless entry capability. `DictionaryLanguageTerms` and
+`DictionaryLanguageEntries` separately expose the recognized graph language,
+which is deliberately not conflated with source records in suffix families.
+No monomorphic Rust caller is forced through boxing, dynamic dispatch, or the
+foreign ABI.
 
 Define one lossless entry type. Its mapped state must distinguish:
 
@@ -205,7 +198,7 @@ a provider that exposes only the graph interface uses the shared compact-graph
 walker. All applicable automata must pass the same laws.
 
 Then add an optional, versioned family interface (working name
-`vt.dictionary.entries.v1`) that drains entries in batches. A batch contains
+`vt.dict.entry.v1`) that drains entries in batches. A batch contains
 fixed-size descriptors plus contiguous unit and optional-value arenas. Every
 descriptor carries offsets and lengths; the cursor owns its snapshot; one batch
 is leased at a time; release is mandatory before the next batch; cancellation
@@ -232,29 +225,31 @@ cursor.
 
 ### Java, Kotlin, Scala, and Clojure
 
-Provide explicit views rather than making the closeable dictionary object
-itself inherit one ambiguous collection type:
+The concrete producer dictionary is repeatably `Iterable<DictionaryEntry>`;
+explicit snapshot views avoid making its native lifetime inherit one ambiguous
+`Set` or `Map` ownership policy:
 
 ```java
-try (Dictionary dictionary = Dictionary.open(...)) {
-    Set<String> stable = dictionary.asStringSet(); // host-owned snapshot
-    consume(stable);
+try (Dictionary dictionary = openDictionary()) {
+    DictionarySnapshot stable = dictionary.snapshot();
+    consume(stable.keys(), stable.asMap());
 
-    try (DictionaryEntryStream<String, OptionalLong> entries =
-             dictionary.stringEntries()) {
-        entries.forEachRemaining(
-            entry -> consume(entry.key(), entry.value()));
+    try (EntryStream entries = dictionary.openEntryStream()) {
+        entries.forEachRemaining(entry -> consume(entry.key(), entry.value()));
     }
 }
 ```
 
-- Java: immutable `Set<String>`/typed key-set and
-  `Map<K, OptionalLong>` snapshot views; closeable `Iterator`/`Spliterator` and
-  sequential `Stream` for bounded streaming. `trySplit` is enabled only when a
+- Java: one immutable ordered `Collection<DictionaryEntry>` with typed
+  `Set<DictionaryKey>` and `Map<DictionaryKey, OptionalLong>` views; closeable
+  `Iterator`/`Spliterator` and sequential `Stream` for bounded streaming. The
+  snapshot views share one sorted entry array and use binary search rather than
+  copying output-sized hash tables. `trySplit` remains disabled until a
   snapshot can partition at root subtrees without duplicate traversal.
-- Kotlin: `Set`, `Map`, `Sequence`, and `use` extensions without duplicating JNI
-  logic.
-- Scala: immutable `Set`/`Map`, `Iterator`, and `Using.resource` adapters.
+- Kotlin: the same Java collections work with collection operators and
+  `asSequence()`; closeable traversal uses `use` without a second native layer.
+- Scala: standard collection converters and `Using.resource` consume the same
+  Java views and cursor.
 - Clojure: reducible/foldable view; `reduce` uses the native batch reducer so it
   does not first create a Java collection.
 
@@ -265,9 +260,12 @@ safety net, never the normal lifecycle.
 
 ### .NET
 
-Expose immutable `IReadOnlySet<TKey>` and `IReadOnlyDictionary<TKey,
-OptionalUInt64>` snapshot views, plus `IEnumerable<Entry>` on a materialized
-view. Use `IDisposable`/`using` for a closeable batch enumerator. Add
+Expose immutable `IReadOnlySet<DictionaryKey>` and
+`IReadOnlyDictionary<DictionaryKey, ulong?>` snapshot views, plus
+`IEnumerable<DictionaryEntry>` on a materialized view. The views share one
+sorted entry array and use binary search, while set-relation operations accept
+ordinary LINQ/enumerable inputs. Use `IDisposable`/`using` for a closeable batch
+enumerator. Add
 `IAsyncEnumerable` only if traversal actually becomes asynchronous; wrapping a
 synchronous native call in a task would add overhead without improving
 concurrency.
@@ -282,11 +280,15 @@ reacquire it only while constructing Python objects or invoking Python code.
 
 ### JavaScript, TypeScript, and ClojureScript
 
-Expose `[Symbol.iterator]` on immutable materialized views and
-`[Symbol.asyncIterator]` only on WASI/worker paths that are genuinely
-asynchronous. A closeable native iterator should support explicit resource
-management where the runtime implements it, plus `try/finally` everywhere.
-TypeScript types distinguish keys, entries, and optional mapped values.
+Match the synchronous `Map` vocabulary: `size`, `set`, `get`, `has`, `delete`,
+`entries`, `keys`, `values`, `forEach`, and `[Symbol.iterator]`. Each ordinary
+iterator is created from one host-owned `snapshotEntries()` result, so an early
+`for...of` exit cannot retain native state. `streamEntries()` is the explicit
+bounded `IterableIterator` and implements `return`, `close`, batch reduction,
+and `Symbol.dispose` on native Node, browser-WASM, and WASI. Do not expose
+`[Symbol.asyncIterator]` unless a worker path becomes genuinely asynchronous.
+TypeScript distinguishes keys, entries, absent lookup (`undefined`), and a
+present unvalued mapping (`null`).
 
 ### C++, Go, Swift, Ruby, and the remaining facades
 
@@ -362,34 +364,36 @@ crossings, and host allocation. Use headless AMD uProf, `perf`, and Heaptrack as
 described by the benchmark methodology. Optimize only after a causal experiment
 identifies a dominant component.
 
-## Implementation work packages
+## Implemented work packages and evidence ownership
 
-1. **Rust contract and law suite.** Define the lossless entry type and narrow
-   capability traits; inventory every automaton; add compile-time trait tests,
-   reference-model properties, and snapshot/early-drop laws.
-2. **Generic native traversal.** Implement the monomorphic snapshot-pinned
-   walker with reusable stack/path storage; route all applicable byte, scalar,
-   and `u64` backends through it; retain measured specialization hooks.
-3. **Rust idiom completion.** Standardize `iter`/`keys`/`entries`/`values`,
-   borrowed and snapshot-owning `IntoIterator`, optimized `FromIterator`,
-   `Extend`, fallible variants, iterator metadata, and query-result idioms.
-4. **Batched ABI extension.** Specify, model, fuzz, and implement the optional
-   versioned entry-batch interface with graph fallback, bounded leases, and
-   compatibility tests across repository versions.
-5. **Managed collection foundations.** Generate the shared materializer,
-   closeable cursor, error translation, cardinality reservation, and early-exit
-   cleanup primitives for each runtime family.
-6. **Parity-first facades.** Land Java/Kotlin/Scala/Clojure and .NET collection
-   views first, including Java `Set` parity and deterministic RAII idioms.
-7. **Dynamic and native facades.** Land Python, JavaScript/TypeScript,
-   Ruby, C++, Go, and Swift; then Fortran, OCaml, Haskell, and Lua where their
-   package tier applies.
-8. **Evidence and rollout.** Run the correctness, profiler, allocation,
-   scalability, and cross-language matrices; update every guide and
-   `bindings/api.json` only for protocols whose gates pass; publish migration
-   and compatibility notes.
+1. **Rust contract and laws.** `DictionaryEntry`, the narrow collection traits,
+   compile-time matrices, reference-model properties, and snapshot/early-drop
+   laws cover every applicable automaton and unit domain.
+2. **Generic native traversal.** The monomorphic snapshot-pinned walker selects
+   compact graph, native cursor, or owned-node fallback once, and reuses
+   stack/path storage. Backend specialization remains behind capability hooks.
+3. **Rust idioms.** Entries/terms/keys/values/folds, borrowed and owning
+   `IntoIterator`, lazy zipper set operations, optimized infallible builders,
+   and explicit fallible/sorted persistent builders are shipped and documented.
+4. **Batched ABI.** `vt.dict.entry.v1` has generated layout/status
+   fixtures, a TLA⁺ lease model, graph fallback, bounded generations,
+   cancellation/reducer paths, and compatibility/fault tests.
+5. **Adapter foundations.** Every runtime family copies and validates bounded
+   batches through one shared cursor contract, reserves exact cardinality when
+   present, translates typed errors, and closes on early exit.
+6. **JVM and .NET parity.** Java/Kotlin/Scala/Clojure and .NET expose their
+   standard immutable collection protocols plus deterministic lexical streams;
+   Java try-with-resources and C# `using` are first-class examples and tests.
+7. **Remaining facades.** Python, JavaScript/TypeScript/ClojureScript, C/C++, Go,
+   Swift, Ruby, Fortran, OCaml, Haskell, and Lua expose the language-native
+   protocols listed above without private graph walkers.
+8. **Evidence and rollout.** Machine-readable binding manifests, per-language
+   conformance programs, allocation census, Criterion exploration,
+   topology-admitted paired drivers, headless profiles, and generated guides
+   form the release evidence. A guide claims only the protocols exercised by
+   its package-level gates.
 
-Each work package is independently reviewable. No binding may introduce a
-private graph walker or change snapshot/value semantics to obtain surface-level
-idiomaticity. Specialization must show a repeatable, admitted benchmark gain and
-retain the common law suite.
+No binding introduces a private graph walker or weakens snapshot/value
+semantics for surface-level idiomaticity. A representation-specific fast path
+is retained only when repeatable admitted evidence justifies it and the common
+law suite remains green.
