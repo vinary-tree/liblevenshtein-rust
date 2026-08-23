@@ -68,6 +68,65 @@ legacy JavaScript API. Version 4 consumers use the new Rust-backed facade API.
 Its ESM, CommonJS, TypeScript, ClojureScript, browser-WASM, and WASI exports are
 thin re-exports of the exact scoped package.
 
+## Two-phase, fail-closed workflow protocol
+
+A **validation dispatch** builds and tests an immutable tag, stages every
+candidate artifact, and creates or refreshes the checksummed GitHub
+prerelease. A **registry dispatch** repeats those gates but permits exactly one
+named publication job to enter its protected environment. These are separate
+operations because a source tag is evidence to validate, not authorization to
+mutate every configured registry.
+
+Every manual release must run against the tag itself. A branch dispatch fails
+in the contract job, even when its files happen to declare the expected
+version. The `registry` choice is also fail-closed: `validate-only` enables no
+registry uploader, while each other value enables one and only one uploader.
+
+| Owner | Workflow | npm coordinate |
+|---|---|---|
+| `vinary-tree-interop` | `release.yml` | `@vinary-tree/interop` |
+| `libdictenstein` | `release-bindings.yml` | `@vinary-tree/libdictenstein` |
+| `liblevenshtein-rust` | `release.yml` | `@vinary-tree/liblevenshtein` |
+| `lling-llang` | `release-bindings.yml` | `@vinary-tree/lling-llang` |
+| `duallity` | `release-bindings.yml` | `@vinary-tree/duallity` |
+| `javascript-runtime` | `release.yml` | `@vinary-tree/vinary-tree` |
+| `liblevenshtein-npm` | `release.yml` | legacy `liblevenshtein` |
+
+For example, validate one owner and then publish only its npm artifact:
+
+```bash
+gh workflow run release.yml \
+  --repo vinary-tree/liblevenshtein-rust \
+  --ref v4.0.0-rc.1 \
+  -f registry=validate-only
+
+gh workflow run release.yml \
+  --repo vinary-tree/liblevenshtein-rust \
+  --ref v4.0.0-rc.1 \
+  -f registry=npm
+```
+
+Repositories whose workflow is named `release-bindings.yml` use that filename
+in the same command. The protected `npm` environment supplies the human review
+boundary; npm's trusted publisher supplies short-lived OpenID Connect (OIDC)
+credentials and provenance. Neither operation uses the workstation's
+long-lived npm login.
+
+The workflow state transition is:
+
+```text
+immutable tag
+  -> validate-only gates
+  -> checksummed GitHub prerelease
+  -> approve one protected registry environment
+  -> publish one staged coordinate
+  -> resolve and smoke-test the public bytes
+```
+
+If any transition fails, keep the immutable tag and version unchanged, repair
+the workflow on the next release-candidate commit, and mint the next candidate.
+Never widen a failed run to an `all registries` operation.
+
 ## Version function
 
 Let `M`, `m`, and `p` denote the major, minor, and patch components, and let `r`
@@ -149,10 +208,14 @@ procedure RELEASE_4_RC_1(owners):
     require check_release_train(owners)
     require npm_dist_tag("liblevenshtein", "latest") = "2.0.4"
 
+    for owner in owners:
+        owner.dispatch(tag = "v4.0.0-rc.1", registry = "validate-only")
+        require owner.github_prerelease.has_valid_checksums
+
     for owner in [interop, libdictenstein, liblevenshtein,
                   lling_llang, duallity, javascript_runtime,
                   scoped_facades, legacy_npm_facade]:
-        owner.publish_release_candidate()
+        owner.dispatch(tag = "v4.0.0-rc.1", registry = owner.next_registry)
         wait_until_every_published_coordinate_resolves(owner)
         rerun_owner_smoke_tests_against_registry_bytes(owner)
 
@@ -331,6 +394,10 @@ manual inspection but is not a substitute for CI trusted-publisher setup.
 - [ ] All managed-language and JavaScript package tests pass against assembled
       artifacts.
 - [ ] All workflow YAML parses and all package dry runs succeed.
+- [ ] A `validate-only` dispatch at each immutable tag completes before any
+      registry dispatch.
+- [ ] Every registry dispatch names exactly one target and runs against
+      `refs/tags/v4.0.0-rc.1`, never a branch.
 - [ ] Registry namespaces, trusted publishers, signing keys, and protected
       environments exist.
 - [ ] Every new scoped npm package has `latest = next = 4.0.0-rc.1`, has no

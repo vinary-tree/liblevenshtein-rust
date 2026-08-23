@@ -4,6 +4,24 @@ on:
   push:
     tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      registry:
+        description: Publish one registry from an immutable release tag
+        required: true
+        type: choice
+        default: validate-only
+        options:
+          - validate-only
+          - npm
+          - crates-io
+          - pypi
+          - maven-central
+          - clojars
+          - nuget
+          - rubygems
+          - go-module
+          - luarocks
+          - opam
 
 permissions:
   contents: read
@@ -31,9 +49,12 @@ jobs:
       - run: python3 scripts/check-binding-docs.py
       - run: python3 scripts/check-release-train.py
       - name: Verify release tag matches package version
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            echo "::error::Manual releases must be dispatched against an immutable tag." >&2
+            exit 1
+          fi
           version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
           test "v$version" = "$GITHUB_REF_NAME"
       - run: cargo test --locked --features native-bindings-full --test query_start_snapshot_semantics
@@ -487,7 +508,7 @@ jobs:
   crates-io:
     name: Publish Rust crate
     needs: [native, python-wheels, javascript-package, jvm-package, clojure-package]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'crates-io'
     runs-on: ubuntu-24.04
     environment: crates-io
     steps:
@@ -511,7 +532,7 @@ jobs:
   nuget:
     name: Publish NuGet packages
     needs: nuget-package
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'nuget'
     runs-on: ubuntu-24.04
     environment: nuget
     steps:
@@ -533,7 +554,7 @@ jobs:
   rubygems:
     name: Publish RubyGem
     needs: rubygems-package
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'rubygems'
     runs-on: ubuntu-24.04
     environment: rubygems
     steps:
@@ -552,7 +573,7 @@ jobs:
   go-module:
     name: Publish Go module tag
     needs: binding-contract
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'go-module'
     runs-on: ubuntu-24.04
     environment: go-module
     permissions:
@@ -600,7 +621,7 @@ jobs:
   luarocks:
     name: Publish LuaRocks package
     needs: luarocks-package
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'luarocks'
     runs-on: ubuntu-24.04
     environment: luarocks
     steps:
@@ -618,8 +639,8 @@ jobs:
 
   opam:
     name: Submit package to opam-repository
-    needs: [opam-package, github-release]
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: opam-package
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'opam'
     runs-on: ubuntu-24.04
     environment: opam
     steps:
@@ -662,7 +683,7 @@ jobs:
   pypi:
     name: Publish PyPI wheels
     needs: python-wheels
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'pypi'
     runs-on: ubuntu-24.04
     environment: pypi
     permissions:
@@ -680,7 +701,7 @@ jobs:
   npm:
     name: Publish npm package
     needs: javascript-package
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'npm'
     runs-on: ubuntu-24.04
     environment: npm
     permissions:
@@ -703,7 +724,7 @@ jobs:
   maven-central:
     name: Publish JVM package to Maven Central
     needs: jvm-package
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'maven-central'
     runs-on: ubuntu-24.04
     environment: maven-central
     steps:
@@ -733,7 +754,7 @@ jobs:
   clojars:
     name: Publish idiomatic Clojure facade to Clojars
     needs: [clojure-package, jvm-package]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'clojars'
     runs-on: ubuntu-24.04
     environment: clojars
     steps:
@@ -782,7 +803,10 @@ jobs:
       - hackage-package
       - luarocks-package
       - opam-package
-    if: startsWith(github.ref, 'refs/tags/')
+    if: >-
+      github.ref_type == 'tag' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.registry == 'validate-only'))
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -844,4 +868,5 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: release-assets/*
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
