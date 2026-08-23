@@ -32,8 +32,13 @@ The release has five invariants:
 4. Hackage and fpm receive buildable numeric `4.0.0` candidates during the RC,
    but those candidates are not published because their package versions cannot
    distinguish the RC from the future final release.
-5. `liblevenshtein@latest` remains `2.0.4` throughout the RC. Both scoped and
-   unscoped version 4 packages publish only under `next`.
+5. `liblevenshtein@latest` remains `2.0.4` throughout the RC. Version-4 bytes
+   first enter npm under `next`. Because npm assigns `latest` to the first
+   publication of a new package even when that publication uses another tag,
+   each new scoped coordinate is reserved by an inert `0.0.0` bootstrap. After
+   the real RC passes installed-artifact smoke tests, its scoped `latest`
+   pointer is moved from `0.0.0` to `4.0.0-rc.1` and the `bootstrap` tag is
+   removed. The legacy unscoped coordinate is never moved during the RC.
 
 Cargo documents why a published crate version is immutable and recommends a
 dry run before upload in the [Cargo publishing guide](https://doc.rust-lang.org/cargo/reference/publishing.html).
@@ -151,12 +156,20 @@ procedure RELEASE_4_RC_1(owners):
         wait_until_every_published_coordinate_resolves(owner)
         rerun_owner_smoke_tests_against_registry_bytes(owner)
 
+    for package in new_scoped_npm_coordinates:
+        require npm_dist_tag(package, "next") = "4.0.0-rc.1"
+        npm_set_dist_tag(package, "latest", "4.0.0-rc.1")
+        npm_remove_dist_tag(package, "bootstrap")
+        require npm_dist_tag(package, "latest") = "4.0.0-rc.1"
+
     require npm_dist_tag("liblevenshtein", "latest") = "2.0.4"
     record_checksums_and_release_evidence()
 ```
 
-No step automatically promotes `next` to `latest`. Promotion is a separate
-final-release decision.
+The scoped retarget above replaces npm's unusable bootstrap default only after
+the RC is proven. It is not the legacy package's final-release promotion:
+moving unscoped `liblevenshtein@latest` remains a separate final-release
+decision.
 
 ## Preparing a release checkout
 
@@ -248,6 +261,19 @@ The scoped facade publish command is intentionally explicit:
 npm publish --access public --provenance --tag next package.tgz
 ```
 
+For every newly created scoped coordinate, verify the installed RC and then
+replace npm's mandatory first-publication default and retire the bootstrap tag:
+
+```bash
+npm dist-tag add @vinary-tree/PACKAGE@4.0.0-rc.1 latest
+npm dist-tag rm @vinary-tree/PACKAGE bootstrap
+npm deprecate @vinary-tree/PACKAGE@0.0.0 \
+  "Bootstrap reservation only; install 4.0.0-rc.1 or use the next/latest tag."
+```
+
+The scoped postcondition is `latest = next = 4.0.0-rc.1`, with no `bootstrap`
+tag. The immutable `0.0.0` audit artifact remains explicitly deprecated.
+
 Before and after publishing the legacy name, verify its stable tag:
 
 ```bash
@@ -307,6 +333,8 @@ manual inspection but is not a substitute for CI trusted-publisher setup.
 - [ ] All workflow YAML parses and all package dry runs succeed.
 - [ ] Registry namespaces, trusted publishers, signing keys, and protected
       environments exist.
+- [ ] Every new scoped npm package has `latest = next = 4.0.0-rc.1`, has no
+      `bootstrap` tag, and deprecates its immutable `0.0.0` reservation.
 - [ ] `npm view liblevenshtein dist-tags --json` reports `latest: 2.0.4`.
 - [ ] Hackage and fpm jobs are visibly candidate-only.
 
