@@ -150,7 +150,11 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "25"
+          # The JVM facade's default Gradle toolchain is Java 22. Installing a
+          # newer JDK does not satisfy an exact Gradle toolchain request unless
+          # a download repository is configured, so exercise the declared
+          # baseline directly here; the dedicated current-JDK lane covers 26.
+          java-version: "22"
       - run: python3 scripts/check-bindings.py
       - run: python3 scripts/check-binding-docs.py
       - run: python3 scripts/check-release-train.py
@@ -328,7 +332,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --locked --features python-bindings
       - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
-      - run: python -m pip install pytest hypothesis
+      - run: python -m pip install pytest hypothesis typing-extensions
       - name: Custom-provider and long-lived snapshot tests
         env:
           LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
@@ -356,6 +360,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           package-manager-cache: false
+      # The package contract includes compiling its ClojureScript namespace;
+      # install the compiler explicitly instead of relying on runner state.
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          cli: latest
       - run: npm test --prefix ../vinary-tree-interop/bindings/javascript
       - name: Validate native, WASM, WASI, TS, and CLJS facades
         working-directory: bindings/javascript
@@ -478,7 +487,11 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: wasm-pack
-      - run: sudo apt-get update && sudo apt-get install -y binaryen
+      # Ubuntu 24.04's Binaryen cannot parse the reference-types opcodes
+      # emitted by the current Rust/WASM toolchain. Reuse the runtime's pinned,
+      # checksummed installer so local CI and its release workflow optimize with
+      # the same known-compatible wasm-opt.
+      - run: bash ../javascript-runtime/.github/setup-binaryen.sh
       - name: Build the four statically linked native components
         shell: bash
         run: |
@@ -529,6 +542,8 @@ jobs:
   dotnet-bindings:
     name: .NET 8 LTS and .NET 10 current
     runs-on: ubuntu-24.04
+    env:
+      VinaryTreeInteropRoot: ${{ github.workspace }}/../vinary-tree-interop
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-dev-siblings
@@ -554,7 +569,7 @@ jobs:
           dotnet build "$project" --framework net10.0 --no-restore -m:1
           dotnet run --project "$project" --framework net10.0 --no-build
           dotnet pack --configuration Release -p:BuildInParallel=false \
-            bindings/dotnet/src/VinaryTree.Interop
+            ../vinary-tree-interop/bindings/dotnet/src/VinaryTree.Interop
           dotnet pack --configuration Release -p:BuildInParallel=false \
             bindings/dotnet/src/VinaryTree.Liblevenshtein
       - name: Run libdictenstein CRUD and cross-project snapshots on both frameworks
@@ -785,6 +800,7 @@ jobs:
           cc -std=c17 -Wall -Wextra -Werror -shared -fPIC \
             "${lua_cflags[@]}" \
             -I../libdictenstein/include -I../vinary-tree-interop/include \
+            -I../libdictenstein/bindings/lua/include \
             -I../vinary-tree-interop/bindings/lua \
             ../libdictenstein/bindings/lua/src/libdictenstein_lua.c \
             -L../libdictenstein/target/debug -llibdictenstein \
@@ -879,11 +895,13 @@ jobs:
             os: freebsd
             version: "15.1"
             install: sudo pkg install -y rust
+            native_rust_at_msrv: true
             experimental: false
           - name: NetBSD 10.1 x86_64
             os: netbsd
             version: "10.1"
             install: sudo pkgin -y install rust
+            native_rust_at_msrv: true
             experimental: false
           - name: OpenBSD 7.9 x86_64
             os: openbsd
@@ -898,6 +916,7 @@ jobs:
             os: dragonflybsd
             version: "6.4.2"
             install: sudo pkg install -y rust
+            native_rust_at_msrv: true
             experimental: true
     steps:
       - uses: actions/checkout@v6
@@ -942,7 +961,7 @@ jobs:
             -x c++ -fsyntax-only include/liblevenshtein.hpp
 
   bsd-aarch64-compile:
-    name: ${{ matrix.name }} aarch64 compile
+    name: ${{ matrix.name }} ${{ matrix.target }} compile
     runs-on: ubuntu-24.04
     continue-on-error: ${{ matrix.experimental }}
     strategy:

@@ -8,7 +8,7 @@ net.
 
 Dictionary producers implement the small `interop.DictionaryResource`
 interface from
-`github.com/vinary-tree/liblevenshtein-rust/vinary-tree-interop/bindings/go`.
+`github.com/vinary-tree/vinary-tree-interop/bindings/go/v4`.
 Native Vinary
 Tree producers lend two pointer-sized words for the constructor and are retained
 in O(1) by the transducer.
@@ -27,7 +27,7 @@ package. C/C++ consumers may select static or shared linkage.
 | Binding | Go |
 | Languages/runtime | Go 1.25+ with cgo |
 | Support tier | Tier 2 |
-| Distribution | Go module `github.com/vinary-tree/liblevenshtein-rust/bindings/go` |
+| Distribution | Go module `github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4` |
 | Native boundary | cgo calls the stable C ABI and uses the interop module for two-word retained dictionary resources. |
 | Canonical facade source | [`bindings/go/liblevenshtein.go`](../../bindings/go/liblevenshtein.go) |
 

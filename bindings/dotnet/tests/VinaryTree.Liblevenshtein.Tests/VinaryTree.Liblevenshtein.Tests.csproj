@@ -5,7 +5,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/VinaryTree.Interop/VinaryTree.Interop.csproj" />
+    <ProjectReference Include="$(VinaryTreeInteropRoot)/bindings/dotnet/src/VinaryTree.Interop/VinaryTree.Interop.csproj" />
     <ProjectReference Include="../../src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj" />
     <!-- C8 property tests build dictionaries with the libdictenstein sibling's
          DynamicDawg, which implements the same VinaryTree.Interop.IDictionaryResource

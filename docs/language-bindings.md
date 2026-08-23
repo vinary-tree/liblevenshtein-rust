@@ -226,8 +226,8 @@ The packages are independently releasable:
   `@vinary-tree/vinary-tree`, and project facade
   `@vinary-tree/liblevenshtein`;
 - .NET: `VinaryTree.Interop` and `VinaryTree.Liblevenshtein` on NuGet;
-- Go: `github.com/vinary-tree/liblevenshtein-rust/bindings/go` and
-  `github.com/vinary-tree/liblevenshtein-rust/vinary-tree-interop/bindings/go`,
+- Go: `github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4` and
+  `github.com/vinary-tree/vinary-tree-interop/bindings/go/v4`,
   published with immutable module-subdirectory tags;
 - Swift: the repository-root SwiftPM package, with products
   `VinaryTreeInterop` and `Liblevenshtein`;

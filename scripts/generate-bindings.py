@@ -509,6 +509,18 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
         / "dictionary_entries_v1.tsv": render_dictionary_entries_fixture(model),
         ROOT / "bindings" / "ocaml" / "include" / "liblevenshtein.h": public_header,
         ROOT / "bindings" / "ocaml" / "include" / "liblevenshtein_abi.h": abi_header,
+        ROOT
+        / "bindings"
+        / "ocaml"
+        / "include"
+        / "vinary_tree_interop.h": interop_header,
+        ROOT
+        / "bindings"
+        / "swift"
+        / "liblevenshtein"
+        / "Sources"
+        / "CLiblevenshtein"
+        / "vinary_tree_interop.h": interop_header,
     }
     # Cross-project release work may opt in to refreshing sibling mirrors. Normal
     # local generation is deliberately confined to this repository.

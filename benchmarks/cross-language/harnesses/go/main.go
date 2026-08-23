@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	libdictenstein "github.com/vinary-tree/libdictenstein/bindings/go"
-	liblevenshtein "github.com/vinary-tree/liblevenshtein-rust/bindings/go"
+	libdictenstein "github.com/vinary-tree/libdictenstein/bindings/go/v4"
+	liblevenshtein "github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4"
 )
 
 const (
