@@ -611,7 +611,9 @@ pub mod float_encoding {
     /// Decode pairs of u32 back to f64.
     pub fn decode_u32_pairs_to_f64(encoded: &[u32]) -> Vec<f64> {
         encoded
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|pair| {
                 let high = (pair[0] as u64) << 32;
                 let low = pair[1] as u64;

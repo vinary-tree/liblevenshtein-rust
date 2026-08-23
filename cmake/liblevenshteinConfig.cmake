@@ -40,7 +40,7 @@ if(NOT TARGET liblevenshtein::static)
   if(WIN32)
     set_target_properties(liblevenshtein::static PROPERTIES
       IMPORTED_LOCATION "${_LLEVENSHTEIN_PREFIX}/lib/liblevenshtein.lib"
-      INTERFACE_LINK_LIBRARIES "bcrypt;userenv;ws2_32;ntdll;synchronization;advapi32;Threads::Threads"
+      INTERFACE_LINK_LIBRARIES "vinary-tree::interop;bcrypt;userenv;ws2_32;ntdll;synchronization;advapi32;Threads::Threads"
     )
   elseif(APPLE)
     find_library(_LLEVENSHTEIN_ICONV_LIBRARY NAMES iconv REQUIRED)
@@ -50,7 +50,7 @@ if(NOT TARGET liblevenshtein::static)
     set_target_properties(liblevenshtein::static PROPERTIES
       IMPORTED_LOCATION "${_LLEVENSHTEIN_PREFIX}/lib/libliblevenshtein.a"
       INTERFACE_LINK_LIBRARIES
-        "${CMAKE_DL_LIBS};Threads::Threads;m;${_LLEVENSHTEIN_ICONV_LIBRARY};${_LLEVENSHTEIN_COREFOUNDATION_FRAMEWORK};${_LLEVENSHTEIN_SECURITY_FRAMEWORK}"
+        "vinary-tree::interop;${CMAKE_DL_LIBS};Threads::Threads;m;${_LLEVENSHTEIN_ICONV_LIBRARY};${_LLEVENSHTEIN_COREFOUNDATION_FRAMEWORK};${_LLEVENSHTEIN_SECURITY_FRAMEWORK}"
     )
     unset(_LLEVENSHTEIN_ICONV_LIBRARY CACHE)
     unset(_LLEVENSHTEIN_COREFOUNDATION_FRAMEWORK CACHE)
@@ -58,7 +58,7 @@ if(NOT TARGET liblevenshtein::static)
   else()
     set_target_properties(liblevenshtein::static PROPERTIES
       IMPORTED_LOCATION "${_LLEVENSHTEIN_PREFIX}/lib/libliblevenshtein.a"
-      INTERFACE_LINK_LIBRARIES "${CMAKE_DL_LIBS};Threads::Threads;m"
+      INTERFACE_LINK_LIBRARIES "vinary-tree::interop;${CMAKE_DL_LIBS};Threads::Threads;m"
     )
   endif()
 endif()

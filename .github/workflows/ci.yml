@@ -614,6 +614,7 @@ jobs:
       - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - name: SwiftPM cross-project snapshot integration
         env:
+          VINARY_TREE_INTEROP_ROOT: ${{ github.workspace }}/../vinary-tree-interop/bindings/swift/vinary-tree-interop
           LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
         run: swift run --package-path bindings/swift/Integration -c release
@@ -675,6 +676,10 @@ jobs:
         if: matrix.toolchain.setup == 'apt'
         shell: bash
         run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /usr/share/keyrings/apt.llvm.org.gpg
+          echo "deb [signed-by=/usr/share/keyrings/apt.llvm.org.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-22.list >/dev/null
           sudo apt-get update
           sudo apt-get install -y flang-22
           command -v flang-new-22
@@ -751,6 +756,8 @@ jobs:
           cp ../libdictenstein/target/debug/liblibdictenstein.so target/haskell-native/lib/
           cp pkgconfig/liblevenshtein.pc target/haskell-native/lib/pkgconfig/
           cp ../libdictenstein/pkgconfig/libdictenstein.pc target/haskell-native/lib/pkgconfig/
+          cp ../vinary-tree-interop/pkgconfig/vinary-tree-interop.pc \
+            target/haskell-native/lib/pkgconfig/
           cp include/liblevenshtein.h include/liblevenshtein_abi.h \
             ../vinary-tree-interop/include/vinary_tree_interop.h \
             ../libdictenstein/include/libdictenstein.h target/haskell-native/include/
@@ -882,6 +889,10 @@ jobs:
             os: openbsd
             version: "7.9"
             install: sudo pkg_add rust
+            # OpenBSD 7.9 currently packages rustc 1.94.1, below this family's
+            # declared Rust 1.95 MSRV. The VM still validates the native C ABI;
+            # a required current-Rust OpenBSD compile is maintained below.
+            native_rust_at_msrv: false
             experimental: false
           - name: DragonFly BSD 6.4.2 x86_64
             os: dragonflybsd
@@ -904,9 +915,11 @@ jobs:
         shell: cpa.sh {0}
         run: ${{ matrix.platform.install }}
       - name: Compile the native binding surface
+        if: matrix.platform.native_rust_at_msrv != false
         shell: cpa.sh {0}
         run: cargo check --locked --no-default-features --features native-bindings-full
       - name: Run long-lived snapshot integration tests
+        if: matrix.platform.native_rust_at_msrv != false
         shell: cpa.sh {0}
         run: |
           cargo test --locked --no-default-features --features native-bindings-full \
@@ -914,8 +927,19 @@ jobs:
             --test binding_snapshot_semantics \
             --test ffi_resource_snapshot_semantics
       - name: Run interop ABI contract tests
+        if: matrix.platform.native_rust_at_msrv != false
         shell: cpa.sh {0}
         run: cargo test --locked --manifest-path vendor/vinary-tree-interop/Cargo.toml
+      - name: Validate the native C and C++ ABI headers below Rust MSRV
+        if: matrix.platform.native_rust_at_msrv == false
+        shell: cpa.sh {0}
+        run: |
+          cc -std=c17 -Wall -Wextra -Werror \
+            -Iinclude -Ivendor/vinary-tree-interop/include \
+            -x c -fsyntax-only include/liblevenshtein.h
+          c++ -std=c++20 -Wall -Wextra -Werror \
+            -Iinclude -Ivendor/vinary-tree-interop/include \
+            -x c++ -fsyntax-only include/liblevenshtein.hpp
 
   bsd-aarch64-compile:
     name: ${{ matrix.name }} aarch64 compile
@@ -934,17 +958,23 @@ jobs:
           - name: OpenBSD
             target: aarch64-unknown-openbsd
             experimental: true
+          - name: OpenBSD
+            target: x86_64-unknown-openbsd
+            experimental: false
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-portable-siblings
-      - uses: dtolnay/rust-toolchain@stable
+      # Tier-3 BSD targets do not receive prebuilt standard libraries. Build
+      # std from the exact nightly source instead of silently dropping those
+      # targets when a stable rustup component disappears.
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          targets: ${{ matrix.target }}
+          components: rust-src
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
       - run: >-
-          cargo check --locked --target ${{ matrix.target }}
+          cargo +nightly check -Zbuild-std --locked --target ${{ matrix.target }}
           --no-default-features --features native-bindings-full
 
   msrv:
