@@ -507,6 +507,10 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
       - uses: DeLaGuardo/setup-clojure@13.4
         with:
           cli: latest
