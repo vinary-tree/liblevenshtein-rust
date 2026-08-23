@@ -6,13 +6,20 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED = "4.0.0-rc.1"
-BASE = "4.0.0"
+ROOT_MODEL = json.loads((ROOT / "release/version.json").read_text(encoding="utf-8"))
+EXPECTED = str(ROOT_MODEL.get("canonical", ""))
+VERSION_MATCH = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)-rc\.(\d+)", EXPECTED)
+if VERSION_MATCH is None:
+    raise SystemExit(
+        "release train error: root canonical version is not a numbered release candidate"
+    )
+MAJOR, MINOR, PATCH, CANDIDATE = VERSION_MATCH.groups()
+BASE = f"{MAJOR}.{MINOR}.{PATCH}"
 
 
 def sibling(environment: str, directory: str) -> Path:
@@ -22,7 +29,9 @@ def sibling(environment: str, directory: str) -> Path:
 COMPONENTS = {
     "liblevenshtein": ROOT,
     "vinary-tree-interop": sibling("VINARY_TREE_INTEROP_ROOT", "vinary-tree-interop"),
-    "javascript-runtime": sibling("VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", "javascript-runtime"),
+    "javascript-runtime": sibling(
+        "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", "javascript-runtime"
+    ),
     "libdictenstein": sibling("LIBDICTENSTEIN_ROOT", "libdictenstein"),
     "lling-llang": sibling("LLING_LLANG_ROOT", "lling-llang"),
     "duallity": sibling("DUALLITY_ROOT", "duallity"),
@@ -42,11 +51,27 @@ REGISTRY_SPELLINGS = {
     "maven": EXPECTED,
     "npm": EXPECTED,
     "nuget": EXPECTED,
-    "opam": "4.0.0~rc1",
+    "opam": f"{BASE}~rc{CANDIDATE}",
     "pkgConfig": EXPECTED,
-    "pypi": "4.0.0rc1",
-    "rubygems": "4.0.0.rc.1",
+    "pypi": f"{BASE}rc{CANDIDATE}",
+    "rubygems": f"{BASE}.rc.{CANDIDATE}",
     "swiftTag": EXPECTED,
+}
+
+NPM_PACKAGES = {
+    "liblevenshtein": (
+        "bindings/javascript/package.json",
+        "@vinary-tree/liblevenshtein",
+    ),
+    "vinary-tree-interop": ("bindings/javascript/package.json", "@vinary-tree/interop"),
+    "javascript-runtime": ("package.json", "@vinary-tree/vinary-tree"),
+    "libdictenstein": (
+        "bindings/javascript/package.json",
+        "@vinary-tree/libdictenstein",
+    ),
+    "lling-llang": ("bindings/javascript/package.json", "@vinary-tree/lling-llang"),
+    "duallity": ("bindings/javascript/package.json", "@vinary-tree/duallity"),
+    "liblevenshtein-npm-compatibility": ("package.json", "liblevenshtein"),
 }
 
 
@@ -77,6 +102,41 @@ def check_dependency(owner: str, name: str, version: object) -> None:
 
 manifests = {name: load(name, root) for name, root in COMPONENTS.items()}
 
+if len(set(COMPONENTS.values())) != len(COMPONENTS):
+    fail("two artifact owners resolve to the same repository root")
+for standalone in (
+    "vinary-tree-interop",
+    "javascript-runtime",
+    "liblevenshtein-npm-compatibility",
+):
+    if COMPONENTS[standalone] == ROOT or ROOT in COMPONENTS[standalone].parents:
+        fail(
+            f"{standalone}: standalone owner is still nested under liblevenshtein-rust"
+        )
+for obsolete in (ROOT / "vinary-tree-interop", ROOT / "bindings/javascript-runtime"):
+    if obsolete.exists():
+        fail(f"embedded artifact owner still exists: {obsolete}")
+
+for component, component_root in COMPONENTS.items():
+    python_sync = component_root / "scripts/sync-release-version.py"
+    javascript_sync = component_root / "scripts/sync-release-version.mjs"
+    if python_sync.is_file():
+        command = [sys.executable, str(python_sync)]
+    elif javascript_sync.is_file():
+        command = ["node", str(javascript_sync)]
+    else:
+        fail(f"{component}: missing local release-version synchronizer")
+    completed = subprocess.run(
+        command,
+        cwd=component_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout).strip()
+        fail(f"{component}: local release-version validation failed: {detail}")
+
 for component, manifest in manifests.items():
     for dependency, version in manifest.get("dependencies", {}).items():
         check_dependency(component, dependency, version)
@@ -101,6 +161,25 @@ for component, manifest in manifests.items():
                 fail(f"{component}: {numeric_only} must remain unpublished for the RC")
             if not publication.get(f"{numeric_only}Reason"):
                 fail(f"{component}: {numeric_only} embargo requires an explanation")
+
+    package_path, package_name = NPM_PACKAGES[component]
+    package = json.loads(
+        (COMPONENTS[component] / package_path).read_text(encoding="utf-8")
+    )
+    if package.get("name") != package_name:
+        fail(f"{component}: npm package name is {package.get('name')!r}")
+    if package.get("version") != EXPECTED:
+        fail(f"{component}: npm package version is {package.get('version')!r}")
+    publish_config = package.get("publishConfig", {})
+    if publish_config.get("access") != "public":
+        fail(f"{component}: npm package must publish with public access")
+    if publish_config.get("provenance") is not True:
+        fail(f"{component}: npm package must request provenance")
+    if publish_config.get("tag") != "next":
+        fail(f"{component}: npm package must protect latest with tag=next")
+    for dependency, version in package.get("dependencies", {}).items():
+        if dependency.startswith("@vinary-tree/"):
+            check_dependency(component, dependency, version)
 
 runtime = manifests["javascript-runtime"]
 if runtime.get("npm") != EXPECTED or runtime.get("distTag") != "next":
@@ -128,10 +207,8 @@ for component in ("lling-llang", "duallity"):
     if dependencies.get("vinary-tree-interop") != EXPECTED:
         fail(f"{component}: standalone interop dependency is not exact")
 
-if not re.fullmatch(r"\d+\.\d+\.\d+-rc\.\d+", EXPECTED):
-    fail("the release-train checker itself contains an invalid RC")
-
 print(
-    "release train is coherent: 7 owners, exact 4.0.0-rc.1 edges, "
-    "npm next, Hackage/fpm embargoed, legacy latest protected"
+    f"release train is coherent: 7 standalone owners, exact {EXPECTED} edges, "
+    "all local version surfaces valid, npm next, Hackage/fpm embargoed, "
+    "legacy latest protected"
 )
