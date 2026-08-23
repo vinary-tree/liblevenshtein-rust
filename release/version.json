@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "component": "liblevenshtein",
+  "canonical": "4.0.0-rc.1",
+  "registries": {
+    "cargo": "4.0.0-rc.1",
+    "clojars": "4.0.0-rc.1",
+    "cmake": "4.0.0-rc.1",
+    "fpm": "4.0.0",
+    "goTag": "v4.0.0-rc.1",
+    "hackage": "4.0.0",
+    "luaRocks": "4.0.0-rc.1-1",
+    "maven": "4.0.0-rc.1",
+    "npm": "4.0.0-rc.1",
+    "nuget": "4.0.0-rc.1",
+    "opam": "4.0.0~rc1",
+    "pkgConfig": "4.0.0-rc.1",
+    "pypi": "4.0.0rc1",
+    "rubygems": "4.0.0.rc.1",
+    "swiftTag": "4.0.0-rc.1"
+  },
+  "dependencies": {
+    "duallity": "4.0.0-rc.1",
+    "libdictenstein": "4.0.0-rc.1",
+    "llattice": "0.1.0",
+    "liblevenshtein": "4.0.0-rc.1",
+    "lling-llang": "4.0.0-rc.1",
+    "vinary-tree-interop": "4.0.0-rc.1",
+    "@vinary-tree/interop": "4.0.0-rc.1",
+    "@vinary-tree/vinary-tree": "4.0.0-rc.1"
+  },
+  "publication": {
+    "distTag": "next",
+    "fpm": false,
+    "fpmReason": "fpm accepts numeric package versions only; validate 4.0.0 as a source candidate and defer registry publication until the final release.",
+    "hackage": false,
+    "hackageReason": "Cabal package versions are numeric-only; validate 4.0.0 as a source candidate and defer upload until the final release."
+  }
+}

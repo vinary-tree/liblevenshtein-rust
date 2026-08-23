@@ -25,10 +25,14 @@ audit` and run directly in CI.
 from __future__ import annotations
 
 import re
+import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+INTEROP_ROOT = Path(
+    os.environ.get("VINARY_TREE_INTEROP_ROOT", ROOT.parent / "vinary-tree-interop")
+).resolve()
 REGISTRY = ROOT / "docs" / "verification" / "ABI_INVARIANTS.tsv"
 
 COLUMNS = [
@@ -63,6 +67,23 @@ class Failures:
 
     def add(self, message: str) -> None:
         self.messages.append(message)
+
+
+def resolve_path(relative: str) -> Path:
+    prefix = "vinary-tree-interop/"
+    if relative.startswith(prefix):
+        return INTEROP_ROOT / relative.removeprefix(prefix)
+    return ROOT / relative
+
+
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        try:
+            return f"vinary-tree-interop/{path.relative_to(INTEROP_ROOT)}"
+        except ValueError:
+            return str(path)
 
 
 def parse_rows(failures: Failures) -> list[dict[str, str]]:
@@ -122,7 +143,7 @@ def main() -> int:
         if not row["gate"].strip():
             failures.add(f"{row_id}: empty gate column")
 
-        spec_path = ROOT / row["spec_path"]
+        spec_path = resolve_path(row["spec_path"])
         if not spec_path.is_file():
             failures.add(f"{row_id}: spec_path missing: {row['spec_path']}")
         else:
@@ -139,7 +160,7 @@ def main() -> int:
                     f"{row['spec_path']}"
                 )
 
-        test_path = ROOT / row["test_path"]
+        test_path = resolve_path(row["test_path"])
         if not test_path.is_file():
             failures.add(f"{row_id}: test_path missing: {row['test_path']}")
         else:
@@ -153,14 +174,14 @@ def main() -> int:
     # Hooks <-> registry closure.
     hooked: set[str] = set()
     hook_sources: dict[str, list[str]] = {}
-    for base in (ROOT / "tests", ROOT / "vinary-tree-interop" / "tests"):
+    for base in (ROOT / "tests", INTEROP_ROOT / "tests"):
         for path in sorted(base.rglob("*.rs")):
             text = path.read_text(encoding="utf-8", errors="replace")
             for match in HOOK_PATTERN.finditer(text):
                 for invariant_id in expand_hook(match.group(1)):
                     hooked.add(invariant_id)
                     hook_sources.setdefault(invariant_id, []).append(
-                        str(path.relative_to(ROOT))
+                        display_path(path)
                     )
     for invariant_id in sorted(hooked - seen_ids):
         failures.add(

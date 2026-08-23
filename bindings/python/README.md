@@ -53,7 +53,7 @@ The repository's canonical executable example is
 installs and is run by the binding CI with:
 
 ```sh
-PYTHONPATH=bindings/python/src:vinary-tree-interop/bindings/python/src pytest -q bindings/python/tests/test_api.py
+PYTHONPATH=bindings/python/src:../vinary-tree-interop/bindings/python/src pytest -q bindings/python/tests/test_api.py
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -138,7 +138,7 @@ are in the [binding trust model](../../docs/security/binding-trust-model.md).
 
 The project ABI revision, family ABI version, interface identity/version,
 package version, and umbrella-runtime version are independent counters. Follow
-the [ABI evolution policy](../../vinary-tree-interop/docs/abi-evolution.md); never infer compatibility from a
+the [ABI evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md); never infer compatibility from a
 package version alone.
 
 When loading fails, check—in order—the documented runtime/toolchain version,

@@ -13,7 +13,7 @@ pub mod high_degree_dictionary;
 pub mod interop_dictionary;
 
 /// Parser for the canonical cross-language query-start snapshot fixture at
-/// `vinary-tree-interop/conformance/query_start_snapshot.tsv`.
+/// `bindings/conformance/query_start_snapshot.tsv`.
 ///
 /// The fixture is the shared oracle for query-start snapshot semantics: an
 /// `initial` phase populates the dictionary, a cursor is started, and a
@@ -25,7 +25,7 @@ pub mod interop_dictionary;
 pub mod query_start_fixture {
     /// Repository-relative fixture location (also cited by binding suites in
     /// other languages).
-    pub const FIXTURE_PATH: &str = "vinary-tree-interop/conformance/query_start_snapshot.tsv";
+    pub const FIXTURE_PATH: &str = "bindings/conformance/query_start_snapshot.tsv";
 
     /// Which half of the replay a step belongs to.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]

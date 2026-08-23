@@ -2,7 +2,7 @@
 package liblevenshtein
 
 /*
-#cgo CFLAGS: -std=c17 -I${SRCDIR}/../../include -I${SRCDIR}/../../vinary-tree-interop/include
+#cgo CFLAGS: -std=c17 -I${SRCDIR}/../../include -I${SRCDIR}/../../../vinary-tree-interop/include
 #cgo LDFLAGS: -lliblevenshtein
 #include <stdint.h>
 #include <stdlib.h>
@@ -25,7 +25,7 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
-	interop "github.com/vinary-tree/liblevenshtein-rust/vinary-tree-interop/bindings/go"
+	interop "github.com/vinary-tree/vinary-tree-interop/bindings/go/v4"
 )
 
 // Algorithm selects the edit operation set.

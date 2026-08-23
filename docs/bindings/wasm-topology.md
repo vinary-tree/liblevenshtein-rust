@@ -31,7 +31,7 @@ and the panic-versus-status discipline at each boundary.
 Everywhere else in the family, "modular packages + two-word resources" is
 the whole story: native libraries in one address space exchange
 `VtResource` handles directly
-($`\mathcal{O}(1)`$, [canon § 5](../../vinary-tree-interop/docs/abi-reference.md#5-the-resource-two-words-and-a-base-vtable)).
+($`\mathcal{O}(1)`$, [canon § 5](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#5-the-resource-two-words-and-a-base-vtable)).
 WebAssembly breaks that assumption: two independently instantiated WASM
 modules have **disjoint linear memories and disjoint tables**, so a pointer
 minted by one instance is a meaningless integer to another. Four separate
@@ -108,7 +108,7 @@ provider".
 
 The WASI path follows strict capability discipline — the family policy is
 canonically specified in the
-[security model § 7](../../vinary-tree-interop/docs/security-model.md#7-wasi-capability-policy);
+[security model § 7](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md#7-wasi-capability-policy);
 the mechanics here:
 
 - `createWasiRuntime({ preopens })` instantiates an **isolated** WASI
@@ -129,7 +129,7 @@ the mechanics here:
 
 The family containment law — no unwinding across an `extern "C"` boundary,
 faults surface as statuses
-([canon § 3](../../vinary-tree-interop/docs/security-model.md#3-the-panic-and-exception-containment-law))
+([canon § 3](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md#3-the-panic-and-exception-containment-law))
 — meets three different fault substrates here:
 
 | Boundary | Fault discipline | State |

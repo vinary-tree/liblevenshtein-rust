@@ -19,7 +19,10 @@
     "npm": "@vinary-tree/interop",
     "maven": "io.vinarytree:vinary-tree-interop",
     "javaPackage": "io.vinarytree.interop",
-    "resourceLayout": ["context", "vtable"],
+    "resourceLayout": [
+      "context",
+      "vtable"
+    ],
     "dictionaryInterfaceVersion": 1,
     "dictionaryVisitInterfaceVersion": 1,
     "dictionaryGraphInterfaceVersion": 1,
@@ -62,32 +65,74 @@
             "VtDictionaryEntry": {
               "size": 40,
               "alignment": 8,
-              "offsets": {"unit_offset": 0, "unit_len": 8, "value_offset": 16, "value_len": 24, "reserved": 32}
+              "offsets": {
+                "unit_offset": 0,
+                "unit_len": 8,
+                "value_offset": 16,
+                "value_len": 24,
+                "reserved": 32
+              }
             },
             "VtDictionaryEntryBatchLimits": {
               "size": 32,
               "alignment": 8,
-              "offsets": {"max_entries": 0, "max_units": 8, "max_values": 16, "reserved": 24}
+              "offsets": {
+                "max_entries": 0,
+                "max_units": 8,
+                "max_values": 16,
+                "reserved": 24
+              }
             },
             "VtDictionaryEntryBatchView": {
               "size": 64,
               "alignment": 8,
-              "offsets": {"entries": 0, "entry_count": 8, "units": 16, "unit_count": 24, "values": 32, "value_count": 40, "generation": 48, "reserved": 56}
+              "offsets": {
+                "entries": 0,
+                "entry_count": 8,
+                "units": 16,
+                "unit_count": 24,
+                "values": 32,
+                "value_count": 40,
+                "generation": 48,
+                "reserved": 56
+              }
             },
             "VtDictionaryEntriesInfo": {
               "size": 64,
               "alignment": 8,
-              "offsets": {"unit_domain": 0, "value_domain": 4, "order": 8, "reserved0": 12, "flags": 16, "exact_len": 24, "identity": 32, "reserved": 48}
+              "offsets": {
+                "unit_domain": 0,
+                "value_domain": 4,
+                "order": 8,
+                "reserved0": 12,
+                "flags": 16,
+                "exact_len": 24,
+                "identity": 32,
+                "reserved": 48
+              }
             },
             "VtDictionaryEntriesCursor": {
               "size": 16,
               "alignment": 8,
-              "offsets": {"context": 0, "vtable": 8}
+              "offsets": {
+                "context": 0,
+                "vtable": 8
+              }
             },
             "VtDictionaryEntriesVTable": {
               "size": 64,
               "alignment": 8,
-              "offsets": {"struct_size": 0, "interface_version": 8, "reserved": 12, "open": 16, "next_batch": 24, "release_batch": 32, "reduce": 40, "cancel": 48, "close": 56}
+              "offsets": {
+                "struct_size": 0,
+                "interface_version": 8,
+                "reserved": 12,
+                "open": 16,
+                "next_batch": 24,
+                "release_batch": 32,
+                "reduce": 40,
+                "cancel": 48,
+                "close": 56
+              }
             }
           }
         },
@@ -97,32 +142,74 @@
             "VtDictionaryEntry": {
               "size": 24,
               "alignment": 8,
-              "offsets": {"unit_offset": 0, "unit_len": 4, "value_offset": 8, "value_len": 12, "reserved": 16}
+              "offsets": {
+                "unit_offset": 0,
+                "unit_len": 4,
+                "value_offset": 8,
+                "value_len": 12,
+                "reserved": 16
+              }
             },
             "VtDictionaryEntryBatchLimits": {
               "size": 24,
               "alignment": 8,
-              "offsets": {"max_entries": 0, "max_units": 4, "max_values": 8, "reserved": 16}
+              "offsets": {
+                "max_entries": 0,
+                "max_units": 4,
+                "max_values": 8,
+                "reserved": 16
+              }
             },
             "VtDictionaryEntryBatchView": {
               "size": 40,
               "alignment": 8,
-              "offsets": {"entries": 0, "entry_count": 4, "units": 8, "unit_count": 12, "values": 16, "value_count": 20, "generation": 24, "reserved": 32}
+              "offsets": {
+                "entries": 0,
+                "entry_count": 4,
+                "units": 8,
+                "unit_count": 12,
+                "values": 16,
+                "value_count": 20,
+                "generation": 24,
+                "reserved": 32
+              }
             },
             "VtDictionaryEntriesInfo": {
               "size": 64,
               "alignment": 8,
-              "offsets": {"unit_domain": 0, "value_domain": 4, "order": 8, "reserved0": 12, "flags": 16, "exact_len": 24, "identity": 32, "reserved": 48}
+              "offsets": {
+                "unit_domain": 0,
+                "value_domain": 4,
+                "order": 8,
+                "reserved0": 12,
+                "flags": 16,
+                "exact_len": 24,
+                "identity": 32,
+                "reserved": 48
+              }
             },
             "VtDictionaryEntriesCursor": {
               "size": 8,
               "alignment": 4,
-              "offsets": {"context": 0, "vtable": 4}
+              "offsets": {
+                "context": 0,
+                "vtable": 4
+              }
             },
             "VtDictionaryEntriesVTable": {
               "size": 36,
               "alignment": 4,
-              "offsets": {"struct_size": 0, "interface_version": 4, "reserved": 8, "open": 12, "next_batch": 16, "release_batch": 20, "reduce": 24, "cancel": 28, "close": 32}
+              "offsets": {
+                "struct_size": 0,
+                "interface_version": 4,
+                "reserved": 8,
+                "open": 12,
+                "next_batch": 16,
+                "release_batch": 20,
+                "reduce": 24,
+                "cancel": 28,
+                "close": 32
+              }
             }
           }
         }
@@ -144,11 +231,30 @@
     "luarocks": "vinary-tree-liblevenshtein"
   },
   "supportTiers": {
-    "tier1": ["c", "cpp", "python", "jvm", "clojure", "javascript", "typescript", "clojurescript"],
-    "tier2": ["dotnet", "go", "swift", "ruby", "fortran"],
-    "tier3": ["ocaml", "haskell", "lua"]
+    "tier1": [
+      "c",
+      "cpp",
+      "python",
+      "jvm",
+      "clojure",
+      "javascript",
+      "typescript",
+      "clojurescript"
+    ],
+    "tier2": [
+      "dotnet",
+      "go",
+      "swift",
+      "ruby",
+      "fortran"
+    ],
+    "tier3": [
+      "ocaml",
+      "haskell",
+      "lua"
+    ]
   },
-  "packageVersion": "0.10.0",
+  "packageVersion": "4.0.0-rc.1",
   "abiVersion": 1,
   "apiRevision": 2,
   "defaultMatchBatch": 256,
@@ -234,31 +340,75 @@
   "objects": {
     "ResourceTransducer": {
       "accepts": "VtResource(dictionary-v1)",
-      "methods": ["snapshot", "unit_domain", "query_utf8", "query_bytes", "query_u64", "query_pattern"]
+      "methods": [
+        "snapshot",
+        "unit_domain",
+        "query_utf8",
+        "query_bytes",
+        "query_u64",
+        "query_pattern"
+      ]
     },
     "QueryCursor": {
       "ownership": "retains-query-start-snapshot",
-      "methods": ["next_batch", "release_batch", "reduce", "close"]
+      "methods": [
+        "next_batch",
+        "release_batch",
+        "reduce",
+        "close"
+      ]
     },
     "PhoneticPattern": {
       "feature": "PHONETIC",
-      "methods": ["compile_regex", "compile_llre", "size", "matches", "close"]
+      "methods": [
+        "compile_regex",
+        "compile_llre",
+        "size",
+        "matches",
+        "close"
+      ]
     },
     "PhoneticRuleSet": {
       "feature": "PHONETIC",
-      "methods": ["parse", "builtin", "len", "apply", "close"]
+      "methods": [
+        "parse",
+        "builtin",
+        "len",
+        "apply",
+        "close"
+      ]
     },
     "ScalarWfstResource": {
       "interface": "vt.scalar-wfst.1",
       "unitDomain": "UNICODE_SCALAR",
-      "weightDomains": ["tropical-f64", "log-f64", "probability-f64", "arctic-f64", "signed-tropical-f64", "count-f64", "boolean-f64"],
-      "methods": ["snapshot", "start", "num_states", "state_info", "state_arcs"]
+      "weightDomains": [
+        "tropical-f64",
+        "log-f64",
+        "probability-f64",
+        "arctic-f64",
+        "signed-tropical-f64",
+        "count-f64",
+        "boolean-f64"
+      ],
+      "methods": [
+        "snapshot",
+        "start",
+        "num_states",
+        "state_info",
+        "state_arcs"
+      ]
     },
     "DictionaryEntriesCursor": {
       "interface": "vt.dict.entry.v1",
       "ownership": "move-only-captured-revision-with-one-live-batch-lease",
       "order": "lexicographic",
-      "methods": ["next_batch", "release_batch", "reduce", "cancel", "close"]
+      "methods": [
+        "next_batch",
+        "release_batch",
+        "reduce",
+        "cancel",
+        "close"
+      ]
     }
   },
   "forbiddenOwnedObjects": [
@@ -270,42 +420,150 @@
     "DictionarySnapshot"
   ],
   "cFunctions": [
-    {"name": "llev_abi_version", "rustModule": "index"},
-    {"name": "llev_api_revision", "rustModule": "index"},
-    {"name": "llev_build_features", "rustModule": "index"},
-    {"name": "llev_last_error_message", "rustModule": "index"},
-    {"name": "llev_string_free", "rustModule": "string"},
-    {"name": "llev_string_array_free", "rustModule": "string"},
-    {"name": "llev_string_dup", "rustModule": "string"},
-    {"name": "llev_distance", "rustModule": "distance"},
-    {"name": "llev_distance_threshold", "rustModule": "distance"},
-    {"name": "llev_damerau_distance", "rustModule": "distance"},
-    {"name": "llev_damerau_distance_threshold", "rustModule": "distance"},
-    {"name": "llev_true_damerau_distance", "rustModule": "distance"},
-    {"name": "llev_true_damerau_distance_threshold", "rustModule": "distance"},
-    {"name": "llev_transducer_new", "rustModule": "index"},
-    {"name": "llev_transducer_snapshot", "rustModule": "index"},
-    {"name": "llev_transducer_free", "rustModule": "index"},
-    {"name": "llev_transducer_unit_domain", "rustModule": "index"},
-    {"name": "llev_transducer_query_utf8", "rustModule": "index"},
-    {"name": "llev_transducer_query_bytes", "rustModule": "index"},
-    {"name": "llev_transducer_query_u64", "rustModule": "index"},
-    {"name": "llev_query_cursor_next_batch", "rustModule": "index"},
-    {"name": "llev_query_cursor_release_batch", "rustModule": "index"},
-    {"name": "llev_query_cursor_reduce", "rustModule": "index"},
-    {"name": "llev_query_cursor_free", "rustModule": "index"},
-    {"name": "llev_owned_string_free", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_pattern_compile_regex", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_pattern_compile_llre", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_pattern_free", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_pattern_size", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_pattern_matches", "rustModule": "phonetic"},
-    {"name": "llev_transducer_query_pattern", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_rules_parse", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_rules_builtin", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_rules_free", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_rules_len", "rustModule": "phonetic"},
-    {"name": "llev_phonetic_rules_apply", "rustModule": "phonetic"}
+    {
+      "name": "llev_abi_version",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_api_revision",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_build_features",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_last_error_message",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_string_free",
+      "rustModule": "string"
+    },
+    {
+      "name": "llev_string_array_free",
+      "rustModule": "string"
+    },
+    {
+      "name": "llev_string_dup",
+      "rustModule": "string"
+    },
+    {
+      "name": "llev_distance",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_damerau_distance",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_damerau_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_true_damerau_distance",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_true_damerau_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_transducer_new",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_transducer_snapshot",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_transducer_free",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_transducer_unit_domain",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_transducer_query_utf8",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_transducer_query_bytes",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_transducer_query_u64",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cursor_next_batch",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cursor_release_batch",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cursor_reduce",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cursor_free",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_owned_string_free",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_pattern_compile_regex",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_pattern_compile_llre",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_pattern_free",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_pattern_size",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_pattern_matches",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_transducer_query_pattern",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_rules_parse",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_rules_builtin",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_rules_free",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_rules_len",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_rules_apply",
+      "rustModule": "phonetic"
+    }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",
@@ -326,46 +584,196 @@
       "Maintainer checklist"
     ],
     "facades": {
-      "c": {"languages": ["C"], "guide": "bindings/c/README.md", "example": "bindings/c/tests/cross_project_snapshot.c"},
-      "cpp": {"languages": ["C++"], "guide": "bindings/cpp/README.md", "example": "bindings/cpp/tests/snapshot.cpp"},
-      "python": {"languages": ["Python"], "guide": "bindings/python/README.md", "example": "bindings/python/tests/test_api.py"},
-      "jvm": {"languages": ["Java", "Kotlin", "Scala"], "guide": "bindings/jvm/README.md", "example": "bindings/jvm/src/smoke/java/io/vinarytree/liblevenshtein/ResourceSnapshotSmoke.java"},
-      "clojure": {"languages": ["Clojure"], "guide": "bindings/clojure/README.md", "example": "bindings/clojure/test/vinary_tree/liblevenshtein_test.clj"},
-      "javascript": {"languages": ["JavaScript", "TypeScript", "ClojureScript"], "guide": "bindings/javascript/README.md", "example": "bindings/javascript/test/facades.test.mjs"},
-      "dotnet": {"languages": ["C#"], "guide": "bindings/dotnet/README.md", "example": "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/Program.cs"},
-      "go": {"languages": ["Go"], "guide": "bindings/go/README.md", "example": "bindings/go/liblevenshtein_test.go"},
-      "swift": {"languages": ["Swift"], "guide": "bindings/swift/README.md", "example": "bindings/swift/Integration/Sources/SwiftBindingIntegration/main.swift"},
-      "ruby": {"languages": ["Ruby"], "guide": "bindings/ruby/README.md", "example": "bindings/ruby/test/test_liblevenshtein.rb"},
-      "fortran": {"languages": ["Fortran"], "guide": "bindings/fortran/README.md", "example": "bindings/fortran/test/test_distance.f90"},
-      "ocaml": {"languages": ["OCaml"], "guide": "bindings/ocaml/README.md", "example": "bindings/ocaml/test/snapshot.ml"},
-      "haskell": {"languages": ["Haskell"], "guide": "bindings/haskell/README.md", "example": "bindings/haskell/test/Main.hs"},
-      "lua": {"languages": ["Lua"], "guide": "bindings/lua/README.md", "example": "bindings/lua/tests/snapshot.lua"}
+      "c": {
+        "languages": [
+          "C"
+        ],
+        "guide": "bindings/c/README.md",
+        "example": "bindings/c/tests/cross_project_snapshot.c"
+      },
+      "cpp": {
+        "languages": [
+          "C++"
+        ],
+        "guide": "bindings/cpp/README.md",
+        "example": "bindings/cpp/tests/snapshot.cpp"
+      },
+      "python": {
+        "languages": [
+          "Python"
+        ],
+        "guide": "bindings/python/README.md",
+        "example": "bindings/python/tests/test_api.py"
+      },
+      "jvm": {
+        "languages": [
+          "Java",
+          "Kotlin",
+          "Scala"
+        ],
+        "guide": "bindings/jvm/README.md",
+        "example": "bindings/jvm/src/smoke/java/io/vinarytree/liblevenshtein/ResourceSnapshotSmoke.java"
+      },
+      "clojure": {
+        "languages": [
+          "Clojure"
+        ],
+        "guide": "bindings/clojure/README.md",
+        "example": "bindings/clojure/test/vinary_tree/liblevenshtein_test.clj"
+      },
+      "javascript": {
+        "languages": [
+          "JavaScript",
+          "TypeScript",
+          "ClojureScript"
+        ],
+        "guide": "bindings/javascript/README.md",
+        "example": "bindings/javascript/test/facades.test.mjs"
+      },
+      "dotnet": {
+        "languages": [
+          "C#"
+        ],
+        "guide": "bindings/dotnet/README.md",
+        "example": "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/Program.cs"
+      },
+      "go": {
+        "languages": [
+          "Go"
+        ],
+        "guide": "bindings/go/README.md",
+        "example": "bindings/go/liblevenshtein_test.go"
+      },
+      "swift": {
+        "languages": [
+          "Swift"
+        ],
+        "guide": "bindings/swift/README.md",
+        "example": "bindings/swift/Integration/Sources/SwiftBindingIntegration/main.swift"
+      },
+      "ruby": {
+        "languages": [
+          "Ruby"
+        ],
+        "guide": "bindings/ruby/README.md",
+        "example": "bindings/ruby/test/test_liblevenshtein.rb"
+      },
+      "fortran": {
+        "languages": [
+          "Fortran"
+        ],
+        "guide": "bindings/fortran/README.md",
+        "example": "bindings/fortran/test/test_distance.f90"
+      },
+      "ocaml": {
+        "languages": [
+          "OCaml"
+        ],
+        "guide": "bindings/ocaml/README.md",
+        "example": "bindings/ocaml/test/snapshot.ml"
+      },
+      "haskell": {
+        "languages": [
+          "Haskell"
+        ],
+        "guide": "bindings/haskell/README.md",
+        "example": "bindings/haskell/test/Main.hs"
+      },
+      "lua": {
+        "languages": [
+          "Lua"
+        ],
+        "guide": "bindings/lua/README.md",
+        "example": "bindings/lua/tests/snapshot.lua"
+      }
     },
-    "interopFacades": {
-      "python": "vinary-tree-interop/bindings/python/README.md",
-      "jvm": "vinary-tree-interop/bindings/jvm/README.md",
-      "javascript": "vinary-tree-interop/bindings/javascript/README.md",
-      "go": "vinary-tree-interop/bindings/go/README.md",
-      "swift": "vinary-tree-interop/bindings/swift/README.md",
-      "fortran": "vinary-tree-interop/bindings/fortran/README.md",
-      "ocaml": "vinary-tree-interop/bindings/ocaml/README.md",
-      "haskell": "vinary-tree-interop/bindings/haskell/README.md",
-      "lua": "vinary-tree-interop/bindings/lua/README.md"
-    }
+    "interopDocumentation": "https://github.com/vinary-tree/vinary-tree-interop/tree/master/bindings"
   },
   "wasm": {
     "umbrellaPackage": "@vinary-tree/vinary-tree",
     "projectPackage": "@vinary-tree/liblevenshtein",
-    "relatedProjectPackages": ["@vinary-tree/libdictenstein", "@vinary-tree/lling-llang", "@vinary-tree/duallity"],
+    "relatedProjectPackages": [
+      "@vinary-tree/libdictenstein",
+      "@vinary-tree/lling-llang",
+      "@vinary-tree/duallity"
+    ],
     "runtimeIdentityGuard": true,
     "browserPersistence": false,
     "nodeDefault": "native-napi",
-    "alternatives": ["wasm", "wasi-preview1", "wasi-component"]
+    "alternatives": [
+      "wasm",
+      "wasi-preview1",
+      "wasi-component"
+    ]
   },
   "snapshotFixture": {
     "query": "cat",
     "maxDistance": 2,
-    "initial": [["cat", 1], ["cot", 2], ["cut", 3], ["scat", null]],
-    "mutations": [["remove", "cot", null], ["update", "cut", 30], ["insert", "cit", 5], ["compact", "", null], ["checkpoint", "", null]]
+    "initial": [
+      [
+        "cat",
+        1
+      ],
+      [
+        "cot",
+        2
+      ],
+      [
+        "cut",
+        3
+      ],
+      [
+        "scat",
+        null
+      ]
+    ],
+    "mutations": [
+      [
+        "remove",
+        "cot",
+        null
+      ],
+      [
+        "update",
+        "cut",
+        30
+      ],
+      [
+        "insert",
+        "cit",
+        5
+      ],
+      [
+        "compact",
+        "",
+        null
+      ],
+      [
+        "checkpoint",
+        "",
+        null
+      ]
+    ]
+  },
+  "release": {
+    "canonical": "4.0.0-rc.1",
+    "registries": {
+      "cargo": "4.0.0-rc.1",
+      "clojars": "4.0.0-rc.1",
+      "cmake": "4.0.0-rc.1",
+      "fpm": "4.0.0",
+      "goTag": "v4.0.0-rc.1",
+      "hackage": "4.0.0",
+      "luaRocks": "4.0.0-rc.1-1",
+      "maven": "4.0.0-rc.1",
+      "npm": "4.0.0-rc.1",
+      "nuget": "4.0.0-rc.1",
+      "opam": "4.0.0~rc1",
+      "pkgConfig": "4.0.0-rc.1",
+      "pypi": "4.0.0rc1",
+      "rubygems": "4.0.0.rc.1",
+      "swiftTag": "4.0.0-rc.1"
+    },
+    "distTag": "next"
   }
 }

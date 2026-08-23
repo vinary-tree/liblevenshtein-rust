@@ -268,15 +268,15 @@ interface version; incompatible versions may coexist. Project APIs evolve above
 that boundary without requiring one monolithic release. The full change
 rules — four version counters, the additive-versus-fork decision table,
 worked examples — are the
-[evolution policy](../vinary-tree-interop/docs/abi-evolution.md).
+[evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md).
 
 ## Deeper documentation
 
 - **Family canon** (normative for all four projects, hosted with the
-  interop crate): [portal](../vinary-tree-interop/README.md) ·
-  [ABI reference](../vinary-tree-interop/docs/abi-reference.md) ·
-  [evolution policy](../vinary-tree-interop/docs/abi-evolution.md) ·
-  [security model](../vinary-tree-interop/docs/security-model.md).
+  interop crate): [portal](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) ·
+  [ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) ·
+  [evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md) ·
+  [security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md).
 - **Project corpus**: [binding hub](bindings/README.md) ·
   [`llev_*` C-ABI reference](bindings/c-abi-reference.md) ·
   [resource consumer](bindings/resource-consumer.md) ·

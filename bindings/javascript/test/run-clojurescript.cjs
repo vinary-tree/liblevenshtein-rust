@@ -5,5 +5,5 @@ const { resolve } = require("node:path");
 
 process.env.NODE_PATH = resolve("node_modules");
 Module._initPaths();
-process.chdir("/");
-require("/tmp/vinary-tree-liblevenshtein-cljs/main.cjs");
+const compiledTest = resolve("../../target/liblevenshtein-cljs/main.cjs");
+require(compiledTest);

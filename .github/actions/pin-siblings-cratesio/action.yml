@@ -1,15 +1,15 @@
-name: Pin dictionary crates to crates.io
+name: Pin family crates to crates.io
 description: >
-  Drop the development-only local `path` override from the `libdictenstein`
-  dependency so production builds and packaging resolve it — and transitively
-  `llattice` — from the published crates.io versions via its `version`
+  Drop development-only local `path` overrides from `vinary-tree-interop` and
+  `libdictenstein` so production builds and packaging resolve exact published
+  crates.io versions
   requirement. For release / production workflows only; development and CI use
   the sibling checkouts instead (see the `checkout-dev-siblings` action).
 
 runs:
   using: composite
   steps:
-    - name: Strip dev-only path override from libdictenstein dependency
+    - name: Strip dev-only path overrides from family dependencies
       shell: bash
       run: |
         set -euo pipefail
@@ -19,22 +19,22 @@ runs:
 
         manifest = pathlib.Path("Cargo.toml")
         before = manifest.read_text()
-        # Strip the dev-only `path = "../libdictenstein", ` key while keeping the
-        # `version = "X"` requirement so cargo resolves from crates.io. Version
-        # agnostic, so bumping the dependency does not silently break this step.
-        after = re.sub(
-            r'libdictenstein = \{ path = "\.\./libdictenstein", (version = "[^"]+")',
-            r'libdictenstein = { \1',
-            before,
-        )
+        after = before
+        for dependency in ("vinary-tree-interop", "libdictenstein"):
+            after, count = re.subn(
+                rf'{dependency} = \{{ path = "\.\./{dependency}", (version = "[^"]+")',
+                rf'{dependency} = {{ \1',
+                after,
+            )
+            if count != 1:
+                raise SystemExit(f"ERROR: expected one dev path override for {dependency}")
         if after == before:
             raise SystemExit(
-                "ERROR: expected the dev `path` override on the libdictenstein "
-                "dependency, but it was not found. The manifest form changed — "
+                "ERROR: expected dev path overrides, but none were found. "
                 "update .github/actions/pin-siblings-cratesio/action.yml."
             )
         manifest.write_text(after)
         PY
         cargo generate-lockfile
-        echo "libdictenstein dependency now resolves from crates.io:"
-        grep -n 'libdictenstein =' Cargo.toml
+        echo "Family dependencies now resolve from crates.io:"
+        grep -nE '^(vinary-tree-interop|libdictenstein) =' Cargo.toml

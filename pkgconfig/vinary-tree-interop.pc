@@ -1,7 +1,0 @@
-prefix=${pcfiledir}/../..
-includedir=${prefix}/include
-
-Name: vinary-tree-interop
-Description: Stable retained-resource ABI for modular Vinary Tree libraries
-Version: 0.1.0
-Cflags: -I${includedir}

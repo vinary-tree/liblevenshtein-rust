@@ -1,5 +1,5 @@
 module VinaryTree
   module Liblevenshtein
-    VERSION = "0.10.0"
+    VERSION = "4.0.0.rc.1"
   end
 end

@@ -41,10 +41,9 @@ jobs:
         env:
           RUSTFLAGS: -C target-feature=+aes,+sse2
         run: cargo build --locked --examples --all-features
-      # The interop crate is a workspace member the root test run does not
-      # cover; its layout/discriminant/negotiation pins are the executable ABI
-      # contract, so they run on every feature leg.
-      - run: cargo test --locked -p vinary-tree-interop
+      # The standalone interop repository owns its layout, discriminant, and
+      # negotiation pins. Cross-repository CI replays them at the same ref.
+      - run: cargo test --locked --manifest-path ../vinary-tree-interop/Cargo.toml
       - run: cargo fmt --all --check
 
   sanitizers:
@@ -79,7 +78,7 @@ jobs:
       # checks its layout (offset_of), vtable negotiation, and discriminant
       # reads for undefined behavior under the stacked-borrows model.
       - name: Miri over the interop layout and vtable unsafe
-        run: cargo +nightly miri test -p vinary-tree-interop
+        run: cargo +nightly miri test --manifest-path ../vinary-tree-interop/Cargo.toml
       # Strict-provenance validation of the consumer's raw-pointer surface that
       # AddressSanitizer cannot see: VtResource / Box::into_raw+from_raw
       # round-trips, the two-pass arena pointer fixup, discriminant reads, the
@@ -152,17 +151,18 @@ jobs:
           java-version: "25"
       - run: python3 scripts/check-bindings.py
       - run: python3 scripts/check-binding-docs.py
+      - run: python3 scripts/check-release-train.py
       - run: cargo build --locked --features native-bindings-full
       - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - name: C17/C23 and C++23 headers
         run: |
-          cc -std=c17 -Wall -Wextra -Werror -Iinclude -Ivinary-tree-interop/include -x c -fsyntax-only include/liblevenshtein.h
-          cc -std=c2x -Wall -Wextra -Werror -Iinclude -Ivinary-tree-interop/include -x c -fsyntax-only include/liblevenshtein.h
-          c++ -std=c++23 -Wall -Wextra -Werror -Iinclude -Ivinary-tree-interop/include -x c++ -fsyntax-only include/liblevenshtein.hpp
+          cc -std=c17 -Wall -Wextra -Werror -Iinclude -I../vinary-tree-interop/include -x c -fsyntax-only include/liblevenshtein.h
+          cc -std=c2x -Wall -Wextra -Werror -Iinclude -I../vinary-tree-interop/include -x c -fsyntax-only include/liblevenshtein.h
+          c++ -std=c++23 -Wall -Wextra -Werror -Iinclude -I../vinary-tree-interop/include -x c++ -fsyntax-only include/liblevenshtein.hpp
       - name: C++ custom-provider cursor integration
         run: |
           c++ -std=c++20 -Wall -Wextra -Werror \
-            -Iinclude -Ivinary-tree-interop/include \
+            -Iinclude -I../vinary-tree-interop/include \
             bindings/cpp/tests/snapshot.cpp -Ltarget/debug \
             -Wl,-rpath,"$PWD/target/debug" -lliblevenshtein \
             -o target/cpp-binding-smoke
@@ -170,7 +170,7 @@ jobs:
       - name: Modular C and C++ cross-project snapshots
         run: |
           cc -std=c17 -Wall -Wextra -Werror \
-            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include \
             bindings/c/tests/cross_project_snapshot.c \
             -Ltarget/debug -lliblevenshtein \
             -L../libdictenstein/target/debug -llibdictenstein \
@@ -179,7 +179,7 @@ jobs:
             -o target/c-cross-project-snapshot
           target/c-cross-project-snapshot
           cc -std=c17 -Wall -Wextra -Werror \
-            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include \
             bindings/c/tests/property.c \
             -Ltarget/debug -lliblevenshtein \
             -L../libdictenstein/target/debug -llibdictenstein \
@@ -188,7 +188,7 @@ jobs:
             -o target/c-property
           target/c-property
           cc -std=c17 -Wall -Wextra -Werror -fsanitize=address -g \
-            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include \
             bindings/c/tests/leak.c \
             -Ltarget/debug -lliblevenshtein \
             -L../libdictenstein/target/debug -llibdictenstein \
@@ -197,7 +197,7 @@ jobs:
             -o target/c-leak
           LD_PRELOAD="$(cc -print-file-name=libasan.so)" ASAN_OPTIONS=detect_leaks=1 target/c-leak
           cc -std=c17 -Wall -Wextra -Werror -fsanitize=address -g \
-            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include \
             bindings/c/tests/arena_profile.c \
             -Ltarget/debug -lliblevenshtein \
             -L../libdictenstein/target/debug -llibdictenstein \
@@ -206,7 +206,7 @@ jobs:
             -o target/c-arena-profile
           LD_PRELOAD="$(cc -print-file-name=libasan.so)" ASAN_OPTIONS=detect_leaks=1 target/c-arena-profile
           c++ -std=c++23 -Wall -Wextra -Werror \
-            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include \
             ../libdictenstein/bindings/cpp/tests/cross_project_snapshot.cpp \
             -Ltarget/debug -lliblevenshtein \
             -L../libdictenstein/target/debug -llibdictenstein \
@@ -215,7 +215,7 @@ jobs:
             -o target/cpp-cross-project-snapshot
           target/cpp-cross-project-snapshot
           c++ -std=c++23 -Wall -Wextra -Werror \
-            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include \
             bindings/cpp/tests/property.cpp \
             -Ltarget/debug -lliblevenshtein \
             -L../libdictenstein/target/debug -llibdictenstein \
@@ -224,7 +224,7 @@ jobs:
             -o target/cpp-property
           target/cpp-property
           c++ -std=c++23 -Wall -Wextra -Werror -fsanitize=address -g \
-            -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include \
+            -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include \
             bindings/cpp/tests/leak.cpp \
             -Ltarget/debug -lliblevenshtein \
             -L../libdictenstein/target/debug -llibdictenstein \
@@ -234,31 +234,37 @@ jobs:
           LD_PRELOAD="$(c++ -print-file-name=libasan.so)" ASAN_OPTIONS=detect_leaks=1 target/cpp-leak
       - name: Installed CMake package integration
         run: |
+          pushd ../vinary-tree-interop
+          scripts/stage-native-package.sh "$GITHUB_WORKSPACE/target/native-package"
+          popd
           scripts/stage-native-package.sh \
             x86_64-unknown-linux-gnu target/debug target/native-package
+          interop_prefix="$PWD/target/native-package/vinary-tree-interop-4.0.0-rc.1"
+          liblevenshtein_prefix="$PWD/target/native-package/liblevenshtein-4.0.0-rc.1-x86_64-unknown-linux-gnu"
           cmake -S bindings/cpp/tests/package -B target/cmake-package-smoke \
-            -DCMAKE_PREFIX_PATH="$PWD/target/native-package/liblevenshtein-0.10.0-x86_64-unknown-linux-gnu"
+            -DCMAKE_PREFIX_PATH="$interop_prefix;$liblevenshtein_prefix"
           cmake --build target/cmake-package-smoke
-          LD_LIBRARY_PATH="$PWD/target/native-package/liblevenshtein-0.10.0-x86_64-unknown-linux-gnu/lib" \
+          LD_LIBRARY_PATH="$liblevenshtein_prefix/lib" \
             target/cmake-package-smoke/liblevenshtein_package_smoke
           cmake -S bindings/cpp/tests/package -B target/cmake-package-static-smoke \
-            -DCMAKE_PREFIX_PATH="$PWD/target/native-package/liblevenshtein-0.10.0-x86_64-unknown-linux-gnu" \
+            -DCMAKE_PREFIX_PATH="$interop_prefix;$liblevenshtein_prefix" \
             -DLIBLEVENSHTEIN_LINKAGE=STATIC
           cmake --build target/cmake-package-static-smoke
           target/cmake-package-static-smoke/liblevenshtein_package_smoke
-          PKG_CONFIG_PATH="$PWD/target/native-package/liblevenshtein-0.10.0-x86_64-unknown-linux-gnu/lib/pkgconfig" \
+          PKG_CONFIG_PATH="$interop_prefix/lib/pkgconfig:$liblevenshtein_prefix/lib/pkgconfig" \
             pkg-config --validate liblevenshtein
           pushd ../libdictenstein
           scripts/stage-native-package.sh \
             x86_64-unknown-linux-gnu target/debug \
             "$GITHUB_WORKSPACE/target/native-package"
           popd
-          package_prefixes="$PWD/target/native-package/liblevenshtein-0.10.0-x86_64-unknown-linux-gnu;$PWD/target/native-package/libdictenstein-0.2.1-x86_64-unknown-linux-gnu"
+          libdictenstein_prefix="$PWD/target/native-package/libdictenstein-4.0.0-rc.1-x86_64-unknown-linux-gnu"
+          package_prefixes="$interop_prefix;$liblevenshtein_prefix;$libdictenstein_prefix"
           cmake -S bindings/cpp/tests/package-cross \
             -B target/cmake-cross-project-shared \
             -DCMAKE_PREFIX_PATH="$package_prefixes"
           cmake --build target/cmake-cross-project-shared
-          LD_LIBRARY_PATH="$PWD/target/native-package/liblevenshtein-0.10.0-x86_64-unknown-linux-gnu/lib:$PWD/target/native-package/libdictenstein-0.2.1-x86_64-unknown-linux-gnu/lib" \
+          LD_LIBRARY_PATH="$liblevenshtein_prefix/lib:$libdictenstein_prefix/lib" \
             target/cmake-cross-project-shared/vinary_tree_cross_project_package_smoke
           cmake -S bindings/cpp/tests/package-cross \
             -B target/cmake-cross-project-static \
@@ -267,13 +273,13 @@ jobs:
             -DLIBDICTENSTEIN_LINKAGE=STATIC
           cmake --build target/cmake-cross-project-static
           target/cmake-cross-project-static/vinary_tree_cross_project_package_smoke
-          PKG_CONFIG_PATH="$PWD/target/native-package/libdictenstein-0.2.1-x86_64-unknown-linux-gnu/lib/pkgconfig" \
+          PKG_CONFIG_PATH="$interop_prefix/lib/pkgconfig:$libdictenstein_prefix/lib/pkgconfig" \
             pkg-config --validate libdictenstein
       - name: JVM FFM provider and phonetic smoke integration
         run: |
           mkdir -p target/jvm-smoke
           mapfile -d '' -t java_sources < <(
-            find vinary-tree-interop/bindings/jvm/src/main/java \
+            find ../vinary-tree-interop/bindings/jvm/src/main/java \
               bindings/jvm/src/main/java bindings/jvm/src/smoke/java \
               -name '*.java' -print0
           )
@@ -324,14 +330,14 @@ jobs:
       - name: Custom-provider and long-lived snapshot tests
         env:
           LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
-          PYTHONPATH: bindings/python/src:vinary-tree-interop/bindings/python/src
+          PYTHONPATH: bindings/python/src:../vinary-tree-interop/bindings/python/src
         run: python -m pytest -q bindings/python/tests
       - name: Libdictenstein backends and cross-project snapshots
         env:
           LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
           LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
           PYTHONPATH: >-
-            ${{ github.workspace }}/../libdictenstein/bindings/python/src:${{ github.workspace }}/bindings/python/src:${{ github.workspace }}/vinary-tree-interop/bindings/python/src
+            ${{ github.workspace }}/../libdictenstein/bindings/python/src:${{ github.workspace }}/bindings/python/src:${{ github.workspace }}/../vinary-tree-interop/bindings/python/src
         run: python -m pytest -q ../libdictenstein/bindings/python/tests
 
   javascript-bindings:
@@ -347,7 +353,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           package-manager-cache: false
-      - run: npm test --prefix vinary-tree-interop/bindings/javascript
+      - run: npm test --prefix ../vinary-tree-interop/bindings/javascript
       - name: Validate native, WASM, WASI, TS, and CLJS facades
         working-directory: bindings/javascript
         run: |
@@ -479,28 +485,28 @@ jobs:
         shell: bash
         run: |
           c++ -std=c++23 -Wall -Wextra -Werror \
-            -I../lling-llang/include -Ivinary-tree-interop/include \
+            -I../lling-llang/include -I../vinary-tree-interop/include \
             ../lling-llang/bindings/cpp/tests/package_smoke.cpp \
             -L../lling-llang/target/debug -llling_llang \
             -Wl,-rpath,"$PWD/../lling-llang/target/debug" \
             -o target/lling-cpp-smoke
           target/lling-cpp-smoke
           c++ -std=c++23 -Wall -Wextra -Werror \
-            -I../duallity/include -Ivinary-tree-interop/include \
+            -I../duallity/include -I../vinary-tree-interop/include \
             ../duallity/bindings/cpp/tests/package_smoke.cpp \
             -L../duallity/target/debug -lduallity \
             -Wl,-rpath,"$PWD/../duallity/target/debug" \
             -o target/duallity-cpp-smoke
           target/duallity-cpp-smoke
       - name: Native N-API cross-project conformance
-        working-directory: bindings/javascript-runtime
+        working-directory: ../javascript-runtime
         run: |
           npm run build:native
           npm run test:native
           npm run test:leak
           npm run test:property
       - name: Browser WASM and Node WASI conformance
-        working-directory: bindings/javascript-runtime
+        working-directory: ../javascript-runtime
         run: |
           npm run build:wasm
           npm run build:wasi
@@ -707,8 +713,8 @@ jobs:
           LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
           LD_LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
         run: |
-          opam exec -- dune build --root vinary-tree-interop/bindings/ocaml @install
-          opam exec -- dune install --root vinary-tree-interop/bindings/ocaml
+          opam exec -- dune build --root ../vinary-tree-interop/bindings/ocaml @install
+          opam exec -- dune install --root ../vinary-tree-interop/bindings/ocaml
           opam exec -- dune build --root ../libdictenstein/bindings/ocaml @install
           opam exec -- dune install --root ../libdictenstein/bindings/ocaml
           opam exec -- dune build --root bindings/ocaml @install @runtest
@@ -739,7 +745,7 @@ jobs:
           cp pkgconfig/liblevenshtein.pc target/haskell-native/lib/pkgconfig/
           cp ../libdictenstein/pkgconfig/libdictenstein.pc target/haskell-native/lib/pkgconfig/
           cp include/liblevenshtein.h include/liblevenshtein_abi.h \
-            vinary-tree-interop/include/vinary_tree_interop.h \
+            ../vinary-tree-interop/include/vinary_tree_interop.h \
             ../libdictenstein/include/libdictenstein.h target/haskell-native/include/
           pushd bindings/haskell
           PKG_CONFIG_PATH="$GITHUB_WORKSPACE/target/haskell-native/lib/pkgconfig" \
@@ -764,15 +770,15 @@ jobs:
           read -r -a lua_cflags <<< "$(pkg-config --cflags lua5.4)"
           cc -std=c17 -Wall -Wextra -Werror -shared -fPIC \
             "${lua_cflags[@]}" \
-            -I../libdictenstein/include -Ivinary-tree-interop/include \
-            -Ivinary-tree-interop/bindings/lua \
+            -I../libdictenstein/include -I../vinary-tree-interop/include \
+            -I../vinary-tree-interop/bindings/lua \
             ../libdictenstein/bindings/lua/src/libdictenstein_lua.c \
             -L../libdictenstein/target/debug -llibdictenstein \
             -o target/lua/vinary_tree/libdictenstein.so
           cc -std=c17 -Wall -Wextra -Werror -shared -fPIC \
             "${lua_cflags[@]}" \
-            -Iinclude -Ivinary-tree-interop/include \
-            -Ivinary-tree-interop/bindings/lua \
+            -Iinclude -I../vinary-tree-interop/include \
+            -I../vinary-tree-interop/bindings/lua \
             bindings/lua/src/liblevenshtein_lua.c \
             -Ltarget/debug -lliblevenshtein \
             -o target/lua/vinary_tree/liblevenshtein.so
@@ -824,8 +830,8 @@ jobs:
           --test binding_snapshot_semantics
           --test ffi_resource_snapshot_semantics
       - run: >-
-          cargo test --locked --target ${{ matrix.platform.target }}
-          -p vinary-tree-interop
+          cargo test --locked --manifest-path ../vinary-tree-interop/Cargo.toml
+          --target ${{ matrix.platform.target }}
 
   linux-armv7-experimental:
     name: Linux armv7 (experimental)
@@ -840,12 +846,12 @@ jobs:
           target: armv7-unknown-linux-gnueabihf
           args: "--locked --no-default-features --features native-bindings-full --test query_start_snapshot_semantics --test binding_snapshot_semantics --test ffi_resource_snapshot_semantics"
       # The 32-bit ARM EABI leg is the one place the exact_32_arm layout table
-      # in vinary-tree-interop/tests/layout_contract.rs actually executes.
+      # in ../vinary-tree-interop/tests/layout_contract.rs actually executes.
       - uses: houseabsolute/actions-rust-cross@v1
         with:
           command: test
           target: armv7-unknown-linux-gnueabihf
-          args: "--locked -p vinary-tree-interop"
+          args: "--locked --manifest-path vendor/vinary-tree-interop/Cargo.toml"
 
   bsd-portability:
     name: ${{ matrix.platform.name }}
@@ -902,7 +908,7 @@ jobs:
             --test ffi_resource_snapshot_semantics
       - name: Run interop ABI contract tests
         shell: cpa.sh {0}
-        run: cargo test --locked -p vinary-tree-interop
+        run: cargo test --locked --manifest-path vendor/vinary-tree-interop/Cargo.toml
 
   bsd-aarch64-compile:
     name: ${{ matrix.name }} aarch64 compile

@@ -50,7 +50,7 @@ GUIDES: dict[str, Guide] = {
         "All strings and arrays use pointer-plus-length descriptors; embedded zero bytes and empty terms are valid where the function contract permits them.",
         "include/liblevenshtein.h",
         "bindings/c/tests/cross_project_snapshot.c",
-        'cc -std=c17 -Wall -Wextra -Werror -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include bindings/c/tests/cross_project_snapshot.c -Ltarget/debug -lliblevenshtein -L../libdictenstein/target/debug -llibdictenstein -Wl,-rpath,"$PWD/target/debug" -Wl,-rpath,"$PWD/../libdictenstein/target/debug" -o target/c-cross-project-snapshot && target/c-cross-project-snapshot',
+        'cc -std=c17 -Wall -Wextra -Werror -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include bindings/c/tests/cross_project_snapshot.c -Ltarget/debug -lliblevenshtein -L../libdictenstein/target/debug -llibdictenstein -Wl,-rpath,"$PWD/target/debug" -Wl,-rpath,"$PWD/../libdictenstein/target/debug" -o target/c-cross-project-snapshot && target/c-cross-project-snapshot',
     ),
     "cpp": Guide(
         "C and C++",
@@ -78,7 +78,7 @@ GUIDES: dict[str, Guide] = {
         "`str` selects Unicode scalars, `bytes` selects raw bytes, and integer sequences select the packed `u64` domain.",
         "bindings/python/src/liblevenshtein",
         "bindings/python/tests/test_api.py",
-        "PYTHONPATH=bindings/python/src:vinary-tree-interop/bindings/python/src pytest -q bindings/python/tests/test_api.py",
+        "PYTHONPATH=bindings/python/src:../vinary-tree-interop/bindings/python/src pytest -q bindings/python/tests/test_api.py",
     ),
     "jvm": Guide(
         "JVM",
@@ -323,7 +323,7 @@ views expire when their callback returns."""
     else:
         architecture = "../../docs/language-bindings.md"
         security = "../../docs/security/binding-trust-model.md"
-        evolution = "../../vinary-tree-interop/docs/abi-evolution.md"
+        evolution = "https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md"
         family = "../../docs/bindings/README.md"
         source = f"../../{guide.source}"
         evidence = f"../../{guide.evidence}"
@@ -534,11 +534,6 @@ def main() -> None:
     for key, guide in GUIDES.items():
         path = ROOT / f"bindings/{key}/README.md"
         outputs.append((path, render(path, guide)))
-    for key, guide in INTEROP_GUIDES.items():
-        path = ROOT / f"vinary-tree-interop/bindings/{key}/README.md"
-        outputs.append((path, render(path, guide, interop=True)))
-    outputs.append(render_interop_root())
-
     stale: list[Path] = []
     for path, rendered in outputs:
         if args.check:

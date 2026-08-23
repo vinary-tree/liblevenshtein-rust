@@ -107,22 +107,6 @@ def main() -> None:
     for entry in DOCS["facades"].values():
         check_guide(entry["guide"], entry["languages"], entry["example"])
 
-    interop_dirs = {
-        path.name
-        for path in (ROOT / "vinary-tree-interop/bindings").iterdir()
-        if path.is_dir() and not path.name.startswith(".")
-    }
-    if set(DOCS["interopFacades"]) != interop_dirs:
-        fail(
-            "interop documentation set differs from adapter directories: "
-            f"missing={sorted(interop_dirs - set(DOCS['interopFacades']))}, "
-            f"extra={sorted(set(DOCS['interopFacades']) - interop_dirs)}"
-        )
-    for key, guide in DOCS["interopFacades"].items():
-        represented = DOCS["facades"].get(key, {}).get("languages", [key])
-        example = DOCS["facades"].get(key, {}).get("example")
-        check_guide(guide, represented, example)
-
     hub_path, hub = read(DOCS["hub"])
     architecture_path, architecture = read(DOCS["architecture"])
     collection_path, collection = read(DOCS["collectionProtocols"])
@@ -144,8 +128,8 @@ def main() -> None:
 
     print(
         "binding-docs: ok "
-        f"({len(DOCS['facades'])} project facades, "
-        f"{len(DOCS['interopFacades'])} interop adapters)"
+        f"({len(DOCS['facades'])} project facades; "
+        "standalone interop documentation linked externally)"
     )
 
 

@@ -5,9 +5,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+INTEROP_ROOT = Path(
+    os.environ.get("VINARY_TREE_INTEROP_ROOT", ROOT.parent / "vinary-tree-interop")
+).resolve()
 MODEL_PATH = ROOT / "bindings" / "api.json"
 NOTICE = "Generated from bindings/api.json; do not edit numeric values manually."
 
@@ -468,15 +472,15 @@ def render_dictionary_entries_fixture(model: dict) -> str:
 def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
     java_path = Path(*model["organization"]["javaPackage"].split("."))
     interop_header = (
-        ROOT / "vinary-tree-interop" / "include" / "vinary_tree_interop.h"
+        INTEROP_ROOT / "include" / "vinary_tree_interop.h"
     ).read_text(encoding="utf-8")
     public_header = (ROOT / "include" / "liblevenshtein.h").read_text(encoding="utf-8")
     abi_header = render_c(model)
     ocaml_header = (
-        ROOT / "vinary-tree-interop" / "bindings" / "ocaml" / "vinary_tree_ocaml.h"
+        INTEROP_ROOT / "bindings" / "ocaml" / "vinary_tree_ocaml.h"
     ).read_text(encoding="utf-8")
     lua_header = (
-        ROOT / "vinary-tree-interop" / "bindings" / "lua" / "vinary_tree_lua.h"
+        INTEROP_ROOT / "bindings" / "lua" / "vinary_tree_lua.h"
     ).read_text(encoding="utf-8")
     generated = {
         ROOT / "include" / "liblevenshtein_abi.h": render_c(model),
@@ -503,32 +507,8 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
         / "bindings"
         / "conformance"
         / "dictionary_entries_v1.tsv": render_dictionary_entries_fixture(model),
-        # Placement-clean sharing of the conformance oracle: sibling repos may
-        # read a DEPENDENCY's files, and vinary-tree-interop is everyone's
-        # dependency — so the fixture is mirrored into the interop crate for
-        # libdictenstein/lling-llang/duallity tests to consume.
-        ROOT
-        / "vinary-tree-interop"
-        / "conformance"
-        / "query_start_snapshot.tsv": render_fixture(model),
-        ROOT
-        / "vinary-tree-interop"
-        / "conformance"
-        / "dictionary_entries_v1.tsv": render_dictionary_entries_fixture(model),
-        ROOT
-        / "vinary-tree-interop"
-        / "bindings"
-        / "haskell"
-        / "include"
-        / "vinary_tree_interop.h": interop_header,
         ROOT / "bindings" / "ocaml" / "include" / "liblevenshtein.h": public_header,
         ROOT / "bindings" / "ocaml" / "include" / "liblevenshtein_abi.h": abi_header,
-        ROOT
-        / "bindings"
-        / "ocaml"
-        / "include"
-        / "vinary_tree_interop.h": interop_header,
-        ROOT / "bindings" / "ocaml" / "include" / "vinary_tree_ocaml.h": ocaml_header,
     }
     # Cross-project release work may opt in to refreshing sibling mirrors. Normal
     # local generation is deliberately confined to this repository.

@@ -2,7 +2,7 @@ include_guard(GLOBAL)
 
 include(CMakeFindDependencyMacro)
 find_dependency(Threads)
-find_dependency(vinary-tree-interop 0.1 CONFIG)
+find_dependency(vinary-tree-interop 4.0 CONFIG)
 
 get_filename_component(_LLEVENSHTEIN_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
 

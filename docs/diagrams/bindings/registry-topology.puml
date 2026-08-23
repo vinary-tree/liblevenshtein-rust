@@ -1,64 +1,70 @@
 @startuml registry-topology
-' The publish-order DAG across package registries: the shared interop package
-' publishes first, then the producer (libdictenstein), then this consumer
-' (liblevenshtein), then the sibling WFST projects, and finally the npm
-' umbrella runtime followed by its lightweight project facades. Solid arrows
-' are "must be published before"; each node lists its public coordinates.
-' Color: family palette — interop #DCEDC8 (#33691E), libdictenstein #D5F5E3,
-'   liblevenshtein #FADBD8, lling-llang #FCF3CF, duallity #D6EAF8; npm
-'   umbrella + facades = engines purple #E1BEE7 / tint #F3E5F5 (#6A1B9A).
-' Source of truth: docs/releasing-language-bindings.md ("Exact release
-'   sequence"), bindings/related-projects.json, .github/workflows/
-'   release-interop.yml and release.yml.
+' Normative release ownership and publish-order DAG for 4.0.0-rc.1.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "DejaVu Sans"
 skinparam rectangle {
   RoundCorner 14
-  BorderColor #455A64
+  BorderColor #37474F
   FontColor #102027
 }
 skinparam ArrowColor #37474F
 skinparam ArrowThickness 2
 top to bottom direction
 
-title Publish-order DAG — interop first, producers before consumers, umbrella before facades
+title Vinary Tree 4.0.0-rc.1 — one owner per artifact, exact edges
 
-rectangle "1 · vinary-tree-interop  (tag interop-vX.Y.Z)\ncrates.io vinary-tree-interop · PyPI vinary-tree-interop\nMaven io.vinarytree:vinary-tree-interop · npm @vinary-tree/interop\nNuGet VinaryTree.Interop · Hackage/opam/fpm mirrors · C/C++ archive" as INTEROP #DCEDC8
+rectangle "1 · Standalone ABI owner\nvinary-tree-interop\ntag v4.0.0-rc.1\nall shared resource-type packages" as INTEROP #C8E6C9
 
-rectangle "2 · libdictenstein  (producer: dictionaries, CRUD, persistence)\ncrates.io libdictenstein · PyPI vinary-tree-libdictenstein\nMaven io.vinarytree:libdictenstein · npm @vinary-tree/libdictenstein" as LDICT #D5F5E3
+rectangle "2 · Dictionary producer\nlibdictenstein\nconstruction · CRUD · persistence" as LDICT #B2DFDB
+rectangle "3 · Matching consumer\nliblevenshtein-rust\nautomata · queries · matching" as LLEV #FFCCBC
+rectangle "4 · WFST toolkit\nlling-llang" as LLING #FFF9C4
+rectangle "5 · Bridge toolkit\nduallity" as DUAL #BBDEFB
 
-rectangle "3 · liblevenshtein  (consumer; tag vX.Y.Z)\ncrates.io liblevenshtein · PyPI vinary-tree-liblevenshtein\nMaven io.vinarytree:liblevenshtein · Clojars io.vinarytree/liblevenshtein-clojure\nNuGet VinaryTree.Liblevenshtein · RubyGems/fpm/opam/Hackage/LuaRocks\nGo module tag · SwiftPM tag · C/C++ archive" as LLEV #FADBD8
+rectangle "6 · Standalone JS runtime owner\njavascript-runtime\n@vinary-tree/vinary-tree\n6 native + browser-WASM + WASI" as RUNTIME #D1C4E9
+rectangle "7 · Scoped project facades\n@vinary-tree/libdictenstein\n@vinary-tree/liblevenshtein\n@vinary-tree/lling-llang\n@vinary-tree/duallity" as SCOPED #E1BEE7
+rectangle "8 · Legacy-name compatibility owner\nliblevenshtein-npm\nliblevenshtein@4.0.0-rc.1\nnext only; latest remains 2.0.4" as COMPAT #F8BBD0
 
-rectangle "4a · lling-llang\n(WFST toolkit; own repo + tag)" as LLING #FCF3CF
-rectangle "4b · duallity\n(Levenshtein WFSTs; own repo + tag)" as DUAL #D6EAF8
+INTEROP -[#2E7D32]-> LDICT : exact ABI package
+INTEROP -[#2E7D32]-> LLEV
+LDICT -[#00796B]-> LLEV : producer before consumer
+LLEV -[#D84315]-> LLING : exact optional integration
+LDICT -[#00796B]-> LLING
+LLING -[#F9A825]-> DUAL
+LLEV -[#D84315]-> DUAL
+LDICT -[#00796B]-> DUAL
 
-rectangle "5 · npm umbrella runtime\n@vinary-tree/vinary-tree\n(one native/WASM resource table)" as UMBRELLA #E1BEE7
+INTEROP -[#2E7D32]-> RUNTIME
+LDICT -[#00796B]-> RUNTIME
+LLEV -[#D84315]-> RUNTIME
+LLING -[#F9A825]-> RUNTIME
+DUAL -[#1976D2]-> RUNTIME
+RUNTIME -[#6A1B9A]-> SCOPED : exact runtime identity
+SCOPED -[#AD1457]-> COMPAT : exact scoped facade
 
-rectangle "6 · npm project facades\n@vinary-tree/liblevenshtein · @vinary-tree/libdictenstein\n@vinary-tree/lling-llang · @vinary-tree/duallity" as FACADES #F3E5F5
-
-INTEROP -[#33691E]-> LDICT : exact interop\nversion pinned
-INTEROP -[#33691E]-> LLEV
-LDICT -[#2E7D32]-> LLEV : cross-project handoff\nfixture must pass
-LLEV -[#C62828]-> LLING : exact sibling\ntag pins
-LLEV -[#C62828]-> DUAL
-LLING -[#F9A825]-> DUAL : duallity depends on\nall three siblings
-LDICT -[#2E7D32]-> UMBRELLA
-LLEV -[#C62828]-> UMBRELLA
-LLING -[#F9A825]-> UMBRELLA
-DUAL -[#0277BD]-> UMBRELLA
-UMBRELLA -[#6A1B9A]-> FACADES : facades pin the exact\numbrella version
-
-note right of INTEROP #F1F8E9
-  The dedicated release-interop.yml
-  workflow owns these coordinates; a
-  project release validates but never
-  republishes the shared ABI package.
+note right of INTEROP #E8F5E9
+  Project workflows consume this owner.
+  They never package or republish it.
 end note
 
-note right of FACADES #F3E5F5
-  Every edge is an exact-version pin:
-  no release job builds against a
-  moving sibling branch.
+note right of RUNTIME #EDE7F6
+  This is a sibling repository,
+  never an embedded project package.
 end note
+
+note right of COMPAT #FCE4EC
+  Both version-4 npm layers publish
+  under the next dist-tag during RC.
+end note
+
+legend bottom
+  |= Color |= Artifact role |
+  |<#C8E6C9> green | shared ABI owner |
+  |<#B2DFDB> teal | dictionary producer |
+  |<#FFCCBC> orange | matching consumer |
+  |<#FFF9C4> yellow | WFST toolkit |
+  |<#BBDEFB> blue | bridge toolkit |
+  |<#D1C4E9> purple | JavaScript runtime |
+  |<#F8BBD0> pink | legacy-name compatibility |
+endlegend
 @enduml

@@ -3,7 +3,7 @@
 The family-wide trust model — zones, the containment law, threading by
 claim, validation duties, exhaustion vectors, WASI policy, and non-goals —
 is specified once in the
-[interop security model](../../vinary-tree-interop/docs/security-model.md);
+[interop security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md);
 this document **instantiates it for liblevenshtein's own surfaces** and
 cites it rather than restating it. The project-wide threat model for
 non-binding surfaces (serialization, `.llre` parsing, resource ceilings)
@@ -28,7 +28,7 @@ Every fallible `llev_*` entry point executes inside `boundary()`
 caught panic downcast to its message and surfaced as `LLEV_STATUS_PANIC`,
 success clearing the per-thread error slot, failure storing the message.
 Nothing unwinds across the ABI in either direction — the family law
-([canon § 3](../../vinary-tree-interop/docs/security-model.md#3-the-panic-and-exception-containment-law)),
+([canon § 3](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md#3-the-panic-and-exception-containment-law)),
 contract row `ffi-boundary-panic-containment` in
 [`UNSAFE_ABI_CONTRACTS.tsv`](../verification/UNSAFE_ABI_CONTRACTS.tsv).
 
@@ -97,7 +97,7 @@ every path to a dangling read *by refusal*, not by caller discipline:
 ## 5. Validation duties, instantiated
 
 The canon's duty table
-([§ 5](../../vinary-tree-interop/docs/security-model.md#5-input-validation-duties))
+([§ 5](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md#5-input-validation-duties))
 lands in this consumer as follows — the full mechanism-by-mechanism
 walkthrough is [resource-consumer.md](../bindings/resource-consumer.md):
 
@@ -167,7 +167,7 @@ is argument validation (sentinel-coded, [C-ABI reference § 6](../bindings/c-abi
 ---
 
 *Canonical upstream:*
-[family security model](../../vinary-tree-interop/docs/security-model.md) ·
+[family security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md) ·
 [project threat model](../SECURITY.md) ·
 [UNSAFE_ABI_CONTRACTS.tsv](../verification/UNSAFE_ABI_CONTRACTS.tsv) ·
 [findings ledger](../bindings/FINDINGS_LEDGER.md). *Siblings:*

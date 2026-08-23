@@ -23,18 +23,13 @@ mkdir -p \
   "${prefix}/bin" \
   "${prefix}/include" \
   "${prefix}/lib/cmake/liblevenshtein" \
-  "${prefix}/lib/cmake/vinary-tree-interop" \
   "${prefix}/lib/pkgconfig"
 
 cp include/liblevenshtein.h include/liblevenshtein_abi.h include/liblevenshtein.hpp \
   "${prefix}/include/"
-cp vinary-tree-interop/include/vinary_tree_interop.h "${prefix}/include/"
 cp cmake/liblevenshteinConfig.cmake cmake/liblevenshteinConfigVersion.cmake \
   "${prefix}/lib/cmake/liblevenshtein/"
-cp cmake/vinary-tree-interopConfig.cmake cmake/vinary-tree-interopConfigVersion.cmake \
-  "${prefix}/lib/cmake/vinary-tree-interop/"
-cp pkgconfig/liblevenshtein.pc pkgconfig/vinary-tree-interop.pc \
-  "${prefix}/lib/pkgconfig/"
+cp pkgconfig/liblevenshtein.pc "${prefix}/lib/pkgconfig/"
 cp LICENSE README.md "${prefix}/"
 cp bindings/cpp/README.md "${prefix}/C_CPP_BINDINGS.md"
 

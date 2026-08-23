@@ -16,12 +16,12 @@ resource consumer, the cursor laws, and the JS/WASM topology.
    snapshot/marshalling contracts, tiers, distribution, and platform
    policy.
 2. **The family canon** (normative, shared by all four projects):
-   [interop README](../../vinary-tree-interop/README.md) — the portal ·
-   [ABI reference](../../vinary-tree-interop/docs/abi-reference.md) — the
+   [interop README](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) — the portal ·
+   [ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) — the
    annotated header walk with the refcount/paging/snapshot laws ·
-   [evolution policy](../../vinary-tree-interop/docs/abi-evolution.md) —
+   [evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md) —
    the four version counters and the additive-versus-fork rules ·
-   [security model](../../vinary-tree-interop/docs/security-model.md) —
+   [security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md) —
    zones, containment, validation duties.
 3. **The project corpus** (this layer):
 
@@ -68,20 +68,20 @@ foreign-language facade; it is not a documentation gap.
 
 | Language/runtime | liblevenshtein | libdictenstein | lling-llang | duallity | interop |
 |---|---|---|---|---|---|
-| C | [guide](../../bindings/c/README.md) | [ABI and guide](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/c-abi-reference.md) | [ABI and guide](https://github.com/vinary-tree/lling-llang/blob/master/docs/api/c-abi-reference.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/docs/guides/07-language-bindings.md) | [native contract](../../vinary-tree-interop/README.md) |
-| C++ | [guide](../../bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/cpp/README.md) | [native contract](../../vinary-tree-interop/README.md) |
-| Python | [guide](../../bindings/python/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/python/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/python/README.md) |
-| Java, Kotlin, Scala | [JVM guide](../../bindings/jvm/README.md) | [JVM guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/jvm/README.md) | — | — | [JVM adapter](../../vinary-tree-interop/bindings/jvm/README.md) |
+| C | [guide](../../bindings/c/README.md) | [ABI and guide](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/c-abi-reference.md) | [ABI and guide](https://github.com/vinary-tree/lling-llang/blob/master/docs/api/c-abi-reference.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/docs/guides/07-language-bindings.md) | [native contract](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) |
+| C++ | [guide](../../bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/cpp/README.md) | [native contract](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) |
+| Python | [guide](../../bindings/python/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/python/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/python/README.md) |
+| Java, Kotlin, Scala | [JVM guide](../../bindings/jvm/README.md) | [JVM guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/jvm/README.md) | — | — | [JVM adapter](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/jvm/README.md) |
 | Clojure | [guide](../../bindings/clojure/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/clojure/README.md) | — | — | Delegates to JVM |
-| JavaScript, TypeScript, ClojureScript | [guide](../../bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/javascript/README.md) | [adapter guide](../../vinary-tree-interop/bindings/javascript/README.md) |
+| JavaScript, TypeScript, ClojureScript | [guide](../../bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/javascript/README.md) | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/javascript/README.md) |
 | C# / .NET | [guide](../../bindings/dotnet/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/dotnet/README.md) | — | — | Included in the .NET package |
-| Go | [guide](../../bindings/go/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/go/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/go/README.md) |
-| Swift | [guide](../../bindings/swift/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/swift/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/swift/README.md) |
+| Go | [guide](../../bindings/go/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/go/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/go/README.md) |
+| Swift | [guide](../../bindings/swift/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/swift/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/swift/README.md) |
 | Ruby | [guide](../../bindings/ruby/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ruby/README.md) | — | — | Resource pair is mediated by project gems |
-| Fortran | [guide](../../bindings/fortran/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/fortran/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/fortran/README.md) |
-| OCaml | [guide](../../bindings/ocaml/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ocaml/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/ocaml/README.md) |
-| Haskell | [guide](../../bindings/haskell/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/haskell/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/haskell/README.md) |
-| Lua | [guide](../../bindings/lua/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/lua/README.md) | — | — | [adapter guide](../../vinary-tree-interop/bindings/lua/README.md) |
+| Fortran | [guide](../../bindings/fortran/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/fortran/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/fortran/README.md) |
+| OCaml | [guide](../../bindings/ocaml/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ocaml/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/ocaml/README.md) |
+| Haskell | [guide](../../bindings/haskell/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/haskell/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/haskell/README.md) |
+| Lua | [guide](../../bindings/lua/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/lua/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/lua/README.md) |
 
 The related `llattice` crate is Rust-only. It therefore appears in the family
 dependency graph but has no missing foreign-language guide.

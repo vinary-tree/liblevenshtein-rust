@@ -1,3 +1,3 @@
 {:paths ["build/classes/java/main" "build/resources/main"]
  :deps {io.vinarytree/vinary-tree-interop
-        {:local/root "../../vinary-tree-interop/bindings/jvm"}}}
+        {:local/root "../../../vinary-tree-interop/bindings/jvm"}}}

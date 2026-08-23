@@ -1,7 +1,8 @@
 name: Checkout dev sibling crates
 description: >
-  Clone the in-development related crates (llattice, libdictenstein,
-  lling-llang, duallity) into the
+  Clone the in-development family repositories (vinary-tree-interop,
+  javascript-runtime, liblevenshtein-npm, llattice, libdictenstein, lling-llang,
+  and duallity) into the
   workspace parent directory so liblevenshtein's `path = "../..."` dependencies
   resolve against their development versions (mirroring the local checkout
   layout). This is for development / CI workflows only — release and other
@@ -29,6 +30,18 @@ inputs:
     description: Exact duallity ref; defaults to `ref`.
     required: false
     default: ""
+  interop-ref:
+    description: Exact vinary-tree-interop ref; defaults to `ref`.
+    required: false
+    default: ""
+  javascript-runtime-ref:
+    description: Exact javascript-runtime ref; defaults to `ref`.
+    required: false
+    default: ""
+  liblevenshtein-npm-ref:
+    description: Exact liblevenshtein-npm compatibility ref; defaults to `ref`.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -42,8 +55,11 @@ runs:
         # libdictenstein consumes llattice, lling-llang consumes both dictionary
         # crates, and duallity consumes the three lower layers.
         parent="$(dirname "$GITHUB_WORKSPACE")"
-        for repo in llattice libdictenstein lling-llang duallity; do
+        for repo in vinary-tree-interop javascript-runtime liblevenshtein-npm llattice libdictenstein lling-llang duallity; do
           case "$repo" in
+            vinary-tree-interop) selected_ref="${{ inputs.interop-ref }}" ;;
+            javascript-runtime) selected_ref="${{ inputs.javascript-runtime-ref }}" ;;
+            liblevenshtein-npm) selected_ref="${{ inputs.liblevenshtein-npm-ref }}" ;;
             llattice) selected_ref="${{ inputs.llattice-ref }}" ;;
             libdictenstein) selected_ref="${{ inputs.libdictenstein-ref }}" ;;
             lling-llang) selected_ref="${{ inputs.lling-llang-ref }}" ;;
@@ -68,6 +84,9 @@ runs:
         echo "Sibling crates available under $parent:"
         ls -1d \
           "$parent"/llattice \
+          "$parent"/vinary-tree-interop \
+          "$parent"/javascript-runtime \
+          "$parent"/liblevenshtein-npm \
           "$parent"/libdictenstein \
           "$parent"/lling-llang \
           "$parent"/duallity

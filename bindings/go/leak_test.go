@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"testing"
 
-	lib "github.com/vinary-tree/libdictenstein/bindings/go"
+	lib "github.com/vinary-tree/libdictenstein/bindings/go/v4"
 )
 
 const (

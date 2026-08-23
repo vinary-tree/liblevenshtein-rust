@@ -4,7 +4,7 @@ set -euo pipefail
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 if [ "$#" -ne 2 ]; then
-  echo "usage: $0 <interop|liblevenshtein> <new-output-directory>" >&2
+  echo "usage: $0 <liblevenshtein> <new-output-directory>" >&2
   exit 2
 fi
 
@@ -17,14 +17,6 @@ fi
 
 mkdir -p "$output/src"
 case "$package" in
-  interop)
-    cp "$repository_root/vinary-tree-interop/bindings/fortran/fpm.toml" \
-      "$output/fpm.toml"
-    cp "$repository_root/vinary-tree-interop/bindings/fortran/src/vinary_tree_interop.f90" \
-      "$output/src/"
-    cp "$repository_root/vinary-tree-interop/README.md" "$output/README.md"
-    cp "$repository_root/LICENSE" "$output/LICENSE"
-    ;;
   liblevenshtein)
     cp "$repository_root/bindings/fortran/fpm.publish.toml" "$output/fpm.toml"
     cp "$repository_root/bindings/fortran/src/vinary_tree_liblevenshtein.f90" \
@@ -33,7 +25,7 @@ case "$package" in
     cp "$repository_root/bindings/fortran/LICENSE" "$output/LICENSE"
     ;;
   *)
-    echo "unknown fpm package: $package" >&2
+    echo "unsupported package (this repository owns only liblevenshtein): $package" >&2
     exit 2
     ;;
 esac

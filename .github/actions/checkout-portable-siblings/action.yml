@@ -8,6 +8,11 @@ runs:
   steps:
     - uses: actions/checkout@v6
       with:
+        repository: vinary-tree/vinary-tree-interop
+        path: vendor/vinary-tree-interop
+        persist-credentials: false
+    - uses: actions/checkout@v6
+      with:
         repository: vinary-tree/llattice
         path: vendor/llattice
         persist-credentials: false
@@ -16,7 +21,7 @@ runs:
         repository: vinary-tree/libdictenstein
         path: vendor/libdictenstein
         persist-credentials: false
-    - name: Point the development dependency at the workspace-local vendor tree
+    - name: Point development dependencies at workspace-local vendor trees
       shell: bash
       run: |
         set -euo pipefail
@@ -30,8 +35,13 @@ runs:
             'path = "vendor/libdictenstein"',
             1,
         )
+        after = after.replace(
+            'path = "../vinary-tree-interop"',
+            'path = "vendor/vinary-tree-interop"',
+            1,
+        )
         if after == before:
-            raise SystemExit("development libdictenstein path was not found")
+            raise SystemExit("development dependency paths were not found")
         manifest.write_text(after)
         PY
         cargo generate-lockfile

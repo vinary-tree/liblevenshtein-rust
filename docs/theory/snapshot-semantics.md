@@ -15,7 +15,7 @@ maps every law to its formal model and its executable tests.
 ## 1. Definitions
 
 All terms are defined before use; interop-level terms follow the
-[family canon](../../vinary-tree-interop/docs/abi-reference.md#1-terms).
+[family canon](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#1-terms).
 
 | Symbol / term | Definition |
 |---|---|
@@ -28,7 +28,7 @@ All terms are defined before use; interop-level terms follow the
 | path copying | The specific structural-sharing method used here: a mutation copies the nodes on the root-to-change path (out-degree-bounded), leaving all other nodes shared. |
 | ephemeral / partially persistent / fully persistent | Driscoll et al.'s taxonomy [[1]](#7-references): an *ephemeral* structure loses past versions on update; a *partially persistent* one allows reads of **every** past version but updates only the newest; a *fully persistent* one allows updates to any version (branching histories). |
 | $`d(q, w)`$ | The edit distance of the configured algorithm (Levenshtein, OSA, unrestricted Damerau, merge-and-split) between query $`q`$ and term $`w`$. |
-| $`\mathrm{live}_t(r)`$ | The retain/release ledger balance of resource $`r`$ at time $`t`$ ([canon § 5.3](../../vinary-tree-interop/docs/abi-reference.md#53-the-refcount-laws)). |
+| $`\mathrm{live}_t(r)`$ | The retain/release ledger balance of resource $`r`$ at time $`t`$ ([canon § 5.3](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#53-the-refcount-laws)). |
 
 ## 2. The cursor laws
 
@@ -85,7 +85,7 @@ constant-space,
 ```
 
 which is the interop capture-cost contract
-([canon § 6.4](../../vinary-tree-interop/docs/abi-reference.md#64-vtdictionaryvtable-op-by-op)):
+([canon § 6.4](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#64-vtdictionaryvtable-op-by-op)):
 copying the dictionary or taking a long-lived read lock are *violations*,
 not implementations.
 
@@ -174,7 +174,7 @@ in 1960 precisely so a consumer of a shared structure could keep exactly
 the part it needs alive [[3]](#7-references). COM's `IUnknown` turned the
 same discipline into a binary-stable protocol (`AddRef` / `Release` /
 `QueryInterface`) [[4]](#7-references), and the family ABI adopts its
-portable core ([canon § 5.2](../../vinary-tree-interop/docs/abi-reference.md#52-vtresourcevtable)).
+portable core ([canon § 5.2](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#52-vtresourcevtable)).
 
 The cursor's ownership chain is minimal by construction: at query start the
 snapshot arrives as a *new resource born owning one retain*; the cursor
@@ -262,7 +262,7 @@ canon's citation.
 — the lease protocol these laws ride under ·
 [resource-consumer](../bindings/resource-consumer.md) — where capture and
 validation happen in code ·
-[interop canon § 6.5](../../vinary-tree-interop/docs/abi-reference.md#65-the-dictionary-laws)
+[interop canon § 6.5](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#65-the-dictionary-laws)
 — the provider-side statement of the same laws ·
 [language-bindings](../language-bindings.md) — the architecture decision
 this contract serves.

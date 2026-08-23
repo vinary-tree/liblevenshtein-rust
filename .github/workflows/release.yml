@@ -21,11 +21,15 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
         with:
           llattice-ref: v0.1.0
-          libdictenstein-ref: v0.2.1
-          lling-llang-ref: v0.2.0
-          duallity-ref: v0.3.0
+          libdictenstein-ref: v4.0.0-rc.1
+          lling-llang-ref: v4.0.0-rc.1
+          duallity-ref: v4.0.0-rc.1
+          interop-ref: v4.0.0-rc.1
+          javascript-runtime-ref: v4.0.0-rc.1
+          liblevenshtein-npm-ref: v4.0.0-rc.1
       - run: python3 scripts/check-bindings.py
       - run: python3 scripts/check-binding-docs.py
+      - run: python3 scripts/check-release-train.py
       - name: Verify release tag matches package version
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
@@ -92,13 +96,12 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
         with:
           llattice-ref: v0.1.0
-          libdictenstein-ref: v0.2.1
-          lling-llang-ref: v0.2.0
-          duallity-ref: v0.3.0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          package-manager-cache: false
+          libdictenstein-ref: v4.0.0-rc.1
+          lling-llang-ref: v4.0.0-rc.1
+          duallity-ref: v4.0.0-rc.1
+          interop-ref: v4.0.0-rc.1
+          javascript-runtime-ref: v4.0.0-rc.1
+          liblevenshtein-npm-ref: v4.0.0-rc.1
       - run: cargo build --locked --release --lib --features native-bindings-full
       - run: cargo build --release --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - run: >-
@@ -141,17 +144,6 @@ jobs:
           mkdir -p "ruby-native/${{ matrix.ruby-platform }}"
           cp "$package_root/${{ matrix.package-file }}" \
             "ruby-native/${{ matrix.ruby-platform }}/${{ matrix.jvm-file }}"
-      - name: Build and test statically linked Node addon
-        shell: bash
-        working-directory: bindings/javascript-runtime
-        run: |
-          if [ "${{ runner.os }}" = Linux ]; then
-            node-gyp rebuild --directory native --nodedir=/usr -- -Dvinary_tree_profile=release
-          else
-            node-gyp rebuild --directory native -- -Dvinary_tree_profile=release
-          fi
-          npm run stage:native
-          npm run test:native
       - uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.target }}
@@ -172,12 +164,6 @@ jobs:
           name: ruby-native-${{ matrix.ruby-platform }}
           path: ruby-native
           if-no-files-found: error
-      - uses: actions/upload-artifact@v7
-        with:
-          name: node-prebuild-${{ matrix.node-platform }}
-          path: bindings/javascript-runtime/native/prebuilds
-          if-no-files-found: error
-
   python-wheels:
     name: Python wheel ${{ matrix.platform }}
     needs: binding-contract
@@ -219,7 +205,7 @@ jobs:
           CIBW_TEST_REQUIRES: pytest
           CIBW_BEFORE_TEST: >-
             python -m pip install
-            {project}/vinary-tree-interop/bindings/python
+            {project}/../vinary-tree-interop/bindings/python
           CIBW_TEST_COMMAND: >-
             python -m pytest -q {project}/bindings/python/tests
           CIBW_BEFORE_ALL_LINUX: >-
@@ -233,68 +219,9 @@ jobs:
           path: wheelhouse/*.whl
           if-no-files-found: error
 
-  javascript-runtime-package:
-    name: npm related umbrella runtime
-    needs: [binding-contract, native]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/checkout-dev-siblings
-        with:
-          llattice-ref: v0.1.0
-          libdictenstein-ref: v0.2.1
-          lling-llang-ref: v0.2.0
-          duallity-ref: v0.3.0
-      - uses: dtolnay/rust-toolchain@1.95
-        with:
-          targets: wasm32-unknown-unknown, wasm32-wasip1
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          registry-url: https://registry.npmjs.org
-          package-manager-cache: false
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-pack
-      - run: sudo apt-get update && sudo apt-get install -y binaryen
-      - uses: actions/download-artifact@v7
-        with:
-          pattern: node-prebuild-*
-          path: bindings/javascript-runtime/native/prebuilds
-          merge-multiple: true
-      - name: Build portable runtimes and test the assembled package
-        working-directory: bindings/javascript-runtime
-        run: |
-          npm run build:wasm
-          npm run build:wasi
-          npm run test:native
-          npm test
-          npm pack --pack-destination ../../dist
-          archive=$(find ../../dist -maxdepth 1 -type f -name 'vinary-tree-vinary-tree-*.tgz' -print -quit)
-          test -n "$archive"
-          for required in \
-            LICENSE \
-            README.md \
-            generated/wasm/vinary_tree.js \
-            generated/wasm/vinary_tree_bg.wasm \
-            generated/wasi/vinary_tree.wasm \
-            native/prebuilds/linux-x64/vinary_tree_native.node \
-            native/prebuilds/linux-arm64/vinary_tree_native.node \
-            native/prebuilds/darwin-arm64/vinary_tree_native.node \
-            native/prebuilds/win32-x64/vinary_tree_native.node; do
-            tar -tf "$archive" | grep -Fx "package/$required"
-          done
-      - uses: actions/upload-artifact@v7
-        with:
-          name: npm-runtime-package
-          path: dist/vinary-tree-vinary-tree-*.tgz
-          if-no-files-found: error
-
   javascript-package:
     name: npm package
-    needs: [binding-contract, native, javascript-runtime-package]
+    needs: binding-contract
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -303,9 +230,12 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
         with:
           llattice-ref: v0.1.0
-          libdictenstein-ref: v0.2.1
-          lling-llang-ref: v0.2.0
-          duallity-ref: v0.3.0
+          libdictenstein-ref: v4.0.0-rc.1
+          lling-llang-ref: v4.0.0-rc.1
+          duallity-ref: v4.0.0-rc.1
+          interop-ref: v4.0.0-rc.1
+          javascript-runtime-ref: v4.0.0-rc.1
+          liblevenshtein-npm-ref: v4.0.0-rc.1
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
@@ -314,10 +244,6 @@ jobs:
       - uses: DeLaGuardo/setup-clojure@13.4
         with:
           cli: latest
-      - uses: actions/download-artifact@v7
-        with:
-          name: node-prebuild-linux-x64
-          path: bindings/javascript-runtime/native/prebuilds
       - name: Build, test, and pack npm artifact
         working-directory: bindings/javascript
         run: |
@@ -329,52 +255,6 @@ jobs:
         with:
           name: npm-package
           path: dist/*.tgz
-          if-no-files-found: error
-
-  javascript-interop-package:
-    name: npm interop package
-    needs: binding-contract
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          registry-url: https://registry.npmjs.org
-          package-manager-cache: false
-      - name: Test and pack the shared resource package
-        working-directory: vinary-tree-interop/bindings/javascript
-        run: |
-          npm test
-          npm pack --pack-destination ../../../dist
-      - uses: actions/upload-artifact@v7
-        with:
-          name: npm-interop-package
-          path: dist/vinary-tree-interop-*.tgz
-          if-no-files-found: error
-
-  python-interop-package:
-    name: Python interop package
-    needs: binding-contract
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.14"
-      - run: python -m pip install build
-      - run: >-
-          python -m build --wheel
-          --outdir dist
-          vinary-tree-interop/bindings/python
-      - uses: actions/upload-artifact@v7
-        with:
-          name: python-interop-package
-          path: dist/vinary_tree_interop-*.whl
           if-no-files-found: error
 
   jvm-package:
@@ -396,13 +276,6 @@ jobs:
           pattern: jvm-native-*
           path: bindings/jvm/build/native-resources/META-INF/native
           merge-multiple: true
-      - name: Stage the shared JVM interop artifact first
-        working-directory: bindings/jvm
-        run: >-
-          ./gradlew --no-daemon
-          -p ../../vinary-tree-interop/bindings/jvm
-          publishMavenJavaPublicationToStagingRepository
-          -PstagingRepository=${{ github.workspace }}/bindings/jvm/build/staging-deploy
       - name: Test and stage Maven Central artifacts
         working-directory: bindings/jvm
         run: >-
@@ -438,14 +311,6 @@ jobs:
         shell: bash
         run: |
           version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
-          interop_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' vinary-tree-interop/Cargo.toml | head -n 1)
-          interop_repository="$HOME/.m2/repository/io/vinarytree/vinary-tree-interop/$interop_version"
-          mkdir -p "$interop_repository"
-          interop_jar=$(find maven-staging -type f -name "vinary-tree-interop-$interop_version.jar" -print -quit)
-          interop_pom=$(find maven-staging -type f -name "vinary-tree-interop-$interop_version.pom" -print -quit)
-          test -n "$interop_jar" && test -n "$interop_pom"
-          cp "$interop_jar" "$interop_repository/vinary-tree-interop-$interop_version.jar"
-          cp "$interop_pom" "$interop_repository/vinary-tree-interop-$interop_version.pom"
           repository="$HOME/.m2/repository/io/vinarytree/liblevenshtein/$version"
           mkdir -p "$repository"
           jar=$(find maven-staging -type f -name "liblevenshtein-$version.jar" -print -quit)
@@ -529,7 +394,7 @@ jobs:
           if-no-files-found: error
 
   hackage-package:
-    name: Hackage source packages
+    name: Hackage final-version candidate (never published for RC)
     needs: binding-contract
     runs-on: ubuntu-24.04
     steps:
@@ -544,9 +409,6 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$PWD/dist"
-          pushd vinary-tree-interop/bindings/haskell
-          cabal check
-          popd
           pushd bindings/haskell
           cabal check
           cabal sdist --ignore-project --output-directory="$OLDPWD/dist"
@@ -558,35 +420,29 @@ jobs:
           if-no-files-found: error
 
   fpm-package:
-    name: fpm registry package validation
+    name: fpm final-version candidate (never published for RC)
     needs: binding-contract
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          llattice-ref: v0.1.0
+          libdictenstein-ref: v4.0.0-rc.1
+          lling-llang-ref: v4.0.0-rc.1
+          duallity-ref: v4.0.0-rc.1
+          interop-ref: v4.0.0-rc.1
+          javascript-runtime-ref: v4.0.0-rc.1
+          liblevenshtein-npm-ref: v4.0.0-rc.1
       - uses: fortran-lang/setup-fpm@v10
-      - name: Stage clean registry packages and validate upload metadata
+      - name: Validate the numeric 4.0.0 candidates without publication
         run: |
-          scripts/stage-fpm-package.sh interop "$RUNNER_TEMP/fpm-interop"
+          fpm build -C ../vinary-tree-interop/bindings/fortran --dump fpm_model.json
+          fpm build -C bindings/fortran --dump fpm_model.json
           scripts/stage-fpm-package.sh liblevenshtein "$RUNNER_TEMP/fpm-liblevenshtein"
-          pushd "$RUNNER_TEMP/fpm-interop"
-          fpm build --dump fpm_model.json
-          fpm publish --token validation --dry-run
-          popd
-          mkdir -p "$RUNNER_TEMP/fpm-registry/vinary-tree/vinary-tree-interop/0.1.0"
-          cp -R "$RUNNER_TEMP/fpm-interop/src" \
-            "$RUNNER_TEMP/fpm-registry/vinary-tree/vinary-tree-interop/0.1.0/src"
-          cp "$RUNNER_TEMP/fpm-interop/fpm.toml" \
-            "$RUNNER_TEMP/fpm-registry/vinary-tree/vinary-tree-interop/0.1.0/fpm.toml"
-          printf '[registry]\npath = "%s"\n' "$RUNNER_TEMP/fpm-registry" \
-            > "$RUNNER_TEMP/fpm-registry.toml"
-          pushd "$RUNNER_TEMP/fpm-liblevenshtein"
-          fpm build --dump fpm_model.json \
-            --config-file "$RUNNER_TEMP/fpm-registry.toml"
-          fpm publish --token validation --dry-run \
-            --config-file "$RUNNER_TEMP/fpm-registry.toml"
-          popd
+          test "$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$RUNNER_TEMP/fpm-liblevenshtein/fpm.toml")" = 4.0.0
 
   luarocks-package:
     name: LuaRocks metadata validation
@@ -597,11 +453,11 @@ jobs:
         with:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y luarocks
-      - run: luarocks lint bindings/lua/vinary-tree-liblevenshtein-0.10.0-1.rockspec
+      - run: luarocks lint bindings/lua/vinary-tree-liblevenshtein-4.0.0-rc.1-1.rockspec
       - uses: actions/upload-artifact@v7
         with:
           name: luarocks-package
-          path: bindings/lua/vinary-tree-liblevenshtein-0.10.0-1.rockspec
+          path: bindings/lua/vinary-tree-liblevenshtein-4.0.0-rc.1-1.rockspec
           if-no-files-found: error
 
   opam-package:
@@ -619,13 +475,13 @@ jobs:
         run: |
           scripts/stage-ocaml-package.sh "$RUNNER_TEMP/opam-package"
           opam lint "$RUNNER_TEMP/opam-package/opam"
-          tar -tjf "$RUNNER_TEMP/opam-package/vinary-tree-liblevenshtein-0.10.0.tbz"
+          tar -tjf "$RUNNER_TEMP/opam-package/vinary-tree-liblevenshtein-4.0.0-rc.1.tbz"
       - uses: actions/upload-artifact@v7
         with:
           name: opam-package
           path: |
             ${{ runner.temp }}/opam-package/opam
-            ${{ runner.temp }}/opam-package/vinary-tree-liblevenshtein-0.10.0.tbz
+            ${{ runner.temp }}/opam-package/vinary-tree-liblevenshtein-4.0.0-rc.1.tbz
           if-no-files-found: error
 
   crates-io:
@@ -693,59 +549,6 @@ jobs:
           GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
         run: gem push dist/*.gem
 
-  hackage:
-    name: Publish Hackage packages
-    needs: hackage-package
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-24.04
-    environment: hackage
-    steps:
-      - uses: haskell-actions/setup@v2
-        with:
-          ghc-version: "9.14.1"
-          cabal-version: latest
-      - uses: actions/download-artifact@v7
-        with:
-          name: hackage-package
-          path: dist
-      - name: Publish liblevenshtein
-        shell: bash
-        env:
-          HACKAGE_USERNAME: ${{ secrets.HACKAGE_USERNAME }}
-          HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
-        run: |
-          cabal upload --publish \
-            --username="$HACKAGE_USERNAME" --password="$HACKAGE_PASSWORD" \
-            dist/vinary-tree-liblevenshtein-*.tar.gz
-
-  fpm:
-    name: Publish fpm registry packages
-    needs: fpm-package
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-24.04
-    environment: fpm
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: fortran-lang/setup-fpm@v10
-      - name: Publish liblevenshtein against the immutable interop package
-        shell: bash
-        env:
-          FPM_REGISTRY_TOKEN: ${{ secrets.FPM_REGISTRY_TOKEN }}
-        run: |
-          scripts/stage-fpm-package.sh liblevenshtein "$RUNNER_TEMP/fpm-liblevenshtein"
-          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-            if fpm build -C "$RUNNER_TEMP/fpm-liblevenshtein" \
-              --dump fpm_model.json; then
-              break
-            fi
-            if [ "$attempt" -eq 12 ]; then exit 1; fi
-            sleep 10
-          done
-          fpm publish -C "$RUNNER_TEMP/fpm-liblevenshtein" \
-            --token "$FPM_REGISTRY_TOKEN"
-
   go-module:
     name: Publish Go module tag
     needs: binding-contract
@@ -766,18 +569,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          interop_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' vinary-tree-interop/Cargo.toml | head -n 1)
-          interop_tag="vinary-tree-interop/bindings/go/v$interop_version"
-          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$interop_tag" >/dev/null
-          interop_module="github.com/vinary-tree/liblevenshtein-rust/vinary-tree-interop/bindings/go"
-          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-            if GOWORK=off GOPROXY=https://proxy.golang.org \
-              go list -m "$interop_module@v$interop_version" >/dev/null; then
-              break
-            fi
-            if [ "$attempt" -eq 12 ]; then exit 1; fi
-            sleep 10
-          done
+          grep -Fx 'module github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4' bindings/go/go.mod
+          grep -F 'github.com/vinary-tree/vinary-tree-interop/bindings/go/v4 v4.0.0-rc.1' bindings/go/go.mod
           GOWORK=off go -C bindings/go mod verify
           version=${GITHUB_REF_NAME#v}
           module_tag="bindings/go/v$version"
@@ -820,7 +613,7 @@ jobs:
         env:
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: >-
-          luarocks upload dist/vinary-tree-liblevenshtein-0.10.0-1.rockspec
+          luarocks upload dist/vinary-tree-liblevenshtein-4.0.0-rc.1-1.rockspec
           --api-key "$LUAROCKS_API_KEY"
 
   opam:
@@ -884,29 +677,9 @@ jobs:
         with:
           packages-dir: dist
 
-  npm-runtime:
-    name: Publish npm umbrella runtime
-    needs: javascript-runtime-package
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-24.04
-    environment: npm
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          registry-url: https://registry.npmjs.org
-          package-manager-cache: false
-      - uses: actions/download-artifact@v7
-        with:
-          name: npm-runtime-package
-          path: dist
-      - run: npm publish --access public --provenance dist/*.tgz
-
   npm:
     name: Publish npm package
-    needs: [javascript-package, npm-runtime]
+    needs: javascript-package
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     environment: npm
@@ -925,7 +698,7 @@ jobs:
         with:
           name: npm-package
           path: dist
-      - run: npm publish --access public --provenance dist/*.tgz
+      - run: npm publish --access public --provenance --tag next dist/*.tgz
 
   maven-central:
     name: Publish JVM package to Maven Central
@@ -942,11 +715,8 @@ jobs:
         with:
           name: maven-staging
           path: bindings/jvm/build/staging-deploy
-      - name: Keep only liblevenshtein in the project deployment bundle
-        shell: bash
-        run: |
-          rm -rf bindings/jvm/build/staging-deploy/io/vinarytree/vinary-tree-interop
-          test -d bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein
+      - name: Assert the project-only Maven deployment bundle
+        run: test -d bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein
       - name: Deploy signed bundle through Central Publisher Portal
         uses: jreleaser/release-action@v2
         with:
@@ -985,14 +755,6 @@ jobs:
         shell: bash
         run: |
           version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
-          interop_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' vinary-tree-interop/Cargo.toml | head -n 1)
-          interop_repository="$HOME/.m2/repository/io/vinarytree/vinary-tree-interop/$interop_version"
-          mkdir -p "$interop_repository"
-          interop_jar=$(find maven-staging -type f -name "vinary-tree-interop-$interop_version.jar" -print -quit)
-          interop_pom=$(find maven-staging -type f -name "vinary-tree-interop-$interop_version.pom" -print -quit)
-          test -n "$interop_jar" && test -n "$interop_pom"
-          cp "$interop_jar" "$interop_repository/vinary-tree-interop-$interop_version.jar"
-          cp "$interop_pom" "$interop_repository/vinary-tree-interop-$interop_version.pom"
           repository="$HOME/.m2/repository/io/vinarytree/liblevenshtein/$version"
           mkdir -p "$repository"
           jar=$(find maven-staging -type f -name "liblevenshtein-$version.jar" -print -quit)
@@ -1012,7 +774,6 @@ jobs:
     needs:
       - native
       - python-wheels
-      - javascript-runtime-package
       - javascript-package
       - jvm-package
       - clojure-package
@@ -1039,10 +800,6 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: npm-package
-          path: release-assets
-      - uses: actions/download-artifact@v7
-        with:
-          name: npm-runtime-package
           path: release-assets
       - uses: actions/download-artifact@v7
         with:

@@ -1,5 +1,5 @@
 name = "vinary-tree-liblevenshtein"
-version = "0.10.0"
+version = "4.0.0"
 license = "Apache-2.0"
 author = "Dylon Edwards"
 maintainer = "Dylon Edwards <dylon.devo@gmail.com>"
@@ -11,7 +11,7 @@ source-dir = "src"
 
 [dependencies.vinary-tree-interop]
 namespace = "vinary-tree"
-v = "0.1.0"
+v = "4.0.0"
 
 [build]
 link = ["liblevenshtein"]

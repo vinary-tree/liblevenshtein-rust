@@ -29,7 +29,7 @@ The repository's canonical executable example is
 installs and is run by the binding CI with:
 
 ```sh
-cc -std=c17 -Wall -Wextra -Werror -Iinclude -I../libdictenstein/include -Ivinary-tree-interop/include bindings/c/tests/cross_project_snapshot.c -Ltarget/debug -lliblevenshtein -L../libdictenstein/target/debug -llibdictenstein -Wl,-rpath,"$PWD/target/debug" -Wl,-rpath,"$PWD/../libdictenstein/target/debug" -o target/c-cross-project-snapshot && target/c-cross-project-snapshot
+cc -std=c17 -Wall -Wextra -Werror -Iinclude -I../libdictenstein/include -I../vinary-tree-interop/include bindings/c/tests/cross_project_snapshot.c -Ltarget/debug -lliblevenshtein -L../libdictenstein/target/debug -llibdictenstein -Wl,-rpath,"$PWD/target/debug" -Wl,-rpath,"$PWD/../libdictenstein/target/debug" -o target/c-cross-project-snapshot && target/c-cross-project-snapshot
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -114,7 +114,7 @@ are in the [binding trust model](../../docs/security/binding-trust-model.md).
 
 The project ABI revision, family ABI version, interface identity/version,
 package version, and umbrella-runtime version are independent counters. Follow
-the [ABI evolution policy](../../vinary-tree-interop/docs/abi-evolution.md); never infer compatibility from a
+the [ABI evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md); never infer compatibility from a
 package version alone.
 
 When loading fails, check—in order—the documented runtime/toolchain version,

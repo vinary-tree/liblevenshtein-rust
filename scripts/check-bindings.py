@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -13,6 +14,17 @@ from pathlib import Path
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
+INTEROP_ROOT = Path(
+    os.environ.get("VINARY_TREE_INTEROP_ROOT", ROOT.parent / "vinary-tree-interop")
+).resolve()
+RUNTIME_ROOT = Path(
+    os.environ.get("VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", ROOT.parent / "javascript-runtime")
+).resolve()
+LIBDICT_ROOT = Path(
+    os.environ.get("LIBDICTENSTEIN_ROOT", ROOT.parent / "libdictenstein")
+).resolve()
+LLING_ROOT = Path(os.environ.get("LLING_LLANG_ROOT", ROOT.parent / "lling-llang")).resolve()
+DUALLITY_ROOT = Path(os.environ.get("DUALLITY_ROOT", ROOT.parent / "duallity")).resolve()
 MODEL = json.loads((ROOT / "bindings" / "api.json").read_text(encoding="utf-8"))
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -29,12 +41,15 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit(message)
 
 
-def text(path: Path) -> str:
+def display(path: Path) -> str:
     try:
-        display_path = path.relative_to(ROOT)
+        return str(path.relative_to(ROOT))
     except ValueError:
-        display_path = path
-    require(path.is_file(), f"required binding file is missing: {display_path}")
+        return str(path)
+
+
+def text(path: Path) -> str:
+    require(path.is_file(), f"required binding file is missing: {display(path)}")
     return path.read_text(encoding="utf-8")
 
 
@@ -105,7 +120,7 @@ for marker in (
         "liblevenshtein ABI must consume the overridable shared interop header",
     )
 interop_header = text(
-    ROOT / "vinary-tree-interop" / "include" / "vinary_tree_interop.h"
+    INTEROP_ROOT / "include" / "vinary_tree_interop.h"
 )
 for marker in (
     "VT_WFST_INTERFACE_VERSION 1u",
@@ -185,23 +200,17 @@ require(
 )
 
 for mirror in (
-    ROOT
-    / "vinary-tree-interop"
-    / "bindings"
-    / "haskell"
-    / "include"
-    / "vinary_tree_interop.h",
-    ROOT / "bindings" / "ocaml" / "include" / "vinary_tree_interop.h",
+    INTEROP_ROOT / "bindings" / "haskell" / "include" / "vinary_tree_interop.h",
 ):
     require(
         text(mirror) == interop_header,
-        f"interop header mirror is stale: {mirror.relative_to(ROOT)}",
+        f"standalone interop header mirror is stale: {mirror}",
     )
 
 entries_fixture = text(ROOT / "bindings" / "conformance" / "dictionary_entries_v1.tsv")
 require(
     entries_fixture
-    == text(ROOT / "vinary-tree-interop" / "conformance" / "dictionary_entries_v1.tsv"),
+    == text(INTEROP_ROOT / "conformance" / "dictionary_entries_v1.tsv"),
     "dictionary entries conformance fixtures differ",
 )
 for marker in (
@@ -333,12 +342,8 @@ identity_suffixes = {
     ".tsv",
     ".yml",
 }
-identity_roots = [ROOT / "bindings", ROOT / "vinary-tree-interop"]
-for sibling in (
-    ROOT.parent / "libdictenstein",
-    ROOT.parent / "lling-llang",
-    ROOT.parent / "duallity",
-):
+identity_roots = [ROOT / "bindings", INTEROP_ROOT]
+for sibling in (LIBDICT_ROOT, LLING_ROOT, DUALLITY_ROOT):
     for relative in ("bindings", "include"):
         candidate = sibling / relative
         if candidate.is_dir():
@@ -430,7 +435,7 @@ for marker in ("byte_arena", "u64_arena", "leased", "llev_query_cursor_reduce"):
 python = tomllib.loads(text(ROOT / "bindings" / "python" / "pyproject.toml"))
 require(python["project"]["name"] == packages["pypi"], "wrong PyPI package")
 python_interop = tomllib.loads(
-    text(ROOT / "vinary-tree-interop" / "bindings" / "python" / "pyproject.toml")
+    text(INTEROP_ROOT / "bindings" / "python" / "pyproject.toml")
 )
 require(
     python_interop["project"]["name"] == "vinary-tree-interop",
@@ -438,18 +443,16 @@ require(
 )
 for setup_path in (
     ROOT / "bindings" / "python" / "setup.py",
-    ROOT / "vinary-tree-interop" / "bindings" / "python" / "setup.py",
-    ROOT.parent / "libdictenstein" / "bindings" / "python" / "setup.py",
+    INTEROP_ROOT / "bindings" / "python" / "setup.py",
+    LIBDICT_ROOT / "bindings" / "python" / "setup.py",
 ):
     require(
         '"LICENSE"' in text(setup_path),
         f"Python wheel does not stage its license: {setup_path}",
     )
-go_interop = text(ROOT / "vinary-tree-interop" / "bindings" / "go" / "go.mod")
+go_interop = text(INTEROP_ROOT / "bindings" / "go" / "go.mod")
 go_project = text(ROOT / "bindings" / "go" / "go.mod")
-go_interop_module = (
-    "github.com/vinary-tree/liblevenshtein-rust/vinary-tree-interop/bindings/go"
-)
+go_interop_module = "github.com/vinary-tree/vinary-tree-interop/bindings/go/v4"
 require(
     f"module {go_interop_module}" in go_interop,
     "shared Go module path must match its versioned repository subdirectory",
@@ -469,9 +472,9 @@ require(
     "wrong Maven artifact",
 )
 for build_path in (
-    ROOT / "vinary-tree-interop" / "bindings" / "jvm" / "build.gradle.kts",
+    INTEROP_ROOT / "bindings" / "jvm" / "build.gradle.kts",
     ROOT / "bindings" / "jvm" / "build.gradle.kts",
-    ROOT.parent / "libdictenstein" / "bindings" / "jvm" / "build.gradle.kts",
+    LIBDICT_ROOT / "bindings" / "jvm" / "build.gradle.kts",
 ):
     source = text(build_path)
     for marker in (
@@ -499,8 +502,7 @@ require(
     "JVM native path must not declare JNI methods",
 )
 jvm_provider = text(
-    ROOT
-    / "vinary-tree-interop"
+    INTEROP_ROOT
     / "bindings"
     / "jvm"
     / "src"
@@ -536,8 +538,8 @@ require(packages["clojars"] in clojure_project, "wrong Clojars coordinate")
 for clojure_path in (
     ROOT / "bindings" / "clojure" / "project.clj",
     ROOT / "bindings" / "clojure" / "deps.edn",
-    ROOT.parent / "libdictenstein" / "bindings" / "clojure" / "project.clj",
-    ROOT.parent / "libdictenstein" / "bindings" / "clojure" / "deps.edn",
+    LIBDICT_ROOT / "bindings" / "clojure" / "project.clj",
+    LIBDICT_ROOT / "bindings" / "clojure" / "deps.edn",
 ):
     require(
         "--enable-native-access=ALL-UNNAMED" in text(clojure_path),
@@ -546,7 +548,7 @@ for clojure_path in (
 javascript = json.loads(text(ROOT / "bindings" / "javascript" / "package.json"))
 require(javascript["name"] == packages["npm"], "wrong npm project package")
 javascript_interop = json.loads(
-    text(ROOT / "vinary-tree-interop" / "bindings" / "javascript" / "package.json")
+    text(INTEROP_ROOT / "bindings" / "javascript" / "package.json")
 )
 require(javascript_interop["name"] == interop["npm"], "wrong interop npm package")
 require(
@@ -574,14 +576,18 @@ for facade in ("native.mjs", "wasm.mjs", "wasi.mjs"):
 # runtime instance. WFST composition must retain inputs in O(1), not import the
 # complete component graphs.
 related_packages = {
-    "lling-llang": ("@vinary-tree/lling-llang", "0.2.0", "assertWfstResource"),
-    "duallity": ("@vinary-tree/duallity", "0.3.0", "assertDictionaryResource"),
+    "lling-llang": (LLING_ROOT, "@vinary-tree/lling-llang", "assertWfstResource"),
+    "duallity": (DUALLITY_ROOT, "@vinary-tree/duallity", "assertDictionaryResource"),
 }
-for project, (package_name, version, guard) in related_packages.items():
-    package_root = ROOT.parent / project / "bindings" / "javascript"
+related_versions = json.loads(text(ROOT / "bindings" / "related-projects.json"))
+for project, (project_root, package_name, guard) in related_packages.items():
+    package_root = project_root / "bindings" / "javascript"
     package = json.loads(text(package_root / "package.json"))
     require(package["name"] == package_name, f"wrong {project} npm package")
-    require(package["version"] == version, f"wrong {project} npm version")
+    require(
+        package["version"] == related_versions[project]["version"],
+        f"wrong {project} npm version",
+    )
     require(
         package["dependencies"]["@vinary-tree/vinary-tree"] == MODEL["packageVersion"],
         f"{project} must pin the umbrella runtime exactly",
@@ -595,7 +601,7 @@ for project, (package_name, version, guard) in related_packages.items():
         )
         require(guard in source, f"{project} {facade} lacks interface guard")
 
-lling_bindings = text(ROOT.parent / "lling-llang" / "src" / "bindings.rs")
+lling_bindings = text(LLING_ROOT / "src" / "bindings.rs")
 for marker in (
     "CapturedWfst",
     "CompositionResource::capture",
@@ -609,7 +615,7 @@ require(
     and "import_tropical_wfst(second)?" not in lling_bindings,
     "composition must not eagerly import its component graphs",
 )
-duallity_bindings = text(ROOT.parent / "duallity" / "src" / "bindings.rs")
+duallity_bindings = text(DUALLITY_ROOT / "src" / "bindings.rs")
 for marker in (
     "DictionaryProvider::capture(resource)?",
     "retained_duallity_snapshot_composes_after_all_source_handles_are_dropped",
@@ -629,7 +635,7 @@ require(
     "Maven local paths must follow io.vinarytree -> io/vinarytree",
 )
 libdictenstein_release = text(
-    ROOT.parent / "libdictenstein" / ".github" / "workflows" / "release-bindings.yml"
+    LIBDICT_ROOT / ".github" / "workflows" / "release-bindings.yml"
 ).lower()
 for marker in (
     "stage-native-package.sh",
@@ -641,26 +647,31 @@ for marker in (
     "go-module",
     "swiftpm",
     "rubygems",
-    "fpm publish",
+    "hackage final-version candidate (never published for rc)",
+    "fpm final-version candidate (never published for rc)",
     "opam-repository",
-    "cabal upload",
     "luarocks upload",
 ):
     require(
         marker in libdictenstein_release,
         f"libdictenstein release workflow does not cover {marker}",
     )
-interop_release = text(ROOT / ".github" / "workflows" / "release-interop.yml").lower()
+for forbidden in ("name: publish hackage", "name: publish fpm"):
+    require(
+        forbidden not in libdictenstein_release,
+        f"libdictenstein RC workflow violates the numeric-only registry embargo: {forbidden}",
+    )
+interop_release = text(INTEROP_ROOT / ".github" / "workflows" / "release.yml").lower()
 for marker in (
-    'tags: ["interop-v*.*.*"]',
-    "cargo publish -p vinary-tree-interop",
+    'tags: ["v*.*.*"]',
+    "cargo publish --locked",
     "gh-action-pypi-publish",
     "npm publish",
     "maven-central",
     "vinarytree.interop",
-    "cabal upload",
-    "fpm publish",
-    "vinary-tree-interop/bindings/go/v$version",
+    "hackage final-version candidate (never published for rc)",
+    "fpm final-version candidate (never published for rc)",
+    'module_tag="bindings/go/v$version"',
     "opam-repository",
 ):
     require(marker in interop_release, f"shared interop release is missing {marker}")
@@ -676,12 +687,23 @@ for forbidden in (
     )
 for marker in ("nuget", "rubygems", "hackage", "fpm", "go-module", "opam", "luarocks"):
     require(marker in release, f"release workflow does not cover {marker}")
+for marker in (
+    "hackage final-version candidate (never published for rc)",
+    "fpm final-version candidate (never published for rc)",
+):
+    require(marker in release, f"project RC workflow is missing {marker}")
+for forbidden in ("name: publish hackage", "name: publish fpm"):
+    require(
+        forbidden not in release,
+        f"project RC workflow violates the numeric-only registry embargo: {forbidden}",
+    )
 for project, package_name in (
     ("lling-llang", "@vinary-tree/lling-llang"),
     ("duallity", "@vinary-tree/duallity"),
 ):
+    project_root = LLING_ROOT if project == "lling-llang" else DUALLITY_ROOT
     project_release = text(
-        ROOT.parent / project / ".github" / "workflows" / "release-bindings.yml"
+        project_root / ".github" / "workflows" / "release-bindings.yml"
     ).lower()
     for marker in ("npm publish", "cargo publish", "stage-native-package.sh"):
         require(
@@ -725,7 +747,7 @@ for marker in (
     require(marker in ci, f"CI cross-project conformance is missing {marker}")
 
 runtime_package = json.loads(
-    text(ROOT / "bindings" / "javascript-runtime" / "package.json")
+    text(RUNTIME_ROOT / "package.json")
 )
 for artifact in (
     "LICENSE",
@@ -744,14 +766,12 @@ require(
     "published WASI runtime must remove profiling debug sections",
 )
 native_stager = text(
-    ROOT / "bindings" / "javascript-runtime" / "scripts" / "stage-native-prebuild.mjs"
+    RUNTIME_ROOT / "scripts" / "stage-native-prebuild.mjs"
 )
 require(
     'execFileSync("strip"' in native_stager,
     "published Node prebuilds must remove profiling debug symbols",
 )
-text(ROOT / "bindings" / "javascript-runtime" / "generated" / "wasm" / ".npmignore")
-
 # Panic-free WASM boundary (LLEV-B4): a panic in the umbrella-runtime WASM
 # modules traps and kills the whole instance instead of surfacing a status or
 # JsError, so non-test code in browser.rs and wasi.rs must never reach a
@@ -786,7 +806,7 @@ def wasm_panic_sites(path: Path) -> list[str]:
             elif stripped.endswith(";"):
                 cfg_test_pending = False  # declaration-only item: `mod tests;`
         elif not test_depths and WASM_PANIC_PATTERN.search(code):
-            sites.append(f"{path.relative_to(ROOT)}:{number}: {raw_line.strip()}")
+            sites.append(f"{display(path)}:{number}: {raw_line.strip()}")
         depth += code.count("{") - code.count("}")
         if test_depths and depth <= test_depths[-1]:
             test_depths.pop()
@@ -794,8 +814,8 @@ def wasm_panic_sites(path: Path) -> list[str]:
 
 
 for wasm_module in (
-    ROOT / "bindings" / "javascript-runtime" / "rust" / "src" / "browser.rs",
-    ROOT / "bindings" / "javascript-runtime" / "rust" / "src" / "wasi.rs",
+    RUNTIME_ROOT / "rust" / "src" / "browser.rs",
+    RUNTIME_ROOT / "rust" / "src" / "wasi.rs",
 ):
     wasm_panics = wasm_panic_sites(wasm_module)
     require(

@@ -1323,16 +1323,16 @@
     "javascript-runtime": {
       "binding": "c-abi",
       "sourceFiles": [
-        "bindings/javascript-runtime/native.mjs",
-        "bindings/javascript-runtime/native.cjs",
-        "bindings/javascript-runtime/index.d.ts",
-        "bindings/javascript-runtime/native/src/addon.cc"
+        "../javascript-runtime/native.mjs",
+        "../javascript-runtime/native.cjs",
+        "../javascript-runtime/index.d.ts",
+        "../javascript-runtime/native/src/addon.cc"
       ],
-      "readme": "bindings/javascript-runtime/README.md",
+      "readme": "../javascript-runtime/README.md",
       "tests": [
-        "bindings/javascript-runtime/test/native.test.mjs",
-        "bindings/javascript-runtime/test/wasi.test.mjs",
-        "bindings/javascript-runtime/test/browser-wasm.test.mjs"
+        "../javascript-runtime/test/native.test.mjs",
+        "../javascript-runtime/test/wasi.test.mjs",
+        "../javascript-runtime/test/browser-wasm.test.mjs"
       ],
       "enums": {
         "status": {
@@ -1341,17 +1341,17 @@
         },
         "algorithm": {
           "symbol": "Algorithm",
-          "definedIn": "bindings/javascript-runtime/index.d.ts",
+          "definedIn": "../javascript-runtime/index.d.ts",
           "note": "string-literal union mapped by the algorithms table in native.mjs"
         },
         "queryOrder": {
           "symbol": "QueryOrder",
-          "definedIn": "bindings/javascript-runtime/index.d.ts",
+          "definedIn": "../javascript-runtime/index.d.ts",
           "note": "string-literal union mapped by the orders table in native.mjs"
         },
         "phoneticRuleSetKind": {
           "symbol": "phoneticRules",
-          "definedIn": "bindings/javascript-runtime/index.d.ts",
+          "definedIn": "../javascript-runtime/index.d.ts",
           "note": "string selectors \"english-orthography\"/\"english-phonetic\" dispatched in addon.cc"
         }
       },

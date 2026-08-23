@@ -29,7 +29,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	lib "github.com/vinary-tree/libdictenstein/bindings/go"
+	lib "github.com/vinary-tree/libdictenstein/bindings/go/v4"
 )
 
 const seed = 20260809

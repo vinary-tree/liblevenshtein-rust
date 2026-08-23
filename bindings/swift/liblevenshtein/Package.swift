@@ -6,7 +6,10 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [.library(name: "Liblevenshtein", targets: ["Liblevenshtein"])],
     dependencies: [
-        .package(path: "../../../vinary-tree-interop/bindings/swift/vinary-tree-interop"),
+        .package(
+            url: "https://github.com/vinary-tree/vinary-tree-interop.git",
+            exact: "4.0.0-rc.1"
+        ),
     ],
     targets: [
         .systemLibrary(name: "CLiblevenshtein"),

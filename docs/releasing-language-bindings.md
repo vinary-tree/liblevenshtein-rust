@@ -1,242 +1,336 @@
-# Releasing language bindings
+# Releasing the Vinary Tree language bindings
 
-Bindings are released as a dependency graph, not as one monolithic artifact.
-The shared interop packages publish first, producer projects such as
-libdictenstein publish next, and consumers such as liblevenshtein publish after
-cross-project conformance succeeds.
+This guide defines the release architecture, version policy, publication order,
+validation gates, credentials, and recovery procedure for the Vinary Tree
+family. It is normative for the `4.0.0-rc.1` release train.
 
-![Publish-order DAG: vinary-tree-interop first, libdictenstein second, liblevenshtein third, the WFST siblings next, then the npm umbrella runtime and finally the project npm facades — every edge an exact-version pin, never a moving branch.](diagrams/bindings/registry-topology.svg)
+The central rule is **one artifact owner, one repository, one release
+workflow**. Project repositories may test an exact dependency, but they never
+rebuild or republish an artifact owned by another repository.
 
-## Release order
+![Colored publish-order graph showing the standalone interop ABI, Rust projects, standalone JavaScript runtime, scoped facades, and final unscoped compatibility facade.](diagrams/bindings/registry-topology.svg)
 
-For a liblevenshtein release:
+## Terms and invariants
 
-1. Publish `vinary-tree-interop` version required by `bindings/api.json` to
-   crates.io, PyPI, Maven Central, npm, NuGet, Hackage, fpm, opam, Go, and the
-   C/C++ archive channel. Push the immutable `interop-vX.Y.Z` tag; the dedicated
-   `release-interop.yml` workflow owns these coordinates.
-2. Publish or verify the compatible libdictenstein bindings. Their package owns
-   dictionary construction, CRUD, persistence, and concrete dictionary types.
-3. Build liblevenshtein against those public coordinates and the stable
-   `vt.dictionary.v1` ABI.
-4. Run the cross-project handoff fixture: construct/mutate the dictionary with
-   libdictenstein, pass its retained resource to liblevenshtein, and verify one
-   long-lived query-start snapshot plus a fresh query.
-5. Publish liblevenshtein's native packages and language facades.
-6. Publish the JavaScript umbrella runtime before its lightweight project
-   facades.
+An **artifact owner** is the sole repository permitted to publish a package
+coordinate. A **facade** is a language-natural public API which delegates to a
+Rust implementation or shared runtime. A **release train** is the set of exact
+versions intended to interoperate. A **candidate** is a build that is validated
+but deliberately not uploaded. A **dist-tag** is npm's human-readable pointer
+to a package version; npm publishes to `latest` unless another tag is supplied,
+which is why every RC command explicitly supplies `--tag next`.
 
-The ordinary `vX.Y.Z` project workflow validates a local copy of the common
-ABI but never republishes it. This separation is required: the ABI has its own
-version and may be consumed by several project releases. `libdictenstein`,
-`lling-llang`, and `duallity` likewise publish from their own repositories and
-their own tags.
+The release has five invariants:
 
-No job derives coordinates from an author name, email address, or checkout
-path. The organization is exactly `vinary-tree`; the author is Dylon Edwards
-`<dylon.devo@gmail.com>`.
+1. Every publish-time dependency edge is exact; no branch, range, or workspace
+   fallback may enter a registry artifact.
+2. `release/version.json` is the version authority in each owning repository.
+   Its local `scripts/sync-release-version.py` materializes registry-specific
+   spellings.
+3. `scripts/check-release-train.py` must accept all seven owners together before
+   the first package is uploaded.
+4. Hackage and fpm receive buildable numeric `4.0.0` candidates during the RC,
+   but those candidates are not published because their package versions cannot
+   distinguish the RC from the future final release.
+5. `liblevenshtein@latest` remains `2.0.4` throughout the RC. Both scoped and
+   unscoped version 4 packages publish only under `next`.
 
-## Pin coherence preconditions
+Cargo documents why a published crate version is immutable and recommends a
+dry run before upload in the [Cargo publishing guide](https://doc.rust-lang.org/cargo/reference/publishing.html).
+npm's [dist-tag guide](https://docs.npmjs.com/adding-dist-tags-to-packages/)
+explains the explicit tag required to avoid changing `latest`.
 
-Every edge in the DAG above is an exact-version pin, so a release is legal
-only when the pins agree everywhere they are written down. Before pushing
-**any** tag in the sequence, all of the following must hold simultaneously:
+## Repository and coordinate ownership
 
-1. **Model ↔ crate agreement.** `bindings/api.json` `packageVersion` equals
-   the crate version in `Cargo.toml`, and the interop version the model
-   implies is the one `vinary-tree-interop/Cargo.toml` carries.
-   `python3 scripts/generate-bindings.py --check` proves the generated
-   constants, headers, and conformance fixtures are byte-stable against the
-   model; `python3 scripts/check-bindings.py` proves symbol parity,
-   coordinates, the umbrella identity guard, and the facade completeness
-   matrix.
-2. **Sibling pins name real, existing tags.** Every version in
-   `bindings/related-projects.json` and every checkout input in
-   `release.yml` refers to a tag that exists and contains the ABI surface
-   being pinned. The dev-sibling checkout action is a CI convenience only;
-   no release job may build against a moving sibling branch.
-3. **Interop is public before anything that depends on it.** The exact
-   `vinary-tree-interop` version pinned by this release exists on every
-   registry a facade will resolve it from (crates.io, PyPI, Maven Central,
-   npm, NuGet, Hackage, fpm, opam, Go, the C/C++ archive) — pushed via
-   `interop-vX.Y.Z` and `release-interop.yml`, never republished by a
-   project workflow.
-4. **Producer before consumer, proven by handoff.** The pinned
-   libdictenstein artifacts are public and the cross-project handoff
-   fixture (construct/mutate with libdictenstein, hand the retained
-   resource to liblevenshtein, verify one long-lived query-start snapshot
-   plus a fresh query) passes against exactly those coordinates — not
-   against a local sibling checkout.
-5. **Umbrella before facades.** The npm umbrella version the project
-   facades pin exists on npm before any facade publishes, and each facade's
-   runtime-identity guard matches the umbrella it pins.
-6. **No known pin inconsistencies outstanding.** The findings ledger's
-   version-pin entry (`LLEV-B9` in
-   [docs/bindings/FINDINGS_LEDGER.md](bindings/FINDINGS_LEDGER.md))
-   enumerates the currently known divergences — e.g. a sibling version
-   pinned before its tag exists, or a crates.io version behind the local
-   tree. Every such entry must be resolved (or explicitly re-scoped to a
-   later release) before the first tag of the sequence is pushed; pin
-   divergences discovered *during* a release abort it.
+| Owner repository | Responsibility | Public coordinates in this train |
+|---|---|---|
+| `vinary-tree-interop` | Shared retained-resource ABI, headers, and language resource types | `vinary-tree-interop`, `@vinary-tree/interop`, `VinaryTree.Interop`, `io.vinarytree:vinary-tree-interop`, and matching PyPI, Go, Swift, OCaml, Haskell, Fortran, CMake, and pkg-config packages |
+| `libdictenstein` | Dictionary construction, mutation, persistence, and collection facades | `libdictenstein` and its project-specific language packages |
+| `liblevenshtein-rust` | Levenshtein automata, matching, and query facades | `liblevenshtein` and its project-specific language packages |
+| `lling-llang` | Weighted finite-state transducer toolkit and project facade | `lling-llang`, `@vinary-tree/lling-llang`, and native package metadata |
+| `duallity` | Bridges between Levenshtein automata and weighted transducers | `duallity`, `@vinary-tree/duallity`, and native package metadata |
+| `javascript-runtime` | One native/WASM/WASI runtime and resource table for every JavaScript facade | `@vinary-tree/vinary-tree` |
+| `liblevenshtein-npm` | Compatibility ownership of the legacy unscoped npm name | `liblevenshtein` only; it delegates exactly to `@vinary-tree/liblevenshtein` |
 
-A release that cannot satisfy one of these preconditions is not "mostly
-ready" — the failure mode each one guards against is a public artifact
-permanently built against the wrong bytes (published tags and registry
-versions are never moved; see "Versioning and rollback").
+The repositories are siblings, not nested packages. In particular,
+`vinary-tree-interop` and `javascript-runtime` are not owned by
+`liblevenshtein-rust`. The scoped liblevenshtein JavaScript facade remains in
+`liblevenshtein-rust`; the unscoped compatibility facade is intentionally a
+separate repository.
 
-## Registry coordinates
+The compatibility package is a package-name bridge, not an emulation of the
+legacy JavaScript API. Version 4 consumers use the new Rust-backed facade API.
+Its ESM, CommonJS, TypeScript, ClojureScript, browser-WASM, and WASI exports are
+thin re-exports of the exact scoped package.
 
-| Ecosystem | Shared interop | Libdictenstein producer | Liblevenshtein consumer |
-|---|---|---|---|
-| crates.io | `vinary-tree-interop` | `libdictenstein` | `liblevenshtein` |
-| PyPI | `vinary-tree-interop` | `vinary-tree-libdictenstein` | `vinary-tree-liblevenshtein` |
-| Maven Central | `io.vinarytree:vinary-tree-interop` | `io.vinarytree:libdictenstein` | `io.vinarytree:liblevenshtein` |
-| Clojars | Java dependency from Central | `io.vinarytree/libdictenstein-clojure` | `io.vinarytree/liblevenshtein-clojure` |
-| npm | `@vinary-tree/interop` | `@vinary-tree/libdictenstein` over the umbrella | `@vinary-tree/liblevenshtein` over the umbrella |
-| C/C++ | `vinary-tree-interopConfig.cmake` | `libdictensteinConfig.cmake` and `libdictenstein.pc` | `liblevenshteinConfig.cmake` and `liblevenshtein.pc` |
-| .NET | `VinaryTree.Interop` | `VinaryTree.Libdictenstein` | `VinaryTree.Liblevenshtein` |
-| Go | common module subdirectory | `github.com/vinary-tree/libdictenstein/bindings/go` | `github.com/vinary-tree/liblevenshtein-rust/bindings/go` |
-| Swift | `VinaryTreeInterop` | `Libdictenstein` | `Liblevenshtein` |
-| Ruby | shared resource types supplied by each project package | `vinary-tree-libdictenstein` | `vinary-tree-liblevenshtein` |
-| Fortran | `vinary-tree-interop` | `vinary-tree-libdictenstein` | `vinary-tree-liblevenshtein` |
-| OCaml | `vinary-tree-interop` | `vinary-tree-libdictenstein` | `vinary-tree-liblevenshtein` |
-| Haskell | `vinary-tree-interop` | `vinary-tree-libdictenstein` | `vinary-tree-liblevenshtein` |
-| Lua | common C ABI headers | `vinary-tree-libdictenstein` | `vinary-tree-liblevenshtein` |
+## Version function
 
-Maven Central is the public Java repository of record. JFrog Artifactory can
-proxy those coordinates; it is not a distinct public package coordinate. Java
-packages use `io.vinarytree.*` because Java identifiers cannot contain
-a hyphen, while Maven groups retain `io.vinarytree`.
+Let `M`, `m`, and `p` denote the major, minor, and patch components, and let `r`
+denote the release-candidate ordinal. For this train, `$`M = 4`$`, `$`m = 0`$`,
+`$`p = 0`$`, and `$`r = 1`$`. Define the canonical version `$`v`$` and numeric
+base `$`b`$` as follows:
 
-## Registry credentials
+```math
+v = M.m.p\text{-rc}.r = \text{4.0.0-rc.1}, \qquad b = M.m.p = \text{4.0.0}.
+```
 
-Protected GitHub environments scope credentials to their publish jobs:
+Each registry renderer `$`R_e`$` maps `$`v`$` into the syntax accepted by
+ecosystem `$`e`$`:
 
-- crates.io uses `CARGO_REGISTRY_TOKEN`;
-- PyPI and npm use OIDC trusted publishing;
-- Maven Central uses Central Portal credentials and signing keys;
-- Clojars uses a scoped deploy token;
-- NuGet uses `NUGET_API_KEY` and RubyGems uses `RUBYGEMS_API_KEY`;
-- Hackage uses `HACKAGE_USERNAME` and `HACKAGE_PASSWORD`;
-- fpm uses `FPM_REGISTRY_TOKEN`, LuaRocks uses `LUAROCKS_API_KEY`, and the
-  opam-repository pull-request job uses `OPAM_GITHUB_TOKEN`.
+```math
+R_e(v) =
+\begin{cases}
+\text{4.0.0-rc.1} & e \in \{\text{Cargo,npm,Maven,Clojars,NuGet,Swift,CMake,C++}\},\\
+\text{4.0.0rc1} & e = \text{PyPI},\\
+\text{4.0.0.rc.1} & e = \text{RubyGems},\\
+\text{4.0.0\textasciitilde rc1} & e = \text{opam},\\
+\text{v4.0.0-rc.1} & e = \text{Go tag},\\
+\text{4.0.0} & e \in \{\text{Hackage,fpm candidates}\}.
+\end{cases}
+```
 
-Create namespace ownership for `vinary-tree` before the first release. Keep
-interop and project credentials separate so a project release cannot replace
-the shared ABI package accidentally.
+| Ecosystem | RC spelling | Publication policy |
+|---|---|---|
+| Cargo, npm, Maven, Clojars, NuGet, Swift, CMake, pkg-config | `4.0.0-rc.1` | Publish after its owner passes all gates |
+| PyPI | `4.0.0rc1` | Publish after wheel tests |
+| RubyGems | `4.0.0.rc.1` | Publish after native-resource inspection |
+| opam | `4.0.0~rc1` | Submit an opam-repository pull request |
+| Go | module path ending in `/v4`; tag `v4.0.0-rc.1` | Create the immutable subdirectory tag after dependencies resolve |
+| LuaRocks | `4.0.0-rc.1-1` | Publish linted rockspec metadata |
+| Hackage | `4.0.0` with `x-release-candidate: rc.1` | Build candidate only; do not upload |
+| fpm | `4.0.0` | Build candidate only; do not upload |
 
-## Exact release sequence
+`llattice` is intentionally outside the synchronized major-version train and
+remains pinned to `0.1.0`.
 
-For the first release of an ABI revision:
+## Release graph and order
 
-1. push `interop-vX.Y.Z` in `liblevenshtein-rust` and wait for every common
-   registry job plus the opam pull request;
-2. release `libdictenstein`, which owns dictionary CRUD and persistence;
-3. release `lling-llang` and `duallity` when their exact dependency versions
-   are available;
-4. push the liblevenshtein `vX.Y.Z` tag;
-5. publish the related npm umbrella, then the project npm facades.
+Source tags for every repository may be prepared before registry publication,
+because cross-project conformance tests consume exact source tags. Registry
+publication still follows dependency order:
 
-Every checkout action accepts exact tag inputs. No release job builds against a
-moving sibling branch.
+1. Publish `vinary-tree-interop` from its standalone repository.
+2. Publish `libdictenstein` after the interop coordinates resolve.
+3. Publish `liblevenshtein` after libdictenstein and interop resolve and the
+   retained-resource handoff fixture passes.
+4. Publish `lling-llang`, then `duallity`, because their optional integrations
+   pin the preceding Rust crates exactly.
+5. Publish `@vinary-tree/vinary-tree` from `javascript-runtime` after all four
+   Rust components are available.
+6. Publish the four scoped npm project facades with `--tag next`.
+7. Publish `liblevenshtein@4.0.0-rc.1` from `liblevenshtein-npm`, also with
+   `--tag next`, after `@vinary-tree/liblevenshtein@4.0.0-rc.1` resolves.
 
-## Native artifacts
+The libdictenstein workflow uses liblevenshtein source for a cross-project
+consumer test. That is a **validation dependency**, not a reason to invert the
+registry order: dictionary packages remain independently usable and are
+published before the matching consumer.
 
-Release archives are built for:
+### Literate release algorithm
 
-- `x86_64-unknown-linux-gnu`;
-- `aarch64-unknown-linux-gnu`;
-- `aarch64-apple-darwin`;
-- `x86_64-pc-windows-msvc`.
+The algorithm first proves that every coordinate describes the same train,
+then publishes one owner at a time. The registry observation after each upload
+is part of the algorithm: downstream publication never relies on an upload
+command merely returning success.
 
-Each archive contains the interop and project headers, shared and static
-liblevenshtein libraries, CMake config packages, and `pkg-config` metadata. It
-must be relocatable and must not use `target-cpu=native`.
+```text
+procedure RELEASE_4_RC_1(owners):
+    # Establish one immutable source state for every owner.
+    for owner in owners:
+        require owner.worktree_is_clean
+        owner.sync_release_version(check = true)
+        owner.run_project_gates()
 
-Dynamic CMake consumers use:
+    require check_release_train(owners)
+    require npm_dist_tag("liblevenshtein", "latest") = "2.0.4"
+
+    for owner in [interop, libdictenstein, liblevenshtein,
+                  lling_llang, duallity, javascript_runtime,
+                  scoped_facades, legacy_npm_facade]:
+        owner.publish_release_candidate()
+        wait_until_every_published_coordinate_resolves(owner)
+        rerun_owner_smoke_tests_against_registry_bytes(owner)
+
+    require npm_dist_tag("liblevenshtein", "latest") = "2.0.4"
+    record_checksums_and_release_evidence()
+```
+
+No step automatically promotes `next` to `latest`. Promotion is a separate
+final-release decision.
+
+## Preparing a release checkout
+
+Place the repositories as siblings. The local checker accepts environment
+overrides, which is useful when lling-llang or duallity must remain isolated in
+release worktrees:
+
+```bash
+export VINARY_TREE_INTEROP_ROOT=../vinary-tree-interop
+export VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT=../javascript-runtime
+export LIBDICTENSTEIN_ROOT=../libdictenstein
+export LLING_LLANG_ROOT=../lling-llang
+export DUALLITY_ROOT=../duallity
+export LIBLEVENSHTEIN_NPM_ROOT=../liblevenshtein-npm
+
+python3 scripts/check-release-train.py
+```
+
+Do not package with path dependencies still active. Path dependencies make
+local development ergonomic, but registry dry runs must resolve their exact
+public versions. Cargo's package verification, Python wheel isolation, Gradle
+staging, and npm packing each provide a registry-shaped check.
+
+For every owning repository:
+
+```bash
+python3 scripts/sync-release-version.py
+git diff --exit-code
+```
+
+The first command is deliberately idempotent. A diff after the second
+invocation means either a coordinate escaped the model or the generator is not
+stable; both are release blockers.
+
+## Artifact-specific gates
+
+### Rust and native C/C++
+
+Run locked tests, all-feature tests, Clippy, documentation, and package dry
+runs. Release binaries clear workstation-specific `RUSTFLAGS`; they must not
+embed `target-cpu=native`.
+
+Native archives contain only the project that owns them. They depend on the
+separately installed `vinary-tree-interop` CMake/pkg-config package:
 
 ```cmake
-find_package(vinary-tree-interop 0.1 CONFIG REQUIRED)
-find_package(liblevenshtein 0.10 CONFIG REQUIRED)
+find_package(vinary-tree-interop 4.0 CONFIG REQUIRED)
+find_package(liblevenshtein 4.0 CONFIG REQUIRED)
 target_link_libraries(app PRIVATE liblevenshtein::liblevenshtein)
 ```
 
-Static consumers select `-DLIBLEVENSHTEIN_LINKAGE=STATIC` or link the explicit
-`liblevenshtein::static` target. The package propagates platform system
-libraries. Other native facades may use the installed shared package or link
-statically, but package documentation must say which mode is used; loaders must
-not silently select an arbitrary system library.
+Required native targets are Linux x86-64, Linux ARM64, macOS x86-64, macOS
+ARM64, Windows x86-64, and Windows ARM64 where the owning artifact supports a
+native payload. Each archive is tested after relocation with both shared and
+static linkage when offered.
 
-## Managed artifacts
+### Python, JVM, Clojure, .NET, and Ruby
 
-Python wheels bundle liblevenshtein's native library and depend on the matching
-`vinary-tree-interop` Python package for provider/resource types. Wheel tests
-construct a custom provider and exercise the long-lived cursor fixture.
-Libdictenstein wheels first run producer-only CRUD and persistence tests, then
-the liblevenshtein matrix installs both packages and runs the real retained
-resource handoff. This ordering lets a producer release precede its consumer
-without weakening cross-project conformance.
+Python wheels use the PyPI spelling `4.0.0rc1`, bundle only their project native
+library, and depend exactly on `vinary-tree-interop==4.0.0rc1`.
 
-The JVM artifact targets Java 22 bytecode and uses FFM. It bundles native
-libraries for all required release targets and depends exactly on
-`io.vinarytree:vinary-tree-interop`. Test on JDK 25 LTS and the current
-JDK. Maven source classifiers contain Java sources only; platform libraries
-exist solely in the runtime JAR. Clojure is built only after the exact staged
-JVM and interop artifacts are installed locally, then published to Clojars.
-Both Leiningen and Clojure CLI tests authorize FFM native access explicitly.
+The JVM artifact targets the documented Java level, uses Foreign Function &
+Memory resource lifetimes, bundles its project native resources, and depends
+on `io.vinarytree:vinary-tree-interop:4.0.0-rc.1`. The Clojure facade is staged
+only after the exact JVM artifact has been installed into the test repository.
+Maven Central and Clojars are separate coordinates and separate credentials.
 
-The npm project artifact is a typed facade. It pins both
-`@vinary-tree/interop` and `@vinary-tree/vinary-tree` and supplies native,
-browser-WASM, WASI, TypeScript, and ClojureScript entry points. The payloads and
-actual resource table live in the umbrella runtime; facade packages verify the
-same runtime identity before accepting a resource. Its Node prebuilds
-statically contain all four related Rust components, so Node consumers do not
-install a Vinary Tree shared library or configure a loader path. Browser and
-WASI artifacts are separate explicit exports; a WASI host must preopen every
-persistent-ARTrie directory it wants to expose. Release staging strips profiling
-symbols from native prebuilds and debug custom sections from WASI while leaving
-the libraries' optimized code unchanged.
+.NET packages depend on `VinaryTree.Interop` rather than embedding its source.
+Ruby packages inspect every platform payload before `gem push`. Every managed
+facade must pass its collection-idiom, resource-lifetime, snapshot-consistency,
+property, and leak tests before packaging.
 
-## Pre-publication gates
+### JavaScript, TypeScript, and ClojureScript
 
-`scripts/check-bindings.py` rejects a release unless:
+`javascript-runtime` owns six native prebuilds:
 
-- generated constants and modeled C symbols are exact;
-- publishable liblevenshtein Tier 1 facades contain no dictionary-owned CRUD;
-- public coordinates use only the `vinary-tree` organization;
-- all language feature aliases remain opt-in;
-- FFM, package dependencies, exports, and registry jobs are present;
-- the required OS/architecture target triples appear in CI;
-- snapshot, batch lease, reducer, and provider-concurrency contracts have
-  executable tests.
+- `linux-x64` and `linux-arm64`;
+- `darwin-x64` and `darwin-arm64`;
+- `win32-x64` and `win32-arm64`.
 
-The binding test suite must also pass:
+It also owns browser-WASM and WASI payloads. Project facades contain no native
+payload and pin both `@vinary-tree/interop` and
+`@vinary-tree/vinary-tree` exactly. Runtime identity checks prevent resources
+from crossing different runtime instances.
 
-- direct Rust and resource-ABI example tests;
-- randomized insert/remove/update/clear/compact/checkpoint histories against
-  one partially consumed cursor;
-- the C ABI leased-batch and reducer tests;
-- C++ custom-provider and installed-CMake smoke tests;
-- Python custom-provider tests;
-- JVM FFM, Clojure, TypeScript, and ClojureScript facade tests;
-- Babashka reader/namespace contracts for the Clojure facades;
-- .NET 8 LTS and .NET 10, Go 1.25 and 1.26, Swift on current macOS ARM,
-  Ruby 3.3 through 3.5, GCC 15, AOCC Flang 5.1, and LLVM Flang 22,
-  OCaml 5.2 and 5.4,
-  GHC 9.6 and 9.14, and Lua 5.4 integration tests;
-- required native architecture jobs and best-effort BSD jobs.
+The scoped facade publish command is intentionally explicit:
 
-Tier 2 and Tier 3 packages are publishable because they consume retained shared
-resources rather than exposing the retired liblevenshtein-owned dictionary API,
-and their CI lanes run the same query-start snapshot fixture as Tier 1.
+```bash
+npm publish --access public --provenance --tag next package.tgz
+```
 
-## Versioning and rollback
+Before and after publishing the legacy name, verify its stable tag:
 
-The interop ABI version and project API revision are separate. A project may
-release without changing the ABI. An incompatible resource layout or ownership
-rule receives a new interface ID/version and can coexist with the old one.
+```bash
+npm view liblevenshtein dist-tags --json
+npm view liblevenshtein@4.0.0-rc.1 version
+```
 
-Never move a published Git tag, Go submodule tag, SwiftPM tag, or registry
-version. If publication fails after some artifacts are public, fix the pipeline
-and release a new patch version. Do not overwrite a public interop package:
-other independently released projects may already depend on it.
+The required postcondition is `latest = 2.0.4` and `next = 4.0.0-rc.1`.
+
+### Haskell and Fortran candidates
+
+Hackage and fpm cannot safely publish this RC under `4.0.0`, because that
+numeric coordinate is reserved for the final release. Their workflow lanes
+still build source distributions, validate manifests, and archive candidates
+as GitHub release evidence. They contain no registry credentials and no upload
+step. The final `4.0.0` train may publish those already-tested shapes after
+regenerating checksums from the final source commit.
+
+## Credentials and protected environments
+
+| Destination | Authentication | Recommended GitHub environment |
+|---|---|---|
+| crates.io | `CARGO_REGISTRY_TOKEN` | `crates-io` |
+| PyPI | OIDC trusted publishing | `pypi` |
+| npm | OIDC trusted publishing with provenance; account and organization require 2FA | `npm` |
+| Maven Central | Central Portal credentials plus GPG public key, private key, and passphrase | `maven-central` |
+| Clojars | username and scoped deploy token | `clojars` |
+| NuGet | `NUGET_API_KEY` | `nuget` |
+| RubyGems | `RUBYGEMS_API_KEY` | `rubygems` |
+| LuaRocks | `LUAROCKS_API_KEY` | `luarocks` |
+| opam repository | GitHub token authorized to push a fork and open a pull request | `opam` |
+
+Hackage and fpm secrets are intentionally unnecessary for this RC. Apply
+required-reviewer protection to every publish environment. OIDC jobs receive
+`id-token: write` only in the individual job that uploads that owner's
+artifact; build jobs remain read-only.
+
+For npm, the publisher must have access to the `vinary-tree` organization and
+the legacy `liblevenshtein` package. Register each repository/workflow as a
+trusted publisher before pushing its tag. A local `npm login` is useful for
+manual inspection but is not a substitute for CI trusted-publisher setup.
+
+## Pre-publication checklist
+
+- [ ] Every worktree intended for release is clean and committed.
+- [ ] Every `release/version.json` says `4.0.0-rc.1` and every sync script is
+      idempotent.
+- [ ] `python3 scripts/check-release-train.py` passes across the seven owners.
+- [ ] Generated APIs, binding documentation, ABI invariants, and completeness
+      matrices are current.
+- [ ] Locked Rust tests pass with default and all features; Gxhash target flags
+      are supplied by platform-specific Cargo configuration.
+- [ ] Native archives are relocation-tested and contain no foreign owner's
+      package.
+- [ ] All managed-language and JavaScript package tests pass against assembled
+      artifacts.
+- [ ] All workflow YAML parses and all package dry runs succeed.
+- [ ] Registry namespaces, trusted publishers, signing keys, and protected
+      environments exist.
+- [ ] `npm view liblevenshtein dist-tags --json` reports `latest: 2.0.4`.
+- [ ] Hackage and fpm jobs are visibly candidate-only.
+
+## Failure, rollback, and evidence
+
+Registry versions and Git tags are immutable. If an upload succeeds in only
+part of the graph, stop immediately, record the coordinates that became
+public, and resume only after those exact bytes resolve. If published bytes are
+wrong, release a new candidate such as `4.0.0-rc.2`; never overwrite, retag, or
+silently rebuild `rc.1`.
+
+If a facade is broken but its underlying runtime is correct, fix and republish
+only that facade under a new candidate. If the shared ABI is wrong, advance the
+entire dependent train. This is the operational benefit of single ownership:
+the affected cut is explicit rather than hidden inside duplicated bundles.
+
+Each GitHub release retains:
+
+- source and native archives;
+- package candidates and registry staging bundles;
+- `SHA256SUMS` over every attached artifact;
+- workflow run links and test summaries;
+- the exact `release/version.json` used by its owner.
+
+Publication itself is never a test. The release is complete only when a clean
+consumer can resolve each public coordinate, run a representative query, close
+its resource normally, and reproduce the expected checksum evidence.

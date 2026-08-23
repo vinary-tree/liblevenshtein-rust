@@ -6,7 +6,7 @@ const packageJson = JSON.parse(await readFile(new URL("../package.json", import.
 
 test("all project facades share the exact umbrella runtime", () => {
   assert.equal(packageJson.dependencies["@vinary-tree/vinary-tree"], packageJson.version);
-  assert.equal(packageJson.dependencies["@vinary-tree/interop"], "0.1.0");
+  assert.equal(packageJson.dependencies["@vinary-tree/interop"], "4.0.0-rc.1");
   for (const path of [".", "./typescript", "./clojurescript", "./wasm", "./wasi"]) {
     assert.ok(packageJson.exports[path]);
   }

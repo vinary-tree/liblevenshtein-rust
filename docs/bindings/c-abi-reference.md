@@ -7,7 +7,7 @@ implementation, not aspirationally), ownership rules, thread-safety truth, and
 cost. It is the **project layer above the family canon**: everything about the
 two-word `VtResource`, the base retain/release/`query_interface` protocol, and
 the `vt.dictionary.v1` interface this ABI consumes is specified once in the
-[interop ABI reference](../../vinary-tree-interop/docs/abi-reference.md) and
+[interop ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) and
 cited here rather than restated.
 
 Companions: [binding corpus hub](README.md) ·
@@ -21,7 +21,7 @@ this surface) · [snapshot-semantics theory](../theory/snapshot-semantics.md) ·
 ## 1. Terms
 
 Interop-level terms (resource, vtable, retain/release, snapshot, paging) are
-defined in the [canon's terms table](../../vinary-tree-interop/docs/abi-reference.md#1-terms).
+defined in the [canon's terms table](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#1-terms).
 The project-level terms this document adds:
 
 | Term | Definition |
@@ -33,7 +33,7 @@ The project-level terms this document adds:
 | generation | The `uint64_t` tag identifying the live lease. Strictly increasing per cursor, never zero, and required *exactly* at release — a stale generation cannot release a newer lease. |
 | arena | Cursor-owned contiguous storage (`byte` and `u64` arenas) holding every term of the current batch back-to-back; descriptors point into it. Cleared-but-retained between batches, so steady-state batches allocate nothing. |
 | reducer | A caller-supplied `LlevBatchReducer` callback invoked once per batch with borrowed descriptors — the allocation-minimizing expert path for managed languages. |
-| unit domain | Which value space the dictionary's labels inhabit: bytes, Unicode scalars, or opaque `u64` tokens (`VtUnitDomain`, canon [§ 6.1](../../vinary-tree-interop/docs/abi-reference.md#61-vtunitdomain-and-vtvaluedomain)). |
+| unit domain | Which value space the dictionary's labels inhabit: bytes, Unicode scalars, or opaque `u64` tokens (`VtUnitDomain`, canon [§ 6.1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#61-vtunitdomain-and-vtvaluedomain)). |
 
 Throughout, $`n`$ is the number of matches a query yields, $`B`$ the batch
 capacity, $`q`$ the query, $`k`$ the maximum edit distance, and
@@ -104,7 +104,7 @@ the interop `VtStatus`. All 13 values, pinned in
 ### 3.1 Mapping from the interop `VtStatus`
 
 Provider callbacks answer with the nine-value interop `VtStatus`
-([canon § 3](../../vinary-tree-interop/docs/abi-reference.md#3-vtstatus--the-one-error-currency))
+([canon § 3](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#3-vtstatus--the-one-error-currency))
 — but **on the Rust side the wire type is a raw `u32`**, not the enum. The
 family's status wire rule (landed with LLEV-B6's fix, commit `e42485c`):
 producers encode with `VtStatus::to_raw`, consumers decode with
@@ -162,7 +162,7 @@ Every fallible entry point runs inside `boundary()`
 clears the slot, failure stores the message, and a caught panic is downcast
 to its message and surfaced as `PANIC`. No unwinding ever crosses this ABI —
 the family containment law
-([security model § 3](../../vinary-tree-interop/docs/security-model.md#3-the-panic-and-exception-containment-law)).
+([security model § 3](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md#3-the-panic-and-exception-containment-law)).
 
 ---
 
@@ -178,7 +178,7 @@ const char* llev_last_error_message(void);
 | Function | Returns | Contract |
 |---|---|---|
 | `llev_abi_version` | `LLEV_ABI_VERSION` = 1 | The project ABI generation. A facade built for generation $`g`$ must refuse a library reporting a different generation. |
-| `llev_api_revision` | `LLEV_API_REVISION` = 1 | The additive revision within the ABI generation ([evolution policy § 1](../../vinary-tree-interop/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. |
+| `llev_api_revision` | `LLEV_API_REVISION` = 1 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. |
 | `llev_build_features` | bitset | `LLEV_BUILD_FEATURE_CORE` (1) is always set; `LLEV_BUILD_FEATURE_PHONETIC` (2) is set exactly when the library was compiled with `bindings-phonetic`. Probe it instead of trial-calling the phonetic surface. |
 | `llev_last_error_message` | borrowed `const char*` | § 3.2. Never NULL; empty string when the last call on this thread succeeded. |
 
@@ -511,7 +511,7 @@ Boundary-crossing count for $`n`$ matches: $`\lceil n / B \rceil`$ lease
 pairs plus one terminal `END` probe — never one crossing per match. Each
 node expansion inside the traversal costs the provider
 $`\lceil \deg(v) / 256 \rceil`$ crossings
-([canon § 2](../../vinary-tree-interop/docs/abi-reference.md#2-prologue-what-kind-of-header-this-is)).
+([canon § 2](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#2-prologue-what-kind-of-header-this-is)).
 
 ### 7.7 `llev_query_cursor_reduce`
 
@@ -870,9 +870,9 @@ Levenshtein 1966 is a Soviet Physics Doklady translation with no DOI
 ---
 
 *Family footer:* the canon under this document —
-[interop ABI reference](../../vinary-tree-interop/docs/abi-reference.md) ·
-[evolution policy](../../vinary-tree-interop/docs/abi-evolution.md) ·
-[security model](../../vinary-tree-interop/docs/security-model.md). Sibling
+[interop ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) ·
+[evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md) ·
+[security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md). Sibling
 project references —
 [libdictenstein `ldict_*`](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/c-abi-reference.md) ·
 [lling-llang `lling_*`](https://github.com/vinary-tree/lling-llang/blob/master/docs/api/c-abi-reference.md) ·

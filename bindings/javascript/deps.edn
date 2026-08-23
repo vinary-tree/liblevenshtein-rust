@@ -1,5 +1,7 @@
-{:paths ["cljs" "test/cljs" "../../../libdictenstein/bindings/javascript/cljs"]
- :deps {org.clojure/clojurescript {:mvn/version "1.12.145"}}
+{:paths ["cljs" "test/cljs"]
+ :deps {org.clojure/clojurescript {:mvn/version "1.12.145"}
+        io.vinarytree/libdictenstein-cljs
+        {:local/root "../../../libdictenstein/bindings/javascript"}}
  :aliases
  {:cljs-test
   {:main-opts ["-m" "cljs.main" "-co" "test/cljs.edn"

@@ -19,6 +19,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
 
 DICT="${LIBDICTENSTEIN_DIR:-$REPO/../libdictenstein}"
+INTEROP="${VINARY_TREE_INTEROP_ROOT:-$REPO/../vinary-tree-interop}"
 OUT="$REPO/target/ffi-arena-profile"
 mkdir -p "$OUT"
 
@@ -28,7 +29,7 @@ cargo build --manifest-path "$DICT/Cargo.toml" --no-default-features --features 
 
 echo "== compiling arena_profile.c =="
 cc -std=c17 -Wall -Wextra -Werror -g \
-  -Iinclude -I"$DICT/include" -Ivinary-tree-interop/include \
+  -Iinclude -I"$DICT/include" -I"$INTEROP/include" \
   bindings/c/tests/arena_profile.c \
   -Ltarget/debug -lliblevenshtein \
   -L"$DICT/target/debug" -llibdictenstein \

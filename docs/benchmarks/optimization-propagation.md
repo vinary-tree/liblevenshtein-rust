@@ -273,5 +273,5 @@ The measured causes, experiment decisions, and before/after performance results
 are maintained in
 [`java-parity-causal-analysis.md`](cross-language/java-parity-causal-analysis.md).
 The ABI contracts are specified in
-[`abi-reference.md`](../../vinary-tree-interop/docs/abi-reference.md) and
-[`abi-evolution.md`](../../vinary-tree-interop/docs/abi-evolution.md).
+[`abi-reference.md`](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) and
+[`abi-evolution.md`](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md).

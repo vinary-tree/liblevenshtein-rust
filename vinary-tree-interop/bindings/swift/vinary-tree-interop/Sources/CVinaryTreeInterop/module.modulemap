@@ -1,4 +1,0 @@
-module CVinaryTreeInterop [system] {
-  header "../../../../../include/vinary_tree_interop.h"
-  export *
-}

@@ -1,6 +1,6 @@
 packages:
   .
-  ../../vinary-tree-interop/bindings/haskell
+  ../../../vinary-tree-interop/bindings/haskell
   ../../../libdictenstein/bindings/haskell
 
 tests: True

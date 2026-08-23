@@ -2,7 +2,7 @@
 
 How liblevenshtein *consumes* a foreign `vt.dictionary.v1` resource: the
 safe-Rust layer between the [`llev_*` C ABI](c-abi-reference.md) above it and
-the [interop contract](../../vinary-tree-interop/docs/abi-reference.md) below
+the [interop contract](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) below
 it. This is the reference for binding authors and reviewers who need to know
 exactly what happens between a `VtResource` arriving and a match leaving —
 validation, graph import, callback fallback, fault handling, and ownership, each tied to
@@ -72,7 +72,7 @@ against the counting provider in `tests/support/interop_dictionary.rs`.
   success that delivered nothing is a provider bug, not a success).
 - `validate_dictionary` — `struct_size` at least the v1 size,
   `interface_version >= 1` (a **minimum**, per the
-  [evolution policy](../../vinary-tree-interop/docs/abi-evolution.md)), the
+  [evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md)), the
   four unconditionally required ops present (`snapshot`, `root`,
   `node_is_final`, `node_edges`), and `node_value_u64` present exactly when
   `value_domain` is `OptionalU64`.
@@ -109,7 +109,7 @@ ABI-boundary codec:
 A label outside its domain is **rejected, never truncated**
 (`InvalidProviderOutput("edge label is outside its domain")`) — truncation
 would silently alias distinct labels, the exact failure mode the
-[security model](../../vinary-tree-interop/docs/security-model.md#5-input-validation-duties)
+[security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md#5-input-validation-duties)
 forbids.
 
 For DynamicDAWG snapshots, `ForeignNode<U>` normally supplies one retained
@@ -402,5 +402,5 @@ single callbacks), and never crosses the boundary once per match.
 layer · [snapshot semantics](../theory/snapshot-semantics.md) — the cursor
 laws and their proofs · [binding trust model](../security/binding-trust-model.md)
 — the adversarial reading of every check in this document ·
-[interop canon](../../vinary-tree-interop/docs/abi-reference.md) — the
+[interop canon](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) — the
 contract being consumed.
