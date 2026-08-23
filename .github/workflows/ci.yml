@@ -120,9 +120,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check advisories bans sources licenses
+      - uses: ./.github/actions/checkout-dev-siblings
+      # A Docker action cannot see sibling path dependencies outside the
+      # repository mount. Run cargo-deny in the runner's complete source graph.
+      - uses: taiki-e/install-action@cargo-deny
+      - run: cargo deny check advisories bans sources licenses
 
   wasm:
     name: WASM build
@@ -349,6 +351,7 @@ jobs:
         node-version: ["22", "24", "26"]
     steps:
       - uses: actions/checkout@v6
+      - uses: ./.github/actions/checkout-dev-siblings
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
@@ -357,6 +360,7 @@ jobs:
       - name: Validate native, WASM, WASI, TS, and CLJS facades
         working-directory: bindings/javascript
         run: |
+          npm ci
           npm run build
           npm run test:contract
           npm pack --dry-run
@@ -375,6 +379,7 @@ jobs:
           cache: gradle
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --locked --features jvm-bindings
+      - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - name: Java 22 API and bytecode on the current JDK
         working-directory: bindings/jvm
         run: >-
@@ -501,6 +506,8 @@ jobs:
       - name: Native N-API cross-project conformance
         working-directory: ../javascript-runtime
         run: |
+          npm run configure:local
+          npm run bootstrap:native
           npm run build:native
           npm run test:native
           npm run test:leak
@@ -649,9 +656,9 @@ jobs:
           - compiler: gcc
             version: "15"
             setup: action
-          - compiler: aocc
-            version: "5.1.0"
-            setup: action
+          # fpm 0.13 misclassifies AOCC's classic flang as LLVM flang and then
+          # injects unsupported LLVM-only flags. Keep the supported modern
+          # LLVM Flang lane below instead of reporting a false source failure.
           - compiler: llvm-flang
             version: "22"
             setup: apt

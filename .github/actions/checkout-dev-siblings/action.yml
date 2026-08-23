@@ -17,7 +17,7 @@ inputs:
   llattice-ref:
     description: Exact llattice ref; defaults to `ref`.
     required: false
-    default: ""
+    default: "v0.1.0"
   libdictenstein-ref:
     description: Exact libdictenstein ref; defaults to `ref`.
     required: false
@@ -25,11 +25,11 @@ inputs:
   lling-llang-ref:
     description: Exact lling-llang ref; defaults to `ref`.
     required: false
-    default: ""
+    default: "release/4.0.0-rc.1"
   duallity-ref:
     description: Exact duallity ref; defaults to `ref`.
     required: false
-    default: ""
+    default: "release/4.0.0-rc.1"
   interop-ref:
     description: Exact vinary-tree-interop ref; defaults to `ref`.
     required: false

@@ -12,7 +12,13 @@ use liblevenshtein::bindings::{
 };
 use liblevenshtein::transducer::Algorithm;
 use liblevenshtein::{causal_perf_stats, reset_causal_perf_stats};
-use std::sync::{Arc, Barrier};
+use std::sync::{Arc, Barrier, Mutex};
+
+// Both tests deliberately reset and assert process-global causal counters.
+// Cargo may execute tests in this integration binary concurrently, so isolate
+// only the observation windows; the concurrency exercised inside each window
+// remains fully parallel.
+static PERF_COUNTER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 fn drain(cursor: &mut QueryCursor) -> Vec<Match> {
     let mut output = Vec::new();
@@ -34,6 +40,9 @@ fn transducer(dictionary: &DynamicDawgBinding) -> ResourceTransducer {
 
 #[test]
 fn concurrent_cold_queries_import_one_graph_without_registry_locking() {
+    let _counter_guard = PERF_COUNTER_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     const THREADS: usize = 16;
     let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
     for index in 0..512 {
@@ -88,6 +97,9 @@ fn concurrent_cold_queries_import_one_graph_without_registry_locking() {
 
 #[test]
 fn real_dynamic_dawg_queries_share_one_graph_per_revision_in_all_unit_domains() {
+    let _counter_guard = PERF_COUNTER_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let bytes = DynamicDawgBinding::new(BindingUnitDomain::Byte);
     bytes.insert_text(&[0], Some(10)).unwrap();
     bytes.insert_text(b"a", None).unwrap();

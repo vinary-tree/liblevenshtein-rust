@@ -88,6 +88,9 @@ wasm-bindgen = { version = "=0.2.100", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 getrandom = { version = "0.4", features = ["wasm_js"], optional = true }
+# Ahash still resolves getrandom 0.3. Feature unification is version-specific,
+# so enable that release line's browser backend explicitly as well.
+getrandom-03 = { package = "getrandom", version = "0.3", features = ["wasm_js"], optional = true }
 js-sys = { version = "0.3", optional = true }
 
 [dev-dependencies]
@@ -492,7 +495,7 @@ eviction-opt-memory = ["eviction-compact-metadata"]
 persistent-artrie = ["memmap2", "parking_lot", "serde", "bincode", "libdictenstein/persistent-artrie"]
 
 # WASM support - enables wasm-bindgen bindings for JavaScript
-wasm = ["bindings-core", "wasm-bindgen", "serde-wasm-bindgen", "console_error_panic_hook", "getrandom", "js-sys", "serde"]
+wasm = ["bindings-core", "wasm-bindgen", "serde-wasm-bindgen", "console_error_panic_hook", "getrandom", "getrandom-03", "js-sys", "serde"]
 # WASM with full phonetic support
 wasm-phonetic = ["wasm", "phonetic-rules"]
 # C FFI support - exposes raw C-compatible functions (for WASI or native FFI)
