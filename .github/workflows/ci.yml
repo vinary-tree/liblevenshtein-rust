@@ -360,6 +360,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           package-manager-cache: false
+      # The ClojureScript compiler is built for Java 21 bytecode. Runner-image
+      # defaults are not part of our package contract, so pin its minimum LTS
+      # runtime explicitly for every supported Node release.
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
       # The package contract includes compiling its ClojureScript namespace;
       # install the compiler explicitly instead of relying on runner state.
       - uses: DeLaGuardo/setup-clojure@13.4
@@ -474,8 +481,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-dev-siblings
-      - uses: dtolnay/rust-toolchain@stable
+      # javascript-runtime pins 1.95.0 in rust-toolchain.toml. Install targets
+      # for that exact active toolchain; installing them only for the runner's
+      # newer default `stable` leaves the nested WASI build without libcore.
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: "1.95.0"
           targets: wasm32-unknown-unknown, wasm32-wasip1
       - uses: actions/setup-node@v6
         with:
@@ -932,7 +943,17 @@ jobs:
           cpu_count: 2
       - name: Install Rust
         shell: cpa.sh {0}
-        run: ${{ matrix.platform.install }}
+        run: |
+          attempt=1
+          while [ "$attempt" -le 3 ]; do
+            if ${{ matrix.platform.install }}; then
+              exit 0
+            fi
+            echo "package installation attempt $attempt failed; retrying" >&2
+            sleep "$((attempt * 5))"
+            attempt="$((attempt + 1))"
+          done
+          exit 1
       - name: Compile the native binding surface
         if: matrix.platform.native_rust_at_msrv != false
         shell: cpa.sh {0}
