@@ -356,6 +356,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@1.95
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
@@ -372,7 +373,21 @@ jobs:
       - uses: DeLaGuardo/setup-clojure@13.4
         with:
           cli: latest
+      - uses: Swatinem/rust-cache@v2
       - run: npm test --prefix ../vinary-tree-interop/bindings/javascript
+      # `npm pack` executes prepack, whose ClojureScript integration suite
+      # deliberately exercises the default native facade. Assemble the same
+      # four-component static SDK and N-API addon that consumers receive for
+      # each supported Node ABI instead of relying on local build residue.
+      - name: Build the shared native runtime for ClojureScript integration
+        working-directory: ../javascript-runtime
+        run: |
+          npm install --ignore-scripts --no-save \
+            node-gyp@13.0.1 \
+            ../vinary-tree-interop/bindings/javascript
+          npm run configure:local
+          npm run bootstrap:native
+          npm run build:native
       - name: Validate native, WASM, WASI, TS, and CLJS facades
         working-directory: bindings/javascript
         run: |
@@ -530,6 +545,9 @@ jobs:
       - name: Native N-API cross-project conformance
         working-directory: ../javascript-runtime
         run: |
+          npm install --ignore-scripts --no-save \
+            node-gyp@13.0.1 \
+            ../vinary-tree-interop/bindings/javascript
           npm run configure:local
           npm run bootstrap:native
           npm run build:native
