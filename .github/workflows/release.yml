@@ -308,6 +308,7 @@ jobs:
         working-directory: bindings/jvm
         run: >-
           ./gradlew --no-daemon
+          -PjavaToolchain=25
           test javadoc verifyNativeResources
           publishMavenJavaPublicationToStagingRepository
       - uses: actions/upload-artifact@v7
