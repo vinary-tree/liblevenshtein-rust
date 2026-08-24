@@ -209,6 +209,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - name: Checkout the exact Python interop dependency
+        shell: bash
+        run: >-
+          git clone --depth 1 --branch v4.0.0-rc.1
+          https://github.com/vinary-tree/vinary-tree-interop.git
+          .release-deps/vinary-tree-interop
       - uses: dtolnay/rust-toolchain@1.95
       - uses: ./.github/actions/pin-siblings-cratesio
       - uses: actions/setup-python@v6
@@ -226,7 +232,7 @@ jobs:
           CIBW_TEST_REQUIRES: pytest
           CIBW_BEFORE_TEST: >-
             python -m pip install
-            {project}/../vinary-tree-interop/bindings/python
+            {project}/.release-deps/vinary-tree-interop/bindings/python
           CIBW_TEST_COMMAND: >-
             python -m pytest -q {project}/bindings/python/tests
           CIBW_BEFORE_ALL_LINUX: >-
@@ -262,7 +268,7 @@ jobs:
           node-version: "24"
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - uses: DeLaGuardo/setup-clojure@13.4
+      - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
           cli: latest
       - name: Build, test, and pack npm artifact
@@ -322,7 +328,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - uses: DeLaGuardo/setup-clojure@13.4
+      - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
           lein: 2.13.0
       - uses: actions/download-artifact@v7
@@ -771,7 +777,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - uses: DeLaGuardo/setup-clojure@13.4
+      - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
           lein: 2.13.0
       - uses: actions/download-artifact@v7

@@ -370,7 +370,7 @@ jobs:
           java-version: "21"
       # The package contract includes compiling its ClojureScript namespace;
       # install the compiler explicitly instead of relying on runner state.
-      - uses: DeLaGuardo/setup-clojure@13.4
+      - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
           cli: latest
       - uses: Swatinem/rust-cache@v2
@@ -440,7 +440,7 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java-version }}
           cache: gradle
-      - uses: DeLaGuardo/setup-clojure@13.4
+      - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
           cli: latest
       - uses: Swatinem/rust-cache@v2
@@ -485,7 +485,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-dev-siblings
-      - uses: DeLaGuardo/setup-clojure@13.4
+      - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
           bb: latest
       - run: bb scripts/check-clojure-facades.clj
@@ -511,7 +511,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - uses: DeLaGuardo/setup-clojure@13.4
+      - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
           cli: latest
       - uses: taiki-e/install-action@v2
