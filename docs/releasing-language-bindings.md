@@ -127,6 +127,197 @@ If any transition fails, keep the immutable tag and version unchanged, repair
 the workflow on the next release-candidate commit, and mint the next candidate.
 Never widen a failed run to an `all registries` operation.
 
+![Sequence diagram showing the release operator, immutable source, validation graph, protected environment, package registry, fresh consumer, and evidence store from tag creation through public-byte proof.](diagrams/bindings/release-operator-flow.svg)
+
+The protected environment is an authorization boundary, not a test substitute:
+the test graph has already accepted the bytes before a human permits one
+external mutation. The fresh consumer then proves what the registry serves,
+not what the build workspace happened to contain.
+
+## Operator command protocol
+
+This section is the executable command sheet. Replace values in uppercase; do
+not copy a run identifier or environment identifier from an earlier release.
+
+### 1. Establish and record the immutable source
+
+Run the repository's sync and validation commands, inspect the diff, and commit
+every intended change before creating the tag. A release tag is annotated so it
+records an explicit release event rather than merely naming a commit.
+
+```bash
+RELEASE_VERSION="4.0.0-rc.1"
+RELEASE_TAG="v${RELEASE_VERSION}"
+
+python3 scripts/sync-release-version.py
+git diff --check
+git status --short
+git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
+git push origin "refs/tags/${RELEASE_TAG}"
+```
+
+Do not force-move a release tag after it is pushed. If the tag graph exposes a
+defect, correct the source and mint the next candidate. Before the first tag,
+the same commit must already have passed ordinary branch CI and the local
+release gates; a tag push is the immutable replay, not the first experiment.
+
+### 2. Observe validation rather than assuming it
+
+Tag pushes stage artifacts and a checksummed GitHub prerelease but authorize no
+package registry. Record the run URL and wait for its conclusion:
+
+```bash
+OWNER_REPOSITORY="vinary-tree/libdictenstein"
+WORKFLOW_FILE="release-bindings.yml"
+
+gh run list \
+  --repo "${OWNER_REPOSITORY}" \
+  --workflow "${WORKFLOW_FILE}" \
+  --limit 10
+
+gh run watch RUN_ID --repo "${OWNER_REPOSITORY}" --exit-status
+```
+
+Use `release.yml` for interop, liblevenshtein-rust, javascript-runtime, and
+liblevenshtein-npm; use `release-bindings.yml` for libdictenstein,
+lling-llang, and duallity. A safe replay uses `registry=validate-only` against
+the tag itself.
+
+### 3. Dispatch exactly one registry
+
+The registry input is the capability selector. It must name one registry and
+the ref must be the immutable tag:
+
+```bash
+gh workflow run "${WORKFLOW_FILE}" \
+  --repo "${OWNER_REPOSITORY}" \
+  --ref "${RELEASE_TAG}" \
+  -f registry=crates-io
+
+PUBLISH_RUN_ID="RUN_ID_RETURNED_BY_GITHUB"
+gh run view "${PUBLISH_RUN_ID}" --repo "${OWNER_REPOSITORY}"
+```
+
+The build and package jobs rerun before the protected publication job. Never
+approve the environment merely because an older validation run was green;
+confirm that the current run is at the expected tag and commit.
+
+### 4. Review a pending protected environment
+
+GitHub exposes the exact environment awaiting approval. Read it first, then
+approve only that environment for that run:
+
+```bash
+gh api \
+  "repos/${OWNER_REPOSITORY}/actions/runs/${PUBLISH_RUN_ID}/pending_deployments"
+
+ENVIRONMENT_ID="ID_FROM_THE_RESPONSE"
+gh api --method POST \
+  "repos/${OWNER_REPOSITORY}/actions/runs/${PUBLISH_RUN_ID}/pending_deployments" \
+  -F "environment_ids[]=${ENVIRONMENT_ID}" \
+  -f state=approved \
+  -f comment="Approved after exact-tag validation and artifact review."
+
+gh run watch "${PUBLISH_RUN_ID}" \
+  --repo "${OWNER_REPOSITORY}" \
+  --exit-status
+```
+
+The review API is documented by GitHub's
+[workflow-run deployments reference](https://docs.github.com/en/rest/actions/workflow-runs#review-pending-deployments-for-a-workflow-run).
+The approval does not provide a reusable registry secret: npm and PyPI obtain
+short-lived OpenID Connect (OIDC) credentials from their configured trusted
+publishers.
+
+### 5. Prove the public bytes before releasing a dependent
+
+A successful upload step is necessary but insufficient. Wait for registry
+indexing, resolve the exact coordinate, verify registry metadata and digest,
+and install it into a fresh consumer. Record the command output and the GitHub
+run URL in the release ledger.
+
+For a Rust crate:
+
+```bash
+CRATE_NAME="libdictenstein"
+cargo info "${CRATE_NAME}@${RELEASE_VERSION}"
+```
+
+Then create a temporary consumer whose manifest pins
+`=${RELEASE_VERSION}`, run `cargo check --locked`, and remove the temporary
+directory. Downstream publication starts only after that registry-shaped
+consumer passes.
+
+For an npm package:
+
+```bash
+NPM_PACKAGE="@vinary-tree/libdictenstein"
+npm view "${NPM_PACKAGE}@${RELEASE_VERSION}" \
+  version dist.integrity dist.shasum --json
+
+SMOKE_DIRECTORY="$(mktemp -d /tmp/vinary-tree-npm-smoke.XXXXXX)"
+trap 'rm -rf -- "${SMOKE_DIRECTORY}"' EXIT
+npm install --prefix "${SMOKE_DIRECTORY}" \
+  "${NPM_PACKAGE}@${RELEASE_VERSION}"
+(
+  cd "${SMOKE_DIRECTORY}"
+  node -e "require('${NPM_PACKAGE}')"
+  node --input-type=module -e "await import('${NPM_PACKAGE}')"
+)
+```
+
+The smoke program must import the installed package—not a repository-relative
+path—and exercise its public construction, query or traversal, iteration,
+snapshot where applicable, and deterministic-close contracts. Remove the exact
+temporary directory after its evidence is captured.
+
+### 6. Normalize a newly scoped npm coordinate
+
+npm may attach `latest` to a package's first published version even when the
+publication command supplied another tag. Each Vinary Tree scoped name was
+therefore reserved with inert `0.0.0` bytes. Only after the RC's installed-byte
+smoke passes, use an interactive web-authenticated session to replace that
+bootstrap default:
+
+```bash
+npm login --auth-type=web
+npm whoami
+
+NPM_PACKAGE="@vinary-tree/libdictenstein"
+npm dist-tag add "${NPM_PACKAGE}@${RELEASE_VERSION}" latest --auth-type=web
+npm dist-tag rm "${NPM_PACKAGE}" bootstrap --auth-type=web
+npm deprecate "${NPM_PACKAGE}@0.0.0" \
+  "Bootstrap-only placeholder; use ${NPM_PACKAGE}@${RELEASE_VERSION} or newer." \
+  --auth-type=web
+
+npm view "${NPM_PACKAGE}" versions dist-tags --json
+npm view "${NPM_PACKAGE}@0.0.0" deprecated --json
+```
+
+Repeat this read-modify-read protocol for `@vinary-tree/interop`,
+`@vinary-tree/vinary-tree`, `@vinary-tree/libdictenstein`,
+`@vinary-tree/liblevenshtein`, `@vinary-tree/lling-llang`, and
+`@vinary-tree/duallity`. The postcondition is
+`latest = next = 4.0.0-rc.1`, no `bootstrap` tag, and an explicit deprecation
+message on `0.0.0`.
+
+Do not create or store a token that bypasses two-factor authentication (2FA)
+for this task. GitHub Actions uses npm
+[trusted publishing](https://docs.npmjs.com/trusted-publishers/) and
+[package provenance](https://docs.npmjs.com/generating-provenance-statements/);
+the local web login is limited to post-publication metadata changes that npm
+does not yet authorize through the trusted-publisher workflow.
+
+The legacy unscoped package is deliberately different:
+
+```bash
+npm view liblevenshtein dist-tags --json
+```
+
+During the RC, it must report `latest = 2.0.4` and
+`next = 4.0.0-rc.1`. Never apply the scoped-package `latest` command to this
+coordinate.
+
 ## Version function
 
 Let `M`, `m`, and `p` denote the major, minor, and patch components, and let `r`
@@ -252,10 +443,26 @@ export LIBLEVENSHTEIN_NPM_ROOT=../liblevenshtein-npm
 python3 scripts/check-release-train.py
 ```
 
-Do not package with path dependencies still active. Path dependencies make
-local development ergonomic, but registry dry runs must resolve their exact
-public versions. Cargo's package verification, Python wheel isolation, Gradle
-staging, and npm packing each provide a registry-shaped check.
+Keep Cargo dependencies declared with both `path` and an exact `version` in
+the reviewed source. Cargo's supported multiple-location dependency form uses
+the path locally and removes it from the normalized registry manifest. Do not
+rewrite `Cargo.toml` or `Cargo.lock` inside the publication job: doing so makes
+the checkout dirty and causes `cargo publish` to reject the release unless an
+unsafe override is added. Instead, check out exact sibling tags where local
+path discovery is required and publish the unchanged source:
+
+```bash
+cargo publish --dry-run --locked
+git diff --exit-code -- Cargo.toml Cargo.lock
+cargo publish --locked
+```
+
+Cargo documents this normalization under
+[multiple dependency locations](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#multiple-locations).
+The public versions on the registry remain prerequisites for package
+verification and downstream consumers; exact source checkouts do not replace
+the dependency-order gate. Python wheel isolation, Gradle staging, and npm
+packing provide equivalent registry-shaped checks for their ecosystems.
 
 For every owning repository:
 
@@ -273,8 +480,12 @@ stable; both are release blockers.
 ### Rust and native C/C++
 
 Run locked tests, all-feature tests, Clippy, documentation, and package dry
-runs. Release binaries clear workstation-specific `RUSTFLAGS`; they must not
-embed `target-cpu=native`.
+runs. Platform feature minimums required by dependencies such as Gxhash belong
+in target-scoped `.cargo/config.toml` entries. Workflow-level `RUSTFLAGS` must
+not override that matrix, and release binaries must not embed
+`target-cpu=native`. Sanitizer jobs are the exception: their environment flags
+must explicitly carry both the sanitizer instrumentation and the target's
+portable baseline.
 
 Native archives contain only the project that owns them. They depend on the
 separately installed `vinary-tree-interop` CMake/pkg-config package:
@@ -322,18 +533,16 @@ from crossing different runtime instances.
 The scoped facade publish command is intentionally explicit:
 
 ```bash
-npm publish --access public --provenance --tag next package.tgz
+npm publish --access public --provenance --tag next ./dist/*.tgz
 ```
 
 For every newly created scoped coordinate, verify the installed RC and then
 replace npm's mandatory first-publication default and retire the bootstrap tag:
 
-```bash
-npm dist-tag add @vinary-tree/PACKAGE@4.0.0-rc.1 latest
-npm dist-tag rm @vinary-tree/PACKAGE bootstrap
-npm deprecate @vinary-tree/PACKAGE@0.0.0 \
-  "Bootstrap reservation only; install 4.0.0-rc.1 or use the next/latest tag."
-```
+Use the interactive, read-modify-read procedure in
+[Operator command protocol §6](#6-normalize-a-newly-scoped-npm-coordinate).
+It deliberately includes `--auth-type=web` and verifies the tags and
+deprecation after mutation.
 
 The scoped postcondition is `latest = next = 4.0.0-rc.1`, with no `bootstrap`
 tag. The immutable `0.0.0` audit artifact remains explicitly deprecated.
@@ -355,6 +564,32 @@ still build source distributions, validate manifests, and archive candidates
 as GitHub release evidence. They contain no registry credentials and no upload
 step. The final `4.0.0` train may publish those already-tested shapes after
 regenerating checksums from the final source commit.
+
+## Registry read-back matrix
+
+The public-byte gate is language-specific but follows one invariant: resolve
+the exact public coordinate into a clean consumer and exercise the installed
+API. A metadata listing alone does not prove that the package installs or that
+its native payload loads.
+
+| Registry | Resolution proof | Minimum fresh-consumer proof |
+|---|---|---|
+| crates.io | `cargo info NAME@4.0.0-rc.1` | Temporary crate with `NAME = "=4.0.0-rc.1"`; `cargo check --locked`; run a construction/query smoke where the crate exposes behavior |
+| npm | `npm view NAME@4.0.0-rc.1 version dist.integrity dist.shasum --json` | Install the exact version into `mktemp -d`; test CommonJS and ESM entry points, runtime identity, iteration, and deterministic closure |
+| PyPI | `python -m pip download --no-deps NAME==4.0.0rc1` | New virtual environment; install only downloaded wheels and exact dependencies; import, construct, iterate, snapshot, close |
+| Maven Central | Resolve `GROUP:ARTIFACT:4.0.0-rc.1` from Central in an empty Gradle/Maven cache | Compile and run the Java collection and try-with-resources fixtures against the resolved JAR and extracted native library |
+| Clojars | Resolve `[GROUP/ARTIFACT "4.0.0-rc.1"]` from Clojars | Run the idiomatic Clojure collection, snapshot, and resource-lifetime fixtures without a local Maven override |
+| NuGet | Query the exact package version from nuget.org | Empty `dotnet new` project; add exact package; run collection, enumeration, snapshot, and `IDisposable` fixtures |
+| RubyGems | `gem fetch NAME -v 4.0.0.rc.1` | Install to an isolated gem home; require the gem, traverse data, and close native resources |
+| Go proxy | `go list -m MODULE@v4.0.0-rc.1` | New module with the exact `/v4` requirement; `go test` the ownership and iteration fixture |
+| LuaRocks | Inspect/download `NAME 4.0.0rc1-1` from the configured server | Isolated tree; load the module and run resource and traversal fixtures |
+| opam | Inspect the submitted `opam-repository` pull request and source checksum | Fresh switch; pin the candidate metadata, build, and execute its examples before merge |
+| GitHub release | Verify `SHA256SUMS` against every downloaded asset | Relocate each native SDK archive and build both shared and static sample consumers where supported |
+
+Hackage and fpm are absent from the upload rows for this RC: their numeric-only
+`4.0.0` candidates are build evidence, not public registry versions. Store the
+read-back commands, resolved digests, smoke outcomes, and run URLs in the
+versioned release ledger.
 
 ## Credentials and protected environments
 

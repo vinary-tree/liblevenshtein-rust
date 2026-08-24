@@ -1,0 +1,80 @@
+@startuml release-operator-flow
+' End-to-end release control flow for an immutable Vinary Tree release train.
+' Colors: operator/input cyan; source and validation green/teal; approval amber;
+' registry purple; public-byte verification blue; failure red; evidence lime.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam sequence {
+  ArrowColor #37474F
+  ArrowThickness 2
+  LifeLineBorderColor #455A64
+  LifeLineBackgroundColor #FAFAFA
+  ParticipantBorderColor #455A64
+  ParticipantFontColor #102027
+  ParticipantRoundCorner 14
+}
+skinparam note {
+  BorderColor #455A64
+  FontColor #102027
+}
+
+title Immutable release: validation, one-registry authorization, and public-byte proof
+
+actor "Release operator" as Operator #B2EBF2
+participant "Reviewed source\nand annotated tag" as Source #C8E6C9
+participant "GitHub Actions\nvalidation graph" as CI #B2DFDB
+participant "Protected\nenvironment" as Gate #FFECB3
+participant "Package registry\nOIDC / scoped credential" as Registry #D1C4E9
+participant "Fresh consumer\npublic-byte smoke" as Consumer #BBDEFB
+database "Release evidence\nchecksums · run URLs · metadata" as Evidence #F0F4C3
+
+Operator -[#00838F]> Source : sync versions; prove clean source; create tag
+Source -[#2E7D32]> CI : tag push or validate-only dispatch
+CI -[#00796B]> CI : tests · conformance · package · relocation
+
+alt any validation or checksum gate fails
+  CI -[#C62828]> Operator : stop; do not authorize a registry
+  note over Operator,Source #FFCDD2
+    Repair source and mint the next release candidate.
+    Published versions and release tags are immutable.
+  end note
+else every validation gate passes
+  CI -[#9E9D24]> Evidence : GitHub prerelease + SHA256SUMS
+
+  loop one owner and one registry, in dependency order
+    Operator -[#00838F]> CI : exact-tag dispatch; select one registry
+    CI -[#FF6F00]> Gate : request named environment
+    Gate -[#FF6F00]> Operator : required-reviewer approval
+    Operator -[#FF6F00]> Gate : approve this run and environment
+    Gate -[#6A1B9A]> Registry : issue short-lived credential; publish immutable bytes
+    Registry -[#1976D2]> Consumer : resolve exact public coordinate
+    Consumer -[#1565C0]> Consumer : install in clean directory; exercise behavior
+
+    alt metadata, integrity, provenance, and behavior agree
+      Consumer -[#9E9D24]> Evidence : record coordinate, digest, run, and smoke result
+    else registry bytes cannot be proven
+      Consumer -[#C62828]> Operator : stop downstream publication
+      note over Operator,Registry #FFCDD2
+        Retry only if the registry confirms that no version was accepted.
+        Wrong public bytes require the next release candidate.
+      end note
+    end
+  end
+
+  Operator -[#AD1457]> Registry : scoped npm only: latest := RC; remove bootstrap; deprecate 0.0.0
+  Registry -[#AD1457]> Evidence : prove next = latest = RC; legacy latest remains 2.0.4
+end
+
+legend bottom
+  |= Color |= Control concept |
+  |<#B2EBF2> cyan | human operator / input |
+  |<#C8E6C9> green | reviewed immutable source |
+  |<#B2DFDB> teal | automated validation |
+  |<#FFECB3> amber | explicit authorization boundary |
+  |<#D1C4E9> purple | external registry mutation |
+  |<#BBDEFB> blue | independent public-byte verification |
+  |<#F0F4C3> lime | durable evidence |
+  |<#FFCDD2> red | fail-closed stop condition |
+endlegend
+@enduml
