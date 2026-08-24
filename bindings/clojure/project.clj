@@ -15,6 +15,7 @@
   :dependencies [[org.clojure/clojure "1.12.5" :scope "provided"]
                  [io.vinarytree/vinary-tree-interop "4.0.0-rc.1"]
                  [io.vinarytree/liblevenshtein "4.0.0-rc.1"]]
+  :profiles {:test {:dependencies [[org.clojure/test.check "1.1.1"]]}}
   :source-paths ["src"]
   :test-paths ["test"]
   :jvm-opts ["--enable-native-access=ALL-UNNAMED"]
