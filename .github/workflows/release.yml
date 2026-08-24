@@ -229,7 +229,7 @@ jobs:
           CIBW_BUILD: cp310-*
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_BUILD_VERBOSITY: "1"
-          CIBW_TEST_REQUIRES: pytest
+          CIBW_TEST_REQUIRES: pytest hypothesis
           CIBW_BEFORE_TEST: >-
             python -m pip install
             {project}/.release-deps/vinary-tree-interop/bindings/python
@@ -268,6 +268,12 @@ jobs:
           node-version: "24"
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          # ClojureScript 1.12's Closure compiler is compiled for Java 21.
+          # Pin the runtime rather than inheriting the runner image's Java 17.
+          java-version: "25"
       - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
           cli: latest
@@ -299,6 +305,17 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: gradle
+      - name: Stage the exact interop JVM dependency
+        shell: bash
+        run: |
+          git clone --depth 1 --branch v4.0.0-rc.1 \
+            https://github.com/vinary-tree/vinary-tree-interop.git \
+            .release-deps/vinary-tree-interop
+          .release-deps/vinary-tree-interop/bindings/jvm/gradlew \
+            --no-daemon \
+            -p .release-deps/vinary-tree-interop/bindings/jvm \
+            -PjavaToolchain=25 \
+            publishMavenJavaPublicationToStagingRepository
       - uses: actions/download-artifact@v7
         with:
           pattern: jvm-native-*
@@ -309,6 +326,7 @@ jobs:
         run: >-
           ./gradlew --no-daemon
           -PjavaToolchain=25
+          -PinteropRepository="$GITHUB_WORKSPACE/.release-deps/vinary-tree-interop/bindings/jvm/build/staging-deploy"
           test javadoc verifyNativeResources
           publishMavenJavaPublicationToStagingRepository
       - uses: actions/upload-artifact@v7
@@ -371,6 +389,12 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+      - name: Checkout the exact interop .NET dependency
+        shell: bash
+        run: >-
+          git clone --depth 1 --branch v4.0.0-rc.1
+          https://github.com/vinary-tree/vinary-tree-interop.git
+          .release-deps/vinary-tree-interop
       - uses: actions/download-artifact@v7
         with:
           pattern: dotnet-native-*
@@ -379,10 +403,15 @@ jobs:
       - name: Pack the project artifact against the exact shared package
         shell: bash
         run: |
-          dotnet restore bindings/dotnet/src/VinaryTree.Liblevenshtein -p:NuGetAudit=false -m:1
+          dotnet restore bindings/dotnet/src/VinaryTree.Liblevenshtein \
+            -p:NuGetAudit=false \
+            -p:VinaryTreeInteropRoot="$GITHUB_WORKSPACE/.release-deps/vinary-tree-interop" \
+            -m:1
           dotnet pack bindings/dotnet/src/VinaryTree.Liblevenshtein \
             --configuration Release --no-restore \
-            --output "$PWD/dist" -p:BuildInParallel=false
+            --output "$PWD/dist" \
+            -p:BuildInParallel=false \
+            -p:VinaryTreeInteropRoot="$GITHUB_WORKSPACE/.release-deps/vinary-tree-interop"
           for rid in linux-x64 linux-arm64 osx-arm64 win-x64; do
             unzip -l dist/VinaryTree.Liblevenshtein.*.nupkg | grep "runtimes/$rid/native/"
           done

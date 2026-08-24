@@ -40,6 +40,12 @@ tasks.withType<Javadoc>().configureEach {
 }
 
 repositories {
+    providers.gradleProperty("interopRepository").orNull?.let { repository ->
+        maven {
+            name = "exactInterop"
+            url = uri(repository)
+        }
+    }
     mavenCentral()
 }
 
