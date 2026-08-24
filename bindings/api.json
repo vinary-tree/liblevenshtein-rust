@@ -254,7 +254,7 @@
       "lua"
     ]
   },
-  "packageVersion": "4.0.0-rc.1",
+  "packageVersion": "4.0.0-rc.2",
   "abiVersion": 1,
   "apiRevision": 2,
   "defaultMatchBatch": 256,
@@ -756,23 +756,23 @@
     ]
   },
   "release": {
-    "canonical": "4.0.0-rc.1",
+    "canonical": "4.0.0-rc.2",
     "registries": {
-      "cargo": "4.0.0-rc.1",
-      "clojars": "4.0.0-rc.1",
-      "cmake": "4.0.0-rc.1",
+      "cargo": "4.0.0-rc.2",
+      "clojars": "4.0.0-rc.2",
+      "cmake": "4.0.0-rc.2",
       "fpm": "4.0.0",
-      "goTag": "v4.0.0-rc.1",
+      "goTag": "v4.0.0-rc.2",
       "hackage": "4.0.0",
-      "luaRocks": "4.0.0rc1-1",
-      "maven": "4.0.0-rc.1",
-      "npm": "4.0.0-rc.1",
-      "nuget": "4.0.0-rc.1",
-      "opam": "4.0.0~rc1",
-      "pkgConfig": "4.0.0-rc.1",
-      "pypi": "4.0.0rc1",
-      "rubygems": "4.0.0.rc.1",
-      "swiftTag": "4.0.0-rc.1"
+      "luaRocks": "4.0.0rc2-1",
+      "maven": "4.0.0-rc.2",
+      "npm": "4.0.0-rc.2",
+      "nuget": "4.0.0-rc.2",
+      "opam": "4.0.0~rc2",
+      "pkgConfig": "4.0.0-rc.2",
+      "pypi": "4.0.0rc2",
+      "rubygems": "4.0.0.rc.2",
+      "swiftTag": "4.0.0-rc.2"
     },
     "distTag": "next"
   }

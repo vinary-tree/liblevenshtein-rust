@@ -6,7 +6,7 @@ let interopDependency: Package.Dependency = if let localRoot = Context.environme
 } else {
     .package(
         url: "https://github.com/vinary-tree/vinary-tree-interop.git",
-        exact: "4.0.0-rc.1"
+        exact: "4.0.0-rc.2"
     )
 }
 

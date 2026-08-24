@@ -1,0 +1,50 @@
+@startuml
+' Immutable-candidate recovery protocol for the RC.1 -> RC.2 incident.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #37474F
+  ActorBorderColor #37474F
+  LifeLineBorderColor #78909C
+  LifeLineBackgroundColor #ECEFF1
+  ParticipantBorderColor #37474F
+  ParticipantFontColor #102027
+}
+
+title Immutable candidate recovery: rejected RC.1 to verified RC.2
+
+actor "Release operator" as OP #FFF9C4
+participant "npm registry\nimmutable RC.1" as NPM1 #FFCDD2
+participant "Fresh consumer\ninstalled bytes" as CONSUMER #FFE0B2
+participant "Source repair\ncommit 75dc2cc" as SOURCE #C8E6C9
+participant "RC.2 validation\nand publication" as RC2 #BBDEFB
+database "Append-only\nevidence ledger" as LEDGER #D1C4E9
+
+OP -> NPM1 : publish facade with provenance
+NPM1 --> OP : immutable 4.0.0-rc.1 coordinate
+OP -> CONSUMER : install exact public package
+CONSUMER --> OP : traversal fails: cursor.close absent
+OP -> LEDGER : record run, integrity, and rejection
+OP -> SOURCE : adapt to next + Symbol.dispose protocol
+SOURCE --> OP : local packed-byte CJS/ESM smokes pass
+OP -> RC2 : synchronize full train; mint new tag
+RC2 -> CONSUMER : install exact public RC.2 bytes
+alt installed contracts pass
+  CONSUMER --> RC2 : CRUD, traversal, batching, disposal pass
+  RC2 -> LEDGER : record digest and proof
+  RC2 --> OP : downstream publication may resume
+else any installed contract fails
+  CONSUMER --> RC2 : reject candidate
+  RC2 -> LEDGER : append failure; never overwrite bytes
+  RC2 --> OP : advance to next unused candidate
+end
+
+legend right
+  |= Color |= Meaning |
+  |<#FFCDD2>| rejected immutable artifact |
+  |<#FFE0B2>| registry-shaped consumer proof |
+  |<#C8E6C9>| corrective source |
+  |<#BBDEFB>| new candidate boundary |
+  |<#D1C4E9>| durable evidence |
+endlegend
+@enduml

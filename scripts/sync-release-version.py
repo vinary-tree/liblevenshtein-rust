@@ -12,6 +12,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = ROOT / "release/version.json"
+GENERATED_TREE_PARTS = frozenset(
+    {".git", ".venv", "_build", "build", "dist", "node_modules", "target", "venv"}
+)
 
 
 def derived(canonical: str) -> dict[str, str]:
@@ -52,6 +55,41 @@ def replace(path: str, pattern: str, replacement: str, expected: int = 1) -> Non
     target.write_text(updated, encoding="utf-8")
 
 
+def rewrite_candidate_tokens(
+    patterns: tuple[str, ...],
+    canonical: str,
+    excluded: tuple[str, ...] = (),
+) -> None:
+    base, candidate = canonical.split("-rc.", 1)
+    escaped = re.escape(base)
+    replacements = (
+        (rf"{escaped}\.rc\.\d+", f"{base}.rc.{candidate}"),
+        (rf"{escaped}~rc\d+", f"{base}~rc{candidate}"),
+        (rf"{escaped}\\textasciitilde rc\d+", rf"{base}\textasciitilde rc{candidate}"),
+        (rf"{escaped}rc\d+-\d+", f"{base}rc{candidate}-1"),
+        (rf"{escaped}rc\d+", f"{base}rc{candidate}"),
+        (rf"{escaped}-rc\.\d+", canonical),
+        (r"RELEASE_4_RC_\d+", f"RELEASE_4_RC_{candidate}"),
+        (r"x-release-candidate: rc\.\d+", f"x-release-candidate: rc.{candidate}"),
+        (r"(?<=`\$`r = )\d+(?=`\$`)", candidate),
+    )
+    excluded_paths = {ROOT / path for path in excluded}
+    for pattern in patterns:
+        for target in ROOT.glob(pattern):
+            relative = target.relative_to(ROOT)
+            if (
+                target in excluded_paths
+                or not target.is_file()
+                or GENERATED_TREE_PARTS.intersection(relative.parts)
+                or relative.parts[:2] == ("docs", "releases")
+            ):
+                continue
+            source = target.read_text(encoding="utf-8")
+            for version_pattern, replacement in replacements:
+                source = re.sub(version_pattern, lambda _match: replacement, source)
+            target.write_text(source, encoding="utf-8")
+
+
 def update_json(path: str, mutate) -> None:
     target = ROOT / path
     value = json.loads(target.read_text(encoding="utf-8"))
@@ -61,6 +99,7 @@ def update_json(path: str, mutate) -> None:
 
 def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     canonical = str(model["canonical"])
+    candidate = canonical.rsplit(".", 1)[-1]
     dependencies = model["dependencies"]
     assert isinstance(dependencies, dict)
 
@@ -242,6 +281,12 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
             f"version: {versions['hackage']}\nx-release-candidate: rc.1\n",
             1,
         )
+    cabal = re.sub(
+        r"^x-release-candidate: \S+$",
+        f"x-release-candidate: rc.{candidate}",
+        cabal,
+        flags=re.MULTILINE,
+    )
     cabal = re.sub(r"vinary-tree-interop >=\S+ && <\S+", "vinary-tree-interop >=4 && <5", cabal)
     cabal_path.write_text(cabal, encoding="utf-8")
 
@@ -279,6 +324,12 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     )
 
     lua_path = f'bindings/lua/vinary-tree-liblevenshtein-{versions["luaRocks"]}.rockspec'
+    lua_target = ROOT / lua_path
+    if not lua_target.exists():
+        candidates = list((ROOT / "bindings/lua").glob("vinary-tree-liblevenshtein-*.rockspec"))
+        if len(candidates) != 1:
+            raise ValueError(f"expected one LuaRocks source file, found {len(candidates)}")
+        candidates[0].rename(lua_target)
     replace(lua_path, r'^version = "[^"]+"$', f'version = "{versions["luaRocks"]}"')
     replace(
         lua_path,
@@ -298,18 +349,35 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         r'^Requires: vinary-tree-interop = \S+$',
         f'Requires: vinary-tree-interop = {versions["pkgConfig"]}',
     )
+    rewrite_candidate_tokens(
+        (
+            ".github/actions/**/*.yml",
+            ".github/workflows/*.yml",
+            "benchmarks/cross-language/harnesses/go/go.mod",
+            "bindings/**/*.md",
+            "docs/**/*.md",
+            "docs/**/*.puml",
+        ),
+        canonical,
+        excluded=(
+            "docs/diagrams/bindings/rejected-candidate-recovery.puml",
+            "docs/releases/4.0.0-rc.1.md",
+            "docs/releases/README.md",
+        ),
+    )
 
 
 def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     failures: list[str] = []
     if model.get("registries") != versions:
         failures.append("release/version.json registry spellings are not derived from canonical")
+    canonical = str(model["canonical"])
+    candidate = canonical.rsplit(".", 1)[-1]
     publication = model.get("publication", {})
     if not isinstance(publication, dict) or publication.get("fpm") is not False:
         failures.append("fpm RC publication must remain embargoed")
     if not isinstance(publication, dict) or publication.get("hackage") is not False:
         failures.append("Hackage RC publication must remain embargoed")
-    canonical = str(model["canonical"])
     dependencies = model["dependencies"]
     assert isinstance(dependencies, dict)
     checks = {
@@ -354,7 +422,7 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     if f"github.com/vinary-tree/vinary-tree-interop/bindings/go/v4 {versions['goTag']}" not in go_mod:
         failures.append("Go interop dependency is stale")
     cabal = read("bindings/haskell/vinary-tree-liblevenshtein.cabal")
-    if f"version: {versions['hackage']}" not in cabal or "x-release-candidate: rc.1" not in cabal:
+    if f"version: {versions['hackage']}" not in cabal or f"x-release-candidate: rc.{candidate}" not in cabal:
         failures.append("Hackage source candidate metadata is stale")
     return failures
 

@@ -39,12 +39,12 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
         with:
           llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.1
-          lling-llang-ref: v4.0.0-rc.1
-          duallity-ref: v4.0.0-rc.1
-          interop-ref: v4.0.0-rc.1
-          javascript-runtime-ref: v4.0.0-rc.1
-          liblevenshtein-npm-ref: v4.0.0-rc.1
+          libdictenstein-ref: v4.0.0-rc.2
+          lling-llang-ref: v4.0.0-rc.2
+          duallity-ref: v4.0.0-rc.2
+          interop-ref: v4.0.0-rc.2
+          javascript-runtime-ref: v4.0.0-rc.2
+          liblevenshtein-npm-ref: v4.0.0-rc.2
       - run: python3 scripts/check-bindings.py
       - run: python3 scripts/check-binding-docs.py
       - run: python3 scripts/check-release-train.py
@@ -117,12 +117,12 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
         with:
           llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.1
-          lling-llang-ref: v4.0.0-rc.1
-          duallity-ref: v4.0.0-rc.1
-          interop-ref: v4.0.0-rc.1
-          javascript-runtime-ref: v4.0.0-rc.1
-          liblevenshtein-npm-ref: v4.0.0-rc.1
+          libdictenstein-ref: v4.0.0-rc.2
+          lling-llang-ref: v4.0.0-rc.2
+          duallity-ref: v4.0.0-rc.2
+          interop-ref: v4.0.0-rc.2
+          javascript-runtime-ref: v4.0.0-rc.2
+          liblevenshtein-npm-ref: v4.0.0-rc.2
       - run: cargo build --locked --release --lib --features native-bindings-full
       - run: cargo build --release --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - run: >-
@@ -212,7 +212,7 @@ jobs:
       - name: Checkout the exact Python interop dependency
         shell: bash
         run: >-
-          git clone --depth 1 --branch v4.0.0-rc.1
+          git clone --depth 1 --branch v4.0.0-rc.2
           https://github.com/vinary-tree/vinary-tree-interop.git
           .release-deps/vinary-tree-interop
       - uses: dtolnay/rust-toolchain@1.95
@@ -257,12 +257,12 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
         with:
           llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.1
-          lling-llang-ref: v4.0.0-rc.1
-          duallity-ref: v4.0.0-rc.1
-          interop-ref: v4.0.0-rc.1
-          javascript-runtime-ref: v4.0.0-rc.1
-          liblevenshtein-npm-ref: v4.0.0-rc.1
+          libdictenstein-ref: v4.0.0-rc.2
+          lling-llang-ref: v4.0.0-rc.2
+          duallity-ref: v4.0.0-rc.2
+          interop-ref: v4.0.0-rc.2
+          javascript-runtime-ref: v4.0.0-rc.2
+          liblevenshtein-npm-ref: v4.0.0-rc.2
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
@@ -308,7 +308,7 @@ jobs:
       - name: Stage the exact interop JVM dependency
         shell: bash
         run: |
-          git clone --depth 1 --branch v4.0.0-rc.1 \
+          git clone --depth 1 --branch v4.0.0-rc.2 \
             https://github.com/vinary-tree/vinary-tree-interop.git \
             .release-deps/vinary-tree-interop
           .release-deps/vinary-tree-interop/bindings/jvm/gradlew \
@@ -392,7 +392,7 @@ jobs:
       - name: Checkout the exact interop .NET dependency
         shell: bash
         run: >-
-          git clone --depth 1 --branch v4.0.0-rc.1
+          git clone --depth 1 --branch v4.0.0-rc.2
           https://github.com/vinary-tree/vinary-tree-interop.git
           .release-deps/vinary-tree-interop
       - uses: actions/download-artifact@v7
@@ -488,12 +488,12 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
         with:
           llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.1
-          lling-llang-ref: v4.0.0-rc.1
-          duallity-ref: v4.0.0-rc.1
-          interop-ref: v4.0.0-rc.1
-          javascript-runtime-ref: v4.0.0-rc.1
-          liblevenshtein-npm-ref: v4.0.0-rc.1
+          libdictenstein-ref: v4.0.0-rc.2
+          lling-llang-ref: v4.0.0-rc.2
+          duallity-ref: v4.0.0-rc.2
+          interop-ref: v4.0.0-rc.2
+          javascript-runtime-ref: v4.0.0-rc.2
+          liblevenshtein-npm-ref: v4.0.0-rc.2
       - uses: fortran-lang/setup-fpm@v10
       - uses: dtolnay/rust-toolchain@1.95
       - name: Validate the numeric 4.0.0 candidates without publication
@@ -516,11 +516,11 @@ jobs:
         with:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y luarocks
-      - run: luarocks lint bindings/lua/vinary-tree-liblevenshtein-4.0.0rc1-1.rockspec
+      - run: luarocks lint bindings/lua/vinary-tree-liblevenshtein-4.0.0rc2-1.rockspec
       - uses: actions/upload-artifact@v7
         with:
           name: luarocks-package
-          path: bindings/lua/vinary-tree-liblevenshtein-4.0.0rc1-1.rockspec
+          path: bindings/lua/vinary-tree-liblevenshtein-4.0.0rc2-1.rockspec
           if-no-files-found: error
 
   opam-package:
@@ -538,13 +538,13 @@ jobs:
         run: |
           scripts/stage-ocaml-package.sh "$RUNNER_TEMP/opam-package"
           opam lint "$RUNNER_TEMP/opam-package/opam"
-          tar -tjf "$RUNNER_TEMP/opam-package/vinary-tree-liblevenshtein-4.0.0-rc.1.tbz"
+          tar -tjf "$RUNNER_TEMP/opam-package/vinary-tree-liblevenshtein-4.0.0-rc.2.tbz"
       - uses: actions/upload-artifact@v7
         with:
           name: opam-package
           path: |
             ${{ runner.temp }}/opam-package/opam
-            ${{ runner.temp }}/opam-package/vinary-tree-liblevenshtein-4.0.0-rc.1.tbz
+            ${{ runner.temp }}/opam-package/vinary-tree-liblevenshtein-4.0.0-rc.2.tbz
           if-no-files-found: error
 
   crates-io:
@@ -563,8 +563,8 @@ jobs:
         run: |
           parent=$(dirname "$GITHUB_WORKSPACE")
           git clone --depth 1 --branch v0.1.0 https://github.com/vinary-tree/llattice.git "$parent/llattice"
-          git clone --depth 1 --branch v4.0.0-rc.1 https://github.com/vinary-tree/libdictenstein.git "$parent/libdictenstein"
-          git clone --depth 1 --branch v4.0.0-rc.1 https://github.com/vinary-tree/vinary-tree-interop.git "$parent/vinary-tree-interop"
+          git clone --depth 1 --branch v4.0.0-rc.2 https://github.com/vinary-tree/libdictenstein.git "$parent/libdictenstein"
+          git clone --depth 1 --branch v4.0.0-rc.2 https://github.com/vinary-tree/vinary-tree-interop.git "$parent/vinary-tree-interop"
       - name: Publish the consumer crate against the immutable shared ABI
         run: |
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
@@ -639,7 +639,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           grep -Fx 'module github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4' bindings/go/go.mod
-          grep -F 'github.com/vinary-tree/vinary-tree-interop/bindings/go/v4 v4.0.0-rc.1' bindings/go/go.mod
+          grep -F 'github.com/vinary-tree/vinary-tree-interop/bindings/go/v4 v4.0.0-rc.2' bindings/go/go.mod
           GOWORK=off go -C bindings/go mod verify
           version=${GITHUB_REF_NAME#v}
           module_tag="bindings/go/v$version"
@@ -682,7 +682,7 @@ jobs:
         env:
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: >-
-          luarocks upload dist/vinary-tree-liblevenshtein-4.0.0rc1-1.rockspec
+          luarocks upload dist/vinary-tree-liblevenshtein-4.0.0rc2-1.rockspec
           --api-key "$LUAROCKS_API_KEY"
 
   opam:

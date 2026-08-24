@@ -1,4 +1,4 @@
-(defproject io.vinarytree/liblevenshtein-clojure "4.0.0-rc.1"
+(defproject io.vinarytree/liblevenshtein-clojure "4.0.0-rc.2"
   :description "Idiomatic Clojure facade for snapshot-consistent liblevenshtein FFM bindings"
   :url "https://github.com/vinary-tree/liblevenshtein-rust"
   :license {:name "Apache License 2.0"
@@ -13,8 +13,8 @@
                   [:name "Dylon Edwards"]
                   [:email "dylon.devo@gmail.com"]]]
   :dependencies [[org.clojure/clojure "1.12.5" :scope "provided"]
-                 [io.vinarytree/vinary-tree-interop "4.0.0-rc.1"]
-                 [io.vinarytree/liblevenshtein "4.0.0-rc.1"]]
+                 [io.vinarytree/vinary-tree-interop "4.0.0-rc.2"]
+                 [io.vinarytree/liblevenshtein "4.0.0-rc.2"]]
   :profiles {:test {:dependencies [[org.clojure/test.check "1.1.1"]]}}
   :source-paths ["src"]
   :test-paths ["test"]

@@ -2,7 +2,7 @@
 
 This guide defines the release architecture, version policy, publication order,
 validation gates, credentials, and recovery procedure for the Vinary Tree
-family. It is normative for the `4.0.0-rc.1` release train.
+family. It is normative for the `4.0.0-rc.2` release train.
 
 The central rule is **one artifact owner, one repository, one release
 workflow**. Project repositories may test an exact dependency, but they never
@@ -37,7 +37,7 @@ The release has five invariants:
    publication of a new package even when that publication uses another tag,
    each new scoped coordinate is reserved by an inert `0.0.0` bootstrap. After
    the real RC passes installed-artifact smoke tests, its scoped `latest`
-   pointer is moved from `0.0.0` to `4.0.0-rc.1` and the `bootstrap` tag is
+   pointer is moved from `0.0.0` to `4.0.0-rc.2` and the `bootstrap` tag is
    removed. The legacy unscoped coordinate is never moved during the RC.
 
 Cargo documents why a published crate version is immutable and recommends a
@@ -97,12 +97,12 @@ For example, validate one owner and then publish only its npm artifact:
 ```bash
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.1 \
+  --ref v4.0.0-rc.2 \
   -f registry=validate-only
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.1 \
+  --ref v4.0.0-rc.2 \
   -f registry=npm
 ```
 
@@ -146,7 +146,7 @@ every intended change before creating the tag. A release tag is annotated so it
 records an explicit release event rather than merely naming a commit.
 
 ```bash
-RELEASE_VERSION="4.0.0-rc.1"
+RELEASE_VERSION="4.0.0-rc.2"
 RELEASE_TAG="v${RELEASE_VERSION}"
 
 python3 scripts/sync-release-version.py
@@ -298,7 +298,7 @@ Repeat this read-modify-read protocol for `@vinary-tree/interop`,
 `@vinary-tree/vinary-tree`, `@vinary-tree/libdictenstein`,
 `@vinary-tree/liblevenshtein`, `@vinary-tree/lling-llang`, and
 `@vinary-tree/duallity`. The postcondition is
-`latest = next = 4.0.0-rc.1`, no `bootstrap` tag, and an explicit deprecation
+`latest = next = 4.0.0-rc.2`, no `bootstrap` tag, and an explicit deprecation
 message on `0.0.0`.
 
 Do not create or store a token that bypasses two-factor authentication (2FA)
@@ -315,18 +315,18 @@ npm view liblevenshtein dist-tags --json
 ```
 
 During the RC, it must report `latest = 2.0.4` and
-`next = 4.0.0-rc.1`. Never apply the scoped-package `latest` command to this
+`next = 4.0.0-rc.2`. Never apply the scoped-package `latest` command to this
 coordinate.
 
 ## Version function
 
 Let `M`, `m`, and `p` denote the major, minor, and patch components, and let `r`
 denote the release-candidate ordinal. For this train, `$`M = 4`$`, `$`m = 0`$`,
-`$`p = 0`$`, and `$`r = 1`$`. Define the canonical version `$`v`$` and numeric
+`$`p = 0`$`, and `$`r = 2`$`. Define the canonical version `$`v`$` and numeric
 base `$`b`$` as follows:
 
 ```math
-v = M.m.p\text{-rc}.r = \text{4.0.0-rc.1}, \qquad b = M.m.p = \text{4.0.0}.
+v = M.m.p\text{-rc}.r = \text{4.0.0-rc.2}, \qquad b = M.m.p = \text{4.0.0}.
 ```
 
 Each registry renderer `$`R_e`$` maps `$`v`$` into the syntax accepted by
@@ -335,25 +335,25 @@ ecosystem `$`e`$`:
 ```math
 R_e(v) =
 \begin{cases}
-\text{4.0.0-rc.1} & e \in \{\text{Cargo,npm,Maven,Clojars,NuGet,Swift,CMake,C++}\},\\
-\text{4.0.0rc1} & e = \text{PyPI},\\
-\text{4.0.0rc1-1} & e = \text{LuaRocks},\\
-\text{4.0.0.rc.1} & e = \text{RubyGems},\\
-\text{4.0.0\textasciitilde rc1} & e = \text{opam},\\
-\text{v4.0.0-rc.1} & e = \text{Go tag},\\
+\text{4.0.0-rc.2} & e \in \{\text{Cargo,npm,Maven,Clojars,NuGet,Swift,CMake,C++}\},\\
+\text{4.0.0rc2} & e = \text{PyPI},\\
+\text{4.0.0rc2-1} & e = \text{LuaRocks},\\
+\text{4.0.0.rc.2} & e = \text{RubyGems},\\
+\text{4.0.0\textasciitilde rc2} & e = \text{opam},\\
+\text{v4.0.0-rc.2} & e = \text{Go tag},\\
 \text{4.0.0} & e \in \{\text{Hackage,fpm candidates}\}.
 \end{cases}
 ```
 
 | Ecosystem | RC spelling | Publication policy |
 |---|---|---|
-| Cargo, npm, Maven, Clojars, NuGet, Swift, CMake, pkg-config | `4.0.0-rc.1` | Publish after its owner passes all gates |
-| PyPI | `4.0.0rc1` | Publish after wheel tests |
-| RubyGems | `4.0.0.rc.1` | Publish after native-resource inspection |
-| opam | `4.0.0~rc1` | Submit an opam-repository pull request |
-| Go | module path ending in `/v4`; tag `v4.0.0-rc.1` | Create the immutable subdirectory tag after dependencies resolve |
-| LuaRocks | `4.0.0rc1-1` | Publish linted rockspec metadata; rockspec format 1.0 permits one hyphen only, before the numeric revision |
-| Hackage | `4.0.0` with `x-release-candidate: rc.1` | Build candidate only; do not upload |
+| Cargo, npm, Maven, Clojars, NuGet, Swift, CMake, pkg-config | `4.0.0-rc.2` | Publish after its owner passes all gates |
+| PyPI | `4.0.0rc2` | Publish after wheel tests |
+| RubyGems | `4.0.0.rc.2` | Publish after native-resource inspection |
+| opam | `4.0.0~rc2` | Submit an opam-repository pull request |
+| Go | module path ending in `/v4`; tag `v4.0.0-rc.2` | Create the immutable subdirectory tag after dependencies resolve |
+| LuaRocks | `4.0.0rc2-1` | Publish linted rockspec metadata; rockspec format 1.0 permits one hyphen only, before the numeric revision |
+| Hackage | `4.0.0` with `x-release-candidate: rc.2` | Build candidate only; do not upload |
 | fpm | `4.0.0` | Build candidate only; do not upload |
 
 `llattice` is intentionally outside the synchronized major-version train and
@@ -374,8 +374,8 @@ publication still follows dependency order:
 5. Publish `@vinary-tree/vinary-tree` from `javascript-runtime` after all four
    Rust components are available.
 6. Publish the four scoped npm project facades with `--tag next`.
-7. Publish `liblevenshtein@4.0.0-rc.1` from `liblevenshtein-npm`, also with
-   `--tag next`, after `@vinary-tree/liblevenshtein@4.0.0-rc.1` resolves.
+7. Publish `liblevenshtein@4.0.0-rc.2` from `liblevenshtein-npm`, also with
+   `--tag next`, after `@vinary-tree/liblevenshtein@4.0.0-rc.2` resolves.
 
 The libdictenstein workflow uses liblevenshtein source for a cross-project
 consumer test. That is a **validation dependency**, not a reason to invert the
@@ -390,7 +390,7 @@ is part of the algorithm: downstream publication never relies on an upload
 command merely returning success.
 
 ```text
-procedure RELEASE_4_RC_1(owners):
+procedure RELEASE_4_RC_2(owners):
     # Establish one immutable source state for every owner.
     for owner in owners:
         require owner.worktree_is_clean
@@ -401,21 +401,21 @@ procedure RELEASE_4_RC_1(owners):
     require npm_dist_tag("liblevenshtein", "latest") = "2.0.4"
 
     for owner in owners:
-        owner.dispatch(tag = "v4.0.0-rc.1", registry = "validate-only")
+        owner.dispatch(tag = "v4.0.0-rc.2", registry = "validate-only")
         require owner.github_prerelease.has_valid_checksums
 
     for owner in [interop, libdictenstein, liblevenshtein,
                   lling_llang, duallity, javascript_runtime,
                   scoped_facades, legacy_npm_facade]:
-        owner.dispatch(tag = "v4.0.0-rc.1", registry = owner.next_registry)
+        owner.dispatch(tag = "v4.0.0-rc.2", registry = owner.next_registry)
         wait_until_every_published_coordinate_resolves(owner)
         rerun_owner_smoke_tests_against_registry_bytes(owner)
 
     for package in new_scoped_npm_coordinates:
-        require npm_dist_tag(package, "next") = "4.0.0-rc.1"
-        npm_set_dist_tag(package, "latest", "4.0.0-rc.1")
+        require npm_dist_tag(package, "next") = "4.0.0-rc.2"
+        npm_set_dist_tag(package, "latest", "4.0.0-rc.2")
         npm_remove_dist_tag(package, "bootstrap")
-        require npm_dist_tag(package, "latest") = "4.0.0-rc.1"
+        require npm_dist_tag(package, "latest") = "4.0.0-rc.2"
 
     require npm_dist_tag("liblevenshtein", "latest") = "2.0.4"
     record_checksums_and_release_evidence()
@@ -475,6 +475,27 @@ The first command is deliberately idempotent. A diff after the second
 invocation means either a coordinate escaped the model or the generator is not
 stable; both are release blockers.
 
+### Documentation and generated-evidence gate
+
+Documentation is part of the released interface. After synchronizing the
+version, render diagrams from their sources, validate mathematical delimiters
+and language guides, and reject generated drift before tagging:
+
+```bash
+python3 scripts/sync-release-version.py
+python3 scripts/check-binding-docs.py
+scripts/doc-mathlint.sh
+docs/diagrams/render.sh --check
+git diff --check
+```
+
+`docs/diagrams/render.sh` supplies Java's headless mode internally, renders into
+a temporary tree in check mode, and compares those bytes with the committed
+SVGs. Do not invoke a GUI renderer during a release. Every diagram must retain
+its source beside the SVG; edit the source and regenerate rather than editing
+SVG markup by hand. Store command output as validation evidence, then remove
+the temporary log after the ledger has captured the result.
+
 ## Artifact-specific gates
 
 ### Rust and native C/C++
@@ -503,12 +524,12 @@ static linkage when offered.
 
 ### Python, JVM, Clojure, .NET, and Ruby
 
-Python wheels use the PyPI spelling `4.0.0rc1`, bundle only their project native
-library, and depend exactly on `vinary-tree-interop==4.0.0rc1`.
+Python wheels use the PyPI spelling `4.0.0rc2`, bundle only their project native
+library, and depend exactly on `vinary-tree-interop==4.0.0rc2`.
 
 The JVM artifact targets the documented Java level, uses Foreign Function &
 Memory resource lifetimes, bundles its project native resources, and depends
-on `io.vinarytree:vinary-tree-interop:4.0.0-rc.1`. The Clojure facade is staged
+on `io.vinarytree:vinary-tree-interop:4.0.0-rc.2`. The Clojure facade is staged
 only after the exact JVM artifact has been installed into the test repository.
 Maven Central and Clojars are separate coordinates and separate credentials.
 
@@ -544,17 +565,17 @@ Use the interactive, read-modify-read procedure in
 It deliberately includes `--auth-type=web` and verifies the tags and
 deprecation after mutation.
 
-The scoped postcondition is `latest = next = 4.0.0-rc.1`, with no `bootstrap`
+The scoped postcondition is `latest = next = 4.0.0-rc.2`, with no `bootstrap`
 tag. The immutable `0.0.0` audit artifact remains explicitly deprecated.
 
 Before and after publishing the legacy name, verify its stable tag:
 
 ```bash
 npm view liblevenshtein dist-tags --json
-npm view liblevenshtein@4.0.0-rc.1 version
+npm view liblevenshtein@4.0.0-rc.2 version
 ```
 
-The required postcondition is `latest = 2.0.4` and `next = 4.0.0-rc.1`.
+The required postcondition is `latest = 2.0.4` and `next = 4.0.0-rc.2`.
 
 ### Haskell and Fortran candidates
 
@@ -574,15 +595,15 @@ its native payload loads.
 
 | Registry | Resolution proof | Minimum fresh-consumer proof |
 |---|---|---|
-| crates.io | `cargo info NAME@4.0.0-rc.1` | Temporary crate with `NAME = "=4.0.0-rc.1"`; `cargo check --locked`; run a construction/query smoke where the crate exposes behavior |
-| npm | `npm view NAME@4.0.0-rc.1 version dist.integrity dist.shasum --json` | Install the exact version into `mktemp -d`; test CommonJS and ESM entry points, runtime identity, iteration, and deterministic closure |
-| PyPI | `python -m pip download --no-deps NAME==4.0.0rc1` | New virtual environment; install only downloaded wheels and exact dependencies; import, construct, iterate, snapshot, close |
-| Maven Central | Resolve `GROUP:ARTIFACT:4.0.0-rc.1` from Central in an empty Gradle/Maven cache | Compile and run the Java collection and try-with-resources fixtures against the resolved JAR and extracted native library |
-| Clojars | Resolve `[GROUP/ARTIFACT "4.0.0-rc.1"]` from Clojars | Run the idiomatic Clojure collection, snapshot, and resource-lifetime fixtures without a local Maven override |
+| crates.io | `cargo info NAME@4.0.0-rc.2` | Temporary crate with `NAME = "=4.0.0-rc.2"`; `cargo check --locked`; run a construction/query smoke where the crate exposes behavior |
+| npm | `npm view NAME@4.0.0-rc.2 version dist.integrity dist.shasum --json` | Install the exact version into `mktemp -d`; test CommonJS and ESM entry points, runtime identity, iteration, and deterministic closure |
+| PyPI | `python -m pip download --no-deps NAME==4.0.0rc2` | New virtual environment; install only downloaded wheels and exact dependencies; import, construct, iterate, snapshot, close |
+| Maven Central | Resolve `GROUP:ARTIFACT:4.0.0-rc.2` from Central in an empty Gradle/Maven cache | Compile and run the Java collection and try-with-resources fixtures against the resolved JAR and extracted native library |
+| Clojars | Resolve `[GROUP/ARTIFACT "4.0.0-rc.2"]` from Clojars | Run the idiomatic Clojure collection, snapshot, and resource-lifetime fixtures without a local Maven override |
 | NuGet | Query the exact package version from nuget.org | Empty `dotnet new` project; add exact package; run collection, enumeration, snapshot, and `IDisposable` fixtures |
-| RubyGems | `gem fetch NAME -v 4.0.0.rc.1` | Install to an isolated gem home; require the gem, traverse data, and close native resources |
-| Go proxy | `go list -m MODULE@v4.0.0-rc.1` | New module with the exact `/v4` requirement; `go test` the ownership and iteration fixture |
-| LuaRocks | Inspect/download `NAME 4.0.0rc1-1` from the configured server | Isolated tree; load the module and run resource and traversal fixtures |
+| RubyGems | `gem fetch NAME -v 4.0.0.rc.2` | Install to an isolated gem home; require the gem, traverse data, and close native resources |
+| Go proxy | `go list -m MODULE@v4.0.0-rc.2` | New module with the exact `/v4` requirement; `go test` the ownership and iteration fixture |
+| LuaRocks | Inspect/download `NAME 4.0.0rc2-1` from the configured server | Isolated tree; load the module and run resource and traversal fixtures |
 | opam | Inspect the submitted `opam-repository` pull request and source checksum | Fresh switch; pin the candidate metadata, build, and execute its examples before merge |
 | GitHub release | Verify `SHA256SUMS` against every downloaded asset | Relocate each native SDK archive and build both shared and static sample consumers where supported |
 
@@ -618,7 +639,7 @@ manual inspection but is not a substitute for CI trusted-publisher setup.
 ## Pre-publication checklist
 
 - [ ] Every worktree intended for release is clean and committed.
-- [ ] Every `release/version.json` says `4.0.0-rc.1` and every sync script is
+- [ ] Every `release/version.json` says `4.0.0-rc.2` and every sync script is
       idempotent.
 - [ ] `python3 scripts/check-release-train.py` passes across the seven owners.
 - [ ] Generated APIs, binding documentation, ABI invariants, and completeness
@@ -633,10 +654,10 @@ manual inspection but is not a substitute for CI trusted-publisher setup.
 - [ ] A `validate-only` dispatch at each immutable tag completes before any
       registry dispatch.
 - [ ] Every registry dispatch names exactly one target and runs against
-      `refs/tags/v4.0.0-rc.1`, never a branch.
+      `refs/tags/v4.0.0-rc.2`, never a branch.
 - [ ] Registry namespaces, trusted publishers, signing keys, and protected
       environments exist.
-- [ ] Every new scoped npm package has `latest = next = 4.0.0-rc.1`, has no
+- [ ] Every new scoped npm package has `latest = next = 4.0.0-rc.2`, has no
       `bootstrap` tag, and deprecates its immutable `0.0.0` reservation.
 - [ ] `npm view liblevenshtein dist-tags --json` reports `latest: 2.0.4`.
 - [ ] Hackage and fpm jobs are visibly candidate-only.
@@ -646,8 +667,8 @@ manual inspection but is not a substitute for CI trusted-publisher setup.
 Registry versions and Git tags are immutable. If an upload succeeds in only
 part of the graph, stop immediately, record the coordinates that became
 public, and resume only after those exact bytes resolve. If published bytes are
-wrong, release a new candidate such as `4.0.0-rc.2`; never overwrite, retag, or
-silently rebuild `rc.1`.
+wrong, release the next unused candidate; never overwrite, retag, or silently
+rebuild the rejected candidate.
 
 If a facade is broken but its underlying runtime is correct, fix and republish
 only that facade under a new candidate. If the shared ABI is wrong, advance the

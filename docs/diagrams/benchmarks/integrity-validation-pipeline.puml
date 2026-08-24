@@ -38,9 +38,9 @@ governor = performance on cpus 2-9,
 SMT siblings idle, release cdylibs
 present, per-toolchain smoke test;
 if (all requested targets ready?) then (no)
-  #FFCDD2:**ABORT**
+  :**ABORT**
   a target that cannot run is never
-  silently skipped;
+  silently skipped; <<#FFCDD2>>
   stop
 else (yes)
 endif
@@ -52,10 +52,10 @@ over the verify-cell family;
 :compare the four-tuple
 <latex>(\,|M|,\ \sum |t|,\ \sum d,\ \mathrm{FNV}\text{-}1a_{64}\,)</latex>;
 if (bit-exact for every target?) then (no)
-  #FFCDD2:**ABORT**
+  :**ABORT**
   timing is never accepted from an
   implementation that is not proven
-  correct on this workload;
+  correct on this workload; <<#FFCDD2>>
   stop
 else (yes)
 endif
@@ -73,9 +73,9 @@ repeat :next cell;
     :drain every cursor fully,
     materialize <latex>(term, distance)</latex>;
     if (pass reproduces the reference?) then (no)
-      #FFCDD2:**FAIL THE CELL**
+      :**FAIL THE CELL**
       nondeterminism is never
-      averaged away;
+      averaged away; <<#FFCDD2>>
       stop
     else (yes)
     endif
@@ -85,10 +85,10 @@ repeat :next cell;
   run_id, environment_ref, cell_snapshot,
   workload digests, **native_digests**;
   if (cell validates against the schema?) then (no)
-    #FFCDD2:**QUARANTINE**
+    :**QUARANTINE**
     incomplete record moved aside
     with a manifest; resume
-    re-measures the coordinate;
+    re-measures the coordinate; <<#FFCDD2>>
     detach
   else (yes)
   endif
@@ -102,7 +102,7 @@ repeat :next cell;
   if (drift sentinel due?) then (yes)
     :re-run 3 fixed anchor cells;
     if (median shift > 5%?) then (yes)
-      #FFE0B2:annotate the window;
+      :annotate the window; <<#FFE0B2>>
     else (no)
     endif
   else (no)
@@ -122,10 +122,10 @@ cells are never dropped as invalid);
 :**aggregate**
 check digest consistency;
 if (all workload + native digests match the pins?) then (no)
-  #FFCDD2:**ABORT**
+  :**ABORT**
   refuse to summarize a run whose
   cells measured different binaries
-  or different inputs;
+  or different inputs; <<#FFCDD2>>
   stop
 else (yes)
 endif

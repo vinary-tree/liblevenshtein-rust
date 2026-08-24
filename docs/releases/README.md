@@ -14,7 +14,13 @@ consumer exercises it.
 
 ## Ledgers
 
+- [`4.0.0-rc.2`](4.0.0-rc.2.md) — current corrective release train. It
+  preserves the rejected libdictenstein npm RC.1 as immutable evidence,
+  verifies the iterator-protocol repair from installed bytes, and resumes the
+  complete dependency-ordered publication graph at a new candidate.
 - [`4.0.0-rc.1`](4.0.0-rc.1.md) — synchronized version-4 release candidate,
   standalone interop and JavaScript runtime decomposition, scoped npm package
-  bootstrap migration, and multi-registry language-binding publication.
-
+  bootstrap migration, and multi-registry language-binding publication. This
+  ledger is historical: one published facade was rejected during installed-byte
+  verification, so unfinished coordinates moved to RC.2 rather than rewriting
+  RC.1.
