@@ -257,6 +257,26 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         r'io\.vinarytree/liblevenshtein \{:mvn/version "[^"]+"\}',
         f'io.vinarytree/liblevenshtein {{:mvn/version "{versions["maven"]}"}}',
     )
+    replace(
+        "bindings/clojure/README.md",
+        r'(\[io\.vinarytree/liblevenshtein-clojure ")[^"]+("\])',
+        rf'\g<1>{versions["clojars"]}\2',
+    )
+    replace(
+        "bindings/clojure/README.md",
+        r'(io\.vinarytree/liblevenshtein-clojure \{:mvn/version ")[^"]+("\})',
+        rf'\g<1>{versions["clojars"]}\2',
+    )
+    replace(
+        "docs/architecture/overview.md",
+        r'(\| \*\*liblevenshtein\*\* \(this crate, `v)[^`]+(`\))',
+        rf'\g<1>{canonical}\2',
+    )
+    replace(
+        "docs/architecture/overview.md",
+        r'(\| \*\*libdictenstein\*\* \(`v)[^`]+(`\))',
+        rf'\g<1>{dependencies["libdictenstein"]}\2',
+    )
 
     lua_path = f'bindings/lua/vinary-tree-liblevenshtein-{versions["luaRocks"]}.rockspec'
     replace(lua_path, r'^version = "[^"]+"$', f'version = "{versions["luaRocks"]}"')
@@ -307,6 +327,10 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
         "Swift root interop": ("Package.swift", r'exact: "([^"]+)"', versions["swiftTag"]),
         "Swift facade interop": ("bindings/swift/liblevenshtein/Package.swift", r'exact: "([^"]+)"', versions["swiftTag"]),
         "Clojure CLI JVM": ("bindings/clojure/deps.edn", r'io\.vinarytree/liblevenshtein \{:mvn/version "([^"]+)"\}', versions["maven"]),
+        "Clojure README Leiningen": ("bindings/clojure/README.md", r'\[io\.vinarytree/liblevenshtein-clojure "([^"]+)"\]', versions["clojars"]),
+        "Clojure README tools.deps": ("bindings/clojure/README.md", r'io\.vinarytree/liblevenshtein-clojure \{:mvn/version "([^"]+)"\}', versions["clojars"]),
+        "Architecture root crate": ("docs/architecture/overview.md", r'\| \*\*liblevenshtein\*\* \(this crate, `v([^`]+)`\)', canonical),
+        "Architecture dictionary crate": ("docs/architecture/overview.md", r'\| \*\*libdictenstein\*\* \(`v([^`]+)`\)', dependencies["libdictenstein"]),
         "LuaRocks": (f'bindings/lua/vinary-tree-liblevenshtein-{versions["luaRocks"]}.rockspec', r'^version = "([^"]+)"$', versions["luaRocks"]),
     }
     for name, (path, pattern, wanted) in checks.items():
