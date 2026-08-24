@@ -271,7 +271,8 @@ jobs:
           npm ci
           npm run build
           npm test
-          npm pack --pack-destination ../../dist
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          npm pack --pack-destination "$GITHUB_WORKSPACE/dist"
       - uses: actions/upload-artifact@v7
         with:
           name: npm-package
