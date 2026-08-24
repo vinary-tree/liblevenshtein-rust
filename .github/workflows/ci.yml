@@ -26,20 +26,12 @@ jobs:
       - if: matrix.feature-set == 'default'
         run: cargo test --locked
       - if: matrix.feature-set == 'all'
-        env:
-          RUSTFLAGS: -C target-feature=+aes,+sse2
         run: cargo test --locked --all-features
       - if: matrix.feature-set == 'all'
-        env:
-          RUSTFLAGS: -C target-feature=+aes,+sse2
         run: cargo clippy --locked --all-features --all-targets -- -D warnings
       - if: matrix.feature-set == 'all'
-        env:
-          RUSTFLAGS: -C target-feature=+aes,+sse2
         run: cargo test --locked --manifest-path liblevenshtein-macros/Cargo.toml --all-features
       - if: matrix.feature-set == 'all'
-        env:
-          RUSTFLAGS: -C target-feature=+aes,+sse2
         run: cargo build --locked --examples --all-features
       # The standalone interop repository owns its layout, discriminant, and
       # negotiation pins. Cross-repository CI replays them at the same ref.
@@ -1057,9 +1049,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - env:
-          RUSTFLAGS: -C target-feature=+aes,+sse2
-        run: cargo build --locked --benches --all-features
+      - run: cargo build --locked --benches --all-features
 
   downstream-boundary:
     name: Library dependency boundary
@@ -1086,5 +1076,4 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - env:
           RUSTDOCFLAGS: -D warnings
-          RUSTFLAGS: -C target-feature=+aes,+sse2
         run: cargo doc --locked --all-features --no-deps
