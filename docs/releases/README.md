@@ -14,10 +14,12 @@ consumer exercises it.
 
 ## Ledgers
 
-- [`4.0.0-rc.2`](4.0.0-rc.2.md) — current corrective release train. It
-  preserves the rejected libdictenstein npm RC.1 as immutable evidence,
-  verifies the iterator-protocol repair from installed bytes, and resumes the
-  complete dependency-ordered publication graph at a new candidate.
+- [`4.0.0-rc.3`](4.0.0-rc.3.md) — current corrective release train. It fixes
+  the Cabal source defect found by RC.2 immutable-tag validation and resumes
+  the exact dependency-ordered registry graph without moving prior tags.
+- [`4.0.0-rc.2`](4.0.0-rc.2.md) — rejected corrective candidate. Its valid
+  public interop/runtime subset and installed-byte proofs are retained, but an
+  invalid libdictenstein Cabal descriptor prevents promotion of the train.
 - [`4.0.0-rc.1`](4.0.0-rc.1.md) — synchronized version-4 release candidate,
   standalone interop and JavaScript runtime decomposition, scoped npm package
   bootstrap migration, and multi-registry language-binding publication. This

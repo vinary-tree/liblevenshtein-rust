@@ -1,7 +1,7 @@
 cabal-version: 3.6
 name: vinary-tree-liblevenshtein
 version: 4.0.0
-x-release-candidate: rc.2
+x-release-candidate: rc.3
 synopsis: Fast streaming Levenshtein automata for Haskell
 description: Snapshot-consistent, bounded-batch bindings to liblevenshtein.
 category: Text

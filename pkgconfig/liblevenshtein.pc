@@ -5,8 +5,8 @@ includedir=${prefix}/include
 
 Name: liblevenshtein
 Description: Snapshot-consistent streaming Levenshtein search
-Version: 4.0.0-rc.2
-Requires: vinary-tree-interop = 4.0.0-rc.2
+Version: 4.0.0-rc.3
+Requires: vinary-tree-interop = 4.0.0-rc.3
 Libs: -L${libdir} -lliblevenshtein
 Libs.private: -ldl -lpthread -lm
 Cflags: -I${includedir}

@@ -1,5 +1,5 @@
 @startuml
-' Immutable-candidate recovery protocol for the RC.1 -> RC.2 incident.
+' Immutable-candidate recovery protocol exercised by RC.1, RC.2, and RC.3.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam sequence {
@@ -11,13 +11,13 @@ skinparam sequence {
   ParticipantFontColor #102027
 }
 
-title Immutable candidate recovery: rejected RC.1 to verified RC.2
+title Immutable candidate recovery after a rejected prerelease
 
 actor "Release operator" as OP #FFF9C4
 participant "npm registry\nimmutable RC.1" as NPM1 #FFCDD2
 participant "Fresh consumer\ninstalled bytes" as CONSUMER #FFE0B2
 participant "Source repair\ncommit 75dc2cc" as SOURCE #C8E6C9
-participant "RC.2 validation\nand publication" as RC2 #BBDEFB
+participant "Next-candidate validation\nand publication" as NEXT #BBDEFB
 database "Append-only\nevidence ledger" as LEDGER #D1C4E9
 
 OP -> NPM1 : publish facade with provenance
@@ -27,16 +27,16 @@ CONSUMER --> OP : traversal fails: cursor.close absent
 OP -> LEDGER : record run, integrity, and rejection
 OP -> SOURCE : adapt to next + Symbol.dispose protocol
 SOURCE --> OP : local packed-byte CJS/ESM smokes pass
-OP -> RC2 : synchronize full train; mint new tag
-RC2 -> CONSUMER : install exact public RC.2 bytes
+OP -> NEXT : synchronize full train; mint new tag
+NEXT -> CONSUMER : install exact public candidate bytes
 alt installed contracts pass
-  CONSUMER --> RC2 : CRUD, traversal, batching, disposal pass
-  RC2 -> LEDGER : record digest and proof
-  RC2 --> OP : downstream publication may resume
+  CONSUMER --> NEXT : CRUD, traversal, batching, disposal pass
+  NEXT -> LEDGER : record digest and proof
+  NEXT --> OP : downstream publication may resume
 else any installed contract fails
-  CONSUMER --> RC2 : reject candidate
-  RC2 -> LEDGER : append failure; never overwrite bytes
-  RC2 --> OP : advance to next unused candidate
+  CONSUMER --> NEXT : reject candidate
+  NEXT -> LEDGER : append failure; never overwrite bytes
+  NEXT --> OP : advance to next unused candidate
 end
 
 legend right

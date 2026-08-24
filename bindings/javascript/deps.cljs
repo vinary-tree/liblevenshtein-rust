@@ -1,1 +1,1 @@
-{:npm-deps {"@vinary-tree/liblevenshtein" "4.0.0-rc.2"}}
+{:npm-deps {"@vinary-tree/liblevenshtein" "4.0.0-rc.3"}}

@@ -663,7 +663,7 @@ for forbidden in ("name: publish hackage", "name: publish fpm"):
     )
 interop_release = text(INTEROP_ROOT / ".github" / "workflows" / "release.yml").lower()
 for marker in (
-    'tags: ["v*.*.*"]',
+    "workflow_dispatch:",
     "cargo publish --locked",
     "gh-action-pypi-publish",
     "npm publish",
@@ -675,6 +675,19 @@ for marker in (
     "opam-repository",
 ):
     require(marker in interop_release, f"shared interop release is missing {marker}")
+for name, workflow in (
+    ("liblevenshtein", release),
+    ("libdictenstein", libdictenstein_release),
+    ("vinary-tree-interop", interop_release),
+):
+    require(
+        "workflow_dispatch:" in workflow,
+        f"{name} release workflow must support explicit immutable-tag dispatch",
+    )
+    require(
+        "\n  push:" not in workflow,
+        f"{name} release workflow must not auto-run before dependency tags are ready",
+    )
 for forbidden in (
     "cargo publish --locked -p vinary-tree-interop",
     "pypi-interop:",
@@ -705,6 +718,10 @@ for project, package_name in (
     project_release = text(
         project_root / ".github" / "workflows" / "release-bindings.yml"
     ).lower()
+    require(
+        "workflow_dispatch:" in project_release and "\n  push:" not in project_release,
+        f"{project} release workflow must be explicit-dispatch only",
+    )
     for marker in ("npm publish", "cargo publish", "stage-native-package.sh"):
         require(
             marker in project_release,
