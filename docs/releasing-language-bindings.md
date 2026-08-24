@@ -146,6 +146,7 @@ R_e(v) =
 \begin{cases}
 \text{4.0.0-rc.1} & e \in \{\text{Cargo,npm,Maven,Clojars,NuGet,Swift,CMake,C++}\},\\
 \text{4.0.0rc1} & e = \text{PyPI},\\
+\text{4.0.0rc1-1} & e = \text{LuaRocks},\\
 \text{4.0.0.rc.1} & e = \text{RubyGems},\\
 \text{4.0.0\textasciitilde rc1} & e = \text{opam},\\
 \text{v4.0.0-rc.1} & e = \text{Go tag},\\
@@ -160,7 +161,7 @@ R_e(v) =
 | RubyGems | `4.0.0.rc.1` | Publish after native-resource inspection |
 | opam | `4.0.0~rc1` | Submit an opam-repository pull request |
 | Go | module path ending in `/v4`; tag `v4.0.0-rc.1` | Create the immutable subdirectory tag after dependencies resolve |
-| LuaRocks | `4.0.0-rc.1-1` | Publish linted rockspec metadata |
+| LuaRocks | `4.0.0rc1-1` | Publish linted rockspec metadata; rockspec format 1.0 permits one hyphen only, before the numeric revision |
 | Hackage | `4.0.0` with `x-release-candidate: rc.1` | Build candidate only; do not upload |
 | fpm | `4.0.0` | Build candidate only; do not upload |
 

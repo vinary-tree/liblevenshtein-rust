@@ -27,7 +27,7 @@ def derived(canonical: str) -> dict[str, str]:
         "fpm": base,
         "goTag": f"v{canonical}",
         "hackage": base,
-        "luaRocks": f"{canonical}-1",
+        "luaRocks": f"{base}rc{candidate}-1",
         "maven": canonical,
         "npm": canonical,
         "nuget": canonical,

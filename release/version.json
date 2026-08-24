@@ -9,7 +9,7 @@
     "fpm": "4.0.0",
     "goTag": "v4.0.0-rc.1",
     "hackage": "4.0.0",
-    "luaRocks": "4.0.0-rc.1-1",
+    "luaRocks": "4.0.0rc1-1",
     "maven": "4.0.0-rc.1",
     "npm": "4.0.0-rc.1",
     "nuget": "4.0.0-rc.1",

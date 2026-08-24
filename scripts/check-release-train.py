@@ -47,7 +47,7 @@ REGISTRY_SPELLINGS = {
     "fpm": BASE,
     "goTag": f"v{EXPECTED}",
     "hackage": BASE,
-    "luaRocks": f"{EXPECTED}-1",
+    "luaRocks": f"{BASE}rc{CANDIDATE}-1",
     "maven": EXPECTED,
     "npm": EXPECTED,
     "nuget": EXPECTED,

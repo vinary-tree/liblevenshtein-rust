@@ -574,7 +574,6 @@ dependencies = [
  "prost-build",
  "protoc-bin-vendored",
  "rustc-hash",
- "rustix",
  "serde",
  "smallvec",
  "sysinfo",

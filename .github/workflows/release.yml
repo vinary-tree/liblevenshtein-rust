@@ -459,10 +459,15 @@ jobs:
           javascript-runtime-ref: v4.0.0-rc.1
           liblevenshtein-npm-ref: v4.0.0-rc.1
       - uses: fortran-lang/setup-fpm@v10
+      - uses: dtolnay/rust-toolchain@1.95
       - name: Validate the numeric 4.0.0 candidates without publication
         run: |
+          cargo build --release --features native-bindings-full
           fpm build -C ../vinary-tree-interop/bindings/fortran --dump fpm_model.json
-          fpm build -C bindings/fortran --dump fpm_model.json
+          fpm build -C bindings/fortran \
+            --build-dir "$RUNNER_TEMP/fpm-build-liblevenshtein" \
+            --link-flag "-L$PWD/target/release" \
+            --dump fpm_model.json
           scripts/stage-fpm-package.sh liblevenshtein "$RUNNER_TEMP/fpm-liblevenshtein"
           test "$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$RUNNER_TEMP/fpm-liblevenshtein/fpm.toml")" = 4.0.0
 
@@ -475,11 +480,11 @@ jobs:
         with:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y luarocks
-      - run: luarocks lint bindings/lua/vinary-tree-liblevenshtein-4.0.0-rc.1-1.rockspec
+      - run: luarocks lint bindings/lua/vinary-tree-liblevenshtein-4.0.0rc1-1.rockspec
       - uses: actions/upload-artifact@v7
         with:
           name: luarocks-package
-          path: bindings/lua/vinary-tree-liblevenshtein-4.0.0-rc.1-1.rockspec
+          path: bindings/lua/vinary-tree-liblevenshtein-4.0.0rc1-1.rockspec
           if-no-files-found: error
 
   opam-package:
@@ -635,7 +640,7 @@ jobs:
         env:
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: >-
-          luarocks upload dist/vinary-tree-liblevenshtein-4.0.0-rc.1-1.rockspec
+          luarocks upload dist/vinary-tree-liblevenshtein-4.0.0rc1-1.rockspec
           --api-key "$LUAROCKS_API_KEY"
 
   opam:
