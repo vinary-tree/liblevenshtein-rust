@@ -330,7 +330,7 @@ jobs:
           java-version: "25"
       - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
-          lein: 2.13.0
+          lein: 2.12.0
       - uses: actions/download-artifact@v7
         with:
           name: maven-staging
@@ -779,7 +779,7 @@ jobs:
           java-version: "25"
       - uses: DeLaGuardo/setup-clojure@13.6.1
         with:
-          lein: 2.13.0
+          lein: 2.12.0
       - uses: actions/download-artifact@v7
         with:
           name: maven-staging
