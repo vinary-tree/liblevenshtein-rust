@@ -171,8 +171,8 @@ A numbered tag of the form `vVERSION-release.N` is an exceptional source
 identity, not a new package version. It is permitted only when all of the
 following are true:
 
-1. the canonical `vVERSION` tag failed before any coordinate owned by that
-   repository was published at `VERSION`;
+1. the canonical `vVERSION` tag failed before the target coordinate was
+   published at `VERSION`;
 2. the correction is limited to release automation, verification, or
    documentation and does not change the shipped API, ABI, or runtime behavior;
 3. the failed canonical tag remains immutable and its failure is recorded in
@@ -180,14 +180,23 @@ following are true:
 4. every registry-facing version is derived from the package manifest, never
    from the corrective tag name; and
 5. the corrective tag receives the complete `validate-only`, protected publish,
-   registry read-back, and clean-consumer sequence.
+   registry read-back, and clean-consumer sequence; and
+6. if another coordinate from that owner is already public, the workflow guard
+   permits only `validate-only` and the exact still-unpublished registry lane.
 
 For example, `v4.0.0-rc.4-release.1` may authoritatively produce packages whose
 version remains `4.0.0-rc.4`. The workflow guard accepts the canonical tag or a
 positive, numbered corrective suffix and rejects branches, unnumbered suffixes,
-and suffix zero. If any coordinate from the owner is already public, or if the
-library/package behavior changes, advance the package version instead. Never
-use this mechanism to rebuild or replace published bytes.
+and suffix zero. If the target coordinate is already public, the target payload
+changes, or the library/package behavior changes, advance the package version
+instead. Never use this mechanism to rebuild or replace published bytes.
+
+The shared interop RC.4 Maven lane is the narrow multi-registry case. Its crate
+and npm package are already public from the canonical tag, while its Maven
+coordinate is not. The nested JReleaser invocation at that tag lacks Git-root
+discovery. `vinary-tree-interop` therefore uses
+`v4.0.0-rc.4-release.1` solely for `validate-only` and `maven-central`; its
+workflow rejects every already-published or unrelated registry lane.
 
 ### 2. Dispatch and observe validation
 
@@ -615,6 +624,12 @@ exact native libdictenstein provider. The job builds that provider with its
 directory to an absolute path before Gradle forks a test process. A developer's
 pre-existing `target` directory is never an acceptable provider.
 
+For RC.4, publish and independently resolve
+`io.vinarytree:vinary-tree-interop:4.0.0-rc.4` from the interop corrective
+source tag before dispatching the root Maven lane. Root validation continues to
+build the immutable canonical interop source locally; the corrective interop
+commit changes release metadata and automation only, not Java sources or ABI.
+
 #### Maven Central identity and the legacy Java coordinate
 
 Maven Central is the publication authority for the JVM artifacts. JFrog is not
@@ -635,17 +650,61 @@ reverse-domain namespace and requires ownership proof in its
 Absence of that namespace is a hard pre-publication barrier, not a reason to
 route the artifact through another repository.
 
-If `io.vinarytree` remains the canonical group, publish its complete signed
-artifact first. Then, from a reviewed source workflow that also controls the
-legacy namespace, publish one minimal relocation POM at the corresponding new
-version under `com.github.universal-automata:liblevenshtein`. The
-[official Maven relocation procedure](https://maven.apache.org/guides/mini/guide-relocation.html)
+The canonical group is `io.vinarytree`. The reviewed Maven lane stages its
+complete signed artifact and two namespace-isolated, POM-only migration
+notices at the same version:
+
+- `com.github.dylon:liblevenshtein:4.0.0-rc.4` relocates to the canonical
+  coordinate; and
+- `com.github.universal-automata:liblevenshtein:4.0.0-rc.4` relocates to the
+  canonical coordinate.
+
+The three inputs use separate JReleaser Maven Central deployers whose declared
+namespaces and staging roots cannot bleed into one another. They are inactive
+by default: each workflow dispatch both activates exactly one named deployer
+and passes JReleaser's named-deployer selector. Consequently, a bare local
+`jreleaser deploy` publishes nothing, and a successful canonical upload is
+never retried when one historical namespace fails. Publish `maven-central`
+first.
+Only after its staged POM and JAR are byte-identical to the public Central
+read-back may the operator dispatch `maven-relocation-dylon` and
+`maven-relocation-universal-automata`, independently and in either order. The
+relocation POMs have `pom` packaging, carry Central's required project
+metadata, contain no implementation JAR, and are generated only from
+`release/version.json`.
+The [official Maven relocation procedure](https://maven.apache.org/guides/mini/guide-relocation.html)
 causes old-coordinate consumers to resolve the new group while emitting a
-migration warning. Never alter the already-published `3.0.0` POM, and never
+migration warning. Never alter the already-published historical POMs, and never
 construct a relocation upload manually outside the immutable release source.
-The RC.4 tag does not contain that bridge; add it to the next otherwise-needed
-candidate or the final `4.0.0` release rather than minting a candidate solely
-to change metadata.
+`scripts/stage-maven-relocations.py --check` proves the canonical input and the
+exact generated migration POMs again immediately before signing and upload.
+Because no root-owned RC.4 coordinate was published from the failed canonical
+source, this packaging-only bridge is included in the append-only
+`v4.0.0-rc.4-release.1` recovery source without changing the package version.
+
+The RC.4 recovery sequence is intentionally three explicit dispatches. Wait
+for each run to finish and record its run URL before continuing:
+
+```bash
+gh workflow run release.yml \
+  --repo vinary-tree/liblevenshtein-rust \
+  --ref v4.0.0-rc.4-release.1 \
+  -f registry=maven-central
+
+gh workflow run release.yml \
+  --repo vinary-tree/liblevenshtein-rust \
+  --ref v4.0.0-rc.4-release.1 \
+  -f registry=maven-relocation-dylon
+
+gh workflow run release.yml \
+  --repo vinary-tree/liblevenshtein-rust \
+  --ref v4.0.0-rc.4-release.1 \
+  -f registry=maven-relocation-universal-automata
+```
+
+The first historical dispatch cannot pass until the workflow reads back the
+exact canonical POM and JAR from Central. The second notice is independent of
+the first; either can be retried without touching the other namespaces.
 
 .NET packages depend on `VinaryTree.Interop` rather than embedding its source.
 Ruby packages inspect every platform payload before `gem push`. Every managed
@@ -740,7 +799,8 @@ versioned release ledger.
 | crates.io | `CARGO_REGISTRY_TOKEN` | `crates-io` |
 | PyPI | OIDC trusted publishing | `pypi` |
 | npm | OIDC trusted publishing with provenance; account and organization require 2FA | `npm` |
-| Maven Central | Central Portal credentials plus GPG public key, private key, and passphrase | `maven-central` |
+| Maven Central canonical artifact | Central Portal credentials plus GPG public key, private key, and passphrase | `maven-central` |
+| Maven Central historical notices | The same credentials, with each historical namespace verified | `maven-central` via `maven-relocation-dylon` or `maven-relocation-universal-automata` |
 | Clojars | username and scoped deploy token | `clojars` |
 | NuGet | `NUGET_API_KEY` | `nuget` |
 | RubyGems | `RUBYGEMS_API_KEY` | `rubygems` |
@@ -785,6 +845,17 @@ trusted-publisher setup.
       `refs/tags/v4.0.0-rc.4-release.N`.
 - [ ] Registry namespaces, trusted publishers, signing keys, and protected
       environments exist.
+- [ ] Central Portal shows `io.vinarytree` as a verified namespace available
+      to the Maven publishing token; its absence blocks the canonical upload.
+- [ ] Before each optional historical-notice dispatch, Central Portal shows
+      that notice's `com.github.dylon` or `com.github.universal-automata`
+      namespace as verified. A missing historical namespace does not block the
+      canonical `io.vinarytree` artifact.
+- [ ] The Maven staging tree contains the full `io.vinarytree` artifact and
+      POM-only relocations for both historical groups; the relocation checker
+      passes before JReleaser signs any namespace-scoped input.
+- [ ] The canonical Maven POM and JAR resolve publicly and are byte-identical
+      to the staged files before either historical relocation is dispatched.
 - [ ] Every new scoped npm package has `latest = next = 4.0.0-rc.4`, has no
       `bootstrap` tag, and deprecates its immutable `0.0.0` reservation.
 - [ ] `npm view liblevenshtein dist-tags --json` reports `latest: 2.0.4`.

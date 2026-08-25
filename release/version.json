@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "component": "liblevenshtein",
   "canonical": "4.0.0-rc.4",
+  "coordinates": {
+    "mavenGroup": "io.vinarytree",
+    "mavenArtifact": "liblevenshtein",
+    "interopMavenGroup": "io.vinarytree",
+    "interopMavenArtifact": "vinary-tree-interop",
+    "javaPackage": "io.vinarytree.liblevenshtein",
+    "legacyMavenGroups": [
+      "com.github.dylon",
+      "com.github.universal-automata"
+    ]
+  },
   "registries": {
     "cargo": "4.0.0-rc.4",
     "clojars": "4.0.0-rc.4",

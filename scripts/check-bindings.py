@@ -18,14 +18,23 @@ INTEROP_ROOT = Path(
     os.environ.get("VINARY_TREE_INTEROP_ROOT", ROOT.parent / "vinary-tree-interop")
 ).resolve()
 RUNTIME_ROOT = Path(
-    os.environ.get("VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", ROOT.parent / "javascript-runtime")
+    os.environ.get(
+        "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", ROOT.parent / "javascript-runtime"
+    )
 ).resolve()
 LIBDICT_ROOT = Path(
     os.environ.get("LIBDICTENSTEIN_ROOT", ROOT.parent / "libdictenstein")
 ).resolve()
-LLING_ROOT = Path(os.environ.get("LLING_LLANG_ROOT", ROOT.parent / "lling-llang")).resolve()
-DUALLITY_ROOT = Path(os.environ.get("DUALLITY_ROOT", ROOT.parent / "duallity")).resolve()
+LLING_ROOT = Path(
+    os.environ.get("LLING_LLANG_ROOT", ROOT.parent / "lling-llang")
+).resolve()
+DUALLITY_ROOT = Path(
+    os.environ.get("DUALLITY_ROOT", ROOT.parent / "duallity")
+).resolve()
 MODEL = json.loads((ROOT / "bindings" / "api.json").read_text(encoding="utf-8"))
+RELEASE_MODEL = json.loads(
+    (ROOT / "release" / "version.json").read_text(encoding="utf-8")
+)
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
@@ -68,6 +77,23 @@ require(interop["crate"] == "vinary-tree-interop", "wrong interop crate")
 require(
     interop["maven"] == "io.vinarytree:vinary-tree-interop",
     "wrong interop Maven coordinate",
+)
+release_coordinates = RELEASE_MODEL.get("coordinates", {})
+require(
+    release_coordinates.get("mavenGroup") == organization["mavenGroup"]
+    and release_coordinates.get("mavenArtifact") == "liblevenshtein"
+    and f"{release_coordinates.get('interopMavenGroup')}:{release_coordinates.get('interopMavenArtifact')}"
+    == interop["maven"],
+    "release model and generated binding model disagree on canonical Maven coordinates",
+)
+require(
+    release_coordinates.get("javaPackage") == organization["javaPackage"],
+    "release model and generated binding model disagree on the Java package",
+)
+require(
+    release_coordinates.get("legacyMavenGroups")
+    == ["com.github.dylon", "com.github.universal-automata"],
+    "historical liblevenshtein Maven relocation groups are incomplete",
 )
 require(
     interop["scalarWfstInterfaceVersion"] == 1, "wrong scalar WFST interface version"
@@ -119,9 +145,7 @@ for marker in (
         marker in abi_header,
         "liblevenshtein ABI must consume the overridable shared interop header",
     )
-interop_header = text(
-    INTEROP_ROOT / "include" / "vinary_tree_interop.h"
-)
+interop_header = text(INTEROP_ROOT / "include" / "vinary_tree_interop.h")
 for marker in (
     "VT_WFST_INTERFACE_VERSION 1u",
     "VT_RECOMMENDED_ARC_BATCH 256u",
@@ -209,8 +233,7 @@ for mirror in (
 
 entries_fixture = text(ROOT / "bindings" / "conformance" / "dictionary_entries_v1.tsv")
 require(
-    entries_fixture
-    == text(INTEROP_ROOT / "conformance" / "dictionary_entries_v1.tsv"),
+    entries_fixture == text(INTEROP_ROOT / "conformance" / "dictionary_entries_v1.tsv"),
     "dictionary entries conformance fixtures differ",
 )
 for marker in (
@@ -373,7 +396,14 @@ for root in identity_roots:
         ):
             continue
         source = path.read_text(encoding="utf-8", errors="ignore").lower()
-        for forbidden in ("f1r3fly", "universal-automata", "universal_automata"):
+        forbidden_identities = ["f1r3fly", "universal-automata", "universal_automata"]
+        if path == ROOT / "bindings" / "jvm" / "jreleaser.yml":
+            # This release-only file intentionally owns a minimal relocation
+            # POM for the historical pure-Java Maven coordinate. Public Java
+            # packages and implementation artifacts must still reject that
+            # retired project identity everywhere else.
+            forbidden_identities.remove("universal-automata")
+        for forbidden in forbidden_identities:
             require(
                 forbidden not in source,
                 f"unrelated identity {forbidden!r} in {path}",
@@ -628,12 +658,47 @@ for marker in (
 
 # Active release metadata must name every implemented registry.
 release = text(ROOT / ".github" / "workflows" / "release.yml").lower()
-for marker in ("crates-io", "pypi", "npm", "maven-central", "clojars"):
+for marker in (
+    "crates-io",
+    "pypi",
+    "npm",
+    "maven-central",
+    "maven-relocation-dylon",
+    "maven-relocation-universal-automata",
+    "clojars",
+):
     require(marker in release, f"release workflow does not cover {marker}")
+for marker in (
+    "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein",
+    "bindings/jvm/build/staging-relocations",
+    "com-github-dylon",
+    "com-github-universal-automata",
+    "legacy_group: ${{ inputs.registry == 'maven-relocation-dylon' && 'com.github.dylon' || 'com.github.universal-automata' }}",
+    "scripts/stage-maven-relocations.py",
+    "deploy --git-root-search --deployer-name canonical",
+    "deploy --git-root-search --deployer-name ${{ env.deployer_name }}",
+    "jreleaser_deploy_maven_mavencentral_canonical_active: release",
+    "jreleaser_deploy_maven_mavencentral_legacydylon_active:",
+    "jreleaser_deploy_maven_mavencentral_legacyuniversalautomata_active:",
+    "require the exact canonical bytes to be public first",
+):
+    require(marker in release, f"Maven publication workflow is missing {marker}")
+relocation_stager = text(ROOT / "scripts" / "stage-maven-relocations.py")
+jreleaser_configuration = text(ROOT / "bindings" / "jvm" / "jreleaser.yml")
 require(
-    "io/github/vinary-tree" not in release,
-    "Maven local paths must follow io.vinarytree -> io/vinarytree",
+    not re.search(
+        r"^        active: release$", jreleaser_configuration, flags=re.MULTILINE
+    ),
+    "Maven deployers must remain inactive unless one workflow lane selects them",
 )
+for marker in (
+    "legacyMavenGroups",
+    "<distributionManagement>",
+    "<relocation>",
+    "require_canonical_pom",
+    '"--check"',
+):
+    require(marker in relocation_stager, f"Maven relocation stager is missing {marker}")
 # Cargo resolves this repository's development-only path dependencies relative
 # to the repository root.  JVM packaging must therefore mirror the documented
 # sibling topology instead of nesting the dictionary producer below the root;
@@ -789,9 +854,7 @@ for marker in (
 ):
     require(marker in ci, f"CI cross-project conformance is missing {marker}")
 
-runtime_package = json.loads(
-    text(RUNTIME_ROOT / "package.json")
-)
+runtime_package = json.loads(text(RUNTIME_ROOT / "package.json"))
 for artifact in (
     "LICENSE",
     "README.md",
@@ -808,9 +871,7 @@ require(
     "--strip-debug" in runtime_package["scripts"]["build:wasi"],
     "published WASI runtime must remove profiling debug sections",
 )
-native_stager = text(
-    RUNTIME_ROOT / "scripts" / "stage-native-prebuild.mjs"
-)
+native_stager = text(RUNTIME_ROOT / "scripts" / "stage-native-prebuild.mjs")
 require(
     'execFileSync("strip"' in native_stager,
     "published Node prebuilds must remove profiling debug symbols",
@@ -1105,26 +1166,11 @@ for language in FACADE_LANGUAGES:
         )
     )
 
-matrix = "\n".join(
-    [
-        "\t".join(
-            (
-                "language",
-                "fns_exposed",
-                "fns_null_with_reason",
-                "enums_ok",
-                "iterator",
-                "reducer",
-                "phonetic_gating",
-                "readme_present",
-                "tests_present",
-                "findings",
-            )
-        ),
-        *matrix_rows,
-        "",
-    ]
+matrix_header = (
+    "language\tfns_exposed\tfns_null_with_reason\tenums_ok\titerator\treducer\t"
+    "phonetic_gating\treadme_present\ttests_present\tfindings"
 )
+matrix = "\n".join([matrix_header, *matrix_rows, ""])
 matrix_path = ROOT / "bindings" / "conformance" / "completeness-matrix.tsv"
 if ARGS.check:
     require(

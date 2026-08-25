@@ -7,9 +7,10 @@ project:
   license: Apache-2.0
   links:
     homepage: https://github.com/vinary-tree/liblevenshtein-rust
-  java:
-    groupId: io.vinarytree
-    artifactId: liblevenshtein
+  languages:
+    java:
+      groupId: io.vinarytree
+      artifactId: liblevenshtein
 
 signing:
   pgp:
@@ -19,10 +20,40 @@ signing:
 deploy:
   maven:
     mavenCentral:
-      sonatype:
-        active: RELEASE
+      # Named deployers deliberately omit `active` (JReleaser defaults it to
+      # NEVER). The protected workflow activates and selects exactly one.
+      canonical:
         url: https://central.sonatype.com/api/v1/publisher
         authorization: BASIC
         applyMavenCentralRules: true
+        namespace: io.vinarytree
         stagingRepositories:
           - build/staging-deploy
+      legacyDylon:
+        url: https://central.sonatype.com/api/v1/publisher
+        authorization: BASIC
+        applyMavenCentralRules: true
+        namespace: com.github.dylon
+        artifactOverrides:
+          - groupId: com.github.dylon
+            artifactId: liblevenshtein
+            jar: false
+            sourceJar: false
+            javadocJar: false
+            verifyPom: true
+        stagingRepositories:
+          - build/staging-relocations/com-github-dylon
+      legacyUniversalAutomata:
+        url: https://central.sonatype.com/api/v1/publisher
+        authorization: BASIC
+        applyMavenCentralRules: true
+        namespace: com.github.universal-automata
+        artifactOverrides:
+          - groupId: com.github.universal-automata
+            artifactId: liblevenshtein
+            jar: false
+            sourceJar: false
+            javadocJar: false
+            verifyPom: true
+        stagingRepositories:
+          - build/staging-relocations/com-github-universal-automata

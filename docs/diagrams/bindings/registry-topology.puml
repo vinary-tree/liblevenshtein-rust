@@ -14,7 +14,7 @@ top to bottom direction
 
 title Vinary Tree 4.0.0-rc.4 — one owner per artifact, exact edges
 
-rectangle "1 · Standalone ABI owner\nvinary-tree-interop\ntag v4.0.0-rc.4\nall shared resource-type packages" as INTEROP #C8E6C9
+rectangle "1 · Standalone ABI owner\nvinary-tree-interop\ncanonical tag v4.0.0-rc.4\nMaven-only source v4.0.0-rc.4-release.1" as INTEROP #C8E6C9
 
 rectangle "2 · Dictionary producer\nlibdictenstein\nconstruction · CRUD · persistence" as LDICT #B2DFDB
 rectangle "3 · Matching consumer\nliblevenshtein-rust\nautomata · queries · matching" as LLEV #FFCCBC
@@ -26,7 +26,7 @@ rectangle "7 · Scoped project facades\n@vinary-tree/libdictenstein\n@vinary-tre
 rectangle "8 · Legacy-name compatibility owner\nliblevenshtein-npm\nliblevenshtein@4.0.0-rc.4\nnext only; latest remains 2.0.4" as COMPAT #F8BBD0
 
 INTEROP -[#2E7D32]-> LDICT : exact ABI package
-INTEROP -[#2E7D32]-> LLEV
+INTEROP -[#2E7D32]-> LLEV : exact ABI; public Maven dependency first
 LDICT -[#00796B]-> LLEV : producer before consumer
 LLEV -[#D84315]-> LLING : exact optional integration
 LDICT -[#00796B]-> LLING
@@ -45,6 +45,8 @@ SCOPED -[#AD1457]-> COMPAT : exact scoped facade
 note right of INTEROP #E8F5E9
   Project workflows consume this owner.
   They never package or republish it.
+  The corrective source permits only
+  validation and the unpublished Maven lane.
 end note
 
 note right of RUNTIME #EDE7F6

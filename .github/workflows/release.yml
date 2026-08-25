@@ -14,6 +14,8 @@ on:
           - crates-io
           - pypi
           - maven-central
+          - maven-relocation-dylon
+          - maven-relocation-universal-automata
           - clojars
           - nuget
           - rubygems
@@ -356,10 +358,20 @@ jobs:
           -Plibdictenstein.nativeDir="$GITHUB_WORKSPACE/../libdictenstein/target/release"
           test javadoc verifyNativeResources
           publishMavenJavaPublicationToStagingRepository
+      - name: Stage historical Maven relocation notices
+        run: >-
+          python3 scripts/stage-maven-relocations.py
+          bindings/jvm/build/staging-deploy
+          bindings/jvm/build/staging-relocations
       - uses: actions/upload-artifact@v7
         with:
           name: maven-staging
           path: bindings/jvm/build/staging-deploy
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: maven-relocations
+          path: bindings/jvm/build/staging-relocations
           if-no-files-found: error
 
   clojure-package:
@@ -388,8 +400,8 @@ jobs:
           repository="$HOME/.m2/repository/io/vinarytree/liblevenshtein/$version"
           mkdir -p "$repository"
           jar=$(find maven-staging -type f -name "liblevenshtein-$version.jar" -print -quit)
-          pom=$(find maven-staging -type f -name "liblevenshtein-$version.pom" -print -quit)
-          test -n "$jar" && test -n "$pom"
+          pom="maven-staging/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.pom"
+          test -n "$jar" && test -f "$pom"
           cp "$jar" "$repository/liblevenshtein-$version.jar"
           cp "$pom" "$repository/liblevenshtein-$version.pom"
       - name: Test and build Clojure JAR and POM
@@ -801,7 +813,7 @@ jobs:
       - run: npm publish --access public --provenance --tag next ./dist/*.tgz
 
   maven-central:
-    name: Publish JVM package to Maven Central
+    name: Publish canonical JVM package to Maven Central
     needs: jvm-package
     if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'maven-central'
     runs-on: ubuntu-24.04
@@ -815,15 +827,97 @@ jobs:
         with:
           name: maven-staging
           path: bindings/jvm/build/staging-deploy
-      - name: Assert the project-only Maven deployment bundle
-        run: test -d bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein
-      - name: Deploy signed bundle through Central Publisher Portal
+      - name: Assert the canonical Maven coordinate
+        shell: bash
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("release/version.json"))["registries"]["maven"])')
+          test -f "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.pom"
+          test -f "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.jar"
+      - name: Deploy only the canonical signed bundle through Central Publisher Portal
         uses: jreleaser/release-action@v2
         with:
           version: 1.25.0
-          arguments: deploy
+          arguments: deploy --git-root-search --deployer-name canonical
           working-directory: bindings/jvm
         env:
+          JRELEASER_DEPLOY_MAVEN_MAVENCENTRAL_CANONICAL_ACTIVE: RELEASE
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.MAVEN_GPG_PUBLIC_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.MAVEN_GPG_SECRET_KEY }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+
+  maven-relocation:
+    name: Publish one historical Maven relocation notice
+    needs: jvm-package
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref_type == 'tag' &&
+      (inputs.registry == 'maven-relocation-dylon' ||
+       inputs.registry == 'maven-relocation-universal-automata')
+    runs-on: ubuntu-24.04
+    environment: maven-central
+    env:
+      DEPLOYER_NAME: ${{ inputs.registry == 'maven-relocation-dylon' && 'legacyDylon' || 'legacyUniversalAutomata' }}
+      LEGACY_GROUP: ${{ inputs.registry == 'maven-relocation-dylon' && 'com.github.dylon' || 'com.github.universal-automata' }}
+      LEGACY_REPOSITORY: ${{ inputs.registry == 'maven-relocation-dylon' && 'com-github-dylon' || 'com-github-universal-automata' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        with:
+          name: maven-staging
+          path: bindings/jvm/build/staging-deploy
+      - uses: actions/download-artifact@v7
+        with:
+          name: maven-relocations
+          path: bindings/jvm/build/staging-relocations
+      - name: Prove both relocation notices and the canonical input
+        shell: bash
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("release/version.json"))["registries"]["maven"])')
+          group_path=${LEGACY_GROUP//./\/}
+          selected="bindings/jvm/build/staging-relocations/$LEGACY_REPOSITORY/$group_path/liblevenshtein/$version/liblevenshtein-$version.pom"
+          test -f "$selected"
+          python3 scripts/stage-maven-relocations.py --check \
+            bindings/jvm/build/staging-deploy \
+            bindings/jvm/build/staging-relocations
+      - name: Require the exact canonical bytes to be public first
+        shell: bash
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("release/version.json"))["registries"]["maven"])')
+          base="https://repo.maven.apache.org/maven2/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version"
+          mkdir -p "$RUNNER_TEMP/canonical-maven-readback"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --location \
+                "$base.pom" --output "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.pom" && \
+               curl --fail --silent --show-error --location \
+                "$base.jar" --output "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.jar"; then
+              break
+            fi
+            if [[ "$attempt" = 30 ]]; then
+              echo "::error::Canonical Maven bytes are not publicly readable; refusing to publish $LEGACY_GROUP relocation." >&2
+              exit 1
+            fi
+            sleep 20
+          done
+          cmp \
+            "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.pom" \
+            "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.pom"
+          cmp \
+            "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.jar" \
+            "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.jar"
+      - name: Deploy only the selected historical relocation POM
+        uses: jreleaser/release-action@v2
+        with:
+          version: 1.25.0
+          arguments: deploy --git-root-search --deployer-name ${{ env.DEPLOYER_NAME }}
+          working-directory: bindings/jvm
+        env:
+          JRELEASER_DEPLOY_MAVEN_MAVENCENTRAL_LEGACYDYLON_ACTIVE: ${{ inputs.registry == 'maven-relocation-dylon' && 'RELEASE' || 'NEVER' }}
+          JRELEASER_DEPLOY_MAVEN_MAVENCENTRAL_LEGACYUNIVERSALAUTOMATA_ACTIVE: ${{ inputs.registry == 'maven-relocation-universal-automata' && 'RELEASE' || 'NEVER' }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.MAVEN_GPG_PUBLIC_KEY }}
@@ -858,8 +952,8 @@ jobs:
           repository="$HOME/.m2/repository/io/vinarytree/liblevenshtein/$version"
           mkdir -p "$repository"
           jar=$(find maven-staging -type f -name "liblevenshtein-$version.jar" -print -quit)
-          pom=$(find maven-staging -type f -name "liblevenshtein-$version.pom" -print -quit)
-          test -n "$jar" && test -n "$pom"
+          pom="maven-staging/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.pom"
+          test -n "$jar" && test -f "$pom"
           cp "$jar" "$repository/liblevenshtein-$version.jar"
           cp "$pom" "$repository/liblevenshtein-$version.pom"
       - name: Deploy to Clojars for Leiningen and tools.deps
