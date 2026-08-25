@@ -5,11 +5,18 @@ description: >
   and duallity) into the
   workspace parent directory so liblevenshtein's `path = "../..."` dependencies
   resolve against their development versions (mirroring the local checkout
-  layout). This is for development / CI workflows only — release and other
-  production workflows resolve these crates from crates.io instead (see the
-  `pin-siblings-cratesio` action).
+  layout). Development jobs may select branches explicitly. Release jobs pass
+  one validated manifest whose exact immutable tags override every individual
+  ref input.
 
 inputs:
+  source-ref-manifest:
+    description: >
+      Repository-relative JSON manifest containing a sourceRefs object. When
+      present, it is the exclusive source of every sibling ref and individual
+      ref inputs are ignored.
+    required: false
+    default: ""
   ref:
     description: Git ref (branch, tag, or SHA) to check out for the sibling crates.
     required: false
@@ -55,18 +62,30 @@ runs:
         # libdictenstein consumes llattice, lling-llang consumes both dictionary
         # crates, and duallity consumes the three lower layers.
         parent="$(dirname "$GITHUB_WORKSPACE")"
+        manifest="${{ inputs.source-ref-manifest }}"
+        if [ -n "$manifest" ]; then
+          if [[ "$manifest" != /* ]]; then
+            manifest="$GITHUB_WORKSPACE/$manifest"
+          fi
+          test -f "$manifest"
+        fi
         for repo in vinary-tree-interop javascript-runtime liblevenshtein-npm llattice libdictenstein lling-llang duallity; do
-          case "$repo" in
-            vinary-tree-interop) selected_ref="${{ inputs.interop-ref }}" ;;
-            javascript-runtime) selected_ref="${{ inputs.javascript-runtime-ref }}" ;;
-            liblevenshtein-npm) selected_ref="${{ inputs.liblevenshtein-npm-ref }}" ;;
-            llattice) selected_ref="${{ inputs.llattice-ref }}" ;;
-            libdictenstein) selected_ref="${{ inputs.libdictenstein-ref }}" ;;
-            lling-llang) selected_ref="${{ inputs.lling-llang-ref }}" ;;
-            duallity) selected_ref="${{ inputs.duallity-ref }}" ;;
-          esac
-          if [ -z "$selected_ref" ]; then
-            selected_ref="${{ inputs.ref }}"
+          if [ -n "$manifest" ]; then
+            selected_ref="$(python3 "$GITHUB_WORKSPACE/scripts/release_source_refs.py" \
+              --manifest "$manifest" --component "$repo")"
+          else
+            case "$repo" in
+              vinary-tree-interop) selected_ref="${{ inputs.interop-ref }}" ;;
+              javascript-runtime) selected_ref="${{ inputs.javascript-runtime-ref }}" ;;
+              liblevenshtein-npm) selected_ref="${{ inputs.liblevenshtein-npm-ref }}" ;;
+              llattice) selected_ref="${{ inputs.llattice-ref }}" ;;
+              libdictenstein) selected_ref="${{ inputs.libdictenstein-ref }}" ;;
+              lling-llang) selected_ref="${{ inputs.lling-llang-ref }}" ;;
+              duallity) selected_ref="${{ inputs.duallity-ref }}" ;;
+            esac
+            if [ -z "$selected_ref" ]; then
+              selected_ref="${{ inputs.ref }}"
+            fi
           fi
           dest="$parent/$repo"
           if [ -d "$dest/.git" ]; then

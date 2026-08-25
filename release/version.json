@@ -40,9 +40,18 @@
     "@vinary-tree/interop": "4.0.0-rc.4",
     "@vinary-tree/vinary-tree": "4.0.0-rc.4"
   },
+  "sourceRefs": {
+    "vinary-tree-interop": "v4.0.0-rc.4-release.2",
+    "javascript-runtime": "v4.0.0-rc.4-release.2",
+    "liblevenshtein-npm": "v4.0.0-rc.4-release.1",
+    "llattice": "v0.1.0",
+    "libdictenstein": "v4.0.0-rc.4-release.1",
+    "lling-llang": "v4.0.0-rc.4-release.1",
+    "duallity": "v4.0.0-rc.4-release.1"
+  },
   "publication": {
     "distTag": "next",
-    "sourceTag": "v4.0.0-rc.4-release.2",
+    "sourceTag": "v4.0.0-rc.4-release.3",
     "fpm": false,
     "fpmReason": "fpm accepts numeric package versions only; validate 4.0.0 as a source candidate and defer registry publication until the final release.",
     "hackage": false,

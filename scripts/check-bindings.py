@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 import tomllib
+from release_source_refs import validate_source_refs
 
 ROOT = Path(__file__).resolve().parents[1]
 INTEROP_ROOT = Path(
@@ -86,6 +87,10 @@ require(
     == interop["maven"],
     "release model and generated binding model disagree on canonical Maven coordinates",
 )
+try:
+    validate_source_refs(RELEASE_MODEL)
+except (TypeError, ValueError) as error:
+    raise SystemExit(f"invalid release source refs: {error}") from error
 require(
     release_coordinates.get("javaPackage") == organization["javaPackage"],
     "release model and generated binding model disagree on the Java package",
@@ -716,6 +721,26 @@ for marker in (
 
 # Active release metadata must name every implemented registry.
 release = text(ROOT / ".github" / "workflows" / "release.yml").lower()
+checkout_siblings = text(
+    ROOT / ".github" / "actions" / "checkout-dev-siblings" / "action.yml"
+).lower()
+require(
+    "source-ref-manifest: release/version.json" in release,
+    "binding contract must resolve exact sibling sources from the release manifest",
+)
+for marker in (
+    "source-ref-manifest:",
+    "scripts/release_source_refs.py",
+    '--manifest "$manifest" --component "$repo"',
+):
+    require(
+        marker in checkout_siblings,
+        f"sibling checkout action does not fail closed on the source manifest: {marker}",
+    )
+require(
+    "python3 scripts/release_source_refs.py --self-test" in release,
+    "release contract does not execute the source-ref hostile-input tests",
+)
 for marker in (
     "crates-io",
     "pypi",

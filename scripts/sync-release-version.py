@@ -9,6 +9,8 @@ import re
 import sys
 from pathlib import Path
 
+from release_source_refs import validate_source_refs
+
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = ROOT / "release/version.json"
 GENERATED_TREE_PARTS = frozenset(
@@ -527,12 +529,16 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     if not isinstance(publication, dict) or publication.get("hackage") is not False:
         failures.append("Hackage RC publication must remain embargoed")
     source_tag = publication.get("sourceTag") if isinstance(publication, dict) else None
-    if source_tag != f"v{canonical}-release.2":
+    if source_tag != f"v{canonical}-release.3":
         failures.append(
-            "RC.4 publishable source tag must remain the append-only release.2 correction"
+            "RC.4 publishable source tag must remain the append-only release.3 correction"
         )
     dependencies = model["dependencies"]
     assert isinstance(dependencies, dict)
+    try:
+        validate_source_refs(model)
+    except (TypeError, ValueError) as error:
+        failures.append(str(error))
     coordinates = maven_coordinates(model)
     maven_group = str(coordinates["mavenGroup"])
     maven_artifact = str(coordinates["mavenArtifact"])

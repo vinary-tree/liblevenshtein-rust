@@ -38,13 +38,8 @@ jobs:
       - uses: ./.github/actions/pin-siblings-cratesio
       - uses: ./.github/actions/checkout-dev-siblings
         with:
-          llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.4
-          lling-llang-ref: v4.0.0-rc.4
-          duallity-ref: v4.0.0-rc.4
-          interop-ref: v4.0.0-rc.4
-          javascript-runtime-ref: v4.0.0-rc.4
-          liblevenshtein-npm-ref: v4.0.0-rc.4
+          source-ref-manifest: release/version.json
+      - run: python3 scripts/release_source_refs.py --self-test
       - run: python3 scripts/check-bindings.py
       - run: python3 scripts/check-binding-docs.py
       - run: python3 scripts/check-release-train.py
@@ -122,13 +117,7 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: ./.github/actions/checkout-dev-siblings
         with:
-          llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.4
-          lling-llang-ref: v4.0.0-rc.4
-          duallity-ref: v4.0.0-rc.4
-          interop-ref: v4.0.0-rc.4
-          javascript-runtime-ref: v4.0.0-rc.4
-          liblevenshtein-npm-ref: v4.0.0-rc.4
+          source-ref-manifest: release/version.json
       - run: cargo build --locked --release --lib --features native-bindings-full
       - run: cargo build --release --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - run: >-
@@ -262,13 +251,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/checkout-dev-siblings
         with:
-          llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.4
-          lling-llang-ref: v4.0.0-rc.4
-          duallity-ref: v4.0.0-rc.4
-          interop-ref: v4.0.0-rc.4
-          javascript-runtime-ref: v4.0.0-rc.4
-          liblevenshtein-npm-ref: v4.0.0-rc.4
+          source-ref-manifest: release/version.json
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
@@ -325,13 +308,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95
       - uses: ./.github/actions/checkout-dev-siblings
         with:
-          llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.4
-          lling-llang-ref: v4.0.0-rc.4
-          duallity-ref: v4.0.0-rc.4
-          interop-ref: v4.0.0-rc.4
-          javascript-runtime-ref: v4.0.0-rc.4
-          liblevenshtein-npm-ref: v4.0.0-rc.4
+          source-ref-manifest: release/version.json
       - name: Stage exact JVM and native dictionary test dependencies
         shell: bash
         run: |
@@ -542,13 +519,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/checkout-dev-siblings
         with:
-          llattice-ref: v0.1.0
-          libdictenstein-ref: v4.0.0-rc.4
-          lling-llang-ref: v4.0.0-rc.4
-          duallity-ref: v4.0.0-rc.4
-          interop-ref: v4.0.0-rc.4
-          javascript-runtime-ref: v4.0.0-rc.4
-          liblevenshtein-npm-ref: v4.0.0-rc.4
+          source-ref-manifest: release/version.json
       - uses: fortran-lang/setup-fpm@v10
       - uses: dtolnay/rust-toolchain@1.95
       - name: Validate the numeric 4.0.0 candidates without publication
