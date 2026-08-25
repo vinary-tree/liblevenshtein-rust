@@ -9,8 +9,8 @@ description = "Cross-language benchmark harness (PROTOCOL.md) over the Fortran f
 source-dir = "src"
 
 [dependencies]
-vinary-tree-liblevenshtein = { path = "../../../../bindings/fortran" }
-vinary-tree-libdictenstein = { path = "../../../../../libdictenstein/bindings/fortran" }
+liblevenshtein = { path = "../../../../bindings/fortran" }
+libdictenstein = { path = "../../../../../libdictenstein/bindings/fortran" }
 
 [[executable]]
 name = "bench"

@@ -3,7 +3,7 @@
 The Lua 5.4+ module consumes `vinary-tree.dictionary.v1` userdata created by
 the separate libdictenstein rock. Cursors are callable generic-for iterators,
 use leased native batches, and implement `__close` plus `__gc`. The module is
-published as `vinary-tree-liblevenshtein` on LuaRocks.
+published as `liblevenshtein` on LuaRocks.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
@@ -14,7 +14,7 @@ published as `vinary-tree-liblevenshtein` on LuaRocks.
 | Binding | Lua |
 | Languages/runtime | Lua 5.4+ |
 | Support tier | Tier 3 |
-| Distribution | LuaRocks package `vinary-tree-liblevenshtein` |
+| Distribution | LuaRocks package `liblevenshtein` |
 | Native boundary | A C module calls the stable ABI and consumes `vinary-tree.dictionary.v1` userdata from modular producers. |
 | Canonical facade source | [`bindings/lua/src/liblevenshtein_lua.c`](../../bindings/lua/src/liblevenshtein_lua.c) |
 

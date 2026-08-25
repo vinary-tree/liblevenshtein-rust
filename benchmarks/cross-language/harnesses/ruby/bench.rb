@@ -243,7 +243,7 @@ def render_result(args, mode, algorithm, max_distance, queries_path, query_count
       "backend" => "fiddle",
       "runtime_version" => "ruby #{RUBY_VERSION}",
       "library_version" => "0.10.0",
-      "artifact" => { "kind" => "local-build", "id" => "vinary-tree-liblevenshtein@0.10.0" },
+      "artifact" => { "kind" => "local-build", "id" => "liblevenshtein@0.10.0" },
     },
     "dictionary" => dictionary,
     "workload" => {

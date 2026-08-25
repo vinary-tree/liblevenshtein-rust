@@ -217,7 +217,7 @@ The packages are independently releasable:
 - C/C++: versioned native archives, `pkg-config`, and CMake config packages
   `vinary-tree-interop` and `liblevenshtein`;
 - Python: `vinary-tree-interop` followed by
-  `vinary-tree-liblevenshtein` on PyPI;
+  `liblevenshtein` on PyPI;
 - JVM: `io.vinarytree:vinary-tree-interop` followed by
   `io.vinarytree:liblevenshtein` on Maven Central (and therefore
   consumable through JFrog Artifactory mirrors);
@@ -225,18 +225,19 @@ The packages are independently releasable:
 - npm: `@vinary-tree/interop`, the umbrella
   `@vinary-tree/vinary-tree`, and project facade
   `@vinary-tree/liblevenshtein`;
-- .NET: `VinaryTree.Interop` and `VinaryTree.Liblevenshtein` on NuGet;
+- .NET: `VinaryTree.Interop` and `Liblevenshtein` on NuGet; the latter exposes
+  the `VinaryTree.Liblevenshtein` namespace;
 - Go: `github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4` and
   `github.com/vinary-tree/vinary-tree-interop/bindings/go/v4`,
   published with immutable module-subdirectory tags;
 - Swift: the repository-root SwiftPM package, with products
   `VinaryTreeInterop` and `Liblevenshtein`;
-- Ruby: `vinary-tree-liblevenshtein` on RubyGems;
-- Fortran: `vinary-tree-interop` and `vinary-tree-liblevenshtein` in the fpm
+- Ruby: `liblevenshtein` on RubyGems;
+- Fortran: `vinary-tree-interop` and `liblevenshtein` in the fpm
   registry;
-- OCaml: `vinary-tree-interop` and `vinary-tree-liblevenshtein` through opam;
-- Haskell: `vinary-tree-interop` and `vinary-tree-liblevenshtein` on Hackage;
-- Lua: `vinary-tree-liblevenshtein` on LuaRocks.
+- OCaml: `vinary-tree-interop` and `liblevenshtein` through opam;
+- Haskell: `vinary-tree-interop` and `liblevenshtein` on Hackage;
+- Lua: `liblevenshtein` on LuaRocks.
 
 Interop artifacts publish before producer/consumer artifacts. A binding release
 must pin an exact compatible interop version and test a real cross-project

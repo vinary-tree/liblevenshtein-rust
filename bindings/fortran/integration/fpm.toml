@@ -6,8 +6,8 @@ maintainer = "Dylon Edwards <dylon.devo@gmail.com>"
 description = "Cross-project Fortran binding conformance tests"
 
 [dependencies]
-vinary-tree-liblevenshtein = { path = ".." }
-vinary-tree-libdictenstein = { path = "../../../../libdictenstein/bindings/fortran" }
+liblevenshtein = { path = ".." }
+libdictenstein = { path = "../../../../libdictenstein/bindings/fortran" }
 
 [[test]]
 name = "cross-project-snapshot"

@@ -4,7 +4,7 @@ version: 0.1.0
 synopsis: Haskell harness for the cross-language benchmark program
 description:
   Implements benchmarks/cross-language/harnesses/common/PROTOCOL.md over the
-  hsc2hs facades (vinary-tree-liblevenshtein + vinary-tree-libdictenstein).
+  hsc2hs facades (liblevenshtein + libdictenstein).
 license: Apache-2.0
 author: Dylon Edwards
 maintainer: dylon.devo@gmail.com
@@ -27,5 +27,5 @@ executable bench-cross-haskell
     text >=2.0 && <2.2,
     time,
     vinary-tree-interop,
-    vinary-tree-libdictenstein,
-    vinary-tree-liblevenshtein
+    libdictenstein,
+    liblevenshtein

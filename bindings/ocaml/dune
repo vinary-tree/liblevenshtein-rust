@@ -1,6 +1,6 @@
 (library
  (name vinary_tree_liblevenshtein)
- (public_name vinary-tree-liblevenshtein)
+ (public_name liblevenshtein)
  (libraries vinary-tree-interop)
  (foreign_stubs
   (language c)

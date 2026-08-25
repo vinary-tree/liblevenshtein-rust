@@ -217,18 +217,18 @@
     }
   },
   "packages": {
-    "pypi": "vinary-tree-liblevenshtein",
+    "pypi": "liblevenshtein",
     "npm": "@vinary-tree/liblevenshtein",
     "maven": "io.vinarytree:liblevenshtein",
     "clojars": "io.vinarytree/liblevenshtein-clojure",
-    "nuget": "VinaryTree.Liblevenshtein",
+    "nuget": "Liblevenshtein",
     "goModule": "github.com/vinary-tree/liblevenshtein-rust/bindings/go",
-    "swift": "VinaryTreeLiblevenshtein",
-    "rubygems": "vinary-tree-liblevenshtein",
-    "fpm": "vinary-tree-liblevenshtein",
-    "opam": "vinary-tree-liblevenshtein",
-    "hackage": "vinary-tree-liblevenshtein",
-    "luarocks": "vinary-tree-liblevenshtein"
+    "swift": "Liblevenshtein",
+    "rubygems": "liblevenshtein",
+    "fpm": "liblevenshtein",
+    "opam": "liblevenshtein",
+    "hackage": "liblevenshtein",
+    "luarocks": "liblevenshtein"
   },
   "supportTiers": {
     "tier1": [

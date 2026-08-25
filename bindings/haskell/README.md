@@ -1,11 +1,11 @@
 # Haskell binding (Tier 3)
 
 The Haskell package consumes a retained `DictionaryResource` from the separate
-`vinary-tree-libdictenstein` package. `nextBatch` reads each leased native batch
+`libdictenstein` package. `nextBatch` reads each leased native batch
 directly and releases it before returning immutable Haskell values; `next` and
 `foldBatches` provide incremental traversal without materializing the query.
 
-The Hackage package is `vinary-tree-liblevenshtein`.
+The Hackage package is `liblevenshtein`.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
@@ -16,7 +16,7 @@ The Hackage package is `vinary-tree-liblevenshtein`.
 | Binding | Haskell |
 | Languages/runtime | GHC through Cabal |
 | Support tier | Tier 3 |
-| Distribution | Hackage package `vinary-tree-liblevenshtein` |
+| Distribution | Hackage package `liblevenshtein` |
 | Native boundary | The Haskell FFI calls the stable C ABI; `DictionaryResource` is the retained cross-package capability. |
 | Canonical facade source | [`bindings/haskell/src/VinaryTree/Liblevenshtein.hsc`](../../bindings/haskell/src/VinaryTree/Liblevenshtein.hsc) |
 

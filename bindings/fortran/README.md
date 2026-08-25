@@ -6,7 +6,7 @@ streaming queries, retained dictionary construction, and phonetic automata. A
 `levenshtein_match` at a time. Finalizers are a safety net; call `close` when
 deterministic release matters.
 
-The fpm package is named `vinary-tree-liblevenshtein` and depends on the shared
+The fpm package is named `liblevenshtein` and depends on the shared
 `vinary-tree-interop` module. Link with `-lliblevenshtein`; CMake installations
 let applications choose shared or static linkage.
 
@@ -19,7 +19,7 @@ let applications choose shared or static linkage.
 | Binding | Fortran |
 | Languages/runtime | Fortran 2018 through fpm |
 | Support tier | Tier 2 |
-| Distribution | fpm package `vinary-tree-liblevenshtein` |
+| Distribution | fpm package `liblevenshtein` |
 | Native boundary | `iso_c_binding` declarations call the stable C ABI and share the interop resource derived type. |
 | Canonical facade source | [`bindings/fortran/src/vinary_tree_liblevenshtein.f90`](../../bindings/fortran/src/vinary_tree_liblevenshtein.f90) |
 
@@ -37,7 +37,7 @@ The repository's canonical executable example is
 installs and is run by the binding CI with:
 
 ```sh
-fpm test --profile release --package vinary-tree-liblevenshtein
+fpm test --profile release --package liblevenshtein
 ```
 
 Examples deliberately construct or receive resources through public project

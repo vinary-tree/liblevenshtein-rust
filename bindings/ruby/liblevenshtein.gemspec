@@ -1,7 +1,7 @@
 require_relative "lib/vinary_tree/liblevenshtein/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "vinary-tree-liblevenshtein"
+  spec.name = "liblevenshtein"
   spec.version = VinaryTree::Liblevenshtein::VERSION
   spec.authors = ["Dylon Edwards"]
   spec.email = ["dylon.devo@gmail.com"]

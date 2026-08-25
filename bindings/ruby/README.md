@@ -22,7 +22,7 @@ installation remains a supported loader fallback.
 | Binding | Ruby |
 | Languages/runtime | Ruby 3.3+ |
 | Support tier | Tier 2 |
-| Distribution | RubyGems package `vinary-tree-liblevenshtein` |
+| Distribution | RubyGems package `liblevenshtein` |
 | Native boundary | Ruby Fiddle calls the stable C ABI; modular producers yield the two-word resource without serialization. |
 | Canonical facade source | [`bindings/ruby/lib/vinary_tree/liblevenshtein`](../../bindings/ruby/lib/vinary_tree/liblevenshtein) |
 

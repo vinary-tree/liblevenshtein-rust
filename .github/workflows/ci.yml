@@ -686,7 +686,7 @@ jobs:
           ruby bindings/ruby/test/test_property.rb
           ruby bindings/ruby/test/test_leak.rb
           ruby ../libdictenstein/bindings/ruby/test/test_cross_project.rb
-      - run: gem build bindings/ruby/vinary-tree-liblevenshtein.gemspec
+      - run: gem build bindings/ruby/liblevenshtein.gemspec
 
   fortran-bindings:
     name: Fortran 2018 / ${{ matrix.toolchain.compiler }}

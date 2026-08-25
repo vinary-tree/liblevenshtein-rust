@@ -468,7 +468,7 @@ jobs:
             -p:BuildInParallel=false \
             -p:VinaryTreeInteropRoot="$GITHUB_WORKSPACE/.release-deps/vinary-tree-interop"
           for rid in linux-x64 linux-arm64 osx-arm64 win-x64; do
-            unzip -l dist/VinaryTree.Liblevenshtein.*.nupkg | grep "runtimes/$rid/native/"
+            unzip -l dist/Liblevenshtein.*.nupkg | grep "runtimes/$rid/native/"
           done
       - uses: actions/upload-artifact@v7
         with:
@@ -495,9 +495,9 @@ jobs:
       - name: Build and inspect the portable gem
         working-directory: bindings/ruby
         run: |
-          gem build vinary-tree-liblevenshtein.gemspec
+          gem build liblevenshtein.gemspec
           for platform in linux-x64 linux-arm64 darwin-arm64 windows-x64; do
-            tar -tf vinary-tree-liblevenshtein-*.gem >/dev/null
+            tar -tf liblevenshtein-*.gem >/dev/null
             test -f "lib/vinary_tree/liblevenshtein/native/$platform/$(case "$platform" in darwin-*) echo libliblevenshtein.dylib ;; windows-*) echo liblevenshtein.dll ;; *) echo libliblevenshtein.so ;; esac)"
           done
       - uses: actions/upload-artifact@v7
@@ -571,11 +571,11 @@ jobs:
         with:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y luarocks
-      - run: luarocks lint bindings/lua/vinary-tree-liblevenshtein-4.0.0rc4-1.rockspec
+      - run: luarocks lint bindings/lua/liblevenshtein-4.0.0rc4-1.rockspec
       - uses: actions/upload-artifact@v7
         with:
           name: luarocks-package
-          path: bindings/lua/vinary-tree-liblevenshtein-4.0.0rc4-1.rockspec
+          path: bindings/lua/liblevenshtein-4.0.0rc4-1.rockspec
           if-no-files-found: error
 
   opam-package:
@@ -591,15 +591,15 @@ jobs:
           ocaml-compiler: "5.4.0"
       - name: Build and lint the standalone source package
         run: |
-          scripts/stage-ocaml-package.sh "$RUNNER_TEMP/opam-package"
+          scripts/stage-ocaml-package.sh "$RUNNER_TEMP/opam-package" "$GITHUB_REF_NAME"
           opam lint "$RUNNER_TEMP/opam-package/opam"
-          tar -tjf "$RUNNER_TEMP/opam-package/vinary-tree-liblevenshtein-4.0.0-rc.4.tbz"
+          tar -tjf "$RUNNER_TEMP/opam-package/liblevenshtein-4.0.0-rc.4.tbz"
       - uses: actions/upload-artifact@v7
         with:
           name: opam-package
           path: |
             ${{ runner.temp }}/opam-package/opam
-            ${{ runner.temp }}/opam-package/vinary-tree-liblevenshtein-4.0.0-rc.4.tbz
+            ${{ runner.temp }}/opam-package/liblevenshtein-4.0.0-rc.4.tbz
           if-no-files-found: error
 
   crates-io:
@@ -608,6 +608,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'crates-io'
     runs-on: ubuntu-24.04
     environment: crates-io
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -620,6 +623,9 @@ jobs:
           git clone --depth 1 --branch v0.1.0 https://github.com/vinary-tree/llattice.git "$parent/llattice"
           git clone --depth 1 --branch v4.0.0-rc.4 https://github.com/vinary-tree/libdictenstein.git "$parent/libdictenstein"
           git clone --depth 1 --branch v4.0.0-rc.4 https://github.com/vinary-tree/vinary-tree-interop.git "$parent/vinary-tree-interop"
+      - name: Authenticate with crates.io
+        id: crates-io-auth
+        uses: rust-lang/crates-io-auth-action@v1
       - name: Publish the consumer crate against the immutable shared ABI
         run: |
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
@@ -630,7 +636,7 @@ jobs:
             sleep 10
           done
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
 
   nuget:
     name: Publish NuGet packages
@@ -638,6 +644,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'nuget'
     runs-on: ubuntu-24.04
     environment: nuget
+    permissions:
+      id-token: write
     steps:
       - uses: actions/setup-dotnet@v5
         with:
@@ -646,13 +654,17 @@ jobs:
         with:
           name: nuget-package
           path: dist
+      - name: Exchange GitHub identity for a short-lived NuGet key
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
       - name: Publish liblevenshtein
         shell: bash
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          dotnet nuget push dist/VinaryTree.Liblevenshtein.*.nupkg \
-            --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+          dotnet nuget push dist/Liblevenshtein.*.nupkg \
+            --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json
 
   rubygems:
     name: Publish RubyGem
@@ -660,6 +672,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'rubygems'
     runs-on: ubuntu-24.04
     environment: rubygems
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: ruby/setup-ruby@v1
         with:
@@ -668,9 +683,9 @@ jobs:
         with:
           name: rubygems-package
           path: dist
+      - name: Exchange GitHub identity for short-lived RubyGems credentials
+        uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
       - name: Push to RubyGems.org
-        env:
-          GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
         run: gem push dist/*.gem
 
   go-module:
@@ -738,8 +753,8 @@ jobs:
         env:
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: >-
-          luarocks upload dist/vinary-tree-liblevenshtein-4.0.0rc4-1.rockspec
-          --api-key "$LUAROCKS_API_KEY"
+          luarocks upload dist/liblevenshtein-4.0.0rc4-1.rockspec
+          --temp-key "$LUAROCKS_API_KEY"
 
   opam:
     name: Submit package to opam-repository
@@ -760,31 +775,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.OPAM_GITHUB_TOKEN }}
         run: |
-          account=$(gh api user --jq .login)
-          if ! gh repo view "$account/opam-repository" >/dev/null 2>&1; then
-            gh repo fork ocaml/opam-repository --clone=false
-          fi
-          for attempt in 1 2 3 4 5 6; do
-            if gh repo view "$account/opam-repository" >/dev/null 2>&1; then break; fi
-            if [ "$attempt" -eq 6 ]; then exit 1; fi
-            sleep 5
-          done
-          gh repo clone "$account/opam-repository" opam-repository
+          fork="vinary-tree/opam-repository"
+          gh repo view "$fork" >/dev/null
+          gh auth setup-git
+          gh repo clone "$fork" opam-repository
           git -C opam-repository fetch https://github.com/ocaml/opam-repository.git master
-          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
-          branch="vinary-tree-liblevenshtein-$version-$GITHUB_RUN_ID"
+          canonical=$(python3 -c 'import json; print(json.load(open("release/version.json"))["canonical"])')
+          version=$(python3 -c 'import json; print(json.load(open("release/version.json"))["registries"]["opam"])')
+          branch="liblevenshtein-$canonical-$GITHUB_RUN_ID"
           git -C opam-repository checkout -b "$branch" FETCH_HEAD
-          package="opam-repository/packages/vinary-tree-liblevenshtein/vinary-tree-liblevenshtein.$version"
+          package="opam-repository/packages/liblevenshtein/liblevenshtein.$version"
           mkdir -p "$package"
           cp dist/opam "$package/opam"
           git -C opam-repository config user.name "Vinary Tree release automation"
           git -C opam-repository config user.email "dylon.devo@gmail.com"
-          git -C opam-repository add "packages/vinary-tree-liblevenshtein/vinary-tree-liblevenshtein.$version/opam"
-          git -C opam-repository commit -m "Package vinary-tree-liblevenshtein $version"
+          git -C opam-repository add "packages/liblevenshtein/liblevenshtein.$version/opam"
+          git -C opam-repository commit -m "Package liblevenshtein $version"
           git -C opam-repository push origin "$branch"
           gh pr create --repo ocaml/opam-repository \
-            --base master --head "$account:$branch" \
-            --title "Package vinary-tree-liblevenshtein $version" \
+            --base master --head "vinary-tree:$branch" \
+            --title "Package liblevenshtein $version" \
             --body "Automated submission of the tested Vinary Tree OCaml bindings."
 
   pypi:
@@ -872,7 +882,7 @@ jobs:
       (inputs.registry == 'maven-relocation-dylon' ||
        inputs.registry == 'maven-relocation-universal-automata')
     runs-on: ubuntu-24.04
-    environment: maven-central
+    environment: ${{ inputs.registry }}
     env:
       DEPLOYER_NAME: ${{ inputs.registry == 'maven-relocation-dylon' && 'legacyDylon' || 'legacyUniversalAutomata' }}
       LEGACY_GROUP: ${{ inputs.registry == 'maven-relocation-dylon' && 'com.github.dylon' || 'com.github.universal-automata' }}
@@ -975,7 +985,7 @@ jobs:
       - name: Deploy to Clojars for Leiningen and tools.deps
         working-directory: bindings/clojure
         env:
-          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+          CLOJARS_USERNAME: ${{ vars.CLOJARS_USERNAME }}
           CLOJARS_PASSWORD: ${{ secrets.CLOJARS_DEPLOY_TOKEN }}
         run: lein deploy clojars
 
@@ -997,6 +1007,7 @@ jobs:
       github.ref_type == 'tag' &&
       inputs.registry == 'validate-only'
     runs-on: ubuntu-24.04
+    environment: github-release
     permissions:
       contents: write
     steps:

@@ -1,6 +1,7 @@
 # Vinary Tree .NET bindings
 
-`VinaryTree.Liblevenshtein` is an idiomatic, streaming .NET binding for the
+`Liblevenshtein` is the NuGet distribution for the idiomatic, streaming
+`VinaryTree.Liblevenshtein` .NET namespace over the
 stable native ABI. `VinaryTree.Interop` contains the shared two-word retained
 resource contract used by independently packaged dictionary producers.
 
@@ -51,7 +52,7 @@ bounded batch before yielding managed entries, and cleanup cancels unread work.
 | Binding | .NET |
 | Languages/runtime | .NET 8+ and current C# |
 | Support tier | Tier 2 |
-| Distribution | NuGet package `VinaryTree.Liblevenshtein` |
+| Distribution | NuGet package `Liblevenshtein` |
 | Native boundary | Source-generated P/Invoke reaches the stable C ABI; `VinaryTree.Interop` carries retained resource handles between packages. |
 | Canonical facade source | [`bindings/dotnet/src/VinaryTree.Liblevenshtein`](../../bindings/dotnet/src/VinaryTree.Liblevenshtein) |
 

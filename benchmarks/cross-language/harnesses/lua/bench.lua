@@ -332,7 +332,7 @@ local function render_result(args, mode, algorithm, max_distance, queries_path, 
   emit('    "backend": "lua-cmodule",\n')
   emit('    "runtime_version": "' .. json_escape(_VERSION) .. '",\n')
   emit('    "library_version": "0.10.0",\n')
-  emit('    "artifact": { "kind": "local-build", "id": "vinary-tree-liblevenshtein@0.10.0" }\n')
+  emit('    "artifact": { "kind": "local-build", "id": "liblevenshtein@0.10.0" }\n')
   emit('  },\n')
   emit('  "dictionary": {\n')
   emit('    "file": "' .. json_escape(args.dictionary) .. '",\n')

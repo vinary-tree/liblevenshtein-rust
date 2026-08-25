@@ -1,7 +1,7 @@
 ! Fortran harness for the cross-language benchmark program.
 !
 ! Implements harnesses/common/PROTOCOL.md over the iso_c_binding facades
-! (vinary-tree-liblevenshtein + vinary-tree-libdictenstein, sharing the
+! (liblevenshtein + libdictenstein, sharing the
 ! vinary_tree_interop resource type). Fairness notes (PROTOCOL.md section
 ! 10): fpm release profile, no runtime tuning; dynamic_dawg construction is
 ! ONE facade put_all batch call (section 4).

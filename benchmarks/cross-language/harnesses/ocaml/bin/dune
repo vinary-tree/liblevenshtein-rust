@@ -1,6 +1,6 @@
 ; OCaml harness executable for the cross-language benchmark program.
 ; Links the installed opam packages (vinary-tree-interop,
-; vinary-tree-libdictenstein, vinary-tree-liblevenshtein); their stub
+; libdictenstein, liblevenshtein); their stub
 ; archives reference -lliblevenshtein / -llibdictenstein, so the build
 ; environment must export LIBRARY_PATH pointing at the RELEASE cdylib
 ; directories ($LR/target/release:$LD/target/release).
@@ -12,8 +12,7 @@
 ; blesses for Lua (harness-local bench_clock shim).
 (executable
  (name bench)
- (libraries unix vinary-tree-interop vinary-tree-libdictenstein
-   vinary-tree-liblevenshtein)
+ (libraries unix vinary-tree-interop libdictenstein liblevenshtein)
  (foreign_stubs
   (language c)
   (names bench_clock_stubs)

@@ -374,8 +374,8 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         )
 
     for path in (
-        "bindings/ocaml/vinary-tree-liblevenshtein.opam",
-        "bindings/ocaml/vinary-tree-liblevenshtein.opam.template",
+        "bindings/ocaml/liblevenshtein.opam",
+        "bindings/ocaml/liblevenshtein.opam.template",
     ):
         replace(
             path,
@@ -384,8 +384,8 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         )
         replace(
             path,
-            r'"vinary-tree-libdictenstein" \{with-test & [^}]+\}',
-            f'"vinary-tree-libdictenstein" {{with-test & = "{versions["opam"]}"}}',
+            r'"libdictenstein" \{with-test & [^}]+\}',
+            f'"libdictenstein" {{with-test & = "{versions["opam"]}"}}',
         )
         replace(
             path,
@@ -393,11 +393,11 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
             f'["pkg-config" "--atleast-version={versions["pkgConfig"]}" "liblevenshtein"]',
         )
     replace(
-        "bindings/haskell/vinary-tree-liblevenshtein.cabal",
+        "bindings/haskell/liblevenshtein.cabal",
         r"^version: \S+$",
         f"version: {versions['hackage']}",
     )
-    cabal_path = ROOT / "bindings/haskell/vinary-tree-liblevenshtein.cabal"
+    cabal_path = ROOT / "bindings/haskell/liblevenshtein.cabal"
     cabal = cabal_path.read_text(encoding="utf-8")
     if not re.search(r"^x-release-candidate:", cabal, re.MULTILINE):
         cabal = cabal.replace(
@@ -459,14 +459,10 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         rf"\g<1>{dependencies['libdictenstein']}\2",
     )
 
-    lua_path = (
-        f"bindings/lua/vinary-tree-liblevenshtein-{versions['luaRocks']}.rockspec"
-    )
+    lua_path = f"bindings/lua/liblevenshtein-{versions['luaRocks']}.rockspec"
     lua_target = ROOT / lua_path
     if not lua_target.exists():
-        candidates = list(
-            (ROOT / "bindings/lua").glob("vinary-tree-liblevenshtein-*.rockspec")
-        )
+        candidates = list((ROOT / "bindings/lua").glob("liblevenshtein-*.rockspec"))
         if len(candidates) != 1:
             raise ValueError(
                 f"expected one LuaRocks source file, found {len(candidates)}"
@@ -476,12 +472,12 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     replace(
         lua_path,
         r'^(source = \{ url = "[^"]+", tag = ")[^"]+(" \})$',
-        rf"\g<1>{versions['goTag']}\2",
+        rf"\g<1>{model['publication']['sourceTag']}\2",
     )
     replace(
         lua_path,
-        r'"vinary-tree-libdictenstein == [^"]+"',
-        f'"vinary-tree-libdictenstein == {versions["luaRocks"]}"',
+        r'"libdictenstein == [^"]+"',
+        f'"libdictenstein == {versions["luaRocks"]}"',
     )
 
     replace(
@@ -530,6 +526,11 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
         failures.append("fpm RC publication must remain embargoed")
     if not isinstance(publication, dict) or publication.get("hackage") is not False:
         failures.append("Hackage RC publication must remain embargoed")
+    source_tag = publication.get("sourceTag") if isinstance(publication, dict) else None
+    if source_tag != f"v{canonical}-release.2":
+        failures.append(
+            "RC.4 publishable source tag must remain the append-only release.2 correction"
+        )
     dependencies = model["dependencies"]
     assert isinstance(dependencies, dict)
     coordinates = maven_coordinates(model)
@@ -671,7 +672,7 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
             dependencies["libdictenstein"],
         ),
         "LuaRocks": (
-            f"bindings/lua/vinary-tree-liblevenshtein-{versions['luaRocks']}.rockspec",
+            f"bindings/lua/liblevenshtein-{versions['luaRocks']}.rockspec",
             r'^version = "([^"]+)"$',
             versions["luaRocks"],
         ),
@@ -681,6 +682,14 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
         actual = match.group(1) if match else None
         if actual != wanted:
             failures.append(f"{name}: expected {wanted}, got {actual}")
+    lua_rockspec = read(f"bindings/lua/liblevenshtein-{versions['luaRocks']}.rockspec")
+    lua_source = re.search(
+        r'^source = \{ url = "[^"]+", tag = "([^"]+)" \}$',
+        lua_rockspec,
+        flags=re.MULTILINE,
+    )
+    if (lua_source.group(1) if lua_source else None) != source_tag:
+        failures.append("LuaRocks source tag is stale")
     jreleaser = read("bindings/jvm/jreleaser.yml")
     if re.search(r"^        active: RELEASE$", jreleaser, flags=re.MULTILINE):
         failures.append(
@@ -732,7 +741,7 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
         not in go_mod
     ):
         failures.append("Go interop dependency is stale")
-    cabal = read("bindings/haskell/vinary-tree-liblevenshtein.cabal")
+    cabal = read("bindings/haskell/liblevenshtein.cabal")
     if (
         f"version: {versions['hackage']}" not in cabal
         or f"x-release-candidate: rc.{candidate}" not in cabal

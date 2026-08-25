@@ -1,6 +1,6 @@
 (install
  (section lib)
- (package vinary-tree-liblevenshtein)
+ (package liblevenshtein)
  (files
   liblevenshtein.h
   liblevenshtein_abi.h

@@ -13,7 +13,7 @@ development may set `LIBLEVENSHTEIN_LIBRARY` to an explicit build.
 ```python
 from liblevenshtein import Transducer
 
-# `dictionary` comes from vinary-tree-libdictenstein or a
+# `dictionary` comes from libdictenstein or a
 # vinary_tree_interop.UnicodeDictionaryResource host provider.
 with Transducer(dictionary) as automaton:
     with automaton.query("cat", 1) as matches:
@@ -35,7 +35,7 @@ retain the exact dictionary revision visible when `query()` was called.
 | Binding | Python |
 | Languages/runtime | Python 3.10+ |
 | Support tier | Tier 1 |
-| Distribution | PyPI package `vinary-tree-liblevenshtein` |
+| Distribution | PyPI package `liblevenshtein` |
 | Native boundary | `ctypes` calls the stable C ABI; first-party native calls release the GIL, while Python callbacks reacquire it. |
 | Canonical facade source | [`bindings/python/src/liblevenshtein`](../../bindings/python/src/liblevenshtein) |
 

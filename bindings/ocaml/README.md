@@ -16,7 +16,7 @@ The opam package is `vinary_tree_liblevenshtein`.
 | Binding | OCaml |
 | Languages/runtime | OCaml 5 through dune/opam |
 | Support tier | Tier 3 |
-| Distribution | opam package `vinary-tree-liblevenshtein` |
+| Distribution | opam package `liblevenshtein` |
 | Native boundary | C stubs call the stable ABI and consume `Vinary_tree_interop.resource` values from independent producers. |
 | Canonical facade source | [`bindings/ocaml/vinary_tree_liblevenshtein.mli`](../../bindings/ocaml/vinary_tree_liblevenshtein.mli) |
 

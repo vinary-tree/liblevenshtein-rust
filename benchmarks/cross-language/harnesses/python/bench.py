@@ -2,7 +2,7 @@
 """Python harness for the cross-language benchmark program.
 
 Implements harnesses/common/PROTOCOL.md over the ctypes facades
-(vinary-tree-liblevenshtein + vinary-tree-libdictenstein). The runner
+(liblevenshtein + libdictenstein). The runner
 provides PYTHONPATH to the three binding source trees and the
 LIBLEVENSHTEIN_LIBRARY / LIBDICTENSTEIN_LIBRARY release overrides.
 
@@ -166,7 +166,7 @@ def render_result(
             "backend": "ctypes",
             "runtime_version": f"CPython {sys.version.split()[0]}",
             "library_version": "0.10.0",
-            "artifact": {"kind": "local-build", "id": "vinary-tree-liblevenshtein@0.10.0"},
+            "artifact": {"kind": "local-build", "id": "liblevenshtein@0.10.0"},
         },
         "dictionary": {
             "file": str(args.dictionary),

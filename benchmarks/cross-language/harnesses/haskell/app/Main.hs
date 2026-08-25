@@ -5,7 +5,7 @@
 -- | Haskell harness for the cross-language benchmark program.
 --
 -- Implements harnesses/common/PROTOCOL.md over the hsc2hs facades
--- (vinary-tree-liblevenshtein + vinary-tree-libdictenstein). The runner
+-- (liblevenshtein + libdictenstein). The runner
 -- stages RELEASE cdylibs plus pkg-config metadata under
 -- .stage/haskell-native and provides LD_LIBRARY_PATH at run time.
 --
@@ -373,7 +373,7 @@ writeResult outPath args mode algorithm maxDistance queriesPath queryCount
           <> escapeJson (showVersion fullCompilerVersion) <> "\",\n"
           <> "    \"library_version\": \"0.10.0\",\n"
           <> "    \"artifact\": { \"kind\": \"local-build\", \"id\": "
-          <> "\"vinary-tree-liblevenshtein@0.10.0 (cabal project)\" }\n"
+          <> "\"liblevenshtein@0.10.0 (cabal project)\" }\n"
           <> "  },\n"
           <> "  \"dictionary\": {\n"
           <> "    \"file\": \""

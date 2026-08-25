@@ -425,7 +425,7 @@ func renderResult(args cliArgs, mode, algorithm string, maxDistance int, queries
 			Backend:        "cgo",
 			RuntimeVersion: runtime.Version(),
 			LibraryVersion: "0.10.0",
-			Artifact:       artifactJSON{Kind: "local-build", ID: "vinary-tree-liblevenshtein@0.10.0"},
+			Artifact:       artifactJSON{Kind: "local-build", ID: "liblevenshtein@0.10.0"},
 		},
 		Dictionary: dictionaryJSON{
 			File:        args.dictionary,

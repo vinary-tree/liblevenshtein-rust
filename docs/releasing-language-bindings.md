@@ -68,6 +68,37 @@ legacy JavaScript API. Version 4 consumers use the new Rust-backed facade API.
 Its ESM, CommonJS, TypeScript, ClojureScript, browser-WASM, and WASI exports are
 thin re-exports of the exact scoped package.
 
+### Distribution-name invariant
+
+The owner identity and the library name are separate concepts. Use
+`vinary-tree` as an organization, group, scope, repository owner, or
+language-level namespace where the ecosystem supports one; do not concatenate
+it onto an algorithm package's globally registered distribution name. The
+shared interoperability package is the deliberate exception because
+`vinary-tree-interop` is its actual name.
+
+| Ecosystem shape | liblevenshtein | libdictenstein | Interop |
+|---|---|---|---|
+| Global package name | `liblevenshtein` | `libdictenstein` | `vinary-tree-interop` |
+| npm scope | `@vinary-tree/liblevenshtein` | `@vinary-tree/libdictenstein` | `@vinary-tree/interop` |
+| Maven/Clojars group | group `io.vinarytree`; artifact `liblevenshtein` or `liblevenshtein-clojure` | group `io.vinarytree`; artifact `libdictenstein` or `libdictenstein-clojure` | group `io.vinarytree`; artifact `vinary-tree-interop` |
+| Go repository owner | `github.com/vinary-tree/liblevenshtein-rust/...` | `github.com/vinary-tree/libdictenstein/...` | `github.com/vinary-tree/vinary-tree-interop/...` |
+
+“Global package name” governs PyPI, NuGet, RubyGems, SwiftPM's declared package,
+fpm, opam, Hackage, and LuaRocks. Language imports remain idiomatic and may use
+the Vinary Tree namespace—for example, the NuGet distribution
+`Liblevenshtein` exposes the C# namespace `VinaryTree.Liblevenshtein`. Release
+checks must compare every manifest with `bindings/api.json` so a prefixed
+distribution cannot silently return.
+
+For RC.4, the corrected global-distribution metadata exists only in the
+append-only root source `v4.0.0-rc.4-release.2` and libdictenstein source
+`v4.0.0-rc.4-release.1`. Source-fetching metadata must distinguish the
+immutable package version from its corrective source tag: the LuaRocks
+rockspecs name those exact refs, and opam staging derives the ref from the
+validated workflow dispatch. Synchronizers enforce this provenance so a
+registry cannot fetch an earlier tag that still carries prefixed manifests.
+
 ## Two-phase, fail-closed workflow protocol
 
 A **validation dispatch** builds and tests an immutable tag, stages every
@@ -805,27 +836,260 @@ versioned release ledger.
 
 | Destination | Authentication | Recommended GitHub environment |
 |---|---|---|
-| crates.io | `CARGO_REGISTRY_TOKEN` | `crates-io` |
+| crates.io | OIDC trusted publishing through `rust-lang/crates-io-auth-action`; no stored token | `crates-io` |
 | PyPI | OIDC trusted publishing | `pypi` |
 | npm | OIDC trusted publishing with provenance; account and organization require 2FA | `npm` |
 | Maven Central canonical artifact | Central Portal credentials plus GPG public key, private key, and passphrase | `maven-central` |
-| Maven Central historical notices | The same credentials, with each historical namespace verified | `maven-central` via `maven-relocation-dylon` or `maven-relocation-universal-automata` |
-| Clojars | username and scoped deploy token | `clojars` |
-| NuGet | `NUGET_API_KEY` | `nuget` |
-| RubyGems | `RUBYGEMS_API_KEY` | `rubygems` |
-| LuaRocks | `LUAROCKS_API_KEY` | `luarocks` |
-| opam repository | GitHub token authorized to push a fork and open a pull request | `opam` |
+| Maven Central historical notices | The same credentials, with each historical namespace verified | `maven-relocation-dylon` or `maven-relocation-universal-automata` |
+| Clojars | public username in `CLOJARS_USERNAME` plus environment-scoped deploy token in `CLOJARS_DEPLOY_TOKEN` | `clojars` |
+| NuGet | OIDC trusted publishing through `NuGet/login`; public profile name in `NUGET_USER` | `nuget` |
+| RubyGems | OIDC trusted publishing through `rubygems/configure-rubygems-credentials`; no stored token | `rubygems` |
+| LuaRocks | Independent account API key in each repository's `LUAROCKS_API_KEY`; LuaRocks has no OIDC exchange | `luarocks` |
+| opam repository | Short-lived GitHub user token in `OPAM_GITHUB_TOKEN`, authorized to push `vinary-tree/opam-repository` and open the upstream PR | `opam` |
+| GitHub prerelease | Job-scoped `GITHUB_TOKEN`; no stored secret | `github-release` (or owner-specific `github-release-interop`) |
 
 Hackage and fpm secrets are intentionally unnecessary for this RC. Apply
 required-reviewer protection to every publish environment. OIDC jobs receive
 `id-token: write` only in the individual job that uploads that owner's
 artifact; build jobs remain read-only.
 
+### RC.4 environment inventory
+
+An environment is a GitHub Actions authorization boundary attached to one
+repository. Names are therefore intentionally reused across independent
+owners, except where the shared interop repository uses an `-interop` suffix
+to preserve the claims already registered with external trusted publishers.
+Every environment below must require reviewer `dylon`, permit that reviewer to
+approve their own deployment, and admit tags matching `v*` only. A missing
+environment is a release blocker: GitHub otherwise creates an unprotected
+environment when the workflow first references its name.
+
+| Repository | Exact protected environments |
+|---|---|
+| `vinary-tree/liblevenshtein-rust` | `crates-io`, `pypi`, `npm`, `maven-central`, `maven-relocation-dylon`, `maven-relocation-universal-automata`, `clojars`, `nuget`, `rubygems`, `go-module`, `luarocks`, `opam`, `github-release` |
+| `vinary-tree/libdictenstein` | `crates-io`, `pypi`, `npm`, `maven-central`, `clojars`, `nuget`, `rubygems`, `go-module`, `luarocks`, `opam`, `github-release` |
+| `vinary-tree/lling-llang` | `crates-io`, `npm`, `github-release` |
+| `vinary-tree/duallity` | `crates-io`, `npm`, `github-release` |
+| `vinary-tree/llattice` | `crates-io`, `github-release` |
+| `vinary-tree/vinary-tree-interop` | `crates-io-interop`, `pypi-interop`, `npm`, `maven-central-interop`, `nuget-interop`, `go-module-interop`, `opam`, `github-release-interop` |
+| `vinary-tree/javascript-runtime` | `npm`, `github-release` |
+| `vinary-tree/liblevenshtein-npm` | `npm`, `github-release` |
+| `vinary-tree/liblevenshtein-rust-cli` | `crates-io`, `github-release` |
+
+Secretless environments are not redundant. `crates-io`, `pypi`, `npm`,
+`nuget`, and `rubygems` gate an OpenID Connect (OIDC) credential exchange;
+`go-module` and `github-release` gate a narrowly scoped repository mutation.
+Clojars, LuaRocks, and opam environments additionally constrain their
+repository-specific stored credentials.
+
+The five Maven Central credentials are intentionally organization secrets,
+restricted to `liblevenshtein-rust`, `libdictenstein`, and
+`vinary-tree-interop`. This avoids duplicating the same Central Portal and GPG
+identity across five environments. The Maven environments still gate job
+execution by reviewer and release tag, but an organization secret is available
+to any workflow in one of its selected repositories. Default-branch history
+and release tags are therefore protected independently, and the final release
+audit must confirm the five secrets no longer have organization-wide access.
+Do not retain repository or environment copies after public read-back proves
+the selected-repository organization-secret path.
+
+At both organization and repository scope, the default `GITHUB_TOKEN` is
+read-only and cannot approve pull requests. Individual publication jobs grant
+only `id-token: write` or `contents: write` as required. Active release owners
+protect `v*` tags from updates and deletion; the three Go module owners also
+protect `bindings/go/v*`. Their default branches reject deletion and
+non-fast-forward updates without imposing a pull-request-only development
+policy. Secret scanning, push protection, Dependabot alerts, and private
+vulnerability reporting are enabled on every first-party release owner. The
+`vinary-tree/opam-repository` fork disables Actions because upstream pull
+request continuous integration is authoritative.
+
+`validate-only` is non-mutating with respect to package registries, but its
+terminal job creates or updates the checksummed GitHub prerelease. Protect that
+repository write behind `github-release` in liblevenshtein and libdictenstein,
+and `github-release-interop` in the shared interop owner. These environments
+store no secret; approval gates the job-scoped `GITHUB_TOKEN`.
+
+Both RC.4 Ruby distribution names are new. Create pending trusted publishers
+at `https://rubygems.org/profile/oidc/pending_trusted_publishers`:
+
+| Gem | GitHub repository | Workflow filename | Environment |
+|---|---|---|---|
+| `liblevenshtein` | `vinary-tree/liblevenshtein-rust` | `release.yml` | `rubygems` |
+| `libdictenstein` | `vinary-tree/libdictenstein` | `release-bindings.yml` | `rubygems` |
+
+Leave reusable-workflow fields empty because each job is defined in its owner
+repository. The artifact is built and inspected in an unprivileged job; the
+protected uploader uses the official credential-exchange action pinned to an
+immutable release commit, then pushes that exact downloaded `.gem`. After the
+first successful upload, RubyGems converts the pending publisher into the
+ordinary gem-scoped publisher and makes the initiating account an owner.
+
 For npm, the publisher must have access to the `vinary-tree` organization and
 the legacy `liblevenshtein` package. Register each repository/workflow as a
 trusted publisher before dispatching its npm publication. A local `npm login`
 is useful for manual inspection but is not a substitute for CI
 trusted-publisher setup.
+
+### crates.io trusted publishers
+
+OpenID Connect (OIDC) lets a protected GitHub Actions job prove its identity
+to crates.io. crates.io exchanges that proof for a short-lived Cargo token;
+the authentication action revokes the token when the job completes. This
+removes the persistent, cross-repository authority of
+`CARGO_REGISTRY_TOKEN`.
+
+Every crate must already exist before crates.io can associate it with a
+trusted publisher. Register these exact claims in each crate's Settings page:
+
+| Crate | GitHub repository | Workflow filename | Environment |
+|---|---|---|---|
+| `vinary-tree-interop` | `vinary-tree/vinary-tree-interop` | `release.yml` | `crates-io-interop` |
+| `libdictenstein` | `vinary-tree/libdictenstein` | `release-bindings.yml` | `crates-io` |
+| `liblevenshtein` | `vinary-tree/liblevenshtein-rust` | `release.yml` | `crates-io` |
+| `lling-llang` | `vinary-tree/lling-llang` | `release-bindings.yml` | `crates-io` |
+| `duallity` | `vinary-tree/duallity` | `release-bindings.yml` | `crates-io` |
+| `llattice` | `vinary-tree/llattice` | `release.yml` | `crates-io` |
+
+The workflow filename is a basename, not `.github/workflows/NAME`. The
+repository, filename, and environment are case-sensitive identity claims. The
+publish job must grant `id-token: write`, invoke
+`rust-lang/crates-io-auth-action@v1`, and pass only its `token` output as
+`CARGO_REGISTRY_TOKEN` to `cargo publish`.
+
+Migrate without an authentication gap:
+
+1. Register the trusted publisher while the old Cargo token still exists.
+2. Publish and read back one version through OIDC.
+3. Enable crates.io's “Require trusted publishing for all new versions”
+   control for that crate.
+4. Delete the GitHub Cargo secret and revoke the long-lived crates.io token.
+
+`llattice 0.1.0` is already public and unchanged by the RC.4 train. Its new
+release workflow is future-facing and must not be dispatched at the
+already-published tag. Do not enable the enforcement control before the
+matching workflow commit is on its immutable release ref. A first-ever crate
+publication still needs a narrow token with `publish-new`; all crates in the
+table already have at least one public version.
+
+### npm trusted publishers
+
+npm trusted publishing requires npm 11.5.1 or newer, Node.js 22.14.0 or newer,
+a GitHub-hosted runner, and `id-token: write` on the publish job. Register one
+publisher per package with direct-publish authority:
+
+```bash
+npm trust github @vinary-tree/interop \
+  --repo vinary-tree/vinary-tree-interop --file release.yml \
+  --env npm --allow-publish --yes
+npm trust github @vinary-tree/vinary-tree \
+  --repo vinary-tree/javascript-runtime --file release.yml \
+  --env npm --allow-publish --yes
+npm trust github @vinary-tree/libdictenstein \
+  --repo vinary-tree/libdictenstein --file release-bindings.yml \
+  --env npm --allow-publish --yes
+npm trust github @vinary-tree/lling-llang \
+  --repo vinary-tree/lling-llang --file release-bindings.yml \
+  --env npm --allow-publish --yes
+npm trust github @vinary-tree/duallity \
+  --repo vinary-tree/duallity --file release-bindings.yml \
+  --env npm --allow-publish --yes
+npm trust github @vinary-tree/liblevenshtein \
+  --repo vinary-tree/liblevenshtein-rust --file release.yml \
+  --env npm --allow-publish --yes
+npm trust github liblevenshtein \
+  --repo vinary-tree/liblevenshtein-npm --file release.yml \
+  --env npm --allow-publish --yes
+```
+
+npm permits only one trusted-publisher relationship per package. Confirm each
+relationship with `npm trust list PACKAGE`. After a successful OIDC publish,
+set Publishing access to “Require two-factor authentication and disallow
+tokens,” then revoke obsolete automation tokens. Direct trusted publication
+does not request a passkey during each deployment; choosing stage-only trust
+would add an explicit 2FA approval before public promotion.
+
+### Clojars group and deploy authority
+
+Clojars does not expose a GitHub OIDC trusted-publisher exchange. Verify the
+reverse-domain group `io.vinarytree` independently in Clojars before either
+first upload. For domain-based verification, publish a TXT record at the apex
+of `vinarytree.io` whose value is `clojars USERNAME`, then complete Clojars'
+self-service group verification. Maven Central namespace verification is a
+different authority and does not satisfy this step.
+
+Store the shared, non-secret account name once as the organization Actions
+variable `CLOJARS_USERNAME`. Store `CLOJARS_DEPLOY_TOKEN` separately in each
+repository's protected `clojars` environment:
+
+| Coordinate | Repository environment | Initial token |
+|---|---|---|
+| `io.vinarytree/liblevenshtein-clojure` | `vinary-tree/liblevenshtein-rust` → `clojars` | unscoped, single-use |
+| `io.vinarytree/libdictenstein-clojure` | `vinary-tree/libdictenstein` → `clojars` | unscoped, single-use |
+
+Clojars cannot create an artifact- or group-scoped token before that group or
+artifact exists. Therefore use a distinct single-use bootstrap token for each
+first publication. After public read-back succeeds, disable each bootstrap
+token, create a replacement scoped to its exact artifact with a finite
+expiration, and update only that repository environment. Never place an
+unscoped reusable token at organization scope.
+
+### LuaRocks upload authority
+
+LuaRocks does not currently expose an OIDC trusted-publisher exchange. Create
+an independent API key for each publishing repository and store it only as
+`LUAROCKS_API_KEY` in that repository's protected `luarocks` environment:
+
+| Rock | Repository environment |
+|---|---|
+| `liblevenshtein` | `vinary-tree/liblevenshtein-rust` → `luarocks` |
+| `libdictenstein` | `vinary-tree/libdictenstein` → `luarocks` |
+
+Do not use one organization-wide key: a LuaRocks API key represents the
+account rather than one rock, so a shared key couples the two publishers and
+increases its blast radius. The workflow passes the secret with
+`luarocks upload --temp-key`; unlike `--api-key`, this mode does not persist
+the credential in the runner's LuaRocks configuration. Keep required-reviewer
+protection on the environment, label the two keys by repository in LuaRocks,
+and revoke or rotate either key independently when its ownership changes or
+its confidentiality is uncertain.
+
+### opam-repository contribution authority
+
+opam publication is an upstream review-and-merge process, not a direct registry
+upload. The three package owners push a unique branch to the organization fork
+`vinary-tree/opam-repository`, then open a pull request against
+`ocaml/opam-repository:master`. Use a short-lived classic GitHub personal access
+token with only `public_repo`, created by an account that can write the
+organization fork. Store it separately as `OPAM_GITHUB_TOKEN` in each owner's
+protected `opam` environment; do not place it in repository configuration or
+pass it in a remote URL. The workflow configures Git's credential helper from
+`GH_TOKEN`, never persists the token in a checkout, and fixes the fork identity
+rather than inferring it from the authenticating user.
+
+The package-directory version is the opam spelling `4.0.0~rc4`, read from each
+owner's `release/version.json`; branch names use the canonical
+`4.0.0-rc.4` spelling because `~` is illegal in Git refs. Submit and obtain
+public read-back in dependency order:
+
+1. `vinary-tree-interop.4.0.0~rc4`;
+2. `libdictenstein.4.0.0~rc4`; and
+3. `liblevenshtein.4.0.0~rc4`.
+
+Each upstream pull request must pass opam-repository CI and be merged before the
+next package is submitted. After merge, create a fresh switch against the
+official repository, install the exact version, inspect its resolved source
+checksum, and record the PR, merge commit, package commit, and consumer outcome
+in this ledger. Revoke the release token after all three submissions have been
+opened; later corrections require a new finite-lifetime token.
+
+NuGet publication is likewise keyless. Register one nuget.org trusted-publisher
+policy per owner workflow, owned by the `vinary-tree` NuGet organization and
+restricted to the matching protected environment. The publish job grants only
+`id-token: write`, invokes `NuGet/login@v1` immediately before upload, and uses
+the returned one-use temporary key. `NUGET_USER` is the publisher's public
+nuget.org profile name, not an email address or API key; store it as an
+environment variable. Do not provision `NUGET_API_KEY` secrets.
 
 ## Pre-publication checklist
 

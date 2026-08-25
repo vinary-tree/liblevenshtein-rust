@@ -80,7 +80,7 @@ contains
     write (unit, '(a)') '    "runtime_version": "'//json_escape(cell%runtime_version)//'",'
     write (unit, '(a)') '    "library_version": "'//library_version//'",'
     write (unit, '(a)') '    "artifact": { "kind": "local-build", '// &
-      '"id": "vinary-tree-liblevenshtein-fpm@'//library_version//'" }'
+      '"id": "liblevenshtein-fpm@'//library_version//'" }'
     write (unit, '(a)') '  },'
     write (unit, '(a)') '  "dictionary": {'
     write (unit, '(a)') '    "file": "'//json_escape(cell%dictionary_file)//'",'

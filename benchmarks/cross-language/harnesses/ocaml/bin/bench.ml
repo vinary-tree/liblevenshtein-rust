@@ -1,7 +1,7 @@
 (* OCaml harness for the cross-language benchmark program.
 
    Implements harnesses/common/PROTOCOL.md over the ctypes-style C stub
-   facades (vinary-tree-liblevenshtein + vinary-tree-libdictenstein dune
+   facades (liblevenshtein + libdictenstein dune
    packages installed in the opam switch). The runner provides
    LD_LIBRARY_PATH pointing at the RELEASE cdylibs.
 
@@ -330,7 +330,7 @@ let write_result ~out ~(args : args) ~mode ~algorithm ~max_distance
   add "    \"library_version\": \"0.10.0\",\n";
   add
     "    \"artifact\": { \"kind\": \"local-build\", \"id\": \
-     \"vinary-tree-liblevenshtein@0.10.0 (opam switch)\" }\n";
+     \"liblevenshtein@0.10.0 (opam switch)\" }\n";
   add "  },\n";
   add "  \"dictionary\": {\n";
   add

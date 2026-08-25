@@ -464,6 +464,64 @@ for marker in ("byte_arena", "u64_arena", "leased", "llev_query_cursor_reduce"):
 # Tier-1 package coordinates and idiomatic facades.
 python = tomllib.loads(text(ROOT / "bindings" / "python" / "pyproject.toml"))
 require(python["project"]["name"] == packages["pypi"], "wrong PyPI package")
+dotnet_project = text(
+    ROOT
+    / "bindings"
+    / "dotnet"
+    / "src"
+    / "VinaryTree.Liblevenshtein"
+    / "VinaryTree.Liblevenshtein.csproj"
+)
+require(
+    f"<PackageId>{packages['nuget']}</PackageId>" in dotnet_project,
+    "wrong NuGet package",
+)
+swift_package = text(ROOT / "Package.swift")
+require(
+    f'name: "{packages["swift"]}"' in swift_package,
+    "wrong SwiftPM package",
+)
+ruby_gemspec = text(ROOT / "bindings" / "ruby" / "liblevenshtein.gemspec")
+require(
+    f'spec.name = "{packages["rubygems"]}"' in ruby_gemspec,
+    "wrong RubyGems package",
+)
+fortran_package = tomllib.loads(text(ROOT / "bindings" / "fortran" / "fpm.toml"))
+fortran_publish_package = tomllib.loads(
+    text(ROOT / "bindings" / "fortran" / "fpm.publish.toml")
+)
+require(
+    fortran_package["name"] == packages["fpm"]
+    and fortran_publish_package["name"] == packages["fpm"],
+    "wrong fpm package",
+)
+ocaml_project = text(ROOT / "bindings" / "ocaml" / "dune-project")
+require(
+    f"(name {packages['opam']})" in ocaml_project,
+    "wrong opam package",
+)
+haskell_package = text(ROOT / "bindings" / "haskell" / "liblevenshtein.cabal")
+require(
+    re.search(
+        rf"^name: {re.escape(packages['hackage'])}$",
+        haskell_package,
+        flags=re.MULTILINE,
+    )
+    is not None,
+    "wrong Hackage package",
+)
+luarocks_package = text(
+    ROOT / "bindings" / "lua" / "liblevenshtein-4.0.0rc4-1.rockspec"
+)
+require(
+    re.search(
+        rf'^package = "{re.escape(packages["luarocks"])}"$',
+        luarocks_package,
+        flags=re.MULTILINE,
+    )
+    is not None,
+    "wrong LuaRocks package",
+)
 python_interop = tomllib.loads(
     text(INTEROP_ROOT / "bindings" / "python" / "pyproject.toml")
 )
@@ -731,6 +789,63 @@ require(
 libdictenstein_release = text(
     LIBDICT_ROOT / ".github" / "workflows" / "release-bindings.yml"
 ).lower()
+for release_name, release_source in (
+    ("liblevenshtein", release),
+    ("libdictenstein", libdictenstein_release),
+):
+    require(
+        "rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a"
+        in release_source,
+        f"{release_name} RubyGems upload does not use the pinned OIDC credential exchange",
+    )
+    require(
+        "rubygems_api_key" not in release_source,
+        f"{release_name} RubyGems upload still references a long-lived API key",
+    )
+    require(
+        "clojars_username: ${{ vars.clojars_username }}" in release_source,
+        f"{release_name} Clojars upload must consume the organization username variable",
+    )
+    require(
+        "secrets.clojars_username" not in release_source,
+        f"{release_name} Clojars upload incorrectly stores the public username as a secret",
+    )
+    require(
+        "secrets.luarocks_api_key" in release_source,
+        f"{release_name} LuaRocks upload does not consume its repository environment key",
+    )
+    require(
+        '--temp-key "$luarocks_api_key"' in release_source,
+        f"{release_name} LuaRocks upload must use the non-persisting temporary-key mode",
+    )
+    require(
+        '--api-key "$luarocks_api_key"' not in release_source,
+        f"{release_name} LuaRocks upload persists the API key in runner configuration",
+    )
+    for marker in (
+        'fork="vinary-tree/opam-repository"',
+        "gh auth setup-git",
+        '["registries"]["opam"]',
+        '--head "vinary-tree:$branch"',
+        "secrets.opam_github_token",
+        "environment: github-release",
+    ):
+        require(
+            marker in release_source,
+            f"{release_name} opam publisher is missing {marker}",
+        )
+    for forbidden in (
+        "account=$(gh api user",
+        "gh repo fork ocaml/opam-repository",
+    ):
+        require(
+            forbidden not in release_source,
+            f"{release_name} opam publisher retains dynamic fork logic: {forbidden}",
+        )
+require(
+    "environment: ${{ inputs.registry }}" in release,
+    "historical Maven relocation jobs must use their registry-specific protected environment",
+)
 for marker in (
     "stage-native-package.sh",
     "python-wheels",
