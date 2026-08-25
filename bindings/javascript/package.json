@@ -1,6 +1,6 @@
 {
   "name": "@vinary-tree/liblevenshtein",
-  "version": "4.0.0-rc.3",
+  "version": "4.0.0-rc.4",
   "description": "Modular liblevenshtein facade over the shared vinary-tree runtime",
   "author": {
     "name": "Dylon Edwards",
@@ -18,11 +18,10 @@
     "node": ">=22.14"
   },
   "dependencies": {
-    "@vinary-tree/interop": "4.0.0-rc.3",
-    "@vinary-tree/vinary-tree": "4.0.0-rc.3"
+    "@vinary-tree/interop": "4.0.0-rc.4",
+    "@vinary-tree/vinary-tree": "4.0.0-rc.4"
   },
   "devDependencies": {
-    "@cljs-oss/module-deps": "^1.1.1",
     "@vinary-tree/libdictenstein": "file:../../../libdictenstein/bindings/javascript"
   },
   "types": "./index.d.ts",

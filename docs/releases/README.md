@@ -14,9 +14,12 @@ consumer exercises it.
 
 ## Ledgers
 
-- [`4.0.0-rc.3`](4.0.0-rc.3.md) — current corrective release train. It fixes
-  the Cabal source defect found by RC.2 immutable-tag validation and resumes
-  the exact dependency-ordered registry graph without moving prior tags.
+- [`4.0.0-rc.4`](4.0.0-rc.4.md) — current corrective release train. It makes
+  native JavaScript/JVM prerequisites explicit, brings Cargo lockfiles under
+  release synchronization, and rehearses both repairs from a build-clean family.
+- [`4.0.0-rc.3`](4.0.0-rc.3.md) — rejected corrective candidate. Its verified
+  interop and libdictenstein public subset is retained, but two clean-build
+  package jobs failed and the remaining publication stopped.
 - [`4.0.0-rc.2`](4.0.0-rc.2.md) — rejected corrective candidate. Its valid
   public interop/runtime subset and installed-byte proofs are retained, but an
   invalid libdictenstein Cabal descriptor prevents promotion of the train.

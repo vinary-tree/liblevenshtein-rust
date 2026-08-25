@@ -1,5 +1,5 @@
 @startuml
-' Immutable-candidate recovery protocol exercised by RC.1, RC.2, and RC.3.
+' Immutable-candidate recovery protocol exercised by RC.1 through RC.4.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam sequence {

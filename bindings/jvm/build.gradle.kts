@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.vinarytree"
-version = "4.0.0-rc.3"
+version = "4.0.0-rc.4"
 
 java {
     toolchain {
@@ -50,7 +50,7 @@ repositories {
 }
 
 dependencies {
-    api("io.vinarytree:vinary-tree-interop:4.0.0-rc.3")
+    api("io.vinarytree:vinary-tree-interop:4.0.0-rc.4")
     testImplementation(platform("org.junit:junit-bom:6.1.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -61,12 +61,17 @@ tasks.test {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
     systemProperty(
         "java.library.path",
-        providers.gradleProperty("liblevenshtein.nativeDir").orElse("../../target/debug").get()
+        providers.gradleProperty("liblevenshtein.nativeDir")
+            .orElse("../../target/debug")
+            .map { rootProject.file(it).absolutePath }
+            .get()
     )
     systemProperty(
         "libdictenstein.nativeDir",
         providers.gradleProperty("libdictenstein.nativeDir")
-            .orElse("../../../libdictenstein/target/debug").get()
+            .orElse("../../../libdictenstein/target/debug")
+            .map { rootProject.file(it).absolutePath }
+            .get()
     )
 }
 
@@ -101,7 +106,10 @@ val propertyTest = tasks.register<Test>("propertyTest") {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
     systemProperty(
         "java.library.path",
-        providers.gradleProperty("liblevenshtein.nativeDir").orElse("../../target/debug").get()
+        providers.gradleProperty("liblevenshtein.nativeDir")
+            .orElse("../../target/debug")
+            .map { rootProject.file(it).absolutePath }
+            .get()
     )
 }
 

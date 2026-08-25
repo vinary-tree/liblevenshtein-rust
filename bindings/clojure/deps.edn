@@ -1,6 +1,6 @@
 {:paths ["src"]
  :deps {org.clojure/clojure {:mvn/version "1.12.5"}
-        io.vinarytree/liblevenshtein {:mvn/version "4.0.0-rc.3"}}
+        io.vinarytree/liblevenshtein {:mvn/version "4.0.0-rc.4"}}
  :aliases
  {:test
   {:extra-paths ["test"]

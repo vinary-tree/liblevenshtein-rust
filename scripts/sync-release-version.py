@@ -55,6 +55,36 @@ def replace(path: str, pattern: str, replacement: str, expected: int = 1) -> Non
     target.write_text(updated, encoding="utf-8")
 
 
+def rewrite_cargo_lock(expected: dict[str, str]) -> None:
+    target = ROOT / "Cargo.lock"
+    source = target.read_text(encoding="utf-8")
+    for package, version in expected.items():
+        pattern = rf'(\[\[package\]\]\nname = "{re.escape(package)}"\nversion = ")[^"]+'
+        source, count = re.subn(pattern, rf'\g<1>{version}', source)
+        if count != 1:
+            raise ValueError(
+                f"Cargo.lock: expected one {package} package entry, found {count}"
+            )
+    target.write_text(source, encoding="utf-8")
+
+
+def cargo_lock_versions(expected: dict[str, str]) -> dict[str, str | None]:
+    source = read("Cargo.lock")
+    return {
+        package: (
+            match.group(1)
+            if (
+                match := re.search(
+                    rf'\[\[package\]\]\nname = "{re.escape(package)}"\nversion = "([^"]+)"',
+                    source,
+                )
+            )
+            else None
+        )
+        for package in expected
+    }
+
+
 def rewrite_candidate_tokens(
     patterns: tuple[str, ...],
     canonical: str,
@@ -113,6 +143,13 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         "Cargo.toml",
         r'^libdictenstein = \{[^\n]+\}$',
         f'libdictenstein = {{ path = "../libdictenstein", version = "={dependencies["libdictenstein"]}", features = ["parking_lot"] }}',
+    )
+    rewrite_cargo_lock(
+        {
+            "liblevenshtein": canonical,
+            "libdictenstein": str(dependencies["libdictenstein"]),
+            "vinary-tree-interop": str(dependencies["vinary-tree-interop"]),
+        }
     )
 
     def api(value: dict) -> None:
@@ -406,6 +443,16 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
         actual = match.group(1) if match else None
         if actual != wanted:
             failures.append(f"{name}: expected {wanted}, got {actual}")
+    expected_locks = {
+        "liblevenshtein": canonical,
+        "libdictenstein": str(dependencies["libdictenstein"]),
+        "vinary-tree-interop": str(dependencies["vinary-tree-interop"]),
+    }
+    for package, actual in cargo_lock_versions(expected_locks).items():
+        if actual != expected_locks[package]:
+            failures.append(
+                f"Cargo.lock {package}: expected {expected_locks[package]}, got {actual}"
+            )
     api = json.loads(read("bindings/api.json"))
     if api.get("packageVersion") != canonical or api.get("release", {}).get("registries") != versions:
         failures.append("bindings/api.json release identity is stale")

@@ -1,11 +1,11 @@
 # Documentation Index
 
-Complete documentation for **liblevenshtein-rust v4.0.0-rc.3** — Levenshtein and
+Complete documentation for **liblevenshtein-rust v4.0.0-rc.4** — Levenshtein and
 related (phonetic, time-series) automata for error-tolerant search over strings
 and byte arrays, with several trie/DAWG dictionaries, fuzzy maps, and fuzzy
 caches.
 
-**Last Updated:** 2026-08-24  ·  **Version:** 4.0.0-rc.3
+**Last Updated:** 2026-08-24  ·  **Version:** 4.0.0-rc.4
 
 ![Documentation map: the nine sections of this documentation set.](diagrams/architectures/documentation-map.svg)
 
@@ -36,7 +36,7 @@ index maps everything else.
 ### Living vs. Historical — the rule that bounds edits
 
 > A document is **LIVING** if it describes the *current* behaviour, API, theory,
-> or architecture of liblevenshtein v4.0.0-rc.3 — something you would consult to *use
+> or architecture of liblevenshtein v4.0.0-rc.4 — something you would consult to *use
 > or extend the library today*. A document is **HISTORICAL** if it is a dated
 > record of *how we got here*: a scientific ledger, hypothesis log, experiment
 > record, phase/session/completion report, or benchmark dump. Per the project's
@@ -92,7 +92,7 @@ index maps everything else.
 - [Releasing language bindings](releasing-language-bindings.md) — the publish-order DAG, registry coordinates and credentials, pin-coherence preconditions, and pre-publication gates.
 - [Release evidence ledgers](releases/README.md) — immutable source commits,
   workflow runs, registry digests, public-byte smokes, incidents, and recovery
-  decisions; start with the [`4.0.0-rc.3` ledger](releases/4.0.0-rc.3.md).
+  decisions; start with the [`4.0.0-rc.4` ledger](releases/4.0.0-rc.4.md).
 - [Resource-exhaustion controls](security/resource-exhaustion.md) — automaton state ceilings, edit budgets, elastic-DP guards, and deployment policy.
 - [Automaton-variant security](security/automaton-variants.md) — continuation-tag integrity, subsumption soundness, selector stability, and extension review controls.
 - [Migration](migration/README.md) — terminology and version-migration notes (including the libdictenstein extraction).
