@@ -54,7 +54,13 @@ jobs:
             exit 1
           fi
           version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
-          test "v$version" = "$GITHUB_REF_NAME"
+          canonical_tag="v$version"
+          escaped_tag=${canonical_tag//./\\.}
+          if [[ "$GITHUB_REF_NAME" != "$canonical_tag" &&
+                ! "$GITHUB_REF_NAME" =~ ^${escaped_tag}-release\.[1-9][0-9]*$ ]]; then
+            echo "::error::Expected $canonical_tag or its numbered corrective release tag; got $GITHUB_REF_NAME." >&2
+            exit 1
+          fi
       - run: cargo test --locked --features native-bindings-full --test query_start_snapshot_semantics
       - run: >-
           cargo test --locked --features native-bindings-full
@@ -315,24 +321,24 @@ jobs:
           java-version: "25"
           cache: gradle
       - uses: dtolnay/rust-toolchain@1.95
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          llattice-ref: v0.1.0
+          libdictenstein-ref: v4.0.0-rc.4
+          lling-llang-ref: v4.0.0-rc.4
+          duallity-ref: v4.0.0-rc.4
+          interop-ref: v4.0.0-rc.4
+          javascript-runtime-ref: v4.0.0-rc.4
+          liblevenshtein-npm-ref: v4.0.0-rc.4
       - name: Stage exact JVM and native dictionary test dependencies
         shell: bash
         run: |
-          git clone --depth 1 --branch v0.1.0 \
-            https://github.com/vinary-tree/llattice.git \
-            .release-deps/llattice
-          git clone --depth 1 --branch v4.0.0-rc.4 \
-            https://github.com/vinary-tree/vinary-tree-interop.git \
-            .release-deps/vinary-tree-interop
-          git clone --depth 1 --branch v4.0.0-rc.4 \
-            https://github.com/vinary-tree/libdictenstein.git \
-            .release-deps/libdictenstein
           cargo build --locked --release \
-            --manifest-path .release-deps/libdictenstein/Cargo.toml \
+            --manifest-path ../libdictenstein/Cargo.toml \
             --features ffi
-          .release-deps/vinary-tree-interop/bindings/jvm/gradlew \
+          ../vinary-tree-interop/bindings/jvm/gradlew \
             --no-daemon \
-            -p .release-deps/vinary-tree-interop/bindings/jvm \
+            -p ../vinary-tree-interop/bindings/jvm \
             -PjavaToolchain=25 \
             publishMavenJavaPublicationToStagingRepository
       - uses: actions/download-artifact@v7
@@ -345,8 +351,9 @@ jobs:
         run: >-
           ./gradlew --no-daemon
           -PjavaToolchain=25
-          -PinteropRepository="$GITHUB_WORKSPACE/.release-deps/vinary-tree-interop/bindings/jvm/build/staging-deploy"
-          -Plibdictenstein.nativeDir="$GITHUB_WORKSPACE/.release-deps/libdictenstein/target/release"
+          -PvinaryTreeInteropRoot="$RUNNER_TEMP/no-composite-interop"
+          -PinteropRepository="$GITHUB_WORKSPACE/../vinary-tree-interop/bindings/jvm/build/staging-deploy"
+          -Plibdictenstein.nativeDir="$GITHUB_WORKSPACE/../libdictenstein/target/release"
           test javadoc verifyNativeResources
           publishMavenJavaPublicationToStagingRepository
       - uses: actions/upload-artifact@v7
@@ -662,7 +669,7 @@ jobs:
           grep -Fx 'module github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4' bindings/go/go.mod
           grep -F 'github.com/vinary-tree/vinary-tree-interop/bindings/go/v4 v4.0.0-rc.4' bindings/go/go.mod
           GOWORK=off go -C bindings/go mod verify
-          version=${GITHUB_REF_NAME#v}
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
           module_tag="bindings/go/v$version"
           if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$module_tag" >/dev/null 2>&1; then
             echo "tag already exists: $module_tag" >&2
@@ -713,6 +720,9 @@ jobs:
     runs-on: ubuntu-24.04
     environment: opam
     steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v7
         with:
           name: opam-package
@@ -733,7 +743,7 @@ jobs:
           done
           gh repo clone "$account/opam-repository" opam-repository
           git -C opam-repository fetch https://github.com/ocaml/opam-repository.git master
-          version=${GITHUB_REF_NAME#v}
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
           branch="vinary-tree-liblevenshtein-$version-$GITHUB_RUN_ID"
           git -C opam-repository checkout -b "$branch" FETCH_HEAD
           package="opam-repository/packages/vinary-tree-liblevenshtein/vinary-tree-liblevenshtein.$version"

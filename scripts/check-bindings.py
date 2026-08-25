@@ -634,6 +634,32 @@ require(
     "io/github/vinary-tree" not in release,
     "Maven local paths must follow io.vinarytree -> io/vinarytree",
 )
+# Cargo resolves this repository's development-only path dependencies relative
+# to the repository root.  JVM packaging must therefore mirror the documented
+# sibling topology instead of nesting the dictionary producer below the root;
+# the latter passes source inspection but fails in a clean GitHub runner before
+# Gradle ever starts.  Keep Gradle's composite substitution disabled here so
+# the consumer test resolves the exact Maven artifact staged by the interop
+# producer, not its source checkout.
+for marker in (
+    "--manifest-path ../libdictenstein/cargo.toml",
+    "../vinary-tree-interop/bindings/jvm/gradlew",
+    '-pvinarytreeinteroproot="$runner_temp/no-composite-interop"',
+):
+    require(marker in release, f"JVM release staging is missing {marker}")
+for forbidden in (
+    ".release-deps/libdictenstein",
+    ".release-deps/vinary-tree-interop/bindings/jvm",
+    "${github_ref_name#v}",
+):
+    require(
+        forbidden not in release,
+        f"release staging contains a forbidden source-tag-derived path/version: {forbidden}",
+    )
+require(
+    "numbered corrective release tag" in release,
+    "release workflow does not recognize a provenance-safe corrective source tag",
+)
 libdictenstein_release = text(
     LIBDICT_ROOT / ".github" / "workflows" / "release-bindings.yml"
 ).lower()
