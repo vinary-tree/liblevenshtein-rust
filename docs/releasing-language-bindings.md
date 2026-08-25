@@ -615,8 +615,14 @@ library, and depend exactly on `vinary-tree-interop==4.0.0rc4`.
 
 The JVM artifact targets the documented Java level, uses Foreign Function &
 Memory resource lifetimes, bundles its project native resources, and depends
-on `io.vinarytree:vinary-tree-interop:4.0.0-rc.4`. The Clojure facade is staged
-only after the exact JVM artifact has been installed into the test repository.
+on `io.vinarytree:vinary-tree-interop:4.0.0-rc.4`. The Clojure facade directly
+depends on both that interop coordinate and
+`io.vinarytree:liblevenshtein:4.0.0-rc.4`; a validation job must therefore
+install the exact staged JAR and POM for both coordinates into its local test
+repository before Leiningen starts. The JVM producer transports the two
+staging trees as separately named workflow artifacts. Root JReleaser jobs
+download only the root-owned tree, preserving the invariant that one owner
+cannot publish another owner's bytes.
 Maven Central and Clojars are separate coordinates and separate credentials.
 Collection conformance tests that construct dictionaries also require the
 exact native libdictenstein provider. The job builds that provider with its
@@ -679,8 +685,11 @@ construct a relocation upload manually outside the immutable release source.
 `scripts/stage-maven-relocations.py --check` proves the canonical input and the
 exact generated migration POMs again immediately before signing and upload.
 Because no root-owned RC.4 coordinate was published from the failed canonical
-source, this packaging-only bridge is included in the append-only
-`v4.0.0-rc.4-release.1` recovery source without changing the package version.
+source, this packaging-only bridge is included in the append-only corrective
+source without changing the package version. The first corrective tag exposed
+a validation-only Clojure dependency-transport defect and remains immutable;
+the complete corrected graph is therefore frozen at
+`v4.0.0-rc.4-release.2`.
 
 The RC.4 recovery sequence is intentionally three explicit dispatches. Wait
 for each run to finish and record its run URL before continuing:
@@ -688,17 +697,17 @@ for each run to finish and record its run URL before continuing:
 ```bash
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.1 \
+  --ref v4.0.0-rc.4-release.2 \
   -f registry=maven-central
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.1 \
+  --ref v4.0.0-rc.4-release.2 \
   -f registry=maven-relocation-dylon
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.1 \
+  --ref v4.0.0-rc.4-release.2 \
   -f registry=maven-relocation-universal-automata
 ```
 
