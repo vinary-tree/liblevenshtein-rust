@@ -92,7 +92,7 @@ checks must compare every manifest with `bindings/api.json` so a prefixed
 distribution cannot silently return.
 
 For RC.4, the authoritative global-distribution metadata is frozen in the
-append-only root source `v4.0.0-rc.4-release.4` and libdictenstein source
+append-only root source `v4.0.0-rc.4-release.5` and libdictenstein source
 `v4.0.0-rc.4-release.2`. Source-fetching metadata must distinguish the
 immutable package version from its corrective source tag: the LuaRocks
 rockspecs name those exact refs, and opam staging derives the ref from the
@@ -734,23 +734,33 @@ retains the external owner topology, the unchanged package version, and
 libdictenstein `v4.0.0-rc.4-release.2`, which preserves its namespaced Fortran
 module while disabling fpm's optional package-name module convention.
 
+Root release.4 built and tested every JVM artifact, but
+`actions/upload-artifact@v7` rejected the sibling-relative upload path because
+its archive root contained `..`. Root `v4.0.0-rc.4-release.5` copies the exact
+interop Maven tree into a checkout-owned staging directory, proves the expected
+POM and JAR exist on both sides of the copy, and uploads only that owned path.
+The binding contract rejects future scalar artifact paths containing parent
+traversal. An audit of every core release workflow found no other affected
+upload. This correction changes workflow transport only; package bytes,
+package versions, and sibling source refs remain unchanged.
+
 The RC.4 recovery sequence is intentionally three explicit dispatches. Wait
 for each run to finish and record its run URL before continuing:
 
 ```bash
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.4 \
+  --ref v4.0.0-rc.4-release.5 \
   -f registry=maven-central
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.4 \
+  --ref v4.0.0-rc.4-release.5 \
   -f registry=maven-relocation-dylon
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.4 \
+  --ref v4.0.0-rc.4-release.5 \
   -f registry=maven-relocation-universal-automata
 ```
 

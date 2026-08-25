@@ -51,7 +51,7 @@
   },
   "publication": {
     "distTag": "next",
-    "sourceTag": "v4.0.0-rc.4-release.4",
+    "sourceTag": "v4.0.0-rc.4-release.5",
     "fpm": false,
     "fpmReason": "fpm accepts numeric package versions only; validate 4.0.0 as a source candidate and defer registry publication until the final release.",
     "hackage": false,

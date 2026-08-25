@@ -340,6 +340,16 @@ jobs:
           python3 scripts/stage-maven-relocations.py
           bindings/jvm/build/staging-deploy
           bindings/jvm/build/staging-relocations
+      - name: Copy sibling Maven staging into the artifact workspace
+        shell: bash
+        run: |
+          source=../vinary-tree-interop/bindings/jvm/build/staging-deploy
+          destination=release-artifacts/interop-maven-staging
+          version=$(python3 -c 'import json; print(json.load(open("release/version.json"))["registries"]["maven"])')
+          test -f "$source/io/vinarytree/vinary-tree-interop/$version/vinary-tree-interop-$version.pom"
+          mkdir -p "$destination"
+          cp -a "$source/." "$destination/"
+          test -f "$destination/io/vinarytree/vinary-tree-interop/$version/vinary-tree-interop-$version.jar"
       - uses: actions/upload-artifact@v7
         with:
           name: maven-staging
@@ -348,7 +358,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: interop-maven-staging
-          path: ../vinary-tree-interop/bindings/jvm/build/staging-deploy
+          path: release-artifacts/interop-maven-staging
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:

@@ -726,6 +726,10 @@ for marker in (
 
 # Active release metadata must name every implemented registry.
 release = text(ROOT / ".github" / "workflows" / "release.yml").lower()
+require(
+    re.search(r"(?m)^\s*path:\s*['\"]?\.\./", release) is None,
+    "release artifact uploads must stage sibling outputs inside the checkout",
+)
 checkout_siblings = text(
     ROOT / ".github" / "actions" / "checkout-dev-siblings" / "action.yml"
 ).lower()
@@ -759,6 +763,7 @@ for marker in (
 for marker in (
     "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein",
     "name: interop-maven-staging",
+    "path: release-artifacts/interop-maven-staging",
     "../vinary-tree-interop/bindings/jvm/build/staging-deploy",
     "for artifact in vinary-tree-interop liblevenshtein; do",
     "bindings/jvm/build/staging-relocations",
