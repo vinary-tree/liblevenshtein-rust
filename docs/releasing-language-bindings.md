@@ -92,8 +92,8 @@ checks must compare every manifest with `bindings/api.json` so a prefixed
 distribution cannot silently return.
 
 For RC.4, the authoritative global-distribution metadata is frozen in the
-append-only root source `v4.0.0-rc.4-release.3` and libdictenstein source
-`v4.0.0-rc.4-release.1`. Source-fetching metadata must distinguish the
+append-only root source `v4.0.0-rc.4-release.4` and libdictenstein source
+`v4.0.0-rc.4-release.2`. Source-fetching metadata must distinguish the
 immutable package version from its corrective source tag: the LuaRocks
 rockspecs name those exact refs, and opam staging derives the ref from the
 validated workflow dispatch. Synchronizers enforce this provenance so a
@@ -722,13 +722,17 @@ a validation-only Clojure dependency-transport defect. The second corrected
 that transport but exposed an aggregate-policy provenance defect: the root
 contract audited current sibling publisher rules after checking out their
 older canonical tags. Both tags remain immutable. The complete graph and its
-single-source sibling-ref manifest are therefore frozen at root
-`v4.0.0-rc.4-release.3`, including JavaScript runtime corrective source
-`v4.0.0-rc.4-release.2`. That runtime source places owner repositories beside
-the runtime checkout so Cargo never applies the runtime-only patch overlay to
-an owner's locked graph. The graph also pins libdictenstein corrective source
-`v4.0.0-rc.4-release.2`, which preserves its namespaced Fortran module while
-disabling fpm's optional package-name module convention.
+single-source sibling-ref manifest were first frozen at root
+`v4.0.0-rc.4-release.3`. Its exact-source validation then exposed a malformed
+CRLF blob in interop's Windows Gradle launcher: Git's declared text filter made
+a fresh exact-tag checkout appear modified. Interop
+`v4.0.0-rc.4-release.3` stores canonical LF object data while preserving CRLF
+checkout semantics and rejects noncanonical tracked text in its verification
+gate. JavaScript runtime `v4.0.0-rc.4-release.3` consumes that corrected exact
+source. Root `v4.0.0-rc.4-release.4` advances only those two source refs; it
+retains the external owner topology, the unchanged package version, and
+libdictenstein `v4.0.0-rc.4-release.2`, which preserves its namespaced Fortran
+module while disabling fpm's optional package-name module convention.
 
 The RC.4 recovery sequence is intentionally three explicit dispatches. Wait
 for each run to finish and record its run URL before continuing:
@@ -736,17 +740,17 @@ for each run to finish and record its run URL before continuing:
 ```bash
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.3 \
+  --ref v4.0.0-rc.4-release.4 \
   -f registry=maven-central
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.3 \
+  --ref v4.0.0-rc.4-release.4 \
   -f registry=maven-relocation-dylon
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.3 \
+  --ref v4.0.0-rc.4-release.4 \
   -f registry=maven-relocation-universal-automata
 ```
 

@@ -71,8 +71,8 @@ def self_test() -> None:
             "duallity": "4.0.0-rc.4",
         },
         "sourceRefs": {
-            "vinary-tree-interop": "v4.0.0-rc.4-release.2",
-            "javascript-runtime": "v4.0.0-rc.4-release.2",
+            "vinary-tree-interop": "v4.0.0-rc.4-release.3",
+            "javascript-runtime": "v4.0.0-rc.4-release.3",
             "liblevenshtein-npm": "v4.0.0-rc.4-release.1",
             "llattice": "v0.1.0",
             "libdictenstein": "v4.0.0-rc.4-release.2",

@@ -529,9 +529,9 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     if not isinstance(publication, dict) or publication.get("hackage") is not False:
         failures.append("Hackage RC publication must remain embargoed")
     source_tag = publication.get("sourceTag") if isinstance(publication, dict) else None
-    if source_tag != f"v{canonical}-release.3":
+    if source_tag != f"v{canonical}-release.4":
         failures.append(
-            "RC.4 publishable source tag must remain the append-only release.3 correction"
+            "RC.4 publishable source tag must remain the append-only release.4 correction"
         )
     dependencies = model["dependencies"]
     assert isinstance(dependencies, dict)
