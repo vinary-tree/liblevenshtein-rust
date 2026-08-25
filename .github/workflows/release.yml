@@ -370,6 +370,11 @@ jobs:
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
+          name: interop-maven-staging
+          path: ../vinary-tree-interop/bindings/jvm/build/staging-deploy
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
           name: maven-relocations
           path: bindings/jvm/build/staging-relocations
           if-no-files-found: error
@@ -393,17 +398,28 @@ jobs:
         with:
           name: maven-staging
           path: maven-staging
-      - name: Install the exact staged JVM dependency locally
+      - uses: actions/download-artifact@v7
+        with:
+          name: interop-maven-staging
+          path: interop-maven-staging
+      - name: Install the exact staged JVM dependencies locally
         shell: bash
         run: |
           version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
-          repository="$HOME/.m2/repository/io/vinarytree/liblevenshtein/$version"
-          mkdir -p "$repository"
-          jar=$(find maven-staging -type f -name "liblevenshtein-$version.jar" -print -quit)
-          pom="maven-staging/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.pom"
-          test -n "$jar" && test -f "$pom"
-          cp "$jar" "$repository/liblevenshtein-$version.jar"
-          cp "$pom" "$repository/liblevenshtein-$version.pom"
+          for artifact in vinary-tree-interop liblevenshtein; do
+            if [[ "$artifact" = vinary-tree-interop ]]; then
+              staging=interop-maven-staging
+            else
+              staging=maven-staging
+            fi
+            source="$staging/io/vinarytree/$artifact/$version"
+            repository="$HOME/.m2/repository/io/vinarytree/$artifact/$version"
+            for extension in jar pom; do
+              file="$source/$artifact-$version.$extension"
+              test -f "$file"
+              install -D -m 0644 "$file" "$repository/$artifact-$version.$extension"
+            done
+          done
       - name: Test and build Clojure JAR and POM
         working-directory: bindings/clojure
         env:

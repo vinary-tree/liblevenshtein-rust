@@ -670,6 +670,9 @@ for marker in (
     require(marker in release, f"release workflow does not cover {marker}")
 for marker in (
     "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein",
+    "name: interop-maven-staging",
+    "../vinary-tree-interop/bindings/jvm/build/staging-deploy",
+    "for artifact in vinary-tree-interop liblevenshtein; do",
     "bindings/jvm/build/staging-relocations",
     "com-github-dylon",
     "com-github-universal-automata",
