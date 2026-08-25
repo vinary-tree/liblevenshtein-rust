@@ -726,7 +726,9 @@ single-source sibling-ref manifest are therefore frozen at root
 `v4.0.0-rc.4-release.3`, including JavaScript runtime corrective source
 `v4.0.0-rc.4-release.2`. That runtime source places owner repositories beside
 the runtime checkout so Cargo never applies the runtime-only patch overlay to
-an owner's locked graph.
+an owner's locked graph. The graph also pins libdictenstein corrective source
+`v4.0.0-rc.4-release.2`, which preserves its namespaced Fortran module while
+disabling fpm's optional package-name module convention.
 
 The RC.4 recovery sequence is intentionally three explicit dispatches. Wait
 for each run to finish and record its run URL before continuing:

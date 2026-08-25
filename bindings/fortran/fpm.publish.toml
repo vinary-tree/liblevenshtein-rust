@@ -15,4 +15,4 @@ v = "4.0.0"
 
 [build]
 link = ["liblevenshtein"]
-module-naming = true
+module-naming = false

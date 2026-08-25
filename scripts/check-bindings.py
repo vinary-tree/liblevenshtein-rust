@@ -500,6 +500,11 @@ require(
     and fortran_publish_package["name"] == packages["fpm"],
     "wrong fpm package",
 )
+require(
+    fortran_package.get("build", {}).get("module-naming") is False
+    and fortran_publish_package.get("build", {}).get("module-naming") is False,
+    "fpm manifests must disable module naming for the namespaced public module",
+)
 ocaml_project = text(ROOT / "bindings" / "ocaml" / "dune-project")
 require(
     f"(name {packages['opam']})" in ocaml_project,

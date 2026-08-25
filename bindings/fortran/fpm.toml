@@ -13,4 +13,4 @@ vinary-tree-interop = { path = "../../../vinary-tree-interop/bindings/fortran" }
 
 [build]
 link = ["liblevenshtein"]
-module-naming = true
+module-naming = false
