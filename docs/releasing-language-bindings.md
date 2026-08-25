@@ -123,9 +123,12 @@ immutable tag
   -> resolve and smoke-test the public bytes
 ```
 
-If any transition fails, keep the immutable tag and version unchanged, repair
-the workflow on the next release-candidate commit, and mint the next candidate.
-Never widen a failed run to an `all registries` operation.
+If any transition fails, keep the immutable tag unchanged and never widen a
+failed run to an `all registries` operation. Normally, repair the source and
+mint the next candidate. A workflow-only failure discovered before this owner
+publishes any coordinate may instead use the narrowly defined corrective-source
+procedure below; it preserves the package version without moving the failed
+tag or obscuring the source that actually produced the artifacts.
 
 ![Sequence diagram showing the release operator, immutable source, validation graph, protected environment, package registry, fresh consumer, and evidence store from tag creation through public-byte proof.](diagrams/bindings/release-operator-flow.svg)
 
@@ -157,10 +160,34 @@ git push origin "refs/tags/${RELEASE_TAG}"
 ```
 
 Do not force-move a release tag after it is pushed. If the tag graph exposes a
-defect, correct the source and mint the next candidate. Before the first tag,
-the same commit must already have passed ordinary branch CI and the local
-release gates. A tag push establishes an immutable source boundary; it does
-not start a workflow or authorize a registry operation.
+defect, normally correct the source and mint the next candidate. Before the
+first tag, the same commit must already have passed ordinary branch CI and the
+local release gates. A tag push establishes an immutable source boundary; it
+does not start a workflow or authorize a registry operation.
+
+#### Corrective source tag for an unpublished owner
+
+A numbered tag of the form `vVERSION-release.N` is an exceptional source
+identity, not a new package version. It is permitted only when all of the
+following are true:
+
+1. the canonical `vVERSION` tag failed before any coordinate owned by that
+   repository was published at `VERSION`;
+2. the correction is limited to release automation, verification, or
+   documentation and does not change the shipped API, ABI, or runtime behavior;
+3. the failed canonical tag remains immutable and its failure is recorded in
+   the release ledger;
+4. every registry-facing version is derived from the package manifest, never
+   from the corrective tag name; and
+5. the corrective tag receives the complete `validate-only`, protected publish,
+   registry read-back, and clean-consumer sequence.
+
+For example, `v4.0.0-rc.4-release.1` may authoritatively produce packages whose
+version remains `4.0.0-rc.4`. The workflow guard accepts the canonical tag or a
+positive, numbered corrective suffix and rejects branches, unnumbered suffixes,
+and suffix zero. If any coordinate from the owner is already public, or if the
+library/package behavior changes, advance the package version instead. Never
+use this mechanism to rebuild or replace published bytes.
 
 ### 2. Dispatch and observe validation
 
@@ -588,6 +615,38 @@ exact native libdictenstein provider. The job builds that provider with its
 directory to an absolute path before Gradle forks a test process. A developer's
 pre-existing `target` directory is never an acceptable provider.
 
+#### Maven Central identity and the legacy Java coordinate
+
+Maven Central is the publication authority for the JVM artifacts. JFrog is not
+part of this release path: JReleaser uploads the signed staging bundle directly
+through Sonatype's Central Publisher API. The protected workflow environment
+holds a short-lived or expiring [Central Portal user token](https://central.sonatype.org/publish/generate-portal-token/)
+and the signing material; it does not contain a JFrog credential.
+
+The legacy pure-Java release remains immutable at
+`com.github.universal-automata:liblevenshtein:3.0.0` in
+[Maven Central](https://repo1.maven.org/maven2/com/github/universal-automata/liblevenshtein/3.0.0/).
+The Rust-backed JVM facade is staged at
+`io.vinarytree:liblevenshtein:4.0.0-rc.4`. Before the first upload under that
+group, the operator must prove that the Central Portal account controls the
+`io.vinarytree` namespace. Sonatype defines a group identifier as a controlled
+reverse-domain namespace and requires ownership proof in its
+[coordinate requirements](https://central.sonatype.org/publish/requirements/coordinates/).
+Absence of that namespace is a hard pre-publication barrier, not a reason to
+route the artifact through another repository.
+
+If `io.vinarytree` remains the canonical group, publish its complete signed
+artifact first. Then, from a reviewed source workflow that also controls the
+legacy namespace, publish one minimal relocation POM at the corresponding new
+version under `com.github.universal-automata:liblevenshtein`. The
+[official Maven relocation procedure](https://maven.apache.org/guides/mini/guide-relocation.html)
+causes old-coordinate consumers to resolve the new group while emitting a
+migration warning. Never alter the already-published `3.0.0` POM, and never
+construct a relocation upload manually outside the immutable release source.
+The RC.4 tag does not contain that bridge; add it to the next otherwise-needed
+candidate or the final `4.0.0` release rather than minting a candidate solely
+to change metadata.
+
 .NET packages depend on `VinaryTree.Interop` rather than embedding its source.
 Ruby packages inspect every platform payload before `gem push`. Every managed
 facade must pass its collection-idiom, resource-lifetime, snapshot-consistency,
@@ -720,8 +779,10 @@ trusted-publisher setup.
 - [ ] All workflow YAML parses and all package dry runs succeed.
 - [ ] A `validate-only` dispatch at each immutable tag completes before any
       registry dispatch.
-- [ ] Every registry dispatch names exactly one target and runs against
-      `refs/tags/v4.0.0-rc.4`, never a branch.
+- [ ] Every registry dispatch names exactly one target and runs against the
+      ledger-recorded immutable source tag, never a branch. The ordinary tag is
+      `refs/tags/v4.0.0-rc.4`; an eligible unpublished-owner recovery may use
+      `refs/tags/v4.0.0-rc.4-release.N`.
 - [ ] Registry namespaces, trusted publishers, signing keys, and protected
       environments exist.
 - [ ] Every new scoped npm package has `latest = next = 4.0.0-rc.4`, has no
