@@ -91,13 +91,16 @@ the Vinary Tree namespace—for example, the NuGet distribution
 checks must compare every manifest with `bindings/api.json` so a prefixed
 distribution cannot silently return.
 
-For RC.4, the authoritative global-distribution metadata is frozen in the
+For RC.4, the already-published global-distribution metadata came from
 append-only root source `v4.0.0-rc.4-release.5` and libdictenstein source
-`v4.0.0-rc.4-release.2`. Source-fetching metadata must distinguish the
-immutable package version from its corrective source tag: the LuaRocks
-rockspecs name those exact refs, and opam staging derives the ref from the
-validated workflow dispatch. Synchronizers enforce this provenance so a
-registry cannot fetch an earlier tag that still carries prefixed manifests.
+`v4.0.0-rc.4-release.2`. The clean-runner LuaRocks recovery advances only the
+affected publisher sources to root `v4.0.0-rc.4-release.6` and libdictenstein
+`v4.0.0-rc.4-release.4`; package versions and language APIs remain unchanged.
+Source-fetching metadata must distinguish the immutable package version from
+its corrective source tag: the LuaRocks rockspecs name those recovery refs,
+and opam staging derives its ref from the validated workflow dispatch.
+Synchronizers enforce this provenance so a registry cannot fetch an earlier
+tag that lacks the required publisher environment.
 
 ## Two-phase, fail-closed workflow protocol
 
@@ -703,12 +706,18 @@ and passes JReleaser's named-deployer selector. Consequently, a bare local
 `jreleaser deploy` publishes nothing, and a successful canonical upload is
 never retried when one historical namespace fails. Publish `maven-central`
 first.
-Only after its staged POM and JAR are byte-identical to the public Central
-read-back may the operator dispatch `maven-relocation-dylon` and
+Only after its staged POM is byte-identical and its JAR's public SHA-256 matches
+the value pinned in `release/version.json` may the operator dispatch
+`maven-relocation-dylon` and
 `maven-relocation-universal-automata`, independently and in either order. The
 relocation POMs have `pom` packaging, carry Central's required project
 metadata, contain no implementation JAR, and are generated only from
 `release/version.json`.
+The relocation lane deliberately does not compare that canonical JAR with its
+independent rebuild: platform toolchains can emit non-bit-reproducible native
+members, and no implementation JAR is part of a relocation upload. Pinning the
+already-published artifact's digest proves the public target without confusing
+rebuild reproducibility with relocation safety.
 The [official Maven relocation procedure](https://maven.apache.org/guides/mini/guide-relocation.html)
 causes old-coordinate consumers to resolve the new group while emitting a
 migration warning. Never alter the already-published historical POMs, and never
@@ -1075,6 +1084,16 @@ the credential in the runner's LuaRocks configuration. Keep required-reviewer
 protection on the environment, label the two keys by repository in LuaRocks,
 and revoke or rotate either key independently when its ownership changes or
 its confidentiality is uncertain.
+
+The LuaRocks client delegates JSON response decoding to a separately installed
+Lua module. A clean hosted runner does not provide that module merely because
+the `luarocks` executable is installed. Every publisher must therefore install
+`dkjson` immediately after installing LuaRocks and before invoking
+`luarocks upload`. The binding release gate checks this invariant in both
+publishing repositories. If an upload fails with `A JSON library was not
+found`, treat it as a publisher-environment defect: do not move the source tag
+or change the package version, add the explicit dependency in a new numbered
+corrective source, repeat validate-only, and then retry only the affected rock.
 
 ### opam-repository contribution authority
 

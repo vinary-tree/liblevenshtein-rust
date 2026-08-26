@@ -1,0 +1,39 @@
+@startuml family-completeness-gate
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  RoundCorner 14
+  BorderColor #37474F
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+left to right direction
+
+title Family-wide binding completeness — omissions become explicit cells
+
+rectangle "Reviewed axes\nprojects · capabilities\nlanguages · unit domains" as AXES #BBDEFB
+rectangle "Deterministic generator\nvalidate roots, evidence,\nidentities, and proofs" as GEN #D1C4E9
+rectangle "Cartesian inventory\n1 row per\n(project, language, capability)" as MATRIX #FFF9C4
+rectangle "Five independent evidence gates\n\n1. idiomatic API + lifecycle\n2. conformance + property + stress\n3. representative native/binding benchmark\n4. API + intended examples + deployment docs\n5. exact registry clean-consumer readback" as EVIDENCE #C8E6C9
+rectangle "Strict completion gate\ncomplete, or reviewed\ninapplicability proof" as GATE #C5E1A5
+rectangle "Next implementation wave\nordered missing and\naudit-required cells" as WORK #CFD8DC
+
+AXES --> GEN
+GEN --> MATRIX
+MATRIX --> EVIDENCE
+EVIDENCE --> GATE
+GATE -[#C62828,dashed]-> WORK : unfinished cells remain visible
+
+note bottom of GATE #E8F5E9
+  “Directory exists” is not completion.
+  “No row exists” is not inapplicability.
+end note
+
+note bottom of WORK #E3F2FD
+  Every completed wave adds reviewed
+  evidence to the source model and
+  regenerates the Cartesian inventory.
+end note
+@enduml

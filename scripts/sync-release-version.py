@@ -529,10 +529,24 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     if not isinstance(publication, dict) or publication.get("hackage") is not False:
         failures.append("Hackage RC publication must remain embargoed")
     source_tag = publication.get("sourceTag") if isinstance(publication, dict) else None
-    if source_tag != f"v{canonical}-release.5":
+    corrective_pattern = rf"v{re.escape(canonical)}-release\.[1-9][0-9]*"
+    if (
+        not isinstance(source_tag, str)
+        or re.fullmatch(corrective_pattern, source_tag) is None
+    ):
         failures.append(
-            "RC.4 publishable source tag must remain the append-only release.5 correction"
+            "RC publishable source tag must be an append-only numbered correction"
         )
+    canonical_maven_jar_sha = (
+        publication.get("canonicalMavenJarSha256")
+        if isinstance(publication, dict)
+        else None
+    )
+    if (
+        not isinstance(canonical_maven_jar_sha, str)
+        or re.fullmatch(r"[0-9a-f]{64}", canonical_maven_jar_sha) is None
+    ):
+        failures.append("canonical Maven JAR SHA-256 must be pinned in lowercase hex")
     dependencies = model["dependencies"]
     assert isinstance(dependencies, dict)
     try:

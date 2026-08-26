@@ -45,13 +45,14 @@
     "javascript-runtime": "v4.0.0-rc.4-release.3",
     "liblevenshtein-npm": "v4.0.0-rc.4-release.1",
     "llattice": "v0.1.0",
-    "libdictenstein": "v4.0.0-rc.4-release.2",
+    "libdictenstein": "v4.0.0-rc.4-release.4",
     "lling-llang": "v4.0.0-rc.4-release.1",
     "duallity": "v4.0.0-rc.4-release.1"
   },
   "publication": {
     "distTag": "next",
-    "sourceTag": "v4.0.0-rc.4-release.5",
+    "sourceTag": "v4.0.0-rc.4-release.6",
+    "canonicalMavenJarSha256": "af55e27520375c6b9465f765a4d9e8facd221f5fbfadd72c37cbb34b285b210b",
     "fpm": false,
     "fpmReason": "fpm accepts numeric package versions only; validate 4.0.0 as a source candidate and defer registry publication until the final release.",
     "hackage": false,

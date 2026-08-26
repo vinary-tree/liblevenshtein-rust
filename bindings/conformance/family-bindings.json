@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "languages": [
+    {"id": "rust", "packageManager": "crates.io", "hostIdioms": "traits; IntoIterator/Iterator; Result; Drop"},
+    {"id": "c", "packageManager": "CMake/pkg-config/GitHub Releases", "hostIdioms": "opaque handles; status codes; bounded buffers; vtables"},
+    {"id": "cpp", "packageManager": "CMake/pkg-config/GitHub Releases", "hostIdioms": "RAII; ranges/iterators; move-only handles; typed errors"},
+    {"id": "python", "packageManager": "PyPI", "hostIdioms": "context managers; iterators/collections; exceptions; protocols"},
+    {"id": "java", "packageManager": "Maven Central", "hostIdioms": "AutoCloseable/try-with-resources; Collection/Map; Stream/Spliterator; interfaces"},
+    {"id": "kotlin", "packageManager": "Maven Central", "hostIdioms": "use; Iterable/Map; Sequence; SAM interfaces"},
+    {"id": "scala", "packageManager": "Maven Central", "hostIdioms": "Using/AutoCloseable; Iterable; Iterator; type classes"},
+    {"id": "clojure", "packageManager": "Clojars", "hostIdioms": "Seqable; IReduceInit; Closeable; persistent values"},
+    {"id": "csharp", "packageManager": "NuGet", "hostIdioms": "IDisposable/using; IEnumerable/IDictionary; exceptions; interfaces"},
+    {"id": "fsharp", "packageManager": "NuGet", "hostIdioms": "use/use!; seq; Result; object expressions; interfaces"},
+    {"id": "go", "packageManager": "Go module proxy", "hostIdioms": "interfaces; iter.Seq; io.Closer; errors"},
+    {"id": "javascript", "packageManager": "npm", "hostIdioms": "Symbol.iterator; Symbol.dispose; Error; native/WASM/WASI runtime identity"},
+    {"id": "typescript", "packageManager": "npm", "hostIdioms": "structural interfaces; Iterable; Disposable; discriminated errors"},
+    {"id": "clojurescript", "packageManager": "npm", "hostIdioms": "ISeqable; IReduce; protocol dispatch; close!"},
+    {"id": "swift", "packageManager": "Swift Package Index", "hostIdioms": "Sequence/Collection; protocols; throws; deterministic scoped ownership"},
+    {"id": "ruby", "packageManager": "RubyGems", "hostIdioms": "Enumerable; blocks/ensure; exceptions; explicit close"},
+    {"id": "fortran", "packageManager": "fpm", "hostIdioms": "modules; derived types; type-bound procedures; finalizers"},
+    {"id": "ocaml", "packageManager": "opam", "hostIdioms": "abstract types; Seq; result; Fun.protect"},
+    {"id": "haskell", "packageManager": "Hackage", "hostIdioms": "type classes; Foldable; bracket; Either"},
+    {"id": "lua", "packageManager": "LuaRocks", "hostIdioms": "generic-for iterators; __close; tables; error values"},
+    {"id": "raku", "packageManager": "zef/fez", "hostIdioms": "NativeCall; Iterable/Positional/Associative; LEAVE; exceptions"}
+  ],
+  "projects": [
+    {
+      "id": "vinary-tree-interop",
+      "role": "core-abi",
+      "root": "../vinary-tree-interop",
+      "unitDomains": ["byte", "unicode-scalar", "u64", "not-unit-bearing"],
+      "capabilities": ["retained-resource", "dictionary-snapshot", "dictionary-visit", "dictionary-graph", "dictionary-entries", "snapshot-identity", "scalar-wfst"],
+      "declaredLanguageEvidence": {
+        "rust": "Cargo.toml", "c": "include/vinary_tree_interop.h", "cpp": "include/vinary_tree_interop.h",
+        "python": "bindings/python", "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm",
+        "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
+        "swift": "bindings/swift", "fortran": "bindings/fortran", "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+      }
+    },
+    {
+      "id": "llattice",
+      "role": "core-library",
+      "root": "../llattice",
+      "unitDomains": ["not-unit-bearing"],
+      "capabilities": ["lattice-trait", "numeric-lattices", "boolean-lattice", "option-lattice", "set-lattice", "vector-content-lattice"],
+      "declaredLanguageEvidence": {"rust": "src/lib.rs"}
+    },
+    {
+      "id": "libdictenstein",
+      "role": "core-library",
+      "root": "../libdictenstein",
+      "unitDomains": ["byte", "unicode-scalar", "u64"],
+      "capabilities": ["dictionary-collection", "dynamic-dawg", "sorted-minimal-dawg", "double-array-trie", "suffix-automaton", "scdawg", "persistent-artrie", "pathmap-backend", "snapshot", "resource-provider"],
+      "declaredLanguageEvidence": {
+        "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "python": "bindings/python",
+        "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm", "clojure": "bindings/clojure",
+        "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
+        "clojurescript": "bindings/javascript/cljs", "swift": "bindings/swift", "ruby": "bindings/ruby", "fortran": "bindings/fortran",
+        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+      }
+    },
+    {
+      "id": "liblevenshtein",
+      "role": "core-library",
+      "root": ".",
+      "unitDomains": ["byte", "unicode-scalar", "u64"],
+      "capabilities": ["distance", "standard", "transposition", "damerau-levenshtein", "merge-and-split", "generalized-edit", "phonetic", "fzf", "universal", "wallbreaker", "query-traversal", "ranked-contextual", "serialization", "resource-consumer"],
+      "declaredLanguageEvidence": {
+        "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "python": "bindings/python",
+        "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm", "clojure": "bindings/clojure",
+        "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
+        "clojurescript": "bindings/javascript/cljs", "swift": "bindings/swift", "ruby": "bindings/ruby", "fortran": "bindings/fortran",
+        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+      }
+    },
+    {
+      "id": "lling-llang",
+      "role": "core-library",
+      "root": "../lling-llang",
+      "unitDomains": ["unicode-scalar", "vocabulary-id", "not-unit-bearing"],
+      "capabilities": ["semiring", "wfst", "composition", "lattice", "algorithms", "cfg", "differentiable", "pushdown", "symbolic", "acoustic-asr-ctc", "correction-layers", "llm-decoder", "custom-provider"],
+      "declaredLanguageEvidence": {
+        "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "javascript": "bindings/javascript",
+        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs"
+      }
+    },
+    {
+      "id": "duallity",
+      "role": "core-library",
+      "root": "../duallity",
+      "unitDomains": ["unicode-scalar"],
+      "capabilities": ["dictionary-backend", "levenshtein-wfst", "universal-wfst", "generalized-wfst", "phonetic-wfst", "wallbreaker-wfst", "fzf-wfst", "resource-bridge"],
+      "declaredLanguageEvidence": {
+        "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "javascript": "bindings/javascript",
+        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs"
+      }
+    },
+    {
+      "id": "javascript-runtime",
+      "role": "distribution-owner",
+      "root": "../javascript-runtime",
+      "unitDomains": ["not-unit-bearing"],
+      "capabilities": ["native-napi-runtime", "browser-wasm-runtime", "wasi-runtime", "resource-table", "runtime-identity"],
+      "declaredLanguageEvidence": {"javascript": "package.json", "typescript": "index.d.ts"},
+      "reviewRequiredLanguages": ["rust", "c", "cpp", "python", "java", "kotlin", "scala", "clojure", "csharp", "fsharp", "go", "clojurescript", "swift", "ruby", "fortran", "ocaml", "haskell", "lua", "raku"]
+    },
+    {
+      "id": "liblevenshtein-npm",
+      "role": "distribution-owner",
+      "root": "../liblevenshtein-npm",
+      "unitDomains": ["byte", "unicode-scalar", "u64"],
+      "capabilities": ["unscoped-package-bridge"],
+      "declaredLanguageEvidence": {"javascript": "package.json", "typescript": "index.d.ts", "clojurescript": "clojurescript.mjs"},
+      "reviewRequiredLanguages": ["rust", "c", "cpp", "python", "java", "kotlin", "scala", "clojure", "csharp", "fsharp", "go", "swift", "ruby", "fortran", "ocaml", "haskell", "lua", "raku"]
+    }
+  ],
+  "cellOverrides": {}
+}

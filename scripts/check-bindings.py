@@ -68,6 +68,15 @@ subprocess.run(
     cwd=ROOT,
     check=True,
 )
+subprocess.run(
+    [
+        sys.executable,
+        str(ROOT / "scripts" / "generate-family-completeness-matrix.py"),
+        "--check",
+    ],
+    cwd=ROOT,
+    check=True,
+)
 
 organization = MODEL["organization"]
 interop = MODEL["interop"]
@@ -776,7 +785,9 @@ for marker in (
     "jreleaser_deploy_maven_mavencentral_canonical_active: release",
     "jreleaser_deploy_maven_mavencentral_legacydylon_active:",
     "jreleaser_deploy_maven_mavencentral_legacyuniversalautomata_active:",
-    "require the exact canonical bytes to be public first",
+    "require the pinned canonical artifact to be public first",
+    "canonicalmavenjarsha256",
+    "sha256sum --check --strict",
 ):
     require(marker in release, f"Maven publication workflow is missing {marker}")
 relocation_stager = text(ROOT / "scripts" / "stage-maven-relocations.py")
@@ -852,6 +863,10 @@ for release_name, release_source in (
     require(
         '--temp-key "$luarocks_api_key"' in release_source,
         f"{release_name} LuaRocks upload must use the non-persisting temporary-key mode",
+    )
+    require(
+        "luarocks install dkjson" in release_source,
+        f"{release_name} LuaRocks upload does not install its JSON transport dependency",
     )
     require(
         '--api-key "$luarocks_api_key"' not in release_source,
