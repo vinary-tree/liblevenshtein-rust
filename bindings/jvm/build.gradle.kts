@@ -176,7 +176,7 @@ publishing {
             from(components["java"])
             pom {
                 name = "liblevenshtein JVM bindings"
-                description = "Snapshot-consistent streaming fuzzy search through the Java FFM API"
+                description = "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
                 url = "https://github.com/vinary-tree/liblevenshtein-rust"
                 inceptionYear = "2026"
                 licenses {

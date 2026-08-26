@@ -792,6 +792,19 @@ for marker in (
     require(marker in release, f"Maven publication workflow is missing {marker}")
 relocation_stager = text(ROOT / "scripts" / "stage-maven-relocations.py")
 jreleaser_configuration = text(ROOT / "bindings" / "jvm" / "jreleaser.yml")
+jvm_build = text(ROOT / "bindings" / "jvm" / "build.gradle.kts")
+jvm_description = (
+    "A high-performance library for spelling correction, fuzzy dictionary search, "
+    "and phonetic matching using Levenshtein and related finite-state automata."
+)
+require(
+    f'description = "{jvm_description}"' in jvm_build,
+    "Maven POM description does not explain the product's purpose",
+)
+require(
+    f"description: {jvm_description}" in jreleaser_configuration,
+    "JReleaser and Maven POM descriptions have drifted",
+)
 require(
     not re.search(
         r"^        active: release$", jreleaser_configuration, flags=re.MULTILINE
