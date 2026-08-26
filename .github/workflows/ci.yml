@@ -942,7 +942,11 @@ jobs:
             os: dragonflybsd
             version: "6.4.2"
             install: sudo pkg install -y rust
-            native_rust_at_msrv: true
+            # DragonFly 6.4 currently packages rustc 1.85.1, below this
+            # family's declared Rust 1.95 MSRV. Keep the VM as an experimental
+            # native C/C++ ABI portability gate instead of asking an obsolete
+            # compiler to build a graph that correctly declares Rust 1.95.
+            native_rust_at_msrv: false
             experimental: true
     steps:
       - uses: actions/checkout@v6
