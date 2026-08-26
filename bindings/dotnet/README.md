@@ -92,6 +92,66 @@ The idiomatic facade groups the stable surface into these concepts:
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
 
+### Facade symbol index
+
+This table is generated from the same exhaustive model as the binding
+conformance gate. A public symbol may implement several ABI operations when
+the host language expresses domain or lifecycle choices with overloads,
+variants, protocols, or methods.
+
+| Public symbol | Backing native operation(s) | Capability |
+|---|---|---|
+| `Distance.Damerau` | `llev_damerau_distance`, `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
+| `Distance.Levenshtein` | `llev_distance`, `llev_distance_threshold` | standalone exact or thresholded distance |
+| `Distance.TrueDamerau` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
+| `LiblevenshteinException` | `llev_last_error_message` | typed failure diagnostics |
+| `PhoneticPattern.CompileLlre` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.CompileRegex` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.Dispose` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.Matches` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.Size` | `llev_phonetic_pattern_size` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticRuleSet.Apply` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.Builtin` | `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.Count` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.Dispose` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.Parse` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
+| `Query.Dispose` | `llev_query_cursor_free` | streaming result traversal and batch leases |
+| `Query.GetEnumerator` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
+| `Transducer.Dispose` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
+| `Transducer.Query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; phonetic-pattern dictionary query |
+
+### Public types and traversal protocols
+
+| Facade type or protocol | Purpose | Exposure note |
+|---|---|---|
+| `LiblevenshteinException.StatusCode` | Typed native status or error carrier | Public facade type |
+| `Algorithm` | Edit-distance algorithm selection | Public facade type |
+| `QueryOrder` | Result traversal ordering | Public facade type |
+| `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |
+| `Query.GetEnumerator` | One-shot owned-result iteration | Public facade protocol |
+
+### Facade-encapsulated model values
+
+| Model value | Idiomatic treatment |
+|---|---|
+| `reducer` | no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally |
+
+Native operations omitted from the public-symbol table are deliberately
+encapsulated by the facade. The generated completeness matrix records every
+such operation with its reviewed rationale; an unreasoned absence fails CI.
+
+### Intended usage paths
+
+| Need | Use | Rationale |
+|---|---|---|
+| Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
+| Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
+| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
+| Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
+| Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
+
 For the exhaustive native function contract—including exact preconditions,
 returnable statuses, complexity, and thread-safety—use the
 [`llev_*` C ABI reference](../../docs/bindings/c-abi-reference.md). The facade

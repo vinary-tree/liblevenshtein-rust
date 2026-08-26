@@ -2,11 +2,11 @@
 
 The map of everything written about liblevenshtein's ABI and language
 bindings, in reading order. Two layers exist and never duplicate each
-other: the **family canon** (hosted with the `vinary-tree-interop` crate in
-this repository) specifies the shared resource ABI every vinary-tree
-project speaks; the **project corpus** (this directory and its satellites)
-specifies what liblevenshtein builds above it — the `llev_*` C surface, the
-resource consumer, the cursor laws, and the JS/WASM topology.
+other: the **family canon** (hosted in the standalone
+`vinary-tree-interop` repository) specifies the shared resource ABI every
+Vinary Tree project speaks; the **project corpus** (this directory and its
+satellites) specifies what liblevenshtein builds above it — the `llev_*` C
+surface, the resource consumer, the cursor laws, and the JS/WASM topology.
 
 ## Reading order
 
@@ -15,7 +15,7 @@ resource consumer, the cursor laws, and the JS/WASM topology.
    constants + hand-written facades; why not UniFFI), the three layers, the
    snapshot/marshalling contracts, tiers, distribution, and platform
    policy.
-2. **The family canon** (normative, shared by all four projects):
+2. **The family canon** (normative across the core project family):
    [interop README](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) — the portal ·
    [ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) — the
    annotated header walk with the refcount/paging/snapshot laws ·
@@ -44,8 +44,8 @@ resource consumer, the cursor laws, and the JS/WASM topology.
 | [`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) | The per-facade completeness model driving the coverage matrix. |
 | [`bindings/conformance/`](../../bindings/conformance) | Generated conformance fixtures: the query-start snapshot oracle, entries-v1 constants and LP64/ARM32 layouts, and the facade completeness matrix. |
 | [`scripts/check-bindings.py`](../../scripts/check-bindings.py) | The contract gate: symbol parity model ↔ Rust ↔ header, entries-v1 metadata/header/mirror/fixture agreement, forbidden retired APIs, umbrella identity guard, coordinates, feature-alias policy. |
-| [`scripts/generate-binding-guides.py`](../../scripts/generate-binding-guides.py) | Idempotently renders the shared operational contract in every project and interop package guide while preserving its hand-written tutorial. |
-| [`scripts/check-binding-docs.py`](../../scripts/check-binding-docs.py) | Fails closed on an undocumented declared language, missing required topic, stale generated section, absent executable example, untagged code fence, placeholder, or broken local link. |
+| [`scripts/generate-binding-guides.py`](../../scripts/generate-binding-guides.py) | Idempotently renders liblevenshtein's shared operational contract, exhaustive modeled facade-symbol index, modeled type/protocol exposure, and intended-usage paths in every shipped facade guide while preserving its hand-written tutorial. |
+| [`scripts/check-binding-docs.py`](../../scripts/check-binding-docs.py) | Fails closed on an undocumented declared language, missing required topic, stale generated section, missing modeled public symbol, absent intended-usage table or executable example, untagged code fence, placeholder, or broken local link. |
 | [`docs/verification/ABI_INVARIANTS.tsv`](../verification/ABI_INVARIANTS.tsv) | The canonical invariant registry (VT-LIFE, VT-QI, VT-GATE, VT-ABI, and the wave-W3 rows as they land) tying each law to its model, test, and gate. |
 
 5. **Diagrams:** the binding suite lives in
@@ -59,32 +59,40 @@ resource consumer, the cursor laws, and the JS/WASM topology.
 
 ## Language coverage matrix
 
-Every check mark is a shipped package guide rather than an implementation-only
+Every link is a shipped package guide rather than an implementation-only
 directory. A shared-runtime guide contains separate executable idioms for each
-language named in its row. A dash means the project does not publish that
-foreign-language facade; it is not a documentation gap.
+language named in its row. A dash reports current absence; it is an open
+implementation and documentation cell unless the generated
+[`family-completeness-matrix.tsv`](../../bindings/conformance/family-completeness-matrix.tsv)
+contains a reviewed architectural inapplicability proof. Absence by itself is
+never such a proof.
 
-![Foreign languages reach four project facades through native, N-API, WebAssembly, or WASI runtimes and exchange only versioned dictionary or scalar-WFST resources.](../diagrams/bindings/language-runtime-topology.svg)
+![The currently shipped foreign-language packages reach four project facades through native, N-API, WebAssembly, or WASI runtimes and exchange only versioned dictionary or scalar-WFST resources.](../diagrams/bindings/language-runtime-topology.svg)
 
-| Language/runtime | liblevenshtein | libdictenstein | lling-llang | duallity | interop |
-|---|---|---|---|---|---|
-| C | [guide](../../bindings/c/README.md) | [ABI and guide](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/c-abi-reference.md) | [ABI and guide](https://github.com/vinary-tree/lling-llang/blob/master/docs/api/c-abi-reference.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/docs/guides/07-language-bindings.md) | [native contract](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) |
-| C++ | [guide](../../bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/cpp/README.md) | [native contract](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) |
-| Python | [guide](../../bindings/python/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/python/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/python/README.md) |
-| Java, Kotlin, Scala | [JVM guide](../../bindings/jvm/README.md) | [JVM guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/jvm/README.md) | — | — | [JVM adapter](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/jvm/README.md) |
-| Clojure | [guide](../../bindings/clojure/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/clojure/README.md) | — | — | Delegates to JVM |
-| JavaScript, TypeScript, ClojureScript | [guide](../../bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/javascript/README.md) | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/javascript/README.md) |
-| C# / .NET | [guide](../../bindings/dotnet/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/dotnet/README.md) | — | — | Included in the .NET package |
-| Go | [guide](../../bindings/go/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/go/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/go/README.md) |
-| Swift | [guide](../../bindings/swift/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/swift/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/swift/README.md) |
-| Ruby | [guide](../../bindings/ruby/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ruby/README.md) | — | — | Resource pair is mediated by project gems |
-| Fortran | [guide](../../bindings/fortran/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/fortran/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/fortran/README.md) |
-| OCaml | [guide](../../bindings/ocaml/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ocaml/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/ocaml/README.md) |
-| Haskell | [guide](../../bindings/haskell/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/haskell/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/haskell/README.md) |
-| Lua | [guide](../../bindings/lua/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/lua/README.md) | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/lua/README.md) |
+| Language/runtime | liblevenshtein | libdictenstein | lling-llang | duallity | llattice | interop |
+|---|---|---|---|---|---|---|
+| C | [guide](../../bindings/c/README.md) | [ABI and guide](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/c-abi-reference.md) | [ABI and guide](https://github.com/vinary-tree/lling-llang/blob/master/docs/api/c-abi-reference.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/docs/guides/07-language-bindings.md) | — | [native contract](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) |
+| C++ | [guide](../../bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/cpp/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/cpp/README.md) | — | [native contract](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) |
+| Python | [guide](../../bindings/python/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/python/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/python/README.md) |
+| Java, Kotlin, Scala | [JVM guide](../../bindings/jvm/README.md) | [JVM guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/jvm/README.md) | — | — | — | [JVM adapter](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/jvm/README.md) |
+| Clojure | [guide](../../bindings/clojure/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/clojure/README.md) | — | — | — | Delegates to JVM |
+| JavaScript, TypeScript, ClojureScript | [guide](../../bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/lling-llang/blob/master/bindings/javascript/README.md) | [guide](https://github.com/vinary-tree/duallity/blob/master/bindings/javascript/README.md) | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/javascript/README.md) |
+| C# / .NET | [guide](../../bindings/dotnet/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/dotnet/README.md) | — | — | — | Included in the .NET package |
+| Go | [guide](../../bindings/go/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/go/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/go/README.md) |
+| Swift | [guide](../../bindings/swift/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/swift/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/swift/README.md) |
+| Ruby | [guide](../../bindings/ruby/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ruby/README.md) | — | — | — | Resource pair is mediated by project gems |
+| Fortran | [guide](../../bindings/fortran/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/fortran/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/fortran/README.md) |
+| OCaml | [guide](../../bindings/ocaml/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/ocaml/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/ocaml/README.md) |
+| Haskell | [guide](../../bindings/haskell/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/haskell/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/haskell/README.md) |
+| Lua | [guide](../../bindings/lua/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/lua/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/lua/README.md) |
+| Raku | — | — | — | — | — | — |
 
-The related `llattice` crate is Rust-only. It therefore appears in the family
-dependency graph but has no missing foreign-language guide.
+The `llattice` crate currently ships only its optimized native Rust API. That
+is the observed state, not a permanent inapplicability decision: the follow-up
+campaign must expose host-implementable lattice interfaces wherever the target
+runtime can uphold the ownership, callback, concurrency, and algebraic-law
+contracts. Its missing foreign-language guides remain explicit family-matrix
+gaps until those surfaces ship or receive reviewed architectural proofs.
 
 Collection-protocol parity is tracked separately from package availability.
 The [collection-protocol design](collection-protocols.md) records the current
@@ -98,7 +106,7 @@ only functionality that has actually passed its conformance gates.
 Per the separation-of-concerns rule, each repository documents its own ABI
 surface; these are the sibling entry points this corpus cites:
 
-- **vinary-tree-interop** (hosted here) — the canon trio above.
+- **vinary-tree-interop** (standalone repository) — the canon trio above.
 - **libdictenstein** (producer): [binding hub](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/README.md) ·
   [`ldict_*` C-ABI reference](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/c-abi-reference.md) ·
   [resource producer](https://github.com/vinary-tree/libdictenstein/blob/master/docs/bindings/resource-producer.md) ·
@@ -109,6 +117,8 @@ surface; these are the sibling entry points this corpus cites:
 - **duallity** (dictionary consumer, WFST producer): [resource ABI and bindings](https://github.com/vinary-tree/duallity/blob/master/docs/architecture/06-resource-abi-and-bindings.md) ·
   [language-bindings guide](https://github.com/vinary-tree/duallity/blob/master/docs/guides/07-language-bindings.md) ·
   [threat model](https://github.com/vinary-tree/duallity/blob/master/docs/security/threat-model.md)
+- **llattice** (algebraic lattice interfaces): [crate and native Rust API](https://github.com/vinary-tree/llattice) ·
+  foreign provider and facade documentation is an explicit follow-up deliverable.
 
 (Sibling links are absolute — these are separate repositories; the sibling
 documents land with their own waves of this program.)

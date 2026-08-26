@@ -12,13 +12,16 @@ that has no corresponding documentation.
 from __future__ import annotations
 
 import argparse
+import json
 from dataclasses import dataclass
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 MARKER = "<!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->"
 END_MARKER = "<!-- END GENERATED BINDING OPERATIONS -->"
+SURFACE_MODEL = json.loads(
+    (ROOT / "bindings/api-surface-map.json").read_text(encoding="utf-8")
+)
 
 
 @dataclass(frozen=True)
@@ -284,7 +287,143 @@ INTEROP_GUIDES: dict[str, Guide] = {
 }
 
 
-def generated_block(guide: Guide, *, interop: bool = False) -> str:
+def markdown_cell(value: str) -> str:
+    """Escape data inserted into a GitHub-flavored Markdown table cell."""
+
+    return value.replace("|", "\\|").replace("\n", " ")
+
+
+def operation_role(name: str) -> str:
+    """Return the user-facing capability represented by one ABI operation."""
+
+    if name in {"llev_abi_version", "llev_api_revision", "llev_build_features"}:
+        return "ABI compatibility and feature discovery"
+    if name == "llev_last_error_message":
+        return "typed failure diagnostics"
+    if name.startswith("llev_true_damerau_distance"):
+        return "standalone true-Damerau distance"
+    if name.startswith(("llev_distance", "llev_damerau_distance")):
+        return "standalone exact or thresholded distance"
+    if name in {"llev_string_free", "llev_string_array_free", "llev_string_dup"}:
+        return "legacy owned-string plumbing"
+    if name == "llev_owned_string_free":
+        return "owned result-string release"
+    if name.startswith("llev_transducer_query_pattern"):
+        return "phonetic-pattern dictionary query"
+    if name.startswith("llev_transducer_query"):
+        return "domain-preserving dictionary query"
+    if name.startswith("llev_transducer"):
+        return "transducer lifecycle, snapshot, or domain metadata"
+    if name.startswith("llev_query_cursor"):
+        return "streaming result traversal and batch leases"
+    if name.startswith("llev_phonetic_pattern"):
+        return "compiled phonetic-pattern lifecycle and matching"
+    if name.startswith("llev_phonetic_rules"):
+        return "phonetic rule-set lifecycle and rewriting"
+    return "project ABI operation"
+
+
+def facade_surface(key: str) -> str:
+    """Render the exhaustive idiomatic public-symbol index for one facade."""
+
+    facade = SURFACE_MODEL["languages"][key]
+    grouped: dict[str, list[str]] = {}
+    for operation, mapping in facade["functions"].items():
+        symbols = mapping.get("symbol")
+        if symbols is None:
+            continue
+        if isinstance(symbols, str):
+            symbols = [symbols]
+        for symbol in symbols:
+            grouped.setdefault(symbol, []).append(operation)
+
+    symbol_rows: list[str] = []
+    for symbol in sorted(grouped, key=str.casefold):
+        operations = grouped[symbol]
+        rendered_operations = ", ".join(f"`{name}`" for name in operations)
+        roles = "; ".join(dict.fromkeys(operation_role(name) for name in operations))
+        symbol_rows.append(
+            f"| `{markdown_cell(symbol)}` | {rendered_operations} | {markdown_cell(roles)} |"
+        )
+
+    type_rows: list[str] = []
+    type_omission_rows: list[str] = []
+    type_roles = {
+        "status": "Typed native status or error carrier",
+        "algorithm": "Edit-distance algorithm selection",
+        "queryOrder": "Result traversal ordering",
+        "phoneticRuleSetKind": "Built-in phonetic rule-set selection",
+    }
+    for name, mapping in facade["enums"].items():
+        symbol = mapping.get("symbol")
+        if symbol is None:
+            type_omission_rows.append(
+                f"| `{name}` | {markdown_cell(mapping['_reason'])} |"
+            )
+        else:
+            type_rows.append(
+                f"| `{markdown_cell(symbol)}` | {type_roles[name]} | "
+                f"{markdown_cell(mapping.get('note', 'Public facade type'))} |"
+            )
+    for name, role in (
+        ("iterator", "One-shot owned-result iteration"),
+        ("reducer", "Bounded batch/reducer traversal"),
+    ):
+        mapping = facade[name]
+        symbol = mapping.get("symbol")
+        if symbol is None:
+            type_omission_rows.append(
+                f"| `{name}` | {markdown_cell(mapping['_reason'])} |"
+            )
+        else:
+            type_rows.append(
+                f"| `{markdown_cell(symbol)}` | {role} | "
+                f"{markdown_cell(mapping.get('note', 'Public facade protocol'))} |"
+            )
+
+    rendered = [
+        "### Facade symbol index",
+        "",
+        "This table is generated from the same exhaustive model as the binding",
+        "conformance gate. A public symbol may implement several ABI operations when",
+        "the host language expresses domain or lifecycle choices with overloads,",
+        "variants, protocols, or methods.",
+        "",
+        "| Public symbol | Backing native operation(s) | Capability |",
+        "|---|---|---|",
+        *symbol_rows,
+        "",
+        "### Public types and traversal protocols",
+        "",
+        "| Facade type or protocol | Purpose | Exposure note |",
+        "|---|---|---|",
+        *type_rows,
+    ]
+    if type_omission_rows:
+        rendered.extend(
+            [
+                "",
+                "### Facade-encapsulated model values",
+                "",
+                "| Model value | Idiomatic treatment |",
+                "|---|---|",
+                *type_omission_rows,
+            ]
+        )
+    rendered.extend(
+        [
+            "",
+            "Native operations omitted from the public-symbol table are deliberately",
+            "encapsulated by the facade. The generated completeness matrix records every",
+            "such operation with its reviewed rationale; an unreasoned absence fails CI.",
+        ]
+    )
+    return "\n".join(rendered)
+
+
+def generated_block(
+    guide: Guide, *, key: str | None = None, interop: bool = False
+) -> str:
     if interop:
         architecture = "../../docs/abi-reference.md"
         security = "../../docs/security-model.md"
@@ -357,6 +496,8 @@ approximate because all values remain derivable from the retained snapshot."""
         )
         surface_contract = "[`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) and the [generated completeness matrix](../../bindings/conformance/completeness-matrix.tsv)"
 
+    surface = "" if interop else facade_surface(key or "")
+
     return f"""{MARKER}
 
 ## Support and package contract
@@ -400,6 +541,19 @@ The idiomatic facade groups the stable surface into these concepts:
 {guide.units} Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
+
+{surface}
+
+### Intended usage paths
+
+| Need | Use | Rationale |
+|---|---|---|
+| Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
+| Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
+| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
+| Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
+| Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
 
 For the exhaustive native function contract—including exact preconditions,
 returnable statuses, complexity, and thread-safety—use the
@@ -473,7 +627,9 @@ reducing the case to the smallest dictionary/query pair.
 """
 
 
-def render(path: Path, guide: Guide, *, interop: bool = False) -> str:
+def render(
+    path: Path, guide: Guide, *, key: str | None = None, interop: bool = False
+) -> str:
     if path.exists():
         existing = path.read_text(encoding="utf-8")
         prefix = existing.split(MARKER, 1)[0].rstrip()
@@ -485,7 +641,7 @@ def render(path: Path, guide: Guide, *, interop: bool = False) -> str:
             "dictionary, automaton, and WFST packages; it owns no algorithm-specific "
             "policy."
         )
-    return f"{prefix}\n\n{generated_block(guide, interop=interop)}"
+    return f"{prefix}\n\n{generated_block(guide, key=key, interop=interop)}"
 
 
 def render_interop_root() -> tuple[Path, str]:
@@ -533,7 +689,7 @@ def main() -> None:
     outputs: list[tuple[Path, str]] = []
     for key, guide in GUIDES.items():
         path = ROOT / f"bindings/{key}/README.md"
-        outputs.append((path, render(path, guide)))
+        outputs.append((path, render(path, guide, key=key)))
     stale: list[Path] = []
     for path, rendered in outputs:
         if args.check:

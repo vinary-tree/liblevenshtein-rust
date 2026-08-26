@@ -23,7 +23,7 @@ The architecture has three layers:
    conformance fixtures are generated from `bindings/api.json`; facade code is
    not generated blindly from C declarations.
 
-![The three binding layers: language facades call only their project's C ABI; the four project ABIs exchange live objects only as two-word VtResource handles over the shared interop plane; bindings/api.json governs constants and parity.](diagrams/bindings/three-layer-architecture.svg)
+![The currently shipped three binding layers: language facades call only their project's C ABI; the four resource-exporting project ABIs exchange live objects only as two-word VtResource handles over the shared interop plane; bindings/api.json governs liblevenshtein constants and parity.](diagrams/bindings/three-layer-architecture.svg)
 
 This lets Java load a dictionary through `libdictenstein`, pass its
 `DictionaryResource` directly to a liblevenshtein `Transducer`, and keep both
@@ -195,12 +195,12 @@ and option maps. TypeScript supplies discriminated term domains, one-shot
 iterators, and borrowed-batch types rather than exposing untyped JavaScript
 objects.
 
-Current implementation status is machine-checked in CI. Tier 1, Tier 2, and
-Tier 3 facades consume project resources and run the same cross-project
-query-start snapshot fixture. Generator-owned native mirrors additionally
-replay the entries-v1 identity, status, flag, operation-order, and LP64/ARM32
-layout fixture. The tier is a maintenance and optimization priority; it is not
-a statement that lower-tier packages are incomplete.
+Current liblevenshtein implementation status is machine-checked in CI. Its Tier
+1, Tier 2, and Tier 3 facades consume project resources and run the same
+cross-project query-start snapshot fixture. Generator-owned native mirrors
+additionally replay the entries-v1 identity, status, flag, operation-order, and
+LP64/ARM32 layout fixture. The tier is a maintenance and optimization priority;
+it is not a statement that lower-tier packages are incomplete.
 
 ## Distribution
 
@@ -273,8 +273,8 @@ worked examples — are the
 
 ## Deeper documentation
 
-- **Family canon** (normative for all four projects, hosted with the
-  interop crate): [portal](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) ·
+- **Family canon** (normative across the core project family, hosted in the
+  standalone interop repository): [portal](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) ·
   [ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) ·
   [evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md) ·
   [security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md).

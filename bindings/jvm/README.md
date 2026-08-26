@@ -125,6 +125,60 @@ Java `String` is UTF-8 encoded for Unicode queries; byte arrays and `long[]` sel
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
 
+### Facade symbol index
+
+This table is generated from the same exhaustive model as the binding
+conformance gate. A public symbol may implement several ABI operations when
+the host language expresses domain or lifecycle choices with overloads,
+variants, protocols, or methods.
+
+| Public symbol | Backing native operation(s) | Capability |
+|---|---|---|
+| `NativeException` | `llev_last_error_message` | typed failure diagnostics |
+| `PhoneticPattern.close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.compileLlre` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.compileRegex` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.matches` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.size` | `llev_phonetic_pattern_size` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticRuleSet.apply` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.builtin` | `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.parse` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.size` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
+| `QueryCursor.close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
+| `QueryCursor.forEachBatch` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `QueryCursor.next` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
+| `Transducer.close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
+| `Transducer.query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; phonetic-pattern dictionary query |
+| `Transducer.snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
+
+### Public types and traversal protocols
+
+| Facade type or protocol | Purpose | Exposure note |
+|---|---|---|
+| `NativeException.status` | Typed native status or error carrier | numeric values are generated into GeneratedAbi.java |
+| `Algorithm` | Edit-distance algorithm selection | Public facade type |
+| `QueryOrder` | Result traversal ordering | Public facade type |
+| `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |
+| `QueryCursor.next` | One-shot owned-result iteration | Public facade protocol |
+| `QueryCursor.forEachBatch` | Bounded batch/reducer traversal | Public facade protocol |
+
+Native operations omitted from the public-symbol table are deliberately
+encapsulated by the facade. The generated completeness matrix records every
+such operation with its reviewed rationale; an unreasoned absence fails CI.
+
+### Intended usage paths
+
+| Need | Use | Rationale |
+|---|---|---|
+| Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
+| Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
+| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
+| Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
+| Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
+
 For the exhaustive native function contract—including exact preconditions,
 returnable statuses, complexity, and thread-safety—use the
 [`llev_*` C ABI reference](../../docs/bindings/c-abi-reference.md). The facade

@@ -76,6 +76,75 @@ C spans carry explicit lengths. C++ overloads accept byte, Unicode-scalar, and `
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
 
+### Facade symbol index
+
+This table is generated from the same exhaustive model as the binding
+conformance gate. A public symbol may implement several ABI operations when
+the host language expresses domain or lifecycle choices with overloads,
+variants, protocols, or methods.
+
+| Public symbol | Backing native operation(s) | Capability |
+|---|---|---|
+| `llev_abi_version` | `llev_abi_version` | ABI compatibility and feature discovery |
+| `llev_api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
+| `llev_build_features` | `llev_build_features` | ABI compatibility and feature discovery |
+| `llev_damerau_distance` | `llev_damerau_distance` | standalone exact or thresholded distance |
+| `llev_damerau_distance_threshold` | `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
+| `llev_distance` | `llev_distance` | standalone exact or thresholded distance |
+| `llev_distance_threshold` | `llev_distance_threshold` | standalone exact or thresholded distance |
+| `llev_owned_string_free` | `llev_owned_string_free` | owned result-string release |
+| `llev_phonetic_pattern_compile_llre` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
+| `llev_phonetic_pattern_compile_regex` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
+| `llev_phonetic_pattern_free` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
+| `llev_phonetic_pattern_matches` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
+| `llev_phonetic_pattern_size` | `llev_phonetic_pattern_size` | compiled phonetic-pattern lifecycle and matching |
+| `llev_phonetic_rules_apply` | `llev_phonetic_rules_apply` | phonetic rule-set lifecycle and rewriting |
+| `llev_phonetic_rules_builtin` | `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
+| `llev_phonetic_rules_free` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
+| `llev_phonetic_rules_len` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
+| `llev_phonetic_rules_parse` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
+| `llev_query_cursor_reduce` | `llev_query_cursor_reduce` | streaming result traversal and batch leases |
+| `llev_string_array_free` | `llev_string_array_free` | legacy owned-string plumbing |
+| `llev_string_dup` | `llev_string_dup` | legacy owned-string plumbing |
+| `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |
+| `llev_transducer_query_pattern` | `llev_transducer_query_pattern` | phonetic-pattern dictionary query |
+| `llev_transducer_unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
+| `llev_true_damerau_distance` | `llev_true_damerau_distance` | standalone true-Damerau distance |
+| `llev_true_damerau_distance_threshold` | `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
+| `vinary_tree::liblevenshtein::batch::~batch` | `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `vinary_tree::liblevenshtein::detail::cursor_state::~cursor_state` | `llev_query_cursor_free` | streaming result traversal and batch leases |
+| `vinary_tree::liblevenshtein::error` | `llev_last_error_message` | typed failure diagnostics |
+| `vinary_tree::liblevenshtein::query_cursor::next_batch` | `llev_query_cursor_next_batch` | streaming result traversal and batch leases |
+| `vinary_tree::liblevenshtein::transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
+| `vinary_tree::liblevenshtein::transducer::query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64` | domain-preserving dictionary query |
+| `vinary_tree::liblevenshtein::transducer::~transducer` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
+
+### Public types and traversal protocols
+
+| Facade type or protocol | Purpose | Exposure note |
+|---|---|---|
+| `vinary_tree::liblevenshtein::error::status` | Typed native status or error carrier | Public facade type |
+| `vinary_tree::liblevenshtein::algorithm` | Edit-distance algorithm selection | Public facade type |
+| `vinary_tree::liblevenshtein::query_order` | Result traversal ordering | Public facade type |
+| `LlevPhoneticRuleSetKind` | Built-in phonetic rule-set selection | C API passthrough via the included liblevenshtein.h |
+| `vinary_tree::liblevenshtein::query_cursor::next_batch` | One-shot owned-result iteration | Public facade protocol |
+| `llev_query_cursor_reduce` | Bounded batch/reducer traversal | C API passthrough via the included liblevenshtein.h |
+
+Native operations omitted from the public-symbol table are deliberately
+encapsulated by the facade. The generated completeness matrix records every
+such operation with its reviewed rationale; an unreasoned absence fails CI.
+
+### Intended usage paths
+
+| Need | Use | Rationale |
+|---|---|---|
+| Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
+| Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
+| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
+| Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
+| Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
+
 For the exhaustive native function contract—including exact preconditions,
 returnable statuses, complexity, and thread-safety—use the
 [`llev_*` C ABI reference](../../docs/bindings/c-abi-reference.md). The facade
