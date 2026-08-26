@@ -144,7 +144,7 @@ The security-relevant corollaries:
 
 The WASI capability policy (preopens only; persistent backends only at
 preopened paths in `wasi`-feature builds; trap containment at the instance
-boundary) is canon § 7, instantiated for this repo's umbrella runtime in
+boundary) is canon § 7, instantiated for this repo's shared JavaScript runtime in
 [wasm-topology § 5-6](../bindings/wasm-topology.md#5-wasi-capability-policy)
 — including the two open, this-wave hardening items on that surface:
 panic-class sites in the runtime crate

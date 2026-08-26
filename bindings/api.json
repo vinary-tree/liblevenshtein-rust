@@ -16,7 +16,7 @@
     "crate": "vinary-tree-interop",
     "cPrefix": "vt_",
     "cHeader": "vinary_tree_interop.h",
-    "npm": "@vinary-tree/interop",
+    "npm": "@vinary-tree/vinary-tree-interop",
     "maven": "io.vinarytree:vinary-tree-interop",
     "javaPackage": "io.vinarytree.interop",
     "resourceLayout": [
@@ -254,7 +254,7 @@
       "lua"
     ]
   },
-  "packageVersion": "4.0.0-rc.4",
+  "packageVersion": "4.0.0-rc.5",
   "abiVersion": 1,
   "apiRevision": 2,
   "defaultMatchBatch": 256,
@@ -690,7 +690,7 @@
     "interopDocumentation": "https://github.com/vinary-tree/vinary-tree-interop/tree/master/bindings"
   },
   "wasm": {
-    "umbrellaPackage": "@vinary-tree/vinary-tree",
+    "runtimePackage": "@vinary-tree/javascript-runtime",
     "projectPackage": "@vinary-tree/liblevenshtein",
     "relatedProjectPackages": [
       "@vinary-tree/libdictenstein",
@@ -756,23 +756,23 @@
     ]
   },
   "release": {
-    "canonical": "4.0.0-rc.4",
+    "canonical": "4.0.0-rc.5",
     "registries": {
-      "cargo": "4.0.0-rc.4",
-      "clojars": "4.0.0-rc.4",
-      "cmake": "4.0.0-rc.4",
+      "cargo": "4.0.0-rc.5",
+      "clojars": "4.0.0-rc.5",
+      "cmake": "4.0.0-rc.5",
       "fpm": "4.0.0",
-      "goTag": "v4.0.0-rc.4",
+      "goTag": "v4.0.0-rc.5",
       "hackage": "4.0.0",
-      "luaRocks": "4.0.0rc4-2",
-      "maven": "4.0.0-rc.4",
-      "npm": "4.0.0-rc.4",
-      "nuget": "4.0.0-rc.4",
-      "opam": "4.0.0~rc4",
-      "pkgConfig": "4.0.0-rc.4",
-      "pypi": "4.0.0rc4",
-      "rubygems": "4.0.0.rc.4",
-      "swiftTag": "4.0.0-rc.4"
+      "luaRocks": "4.0.0rc5-1",
+      "maven": "4.0.0-rc.5",
+      "npm": "4.0.0-rc.5",
+      "nuget": "4.0.0-rc.5",
+      "opam": "4.0.0~rc5",
+      "pkgConfig": "4.0.0-rc.5",
+      "pypi": "4.0.0rc5",
+      "rubygems": "4.0.0.rc.5",
+      "swiftTag": "4.0.0-rc.5"
     },
     "distTag": "next"
   }

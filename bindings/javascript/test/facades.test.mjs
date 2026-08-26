@@ -4,9 +4,9 @@ import test from "node:test";
 
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url)));
 
-test("all project facades share the exact umbrella runtime", () => {
-  assert.equal(packageJson.dependencies["@vinary-tree/vinary-tree"], packageJson.version);
-  assert.equal(packageJson.dependencies["@vinary-tree/interop"], "4.0.0-rc.4");
+test("all project facades share the exact shared JavaScript runtime", () => {
+  assert.equal(packageJson.dependencies["@vinary-tree/javascript-runtime"], packageJson.version);
+  assert.equal(packageJson.dependencies["@vinary-tree/vinary-tree-interop"], "4.0.0-rc.5");
   for (const path of [".", "./typescript", "./clojurescript", "./wasm", "./wasi"]) {
     assert.ok(packageJson.exports[path]);
   }
@@ -35,6 +35,6 @@ test("delegated facade re-exports the full streaming and phonetic surface", asyn
   assert.match(declarations, /interface PhoneticPattern[\s\S]*?matches\(input: string\): boolean/);
   assert.match(declarations, /interface PhoneticRuleSet[\s\S]*?apply\(input: string\): string/);
   // C1: the transducer only ever borrows a DictionaryResource; it never
-  // constructs storage, keeping ownership on the delegated umbrella runtime.
+  // constructs storage, keeping ownership on the delegated shared JavaScript runtime.
   assert.match(declarations, /transducer\(dictionary: DictionaryResource/);
 });

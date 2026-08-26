@@ -4,13 +4,13 @@ This is the idiomatic Clojure facade over the Java 22 Foreign Function &
 Memory binding. It is published to Clojars as:
 
 ```clojure
-[io.vinarytree/liblevenshtein-clojure "4.0.0-rc.4"]
+[io.vinarytree/liblevenshtein-clojure "4.0.0-rc.5"]
 ```
 
 Tools.deps users use the same coordinate:
 
 ```clojure
-io.vinarytree/liblevenshtein-clojure {:mvn/version "4.0.0-rc.4"}
+io.vinarytree/liblevenshtein-clojure {:mvn/version "4.0.0-rc.5"}
 ```
 
 The transitive JVM artifact embeds native libraries for Linux x86_64/aarch64,

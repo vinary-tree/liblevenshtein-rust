@@ -1,8 +1,8 @@
 package = "liblevenshtein"
-version = "4.0.0rc4-2"
-source = { url = "git+https://github.com/vinary-tree/liblevenshtein-rust.git", tag = "v4.0.0-rc.4-release.7" }
+version = "4.0.0rc5-1"
+source = { url = "git+https://github.com/vinary-tree/liblevenshtein-rust.git", tag = "v4.0.0-rc.5" }
 description = { summary = "Streaming Lua bindings for liblevenshtein", license = "Apache-2.0" }
-dependencies = { "lua >= 5.4", "libdictenstein == 4.0.0rc4-2" }
+dependencies = { "lua >= 5.4", "libdictenstein == 4.0.0rc5-1" }
 external_dependencies = {
   LIBLEVENSHTEIN = { header = "liblevenshtein.h", library = "liblevenshtein" }
 }

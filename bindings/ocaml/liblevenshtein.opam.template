@@ -11,12 +11,12 @@ depends: [
   "ocaml" {>= "5.2"}
   "dune" {>= "3.20"}
   "conf-pkg-config" {build}
-  "vinary-tree-interop" {= "4.0.0~rc4"}
-  "libdictenstein" {with-test & = "4.0.0~rc4"}
+  "vinary-tree-interop" {= "4.0.0~rc5"}
+  "libdictenstein" {with-test & = "4.0.0~rc5"}
   "odoc" {with-doc}
 ]
 build: [
-  ["pkg-config" "--atleast-version=4.0.0-rc.4" "liblevenshtein"]
+  ["pkg-config" "--atleast-version=4.0.0-rc.5" "liblevenshtein"]
   ["dune" "subst"] {dev}
   [
     "dune"

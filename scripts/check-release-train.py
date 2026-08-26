@@ -62,8 +62,11 @@ NPM_PACKAGES = {
         "bindings/javascript/package.json",
         "@vinary-tree/liblevenshtein",
     ),
-    "vinary-tree-interop": ("bindings/javascript/package.json", "@vinary-tree/interop"),
-    "javascript-runtime": ("package.json", "@vinary-tree/vinary-tree"),
+    "vinary-tree-interop": (
+        "bindings/javascript/package.json",
+        "@vinary-tree/vinary-tree-interop",
+    ),
+    "javascript-runtime": ("package.json", "@vinary-tree/javascript-runtime"),
     "libdictenstein": (
         "bindings/javascript/package.json",
         "@vinary-tree/libdictenstein",
@@ -71,6 +74,36 @@ NPM_PACKAGES = {
     "lling-llang": ("bindings/javascript/package.json", "@vinary-tree/lling-llang"),
     "duallity": ("bindings/javascript/package.json", "@vinary-tree/duallity"),
     "liblevenshtein-npm-compatibility": ("package.json", "liblevenshtein"),
+}
+
+CANONICAL_NPM_DEPENDENCIES = {
+    "@vinary-tree/vinary-tree-interop",
+    "@vinary-tree/javascript-runtime",
+    "@vinary-tree/libdictenstein",
+    "@vinary-tree/liblevenshtein",
+    "@vinary-tree/lling-llang",
+    "@vinary-tree/duallity",
+}
+DEPRECATED_NPM_COORDINATES = {
+    "@vinary-tree/" + "interop",
+    "@vinary-tree/" + "vinary-tree",
+    "@vinary-tree/" + "javascript-runtime-interop",
+}
+DEPRECATED_NPM_PATTERNS = {
+    coordinate: re.compile(
+        re.escape(coordinate) + r"(?=$|[^A-Za-z0-9._~-])",
+        flags=re.MULTILINE,
+    )
+    for coordinate in DEPRECATED_NPM_COORDINATES
+}
+IGNORED_IDENTITY_PARTS = {
+    ".git",
+    ".venv",
+    "build",
+    "dist",
+    "node_modules",
+    "target",
+    "venv",
 }
 
 
@@ -94,12 +127,47 @@ def load(component: str, root: Path) -> dict:
 
 
 def check_dependency(owner: str, name: str, version: object) -> None:
+    if name in DEPRECATED_NPM_COORDINATES:
+        fail(f"{owner}: dependency uses deprecated or malformed npm coordinate {name}")
+    if name.startswith("@vinary-tree/") and name not in CANONICAL_NPM_DEPENDENCIES:
+        fail(f"{owner}: dependency uses unknown scoped npm coordinate {name}")
     expected = "0.1.0" if name == "llattice" else EXPECTED
     if version != expected:
         fail(f"{owner}: dependency {name} is {version!r}, expected {expected!r}")
 
 
+def reject_deprecated_coordinates(component: str, root: Path) -> None:
+    for directory, subdirectories, filenames in os.walk(root):
+        subdirectories[:] = [
+            name for name in subdirectories if name not in IGNORED_IDENTITY_PARTS
+        ]
+        for filename in filenames:
+            path = Path(directory) / filename
+            relative = path.relative_to(root)
+            if (
+                relative.name == "CHANGELOG.md"
+                or relative.name == "FINDINGS_LEDGER.md"
+                or relative.parts[:2] == ("docs", "releases")
+                or relative == Path("docs/npm-coordinate-migration.md")
+                or relative == Path("docs/releasing.md")
+                or relative == Path("docs/releasing-language-bindings.md")
+            ):
+                continue
+            try:
+                source = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            for coordinate, token in DEPRECATED_NPM_PATTERNS.items():
+                if token.search(source):
+                    fail(
+                        f"{component}: deprecated npm coordinate remains in {relative}"
+                    )
+
+
 manifests = {name: load(name, root) for name, root in COMPONENTS.items()}
+
+for component, component_root in COMPONENTS.items():
+    reject_deprecated_coordinates(component, component_root)
 
 if len(set(COMPONENTS.values())) != len(COMPONENTS):
     fail("two artifact owners resolve to the same repository root")
@@ -171,6 +239,14 @@ for component, manifest in manifests.items():
                 fail(f"{component}: {numeric_only} embargo requires an explanation")
 
     package_path, package_name = NPM_PACKAGES[component]
+    coordinates = manifest.get("coordinates")
+    if not isinstance(coordinates, dict):
+        fail(f"{component}: release manifest has no coordinates object")
+    if coordinates.get("npmPackage") != package_name:
+        fail(
+            f"{component}: release npm coordinate is "
+            f"{coordinates.get('npmPackage')!r}, expected {package_name!r}"
+        )
     package = json.loads(
         (COMPONENTS[component] / package_path).read_text(encoding="utf-8")
     )

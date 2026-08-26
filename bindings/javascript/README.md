@@ -3,7 +3,7 @@
 This package is the project-local JavaScript, TypeScript, and ClojureScript
 facade for liblevenshtein. It does not contain a second copy of the runtime.
 Every entry point re-exports the liblevenshtein namespace from the exact same
-version of `@vinary-tree/vinary-tree`, so objects created by
+version of `@vinary-tree/javascript-runtime`, so objects created by
 `@vinary-tree/libdictenstein` can be passed directly to `transducer()`.
 
 ```ts
@@ -35,7 +35,7 @@ The ClojureScript facade mirrors the Clojure names: `transducer`, `query`,
 | Languages/runtime | JavaScript, TypeScript, and ClojureScript on Node.js, browsers, or WASI |
 | Support tier | Tier 1 |
 | Distribution | npm package `@vinary-tree/liblevenshtein` |
-| Native boundary | The facade delegates to the singleton `@vinary-tree/vinary-tree` runtime: native N-API by default, WebAssembly or WASI through explicit exports. |
+| Native boundary | The facade delegates to the singleton `@vinary-tree/javascript-runtime` runtime: native N-API by default, WebAssembly or WASI through explicit exports. |
 | Canonical facade source | [`bindings/javascript`](../../bindings/javascript) |
 
 The support tier controls release gating, not semantic quality: every tier has

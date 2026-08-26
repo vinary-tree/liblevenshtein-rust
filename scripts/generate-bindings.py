@@ -215,7 +215,7 @@ def validate(model: dict) -> None:
         "crate": "vinary-tree-interop",
         "cPrefix": "vt_",
         "cHeader": "vinary_tree_interop.h",
-        "npm": "@vinary-tree/interop",
+        "npm": "@vinary-tree/vinary-tree-interop",
         "maven": "io.vinarytree:vinary-tree-interop",
         "javaPackage": "io.vinarytree.interop",
         "resourceLayout": ["context", "vtable"],

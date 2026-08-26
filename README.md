@@ -919,7 +919,7 @@ package. It owns the executable, REPL, filesystem traversal, compression,
 archive, XML, office-document, PDF, and OCR dependencies.
 
 **WASM/WASI** (`wasm`) — project-owned distance and phonetic exports used by
-the shared `@vinary-tree/vinary-tree` runtime. Cross-project dictionary handles
+the shared `@vinary-tree/javascript-runtime` runtime. Cross-project dictionary handles
 are composed in that one runtime; the liblevenshtein npm package is a typed
 facade rather than a second WebAssembly instance.
 `parallel-grep` accelerates the reusable in-memory phonetic grep engines.

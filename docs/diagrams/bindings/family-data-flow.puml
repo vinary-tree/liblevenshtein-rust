@@ -7,7 +7,7 @@
 ' in one process with one resource table.
 ' Color: family palette — libdictenstein #D5F5E3, liblevenshtein #FADBD8,
 '   duallity #D6EAF8, lling-llang #FCF3CF; VtResource handles #DCEDC8
-'   (#33691E); umbrella runtime = engines purple #E1BEE7 (#6A1B9A).
+'   (#33691E); shared JavaScript runtime = engines purple #E1BEE7 (#6A1B9A).
 ' Source of truth: docs/language-bindings.md, vinary-tree-interop/README.md
 '   ("Who produces and consumes what"), bindings/javascript-runtime/.
 skinparam backgroundColor #FFFFFF
@@ -48,7 +48,7 @@ rectangle "lling-llang" as LLING #FCF3CF {
 
 rectangle "composed\nvt.scalar-wfst.1 resource" as WFSTRES2 #DCEDC8
 
-rectangle "umbrella JS runtime\n@vinary-tree/vinary-tree\n(one process, one resource table)" as UMBRELLA #E1BEE7
+rectangle "umbrella JS runtime\n@vinary-tree/javascript-runtime\n(one process, one resource table)" as UMBRELLA #E1BEE7
 
 BACKENDS -[#2E7D32]-> LDR
 LDR -[#33691E]-> DICTRES : publishes\n(born owning one retain)

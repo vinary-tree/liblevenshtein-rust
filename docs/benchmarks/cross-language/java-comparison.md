@@ -84,7 +84,7 @@ throughput choice as well as the actively maintained and lower-peak-RSS choice.
 
 | | Legacy | Rust-backed |
 |---|---|---|
-| Artifact | `com.github.universal-automata:liblevenshtein:3.0.0` (Maven Central) | `io.vinarytree:liblevenshtein:4.0.0-rc.4` |
+| Artifact | `com.github.universal-automata:liblevenshtein:3.0.0` (Maven Central) | `io.vinarytree:liblevenshtein:4.0.0-rc.5` |
 | Implementation | Pure Java, Java 8 bytecode (2016) | Rust core reached through a Java 22 FFM binding (no JNI) |
 | Dictionary | `SortedDawg` on the Java heap | libdictenstein `DynamicDawg` / `DoubleArrayTrie` behind the `llev_*` C ABI |
 | Maintenance | Last upstream commit 2016-05-29 | Actively developed |

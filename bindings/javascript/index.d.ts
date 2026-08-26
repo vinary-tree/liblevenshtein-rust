@@ -1,4 +1,4 @@
-import type { DictionaryResource } from "@vinary-tree/interop";
+import type { DictionaryResource } from "@vinary-tree/vinary-tree-interop";
 
 export type Algorithm =
   | "standard"

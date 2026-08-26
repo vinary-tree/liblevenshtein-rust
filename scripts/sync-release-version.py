@@ -48,6 +48,7 @@ def maven_coordinates(model: dict[str, object]) -> dict[str, object]:
     if not isinstance(coordinates, dict):
         raise TypeError("release/version.json requires coordinates")
     expected_strings = (
+        "npmPackage",
         "mavenGroup",
         "mavenArtifact",
         "interopMavenGroup",
@@ -65,6 +66,18 @@ def maven_coordinates(model: dict[str, object]) -> dict[str, object]:
             "release/version.json requires string array coordinates.legacyMavenGroups"
         )
     return coordinates
+
+
+def release_description(model: dict[str, object]) -> str:
+    metadata = model.get("metadata")
+    if not isinstance(metadata, dict) or not isinstance(
+        metadata.get("description"), str
+    ):
+        raise TypeError("release/version.json requires string metadata.description")
+    description = str(metadata["description"]).strip()
+    if not description:
+        raise ValueError("release/version.json metadata.description cannot be empty")
+    return description
 
 
 def read(path: str) -> str:
@@ -172,6 +185,8 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     maven_artifact = str(coordinates["mavenArtifact"])
     interop_group = str(coordinates["interopMavenGroup"])
     interop_artifact = str(coordinates["interopMavenArtifact"])
+    npm_package = str(coordinates["npmPackage"])
+    description = release_description(model)
 
     replace("Cargo.toml", r'^version = "[^"]+"$', f'version = "{canonical}"')
     replace(
@@ -211,12 +226,13 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     update_json("bindings/related-projects.json", related)
 
     def npm(value: dict) -> None:
+        value["name"] = npm_package
         value["version"] = versions["npm"]
-        value["dependencies"]["@vinary-tree/interop"] = dependencies[
-            "@vinary-tree/interop"
+        value["dependencies"]["@vinary-tree/vinary-tree-interop"] = dependencies[
+            "@vinary-tree/vinary-tree-interop"
         ]
-        value["dependencies"]["@vinary-tree/vinary-tree"] = dependencies[
-            "@vinary-tree/vinary-tree"
+        value["dependencies"]["@vinary-tree/javascript-runtime"] = dependencies[
+            "@vinary-tree/javascript-runtime"
         ]
         value.setdefault("publishConfig", {})["tag"] = model["publication"]["distTag"]
 
@@ -234,31 +250,31 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
             if name == "@vinary-tree/liblevenshtein":
                 package["version"] = versions["npm"]
             elif name in {
-                "@vinary-tree/interop",
+                "@vinary-tree/vinary-tree-interop",
                 "@vinary-tree/libdictenstein",
-                "@vinary-tree/vinary-tree",
+                "@vinary-tree/javascript-runtime",
             }:
                 package["version"] = canonical
             package_dependencies = package.get("dependencies", {})
-            if "@vinary-tree/interop" in package_dependencies:
-                package_dependencies["@vinary-tree/interop"] = dependencies[
-                    "@vinary-tree/interop"
+            if "@vinary-tree/vinary-tree-interop" in package_dependencies:
+                package_dependencies["@vinary-tree/vinary-tree-interop"] = dependencies[
+                    "@vinary-tree/vinary-tree-interop"
                 ]
-            if "@vinary-tree/vinary-tree" in package_dependencies:
-                package_dependencies["@vinary-tree/vinary-tree"] = dependencies[
-                    "@vinary-tree/vinary-tree"
+            if "@vinary-tree/javascript-runtime" in package_dependencies:
+                package_dependencies["@vinary-tree/javascript-runtime"] = dependencies[
+                    "@vinary-tree/javascript-runtime"
                 ]
 
     update_json("bindings/javascript/package-lock.json", npm_lock)
     replace(
         "bindings/javascript/build.mjs",
-        r'assert\.equal\(packageJson\.dependencies\["@vinary-tree/interop"\], "[^"]+"\);',
-        f'assert.equal(packageJson.dependencies["@vinary-tree/interop"], "{dependencies["@vinary-tree/interop"]}");',
+        r'assert\.equal\(packageJson\.dependencies\["@vinary-tree/vinary-tree-interop"\], "[^"]+"\);',
+        f'assert.equal(packageJson.dependencies["@vinary-tree/vinary-tree-interop"], "{dependencies["@vinary-tree/vinary-tree-interop"]}");',
     )
     replace(
         "bindings/javascript/test/facades.test.mjs",
-        r'assert\.equal\(packageJson\.dependencies\["@vinary-tree/interop"\], "[^"]+"\);',
-        f'assert.equal(packageJson.dependencies["@vinary-tree/interop"], "{dependencies["@vinary-tree/interop"]}");',
+        r'assert\.equal\(packageJson\.dependencies\["@vinary-tree/vinary-tree-interop"\], "[^"]+"\);',
+        f'assert.equal(packageJson.dependencies["@vinary-tree/vinary-tree-interop"], "{dependencies["@vinary-tree/vinary-tree-interop"]}");',
     )
 
     replace(
@@ -275,6 +291,11 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         "bindings/jvm/build.gradle.kts",
         r'^version = "[^"]+"$',
         f'version = "{versions["maven"]}"',
+    )
+    replace(
+        "bindings/jvm/build.gradle.kts",
+        r'^                description = "[^"]+"$',
+        f'                description = "{description}"',
     )
     replace(
         "bindings/jvm/build.gradle.kts",
@@ -298,6 +319,11 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     )
     replace(
         "bindings/jvm/jreleaser.yml",
+        r"^  description: .+$",
+        f"  description: {description}",
+    )
+    replace(
+        "bindings/jvm/jreleaser.yml",
         r"^      groupId: \S+$",
         f"      groupId: {maven_group}",
     )
@@ -315,6 +341,11 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         "bindings/clojure/project.clj",
         r'^(\(defproject io\.vinarytree/liblevenshtein-clojure) "[^"]+"$',
         rf'\1 "{versions["clojars"]}"',
+    )
+    replace(
+        "bindings/clojure/project.clj",
+        r'^  :description "[^"]+"$',
+        f'  :description "{description}"',
     )
     replace(
         "bindings/clojure/project.clj",
@@ -534,24 +565,14 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     if not isinstance(publication, dict) or publication.get("hackage") is not False:
         failures.append("Hackage RC publication must remain embargoed")
     source_tag = publication.get("sourceTag") if isinstance(publication, dict) else None
-    corrective_pattern = rf"v{re.escape(canonical)}-release\.[1-9][0-9]*"
+    immutable_tag_pattern = rf"v{re.escape(canonical)}(?:-release\.[1-9][0-9]*)?"
     if (
         not isinstance(source_tag, str)
-        or re.fullmatch(corrective_pattern, source_tag) is None
+        or re.fullmatch(immutable_tag_pattern, source_tag) is None
     ):
         failures.append(
-            "RC publishable source tag must be an append-only numbered correction"
+            "RC source tag must be canonical or an append-only numbered correction"
         )
-    canonical_maven_jar_sha = (
-        publication.get("canonicalMavenJarSha256")
-        if isinstance(publication, dict)
-        else None
-    )
-    if (
-        not isinstance(canonical_maven_jar_sha, str)
-        or re.fullmatch(r"[0-9a-f]{64}", canonical_maven_jar_sha) is None
-    ):
-        failures.append("canonical Maven JAR SHA-256 must be pinned in lowercase hex")
     dependencies = model["dependencies"]
     assert isinstance(dependencies, dict)
     try:
@@ -563,6 +584,10 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     maven_artifact = str(coordinates["mavenArtifact"])
     interop_group = str(coordinates["interopMavenGroup"])
     interop_artifact = str(coordinates["interopMavenArtifact"])
+    npm_package = str(coordinates["npmPackage"])
+    description = release_description(model)
+    if npm_package != "@vinary-tree/liblevenshtein":
+        failures.append("the canonical npm package must be @vinary-tree/liblevenshtein")
     if maven_group != "io.vinarytree":
         failures.append("the canonical Maven group must be io.vinarytree")
     if coordinates["javaPackage"] != "io.vinarytree.liblevenshtein":
@@ -749,15 +774,30 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     ):
         failures.append("bindings/api.json release identity is stale")
     package = json.loads(read("bindings/javascript/package.json"))
+    if package.get("name") != npm_package:
+        failures.append("npm facade package coordinate is stale")
     if package.get("version") != versions["npm"]:
         failures.append("npm facade version is stale")
     if (
-        package.get("dependencies", {}).get("@vinary-tree/vinary-tree")
-        != dependencies["@vinary-tree/vinary-tree"]
+        package.get("dependencies", {}).get("@vinary-tree/javascript-runtime")
+        != dependencies["@vinary-tree/javascript-runtime"]
     ):
         failures.append("npm facade runtime pin is stale")
     if package.get("publishConfig", {}).get("tag") != publication.get("distTag"):
         failures.append("npm facade dist-tag policy is stale")
+    description_surfaces = {
+        "Maven POM": read("bindings/jvm/build.gradle.kts"),
+        "JReleaser": read("bindings/jvm/jreleaser.yml"),
+        "Clojars": read("bindings/clojure/project.clj"),
+    }
+    description_markers = {
+        "Maven POM": f'description = "{description}"',
+        "JReleaser": f"description: {description}",
+        "Clojars": f':description "{description}"',
+    }
+    for surface, source in description_surfaces.items():
+        if description_markers[surface] not in source:
+            failures.append(f"{surface} description differs from release metadata")
     go_mod = read("bindings/go/go.mod")
     if "module github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4" not in go_mod:
         failures.append("Go module lacks /v4 semantic import path")

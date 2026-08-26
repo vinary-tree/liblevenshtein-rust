@@ -116,7 +116,7 @@ GUIDES: dict[str, Guide] = {
         "JavaScript, TypeScript, and ClojureScript on Node.js, browsers, or WASI",
         "Tier 1",
         "npm package `@vinary-tree/liblevenshtein`",
-        "The facade delegates to the singleton `@vinary-tree/vinary-tree` runtime: native N-API by default, WebAssembly or WASI through explicit exports.",
+        "The facade delegates to the singleton `@vinary-tree/javascript-runtime` runtime: native N-API by default, WebAssembly or WASI through explicit exports.",
         "Use explicit resource management (`using`) where available or call `close()`/`close!` in `finally`. GC finalizers are fallback containment.",
         "Status codes become `VinaryTreeError` values carrying project, operation, status, and native diagnostic fields.",
         "Independent handles may be used concurrently. A cursor is single-consumer, callbacks are synchronous, and borrowed batches expire on callback return.",
@@ -243,7 +243,7 @@ GUIDES: dict[str, Guide] = {
 INTEROP_PACKAGES = {
     "python": "PyPI package `vinary-tree-interop`",
     "jvm": "Maven coordinate `io.vinarytree:vinary-tree-interop`",
-    "javascript": "npm package `@vinary-tree/interop`",
+    "javascript": "npm package `@vinary-tree/vinary-tree-interop`",
     "go": "Go module `github.com/vinary-tree/vinary-tree-interop/bindings/go/v4`",
     "swift": "SwiftPM product `VinaryTreeInterop`",
     "fortran": "fpm package `vinary-tree-interop`",

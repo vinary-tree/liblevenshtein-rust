@@ -217,27 +217,27 @@
         },
         "llev_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -1219,27 +1219,27 @@
         },
         "llev_distance": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_damerau_distance": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -1574,27 +1574,27 @@
         },
         "llev_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_transducer_new": {
           "symbol": "Transducer"
@@ -2076,27 +2076,27 @@
         },
         "llev_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_transducer_new": {
           "symbol": "Transducer.__init__"

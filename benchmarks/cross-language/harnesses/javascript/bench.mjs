@@ -189,7 +189,7 @@ async function loadNamespaces() {
     case "native":
       return {
         levenshtein: await import("@vinary-tree/liblevenshtein"),
-        dictionaries: (await import("@vinary-tree/vinary-tree")).libdictenstein,
+        dictionaries: (await import("@vinary-tree/javascript-runtime")).libdictenstein,
       };
     case "wasm": {
       // The umbrella's ./wasm entry initializes via browser fetch(); under
@@ -199,7 +199,7 @@ async function loadNamespaces() {
       // generated/ and runtime-factory paths are not in the export map, so
       // they are imported by file URL through the farm symlink.
       const runtimeDir = pathToFileURL(
-        resolve(HARNESS_DIR, "node_modules/@vinary-tree/vinary-tree") + "/",
+        resolve(HARNESS_DIR, "node_modules/@vinary-tree/javascript-runtime") + "/",
       );
       const raw = await import(new URL("generated/wasm/vinary_tree.js", runtimeDir));
       raw.initSync({
@@ -210,7 +210,7 @@ async function loadNamespaces() {
       return { levenshtein: runtime.liblevenshtein, dictionaries: runtime.libdictenstein };
     }
     case "wasi": {
-      const runtime = await import("@vinary-tree/vinary-tree/wasi");
+      const runtime = await import("@vinary-tree/javascript-runtime/wasi");
       return { levenshtein: runtime.liblevenshtein, dictionaries: runtime.libdictenstein };
     }
     case "legacy": {

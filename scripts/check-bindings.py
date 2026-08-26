@@ -677,9 +677,9 @@ require(
     "project npm facade must pin the interop package exactly",
 )
 require(
-    javascript["dependencies"][MODEL["wasm"]["umbrellaPackage"]]
+    javascript["dependencies"][MODEL["wasm"]["runtimePackage"]]
     == MODEL["packageVersion"],
-    "project npm facade must consume the exact umbrella runtime version",
+    "project npm facade must consume the exact shared JavaScript runtime version",
 )
 for export in (".", "./typescript", "./clojurescript", "./wasm", "./wasi"):
     require(export in javascript["exports"], f"npm package lacks {export} export")
@@ -710,8 +710,8 @@ for project, (project_root, package_name, guard) in related_packages.items():
         f"wrong {project} npm version",
     )
     require(
-        package["dependencies"]["@vinary-tree/vinary-tree"] == MODEL["packageVersion"],
-        f"{project} must pin the umbrella runtime exactly",
+        package["dependencies"]["@vinary-tree/javascript-runtime"] == MODEL["packageVersion"],
+        f"{project} must pin the shared JavaScript runtime exactly",
     )
     for export in (".", "./typescript", "./clojurescript", "./wasm", "./wasi"):
         require(export in package["exports"], f"{project} npm package lacks {export}")
@@ -799,18 +799,15 @@ for marker in (
     "jreleaser_deploy_maven_mavencentral_canonical_active: release",
     "jreleaser_deploy_maven_mavencentral_legacydylon_active:",
     "jreleaser_deploy_maven_mavencentral_legacyuniversalautomata_active:",
-    "require the pinned canonical artifact to be public first",
-    "canonicalmavenjarsha256",
-    "sha256sum --check --strict",
+    "require exact canonical artifact bytes to be public first",
+    "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.jar",
 ):
     require(marker in release, f"Maven publication workflow is missing {marker}")
 relocation_stager = text(ROOT / "scripts" / "stage-maven-relocations.py")
 jreleaser_configuration = text(ROOT / "bindings" / "jvm" / "jreleaser.yml")
 jvm_build = text(ROOT / "bindings" / "jvm" / "build.gradle.kts")
-jvm_description = (
-    "A high-performance library for spelling correction, fuzzy dictionary search, "
-    "and phonetic matching using Levenshtein and related finite-state automata."
-)
+release_model = json.loads(text(ROOT / "release" / "version.json"))
+jvm_description = release_model["metadata"]["description"]
 require(
     f'description = "{jvm_description}"' in jvm_build,
     "Maven POM description does not explain the product's purpose",
@@ -818,6 +815,11 @@ require(
 require(
     f"description: {jvm_description}" in jreleaser_configuration,
     "JReleaser and Maven POM descriptions have drifted",
+)
+require(
+    f':description "{jvm_description}"'
+    in text(ROOT / "bindings" / "clojure" / "project.clj"),
+    "Clojars and Maven descriptions have drifted",
 )
 require(
     not re.search(

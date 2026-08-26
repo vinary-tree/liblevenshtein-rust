@@ -150,7 +150,7 @@ Python wheels and the JVM artifact bundle the relevant native libraries;
 C/C++ exposes both CMake shared and static targets. No loader silently falls
 back to an unrelated system library.
 
-JavaScript is the deliberate exception. A single `@vinary-tree/vinary-tree`
+JavaScript is the deliberate exception. A single `@vinary-tree/javascript-runtime`
 runtime owns one coherent native/WASM resource table and exposes namespaces for
 the related projects. Project packages such as `@vinary-tree/libdictenstein`
 and `@vinary-tree/liblevenshtein` are lightweight typed facades over that
@@ -179,7 +179,7 @@ another project's API.
 | 1 | Python 3.10-current | Iterator plus borrowed batch reducer |
 | 1 | JVM: Java, Kotlin, Scala | Java 22 FFM API; JDK 25 LTS and current JDK tested |
 | 1 | Clojure | Dedicated reducible/sequence facade over the JVM package |
-| 1 | JavaScript, TypeScript, ClojureScript | Project facades over the shared umbrella runtime; CLJS mirrors the Clojure API where host semantics permit |
+| 1 | JavaScript, TypeScript, ClojureScript | Project facades over the shared JavaScript runtime; CLJS mirrors the Clojure API where host semantics permit |
 | 2 | .NET, Go, Swift, Ruby, Fortran | Idiomatic native facades over the same resource ABI |
 | 3 | OCaml, Haskell, Lua | Maintained native packages over the same resource and leased-batch contracts |
 
@@ -222,8 +222,8 @@ The packages are independently releasable:
   `io.vinarytree:liblevenshtein` on Maven Central (and therefore
   consumable through JFrog Artifactory mirrors);
 - Clojure: `io.vinarytree/liblevenshtein-clojure` on Clojars;
-- npm: `@vinary-tree/interop`, the umbrella
-  `@vinary-tree/vinary-tree`, and project facade
+- npm: `@vinary-tree/vinary-tree-interop`, the umbrella
+  `@vinary-tree/javascript-runtime`, and project facade
   `@vinary-tree/liblevenshtein`;
 - .NET: `VinaryTree.Interop` and `Liblevenshtein` on NuGet; the latter exposes
   the `VinaryTree.Liblevenshtein` namespace;

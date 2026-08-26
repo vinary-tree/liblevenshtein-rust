@@ -237,8 +237,8 @@ jobs:
           popd
           scripts/stage-native-package.sh \
             x86_64-unknown-linux-gnu target/debug target/native-package
-          interop_prefix="$PWD/target/native-package/vinary-tree-interop-4.0.0-rc.4"
-          liblevenshtein_prefix="$PWD/target/native-package/liblevenshtein-4.0.0-rc.4-x86_64-unknown-linux-gnu"
+          interop_prefix="$PWD/target/native-package/vinary-tree-interop-4.0.0-rc.5"
+          liblevenshtein_prefix="$PWD/target/native-package/liblevenshtein-4.0.0-rc.5-x86_64-unknown-linux-gnu"
           cmake -S bindings/cpp/tests/package -B target/cmake-package-smoke \
             -DCMAKE_PREFIX_PATH="$interop_prefix;$liblevenshtein_prefix"
           cmake --build target/cmake-package-smoke
@@ -256,7 +256,7 @@ jobs:
             x86_64-unknown-linux-gnu target/debug \
             "$GITHUB_WORKSPACE/target/native-package"
           popd
-          libdictenstein_prefix="$PWD/target/native-package/libdictenstein-4.0.0-rc.4-x86_64-unknown-linux-gnu"
+          libdictenstein_prefix="$PWD/target/native-package/libdictenstein-4.0.0-rc.5-x86_64-unknown-linux-gnu"
           package_prefixes="$interop_prefix;$liblevenshtein_prefix;$libdictenstein_prefix"
           cmake -S bindings/cpp/tests/package-cross \
             -B target/cmake-cross-project-shared \
