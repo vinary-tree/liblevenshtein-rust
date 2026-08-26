@@ -5,6 +5,28 @@ the separate libdictenstein rock. Cursors are callable generic-for iterators,
 use leased native batches, and implement `__close` plus `__gc`. The module is
 published as `liblevenshtein` on LuaRocks.
 
+## Installation
+
+The Lua rock contains the idiomatic C facade; the native SDK remains an
+explicit system dependency. Install matching `4.0.0-rc.4` native SDKs first,
+then identify their header and library directories when installing the rocks:
+
+```sh
+luarocks install libdictenstein 4.0.0rc4-2 \
+  LIBDICTENSTEIN_INCDIR=/opt/vinary-tree/include \
+  LIBDICTENSTEIN_LIBDIR=/opt/vinary-tree/lib
+luarocks install liblevenshtein 4.0.0rc4-2 \
+  LIBLEVENSHTEIN_INCDIR=/opt/vinary-tree/include \
+  LIBLEVENSHTEIN_LIBDIR=/opt/vinary-tree/lib
+```
+
+The `INCDIR` values must contain the corresponding project headers; the exact
+source rocks carry their generated shared-interop header mirrors. The `LIBDIR`
+values must contain the matching shared libraries. LuaRocks embeds the selected
+library directory in the native module's runtime search path. It never links
+against a transient `target/release` directory inside the downloaded source
+archive.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract

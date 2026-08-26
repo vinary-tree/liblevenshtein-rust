@@ -529,8 +529,9 @@ require(
     is not None,
     "wrong Hackage package",
 )
+luarocks_version = RELEASE_MODEL["registries"]["luaRocks"]
 luarocks_package = text(
-    ROOT / "bindings" / "lua" / "liblevenshtein-4.0.0rc4-1.rockspec"
+    ROOT / "bindings" / "lua" / f"liblevenshtein-{luarocks_version}.rockspec"
 )
 require(
     re.search(
@@ -540,6 +541,19 @@ require(
     )
     is not None,
     "wrong LuaRocks package",
+)
+for marker in (
+    'LIBLEVENSHTEIN = { header = "liblevenshtein.h", library = "liblevenshtein" }',
+    '"$(LIBLEVENSHTEIN_INCDIR)"',
+    '"$(LIBLEVENSHTEIN_LIBDIR)"',
+):
+    require(
+        marker in luarocks_package,
+        f"LuaRocks external-library contract is missing {marker}",
+    )
+require(
+    '"target/release"' not in luarocks_package,
+    "LuaRocks package must not link against a source-checkout target directory",
 )
 python_interop = tomllib.loads(
     text(INTEROP_ROOT / "bindings" / "python" / "pyproject.toml")
@@ -881,6 +895,17 @@ for release_name, release_source in (
         "luarocks install dkjson" in release_source,
         f"{release_name} LuaRocks upload does not install its JSON transport dependency",
     )
+    for marker in (
+        "luarocks --lua-version 5.4 make --tree",
+        "luarocks-tree",
+        "_incdir=",
+        "_libdir=",
+        "lua5.4 bindings/lua/",
+    ):
+        require(
+            marker in release_source,
+            f"{release_name} LuaRocks lane does not prove installed-package behavior: {marker}",
+        )
     require(
         '--api-key "$luarocks_api_key"' not in release_source,
         f"{release_name} LuaRocks upload persists the API key in runner configuration",

@@ -444,8 +444,7 @@ def render_dictionary_entries_fixture(model: dict) -> str:
     lines.extend(
         [
             f"interface\t-\tVtDictionaryEntriesVTable\tid\t{entries['interfaceId']}",
-            "interface\t-\tVtDictionaryEntriesVTable\tversion\t"
-            f"{model['interop']['dictionaryEntriesInterfaceVersion']}",
+            f"interface\t-\tVtDictionaryEntriesVTable\tversion\t{model['interop']['dictionaryEntriesInterfaceVersion']}",
         ]
     )
     for name, value in entries["statusValues"].items():
@@ -471,17 +470,17 @@ def render_dictionary_entries_fixture(model: dict) -> str:
 
 def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
     java_path = Path(*model["organization"]["javaPackage"].split("."))
-    interop_header = (
-        INTEROP_ROOT / "include" / "vinary_tree_interop.h"
-    ).read_text(encoding="utf-8")
+    interop_header = (INTEROP_ROOT / "include" / "vinary_tree_interop.h").read_text(
+        encoding="utf-8"
+    )
     public_header = (ROOT / "include" / "liblevenshtein.h").read_text(encoding="utf-8")
     abi_header = render_c(model)
     ocaml_header = (
         INTEROP_ROOT / "bindings" / "ocaml" / "vinary_tree_ocaml.h"
     ).read_text(encoding="utf-8")
-    lua_header = (
-        INTEROP_ROOT / "bindings" / "lua" / "vinary_tree_lua.h"
-    ).read_text(encoding="utf-8")
+    lua_header = (INTEROP_ROOT / "bindings" / "lua" / "vinary_tree_lua.h").read_text(
+        encoding="utf-8"
+    )
     generated = {
         ROOT / "include" / "liblevenshtein_abi.h": render_c(model),
         ROOT / "src" / "ffi" / "generated.rs": render_rust(model),
@@ -514,6 +513,8 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
         / "ocaml"
         / "include"
         / "vinary_tree_interop.h": interop_header,
+        ROOT / "bindings" / "lua" / "include" / "vinary_tree_lua.h": lua_header,
+        ROOT / "bindings" / "lua" / "include" / "vinary_tree_interop.h": interop_header,
         ROOT
         / "bindings"
         / "swift"

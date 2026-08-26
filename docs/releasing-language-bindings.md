@@ -91,16 +91,18 @@ the Vinary Tree namespace—for example, the NuGet distribution
 checks must compare every manifest with `bindings/api.json` so a prefixed
 distribution cannot silently return.
 
-For RC.4, the already-published global-distribution metadata came from
+For RC.4, the already-published global-distribution artifacts came from
 append-only root source `v4.0.0-rc.4-release.5` and libdictenstein source
-`v4.0.0-rc.4-release.2`. The clean-runner LuaRocks recovery advances only the
-affected publisher sources to root `v4.0.0-rc.4-release.6` and libdictenstein
-`v4.0.0-rc.4-release.4`; package versions and language APIs remain unchanged.
-Source-fetching metadata must distinguish the immutable package version from
-its corrective source tag: the LuaRocks rockspecs name those recovery refs,
-and opam staging derives its ref from the validated workflow dispatch.
-Synchronizers enforce this provenance so a registry cannot fetch an earlier
-tag that lacks the required publisher environment.
+`v4.0.0-rc.4-release.2`. Publisher-environment recovery advanced the first
+LuaRocks metadata to root `release.6` and libdictenstein `release.4`. A public
+clean-install test then proved that those `4.0.0rc4-1` rocks linked to a
+nonexistent source-archive `target/release` directory. The corrected rocks use
+LuaRocks packaging revision 2—`4.0.0rc4-2`—and append-only root `release.7`
+and libdictenstein `release.5`; the Rust RC, native ABI, and language APIs do
+not change. Source-fetching metadata must distinguish the semantic package
+version, the Lua packaging revision, and the corrective source tag.
+Synchronizers enforce all three so a registry cannot fetch an earlier tag or
+silently reset a repaired rock to revision 1.
 
 ## Two-phase, fail-closed workflow protocol
 
@@ -398,10 +400,11 @@ coordinate.
 
 ## Version function
 
-Let `M`, `m`, and `p` denote the major, minor, and patch components, and let `r`
-denote the release-candidate ordinal. For this train, `$`M = 4`$`, `$`m = 0`$`,
-`$`p = 0`$`, and `$`r = 4`$`. Define the canonical version `$`v`$` and numeric
-base `$`b`$` as follows:
+Let `M`, `m`, and `p` denote the major, minor, and patch components, let `r`
+denote the release-candidate ordinal, and let `q` denote a registry-local
+packaging revision. For this train, `$`M = 4`$`, `$`m = 0`$`, `$`p = 0`$`,
+`$`r = 4`$`, and LuaRocks alone uses `$`q = 2`$`. Define the canonical version
+`$`v`$` and numeric base `$`b`$` as follows:
 
 ```math
 v = M.m.p\text{-rc}.r = \text{4.0.0-rc.4}, \qquad b = M.m.p = \text{4.0.0}.
@@ -415,7 +418,7 @@ R_e(v) =
 \begin{cases}
 \text{4.0.0-rc.4} & e \in \{\text{Cargo,npm,Maven,Clojars,NuGet,Swift,CMake,C++}\},\\
 \text{4.0.0rc4} & e = \text{PyPI},\\
-\text{4.0.0rc4-1} & e = \text{LuaRocks},\\
+\text{4.0.0rc4-2} & e = \text{LuaRocks},\\
 \text{4.0.0.rc.4} & e = \text{RubyGems},\\
 \text{4.0.0\textasciitilde rc4} & e = \text{opam},\\
 \text{v4.0.0-rc.4} & e = \text{Go tag},\\
@@ -430,7 +433,7 @@ R_e(v) =
 | RubyGems | `4.0.0.rc.4` | Publish after native-resource inspection |
 | opam | `4.0.0~rc4` | Submit an opam-repository pull request |
 | Go | module path ending in `/v4`; tag `v4.0.0-rc.4` | Create the immutable subdirectory tag after dependencies resolve |
-| LuaRocks | `4.0.0rc4-1` | Publish linted rockspec metadata; rockspec format 1.0 permits one hyphen only, before the numeric revision |
+| LuaRocks | `4.0.0rc4-2` | Compile the rock against a staged native SDK, run its installed facade, then publish; the final integer is a Lua packaging revision, not another Rust RC |
 | Hackage | `4.0.0` with `x-release-candidate: rc.4` | Build candidate only; do not upload |
 | fpm | `4.0.0` | Build candidate only; do not upload |
 
@@ -764,18 +767,31 @@ gh workflow run release.yml \
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.5 \
+  --ref v4.0.0-rc.4-release.6 \
   -f registry=maven-relocation-dylon
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.4-release.5 \
+  --ref v4.0.0-rc.4-release.6 \
   -f registry=maven-relocation-universal-automata
 ```
 
 The first historical dispatch cannot pass until the workflow reads back the
 exact canonical POM and JAR from Central. The second notice is independent of
 the first; either can be retried without touching the other namespaces.
+
+Central Portal authorizes the exact group identifier, not a conceptually
+related GitHub namespace. On 2026-08-26, Central accepted and signed both
+revision-6 bundles, then rejected deployment IDs
+`2c034894-a403-41a5-a00f-9b0172d99230` and the corresponding
+universal-automata deployment with `Namespace 'com.github.dylon' is not
+allowed` and `Namespace 'com.github.universal-automata' is not allowed`.
+Verification of `io.github.dylon` and `io.github.universal-automata` does not
+authorize these historical `com.github.*` coordinates. Publishing notices
+under `io.github.*` would not relocate existing consumers and is forbidden.
+The only valid continuation is a Sonatype support transfer/grant for the two
+exact legacy group identifiers to the current Central Portal account, followed
+by independent reruns from immutable `release.6`.
 
 .NET packages depend on `VinaryTree.Interop` rather than embedding its source.
 Ruby packages inspect every platform payload before `gem push`. Every managed
@@ -854,7 +870,7 @@ its native payload loads.
 | NuGet | Query the exact package version from nuget.org | Empty `dotnet new` project; add exact package; run collection, enumeration, snapshot, and `IDisposable` fixtures |
 | RubyGems | `gem fetch NAME -v 4.0.0.rc.4` | Install to an isolated gem home; require the gem, traverse data, and close native resources |
 | Go proxy | `go list -m MODULE@v4.0.0-rc.4` | New module with the exact `/v4` requirement; `go test` the ownership and iteration fixture |
-| LuaRocks | Inspect/download `NAME 4.0.0rc4-1` from the configured server | Isolated tree; load the module and run resource and traversal fixtures |
+| LuaRocks | Inspect/download `NAME 4.0.0rc4-2` from the configured server and compare the rockspec bytes | Isolated tree; install against an explicit native SDK through `NAME_INCDIR` and `NAME_LIBDIR`, load the module, and run resource and traversal fixtures |
 | opam | Inspect the submitted `opam-repository` pull request and source checksum | Fresh switch; pin the candidate metadata, build, and execute its examples before merge |
 | GitHub release | Verify `SHA256SUMS` against every downloaded asset | Relocate each native SDK archive and build both shared and static sample consumers where supported |
 
@@ -1094,6 +1110,35 @@ publishing repositories. If an upload fails with `A JSON library was not
 found`, treat it as a publisher-environment defect: do not move the source tag
 or change the package version, add the explicit dependency in a new numbered
 corrective source, repeat validate-only, and then retry only the affected rock.
+
+A linted rockspec is not installation evidence. The builtin LuaRocks builder
+resolves a declared external dependency into `NAME_INCDIR` and `NAME_LIBDIR`;
+the module's `incdirs` and `libdirs` must reference those variables. Never
+hard-code a repository-local `target/release`: LuaRocks builds an unpacked
+source archive that contains no Cargo output, and an operator-supplied library
+override cannot replace an explicit hard-coded path. The RC.4 revision-1
+rockspecs violated this rule. Their public bytes remain immutable, but they are
+superseded by packaging revision 2.
+
+Every LuaRocks package job must now execute this end-to-end proof before its
+protected uploader can run:
+
+1. Download or build the exact native SDK identified by the release model.
+2. Create an isolated LuaRocks tree.
+3. Build the dictionary producer rock with explicit
+   `LIBDICTENSTEIN_INCDIR` and `LIBDICTENSTEIN_LIBDIR`.
+4. Build the liblevenshtein consumer rock with explicit
+   `LIBLEVENSHTEIN_INCDIR` and `LIBLEVENSHTEIN_LIBDIR`.
+5. Load the installed modules from that tree and exercise retained dictionary
+   handoff, query-start snapshot behavior, traversal, and deterministic close.
+
+The native SDK remains an explicit prerequisite for these source rocks. The
+external header directory must include the project header; the exact source
+rock supplies its generated `vinary_tree_interop.h` mirror. The library
+directory must contain the matching shared library. The module records the
+selected library directory in its runtime search path. Binary rocks that bundle
+platform payloads are a valid future distribution improvement, but they do not
+weaken this source-rock gate.
 
 ### opam-repository contribution authority
 

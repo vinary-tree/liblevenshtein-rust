@@ -18,7 +18,7 @@ GENERATED_TREE_PARTS = frozenset(
 )
 
 
-def derived(canonical: str) -> dict[str, str]:
+def derived(canonical: str, lua_rocks_revision: int = 1) -> dict[str, str]:
     match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)-rc\.(\d+)", canonical)
     if match is None:
         raise ValueError(f"canonical version is not a numbered RC: {canonical}")
@@ -31,7 +31,7 @@ def derived(canonical: str) -> dict[str, str]:
         "fpm": base,
         "goTag": f"v{canonical}",
         "hackage": base,
-        "luaRocks": f"{base}rc{candidate}-1",
+        "luaRocks": f"{base}rc{candidate}-{lua_rocks_revision}",
         "maven": canonical,
         "npm": canonical,
         "nuget": canonical,
@@ -115,6 +115,7 @@ def cargo_lock_versions(expected: dict[str, str]) -> dict[str, str | None]:
 def rewrite_candidate_tokens(
     patterns: tuple[str, ...],
     canonical: str,
+    lua_rocks_revision: int,
     excluded: tuple[str, ...] = (),
 ) -> None:
     base, candidate = canonical.split("-rc.", 1)
@@ -123,7 +124,10 @@ def rewrite_candidate_tokens(
         (rf"{escaped}\.rc\.\d+", f"{base}.rc.{candidate}"),
         (rf"{escaped}~rc\d+", f"{base}~rc{candidate}"),
         (rf"{escaped}\\textasciitilde rc\d+", rf"{base}\textasciitilde rc{candidate}"),
-        (rf"{escaped}rc\d+-\d+", f"{base}rc{candidate}-1"),
+        (
+            rf"{escaped}rc\d+-\d+",
+            f"{base}rc{candidate}-{lua_rocks_revision}",
+        ),
         (rf"{escaped}rc\d+", f"{base}rc{candidate}"),
         (rf"{escaped}-rc\.\d+", canonical),
         (r"RELEASE_4_RC_\d+", f"RELEASE_4_RC_{candidate}"),
@@ -507,6 +511,7 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
             "docs/**/*.puml",
         ),
         canonical,
+        int(model["publication"].get("luaRocksRevision", 1)),
         excluded=(
             "docs/diagrams/bindings/rejected-candidate-recovery.puml",
             "docs/releases/4.0.0-rc.1.md",
@@ -775,7 +780,15 @@ def main() -> int:
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
     model = json.loads(MODEL_PATH.read_text(encoding="utf-8"))
-    versions = derived(str(model["canonical"]))
+    publication = model.get("publication", {})
+    lua_rocks_revision = publication.get("luaRocksRevision", 1)
+    if not isinstance(lua_rocks_revision, int) or lua_rocks_revision < 1:
+        print(
+            "release-version error: publication.luaRocksRevision must be a positive integer",
+            file=sys.stderr,
+        )
+        return 1
+    versions = derived(str(model["canonical"]), lua_rocks_revision)
     if args.write:
         write_versions(model, versions)
     failures = validate(model, versions)

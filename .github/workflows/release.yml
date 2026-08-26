@@ -544,19 +544,47 @@ jobs:
           test "$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$RUNNER_TEMP/fpm-liblevenshtein/fpm.toml")" = 4.0.0
 
   luarocks-package:
-    name: LuaRocks metadata validation
-    needs: binding-contract
+    name: LuaRocks package and installed consumer
+    needs: [binding-contract, native]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - run: sudo apt-get update && sudo apt-get install -y luarocks
-      - run: luarocks lint bindings/lua/liblevenshtein-4.0.0rc4-1.rockspec
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          source-ref-manifest: release/version.json
+      - uses: dtolnay/rust-toolchain@1.95
+      - run: sudo apt-get update && sudo apt-get install -y lua5.4 liblua5.4-dev luarocks
+      - uses: actions/download-artifact@v7
+        with:
+          name: native-x86_64-unknown-linux-gnu
+          path: dist
+      - run: luarocks lint bindings/lua/liblevenshtein-4.0.0rc4-2.rockspec
+      - name: Build both rocks against exact native SDKs and run the public handoff
+        shell: bash
+        run: |
+          tar -xzf dist/liblevenshtein-4.0.0-rc.4-x86_64-unknown-linux-gnu.tar.gz -C dist
+          package_root="$PWD/dist/liblevenshtein-4.0.0-rc.4-x86_64-unknown-linux-gnu"
+          rock_tree="$RUNNER_TEMP/luarocks-tree"
+          cargo build --release --manifest-path ../libdictenstein/Cargo.toml --features ffi
+          (
+            cd ../libdictenstein
+            luarocks --lua-version 5.4 make --tree "$rock_tree" \
+              bindings/lua/libdictenstein-4.0.0rc4-2.rockspec \
+              LIBDICTENSTEIN_INCDIR="$PWD/include" \
+              LIBDICTENSTEIN_LIBDIR="$PWD/target/release"
+          )
+          luarocks --lua-version 5.4 make --tree "$rock_tree" \
+            bindings/lua/liblevenshtein-4.0.0rc4-2.rockspec \
+            LIBLEVENSHTEIN_INCDIR="$package_root/include" \
+            LIBLEVENSHTEIN_LIBDIR="$package_root/lib"
+          LUA_CPATH="$rock_tree/lib/lua/5.4/?.so;;" \
+            lua5.4 bindings/lua/tests/snapshot.lua
       - uses: actions/upload-artifact@v7
         with:
           name: luarocks-package
-          path: bindings/lua/liblevenshtein-4.0.0rc4-1.rockspec
+          path: bindings/lua/liblevenshtein-4.0.0rc4-2.rockspec
           if-no-files-found: error
 
   opam-package:
@@ -736,7 +764,7 @@ jobs:
         env:
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: >-
-          luarocks upload dist/liblevenshtein-4.0.0rc4-1.rockspec
+          luarocks upload dist/liblevenshtein-4.0.0rc4-2.rockspec
           --temp-key "$LUAROCKS_API_KEY"
 
   opam:

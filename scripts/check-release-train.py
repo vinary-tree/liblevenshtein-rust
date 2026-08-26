@@ -47,7 +47,6 @@ REGISTRY_SPELLINGS = {
     "fpm": BASE,
     "goTag": f"v{EXPECTED}",
     "hackage": BASE,
-    "luaRocks": f"{BASE}rc{CANDIDATE}-1",
     "maven": EXPECTED,
     "npm": EXPECTED,
     "nuget": EXPECTED,
@@ -141,17 +140,26 @@ for component, manifest in manifests.items():
     for dependency, version in manifest.get("dependencies", {}).items():
         check_dependency(component, dependency, version)
 
+    publication_model = manifest.get("publication")
+    publication = publication_model or {}
+    lua_rocks_revision = publication.get("luaRocksRevision", 1)
+    if not isinstance(lua_rocks_revision, int) or lua_rocks_revision < 1:
+        fail(f"{component}: publication.luaRocksRevision must be a positive integer")
+
     registries = manifest.get("registries")
     if registries is not None:
         for registry, version in registries.items():
-            expected = REGISTRY_SPELLINGS.get(registry)
+            expected = (
+                f"{BASE}rc{CANDIDATE}-{lua_rocks_revision}"
+                if registry == "luaRocks"
+                else REGISTRY_SPELLINGS.get(registry)
+            )
             if expected is None:
                 fail(f"{component}: unknown registry spelling {registry!r}")
             if version != expected:
                 fail(f"{component}: {registry} uses {version!r}, expected {expected!r}")
 
-    publication = manifest.get("publication")
-    if publication is not None:
+    if publication_model is not None:
         if publication.get("distTag") != "next":
             fail(f"{component}: npm prereleases must use the next dist-tag")
         for numeric_only in ("hackage", "fpm"):
