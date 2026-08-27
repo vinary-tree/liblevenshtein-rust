@@ -117,6 +117,11 @@ Backend-by-backend and query-surface-by-query-surface classification of every
 accepted parity optimization, including the generic invariant, specialized
 adaptations, explicit inapplicability reasons, and completion gates.
 
+#### [Generated-target Storage Requalification](generated-target-storage-requalification.md)
+Root-cause analysis, bounded adaptive representation, property and deep-stack
+tests, and paired latency/RSS evidence for the positional automaton's
+generated-target cache.
+
 #### [Academic Benchmark Reproduction](academic-benchmarks.md)
 Repeatable commands for the UCR/UEA MSM archive benchmark and the CMUdict
 phonetic homophone benchmark:

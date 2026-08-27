@@ -1261,6 +1261,24 @@ fn jagged_generated_targets_enabled() -> bool {
     std::env::var_os("LIBLEVENSHTEIN_CAUSAL_USE_JAGGED_GENERATED_TARGETS").is_some()
 }
 
+/// Same-binary causal control for comparing the former unbounded dense table.
+///
+/// The control is compiled out of production builds and refuses rows above
+/// 4 KiB, preventing an accidental benchmark configuration from recreating
+/// the previously unbounded per-state allocation.
+#[cfg(feature = "benchmark-controls")]
+fn causal_dense_generated_targets_enabled(row_bytes: usize) -> bool {
+    const MAX_CAUSAL_ROW_BYTES: usize = 4 * 1024;
+    row_bytes <= MAX_CAUSAL_ROW_BYTES
+        && std::env::var_os("LIBLEVENSHTEIN_CAUSAL_FORCE_DENSE_GENERATED_TARGETS").is_some()
+}
+
+#[cfg(not(feature = "benchmark-controls"))]
+#[inline(always)]
+const fn causal_dense_generated_targets_enabled(_row_bytes: usize) -> bool {
+    false
+}
+
 #[inline(always)]
 fn legacy_characteristic_index_enabled() -> bool {
     #[cfg(feature = "benchmark-controls")]
@@ -1309,76 +1327,149 @@ impl GeneratedStateId {
     }
 }
 
-/// Contiguous row-major transition targets for generated positional states.
+/// Maximum fixed storage committed to one generated-state transition row.
 ///
-/// Canonical position slices remain separately boxed because queued `State`
-/// values borrow their stable addresses. Targets have no such stability
-/// requirement, so keeping them in one allocation removes the second pointer
-/// chase from the overwhelmingly common cache-hit path. The row width is a
-/// fixed power of two derived from query length. Exact matching never exceeds
-/// that bound; custom substitution policies may create more classes, whose
-/// genuinely sparse cells use the overflow map without widening every row.
-struct DenseGeneratedTargets {
-    values: Vec<GeneratedTarget>,
-    row_shift: u32,
-    overflow: FxHashMap<(GeneratedStateId, usize), GeneratedTarget>,
+/// Thirty-two ordinary 64-byte cache lines retain the measured short-query locality
+/// benefit without letting query width multiply every generated state. The
+/// bound is expressed in bytes so 32-bit and 64-bit targets obey the same
+/// per-state memory contract.
+const MAX_DENSE_GENERATED_ROW_BYTES: usize = 32 * 64;
+
+/// Adaptive transition targets for generated positional states.
+///
+/// Short-query rows remain contiguous and row-major. Once the power-of-two row
+/// width would exceed [`MAX_DENSE_GENERATED_ROW_BYTES`], the table stores only
+/// observed `(state, characteristic class)` transitions. Storage is therefore
+/// linear in reached states plus observed transitions rather than the product
+/// of reached states and query length. Custom substitution policies also use
+/// sparse cells when they create classes beyond a retained dense stride.
+enum GeneratedTargets {
+    Dense {
+        values: Vec<GeneratedTarget>,
+        row_shift: u32,
+        overflow: FxHashMap<(GeneratedStateId, usize), GeneratedTarget>,
+    },
+    Sparse(FxHashMap<(GeneratedStateId, usize), GeneratedTarget>),
 }
 
-impl DenseGeneratedTargets {
+impl GeneratedTargets {
     fn new(initial_class_capacity: usize) -> Self {
         let capacity = initial_class_capacity
             .max(1)
             .checked_next_power_of_two()
             .expect("query-local characteristic class capacity exceeds usize");
-        Self {
-            values: Vec::new(),
-            row_shift: capacity.trailing_zeros(),
-            overflow: FxHashMap::default(),
+        let dense_capacity = MAX_DENSE_GENERATED_ROW_BYTES / std::mem::size_of::<GeneratedTarget>();
+        let row_bytes = capacity
+            .checked_mul(std::mem::size_of::<GeneratedTarget>())
+            .expect("query-local generated target row exceeds usize");
+        if capacity <= dense_capacity || causal_dense_generated_targets_enabled(row_bytes) {
+            Self::Dense {
+                values: Vec::new(),
+                row_shift: capacity.trailing_zeros(),
+                overflow: FxHashMap::default(),
+            }
+        } else {
+            Self::Sparse(FxHashMap::default())
+        }
+    }
+
+    #[cfg(test)]
+    #[inline(always)]
+    fn dense_stride(&self) -> Option<usize> {
+        match self {
+            Self::Dense { row_shift, .. } => Some(1usize << row_shift),
+            Self::Sparse(_) => None,
         }
     }
 
     #[inline(always)]
-    fn stride(&self) -> usize {
-        1usize << self.row_shift
-    }
-
-    #[inline(always)]
-    fn index(&self, state: GeneratedStateId, class: usize) -> usize {
-        debug_assert!(class < self.stride());
-        (state.0 << self.row_shift) | class
+    fn dense_index(state: GeneratedStateId, class: usize, row_shift: u32) -> usize {
+        debug_assert!(class < (1usize << row_shift));
+        (state.0 << row_shift) | class
     }
 
     fn push_row(&mut self) {
-        self.values.extend(std::iter::repeat_n(
-            GeneratedTarget::UNCOMPUTED,
-            self.stride(),
-        ));
+        if let Self::Dense {
+            values, row_shift, ..
+        } = self
+        {
+            values.extend(std::iter::repeat_n(
+                GeneratedTarget::UNCOMPUTED,
+                1usize << *row_shift,
+            ));
+        }
     }
 
     #[inline(always)]
     fn get(&self, state: GeneratedStateId, class: usize) -> GeneratedTarget {
-        if class >= self.stride() {
-            return self
-                .overflow
+        match self {
+            Self::Dense {
+                values,
+                row_shift,
+                overflow,
+            } => {
+                if class < (1usize << row_shift) {
+                    values[Self::dense_index(state, class, *row_shift)]
+                } else {
+                    overflow
+                        .get(&(state, class))
+                        .copied()
+                        .unwrap_or(GeneratedTarget::UNCOMPUTED)
+                }
+            }
+            Self::Sparse(values) => values
                 .get(&(state, class))
                 .copied()
-                .unwrap_or(GeneratedTarget::UNCOMPUTED);
+                .unwrap_or(GeneratedTarget::UNCOMPUTED),
         }
-        self.values[self.index(state, class)]
     }
 
     fn set(&mut self, state: GeneratedStateId, class: usize, target: GeneratedTarget) {
-        if class >= self.stride() {
-            self.overflow.insert((state, class), target);
-            return;
+        match self {
+            Self::Dense {
+                values,
+                row_shift,
+                overflow,
+            } => {
+                if class < (1usize << *row_shift) {
+                    let index = Self::dense_index(state, class, *row_shift);
+                    values[index] = target;
+                } else {
+                    overflow.insert((state, class), target);
+                }
+            }
+            Self::Sparse(values) => {
+                values.insert((state, class), target);
+            }
         }
-        let index = self.index(state, class);
-        self.values[index] = target;
     }
 
     fn clear(&mut self) {
-        self.values.clear();
-        self.overflow.clear();
+        match self {
+            Self::Dense {
+                values, overflow, ..
+            } => {
+                values.clear();
+                overflow.clear();
+            }
+            Self::Sparse(values) => values.clear(),
+        }
+    }
+
+    #[cfg(test)]
+    fn dense_cell_count(&self) -> usize {
+        match self {
+            Self::Dense { values, .. } => values.len(),
+            Self::Sparse(_) => 0,
+        }
+    }
+
+    #[cfg(test)]
+    fn sparse_cell_count(&self) -> usize {
+        match self {
+            Self::Dense { overflow, .. } => overflow.len(),
+            Self::Sparse(values) => values.len(),
+        }
     }
 }
 
@@ -1392,7 +1483,7 @@ pub(crate) struct CachedUnitTransitions<U: CharUnit> {
     cache: CharacteristicCache<U>,
     generated_config: Option<(Algorithm, bool)>,
     generated_sources: Vec<Box<[Position]>>,
-    dense_targets: DenseGeneratedTargets,
+    generated_targets: GeneratedTargets,
     #[cfg(feature = "benchmark-controls")]
     jagged_targets: Vec<Vec<GeneratedTarget>>,
     #[cfg(feature = "benchmark-controls")]
@@ -1407,7 +1498,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
             cache: CharacteristicCache::new(query_length, max_distance),
             generated_config: None,
             generated_sources: Vec::new(),
-            dense_targets: DenseGeneratedTargets::new(query_length.saturating_add(1)),
+            generated_targets: GeneratedTargets::new(query_length.saturating_add(1)),
             #[cfg(feature = "benchmark-controls")]
             jagged_targets: Vec::new(),
             #[cfg(feature = "benchmark-controls")]
@@ -1424,10 +1515,10 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         if self.use_jagged_targets {
             self.jagged_targets.push(Vec::new());
         } else {
-            self.dense_targets.push_row();
+            self.generated_targets.push_row();
         }
         #[cfg(not(feature = "benchmark-controls"))]
-        self.dense_targets.push_row();
+        self.generated_targets.push_row();
         id
     }
 
@@ -1440,7 +1531,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
                 .copied()
                 .unwrap_or(GeneratedTarget::UNCOMPUTED);
         }
-        self.dense_targets.get(source, class)
+        self.generated_targets.get(source, class)
     }
 
     #[inline]
@@ -1459,12 +1550,12 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
             row[class] = target;
             return;
         }
-        self.dense_targets.set(source, class, target);
+        self.generated_targets.set(source, class, target);
     }
 
     fn clear_generated_table(&mut self) {
         self.generated_sources.clear();
-        self.dense_targets.clear();
+        self.generated_targets.clear();
         #[cfg(feature = "benchmark-controls")]
         self.jagged_targets.clear();
     }
@@ -3234,6 +3325,7 @@ pub(crate) fn initial_state_affine(
 mod tests {
     use super::*;
     use crate::transducer::{Restricted, SubstitutionSet, Unrestricted};
+    use proptest::prelude::*;
 
     fn short_words<U: CharUnit>(alphabet: &[U], max_len: usize) -> Vec<Vec<U>> {
         let mut words = vec![Vec::new()];
@@ -3581,8 +3673,8 @@ mod tests {
     }
 
     #[test]
-    fn dense_generated_targets_keep_custom_policy_classes_in_sparse_overflow() {
-        let mut targets = DenseGeneratedTargets::new(2);
+    fn short_generated_target_rows_keep_custom_policy_classes_in_sparse_overflow() {
+        let mut targets = GeneratedTargets::new(2);
         let row_zero = GeneratedStateId(0);
         let row_one = GeneratedStateId(1);
         targets.push_row();
@@ -3592,7 +3684,7 @@ mod tests {
 
         targets.set(row_zero, 5, GeneratedTarget::state(GeneratedStateId(9)));
 
-        assert_eq!(targets.stride(), 2);
+        assert_eq!(targets.dense_stride(), Some(2));
         assert_eq!(
             targets.get(row_zero, 0),
             GeneratedTarget::state(GeneratedStateId(7))
@@ -3606,10 +3698,103 @@ mod tests {
 
         let row_two = GeneratedStateId(2);
         targets.push_row();
-        for class in 0..targets.stride() {
+        for class in 0..targets.dense_stride().expect("short rows stay dense") {
             assert_eq!(targets.get(row_two, class), GeneratedTarget::UNCOMPUTED);
         }
         assert_eq!(targets.get(row_two, 5), GeneratedTarget::UNCOMPUTED);
+    }
+
+    #[test]
+    fn long_generated_target_rows_allocate_only_observed_transitions() {
+        let dense_capacity = MAX_DENSE_GENERATED_ROW_BYTES / std::mem::size_of::<GeneratedTarget>();
+        let mut targets = GeneratedTargets::new(dense_capacity + 1);
+        for _ in 0..10_000 {
+            targets.push_row();
+        }
+
+        let first = GeneratedStateId(0);
+        let last = GeneratedStateId(9_999);
+        targets.set(first, 7, GeneratedTarget::state(last));
+        targets.set(last, dense_capacity * 4, GeneratedTarget::EMPTY);
+
+        assert_eq!(targets.dense_stride(), None);
+        assert_eq!(targets.dense_cell_count(), 0);
+        assert_eq!(targets.sparse_cell_count(), 2);
+        assert_eq!(targets.get(first, 7), GeneratedTarget::state(last));
+        assert_eq!(
+            targets.get(last, dense_capacity * 4),
+            GeneratedTarget::EMPTY
+        );
+        assert_eq!(
+            targets.get(GeneratedStateId(5_000), 7),
+            GeneratedTarget::UNCOMPUTED
+        );
+    }
+
+    #[test]
+    fn hundred_thousand_unit_query_uses_sparse_targets_and_constant_call_stack() {
+        std::thread::Builder::new()
+            .name("generated-targets-256k-stack".into())
+            .stack_size(256 * 1024)
+            .spawn(|| {
+                let query = vec![b'a'; 100_000];
+                let settings = TransitionSettings::new(1, Algorithm::Standard, false);
+                let (mut machine, mut frontier) =
+                    UnitCostMachine::<u8>::seeded::<Unrestricted>(&query, settings);
+                let mut pool = StatePool::new();
+
+                for &unit in &query {
+                    frontier = machine
+                        .step(frontier, &mut pool, &Unrestricted, unit, &query, settings)
+                        .expect("the exact query path remains live");
+                }
+
+                assert_eq!(
+                    machine.finish_distance(frontier, FinishMode::Complete, query.len()),
+                    Some(0)
+                );
+                let UnitCostMachine::Positional(machine) = machine else {
+                    panic!("a 100,000-unit query cannot fit a packed frontier");
+                };
+                assert_eq!(machine.generated_targets.dense_cell_count(), 0);
+                assert!(machine.generated_targets.sparse_cell_count() <= query.len());
+            })
+            .expect("spawn bounded-stack generated-target test")
+            .join()
+            .expect("bounded-stack generated-target test completes");
+    }
+
+    proptest! {
+        #[test]
+        fn generated_target_modes_refine_a_sparse_oracle(
+            initial_capacity in 1usize..128,
+            row_count in 1usize..64,
+            operations in prop::collection::vec((0usize..64, 0usize..256, 0usize..4096), 0..512),
+            probes in prop::collection::vec((0usize..64, 0usize..256), 0..128),
+        ) {
+            let mut targets = GeneratedTargets::new(initial_capacity);
+            for _ in 0..row_count {
+                targets.push_row();
+            }
+            let mut oracle = FxHashMap::default();
+
+            for (row, class, target_state) in operations {
+                let row = GeneratedStateId(row % row_count);
+                let target = GeneratedTarget::state(GeneratedStateId(target_state));
+                targets.set(row, class, target);
+                oracle.insert((row, class), target);
+                prop_assert_eq!(targets.get(row, class), target);
+            }
+
+            for (row, class) in probes {
+                let row = GeneratedStateId(row % row_count);
+                let expected = oracle
+                    .get(&(row, class))
+                    .copied()
+                    .unwrap_or(GeneratedTarget::UNCOMPUTED);
+                prop_assert_eq!(targets.get(row, class), expected);
+            }
+        }
     }
 
     #[test]
