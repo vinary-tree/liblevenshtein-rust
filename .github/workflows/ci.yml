@@ -57,6 +57,10 @@ jobs:
   miri:
     name: Miri (interop + consumer ABI)
     runs-on: ubuntu-24.04
+    # The prior complete hosted baseline took 58 minutes. Preserve more than a
+    # twofold noise margin without allowing an interpreter stall to consume the
+    # six-hour GitHub Actions default.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
       # The consumer-ABI correspondence tests below build against the
@@ -952,6 +956,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-portable-siblings
       - name: Start ${{ matrix.platform.name }} VM
+        # Healthy BSD starts in this matrix complete in under one minute. The
+        # wider ceiling tolerates runner noise while bounding a stuck QEMU boot.
+        timeout-minutes: 10
         uses: cross-platform-actions/action@v1.3.0
         with:
           operating_system: ${{ matrix.platform.os }}

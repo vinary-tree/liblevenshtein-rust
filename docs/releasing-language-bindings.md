@@ -335,7 +335,8 @@ NPM_PACKAGE="@vinary-tree/libdictenstein"
 npm view "${NPM_PACKAGE}@${RELEASE_VERSION}" \
   version dist.integrity dist.shasum --json
 
-SMOKE_DIRECTORY="$(mktemp -d /tmp/vinary-tree-npm-smoke.XXXXXX)"
+mkdir -p "${PWD}/target/release-smoke"
+SMOKE_DIRECTORY="$(mktemp -d "${PWD}/target/release-smoke/npm.XXXXXX")"
 trap 'rm -rf -- "${SMOKE_DIRECTORY}"' EXIT
 npm install --prefix "${SMOKE_DIRECTORY}" \
   "${NPM_PACKAGE}@${RELEASE_VERSION}"
@@ -348,8 +349,9 @@ npm install --prefix "${SMOKE_DIRECTORY}" \
 
 The smoke program must import the installed package—not a repository-relative
 path—and exercise its public construction, query or traversal, iteration,
-snapshot where applicable, and deterministic-close contracts. Remove the exact
-temporary directory after its evidence is captured.
+snapshot where applicable, and deterministic-close contracts. The
+repository-local directory avoids RAM-backed system temporary files. Remove the
+exact temporary directory after its evidence is captured.
 
 ### 6. Normalize a newly scoped npm coordinate
 
