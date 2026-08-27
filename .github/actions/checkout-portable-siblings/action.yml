@@ -3,22 +3,71 @@ description: >
   Place development sibling sources inside the repository so cross-runtime and
   VM jobs that mount only GITHUB_WORKSPACE test the same revisions as native CI.
 
+inputs:
+  ref:
+    description: >
+      Baseline development ref. A release/* pull-request head selects the same
+      coordinated branch for mutable siblings.
+    required: false
+    default: master
+  llattice-ref:
+    description: Immutable llattice release ref.
+    required: false
+    default: v0.1.0
+  interop-ref:
+    description: Explicit vinary-tree-interop ref; defaults to the coordinated ref.
+    required: false
+    default: ""
+  libdictenstein-ref:
+    description: Explicit libdictenstein ref; defaults to the coordinated ref.
+    required: false
+    default: ""
+
 runs:
   using: composite
   steps:
+    - id: source-refs
+      name: Select and validate portable sibling refs
+      shell: bash
+      env:
+        BASELINE_REF: ${{ inputs.ref }}
+        LLATTICE_REF: ${{ inputs.llattice-ref }}
+        INTEROP_REF: ${{ inputs.interop-ref }}
+        LIBDICTENSTEIN_REF: ${{ inputs.libdictenstein-ref }}
+      run: |
+        set -euo pipefail
+        event_ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}"
+        if [[ "$event_ref" == release/* ]]; then
+          mutable_ref="$event_ref"
+        else
+          mutable_ref="$BASELINE_REF"
+        fi
+        interop_ref="${INTEROP_REF:-$mutable_ref}"
+        libdictenstein_ref="${LIBDICTENSTEIN_REF:-$mutable_ref}"
+        for ref in "$interop_ref" "$LLATTICE_REF" "$libdictenstein_ref"; do
+          git check-ref-format --branch "$ref" >/dev/null
+        done
+        {
+          echo "interop=$interop_ref"
+          echo "llattice=$LLATTICE_REF"
+          echo "libdictenstein=$libdictenstein_ref"
+        } >> "$GITHUB_OUTPUT"
     - uses: actions/checkout@v6
       with:
         repository: vinary-tree/vinary-tree-interop
+        ref: ${{ steps.source-refs.outputs.interop }}
         path: vendor/vinary-tree-interop
         persist-credentials: false
     - uses: actions/checkout@v6
       with:
         repository: vinary-tree/llattice
+        ref: ${{ steps.source-refs.outputs.llattice }}
         path: vendor/llattice
         persist-credentials: false
     - uses: actions/checkout@v6
       with:
         repository: vinary-tree/libdictenstein
+        ref: ${{ steps.source-refs.outputs.libdictenstein }}
         path: vendor/libdictenstein
         persist-credentials: false
     - name: Point development dependencies at workspace-local vendor trees

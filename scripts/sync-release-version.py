@@ -95,21 +95,23 @@ def replace(path: str, pattern: str, replacement: str, expected: int = 1) -> Non
     target.write_text(updated, encoding="utf-8")
 
 
-def rewrite_cargo_lock(expected: dict[str, str]) -> None:
-    target = ROOT / "Cargo.lock"
+def rewrite_cargo_lock(expected: dict[str, str], path: str = "Cargo.lock") -> None:
+    target = ROOT / path
     source = target.read_text(encoding="utf-8")
     for package, version in expected.items():
         pattern = rf'(\[\[package\]\]\nname = "{re.escape(package)}"\nversion = ")[^"]+'
         source, count = re.subn(pattern, rf"\g<1>{version}", source)
         if count != 1:
             raise ValueError(
-                f"Cargo.lock: expected one {package} package entry, found {count}"
+                f"{path}: expected one {package} package entry, found {count}"
             )
     target.write_text(source, encoding="utf-8")
 
 
-def cargo_lock_versions(expected: dict[str, str]) -> dict[str, str | None]:
-    source = read("Cargo.lock")
+def cargo_lock_versions(
+    expected: dict[str, str], path: str = "Cargo.lock"
+) -> dict[str, str | None]:
+    source = read(path)
     return {
         package: (
             match.group(1)
@@ -205,6 +207,13 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
             "libdictenstein": str(dependencies["libdictenstein"]),
             "vinary-tree-interop": str(dependencies["vinary-tree-interop"]),
         }
+    )
+    rewrite_cargo_lock(
+        {
+            "liblevenshtein": canonical,
+            "libdictenstein": str(dependencies["libdictenstein"]),
+        },
+        "liblevenshtein-macros/Cargo.lock",
     )
 
     def api(value: dict) -> None:
@@ -762,11 +771,19 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
         "libdictenstein": str(dependencies["libdictenstein"]),
         "vinary-tree-interop": str(dependencies["vinary-tree-interop"]),
     }
-    for package, actual in cargo_lock_versions(expected_locks).items():
-        if actual != expected_locks[package]:
-            failures.append(
-                f"Cargo.lock {package}: expected {expected_locks[package]}, got {actual}"
-            )
+    lock_expectations = {
+        "Cargo.lock": expected_locks,
+        "liblevenshtein-macros/Cargo.lock": {
+            "liblevenshtein": canonical,
+            "libdictenstein": str(dependencies["libdictenstein"]),
+        },
+    }
+    for path, expected in lock_expectations.items():
+        for package, actual in cargo_lock_versions(expected, path).items():
+            if actual != expected[package]:
+                failures.append(
+                    f"{path} {package}: expected {expected[package]}, got {actual}"
+                )
     api = json.loads(read("bindings/api.json"))
     if (
         api.get("packageVersion") != canonical
