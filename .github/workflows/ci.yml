@@ -937,7 +937,7 @@ jobs:
             os: openbsd
             version: "7.9"
             install: sudo pkg_add rust
-            cxx: c++
+            cxx: /usr/bin/c++
             # OpenBSD 7.9 currently packages rustc 1.94.1, below this family's
             # declared Rust 1.95 MSRV. The VM still validates the native C ABI;
             # a required current-Rust OpenBSD compile is maintained below.
@@ -949,9 +949,10 @@ jobs:
             # DragonFly's base GCC accepts the historical C++20 flag spelling
             # but predates required library facilities such as <span>. The
             # default dports GCC package supplies a maintained C++20 compiler
-            # and standard library under the unversioned g++ command.
+            # and standard library. Use its absolute unversioned symlink so a
+            # same-named compiler in DragonFly's base PATH cannot shadow it.
             install: sudo pkg install -y rust gcc
-            cxx: g++
+            cxx: /usr/local/bin/g++
             # DragonFly 6.4 currently packages rustc 1.85.1, below this
             # family's declared Rust 1.95 MSRV. Keep the VM as an experimental
             # native C/C++ ABI portability gate instead of asking an obsolete
@@ -1011,6 +1012,11 @@ jobs:
             -x c -fsyntax-only include/liblevenshtein.h
           cxx='${{ matrix.platform.cxx }}'
           cxx_standard=
+          if [ ! -x "$cxx" ]; then
+            echo "configured C++ compiler is not executable: $cxx" >&2
+            exit 1
+          fi
+          "$cxx" --version
           for standard in c++20 c++2a; do
             if printf '#include <span>\n' | \
               "$cxx" "-std=$standard" -x c++ -fsyntax-only - \
@@ -1021,6 +1027,10 @@ jobs:
           done
           if [ -z "$cxx_standard" ]; then
             echo "$cxx has no C++20 mode and standard library with <span>" >&2
+            for standard in c++20 c++2a; do
+              printf '#include <span>\n' | \
+                "$cxx" "-std=$standard" -x c++ -fsyntax-only - || true
+            done
             exit 1
           fi
           "$cxx" "$cxx_standard" -Wall -Wextra -Werror \
