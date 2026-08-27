@@ -100,6 +100,8 @@ disabled, and output captured under `target/verification/t0-6/logs/`.
 | Levenshtein result properties | Exact match, distance bound, and completeness over close words | 4 properties/regressions passed; 234,136 KiB peak process RSS; zero swaps |
 | Exact deep-query semantics | Consume 100,000 identical units through the positional Standard automaton | final distance 0 |
 | Native-stack bound | Run that 100,000-unit query on an explicitly created 256 KiB thread | passed in 120.66 s |
+| Full default compiled suite | Exercise library, binary, example-based, property-based, and integration targets | 97 suites; 1,778 passed; zero failed; 855,004 KiB peak process RSS; zero swaps |
+| Executable documentation | Compile and run serially under the process cap with a disk-backed temporary directory | 174 passed; zero failed; 167 intentionally ignored; 207,128 KiB peak process RSS; zero swaps |
 | Static quality | Clippy over library, tests, and benchmarks with `benchmark-controls` and `-D warnings` | passed |
 
 The randomized oracle checks the last-write semantics of every stored pair and
@@ -111,6 +113,15 @@ The deep test creates the bounded worker thread inside the already compiled
 test binary. Applying `RUST_MIN_STACK` to the Cargo command is invalid for this
 purpose because it also constrains compiler worker threads; the test therefore
 isolates the stack bound to the algorithm under test.
+
+The first combined `cargo test` invocation let rustdoc schedule executable
+examples concurrently. That exceeded the deliberately strict `TasksMax=128`
+process limit, causing `EAGAIN` spawn failures rather than semantic failures.
+The compiled unit and integration targets had already completed without a
+failure. Re-running only documentation tests with `--test-threads=1` kept the
+same process cap, moved `TMPDIR` onto the disk-backed verification tree, and
+passed every executable example. This preserves the resource boundary instead
+of weakening it to accommodate rustdoc concurrency.
 
 ## 5. Causal performance and resident memory
 
