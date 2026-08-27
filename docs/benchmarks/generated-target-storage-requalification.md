@@ -202,6 +202,14 @@ persisted format. Generated state and class identifiers are dense query-local
 integers; map iteration order is never exposed and cannot affect result order
 or edit distance. Correctness depends only on exact key equality.
 
+The repository manifest resolves `libdictenstein` and the optional
+`vinary-tree-interop` ABI crate from their exact RC4 registry releases. It does
+not require unpublished sibling directories. Consequently, the audited Git
+revision is consumable as an immutable dependency from a fresh checkout while
+local developers may still select alternate sources explicitly in their root
+workspace. This distinction is part of the supply-chain boundary: a published
+Git commit must not depend on the committer's filesystem topology.
+
 ## 7. Decision
 
 The dense generated-target representation's superlinear root cause is fixed.

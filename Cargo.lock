@@ -558,6 +558,8 @@ checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 [[package]]
 name = "libdictenstein"
 version = "4.0.0-rc.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3107cc65fec16a66624be386df12a0c8f4786c665c2088124bccc63350587842"
 dependencies = [
  "arc-swap",
  "bincode-next",
@@ -638,6 +640,8 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 [[package]]
 name = "llattice"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11b2da71811803fafc6a1f2aff2fb8d8f25be26ee38678a89cf4008e7374f567"
 
 [[package]]
 name = "local-or-heap"
@@ -1479,6 +1483,8 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vinary-tree-interop"
 version = "4.0.0-rc.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "431dff0a1c1adb8008800224978aa25f1d386d1ffba5456b5b575d29ff57dd5d"
 
 [[package]]
 name = "virtue-next"
