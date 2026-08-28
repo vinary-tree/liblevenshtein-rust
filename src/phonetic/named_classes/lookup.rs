@@ -147,9 +147,13 @@ pub fn get_digraphs_only(name: &str) -> Option<Vec<(char, char)>> {
 /// for trigraph patterns like ejective affricates.
 ///
 /// # Example
-/// ```ignore
-/// let ejective_trigraphs = get_trigraphs_only("ejective");
-/// // Returns Some(vec![('t', 's', 'ʼ'), ('t', 'ʃ', 'ʼ'), ...])
+/// ```rust
+/// use liblevenshtein::phonetic::named_classes::get_trigraphs_only;
+///
+/// let ejectives = get_trigraphs_only("ejective")
+///     .expect("ejective is a built-in named class");
+/// assert!(ejectives.contains(&('t', 's', 'ʼ')));
+/// assert!(ejectives.contains(&('k', 'ʷ', 'ʼ')));
 /// ```
 pub fn get_trigraphs_only(name: &str) -> Option<Vec<(char, char, char)>> {
     get_named_class(name).map(|class| {
@@ -166,9 +170,13 @@ pub fn get_trigraphs_only(name: &str) -> Option<Vec<(char, char, char)>> {
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let click_tetragraphs = get_tetragraphs_only("prenasalized_click");
-/// // Returns Some(vec![('ŋ', 'ɡ', 'ǀ', 'ʰ'), ...])
+/// ```rust
+/// use liblevenshtein::phonetic::named_classes::get_tetragraphs_only;
+///
+/// let clicks = get_tetragraphs_only("prenasalized_click")
+///     .expect("prenasalized_click is a built-in named class");
+/// assert!(clicks.contains(&('ŋ', 'ɡ', 'ǀ', 'ʰ')));
+/// assert!(clicks.contains(&('ŋ', 'ɡ', 'ǁ', 'ʷ')));
 /// ```
 pub fn get_tetragraphs_only(name: &str) -> Option<Vec<(char, char, char, char)>> {
     get_named_class(name).map(|class| {
@@ -185,9 +193,15 @@ pub fn get_tetragraphs_only(name: &str) -> Option<Vec<(char, char, char, char)>>
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let long_patterns = get_sequences_only("complex_clusters");
-/// // Returns Some(vec![[...], [...], ...])
+/// ```rust
+/// use liblevenshtein::phonetic::named_classes::get_sequences_only;
+///
+/// // Current built-ins encode bounded-width phones as explicit digraph through
+/// // heptagraph variants, so this known class has no open-ended sequences.
+/// let sequences = get_sequences_only("prenasalized_click")
+///     .expect("prenasalized_click is a built-in named class");
+/// assert!(sequences.is_empty());
+/// assert!(get_sequences_only("not_a_builtin_class").is_none());
 /// ```
 pub fn get_sequences_only(name: &str) -> Option<Vec<Vec<char>>> {
     get_named_class(name).map(|class| {

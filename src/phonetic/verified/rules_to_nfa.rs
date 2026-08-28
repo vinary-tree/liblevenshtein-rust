@@ -124,7 +124,7 @@ fn pattern_to_string_char(pattern: &[PhoneChar]) -> String {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::verified::rule_to_nfa_char;
 /// use liblevenshtein::phonetic::types::{RewriteRuleChar, PhoneChar, ContextChar};
 ///
@@ -136,6 +136,7 @@ fn pattern_to_string_char(pattern: &[PhoneChar]) -> String {
 ///     replacement: vec![PhoneChar::Consonant('f')],
 ///     context: ContextChar::Anywhere,
 ///     weight: 0.0,
+///     syllable_condition: None,
 /// };
 ///
 /// let nfa = rule_to_nfa_char(&rule);

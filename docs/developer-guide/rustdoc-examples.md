@@ -108,7 +108,12 @@ more examples. The hierarchical-filter examples now use genuinely fuzzy-near
 terms, prove that visible matches survive, and prove that an equally near term
 from an unrelated scope is excluded. The integer and weighted state-pool
 examples now execute acquisition, mutation, release, clearing, and reuse while
-describing the current `SmallVec`-based storage accurately. The remaining 60
-stay explicitly ratcheted while they are repaired subsystem by subsystem.
+describing the current `SmallVec`-based storage accurately. The phonetic-entry
+batch restored six examples for dictionary/NFA product queries, named-class
+arity extraction, and the Rocq-verified-rule compilation boundary. It replaced
+a mixed byte/character transducer sketch, a nonexistent `complex_clusters`
+class, and an incomplete rewrite-rule literal with public, assertion-backed
+workflows. The remaining 54 stay explicitly ratcheted while they are repaired
+subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

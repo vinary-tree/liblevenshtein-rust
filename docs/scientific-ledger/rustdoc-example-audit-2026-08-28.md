@@ -92,6 +92,7 @@ classification.
 | After generalized-alignment repairs | 541 | 0 | 70 | 611 |
 | After zipper-intersection repairs | 547 | 0 | 64 | 611 |
 | After helper-and-pool repairs | 551 | 0 | 60 | 611 |
+| After phonetic-entry repairs | 557 | 0 | 54 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -135,3 +136,14 @@ The state-pool examples and prose also predated the current position storage:
 they now exercise the actual insertion signatures and distinguish owned
 integer-state storage from the weighted state's inline-and-spilled `SmallVec`
 representation.
+
+The phonetic-entry batch corrected six independently stale examples. The
+transducer overview had paired a byte dictionary/transducer with a
+character-NFA compiler; the executable version now uses the character surface
+consistently and proves both phonetic alternatives while excluding an unrelated
+term. Named-class extraction now checks concrete trigraph and tetragraph
+members. Its sequence example no longer names an unregistered
+`complex_clusters` class and instead demonstrates the documented distinction
+between an existing class with no open-ended `Sequence` variants and a missing
+class. Finally, the verified-rule examples compile a real selected rule set,
+and the explicit rewrite-rule literal includes the current syllable condition.
