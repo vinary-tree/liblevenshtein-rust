@@ -98,6 +98,7 @@ classification.
 | After phonetic-surface repairs | 578 | 0 | 33 | 611 |
 | After corpus-and-query repairs | 582 | 0 | 29 | 611 |
 | After basic-grep repairs | 590 | 0 | 21 | 611 |
+| After online-grep repairs | 604 | 0 | 7 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -207,3 +208,30 @@ matching. The two streaming examples use an explicit `ph` to `f` rule rather
 than relying on a preset whose contents are unrelated to the API contract. The
 transducer collects emitted characters across `feed` and `finish`, while the
 scanner proves the original range is normalized to the query at distance zero.
+
+The online-grep batch repaired 14 examples covering construction with parsed
+rewrite rules, case-insensitive and fuzzy substring search, normalized-query
+inspection, chunked input, parallel candidate verification, parallel document
+search, filtering, counting, and the `StreamingScanner` lifecycle. The first
+executable chunked-input experiment found a runtime defect: an accepting product
+state was stored only as a distance on its live candidate. Subsequent characters
+could kill and prune that candidate before `finish`, silently losing a match
+that had already been accepted. Preserving the accepting state alone then
+revealed the deeper source-mapping defect documented by the pre-existing
+property suite: because one transducer was shared by candidates started at raw
+character positions, delayed output from a multi-character rewrite could be
+assigned to a later candidate. For `ph -> f`, scanning `my phone` could report
+the normalized text `fone` against the original text `one `.
+
+The repaired incremental-input surface accumulates the original UTF-8 stream
+and invokes the same optimized, span-aware bounded-window engine used by
+`PhoneticGrepOnline::scan` at `finish`. This removes the divergent active-state
+implementation, preserves right context across arbitrary chunks, retains
+original case, and makes byte ranges, character ranges, and `original_text`
+refer to the same source span. Repeated `finish` calls are idempotent, appending
+after a finish reports only newly observed matches, and `reset` starts an
+independent stream. Five focused unit tests cover exact and phonetic matches,
+trailing input, chunk boundaries, final-context rewrites, fuzzy deletion,
+statistics, and reset. Four 300-case property tests cover distance bounds,
+source-slice correspondence, determinism, result ordering, and exact embedded
+occurrence completeness.

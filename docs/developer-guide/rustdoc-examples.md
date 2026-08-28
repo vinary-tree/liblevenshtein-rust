@@ -140,7 +140,15 @@ pattern flags, algorithm selection, runtime case folding, incremental phonetic
 normalization, and online scanning. Every example now constructs its real
 pattern or rewrite rules and asserts line, distance, cache-independent match,
 or normalized-output semantics; none depends on undefined content or prints an
-unverified result. The remaining 21 stay explicitly ratcheted while they are
-repaired subsystem by subsystem.
+unverified result. The online-grep batch restored the next 14 examples for
+phonetic substring search, normalized queries, chunked input, and intra- and
+inter-document parallel traversal. Executing the chunked examples exposed that
+the old active-state scanner lost accepted candidates after trailing input and
+associated delayed rewrite output with the wrong source characters. The
+incremental-input surface now retains original UTF-8 chunks and delegates at
+finish to the optimized, span-aware bounded-window engine. Unit and property
+tests enforce exact byte/text correspondence, embedded-match completeness,
+case preservation, and chunk-boundary independence. The remaining seven stay
+explicitly ratcheted while the token-grep subsystem is repaired.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

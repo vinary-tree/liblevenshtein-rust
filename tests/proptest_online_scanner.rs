@@ -1,23 +1,11 @@
 //! Property-based tests for the online phonetic scanner (`src/phonetic/online_scanner.rs`).
 //!
 //! Mirrors the TLA+ `OnlineScanner` model (`docs/verification/tla/`), which
-//! models bounded active matches, position monotonicity, and (aspirationally)
-//! `NoMissedMatches`, but abstracts the matching.
+//! models bounded active matches, position monotonicity, and `NoMissedMatches`,
+//! but abstracts the matching.
 //!
 //! We drive the real scanner with an EMPTY rewrite-rule set, so normalization is
 //! the identity and the scanner performs plain fuzzy substring matching.
-//!
-//! NOTE / discovered inconsistency (left for a follow-up design decision rather
-//! than an ad-hoc fix): a completed `ScanMatch` does not satisfy the natural
-//! invariant `original_text == document[byte_range]`, and its `distance` is the
-//! minimum over accepting *prefixes* of the consumed window rather than the edit
-//! distance of `normalized_text` as a whole. Concretely, `PotentialMatch`
-//! accumulates `original_chars`/`normalized_chars` over the full consumed window
-//! (`online_scanner.rs:64-67, 91-97`) while `end_byte` / `min_distance` track the
-//! best accepting position, so for query "c" over document "ca" a reported match
-//! can have `byte_range` covering "c" but `original_text` "ca". The properties
-//! below therefore assert only the invariants that genuinely hold; tightening
-//! the `ScanMatch` field contract is a separate change.
 //!
 //! Gated on the `phonetic-rules` feature; run with
 //! `cargo test --features phonetic-rules`.
@@ -34,11 +22,15 @@ fn arb_doc() -> impl Strategy<Value = String> {
     prop::string::string_regex("[a-c]{0,16}").unwrap()
 }
 
+fn arb_nonmatching_context() -> impl Strategy<Value = String> {
+    prop::string::string_regex("[x-z]{0,8}").unwrap()
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(300))]
 
-    /// Boundedness: every completed match is within the configured error bound,
-    /// and its byte range is a well-formed span of the document.
+    /// Boundedness and source correspondence: every completed match is within
+    /// the configured error bound and reproduces its exact document slice.
     #[test]
     fn scanner_matches_within_bound(
         query in arb_query(),
@@ -52,6 +44,7 @@ proptest! {
             prop_assert!(m.byte_range.0 <= m.byte_range.1, "inverted byte range");
             prop_assert!(m.byte_range.1 <= document.len(), "byte range past end of document");
             prop_assert!(m.char_range.0 <= m.char_range.1, "inverted char range");
+            prop_assert_eq!(&document[m.byte_range.0..m.byte_range.1], m.original_text.as_str());
         }
     }
 
@@ -68,8 +61,7 @@ proptest! {
     }
 
     /// PositionMonotonicity: completed matches are ordered by start position,
-    /// then by distance (the scanner sorts by `(byte_range.0, distance)` in
-    /// `finalize_matches`, `online_scanner.rs:459`).
+    /// then by distance.
     #[test]
     fn scanner_matches_position_monotonic(
         query in arb_query(),
@@ -83,12 +75,25 @@ proptest! {
             prop_assert!(a <= b, "matches not ordered by (start_byte, distance): {:?} then {:?}", a, b);
         }
     }
-}
 
-// NOTE: a "no missed matches" property over arbitrary proper substrings is NOT
-// asserted here. The scanner's substring-matching contract is not pinned down by
-// its in-source tests (which all match the query against the whole normalized
-// document), and an exploratory check found that scanning "ba" for query "b" at
-// max_distance 0 reports no match. Whether proper-substring occurrences must be
-// reported is a semantic question for the scanner's owner; it is recorded here
-// as an open question rather than asserted as a (possibly incorrect) contract.
+    /// NoMissedMatches for an exact occurrence surrounded by symbols that do
+    /// not occur in the query alphabet.
+    #[test]
+    fn scanner_finds_exact_embedded_occurrence(
+        query in arb_query(),
+        prefix in arb_nonmatching_context(),
+        suffix in arb_nonmatching_context(),
+    ) {
+        let expected_start = prefix.len();
+        let expected_end = expected_start + query.len();
+        let document = format!("{prefix}{query}{suffix}");
+        let matches = OnlinePhoneticScannerChar::new(&query, &[], 0).scan(&document);
+
+        let found = matches.iter().any(|m| {
+            m.byte_range == (expected_start, expected_end)
+                && m.original_text == query
+                && m.distance == 0
+        });
+        prop_assert!(found, "exact occurrence was not returned: {matches:?}");
+    }
+}
