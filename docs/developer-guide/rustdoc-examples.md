@@ -148,7 +148,13 @@ associated delayed rewrite output with the wrong source characters. The
 incremental-input surface now retains original UTF-8 chunks and delegates at
 finish to the optimized, span-aware bounded-window engine. Unit and property
 tests enforce exact byte/text correspondence, embedded-match completeness,
-case preservation, and chunk-boundary independence. The remaining seven stay
-explicitly ratcheted while the token-grep subsystem is repaired.
+case preservation, and chunk-boundary independence. The final token-grep batch
+restored all seven examples for fuzzy token sequences, per-token distance
+bounds, wildcard separators, phonetic normalization, parallel document scans,
+and word-at-a-time streaming. Each now imports the public surface, handles query
+compilation, and asserts inclusions, exclusions, distances, document
+identifiers, byte ranges, or stream completion. The global ignored-example
+ratchet is now zero: every Rust example is executable, compile-checked `no_run`,
+an intentional `compile_fail`, or explicitly non-Rust prose.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

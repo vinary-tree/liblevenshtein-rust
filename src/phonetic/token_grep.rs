@@ -34,28 +34,41 @@
 //!
 //! ## Basic Multi-Token
 //!
-//! ```ignore
-//! let grep = TokenGrep::new("hello world", 1)?;
-//! grep.scan("hello world")   // distance 0+0=0 ✓
-//! grep.scan("helo wrld")     // distance 1+1=2 ✓
-//! grep.scan("helloworld")    // no separator ✗
+//! ```rust
+//! use liblevenshtein::phonetic::token_grep::TokenGrep;
+//!
+//! let grep = TokenGrep::new("hello world", 1)
+//!     .expect("doc: token query must compile");
+//! assert_eq!(grep.scan("hello world")[0].total_distance, 0);
+//! assert_eq!(grep.scan("helo wrld")[0].total_distance, 2);
+//! assert!(grep.scan("helloworld").is_empty());
 //! ```
 //!
 //! ## Explicit Distance
 //!
-//! ```ignore
-//! let grep = TokenGrep::new("error:0 .* failed:1", 0)?;
-//! grep.scan("error: test failed")   // exact+wildcard+d1 ✓
-//! grep.scan("erro: test failed")    // d1+wildcard+d0 ✗ (error:0 violated)
+//! ```rust
+//! use liblevenshtein::phonetic::token_grep::TokenGrep;
+//!
+//! let grep = TokenGrep::new("error:0 .* failed:1", 0)
+//!     .expect("doc: explicit-distance query must compile");
+//! assert_eq!(grep.scan("error test faild")[0].total_distance, 1);
+//! assert!(grep.scan("erro test failed").is_empty());
 //! ```
 //!
 //! ## Phonetic + Fuzzy
 //!
-//! ```ignore
-//! let rules = vec![make_rule("ph", "f", Anywhere)];
-//! let grep = TokenGrep::with_rules("phone call", rules, 1)?;
-//! grep.scan("fone call")     // d0+d0=0 (phonetic equiv) ✓
-//! grep.scan("fon call")      // d1+d0=1 ✓
+//! ```rust
+//! use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
+//! use liblevenshtein::phonetic::token_grep::TokenGrep;
+//!
+//! let file = parse_str("ph -> f;").expect("doc: rewrite rule must parse");
+//! let rules = RuleSetChar::from_llev(&file)
+//!     .expect("doc: rewrite rule must compile")
+//!     .rules;
+//! let grep = TokenGrep::with_rules("phone call", rules, 1)
+//!     .expect("doc: phonetic token query must compile");
+//! assert_eq!(grep.scan("fone call")[0].total_distance, 0);
+//! assert_eq!(grep.scan("fon call")[0].total_distance, 1);
 //! ```
 
 use crate::phonetic::grep::{GrepError, WordBoundaryIterator};
@@ -738,9 +751,16 @@ impl TokenGrep {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let grep = TokenGrep::new("hello world", 1)?;
-    /// let grep = TokenGrep::new("error:0 .* failed:1", 0)?;
+    /// ```rust
+    /// use liblevenshtein::phonetic::token_grep::TokenGrep;
+    ///
+    /// let fuzzy = TokenGrep::new("hello world", 1)
+    ///     .expect("doc: fuzzy token query must compile");
+    /// assert_eq!(fuzzy.scan("helo wrld")[0].total_distance, 2);
+    ///
+    /// let explicit = TokenGrep::new("error:0 .* failed:1", 0)
+    ///     .expect("doc: explicit-distance query must compile");
+    /// assert_eq!(explicit.scan("error during faild")[0].total_distance, 1);
     /// ```
     pub fn new(query: &str, default_distance: u8) -> Result<Self, GrepError> {
         let parsed = parse_query(query, default_distance)?;
@@ -940,15 +960,20 @@ impl TokenGrep {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let grep = TokenGrep::new("error .* failed", 0)?;
+    /// ```rust
+    /// use liblevenshtein::phonetic::token_grep::TokenGrep;
+    ///
+    /// let grep = TokenGrep::new("error .* failed", 0)
+    ///     .expect("doc: parallel token query must compile");
     /// let docs = vec![
     ///     (1, "error in module failed"),
     ///     (2, "success complete"),
     ///     (3, "error test failed"),
     /// ];
-    /// let results = grep.scan_documents_parallel(docs);
-    /// // results contains DocumentMatch for docs 1 and 3
+    /// let mut results = grep.scan_documents_parallel(docs);
+    /// results.sort_by_key(|result| result.doc_id);
+    /// assert_eq!(results.iter().map(|result| result.doc_id).collect::<Vec<_>>(), vec![1, 3]);
+    /// assert!(results.iter().all(|result| result.matches.len() == 1));
     /// ```
     pub fn scan_documents_parallel<I, S>(
         &self,
@@ -1085,19 +1110,25 @@ struct MatchAttempt {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let grep = TokenGrep::new("hello world", 1)?;
+/// ```rust
+/// use liblevenshtein::phonetic::token_grep::TokenGrep;
+///
+/// let grep = TokenGrep::new("hello world", 1)
+///     .expect("doc: streaming token query must compile");
 /// let mut stream = grep.streaming();
 ///
 /// // Feed words one at a time
 /// let m1 = stream.feed_word("hello", 0, 5);
-/// assert!(m1.is_empty());  // Incomplete match
+/// assert!(m1.is_empty());
 ///
 /// let m2 = stream.feed_word("world", 6, 11);
-/// assert_eq!(m2.len(), 1);  // Complete match!
+/// assert_eq!(m2.len(), 1);
+/// assert_eq!(m2[0].matched_text, "hello world");
+/// assert_eq!(m2[0].total_distance, 0);
 ///
 /// // Finalize and get any remaining matches
 /// let final_matches = stream.finish();
+/// assert!(final_matches.is_empty());
 /// ```
 pub struct StreamingTokenMatcher {
     /// Compiled query with token automata
@@ -1420,17 +1451,26 @@ impl TokenGrep {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = TokenGrep::new("error .* failed", 0)?;
+    /// ```rust
+    /// use liblevenshtein::phonetic::token_grep::TokenGrep;
+    ///
+    /// let grep = TokenGrep::new("error .* failed", 0)
+    ///     .expect("doc: streaming wildcard query must compile");
     /// let mut stream = grep.streaming();
     ///
-    /// // Process words from a file reader
-    /// for (word, start, end) in word_boundary_iterator(reader) {
-    ///     for m in stream.feed_word(&word, start, end) {
-    ///         println!("Match: {:?}", m);
-    ///     }
+    /// let mut matches = Vec::new();
+    /// for (word, start, end) in [
+    ///     ("error", 0, 5),
+    ///     ("in", 6, 8),
+    ///     ("module", 9, 15),
+    ///     ("failed", 16, 22),
+    /// ] {
+    ///     matches.extend(stream.feed_word(word, start, end));
     /// }
-    /// let remaining = stream.finish();
+    /// matches.extend(stream.finish());
+    /// assert_eq!(matches.len(), 1);
+    /// assert_eq!(matches[0].byte_range, (0, 22));
+    /// assert_eq!(matches[0].total_distance, 0);
     /// ```
     pub fn streaming(&self) -> StreamingTokenMatcher {
         StreamingTokenMatcher::new(self.compiled.clone())

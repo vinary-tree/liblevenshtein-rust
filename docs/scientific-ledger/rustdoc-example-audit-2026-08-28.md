@@ -99,6 +99,7 @@ classification.
 | After corpus-and-query repairs | 582 | 0 | 29 | 611 |
 | After basic-grep repairs | 590 | 0 | 21 | 611 |
 | After online-grep repairs | 604 | 0 | 7 | 611 |
+| After token-grep repairs | 611 | 0 | 0 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -235,3 +236,16 @@ trailing input, chunk boundaries, final-context rewrites, fuzzy deletion,
 statistics, and reset. Four 300-case property tests cover distance bounds,
 source-slice correspondence, determinism, result ordering, and exact embedded
 occurrence completeness.
+
+The token-grep batch repaired the final seven ignored examples. The three
+module examples now execute ordinary multi-token matching, strict versus fuzzy
+per-token bounds, wildcard separators, and a parsed `ph -> f` normalization
+rule. Constructor documentation proves both default and explicit distance
+syntax against concrete results. The parallel example sorts its arbitrary-order
+Rayon output before asserting the exact matching document identifiers. Both
+streaming examples feed real word text with byte offsets, distinguish partial
+from complete matches, and verify the resulting range and distance rather than
+referring to an undefined reader or printing an unchecked value. The controlled
+all-feature run consequently reached 611 passing examples, zero failures, and
+zero ignored examples; the automated ratchet now rejects any reintroduction of
+ignored Rust API examples.
