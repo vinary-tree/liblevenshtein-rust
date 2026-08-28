@@ -123,6 +123,15 @@ def check_guide(
 
 def main() -> None:
     subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "generate-family-completeness-matrix.py"),
+            "--check",
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+    subprocess.run(
         [sys.executable, str(ROOT / DOCS["generator"]), "--check"],
         cwd=ROOT,
         check=True,

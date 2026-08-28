@@ -1,5 +1,27 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "documentationTopics": [
+    {"id": "overview", "description": "Purpose, scope, audience, and relationship to the rest of the Vinary Tree family."},
+    {"id": "installation", "description": "Package-manager coordinates, supported platforms, prerequisites, and installation verification."},
+    {"id": "quick-start", "description": "The shortest validated path from a fresh consumer to a useful result."},
+    {"id": "common-usage", "description": "Validated examples for the operations most users perform."},
+    {"id": "intended-usage", "description": "Validated examples for the capability's designed role, including important alternate paths."},
+    {"id": "api-reference", "description": "Every public symbol, signature, overload, generic parameter, and nullability or optionality contract."},
+    {"id": "semantics", "description": "Observable behavior, invariants, ordering, mutation, snapshot, and unsupported-combination semantics."},
+    {"id": "errors", "description": "Exceptions, results, status codes, cancellation, and failure-containment behavior."},
+    {"id": "lifecycle", "description": "Creation, deterministic closure, finalization fallback, and use-after-close behavior."},
+    {"id": "ownership", "description": "Borrowing, retention, transfer, aliasing, and resource-handoff rules."},
+    {"id": "concurrency", "description": "Thread safety, reentrancy, synchronization, and cancellation guarantees."},
+    {"id": "collections-iterators", "description": "Language-native collections, iterators, reducers, streams, and traversal behavior."},
+    {"id": "snapshots", "description": "Snapshot identity, isolation, consistency, mutation visibility, and cursor lifetime."},
+    {"id": "zero-copy-batching", "description": "Borrowed views, batch leases, buffer validity, paging, and copying tradeoffs."},
+    {"id": "examples", "description": "Syntactically and semantically validated common, intended, error, lifecycle, and performance examples."},
+    {"id": "migration", "description": "Migration from legacy coordinates, APIs, behaviors, and prior release lines."},
+    {"id": "compatibility", "description": "Runtime, ABI, platform, feature, and version compatibility guarantees."},
+    {"id": "performance", "description": "Complexity, allocation, marshalling, benchmark interpretation, and performance-sensitive usage."},
+    {"id": "security", "description": "Trust boundaries, hostile-input limits, callback safety, and vulnerability-reporting guidance."},
+    {"id": "release", "description": "Publication ownership, immutable-source provenance, registry verification, and release operations."}
+  ],
   "languages": [
     {"id": "rust", "packageManager": "crates.io", "hostIdioms": "traits; IntoIterator/Iterator; Result; Drop"},
     {"id": "c", "packageManager": "CMake/pkg-config/GitHub Releases", "hostIdioms": "opaque handles; status codes; bounded buffers; vtables"},
