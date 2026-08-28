@@ -35,9 +35,10 @@
 //!
 //! ## Parse and Compile
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::llre::{parse_str, compile};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse from string
 //! let file = parse_str(r#"
 //!     @name "Hello Pattern"
@@ -50,22 +51,29 @@
 //! // Match strings
 //! assert!(compiled.matches("hello"));
 //! assert!(!compiled.matches("world"));
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Load from File
 //!
-//! ```rust,ignore
-//! use liblevenshtein::phonetic::llre::load_file;
+//! ```rust,no_run
+//! use liblevenshtein::phonetic::llre::{compile, load_file};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let file = load_file("patterns/email.llre")?;
 //! let compiled = compile(&file)?;
+//! assert!(compiled.matches("person@example.com"));
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## AOT Compilation
 //!
-//! ```rust,ignore
-//! use liblevenshtein::phonetic::llre::{compile, save, load};
+//! ```rust,no_run
+//! use liblevenshtein::phonetic::llre::{compile, load, parse_str, save};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Compile and save to binary
 //! let file = parse_str("^hello$")?;
 //! let compiled = compile(&file)?;
@@ -74,15 +82,20 @@
 //! // Load pre-compiled (instant, no parsing)
 //! let loaded = load("pattern.llre.bin")?;
 //! assert!(loaded.matches("hello"));
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Quick Matching
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::llre::is_match;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! assert!(is_match("^hello$", "hello")?);
 //! assert!(!is_match("^hello$", "world")?);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # File Format Grammar

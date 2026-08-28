@@ -23,17 +23,19 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::llev::{RuleSetChar, parse_str};
-//! use liblevenshtein::phonetic::apply_rules_seq_char;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let llev = parse_str(r#"
 //!     ph -> f;
 //!     c -> s / _[ei];
 //! "#)?;
 //!
 //! let ruleset = RuleSetChar::from_llev(&llev)?;
-//! let result = apply_rules_seq_char(&ruleset.rules, "phone");
+//! assert_eq!(ruleset.apply("phone"), "fone");
+//! # Ok(())
+//! # }
 //! ```
 
 use std::collections::HashMap;
@@ -206,10 +208,16 @@ impl RuleSetChar {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let file = parse_str("ph -> f;")?;
     /// let ruleset = RuleSetChar::from_llev(&file)?;
-    /// let result = ruleset.apply("phone"); // "fone"
-    /// let result = ruleset.apply("PHONE"); // "fone" (case-insensitive match)
+    /// assert_eq!(ruleset.apply("phone"), "fone");
+    /// assert_eq!(ruleset.apply("PHONE"), "fone"); // Case-insensitive match.
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn apply(&self, input: &str) -> String {
         // Convert string to PhoneChar array with case folding for matching

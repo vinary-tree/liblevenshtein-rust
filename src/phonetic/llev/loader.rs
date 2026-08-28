@@ -14,12 +14,14 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use liblevenshtein::phonetic::llev::{Loader, LoaderConfig};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Default configuration
 //! let loader = Loader::new();
 //! let file = loader.load("rules.llev")?;
+//! assert!(!file.rules.is_empty());
 //!
 //! // Custom configuration
 //! let config = LoaderConfig::new()
@@ -28,6 +30,9 @@
 //!     .with_max_include_depth(20);
 //! let loader = Loader::with_config(config);
 //! let file = loader.load("rules.llev")?;
+//! assert!(!file.rules.is_empty());
+//! # Ok(())
+//! # }
 //! ```
 
 use std::collections::HashSet;
@@ -333,10 +338,14 @@ impl Loader {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use liblevenshtein::phonetic::llev::load_file;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let file = load_file("rules.llev")?;
+/// assert!(!file.rules.is_empty());
+/// # Ok(())
+/// # }
 /// ```
 pub fn load_file<P: AsRef<Path>>(path: P) -> LLevResult<LLevFile> {
     Loader::new().load(path)
@@ -346,10 +355,14 @@ pub fn load_file<P: AsRef<Path>>(path: P) -> LLevResult<LLevFile> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use liblevenshtein::phonetic::llev::load_file_with_includes;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let file = load_file_with_includes("rules.llev", &["./rules", "/usr/share/llev"])?;
+/// assert!(!file.rules.is_empty());
+/// # Ok(())
+/// # }
 /// ```
 pub fn load_file_with_includes<P: AsRef<Path>, I: AsRef<Path>>(
     path: P,

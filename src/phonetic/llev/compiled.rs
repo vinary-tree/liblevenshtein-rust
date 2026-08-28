@@ -21,9 +21,10 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use liblevenshtein::phonetic::llev::{RuleSetChar, parse_str, compiled};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse and convert rules
 //! let file = parse_str("ph -> f; gh -> ;")?;
 //! let ruleset = RuleSetChar::from_llev(&file)?;
@@ -33,6 +34,9 @@
 //!
 //! // Load from binary (faster)
 //! let loaded = compiled::load_char("rules.llev.bin")?;
+//! assert_eq!(loaded.apply("phone"), "fone");
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Feature Flag
@@ -79,9 +83,15 @@ const HEADER_SIZE: usize = 5;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// use liblevenshtein::phonetic::llev::{parse_str, save, RuleSet};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let file = parse_str("ph -> f;")?;
 /// let ruleset = RuleSet::from_llev(&file)?;
 /// save(&ruleset, "rules.llev.bin")?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn save<P: AsRef<Path>>(ruleset: &RuleSet, path: P) -> LLevResult<()> {
     let file = File::create(path.as_ref()).map_err(|e| {
@@ -147,8 +157,14 @@ pub fn save<P: AsRef<Path>>(ruleset: &RuleSet, path: P) -> LLevResult<()> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// use liblevenshtein::phonetic::llev::load;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let ruleset = load("rules.llev.bin")?;
+/// assert!(!ruleset.is_empty());
+/// # Ok(())
+/// # }
 /// ```
 pub fn load<P: AsRef<Path>>(path: P) -> LLevResult<RuleSet> {
     let file = File::open(path.as_ref()).map_err(|e| {
@@ -222,9 +238,15 @@ pub fn load<P: AsRef<Path>>(path: P) -> LLevResult<RuleSet> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// use liblevenshtein::phonetic::llev::{parse_str, save_char, RuleSetChar};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let file = parse_str("ph -> f;")?;
 /// let ruleset = RuleSetChar::from_llev(&file)?;
 /// save_char(&ruleset, "rules.llev.bin")?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn save_char<P: AsRef<Path>>(ruleset: &RuleSetChar, path: P) -> LLevResult<()> {
     let file = File::create(path.as_ref()).map_err(|e| {
@@ -290,8 +312,14 @@ pub fn save_char<P: AsRef<Path>>(ruleset: &RuleSetChar, path: P) -> LLevResult<(
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// use liblevenshtein::phonetic::llev::load_char;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let ruleset = load_char("rules.llev.bin")?;
+/// assert_eq!(ruleset.apply("phone"), "fone");
+/// # Ok(())
+/// # }
 /// ```
 pub fn load_char<P: AsRef<Path>>(path: P) -> LLevResult<RuleSetChar> {
     let file = File::open(path.as_ref()).map_err(|e| {
@@ -356,10 +384,20 @@ pub fn load_char<P: AsRef<Path>>(path: P) -> LLevResult<RuleSetChar> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
+/// use liblevenshtein::phonetic::llev::{
+///     from_bytes, parse_str, to_bytes, RuleSet,
+/// };
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let file = parse_str("ph -> f;")?;
+/// let ruleset = RuleSet::from_llev(&file)?;
 /// let data = to_bytes(&ruleset)?;
 /// // ... store or transmit data ...
 /// let loaded = from_bytes(&data)?;
+/// assert_eq!(loaded.len(), ruleset.len());
+/// # Ok(())
+/// # }
 /// ```
 pub fn to_bytes(ruleset: &RuleSet) -> LLevResult<Vec<u8>> {
     let mut data = Vec::with_capacity(HEADER_SIZE + 1024);

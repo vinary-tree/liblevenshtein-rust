@@ -81,6 +81,10 @@ English syllable examples with current inputs, fuel, imports, and documented
 heuristic limits. The embedded-language batch then executed every previously
 ignored language example and replaced stale intermediate-marker assertions with
 the public `RuleSetChar::apply` method's empirically verified fixed-point output.
-The remaining 120 stay explicitly ratcheted while they are repaired subsystem by subsystem.
+The rule-language batch restored 17 `.llev` and LibLevenshtein Regex Expression
+(LLRE) examples, distinguishing executable parsing, matching, and in-memory
+serialization from compile-checked `no_run` examples that require customer-owned
+files. The remaining 103 stay explicitly ratcheted while they are repaired
+subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).
