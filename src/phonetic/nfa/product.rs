@@ -445,10 +445,13 @@ impl ProductAutomatonChar {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// use liblevenshtein::phonetic::nfa::product::ProductAutomatonChar;
+    /// ```rust
+    /// use liblevenshtein::phonetic::nfa::{compile, ProductAutomatonChar};
+    /// use liblevenshtein::phonetic::regex::parse;
     /// use liblevenshtein::transducer::{Algorithm, ArticulatoryCosts};
     ///
+    /// let regex = parse("phone").expect("doc: regex parse must succeed");
+    /// let nfa = compile(&regex).expect("doc: NFA compilation must succeed");
     /// let costs = ArticulatoryCosts::default();
     /// let product = ProductAutomatonChar::with_articulatory_costs(
     ///     nfa,
@@ -456,6 +459,12 @@ impl ProductAutomatonChar {
     ///     Algorithm::Standard,
     ///     costs,
     /// );
+    ///
+    /// assert!(product.accepts("phone"));
+    /// assert_eq!(product.min_distance("phone"), Some(0));
+    /// assert_eq!(product.max_cost(), 2.0);
+    /// assert_eq!(product.algorithm(), Algorithm::Standard);
+    /// assert!(product.articulatory_costs().is_some());
     /// ```
     pub fn with_articulatory_costs(
         nfa: NFAChar,

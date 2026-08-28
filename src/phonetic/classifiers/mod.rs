@@ -317,8 +317,10 @@ impl Default for DynClassifier {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
-/// use liblevenshtein::phonetic::classifiers::classifier_for_language;
+/// ```rust
+/// use liblevenshtein::phonetic::classifiers::{
+///     classifier_for_language, VowelClassifier,
+/// };
 ///
 /// let english = classifier_for_language("en");
 /// assert_eq!(english.script_name(), "Latin");

@@ -139,6 +139,23 @@ fn test_parse_rewrite_rule_word_start() {
 }
 
 #[test]
+fn test_parse_newline_delimited_rule_set() {
+    let rules = parse_rules("\n  ph -> f\r\n\n  c -> s / _[ei]\n  e -> / _#\n")
+        .expect("test: newline-delimited rules must parse");
+
+    assert_eq!(rules.len(), 3);
+    assert!(rules.iter().all(Regex::is_rewrite_rule));
+}
+
+#[test]
+fn test_rule_set_error_preserves_source_line() {
+    let error =
+        parse_rules("ph -> f\nc => s\ne -> / _#").expect_err("test: invalid second rule must fail");
+
+    assert_eq!(error.position.line, 2);
+}
+
+#[test]
 fn test_parse_complex_pattern() {
     let r = parse("(ph|f)one[s]?").expect("test: parse (ph|f)one[s]?");
     // Should parse without error

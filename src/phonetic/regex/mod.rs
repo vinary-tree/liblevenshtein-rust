@@ -63,14 +63,14 @@
 //!
 //! ## Parsing multiple rules
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::regex::parse_rules;
 //!
 //! let rules = parse_rules(r#"
 //!     ph -> f
 //!     c -> s / _[ei]
 //!     e -> / _#
-//! "#).unwrap();
+//! "#).expect("doc: rewrite rules must parse");
 //! assert_eq!(rules.len(), 3);
 //! ```
 //!

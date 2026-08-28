@@ -123,7 +123,13 @@ context lookahead and word boundaries, incremental input, lazy determinization,
 and bounded result memoization. It corrected the invented second initial state,
 nonexistent optimizer entry points, placeholder automata, and the stale claim
 that a matcher's fixed edit-distance bound is part of every cache key. The
-remaining 39 stay explicitly ratcheted while they are repaired subsystem by
-subsystem.
+phonetic-surface batch restored six more examples for articulatory-cost product
+matching, rewrite-cycle recovery, newline-delimited rule parsing, embedded
+language dictionaries, language dispatch, and script classification. Executing
+the documented three-rule input exposed that the public `parse_rules` path
+discarded newlines before it could delimit rules; the parser now retains the
+source, parses each nonempty line independently, and preserves source-relative
+error locations. The remaining 33 stay explicitly ratcheted while they are
+repaired subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

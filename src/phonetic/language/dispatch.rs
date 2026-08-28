@@ -329,13 +329,14 @@ pub fn rules_for_language(tag: &str) -> Option<Vec<RewriteRuleChar>> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::language::is_supported;
 ///
 /// assert!(is_supported("en-us"));
 /// assert!(is_supported("en"));
 /// assert!(is_supported("EN-US")); // Case insensitive
-/// assert!(!is_supported("fr"));
+/// assert!(is_supported("fr"));
+/// assert!(!is_supported("xx-unsupported"));
 /// ```
 pub fn is_supported(tag: &str) -> bool {
     rules_for_language(tag).is_some()

@@ -115,17 +115,19 @@
 //!
 //! # Integration with PhoneticNormalizedDictionary
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
+//! use liblevenshtein::phonetic::language::rules_for_language;
 //!
-//! // Create dictionary with explicit language
-//! let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_language(
-//!     &["phone", "fone", "elephant"],
-//!     "en-us"
+//! let rules = rules_for_language("en-us").expect("English rules are embedded");
+//! let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+//!     ["phone", "fone", "elephant"],
+//!     rules,
 //! );
 //!
-//! // Query as usual
 //! let results = dict.query("fone", 2);
+//! assert!(results.iter().any(|candidate| candidate.term == "phone"));
+//! assert!(results.iter().any(|candidate| candidate.term == "fone"));
 //! ```
 
 #[cfg(feature = "embedded-rules")]

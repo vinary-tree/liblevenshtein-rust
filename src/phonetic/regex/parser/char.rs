@@ -18,6 +18,9 @@ use crate::phonetic::regex::lexer::{Lexer, ParsedFlags, Token};
 
 /// Parser for phonetic regular expressions.
 pub struct Parser<'a> {
+    /// Original source, retained so newline-delimited rule sets can preserve
+    /// the delimiter that the token lexer intentionally treats as whitespace.
+    input: &'a str,
     lexer: Lexer<'a>,
     /// Optional symbol table for user-defined symbols ($NAME references)
     symbols: Option<&'a SymbolTable>,
@@ -39,6 +42,7 @@ impl<'a> Parser<'a> {
     /// Create a new parser for the given input.
     pub fn new(input: &'a str) -> Self {
         Self {
+            input,
             lexer: Lexer::new(input),
             symbols: None,
             next_group_number: 1,
@@ -67,6 +71,7 @@ impl<'a> Parser<'a> {
     /// ```
     pub fn new_with_symbols(input: &'a str, symbols: &'a SymbolTable) -> Self {
         Self {
+            input,
             lexer: Lexer::new(input),
             symbols: Some(symbols),
             next_group_number: 1,
@@ -178,18 +183,43 @@ impl<'a> Parser<'a> {
     /// Parse multiple rewrite rules separated by newlines.
     pub fn parse_rule_set(&mut self) -> ParseResult<Vec<Regex>> {
         let mut rules = Vec::new();
+        let mut source_offset = 0usize;
 
-        while !self.lexer.is_eof() {
-            if self.lexer.peek()? == &Token::Eof {
-                break;
+        for (line_index, source_line) in self.input.split_inclusive('\n').enumerate() {
+            let line = source_line.trim_end_matches(['\r', '\n']);
+            if !line.trim().is_empty() {
+                let mut parser = match self.symbols {
+                    Some(symbols) => Parser::new_with_symbols(line, symbols),
+                    None => Parser::new(line),
+                };
+                parser.validate_group_refs = self.validate_group_refs;
+
+                let rule = parser.parse_rewrite_rule().map_err(|mut error| {
+                    error.position.line = error.position.line.saturating_add(line_index);
+                    error.position.offset = error.position.offset.saturating_add(source_offset);
+                    error
+                })?;
+
+                let trailing = parser.lexer.next_token().map_err(|mut error| {
+                    error.position.line = error.position.line.saturating_add(line_index);
+                    error.position.offset = error.position.offset.saturating_add(source_offset);
+                    error
+                })?;
+                if trailing != Token::Eof {
+                    let position = parser.lexer.position();
+                    return Err(ParseError::unexpected_char(
+                        parser.token_to_char(&trailing),
+                        Position::new(
+                            position.line.saturating_add(line_index),
+                            position.column,
+                            position.offset.saturating_add(source_offset),
+                        ),
+                    ));
+                }
+
+                rules.push(rule);
             }
-
-            if self.lexer.is_eof() {
-                break;
-            }
-
-            let rule = self.parse_rewrite_rule()?;
-            rules.push(rule);
+            source_offset = source_offset.saturating_add(source_line.len());
         }
 
         Ok(rules)

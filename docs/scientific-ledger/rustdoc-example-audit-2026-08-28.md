@@ -95,6 +95,7 @@ classification.
 | After phonetic-entry repairs | 557 | 0 | 54 | 611 |
 | After NFA-foundation repairs | 563 | 0 | 48 | 611 |
 | After NFA-runtime repairs | 572 | 0 | 39 | 611 |
+| After phonetic-surface repairs | 578 | 0 | 33 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -170,3 +171,17 @@ transition-cache, and result-cache behavior. The memoization prose also matches
 the implementation: a matcher owns a product automaton with one fixed distance
 bound, so character-level cache keys are query strings rather than redundant
 `(query, distance)` pairs.
+
+The phonetic-surface batch made six examples executable across articulatory
+product costs, normalization-cycle recovery, the regex rule-set parser,
+language-selected normalized dictionaries, embedded-language dispatch, and
+script classifiers. Five needed complete public setup, accurate supported-tag
+assertions, or the trait import Rust requires for classifier methods. The
+newline-delimited `parse_rules` example revealed a functional defect: its lexer
+treated newlines as generic whitespace, so the parser consumed each following
+pattern as part of the preceding replacement and failed on the next arrow. The
+parser now retains the original source, parses each nonempty line as one rule,
+propagates symbol and group-reference settings, rejects trailing per-line input,
+and translates parse errors back to source-wide line and byte positions. Two
+unit tests cover mixed LF/CRLF and blank lines plus error location on a later
+rule.
