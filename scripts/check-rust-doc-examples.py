@@ -13,7 +13,7 @@ SOURCE_ROOT = ROOT / "src"
 # This is a ratchet, not a target. A change that repairs ignored examples must
 # lower this number in the same commit; a change that adds ignored examples is
 # rejected. The remaining debt is catalogued in the Rustdoc example policy.
-IGNORED_EXAMPLE_BASELINE = 64
+IGNORED_EXAMPLE_BASELINE = 60
 
 # Every cache example was compiled and executed successfully during the
 # 2026-08-28 audit. This subtree therefore has a stricter zero-ignore policy.

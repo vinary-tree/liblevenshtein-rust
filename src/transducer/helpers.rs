@@ -36,30 +36,32 @@
 ///
 /// # Use Case: Code Completion with Hierarchical Scopes
 ///
-/// ```ignore
-/// // This example requires the "pathmap-backend" feature
-/// use liblevenshtein::prelude::*;
+/// ```rust
+/// use libdictenstein::pathmap::PathMapDictionary;
 /// use liblevenshtein::transducer::helpers::sorted_vec_intersection;
+/// use liblevenshtein::transducer::{Algorithm, Transducer};
 ///
 /// // Create dictionary mapping terms to their visible scopes
 /// let terms = vec![
-///     ("global_var".to_string(), vec![0]),           // Only in global scope
-///     ("outer_var".to_string(), vec![0, 1]),         // Global + outer
-///     ("inner_var".to_string(), vec![0, 1, 2]),      // All scopes
+///     ("helper".to_string(), vec![0]),       // Global scope
+///     ("halper".to_string(), vec![0, 1]),    // Global + outer scope
+///     ("helper2".to_string(), vec![0, 1, 2]), // Global + outer + inner
+///     ("helper3".to_string(), vec![3]),      // Unrelated module
 /// ];
 /// let dict = PathMapDictionary::from_terms_with_values(terms);
 /// let transducer = Transducer::new(dict, Algorithm::Standard);
 ///
 /// // Query from within inner scope (visible scopes: {0, 1, 2})
 /// let visible_scopes = vec![0, 1, 2];
-/// let results: Vec<_> = transducer
-///     .query_filtered("var", 1, |term_scopes| {
+/// let mut results: Vec<_> = transducer
+///     .query_filtered("helper", 1, |term_scopes| {
 ///         sorted_vec_intersection(term_scopes, &visible_scopes)
 ///     })
 ///     .map(|c| c.term)
 ///     .collect();
 ///
-/// assert_eq!(results.len(), 3); // All three visible
+/// results.sort();
+/// assert_eq!(results, ["halper", "helper", "helper2"]);
 /// ```
 #[inline]
 pub fn sorted_vec_intersection(a: &[u32], b: &[u32]) -> bool {
@@ -136,30 +138,32 @@ pub fn sorted_vec_intersection(a: &[u32], b: &[u32]) -> bool {
 ///
 /// # Use Case: Fast Code Completion (≤64 scopes)
 ///
-/// ```ignore
-/// // This example requires the "pathmap-backend" feature
-/// use liblevenshtein::prelude::*;
+/// ```rust
+/// use libdictenstein::pathmap::PathMapDictionary;
 /// use liblevenshtein::transducer::helpers::bitmask_intersection;
+/// use liblevenshtein::transducer::{Algorithm, Transducer};
 ///
 /// // Create dictionary with bitmask values
 /// let terms = vec![
-///     ("global_var".to_string(), 0b0001u64),  // scope 0
-///     ("outer_var".to_string(), 0b0011u64),   // scopes 0, 1
-///     ("inner_var".to_string(), 0b0111u64),   // scopes 0, 1, 2
+///     ("helper".to_string(), 0b0001u64), // scope 0
+///     ("halper".to_string(), 0b0011u64), // scopes 0, 1
+///     ("helper2".to_string(), 0b0111u64), // scopes 0, 1, 2
+///     ("helper3".to_string(), 0b1000u64), // unrelated scope 3
 /// ];
 /// let dict = PathMapDictionary::from_terms_with_values(terms);
 /// let transducer = Transducer::new(dict, Algorithm::Standard);
 ///
 /// // Query from within inner scope (bitmask for scopes {0, 1, 2})
 /// let visible_mask = 0b0111u64;
-/// let results: Vec<_> = transducer
-///     .query_filtered("var", 1, |term_mask| {
+/// let mut results: Vec<_> = transducer
+///     .query_filtered("helper", 1, |term_mask| {
 ///         bitmask_intersection(*term_mask, visible_mask)
 ///     })
 ///     .map(|c| c.term)
 ///     .collect();
 ///
-/// assert_eq!(results.len(), 3); // All three visible
+/// results.sort();
+/// assert_eq!(results, ["halper", "helper", "helper2"]);
 /// ```
 #[inline(always)]
 pub fn bitmask_intersection(mask_a: u64, mask_b: u64) -> bool {

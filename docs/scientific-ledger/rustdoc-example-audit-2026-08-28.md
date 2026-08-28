@@ -91,6 +91,7 @@ classification.
 | After universal-automata repairs | 533 | 0 | 78 | 611 |
 | After generalized-alignment repairs | 541 | 0 | 70 | 611 |
 | After zipper-intersection repairs | 547 | 0 | 64 | 611 |
+| After helper-and-pool repairs | 551 | 0 | 60 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -124,3 +125,13 @@ snapshot-backed PathMap zipper, pairs it with an automaton zipper, and observes
 the public result after actual traversal. This verifies the boundary accessors
 for distance, depth, reconstructed terms, viability, dictionary finality, and
 query metadata rather than proving only that isolated method names compile.
+
+The helper-and-pool batch found two kinds of semantic drift. The hierarchical
+filter examples queried `var` at edit distance one but expected matches such as
+`global_var`; whole-term Levenshtein matching cannot produce those results.
+They now use four equally eligible near spellings and demonstrate that the
+scope predicate retains the three visible values while excluding the fourth.
+The state-pool examples and prose also predated the current position storage:
+they now exercise the actual insertion signatures and distinguish owned
+integer-state storage from the weighted state's inline-and-spilled `SmallVec`
+representation.

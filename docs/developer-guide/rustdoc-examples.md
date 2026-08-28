@@ -103,7 +103,12 @@ The zipper-intersection batch then made all six accessors for distance, depth,
 term reconstruction, viability, and the underlying dictionary and automaton
 zippers executable. These examples now construct a real snapshot-backed
 PathMap zipper and traverse a real dictionary/automaton product instead of
-referring to an undefined placeholder. The remaining 64 stay explicitly
-ratcheted while they are repaired subsystem by subsystem.
+referring to an undefined placeholder. The helper-and-pool batch restored four
+more examples. The hierarchical-filter examples now use genuinely fuzzy-near
+terms, prove that visible matches survive, and prove that an equally near term
+from an unrelated scope is excluded. The integer and weighted state-pool
+examples now execute acquisition, mutation, release, clearing, and reuse while
+describing the current `SmallVec`-based storage accurately. The remaining 60
+stay explicitly ratcheted while they are repaired subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

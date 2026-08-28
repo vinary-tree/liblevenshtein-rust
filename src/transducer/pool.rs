@@ -5,13 +5,11 @@
 //!
 //! # Performance
 //!
-//! From profiling, State cloning accounts for 21.73% of runtime:
-//! - Vec allocation: 6.00%
-//! - Position copies: 7.44%
-//! - Misc overhead: ~8%
-//!
-//! By reusing State allocations, we eliminate the Vec allocation overhead
-//! and reduce overall cloning cost by an estimated 10-15%.
+//! [`State`](super::State) stores its mutable positions in an owned
+//! `SmallVec` representation and can also borrow positions from a query-local
+//! canonical table. Pooling retains only the owned representation. That avoids
+//! repeatedly creating its backing allocation while ensuring a borrowed
+//! canonical pointer never escapes the table that owns it.
 
 use super::state::State;
 
@@ -19,21 +17,25 @@ use super::state::State;
 ///
 /// The pool maintains a collection of States that can be reused across
 /// multiple transitions within a single query, eliminating the need to
-/// repeatedly allocate and deallocate `Vec<Position>` structures.
+/// repeatedly create and discard owned position storage.
 ///
 /// # Usage
 ///
-/// ```ignore
+/// ```rust
+/// use liblevenshtein::transducer::{Algorithm, Position, StatePool};
+///
 /// let mut pool = StatePool::new();
+/// assert_eq!(pool.pool_size(), 4); // Pre-warmed states.
 ///
 /// // Acquire a state (from pool or allocate new)
 /// let mut state = pool.acquire();
-///
-/// // Use the state...
-/// state.insert(Position::new(0, 0));
+/// assert!(state.insert(Position::new(0, 0), Algorithm::Standard, 3));
 ///
 /// // Return to pool when done
 /// pool.release(state);
+/// let state = pool.acquire();
+/// assert!(state.is_empty()); // `acquire` clears retained positions.
+/// assert_eq!(pool.total_reuses(), 2);
 /// ```
 ///
 /// # Pool Management
@@ -93,11 +95,11 @@ impl StatePool {
     ///
     /// # Performance
     ///
-    /// - Pool hit: O(1) - pop from Vec + clear positions Vec
-    /// - Pool miss: O(1) - allocate new `Vec<Position>`
+    /// - Pool hit: O(1) - pop from `Vec` + clear positions
+    /// - Pool miss: O(1) - construct new owned position storage
     ///
-    /// The state's `Vec<Position>` allocation is reused when available,
-    /// which is the primary performance benefit.
+    /// The state's owned position storage is reused when available, which is
+    /// the primary performance benefit.
     #[inline]
     pub fn acquire(&mut self) -> State {
         crate::causal_perf::record_pool_acquires(1);
@@ -122,7 +124,7 @@ impl StatePool {
     ///
     /// - O(1) - push to Vec (unless pool is full, then drop)
     ///
-    /// The state's internal `Vec<Position>` allocation is preserved for reuse.
+    /// The state's internal owned position storage is preserved for reuse.
     #[inline]
     pub fn release(&mut self, state: State) {
         crate::causal_perf::record_pool_releases(1);
