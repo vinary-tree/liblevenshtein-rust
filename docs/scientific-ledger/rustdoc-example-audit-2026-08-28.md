@@ -94,6 +94,7 @@ classification.
 | After helper-and-pool repairs | 551 | 0 | 60 | 611 |
 | After phonetic-entry repairs | 557 | 0 | 54 | 611 |
 | After NFA-foundation repairs | 563 | 0 | 48 | 611 |
+| After NFA-runtime repairs | 572 | 0 | 39 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -157,3 +158,15 @@ and compiles both a regular expression and a rewrite rule through their actual
 public entry points. The flag example no longer uses the invalid
 `(?iu:café)` spelling: it demonstrates case-insensitive NFA expansion and the
 separate `(?u:NFC:...)` runtime-normalization result explicitly.
+
+The NFA-runtime batch repaired nine examples that previously could not serve as
+customer evidence. Direct construction now uses the initial state created by
+`NFAChar::new` and finalizes its CSR transitions before matching. Both optimizer
+surfaces compile an intentionally unoptimized regular expression, compare the
+language before and after transformation, and inspect real statistics instead
+of calling nonexistent helpers. Context, incremental, lazy-DFA, and memoized
+examples now build complete public automata and assert their boundary, reset,
+transition-cache, and result-cache behavior. The memoization prose also matches
+the implementation: a matcher owns a product automaton with one fixed distance
+bound, so character-level cache keys are query strings rather than redundant
+`(query, distance)` pairs.

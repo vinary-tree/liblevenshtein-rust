@@ -18,19 +18,28 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use liblevenshtein::phonetic::nfa::{compile, NFAChar};
-//! use liblevenshtein::phonetic::nfa::optimizer::{NfaOptimizer, OptimizationConfig};
+//! ```rust
+//! use liblevenshtein::phonetic::nfa::{
+//!     NFACompilerChar, NfaOptimizerChar, OptimizationConfig,
+//! };
+//! use liblevenshtein::phonetic::regex::parse;
 //!
-//! // Compile without optimization
-//! let nfa = compile_unoptimized(&regex)?;
+//! let regex = parse("(a|b)*c").expect("doc: regex parse must succeed");
+//! let mut compiler = NFACompilerChar::new().without_optimization();
+//! let nfa = compiler
+//!     .compile(&regex)
+//!     .expect("doc: NFA compilation must succeed");
 //!
-//! // Optimize with full configuration
-//! let optimizer = NfaOptimizer::new(OptimizationConfig::full());
-//! let (optimized, stats) = optimizer.optimize(nfa);
+//! let optimizer = NfaOptimizerChar::new(OptimizationConfig::full());
+//! let (optimized, stats) = optimizer.optimize(nfa.clone());
 //!
-//! println!("Removed {} states", stats.states_removed);
-//! println!("Eliminated {} epsilon transitions", stats.epsilon_transitions_eliminated);
+//! assert_eq!(stats.original_states, nfa.num_states());
+//! assert_eq!(stats.final_states, optimized.num_states());
+//! assert!(stats.original_epsilon_count > 0);
+//! assert_eq!(optimized.count_epsilon_transitions(), 0);
+//! for input in ["c", "abc", "bbaac", "ab"] {
+//!     assert_eq!(optimized.accepts(input), nfa.accepts(input));
+//! }
 //! ```
 
 #[cfg(feature = "serialization")]

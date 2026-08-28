@@ -117,7 +117,13 @@ workflows. The NFA-foundation batch then restored six examples spanning state
 identity/finality, Unicode character classes, transitions, Thompson
 construction, regex/rewrite compilation, and runtime flag extraction. The
 normalization example now distinguishes compile-time case expansion from the
-runtime Unicode-normalization contract. The remaining 48 stay explicitly
-ratcheted while they are repaired subsystem by subsystem.
+runtime Unicode-normalization contract. The NFA-runtime batch then restored
+nine examples for direct construction, full and configured optimization,
+context lookahead and word boundaries, incremental input, lazy determinization,
+and bounded result memoization. It corrected the invented second initial state,
+nonexistent optimizer entry points, placeholder automata, and the stale claim
+that a matcher's fixed edit-distance bound is part of every cache key. The
+remaining 39 stay explicitly ratcheted while they are repaired subsystem by
+subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).
