@@ -57,6 +57,7 @@
     "distTag": "next",
     "luaRocksRevision": 1,
     "sourceTag": "v4.0.0-rc.5",
+    "canonicalMavenJarSha256": "17312ed8a18741ca308b19c98d2558bd1f7d9de5d91c595d46f7f4383cf7a23d",
     "fpm": false,
     "fpmReason": "fpm accepts numeric package versions only; validate 4.0.0 as a source candidate and defer registry publication until the final release.",
     "hackage": false,

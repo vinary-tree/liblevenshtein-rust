@@ -925,6 +925,7 @@ jobs:
         shell: bash
         run: |
           version=$(python3 -c 'import json; print(json.load(open("release/version.json"))["registries"]["maven"])')
+          expected_jar_sha=$(python3 -c 'import json; print(json.load(open("release/version.json"))["publication"]["canonicalMavenJarSha256"])')
           base="https://repo.maven.apache.org/maven2/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version"
           mkdir -p "$RUNNER_TEMP/canonical-maven-readback"
           for attempt in $(seq 1 30); do
@@ -943,9 +944,8 @@ jobs:
           cmp \
             "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.pom" \
             "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.pom"
-          cmp \
-            "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.jar" \
-            "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.jar"
+          echo "$expected_jar_sha  $RUNNER_TEMP/canonical-maven-readback/liblevenshtein.jar" \
+            | sha256sum --check --strict -
       - name: Deploy only the selected historical relocation POM
         uses: jreleaser/release-action@v2
         with:
