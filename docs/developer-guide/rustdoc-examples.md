@@ -84,7 +84,15 @@ the public `RuleSetChar::apply` method's empirically verified fixed-point output
 The rule-language batch restored 17 `.llev` and LibLevenshtein Regex Expression
 (LLRE) examples, distinguishing executable parsing, matching, and in-memory
 serialization from compile-checked `no_run` examples that require customer-owned
-files. The remaining 103 stay explicitly ratcheted while they are repaired
-subsystem by subsystem.
+files. The universal-automata batch then repaired 24 public examples across
+characteristic vectors, word-pair encoding, positions, states, diagonal
+crossing, subsumption, and complete-word acceptance. It also corrected the
+published characteristic vectors for `banana`, replaced invalid position
+fixtures, re-exported variant-state types from the natural module root, and
+classified one private-helper fragment as `text`. That review exposed a real
+functional limitation: `UniversalAutomaton::with_policy` currently discards its
+policy value, so its documentation now states the limitation and the repair is
+tracked separately instead of claiming unsupported semantics. The remaining 78
+stay explicitly ratcheted while they are repaired subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

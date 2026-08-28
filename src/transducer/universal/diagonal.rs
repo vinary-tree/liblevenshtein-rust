@@ -54,13 +54,18 @@ use crate::transducer::universal::position::{PositionVariant, UniversalPosition}
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
+/// use liblevenshtein::transducer::universal::{right_most, Standard, UniversalPosition};
+///
 /// let positions = vec![
-///     UniversalPosition::new_i(0, 1, 2).expect("doc/test fixture: UniversalPosition::new_i with valid args"),  // e - i = 1 - 0 = 1
-///     UniversalPosition::new_i(-2, 2, 2).expect("doc/test fixture: UniversalPosition::new_i with valid args"), // e - i = 2 - (-2) = 4
+///     UniversalPosition::<Standard>::new_i(0, 1, 2)
+///         .expect("0#1 satisfies the I-position invariant"),
+///     UniversalPosition::<Standard>::new_i(-2, 2, 2)
+///         .expect("-2#2 satisfies the I-position invariant"),
 /// ];
-/// let rm_pos = right_most(positions.iter());
-/// // Returns I + (-2)#2 (maximum e - i = 4)
+/// let rm_pos = right_most(positions.iter()).expect("the input is non-empty");
+/// assert_eq!(rm_pos.offset(), -2);
+/// assert_eq!(rm_pos.errors(), 2); // Maximum `e - i`: 2 - (-2) = 4.
 /// ```
 pub fn right_most<'a, V: PositionVariant>(
     positions: impl Iterator<Item = &'a UniversalPosition<V>>,
@@ -106,12 +111,15 @@ where
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let pos = UniversalPosition::new_i(0, 0, 2).expect("doc/test fixture: UniversalPosition::new_i with valid args");
-/// assert!(!diagonal_crossed(&pos, 0, 2));  // Not crossed yet
+/// ```rust
+/// use liblevenshtein::transducer::universal::{
+///     diagonal_crossed, Standard, UniversalPosition,
+/// };
 ///
-/// let pos = UniversalPosition::new_i(0, 3, 2).expect("doc/test fixture: UniversalPosition::new_i with valid args");
-/// assert!(diagonal_crossed(&pos, 2, 2));   // Crossed (e > i + 2n + 1 - k)
+/// let pos = UniversalPosition::<Standard>::new_i(0, 0, 2)
+///     .expect("0#0 satisfies the I-position invariant");
+/// assert!(diagonal_crossed(&pos, 0, 2));
+/// assert!(!diagonal_crossed(&pos, 10, 2)); // `k > 2n + 1`.
 /// ```
 pub fn diagonal_crossed<V: PositionVariant>(
     pos: &UniversalPosition<V>,
@@ -163,16 +171,26 @@ pub fn diagonal_crossed<V: PositionVariant>(
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
+/// use liblevenshtein::transducer::universal::{
+///     convert_position, Standard, UniversalPosition,
+/// };
+///
 /// // Convert I-type to M-type
-/// let i_pos = UniversalPosition::new_i(0, 0, 2).expect("doc/test fixture: UniversalPosition::new_i with valid args");
-/// let m_pos = convert_position(&i_pos, 3, 2).expect("doc/test fixture: convert_position with valid args");
+/// let i_pos = UniversalPosition::<Standard>::new_i(0, 0, 2)
+///     .expect("0#0 satisfies the I-position invariant");
+/// let m_pos = convert_position(&i_pos, 3, 2).expect("conversion produces a valid position");
 /// // m_n(I + 0#0, 3) = M + (0 + 2 + 1 - 3)#0 = M + 0#0
+/// assert!(m_pos.is_m_type());
+/// assert_eq!(m_pos.offset(), 0);
 ///
 /// // Convert M-type to I-type
-/// let m_pos = UniversalPosition::new_m(0, 0, 2).expect("doc/test fixture: UniversalPosition::new_m with valid args");
-/// let i_pos = convert_position(&m_pos, 3, 2).expect("doc/test fixture: convert_position with valid args");
+/// let m_pos = UniversalPosition::<Standard>::new_m(0, 0, 2)
+///     .expect("0#0 satisfies the M-position invariant");
+/// let i_pos = convert_position(&m_pos, 3, 2).expect("conversion produces a valid position");
 /// // m_n(M + 0#0, 3) = I + (0 - 2 - 1 + 3)#0 = I + 0#0
+/// assert!(i_pos.is_i_type());
+/// assert_eq!(i_pos.offset(), 0);
 /// ```
 pub fn convert_position<V: PositionVariant>(
     pos: &UniversalPosition<V>,

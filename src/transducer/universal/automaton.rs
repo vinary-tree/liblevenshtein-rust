@@ -44,10 +44,18 @@ use crate::transducer::{SubstitutionPolicy, Unrestricted};
 /// # Type Parameters
 ///
 /// - `V`: Position variant (Standard, Transposition, or MergeAndSplit)
-/// - `P`: Substitution policy (defaults to [`Unrestricted`])
+/// - `P`: Reserved substitution-policy marker (defaults to [`Unrestricted`])
 ///
 /// The default [`Unrestricted`] policy is a zero-sized type, so there is
 /// zero memory or performance overhead for the default case.
+///
+/// # Substitution-policy limitation
+///
+/// The universal encoder currently derives characteristic vectors from exact
+/// character equality. Although [`UniversalAutomaton::with_policy`] preserves a
+/// policy type in the API, it does not yet apply non-exact, zero-cost
+/// substitutions during matching. Use [`Unrestricted`] when acceptance
+/// semantics matter; policy-aware universal encoding is tracked separately.
 ///
 /// # Examples
 ///
@@ -85,8 +93,11 @@ impl<V: PositionVariant> UniversalAutomaton<V, Unrestricted> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalAutomaton};
+    ///
     /// let automaton = UniversalAutomaton::<Standard>::new(2);
+    /// assert_eq!(automaton.max_distance(), 2);
     /// ```
     #[must_use]
     pub fn new(max_distance: u8) -> Self {
@@ -99,12 +110,20 @@ impl<V: PositionVariant> UniversalAutomaton<V, Unrestricted> {
 
 // Generic methods (work with any policy)
 impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
-    /// Create a new Universal Levenshtein Automaton with custom substitution policy
+    /// Construct a Universal Levenshtein Automaton with a substitution-policy marker.
+    ///
+    /// # Current limitation
+    ///
+    /// The policy value is not yet consulted by universal characteristic-vector
+    /// encoding. Consequently, this constructor currently has the same matching
+    /// semantics as [`UniversalAutomaton::new`]. It exists to preserve the typed
+    /// API while policy-aware encoding is implemented; callers requiring custom
+    /// zero-cost substitutions should not rely on it yet.
     ///
     /// # Arguments
     ///
     /// - `max_distance`: Maximum edit distance n (typically 1, 2, or 3)
-    /// - `policy`: Substitution policy to use
+    /// - `policy`: Policy value whose type is retained as a marker
     ///
     /// # Returns
     ///
@@ -112,10 +131,15 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::substitution_policy::Restricted;
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalAutomaton};
+    /// use liblevenshtein::transducer::SubstitutionSet;
+    ///
     /// let policy_set = SubstitutionSet::phonetic_basic();
     /// let policy = Restricted::new(&policy_set);
-    /// let automaton = UniversalAutomaton::<Standard>::with_policy(2, policy);
+    /// let automaton = UniversalAutomaton::<Standard, _>::with_policy(2, policy);
+    /// assert_eq!(automaton.max_distance(), 2);
     /// ```
     #[must_use]
     pub fn with_policy(max_distance: u8, _policy: P) -> Self {
@@ -225,7 +249,9 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalAutomaton};
+    ///
     /// let automaton = UniversalAutomaton::<Standard>::new(2);
     ///
     /// // Distance 1: one substitution

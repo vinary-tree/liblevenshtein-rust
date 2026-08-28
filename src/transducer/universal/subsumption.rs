@@ -38,23 +38,25 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::transducer::universal::{UniversalPosition, Standard, subsumes};
 //!
-//! let pos1 = UniversalPosition::<Standard>::new_i(3, 1, 3)?;  // I + 3#1
-//! let pos2 = UniversalPosition::<Standard>::new_i(5, 2, 3)?;  // I + 5#2
+//! let pos1 = UniversalPosition::<Standard>::new_i(3, 3, 3)
+//!     .expect("3#3 satisfies the I-position invariant");
+//! let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 3)
+//!     .expect("2#2 satisfies the I-position invariant");
 //!
-//! // Check: 3#1 ≤^ε_s 5#2
-//! // f > e: 2 > 1 ✓
-//! // |j - i| ≤ f - e: |5 - 3| = 2 ≤ 2 - 1 = 1? NO
+//! // The second position has fewer errors, so strict subsumption fails.
 //! assert!(!subsumes(&pos1, &pos2, 3));
 //!
-//! let pos3 = UniversalPosition::<Standard>::new_i(4, 1, 3)?;  // I + 4#1
-//! let pos4 = UniversalPosition::<Standard>::new_i(5, 2, 3)?;  // I + 5#2
+//! let pos3 = UniversalPosition::<Standard>::new_i(1, 1, 3)
+//!     .expect("1#1 satisfies the I-position invariant");
+//! let pos4 = UniversalPosition::<Standard>::new_i(2, 2, 3)
+//!     .expect("2#2 satisfies the I-position invariant");
 //!
-//! // Check: 4#1 ≤^ε_s 5#2
+//! // Check: 1#1 ≤^ε_s 2#2
 //! // f > e: 2 > 1 ✓
-//! // |j - i| ≤ f - e: |5 - 4| = 1 ≤ 2 - 1 = 1 ✓
+//! // |j - i| ≤ f - e: |2 - 1| = 1 ≤ 2 - 1 = 1 ✓
 //! assert!(subsumes(&pos3, &pos4, 3));
 //! ```
 
@@ -87,10 +89,14 @@ use crate::transducer::universal::position::{
 ///
 /// # Example
 ///
-/// ```ignore
-/// let pos1 = UniversalPosition::<Standard>::new_i(4, 1, 3)?;
-/// let pos2 = UniversalPosition::<Standard>::new_i(5, 2, 3)?;
-/// assert!(subsumes(&pos1, &pos2, 3));  // 4#1 <^ε_s 5#2
+/// ```rust
+/// use liblevenshtein::transducer::universal::{subsumes, Standard, UniversalPosition};
+///
+/// let pos1 = UniversalPosition::<Standard>::new_i(1, 1, 3)
+///     .expect("1#1 satisfies the I-position invariant");
+/// let pos2 = UniversalPosition::<Standard>::new_i(2, 2, 3)
+///     .expect("2#2 satisfies the I-position invariant");
+/// assert!(subsumes(&pos1, &pos2, 3)); // 1#1 <^ε_s 2#2
 /// ```
 #[inline(always)]
 pub fn subsumes<V: PositionVariant>(

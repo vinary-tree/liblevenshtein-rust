@@ -36,8 +36,8 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use liblevenshtein::transducer::universal::UniversalAutomaton;
+//! ```rust
+//! use liblevenshtein::transducer::universal::{Standard, UniversalAutomaton};
 //!
 //! // Construct once for maximum distance n=2.
 //! let automaton = UniversalAutomaton::<Standard>::new(2);
@@ -63,7 +63,8 @@ pub use bit_vector::{characteristic_vector, encode_word_pair, CharacteristicVect
 pub use diagonal::{convert_position, diagonal_crossed, right_most};
 
 pub use position::{
-    MergeAndSplit, PositionError, PositionVariant, Standard, Transposition, UniversalPosition,
+    MergeAndSplit, MergeSplitState, PositionError, PositionVariant, Standard, Transposition,
+    TranspositionState, UniversalPosition,
 };
 
 pub use state::UniversalState;

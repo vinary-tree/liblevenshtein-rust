@@ -75,3 +75,33 @@ Accept the 165 evidence-backed fence conversions. Add an automated ratchet,
 run all-feature doctests in the documentation lane, and repair the remaining
 183 examples in bounded subsystem batches. New public examples must be
 executable by default; `ignore` is not an accepted escape hatch.
+
+## Repair follow-through
+
+The same immutable source graph and all-feature command were retained for each
+bounded repair batch. Unlike the initial fence-only experiment, these batches
+reviewed the example bodies and public semantics before changing their
+classification.
+
+| Reviewed state | Passed | Failed | Ignored | Total |
+|---|---:|---:|---:|---:|
+| After crate, corpus, migration, synchronization, serialization, WallBreaker, builder, and query-policy repairs | 460 | 0 | 152 | 612 |
+| After phonetic-core and embedded-language repairs | 492 | 0 | 120 | 612 |
+| After `.llev` and LLRE repairs | 509 | 0 | 103 | 612 |
+| After universal-automata repairs | 533 | 0 | 78 | 611 |
+
+The total can decrease when review proves that a fence is pseudocode or a
+private implementation fragment rather than customer-compilable usage. Such a
+fence is relabeled `text`; it is not counted as a doctest and does not consume
+the ignored-example allowance.
+
+The universal-automata batch also served as a semantic control. It found three
+classes of stale documentation: missing standalone imports, examples whose
+positions violated the documented invariants, and characteristic-vector bits
+whose asserted indices disagreed with exact character equality. All were
+corrected and executed. One advertised behavior was not repaired as prose:
+`UniversalAutomaton::with_policy` accepts and discards its policy value, while
+the encoder constructs vectors using exact equality. The API documentation now
+states that limitation, and pgmcp item
+`wire-universalautomaton-substitution-policies-into-characteristic-vector-matching-ba95ee`
+tracks the required policy-aware implementation and semantic tests.
