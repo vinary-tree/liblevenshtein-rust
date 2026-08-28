@@ -31,23 +31,23 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::korean;
 //!
 //! let rules = korean::base();
 //!
 //! // Basic consonant
 //! let result = rules.apply("ㄱ");
-//! assert!(result.contains("g"), "ㄱ → g");
+//! assert_eq!(result, "k");
 //!
 //! // Double consonant
 //! let result = rules.apply("ㄲ");
-//! assert!(result.contains("k͈"), "ㄲ → kk");
+//! assert_eq!(result, "k͈");
 //!
 //! // Romanization variant normalization
 //! let rom_rules = korean::romanization();
 //! let result = rom_rules.apply("Sŏul");
-//! // McCune-Reischauer ŏ becomes eo
+//! assert_eq!(result, "sʌul");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

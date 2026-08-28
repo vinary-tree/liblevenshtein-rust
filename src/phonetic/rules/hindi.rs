@@ -49,22 +49,22 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::hindi;
 //!
 //! let rules = hindi::base();
 //!
 //! // Basic consonants
 //! let result = rules.apply("क");
-//! assert!(result.contains('k'), "क → k");
+//! assert_eq!(result, "ka");
 //!
 //! // Retroflex consonants
 //! let result = rules.apply("ट");
-//! assert!(result.contains("ʈ"), "ट → TT");
+//! assert_eq!(result, "ʈa");
 //!
 //! // Aspirated consonants
 //! let result = rules.apply("ख");
-//! assert!(result.contains("x"), "ख → kh");
+//! assert_eq!(result, "kha");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

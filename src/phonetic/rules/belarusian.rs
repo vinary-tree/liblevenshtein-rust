@@ -27,18 +27,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::belarusian;
 //!
 //! let rules = belarusian::base();
 //!
 //! // Ў becomes w (unique Belarusian letter!)
 //! let result = rules.apply("ў");
-//! assert!(result.contains("w"), "ў → w");
+//! assert_eq!(result, "w");
 //!
-//! // Г becomes h (not g like Russian)
+//! // Г becomes the voiced glottal fricative, unlike Russian г.
 //! let result = rules.apply("г");
-//! assert!(result.contains("h"), "г → h");
+//! assert_eq!(result, "ɦ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

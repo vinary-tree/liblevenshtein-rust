@@ -24,18 +24,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::slovak;
 //!
 //! let rules = slovak::base();
 //!
 //! // Soft l
 //! let result = rules.apply("ľ");
-//! assert!(result.contains("ʎ"), "ľ → LJ");
+//! assert_eq!(result, "ʎ");
 //!
 //! // Diphthong
 //! let result = rules.apply("ô");
-//! assert!(result.contains("UO"), "ô → UO");
+//! assert_eq!(result, "uo");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

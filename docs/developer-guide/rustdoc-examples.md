@@ -76,6 +76,11 @@ and current ordered-candidate handling. The query-policy batch then corrected
 restricted substitutions, ordered filtering and prefix matching, and both
 post-filtered and set-filtered value queries; two deliberately incomplete
 internal-control-flow fragments were honestly relabeled as `text`. The remaining
-152 stay explicitly ratcheted while they are repaired subsystem by subsystem.
+phonetic-core batch restored the low-level rewrite, ergonomic custom-rule, and
+English syllable examples with current inputs, fuel, imports, and documented
+heuristic limits. The embedded-language batch then executed every previously
+ignored language example and replaced stale intermediate-marker assertions with
+the public `RuleSetChar::apply` method's empirically verified fixed-point output.
+The remaining 120 stay explicitly ratcheted while they are repaired subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

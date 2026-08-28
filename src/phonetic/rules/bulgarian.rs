@@ -27,18 +27,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::bulgarian;
 //!
 //! let rules = bulgarian::base();
 //!
 //! // Щ becomes sht (not shch like Russian!)
 //! let result = rules.apply("щ");
-//! assert!(result.contains("ʃt"), "щ → sht");
+//! assert_eq!(result, "ʃt");
 //!
 //! // Ъ is a schwa vowel (very common in Bulgarian)
 //! let result = rules.apply("ъ");
-//! assert!(result.contains("a"), "ъ → a (schwa)");
+//! assert_eq!(result, "ə");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

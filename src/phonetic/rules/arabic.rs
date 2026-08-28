@@ -43,18 +43,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::arabic;
 //!
 //! let rules = arabic::base();
 //!
 //! // Basic consonants
 //! let result = rules.apply("ب");
-//! assert!(result.contains('b'), "ب → b");
+//! assert_eq!(result, "b");
 //!
-//! // Emphatic consonants
+//! // Emphatic consonants retain pharyngealization in the IPA output.
 //! let result = rules.apply("ص");
-//! assert!(result.contains('ʃ'), "ص → S");
+//! assert_eq!(result, "sˤ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

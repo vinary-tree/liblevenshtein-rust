@@ -20,18 +20,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::russian;
 //!
 //! let rules = russian::base();
 //!
 //! // Basic transliteration
 //! let moscow = rules.apply("Москва");
-//! assert!(moscow.contains("moskv"), "Москва → moskva");
+//! assert_eq!(moscow, "mɐskvɐ");
 //!
 //! // Complex consonants
 //! let shchi = rules.apply("щи");
-//! assert!(shchi.starts_with("ʃt͡ʃ"), "щ → shch");
+//! assert_eq!(shchi, "ɕːi");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

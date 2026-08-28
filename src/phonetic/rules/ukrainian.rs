@@ -29,18 +29,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::ukrainian;
 //!
 //! let rules = ukrainian::base();
 //!
 //! // Unique Ukrainian letters
 //! let result = rules.apply("ї");
-//! assert!(result.contains("yi"), "ї → yi");
+//! assert_eq!(result, "yi");
 //!
 //! // Ukrainian г → h (not g!)
 //! let result = rules.apply("г");
-//! assert!(result.contains("h"), "г → h");
+//! assert_eq!(result, "ɦ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

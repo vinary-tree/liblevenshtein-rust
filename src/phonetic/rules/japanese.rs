@@ -37,18 +37,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::japanese;
 //!
 //! let rules = japanese::romaji();
 //!
 //! // Long vowel normalization
 //! let result = rules.apply("Tōkyō");
-//! assert!(result.contains('O'), "ō → O");
+//! assert_eq!(result, "toːkyoː");
 //!
 //! // Romanization variant normalization
 //! let result = rules.apply("sushi");
-//! assert!(result.contains('ʃ'), "shi → S");
+//! assert_eq!(result, "suɕ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

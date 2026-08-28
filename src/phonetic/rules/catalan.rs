@@ -26,18 +26,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::catalan;
 //!
 //! let rules = catalan::base();
 //!
 //! // Ela geminada
 //! let result = rules.apply("l·l");
-//! assert!(result.contains("ʎ"), "l·l → LL");
+//! assert_eq!(result, "L");
 //!
 //! // NY digraph
 //! let result = rules.apply("Catalunya");
-//! assert!(result.contains("ɲ"), "ny → NY");
+//! assert_eq!(result, "kataluɲa");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

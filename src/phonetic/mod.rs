@@ -52,13 +52,31 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
-//! use liblevenshtein::phonetic::{apply_rules_seq, orthography_rules};
+//! ```rust
+//! use liblevenshtein::phonetic::{
+//!     apply_rules_seq, orthography_rules, PhoneByte, MAX_EXPANSION_FACTOR,
+//! };
 //!
-//! let input = "enough";
+//! let input = vec![
+//!     PhoneByte::Consonant(b'p'),
+//!     PhoneByte::Consonant(b'h'),
+//!     PhoneByte::Vowel(b'o'),
+//!     PhoneByte::Consonant(b'n'),
+//!     PhoneByte::Vowel(b'e'),
+//! ];
 //! let rules = orthography_rules();
-//! let phonetic = apply_rules_seq(&rules, input);
-//! assert_eq!(phonetic, "enuf");
+//! let fuel = input.len() * rules.len() * MAX_EXPANSION_FACTOR;
+//! let phonetic = apply_rules_seq(&rules, &input, fuel)
+//!     .expect("phonetic rewriting returns its fixed point");
+//! assert_eq!(
+//!     phonetic,
+//!     vec![
+//!         PhoneByte::Consonant(b'f'),
+//!         PhoneByte::Vowel(b'o'),
+//!         PhoneByte::Consonant(b'n'),
+//!         PhoneByte::Silent,
+//!     ],
+//! );
 //! ```
 //!
 //! # Rule Sets
@@ -73,9 +91,10 @@
 //!
 //! Load custom phonetic rules from `.llev` files:
 //!
-//! ```rust,ignore
-//! use liblevenshtein::phonetic::{parse_str, RuleSetChar, apply_rules_seq_char};
+//! ```rust
+//! use liblevenshtein::phonetic::{parse_str, RuleSetChar};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Parse rules from a string
 //! let file = parse_str(r#"
 //!     @name "Custom Rules"
@@ -90,9 +109,11 @@
 //! // Convert to runtime rule set
 //! let ruleset = RuleSetChar::from_llev(&file)?;
 //!
-//! // Apply rules
-//! let result = apply_rules_seq_char(&ruleset.rules, "phone");
+//! // Apply rules through the string-oriented convenience API.
+//! let result = ruleset.apply("phone");
 //! assert_eq!(result, "fone");
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! See the [`llev`](crate::phonetic::llev) module for complete documentation on the file format.

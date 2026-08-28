@@ -35,18 +35,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::polish;
 //!
 //! let rules = polish::base();
 //!
 //! // Nasal vowel
 //! let result = rules.apply("ą");
-//! assert!(result.contains("on"), "ą → on");
+//! assert_eq!(result, "ɔ\u{303}");
 //!
-//! // Digraph (S marker for postalveolar fricative)
+//! // Digraph for the voiceless postalveolar fricative.
 //! let result = rules.apply("sz");
-//! assert!(result.contains('ʃ'), "sz → S");
+//! assert_eq!(result, "ʃ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

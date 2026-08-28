@@ -22,22 +22,22 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::german;
 //!
 //! let rules = german::base();
 //!
 //! // Umlaut normalization
 //! let muenchen = rules.apply("München");
-//! assert!(muenchen.contains("ue"), "ü → ue");
+//! assert_eq!(muenchen, "myŋken");
 //!
 //! // Eszett handling
 //! let strasse = rules.apply("Straße");
-//! assert!(strasse.contains("ss"), "ß → ss");
+//! assert_eq!(strasse, "ʃtrase");
 //!
 //! // Final devoicing
 //! let hund = rules.apply("Hund");
-//! assert!(hund.ends_with('t'), "d → t at word end");
+//! assert_eq!(hund, "hunt");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

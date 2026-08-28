@@ -39,18 +39,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::tamil;
 //!
 //! let rules = tamil::base();
 //!
 //! // Unique retroflex approximant
 //! let result = rules.apply("ழ");
-//! assert!(result.contains("ʒ"), "ழ → ZH");
+//! assert_eq!(result, "ɻ");
 //!
 //! // Standard consonants
 //! let result = rules.apply("க");
-//! assert!(result.contains('k'), "க → k");
+//! assert_eq!(result, "k");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

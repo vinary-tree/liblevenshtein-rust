@@ -40,18 +40,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::bengali;
 //!
 //! let rules = bengali::base();
 //!
 //! // Inherent vowel is ɔ (o sound)
 //! let result = rules.apply("অ");
-//! assert!(result.contains('ɔ'), "অ → o (not 'a' like Hindi!)");
+//! assert_eq!(result, "o");
 //!
 //! // Nukta consonants
 //! let result = rules.apply("ড়");
-//! assert!(result.contains("r"), "ড় → RR");
+//! assert_eq!(result, "ɽ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

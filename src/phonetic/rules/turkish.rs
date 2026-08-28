@@ -36,18 +36,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::turkish;
 //!
 //! let rules = turkish::base();
 //!
 //! // Dotted I distinction
 //! let result = rules.apply("İstanbul");
-//! assert!(result.contains('i'), "İ → i");
+//! assert_eq!(result, "ɯstanbul");
 //!
 //! // Soft g
 //! let result = rules.apply("dağ");
-//! assert!(result.contains('G'), "ğ → G");
+//! assert_eq!(result, "daɣ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;
