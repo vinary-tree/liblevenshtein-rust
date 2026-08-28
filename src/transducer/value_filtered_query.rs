@@ -398,9 +398,22 @@ where
 /// ```
 ///
 /// For most use cases, post-filtering is recommended:
-/// ```rust,ignore
-/// transducer.query("term", 2)
-///     .filter(|term| dict.get_value(term) == Some(target_scope))
+/// ```rust
+/// use liblevenshtein::dictionary::MappedDictionary;
+/// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
+/// use liblevenshtein::prelude::*;
+///
+/// let dict: PathMapDictionary<u32> = PathMapDictionary::from_terms_with_values([
+///     ("println", 1),
+///     ("my_func", 2),
+/// ]);
+/// let transducer = Transducer::standard(dict);
+/// let target_scope = 2;
+/// let matches: Vec<_> = transducer
+///     .query_terms("my", 5)
+///     .filter(|term| transducer.dictionary().get_value(term) == Some(target_scope))
+///     .collect();
+/// assert_eq!(matches, ["my_func"]);
 /// ```
 ///
 /// # Example
@@ -668,12 +681,16 @@ where
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use std::collections::HashSet;
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
 ///
-/// let dict: PathMapDictionary<u32> = /* ... */;
+/// let dict: PathMapDictionary<u32> = PathMapDictionary::from_terms_with_values([
+///     ("println", 1),
+///     ("my_func", 2),
+///     ("private_helper", 9),
+/// ]);
 /// let transducer = Transducer::new(dict, Algorithm::Standard);
 ///
 /// // Query for terms in scopes 1, 2, or 3 (hierarchical scope visibility)
@@ -681,6 +698,8 @@ where
 /// let matches: Vec<_> = transducer
 ///     .query_by_value_set("my_func", 2, &visible_scopes)
 ///     .collect();
+/// assert!(matches.iter().any(|candidate| candidate.term == "my_func"));
+/// assert!(matches.iter().all(|candidate| candidate.term != "private_helper"));
 /// ```
 pub struct ValueSetFilteredQueryIterator<'a, N, V>
 where

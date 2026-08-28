@@ -25,13 +25,16 @@ use std::path::Path;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use liblevenshtein::corpus::BigTxtCorpus;
 ///
+/// # fn main() -> std::io::Result<()> {
 /// let corpus = BigTxtCorpus::load("data/corpora/big.txt")?;
 /// let unique_words = corpus.unique_words();
 /// let total_tokens = corpus.total_tokens();
 /// let frequency = corpus.frequency("the"); // Number of occurrences
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct BigTxtCorpus {
@@ -152,9 +155,10 @@ impl BigTxtCorpus {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use liblevenshtein::corpus::MittonCorpus;
 ///
+/// # fn main() -> std::io::Result<()> {
 /// let holbrook = MittonCorpus::load("data/corpora/holbrook.dat")?;
 ///
 /// for (correct, misspellings) in &holbrook.errors {
@@ -163,6 +167,8 @@ impl BigTxtCorpus {
 ///         println!("  {} (×{})", misspelling, frequency);
 ///     }
 /// }
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct MittonCorpus {

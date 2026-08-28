@@ -65,7 +65,17 @@ public API and the behavior a customer should rely on.
 
 The controlled 2026-08-28 audit started with 348 ignored examples. Running all
 of them as ordinary Rust found 165 that already compiled and executed without
-changes; those suppressions were removed. The remaining 183 failed and stay
-explicitly ratcheted while they are repaired subsystem by subsystem. The
-method, controls, and raw result summary are recorded in the
+changes; those suppressions were removed. The first repair batch then restored
+the crate quick start and three file-backed corpus examples, using `no_run` for
+the examples whose input files are deliberately external. A second batch
+restored the deprecated-import migration, synchronization, serialization, and
+WallBreaker examples with current imports, signatures, result types, and honest
+`no_run` treatment for file I/O. The fluent transducer-builder batch restored
+ten more standalone examples with complete construction, meaningful assertions,
+and current ordered-candidate handling. The query-policy batch then corrected
+restricted substitutions, ordered filtering and prefix matching, and both
+post-filtered and set-filtered value queries; two deliberately incomplete
+internal-control-flow fragments were honestly relabeled as `text`. The remaining
+152 stay explicitly ratcheted while they are repaired subsystem by subsystem.
+The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

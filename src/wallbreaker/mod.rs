@@ -142,9 +142,13 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::dictionary::scdawg::Scdawg;
+    /// use liblevenshtein::wallbreaker::WallBreaker;
+    ///
     /// let dict = Scdawg::<()>::from_terms(["test"]);
     /// let wb = WallBreaker::new(&dict, 2);
+    /// assert_eq!(wb.max_distance(), 2);
     /// ```
     pub fn new(dictionary: &'a D, max_distance: usize) -> Self {
         Self::with_algorithm(dictionary, max_distance, Algorithm::Standard)
@@ -168,8 +172,10 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::dictionary::scdawg::Scdawg;
     /// use liblevenshtein::transducer::Algorithm;
+    /// use liblevenshtein::wallbreaker::WallBreaker;
     ///
     /// let dict = Scdawg::<()>::from_terms(["test"]);
     ///
@@ -202,9 +208,14 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// for (term, distance) in wb.query("tset") {
-    ///     println!("{} at distance {}", term, distance);
+    /// ```rust
+    /// use liblevenshtein::dictionary::scdawg::Scdawg;
+    /// use liblevenshtein::wallbreaker::WallBreaker;
+    ///
+    /// let dict = Scdawg::<()>::from_terms(["test"]);
+    /// let wb = WallBreaker::new(&dict, 2);
+    /// for result in wb.query("tset") {
+    ///     println!("{} at distance {}", result.term, result.distance);
     /// }
     /// ```
     pub fn query(&self, query: &str) -> WallBreakerQuery<'_, D> {

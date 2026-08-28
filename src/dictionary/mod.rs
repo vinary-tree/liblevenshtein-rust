@@ -7,8 +7,10 @@
 //! # Migration Guide
 //!
 //! Replace imports like:
-//! ```rust,ignore
-//! use liblevenshtein::dictionary::{Dictionary, DictionaryNode, DoubleArrayTrie};
+//! ```rust
+//! # #![allow(deprecated)]
+//! use liblevenshtein::dictionary::{Dictionary, DictionaryNode};
+//! use liblevenshtein::dictionary::double_array_trie::DoubleArrayTrie;
 //! ```
 //!
 //! With:

@@ -608,7 +608,7 @@ impl OperationType {
     ///
     /// When deciding whether to enter a split state for phonetic operations:
     ///
-    /// ```rust,ignore
+    /// ```text
     /// // Check if THIS word character can be split (without knowing target yet)
     /// let can_enter_split = split_ops.iter().any(|op| {
     ///     op.can_apply_to_source(word_char.as_bytes())
@@ -684,7 +684,7 @@ impl OperationType {
     /// 1. The word character can be split (via `can_apply_to_source`)
     /// 2. The current input character matches the first target character
     ///
-    /// ```rust,ignore
+    /// ```text
     /// // Only enter split state if input char matches first char of split target
     /// let can_enter_split = split_ops.iter().any(|op| {
     ///     op.can_apply_to_source(word_char.as_bytes())

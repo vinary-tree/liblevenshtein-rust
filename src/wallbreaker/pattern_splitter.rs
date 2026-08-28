@@ -156,11 +156,15 @@ impl PatternSplitter {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// let splitter = PatternSplitter::new(2);
+    /// ```rust
+    /// use liblevenshtein::transducer::Algorithm;
+    /// use liblevenshtein::wallbreaker::PatternSplitter;
+    ///
+    /// let splitter = PatternSplitter::new(2, Algorithm::Standard);
     /// let pieces = splitter.split("hello");
     /// // With b=2: 3 pieces from 5 chars
     /// // "he" (2), "ll" (2), "o" (1)
+    /// assert_eq!(pieces.iter().map(|piece| piece.content.as_str()).collect::<Vec<_>>(), ["he", "ll", "o"]);
     /// ```
     pub fn split(&self, query: &str) -> Vec<PatternPiece> {
         let chars: Vec<char> = query.chars().collect();

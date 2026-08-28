@@ -9,11 +9,12 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
-//! use crate::sync_compat::RwLock;
+//! ```rust
+//! use liblevenshtein::sync_compat::RwLock;
 //!
 //! let lock = RwLock::new(42);
 //! let value = lock.read();  // Works on both parking_lot and std::sync
+//! assert_eq!(*value, 42);
 //! ```
 
 // ============================================================================
