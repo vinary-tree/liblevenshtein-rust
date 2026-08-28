@@ -96,15 +96,6 @@ DEPRECATED_NPM_PATTERNS = {
     )
     for coordinate in DEPRECATED_NPM_COORDINATES
 }
-IGNORED_IDENTITY_PARTS = {
-    ".git",
-    ".venv",
-    "build",
-    "dist",
-    "node_modules",
-    "target",
-    "venv",
-}
 
 
 def fail(message: str) -> None:
@@ -137,31 +128,35 @@ def check_dependency(owner: str, name: str, version: object) -> None:
 
 
 def reject_deprecated_coordinates(component: str, root: Path) -> None:
-    for directory, subdirectories, filenames in os.walk(root):
-        subdirectories[:] = [
-            name for name in subdirectories if name not in IGNORED_IDENTITY_PARTS
-        ]
-        for filename in filenames:
-            path = Path(directory) / filename
-            relative = path.relative_to(root)
-            if (
-                relative.name == "CHANGELOG.md"
-                or relative.name == "FINDINGS_LEDGER.md"
-                or relative.parts[:2] == ("docs", "releases")
-                or relative == Path("docs/npm-coordinate-migration.md")
-                or relative == Path("docs/releasing.md")
-                or relative == Path("docs/releasing-language-bindings.md")
-            ):
-                continue
-            try:
-                source = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                continue
-            for coordinate, token in DEPRECATED_NPM_PATTERNS.items():
-                if token.search(source):
-                    fail(
-                        f"{component}: deprecated npm coordinate remains in {relative}"
-                    )
+    tracked = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "-z"],
+        check=False,
+        capture_output=True,
+    )
+    if tracked.returncode != 0:
+        detail = tracked.stderr.decode("utf-8", errors="replace").strip()
+        fail(f"{component}: cannot enumerate reviewed source files: {detail}")
+
+    for raw_relative in tracked.stdout.split(b"\0"):
+        if not raw_relative:
+            continue
+        relative = Path(os.fsdecode(raw_relative))
+        if (
+            relative.name == "CHANGELOG.md"
+            or relative.name == "FINDINGS_LEDGER.md"
+            or relative.parts[:2] == ("docs", "releases")
+            or relative == Path("docs/npm-coordinate-migration.md")
+            or relative == Path("docs/releasing.md")
+            or relative == Path("docs/releasing-language-bindings.md")
+        ):
+            continue
+        try:
+            source = (root / relative).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for token in DEPRECATED_NPM_PATTERNS.values():
+            if token.search(source):
+                fail(f"{component}: deprecated npm coordinate remains in {relative}")
 
 
 manifests = {name: load(name, root) for name, root in COMPONENTS.items()}
