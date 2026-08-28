@@ -90,6 +90,7 @@ classification.
 | After `.llev` and LLRE repairs | 509 | 0 | 103 | 612 |
 | After universal-automata repairs | 533 | 0 | 78 | 611 |
 | After generalized-alignment repairs | 541 | 0 | 70 | 611 |
+| After zipper-intersection repairs | 547 | 0 | 64 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -116,3 +117,10 @@ API failed closed. The preset now uses distinct `2 → 1` simplification and
 `1 → 2` expansion operations, validates as a complete set, and is exercised
 through a full `phone` to `fone` alignment after composition with the standard
 edit operations.
+
+The zipper-intersection batch replaced six contextless fragments with complete
+product-traversal experiments. Each example constructs an owned,
+snapshot-backed PathMap zipper, pairs it with an automaton zipper, and observes
+the public result after actual traversal. This verifies the boundary accessors
+for distance, depth, reconstructed terms, viability, dictionary finality, and
+query metadata rather than proving only that isolated method names compile.

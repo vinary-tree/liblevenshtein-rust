@@ -228,11 +228,29 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// // After navigating to a final node
-    /// if let Some(dist) = intersection.distance() {
-    ///     println!("Match with distance: {}", dist);
+    /// ```rust
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"bat", 1, Algorithm::Standard);
+    /// let mut intersection = IntersectionZipper::new(dictionary, automaton);
+    /// let mut pool = StatePool::new();
+    ///
+    /// for &expected in b"cat" {
+    ///     let children: Vec<_> = intersection.children(&mut pool).collect();
+    ///     intersection = children
+    ///         .into_iter()
+    ///         .find(|(label, _)| *label == expected)
+    ///         .expect("the dictionary contains the requested path")
+    ///         .1;
     /// }
+    /// assert_eq!(intersection.distance(), Some(1));
     /// ```
     #[inline]
     pub fn distance(&self) -> Option<usize> {
@@ -258,10 +276,29 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// assert_eq!(intersection.depth(), 0);  // At root
+    /// ```rust
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
     ///
-    /// // After transitioning through "cat"
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"cat", 0, Algorithm::Standard);
+    /// let mut intersection = IntersectionZipper::new(dictionary, automaton);
+    /// assert_eq!(intersection.depth(), 0);
+    ///
+    /// let mut pool = StatePool::new();
+    /// for &expected in b"cat" {
+    ///     let children: Vec<_> = intersection.children(&mut pool).collect();
+    ///     intersection = children
+    ///         .into_iter()
+    ///         .find(|(label, _)| *label == expected)
+    ///         .expect("the dictionary contains the requested path")
+    ///         .1;
+    /// }
     /// assert_eq!(intersection.depth(), 3);
     /// ```
     #[inline]
@@ -277,9 +314,29 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let term = intersection.term();
-    /// println!("Matched term: {}", term);
+    /// ```rust
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"cat", 0, Algorithm::Standard);
+    /// let mut intersection = IntersectionZipper::new(dictionary, automaton);
+    /// let mut pool = StatePool::new();
+    ///
+    /// for &expected in b"cat" {
+    ///     let children: Vec<_> = intersection.children(&mut pool).collect();
+    ///     intersection = children
+    ///         .into_iter()
+    ///         .find(|(label, _)| *label == expected)
+    ///         .expect("the dictionary contains the requested path")
+    ///         .1;
+    /// }
+    /// assert_eq!(intersection.term(), "cat");
     /// ```
     pub fn term(&self) -> String {
         let mut units = Vec::with_capacity(self.depth());
@@ -390,11 +447,26 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// if !intersection.is_viable() {
-    ///     // Dead end, stop exploring this branch
-    ///     return;
-    /// }
+    /// ```rust
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"cat", 0, Algorithm::Standard);
+    /// let intersection = IntersectionZipper::new(dictionary, automaton);
+    /// assert!(intersection.is_viable());
+    ///
+    /// // `children` prunes failed automaton transitions, so every yielded
+    /// // dictionary/automaton intersection remains viable.
+    /// let mut pool = StatePool::new();
+    /// let children: Vec<_> = intersection.children(&mut pool).collect();
+    /// assert_eq!(children.len(), 1);
+    /// assert!(children.iter().all(|(_, child)| child.is_viable()));
     /// ```
     pub fn is_viable(&self) -> bool {
         self.automaton.is_viable()
@@ -404,11 +476,31 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let dict_zipper = intersection.dict_zipper();
-    /// if dict_zipper.is_final() {
-    ///     println!("At a final dictionary node");
+    /// ```rust
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use libdictenstein::DictZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"cat", 0, Algorithm::Standard);
+    /// let mut intersection = IntersectionZipper::new(dictionary, automaton);
+    /// assert!(!intersection.dict_zipper().is_final());
+    ///
+    /// let mut pool = StatePool::new();
+    /// for &expected in b"cat" {
+    ///     let children: Vec<_> = intersection.children(&mut pool).collect();
+    ///     intersection = children
+    ///         .into_iter()
+    ///         .find(|(label, _)| *label == expected)
+    ///         .expect("the dictionary contains the requested path")
+    ///         .1;
     /// }
+    /// assert!(intersection.dict_zipper().is_final());
     /// ```
     pub fn dict_zipper(&self) -> &D {
         &self.dict
@@ -418,9 +510,20 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auto_zipper = intersection.automaton_zipper();
-    /// println!("Query: {:?}", auto_zipper.query());
+    /// ```rust
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"needle", 2, Algorithm::Standard);
+    /// let intersection = IntersectionZipper::new(dictionary, automaton);
+    ///
+    /// assert_eq!(intersection.automaton_zipper().query(), b"needle");
+    /// assert_eq!(intersection.automaton_zipper().max_distance(), 2);
     /// ```
     pub fn automaton_zipper(&self) -> &AutomatonZipper {
         &self.automaton

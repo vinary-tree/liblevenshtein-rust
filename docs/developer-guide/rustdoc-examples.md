@@ -99,7 +99,11 @@ example exposed and fixed an invalid built-in preset: double-consonant
 simplification and expansion had been mixed into one arity declaration and are
 now represented by separate `2 → 1` and `1 → 2` operations. The preset and its
 composition with standard operations are both validation-checked and executed.
-The remaining 70 stay explicitly ratcheted while they are repaired subsystem by
-subsystem.
+The zipper-intersection batch then made all six accessors for distance, depth,
+term reconstruction, viability, and the underlying dictionary and automaton
+zippers executable. These examples now construct a real snapshot-backed
+PathMap zipper and traverse a real dictionary/automaton product instead of
+referring to an undefined placeholder. The remaining 64 stay explicitly
+ratcheted while they are repaired subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).
