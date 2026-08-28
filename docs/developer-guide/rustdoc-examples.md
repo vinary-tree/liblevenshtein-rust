@@ -113,7 +113,11 @@ batch restored six examples for dictionary/NFA product queries, named-class
 arity extraction, and the Rocq-verified-rule compilation boundary. It replaced
 a mixed byte/character transducer sketch, a nonexistent `complex_clusters`
 class, and an incomplete rewrite-rule literal with public, assertion-backed
-workflows. The remaining 54 stay explicitly ratcheted while they are repaired
-subsystem by subsystem.
+workflows. The NFA-foundation batch then restored six examples spanning state
+identity/finality, Unicode character classes, transitions, Thompson
+construction, regex/rewrite compilation, and runtime flag extraction. The
+normalization example now distinguishes compile-time case expansion from the
+runtime Unicode-normalization contract. The remaining 48 stay explicitly
+ratcheted while they are repaired subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

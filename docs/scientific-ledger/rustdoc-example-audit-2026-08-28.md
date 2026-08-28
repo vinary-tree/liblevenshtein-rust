@@ -93,6 +93,7 @@ classification.
 | After zipper-intersection repairs | 547 | 0 | 64 | 611 |
 | After helper-and-pool repairs | 551 | 0 | 60 | 611 |
 | After phonetic-entry repairs | 557 | 0 | 54 | 611 |
+| After NFA-foundation repairs | 563 | 0 | 48 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -147,3 +148,12 @@ members. Its sequence example no longer names an unregistered
 between an existing class with no open-ended `Sequence` variants and a missing
 class. Finally, the verified-rule examples compile a real selected rule set,
 and the explicit rewrite-rule literal includes the current syllable condition.
+
+The NFA-foundation batch made six core examples executable. State display and
+finality, positive and negated Unicode character classes, consuming versus
+epsilon transitions, and Thompson alternation/star/concatenation now have
+observable acceptance or rejection assertions. The compiler overview parses
+and compiles both a regular expression and a rewrite rule through their actual
+public entry points. The flag example no longer uses the invalid
+`(?iu:café)` spelling: it demonstrates case-insensitive NFA expansion and the
+separate `(?u:NFC:...)` runtime-normalization result explicitly.
