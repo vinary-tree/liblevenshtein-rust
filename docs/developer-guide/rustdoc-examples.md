@@ -92,7 +92,14 @@ fixtures, re-exported variant-state types from the natural module root, and
 classified one private-helper fragment as `text`. That review exposed a real
 functional limitation: `UniversalAutomaton::with_policy` currently discards its
 policy value, so its documentation now states the limitation and the repair is
-tracked separately instead of claiming unsupported semantics. The remaining 78
-stay explicitly ratcheted while they are repaired subsystem by subsystem.
+tracked separately instead of claiming unsupported semantics. The generalized
+alignment batch restored eight examples for runtime operation sets, exact
+weighted acceptance, positions, and subsumption. Its end-to-end phonetic
+example exposed and fixed an invalid built-in preset: double-consonant
+simplification and expansion had been mixed into one arity declaration and are
+now represented by separate `2 → 1` and `1 → 2` operations. The preset and its
+composition with standard operations are both validation-checked and executed.
+The remaining 70 stay explicitly ratcheted while they are repaired subsystem by
+subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

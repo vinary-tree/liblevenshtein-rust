@@ -89,6 +89,7 @@ classification.
 | After phonetic-core and embedded-language repairs | 492 | 0 | 120 | 612 |
 | After `.llev` and LLRE repairs | 509 | 0 | 103 | 612 |
 | After universal-automata repairs | 533 | 0 | 78 | 611 |
+| After generalized-alignment repairs | 541 | 0 | 70 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -105,3 +106,13 @@ the encoder constructs vectors using exact equality. The API documentation now
 states that limitation, and pgmcp item
 `wire-universalautomaton-substitution-policies-into-characteristic-vector-matching-ba95ee`
 tracks the required policy-aware implementation and semantic tests.
+
+The generalized-alignment batch demonstrated why examples execute rather than
+merely compile. The comprehensive English phonetic preset originally placed
+both double-to-single and single-to-double restriction pairs in one operation
+declared as consuming two source scalars and one target scalar. Operation-set
+validation therefore rejected every reverse pair, and the Boolean acceptance
+API failed closed. The preset now uses distinct `2 → 1` simplification and
+`1 → 2` expansion operations, validates as a complete set, and is exercised
+through a full `phone` to `fone` alignment after composition with the standard
+edit operations.

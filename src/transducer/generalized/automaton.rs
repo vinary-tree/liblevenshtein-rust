@@ -155,8 +155,11 @@ impl GeneralizedAutomaton {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
+    ///
     /// let automaton = GeneralizedAutomaton::new(2);
+    /// assert_eq!(automaton.max_distance(), 2);
     /// ```
     #[must_use]
     pub fn new(max_distance: u8) -> Self {
@@ -182,12 +185,16 @@ impl GeneralizedAutomaton {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
+    /// use liblevenshtein::transducer::OperationSet;
+    ///
     /// // Automaton with transposition support
-    /// let automaton = GeneralizedAutomaton::with_operations(
+    /// let transposition = GeneralizedAutomaton::with_operations(
     ///     2,
     ///     OperationSet::with_transposition()
     /// );
+    /// assert!(transposition.accepts("ab", "ba"));
     ///
     /// // Automaton with custom phonetic operations
     /// use liblevenshtein::transducer::{OperationSetBuilder, OperationType, SubstitutionSet};
@@ -200,7 +207,8 @@ impl GeneralizedAutomaton {
     ///         2, 1, 0.15, phonetic, "ph_to_f"
     ///     ))
     ///     .build();
-    /// let automaton = GeneralizedAutomaton::with_operations(2, ops);
+    /// let phonetic = GeneralizedAutomaton::with_operations(1, ops);
+    /// assert!(phonetic.accepts("phone", "fone"));
     /// ```
     #[must_use]
     pub fn with_operations(max_distance: u8, operations: OperationSet) -> Self {
@@ -258,7 +266,9 @@ impl GeneralizedAutomaton {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
+    ///
     /// let automaton = GeneralizedAutomaton::new(2);
     ///
     /// // Distance 1: one substitution

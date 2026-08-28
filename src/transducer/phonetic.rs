@@ -209,20 +209,22 @@ pub fn phonetic_confusions() -> OperationSet {
     OperationSetBuilder::new().with_operation(op).build()
 }
 
-/// Double consonant simplification.
+/// Bidirectional double-consonant equivalence.
 ///
 /// Allows matching between doubled and single consonants, which often sound
 /// identical in English.
 ///
 /// # Mappings
 ///
-/// - `bb → b`, `dd → d`, `ff → f`, `gg → g`, etc.
+/// - Simplification: `bb → b`, `dd → d`, `ff → f`, `gg → g`, etc.
+/// - Expansion: `b → bb`, `d → dd`, `f → ff`, `g → gg`, etc.
 ///
 /// # Coverage
 ///
 /// Affects ~10-15% of English words (very common pattern).
 pub fn double_consonants() -> OperationSet {
-    let mut doubles = SubstitutionSet::new();
+    let mut simplifications = SubstitutionSet::new();
+    let mut expansions = SubstitutionSet::new();
 
     // Common doubled consonants
     let consonants = [
@@ -232,19 +234,26 @@ pub fn double_consonants() -> OperationSet {
     for &c in &consonants {
         let double = format!("{}{}", c, c);
         let single = format!("{}", c);
-        doubles.allow_str(&double, &single);
-        doubles.allow_str(&single, &double);
+        simplifications.allow_str(&double, &single);
+        expansions.allow_str(&single, &double);
     }
 
-    let op = OperationType::with_restriction(
-        2,
-        1,
-        0.10, // Very low cost (extremely common)
-        doubles,
-        "double_consonants",
-    );
-
-    OperationSetBuilder::new().with_operation(op).build()
+    OperationSetBuilder::new()
+        .with_operation(OperationType::with_restriction(
+            2,
+            1,
+            0.10, // Very low cost (extremely common)
+            simplifications,
+            "double_consonants_2to1",
+        ))
+        .with_operation(OperationType::with_restriction(
+            1,
+            2,
+            0.10,
+            expansions,
+            "double_consonants_1to2",
+        ))
+        .build()
 }
 
 /// Comprehensive English phonetic operation set (Phase 1).
@@ -263,23 +272,33 @@ pub fn double_consonants() -> OperationSet {
 ///
 /// ```rust
 /// use liblevenshtein::transducer::phonetic::phonetic_english_basic;
+/// use liblevenshtein::transducer::OperationSetBuilder;
 ///
-/// let ops = phonetic_english_basic();
+/// let phonetic = phonetic_english_basic();
+/// phonetic.validate().expect("the built-in preset is valid");
 ///
-/// // Can be used directly or combined with standard operations
-/// // (Currently requires universal automata integration for full functionality)
+/// // Add a base metric when complete-string alignment also needs exact-match,
+/// // insertion, deletion, and ordinary-substitution edges.
+/// let mut builder = OperationSetBuilder::new().with_standard_ops();
+/// for operation in phonetic.operations() {
+///     builder = builder.with_operation(operation.clone());
+/// }
+/// let complete_metric = builder.build();
+/// complete_metric.validate().expect("the combined metric is valid");
 /// ```
 ///
 /// # Performance
 ///
-/// Estimated operation count: ~20-25 operations total
-/// Memory overhead: ~1-2 KB per operation set instance
+/// The preset contains eight operation classes. Each class groups its allowed
+/// source/target pairs in one restriction table rather than creating one
+/// operation value per spelling pair.
 ///
 /// # Limitations
 ///
 /// - ASCII-only (no special phonetic characters)
 /// - Context-free approximations (some rules are context-dependent)
-/// - Requires universal automata integration for actual matching
+/// - Contains phonetic rules only; combine it with standard operations for a
+///   complete edit metric
 pub fn phonetic_english_basic() -> OperationSet {
     let mut builder = OperationSetBuilder::new();
 
@@ -344,20 +363,28 @@ mod tests {
     fn test_double_consonants() {
         let ops = double_consonants();
         assert!(!ops.is_empty());
-        assert_eq!(ops.len(), 1);
+        assert_eq!(ops.len(), 2);
+        ops.validate()
+            .expect("both double-consonant directions have matching arity");
 
-        let op = &ops.operations()[0];
-        assert_eq!(op.name(), "double_consonants");
-        assert_eq!(op.consume_x(), 2);
-        assert_eq!(op.consume_y(), 1);
+        let simplify = &ops.operations()[0];
+        assert_eq!(simplify.name(), "double_consonants_2to1");
+        assert_eq!((simplify.consume_x(), simplify.consume_y()), (2, 1));
+        assert!(simplify.can_apply(b"ll", b"l"));
+
+        let expand = &ops.operations()[1];
+        assert_eq!(expand.name(), "double_consonants_1to2");
+        assert_eq!((expand.consume_x(), expand.consume_y()), (1, 2));
+        assert!(expand.can_apply(b"l", b"ll"));
     }
 
     #[test]
     fn test_phonetic_english_basic() {
         let ops = phonetic_english_basic();
         assert!(!ops.is_empty());
-        // 3 (consonant_digraphs) + 2 (initial_clusters) + 1 (phonetic_confusions) + 1 (double_consonants) = 7
-        assert_eq!(ops.len(), 7);
+        // 3 digraph + 2 initial-cluster + 1 confusion + 2 double-consonant classes.
+        assert_eq!(ops.len(), 8);
+        ops.validate().expect("the built-in preset must be valid");
 
         // Verify all operations are included
         let names: Vec<_> = ops.operations().iter().map(|op| op.name()).collect();
@@ -367,7 +394,8 @@ mod tests {
         assert!(names.contains(&"initial_clusters_2to1"));
         assert!(names.contains(&"initial_clusters_1to2"));
         assert!(names.contains(&"phonetic_confusions"));
-        assert!(names.contains(&"double_consonants"));
+        assert!(names.contains(&"double_consonants_2to1"));
+        assert!(names.contains(&"double_consonants_1to2"));
     }
 
     #[test]

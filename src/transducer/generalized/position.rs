@@ -35,14 +35,18 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::transducer::generalized::GeneralizedPosition;
 //!
 //! // Create I-type position: I + 0#0 (initial state)
-//! let initial = GeneralizedPosition::new_i(0, 0, 2)?;
+//! let initial = GeneralizedPosition::new_i(0, 0, 2)
+//!     .expect("0#0 satisfies the generalized I-position invariant");
+//! assert!(initial.is_non_final());
 //!
 //! // Create M-type position: M + (-1)#1 (one error, one char before end)
-//! let final_pos = GeneralizedPosition::new_m(-1, 1, 2)?;
+//! let final_pos = GeneralizedPosition::new_m(-1, 1, 2)
+//!     .expect("-1#1 satisfies the generalized M-position invariant");
+//! assert!(final_pos.is_final());
 //! ```
 
 use std::fmt;
@@ -286,10 +290,16 @@ impl GeneralizedPosition {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let pos = GeneralizedPosition::new_i(0, 0, 2)?;  // I + 0#0
-    /// let pos = GeneralizedPosition::new_i(1, 1, 2)?;  // I + 1#1
-    /// let pos = GeneralizedPosition::new_i(-2, 2, 2)?; // I + (-2)#2
+    /// ```rust
+    /// use liblevenshtein::transducer::generalized::GeneralizedPosition;
+    ///
+    /// let initial = GeneralizedPosition::new_i(0, 0, 2)
+    ///     .expect("0#0 satisfies the generalized I-position invariant");
+    /// let ahead = GeneralizedPosition::new_i(1, 1, 2)
+    ///     .expect("1#1 satisfies the generalized I-position invariant");
+    /// let behind = GeneralizedPosition::new_i(-2, 2, 2)
+    ///     .expect("-2#2 satisfies the generalized I-position invariant");
+    /// assert_eq!((initial.offset(), ahead.offset(), behind.offset()), (0, 1, -2));
     /// ```
     pub fn new_i(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
         Self::new_i_scaled(
@@ -343,10 +353,16 @@ impl GeneralizedPosition {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let pos = GeneralizedPosition::new_m(0, 0, 2)?;   // M + 0#0
-    /// let pos = GeneralizedPosition::new_m(-1, 1, 2)?;  // M + (-1)#1
-    /// let pos = GeneralizedPosition::new_m(-4, 2, 2)?;  // M + (-4)#2
+    /// ```rust
+    /// use liblevenshtein::transducer::generalized::GeneralizedPosition;
+    ///
+    /// let at_end = GeneralizedPosition::new_m(0, 0, 2)
+    ///     .expect("0#0 satisfies the generalized M-position invariant");
+    /// let before_end = GeneralizedPosition::new_m(-1, 1, 2)
+    ///     .expect("-1#1 satisfies the generalized M-position invariant");
+    /// let farthest = GeneralizedPosition::new_m(-4, 2, 2)
+    ///     .expect("-4#2 satisfies the generalized M-position invariant");
+    /// assert_eq!((at_end.offset(), before_end.offset(), farthest.offset()), (0, -1, -4));
     /// ```
     pub fn new_m(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
         Self::new_m_scaled(
