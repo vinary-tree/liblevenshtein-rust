@@ -129,7 +129,13 @@ language dictionaries, language dispatch, and script classification. Executing
 the documented three-rule input exposed that the public `parse_rules` path
 discarded newlines before it could delimit rules; the parser now retains the
 source, parses each nonempty line independently, and preserves source-relative
-error locations. The remaining 33 stay explicitly ratcheted while they are
-repaired subsystem by subsystem.
+error locations. The corpus-and-query batch then restored four examples for
+file-backed corpus loading, regex matching against original dictionary terms,
+and A*-ordered queries. External corpus files remain honestly compile-checked
+with `no_run`; the executable query examples construct their real dictionaries
+and assert exact, bounded results. This also corrected the corpus example's
+stale claim that `unique_words` returns a collection rather than a count. The
+remaining 29 stay explicitly ratcheted while they are repaired subsystem by
+subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

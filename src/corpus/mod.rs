@@ -13,12 +13,14 @@
 //!
 //! This module is only available in test and benchmark builds:
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use liblevenshtein::corpus::{BigTxtCorpus, MittonCorpus};
 //!
+//! # fn main() -> std::io::Result<()> {
 //! // Load Norvig's big.txt for dictionary construction
 //! let big_txt = BigTxtCorpus::load("data/corpora/big.txt")?;
-//! let unique_words = big_txt.unique_words(); // ~32K words
+//! let unique_word_count = big_txt.unique_words(); // ~32K words
+//! assert!(unique_word_count > 0);
 //!
 //! // Load Holbrook corpus for error validation
 //! let holbrook = MittonCorpus::load("data/corpora/holbrook.dat")?;
@@ -27,6 +29,8 @@
 //!         // Validate spell correction...
 //!     }
 //! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Corpus Formats

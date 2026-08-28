@@ -96,6 +96,7 @@ classification.
 | After NFA-foundation repairs | 563 | 0 | 48 | 611 |
 | After NFA-runtime repairs | 572 | 0 | 39 | 611 |
 | After phonetic-surface repairs | 578 | 0 | 33 | 611 |
+| After corpus-and-query repairs | 582 | 0 | 29 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -185,3 +186,14 @@ propagates symbol and group-reference settings, rejects trailing per-line input,
 and translates parse errors back to source-wide line and byte positions. Two
 unit tests cover mixed LF/CRLF and blank lines plus error location on a later
 rule.
+
+The corpus-and-query batch repaired four examples at the boundary between
+external data and executable matching. The aggregate corpus example is now a
+`no_run` program because its two files belong to the caller; it compiles the
+real loaders and iteration shape without pretending those paths exist during
+Rustdoc. It also reflects that `BigTxtCorpus::unique_words` returns a count, not
+a collection. Original-term regex matching now supplies an explicit `ph` to
+`f` rewrite rule, expands a real pattern, and proves inclusion and exclusion
+against stored spellings. Both priority-query examples build a public
+`DynamicDawg<()>`, retain its snapshot root through the iterator, and assert
+distance bounds and exact-match priority rather than printing undefined values.
