@@ -12,17 +12,25 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::online_scanner::OnlinePhoneticScannerChar;
-//! use liblevenshtein::phonetic::rules::english;
+//! use liblevenshtein::phonetic::{ContextChar, PhoneChar, RewriteRuleChar};
 //!
-//! let rules = english::base().rules_vec();
-//! let mut scanner = OnlinePhoneticScannerChar::new("phone", &rules, 1);
+//! let ph_to_f = RewriteRuleChar {
+//!     rule_id: 1,
+//!     rule_name: "ph to f".into(),
+//!     pattern: vec![PhoneChar::Consonant('p'), PhoneChar::Consonant('h')],
+//!     replacement: vec![PhoneChar::Consonant('f')],
+//!     context: ContextChar::Anywhere,
+//!     weight: 1.0,
+//!     syllable_condition: None,
+//! };
+//! let mut scanner = OnlinePhoneticScannerChar::new("phone", &[ph_to_f], 0);
 //!
-//! // Scan a document
-//! let matches = scanner.scan("Call my fone or phone.");
-//! // matches[0]: "fone" at bytes 8..12, distance 0 (phonetically equivalent)
-//! // matches[1]: "phone" at bytes 16..21, distance 0
+//! let matches = scanner.scan("fone");
+//! assert_eq!(matches[0].original_text, "fone");
+//! assert_eq!(matches[0].normalized_text, "fone");
+//! assert_eq!(matches[0].distance, 0);
 //! ```
 
 use super::nfa::product::{ProductAutomatonChar, ProductStateChar};

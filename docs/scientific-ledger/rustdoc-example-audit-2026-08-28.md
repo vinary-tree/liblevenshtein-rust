@@ -97,6 +97,7 @@ classification.
 | After NFA-runtime repairs | 572 | 0 | 39 | 611 |
 | After phonetic-surface repairs | 578 | 0 | 33 | 611 |
 | After corpus-and-query repairs | 582 | 0 | 29 | 611 |
+| After basic-grep repairs | 590 | 0 | 21 | 611 |
 
 The total can decrease when review proves that a fence is pseudocode or a
 private implementation fragment rather than customer-compilable usage. Such a
@@ -197,3 +198,12 @@ a collection. Original-term regex matching now supplies an explicit `ph` to
 against stored spellings. Both priority-query examples build a public
 `DynamicDawg<()>`, retain its snapshot root through the iterator, and assert
 distance bounds and exact-match priority rather than printing undefined values.
+
+The basic-grep batch repaired eight examples spanning `PhoneticGrep`, the
+incremental phonetic transducer, and the online scanner. The grep examples now
+compile their patterns explicitly and verify line numbering, exact and fuzzy
+distances, case and accent flags, runtime case folding, and transposition-aware
+matching. The two streaming examples use an explicit `ph` to `f` rule rather
+than relying on a preset whose contents are unrelated to the API contract. The
+transducer collects emitted characters across `feed` and `finish`, while the
+scanner proves the original range is normalized to the query at distance zero.

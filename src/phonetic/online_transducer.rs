@@ -12,24 +12,29 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::online_transducer::OnlinePhoneticTransducerChar;
-//! use liblevenshtein::phonetic::rules::english;
+//! use liblevenshtein::phonetic::{ContextChar, PhoneChar, RewriteRuleChar};
 //!
-//! let rules = english::base().rules_vec();
-//! let mut transducer = OnlinePhoneticTransducerChar::new(rules);
+//! let ph_to_f = RewriteRuleChar {
+//!     rule_id: 1,
+//!     rule_name: "ph to f".into(),
+//!     pattern: vec![PhoneChar::Consonant('p'), PhoneChar::Consonant('h')],
+//!     replacement: vec![PhoneChar::Consonant('f')],
+//!     context: ContextChar::Anywhere,
+//!     weight: 1.0,
+//!     syllable_condition: None,
+//! };
+//! let mut transducer = OnlinePhoneticTransducerChar::new(vec![ph_to_f]);
+//! let mut normalized = String::new();
 //!
 //! // Feed characters one at a time
 //! for c in "phone".chars() {
-//!     for normalized in transducer.feed(c) {
-//!         print!("{}", normalized);
-//!     }
+//!     normalized.extend(transducer.feed(c));
 //! }
 //! // Flush remaining buffer
-//! for c in transducer.finish() {
-//!     print!("{}", c);
-//! }
-//! // Output: "fon"
+//! normalized.extend(transducer.finish());
+//! assert_eq!(normalized, "fone");
 //! ```
 
 use std::collections::VecDeque;

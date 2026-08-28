@@ -135,7 +135,12 @@ and A*-ordered queries. External corpus files remain honestly compile-checked
 with `no_run`; the executable query examples construct their real dictionaries
 and assert exact, bounded results. This also corrected the corpus example's
 stale claim that `unique_words` returns a collection rather than a count. The
-remaining 29 stay explicitly ratcheted while they are repaired subsystem by
-subsystem.
+basic-grep batch then restored eight examples for whole-content fuzzy grep,
+pattern flags, algorithm selection, runtime case folding, incremental phonetic
+normalization, and online scanning. Every example now constructs its real
+pattern or rewrite rules and asserts line, distance, cache-independent match,
+or normalized-output semantics; none depends on undefined content or prints an
+unverified result. The remaining 21 stay explicitly ratcheted while they are
+repaired subsystem by subsystem.
 The method, controls, and raw result summary are recorded in the
 [scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).
