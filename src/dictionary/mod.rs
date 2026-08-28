@@ -12,13 +12,13 @@
 //! ```
 //!
 //! With:
-//! ```rust,ignore
+//! ```rust
 //! use libdictenstein::{Dictionary, DictionaryNode};
 //! use libdictenstein::double_array_trie::DoubleArrayTrie;
 //! ```
 //!
 //! Or use the prelude:
-//! ```rust,ignore
+//! ```rust
 //! use libdictenstein::prelude::*;
 //! ```
 //!

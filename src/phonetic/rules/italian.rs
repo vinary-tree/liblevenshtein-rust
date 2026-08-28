@@ -13,7 +13,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::italian;
 //!
 //! let rules = italian::base();

@@ -22,7 +22,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::nfa::{StateId, NFAState, Transition, TransitionLabel};
 //!
 //! // Create a simple NFA state

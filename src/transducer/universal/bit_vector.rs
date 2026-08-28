@@ -277,7 +277,7 @@ impl fmt::Display for CharacteristicVector {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::transducer::universal::characteristic_vector;
 ///
 /// let cv = characteristic_vector('a', "banana");
@@ -387,7 +387,7 @@ fn relevant_subword(word: &str, position: usize, max_distance: u8) -> String {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::transducer::universal::encode_word_pair;
 ///
 /// // Example from thesis page 52:

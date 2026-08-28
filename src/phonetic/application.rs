@@ -197,7 +197,7 @@ pub const MAX_TOTAL_EXPANSION: usize = 100;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::{has_position_dependent_rules, orthography_rules, phonetic_rules};
 ///
 /// // orthography_rules contains rule_silent_e_final with Context::Final
@@ -282,7 +282,7 @@ pub fn can_apply_at<U: PhoneticUnit>(rule: &RewriteRule<U>, s: &[Phone<U>], pos:
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::{apply_rule_at, Phone, Context, RewriteRule};
 ///
 /// let rule = RewriteRule {

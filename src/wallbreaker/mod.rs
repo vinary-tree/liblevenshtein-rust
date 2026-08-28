@@ -43,7 +43,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::dictionary::scdawg::Scdawg;
 //! use liblevenshtein::wallbreaker::WallBreaker;
 //! use liblevenshtein::transducer::Algorithm;
@@ -96,7 +96,7 @@ use libdictenstein::Dictionary;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::dictionary::scdawg::Scdawg;
 /// use liblevenshtein::wallbreaker::WallBreaker;
 /// use liblevenshtein::transducer::Algorithm;

@@ -67,7 +67,7 @@ impl<E> OrderedIntersection<E> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 ///
 /// let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest", "testing"]);

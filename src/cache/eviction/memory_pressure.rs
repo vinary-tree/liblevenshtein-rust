@@ -16,7 +16,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::MemoryPressure;
@@ -91,7 +91,7 @@ impl EntryMetadata {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::cache::eviction::MemoryPressure;
@@ -119,7 +119,7 @@ impl<D> MemoryPressure<D> {
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::MemoryPressure;
     ///

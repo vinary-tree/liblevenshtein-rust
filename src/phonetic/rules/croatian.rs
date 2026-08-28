@@ -22,7 +22,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::croatian;
 //!
 //! let rules = croatian::base();

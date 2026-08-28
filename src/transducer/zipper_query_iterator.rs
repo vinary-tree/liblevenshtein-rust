@@ -28,7 +28,7 @@ use std::collections::VecDeque;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// # // Note: This example requires the 'pathmap-backend' feature
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
 /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -81,7 +81,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
     /// # // Note: This example requires the 'pathmap-backend' feature
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;

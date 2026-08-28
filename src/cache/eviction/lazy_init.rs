@@ -21,7 +21,7 @@
 //!
 //! ## Default Initialization
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInitDefault;
@@ -35,7 +35,7 @@
 //!
 //! ## Custom Function
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInitFn;
@@ -55,7 +55,7 @@
 //!
 //! ## Context-Aware Initialization
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInit;
@@ -315,7 +315,7 @@ impl<D> LazyInitDefault<D> {
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::LazyInitDefault;
     ///
@@ -454,7 +454,7 @@ impl<D, V> LazyInitFn<D, V> {
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::LazyInitFn;
     ///
@@ -610,7 +610,7 @@ impl<D, F> LazyInit<D, F> {
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::LazyInit;
     ///

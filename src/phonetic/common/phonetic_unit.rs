@@ -44,7 +44,7 @@ use std::hash::Hash;
 ///
 /// Using generic phonetic types:
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::common::PhoneticUnit;
 /// use liblevenshtein::phonetic::types::Phone;
 ///

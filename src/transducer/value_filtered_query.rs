@@ -405,7 +405,7 @@ where
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
 ///

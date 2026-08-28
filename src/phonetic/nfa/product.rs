@@ -18,7 +18,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::nfa::product::ProductAutomatonChar;
 //! use liblevenshtein::phonetic::nfa::compile;
 //! use liblevenshtein::phonetic::regex::parse;

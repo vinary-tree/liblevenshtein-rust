@@ -13,7 +13,7 @@ use libdictenstein::Dictionary;
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 ///
 /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);

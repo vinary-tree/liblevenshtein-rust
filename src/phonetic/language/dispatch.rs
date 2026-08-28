@@ -118,7 +118,7 @@ use crate::phonetic::types::RewriteRuleChar;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::language::rules_for_language;
 ///
 /// let rules = rules_for_language("en-us").expect("English should be supported");
@@ -348,7 +348,7 @@ pub fn is_supported(tag: &str) -> bool {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::language::supported_languages;
 ///
 /// let languages = supported_languages();
@@ -578,7 +578,7 @@ pub fn supported_languages() -> &'static [&'static str] {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::language::default_language;
 ///
 /// assert_eq!(default_language(), "en-us");

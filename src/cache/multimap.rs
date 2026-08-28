@@ -14,7 +14,7 @@
 //!
 //! # Example Use Case
 //!
-//! ```rust,ignore
+//! ```rust
 //! use std::collections::HashSet;
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -51,7 +51,7 @@ use std::hash::Hash;
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::cache::multimap::CollectionAggregate;
 /// use std::collections::HashSet;
 ///
@@ -171,7 +171,7 @@ where
 ///
 /// ## HashSet Union
 ///
-/// ```rust,ignore
+/// ```rust
 /// use std::collections::HashSet;
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -192,7 +192,7 @@ where
 ///
 /// ## Vec Concatenation
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
 /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
@@ -230,7 +230,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -268,7 +268,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -309,7 +309,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -329,7 +329,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -365,7 +365,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -428,7 +428,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::multimap::FuzzyMultiMap;
@@ -461,7 +461,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::multimap::FuzzyMultiMap;

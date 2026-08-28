@@ -6,7 +6,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::syllable::*;
 //!
 //! assert_eq!(syllable_count("cat"), 1);        // Monosyllable
@@ -435,7 +435,7 @@ pub fn evaluate_syllable_expr(expr: &SyllableExpr, word: &str, match_pos: usize)
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::syllable::evaluate_syllable_condition_ipa;
 /// use liblevenshtein::phonetic::common::syllable::SyllableCondition;
 ///
@@ -477,7 +477,7 @@ pub fn evaluate_syllable_condition_ipa(
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::syllable::evaluate_syllable_expr_ipa;
 /// use liblevenshtein::phonetic::common::syllable::{SyllableExpr, SyllableCondition};
 ///

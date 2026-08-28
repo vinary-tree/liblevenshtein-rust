@@ -1116,6 +1116,10 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: python3 scripts/check-rust-doc-examples.py
+      - env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo test --locked --all-features --doc
       - env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --locked --all-features --no-deps

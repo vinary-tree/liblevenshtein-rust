@@ -86,6 +86,7 @@ index maps everything else.
 ## 5 · Developer Guide
 
 - [Developer Guide](developer-guide/README.md) — [building](developer-guide/building.md), [contributing](developer-guide/contributing.md), [performance](developer-guide/performance.md), [publishing](developer-guide/publishing.md).
+- [Executable Rust API examples](developer-guide/rustdoc-examples.md) — fence semantics, all-feature Rustdoc gates, the ignored-example ratchet, and the evidence-based repair workflow.
 - [Migration to the split CLI](migration-cli-split-0.10.md) — the v0.10 package and API boundary.
 - [Security & threat model](SECURITY.md) — untrusted-input surfaces (FFI/WASM boundaries, serialization, `.llre` parsing).
 - [Binding trust model](security/binding-trust-model.md) — the family trust model instantiated for the resource consumer: `boundary()` containment, the bounded error channel, the decoded status wire, lease refusal as use-after-free prevention, and duty status per hostile-input class.

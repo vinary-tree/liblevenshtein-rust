@@ -21,7 +21,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
 //!
 //! // Create dictionary with default Zompist rules
@@ -236,7 +236,7 @@ impl std::error::Error for TermIdDictionaryBuildError {}
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
 ///
 /// let dict = PhoneticNormalizedDictionary::<()>::from_terms([
@@ -689,7 +689,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
     ///
     /// let dict = PhoneticNormalizedDictionary::<()>::from_terms([

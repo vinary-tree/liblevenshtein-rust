@@ -27,7 +27,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::filter::{jaro_similarity, jaro_winkler_similarity};
 //!
 //! // High similarity for similar strings
@@ -75,7 +75,7 @@ fn normalize_prefix_scale(prefix_scale: f64) -> f64 {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::filter::jaro_similarity;
 ///
 /// assert_eq!(jaro_similarity("", ""), 1.0);
@@ -172,7 +172,7 @@ fn jaro_similarity_chars(s1_chars: &[char], s2_chars: &[char]) -> f64 {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::filter::jaro_winkler_similarity;
 ///
 /// assert_eq!(jaro_winkler_similarity("", ""), 1.0);

@@ -195,7 +195,7 @@ use std::collections::HashSet;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 ///
 /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
@@ -251,7 +251,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
@@ -269,7 +269,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["the", "quick"]);
@@ -287,7 +287,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["everyone", "someone"]);
@@ -319,7 +319,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::transducer::{SubstitutionSet, Algorithm};
     ///
@@ -449,7 +449,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
@@ -724,7 +724,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest"]);
@@ -846,7 +846,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
@@ -870,7 +870,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest"]);
@@ -895,7 +895,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest"]);
@@ -982,7 +982,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     ///
@@ -1074,7 +1074,7 @@ where
     ///
     /// # Example: Hierarchical Lexical Scope
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;

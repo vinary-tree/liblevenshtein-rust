@@ -112,7 +112,7 @@ pub struct CompileResultChar {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::regex::parse;
 /// use liblevenshtein::phonetic::nfa::compiler::compile;
 ///

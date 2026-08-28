@@ -63,7 +63,7 @@ pub mod transducer;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::dictionary::scdawg::Scdawg;
 /// use liblevenshtein::wallbreaker::WallBreaker;
 ///

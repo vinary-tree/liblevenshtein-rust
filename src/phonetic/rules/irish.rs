@@ -26,7 +26,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::irish;
 //!
 //! let rules = irish::base();

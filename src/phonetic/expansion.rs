@@ -25,7 +25,7 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::expansion::expand_phonetic_alternatives_char;
 //! use liblevenshtein::phonetic::zompist_rules_char;
 //!
@@ -65,7 +65,7 @@ use std::rc::Rc;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::expansion::expand_phonetic_alternatives_char;
 /// use liblevenshtein::phonetic::zompist_rules_char;
 ///

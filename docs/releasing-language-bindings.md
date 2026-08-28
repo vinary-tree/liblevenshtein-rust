@@ -609,6 +609,7 @@ and language guides, and reject generated drift before tagging:
 ```bash
 python3 scripts/sync-release-version.py
 python3 scripts/check-binding-docs.py
+python3 scripts/check-rust-doc-examples.py
 scripts/doc-mathlint.sh
 docs/diagrams/render.sh --check
 git diff --check
@@ -646,6 +647,18 @@ Required native targets are Linux x86-64, Linux ARM64, macOS x86-64, macOS
 ARM64, Windows x86-64, and Windows ARM64 where the owning artifact supports a
 native payload. Each archive is tested after relocation with both shared and
 static linkage when offered.
+
+Rust API examples are release tests rather than illustrative text. Run both
+all-feature documentation gates with warnings denied; the first executes every
+non-ignored example and the second validates the rendered API surface:
+
+```bash
+RUSTDOCFLAGS="-D warnings" cargo test --locked --all-features --doc
+RUSTDOCFLAGS="-D warnings" cargo doc --locked --all-features --no-deps
+```
+
+The [Rustdoc example policy](developer-guide/rustdoc-examples.md) defines the
+allowed fence types and the monotone repair process for legacy ignored examples.
 
 ### Python, JVM, Clojure, .NET, and Ruby
 

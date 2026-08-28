@@ -22,7 +22,7 @@
 //!
 //! ## Basic NFA Construction
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::nfa::{ThompsonBuilderChar, NFAChar};
 //!
 //! let builder = ThompsonBuilderChar::new();
@@ -42,7 +42,7 @@
 //!
 //! ## Character Classes
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::nfa::{ThompsonBuilderChar, CharClassChar};
 //!
 //! let builder = ThompsonBuilderChar::new();

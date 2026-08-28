@@ -14,7 +14,7 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::transducer::{SubstitutionSet, Transducer, Algorithm};
 //! use liblevenshtein::prelude::*;
 //!

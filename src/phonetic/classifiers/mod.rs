@@ -7,7 +7,7 @@
 //! # Problem
 //!
 //! The original vowel classification was hardcoded to English/Latin vowels:
-//! ```rust,ignore
+//! ```rust
 //! fn is_vowel_char(c: char) -> bool {
 //!     matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'A' | 'E' | 'I' | 'O' | 'U')
 //! }
@@ -29,7 +29,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::classifiers::{VowelClassifier, LatinClassifier, CyrillicClassifier};
 //!
 //! let latin = LatinClassifier::new();
@@ -99,7 +99,7 @@ pub use thai::ThaiClassifier;
 ///
 /// Implementing for a custom script:
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::classifiers::VowelClassifier;
 ///
 /// #[derive(Debug, Clone)]

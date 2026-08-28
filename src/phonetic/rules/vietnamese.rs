@@ -28,7 +28,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::vietnamese;
 //!
 //! let rules = vietnamese::base();

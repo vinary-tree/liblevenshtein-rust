@@ -1,0 +1,71 @@
+# Executable Rust API examples
+
+Rust examples are part of the public API contract. A reader should be able to
+copy an intended-usage example from Rustdoc and compile it against the release
+that published the page. CI therefore treats ordinary `rust` fences as tests,
+builds them with every feature enabled, and denies Rustdoc warnings.
+
+## Fence policy
+
+Use the narrowest truthful fence:
+
+- `rust` for intended usage. Cargo compiles and runs the example.
+- `rust,no_run` only when compilation is the contract but execution requires an
+  unavailable service, credential, device, or deliberately expensive input.
+- `compile_fail` when compiler rejection is the behavior being taught.
+- `text` for pseudocode or intentionally incomplete fragments.
+- `rust,ignore` only for pre-existing repair debt recorded by the ratchet. Do
+  not use it for new examples or as a substitute for the preceding categories.
+
+An example that needs a hidden import, setup statement, or `Result` wrapper
+should use Rustdoc's hidden `#` lines. That keeps the displayed example concise
+without exempting it from compilation or execution.
+
+## Required checks
+
+Run the same checks used by CI:
+
+```bash
+python3 scripts/check-rust-doc-examples.py
+RUSTDOCFLAGS="-D warnings" cargo test --locked --all-features --doc
+RUSTDOCFLAGS="-D warnings" cargo doc --locked --all-features --no-deps
+```
+
+The first command enforces two monotone constraints:
+
+1. The global ignored-example count cannot increase. When an ignored example
+   is repaired, the baseline in `scripts/check-rust-doc-examples.py` must be
+   lowered in the same change.
+2. The cache API has no ignored-example allowance. Its 46 examples were all
+   compiled and executed during the 2026-08-28 controlled audit, so both zero
+   ignored fences and at least 46 executable fences are enforced.
+
+When developing beside unpublished family crates, check out the exact source
+refs declared by `release/version.json`. A convenient sibling checkout with a
+different release candidate is not equivalent evidence. Registry releases use
+the same immutable source-ref graph through the checkout actions in CI.
+
+## Repair workflow
+
+For each ignored example:
+
+1. Remove `ignore` in an isolated checkout and run the all-feature doctest.
+2. If it passes unchanged, keep it executable and lower the ratchet.
+3. If it fails, determine whether it is intended usage, non-running compilable
+   usage, an expected compiler error, or pseudocode. Repair the code and fence
+   according to that classification.
+4. Run the full Rustdoc and doctest gates; a targeted success alone can miss
+   feature interactions or duplicate module-level examples.
+
+Do not rewrite an example merely to make the test green. Its imports, result
+handling, ownership model, and asserted result must describe the supported
+public API and the behavior a customer should rely on.
+
+## Current debt
+
+The controlled 2026-08-28 audit started with 348 ignored examples. Running all
+of them as ordinary Rust found 165 that already compiled and executed without
+changes; those suppressions were removed. The remaining 183 failed and stay
+explicitly ratcheted while they are repaired subsystem by subsystem. The
+method, controls, and raw result summary are recorded in the
+[scientific ledger](../scientific-ledger/rustdoc-example-audit-2026-08-28.md).

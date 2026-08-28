@@ -30,7 +30,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::nfa::ThompsonBuilderChar;
 //!
 //! let mut builder = ThompsonBuilderChar::new();

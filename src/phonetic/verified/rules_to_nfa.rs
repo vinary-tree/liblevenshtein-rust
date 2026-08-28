@@ -30,7 +30,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::verified::{rule_to_nfa_char, zompist_nfa_char};
 //! use liblevenshtein::phonetic::rules::zompist_rules_char;
 //!
@@ -173,7 +173,7 @@ pub fn rule_to_nfa_char(rule: &RewriteRuleChar) -> NFAChar {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::verified::rules_to_nfa_char;
 /// use liblevenshtein::phonetic::rules::orthography_rules_char;
 ///
@@ -208,7 +208,7 @@ pub fn rules_to_nfa_char(rules: &[RewriteRuleChar]) -> NFAChar {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::verified::zompist_nfa_char;
 ///
 /// let nfa = zompist_nfa_char();

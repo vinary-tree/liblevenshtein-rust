@@ -115,7 +115,7 @@ impl LLevFile {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
     /// use liblevenshtein::phonetic::{parse_str, regex};
     ///
     /// let llev_file = parse_str(r#"

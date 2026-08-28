@@ -95,7 +95,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::language::{rules_for_language, is_supported, default_language};
 //!
 //! // Check supported languages

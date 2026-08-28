@@ -25,7 +25,7 @@ use std::collections::HashMap;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::corpus::TypoGenerator;
 ///
 /// let mut gen = TypoGenerator::new(42);

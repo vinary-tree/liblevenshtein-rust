@@ -38,7 +38,7 @@
 //!
 //! ## Parsing a simple pattern
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::regex::parse;
 //!
 //! let pattern = parse("(ph|f)one").unwrap();
@@ -47,7 +47,7 @@
 //!
 //! ## Parsing a rewrite rule
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::regex::parse_rule;
 //!
 //! // ph -> f (phone -> fone)

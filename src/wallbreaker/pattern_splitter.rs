@@ -92,7 +92,7 @@ impl PatternPiece {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::wallbreaker::PatternSplitter;
 /// use liblevenshtein::transducer::Algorithm;
 ///

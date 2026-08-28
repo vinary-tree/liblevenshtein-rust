@@ -51,7 +51,7 @@ use crate::transducer::{SubstitutionPolicy, Unrestricted};
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::transducer::universal::{UniversalAutomaton, Standard};
 ///
 /// // Create automaton for maximum distance n=2

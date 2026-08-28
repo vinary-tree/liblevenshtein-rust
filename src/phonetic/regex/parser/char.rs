@@ -55,7 +55,7 @@ impl<'a> Parser<'a> {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
     /// use std::collections::HashMap;
     /// use liblevenshtein::phonetic::regex::parser::{Parser, SymbolTable};
     ///

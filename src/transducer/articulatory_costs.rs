@@ -15,7 +15,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::transducer::ArticulatoryCosts;
 //!
 //! let costs = ArticulatoryCosts::default();
@@ -114,7 +114,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::ArticulatoryCosts;
     ///
     /// let costs = ArticulatoryCosts::new();
@@ -143,7 +143,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::ArticulatoryCosts;
     ///
     /// // Heavily weight articulatory features
@@ -172,7 +172,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::{ArticulatoryCosts, OperationCostsF64};
     ///
     /// let base = OperationCostsF64::typo_friendly();
@@ -247,7 +247,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::ArticulatoryCosts;
     ///
     /// let costs = ArticulatoryCosts::default();
@@ -298,7 +298,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::ArticulatoryCosts;
     ///
     /// let costs = ArticulatoryCosts::default();

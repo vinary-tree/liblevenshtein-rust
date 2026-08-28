@@ -52,7 +52,7 @@
 //!
 //! ## Basic Usage
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Lru;
@@ -73,7 +73,7 @@
 //!
 //! Wrappers can be composed to combine multiple eviction strategies:
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::{Lru, Ttl};
@@ -93,7 +93,7 @@
 //!
 //! ## Memory-Aware Caching
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::MemoryPressure;
@@ -115,7 +115,7 @@
 //!
 //! ## Cost-Based Eviction
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::CostAware;
@@ -141,7 +141,7 @@
 //!
 //! ## Lazy Initialization
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInit;
@@ -201,8 +201,7 @@ mod noop;
 pub use lazy_init::{LazyInit, LazyInitDefault, LazyInitFn};
 pub use noop::Noop;
 
-// Placeholder modules for other eviction strategies
-// These will be implemented in subsequent steps
+// Eviction strategies with policy-specific metadata and selection logic.
 pub mod age;
 pub mod cost_aware;
 pub mod lfu;

@@ -30,7 +30,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::maltese;
 //!
 //! let rules = maltese::base();

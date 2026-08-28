@@ -27,7 +27,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
 //!
 //! // Create automaton for maximum distance n=2
@@ -112,7 +112,7 @@ impl From<ScaleError> for GeneralizedAutomatonError {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
 /// use liblevenshtein::transducer::OperationSet;
 ///

@@ -42,7 +42,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::urdu;
 //!
 //! let rules = urdu::base();

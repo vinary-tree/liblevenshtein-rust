@@ -51,7 +51,7 @@ use super::types::{Context, ContextChar, Phone, PhoneByte, PhoneChar};
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::{Context, Phone, context_matches};
 ///
 /// let s: Vec<Phone<u8>> = vec![Phone::Consonant(b'k'), Phone::Vowel(b'a'), Phone::Consonant(b't')];
@@ -149,7 +149,7 @@ pub fn context_matches<U: PhoneticUnit>(
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::{Phone, pattern_matches_at};
 ///
 /// let pattern: Vec<Phone<u8>> = vec![Phone::Consonant(b'c'), Phone::Consonant(b'h')];
