@@ -25,9 +25,14 @@ from ._generated import (
 
 
 class NativeError(RuntimeError):
-    """Failure reported by the stable native ABI."""
+    """Failure reported by the stable native ABI.
+
+    ``status`` is the stable machine-readable category. The exception message
+    is a copy of the native thread-local diagnostic and is intended for humans.
+    """
 
     def __init__(self, status: int | Status, message: str) -> None:
+        """Preserve a known or forward-compatible status and diagnostic."""
         super().__init__(message)
         try:
             self.status: Status | int = Status(status)
@@ -217,11 +222,14 @@ def _check(status: int, *, end: bool = False) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class Match:
-    """One safely materialized fuzzy match."""
+    """One safely materialized fuzzy match that may outlive its cursor."""
 
     term: str | bytes | tuple[int, ...]
+    """Matched term in the dictionary's Unicode, byte, or u64 unit domain."""
     distance: int
+    """Exact edit distance from the query under the selected algorithm."""
     id: int | None
+    """Optional unsigned dictionary value, or ``None`` when no value exists."""
 
 
 class BorrowedMatch:
@@ -230,6 +238,7 @@ class BorrowedMatch:
     __slots__ = ("_active", "_view")
 
     def __init__(self, view: _MatchView, active: list[bool]) -> None:
+        """Wrap one native descriptor for the reducer's active lexical lease."""
         self._view = view
         self._active = active
 
@@ -239,11 +248,13 @@ class BorrowedMatch:
 
     @property
     def distance(self) -> int:
+        """Exact edit distance, valid only during the reducer callback."""
         self._ensure()
         return self._view.distance
 
     @property
     def id(self) -> int | None:
+        """Optional dictionary value, valid only during the reducer callback."""
         self._ensure()
         return self._view.id if self._view.has_id else None
 
@@ -274,6 +285,7 @@ class BorrowedMatch:
         return memoryview(array)
 
     def materialize(self) -> Match:
+        """Copy this lexical borrow into an independently owned :class:`Match`."""
         self._ensure()
         domain = UnitDomain(self._view.unit_domain)
         if domain == UnitDomain.UNICODE_SCALAR:
@@ -286,17 +298,25 @@ class BorrowedMatch:
 
 
 class BorrowedBatch(Sequence[BorrowedMatch]):
-    """Zero-copy batch valid only during one reducer invocation."""
+    """Read-only zero-copy sequence valid during one reducer invocation.
+
+    Every element and memory view becomes invalid as soon as the reducer
+    callback returns, whether normally or by exception. Materialize values that
+    must escape the callback.
+    """
 
     def __init__(
         self, views: ctypes.POINTER(_MatchView), length: int, active: list[bool]
     ) -> None:
+        """Wrap a native descriptor span for the reducer's active lexical lease."""
         self._views, self._length, self._active = views, length, active
 
     def __len__(self) -> int:
+        """Return the number of borrowed descriptors in this callback batch."""
         return self._length
 
     def __getitem__(self, index: int) -> BorrowedMatch:
+        """Return one checked lexical borrow, supporting negative indices."""
         if index < 0:
             index += self._length
         if not 0 <= index < self._length:
@@ -308,16 +328,25 @@ T = TypeVar("T")
 
 
 class QueryCursor(Iterator[Match]):
-    """One-shot lazy cursor retaining its query-start snapshot."""
+    """One-shot lazy cursor retaining its query-start snapshot.
+
+    A cursor is an exclusive single-consumer object. Different cursors are
+    independent and may be consumed concurrently. Iteration produces owned
+    matches in bounded native batches; ``reduce`` avoids per-match host objects.
+    Closing the source dictionary or transducer does not invalidate the cursor.
+    """
 
     def __init__(self, handle: int) -> None:
+        """Take ownership of one non-NULL native cursor handle."""
         self._handle = ctypes.c_void_p(handle)
         self._pending: deque[Match] = deque()
 
     def __iter__(self) -> QueryCursor:
+        """Return this one-shot iterator without rewinding it."""
         return self
 
     def __next__(self) -> Match:
+        """Return the next owned match or close at the end of the stream."""
         if not self._pending:
             view = _BatchView()
             if not _check(
@@ -348,7 +377,22 @@ class QueryCursor(Iterator[Match]):
         *,
         batch_size: int = DEFAULT_MATCH_BATCH,
     ) -> T:
-        """Reduce native batches without allocating Python match objects."""
+        """Reduce native batches without allocating Python match objects.
+
+        Args:
+            function: Called as ``function(accumulator, borrowed_batch)``. The
+                batch and every view derived from it expire when the callback
+                returns. Exceptions, including cancellation exceptions, are
+                contained at the C trampoline and then re-raised in Python.
+            initial: Initial accumulator value.
+            batch_size: Positive maximum descriptors per callback.
+
+        Returns:
+            The final accumulator after the cursor is exhausted.
+
+        The cursor closes in every completion or failure path. Use ordinary
+        iteration when matches must be retained independently.
+        """
         accumulator = initial
         failure: BaseException | None = None
 
@@ -385,6 +429,7 @@ class QueryCursor(Iterator[Match]):
         return accumulator
 
     def close(self) -> None:
+        """Deterministically release the cursor and its snapshot retain."""
         if self._handle:
             _check(_lib.llev_query_cursor_free(self._handle))
             self._handle = ctypes.c_void_p()
@@ -398,20 +443,39 @@ class QueryCursor(Iterator[Match]):
             pass
 
     def __enter__(self) -> Self:
+        """Enter a deterministic cursor lifetime."""
         return self
 
     def __exit__(self, *_args: object) -> None:
+        """Close the cursor on every context-manager exit path."""
         self.close()
 
 
 class Transducer:
-    """Levenshtein automaton configuration over a live dictionary resource."""
+    """Shareable automaton configuration over a live dictionary resource.
+
+    Construction retains and negotiates the provider in constant time; it does
+    not copy or traverse the dictionary. Reuse one transducer for repeated
+    queries with the same algorithm and dictionary resource.
+    """
 
     def __init__(
         self,
         dictionary: DictionaryResource | VtResource,
         algorithm: Algorithm = Algorithm.STANDARD,
     ) -> None:
+        """Retain ``dictionary`` and select the edit-distance ``algorithm``.
+
+        Args:
+            dictionary: A live high-level dictionary resource or its raw
+                :class:`vinary_tree_interop.VtResource` representation.
+            algorithm: Standard, adjacent-transposition, merge-and-split, or
+                unrestricted Damerau-Levenshtein matching.
+
+        Raises:
+            NativeError: If provider negotiation, retention, or validation
+                fails. The caller's own resource retain is never transferred.
+        """
         resource = (
             dictionary.native_resource
             if isinstance(dictionary, DictionaryResource)
@@ -431,6 +495,22 @@ class Transducer:
         *,
         order: QueryOrder = QueryOrder.TRAVERSAL,
     ) -> QueryCursor:
+        """Capture the current dictionary revision and start a lazy query.
+
+        Args:
+            query: Text, raw bytes, u64 tokens, or a compiled phonetic-language
+                pattern. Its unit domain must match the dictionary.
+            max_distance: Inclusive nonnegative edit-distance bound.
+            order: Provider traversal order, or distance then term where the
+                Unicode facade and backend support ordered streaming.
+
+        Returns:
+            A new exclusive cursor retaining its captured immutable revision.
+
+        Raises:
+            NativeError: For a domain mismatch, invalid input, unsupported
+                ordering, provider fault, or closed native resource.
+        """
         out = ctypes.c_void_p()
         if isinstance(query, PhoneticPattern):
             _check(
@@ -476,6 +556,7 @@ class Transducer:
         return QueryCursor(out.value)
 
     def close(self) -> None:
+        """Release the retained provider; already-created cursors remain valid."""
         if self._handle:
             _lib.llev_transducer_free(self._handle)
             self._handle = ctypes.c_void_p()
@@ -487,16 +568,25 @@ class Transducer:
             pass
 
     def __enter__(self) -> Self:
+        """Enter a deterministic transducer lifetime."""
         return self
 
     def __exit__(self, *_args: object) -> None:
+        """Release the transducer on every context-manager exit path."""
         self.close()
 
 
 class PhoneticPattern:
-    """Reusable Unicode phonetic language automaton."""
+    """Reusable immutable Unicode phonetic-language automaton."""
 
     def __init__(self, source: str, *, llre: bool = False) -> None:
+        """Compile a regex or import-free LLRE document.
+
+        Args:
+            source: UTF-8 phonetic regular expression or LLRE source document.
+            llre: Interpret ``source`` as LLRE when true; otherwise as the
+                phonetic regex surface.
+        """
         data = source.encode()
         self._handle = ctypes.c_void_p()
         constructor = (
@@ -507,6 +597,7 @@ class PhoneticPattern:
         _check(constructor(data, len(data), ctypes.byref(self._handle)))
 
     def matches(self, text: str) -> bool:
+        """Return whether ``text`` is completely accepted by this language."""
         data = text.encode()
         output = ctypes.c_uint8()
         _check(
@@ -529,6 +620,7 @@ class PhoneticPattern:
         return (states.value, transitions.value)
 
     def close(self) -> None:
+        """Release the compiled pattern; existing query cursors stay valid."""
         if self._handle:
             _lib.llev_phonetic_pattern_free(self._handle)
             self._handle = ctypes.c_void_p()
@@ -540,16 +632,19 @@ class PhoneticPattern:
             pass
 
     def __enter__(self) -> Self:
+        """Enter a deterministic pattern lifetime."""
         return self
 
     def __exit__(self, *_args: object) -> None:
+        """Release the pattern on every context-manager exit path."""
         self.close()
 
 
 class PhoneticRuleSet:
-    """Reusable Unicode phonetic rewrite-rule set."""
+    """Reusable immutable Unicode phonetic rewrite-rule set."""
 
     def __init__(self, source: str | PhoneticRuleSetKind) -> None:
+        """Parse an import-free .llev document or select a built-in rule set."""
         self._handle = ctypes.c_void_p()
         if isinstance(source, PhoneticRuleSetKind):
             _check(
@@ -566,6 +661,7 @@ class PhoneticRuleSet:
             )
 
     def apply(self, text: str) -> str:
+        """Rewrite ``text`` to the native fuel-bounded fixed point."""
         data = text.encode()
         output = _OwnedString()
         _check(
@@ -585,6 +681,7 @@ class PhoneticRuleSet:
         return count.value
 
     def close(self) -> None:
+        """Release this compiled rule set."""
         if self._handle:
             _lib.llev_phonetic_rules_free(self._handle)
             self._handle = ctypes.c_void_p()
@@ -596,7 +693,9 @@ class PhoneticRuleSet:
             pass
 
     def __enter__(self) -> Self:
+        """Enter a deterministic rule-set lifetime."""
         return self
 
     def __exit__(self, *_args: object) -> None:
+        """Release the rule set on every context-manager exit path."""
         self.close()

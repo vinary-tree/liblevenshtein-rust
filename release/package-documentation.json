@@ -197,7 +197,7 @@
       "coordinate": "@vinary-tree/liblevenshtein",
       "registryVersion": "4.0.0-rc.5",
       "releaseState": "released",
-      "sourceEvidence": ["bindings/javascript/package.json", "bindings/javascript/README.md", "bindings/javascript/index.d.ts", "bindings/javascript/typedoc.json"],
+      "sourceEvidence": ["bindings/javascript/package.json", "bindings/javascript/README.md", "bindings/javascript/index.d.ts"],
       "registryReadback": {
         "url": "https://registry.npmjs.org/@vinary-tree%2fliblevenshtein/4.0.0-rc.5",
         "markers": ["@vinary-tree/liblevenshtein", "4.0.0-rc.5"]
@@ -212,9 +212,8 @@
         {
           "kind": "api-reference",
           "service": "TypeDoc",
-          "state": "build-only",
-          "reason": "The immutable release workflow now builds and uploads TypeDoc, but no protected public deployment has published that artifact yet.",
-          "buildEvidence": ["bindings/javascript/typedoc.json", ".github/workflows/release.yml"]
+          "state": "missing",
+          "reason": "The exact v4.0.0-rc.5 source lacks the later TypeDoc configuration and no protected public deployment serves an RC5 API reference. Current-branch automation cannot retroactively qualify as immutable release evidence."
         }
       ]
     },

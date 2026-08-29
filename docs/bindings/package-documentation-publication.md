@@ -133,6 +133,70 @@ python3 scripts/check-package-documentation.py --public --require-complete
 The final command is the release acceptance gate. It is expected to fail while
 the manifest truthfully contains released `missing` or `build-only` entries.
 
+## Reproducible references and immutable version history
+
+Three generators feed one versioned site. Doxygen reads the public C and C++
+headers and emits both Hypertext Markup Language (HTML) and Extensible Markup
+Language (XML); the XML inventory proves that every modeled C function and
+public native type appears. pdoc renders the Python facade only after an
+Abstract Syntax Tree (AST) check proves that every exported class and public
+method has explanatory text. TypeDoc renders the JavaScript and TypeScript
+declaration surface. All three receive the canonical version and immutable
+source tag from [`release/version.json`](../../release/version.json).
+
+The local construction uses repository storage under `target/`; it does not
+consume memory-backed system temporary storage:
+
+```sh
+uv sync \
+  --project bindings/python \
+  --group documentation \
+  --frozen \
+  --no-install-project
+npm ci --prefix bindings/javascript --ignore-scripts
+cargo build --locked --features native-bindings-full
+PATH="$PWD/bindings/python/.venv/bin:$PATH" \
+LIBLEVENSHTEIN_LIBRARY="$PWD/target/debug/libliblevenshtein.so" \
+  python3 scripts/build-package-documentation.py --surface all
+python3 scripts/package-documentation-site.py build
+python3 scripts/package-documentation-site.py assemble \
+  --archives target/package-documentation-artifacts
+```
+
+The archive builder normalizes member order, timestamps, owners, groups, and
+permission modes, so identical source produces identical gzip and tar bytes.
+Its manifest records the SHA-256 digest of every served file. The assembler
+rejects absolute paths, parent traversal, links, special files, duplicate
+members, unknown surfaces, unlisted files, missing files, and digest changes
+before extracting a version. A release asset is therefore both the immutable
+history record and the input from which the complete site can be reconstructed.
+
+The protected workflow implements the preservation algorithm literally:
+
+```text
+procedure PublishVersionedReferences(exact_tag T, archive A):
+    assert T equals release.version.publication.sourceTag
+    build native, Python, and JavaScript references from T
+    assert A is reproducible and every public declaration is represented
+
+    if release(T) already contains an asset named like A:
+        download the existing asset and require byte equality
+    else:
+        append A to release(T)
+
+    download every version archive from every release
+    authenticate and safely extract every archive into its version directory
+    sort the versions by semantic-version precedence
+    deploy the entire reconstructed tree through the protected Pages environment
+end procedure
+```
+
+This design never uses the current branch as evidence for an older tag and
+never replaces a historical version directory with a newer build. The RC5
+manifest consequently remains `missing` for native Doxygen and Python pdoc:
+the exact `v4.0.0-rc.5` source does not contain this later automation, and an
+unpublished local build cannot retroactively satisfy public evidence.
+
 ## RC5 evidence and confirmed gaps
 
 The 2026-08-29 unauthenticated audit proves the Rust, Java, Clojure, and Go API

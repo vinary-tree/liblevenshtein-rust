@@ -547,6 +547,11 @@ int main() {
     auto cursor = automaton.query("cat", 2);
     auto first = cursor.next_batch(1);
     assert(first.matches().size() == 1);
+    auto moved_first = std::move(first);
+    assert(first.matches().empty());
+    assert(moved_first.matches().size() == 1);
+    first = std::move(moved_first);
+    assert(moved_first.matches().empty());
     std::vector<std::string> observed{
         std::string(vinary_tree::liblevenshtein::batch::utf8(first.matches().front()))};
     first = {};
@@ -559,6 +564,15 @@ int main() {
 
     auto fresh_cursor = automaton.query("cat", 2);
     assert(drain(fresh_cursor) != expected);
+
+    auto cursor_before_move = automaton.query("cat", 0);
+    auto cursor_after_move = std::move(cursor_before_move);
+    try {
+        static_cast<void>(cursor_before_move.next_batch());
+        assert(false && "moved-from cursor remained callable");
+    } catch (const std::logic_error&) {
+    }
+    assert(!cursor_after_move.next_batch().matches().empty());
 
     const auto contexts_before_escaped_batch = live_contexts.load();
     auto escaped_batch = [&automaton] {

@@ -248,62 +248,90 @@ def validate(model: dict) -> None:
 
 def render_c(model: dict) -> str:
     lines = [
-        f"/* {NOTICE} */",
+        "/** @file",
+        f" * @brief {NOTICE}",
+        " */",
         "#ifndef LIBLEVENSHTEIN_ABI_H",
         "#define LIBLEVENSHTEIN_ABI_H",
         "",
         "#include <stddef.h>",
         "#include <stdint.h>",
         "#ifndef VT_INTEROP_HEADER",
+        "/** Overrideable include spelling for the shared resource-ABI header. */",
         '#define VT_INTEROP_HEADER "vinary_tree_interop.h"',
         "#endif",
         "#include VT_INTEROP_HEADER",
         "",
+        "/** Binary ABI generation implemented by this header and library. */",
         f"#define LLEV_ABI_VERSION {model['abiVersion']}u",
+        "/** Additive API revision within LLEV_ABI_VERSION. */",
         f"#define LLEV_API_REVISION {model['apiRevision']}u",
+        "/** Default maximum descriptors borrowed by one cursor batch. */",
         f"#define LLEV_DEFAULT_MATCH_BATCH {model['defaultMatchBatch']}u",
         "",
     ]
     for name, value in model["buildFeatures"].items():
+        description = {
+            "CORE": "Core distance, transducer, cursor, and batch surface.",
+            "PHONETIC": "Compiled phonetic patterns and rewrite-rule sets.",
+        }[name]
+        lines.append(f"/** Build-feature bit: {description} */")
         lines.append(f"#define LLEV_BUILD_FEATURE_{name} UINT64_C({value})")
     lines.append("")
-    for enum in model["enums"].values():
+    for key, enum in model["enums"].items():
+        lines.append(f"/** {JAVA_ENUM_DOCS[key]} */")
         lines.append(f"typedef enum {enum['cType']} {{")
         values = list(enum["values"].items())
         for index, (name, value) in enumerate(values):
             comma = "," if index + 1 < len(values) else ""
-            lines.append(f"    {enum['cPrefix']}{name} = {value}{comma}")
+            description = JAVA_VALUE_DOCS[key][name]
+            lines.append(
+                f"    {enum['cPrefix']}{name} = {value}{comma} /**< {description} */"
+            )
         lines.append(f"}} {enum['cType']};")
         lines.append("")
     lines.extend(
         [
+            "/** Opaque, shareable automaton configuration retaining a dictionary resource. */",
             "typedef struct LlevTransducer LlevTransducer;",
+            "/** Opaque, exclusive lazy traversal over one immutable query-start snapshot. */",
             "typedef struct LlevQueryCursor LlevQueryCursor;",
+            "/** Opaque, immutable compiled phonetic-language automaton. */",
             "typedef struct LlevPhoneticPattern LlevPhoneticPattern;",
+            "/** Opaque, immutable compiled phonetic rewrite-rule set. */",
             "typedef struct LlevPhoneticRuleSet LlevPhoneticRuleSet;",
             "",
+            "/** One borrowed match descriptor inside a live cursor batch lease. */",
             "typedef struct LlevMatch {",
-            "    const void* term_data;",
-            "    size_t term_len;",
-            "    size_t byte_len;",
-            "    size_t distance;",
-            "    uint64_t id;",
-            "    VtUnitDomain unit_domain;",
-            "    uint8_t has_id;",
-            "    uint8_t reserved[3];",
+            "    const void* term_data; /**< Borrowed term bytes or aligned u64 tokens. */",
+            "    size_t term_len; /**< Logical unit count: scalars, bytes, or u64 tokens. */",
+            "    size_t byte_len; /**< Physical bytes addressed by term_data. */",
+            "    size_t distance; /**< Exact edit distance from the query. */",
+            "    uint64_t id; /**< Dictionary value when has_id is one. */",
+            "    VtUnitDomain unit_domain; /**< Encoding and alignment of term_data. */",
+            "    uint8_t has_id; /**< One when id is present, otherwise zero. */",
+            "    uint8_t reserved[3]; /**< Must be ignored; reserved for additive evolution. */",
             "} LlevMatch;",
             "",
+            "/** Borrowed contiguous match lease returned by cursor advancement. */",
             "typedef struct LlevMatchBatchView {",
-            "    const LlevMatch* matches;",
-            "    size_t len;",
-            "    uint64_t generation;",
+            "    const LlevMatch* matches; /**< Descriptor array valid until exact release. */",
+            "    size_t len; /**< Number of initialized descriptors. */",
+            "    uint64_t generation; /**< Nonzero identity required by release_batch. */",
             "} LlevMatchBatchView;",
             "",
+            "/** Heap-owned, length-bearing UTF-8 returned by the phonetic-rule API. */",
             "typedef struct LlevOwnedString {",
-            "    char* data;",
-            "    size_t len;",
+            "    char* data; /**< Owned bytes, not necessarily NUL-terminated. */",
+            "    size_t len; /**< Number of initialized UTF-8 bytes. */",
             "} LlevOwnedString;",
             "",
+            "/** Consume one borrowed reducer batch on the calling thread.",
+            " * @param context unchanged caller context supplied to cursor_reduce",
+            " * @param matches descriptors valid only for this callback invocation",
+            " * @param len number of descriptors in matches",
+            " * @return OK to continue, END to stop successfully, or another published status to abort",
+            " */",
             "typedef LlevStatus (*LlevBatchReducer)(void* context,",
             "                                       const LlevMatch* matches,",
             "                                       size_t len);",
@@ -465,11 +493,13 @@ def render_python(model: dict) -> str:
         f"DEFAULT_MATCH_BATCH = {model['defaultMatchBatch']}",
         "",
     ]
-    for enum in model["enums"].values():
+    for key, enum in model["enums"].items():
         name = enum["cType"].removeprefix("Llev")
         lines.append(f"class {name}(IntEnum):")
+        lines.append(f'    """{JAVA_ENUM_DOCS[key]}"""')
         for item, value in enum["values"].items():
             lines.append(f"    {item} = {value}")
+            lines.append(f'    """{JAVA_VALUE_DOCS[key][item]}"""')
         lines.append("")
     return "\n".join(lines)
 
@@ -696,7 +726,9 @@ def render_swift_enums(model: dict) -> str:
                         f"    public static let {public_name} = Status(rawValue: {value})",
                     ]
                 )
-            lines.extend(["", "    public var description: String {", "        switch self {"])
+            lines.extend(
+                ["", "    public var description: String {", "        switch self {"]
+            )
             for name in enum["values"]:
                 public_name = camel(name)
                 lines.append(f'        case .{public_name}: "{name}"')

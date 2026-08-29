@@ -63,21 +63,22 @@ class BindingDocumentationAnchorTests(unittest.TestCase):
                 self.assertIn(CHECKER.canonical_package(facade), guide)
 
     def test_retired_package_names_are_boundary_aware(self) -> None:
+        retired_interop = "@vinary-tree/" + "interop"
+        retired_umbrella = "@vinary-tree/" + "vinary-tree"
+        retired_runtime_path = "bindings/" + "javascript-runtime"
         mistaken = (
-            "Use @vinary-tree/interop and @vinary-tree/vinary-tree from "
-            "bindings/javascript-runtime/package.json."
+            f"Use {retired_interop} and {retired_umbrella} from "
+            f"{retired_runtime_path}/package.json."
         )
         canonical = "Use @vinary-tree/vinary-tree-interop."
         self.assertTrue(
-            CHECKER.RETIRED_PACKAGE_PATTERNS["@vinary-tree/interop"].search(mistaken)
+            CHECKER.RETIRED_PACKAGE_PATTERNS[retired_interop].search(mistaken)
         )
-        runtime_pattern = CHECKER.RETIRED_PACKAGE_PATTERNS["@vinary-tree/vinary-tree"]
+        runtime_pattern = CHECKER.RETIRED_PACKAGE_PATTERNS[retired_umbrella]
         self.assertTrue(runtime_pattern.search(mistaken))
         self.assertIsNone(runtime_pattern.search(canonical))
         self.assertTrue(
-            CHECKER.RETIRED_PACKAGE_PATTERNS["bindings/javascript-runtime"].search(
-                mistaken
-            )
+            CHECKER.RETIRED_PACKAGE_PATTERNS[retired_runtime_path].search(mistaken)
         )
 
     def test_binding_diagrams_are_paired_styled_and_embedded(self) -> None:

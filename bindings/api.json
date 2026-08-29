@@ -571,6 +571,13 @@
     "collectionProtocols": "docs/bindings/collection-protocols.md",
     "optimizationMethodology": "docs/benchmarks/optimization-and-profiling-methodology.md",
     "citationLedger": "docs/verification/binding-citation-ledger.json",
+    "packageDocumentation": {
+      "manifest": "release/package-documentation.json",
+      "checker": "scripts/check-package-documentation.py",
+      "builder": "scripts/build-package-documentation.py",
+      "siteAssembler": "scripts/package-documentation-site.py",
+      "workflow": ".github/workflows/package-documentation.yml"
+    },
     "operationalDocuments": [
       "docs/bindings/PERFORMANCE_EXPERIMENTS.md",
       "docs/bindings/c-abi-reference.md",

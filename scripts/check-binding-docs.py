@@ -48,10 +48,14 @@ FACADE_PACKAGE_KEYS = {
     "haskell": "hackage",
     "lua": "luarocks",
 }
+_RETIRED_INTEROP_PACKAGE = "@vinary-tree/" + "interop"
+_RETIRED_UMBRELLA_PACKAGE = "@vinary-tree/" + "vinary-tree"
 RETIRED_PACKAGE_PATTERNS = {
-    "@vinary-tree/interop": re.compile(r"@vinary-tree/interop(?![A-Za-z0-9_-])"),
-    "@vinary-tree/vinary-tree": re.compile(
-        r"@vinary-tree/vinary-tree(?!-interop|[A-Za-z0-9_])"
+    _RETIRED_INTEROP_PACKAGE: re.compile(
+        re.escape(_RETIRED_INTEROP_PACKAGE) + r"(?![A-Za-z0-9_-])"
+    ),
+    _RETIRED_UMBRELLA_PACKAGE: re.compile(
+        re.escape(_RETIRED_UMBRELLA_PACKAGE) + r"(?!-interop|[A-Za-z0-9_])"
     ),
     "vinary-tree-liblevenshtein": re.compile(
         r"(?<![A-Za-z0-9_-])vinary-tree-liblevenshtein(?![A-Za-z0-9_-])"
@@ -429,11 +433,27 @@ def main() -> None:
         cwd=ROOT,
         check=True,
     )
+    package_documentation = DOCS.get("packageDocumentation")
+    required_package_documentation = {
+        "manifest",
+        "checker",
+        "builder",
+        "siteAssembler",
+        "workflow",
+    }
+    if (
+        not isinstance(package_documentation, dict)
+        or set(package_documentation) != required_package_documentation
+    ):
+        fail(
+            "documentation.packageDocumentation must name the manifest, checker, "
+            "builder, site assembler, and protected workflow"
+        )
+    for role, relative in package_documentation.items():
+        if not isinstance(relative, str) or not (ROOT / relative).is_file():
+            fail(f"package-documentation {role} is missing: {relative!r}")
     subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "scripts" / "check-package-documentation.py"),
-        ],
+        [sys.executable, str(ROOT / package_documentation["checker"])],
         cwd=ROOT,
         check=True,
     )
