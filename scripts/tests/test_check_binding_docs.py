@@ -72,6 +72,51 @@ class BindingDocumentationAnchorTests(unittest.TestCase):
         self.assertTrue(runtime_pattern.search(mistaken))
         self.assertIsNone(runtime_pattern.search(canonical))
 
+    def test_doi_link_parser_accepts_plain_and_angle_wrapped_targets(self) -> None:
+        text = (
+            "[DOI:10.1145/1297027.1297033]"
+            "(https://doi.org/10.1145/1297027.1297033)\n"
+            "[10.1016/0022-0000(89)90034-2]"
+            "(<https://doi.org/10.1016/0022-0000(89)90034-2>)"
+        )
+        self.assertEqual(
+            [
+                match.group("angle") or match.group("plain")
+                for match in CHECKER.DOI_LINK_RE.finditer(text)
+            ],
+            ["10.1145/1297027.1297033", "10.1016/0022-0000(89)90034-2"],
+        )
+
+    def test_doi_labels_and_urls_are_consistent_in_governed_documents(self) -> None:
+        CHECKER.check_citation_ledger()
+
+    def test_resolving_but_unrelated_doi_is_rejected(self) -> None:
+        prose = (
+            "2. T. Kalibera, R. Jones. “Rigorous Benchmarking in Reasonable Time.” "
+            "*ISMM*, 2013. "
+            "[DOI:10.1145/2660193.2660196]"
+            "(https://doi.org/10.1145/2660193.2660196)"
+        )
+        link = CHECKER.DOI_LINK_RE.search(prose)
+        self.assertIsNotNone(link)
+        wrong_work = {
+            "title": "An experimental survey of energy management across the stack",
+            "firstAuthor": "Kambadur",
+            "year": 2014,
+        }
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit):
+            CHECKER.check_citation_identity("methodology.md", prose, link, wrong_work)
+        self.assertIn("does not match ledger title", stderr.getvalue())
+
+    def test_normalized_citation_text_preserves_bibliographic_words(self) -> None:
+        self.assertEqual(
+            CHECKER.normalized_citation_text(
+                "*Bringing the web up to speed with WebAssembly.*"
+            ),
+            "bringing the web up to speed with webassembly",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

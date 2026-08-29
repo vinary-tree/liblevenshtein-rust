@@ -241,7 +241,7 @@ Java uses `AutoCloseable` with try-with-resources; Kotlin uses `use`; Scala uses
    Performance Evaluation.” *OOPSLA*, 2007.
    [DOI:10.1145/1297027.1297033](https://doi.org/10.1145/1297027.1297033)
 2. T. Kalibera, R. Jones. “Rigorous Benchmarking in Reasonable Time.” *ISMM*,
-   2013. [DOI:10.1145/2660193.2660196](https://doi.org/10.1145/2660193.2660196)
+   2013. [DOI:10.1145/2464157.2464160](https://doi.org/10.1145/2464157.2464160)
 3. B. Efron. “Bootstrap Methods: Another Look at the Jackknife.” *The Annals
    of Statistics* 7(1), 1979.
    [DOI:10.1214/aos/1176344552](https://doi.org/10.1214/aos/1176344552)
