@@ -773,7 +773,9 @@ jobs:
         env:
           LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
           LD_LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
+          VINARY_TREE_TEST_TMPDIR: ${{ github.workspace }}/target/ocaml/tmp
         run: |
+          mkdir -p "$VINARY_TREE_TEST_TMPDIR"
           opam exec -- dune build --root ../vinary-tree-interop/bindings/ocaml @install
           opam exec -- dune install --root ../vinary-tree-interop/bindings/ocaml
           opam exec -- dune build --root ../libdictenstein/bindings/ocaml @install
