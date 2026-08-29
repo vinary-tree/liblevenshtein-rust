@@ -1328,7 +1328,7 @@
         "../javascript-runtime/index.d.ts",
         "../javascript-runtime/native/src/addon.cc"
       ],
-      "readme": "../javascript-runtime/README.md",
+      "readme": "../javascript-runtime/docs/api-reference.md",
       "tests": [
         "../javascript-runtime/test/native.test.mjs",
         "../javascript-runtime/test/wasi.test.mjs",
@@ -1350,7 +1350,7 @@
           "note": "string-literal union mapped by the orders table in native.mjs"
         },
         "phoneticRuleSetKind": {
-          "symbol": "phoneticRules",
+          "symbol": "liblevenshtein.phoneticRules",
           "definedIn": "../javascript-runtime/index.d.ts",
           "note": "string selectors \"english-orthography\"/\"english-phonetic\" dispatched in addon.cc"
         }

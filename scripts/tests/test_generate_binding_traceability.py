@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
@@ -18,6 +19,16 @@ SPEC.loader.exec_module(GENERATOR)
 
 
 class BindingTraceabilityTests(unittest.TestCase):
+    def test_runtime_evidence_uses_configured_sibling_root(self) -> None:
+        configured_root = (
+            GENERATOR.WORKSPACE / "npm-coordinate-migration" / "javascript-runtime"
+        )
+        with patch.object(GENERATOR, "RUNTIME_ROOT", configured_root):
+            resolved = GENERATOR.resolve(
+                "../javascript-runtime/index.d.ts", "runtime declaration"
+            )
+            self.assertEqual(resolved, (configured_root / "index.d.ts").resolve())
+
     def test_symbol_leaf_preserves_host_method_identity(self) -> None:
         self.assertEqual(GENERATOR.symbol_leaf("QueryCursor.__next__"), "__next__")
         self.assertEqual(GENERATOR.symbol_leaf("Query.GetEnumerator"), "GetEnumerator")

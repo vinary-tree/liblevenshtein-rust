@@ -63,6 +63,14 @@ def text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def surface_file(relative: str) -> Path:
+    """Resolve modeled facade evidence against its configured repository root."""
+    runtime_prefix = "../javascript-runtime/"
+    if relative.startswith(runtime_prefix):
+        return RUNTIME_ROOT / relative.removeprefix(runtime_prefix)
+    return ROOT / relative
+
+
 subprocess.run(
     [sys.executable, str(ROOT / "scripts" / "generate-bindings.py"), "--check"],
     cwd=ROOT,
@@ -1253,13 +1261,19 @@ for language in FACADE_LANGUAGES:
             f"{context} delegates to an unmodeled facade",
         )
     require(bool(facade["sourceFiles"]), f"{context} lists no facade sources")
-    corpus = "\n".join(text(ROOT / relative) for relative in facade["sourceFiles"])
+    corpus = "\n".join(
+        text(surface_file(relative)) for relative in facade["sourceFiles"]
+    )
     readme = facade["readme"]
     if readme is not None:
-        require((ROOT / readme).is_file(), f"{context} README is missing: {readme}")
+        require(
+            surface_file(readme).is_file(), f"{context} README is missing: {readme}"
+        )
     require(bool(facade["tests"]), f"{context} lists no executable tests")
     for relative in facade["tests"]:
-        require((ROOT / relative).is_file(), f"{context} test is missing: {relative}")
+        require(
+            surface_file(relative).is_file(), f"{context} test is missing: {relative}"
+        )
 
     functions = facade["functions"]
     require(
@@ -1321,7 +1335,7 @@ for language in FACADE_LANGUAGES:
             f"{enum_context} must be defined in a listed facade source",
         )
         require(
-            named_in(symbol_leaf(entry["symbol"]), text(ROOT / defined_in)),
+            named_in(symbol_leaf(entry["symbol"]), text(surface_file(defined_in))),
             f"{enum_context} names unlocatable symbol {entry['symbol']!r}",
         )
         enums_exposed += 1

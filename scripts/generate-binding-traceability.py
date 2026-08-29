@@ -5,11 +5,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE = ROOT.parent
+RUNTIME_ROOT = Path(
+    os.environ.get(
+        "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", WORKSPACE / "javascript-runtime"
+    )
+).resolve()
 API_PATH = ROOT / "bindings" / "api.json"
 SURFACE_PATH = ROOT / "bindings" / "api-surface-map.json"
 OUTPUT_PATH = ROOT / "bindings" / "conformance" / "public-api-traceability.tsv"
@@ -30,7 +36,13 @@ def clean(value: object, field: str) -> str:
 
 
 def resolve(relative: str, field: str) -> Path:
-    path = (ROOT / clean(relative, field)).resolve()
+    cleaned = clean(relative, field)
+    runtime_prefix = "../javascript-runtime/"
+    path = (
+        RUNTIME_ROOT / cleaned.removeprefix(runtime_prefix)
+        if cleaned.startswith(runtime_prefix)
+        else ROOT / cleaned
+    ).resolve()
     try:
         path.relative_to(WORKSPACE)
     except ValueError:
