@@ -115,17 +115,12 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
+| `status` | Typed native status or error carrier | stable numeric constants are public while raised Lua errors retain the native code in their message |
 | `algorithm` | Edit-distance algorithm selection | string names "standard"/"transposition"/"merge-and-split"/"damerau-levenshtein" |
 | `order` | Result traversal ordering | string names "traversal"/"distance-then-term" |
-| `phonetic_rules` | Built-in phonetic rule-set selection | string selectors "english-orthography"/"english-phonetic" |
+| `phonetic_rule_set_kind` | Built-in phonetic rule-set selection | named string selectors "english-orthography"/"english-phonetic" |
 | `cursor:next` | One-shot owned-result iteration | Public facade protocol |
 | `cursor:reduce_batches` | Bounded batch/reducer traversal | Public facade protocol |
-
-### Facade-encapsulated model values
-
-| Model value | Idiomatic treatment |
-|---|---|
-| `status` | raised Lua errors embed the numeric code as "(status %d)" text; no named constants |
 
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every

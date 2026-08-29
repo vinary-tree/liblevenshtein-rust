@@ -1710,8 +1710,9 @@
       ],
       "enums": {
         "status": {
-          "symbol": null,
-          "_reason": "raised Lua errors embed the numeric code as \"(status %d)\" text; no named constants"
+          "symbol": "status",
+          "definedIn": "bindings/lua/src/liblevenshtein_lua.c",
+          "note": "stable numeric constants are public while raised Lua errors retain the native code in their message"
         },
         "algorithm": {
           "symbol": "algorithm",
@@ -1724,9 +1725,9 @@
           "note": "string names \"traversal\"/\"distance-then-term\""
         },
         "phoneticRuleSetKind": {
-          "symbol": "phonetic_rules",
+          "symbol": "phonetic_rule_set_kind",
           "definedIn": "bindings/lua/src/liblevenshtein_lua.c",
-          "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+          "note": "named string selectors \"english-orthography\"/\"english-phonetic\""
         }
       },
       "iterator": {
