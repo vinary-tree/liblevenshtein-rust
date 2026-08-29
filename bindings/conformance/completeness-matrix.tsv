@@ -1,5 +1,5 @@
 language	fns_exposed	fns_null_with_reason	enums_ok	iterator	reducer	phonetic_gating	readme_present	tests_present	findings
-c	36/36	0	4/4	llev_query_cursor_next_batch	llev_query_cursor_reduce	llev_build_features	no	yes	-
+c	36/36	0	4/4	llev_query_cursor_next_batch	llev_query_cursor_reduce	llev_build_features	yes	yes	-
 clojure	16/36	20	3/4	ResultCursor	reduce-batches	status-error	yes	yes	-
 cpp	35/36	1	4/4	vinary_tree::liblevenshtein::query_cursor::next_batch	llev_query_cursor_reduce	llev_build_features	yes	yes	-
 dotnet	27/36	9	4/4	Query.GetEnumerator	none	status-error	yes	yes	-

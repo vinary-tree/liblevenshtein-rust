@@ -8,7 +8,7 @@
         "include/liblevenshtein.h",
         "include/liblevenshtein_abi.h"
       ],
-      "readme": null,
+      "readme": "bindings/c/README.md",
       "tests": [
         "bindings/c/tests/cross_project_snapshot.c"
       ],

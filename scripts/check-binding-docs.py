@@ -224,6 +224,14 @@ def main() -> None:
         )
 
     for facade, entry in DOCS["facades"].items():
+        surface = SURFACE_MODEL["languages"][facade]
+        if surface["readme"] != entry["guide"]:
+            fail(f"{facade} guide differs between api.json and api-surface-map.json")
+        if entry["example"] not in surface["tests"]:
+            fail(
+                f"{facade} canonical example is not executable test evidence: "
+                f"{entry['example']}"
+            )
         check_guide(facade, entry["guide"], entry["languages"], entry["example"])
 
     hub_path, hub = read(DOCS["hub"])

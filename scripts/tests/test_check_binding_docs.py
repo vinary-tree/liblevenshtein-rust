@@ -47,6 +47,15 @@ class BindingDocumentationAnchorTests(unittest.TestCase):
             )
         self.assertIn("broken local anchor", stderr.getvalue())
 
+    def test_documented_facades_share_guides_and_examples_with_surface_model(
+        self,
+    ) -> None:
+        for facade, documentation in CHECKER.DOCS["facades"].items():
+            surface = CHECKER.SURFACE_MODEL["languages"][facade]
+            with self.subTest(facade=facade):
+                self.assertEqual(surface["readme"], documentation["guide"])
+                self.assertIn(documentation["example"], surface["tests"])
+
 
 if __name__ == "__main__":
     unittest.main()
