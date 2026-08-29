@@ -189,8 +189,12 @@ def main() -> None:
             sys.executable,
             "-m",
             "unittest",
+            "discover",
+            "-s",
+            str(ROOT / "scripts" / "tests"),
+            "-p",
+            "test_*.py",
             "-q",
-            str(ROOT / "scripts" / "tests" / "test_check_binding_docs.py"),
         ],
         cwd=ROOT,
         check=True,
@@ -199,6 +203,15 @@ def main() -> None:
         [
             sys.executable,
             str(ROOT / "scripts" / "generate-family-completeness-matrix.py"),
+            "--check",
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "generate-binding-traceability.py"),
             "--check",
         ],
         cwd=ROOT,

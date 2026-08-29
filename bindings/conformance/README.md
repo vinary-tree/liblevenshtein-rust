@@ -1,9 +1,13 @@
 # Family-wide binding completeness
 
-This directory contains two distinct forms of evidence:
+This directory contains three distinct forms of evidence:
 
 - [`completeness-matrix.tsv`](completeness-matrix.tsv) audits the functions of
   the liblevenshtein facades that already exist; and
+- [`public-api-traceability.tsv`](public-api-traceability.tsv) maps every
+  modeled facade API item to source, guide, executable tests, and a canonical
+  example, distinguishing direct references from evidence that still needs
+  item-level review;
 - [`family-completeness-matrix.tsv`](family-completeness-matrix.tsv) prevents a
   missing project, language, capability, package, idiom, or verification lane
   from disappearing outside a repository-local model.
@@ -11,8 +15,16 @@ This directory contains two distinct forms of evidence:
 The first matrix answers “how much of liblevenshtein's C surface does this
 facade map?” The family matrix answers the prior question: “which public
 capabilities must exist naturally in every target language across the whole
-Vinary Tree family, and what evidence proves each cell?” Neither matrix can
-substitute for the other.
+Vinary Tree family, and what evidence proves each cell?” No matrix substitutes
+for either of the other two.
+
+The traceability matrix includes functions, enums, and the iterator/reducer
+protocol entry points. A reasoned absence is retained with its rationale and
+marked inapplicable for source, documentation, test, and example evidence. An
+exposed item's guide must name the exact public symbol; its source, test, and
+example corpora must directly name that symbol or its backing native operation.
+A language-level test file that never touches the item remains
+`audit-required`.
 
 ![Family completeness pipeline from the declared project, language, and capability axes through generated cells and evidence gates.](../../docs/diagrams/bindings/family-completeness-gate.svg)
 
@@ -114,6 +126,10 @@ python3 scripts/generate-family-completeness-matrix.py \
 # Documentation-only final gate; identifies unfinished topic tuples directly.
 python3 scripts/generate-family-completeness-matrix.py \
   --check --require-documentation-complete
+
+# Public-symbol traceability, then its strict final campaign gate.
+python3 scripts/generate-binding-traceability.py --check
+python3 scripts/generate-binding-traceability.py --check --require-complete
 ```
 
 The literate generation algorithm is:
