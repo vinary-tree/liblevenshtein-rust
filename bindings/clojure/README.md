@@ -61,6 +61,32 @@ integers. `dictionary-snapshot` returns `:keys`, `:entries`,
 `:ordered-entries`, and exact domain/length/identity metadata. The entry cursor
 is one-shot and reducible; reduction closes on EOF, exceptions, and `reduced`.
 
+Compiled LLRE languages and phonetic rewrite rules are also deterministic
+`AutoCloseable` resources:
+
+```clojure
+(with-open [pattern (llev/llre-pattern "@name \"Greeting\"\n^hello$")
+            rules (llev/phonetic-rules :english-orthography)]
+  {:accepted? (.matches pattern "hello")
+   :normalized (llev/rewrite rules "phone")})
+```
+
+The thin facade deliberately preserves the JVM exception type instead of
+discarding its generated status enum. Clojure callers can branch without
+parsing diagnostic prose and can still record a status introduced by a newer
+compatible native ABI:
+
+```clojure
+(import '(io.vinarytree.liblevenshtein NativeException Status))
+
+(try
+  (llev/phonetic-pattern "(")
+  (catch NativeException failure
+    {:invalid-argument? (= Status/INVALID_ARGUMENT (.status failure))
+     :status-code (.statusCode failure)
+     :diagnostic (.getMessage failure)}))
+```
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract
@@ -143,7 +169,7 @@ variants, protocols, or methods.
 
 | Model value | Idiomatic treatment |
 |---|---|
-| `status` | the delegated NativeException carries the numeric status; no Clojure re-exposure |
+| `status` | the delegated NativeException.status returns the generated JVM Status enum and statusCode preserves unknown raw values; the deliberately thin facade does not duplicate them as Clojure keywords |
 
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every
@@ -182,7 +208,7 @@ an API violation even when the next operation happens to reuse the same arena.
 
 ## Errors and failure containment
 
-Native/JVM failures become `ExceptionInfo` with structured status data and the native diagnostic.
+Native failures retain the delegated JVM `NativeException`, generated `Status` enum, exact raw status code, and copied native diagnostic.
 
 Malformed utf-8, unsupported unit domains, incompatible resource versions, closed handles, invalid bounds, allocation failures, provider faults, and contained rust panics are distinct failures. Never parse diagnostic prose to
 branch on an error: inspect the typed status/exception first and treat the

@@ -5,7 +5,7 @@
    (io.vinarytree.interop
     UnicodeDictionaryResource UnicodeDictionarySnapshot
     UnicodeDictionarySnapshot$Edge)
-   (io.vinarytree.liblevenshtein Transducer)
+   (io.vinarytree.liblevenshtein NativeException Status Transducer)
    (java.util ArrayList OptionalLong)
    (java.util.function Supplier)))
 
@@ -41,6 +41,13 @@
           (mapv (fn [[scalar child]]
                   (UnicodeDictionarySnapshot$Edge. (int scalar) (long child)))
                 (get-in revision [(int node) :edges])))))))
+
+(defn- query-with [dictionary algorithm term max-distance order]
+  (with-open [automaton (llev/transducer dictionary {:algorithm algorithm})
+              matches (llev/query automaton term max-distance {:order order})]
+    (is (= "vinary_tree.liblevenshtein.ResultCursor"
+           (.getName (class matches))))
+    (into [] matches)))
 
 (deftest project-owned-phonetic-facade
   (testing "patterns and rules remain liblevenshtein resources"
@@ -86,6 +93,56 @@
              (.add collected (.utf8 (.get batch index))))))
         (is (= by-iterator (sort (vec collected))))
         (is (= 3 (count by-iterator)))))))
+
+(deftest algorithms-and-orders-have-distinguishing-semantics
+  (let [current (snapshot {"ab" 1 "c" 2 "abc" 3
+                           "bat" 4 "cat" 5 "cats" 6})
+        capture (reify Supplier (get [_] current))]
+    (with-open [dictionary (UnicodeDictionaryResource. capture)]
+      (let [standard (query-with dictionary :standard "ba" 1 :traversal)
+            transposed (query-with dictionary :transposition "ba" 1 :traversal)
+            merged (query-with dictionary :merge-and-split "ab" 1 :traversal)
+            damerau (query-with dictionary :damerau-levenshtein "ca" 2 :traversal)
+            traversal (query-with dictionary :standard "cat" 1 :traversal)
+            ranked (query-with dictionary :standard "cat" 1 :distance-then-term)]
+        (is (not-any? #(= "ab" (:term %)) standard))
+        (is (some #(= {:term "ab" :distance 1}
+                      (select-keys % [:term :distance]))
+                  transposed))
+        (is (some #(= {:term "c" :distance 1}
+                      (select-keys % [:term :distance]))
+                  merged))
+        (is (some #(= {:term "abc" :distance 2}
+                      (select-keys % [:term :distance]))
+                  damerau))
+        (is (= [["bat" 1] ["cat" 0] ["cats" 1]]
+               (mapv (juxt :term :distance) traversal)))
+        (is (= [["cat" 0] ["bat" 1] ["cats" 1]]
+               (mapv (juxt :term :distance) ranked)))))))
+
+(deftest phonetic-rules-and-llre-pattern-are-reusable-resources
+  (with-open [pattern (llev/llre-pattern "@name \"Greeting\"\n^hello$")]
+    (is (.matches pattern "hello"))
+    (is (not (.matches pattern "world"))))
+  (with-open [parsed (llev/phonetic-rules "ph -> f\ngh ->\n")]
+    (is (= 2 (.size parsed)))
+    (is (= "f" (llev/rewrite parsed "phgh"))))
+  (doseq [kind [:english-orthography :english-phonetic]]
+    (with-open [builtin (llev/phonetic-rules kind)]
+      (is (pos? (.size builtin)))
+      (is (not-empty (llev/rewrite builtin "phone"))))))
+
+(deftest native-error-retains-typed-and-raw-status-with-diagnostic
+  (let [failure (try
+                  (llev/phonetic-pattern "(")
+                  nil
+                  (catch NativeException native-failure native-failure))]
+    (is (instance? NativeException failure))
+    (when (instance? NativeException failure)
+      (is (= Status/INVALID_ARGUMENT (.status ^NativeException failure)))
+      (is (= (.code Status/INVALID_ARGUMENT)
+             (.statusCode ^NativeException failure)))
+      (is (not-empty (.getMessage ^NativeException failure))))))
 
 (deftest phonetic-pattern-idempotent-close-and-closed-guard
   ;; C2/C3: close is idempotent and a closed pattern rejects use with an

@@ -161,7 +161,7 @@
       "enums": {
         "status": {
           "symbol": null,
-          "_reason": "the delegated NativeException carries the numeric status; no Clojure re-exposure"
+          "_reason": "the delegated NativeException.status returns the generated JVM Status enum and statusCode preserves unknown raw values; the deliberately thin facade does not duplicate them as Clojure keywords"
         },
         "algorithm": {
           "symbol": "algorithms",
@@ -201,7 +201,7 @@
         },
         "llev_last_error_message": {
           "symbol": null,
-          "_reason": "the delegated JVM NativeException (message + status) propagates unchanged; no Clojure-specific wrapper symbol"
+          "_reason": "the delegated JVM NativeException (copied message + typed Status + exact raw statusCode) propagates unchanged; the deliberately thin facade does not introduce a second error wrapper"
         },
         "llev_string_free": {
           "symbol": null,

@@ -104,7 +104,7 @@ GUIDES: dict[str, Guide] = {
         "Clojars coordinate `io.vinarytree/liblevenshtein-clojure`",
         "The idiomatic namespace delegates to the JVM facade and therefore introduces no second native boundary.",
         "Wrap transducers and cursors in `with-open`; lazy sequences that are abandoned before EOF must be closed explicitly.",
-        "Native/JVM failures become `ExceptionInfo` with structured status data and the native diagnostic.",
+        "Native failures retain the delegated JVM `NativeException`, generated `Status` enum, exact raw status code, and copied native diagnostic.",
         "Independent resources are reentrant. Consume a single reducible cursor from one thread, and never retain a `reduce-batches` view after its callback.",
         "Strings select Unicode traversal; byte arrays and long collections use the corresponding JVM overloads.",
         "bindings/clojure/src/vinary_tree/liblevenshtein.clj",
