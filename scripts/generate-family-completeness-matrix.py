@@ -210,8 +210,13 @@ def main() -> int:
         clean(language.get("packageManager"), f"{identifier}.packageManager")
         clean(language.get("hostIdioms"), f"{identifier}.hostIdioms")
         language_by_id[identifier] = language
-    if "raku" not in language_by_id or "rust" not in language_by_id:
-        fail("the family inventory must include both native Rust and Raku")
+    required_campaign_languages = {"rust", "raku", "julia"}
+    missing_campaign_languages = required_campaign_languages - set(language_by_id)
+    if missing_campaign_languages:
+        fail(
+            "the family inventory is missing required campaign languages: "
+            + ", ".join(sorted(missing_campaign_languages))
+        )
 
     rows: list[str] = []
     seen_projects: set[str] = set()

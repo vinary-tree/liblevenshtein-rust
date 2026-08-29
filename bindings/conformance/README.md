@@ -40,9 +40,9 @@ iterators, or Raku `NativeCall` plus `Iterable`.
 One matrix row has the stable identity
 $`(p, l, c) \in P \times L \times C_p`$, where $`P`$ is the project set,
 $`L`$ is the language set, and $`C_p`$ is project $`p`$'s public capability
-catalog. The initial inventory contains 8 projects, 21 languages—including
-native Rust and Raku—and 64 project-owned capabilities, producing
-$`21 \sum_{p \in P} |C_p| = 1{,}344`$ explicit cells.
+catalog. The inventory contains 8 projects, 22 languages—including native
+Rust, Raku, and Julia—and 64 project-owned capabilities, producing
+$`22 \sum_{p \in P} |C_p| = 1{,}408`$ explicit cells.
 
 Each row also records:
 
@@ -107,7 +107,7 @@ unfinished state as visible work.
 [`family-bindings.json`](family-bindings.json) is the reviewed input model.
 [`generate-family-completeness-matrix.py`](../../scripts/generate-family-completeness-matrix.py)
 validates project roots and evidence paths, rejects duplicate or unknown cells,
-requires Rust and Raku to remain explicit languages, requires the complete
+requires Rust, Raku, and Julia to remain explicit languages, requires the complete
 canonical documentation-topic sequence, derives the aggregate documentation
 state from those topic states, and emits the TSV in a deterministic
 project/capability/language order.

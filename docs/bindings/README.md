@@ -89,6 +89,7 @@ never such a proof.
 | Haskell | [guide](../../bindings/haskell/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/haskell/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/haskell/README.md) |
 | Lua | [guide](../../bindings/lua/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/lua/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/lua/README.md) |
 | Raku | — | — | — | — | — | — |
+| Julia | — | — | — | — | — | — |
 
 The `llattice` crate currently ships only its optimized native Rust API. That
 is the observed state, not a permanent inapplicability decision: the follow-up
