@@ -28,24 +28,6 @@ import (
 	interop "github.com/vinary-tree/vinary-tree-interop/bindings/go/v4"
 )
 
-// Algorithm selects the edit operation set.
-type Algorithm uint32
-
-const (
-	Standard Algorithm = iota
-	Transposition
-	MergeAndSplit
-	DamerauLevenshtein
-)
-
-// QueryOrder controls result ordering.
-type QueryOrder uint32
-
-const (
-	Traversal QueryOrder = iota
-	DistanceThenTerm
-)
-
 // UnitDomain identifies the native term representation.
 type UnitDomain uint32
 
@@ -57,7 +39,7 @@ const (
 
 // Error is a stable native ABI failure.
 type Error struct {
-	Status  uint32
+	Status  Status
 	Message string
 }
 
@@ -69,7 +51,7 @@ func check(status C.LlevStatus) error {
 	if status == C.LLEV_STATUS_OK {
 		return nil
 	}
-	return &Error{Status: uint32(status), Message: C.GoString(C.llev_last_error_message())}
+	return &Error{Status: Status(status), Message: C.GoString(C.llev_last_error_message())}
 }
 
 func bytesPointer(value []byte) *C.uint8_t {
@@ -88,7 +70,7 @@ func Distance(source, target string) uint {
 	return uint(result)
 }
 
-// DistanceThreshold returns threshold+1 when the distance exceeds threshold.
+// DistanceThreshold returns ^uint(0)-1 when the distance exceeds threshold.
 func DistanceThreshold(source, target string, threshold uint) uint {
 	left, right := []byte(source), []byte(target)
 	result := C.llev_distance_threshold((*C.char)(unsafe.Pointer(bytesPointer(left))), C.size_t(len(left)), (*C.char)(unsafe.Pointer(bytesPointer(right))), C.size_t(len(right)), C.size_t(threshold))
@@ -106,7 +88,7 @@ func DamerauDistance(source, target string) uint {
 	return uint(result)
 }
 
-// DamerauDistanceThreshold returns threshold+1 when the adjacent-transposition
+// DamerauDistanceThreshold returns ^uint(0)-1 when the adjacent-transposition
 // distance exceeds threshold.
 func DamerauDistanceThreshold(source, target string, threshold uint) uint {
 	left, right := []byte(source), []byte(target)
@@ -125,7 +107,7 @@ func TrueDamerauDistance(source, target string) uint {
 	return uint(result)
 }
 
-// TrueDamerauDistanceThreshold returns threshold+1 when unrestricted distance
+// TrueDamerauDistanceThreshold returns ^uint(0)-1 when unrestricted distance
 // exceeds threshold.
 func TrueDamerauDistanceThreshold(source, target string, threshold uint) uint {
 	left, right := []byte(source), []byte(target)
@@ -411,14 +393,6 @@ func (p *PhoneticPattern) Close() error {
 	}
 	return nil
 }
-
-// PhoneticRuleSetKind identifies a built-in rewrite-rule set.
-type PhoneticRuleSetKind uint32
-
-const (
-	EnglishOrthography PhoneticRuleSetKind = iota
-	EnglishPhonetic
-)
 
 // PhoneticRuleSet is a reusable fixed-point rewrite program.
 type PhoneticRuleSet struct {

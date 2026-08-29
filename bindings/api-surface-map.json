@@ -839,28 +839,31 @@
     "go": {
       "binding": "c-abi",
       "sourceFiles": [
-        "bindings/go/liblevenshtein.go"
+        "bindings/go/liblevenshtein.go",
+        "bindings/go/generated_enums.go"
       ],
       "readme": "bindings/go/README.md",
       "tests": [
-        "bindings/go/liblevenshtein_test.go"
+        "bindings/go/liblevenshtein_test.go",
+        "bindings/go/property_test.go",
+        "bindings/go/leak_test.go"
       ],
       "enums": {
         "status": {
-          "symbol": "Error.Status",
-          "definedIn": "bindings/go/liblevenshtein.go"
+          "symbol": "Status",
+          "definedIn": "bindings/go/generated_enums.go"
         },
         "algorithm": {
           "symbol": "Algorithm",
-          "definedIn": "bindings/go/liblevenshtein.go"
+          "definedIn": "bindings/go/generated_enums.go"
         },
         "queryOrder": {
           "symbol": "QueryOrder",
-          "definedIn": "bindings/go/liblevenshtein.go"
+          "definedIn": "bindings/go/generated_enums.go"
         },
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
-          "definedIn": "bindings/go/liblevenshtein.go"
+          "definedIn": "bindings/go/generated_enums.go"
         }
       },
       "iterator": {
@@ -885,8 +888,11 @@
           "_reason": "not bound; phonetic availability surfaces at call time as Error with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "Error",
-          "note": "returned failures carry the native message and Status"
+          "symbol": [
+            "Error",
+            "Error.Status"
+          ],
+          "note": "returned failures carry the copied native message and typed forward-compatible Status"
         },
         "llev_string_free": {
           "symbol": null,

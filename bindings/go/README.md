@@ -84,6 +84,7 @@ variants, protocols, or methods.
 | `Distance` | `llev_distance` | standalone exact or thresholded distance |
 | `DistanceThreshold` | `llev_distance_threshold` | standalone exact or thresholded distance |
 | `Error` | `llev_last_error_message` | typed failure diagnostics |
+| `Error.Status` | `llev_last_error_message` | typed failure diagnostics |
 | `Iterator.Close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `Iterator.Next` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `NewTransducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
@@ -106,7 +107,7 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `Error.Status` | Typed native status or error carrier | Public facade type |
+| `Status` | Typed native status or error carrier | Public facade type |
 | `Algorithm` | Edit-distance algorithm selection | Public facade type |
 | `QueryOrder` | Result traversal ordering | Public facade type |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |
