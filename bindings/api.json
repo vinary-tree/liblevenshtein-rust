@@ -574,6 +574,7 @@
     "operationalDocuments": [
       "docs/bindings/PERFORMANCE_EXPERIMENTS.md",
       "docs/bindings/c-abi-reference.md",
+      "docs/bindings/package-documentation-publication.md",
       "docs/bindings/resource-consumer.md",
       "docs/bindings/wasm-topology.md",
       "docs/releasing-language-bindings.md"

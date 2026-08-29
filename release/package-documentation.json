@@ -1,0 +1,439 @@
+{
+  "schemaVersion": 1,
+  "component": "liblevenshtein",
+  "canonicalVersion": "4.0.0-rc.5",
+  "sourceRef": "v4.0.0-rc.5",
+  "sourceRepository": "https://github.com/vinary-tree/liblevenshtein-rust",
+  "observedAt": "2026-08-29",
+  "packages": [
+    {
+      "id": "rust",
+      "languages": ["Rust"],
+      "ecosystem": "crates.io/docs.rs",
+      "coordinate": "liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["Cargo.toml", "src/lib.rs"],
+      "registryReadback": {
+        "url": "https://docs.rs/liblevenshtein/4.0.0-rc.5/liblevenshtein/",
+        "markers": ["liblevenshtein", "4.0.0-rc.5"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "docs.rs crate landing page",
+          "url": "https://docs.rs/liblevenshtein/4.0.0-rc.5/liblevenshtein/",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "markers": ["liblevenshtein", "4.0.0-rc.5"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "rustdoc on docs.rs",
+          "url": "https://docs.rs/liblevenshtein/4.0.0-rc.5/liblevenshtein/",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "markers": ["liblevenshtein", "4.0.0-rc.5"]
+        }
+      ]
+    },
+    {
+      "id": "native-c-cpp",
+      "languages": ["C", "C++"],
+      "ecosystem": "CMake/pkg-config/GitHub Releases",
+      "coordinate": "liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["include/liblevenshtein.h", "include/liblevenshtein.hpp", "bindings/c/README.md", "bindings/cpp/README.md"],
+      "registryReadback": {
+        "url": "https://api.github.com/repos/vinary-tree/liblevenshtein-rust/releases/tags/v4.0.0-rc.5",
+        "markers": ["v4.0.0-rc.5", "liblevenshtein-4.0.0-rc.5-x86_64-unknown-linux-gnu.tar.gz"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "immutable GitHub source guide",
+          "url": "https://github.com/vinary-tree/liblevenshtein-rust/blob/v4.0.0-rc.5/bindings/c/README.md",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "readbackUrl": "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/v4.0.0-rc.5/bindings/c/README.md",
+          "markers": ["Vinary Tree C interop binding", "liblevenshtein"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "versioned Doxygen",
+          "state": "missing",
+          "reason": "No public versioned Doxygen deployment exists for the released C and C++ headers."
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "languages": ["Python"],
+      "ecosystem": "PyPI",
+      "coordinate": "liblevenshtein",
+      "registryVersion": "4.0.0rc5",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/python/pyproject.toml", "bindings/python/README.md", "bindings/python/src/liblevenshtein/__init__.py"],
+      "registryReadback": {
+        "url": "https://pypi.org/pypi/liblevenshtein/4.0.0rc5/json",
+        "markers": ["liblevenshtein", "4.0.0rc5", "Transducer"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "PyPI project description",
+          "url": "https://pypi.org/project/liblevenshtein/4.0.0rc5/",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "readbackUrl": "https://pypi.org/pypi/liblevenshtein/4.0.0rc5/json",
+          "markers": ["Transducer", "QueryCursor"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "versioned pdoc",
+          "state": "missing",
+          "reason": "No public versioned pdoc deployment exists for the released Python facade."
+        }
+      ]
+    },
+    {
+      "id": "jvm-java",
+      "languages": ["Java"],
+      "ecosystem": "Maven Central/javadoc.io",
+      "coordinate": "io.vinarytree:liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/jvm/build.gradle.kts", "bindings/jvm/README.md", "bindings/jvm/src/main/java"],
+      "registryReadback": {
+        "url": "https://repo1.maven.org/maven2/io/vinarytree/liblevenshtein/4.0.0-rc.5/liblevenshtein-4.0.0-rc.5-javadoc.jar",
+        "markers": []
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "Maven Central POM and immutable JVM guide",
+          "url": "https://github.com/vinary-tree/liblevenshtein-rust/blob/v4.0.0-rc.5/bindings/jvm/README.md",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "readbackUrl": "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/v4.0.0-rc.5/bindings/jvm/README.md",
+          "markers": ["JVM binding", "try-with-resources"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "Javadoc on javadoc.io",
+          "url": "https://javadoc.io/doc/io.vinarytree/liblevenshtein/4.0.0-rc.5/index.html",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "markers": []
+        }
+      ]
+    },
+    {
+      "id": "jvm-kotlin-scala",
+      "languages": ["Kotlin", "Scala"],
+      "ecosystem": "Maven Central",
+      "coordinate": "io.vinarytree:liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/jvm/README.md", "bindings/jvm/src/main/java"],
+      "registryReadback": {
+        "url": "https://repo1.maven.org/maven2/io/vinarytree/liblevenshtein/4.0.0-rc.5/liblevenshtein-4.0.0-rc.5.pom",
+        "markers": ["io.vinarytree", "liblevenshtein", "4.0.0-rc.5"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "immutable JVM guide",
+          "url": "https://github.com/vinary-tree/liblevenshtein-rust/blob/v4.0.0-rc.5/bindings/jvm/README.md",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "readbackUrl": "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/v4.0.0-rc.5/bindings/jvm/README.md",
+          "markers": ["Kotlin", "Scala"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "Dokka and Scaladoc",
+          "state": "missing",
+          "reason": "The released JVM artifact has Javadoc but no language-specific Dokka or Scaladoc deployment."
+        }
+      ]
+    },
+    {
+      "id": "clojure",
+      "languages": ["Clojure"],
+      "ecosystem": "Clojars/cljdoc",
+      "coordinate": "io.vinarytree/liblevenshtein-clojure",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/clojure/project.clj", "bindings/clojure/README.md", "bindings/clojure/src/vinary_tree/liblevenshtein.clj"],
+      "registryReadback": {
+        "url": "https://repo.clojars.org/io/vinarytree/liblevenshtein-clojure/4.0.0-rc.5/liblevenshtein-clojure-4.0.0-rc.5.pom",
+        "markers": ["liblevenshtein-clojure", "4.0.0-rc.5"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "cljdoc",
+          "url": "https://cljdoc.org/d/io.vinarytree/liblevenshtein-clojure/4.0.0-rc.5",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "markers": ["4.0.0-rc.5", "vinary-tree.liblevenshtein"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "cljdoc namespace API",
+          "url": "https://cljdoc.org/d/io.vinarytree/liblevenshtein-clojure/4.0.0-rc.5/api/vinary-tree.liblevenshtein",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "markers": ["vinary-tree.liblevenshtein", "transducer"]
+        }
+      ]
+    },
+    {
+      "id": "javascript",
+      "languages": ["JavaScript", "TypeScript", "ClojureScript"],
+      "ecosystem": "npm",
+      "coordinate": "@vinary-tree/liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/javascript/package.json", "bindings/javascript/README.md", "bindings/javascript/index.d.ts", "bindings/javascript/typedoc.json"],
+      "registryReadback": {
+        "url": "https://registry.npmjs.org/@vinary-tree%2fliblevenshtein/4.0.0-rc.5",
+        "markers": ["@vinary-tree/liblevenshtein", "4.0.0-rc.5"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "npm package README",
+          "state": "missing",
+          "reason": "The RC5 tarball contains README.md, but npm's public package metadata retained an empty readme field, so the package page has no verifiable rendered guide."
+        },
+        {
+          "kind": "api-reference",
+          "service": "TypeDoc",
+          "state": "build-only",
+          "reason": "The immutable release workflow now builds and uploads TypeDoc, but no protected public deployment has published that artifact yet.",
+          "buildEvidence": ["bindings/javascript/typedoc.json", ".github/workflows/release.yml"]
+        }
+      ]
+    },
+    {
+      "id": "dotnet",
+      "languages": ["C#", "F#"],
+      "ecosystem": "NuGet",
+      "coordinate": "Liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj", "bindings/dotnet/README.md"],
+      "registryReadback": {
+        "url": "https://api.nuget.org/v3-flatcontainer/liblevenshtein/index.json",
+        "markers": ["4.0.0-rc.5"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "NuGet package README",
+          "url": "https://www.nuget.org/packages/Liblevenshtein/4.0.0-rc.5",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "readbackUrl": "https://api.nuget.org/v3-flatcontainer/liblevenshtein/index.json",
+          "markers": ["4.0.0-rc.5"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "versioned DocFX",
+          "state": "missing",
+          "reason": "The NuGet archive contains compiler XML documentation, but no public browsable DocFX deployment exists."
+        }
+      ]
+    },
+    {
+      "id": "go",
+      "languages": ["Go"],
+      "ecosystem": "Go module proxy/pkg.go.dev",
+      "coordinate": "github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4",
+      "registryVersion": "v4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/go/go.mod", "bindings/go/README.md", "bindings/go/liblevenshtein.go"],
+      "registryReadback": {
+        "url": "https://pkg.go.dev/github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4@v4.0.0-rc.5",
+        "markers": ["liblevenshtein", "v4.0.0-rc.5"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "pkg.go.dev overview",
+          "url": "https://pkg.go.dev/github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4@v4.0.0-rc.5",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "markers": ["liblevenshtein", "v4.0.0-rc.5"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "pkg.go.dev generated API",
+          "url": "https://pkg.go.dev/github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4@v4.0.0-rc.5",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "markers": ["Transducer", "Iterator"]
+        }
+      ]
+    },
+    {
+      "id": "swift",
+      "languages": ["Swift"],
+      "ecosystem": "Swift Package Manager/Swift Package Index",
+      "coordinate": "Liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["Package.swift", "bindings/swift/README.md", "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"],
+      "registryReadback": {
+        "url": "https://api.github.com/repos/vinary-tree/liblevenshtein-rust/git/ref/tags/v4.0.0-rc.5",
+        "markers": ["refs/tags/v4.0.0-rc.5"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "immutable Swift guide",
+          "url": "https://github.com/vinary-tree/liblevenshtein-rust/blob/v4.0.0-rc.5/bindings/swift/README.md",
+          "state": "verified",
+          "verifiedAt": "2026-08-29",
+          "readbackUrl": "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/v4.0.0-rc.5/bindings/swift/README.md",
+          "markers": ["Swift bindings", "Sequence"]
+        },
+        {
+          "kind": "api-reference",
+          "service": "Swift Package Index DocC",
+          "state": "missing",
+          "reason": "The released SwiftPM tag is public, but the package has no verified Swift Package Index DocC page."
+        }
+      ]
+    },
+    {
+      "id": "ruby",
+      "languages": ["Ruby"],
+      "ecosystem": "RubyGems/RubyDoc.info",
+      "coordinate": "liblevenshtein",
+      "registryVersion": "4.0.0.rc.5",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/ruby/liblevenshtein.gemspec", "bindings/ruby/README.md", "bindings/ruby/lib/vinary_tree/liblevenshtein.rb"],
+      "registryReadback": {
+        "url": "https://rubygems.org/api/v2/rubygems/liblevenshtein/versions/4.0.0.rc.5.json",
+        "markers": ["liblevenshtein", "4.0.0.rc.5"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "RubyGems metadata",
+          "state": "missing",
+          "reason": "The released gem has no documentation_uri and its registry page does not render the complete binding guide."
+        },
+        {
+          "kind": "api-reference",
+          "service": "RubyDoc.info/RDoc",
+          "state": "missing",
+          "reason": "RubyDoc.info returns 404 for liblevenshtein 4.0.0.rc.5."
+        }
+      ]
+    },
+    {
+      "id": "lua",
+      "languages": ["Lua"],
+      "ecosystem": "LuaRocks",
+      "coordinate": "liblevenshtein",
+      "registryVersion": "4.0.0rc5-1",
+      "releaseState": "released",
+      "sourceEvidence": ["bindings/lua/liblevenshtein-4.0.0rc5-1.rockspec", "bindings/lua/README.md", "bindings/lua/src/liblevenshtein_lua.c"],
+      "registryReadback": {
+        "url": "https://luarocks.org/modules/dylon/liblevenshtein/4.0.0rc5-1",
+        "markers": ["liblevenshtein", "4.0.0rc5-1"]
+      },
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "LuaRocks module page",
+          "state": "missing",
+          "reason": "The public LuaRocks page exposes rock metadata but none of the binding guide's API symbols or examples."
+        },
+        {
+          "kind": "api-reference",
+          "service": "versioned Lua API reference",
+          "state": "missing",
+          "reason": "No public generated Lua API reference exists."
+        }
+      ]
+    },
+    {
+      "id": "ocaml",
+      "languages": ["OCaml"],
+      "ecosystem": "opam/ocaml.org",
+      "coordinate": "liblevenshtein",
+      "registryVersion": "4.0.0~rc5",
+      "releaseState": "pending-publication",
+      "sourceEvidence": ["bindings/ocaml/liblevenshtein.opam", "bindings/ocaml/README.md", "bindings/ocaml/vinary_tree_liblevenshtein.mli"],
+      "releaseProof": "The immutable GitHub prerelease contains the opam candidate, but opam.ocaml.org returned 404 on 2026-08-29 because the upstream opam-repository contribution is not merged.",
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "ocaml.org package documentation",
+          "state": "missing",
+          "reason": "Upstream opam publication has not completed."
+        },
+        {
+          "kind": "api-reference",
+          "service": "odoc on ocaml.org",
+          "state": "missing",
+          "reason": "Upstream opam publication has not completed."
+        }
+      ]
+    },
+    {
+      "id": "haskell",
+      "languages": ["Haskell"],
+      "ecosystem": "Hackage/Haddock",
+      "coordinate": "liblevenshtein",
+      "registryVersion": "4.0.0",
+      "releaseState": "candidate-only",
+      "sourceEvidence": ["bindings/haskell/liblevenshtein.cabal", "bindings/haskell/README.md", "bindings/haskell/src/VinaryTree/Liblevenshtein.hsc"],
+      "releaseProof": "Hackage versions are numeric-only; publishing the 4.0.0 candidate during RC5 would consume the future final coordinate.",
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "Hackage",
+          "state": "deferred",
+          "reason": "The package is an explicitly non-published RC candidate."
+        },
+        {
+          "kind": "api-reference",
+          "service": "Haddock on Hackage",
+          "state": "deferred",
+          "reason": "The package is an explicitly non-published RC candidate."
+        }
+      ]
+    },
+    {
+      "id": "fortran",
+      "languages": ["Fortran"],
+      "ecosystem": "fpm registry",
+      "coordinate": "liblevenshtein",
+      "registryVersion": "4.0.0",
+      "releaseState": "candidate-only",
+      "sourceEvidence": ["bindings/fortran/fpm.toml", "bindings/fortran/README.md", "bindings/fortran/src/vinary_tree_liblevenshtein.f90"],
+      "releaseProof": "fpm versions are numeric-only; publishing the 4.0.0 candidate during RC5 would consume the future final coordinate.",
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "fpm package page",
+          "state": "deferred",
+          "reason": "The package is an explicitly non-published RC candidate."
+        },
+        {
+          "kind": "api-reference",
+          "service": "versioned FORD reference",
+          "state": "missing",
+          "reason": "No generated FORD reference is built or deployed yet."
+        }
+      ]
+    }
+  ]
+}

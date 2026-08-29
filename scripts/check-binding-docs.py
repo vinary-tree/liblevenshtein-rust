@@ -430,6 +430,14 @@ def main() -> None:
         check=True,
     )
     subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "check-package-documentation.py"),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+    subprocess.run(
         [sys.executable, str(ROOT / DOCS["generator"]), "--check"],
         cwd=ROOT,
         check=True,
