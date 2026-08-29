@@ -322,6 +322,52 @@ RUST_DOCS = {
     "phoneticRuleSetKind": "Built-in phonetic rewrite-rule set.",
 }
 
+JAVA_ENUM_NAMES = {
+    "status": "Status",
+    "algorithm": "Algorithm",
+    "queryOrder": "QueryOrder",
+    "phoneticRuleSetKind": "PhoneticRuleSetKind",
+}
+
+JAVA_ENUM_DOCS = {
+    "status": "Result of a fallible native operation.",
+    "algorithm": "Edit-distance algorithm.",
+    "queryOrder": "Lazy result ordering.",
+    "phoneticRuleSetKind": "Built-in phonetic rewrite-rule set.",
+}
+
+JAVA_VALUE_DOCS = {
+    "status": {
+        "OK": "The operation completed successfully.",
+        "END": "A finite cursor reached the end of its stream.",
+        "INVALID_ARGUMENT": "An argument violated the operation's contract.",
+        "INVALID_UTF8": "Input advertised as text was not valid UTF-8.",
+        "NULL_POINTER": "A required native pointer was null.",
+        "PANIC": "A contained Rust panic crossed the failure boundary.",
+        "UNSUPPORTED": "The requested capability is unavailable in this build.",
+        "IO_ERROR": "An input/output operation failed.",
+        "CLOSED": "The target resource was already closed.",
+        "LIMIT_EXCEEDED": "A configured resource or traversal limit was exceeded.",
+        "PROVIDER_ERROR": "A foreign dictionary provider reported a failure.",
+        "BATCH_IN_USE": "A cursor was advanced while its previous batch remained borrowed.",
+        "DOMAIN_MISMATCH": "The query and dictionary use different unit domains.",
+    },
+    "algorithm": {
+        "STANDARD": "Standard insert/delete/substitute distance.",
+        "TRANSPOSITION": "Optimal string alignment with adjacent transposition.",
+        "MERGE_AND_SPLIT": "Merge-and-split edit distance.",
+        "DAMERAU_LEVENSHTEIN": "Unrestricted Damerau-Levenshtein distance.",
+    },
+    "queryOrder": {
+        "TRAVERSAL": "Provider traversal order with bounded buffering.",
+        "DISTANCE_THEN_TERM": "Distance then term, buffering at most one distance layer.",
+    },
+    "phoneticRuleSetKind": {
+        "ENGLISH_ORTHOGRAPHY": "English orthography normalization.",
+        "ENGLISH_PHONETIC": "English phonetic transformation.",
+    },
+}
+
 
 def render_rust(model: dict) -> str:
     lines = [
@@ -407,6 +453,83 @@ def render_java(model: dict) -> str:
     return "\n".join(lines)
 
 
+def render_java_enum(model: dict, key: str) -> str:
+    """Render one public JVM enum from the language-neutral ABI model."""
+
+    enum = model["enums"][key]
+    class_name = JAVA_ENUM_NAMES[key]
+    lines = [
+        f"package {model['organization']['javaPackage']};",
+        "",
+        f"/** {JAVA_ENUM_DOCS[key]}",
+        f" * <p>{NOTICE}",
+        " */",
+        f"public enum {class_name} {{",
+    ]
+    descriptions = JAVA_VALUE_DOCS.get(key, {})
+    values = list(enum["values"].items())
+    for index, (name, value) in enumerate(values):
+        description = descriptions.get(
+            name, name.lower().replace("_", " ").capitalize() + "."
+        )
+        separator = "," if index + 1 < len(values) or key == "status" else ";"
+        lines.extend([f"    /** {description} */", f"    {name}({value}){separator}"])
+    if key == "status":
+        lines.extend(
+            [
+                "    /** A status introduced by a newer compatible ABI revision. */",
+                "    UNKNOWN(-1);",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "    private final int nativeValue;",
+            "",
+            f"    {class_name}(int nativeValue) {{",
+            "        this.nativeValue = nativeValue;",
+            "    }",
+            "",
+        ]
+    )
+    if key == "status":
+        lines.extend(
+            [
+                "    /**",
+                "     * Return this known status's stable numeric ABI value.",
+                "     *",
+                "     * <p>{@link #UNKNOWN} returns {@code -1}; use",
+                "     * {@link NativeException#statusCode()} to recover an unknown status's",
+                "     * original forward-compatible value.",
+                "     *",
+                "     * @return stable ABI value, or {@code -1} for {@link #UNKNOWN}",
+                "     */",
+                "    public int code() {",
+                "        return nativeValue;",
+                "    }",
+                "",
+                "    static Status fromNativeValue(int value) {",
+                "        return switch (value) {",
+            ]
+        )
+        for name, value in values:
+            lines.append(f"            case {value} -> {name};")
+        lines.extend(
+            ["            default -> UNKNOWN;", "        };", "    }", "}", ""]
+        )
+    else:
+        lines.extend(
+            [
+                "    int nativeValue() {",
+                "        return nativeValue;",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def render_typescript(model: dict) -> str:
     lines = [
         f"/** {NOTICE} */",
@@ -481,6 +604,7 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
     lua_header = (INTEROP_ROOT / "bindings" / "lua" / "vinary_tree_lua.h").read_text(
         encoding="utf-8"
     )
+    java_source_root = ROOT / "bindings" / "jvm" / "src" / "main" / "java" / java_path
     generated = {
         ROOT / "include" / "liblevenshtein_abi.h": render_c(model),
         ROOT / "src" / "ffi" / "generated.rs": render_rust(model),
@@ -490,14 +614,13 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
         / "src"
         / "liblevenshtein"
         / "_generated.py": render_python(model),
-        ROOT
-        / "bindings"
-        / "jvm"
-        / "src"
-        / "main"
-        / "java"
-        / java_path
-        / "GeneratedAbi.java": render_java(model),
+        java_source_root / "GeneratedAbi.java": render_java(model),
+        java_source_root / "Status.java": render_java_enum(model, "status"),
+        java_source_root / "Algorithm.java": render_java_enum(model, "algorithm"),
+        java_source_root / "QueryOrder.java": render_java_enum(model, "queryOrder"),
+        java_source_root / "PhoneticRuleSetKind.java": render_java_enum(
+            model, "phoneticRuleSetKind"
+        ),
         ROOT / "bindings" / "javascript" / "abi.d.ts": render_typescript(model),
         ROOT / "bindings" / "conformance" / "query_start_snapshot.tsv": render_fixture(
             model

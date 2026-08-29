@@ -15,8 +15,13 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class ResourceSnapshotSmoke {
     private ResourceSnapshotSmoke() {}
 
-    /** Run the long-lived cursor fixture, throwing on any contract violation. */
+    /** Run the complete public-facade fixture, throwing on any contract violation. */
     public static void verify() {
+        verifySelectorsErrorsPhoneticsAndLifecycle();
+        verifySnapshotIsolation();
+    }
+
+    private static void verifySnapshotIsolation() {
         AtomicReference<TrieSnapshot> current = new AtomicReference<>(initial());
         List<Match> frozen;
         Match first;
@@ -53,6 +58,149 @@ public final class ResourceSnapshotSmoke {
             if (frozen.equals(sorted(drain(transducer.query("cat", 2))))) {
                 throw new AssertionError("fresh cursor did not observe the new revision");
             }
+        }
+    }
+
+    private static void verifySelectorsErrorsPhoneticsAndLifecycle() {
+        AtomicReference<TrieSnapshot> current = new AtomicReference<>(selectorFixture());
+        try (UnicodeDictionaryResource dictionary =
+                new UnicodeDictionaryResource(current::get)) {
+            List<Match> standard = query(
+                    dictionary, Algorithm.STANDARD, "ba", 1, QueryOrder.TRAVERSAL);
+            require(!contains(standard, "ab", 1),
+                    "standard distance unexpectedly accepted a transposition");
+
+            List<Match> transposition = query(
+                    dictionary, Algorithm.TRANSPOSITION, "ba", 1, QueryOrder.TRAVERSAL);
+            require(contains(transposition, "ab", 1),
+                    "transposition algorithm did not accept an adjacent swap");
+
+            List<Match> mergeAndSplit = query(
+                    dictionary, Algorithm.MERGE_AND_SPLIT, "ab", 1, QueryOrder.TRAVERSAL);
+            require(contains(mergeAndSplit, "c", 1),
+                    "merge-and-split algorithm did not accept its distinguishing edit");
+
+            List<Match> damerau = query(
+                    dictionary,
+                    Algorithm.DAMERAU_LEVENSHTEIN,
+                    "ca",
+                    2,
+                    QueryOrder.TRAVERSAL);
+            require(contains(damerau, "abc", 2),
+                    "unrestricted Damerau-Levenshtein did not accept its distinguishing edit");
+
+            List<Match> traversal = query(
+                    dictionary, Algorithm.STANDARD, "cat", 1, QueryOrder.TRAVERSAL);
+            List<Match> ranked = query(
+                    dictionary,
+                    Algorithm.STANDARD,
+                    "cat",
+                    1,
+                    QueryOrder.DISTANCE_THEN_TERM);
+            require(describe(traversal).equals(List.of("bat:1", "cat:0", "cats:1")),
+                    "traversal query order changed: " + describe(traversal));
+            require(describe(ranked).equals(List.of("cat:0", "bat:1", "cats:1")),
+                    "distance-then-term query order changed: " + describe(ranked));
+
+            try (PhoneticPattern regex = PhoneticPattern.compileRegex("c[ao]t")) {
+                require(regex.matches("cat"), "regex pattern rejected cat");
+                require(!regex.matches("cut"), "regex pattern accepted cut");
+            }
+            try (PhoneticPattern llre = PhoneticPattern.compileLlre(
+                    "@name \"Greeting\"\n^hello$")) {
+                require(llre.matches("hello"), "LLRE pattern rejected hello");
+                require(!llre.matches("world"), "LLRE pattern accepted world");
+            }
+
+            try (PhoneticRuleSet parsed =
+                    PhoneticRuleSet.parse("ph -> f\ngh ->\n")) {
+                require(parsed.size() == 2, "parsed rule count changed");
+                require(parsed.apply("phgh").equals("f"), "parsed rewrite result changed");
+            }
+            for (PhoneticRuleSetKind kind : PhoneticRuleSetKind.values()) {
+                try (PhoneticRuleSet builtin = PhoneticRuleSet.builtin(kind)) {
+                    require(builtin.size() > 0, "built-in phonetic rule set is empty: " + kind);
+                    require(!builtin.apply("phone").isEmpty(),
+                            "built-in phonetic rewrite returned an empty result: " + kind);
+                }
+            }
+
+            verifyTypedNativeError();
+            verifyExplicitLifecycleGuards(dictionary);
+        }
+    }
+
+    private static List<Match> query(
+            UnicodeDictionaryResource dictionary,
+            Algorithm algorithm,
+            String input,
+            long maximumDistance,
+            QueryOrder order) {
+        try (Transducer transducer = new Transducer(dictionary, algorithm)) {
+            return drain(transducer.query(input, maximumDistance, order));
+        }
+    }
+
+    private static boolean contains(List<Match> matches, String term, long distance) {
+        return matches.stream().anyMatch(match ->
+                text(match).equals(term) && match.distance() == distance);
+    }
+
+    private static List<String> describe(List<Match> matches) {
+        return matches.stream()
+                .map(match -> text(match) + ":" + match.distance())
+                .toList();
+    }
+
+    private static void verifyTypedNativeError() {
+        try (PhoneticPattern ignored = PhoneticPattern.compileRegex("(")) {
+            throw new AssertionError("invalid regex unexpectedly compiled");
+        } catch (NativeException failure) {
+            require(failure.status() == Status.INVALID_ARGUMENT,
+                    "invalid regex returned status " + failure.status());
+            require(failure.statusCode() == Status.INVALID_ARGUMENT.code(),
+                    "typed and raw native statuses disagree");
+            require(failure.getMessage() != null && !failure.getMessage().isBlank(),
+                    "native failure omitted its copied diagnostic");
+        }
+    }
+
+    private static void verifyExplicitLifecycleGuards(
+            UnicodeDictionaryResource dictionary) {
+        Transducer transducer = new Transducer(dictionary, Algorithm.STANDARD);
+        QueryCursor cursor = transducer.query("cat", 1);
+        cursor.close();
+        cursor.close();
+        expectClosed(cursor::hasNext, "query cursor");
+        transducer.close();
+        transducer.close();
+        expectClosed(() -> transducer.query("cat", 1), "transducer");
+
+        PhoneticPattern pattern = PhoneticPattern.compileRegex("cat");
+        pattern.close();
+        pattern.close();
+        expectClosed(() -> pattern.matches("cat"), "phonetic pattern");
+
+        PhoneticRuleSet rules =
+                PhoneticRuleSet.builtin(PhoneticRuleSetKind.ENGLISH_ORTHOGRAPHY);
+        rules.close();
+        rules.close();
+        expectClosed(rules::size, "phonetic rule set");
+    }
+
+    private static void expectClosed(Runnable operation, String resource) {
+        try {
+            operation.run();
+            throw new AssertionError(resource + " accepted use after close");
+        } catch (IllegalStateException expected) {
+            require(expected.getMessage() != null && expected.getMessage().contains("closed"),
+                    resource + " closed-handle diagnostic is not actionable");
+        }
+    }
+
+    private static void require(boolean condition, String message) {
+        if (!condition) {
+            throw new AssertionError(message);
         }
     }
 
@@ -103,6 +251,17 @@ public final class ResourceSnapshotSmoke {
         values.put("cit", OptionalLong.of(5));
         values.put("cut", OptionalLong.of(30));
         values.put("scat", OptionalLong.empty());
+        return new TrieSnapshot(values);
+    }
+
+    private static TrieSnapshot selectorFixture() {
+        Map<String, OptionalLong> values = new LinkedHashMap<>();
+        values.put("ab", OptionalLong.of(1));
+        values.put("c", OptionalLong.of(2));
+        values.put("abc", OptionalLong.of(3));
+        values.put("bat", OptionalLong.of(4));
+        values.put("cat", OptionalLong.of(5));
+        values.put("cats", OptionalLong.of(6));
         return new TrieSnapshot(values);
     }
 

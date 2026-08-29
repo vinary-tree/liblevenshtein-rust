@@ -1507,6 +1507,7 @@
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Match.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Term.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/AutomatonSize.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Status.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeException.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeLibraryLoader.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/GeneratedAbi.java"
@@ -1519,9 +1520,9 @@
       ],
       "enums": {
         "status": {
-          "symbol": "NativeException.status",
-          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeException.java",
-          "note": "numeric values are generated into GeneratedAbi.java"
+          "symbol": "Status",
+          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Status.java",
+          "note": "generated from bindings/api.json; NativeException.status returns this enum and preserves unknown raw values separately"
         },
         "algorithm": {
           "symbol": "Algorithm",
@@ -1557,8 +1558,13 @@
           "_reason": "not bound; phonetic availability surfaces at call time as NativeException with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "NativeException",
-          "note": "thrown failures carry the native message and status"
+          "symbol": [
+            "NativeException",
+            "NativeException.status",
+            "NativeException.statusCode",
+            "Status.code"
+          ],
+          "note": "thrown failures carry the copied native message, typed status, and exact forward-compatible raw code"
         },
         "llev_string_free": {
           "symbol": null,
