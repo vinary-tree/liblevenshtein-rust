@@ -480,9 +480,17 @@ visible at query start. Closing the original dictionary or publishing later
 mutations cannot invalidate that query. Acquisition either completes with one
 owned retain or fails with no ownership transfer. Teardown order is therefore
 free across dictionary, transducer, and completed query handles."""
-        performance = """- Reuse transducers for repeated queries against the same resource.
+        reducer_exposed = (
+            SURFACE_MODEL["languages"][key or ""]["reducer"].get("symbol") is not None
+        )
+        traversal_performance = (
+            "- Prefer batch/reducer APIs when per-match boundary crossings dominate."
+            if reducer_exposed
+            else "- Drain each cursor once; the iterator already fetches bounded native batches before materializing host-owned matches."
+        )
+        performance = f"""- Reuse transducers for repeated queries against the same resource.
 - Prefer streaming cursors to whole-result materialization.
-- Prefer batch/reducer APIs when per-match boundary crossings dominate.
+{traversal_performance}
 - Keep Unicode, byte, and token domains explicit to avoid transcoding.
 - Measure native, WASM, and WASI paths independently; they have different
   startup and marshalling costs but identical query semantics.
@@ -497,6 +505,13 @@ approximate because all values remain derivable from the retained snapshot."""
         surface_contract = "[`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) and the [generated completeness matrix](../../bindings/conformance/completeness-matrix.tsv)"
 
     surface = "" if interop else facade_surface(key or "")
+    if interop or reducer_exposed:
+        maximum_throughput_use = "The facade batch/reducer protocol"
+    else:
+        maximum_throughput_use = (
+            "Drain the facade iterator; no public reducer is exposed"
+        )
+
     if not interop and key == "javascript":
         batch_rationale = (
             "It amortizes the foreign boundary while returning bounded, "
@@ -510,7 +525,7 @@ closed handles, invalid bounds, allocation failures, provider faults, and
 contained Rust panics remain distinct native causes. The facade preserves their
 diagnostics but intentionally does not promise a public numeric status; branch
 on the JavaScript error class and failing operation, never diagnostic prose."""
-    else:
+    elif interop or reducer_exposed:
         batch_rationale = (
             "It amortizes the foreign boundary and keeps borrowed views inside "
             "one lexical lease."
@@ -518,6 +533,18 @@ on the JavaScript error class and failing operation, never diagnostic prose."""
         result_lifetime = """Borrowed results are intentionally lexical. Copy data that must outlive the
 callback; retaining a raw address, slice, memory segment, or foreign pointer is
 an API violation even when the next operation happens to reuse the same arena."""
+        error_guidance = f"""{failure_scope.capitalize()} are distinct failures. Never parse diagnostic prose to
+branch on an error: inspect the typed status/exception first and treat the
+message as human context. Diagnostics must be copied before another native
+call on the same thread."""
+    else:
+        batch_rationale = (
+            "The iterator still amortizes native calls with bounded internal "
+            "batches, then releases each lease before exposing host-owned matches."
+        )
+        result_lifetime = """Iterator results are copied into host-owned values before their native batch
+lease is released. They remain valid after iteration advances or the cursor is
+closed; no raw pointer or borrowed native view reaches user code."""
         error_guidance = f"""{failure_scope.capitalize()} are distinct failures. Never parse diagnostic prose to
 branch on an error: inspect the typed status/exception first and treat the
 message as human context. Diagnostics must be copied before another native
@@ -575,7 +602,7 @@ a sentinel value that removes a valid input from the domain.
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
 | Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | The facade batch/reducer protocol | {batch_rationale} |
+| Maximum result throughput | {maximum_throughput_use} | {batch_rationale} |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |

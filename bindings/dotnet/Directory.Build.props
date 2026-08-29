@@ -9,5 +9,9 @@
     <!-- Source checkouts consume the decomposed interop project directly.
          Published packages leave this unset and use the exact NuGet dependency. -->
     <VinaryTreeInteropRoot Condition="'$(VinaryTreeInteropRoot)' == '' and Exists('$(MSBuildThisFileDirectory)../../../vinary-tree-interop/bindings/dotnet/src/VinaryTree.Interop/VinaryTree.Interop.csproj')">$(MSBuildThisFileDirectory)../../../vinary-tree-interop</VinaryTreeInteropRoot>
+    <!-- Tests additionally consume the decomposed dictionary producer. Allow
+         release worktrees to select an exact coherent sibling without editing
+         project files or silently falling back to a different checkout. -->
+    <LibdictensteinRoot Condition="'$(LibdictensteinRoot)' == '' and Exists('$(MSBuildThisFileDirectory)../../../libdictenstein/bindings/dotnet/src/VinaryTree.Libdictenstein/VinaryTree.Libdictenstein.csproj')">$(MSBuildThisFileDirectory)../../../libdictenstein</LibdictensteinRoot>
   </PropertyGroup>
 </Project>

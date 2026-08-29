@@ -5,26 +5,6 @@ using VinaryTree.Interop;
 
 namespace VinaryTree.Liblevenshtein;
 
-/// <summary>Edit-distance algorithm used by a transducer.</summary>
-public enum Algorithm : uint
-{
-    /// <summary>Insertion, deletion, and substitution.</summary>
-    Standard = 0,
-    /// <summary>Also recognize adjacent transpositions.</summary>
-    Transposition = 1,
-    /// <summary>Also recognize merge and split edits.</summary>
-    MergeAndSplit = 2,
-    /// <summary>Unrestricted Damerau-Levenshtein edits.</summary>
-    DamerauLevenshtein = 3,
-}
-/// <summary>Result ordering. Traversal order preserves streaming behavior.</summary>
-public enum QueryOrder : uint
-{
-    /// <summary>Lazy dictionary traversal order.</summary>
-    Traversal = 0,
-    /// <summary>Materialized distance-then-term order.</summary>
-    DistanceThenTerm = 1,
-}
 /// <summary>One owned result materialized from a leased native batch.</summary>
 public sealed record Match(object Term, nuint Distance, ulong? Id);
 

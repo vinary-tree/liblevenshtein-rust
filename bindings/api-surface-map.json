@@ -508,30 +508,34 @@
       "binding": "c-abi",
       "sourceFiles": [
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/Native.cs",
+        "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs",
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs",
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/Phonetic.cs",
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/Distance.cs"
       ],
       "readme": "bindings/dotnet/README.md",
       "tests": [
-        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/Program.cs"
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/Program.cs",
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/DictionaryCollectionTests.cs",
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/PropertyTests.cs",
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/LeakTests.cs"
       ],
       "enums": {
         "status": {
-          "symbol": "LiblevenshteinException.StatusCode",
-          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Native.cs"
+          "symbol": "Status",
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         },
         "algorithm": {
           "symbol": "Algorithm",
-          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs"
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         },
         "queryOrder": {
           "symbol": "QueryOrder",
-          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs"
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         },
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
-          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Phonetic.cs"
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         }
       },
       "iterator": {
@@ -556,8 +560,12 @@
           "_reason": "not bound; phonetic availability surfaces at call time as LiblevenshteinException with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "LiblevenshteinException",
-          "note": "thrown failures carry the native message and StatusCode"
+          "symbol": [
+            "LiblevenshteinException",
+            "LiblevenshteinException.Status",
+            "LiblevenshteinException.StatusCode"
+          ],
+          "note": "thrown failures carry the copied native message, typed Status, and exact raw StatusCode"
         },
         "llev_string_free": {
           "symbol": null,
