@@ -56,6 +56,10 @@ RETIRED_PACKAGE_PATTERNS = {
     "vinary-tree-liblevenshtein": re.compile(
         r"(?<![A-Za-z0-9_-])vinary-tree-liblevenshtein(?![A-Za-z0-9_-])"
     ),
+    "bindings/javascript-runtime": re.compile(
+        r"(?<![A-Za-z0-9_/-])bindings/javascript-runtime"
+        r"(?:/|(?=[^A-Za-z0-9_-]|$))"
+    ),
 }
 
 
@@ -278,6 +282,46 @@ def check_citation_ledger() -> None:
             )
 
 
+def check_binding_diagrams() -> None:
+    diagram_root = ROOT / "docs" / "diagrams" / "bindings"
+    sources = {path.with_suffix("") for path in diagram_root.glob("*.puml")}
+    rendered = {path.with_suffix("") for path in diagram_root.glob("*.svg")}
+    missing_svg = sorted(path.with_suffix(".svg") for path in sources - rendered)
+    orphan_svg = sorted(path.with_suffix(".svg") for path in rendered - sources)
+    if missing_svg or orphan_svg:
+        fail(
+            "binding diagram source/render inventory differs: "
+            f"missing={[_relative(path) for path in missing_svg]}, "
+            f"orphaned={[_relative(path) for path in orphan_svg]}"
+        )
+
+    markdown = "\n".join(
+        path.read_text(encoding="utf-8")
+        for root in (ROOT / "docs", ROOT / "bindings")
+        for path in sorted(root.rglob("*.md"))
+    )
+    for stem in sorted(sources):
+        source = stem.with_suffix(".puml")
+        text = source.read_text(encoding="utf-8")
+        for required in (
+            "skinparam backgroundColor #FFFFFF",
+            "skinparam shadowing false",
+            'skinparam defaultFontName "DejaVu Sans"',
+        ):
+            if required not in text:
+                fail(f"{_relative(source)} omits binding diagram style {required!r}")
+        svg_name = stem.with_suffix(".svg").name
+        embed = re.compile(rf"!\[[^\]\n]+\]\([^\)\n]*{re.escape(svg_name)}\)")
+        if embed.search(markdown) is None:
+            fail(
+                f"{_relative(stem.with_suffix('.svg'))} is not embedded in documentation"
+            )
+
+
+def _relative(path: Path) -> str:
+    return str(path.relative_to(ROOT))
+
+
 def public_symbols(facade: str) -> set[str]:
     entry = SURFACE_MODEL["languages"][facade]
     symbols: set[str] = set()
@@ -436,11 +480,25 @@ def main() -> None:
     operational_documents.update(
         {entry["guide"]: read(entry["guide"])[1] for entry in DOCS["facades"].values()}
     )
+    supplemental = DOCS.get("operationalDocuments")
+    if (
+        not isinstance(supplemental, list)
+        or not supplemental
+        or supplemental != sorted(set(supplemental))
+    ):
+        fail("documentation.operationalDocuments must be a non-empty sorted set")
+    for relative in supplemental:
+        path, document = read(relative)
+        check_links(path, document)
+        operational_documents[relative] = document
     for relative, document in operational_documents.items():
+        if PLACEHOLDER_RE.search(document):
+            fail(f"{relative} contains a documentation placeholder")
         for retired, pattern in RETIRED_PACKAGE_PATTERNS.items():
             if pattern.search(document):
                 fail(f"{relative} uses retired public package name {retired!r}")
     check_citation_ledger()
+    check_binding_diagrams()
     if PLACEHOLDER_RE.search(collection):
         fail(
             f"{collection_path.relative_to(ROOT)} contains a documentation placeholder"

@@ -10,7 +10,7 @@
 '   #FFCDD2 / tint #FFEBEE (#B71C1C); the per-runtime resource table =
 '   VtResource green #DCEDC8 (#33691E); host filesystem grant = leased
 '   memory #FFECB3 (#FF6F00).
-' Source of truth: bindings/javascript-runtime/package.json (exports),
+' Source of truth: the standalone javascript-runtime/package.json (exports),
 '   native.mjs / wasm.mjs / wasi-runtime.mjs (runtimeIdentity, preopens),
 '   runtime-factory.mjs (requireDictionary/requireWfst identity guard),
 '   docs/bindings/wasm-topology.md.

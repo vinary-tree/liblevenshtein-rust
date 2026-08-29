@@ -14,20 +14,24 @@
 #   .asy         Asymptote     publication-grade mathematical figures
 #
 # Every source has exactly one committed sibling `<stem>.svg`. Never hand-edit an
-# SVG: edit the source and re-run this script. CI runs `render.sh --check`, which
-# re-renders to a temp tree and diffs against the committed SVGs (non-zero exit on
-# drift), guaranteeing the committed SVGs always match their sources.
+# SVG: edit the source and re-run this script. `render.sh --check` re-renders to a
+# unique repository-local scratch tree and diffs against the committed SVGs
+# (non-zero exit on drift), proving the committed SVGs match their sources.
 #
 # Usage:
 #   ./render.sh                 # render every source in place
 #   ./render.sh <substring>     # render only sources whose path matches <substring>
-#   ./render.sh --check         # render to a temp tree; fail if any SVG differs
-#   ./render.sh --list          # list every discovered source and its target SVG
+#   ./render.sh --check [text]  # render to a local scratch tree; fail on drift
+#   ./render.sh --list [text]   # list discovered source/target pairs
 #
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$DIR/../.." && pwd)"
 PUPPETEER_CFG="$DIR/puppeteer-config.json"
+SCRATCH_PARENT="${VINARY_DIAGRAM_TMPDIR:-$REPO_ROOT/target/diagram-render}"
+SCRATCH_DIRS=()
+SCRATCH_PARENT_CREATED=0
 
 # Source extensions, paired with the binary that renders them.
 declare -A TOOL=(
@@ -38,6 +42,38 @@ declare -A TOOL=(
 die()  { printf 'render.sh: %s\n' "$*" >&2; exit 1; }
 warn() { printf 'render.sh: %s\n' "$*" >&2; }
 have() { command -v "$1" >/dev/null 2>&1; }
+
+make_scratch() {
+  local variable="$1" scratch
+  if [ ! -d "$SCRATCH_PARENT" ]; then
+    mkdir -p "$SCRATCH_PARENT"
+    SCRATCH_PARENT_CREATED=1
+  fi
+  scratch="$(mktemp -d "$SCRATCH_PARENT/render.XXXXXXXX")"
+  SCRATCH_DIRS+=("$scratch")
+  printf -v "$variable" '%s' "$scratch"
+}
+
+cleanup_scratch() {
+  local scratch
+  for scratch in "${SCRATCH_DIRS[@]}"; do
+    rm -rf -- "$scratch"
+  done
+  if [ "$SCRATCH_PARENT_CREATED" -eq 1 ]; then
+    rmdir "$SCRATCH_PARENT" 2>/dev/null || true
+  fi
+}
+
+on_exit() {
+  local status=$?
+  trap - EXIT
+  cleanup_scratch
+  exit "$status"
+}
+
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Discover every diagram source (sorted, stable order).
 discover() {
@@ -50,7 +86,7 @@ discover() {
 # Render one Structurizr workspace: export its primary view to PlantUML, then SVG.
 render_structurizr() {
   local src="$1" out="$2" tmp puml
-  tmp="$(mktemp -d)"
+  make_scratch tmp
   if ! structurizr export -workspace "$src" -format plantuml -output "$tmp" >/dev/null 2>&1; then
     rm -rf "$tmp"; warn "structurizr export failed for $src"; return 1
   fi
@@ -101,13 +137,22 @@ preflight() {
 
 main() {
   local mode="build" filter=""
-  case "${1:-}" in
-    --check) mode="check" ;;
-    --list)  mode="list" ;;
-    -h|--help) sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    "")      ;;
-    *)       filter="$1" ;;
-  esac
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --check) mode="check" ;;
+      --list)  mode="list" ;;
+      -h|--help)
+        sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
+      --*) die "unknown option: $1" ;;
+      *)
+        [ -z "$filter" ] || die "only one path substring may be supplied"
+        filter="$1"
+        ;;
+    esac
+    shift
+  done
 
   local all=() srcs=()
   mapfile -t all < <(discover)
@@ -128,7 +173,7 @@ main() {
 
   if [ "$mode" = "check" ]; then
     local tmp drift=0 s rel ref
-    tmp="$(mktemp -d)"
+    make_scratch tmp
     for s in "${srcs[@]}"; do
       rel="${s#"$DIR"/}"
       render_one "$s" "$tmp/$(dirname "$rel")" || { warn "FAILED render: $rel"; drift=1; continue; }

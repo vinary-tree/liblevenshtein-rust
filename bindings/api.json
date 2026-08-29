@@ -571,6 +571,13 @@
     "collectionProtocols": "docs/bindings/collection-protocols.md",
     "optimizationMethodology": "docs/benchmarks/optimization-and-profiling-methodology.md",
     "citationLedger": "docs/verification/binding-citation-ledger.json",
+    "operationalDocuments": [
+      "docs/bindings/PERFORMANCE_EXPERIMENTS.md",
+      "docs/bindings/c-abi-reference.md",
+      "docs/bindings/resource-consumer.md",
+      "docs/bindings/wasm-topology.md",
+      "docs/releasing-language-bindings.md"
+    ],
     "generator": "scripts/generate-binding-guides.py",
     "requiredTopics": [
       "Support and package contract",

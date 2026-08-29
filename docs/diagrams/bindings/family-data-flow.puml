@@ -9,7 +9,7 @@
 '   duallity #D6EAF8, lling-llang #FCF3CF; VtResource handles #DCEDC8
 '   (#33691E); shared JavaScript runtime = engines purple #E1BEE7 (#6A1B9A).
 ' Source of truth: docs/language-bindings.md, vinary-tree-interop/README.md
-'   ("Who produces and consumes what"), bindings/javascript-runtime/.
+'   ("Who produces and consumes what"), and the standalone javascript-runtime.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "DejaVu Sans"

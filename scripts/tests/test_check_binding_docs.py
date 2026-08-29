@@ -63,7 +63,10 @@ class BindingDocumentationAnchorTests(unittest.TestCase):
                 self.assertIn(CHECKER.canonical_package(facade), guide)
 
     def test_retired_package_names_are_boundary_aware(self) -> None:
-        mistaken = "Use @vinary-tree/interop and @vinary-tree/vinary-tree."
+        mistaken = (
+            "Use @vinary-tree/interop and @vinary-tree/vinary-tree from "
+            "bindings/javascript-runtime/package.json."
+        )
         canonical = "Use @vinary-tree/vinary-tree-interop."
         self.assertTrue(
             CHECKER.RETIRED_PACKAGE_PATTERNS["@vinary-tree/interop"].search(mistaken)
@@ -71,6 +74,18 @@ class BindingDocumentationAnchorTests(unittest.TestCase):
         runtime_pattern = CHECKER.RETIRED_PACKAGE_PATTERNS["@vinary-tree/vinary-tree"]
         self.assertTrue(runtime_pattern.search(mistaken))
         self.assertIsNone(runtime_pattern.search(canonical))
+        self.assertTrue(
+            CHECKER.RETIRED_PACKAGE_PATTERNS["bindings/javascript-runtime"].search(
+                mistaken
+            )
+        )
+
+    def test_binding_diagrams_are_paired_styled_and_embedded(self) -> None:
+        CHECKER.check_binding_diagrams()
+
+    def test_supplemental_operational_documents_are_unique_and_sorted(self) -> None:
+        documents = CHECKER.DOCS["operationalDocuments"]
+        self.assertEqual(documents, sorted(set(documents)))
 
     def test_doi_link_parser_accepts_plain_and_angle_wrapped_targets(self) -> None:
         text = (

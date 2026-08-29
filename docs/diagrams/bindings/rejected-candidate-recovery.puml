@@ -2,6 +2,7 @@
 ' Immutable-candidate recovery protocol exercised by RC.1 through RC.4.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
 skinparam sequence {
   ArrowColor #37474F
   ActorBorderColor #37474F

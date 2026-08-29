@@ -52,12 +52,13 @@ surface, the resource consumer, the cursor laws, and the JS/WASM topology.
 
 5. **Diagrams:** the binding suite lives in
    [`docs/diagrams/bindings/`](../diagrams/bindings) (sources + committed
-   SVGs, rendered by `docs/diagrams/render.sh bindings`): the four canon
-   diagrams (vt-structs class, interface negotiation, evolution timeline,
-   trust zones) and the ten project diagrams (three-layer architecture,
-   family data flow, registry topology, resource handoff, lease lifecycle,
-   cursor-lease FSM, resource-lifecycle FSM, reducer flow, call-gate
-   serialization, WASM umbrella deployment).
+   SVGs, rendered by `docs/diagrams/render.sh bindings`). The twenty diagrams
+   cover ABI shape and evolution, interface negotiation, trust zones, family
+   data and release flow, snapshots and leases, reducers, collection views,
+   conformance gates, JavaScript runtime topology, and WASM/WASI boundaries.
+   Every source has one SVG, every SVG is embedded in a living document, and
+   `docs/diagrams/render.sh --check bindings` proves byte-for-byte freshness
+   without using system `tmpfs` storage.
 
 ## Language coverage matrix
 

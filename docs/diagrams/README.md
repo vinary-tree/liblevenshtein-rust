@@ -7,9 +7,11 @@ and data flows.
 
 > **Golden rule.** Every diagram is a *text* source with exactly one committed
 > `<stem>.svg` beside it. **Never hand-edit an `.svg`.** Edit the source and run
-> [`./render.sh`](render.sh). Continuous integration runs `./render.sh --check`,
-> which re-renders to a scratch tree and fails if any committed SVG drifts from
-> its source.
+> [`./render.sh`](render.sh). The `./render.sh --check` gate re-renders to a
+> unique repository-local `target/diagram-render/` scratch tree and fails if any
+> committed SVG drifts from its source. It removes that tree on success, failure,
+> or signal; set `VINARY_DIAGRAM_TMPDIR` only when a different non-`tmpfs`
+> scratch volume is required.
 
 ---
 
@@ -60,8 +62,10 @@ renderer by hand — the script is what CI verifies.
 ```sh
 ./render.sh              # render every source in place
 ./render.sh automata     # render only sources whose path matches "automata"
-./render.sh --check      # CI guard: fail if any committed SVG is stale
+./render.sh --check      # fail if any committed SVG is stale
+./render.sh --check bindings # check only the binding diagram family
 ./render.sh --list       # list every source -> target mapping
+./render.sh --list bindings  # list only binding source -> target mappings
 make                     # incremental rebuild (only stale SVGs)
 make check               # delegates to ./render.sh --check
 make automata            # render one subsystem directory
