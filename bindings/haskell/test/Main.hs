@@ -3,6 +3,7 @@
 module Main (main) where
 
 import Control.Monad (forM_, unless)
+import qualified Data.ByteString as Bytes
 import Data.List (sort)
 import qualified Data.ByteString.Char8 as BS
 import Data.Maybe (fromJust)
@@ -34,6 +35,16 @@ removeIfPresent path = removeFile path `catchIOError` const (pure ())
 
 main :: IO ()
 main = do
+  let algorithms :: [Lev.Algorithm]
+      algorithms =
+        [ Lev.Standard, Lev.Transposition, Lev.MergeAndSplit
+        , Lev.DamerauLevenshtein
+        ]
+      orders :: [Lev.QueryOrder]
+      orders = [Lev.Traversal, Lev.DistanceThenTerm]
+  assertIO (length algorithms == 4 && length orders == 2)
+    "stable algorithm and query-order selections"
+
   forM_ [0 .. 63 :: Int] $ \trace -> do
     dictionary <- Dict.dynamicDawg Dict.UnicodeScalar
     let entries =
@@ -88,6 +99,21 @@ main = do
   Lev.closeCursor tokenCursor
   Dict.close tokens
   Lev.closeTransducer tokenAutomaton
+
+  byteDictionary <- Dict.dynamicDawg Dict.Byte
+  let byteTerm = Bytes.pack [0x63, 0x00, 0xff]
+  _ <- Dict.putBytes byteDictionary byteTerm (Just 13)
+  byteResource <- Dict.resource byteDictionary
+  byteAutomaton <- Lev.transducer Lev.Standard byteResource
+  byteCursor <- Lev.queryBytes Lev.Traversal byteAutomaton byteTerm 0
+  byteBatch <- Lev.nextBatch 1 byteCursor
+  assertIO (byteBatch == Just [Lev.Match (Lev.BytesTerm byteTerm) 0 (Just 13)])
+    "byte query and explicit batch lease"
+  exhaustedByteBatch <- Lev.nextBatch 1 byteCursor
+  assertIO (exhaustedByteBatch == Nothing) "byte cursor end"
+  Lev.closeCursor byteCursor
+  Dict.close byteDictionary
+  Lev.closeTransducer byteAutomaton
 
   temporary <- getTemporaryDirectory
   let persistentPath = temporary </> "vinary-tree-haskell.artrie"
@@ -156,6 +182,17 @@ main = do
   Lev.closeCursor reducerCursor
   assertIO (byIterator == sort byReducer && length byIterator == 3)
     "reducer drains to the same matches as the iterator"
+  llre <- Lev.llrePattern "@name \"Greeting\"\n^hello$"
+  llreAcceptsHello <- Lev.patternMatches llre "hello"
+  llreRejectsWorld <- Lev.patternMatches llre "world"
+  assertIO (llreAcceptsHello && not llreRejectsWorld) "LLRE compilation"
+  Lev.closePattern llre
+  productPattern <- Lev.regexPattern "c[ao]t"
+  patternCursor <- Lev.queryPattern equalityAutomaton productPattern 0
+  patternTerms <- map textTerm <$> collect patternCursor
+  assertIO (sort patternTerms == ["cat", "cot"])
+    "regex product-automaton query"
+  Lev.closePattern productPattern
   Dict.close equalityDict
   Lev.closeTransducer equalityAutomaton
 
