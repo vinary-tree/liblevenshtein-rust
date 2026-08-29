@@ -3,11 +3,14 @@
 
 from __future__ import annotations
 
+import html
 import json
 import re
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
+from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL = json.loads((ROOT / "bindings/api.json").read_text(encoding="utf-8"))
@@ -17,6 +20,11 @@ SURFACE_MODEL = json.loads(
 DOCS = MODEL["documentation"]
 LINK_RE = re.compile(r"!?(?:\[[^\]]+\])\(([^)]+)\)")
 PLACEHOLDER_RE = re.compile(r"\b(?:TODO|TBD|FIXME|STUB)\b", re.IGNORECASE)
+HEADING_RE = re.compile(r"^ {0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$")
+EXPLICIT_ANCHOR_RE = re.compile(
+    r"<a\s+[^>]*(?:id|name)\s*=\s*(['\"])([^'\"]+)\1[^>]*>", re.IGNORECASE
+)
+ANCHOR_CACHE: dict[Path, set[str]] = {}
 
 
 def fail(message: str) -> None:
@@ -31,21 +39,75 @@ def read(relative: str) -> tuple[Path, str]:
     return path, path.read_text(encoding="utf-8")
 
 
+def github_heading_slug(heading: str) -> str:
+    """Approximate GitHub's documented heading-ID normalization."""
+    heading = re.sub(r"!?(?:\[([^]]*)\])\([^)]*\)", r"\1", heading)
+    heading = re.sub(r"<[^>]+>", "", heading)
+    heading = html.unescape(heading)
+    heading = re.sub(r"\\(.)", r"\1", heading)
+    heading = heading.replace("`", "")
+    slug: list[str] = []
+    for character in heading.strip().lower():
+        category = unicodedata.category(character)
+        if character.isspace():
+            slug.append("-")
+        elif character in {"-", "_"} or category[0] in {"L", "M", "N"}:
+            slug.append(character)
+    return "".join(slug)
+
+
+def markdown_anchors(path: Path) -> set[str]:
+    cached = ANCHOR_CACHE.get(path)
+    if cached is not None:
+        return cached
+    text = path.read_text(encoding="utf-8")
+    anchors = {match[1] for match in EXPLICIT_ANCHOR_RE.findall(text)}
+    occurrences: dict[str, int] = {}
+    fence: str | None = None
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        marker = stripped[:3]
+        if marker in {"```", "~~~"}:
+            if fence is None:
+                fence = marker
+            elif marker == fence:
+                fence = None
+            continue
+        if fence is not None:
+            continue
+        match = HEADING_RE.match(line)
+        if match is None:
+            continue
+        base = github_heading_slug(match.group(1))
+        if not base:
+            continue
+        duplicate = occurrences.get(base, 0)
+        occurrences[base] = duplicate + 1
+        anchors.add(base if duplicate == 0 else f"{base}-{duplicate}")
+    ANCHOR_CACHE[path] = anchors
+    return anchors
+
+
 def check_links(path: Path, text: str) -> None:
     for raw in LINK_RE.findall(text):
         target = raw.strip().split(maxsplit=1)[0].strip("<>")
-        if not target or target.startswith(("#", "http://", "https://", "mailto:")):
+        if not target or target.startswith(("http://", "https://", "mailto:")):
             continue
-        target = target.split("#", 1)[0]
-        if not target:
-            continue
-        resolved = (path.parent / target).resolve()
+        target_path, separator, fragment = target.partition("#")
+        resolved = (path.parent / target_path).resolve() if target_path else path
         try:
             resolved.relative_to(ROOT)
         except ValueError:
             fail(f"{path.relative_to(ROOT)} links outside the repository: {raw}")
         if not resolved.exists():
             fail(f"{path.relative_to(ROOT)} has broken local link: {raw}")
+        if separator and fragment and resolved.suffix.casefold() == ".md":
+            anchor = unquote(fragment)
+            if anchor not in markdown_anchors(resolved):
+                fail(
+                    f"{path.relative_to(ROOT)} has broken local anchor "
+                    f"{raw}: {anchor!r} is absent from {resolved.relative_to(ROOT)}"
+                )
 
 
 def public_symbols(facade: str) -> set[str]:
@@ -122,6 +184,17 @@ def check_guide(
 
 
 def main() -> None:
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "unittest",
+            "-q",
+            str(ROOT / "scripts" / "tests" / "test_check_binding_docs.py"),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
     subprocess.run(
         [
             sys.executable,
