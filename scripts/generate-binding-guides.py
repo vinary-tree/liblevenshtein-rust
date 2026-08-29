@@ -117,9 +117,9 @@ GUIDES: dict[str, Guide] = {
         "Tier 1",
         "npm package `@vinary-tree/liblevenshtein`",
         "The facade delegates to the singleton `@vinary-tree/javascript-runtime` runtime: native N-API by default, WebAssembly or WASI through explicit exports.",
-        "Use explicit resource management (`using`) where available or call `close()`/`close!` in `finally`. GC finalizers are fallback containment.",
-        "Status codes become `VinaryTreeError` values carrying project, operation, status, and native diagnostic fields.",
-        "Independent handles may be used concurrently. A cursor is single-consumer, callbacks are synchronous, and borrowed batches expire on callback return.",
+        "Dictionaries and query cursors implement `Symbol.dispose` and support `using`. Close transducers and phonetic resources in `finally`; ClojureScript uses `close!`. GC finalizers are fallback containment.",
+        "Native failures become thrown `Error` values carrying a copied native diagnostic. The facade does not expose the numeric status, so callers handle failures by operation and error category rather than parsing message text.",
+        "Wrapper objects belong to one JavaScript runtime instance and Worker and must not be transferred between Workers. A cursor is single-consumer; returned matches and batches are host-owned values.",
         "Strings are Unicode; `Uint8Array` and `BigUint64Array` select byte and packed-token queries. IDs are `bigint`, never lossy JavaScript numbers.",
         "bindings/javascript",
         "bindings/javascript/test/facades.test.mjs",
@@ -497,6 +497,31 @@ approximate because all values remain derivable from the retained snapshot."""
         surface_contract = "[`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) and the [generated completeness matrix](../../bindings/conformance/completeness-matrix.tsv)"
 
     surface = "" if interop else facade_surface(key or "")
+    if not interop and key == "javascript":
+        batch_rationale = (
+            "It amortizes the foreign boundary while returning bounded, "
+            "host-owned arrays."
+        )
+        result_lifetime = """Matches and batches are copied into host-owned values before returning to
+JavaScript. They remain valid independently of the cursor, and no native lease
+or raw pointer is exposed to user code."""
+        error_guidance = """Malformed UTF-8, unsupported unit domains, incompatible resource versions,
+closed handles, invalid bounds, allocation failures, provider faults, and
+contained Rust panics remain distinct native causes. The facade preserves their
+diagnostics but intentionally does not promise a public numeric status; branch
+on the JavaScript error class and failing operation, never diagnostic prose."""
+    else:
+        batch_rationale = (
+            "It amortizes the foreign boundary and keeps borrowed views inside "
+            "one lexical lease."
+        )
+        result_lifetime = """Borrowed results are intentionally lexical. Copy data that must outlive the
+callback; retaining a raw address, slice, memory segment, or foreign pointer is
+an API violation even when the next operation happens to reuse the same arena."""
+        error_guidance = f"""{failure_scope.capitalize()} are distinct failures. Never parse diagnostic prose to
+branch on an error: inspect the typed status/exception first and treat the
+message as human context. Diagnostics must be copied before another native
+call on the same thread."""
 
     return f"""{MARKER}
 
@@ -550,7 +575,7 @@ a sentinel value that removes a valid input from the domain.
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
 | Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Maximum result throughput | The facade batch/reducer protocol | {batch_rationale} |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
@@ -567,18 +592,13 @@ exhaustive coverage is governed by {surface_contract}.
 
 {ownership_detail}
 
-Borrowed results are intentionally lexical. Copy data that must outlive the
-callback; retaining a raw address, slice, memory segment, or foreign pointer is
-an API violation even when the next operation happens to reuse the same arena.
+{result_lifetime}
 
 ## Errors and failure containment
 
 {guide.errors}
 
-{failure_scope.capitalize()} are distinct failures. Never parse diagnostic prose to
-branch on an error: inspect the typed status/exception first and treat the
-message as human context. Diagnostics must be copied before another native
-call on the same thread.
+{error_guidance}
 
 ## Concurrency and reentrancy
 
