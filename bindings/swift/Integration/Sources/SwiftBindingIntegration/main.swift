@@ -10,6 +10,33 @@ func terms(_ cursor: QueryCursor) -> [(String, UInt64?)] {
 }
 
 do {
+    let stableStatuses: [Status] = [
+        .ok, .end, .invalidArgument, .invalidUtf8, .nullPointer, .panic,
+        .unsupported, .ioError, .closed, .limitExceeded, .providerError,
+        .batchInUse, .domainMismatch,
+    ]
+    precondition(stableStatuses.map(\.rawValue) == Array(0...12))
+    let futureStatus = Status(rawValue: UInt32.max)
+    precondition(futureStatus.rawValue == UInt32.max)
+    precondition(futureStatus.description == "UNKNOWN(4294967295)")
+
+    let algorithms: [Algorithm] = [
+        .standard, .transposition, .mergeAndSplit, .damerauLevenshtein,
+    ]
+    let orders: [QueryOrder] = [.traversal, .distanceThenTerm]
+    let ruleSetKinds: [PhoneticRuleSetKind] = [.englishOrthography, .englishPhonetic]
+    precondition(algorithms.map(\.rawValue) == Array(0...3))
+    precondition(orders.map(\.rawValue) == [0, 1])
+    precondition(ruleSetKinds.map(\.rawValue) == [0, 1])
+
+    do {
+        _ = try PhoneticPattern.regex("(")
+        preconditionFailure("invalid regex unexpectedly compiled")
+    } catch let failure as LiblevenshteinError {
+        precondition(failure.status == .invalidArgument)
+        precondition(!failure.description.isEmpty)
+    }
+
     for trace in 0..<64 {
         let dictionary = try DynamicDAWG()
         for index in 0..<16 {
@@ -36,6 +63,77 @@ do {
         precondition(freshTerms == ["after-\(trace)"])
         transducer.close()
     }
+
+    let algorithmDictionary = try DynamicDAWG()
+    try algorithmDictionary.put("cat", value: 1)
+    try algorithmDictionary.put("cot", value: 2)
+    try algorithmDictionary.put("cut", value: 3)
+    for algorithm in algorithms {
+        let transducer = try Transducer.init(
+            dictionary: algorithmDictionary,
+            algorithm: algorithm
+        )
+        let cursor = try transducer.query(
+            "cat",
+            maximumDistance: 0,
+            order: QueryOrder.traversal
+        )
+        precondition(Array(cursor).map(\.term) == [.text("cat")])
+        transducer.close()
+    }
+    let batchTransducer = try Transducer.init(dictionary: algorithmDictionary)
+    let batchCursor = try batchTransducer.query("cat", maximumDistance: 1)
+    let firstBatch = try batchCursor.nextBatch(maximum: 1)
+    let remainingCount = batchCursor.reduceBatches(0, batchSize: 1) { count, batch in
+        count += batch.count
+    }
+    precondition(firstBatch.count == 1 && remainingCount == 2)
+    batchCursor.close()
+    batchTransducer.close()
+    algorithmDictionary.close()
+
+    let byteDictionary = try DynamicDAWG(unitDomain: .byte)
+    try byteDictionary.put(bytes: [0x63, 0x61, 0x74], value: 11)
+    let byteTransducer = try Transducer(dictionary: byteDictionary)
+    do {
+        _ = try byteTransducer.query(
+            [UInt8(0x63), 0x61, 0x74],
+            maximumDistance: 0,
+            order: .distanceThenTerm
+        )
+        preconditionFailure("ordered byte query unexpectedly succeeded")
+    } catch let failure as LiblevenshteinError {
+        precondition(failure.status == .unsupported)
+    }
+    let byteQuery: [UInt8] = [0x63, 0x61, 0x74]
+    let byteMatches = Array(try byteTransducer.query(byteQuery, maximumDistance: 0))
+    precondition(byteMatches.count == 1)
+    precondition(byteMatches[0].term == MatchTerm.bytes(byteQuery))
+    precondition(byteMatches[0].distance == 0 && byteMatches[0].id == 11)
+    byteTransducer.close()
+    byteDictionary.close()
+
+    let tokenDictionary = try DynamicDAWG(unitDomain: .u64)
+    try tokenDictionary.put([1, UInt64.max], value: 12)
+    let tokenTransducer = try Transducer(dictionary: tokenDictionary)
+    do {
+        _ = try tokenTransducer.query(
+            [1, UInt64.max],
+            maximumDistance: 0,
+            order: .distanceThenTerm
+        )
+        preconditionFailure("ordered u64 query unexpectedly succeeded")
+    } catch let failure as LiblevenshteinError {
+        precondition(failure.status == .unsupported)
+    }
+    let tokenMatches = Array(
+        try tokenTransducer.query([1, UInt64.max], maximumDistance: 0)
+    )
+    precondition(tokenMatches.count == 1)
+    precondition(tokenMatches[0].term == .u64([1, UInt64.max]))
+    precondition(tokenMatches[0].distance == 0 && tokenMatches[0].id == 12)
+    tokenTransducer.close()
+    tokenDictionary.close()
 
     let dat = try DoubleArrayTrie(entries: [("café", 7), ("caff", nil)])
     let datLookup = try dat.get("caff")
@@ -68,6 +166,11 @@ do {
     let patternSize = try pattern.size()
     precondition(patternSize.states > 0 && patternSize.transitions > 0)
     pattern.close()
+    let llre = try PhoneticPattern.llre("@name \"Greeting\"\n^hello$")
+    let llreAccepted = try llre.matches("hello")
+    let llreRejected = try llre.matches("world")
+    precondition(llreAccepted && !llreRejected)
+    llre.close()
 
     precondition(EditDistance.levenshtein("kitten", "sitting") == 3)
     // LLEV-B11: all three threshold overloads are bound; nil means the exact
@@ -81,12 +184,16 @@ do {
     precondition(EditDistance.damerauLevenshtein("ca", "abc", threshold: 1) == nil)
 
     // LLEV-B11: the PhoneticRuleSet facade (parse/builtin/count/apply/close).
-    let rules = try PhoneticRuleSet.builtin(.englishOrthography)
+    let rules = try PhoneticRuleSet.builtin(PhoneticRuleSetKind.englishOrthography)
     let builtinCount = try rules.count()
     let builtinApplied = try rules.apply("phone")
     precondition(builtinCount > 0)
     precondition(!builtinApplied.isEmpty)
     rules.close()
+    let phoneticRules = try PhoneticRuleSet.builtin(PhoneticRuleSetKind.englishPhonetic)
+    let phoneticRuleCount = try phoneticRules.count()
+    precondition(phoneticRuleCount > 0)
+    phoneticRules.close()
     let parsed = try PhoneticRuleSet.parse("ph -> f\ngh ->\n")
     let parsedCount = try parsed.count()
     let parsedApplied = try parsed.apply("phgh")

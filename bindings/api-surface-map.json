@@ -2372,16 +2372,20 @@
       "binding": "c-abi",
       "sourceFiles": [
         "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift",
+        "bindings/swift/liblevenshtein/Sources/Liblevenshtein/GeneratedEnums.swift",
         "bindings/swift/liblevenshtein/Sources/CLiblevenshtein/CLiblevenshtein.h"
       ],
       "readme": "bindings/swift/README.md",
       "tests": [
-        "bindings/swift/Integration/Sources/SwiftBindingIntegration/main.swift"
+        "bindings/swift/Integration/Sources/SwiftBindingIntegration/main.swift",
+        "bindings/swift/Integration/Sources/SwiftBindingIntegration/Property.swift",
+        "bindings/swift/Integration/Sources/SwiftBindingIntegration/Leak.swift"
       ],
       "enums": {
         "status": {
-          "symbol": null,
-          "_reason": "LiblevenshteinError carries only the message text; the numeric status is not re-exposed"
+          "symbol": "Status",
+          "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/GeneratedEnums.swift",
+          "note": "open RawRepresentable value preserves statuses introduced by newer compatible API revisions"
         },
         "algorithm": {
           "symbol": "Algorithm",
@@ -2417,8 +2421,11 @@
           "_reason": "not bound; phonetic availability surfaces at call time as thrown LiblevenshteinError values with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "LiblevenshteinError",
-          "note": "thrown failures carry the native message"
+          "symbol": [
+            "LiblevenshteinError",
+            "LiblevenshteinError.status"
+          ],
+          "note": "thrown failures carry the copied native message and exact open status value"
         },
         "llev_string_free": {
           "symbol": null,

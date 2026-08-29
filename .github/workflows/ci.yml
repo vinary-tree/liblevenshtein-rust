@@ -660,6 +660,7 @@ jobs:
       - name: SwiftPM cross-project snapshot integration
         env:
           VINARY_TREE_INTEROP_ROOT: ${{ github.workspace }}/../vinary-tree-interop/bindings/swift/vinary-tree-interop
+          LIBDICTENSTEIN_ROOT: ${{ github.workspace }}/../libdictenstein
           LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
         run: swift run --package-path bindings/swift/Integration -c release

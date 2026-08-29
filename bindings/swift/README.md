@@ -70,6 +70,7 @@ variants, protocols, or methods.
 | `EditDistance.damerauOSA` | `llev_damerau_distance`, `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
 | `EditDistance.levenshtein` | `llev_distance`, `llev_distance_threshold` | standalone exact or thresholded distance |
 | `LiblevenshteinError` | `llev_last_error_message` | typed failure diagnostics |
+| `LiblevenshteinError.status` | `llev_last_error_message` | typed failure diagnostics |
 | `PhoneticPattern.close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.llre` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.matches` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
@@ -91,17 +92,12 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
+| `Status` | Typed native status or error carrier | open RawRepresentable value preserves statuses introduced by newer compatible API revisions |
 | `Algorithm` | Edit-distance algorithm selection | Public facade type |
 | `QueryOrder` | Result traversal ordering | Public facade type |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |
 | `QueryCursor.next` | One-shot owned-result iteration | Public facade protocol |
 | `QueryCursor.reduceBatches` | Bounded batch/reducer traversal | Public facade protocol |
-
-### Facade-encapsulated model values
-
-| Model value | Idiomatic treatment |
-|---|---|
-| `status` | LiblevenshteinError carries only the message text; the numeric status is not re-exposed |
 
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every

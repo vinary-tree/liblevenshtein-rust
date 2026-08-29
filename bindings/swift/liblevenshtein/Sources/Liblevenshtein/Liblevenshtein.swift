@@ -2,34 +2,27 @@ import CLiblevenshtein
 import VinaryTreeInterop
 
 public struct LiblevenshteinError: Error, CustomStringConvertible, Sendable {
+    public let status: Status
     public let description: String
-    init(_ fallback: String) {
+
+    init(nativeStatus: LlevStatus, fallback: String) {
+        status = Status(rawValue: nativeStatus.rawValue)
         description = llev_last_error_message().map(String.init(cString:)) ?? fallback
+    }
+
+    init(status: Status, message: String) {
+        self.status = status
+        description = message
     }
 }
 
 private func checked(_ status: LlevStatus) throws {
     guard status == LLEV_STATUS_OK else {
-        throw LiblevenshteinError("liblevenshtein status \(status.rawValue)")
+        throw LiblevenshteinError(
+            nativeStatus: status,
+            fallback: "liblevenshtein status \(status.rawValue)"
+        )
     }
-}
-
-public enum Algorithm: UInt32, Sendable {
-    case standard = 0
-    case transposition = 1
-    case mergeAndSplit = 2
-    case damerauLevenshtein = 3
-}
-
-public enum QueryOrder: UInt32, Sendable {
-    case traversal = 0
-    case distanceThenTerm = 1
-}
-
-/// Built-in phonetic rewrite-rule set selector.
-public enum PhoneticRuleSetKind: UInt32, Sendable {
-    case englishOrthography = 0
-    case englishPhonetic = 1
 }
 
 public enum MatchTerm: Sendable, Equatable {
@@ -73,7 +66,12 @@ public final class QueryCursor: Sequence, IteratorProtocol, @unchecked Sendable 
     }
 
     public func nextBatch(maximum: Int) throws -> [Match] {
-        guard maximum > 0 else { throw LiblevenshteinError("batch size must be positive") }
+        guard maximum > 0 else {
+            throw LiblevenshteinError(
+                status: .invalidArgument,
+                message: "batch size must be positive"
+            )
+        }
         guard let raw else { return [] }
         var view = LlevMatchBatchView()
         let status = llev_query_cursor_next_batch(raw, maximum, &view)
@@ -147,7 +145,9 @@ public final class Transducer: @unchecked Sendable {
     deinit { close() }
 
     private func handle() throws -> OpaquePointer {
-        guard let raw else { throw LiblevenshteinError("transducer is closed") }
+        guard let raw else {
+            throw LiblevenshteinError(status: .closed, message: "transducer is closed")
+        }
         return raw
     }
 
@@ -167,23 +167,31 @@ public final class Transducer: @unchecked Sendable {
         return QueryCursor(raw: output!)
     }
 
-    public func query(_ bytes: [UInt8], maximumDistance: Int) throws -> QueryCursor {
+    public func query(
+        _ bytes: [UInt8],
+        maximumDistance: Int,
+        order: QueryOrder = .traversal
+    ) throws -> QueryCursor {
         var output: OpaquePointer?
         try bytes.withUnsafeBufferPointer { buffer in
             try checked(llev_transducer_query_bytes(
                 try handle(), buffer.baseAddress, buffer.count,
-                maximumDistance, QueryOrder.traversal.rawValue, &output
+                maximumDistance, order.rawValue, &output
             ))
         }
         return QueryCursor(raw: output!)
     }
 
-    public func query(_ tokens: [UInt64], maximumDistance: Int) throws -> QueryCursor {
+    public func query(
+        _ tokens: [UInt64],
+        maximumDistance: Int,
+        order: QueryOrder = .traversal
+    ) throws -> QueryCursor {
         var output: OpaquePointer?
         try tokens.withUnsafeBufferPointer { buffer in
             try checked(llev_transducer_query_u64(
                 try handle(), buffer.baseAddress, buffer.count,
-                maximumDistance, QueryOrder.traversal.rawValue, &output
+                maximumDistance, order.rawValue, &output
             ))
         }
         return QueryCursor(raw: output!)
@@ -227,7 +235,9 @@ public final class PhoneticPattern: @unchecked Sendable {
         return PhoneticPattern(output!)
     }
     fileprivate func handle() throws -> OpaquePointer {
-        guard let raw else { throw LiblevenshteinError("phonetic pattern is closed") }
+        guard let raw else {
+            throw LiblevenshteinError(status: .closed, message: "phonetic pattern is closed")
+        }
         return raw
     }
     public func matches(_ input: String) throws -> Bool {
@@ -275,7 +285,9 @@ public final class PhoneticRuleSet: @unchecked Sendable {
         return PhoneticRuleSet(output!)
     }
     private func handle() throws -> OpaquePointer {
-        guard let raw else { throw LiblevenshteinError("phonetic rule set is closed") }
+        guard let raw else {
+            throw LiblevenshteinError(status: .closed, message: "phonetic rule set is closed")
+        }
         return raw
     }
     /// Number of enabled rewrite rules.
