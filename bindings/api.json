@@ -222,7 +222,7 @@
     "maven": "io.vinarytree:liblevenshtein",
     "clojars": "io.vinarytree/liblevenshtein-clojure",
     "nuget": "Liblevenshtein",
-    "goModule": "github.com/vinary-tree/liblevenshtein-rust/bindings/go",
+    "goModule": "github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4",
     "swift": "Liblevenshtein",
     "rubygems": "liblevenshtein",
     "fpm": "liblevenshtein",

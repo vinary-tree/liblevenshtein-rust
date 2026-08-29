@@ -579,6 +579,10 @@ require(
     "shared Go module path must match its versioned repository subdirectory",
 )
 require(
+    f"module {packages['goModule']}" in go_project,
+    "project Go module path differs from the canonical package model",
+)
+require(
     go_interop_module in go_project, "project Go module uses the wrong interop path"
 )
 require(
@@ -710,7 +714,8 @@ for project, (project_root, package_name, guard) in related_packages.items():
         f"wrong {project} npm version",
     )
     require(
-        package["dependencies"]["@vinary-tree/javascript-runtime"] == MODEL["packageVersion"],
+        package["dependencies"]["@vinary-tree/javascript-runtime"]
+        == MODEL["packageVersion"],
         f"{project} must pin the shared JavaScript runtime exactly",
     )
     for export in (".", "./typescript", "./clojurescript", "./wasm", "./wasi"):

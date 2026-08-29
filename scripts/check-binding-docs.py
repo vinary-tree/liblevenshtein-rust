@@ -25,6 +25,29 @@ EXPLICIT_ANCHOR_RE = re.compile(
     r"<a\s+[^>]*(?:id|name)\s*=\s*(['\"])([^'\"]+)\1[^>]*>", re.IGNORECASE
 )
 ANCHOR_CACHE: dict[Path, set[str]] = {}
+FACADE_PACKAGE_KEYS = {
+    "python": "pypi",
+    "jvm": "maven",
+    "clojure": "clojars",
+    "javascript": "npm",
+    "dotnet": "nuget",
+    "go": "goModule",
+    "swift": "swift",
+    "ruby": "rubygems",
+    "fortran": "fpm",
+    "ocaml": "opam",
+    "haskell": "hackage",
+    "lua": "luarocks",
+}
+RETIRED_PACKAGE_PATTERNS = {
+    "@vinary-tree/interop": re.compile(r"@vinary-tree/interop(?![A-Za-z0-9_-])"),
+    "@vinary-tree/vinary-tree": re.compile(
+        r"@vinary-tree/vinary-tree(?!-interop|[A-Za-z0-9_])"
+    ),
+    "vinary-tree-liblevenshtein": re.compile(
+        r"(?<![A-Za-z0-9_-])vinary-tree-liblevenshtein(?![A-Za-z0-9_-])"
+    ),
+}
 
 
 def fail(message: str) -> None:
@@ -37,6 +60,15 @@ def read(relative: str) -> tuple[Path, str]:
     if not path.is_file():
         fail(f"missing documented file: {relative}")
     return path, path.read_text(encoding="utf-8")
+
+
+def canonical_package(facade: str) -> str:
+    if facade in {"c", "cpp"}:
+        return "liblevenshtein"
+    package_key = FACADE_PACKAGE_KEYS.get(facade)
+    if package_key is None:
+        fail(f"no canonical package mapping for documented facade {facade}")
+    return MODEL["packages"][package_key]
 
 
 def github_heading_slug(heading: str) -> str:
@@ -245,6 +277,10 @@ def main() -> None:
                 f"{facade} canonical example is not executable test evidence: "
                 f"{entry['example']}"
             )
+        _, guide_text = read(entry["guide"])
+        package = canonical_package(facade)
+        if package not in guide_text:
+            fail(f"{facade} guide omits canonical package coordinate {package!r}")
         check_guide(facade, entry["guide"], entry["languages"], entry["example"])
 
     hub_path, hub = read(DOCS["hub"])
@@ -255,6 +291,19 @@ def main() -> None:
     check_links(architecture_path, architecture)
     check_links(collection_path, collection)
     check_links(optimization_path, optimization)
+    operational_documents = {
+        DOCS["hub"]: hub,
+        DOCS["architecture"]: architecture,
+        DOCS["collectionProtocols"]: collection,
+        DOCS["optimizationMethodology"]: optimization,
+    }
+    operational_documents.update(
+        {entry["guide"]: read(entry["guide"])[1] for entry in DOCS["facades"].values()}
+    )
+    for relative, document in operational_documents.items():
+        for retired, pattern in RETIRED_PACKAGE_PATTERNS.items():
+            if pattern.search(document):
+                fail(f"{relative} uses retired public package name {retired!r}")
     if PLACEHOLDER_RE.search(collection):
         fail(
             f"{collection_path.relative_to(ROOT)} contains a documentation placeholder"

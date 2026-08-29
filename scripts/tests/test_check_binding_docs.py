@@ -56,6 +56,22 @@ class BindingDocumentationAnchorTests(unittest.TestCase):
                 self.assertEqual(surface["readme"], documentation["guide"])
                 self.assertIn(documentation["example"], surface["tests"])
 
+    def test_every_guide_names_its_exact_canonical_package(self) -> None:
+        for facade, documentation in CHECKER.DOCS["facades"].items():
+            guide = (ROOT / documentation["guide"]).read_text(encoding="utf-8")
+            with self.subTest(facade=facade):
+                self.assertIn(CHECKER.canonical_package(facade), guide)
+
+    def test_retired_package_names_are_boundary_aware(self) -> None:
+        mistaken = "Use @vinary-tree/interop and @vinary-tree/vinary-tree."
+        canonical = "Use @vinary-tree/vinary-tree-interop."
+        self.assertTrue(
+            CHECKER.RETIRED_PACKAGE_PATTERNS["@vinary-tree/interop"].search(mistaken)
+        )
+        runtime_pattern = CHECKER.RETIRED_PACKAGE_PATTERNS["@vinary-tree/vinary-tree"]
+        self.assertTrue(runtime_pattern.search(mistaken))
+        self.assertIsNone(runtime_pattern.search(canonical))
+
 
 if __name__ == "__main__":
     unittest.main()
