@@ -391,6 +391,16 @@ jobs:
           npm run build
           npm run test:contract
           npm pack --dry-run
+      - name: Build the generated TypeDoc API reference
+        if: matrix.node-version == '24'
+        working-directory: bindings/javascript
+        run: |
+          npm run docs
+          test -f ../../target/package-documentation/javascript/index.html
+          grep -R -F 'LiblevenshteinNamespace' \
+            ../../target/package-documentation/javascript/interfaces
+          grep -R -F 'QueryCursor' \
+            ../../target/package-documentation/javascript/interfaces
 
   jvm-latest:
     name: JVM current JDK 26

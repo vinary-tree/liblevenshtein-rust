@@ -1,0 +1,16 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["index.d.ts"],
+  "entryPointStrategy": "resolve",
+  "out": "../../target/package-documentation/javascript",
+  "readme": "README.md",
+  "name": "@vinary-tree/liblevenshtein API",
+  "includeVersion": true,
+  "githubPages": true,
+  "cleanOutputDir": true,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": true
+  }
+}
