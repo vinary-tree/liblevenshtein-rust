@@ -671,7 +671,7 @@
           "Fortran"
         ],
         "guide": "bindings/fortran/README.md",
-        "example": "bindings/fortran/test/test_distance.f90"
+        "example": "bindings/fortran/integration/test/test_cross_project.f90"
       },
       "ocaml": {
         "languages": [

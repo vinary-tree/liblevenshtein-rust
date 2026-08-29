@@ -5,12 +5,25 @@ module vinary_tree_liblevenshtein
   private
 
   integer(c_int32_t), parameter, public :: llev_ok = 0, llev_end = 1
+  integer(c_int32_t), parameter, public :: llev_invalid_argument = 2
+  integer(c_int32_t), parameter, public :: llev_invalid_utf8 = 3
+  integer(c_int32_t), parameter, public :: llev_null_pointer = 4
+  integer(c_int32_t), parameter, public :: llev_panic = 5
+  integer(c_int32_t), parameter, public :: llev_unsupported = 6
+  integer(c_int32_t), parameter, public :: llev_io_error = 7
+  integer(c_int32_t), parameter, public :: llev_closed = 8
+  integer(c_int32_t), parameter, public :: llev_limit_exceeded = 9
+  integer(c_int32_t), parameter, public :: llev_provider_error = 10
+  integer(c_int32_t), parameter, public :: llev_batch_in_use = 11
+  integer(c_int32_t), parameter, public :: llev_domain_mismatch = 12
   integer(c_int32_t), parameter, public :: llev_standard = 0
   integer(c_int32_t), parameter, public :: llev_transposition = 1
   integer(c_int32_t), parameter, public :: llev_merge_and_split = 2
   integer(c_int32_t), parameter, public :: llev_damerau_levenshtein = 3
   integer(c_int32_t), parameter, public :: llev_traversal = 0
   integer(c_int32_t), parameter, public :: llev_distance_then_term = 1
+  integer(c_int32_t), parameter, public :: llev_english_orthography = 0
+  integer(c_int32_t), parameter, public :: llev_english_phonetic = 1
 
   type, bind(c) :: c_match
     type(c_ptr) :: term_data
@@ -396,7 +409,7 @@ contains
     type(c_match), pointer :: matches(:)
     integer(c_int32_t) :: code
     found = .false.; code = llev_ok
-    if (.not. c_associated(self%handle)) then; code = 8; goto 100; end if
+    if (.not. c_associated(self%handle)) then; code = llev_closed; goto 100; end if
     if (.not. self%leased .or. self%index >= self%batch%len) then
       if (self%leased) then
         code = c_release(self%handle, self%batch%generation)

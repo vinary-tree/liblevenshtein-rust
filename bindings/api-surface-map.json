@@ -683,13 +683,15 @@
       "readme": "bindings/fortran/README.md",
       "tests": [
         "bindings/fortran/test/test_distance.f90",
+        "bindings/fortran/test/test_property.f90",
+        "bindings/fortran/test/test_leak.f90",
         "bindings/fortran/integration/test/test_cross_project.f90"
       ],
       "enums": {
         "status": {
           "symbol": "llev_ok",
           "definedIn": "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
-          "note": "only OK and END carry named parameters; other codes stay numeric"
+          "note": "all stable native status values carry named llev_* parameters; unknown future integer values remain representable"
         },
         "algorithm": {
           "symbol": "llev_standard",
@@ -702,8 +704,9 @@
           "note": "llev_traversal/llev_distance_then_term"
         },
         "phoneticRuleSetKind": {
-          "symbol": null,
-          "_reason": "builtin_phonetic_rules takes a raw integer kind; named constants are not provided"
+          "symbol": "llev_english_orthography",
+          "definedIn": "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
+          "note": "llev_english_orthography/llev_english_phonetic"
         }
       },
       "iterator": {

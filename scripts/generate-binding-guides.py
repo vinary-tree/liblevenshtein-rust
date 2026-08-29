@@ -192,8 +192,8 @@ GUIDES: dict[str, Guide] = {
         "Independent derived handles are reentrant. Do not access one mutable iterator from multiple images or retain a leased C pointer.",
         "Character data is UTF-8 marshalled explicitly; `integer(c_int8_t)` and `integer(c_int64_t)` arrays preserve byte/token domains.",
         "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
-        "bindings/fortran/test/test_distance.f90",
-        "fpm test --profile release --package liblevenshtein",
+        "bindings/fortran/integration/test/test_cross_project.f90",
+        "fpm test -C bindings/fortran/integration --profile release",
     ),
     "ocaml": Guide(
         "OCaml",

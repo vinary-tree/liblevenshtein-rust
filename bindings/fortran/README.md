@@ -33,11 +33,11 @@ and the [family hub](../../docs/bindings/README.md) when combining independently
 ## Executable example and verification
 
 The repository's canonical executable example is
-[`bindings/fortran/test/test_distance.f90`](../../bindings/fortran/test/test_distance.f90). It exercises the same public package a user
+[`bindings/fortran/integration/test/test_cross_project.f90`](../../bindings/fortran/integration/test/test_cross_project.f90). It exercises the same public package a user
 installs and is run by the binding CI with:
 
 ```sh
-fpm test --profile release --package liblevenshtein
+fpm test -C bindings/fortran/integration --profile release
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -97,16 +97,16 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `llev_ok` | Typed native status or error carrier | only OK and END carry named parameters; other codes stay numeric |
+| `llev_ok` | Typed native status or error carrier | all stable native status values carry named llev_* parameters; unknown future integer values remain representable |
 | `llev_standard` | Edit-distance algorithm selection | llev_standard/llev_transposition/llev_merge_and_split/llev_damerau_levenshtein |
 | `llev_traversal` | Result traversal ordering | llev_traversal/llev_distance_then_term |
+| `llev_english_orthography` | Built-in phonetic rule-set selection | llev_english_orthography/llev_english_phonetic |
 | `query_iterator%next` | One-shot owned-result iteration | Public facade protocol |
 
 ### Facade-encapsulated model values
 
 | Model value | Idiomatic treatment |
 |---|---|
-| `phoneticRuleSetKind` | builtin_phonetic_rules takes a raw integer kind; named constants are not provided |
 | `reducer` | no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally |
 
 Native operations omitted from the public-symbol table are deliberately
