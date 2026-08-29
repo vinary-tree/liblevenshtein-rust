@@ -664,7 +664,7 @@
           "Ruby"
         ],
         "guide": "bindings/ruby/README.md",
-        "example": "bindings/ruby/test/test_liblevenshtein.rb"
+        "example": "bindings/ruby/test/test_cross_project.rb"
       },
       "fortran": {
         "languages": [

@@ -178,8 +178,8 @@ GUIDES: dict[str, Guide] = {
         "Separate native handles are reentrant. Enumerate one cursor on one fiber/thread and never retain callback-scoped buffers.",
         "Ruby strings use explicit encoding rules; byte strings and integer arrays select non-Unicode domains.",
         "bindings/ruby/lib/vinary_tree/liblevenshtein",
-        "bindings/ruby/test/test_liblevenshtein.rb",
-        "ruby -Ibindings/ruby/lib bindings/ruby/test/test_liblevenshtein.rb",
+        "bindings/ruby/test/test_cross_project.rb",
+        "ruby -Ibindings/ruby/lib -I../libdictenstein/bindings/ruby/lib bindings/ruby/test/test_cross_project.rb",
     ),
     "fortran": Guide(
         "Fortran",

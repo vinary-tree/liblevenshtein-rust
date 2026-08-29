@@ -10,8 +10,9 @@ to participate in O(1) retained-resource handoff. The libdictenstein gem does
 so without serialization or an object-format conversion.
 
 Set `LIBLEVENSHTEIN_LIBRARY` for a source-tree build. Release gems contain the
-platform shared library under `lib/vinary_tree/native/<platform>/`; a system
-installation remains a supported loader fallback.
+platform shared library under
+`lib/vinary_tree/liblevenshtein/native/<platform>/`; a system installation
+remains a supported loader fallback.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
@@ -36,11 +37,11 @@ and the [family hub](../../docs/bindings/README.md) when combining independently
 ## Executable example and verification
 
 The repository's canonical executable example is
-[`bindings/ruby/test/test_liblevenshtein.rb`](../../bindings/ruby/test/test_liblevenshtein.rb). It exercises the same public package a user
+[`bindings/ruby/test/test_cross_project.rb`](../../bindings/ruby/test/test_cross_project.rb). It exercises the same public package a user
 installs and is run by the binding CI with:
 
 ```sh
-ruby -Ibindings/ruby/lib bindings/ruby/test/test_liblevenshtein.rb
+ruby -Ibindings/ruby/lib -I../libdictenstein/bindings/ruby/lib bindings/ruby/test/test_cross_project.rb
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -72,6 +73,7 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `Error` | `llev_last_error_message` | typed failure diagnostics |
+| `Error#status` | `llev_last_error_message` | typed failure diagnostics |
 | `Liblevenshtein.damerau_distance` | `llev_damerau_distance` | standalone exact or thresholded distance |
 | `Liblevenshtein.damerau_distance_threshold` | `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
 | `Liblevenshtein.distance` | `llev_distance` | standalone exact or thresholded distance |
@@ -91,26 +93,26 @@ variants, protocols, or methods.
 | `Query#close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `Query#each` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `Transducer#close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
-| `Transducer#initialize` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer#query` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
 | `Transducer#query_bytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |
 | `Transducer#query_pattern` | `llev_transducer_query_pattern` | phonetic-pattern dictionary query |
 | `Transducer#query_u64` | `llev_transducer_query_u64` | domain-preserving dictionary query |
+| `Transducer.new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 
 ### Public types and traversal protocols
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `Error#status` | Typed native status or error carrier | Public facade type |
-| `Transducer::STANDARD` | Edit-distance algorithm selection | STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants |
-| `PhoneticRuleSet::ENGLISH_ORTHOGRAPHY` | Built-in phonetic rule-set selection | ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants |
+| `Status` | Typed native status or error carrier | all stable statuses are named constants while unknown future integer values remain representable on Error#status |
+| `Algorithm` | Edit-distance algorithm selection | STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants; Transducer aliases remain compatible |
+| `QueryOrder` | Result traversal ordering | TRAVERSAL/DISTANCE_THEN_TERM constants |
+| `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants; PhoneticRuleSet aliases remain compatible |
 | `Query#each` | One-shot owned-result iteration | Public facade protocol |
 
 ### Facade-encapsulated model values
 
 | Model value | Idiomatic treatment |
 |---|---|
-| `queryOrder` | Transducer#query takes a raw integer order: keyword; named constants are not provided |
 | `reducer` | no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally |
 
 Native operations omitted from the public-symbol table are deliberately

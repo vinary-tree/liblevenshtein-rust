@@ -12,5 +12,5 @@ jvm	22/36	14	4/4	QueryCursor.next	QueryCursor.forEachBatch	status-error	yes	yes	
 lua	27/36	9	3/4	cursor:next	cursor:reduce_batches	status-error	yes	yes	-
 ocaml	26/36	10	3/4	next	fold_batches	status-error	yes	yes	-
 python	22/36	14	4/4	QueryCursor.__next__	QueryCursor.reduce	status-error	yes	yes	-
-ruby	27/36	9	3/4	Query#each	none	status-error	yes	yes	-
+ruby	27/36	9	4/4	Query#each	none	status-error	yes	yes	-
 swift	27/36	9	3/4	QueryCursor.next	QueryCursor.reduceBatches	status-error	yes	yes	-

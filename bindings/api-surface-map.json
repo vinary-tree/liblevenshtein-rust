@@ -2203,30 +2203,36 @@
       "sourceFiles": [
         "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
         "bindings/ruby/lib/vinary_tree/liblevenshtein/native.rb",
+        "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
         "bindings/ruby/lib/vinary_tree/liblevenshtein/version.rb"
       ],
       "readme": "bindings/ruby/README.md",
       "tests": [
-        "bindings/ruby/test/test_liblevenshtein.rb"
+        "bindings/ruby/test/test_liblevenshtein.rb",
+        "bindings/ruby/test/test_cross_project.rb",
+        "bindings/ruby/test/test_property.rb",
+        "bindings/ruby/test/test_leak.rb"
       ],
       "enums": {
         "status": {
-          "symbol": "Error#status",
-          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb"
+          "symbol": "Status",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
+          "note": "all stable statuses are named constants while unknown future integer values remain representable on Error#status"
         },
         "algorithm": {
-          "symbol": "Transducer::STANDARD",
-          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
-          "note": "STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants"
+          "symbol": "Algorithm",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
+          "note": "STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants; Transducer aliases remain compatible"
         },
         "queryOrder": {
-          "symbol": null,
-          "_reason": "Transducer#query takes a raw integer order: keyword; named constants are not provided"
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
+          "note": "TRAVERSAL/DISTANCE_THEN_TERM constants"
         },
         "phoneticRuleSetKind": {
-          "symbol": "PhoneticRuleSet::ENGLISH_ORTHOGRAPHY",
-          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
-          "note": "ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants"
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
+          "note": "ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants; PhoneticRuleSet aliases remain compatible"
         }
       },
       "iterator": {
@@ -2251,8 +2257,11 @@
           "_reason": "not bound; phonetic availability surfaces at call time as raised Error exceptions with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "Error",
-          "note": "raised failures carry the native message and #status"
+          "symbol": [
+            "Error",
+            "Error#status"
+          ],
+          "note": "raised failures carry the copied native message and exact numeric #status"
         },
         "llev_string_free": {
           "symbol": null,
@@ -2285,7 +2294,7 @@
           "symbol": "Liblevenshtein.true_damerau_distance_threshold"
         },
         "llev_transducer_new": {
-          "symbol": "Transducer#initialize"
+          "symbol": "Transducer.new"
         },
         "llev_transducer_snapshot": {
           "symbol": null,

@@ -100,7 +100,11 @@ class PropertyTest < Minitest::Test
       assert_equal expected.keys.sort, got.keys.sort, "result set equals oracle"
       got.each do |term, (distance, id)|
         assert_equal levenshtein(query, term), distance, "exact distance for #{term.inspect}"
-        assert_equal expected[term], id, "value round-trip for #{term.inspect}"
+        if expected[term].nil?
+          assert_nil id, "value round-trip for #{term.inspect}"
+        else
+          assert_equal expected[term], id, "value round-trip for #{term.inspect}"
+        end
       end
     end
   end

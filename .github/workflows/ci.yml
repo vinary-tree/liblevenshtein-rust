@@ -687,10 +687,13 @@ jobs:
           RUBYLIB: ${{ github.workspace }}/bindings/ruby/lib:${{ github.workspace }}/../libdictenstein/bindings/ruby/lib
         run: |
           ruby bindings/ruby/test/test_liblevenshtein.rb
+          ruby bindings/ruby/test/test_cross_project.rb
           ruby bindings/ruby/test/test_property.rb
           ruby bindings/ruby/test/test_leak.rb
           ruby ../libdictenstein/bindings/ruby/test/test_cross_project.rb
-      - run: gem build bindings/ruby/liblevenshtein.gemspec
+      - name: Build the RubyGems package from its package root
+        working-directory: bindings/ruby
+        run: gem build liblevenshtein.gemspec
 
   fortran-bindings:
     name: Fortran 2018 / ${{ matrix.toolchain.compiler }}
