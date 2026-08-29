@@ -10,7 +10,7 @@ from collections import deque
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, TypeVar
+from typing import Self, TypeVar
 
 from vinary_tree_interop import DictionaryResource, UnitDomain, VtResource
 
@@ -27,9 +27,14 @@ from ._generated import (
 class NativeError(RuntimeError):
     """Failure reported by the stable native ABI."""
 
-    def __init__(self, status: int, message: str) -> None:
+    def __init__(self, status: int | Status, message: str) -> None:
         super().__init__(message)
-        self.status = status
+        try:
+            self.status: Status | int = Status(status)
+        except ValueError:
+            # Preserve forward-compatible diagnostics when a newer native
+            # library reports a status unknown to this package revision.
+            self.status = int(status)
 
 
 class _MatchView(ctypes.Structure):
@@ -82,51 +87,114 @@ def _load_library() -> ctypes.CDLL:
             return ctypes.CDLL(candidate)
         except OSError as error:
             failures.append(f"{candidate}: {error}")
-    raise ImportError("could not load liblevenshtein; set LIBLEVENSHTEIN_LIBRARY\n" + "\n".join(failures))
+    raise ImportError(
+        "could not load liblevenshtein; set LIBLEVENSHTEIN_LIBRARY\n"
+        + "\n".join(failures)
+    )
 
 
 _lib = _load_library()
 _lib.llev_abi_version.restype = ctypes.c_uint32
 _lib.llev_last_error_message.restype = ctypes.c_char_p
-_lib.llev_transducer_new.argtypes = [ctypes.POINTER(VtResource), ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p)]
+_lib.llev_transducer_new.argtypes = [
+    ctypes.POINTER(VtResource),
+    ctypes.c_uint32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
 _lib.llev_transducer_new.restype = ctypes.c_uint32
 _lib.llev_transducer_free.argtypes = [ctypes.c_void_p]
-_lib.llev_transducer_query_utf8.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p)]
+_lib.llev_transducer_query_utf8.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.c_size_t,
+    ctypes.c_uint32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
 _lib.llev_transducer_query_utf8.restype = ctypes.c_uint32
-_lib.llev_transducer_query_bytes.argtypes = list(_lib.llev_transducer_query_utf8.argtypes)
+_lib.llev_transducer_query_bytes.argtypes = list(
+    _lib.llev_transducer_query_utf8.argtypes
+)
 _lib.llev_transducer_query_bytes.restype = ctypes.c_uint32
 _lib.llev_transducer_query_u64.argtypes = list(_lib.llev_transducer_query_utf8.argtypes)
 _lib.llev_transducer_query_u64.restype = ctypes.c_uint32
-_lib.llev_query_cursor_next_batch.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(_BatchView)]
+_lib.llev_query_cursor_next_batch.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(_BatchView),
+]
 _lib.llev_query_cursor_next_batch.restype = ctypes.c_uint32
 _lib.llev_query_cursor_release_batch.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
 _lib.llev_query_cursor_release_batch.restype = ctypes.c_uint32
 _lib.llev_query_cursor_free.argtypes = [ctypes.c_void_p]
 _lib.llev_query_cursor_free.restype = ctypes.c_uint32
 
-_REDUCER = ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p, ctypes.POINTER(_MatchView), ctypes.c_size_t)
-_lib.llev_query_cursor_reduce.argtypes = [ctypes.c_void_p, ctypes.c_size_t, _REDUCER, ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t)]
+_REDUCER = ctypes.CFUNCTYPE(
+    ctypes.c_uint32, ctypes.c_void_p, ctypes.POINTER(_MatchView), ctypes.c_size_t
+)
+_lib.llev_query_cursor_reduce.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    _REDUCER,
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_size_t),
+]
 _lib.llev_query_cursor_reduce.restype = ctypes.c_uint32
 
-_lib.llev_phonetic_pattern_compile_regex.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_void_p)]
+_lib.llev_phonetic_pattern_compile_regex.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_void_p),
+]
 _lib.llev_phonetic_pattern_compile_regex.restype = ctypes.c_uint32
-_lib.llev_phonetic_pattern_compile_llre.argtypes = list(_lib.llev_phonetic_pattern_compile_regex.argtypes)
+_lib.llev_phonetic_pattern_compile_llre.argtypes = list(
+    _lib.llev_phonetic_pattern_compile_regex.argtypes
+)
 _lib.llev_phonetic_pattern_compile_llre.restype = ctypes.c_uint32
 _lib.llev_phonetic_pattern_free.argtypes = [ctypes.c_void_p]
-_lib.llev_phonetic_pattern_matches.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_uint8)]
+_lib.llev_phonetic_pattern_matches.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_uint8),
+]
 _lib.llev_phonetic_pattern_matches.restype = ctypes.c_uint32
-_lib.llev_phonetic_pattern_size.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_size_t)]
+_lib.llev_phonetic_pattern_size.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.POINTER(ctypes.c_size_t),
+]
 _lib.llev_phonetic_pattern_size.restype = ctypes.c_uint32
-_lib.llev_transducer_query_pattern.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint8, ctypes.POINTER(ctypes.c_void_p)]
+_lib.llev_transducer_query_pattern.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_uint8,
+    ctypes.POINTER(ctypes.c_void_p),
+]
 _lib.llev_transducer_query_pattern.restype = ctypes.c_uint32
-_lib.llev_phonetic_rules_parse.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_void_p)]
+_lib.llev_phonetic_rules_parse.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_void_p),
+]
 _lib.llev_phonetic_rules_parse.restype = ctypes.c_uint32
-_lib.llev_phonetic_rules_builtin.argtypes = [ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p)]
+_lib.llev_phonetic_rules_builtin.argtypes = [
+    ctypes.c_uint32,
+    ctypes.POINTER(ctypes.c_void_p),
+]
 _lib.llev_phonetic_rules_builtin.restype = ctypes.c_uint32
-_lib.llev_phonetic_rules_len.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t)]
+_lib.llev_phonetic_rules_len.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_size_t),
+]
 _lib.llev_phonetic_rules_len.restype = ctypes.c_uint32
 _lib.llev_phonetic_rules_free.argtypes = [ctypes.c_void_p]
-_lib.llev_phonetic_rules_apply.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(_OwnedString)]
+_lib.llev_phonetic_rules_apply.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(_OwnedString),
+]
 _lib.llev_phonetic_rules_apply.restype = ctypes.c_uint32
 _lib.llev_owned_string_free.argtypes = [ctypes.POINTER(_OwnedString)]
 
@@ -159,7 +227,7 @@ class Match:
 class BorrowedMatch:
     """Zero-copy descriptor valid only during a reducer callback."""
 
-    __slots__ = ("_view", "_active")
+    __slots__ = ("_active", "_view")
 
     def __init__(self, view: _MatchView, active: list[bool]) -> None:
         self._view = view
@@ -184,7 +252,9 @@ class BorrowedMatch:
         self._ensure()
         if self._view.unit_domain == UnitDomain.U64:
             raise TypeError("u64 term has no byte view")
-        array = (ctypes.c_ubyte * self._view.byte_len).from_address(self._view.term_data)
+        array = (ctypes.c_ubyte * self._view.byte_len).from_address(
+            self._view.term_data
+        )
         return memoryview(array)
 
     def utf8(self) -> str:
@@ -198,7 +268,9 @@ class BorrowedMatch:
         self._ensure()
         if self._view.unit_domain != UnitDomain.U64:
             raise TypeError("term is not u64")
-        array = (ctypes.c_uint64 * self._view.term_len).from_address(self._view.term_data)
+        array = (ctypes.c_uint64 * self._view.term_len).from_address(
+            self._view.term_data
+        )
         return memoryview(array)
 
     def materialize(self) -> Match:
@@ -216,7 +288,9 @@ class BorrowedMatch:
 class BorrowedBatch(Sequence[BorrowedMatch]):
     """Zero-copy batch valid only during one reducer invocation."""
 
-    def __init__(self, views: ctypes.POINTER(_MatchView), length: int, active: list[bool]) -> None:
+    def __init__(
+        self, views: ctypes.POINTER(_MatchView), length: int, active: list[bool]
+    ) -> None:
         self._views, self._length, self._active = views, length, active
 
     def __len__(self) -> int:
@@ -246,30 +320,52 @@ class QueryCursor(Iterator[Match]):
     def __next__(self) -> Match:
         if not self._pending:
             view = _BatchView()
-            if not _check(_lib.llev_query_cursor_next_batch(self._handle, DEFAULT_MATCH_BATCH, ctypes.byref(view)), end=True):
+            if not _check(
+                _lib.llev_query_cursor_next_batch(
+                    self._handle, DEFAULT_MATCH_BATCH, ctypes.byref(view)
+                ),
+                end=True,
+            ):
                 self.close()
                 raise StopIteration
             try:
                 active = [True]
-                self._pending.extend(BorrowedMatch(view.matches[index], active).materialize() for index in range(view.len))
+                self._pending.extend(
+                    BorrowedMatch(view.matches[index], active).materialize()
+                    for index in range(view.len)
+                )
             finally:
                 active[0] = False
-                _check(_lib.llev_query_cursor_release_batch(self._handle, view.generation))
+                _check(
+                    _lib.llev_query_cursor_release_batch(self._handle, view.generation)
+                )
         return self._pending.popleft()
 
-    def reduce(self, function: Callable[[T, BorrowedBatch], T], initial: T, *, batch_size: int = DEFAULT_MATCH_BATCH) -> T:
+    def reduce(
+        self,
+        function: Callable[[T, BorrowedBatch], T],
+        initial: T,
+        *,
+        batch_size: int = DEFAULT_MATCH_BATCH,
+    ) -> T:
         """Reduce native batches without allocating Python match objects."""
         accumulator = initial
         failure: BaseException | None = None
 
         @_REDUCER
-        def callback(_context: int, views: ctypes.POINTER(_MatchView), length: int) -> int:
+        def callback(
+            _context: int, views: ctypes.POINTER(_MatchView), length: int
+        ) -> int:
             nonlocal accumulator, failure
             active = [True]
             try:
-                accumulator = function(accumulator, BorrowedBatch(views, length, active))
+                accumulator = function(
+                    accumulator, BorrowedBatch(views, length, active)
+                )
                 return Status.OK
-            except BaseException as error:
+            # No Python exception may unwind through the C callback trampoline;
+            # preserve even cancellation/system-exit exceptions for re-raising.
+            except BaseException as error:  # noqa: BLE001
                 failure = error
                 return Status.END
             finally:
@@ -277,7 +373,11 @@ class QueryCursor(Iterator[Match]):
 
         count = ctypes.c_size_t()
         try:
-            _check(_lib.llev_query_cursor_reduce(self._handle, batch_size, callback, None, ctypes.byref(count)))
+            _check(
+                _lib.llev_query_cursor_reduce(
+                    self._handle, batch_size, callback, None, ctypes.byref(count)
+                )
+            )
         finally:
             self.close()
         if failure is not None:
@@ -292,12 +392,12 @@ class QueryCursor(Iterator[Match]):
     def __del__(self) -> None:
         try:
             self.close()
-        except Exception:
+        except Exception:  # noqa: BLE001,S110
             # Destructors cannot report errors, especially during interpreter
             # shutdown. Deterministic users should use close()/with.
             pass
 
-    def __enter__(self) -> QueryCursor:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_args: object) -> None:
@@ -307,23 +407,72 @@ class QueryCursor(Iterator[Match]):
 class Transducer:
     """Levenshtein automaton configuration over a live dictionary resource."""
 
-    def __init__(self, dictionary: DictionaryResource | VtResource, algorithm: Algorithm = Algorithm.STANDARD) -> None:
-        resource = dictionary.native_resource if isinstance(dictionary, DictionaryResource) else dictionary
+    def __init__(
+        self,
+        dictionary: DictionaryResource | VtResource,
+        algorithm: Algorithm = Algorithm.STANDARD,
+    ) -> None:
+        resource = (
+            dictionary.native_resource
+            if isinstance(dictionary, DictionaryResource)
+            else dictionary
+        )
         self._handle = ctypes.c_void_p()
-        _check(_lib.llev_transducer_new(ctypes.byref(resource), int(algorithm), ctypes.byref(self._handle)))
+        _check(
+            _lib.llev_transducer_new(
+                ctypes.byref(resource), int(algorithm), ctypes.byref(self._handle)
+            )
+        )
 
-    def query(self, query: str | bytes | Sequence[int] | PhoneticPattern, max_distance: int, *, order: QueryOrder = QueryOrder.TRAVERSAL) -> QueryCursor:
+    def query(
+        self,
+        query: str | bytes | Sequence[int] | PhoneticPattern,
+        max_distance: int,
+        *,
+        order: QueryOrder = QueryOrder.TRAVERSAL,
+    ) -> QueryCursor:
         out = ctypes.c_void_p()
         if isinstance(query, PhoneticPattern):
-            _check(_lib.llev_transducer_query_pattern(self._handle, query._handle, max_distance, ctypes.byref(out)))
+            _check(
+                _lib.llev_transducer_query_pattern(
+                    self._handle, query._handle, max_distance, ctypes.byref(out)
+                )
+            )
         elif isinstance(query, str):
             data = query.encode()
-            _check(_lib.llev_transducer_query_utf8(self._handle, data, len(data), max_distance, int(order), ctypes.byref(out)))
+            _check(
+                _lib.llev_transducer_query_utf8(
+                    self._handle,
+                    data,
+                    len(data),
+                    max_distance,
+                    int(order),
+                    ctypes.byref(out),
+                )
+            )
         elif isinstance(query, bytes):
-            _check(_lib.llev_transducer_query_bytes(self._handle, query, len(query), max_distance, int(order), ctypes.byref(out)))
+            _check(
+                _lib.llev_transducer_query_bytes(
+                    self._handle,
+                    query,
+                    len(query),
+                    max_distance,
+                    int(order),
+                    ctypes.byref(out),
+                )
+            )
         else:
             values = (ctypes.c_uint64 * len(query))(*query)
-            _check(_lib.llev_transducer_query_u64(self._handle, values, len(query), max_distance, int(order), ctypes.byref(out)))
+            _check(
+                _lib.llev_transducer_query_u64(
+                    self._handle,
+                    values,
+                    len(query),
+                    max_distance,
+                    int(order),
+                    ctypes.byref(out),
+                )
+            )
         return QueryCursor(out.value)
 
     def close(self) -> None:
@@ -334,10 +483,10 @@ class Transducer:
     def __del__(self) -> None:
         try:
             self.close()
-        except Exception:
+        except Exception:  # noqa: BLE001,S110
             pass
 
-    def __enter__(self) -> Transducer:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_args: object) -> None:
@@ -350,13 +499,21 @@ class PhoneticPattern:
     def __init__(self, source: str, *, llre: bool = False) -> None:
         data = source.encode()
         self._handle = ctypes.c_void_p()
-        constructor = _lib.llev_phonetic_pattern_compile_llre if llre else _lib.llev_phonetic_pattern_compile_regex
+        constructor = (
+            _lib.llev_phonetic_pattern_compile_llre
+            if llre
+            else _lib.llev_phonetic_pattern_compile_regex
+        )
         _check(constructor(data, len(data), ctypes.byref(self._handle)))
 
     def matches(self, text: str) -> bool:
         data = text.encode()
         output = ctypes.c_uint8()
-        _check(_lib.llev_phonetic_pattern_matches(self._handle, data, len(data), ctypes.byref(output)))
+        _check(
+            _lib.llev_phonetic_pattern_matches(
+                self._handle, data, len(data), ctypes.byref(output)
+            )
+        )
         return bool(output.value)
 
     @property
@@ -364,7 +521,11 @@ class PhoneticPattern:
         """Compiled ``(states, transitions)`` counts of the pattern automaton."""
         states = ctypes.c_size_t()
         transitions = ctypes.c_size_t()
-        _check(_lib.llev_phonetic_pattern_size(self._handle, ctypes.byref(states), ctypes.byref(transitions)))
+        _check(
+            _lib.llev_phonetic_pattern_size(
+                self._handle, ctypes.byref(states), ctypes.byref(transitions)
+            )
+        )
         return (states.value, transitions.value)
 
     def close(self) -> None:
@@ -375,10 +536,10 @@ class PhoneticPattern:
     def __del__(self) -> None:
         try:
             self.close()
-        except Exception:
+        except Exception:  # noqa: BLE001,S110
             pass
 
-    def __enter__(self) -> PhoneticPattern:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_args: object) -> None:
@@ -391,15 +552,27 @@ class PhoneticRuleSet:
     def __init__(self, source: str | PhoneticRuleSetKind) -> None:
         self._handle = ctypes.c_void_p()
         if isinstance(source, PhoneticRuleSetKind):
-            _check(_lib.llev_phonetic_rules_builtin(int(source), ctypes.byref(self._handle)))
+            _check(
+                _lib.llev_phonetic_rules_builtin(
+                    int(source), ctypes.byref(self._handle)
+                )
+            )
         else:
             data = source.encode()
-            _check(_lib.llev_phonetic_rules_parse(data, len(data), ctypes.byref(self._handle)))
+            _check(
+                _lib.llev_phonetic_rules_parse(
+                    data, len(data), ctypes.byref(self._handle)
+                )
+            )
 
     def apply(self, text: str) -> str:
         data = text.encode()
         output = _OwnedString()
-        _check(_lib.llev_phonetic_rules_apply(self._handle, data, len(data), ctypes.byref(output)))
+        _check(
+            _lib.llev_phonetic_rules_apply(
+                self._handle, data, len(data), ctypes.byref(output)
+            )
+        )
         try:
             return ctypes.string_at(output.data, output.len).decode()
         finally:
@@ -419,10 +592,10 @@ class PhoneticRuleSet:
     def __del__(self) -> None:
         try:
             self.close()
-        except Exception:
+        except Exception:  # noqa: BLE001,S110
             pass
 
-    def __enter__(self) -> PhoneticRuleSet:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_args: object) -> None:

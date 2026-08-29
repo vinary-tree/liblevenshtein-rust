@@ -11,6 +11,7 @@ from ._native import (
     PhoneticRuleSetKind,
     QueryCursor,
     QueryOrder,
+    Status,
     Transducer,
 )
 
@@ -25,5 +26,6 @@ __all__ = [
     "PhoneticRuleSetKind",
     "QueryCursor",
     "QueryOrder",
+    "Status",
     "Transducer",
 ]

@@ -21,6 +21,37 @@ with Transducer(dictionary) as automaton:
             print(match.term, match.distance, match.id)
 ```
 
+Select alternate edit semantics and deterministic distance ranking with enums,
+not numeric constants:
+
+```python
+from liblevenshtein import Algorithm, QueryOrder, Transducer
+
+with Transducer(dictionary, Algorithm.TRANSPOSITION) as automaton:
+    with automaton.query(
+        "tset", 1, order=QueryOrder.DISTANCE_THEN_TERM
+    ) as matches:
+        ranked = list(matches)
+```
+
+For large outputs, reduce borrowed native batches without allocating one owned
+`Match` per result:
+
+```python
+def collect_terms(terms, batch):
+    terms.extend(match.materialize().term for match in batch)
+    return terms
+
+with Transducer(dictionary) as automaton:
+    with automaton.query("cat", 2) as matches:
+        terms = matches.reduce(collect_terms, [], batch_size=256)
+```
+
+Every borrowed match expires when its reducer callback returns. Native failures
+raise `NativeError`; known `NativeError.status` values use the exported `Status`
+enum, while an unknown status from a newer native library remains an integer so
+its diagnostic is not lost.
+
 The safe iterator materializes at most one reusable batch. `QueryCursor.reduce`
 is the expert path: its borrowed buffer views are valid only during the reducer
 callback and avoid allocating one Python match object per result. Both paths
@@ -104,7 +135,7 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `Status` | Typed native status or error carrier | NativeError.status carries the raw value; Status itself is not re-exported from the package root |
+| `Status` | Typed native status or error carrier | known NativeError.status values use the root-exported Status enum; unknown future values remain raw integers |
 | `Algorithm` | Edit-distance algorithm selection | Public facade type |
 | `QueryOrder` | Result traversal ordering | Public facade type |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |
