@@ -47,6 +47,8 @@ FACADE_PACKAGE_KEYS = {
     "ocaml": "opam",
     "haskell": "hackage",
     "lua": "luarocks",
+    "julia": "julia",
+    "raku": "zef",
 }
 _RETIRED_INTEROP_PACKAGE = "@vinary-tree/" + "interop"
 _RETIRED_UMBRELLA_PACKAGE = "@vinary-tree/" + "vinary-tree"

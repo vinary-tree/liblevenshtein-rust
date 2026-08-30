@@ -2538,6 +2538,193 @@
           "symbol": "PhoneticRuleSet.apply"
         }
       }
+    },
+    "julia": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/julia/Liblevenshtein/src/Liblevenshtein.jl",
+        "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+      ],
+      "readme": "bindings/julia/README.md",
+      "tests": [
+        "bindings/julia/Liblevenshtein/test/runtests.jl"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "Status",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor"
+      },
+      "reducer": {
+        "symbol": "reduce_batches!"
+      },
+      "phoneticGating": "build_features",
+      "functions": {
+        "llev_abi_version": {"symbol": "abi_version"},
+        "llev_api_revision": {"symbol": "api_revision"},
+        "llev_build_features": {"symbol": "build_features"},
+        "llev_last_error_message": {
+          "symbol": "NativeError",
+          "note": "checked copies the native diagnostic into every thrown NativeError"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev_string_dup allocations"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev_string_dup arrays"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; Julia-owned strings cross as borrowed pointer-plus-length values"
+        },
+        "llev_distance": {"symbol": "distance"},
+        "llev_distance_threshold": {"symbol": "distance"},
+        "llev_damerau_distance": {"symbol": "damerau_distance"},
+        "llev_damerau_distance_threshold": {"symbol": "damerau_distance"},
+        "llev_true_damerau_distance": {"symbol": "true_damerau_distance"},
+        "llev_true_damerau_distance_threshold": {"symbol": "true_damerau_distance"},
+        "llev_transducer_new": {"symbol": "Transducer"},
+        "llev_transducer_snapshot": {"symbol": "snapshot"},
+        "llev_transducer_free": {"symbol": "close!"},
+        "llev_transducer_unit_domain": {"symbol": "unit_domain"},
+        "llev_transducer_query_utf8": {"symbol": "query"},
+        "llev_transducer_query_bytes": {"symbol": "query"},
+        "llev_transducer_query_u64": {"symbol": "query"},
+        "llev_query_cursor_next_batch": {"symbol": "next_batch!"},
+        "llev_query_cursor_release_batch": {
+          "symbol": "next_batch!",
+          "note": "the exact batch generation is settled after owned materialization"
+        },
+        "llev_query_cursor_reduce": {"symbol": "reduce_batches!"},
+        "llev_query_cursor_free": {"symbol": "close!"},
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet",
+          "note": "rule application frees its LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {"symbol": "PhoneticPattern"},
+        "llev_phonetic_pattern_compile_llre": {"symbol": "PhoneticPattern"},
+        "llev_phonetic_pattern_free": {"symbol": "close!"},
+        "llev_phonetic_pattern_size": {"symbol": "PhoneticPattern"},
+        "llev_phonetic_pattern_matches": {"symbol": "PhoneticPattern"},
+        "llev_transducer_query_pattern": {"symbol": "query"},
+        "llev_phonetic_rules_parse": {"symbol": "PhoneticRuleSet"},
+        "llev_phonetic_rules_builtin": {"symbol": "PhoneticRuleSet"},
+        "llev_phonetic_rules_free": {"symbol": "close!"},
+        "llev_phonetic_rules_len": {"symbol": "PhoneticRuleSet"},
+        "llev_phonetic_rules_apply": {"symbol": "PhoneticRuleSet"}
+      }
+    },
+    "raku": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/raku/lib/Liblevenshtein.rakumod",
+        "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+      ],
+      "readme": "bindings/raku/README.md",
+      "tests": [
+        "bindings/raku/t/01-conformance.rakutest"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "Status",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor"
+      },
+      "reducer": {
+        "symbol": "reduce-batches"
+      },
+      "phoneticGating": "build-features",
+      "functions": {
+        "llev_abi_version": {"symbol": "abi-version"},
+        "llev_api_revision": {"symbol": "api-revision"},
+        "llev_build_features": {"symbol": "build-features"},
+        "llev_last_error_message": {
+          "symbol": "X::Liblevenshtein",
+          "note": "check-status copies the native diagnostic into every thrown exception"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev_string_dup allocations"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev_string_dup arrays"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; Raku-owned strings cross as borrowed pointer-plus-length values"
+        },
+        "llev_distance": {"symbol": "distance"},
+        "llev_distance_threshold": {"symbol": "distance"},
+        "llev_damerau_distance": {"symbol": "damerau-distance"},
+        "llev_damerau_distance_threshold": {"symbol": "damerau-distance"},
+        "llev_true_damerau_distance": {"symbol": "true-damerau-distance"},
+        "llev_true_damerau_distance_threshold": {"symbol": "true-damerau-distance"},
+        "llev_transducer_new": {"symbol": "Transducer.new"},
+        "llev_transducer_snapshot": {"symbol": "Transducer.snapshot"},
+        "llev_transducer_free": {"symbol": "Transducer.close"},
+        "llev_transducer_unit_domain": {"symbol": "Transducer.unit-domain"},
+        "llev_transducer_query_utf8": {"symbol": "Transducer.query"},
+        "llev_transducer_query_bytes": {"symbol": "Transducer.query"},
+        "llev_transducer_query_u64": {"symbol": "Transducer.query"},
+        "llev_query_cursor_next_batch": {"symbol": "QueryCursor.next-batch"},
+        "llev_query_cursor_release_batch": {
+          "symbol": "QueryCursor.next-batch",
+          "note": "the exact batch generation is settled after owned materialization"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "the facade's bounded reduce-batches operation is built over next-batch/release-batch because NativeCall callbacks would add a slower runtime trampoline without improving ownership or allocation semantics"
+        },
+        "llev_query_cursor_free": {"symbol": "QueryCursor.close"},
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet.apply",
+          "note": "rule application frees its LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {"symbol": "PhoneticPattern.new"},
+        "llev_phonetic_pattern_compile_llre": {"symbol": "PhoneticPattern.new"},
+        "llev_phonetic_pattern_free": {"symbol": "PhoneticPattern.close"},
+        "llev_phonetic_pattern_size": {"symbol": "PhoneticPattern.size"},
+        "llev_phonetic_pattern_matches": {"symbol": "PhoneticPattern.accepts"},
+        "llev_transducer_query_pattern": {"symbol": "Transducer.query"},
+        "llev_phonetic_rules_parse": {"symbol": "PhoneticRuleSet.new"},
+        "llev_phonetic_rules_builtin": {"symbol": "PhoneticRuleSet.new"},
+        "llev_phonetic_rules_free": {"symbol": "PhoneticRuleSet.close"},
+        "llev_phonetic_rules_len": {"symbol": "PhoneticRuleSet.elems"},
+        "llev_phonetic_rules_apply": {"symbol": "PhoneticRuleSet.apply"}
+      }
     }
   }
 }

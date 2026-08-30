@@ -1,22 +1,9 @@
-# Vinary Tree Go bindings
+# Liblevenshtein for Raku
 
-The Go package is an idiomatic streaming wrapper around liblevenshtein's stable
-C ABI. It supports Go 1.25 and newer. `Iterator.Next` owns only the current Go
-result while the iterator leases one bounded native batch; it never collects an
-entire query into a slice. `Close` is deterministic and finalizers are a safety
-net.
-
-Dictionary producers implement the small `interop.DictionaryResource`
-interface from
-`github.com/vinary-tree/vinary-tree-interop/bindings/go/v4`.
-Native Vinary
-Tree producers lend two pointer-sized words for the constructor and are retained
-in O(1) by the transducer.
-
-During source-tree development, set `CGO_LDFLAGS=-L../../target/debug` and put
-that directory on the platform loader path. Published archives place the shared
-library in the platform package or may use the separately installed CMake
-package. C/C++ consumers may select static or shared linkage.
+Fast edit distances and snapshot-consistent fuzzy search from Raku, backed by
+liblevenshtein-rust. `NativeCall` reaches the stable C ABI while
+`Vinary::Tree::Interop` carries retained dictionaries from libdictenstein or
+customer-defined providers without serialization.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
@@ -24,12 +11,12 @@ package. C/C++ consumers may select static or shared linkage.
 
 | Property | Contract |
 |---|---|
-| Binding | Go |
-| Languages/runtime | Go 1.25+ with cgo |
-| Support tier | Tier 2 |
-| Distribution | Go module `github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4` |
-| Native boundary | cgo calls the stable C ABI and uses the interop module for two-word retained dictionary resources. |
-| Canonical facade source | [`bindings/go/liblevenshtein.go`](../../bindings/go/liblevenshtein.go) |
+| Binding | Raku |
+| Languages/runtime | Raku through Rakudo and NativeCall |
+| Support tier | Tier 3 |
+| Distribution | zef/fez distribution `Liblevenshtein` |
+| Native boundary | `NativeCall` reaches the stable C ABI and `Vinary::Tree::Interop` carries retained dictionary resources between independent distributions. |
+| Canonical facade source | [`bindings/raku/lib/Liblevenshtein.rakumod`](../../bindings/raku/lib/Liblevenshtein.rakumod) |
 
 The support tier controls release gating, not semantic quality: every tier has
 the same snapshot, ownership, status, and ABI compatibility laws. Consult the
@@ -41,11 +28,11 @@ and the [family hub](../../docs/bindings/README.md) when combining independently
 ## Executable example and verification
 
 The repository's canonical executable example is
-[`bindings/go/liblevenshtein_test.go`](../../bindings/go/liblevenshtein_test.go). It exercises the same public package a user
+[`bindings/raku/t/01-conformance.rakutest`](../../bindings/raku/t/01-conformance.rakutest). It exercises the same public package a user
 installs and is run by the binding CI with:
 
 ```sh
-go test ./bindings/go
+raku -Ibindings/raku/lib -I../vinary-tree-interop/bindings/raku/lib -I../libdictenstein/bindings/raku/lib bindings/raku/t/01-conformance.rakutest
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -78,7 +65,7 @@ while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
 when constructing the transducer; all query domains and snapshot laws remain the
 same.
 
-Strings use Unicode queries; byte and `[]uint64` entry points preserve raw domain identity. Empty terms, embedded zero bytes, non-ASCII text, and the full
+`Str`, `Blob`, and `Positional` token values preserve Unicode-scalar, byte, and u64-token domains through multi methods. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
 
@@ -91,32 +78,28 @@ variants, protocols, or methods.
 
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
-| `BuiltinPhoneticRules` | `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
-| `CompilePhoneticLLRE` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
-| `CompilePhoneticRegex` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
-| `DamerauDistance` | `llev_damerau_distance` | standalone exact or thresholded distance |
-| `DamerauDistanceThreshold` | `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
-| `Distance` | `llev_distance` | standalone exact or thresholded distance |
-| `DistanceThreshold` | `llev_distance_threshold` | standalone exact or thresholded distance |
-| `Error` | `llev_last_error_message` | typed failure diagnostics |
-| `Error.Status` | `llev_last_error_message` | typed failure diagnostics |
-| `Iterator.Close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
-| `Iterator.Next` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
-| `NewTransducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
-| `ParsePhoneticRules` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
-| `PhoneticPattern.Close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
-| `PhoneticPattern.Matches` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
-| `PhoneticPattern.Size` | `llev_phonetic_pattern_size` | compiled phonetic-pattern lifecycle and matching |
-| `PhoneticRuleSet.Apply` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
-| `PhoneticRuleSet.Close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
-| `PhoneticRuleSet.Len` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
-| `Transducer.Close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
-| `Transducer.Query` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
-| `Transducer.QueryBytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |
-| `Transducer.QueryPattern` | `llev_transducer_query_pattern` | phonetic-pattern dictionary query |
-| `Transducer.QueryU64` | `llev_transducer_query_u64` | domain-preserving dictionary query |
-| `TrueDamerauDistance` | `llev_true_damerau_distance` | standalone true-Damerau distance |
-| `TrueDamerauDistanceThreshold` | `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
+| `abi-version` | `llev_abi_version` | ABI compatibility and feature discovery |
+| `api-revision` | `llev_api_revision` | ABI compatibility and feature discovery |
+| `build-features` | `llev_build_features` | ABI compatibility and feature discovery |
+| `damerau-distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
+| `distance` | `llev_distance`, `llev_distance_threshold` | standalone exact or thresholded distance |
+| `PhoneticPattern.accepts` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.new` | `llev_phonetic_pattern_compile_regex`, `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticPattern.size` | `llev_phonetic_pattern_size` | compiled phonetic-pattern lifecycle and matching |
+| `PhoneticRuleSet.apply` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.elems` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.new` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
+| `QueryCursor.close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
+| `QueryCursor.next-batch` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `Transducer.close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
+| `Transducer.new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
+| `Transducer.query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; phonetic-pattern dictionary query |
+| `Transducer.snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
+| `Transducer.unit-domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
+| `true-damerau-distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
+| `X::Liblevenshtein` | `llev_last_error_message` | typed failure diagnostics |
 
 ### Public types and traversal protocols
 
@@ -126,13 +109,8 @@ variants, protocols, or methods.
 | `Algorithm` | Edit-distance algorithm selection | Public facade type |
 | `QueryOrder` | Result traversal ordering | Public facade type |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |
-| `Iterator.Next` | One-shot owned-result iteration | Public facade protocol |
-
-### Facade-encapsulated model values
-
-| Model value | Idiomatic treatment |
-|---|---|
-| `reducer` | no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally |
+| `QueryCursor` | One-shot owned-result iteration | Public facade protocol |
+| `reduce-batches` | Bounded batch/reducer traversal | Public facade protocol |
 
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every
@@ -144,7 +122,7 @@ such operation with its reviewed rationale; an unreasoned absence fails CI.
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
 | Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | Drain the facade iterator; no public reducer is exposed | The iterator still amortizes native calls with bounded internal batches, then releases each lease before exposing host-owned matches. |
+| Maximum result throughput | The facade batch/reducer protocol | It amortizes NativeCall while copying each bounded batch and settling its exact generation before host values escape. |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
@@ -157,7 +135,7 @@ exhaustive coverage is governed by [`bindings/api-surface-map.json`](../../bindi
 
 ## Ownership, snapshots, and resource handoff
 
-Call `Close` with `defer` immediately after successful construction. Finalizers report leaks but are not a prompt release mechanism.
+Call `.close` or use `LEAVE` for transducers, cursors, patterns, and rule sets; `DESTROY` is only leak containment.
 
 A transducer retains the provider resource, and a query retains the revision
 visible at query start. Closing the original dictionary or publishing later
@@ -165,22 +143,21 @@ mutations cannot invalidate that query. Acquisition either completes with one
 owned retain or fails with no ownership transfer. Teardown order is therefore
 free across dictionary, transducer, and completed query handles.
 
-Iterator results are copied into host-owned values before their native batch
-lease is released. They remain valid after iteration advances or the cursor is
-closed; no raw pointer or borrowed native view reaches user code.
+Every Raku match and bounded batch is copied into host-owned values before
+the native generation is released. Values may outlive the cursor; no raw native
+pointer or lexical lease is exposed to application code.
 
 ## Errors and failure containment
 
-Native statuses become Go errors that preserve the symbolic status and native diagnostic; callers may inspect them without parsing strings.
+Non-OK statuses become `X::Liblevenshtein` values carrying the exact numeric status, operation, and copied diagnostic.
 
-Malformed utf-8, unsupported unit domains, incompatible resource versions, closed handles, invalid bounds, allocation failures, provider faults, and contained rust panics are distinct failures. Never parse diagnostic prose to
-branch on an error: inspect the typed status/exception first and treat the
-message as human context. Diagnostics must be copied before another native
-call on the same thread.
+Malformed utf-8, unsupported unit domains, incompatible resource versions, closed handles, invalid bounds, allocation failures, provider faults, and contained rust panics are distinct failures. Inspect
+`X::Liblevenshtein.status` and `operation`, never diagnostic prose; the copied
+message is human context.
 
 ## Concurrency and reentrancy
 
-Different handles may be used by different goroutines. Serialize `Next` and `Close` for one iterator and do not retain borrowed native memory.
+Immutable transducers and independent cursors may run on separate threads. A cursor remains exclusive and single-consumer.
 
 Snapshot capture is a linearization point, not a dictionary-wide query lock.
 First-party immutable snapshots can be walked concurrently. A foreign provider
@@ -191,7 +168,7 @@ the host language must not add a weaker promise.
 
 - Reuse transducers for repeated queries against the same resource.
 - Prefer streaming cursors to whole-result materialization.
-- Drain each cursor once; the iterator already fetches bounded native batches before materializing host-owned matches.
+- Prefer batch/reducer APIs when per-match boundary crossings dominate.
 - Keep Unicode, byte, and token domains explicit to avoid transcoding.
 - Measure native, WASM, and WASI paths independently; they have different
   startup and marshalling costs but identical query semantics.

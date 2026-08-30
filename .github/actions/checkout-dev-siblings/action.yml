@@ -24,6 +24,13 @@ inputs:
       non-llattice sibling unless an explicit per-owner ref is supplied.
     required: false
     default: master
+  coordinated-ref:
+    description: >
+      Optional development branch to use for each sibling where that exact
+      remote branch exists; repositories without it retain their configured
+      per-owner or baseline fallback. Ignored when source-ref-manifest is set.
+    required: false
+    default: ""
   llattice-ref:
     description: Exact llattice ref; defaults to `ref`.
     required: false
@@ -61,6 +68,7 @@ runs:
       env:
         SOURCE_REF_MANIFEST: ${{ inputs.source-ref-manifest }}
         BASELINE_REF: ${{ inputs.ref }}
+        COORDINATED_REF: ${{ inputs.coordinated-ref }}
         LLATTICE_REF: ${{ inputs.llattice-ref }}
         LIBDICTENSTEIN_REF: ${{ inputs.libdictenstein-ref }}
         LLING_LLANG_REF: ${{ inputs.lling-llang-ref }}
@@ -105,6 +113,12 @@ runs:
             esac
             if [ -z "$selected_ref" ]; then
               selected_ref="$development_ref"
+            fi
+            if [ -n "$COORDINATED_REF" ] &&
+               git ls-remote --exit-code --heads \
+                 "https://github.com/vinary-tree/$repo.git" \
+                 "$COORDINATED_REF" >/dev/null 2>&1; then
+              selected_ref="$COORDINATED_REF"
             fi
           fi
           git check-ref-format --branch "$selected_ref" >/dev/null

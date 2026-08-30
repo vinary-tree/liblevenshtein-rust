@@ -12,6 +12,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
+from html import escape
 from pathlib import Path
 
 
@@ -229,10 +230,81 @@ def build_javascript(version: str, _source_ref: str) -> None:
     )
 
 
+def build_julia(version: str, _source_ref: str) -> None:
+    output = OUTPUT_ROOT / "julia"
+    clean_output(output)
+    docs = ROOT / "bindings" / "julia" / "Liblevenshtein" / "docs"
+    environment_root = ROOT / "target" / "package-documentation-julia-environment"
+    shutil.rmtree(environment_root, ignore_errors=True)
+    environment = dict(os.environ)
+    environment["LIBLEVENSHTEIN_DOCS_DEPLOY"] = "0"
+    environment["VINARY_TREE_DOC_OUTPUT"] = str(output)
+    expression = "\n".join(
+        (
+            "using Pkg",
+            f"Pkg.activate({json.dumps(str(environment_root))})",
+            "Pkg.develop([",
+            "  PackageSpec(path="
+            + json.dumps(
+                str(
+                    ROOT.parent
+                    / "vinary-tree-interop"
+                    / "bindings"
+                    / "julia"
+                    / "VinaryTreeInterop"
+                )
+            )
+            + "),",
+            "  PackageSpec(path="
+            + json.dumps(str(ROOT / "bindings" / "julia" / "Liblevenshtein"))
+            + "),",
+            "])",
+            'Pkg.add(PackageSpec(name="Documenter", version="1"))',
+            f"include({json.dumps(str(docs / 'make.jl'))})",
+        )
+    )
+    run([executable("julia"), "--startup-file=no", "-e", expression], env=environment)
+    require_markers(output / "index.html", ("Liblevenshtein.jl", "Transducer"))
+
+
+def build_raku(version: str, _source_ref: str) -> None:
+    output = OUTPUT_ROOT / "raku"
+    clean_output(output)
+    output.mkdir(parents=True, exist_ok=True)
+    source = ROOT / "bindings" / "raku" / "docs" / "Liblevenshtein.rakudoc"
+    completed = subprocess.run(
+        [executable("raku"), "--doc=Text", str(source)],
+        cwd=ROOT,
+        env=dict(os.environ),
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    rendered = completed.stdout
+    if not rendered.strip():
+        fail("Raku Pod renderer produced an empty API reference")
+    (output / "Liblevenshtein.txt").write_text(rendered, encoding="utf-8")
+    (output / "index.html").write_text(
+        "<!doctype html>\n"
+        '<html lang="en"><head><meta charset="utf-8">'
+        f"<title>Liblevenshtein Raku API {escape(version)}</title>"
+        "<style>body{font:16px/1.5 system-ui;margin:2rem auto;max-width:72rem;"
+        "padding:0 1rem;color:#18212b}pre{white-space:pre-wrap}</style>"
+        "</head><body>"
+        f"<h1>Liblevenshtein Raku API {escape(version)}</h1>"
+        f"<pre>{escape(rendered)}</pre></body></html>\n",
+        encoding="utf-8",
+    )
+    require_markers(output / "index.html", (version, "Transducer", "QueryCursor"))
+
+
 BUILDERS: dict[str, Callable[[str, str], None]] = {
     "native": build_native,
     "python": build_python,
     "javascript": build_javascript,
+    "julia": build_julia,
+    "raku": build_raku,
 }
 
 

@@ -1,0 +1,54 @@
+=begin pod
+
+=TITLE Liblevenshtein
+
+=SUBTITLE Fast edit distances and snapshot-consistent fuzzy search
+
+=head1 Synopsis
+
+    use Liblevenshtein;
+    say distance('kitten', 'sitting');
+
+=head1 Search resources
+
+C<Transducer.new(:dictionary($dictionary), :algorithm(STANDARD))> retains a
+versioned Vinary Tree dictionary provider. C<query> returns an exclusive
+C<QueryCursor> over the immutable revision captured at query start. Iterate
+the cursor for owned C<Match> values or call C<reduce-batches> for bounded
+batch processing.
+
+=head1 Ownership
+
+Call C<close> on transducers, cursors, phonetic patterns, and rewrite-rule
+sets. C<DESTROY> is a leak fallback. Each cursor is single-consumer, while
+independent cursors and immutable transducers may run concurrently.
+
+=head1 API
+
+=item C<distance>, C<damerau-distance>, C<true-damerau-distance>
+
+Compute Unicode-scalar metrics. The C<:threshold> form yields an undefined
+value when the exact distance is above the inclusive bound.
+
+=item C<Transducer>, C<QueryCursor>, C<Match>
+
+Configure an algorithm over a retained provider and traverse owned results in
+bounded batches.
+
+=item C<STANDARD>, C<TRANSPOSITION>, C<MERGE-AND-SPLIT>, C<DAMERAU-LEVENSHTEIN>
+
+Select standard Levenshtein, optimal string alignment, symmetric merge/split,
+or unrestricted Damerau-Levenshtein semantics. Standard, merge/split, and
+unrestricted Damerau are metrics; optimal string alignment is not.
+
+=item C<PhoneticPattern>, C<PhoneticRuleSet>
+
+Compile reusable phonetic languages and rewrite rules when the native
+phonetic feature is present.
+
+=head1 Errors
+
+Native failures throw C<X::Liblevenshtein> with a stable numeric status, the
+failing operation, and a copied diagnostic.
+
+=end pod

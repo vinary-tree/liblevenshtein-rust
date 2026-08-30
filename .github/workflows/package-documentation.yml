@@ -44,6 +44,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
+      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32  # v3.0.2
+        with:
+          version: "1.12"
+      - uses: Raku/setup-raku@b8b1a4ebe85ef112edfc65e9edc8c57735367e3f  # v1
       # setup-uv v7.6.0
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:

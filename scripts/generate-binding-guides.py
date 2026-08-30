@@ -237,6 +237,34 @@ GUIDES: dict[str, Guide] = {
         "bindings/lua/tests/snapshot.lua",
         "lua bindings/lua/tests/snapshot.lua",
     ),
+    "julia": Guide(
+        "Julia",
+        "Julia 1.10+",
+        "Tier 3",
+        "General-registry package `Liblevenshtein`",
+        "`ccall` reaches the stable C ABI and `VinaryTreeInterop` carries retained dictionary resources between independent packages.",
+        "Use `close` in `finally` for transducers, cursors, patterns, and rule sets; finalizers are leak containment rather than deterministic scheduling.",
+        "Non-OK statuses become `NativeError` values carrying the exact numeric status, operation, and copied diagnostic.",
+        "Immutable transducers and independent cursors may run in separate tasks. A cursor and its live lexical batch remain exclusive and single-consumer.",
+        "`String`, `AbstractVector{UInt8}`, and integer vectors preserve Unicode-scalar, byte, and u64-token domains through multiple dispatch.",
+        "bindings/julia/Liblevenshtein/src/Liblevenshtein.jl",
+        "bindings/julia/Liblevenshtein/test/runtests.jl",
+        "julia --project=bindings/julia/Liblevenshtein -e 'using Pkg; Pkg.test()'",
+    ),
+    "raku": Guide(
+        "Raku",
+        "Raku through Rakudo and NativeCall",
+        "Tier 3",
+        "zef/fez distribution `Liblevenshtein`",
+        "`NativeCall` reaches the stable C ABI and `Vinary::Tree::Interop` carries retained dictionary resources between independent distributions.",
+        "Call `.close` or use `LEAVE` for transducers, cursors, patterns, and rule sets; `DESTROY` is only leak containment.",
+        "Non-OK statuses become `X::Liblevenshtein` values carrying the exact numeric status, operation, and copied diagnostic.",
+        "Immutable transducers and independent cursors may run on separate threads. A cursor remains exclusive and single-consumer.",
+        "`Str`, `Blob`, and `Positional` token values preserve Unicode-scalar, byte, and u64-token domains through multi methods.",
+        "bindings/raku/lib/Liblevenshtein.rakumod",
+        "bindings/raku/t/01-conformance.rakutest",
+        "raku -Ibindings/raku/lib -I../vinary-tree-interop/bindings/raku/lib -I../libdictenstein/bindings/raku/lib bindings/raku/t/01-conformance.rakutest",
+    ),
 }
 
 
@@ -475,6 +503,20 @@ views expire when their callback returns."""
 | Transducer | Immutable query configuration plus a retained dictionary provider; construction is constant-time with respect to dictionary size. |
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |"""
+        algorithm_contract = """### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same."""
         ownership_detail = """A transducer retains the provider resource, and a query retains the revision
 visible at query start. Closing the original dictionary or publishing later
 mutations cannot invalidate that query. Acquisition either completes with one
@@ -505,6 +547,8 @@ approximate because all values remain derivable from the retained snapshot."""
         surface_contract = "[`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) and the [generated completeness matrix](../../bindings/conformance/completeness-matrix.tsv)"
 
     surface = "" if interop else facade_surface(key or "")
+    if interop:
+        algorithm_contract = ""
     if interop or reducer_exposed:
         maximum_throughput_use = "The facade batch/reducer protocol"
     else:
@@ -512,7 +556,18 @@ approximate because all values remain derivable from the retained snapshot."""
             "Drain the facade iterator; no public reducer is exposed"
         )
 
-    if not interop and key == "javascript":
+    if not interop and key == "raku":
+        batch_rationale = (
+            "It amortizes NativeCall while copying each bounded batch and settling "
+            "its exact generation before host values escape."
+        )
+        result_lifetime = """Every Raku match and bounded batch is copied into host-owned values before
+the native generation is released. Values may outlive the cursor; no raw native
+pointer or lexical lease is exposed to application code."""
+        error_guidance = f"""{failure_scope.capitalize()} are distinct failures. Inspect
+`X::Liblevenshtein.status` and `operation`, never diagnostic prose; the copied
+message is human context."""
+    elif not interop and key == "javascript":
         batch_rationale = (
             "It amortizes the foreign boundary while returning bounded, "
             "host-owned arrays."
@@ -589,6 +644,8 @@ reach behind the stable C/resource ABIs.
 The idiomatic facade groups the stable surface into these concepts:
 
 {concepts}
+
+{algorithm_contract}
 
 {guide.units} Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use

@@ -1,0 +1,96 @@
+use Test;
+use NativeCall;
+use Liblevenshtein;
+
+module Producer {
+    use Libdictenstein;
+    our sub dictionary() { dynamic-dawg() }
+}
+
+is abi-version(), ABI-VERSION, 'ABI generation matches';
+ok api-revision() >= API-REVISION, 'API revision is compatible';
+ok build-features() +& BUILD-FEATURE-CORE, 'core feature is present';
+isa-ok (OK), Status, 'status values retain their generated enum type';
+isa-ok (STANDARD), Algorithm, 'algorithm values retain their generated enum type';
+isa-ok (TRAVERSAL), QueryOrder, 'query-order values retain their generated enum type';
+isa-ok (ENGLISH-ORTHOGRAPHY), PhoneticRuleSetKind,
+    'phonetic rule-set values retain their generated enum type';
+is nativesizeof(RawMatch), 48, 'match layout matches LP64 C';
+is nativesizeof(RawBatch), 24, 'batch layout matches LP64 C';
+is nativesizeof(OwnedString), 16, 'owned string layout matches LP64 C';
+
+is distance('kitten', 'sitting'), 3, 'standard distance';
+ok !distance('kitten', 'sitting', :threshold(2)).defined,
+    'threshold reports above-bound as Nil';
+is distance('kitten', 'sitting', :threshold(3)), 3,
+    'threshold reports an in-bound exact distance';
+is damerau-distance('ab', 'ba'), 1, 'optimal-string-alignment distance';
+is true-damerau-distance('CA', 'ABC'), 2,
+    'unrestricted Damerau-Levenshtein distance';
+
+my $dictionary = Producer::dictionary();
+$dictionary<cat> = 7;
+$dictionary<cot> = Nil;
+$dictionary<dog> = 9;
+$dictionary<ba> = 10;
+$dictionary<m> = 11;
+$dictionary<ABC> = 12;
+my $provider = $dictionary.snapshot;
+my $transducer = Transducer.new(:dictionary($provider));
+is $transducer.unit-domain, (UNICODE-SCALAR),
+    'the transducer reports its provider unit domain';
+my @matches = $transducer.query(
+    'cut', 1, order => DISTANCE-THEN-TERM,
+).list;
+is-deeply @matches.map({ [.term, .distance] }).Array,
+    [['cat', 1], ['cot', 1]],
+    'resource-backed Unicode query is ordered and materialized';
+is @matches[0].id, 7, 'present dictionary ID is preserved';
+ok !@matches[1].id.defined, 'absent dictionary ID remains undefined';
+
+my $batch-cursor = $transducer.query('cut', 1);
+isa-ok $batch-cursor, QueryCursor, 'queries return the public iterator type';
+is $batch-cursor.next-batch(1).elems, 1,
+    'next-batch materializes one bounded native batch';
+$batch-cursor.close;
+
+sub query-terms(Algorithm:D $algorithm, Str:D $input, Int:D $maximum --> List:D) {
+    my $variant = Transducer.new(:dictionary($provider), :$algorithm);
+    LEAVE $variant.close;
+    $variant.query($input, $maximum).map(*.term).List
+}
+nok query-terms(STANDARD, 'ab', 1).grep(* eq 'ba'),
+    'standard Levenshtein excludes one-edit transposition';
+ok query-terms(TRANSPOSITION, 'ab', 1).grep(* eq 'ba'),
+    'optimal string alignment admits an adjacent transposition';
+ok query-terms(MERGE-AND-SPLIT, 'rn', 1).grep(* eq 'm'),
+    'merge-and-split admits one two-to-one edit';
+ok query-terms(DAMERAU-LEVENSHTEIN, 'CA', 2).grep(* eq 'ABC'),
+    'unrestricted Damerau-Levenshtein composes edits through history';
+nok query-terms(TRANSPOSITION, 'CA', 2).grep(* eq 'ABC'),
+    'optimal string alignment remains distinct from unrestricted Damerau';
+
+my $fixed = $transducer.snapshot;
+$transducer.close;
+is $fixed.query('cut', 1).reduce-batches(
+    -> $count, $batch { $count + $batch.elems }, 0, batch-size => 1,
+), 2, 'bounded reduction consumes a captured snapshot';
+$fixed.close;
+$provider.close;
+$dictionary.close;
+
+if build-features() +& (BUILD-FEATURE-PHONETIC) {
+    my $pattern = PhoneticPattern.new(regex => 'cat');
+    ok $pattern.accepts('cat'), 'phonetic regex accepts a member';
+    nok $pattern.accepts('cot'), 'phonetic regex rejects a non-member';
+    ok $pattern.size.grep(* <= 0).elems == 0,
+        'pattern exposes structural size';
+    $pattern.close;
+
+    my $rules = PhoneticRuleSet.new(builtin => ENGLISH-ORTHOGRAPHY);
+    ok $rules.elems > 0, 'built-in rule set has rules';
+    isa-ok $rules.apply('KNIGHT'), Str, 'rule application returns text';
+    $rules.close;
+}
+
+done-testing;

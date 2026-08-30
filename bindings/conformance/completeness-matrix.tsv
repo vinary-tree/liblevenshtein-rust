@@ -8,9 +8,11 @@ go	27/36	9	4/4	Iterator.Next	none	status-error	yes	yes	-
 haskell	26/36	10	3/4	next	foldBatches	status-error	yes	yes	-
 javascript	20/36	16	3/4	QueryCursor	QueryCursor.reduceBatches	status-error	yes	yes	-
 javascript-runtime	26/36	10	3/4	QueryCursor.next	QueryCursor.reduceBatches	status-error	yes	yes	-
+julia	33/36	3	4/4	QueryCursor	reduce_batches!	build_features	yes	yes	-
 jvm	22/36	14	4/4	QueryCursor.next	QueryCursor.forEachBatch	status-error	yes	yes	-
 lua	27/36	9	4/4	cursor:next	cursor:reduce_batches	status-error	yes	yes	-
 ocaml	26/36	10	3/4	next	fold_batches	status-error	yes	yes	-
 python	22/36	14	4/4	QueryCursor.__next__	QueryCursor.reduce	status-error	yes	yes	-
+raku	32/36	4	4/4	QueryCursor	reduce-batches	build-features	yes	yes	-
 ruby	27/36	9	4/4	Query#each	none	status-error	yes	yes	-
 swift	27/36	9	4/4	QueryCursor.next	QueryCursor.reduceBatches	status-error	yes	yes	-

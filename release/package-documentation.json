@@ -433,6 +433,78 @@
           "reason": "No generated FORD reference is built or deployed yet."
         }
       ]
+    },
+    {
+      "id": "julia",
+      "languages": ["Julia"],
+      "ecosystem": "Julia General registry/Documenter",
+      "coordinate": "Liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/julia/Liblevenshtein/Project.toml",
+        "bindings/julia/README.md",
+        "bindings/julia/Liblevenshtein/src/Liblevenshtein.jl",
+        "bindings/julia/Liblevenshtein/docs/make.jl"
+      ],
+      "releaseProof": "The user authorized feature-branch CI but explicitly prohibited publication from the RC5 binding campaign.",
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "Julia package README and versioned family documentation",
+          "state": "build-only",
+          "reason": "The complete source guide is built in CI; registry publication is intentionally prohibited on this feature branch.",
+          "buildEvidence": [
+            "bindings/julia/README.md",
+            "bindings/julia/Liblevenshtein/README.md"
+          ]
+        },
+        {
+          "kind": "api-reference",
+          "service": "Documenter.jl",
+          "state": "build-only",
+          "reason": "Documenter builds with strict exported-symbol coverage in CI; deployment requires the later reviewed release tag.",
+          "buildEvidence": [
+            "bindings/julia/Liblevenshtein/docs/make.jl",
+            "bindings/julia/Liblevenshtein/docs/src/index.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "raku",
+      "languages": ["Raku"],
+      "ecosystem": "zef/fez ecosystem",
+      "coordinate": "Liblevenshtein",
+      "registryVersion": "4.0.0-rc.5",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/raku/META6.json",
+        "bindings/raku/README.md",
+        "bindings/raku/lib/Liblevenshtein.rakumod",
+        "bindings/raku/docs/Liblevenshtein.rakudoc"
+      ],
+      "releaseProof": "The user authorized feature-branch CI but explicitly prohibited publication from the RC5 binding campaign.",
+      "destinations": [
+        {
+          "kind": "package-guide",
+          "service": "fez ecosystem package page and versioned family documentation",
+          "state": "build-only",
+          "reason": "The distribution guide is validated and staged locally; ecosystem publication requires the later reviewed release tag.",
+          "buildEvidence": [
+            "bindings/raku/README.md"
+          ]
+        },
+        {
+          "kind": "api-reference",
+          "service": "Raku Pod and versioned family documentation",
+          "state": "build-only",
+          "reason": "The package Pod is compiled and staged in CI; public deployment requires the later reviewed release tag.",
+          "buildEvidence": [
+            "bindings/raku/docs/Liblevenshtein.rakudoc"
+          ]
+        }
+      ]
     }
   ]
 }
