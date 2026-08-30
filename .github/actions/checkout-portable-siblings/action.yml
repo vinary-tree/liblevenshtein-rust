@@ -6,8 +6,8 @@ description: >
 inputs:
   ref:
     description: >
-      Baseline development ref. A release/* pull-request head selects the same
-      coordinated branch for mutable siblings.
+      Baseline development ref. The triggering branch is selected for each
+      mutable sibling where that exact remote branch exists.
     required: false
     default: master
   llattice-ref:
@@ -37,13 +37,25 @@ runs:
       run: |
         set -euo pipefail
         event_ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}"
-        if [[ "$event_ref" == release/* ]]; then
-          mutable_ref="$event_ref"
-        else
-          mutable_ref="$BASELINE_REF"
+        mutable_ref="$BASELINE_REF"
+        interop_ref="$INTEROP_REF"
+        libdictenstein_ref="$LIBDICTENSTEIN_REF"
+        if [ -z "$interop_ref" ] && [ -n "$event_ref" ] && \
+          git ls-remote --exit-code --heads \
+            https://github.com/vinary-tree/vinary-tree-interop.git \
+            "$event_ref" >/dev/null 2>&1
+        then
+          interop_ref="$event_ref"
         fi
-        interop_ref="${INTEROP_REF:-$mutable_ref}"
-        libdictenstein_ref="${LIBDICTENSTEIN_REF:-$mutable_ref}"
+        if [ -z "$libdictenstein_ref" ] && [ -n "$event_ref" ] && \
+          git ls-remote --exit-code --heads \
+            https://github.com/vinary-tree/libdictenstein.git \
+            "$event_ref" >/dev/null 2>&1
+        then
+          libdictenstein_ref="$event_ref"
+        fi
+        interop_ref="${interop_ref:-$mutable_ref}"
+        libdictenstein_ref="${libdictenstein_ref:-$mutable_ref}"
         for ref in "$interop_ref" "$LLATTICE_REF" "$libdictenstein_ref"; do
           git check-ref-format --branch "$ref" >/dev/null
         done

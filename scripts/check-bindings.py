@@ -583,17 +583,30 @@ require(
     raku_meta["version"] == RELEASE_MODEL["registries"]["zef"],
     "wrong Raku package version",
 )
+raku_interop_version = RELEASE_MODEL["dependencies"]["vinary-tree-interop"].replace(
+    "-rc.", ".rc."
+)
 require(
-    "Vinary-Tree-Interop:ver<4>:auth<zef:vinary-tree>"
+    f"Vinary-Tree-Interop:ver<{raku_interop_version}>:auth<zef:vinary-tree>"
     in raku_meta.get("depends", []),
     "Raku package must depend on the canonical Vinary-Tree-Interop distribution",
+)
+raku_libdict_version = RELEASE_MODEL["dependencies"]["libdictenstein"].replace(
+    "-rc.", ".rc."
+)
+require(
+    f"Libdictenstein:ver<{raku_libdict_version}>:auth<zef:vinary-tree>"
+    in raku_meta.get("test-depends", []),
+    "Raku tests must pin the coordinated Libdictenstein distribution",
 )
 raku_abi = text(
     ROOT / "bindings" / "raku" / "lib" / "Liblevenshtein" / "GeneratedAbi.rakumod"
 )
 raku_facade = text(ROOT / "bindings" / "raku" / "lib" / "Liblevenshtein.rakumod")
 generated_raku_exports = set(
-    re.findall(r"^our (?:constant|enum) ([A-Z][A-Za-z0-9-]*) is export", raku_abi, re.MULTILINE)
+    re.findall(
+        r"^our (?:constant|enum) ([A-Z][A-Za-z0-9-]*) is export", raku_abi, re.MULTILINE
+    )
 )
 generated_raku_exports.update(
     re.findall(r"^    ([A-Z][A-Z0-9-]*) =>", raku_abi, re.MULTILINE)
