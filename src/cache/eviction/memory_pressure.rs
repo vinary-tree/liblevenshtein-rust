@@ -17,6 +17,8 @@
 //! # Examples
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::MemoryPressure;
@@ -28,6 +30,7 @@
 //!
 //! let memory_pressure = MemoryPressure::new(dict);
 //! assert_eq!(memory_pressure.get_value("foo"), Some(42));
+//! # }
 //! ```
 
 use crate::dictionary::node_adapter::{
@@ -92,6 +95,8 @@ impl EntryMetadata {
 /// # Examples
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::cache::eviction::MemoryPressure;
@@ -103,6 +108,7 @@ impl EntryMetadata {
 ///
 /// let memory_pressure = MemoryPressure::new(dict);
 /// assert_eq!(memory_pressure.get_value("hello"), Some(1));
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct MemoryPressure<D> {
@@ -120,6 +126,8 @@ impl<D> MemoryPressure<D> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::MemoryPressure;
     ///
@@ -128,6 +136,7 @@ impl<D> MemoryPressure<D> {
     /// ]);
     ///
     /// let memory_pressure = MemoryPressure::new(dict);
+    /// # }
     /// ```
     pub fn new(dict: D) -> Self {
         Self {

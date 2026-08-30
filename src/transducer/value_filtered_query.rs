@@ -399,6 +399,8 @@ where
 ///
 /// For most use cases, post-filtering is recommended:
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
 /// use liblevenshtein::prelude::*;
@@ -414,11 +416,14 @@ where
 ///     .filter(|term| transducer.dictionary().get_value(term) == Some(target_scope))
 ///     .collect();
 /// assert_eq!(matches, ["my_func"]);
+/// # }
 /// ```
 ///
 /// # Example
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
 ///
@@ -434,6 +439,7 @@ where
 /// let matches: Vec<_> = transducer
 ///     .query_filtered("my", 2, |scope_id| *scope_id == 2)
 ///     .collect();
+/// # }
 /// ```
 pub struct ValueFilteredQueryIterator<N, F>
 where
@@ -682,6 +688,8 @@ where
 /// # Example
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use std::collections::HashSet;
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
@@ -700,6 +708,7 @@ where
 ///     .collect();
 /// assert!(matches.iter().any(|candidate| candidate.term == "my_func"));
 /// assert!(matches.iter().all(|candidate| candidate.term != "private_helper"));
+/// # }
 /// ```
 pub struct ValueSetFilteredQueryIterator<'a, N, V>
 where

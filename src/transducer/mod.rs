@@ -980,6 +980,8 @@ where
     /// # Example
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     ///
@@ -999,6 +1001,7 @@ where
     ///
     /// // Returns: [("my_func", 2)] - other_func fails the value predicate
     /// // before its term string is returned.
+    /// # }
     /// ```
     ///
     /// # Use Cases
@@ -1072,6 +1075,8 @@ where
     /// # Example: Hierarchical Lexical Scope
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
@@ -1096,6 +1101,7 @@ where
     ///
     /// // Returns: ["my_func", "helper"] - only from visible scopes
     /// // Does NOT return items from other modules/files
+    /// # }
     /// ```
     ///
     /// # Performance

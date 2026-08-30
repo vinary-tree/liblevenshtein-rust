@@ -10,7 +10,12 @@ from collections import deque
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Self, TypeVar
+from typing import TypeVar
+
+try:
+    from typing import Self
+except ImportError:  # Python 3.10
+    from typing_extensions import Self
 
 from vinary_tree_interop import DictionaryResource, UnitDomain, VtResource
 

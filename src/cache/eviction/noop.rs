@@ -10,6 +10,8 @@
 //! # Examples
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Noop;
@@ -24,6 +26,7 @@
 //! // Behaves exactly like the inner dictionary
 //! assert_eq!(wrapped.get_value("hello"), Some(1));
 //! assert!(wrapped.contains("world"));
+//! # }
 //! ```
 
 use crate::dictionary::node_adapter::{
@@ -54,11 +57,14 @@ impl<D> Noop<D> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Noop;
     ///
     /// let dict: PathMapDictionary = PathMapDictionary::from_terms(["hello", "world"]);
     /// let wrapped = Noop::new(dict);
+    /// # }
     /// ```
     #[inline]
     pub fn new(dict: D) -> Self {
@@ -70,12 +76,15 @@ impl<D> Noop<D> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Noop;
     ///
     /// let dict: PathMapDictionary = PathMapDictionary::from_terms(["hello", "world"]);
     /// let wrapped = Noop::new(dict);
     /// let original = wrapped.into_inner();
+    /// # }
     /// ```
     #[inline]
     pub fn into_inner(self) -> D {

@@ -104,5 +104,26 @@ runs:
         if after == before:
             raise SystemExit("development dependency paths were not found")
         manifest.write_text(after)
+
+        # Each sibling ends its package manifest with an empty `[workspace]`
+        # sentinel so a normal standalone checkout cannot be captured by an
+        # unrelated parent workspace. Portable CI intentionally nests these
+        # copies below this workspace, where retaining those sentinels would
+        # create multiple workspace roots. Remove only that verified empty
+        # terminal table from the vendored copies; no package fields or path
+        # dependency semantics are rewritten.
+        for portable_root in (
+            "vendor/libdictenstein",
+            "vendor/llattice",
+            "vendor/vinary-tree-interop",
+        ):
+            sibling_manifest = Path(portable_root, "Cargo.toml")
+            sibling = sibling_manifest.read_text()
+            prefix, marker, suffix = sibling.rpartition("\n[workspace]\n")
+            if not marker or suffix.strip():
+                raise SystemExit(
+                    f"{sibling_manifest} does not end in an empty workspace table"
+                )
+            sibling_manifest.write_text(prefix.rstrip() + "\n")
         PY
         cargo generate-lockfile

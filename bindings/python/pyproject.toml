@@ -24,7 +24,10 @@ classifiers = [
   "Topic :: Software Development :: Libraries",
   "Topic :: Text Processing",
 ]
-dependencies = ["vinary-tree-interop==4.0.0rc5"]
+dependencies = [
+  "typing-extensions>=4.4; python_version < '3.11'",
+  "vinary-tree-interop==4.0.0rc5",
+]
 
 [project.optional-dependencies]
 # C8/C9 dev tooling: Hypothesis drives the property suite (tests/test_property.py);

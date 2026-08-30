@@ -73,6 +73,8 @@ impl ZipperPathNode {
 /// # Examples
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// # // Note: This example requires the 'pathmap-backend' feature
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
 /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -100,6 +102,7 @@ impl ZipperPathNode {
 ///         println!("  Match found: {}", child.term());
 ///     }
 /// }
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct IntersectionZipper<D>
@@ -130,6 +133,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// # // Note: This example requires the 'pathmap-backend' feature
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -141,6 +146,7 @@ where
     /// let auto_zipper = AutomatonZipper::new("test".as_bytes(), 1, Algorithm::Standard);
     ///
     /// let intersection = IntersectionZipper::new(dict_zipper, auto_zipper);
+    /// # }
     /// ```
     pub fn new(dict: D, automaton: AutomatonZipper) -> Self {
         IntersectionZipper {
@@ -178,6 +184,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// # // Note: This example requires the 'pathmap-backend' feature
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -205,6 +213,7 @@ where
     /// }
     /// // Still not a match after just 'c'
     /// assert!(!intersection.is_match());
+    /// # }
     /// ```
     #[inline]
     pub fn is_match(&self) -> bool {
@@ -229,6 +238,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use libdictenstein::pathmap::PathMapDictionary;
     /// use libdictenstein::pathmap::zipper::PathMapZipper;
     /// use liblevenshtein::transducer::{
@@ -251,6 +262,7 @@ where
     ///         .1;
     /// }
     /// assert_eq!(intersection.distance(), Some(1));
+    /// # }
     /// ```
     #[inline]
     pub fn distance(&self) -> Option<usize> {
@@ -277,6 +289,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use libdictenstein::pathmap::PathMapDictionary;
     /// use libdictenstein::pathmap::zipper::PathMapZipper;
     /// use liblevenshtein::transducer::{
@@ -300,6 +314,7 @@ where
     ///         .1;
     /// }
     /// assert_eq!(intersection.depth(), 3);
+    /// # }
     /// ```
     #[inline]
     pub fn depth(&self) -> usize {
@@ -315,6 +330,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use libdictenstein::pathmap::PathMapDictionary;
     /// use libdictenstein::pathmap::zipper::PathMapZipper;
     /// use liblevenshtein::transducer::{
@@ -337,6 +354,7 @@ where
     ///         .1;
     /// }
     /// assert_eq!(intersection.term(), "cat");
+    /// # }
     /// ```
     pub fn term(&self) -> String {
         let mut units = Vec::with_capacity(self.depth());
@@ -369,6 +387,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// # // Note: This example requires the 'pathmap-backend' feature
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -389,6 +409,7 @@ where
     /// // Should have one child: 'c'
     /// assert_eq!(children.len(), 1);
     /// assert_eq!(children[0].0, b'c');
+    /// # }
     /// ```
     pub fn children<'a>(
         &'a self,
@@ -448,6 +469,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use libdictenstein::pathmap::PathMapDictionary;
     /// use libdictenstein::pathmap::zipper::PathMapZipper;
     /// use liblevenshtein::transducer::{
@@ -467,6 +490,7 @@ where
     /// let children: Vec<_> = intersection.children(&mut pool).collect();
     /// assert_eq!(children.len(), 1);
     /// assert!(children.iter().all(|(_, child)| child.is_viable()));
+    /// # }
     /// ```
     pub fn is_viable(&self) -> bool {
         self.automaton.is_viable()
@@ -477,6 +501,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use libdictenstein::pathmap::PathMapDictionary;
     /// use libdictenstein::pathmap::zipper::PathMapZipper;
     /// use libdictenstein::DictZipper;
@@ -501,6 +527,7 @@ where
     ///         .1;
     /// }
     /// assert!(intersection.dict_zipper().is_final());
+    /// # }
     /// ```
     pub fn dict_zipper(&self) -> &D {
         &self.dict
@@ -511,6 +538,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use libdictenstein::pathmap::PathMapDictionary;
     /// use libdictenstein::pathmap::zipper::PathMapZipper;
     /// use liblevenshtein::transducer::{
@@ -524,6 +553,7 @@ where
     ///
     /// assert_eq!(intersection.automaton_zipper().query(), b"needle");
     /// assert_eq!(intersection.automaton_zipper().max_distance(), 2);
+    /// # }
     /// ```
     pub fn automaton_zipper(&self) -> &AutomatonZipper {
         &self.automaton

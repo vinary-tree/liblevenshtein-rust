@@ -415,13 +415,15 @@ jobs:
         run: |
           zef install --/test ../vinary-tree-interop/bindings/raku
           zef install --/test ../libdictenstein/bindings/raku
-      - name: Build and test the fresh distribution
+      - name: Test the fresh pure-Raku distribution
         env:
           LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
           LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
-        run: |
-          zef build ./bindings/raku
-          zef test ./bindings/raku
+        # This distribution has no native build phase: Cargo produced the
+        # shared library above and the Raku package is a NativeCall facade.
+        # Calling `zef build` without META6 `builder` metadata or a legacy
+        # Build.rakumod is an error, not a useful package validation.
+        run: zef test ./bindings/raku
       - name: Compile the public Raku Pod
         run: raku --doc=Text bindings/raku/docs/Liblevenshtein.rakudoc >/dev/null
 

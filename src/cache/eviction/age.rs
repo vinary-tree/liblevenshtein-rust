@@ -17,6 +17,8 @@
 //! # Examples
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Age;
@@ -28,6 +30,7 @@
 //!
 //! let age = Age::new(dict);
 //! assert_eq!(age.get_value("foo"), Some(42));
+//! # }
 //! ```
 
 use crate::dictionary::node_adapter::{
@@ -72,6 +75,8 @@ impl EntryMetadata {
 /// # Examples
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::cache::eviction::Age;
@@ -83,6 +88,7 @@ impl EntryMetadata {
 ///
 /// let age = Age::new(dict);
 /// assert_eq!(age.get_value("hello"), Some(1));
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct Age<D> {
@@ -100,6 +106,8 @@ impl<D> Age<D> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Age;
     ///
@@ -108,6 +116,7 @@ impl<D> Age<D> {
     /// ]);
     ///
     /// let age = Age::new(dict);
+    /// # }
     /// ```
     pub fn new(dict: D) -> Self {
         Self {
