@@ -314,3 +314,59 @@ Proof.
   replace (1 - 1) with 0 by ring.
   repeat rewrite Rabs_R0. lra.
 Qed.
+
+(** Explicit-timestamp TWED replaces the unit-grid stiffness constant by the
+    elapsed physical time in one canonical unit. *)
+Definition physical_delete_exact
+    (current previous time previous_time nu lambda : R) : R :=
+  Rabs (current - previous) + nu * (time - previous_time) + lambda.
+
+Theorem physical_delete_is_nonnegative : forall
+    current previous time previous_time nu lambda,
+  previous_time <= time -> 0 <= nu -> 0 <= lambda ->
+  0 <= physical_delete_exact
+    current previous time previous_time nu lambda.
+Proof.
+  intros current previous time previous_time nu lambda Htime Hnu Hlambda.
+  unfold physical_delete_exact.
+  pose proof (Rabs_pos (current - previous)). nra.
+Qed.
+
+(** Unit-spaced physical timestamps reproduce the unit-grid deletion leaf
+    exactly; this is the local correspondence used by the executable
+    generated test. *)
+Theorem unit_elapsed_physical_delete_is_unit_grid : forall
+    current previous previous_time nu lambda,
+  physical_delete_exact
+    current previous (previous_time + 1) previous_time nu lambda =
+  delete_exact current previous nu lambda.
+Proof.
+  intros. unfold physical_delete_exact, delete_exact. ring.
+Qed.
+
+Definition physical_match_exact
+    (xcur xprev xtime xprev_time
+     ycur yprev ytime yprev_time nu : R) : R :=
+  Rabs (xcur - ycur) + Rabs (xprev - yprev) +
+  nu * (Rabs (xtime - ytime) + Rabs (xprev_time - yprev_time)).
+
+Theorem physical_match_is_nonnegative : forall
+    xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu,
+  0 <= nu ->
+  0 <= physical_match_exact
+    xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu.
+Proof.
+  intros xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu Hnu.
+  unfold physical_match_exact.
+  pose proof (Rabs_pos (xcur - ycur)).
+  pose proof (Rabs_pos (xprev - yprev)).
+  pose proof (Rabs_pos (xtime - ytime)).
+  pose proof (Rabs_pos (xprev_time - yprev_time)). nra.
+Qed.
+
+(** The online constructor's monotonicity gate makes every committed elapsed
+    target-time term nonnegative. *)
+Theorem validated_timestamp_step_has_nonnegative_elapsed_time : forall
+    previous_time current_time,
+  previous_time < current_time -> 0 <= current_time - previous_time.
+Proof. intros; lra. Qed.

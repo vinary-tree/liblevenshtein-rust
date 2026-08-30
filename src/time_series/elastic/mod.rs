@@ -35,9 +35,28 @@ use crate::cost::CostMonoid;
 use std::fmt::Debug;
 
 pub mod interval;
+pub(crate) mod sparse;
+
+/// Internal tagged result of one exact sparse point transition.
+#[doc(hidden)]
+pub enum PointFrontierStep<C, Carry> {
+    /// The next generation was constructed within its hard work ceiling.
+    Advanced {
+        lower_bound: C,
+        carry: Carry,
+        work: usize,
+    },
+    /// Construction stopped before evaluating the requested row.
+    WorkLimitExceeded { completed: usize, requested: usize },
+}
 mod walker;
 
-pub use walker::{ElasticSearchStats, ElasticTransducer};
+pub use walker::{
+    BoundedRangeOutcome, ElasticProductStateStats, ElasticSearchStats, ElasticSnapshot,
+    ElasticSnapshotError, ElasticSnapshotIdentity, ElasticSnapshotKernel, ElasticSnapshotMetadata,
+    ElasticTransducer, ErpAutomatonRangeContinuation, ErpAutomatonRangeOutcome, ExactRangeResults,
+    ExactSearchOutcome, RangeContinuation,
+};
 
 /// Cost carrier selected by an elastic kernel.
 pub type Cost<K> = <<K as ElasticKernel>::Monoid as CostMonoid>::Cost;
@@ -76,6 +95,16 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
         self
     }
 
+    /// Whether `cutoff` belongs to the kernel's lawful nonnegative cost domain.
+    ///
+    /// The default accepts values ordered between the monoid identity and top.
+    /// Floating-point monoids order NaN outside that closed interval.
+    #[inline]
+    fn cutoff_is_valid(&self, cutoff: Cost<Self>) -> bool {
+        Self::Monoid::compare(cutoff, Self::Monoid::ZERO) != std::cmp::Ordering::Less
+            && Self::Monoid::compare(cutoff, Self::Monoid::TOP) != std::cmp::Ordering::Greater
+    }
+
     /// Whether interval traversal is defined for this query.
     ///
     /// The default accepts finite real-valued samples. A rejected query uses
@@ -107,6 +136,93 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
         plan: &Self::QueryPlan,
         column: &mut Vec<Cost<Self>>,
     ) -> (Cost<Self>, Self::Carry);
+
+    /// Construct one exact point-label frontier from the rows reachable in the
+    /// preceding generation.
+    ///
+    /// Returning `None` selects the dense-column fallback. A specialized
+    /// implementation writes only finite in-cutoff rows into `column`, appends
+    /// their strictly increasing row indices to `active`, and returns the
+    /// minimum live cost plus the exact number of recurrence rows evaluated.
+    /// It must charge each row before evaluation and return
+    /// [`PointFrontierStep::WorkLimitExceeded`] without evaluating a row that
+    /// would cross `max_work`.
+    /// Query-sized scratch remains allocated once by the caller; no target
+    /// prefix is retained.
+    #[doc(hidden)]
+    #[allow(clippy::too_many_arguments)]
+    fn step_point_frontier(
+        &self,
+        _previous: &[Cost<Self>],
+        _previous_active: &[usize],
+        _query: &[f64],
+        _target: f64,
+        _previous_carry: Option<Self::Carry>,
+        _depth: usize,
+        _plan: &Self::QueryPlan,
+        _cutoff: Cost<Self>,
+        _max_work: usize,
+        _column: &mut [Cost<Self>],
+        _active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        None
+    }
+
+    /// Construct one interval-relaxed sparse frontier for a dictionary edge.
+    ///
+    /// The contract is the interval analogue of
+    /// [`Self::step_point_frontier`]. Returning `None` selects the legacy dense
+    /// column transition; a specialized implementation schedules only rows
+    /// seeded by the previous frontier and its immediate successors, then
+    /// performs the kernel's vertical closure. Each row is charged before it
+    /// is evaluated.
+    #[doc(hidden)]
+    #[allow(clippy::too_many_arguments)]
+    fn step_interval_frontier(
+        &self,
+        _previous: &[Cost<Self>],
+        _previous_active: &[usize],
+        _query: &[f64],
+        _target: (f64, f64),
+        _previous_carry: Option<Self::Carry>,
+        _depth: usize,
+        _plan: &Self::QueryPlan,
+        _cutoff: Cost<Self>,
+        _max_work: usize,
+        _column: &mut [Cost<Self>],
+        _active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        None
+    }
+
+    /// Recompute the immediate vertical epsilon extension ending at `row`.
+    ///
+    /// The dictionary product removes a row only when this value compares
+    /// exactly equal to the row's recurrence cost. Returning `None` disables
+    /// cross-row subsumption. Implementations must return only a concrete
+    /// zero-target-consumption transition in the kernel's formal model.
+    #[doc(hidden)]
+    fn vertical_epsilon_extension(
+        &self,
+        _query: &[f64],
+        _target: (f64, f64),
+        _row: usize,
+        _column: &[Cost<Self>],
+        _plan: &Self::QueryPlan,
+    ) -> Option<Cost<Self>> {
+        None
+    }
+
+    /// Recover the target interval held by a canonical frontier context.
+    ///
+    /// Kernels whose vertical epsilon cost depends on the held target label
+    /// return it here so a compact state can lazily reconstruct only the
+    /// closure rows demanded by the next transition. Context-free vertical
+    /// costs may return any fixed finite interval.
+    #[doc(hidden)]
+    fn carry_interval(&self, _carry: Self::Carry) -> Option<(f64, f64)> {
+        None
+    }
 
     /// Optional constant-time lower bound evaluated before a child DP column.
     ///

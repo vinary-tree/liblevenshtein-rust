@@ -212,6 +212,47 @@ proptest! {
             }
         }
     }
+
+    /// Every finite cutoff agrees with the exact scalar DP scorer in both
+    /// membership and returned distance. This covers thresholds below,
+    /// equal to, and above the exact distance rather than testing only the
+    /// permissive side of the contract.
+    #[test]
+    fn prop_wavefront_cutoff_matches_exact_dp(
+        x in short_time_series_strategy(),
+        y in short_time_series_strategy(),
+        split_merge_cost in 0.0f64..10.0,
+        cutoff in 0.0f64..100.0,
+    ) {
+        if x.is_empty() || y.is_empty() {
+            return Ok(());
+        }
+
+        let config = MsmConfig::new(split_merge_cost);
+        let expected = config.distance_with_cutoff(&x, &y, cutoff);
+        let actual = msm_distance_wavefront(&x, &y, &config, cutoff);
+
+        match (actual, expected) {
+            (Some(actual), Some(expected)) => {
+                prop_assert!((actual - expected).abs() < 1e-9);
+            }
+            (None, None) => {}
+            (actual, expected) => {
+                prop_assert!(false, "cutoff disagreement: wavefront={actual:?}, exact={expected:?}, cutoff={cutoff}");
+            }
+        }
+    }
+}
+
+#[test]
+fn wavefront_rejects_finite_distance_above_cutoff() {
+    let config = MsmConfig::new(100.0);
+    let query = [0.0, 10.0];
+    let target = [0.0, 20.0];
+
+    assert_eq!(config.distance(&query, &target), 10.0);
+    assert_eq!(config.distance_with_cutoff(&query, &target, 1.0), None);
+    assert_eq!(msm_distance_wavefront(&query, &target, &config, 1.0), None);
 }
 
 // ============================================================================

@@ -67,6 +67,7 @@
 //! assert_eq!(encoding.len(), 5);  // One bit vector per character in "dacab"
 //! ```
 
+use smallvec::SmallVec;
 use std::fmt;
 
 /// Characteristic vector β(x, w) representing which positions in w match character x.
@@ -79,8 +80,9 @@ use std::fmt;
 ///
 /// # Implementation
 ///
-/// Bits are stored as a `Vec<bool>` for simplicity and clarity. For production use, this could
-/// be optimized to use a bit-packed representation (e.g., `Vec<u64>` or `bitvec` crate).
+/// Bits use inline storage for the short windows produced by ordinary universal
+/// automata and spill only when the configured distance requires a larger
+/// window. Storage depends on the fixed distance bound, never input length.
 ///
 /// # Example
 ///
@@ -94,7 +96,7 @@ use std::fmt;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CharacteristicVector {
     /// Bit vector: `bits[i] = true` if the character matches at position `i`.
-    bits: Vec<bool>,
+    bits: SmallVec<[bool; 16]>,
 }
 
 impl CharacteristicVector {
@@ -130,6 +132,17 @@ impl CharacteristicVector {
     /// ```
     pub fn new(character: char, word: &str) -> Self {
         let bits = word.chars().map(|c| c == character).collect();
+        Self { bits }
+    }
+
+    /// Build a universal window without materializing its padded subword.
+    ///
+    /// Padding symbols are outside the input alphabet and therefore always
+    /// contribute `false`, even when the concrete input character is `$`.
+    pub(crate) fn from_padded_chars(character: char, false_prefix: usize, word: &[char]) -> Self {
+        let mut bits = SmallVec::with_capacity(false_prefix.saturating_add(word.len()));
+        bits.resize(false_prefix, false);
+        bits.extend(word.iter().map(|&candidate| candidate == character));
         Self { bits }
     }
 
@@ -213,7 +226,7 @@ impl CharacteristicVector {
     /// A new CharacteristicVector containing bits from start to the end
     pub fn suffix(&self, start: usize) -> Self {
         Self {
-            bits: self.bits[start..].to_vec(),
+            bits: self.bits[start..].iter().copied().collect(),
         }
     }
 
@@ -441,6 +454,15 @@ pub fn encode_word_pair(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn universal_padding_never_matches_a_concrete_dollar_scalar() {
+        let vector = CharacteristicVector::from_padded_chars('$', 3, &['$', 'a']);
+        assert_eq!(
+            vector.iter().collect::<Vec<_>>(),
+            vec![false, false, false, true, false]
+        );
+    }
 
     // ==================== CharacteristicVector Tests ====================
 

@@ -79,6 +79,119 @@ pub struct UniversalAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrest
     _phantom: std::marker::PhantomData<(V, P)>,
 }
 
+/// Stable online execution state for one fixed dictionary word.
+///
+/// Each call to [`advance`](Self::advance) consumes one input scalar and keeps
+/// only the fixed word, the current canonical universal antichain, and a scalar
+/// position counter. Retained memory is independent of the consumed input
+/// prefix and no recursion is used.
+#[derive(Debug, Clone)]
+pub struct UniversalOnlineAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrestricted> {
+    max_distance: u8,
+    word: Vec<char>,
+    state: Option<UniversalState<V>>,
+    input_length: usize,
+    _policy: std::marker::PhantomData<P>,
+}
+
+impl<V: PositionVariant, P: SubstitutionPolicy> UniversalOnlineAutomaton<V, P> {
+    /// Consume one input scalar. `false` means the exact universal frontier is
+    /// dead; subsequent calls remain dead and allocate nothing.
+    pub fn advance(&mut self, input: char) -> bool {
+        let Some(position) = self.input_length.checked_add(1) else {
+            self.state = None;
+            return false;
+        };
+        self.input_length = position;
+        if position
+            > self
+                .word
+                .len()
+                .saturating_add(usize::from(self.max_distance))
+        {
+            self.state = None;
+            return false;
+        }
+
+        let Some(source) = self.state.take() else {
+            return false;
+        };
+        let (false_prefix, relevant) =
+            relevant_word_window(&self.word, position, self.max_distance);
+        let characteristic = CharacteristicVector::from_padded_chars(input, false_prefix, relevant);
+        self.state = source.transition(&characteristic, position);
+        self.state.is_some()
+    }
+
+    /// Whether the consumed prefix is currently an accepted complete input.
+    pub fn is_accepting(&self) -> bool {
+        self.state.as_ref().is_some_and(|state| {
+            universal_state_is_accepting(
+                state,
+                self.word.len(),
+                self.input_length,
+                self.max_distance,
+            )
+        })
+    }
+
+    /// Number of input scalars consumed so far.
+    pub fn input_length(&self) -> usize {
+        self.input_length
+    }
+
+    /// Fixed word length retained by this online machine.
+    pub fn word_length(&self) -> usize {
+        self.word.len()
+    }
+
+    /// Current canonical universal state, or `None` after the frontier dies.
+    pub fn state(&self) -> Option<&UniversalState<V>> {
+        self.state.as_ref()
+    }
+}
+
+fn relevant_word_window(word: &[char], position: usize, max_distance: u8) -> (usize, &[char]) {
+    let distance = usize::from(max_distance);
+    let false_prefix = distance.saturating_add(1).saturating_sub(position);
+    let start = position.saturating_sub(distance).max(1);
+    let end = position
+        .saturating_add(distance)
+        .saturating_add(1)
+        .min(word.len());
+    let relevant = if start <= end {
+        &word[start - 1..end]
+    } else {
+        &[]
+    };
+    (false_prefix, relevant)
+}
+
+fn universal_state_is_accepting<V: PositionVariant>(
+    state: &UniversalState<V>,
+    word_len: usize,
+    input_len: usize,
+    max_distance: u8,
+) -> bool {
+    let distance = i128::from(max_distance);
+    let word_len = word_len as i128;
+    let input_len = input_len as i128;
+
+    state.positions().any(|position| {
+        if position.is_m_type() {
+            position.offset() <= 0 && position.errors() <= max_distance
+        } else {
+            let current_word_pos = input_len + i128::from(position.offset());
+            if current_word_pos < 0 {
+                return false;
+            }
+            let remaining_chars = word_len - current_word_pos;
+            let remaining_errors = distance - i128::from(position.errors());
+            remaining_chars >= 0 && remaining_chars <= remaining_errors
+        }
+    })
+}
+
 // Backward-compatible constructors for Unrestricted policy
 impl<V: PositionVariant> UniversalAutomaton<V, Unrestricted> {
     /// Create a new Universal Levenshtein Automaton for maximum distance n
@@ -172,56 +285,21 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
         state
     }
 
-    /// Check if a state is accepting according to Levenshtein distance criterion
-    ///
-    /// From thesis page 24 (Proposition 11): A position i#e is accepting if:
-    /// ```text
-    /// p - i ≤ n - e
-    /// ```
-    /// Where p is word length, i is position, n is max distance, e is errors.
-    ///
-    /// This translates to: remaining characters ≤ remaining error budget.
-    ///
-    /// # Arguments
-    ///
-    /// - `state`: State to check after processing all input
-    /// - `word_len`: Length of dictionary word
-    /// - `input_len`: Length of input string processed
-    ///
-    /// # Returns
-    ///
-    /// `true` if state is accepting (within distance n), `false` otherwise
-    #[must_use]
+    #[cfg(test)]
     fn is_accepting(&self, state: &UniversalState<V>, word_len: usize, input_len: usize) -> bool {
-        let n = i128::from(self.max_distance);
-        let word_len = word_len as i128;
-        let input_len = input_len as i128;
+        universal_state_is_accepting(state, word_len, input_len, self.max_distance)
+    }
 
-        state.positions().any(|pos| {
-            if pos.is_m_type() {
-                // M-type positions are past the word end
-                // They're accepting if offset ≤ 0 and errors ≤ n
-                pos.offset() <= 0 && pos.errors() <= self.max_distance
-            } else {
-                // I-type positions: check if we can reach word end with remaining errors
-                // Current word position = input_len + offset
-                let current_word_pos = input_len + i128::from(pos.offset());
-
-                if current_word_pos < 0 {
-                    return false; // Before word start
-                }
-
-                // Remaining characters to match = word_len - current_word_pos
-                let remaining_chars = word_len - current_word_pos;
-
-                // Remaining error budget = max_distance - errors_used
-                let remaining_errors = n - i128::from(pos.errors());
-
-                // Accept if we can delete remaining characters with available errors
-                // Proposition 11: p - i ≤ n - e
-                remaining_chars >= 0 && remaining_chars <= remaining_errors
-            }
-        })
+    /// Bind this parameter-free automaton to one fixed word for stable online
+    /// input processing.
+    pub fn online(&self, word: &str) -> UniversalOnlineAutomaton<V, P> {
+        UniversalOnlineAutomaton {
+            max_distance: self.max_distance,
+            word: word.chars().collect(),
+            state: Some(self.initial_state()),
+            input_length: 0,
+            _policy: std::marker::PhantomData,
+        }
     }
 
     /// Check if word w accepts input x within the maximum distance
@@ -264,51 +342,13 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     /// assert!(!automaton.accepts("test", "hello"));
     /// ```
     pub fn accepts(&self, word: &str, input: &str) -> bool {
-        let word_chars: Vec<char> = word.chars().collect();
-        let word_len = word_chars.len();
-        let input_len = input.chars().count();
-
-        // Special case 1: Empty input (outside domain of h_n from thesis page 51)
-        // From Levenshtein definition: d(w, ε) = |w|
-        // Accept if |w| ≤ n
-        if input.is_empty() {
-            return word_len <= self.max_distance as usize;
-        }
-
-        // Special case 2: Input too long (encoding h_n undefined)
-        // From thesis page 51: h_n(w, x) defined only if |x| ≤ |w| + n
-        if input_len > word_len.saturating_add(self.max_distance as usize) {
-            return false;
-        }
-
-        // Start with initial state {I#0}
-        let mut state = self.initial_state();
-
-        // Process each character of input
-        // This generates the bit vector sequence h_n(w, x) = β(x₁, s_n(w,1))...β(x_t, s_n(w,t))
-        for (i, input_char) in input.chars().enumerate() {
-            // Compute relevant subword s_n(w, i+1)
-            // From thesis page 51: s_n(w, i) = w_{i-n}...w_{min(|w|, i+n+1)}
-            let position = i.saturating_add(1);
-            let subword = self.relevant_subword_from_chars(&word_chars, position);
-
-            // Compute characteristic vector β(x_i, s_n(w, i))
-            let bit_vector = CharacteristicVector::new(input_char, &subword);
-
-            // Apply transition: state := δ^∀,χ_n(state, β)
-            // Pass input position (1-indexed) as k parameter for diagonal crossing
-            if let Some(next_state) = state.transition(&bit_vector, position) {
-                state = next_state;
-            } else {
-                // Transition failed (¬!), reject
+        let mut online = self.online(word);
+        for input_char in input.chars() {
+            if !online.advance(input_char) {
                 return false;
             }
         }
-
-        // Check acceptance using Proposition 11 criterion (thesis page 24)
-        // A position i#e is accepting if: p - i ≤ n - e
-        // (remaining characters ≤ remaining error budget)
-        self.is_accepting(&state, word_len, input_len)
+        online.is_accepting()
     }
 
     /// Compute relevant subword s_n(w, i)
@@ -335,6 +375,7 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
         self.relevant_subword_from_chars(&word_chars, position)
     }
 
+    #[cfg(test)]
     fn relevant_subword_from_chars(&self, word_chars: &[char], position: usize) -> String {
         let n = self.max_distance as usize;
         let word_len = word_chars.len();
@@ -382,6 +423,25 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
 mod tests {
     use super::*;
     use crate::transducer::universal::Standard;
+
+    #[test]
+    fn online_universal_state_is_prefix_independent_and_batch_equivalent() {
+        let automaton = UniversalAutomaton::<Standard>::new(2);
+        let mut online = automaton.online("test");
+        for character in "text".chars() {
+            assert!(online.advance(character));
+        }
+        assert!(online.is_accepting());
+        assert_eq!(online.word_length(), 4);
+        assert_eq!(online.input_length(), 4);
+        assert_eq!(automaton.accepts("test", "text"), online.is_accepting());
+
+        for _ in 0..100_000 {
+            online.advance('x');
+        }
+        assert!(online.state().is_none());
+        assert_eq!(online.word_length(), 4);
+    }
 
     // =========================================================================
     // Basic Automaton Creation Tests

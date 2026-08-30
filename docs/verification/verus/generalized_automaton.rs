@@ -180,4 +180,52 @@ proof fn equal_control_position_insertion_is_idempotent(existing_count: nat)
 {
 }
 
+/// A generalized operation can inspect at most `max_target_consumption`
+/// preceding target generations. A ring containing that many predecessors
+/// plus one scratch/current row has prefix-independent retained size.
+pub open spec fn generalized_retained_cells_after_prefix(
+    consumed_target: nat,
+    max_target_consumption: nat,
+    source_width: nat,
+) -> nat {
+    (max_target_consumption + 1) * source_width
+}
+
+proof fn finite_lookback_rows_are_stream_length_independent(
+    consumed_target: nat,
+    max_target_consumption: nat,
+    source_width: nat,
+)
+    ensures
+        generalized_retained_cells_after_prefix(
+            consumed_target,
+            max_target_consumption,
+            source_width,
+        ) == generalized_retained_cells_after_prefix(
+            0,
+            max_target_consumption,
+            source_width,
+        ),
+        generalized_retained_cells_after_prefix(
+            consumed_target,
+            max_target_consumption,
+            source_width,
+        ) == (max_target_consumption + 1) * source_width,
+{
+}
+
+/// Every positive-target operation reads a committed predecessor generation;
+/// zero-target operations read an earlier source coordinate in the scratch
+/// row because validation forbids a zero/zero operation.
+proof fn generalized_predecessor_is_topologically_earlier(
+    source_consumption: nat,
+    target_consumption: nat,
+)
+    requires
+        source_consumption + target_consumption > 0,
+    ensures
+        target_consumption > 0 || source_consumption > 0,
+{
+}
+
 }

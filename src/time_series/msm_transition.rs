@@ -490,7 +490,10 @@ pub fn msm_distance_wavefront(
 
     // Fill the matrix with early termination
     for i in 2..=m {
-        let mut row_has_valid = false;
+        // Column one is a live DP frontier too. Ignoring it can abandon a
+        // row whose later descendants re-enter the cutoff through that
+        // column, producing a false negative.
+        let mut row_has_valid = cost[i][1] <= max_cost + COST_EPSILON;
         for j in 2..=n {
             let move_cost = cost[i - 1][j - 1] + (query[i - 1] - target[j - 1]).abs();
             let merge_cost =
@@ -509,11 +512,8 @@ pub fn msm_distance_wavefront(
         }
     }
 
-    if cost[m][n].is_finite() {
-        Some(cost[m][n])
-    } else {
-        None
-    }
+    let distance = cost[m][n];
+    (distance.is_finite() && distance <= max_cost + COST_EPSILON).then_some(distance)
 }
 
 #[cfg(test)]

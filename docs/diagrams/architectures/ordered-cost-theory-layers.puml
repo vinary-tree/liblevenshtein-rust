@@ -1,0 +1,47 @@
+@startuml ordered-cost-theory-layers
+' Conceptual layers of the generalized lazy ordered-cost product theory.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  BorderColor #37474F
+  FontColor #102027
+  RoundCorner 12
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Lazy ordered-cost product automata — semantic and qualification layers
+
+rectangle "Ordered path algebra\nchoice, extension, order" as Algebra #FFE0B2
+rectangle "Query-specialized weighted residual\ncanonical frontier + finite context" as Residual #BBDEFB
+rectangle "Simulation preorder\nproved antichain normalization" as Simulation #D1C4E9
+rectangle "Observed-transition machine\nexact interning + compact StateId" as Machine #B2EBF2
+rectangle "Reachable synchronized product\ndictionary cursor × StateId" as Product #C8E6C9
+rectangle "Abstract interval product\ncandidate superset" as Abstract #FFF9C4
+rectangle "Exact original verification\nauthoritative membership and cost" as Verify #F8BBD0
+rectangle "Metric-qualified instance\ndomain/quotient axioms" as Metric #DCEDC8
+rectangle "Nonmetric ordered-cost instance\nfor example banded DTW" as Nonmetric #FFCDD2
+
+Algebra --> Residual : recurrence semantics
+Residual --> Simulation : continuation behavior
+Simulation --> Machine : canonical live state
+Machine --> Product : edge-demanded transition
+Product --> Verify : exact labels
+Product --> Abstract : interval labels
+Abstract --> Verify : verify every collision member
+Verify --> Metric : separate proof gate
+Verify --> Nonmetric : architecture still applies
+
+note right of Product #E8F5E9
+  Product names the operational construction.
+  Intersection names the accepted language
+  when both components are exact acceptors.
+end note
+
+note bottom of Metric #E3F2FD
+  Category theory organizes the layers;
+  weighted residuals, simulations, and
+  abstract interpretation prove them.
+end note
+@enduml

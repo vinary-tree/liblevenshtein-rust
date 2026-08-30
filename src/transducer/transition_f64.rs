@@ -28,10 +28,9 @@ use super::{
 };
 use crate::numeric::{nonnegative_ceil_to_usize, nonnegative_floor_to_usize_saturating};
 use libdictenstein::CharUnit;
+use rustc_hash::{FxHashMap, FxHasher};
 use smallvec::SmallVec;
-
-/// Epsilon for float comparisons in cost thresholds.
-const COST_EPSILON: f64 = 1e-9;
+use std::hash::{Hash, Hasher};
 
 /// Configuration shared by float-weighted state transitions.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -129,16 +128,16 @@ pub fn transition_position_f64(
     }
 }
 
-/// Check if cost exceeds threshold (with epsilon tolerance).
+/// Check whether a canonical cost exceeds the exact inclusive threshold.
 #[inline]
 fn exceeds_threshold(cost: f64, max_cost: f64) -> bool {
-    cost > max_cost + COST_EPSILON
+    cost > max_cost
 }
 
-/// Check if cost is at or near threshold.
+/// Check whether a canonical cost is exactly at the threshold.
 #[inline]
 fn at_threshold(cost: f64, max_cost: f64) -> bool {
-    (cost - max_cost).abs() < COST_EPSILON
+    cost == max_cost
 }
 
 #[inline(always)]
@@ -171,16 +170,69 @@ fn transition_window_size_f64(max_cost: f64, min_cost: f64, query_length: usize)
     }
 }
 
+/// Compact query-local identifier for one exact canonical weighted frontier.
+///
+/// Dictionary-product queues carry this word instead of cloning the complete
+/// `StateF64`. The referenced canonical positions live once in the query-local
+/// transition arena.
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub(crate) struct GeneratedStateIdF64(usize);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct GeneratedTargetF64(usize);
+
+impl GeneratedTargetF64 {
+    const EMPTY: Self = Self(usize::MAX);
+
+    #[inline(always)]
+    const fn state(id: GeneratedStateIdF64) -> Self {
+        Self(id.0)
+    }
+
+    #[inline(always)]
+    fn state_id(self) -> GeneratedStateIdF64 {
+        debug_assert!(self != Self::EMPTY);
+        GeneratedStateIdF64(self.0)
+    }
+}
+
+#[inline]
+fn weighted_state_fingerprint(positions: &[PositionF64]) -> u64 {
+    let mut hasher = FxHasher::default();
+    positions.hash(&mut hasher);
+    hasher.finish()
+}
+
+#[inline(always)]
+fn weighted_cost_signature(costs: &OperationCostsF64) -> [u64; 7] {
+    [
+        costs.match_cost.to_bits(),
+        costs.substitution.to_bits(),
+        costs.insertion.to_bits(),
+        costs.deletion.to_bits(),
+        costs.transposition.to_bits(),
+        costs.split.to_bits(),
+        costs.merge.to_bits(),
+    ]
+}
+
 /// Query-local transition engine for weighted automata.
 ///
 /// Character equivalence is independent of the operation-cost model, so the
 /// weighted kernel shares the same label/query cache as the unit-cost kernel.
 /// Every accepted successor is epsilon-closed before it is queued, avoiding a
-/// repeated deletion closure for each outgoing dictionary edge.
+/// repeated deletion closure for each outgoing dictionary edge. Canonical
+/// frontiers are interned once, queued by compact ID, and transitions are
+/// generated only for reached `(state, characteristic-class)` product edges.
 pub(crate) struct CachedF64Transitions<U: CharUnit> {
     cache: CharacteristicCache<U>,
     query_length: usize,
     max_cost_bits: u64,
+    generated_config: Option<(Algorithm, bool, [u64; 7])>,
+    generated_sources: Vec<Box<[PositionF64]>>,
+    generated_targets: FxHashMap<(GeneratedStateIdF64, u32), GeneratedTargetF64>,
+    generated_states: FxHashMap<u64, SmallVec<[GeneratedStateIdF64; 1]>>,
 }
 
 impl<U: CharUnit> CachedF64Transitions<U> {
@@ -192,32 +244,171 @@ impl<U: CharUnit> CachedF64Transitions<U> {
             cache,
             query_length,
             max_cost_bits: max_cost.to_bits(),
+            generated_config: None,
+            generated_sources: Vec::new(),
+            generated_targets: FxHashMap::default(),
+            generated_states: FxHashMap::default(),
         }
     }
 
     #[inline]
-    pub(crate) fn transition<P>(
+    fn bind_generated_config(&mut self, settings: TransitionSettingsF64<'_>) {
+        debug_assert_eq!(settings.max_cost.to_bits(), self.max_cost_bits);
+        let config = (
+            settings.algorithm,
+            settings.prefix_mode,
+            weighted_cost_signature(settings.costs),
+        );
+        match self.generated_config {
+            Some(existing) => assert_eq!(
+                existing, config,
+                "weighted generated-transition configuration changed within one query"
+            ),
+            None => self.generated_config = Some(config),
+        }
+    }
+
+    fn push_generated_source(&mut self, positions: Box<[PositionF64]>) -> GeneratedStateIdF64 {
+        let id = self.generated_sources.len();
+        assert!(
+            id < GeneratedTargetF64::EMPTY.0,
+            "query-local weighted state identifiers exhausted"
+        );
+        self.generated_sources.push(positions);
+        GeneratedStateIdF64(id)
+    }
+
+    fn intern_positions(
+        &mut self,
+        positions: &[PositionF64],
+        fingerprint: u64,
+    ) -> GeneratedStateIdF64 {
+        if let Some(states) = self.generated_states.get(&fingerprint) {
+            if let Some(&id) = states
+                .iter()
+                .find(|&&id| self.generated_sources[id.0].as_ref() == positions)
+            {
+                return id;
+            }
+        }
+
+        // Fingerprints are lookup accelerators only. Exact canonical slice
+        // equality above is the authority boundary for state-ID reuse.
+        let id = self.push_generated_source(positions.into());
+        self.generated_states
+            .entry(fingerprint)
+            .or_default()
+            .push(id);
+        id
+    }
+
+    /// Intern the epsilon-closed query root and return its compact state ID.
+    pub(crate) fn seed_generated_state(
         &mut self,
         state: &StateF64,
+        settings: TransitionSettingsF64<'_>,
+    ) -> GeneratedStateIdF64 {
+        self.bind_generated_config(settings);
+        self.intern_positions(
+            state.positions(),
+            weighted_state_fingerprint(state.positions()),
+        )
+    }
+
+    /// Lazily construct one reached edge of the weighted automaton/dictionary
+    /// synchronized product. Only observed transitions and distinct canonical
+    /// target frontiers consume storage.
+    #[inline]
+    pub(crate) fn transition_generated<P>(
+        &mut self,
+        source: GeneratedStateIdF64,
         pool: &mut StatePoolF64,
         policy: &P,
         dict_unit: U,
         query: &[U],
         settings: TransitionSettingsF64<'_>,
-    ) -> Option<StateF64>
+    ) -> Option<GeneratedStateIdF64>
     where
         P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
     {
         debug_assert_eq!(query.len(), self.query_length);
-        debug_assert_eq!(settings.max_cost.to_bits(), self.max_cost_bits);
-        let (matches, _) = self.cache.matches_for(policy, dict_unit, query);
-        transition_epsilon_closed_state_pooled_f64_cached(
-            state,
+        self.bind_generated_config(settings);
+        let characteristic_class = self.cache.class_for(policy, dict_unit, query);
+
+        if let Some(target) = self
+            .generated_targets
+            .get(&(source, characteristic_class))
+            .copied()
+        {
+            crate::causal_perf::record_transition_attempts(1);
+            crate::causal_perf::record_generated_transition_hits(1);
+            return (target != GeneratedTargetF64::EMPTY).then(|| target.state_id());
+        }
+
+        crate::causal_perf::record_transition_attempts(1);
+        crate::causal_perf::record_generated_transition_misses(1);
+
+        // Materialize only one reusable source view while evaluating a cache
+        // miss. Queue entries and cached hits never allocate or clone a state.
+        let mut source_state = pool.acquire();
+        source_state.copy_from_canonical_positions(&self.generated_sources[source.0]);
+        let matches = self.cache.matches(characteristic_class);
+        let generated = transition_epsilon_closed_state_pooled_f64_cached(
+            &source_state,
             pool,
             matches,
             query.len(),
             settings,
-        )
+        );
+        pool.release(source_state);
+
+        let target = match generated {
+            Some(state) => {
+                let fingerprint = weighted_state_fingerprint(state.positions());
+                let id = self.intern_positions(state.positions(), fingerprint);
+                pool.release(state);
+                GeneratedTargetF64::state(id)
+            }
+            None => GeneratedTargetF64::EMPTY,
+        };
+        self.generated_targets
+            .insert((source, characteristic_class), target);
+        (target != GeneratedTargetF64::EMPTY).then(|| target.state_id())
+    }
+
+    #[inline(always)]
+    pub(crate) fn generated_min_distance(&self, id: GeneratedStateIdF64) -> Option<f64> {
+        self.generated_sources[id.0]
+            .iter()
+            .map(|position| position.accumulated_cost)
+            .reduce(f64::min)
+    }
+
+    #[inline]
+    pub(crate) fn generated_complete_distance(
+        &self,
+        id: GeneratedStateIdF64,
+        query_length: usize,
+        deletion_cost: f64,
+    ) -> Option<f64> {
+        self.generated_sources[id.0]
+            .iter()
+            .filter(|position| !position.is_special && position.term_index <= query_length)
+            .map(|position| {
+                position.accumulated_cost
+                    + (query_length - position.term_index) as f64 * deletion_cost
+            })
+            .reduce(f64::min)
+    }
+
+    #[cfg(test)]
+    fn generated_state_count(&self) -> usize {
+        self.generated_sources.len()
+    }
+
+    #[cfg(test)]
+    fn generated_transition_count(&self) -> usize {
+        self.generated_targets.len()
     }
 }
 
@@ -306,7 +497,7 @@ fn transition_standard_f64(
     let remaining_cost = max_cost - e;
 
     // Case 1: Have cost budget remaining
-    if remaining_cost > COST_EPSILON {
+    if remaining_cost > 0.0 {
         // Subcase 1a: At least 2 characters remain in query
         if h + 2 <= w {
             let k = compute_window_limit(remaining_cost, costs.deletion);
@@ -416,7 +607,7 @@ fn transition_transposition_f64(
     let remaining_cost = max_cost - e;
 
     // Case 1: No errors yet (e == 0)
-    if e.abs() < COST_EPSILON && remaining_cost > COST_EPSILON {
+    if e == 0.0 && remaining_cost > 0.0 {
         if h + 2 <= w {
             let k = compute_window_limit(remaining_cost, costs.deletion);
             let k = k.min(w - h);
@@ -507,7 +698,7 @@ fn transition_transposition_f64(
         }
     }
     // Case 2: Have some errors but not at threshold
-    else if remaining_cost > COST_EPSILON {
+    else if remaining_cost > 0.0 {
         if h + 2 <= w {
             if !t {
                 // Not in transposition state
@@ -648,7 +839,7 @@ fn transition_merge_split_f64(
     let remaining_cost = max_cost - e;
 
     // Case 1: No errors yet (e == 0)
-    if e.abs() < COST_EPSILON && remaining_cost > COST_EPSILON {
+    if e == 0.0 && remaining_cost > 0.0 {
         if h + 2 <= w {
             if cv[h] {
                 // Immediate match
@@ -704,7 +895,7 @@ fn transition_merge_split_f64(
         }
     }
     // Case 2: Have some errors but not at threshold
-    else if remaining_cost > COST_EPSILON {
+    else if remaining_cost > 0.0 {
         if h + 2 <= w {
             if !s {
                 // Not in special state
@@ -1043,7 +1234,7 @@ pub fn initial_state_f64(
     // Add positions for initial deletions
     let mut cost = costs.deletion;
     let mut i = 1;
-    while cost <= max_cost + COST_EPSILON && i <= query_length {
+    while cost <= max_cost && i <= query_length {
         state.insert(
             PositionF64::new(i, cost),
             algorithm,
@@ -1066,6 +1257,38 @@ mod tests {
     use crate::transducer::Unrestricted;
 
     const EPSILON: f64 = 1e-9;
+
+    #[test]
+    fn weighted_generated_states_are_exactly_interned_and_edges_are_lazy() {
+        let query = b"abc";
+        let costs = OperationCostsF64::standard();
+        let settings = TransitionSettingsF64::new(2.0, Algorithm::Standard, &costs, false);
+        let initial = initial_state_f64(query.len(), 2.0, Algorithm::Standard, &costs);
+        let mut transitions = CachedF64Transitions::<u8>::new(query.len(), 2.0, &costs);
+
+        let root = transitions.seed_generated_state(&initial, settings);
+        assert_eq!(transitions.seed_generated_state(&initial, settings), root);
+        assert_eq!(transitions.generated_state_count(), 1);
+        assert_eq!(transitions.generated_transition_count(), 0);
+
+        let mut pool = StatePoolF64::new();
+        let first = transitions
+            .transition_generated(root, &mut pool, &Unrestricted, b'a', query, settings)
+            .expect("matching root edge remains live");
+        let state_count = transitions.generated_state_count();
+        assert_eq!(transitions.generated_transition_count(), 1);
+
+        let repeated = transitions
+            .transition_generated(root, &mut pool, &Unrestricted, b'a', query, settings)
+            .expect("cached matching root edge remains live");
+        assert_eq!(repeated, first);
+        assert_eq!(transitions.generated_state_count(), state_count);
+        assert_eq!(transitions.generated_transition_count(), 1);
+        assert_eq!(
+            std::mem::size_of::<GeneratedStateIdF64>(),
+            std::mem::size_of::<usize>()
+        );
+    }
 
     #[test]
     fn test_characteristic_vector() {
@@ -1245,6 +1468,16 @@ mod tests {
             .positions()
             .iter()
             .any(|p| p.term_index == 0 && p.accumulated_cost.abs() < EPSILON));
+    }
+
+    #[test]
+    fn initial_deletion_just_above_cutoff_is_not_admitted() {
+        let costs = OperationCostsF64 {
+            deletion: 1.0 + 5.0e-10,
+            ..OperationCostsF64::standard()
+        };
+        let state = initial_state_f64(1, 1.0, Algorithm::Standard, &costs);
+        assert_eq!(state.positions(), &[PositionF64::initial()]);
     }
 
     #[test]

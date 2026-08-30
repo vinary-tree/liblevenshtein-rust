@@ -218,12 +218,16 @@
 //! - Stefan, Alexandra, et al. "The move-split-merge metric for time series."
 //!   IEEE transactions on Knowledge and Data Engineering 25.6 (2012): 1425-1438.
 
+mod alignment;
 mod approx_msm;
+pub mod automaton;
+pub mod bounded;
 pub mod elastic;
 mod encoding;
 mod hybrid_search;
 pub mod kernels;
 mod lower_bounds;
+mod metric_domains;
 mod msm;
 pub mod msm_interval;
 mod msm_kernel;
@@ -231,20 +235,42 @@ mod msm_position;
 mod msm_state;
 mod msm_transducer;
 mod msm_transition;
+mod rolling;
+mod timestamped_twed;
 mod trie_index;
+mod vector;
 
 // MSM metric exports
+pub use alignment::{MsmAlignmentStep, MsmAlignmentWitness, MsmWitnessReplayError};
 pub use approx_msm::{paa_features, ApproxMsmConfig, ApproxMsmIndex};
-pub use msm::{MsmConfig, MsmResult};
-pub use msm_kernel::MsmKernel;
+pub use automaton::{
+    ElasticOnlineAutomaton, ElasticOnlineObservation, ErpOnlineAutomaton, ErpOnlineObservation,
+    OnlineAutomatonLimits, OnlineStepOutcome, TemporalArenaLimits, TemporalAutomatonError,
+    TemporalStateId, TimestampedTwedOnlineAutomaton, TimestampedTwedOnlineObservation,
+};
+pub use bounded::{
+    ExactDecision, IncompleteReason, NoWitness, Operand, OperationOutcome, PageBudget,
+    ResourceKind, ResourceLedger, ResourceLimits, ResourceUsage, TemporalValidationError,
+};
+pub use metric_domains::{
+    AuditedMetricTimeSeriesIndex, ErpQuotientSeries, FrechetStutterClass, MetricDomainError,
+    MetricErpConfig, MetricErpTransducer, MetricFrechetTransducer,
+};
+pub use msm::{MetricMsmConfig, MetricMsmConfigError, MsmConfig, MsmConfigError, MsmResult};
+pub use msm_kernel::{MetricMsmKernel, MsmKernel};
 pub use msm_position::{msm_subsumes, MsmPosition};
 pub use msm_state::MsmState;
 pub use msm_transition::{
     initial_msm_state, msm_distance_automaton, msm_distance_wavefront, transition_msm_position,
     transition_msm_state,
 };
+pub use rolling::{BoundedRollingWindow, RollingWindowSnapshot, RollingWindowStep};
 
 // Encoding exports
+pub use elastic::{
+    ElasticProductStateStats, ElasticSnapshot, ElasticSnapshotError, ElasticSnapshotIdentity,
+    ElasticSnapshotKernel, ElasticSnapshotMetadata, ErpAutomatonRangeContinuation,
+};
 pub use encoding::QuantizationConfig;
 pub use encoding::{delta_encoding, float_encoding, sax_encoding};
 
@@ -255,11 +281,21 @@ pub use kernels::{
     frechet_one_sided_hausdorff_lower_bound, keogh_envelopes, lb_keogh, lb_keogh_squared,
     twed_length_lower_bound, DtwConfig, DtwKernel, DtwTransducer, ErpConfig, ErpKernel,
     ErpTransducer, FrechetConfig, FrechetKernel, FrechetTransducer, KeoghPlan, MetricTwedConfig,
-    MetricTwedConfigError, MetricTwedKernel, MetricTwedTransducer, TwedConfig, TwedKernel,
-    TwedTransducer,
+    MetricTwedConfigError, MetricTwedKernel, MetricTwedTransducer, MetricUnitGridTwedConfig,
+    MetricUnitGridTwedKernel, MetricUnitGridTwedTransducer, SoftDtwAnalysis, SoftDtwConfig,
+    SoftDtwConfigError, TwedConfig, TwedKernel, TwedTransducer, UnitGridTwedConfig,
+    UnitGridTwedKernel, UnitGridTwedTransducer,
 };
-pub use msm_transducer::MsmTransducer;
+pub use msm_transducer::{MetricMsmTransducer, MsmTransducer};
+pub use timestamped_twed::{
+    MetricTimestampedTwedConfig, TimestampUnit, TimestampedSeries, TimestampedTwedError,
+};
 pub use trie_index::{TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats};
+pub use vector::{
+    GroundMetric, L1GroundMetric, L2GroundMetric, LinfGroundMetric, VectorFrechetMetric,
+    VectorFrechetOnlineAutomaton, VectorFrechetOnlineObservation, VectorFrechetPath,
+    VectorMetricError, VectorSample,
+};
 
 // Lower bound exports
 #[cfg(feature = "rayon")]

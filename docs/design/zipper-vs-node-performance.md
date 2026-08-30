@@ -13,14 +13,33 @@
 > `PathMapZipper` lock-free (it now focuses a copy-on-write `TrieRef` snapshot), so the
 > `RwLock` "lock overhead" discussed below no longer applies. The structural conclusions
 > (zipper layering vs. direct node traversal) still hold.
+>
+> **Architecture note (2026-08).** Production `ZipperQueryIterator` no longer queues
+> the full `AutomatonZipper`/`State` shape measured below. Each pending product focus
+> carries one opaque dictionary focus, one parent-arena cursor, and one eight-byte
+> `UnitCostFrontier`; canonical positional states live once in the query-local
+> machine. A bounded 2026-08-29 engineering rerun first found the
+> compact zipper 1.72–1.81× slower than direct node traversal, which isolated
+> eager rejected-child construction and duplicate scheduler/path machinery.
+> After `ZipperQueryIterator` was moved onto the production query core and
+> PathMap gained projection-before-child construction, zipper query latency
+> improved 44–50% and finished within 1.3% of direct-node traversal on every
+> measured query. Those current measurements and their limited evidence boundary are recorded in the
+> [lazy-product engineering check](../benchmarks/lazy-product-engineering-check-2026-08-29.md).
+> The historical timings and struct-size estimates below remain superseded. See
+> [Lazy synchronized products and stable online automata](lazy-online-products.md).
 
 ## Executive Summary
 
 This document analyzes the performance trade-offs between zipper-based and node-based query iteration for fuzzy string matching in liblevenshtein-rust.
 
-**Key Finding:** Zipper-based queries are **1.66-1.97× slower** than node-based queries across all edit distances, but provide essential architectural benefits for contextual completion use cases.
+**Historical finding:** The 2025 implementation was **1.66-1.97× slower** than
+the then-current node traversal across the measured edit distances. This is a
+baseline for comparison, not a result for the compact 2026 implementation.
 
-**Recommendation:** Use zipper-based approach for contextual code completion (primary use case) and node-based for simple, high-throughput fuzzy matching.
+**Current recommendation:** Use the shared compact product scheduler. Select
+the dictionary focus representation by its required snapshot, suspension, and
+context semantics, then benchmark that backend on the intended workload.
 
 ---
 
@@ -136,7 +155,7 @@ struct Candidate {
 // Total: ~48 bytes
 ```
 
-**Zipper-based queue item:**
+**Historical zipper-based queue item (superseded in production):**
 ```rust
 struct IntersectionZipper {
     dict: PathMapZipper {
@@ -470,15 +489,17 @@ cargo bench --bench zipper_vs_node_benchmark --features pathmap-backend
 ## Related Documentation
 
 - **Optimization Report:** `docs/design/contextual-completion-progress.md` (Phase 6 complete)
-- **Zipper Optimizations:** `/tmp/final_optimization_report.md` (3-9% improvements)
 - **Contextual Engine Design:** `docs/design/contextual-completion-progress.md`
-- **Performance Baselines:** `/tmp/zipper_optimization_baseline.md`
+- **Current product architecture:** `docs/design/lazy-online-products.md`
 
 ---
 
 ## Conclusion
 
-**Zipper-based queries are 1.66-1.97× slower than node-based**, but this is an **intentional architectural trade-off**:
+In the historical 2025 benchmark, **zipper-based queries were 1.66-1.97×
+slower than node-based queries**. The compact production queue invalidates the
+old memory-shape premise, so a new paired benchmark is required before drawing
+a current speed conclusion.
 
 | Factor | Node-Based | Zipper-Based | Winner |
 |--------|-----------|--------------|--------|
@@ -489,10 +510,11 @@ cargo bench --bench zipper_vs_node_benchmark --features pathmap-backend
 | **Maintainability** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Zipper |
 | **Use Case Fit** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Zipper |
 
-**For contextual code completion** (the primary use case), **zipper-based is the correct architectural choice** despite the performance overhead.
+For contextual completion, a persistent zipper remains the natural focus when
+snapshot isolation, hierarchical context, and suspension are required. For a
+plain finite scan, a borrowed node cursor may remain smaller. Both now compose
+with the same compact query frontier; only a current paired benchmark may
+quantify their relative cost.
 
-The absolute performance is still excellent (<1ms queries), and the architectural benefits (composability, thread safety, hierarchical contexts) are essential for the intended use case.
-
-Future optimizations can reduce the overhead to ~1.2-1.3× with arena allocation, lazy initialization, and lock-free data structures.
-
-**Status:** ✅ Zipper-based approach validated for contextual completion use case.
+**Status:** historical benchmark retained; compact-product remeasurement
+required.

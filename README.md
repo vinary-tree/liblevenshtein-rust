@@ -6,7 +6,7 @@
 [![Release](https://github.com/vinary-tree/liblevenshtein-rust/actions/workflows/release.yml/badge.svg)](https://github.com/vinary-tree/liblevenshtein-rust/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Approximate string matching that scales with matches, not dictionary size.** Instead of computing an edit distance against every entry, `liblevenshtein` represents the query $`W`$ and an error bound $`k`$ as a **Levenshtein automaton** — the set of still-viable $`\langle \text{position}, \text{errors}\rangle`$ states that together accept exactly the strings within distance $`k`$ of $`W`$ — and walks it **in lock-step** with the dictionary (a trie/DAWG), advancing both together and pruning a branch the instant no automaton state survives. The automaton is simulated and determinized **lazily**: only state/class transitions reached by the dictionary walk are materialized, never an eager standalone table. Per-query setup is $`\mathcal{O}(\lvert W\rvert)`$; the first computation of a transition costs $`\mathcal{O}(k)`$ — a constant for fixed $`k`$ — and repeated transitions are table lookups, so total work tracks the explored near-match frontier rather than the size of the dictionary.
+**Approximate matching that scales with the explored match frontier, not dictionary size.** `liblevenshtein`'s defining idea is to traverse an **on-the-fly synchronized product** of two machines: a query automaton, whose compact states retain only viable positions and costs, and a dictionary automaton such as a trie or directed acyclic word graph (DAWG). The *product* is the operational construction—advance both machines on the same label—while *language intersection* names its semantic result when both components are acceptors. The Cartesian product is never materialized: only product states demanded by real dictionary edges are constructed, canonicalized, cached, and pruned by position, cost, and proved subsumption. For Levenshtein distance this accepts exactly the keys within error bound $`k`$ of query $`W`$; exact elastic time-series retrieval uses the same architecture with admissible interval states followed by full-precision verification. Fixed-query online machines likewise retain only their current and next frontiers, so an unknown-length target stream does not make memory grow with the consumed prefix. This lazy product architecture—not a buffered scan against every stored value—is what makes the library distinctive. The general mathematical foundation is documented as [lazy ordered-cost product automata](docs/theory/lazy-ordered-cost-product-automata.md).
 
 On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted/weighted edits, **phonetic** matching (53 built-in languages), **time-series** similarity (Move–Split–Merge), the **WallBreaker** filter for very large error bounds, IDE-style **contextual completion**, composable fuzzy **caches**, and **WFST** adapters for language-model composition (in the companion **duallity** crate). Every dictionary is `Send + Sync` and cheap to share across threads; reads run concurrently and **lock-free** on every backend — static dicts read immutable arrays, dynamic dicts load an `ArcSwap` snapshot, and a reader never blocks on a writer.
 
@@ -61,9 +61,9 @@ edit_distance(W, s):
 Spell-checking a query against a dictionary $`D`$ this way costs $`\mathcal{O}(\lvert D\rvert \cdot \lvert W\rvert \cdot \lvert s\rvert)`$ — you re-pay the $`\lvert W\rvert`$ factor for every entry. The automaton approach avoids that:
 
 1. **Simulate** a Levenshtein automaton $`A(W, k)`$ whose language is exactly the strings $`s`$ with $`d(W, s) \le k`$. Each of its states is a *set* of still-viable $`\langle \text{position}, \text{errors}\rangle`$ positions; for fixed $`k`$ only $`\mathcal{O}(\lvert W\rvert)`$ distinct states ever arise, and each is computed lazily as the search needs it.
-2. **Walk** `A(W, k)` and the dictionary — a trie/DAWG — together in one shared depth-first traversal (their language **intersection**). A subtree is pruned the instant no automaton state survives, so the cost tracks the matching frontier, not the dictionary size.
+2. **Walk** `A(W, k)` and the dictionary—usually a trie or DAWG—as an on-the-fly synchronized **product**. Because both machines are acceptors, the keys accepted by that product form their language **intersection**. A subtree is pruned the instant no query-automaton state survives, so the cost tracks the matching frontier, not the dictionary size.
 
-![How an approximate query is answered: build one automaton from the query, then intersect it with the dictionary in a single traversal.](docs/diagrams/traversal/query-flow.svg)
+![How an approximate query is answered: construct reachable states of the synchronized query-automaton and dictionary product on demand; accepted paths realize the language intersection.](docs/diagrams/traversal/query-flow.svg)
 
 The decisive insight of Schulz & Mihov [[1]](#references) is that the automaton's transition on an input symbol `x` depends only on a small **characteristic vector** — a bit pattern marking where `x` matches inside the relevant window of `W` — and **not** on the concrete symbols. So one fixed, `W`-independent transition rule drives *every* query: the crate **simulates** the automaton's moves on the fly (the paper's *imitation* method) rather than constructing one. Restricting which symbol pairs may substitute generalizes this further, to the *universal* Levenshtein automata of Mitankin, Mihov & Schulz [[2]](#references).
 
@@ -85,6 +85,8 @@ Defined once, used throughout.
 | **position** $`\langle i, e\rangle`$ | automaton state: $`i`$ characters of $`W`$ consumed, $`e`$ edits spent ($`e \le k`$) |
 | **characteristic vector** $`\chi`$ | bit pattern marking where the input symbol matches inside $`W`$'s active window |
 | **subsumption** | a cheaper position dominating a costlier nearby one, pruned to keep states minimal |
+| **synchronized product** | an operational construction that advances a query automaton and dictionary automaton together on the same label; only reachable pairs need be constructed |
+| **language intersection** | the set accepted by both acceptors; it is the semantic result of the synchronized product, not the name of its state-construction algorithm |
 | **NFA / DFA** | non-deterministic / deterministic finite automaton |
 | **DAWG** | Directed Acyclic Word Graph — a trie with shared suffixes (Blumer et al. [[8]](#references)) |
 | **DAT** | Double-Array Trie — a trie packed into two integer arrays for $`\mathcal{O}(1)`$-per-transition lookups (Aoe [[11]](#references)) |
@@ -557,15 +559,15 @@ let zero_distance = index.search_range(&[1.0, 2.0], 0.0);
 assert_eq!(zero_distance.len(), 2); // inserting the gap value 0 costs zero
 ```
 
-ERP is a pseudometric on raw sequences: adding or removing `$`g`$` costs zero.
-Identity holds after quotienting sequences by removal of `$`g`$`. See the
+ERP is a pseudometric on raw sequences: adding or removing $`g`$ costs zero.
+Identity holds after quotienting sequences by removal of $`g`$. See the
 [paper analysis](docs/research/erp/PAPER_SUMMARY.md),
 [design contract](docs/design/elastic-kernels.md), and
 [literate algorithm](docs/algorithms/12-elastic-measures/README.md).
 
 **TWED** [[21]](#references) compares adjacent segments and penalizes temporal
 displacement. The public scalar specialization uses unit-spaced timestamps,
-stiffness `$`\nu`$`, deletion penalty `$`\lambda`$`, and a zero sentinel.
+stiffness $`\nu`$, deletion penalty $`\lambda`$, and a zero sentinel.
 Validate the strict metric premise when metric-dependent generic code is in
 scope:
 
@@ -588,12 +590,12 @@ let index = MetricTwedTransducer::from_series(
 assert_eq!(index.search_range(&[0.0, 1.0, 2.0], 0.0), vec![(0, 0.0)]);
 ```
 
-The unrestricted `TwedConfig` also permits `$`\nu=0`$`; it is deliberately
-labelled non-metric because `$`D([0,1],[1])=0`$` at
-`$`\nu=\lambda=0`$`. Only `MetricTwedConfig`, which requires finite
-`$`\nu>0`$` and `$`\lambda\ge0`$`, implements `MetricElasticKernel`. Exact trie
+The unrestricted `TwedConfig` also permits $`\nu=0`$; it is deliberately
+labelled non-metric because $`D([0,1],[1])=0`$ at
+$`\nu=\lambda=0`$. Only `MetricTwedConfig`, which requires finite
+$`\nu>0`$ and $`\lambda\ge0`$, implements `MetricElasticKernel`. Exact trie
 pruning remains valid for either type through carry-aware interval columns,
-the `$`\lvert m-n\rvert\lambda`$` candidate bound, and full-precision survivor
+the $`\lvert m-n\rvert\lambda`$ candidate bound, and full-precision survivor
 scoring. See the [source analysis](docs/research/twed/PAPER_SUMMARY.md),
 [formal evidence](docs/verification/README.md), and
 [security limits](docs/security/resource-exhaustion.md).

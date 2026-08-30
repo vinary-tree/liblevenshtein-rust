@@ -17,7 +17,8 @@
 //! ([author-hosted report](https://www.kr.tuwien.ac.at/staff/eiter/et-archive/files/cdtr9464.pdf)).
 
 use super::super::elastic::interval::interval_dist;
-use super::super::elastic::{Cost, ElasticKernel, ElasticTransducer, MetricElasticKernel};
+use super::super::elastic::sparse::{charge_work, NeighborSeedRows};
+use super::super::elastic::{Cost, ElasticKernel, ElasticTransducer, PointFrontierStep};
 use crate::cost::{BottleneckCost, CostMonoid};
 
 #[inline]
@@ -185,10 +186,12 @@ pub fn frechet_candidate_lower_bound(x: &[f64], y: &[f64]) -> f64 {
 }
 
 impl ElasticKernel for FrechetConfig {
-    const IS_METRIC: bool = true;
+    // Raw paths form a pseudometric because consecutive stutters cost zero.
+    // Metric consumers must use the canonical stutter-quotient type.
+    const IS_METRIC: bool = false;
 
     type Monoid = BottleneckCost;
-    type Carry = ();
+    type Carry = (f64, f64);
     type QueryPlan = ();
 
     #[inline]
@@ -218,7 +221,7 @@ impl ElasticKernel for FrechetConfig {
     ) -> (Cost<Self>, Self::Carry) {
         if query.is_empty() || depth == 0 {
             column.clear();
-            return (BottleneckCost::TOP, ());
+            return (BottleneckCost::TOP, current_interval);
         }
 
         column.resize(query.len(), BottleneckCost::TOP);
@@ -250,7 +253,230 @@ impl ElasticKernel for FrechetConfig {
             lower_bound = lower_bound.min(column[row]);
         }
 
-        (lower_bound, ())
+        (lower_bound, current_interval)
+    }
+
+    fn step_point_frontier(
+        &self,
+        previous: &[Cost<Self>],
+        previous_active: &[usize],
+        query: &[f64],
+        target: f64,
+        _previous_carry: Option<Self::Carry>,
+        depth: usize,
+        _plan: &Self::QueryPlan,
+        cutoff: Cost<Self>,
+        max_work: usize,
+        column: &mut [Cost<Self>],
+        active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        if query.is_empty() || column.len() != query.len() || depth == 0 {
+            return Some(PointFrontierStep::Advanced {
+                lower_bound: BottleneckCost::TOP,
+                carry: (target, target),
+                work: 0,
+            });
+        }
+        let last_row = query.len() - 1;
+        let mut lower_bound = BottleneckCost::TOP;
+        let mut work = 0usize;
+
+        if depth == 1 {
+            for row in 0..=last_row {
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let predecessor = if row == 0 {
+                    BottleneckCost::ZERO
+                } else {
+                    column[row - 1]
+                };
+                let cost = BottleneckCost::combine(predecessor, (query[row] - target).abs());
+                if !BottleneckCost::within(cost, cutoff) {
+                    break;
+                }
+                column[row] = cost;
+                active.push(row);
+                lower_bound = lower_bound.min(cost);
+            }
+            return Some(PointFrontierStep::Advanced {
+                lower_bound,
+                carry: (target, target),
+                work,
+            });
+        }
+
+        let mut seeds = NeighborSeedRows::new(previous_active, last_row);
+        let mut next_seed = seeds.next();
+        while let Some(start) = next_seed {
+            let mut row = start;
+            loop {
+                while next_seed == Some(row) {
+                    next_seed = seeds.next();
+                }
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let previous_diagonal = row
+                    .checked_sub(1)
+                    .and_then(|index| previous.get(index))
+                    .copied()
+                    .unwrap_or(BottleneckCost::TOP);
+                let previous_same = previous.get(row).copied().unwrap_or(BottleneckCost::TOP);
+                let vertical = row
+                    .checked_sub(1)
+                    .and_then(|index| column.get(index))
+                    .copied()
+                    .unwrap_or(BottleneckCost::TOP);
+                let predecessor = previous_diagonal.min(previous_same).min(vertical);
+                let cost = BottleneckCost::combine(predecessor, (query[row] - target).abs());
+                if BottleneckCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                    if row < last_row {
+                        row += 1;
+                        continue;
+                    }
+                }
+                break;
+            }
+        }
+        Some(PointFrontierStep::Advanced {
+            lower_bound,
+            carry: (target, target),
+            work,
+        })
+    }
+
+    fn step_interval_frontier(
+        &self,
+        previous: &[Cost<Self>],
+        previous_active: &[usize],
+        query: &[f64],
+        target: (f64, f64),
+        _previous_carry: Option<Self::Carry>,
+        depth: usize,
+        _plan: &Self::QueryPlan,
+        cutoff: Cost<Self>,
+        max_work: usize,
+        column: &mut [Cost<Self>],
+        active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        if query.is_empty() || column.len() != query.len() || depth == 0 {
+            return Some(PointFrontierStep::Advanced {
+                lower_bound: BottleneckCost::TOP,
+                carry: target,
+                work: 0,
+            });
+        }
+        let (low, high) = target;
+        let last_row = query.len() - 1;
+        let mut lower_bound = BottleneckCost::TOP;
+        let mut work = 0usize;
+
+        if depth == 1 {
+            for row in 0..=last_row {
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let predecessor = if row == 0 {
+                    BottleneckCost::ZERO
+                } else {
+                    column[row - 1]
+                };
+                let cost =
+                    BottleneckCost::combine(predecessor, interval_dist(query[row], low, high));
+                if !BottleneckCost::within(cost, cutoff) {
+                    break;
+                }
+                column[row] = cost;
+                active.push(row);
+                lower_bound = lower_bound.min(cost);
+            }
+            return Some(PointFrontierStep::Advanced {
+                lower_bound,
+                carry: target,
+                work,
+            });
+        }
+
+        let mut seeds = NeighborSeedRows::new(previous_active, last_row);
+        let mut next_seed = seeds.next();
+        while let Some(start) = next_seed {
+            let mut row = start;
+            loop {
+                while next_seed == Some(row) {
+                    next_seed = seeds.next();
+                }
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let previous_diagonal = row
+                    .checked_sub(1)
+                    .and_then(|index| previous.get(index))
+                    .copied()
+                    .unwrap_or(BottleneckCost::TOP);
+                let previous_same = previous.get(row).copied().unwrap_or(BottleneckCost::TOP);
+                let vertical = row
+                    .checked_sub(1)
+                    .and_then(|index| column.get(index))
+                    .copied()
+                    .unwrap_or(BottleneckCost::TOP);
+                let predecessor = previous_diagonal.min(previous_same).min(vertical);
+                let cost =
+                    BottleneckCost::combine(predecessor, interval_dist(query[row], low, high));
+                if BottleneckCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                    if row < last_row {
+                        row += 1;
+                        continue;
+                    }
+                }
+                break;
+            }
+        }
+        Some(PointFrontierStep::Advanced {
+            lower_bound,
+            carry: target,
+            work,
+        })
+    }
+
+    #[inline]
+    fn vertical_epsilon_extension(
+        &self,
+        query: &[f64],
+        target: (f64, f64),
+        row: usize,
+        column: &[Cost<Self>],
+        _plan: &Self::QueryPlan,
+    ) -> Option<Cost<Self>> {
+        let predecessor = *column.get(row.checked_sub(1)?)?;
+        let query_value = *query.get(row)?;
+        Some(BottleneckCost::combine(
+            predecessor,
+            interval_dist(query_value, target.0, target.1),
+        ))
+    }
+
+    #[inline]
+    fn carry_interval(&self, carry: Self::Carry) -> Option<(f64, f64)> {
+        Some(carry)
     }
 
     #[inline]
@@ -286,8 +512,6 @@ impl ElasticKernel for FrechetConfig {
         BottleneckCost::TOP
     }
 }
-
-impl MetricElasticKernel for FrechetConfig {}
 
 #[cfg(test)]
 mod tests {

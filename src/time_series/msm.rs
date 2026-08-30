@@ -21,6 +21,11 @@
 
 use std::fmt;
 
+use super::bounded::{
+    ExactDecision, IncompleteReason, NoWitness, Operand, OperationOutcome, ResourceKind,
+    ResourceLedger, ResourceLimits, TemporalValidationError,
+};
+
 const CUTOFF_EPSILON: f64 = 1e-9;
 const DEFAULT_MSM_C: f64 = 1.0;
 
@@ -84,6 +89,17 @@ pub struct MsmConfig {
 }
 
 impl MsmConfig {
+    /// Construct an exact raw-domain MSM configuration without normalization.
+    ///
+    /// Zero is accepted for exact scoring but yields a pseudometric, not a
+    /// metric. Use [`MetricMsmConfig::try_new`] when metric laws are required.
+    pub fn try_new(c: f64) -> Result<Self, MsmConfigError> {
+        if !c.is_finite() || c < 0.0 {
+            return Err(MsmConfigError::InvalidSplitMergeCost);
+        }
+        Ok(Self { c })
+    }
+
     /// Create a new MSM configuration.
     ///
     /// # Arguments
@@ -309,6 +325,117 @@ impl MsmConfig {
         (distance <= cutoff).then_some(distance)
     }
 
+    /// Strict, fail-closed MSM cutoff decision under explicit resource limits.
+    ///
+    /// The complete score-only calculation reserves its worst-case cell work
+    /// before allocating. It therefore never begins an operation that cannot
+    /// finish within the declared non-resumable distance budget.
+    pub fn distance_bounded(
+        &self,
+        query: &[f64],
+        candidate: &[f64],
+        cutoff: f64,
+        limits: ResourceLimits,
+    ) -> Result<OperationOutcome<ExactDecision>, TemporalValidationError> {
+        if !self.c.is_finite() || self.c < 0.0 {
+            return Err(TemporalValidationError::InvalidConfiguration(
+                "MSM split/merge cost must be finite and nonnegative",
+            ));
+        }
+        if cutoff.is_nan() || cutoff < 0.0 || (cutoff.is_infinite() && cutoff.is_sign_negative()) {
+            return Err(TemporalValidationError::InvalidCutoff);
+        }
+
+        let mut ledger = ResourceLedger::new(limits);
+        ledger.validate_finite_series(Operand::Query, query)?;
+        ledger.validate_finite_series(Operand::Candidate, candidate)?;
+
+        if query.is_empty() || candidate.is_empty() {
+            let value = if query.is_empty() && candidate.is_empty() {
+                if 0.0 <= cutoff {
+                    ExactDecision::WithinCutoff {
+                        distance: 0.0,
+                        witness: NoWitness,
+                    }
+                } else {
+                    ExactDecision::AboveCutoff
+                }
+            } else {
+                ExactDecision::NoFiniteAlignment
+            };
+            return Ok(OperationOutcome::Complete {
+                value,
+                usage: ledger.usage(),
+            });
+        }
+
+        let Some(dp_cells) = query.len().checked_mul(candidate.len()) else {
+            return Ok(OperationOutcome::Incomplete {
+                partial: None,
+                reason: IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::DpCells,
+                },
+                continuation: None,
+                usage: ledger.usage(),
+            });
+        };
+        let scratch_rows = query.len().min(candidate.len()).checked_add(1);
+        let scratch_bytes = scratch_rows
+            .and_then(|len| len.checked_mul(2))
+            .and_then(|len| len.checked_mul(std::mem::size_of::<f64>()));
+        let Some(scratch_bytes) = scratch_bytes else {
+            return Ok(OperationOutcome::Incomplete {
+                partial: None,
+                reason: IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::ScratchBytes,
+                },
+                continuation: None,
+                usage: ledger.usage(),
+            });
+        };
+
+        if let Err(reason) = ledger.charge_many(&[
+            (ResourceKind::DpCells, dp_cells),
+            (ResourceKind::WorkUnits, dp_cells),
+            (ResourceKind::ScratchBytes, scratch_bytes),
+        ]) {
+            return Ok(OperationOutcome::Incomplete {
+                partial: None,
+                reason,
+                continuation: None,
+                usage: ledger.usage(),
+            });
+        }
+
+        let value = match self.distance_with_cutoff(query, candidate, cutoff) {
+            Some(distance) if distance.is_finite() => ExactDecision::WithinCutoff {
+                distance,
+                witness: NoWitness,
+            },
+            Some(_) => {
+                return Ok(OperationOutcome::Incomplete {
+                    partial: None,
+                    reason: IncompleteReason::NumericOverflow,
+                    continuation: None,
+                    usage: ledger.usage(),
+                });
+            }
+            None if cutoff.is_infinite() => {
+                return Ok(OperationOutcome::Incomplete {
+                    partial: None,
+                    reason: IncompleteReason::NumericOverflow,
+                    continuation: None,
+                    usage: ledger.usage(),
+                });
+            }
+            None => ExactDecision::AboveCutoff,
+        };
+        Ok(OperationOutcome::Complete {
+            value,
+            usage: ledger.usage(),
+        })
+    }
+
     /// Compute the MSM distance and return the full DP matrix for debugging.
     ///
     /// # Arguments
@@ -419,6 +546,84 @@ impl Default for MsmConfig {
         Self::default_cost()
     }
 }
+
+/// Validation error for an exact raw-domain MSM configuration.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MsmConfigError {
+    /// The cost was negative or nonfinite.
+    InvalidSplitMergeCost,
+}
+
+impl fmt::Display for MsmConfigError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("MSM split/merge cost must be finite and nonnegative")
+    }
+}
+
+impl std::error::Error for MsmConfigError {}
+
+/// MSM configuration whose documented nonempty domain is a metric space.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct MetricMsmConfig(MsmConfig);
+
+impl MetricMsmConfig {
+    /// Construct a metric-domain MSM configuration with finite `c > 0`.
+    pub fn try_new(c: f64) -> Result<Self, MetricMsmConfigError> {
+        if !c.is_finite() || c <= 0.0 {
+            return Err(MetricMsmConfigError::NonPositiveSplitMergeCost);
+        }
+        Ok(Self(MsmConfig { c }))
+    }
+
+    /// Borrow the validated raw MSM configuration.
+    #[inline]
+    pub fn as_config(&self) -> &MsmConfig {
+        &self.0
+    }
+
+    /// Return the validated positive split/merge cost.
+    #[inline]
+    pub fn split_merge_cost(&self) -> f64 {
+        self.0.c
+    }
+
+    /// Compute an exact, fail-closed cutoff decision on the nonempty metric domain.
+    pub fn distance_bounded(
+        &self,
+        query: &[f64],
+        candidate: &[f64],
+        cutoff: f64,
+        limits: ResourceLimits,
+    ) -> Result<OperationOutcome<ExactDecision>, TemporalValidationError> {
+        if query.is_empty() || candidate.is_empty() {
+            return Err(TemporalValidationError::EmptyMetricSeries);
+        }
+        self.0.distance_bounded(query, candidate, cutoff, limits)
+    }
+}
+
+impl TryFrom<MsmConfig> for MetricMsmConfig {
+    type Error = MetricMsmConfigError;
+
+    fn try_from(config: MsmConfig) -> Result<Self, Self::Error> {
+        Self::try_new(config.c)
+    }
+}
+
+/// Validation error for [`MetricMsmConfig`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MetricMsmConfigError {
+    /// The split/merge cost was zero, negative, or nonfinite.
+    NonPositiveSplitMergeCost,
+}
+
+impl fmt::Display for MetricMsmConfigError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("metric MSM requires a finite split/merge cost greater than zero")
+    }
+}
+
+impl std::error::Error for MetricMsmConfigError {}
 
 /// Result of MSM distance computation with the DP matrix.
 ///

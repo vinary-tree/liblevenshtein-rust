@@ -39,7 +39,7 @@ impl Display for SmallDfaError {
 impl Error for SmallDfaError {}
 
 /// A dynamically sized bit-set of active [`SmallDfa`] states.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SmallDfaStateSet {
     words: Vec<u64>,
 }

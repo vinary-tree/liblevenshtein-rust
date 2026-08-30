@@ -20,6 +20,51 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 
 ## 1. Main Theorems (Top-Level Results)
 
+### Lazy weighted temporal frontiers
+
+| Theorem | Location | Description |
+|---|---|---|
+| `epsilon_run_composition` | `temporal_automata/theories/LazyWeightedFrontier.v` | A zero-target-consumption path prefixes any suffix run without changing its consumed target word. |
+| `epsilon_dominance_is_residual_simulation` | `temporal_automata/theories/LazyWeightedFrontier.v` | A witnessed epsilon-reachability cost makes antichain pruning safe for every future target suffix. |
+| `canonical_frontier_permutation_invariant` | `temporal_automata/theories/LazyWeightedFrontier.v` | Canonical state membership is independent of candidate generation order. |
+| `canonical_frontier_is_antichain` | `temporal_automata/theories/LazyWeightedFrontier.v` | No retained representative strictly dominates another retained representative. |
+| `canonical_interning_is_permutation_sound` | `temporal_automata/theories/LazyWeightedFrontier.v` | Canonical frontiers generated in different orders are safe to reuse under one compact state identity. |
+| `exact_canonical_key_reuse_is_sound` | `temporal_automata/theories/LazyWeightedFrontier.v` | Exact equality of canonical context and positions preserves every future run and final cost. |
+| `interval_additive_step_is_lower_simulation` | `temporal_automata/theories/LazyWeightedFrontier.v` | Lower predecessor and local costs refine one additive ERP/MSM/TWED/DTW recurrence cell. |
+| `interval_bottleneck_step_is_lower_simulation` | `temporal_automata/theories/LazyWeightedFrontier.v` | Lower predecessor and link costs refine one discrete-Fréchet bottleneck cell. |
+| `exact_leaf_verification_has_no_false_positives` | `temporal_automata/theories/LazyWeightedFrontier.v` | Exact leaf rescoring is the authority boundary that removes abstract false positives. |
+| `page_then_resume_equals_uninterrupted` | `temporal_automata/theories/LazyWeightedFrontier.v` | Every page prefix followed by its continuation reconstructs the uninterrupted observation sequence. |
+| `complete_if_and_only_if_exhausted` | `temporal_automata/theories/LazyWeightedFrontier.v` | Complete—including complete empty—is constructible exactly after search exhaustion. |
+| `generational_retention_is_prefix_independent` | `temporal_automata/theories/LazyWeightedFrontier.v` | Two bounded frontier generations plus a bounded cache retain memory independent of consumed-prefix length. |
+| `sparse_transition_storage_is_observation_bounded` | `temporal_automata/theories/LazyWeightedFrontier.v` | Sparse generated-target storage grows only with distinct transitions actually observed. |
+| `paired_product_push_preserves_bijection` | `temporal_automata/theories/LazyWeightedFrontier.v` | Pushing one explicit DFS frame and one compact product state preserves their live-path bijection. |
+| `paired_product_pop_preserves_bijection` | `temporal_automata/theories/LazyWeightedFrontier.v` | Reclaiming the last frame and stack-arena state together preserves their cardinality invariant. |
+| `stack_arena_retention_is_history_independent` | `temporal_automata/theories/LazyWeightedFrontier.v` | Retained column bytes depend on live DFS depth and query width, not on already visited dictionary nodes. |
+| `rejected_child_preflight_is_atomic` | `temporal_automata/theories/LazyWeightedFrontier.v` | A prospective child above the scratch ceiling leaves retained product state unchanged. |
+| `equal_observation_has_equal_transition` | `temporal_automata/theories/LazyProductOperations.v` | State-relative equal observations induce exactly equal transitions when the concrete transition factors through the observation. |
+| `complete_cache_eviction_is_transparent` | `temporal_automata/theories/LazyProductOperations.v` | Evicting a complete transition entry and recomputing the same successor changes no observation. |
+| `descend_preserves_snapshot_revision` | `temporal_automata/theories/LazyProductOperations.v` | Every successful zipper descent remains scoped to its parent's immutable dictionary revision. |
+| `descend_materializes_path_append` | `temporal_automata/theories/LazyProductOperations.v` | Delayed reconstruction from a shared reverse parent spine equals eager path append. |
+| `erase_path_preserves_successful_descent` | `temporal_automata/theories/LazyProductOperations.v` | Consuming a zipper into an opaque traversal focus may erase path-only context without changing any successful native descent. |
+| `erase_path_preserves_absent_descent` | `temporal_automata/theories/LazyProductOperations.v` | Opaque path erasure cannot introduce a dictionary edge that the captured focus did not have. |
+| `product_child_components` | `temporal_automata/theories/LazyProductOperations.v` | Every constructed product child consists of a dictionary descent and live query transition on the same label. |
+| `product_child_preserves_snapshot_revision` | `temporal_automata/theories/LazyProductOperations.v` | A product transition cannot cross dictionary snapshot revisions. |
+| `absent_dictionary_child_prunes_product` | `temporal_automata/theories/LazyProductOperations.v` | A missing dictionary edge creates no Cartesian product state. |
+| `dead_query_child_prunes_product` | `temporal_automata/theories/LazyProductOperations.v` | A dead query transition prunes its dictionary child product. |
+| `query_first_child_is_product_equivalent` | `temporal_automata/theories/LazyProductOperations.v` | Projecting through the query machine before constructing an owned dictionary child preserves the synchronized product child exactly. |
+| `rejected_projection_constructs_no_child` | `temporal_automata/theories/LazyProductOperations.v` | A query-rejected edge constructs zero owned child foci. |
+| `live_projection_constructs_one_child` | `temporal_automata/theories/LazyProductOperations.v` | A live projected edge constructs exactly one owned child focus. |
+| `admitted_final_is_within_cutoff` | `temporal_automata/theories/LazyProductOperations.v` | A finite exact finalizer score becomes a public range result only when it is no greater than the configured cutoff. |
+| `over_cutoff_final_is_rejected` | `temporal_automata/theories/LazyProductOperations.v` | Closing trailing query-only operations cannot leak a finite over-cutoff score into public results. |
+| `completed_schedule_permutation_preserves_membership` | `temporal_automata/theories/LazyProductOperations.v` | Completed unordered schedulers may reorder work without changing result membership. |
+
+### Generalized finite-lookback scheduling
+
+| Obligation | Location | Description |
+|---|---|---|
+| `finite_lookback_rows_are_stream_length_independent` | `verus/generalized_automaton.rs` | The $`r+1`$ retained rows depend on maximum target consumption rather than consumed stream length, and contain every target-consuming predecessor. |
+| `generalized_predecessor_is_topologically_earlier` | `verus/generalized_automaton.rs` | Every non-zero operation reaches a lexicographically later alignment coordinate; source-only predecessors are earlier in the current scratch row. |
+
 ### Generic elastic walker
 
 | Theorem | Location | Description |
@@ -112,11 +157,11 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `entry_creates_valid_pending` | `damerau/theories/DamerauStreaming.v` | Entry creates a pending continuation whose positive delta fits the one-byte payload. |
 | `extend_preserves_delta_and_adds_one` | `damerau/theories/DamerauStreaming.v` | An interior dictionary unit preserves origin/delta and charges exactly one insertion. |
 | `pending_has_no_epsilon_successor` | `damerau/theories/DamerauStreaming.v` | A pending macro cannot double-charge prepaid query-interior deletions. |
-| `resolve_advances_exact_endpoint` | `damerau/theories/DamerauStreaming.v` | Resolution advances from the stored origin by exactly `$`\delta+1`$` and preserves cost. |
+| `resolve_advances_exact_endpoint` | `damerau/theories/DamerauStreaming.v` | Resolution advances from the stored origin by exactly $`\delta+1`$ and preserves cost. |
 | `macro_cost_equivalent` | `damerau/theories/DamerauStreaming.v` | The streaming charge equals the Lowrance–Wagner macro term. |
 | `mixed_continuations_never_subsume` | `damerau/theories/DamerauStreaming.v` | Normal and pending residual languages are incomparable in both directions. |
 | `pending_subsumption_requires_same_key` | `damerau/theories/DamerauStreaming.v` | Pending dominance exposes non-greater cost and equality of origin and delta. |
-| `frontier_quadratic_bound` | `damerau/theories/DamerauStreaming.v` | At most `$`k`$` diagonals times `$`k`$` deltas yields the `$`k^2`$` frontier envelope. |
+| `frontier_quadratic_bound` | `damerau/theories/DamerauStreaming.v` | At most $`k`$ diagonals times $`k`$ deltas yields the $`k^2`$ frontier envelope. |
 
 ### Discrete Fréchet kernel and bottleneck properties
 
@@ -138,6 +183,18 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `script_gap_mass_bound` | `erp/theories/Metric/ErpProperties.v` | Gap-mass potential difference is bounded by the cost of any ERP edit script. |
 | `erp_candidate_lower_bound` | `erp/theories/Metric/ErpProperties.v` | K4 candidate bound for the source and target projected from any alignment. |
 | `zero_cost_alignment_has_quotient_identity` | `erp/theories/Metric/ErpProperties.v` | Every zero-cost alignment has equal normal forms after removing the fixed gap value. |
+
+### Unit-grid and explicit-timestamp TWED
+
+| Theorem | Location | Description |
+|---|---|---|
+| `match_interval_admissible` | `twed/theories/Metric/TwedProperties.v` | The separable interval match leaf lower-bounds every represented concrete unit-grid TWED match. |
+| `twed_step_monotone` | `twed/theories/Metric/TwedProperties.v` | Ordering every predecessor and local leaf orders the complete additive recurrence cell. |
+| `twed_length_lower_bound` | `twed/theories/Metric/TwedProperties.v` | The unavoidable deletion count makes the gap-penalty length bound admissible for every well-formed script. |
+| `physical_delete_is_nonnegative` | `twed/theories/Metric/TwedProperties.v` | Monotone physical timestamps and validated parameters make an explicit-time deletion leaf nonnegative. |
+| `unit_elapsed_physical_delete_is_unit_grid` | `twed/theories/Metric/TwedProperties.v` | A one-unit physical timestamp step reproduces the unit-grid deletion leaf exactly. |
+| `physical_match_is_nonnegative` | `twed/theories/Metric/TwedProperties.v` | Every explicit-time match leaf is nonnegative under positive stiffness. |
+| `validated_timestamp_step_has_nonnegative_elapsed_time` | `twed/theories/Metric/TwedProperties.v` | A strictly increasing online timestamp produces a nonnegative elapsed-time term. |
 
 ### Core Verification - Levenshtein Distance Properties
 

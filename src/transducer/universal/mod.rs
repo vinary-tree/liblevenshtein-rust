@@ -56,7 +56,7 @@ pub mod state;
 pub mod subsumption;
 
 // Re-exports
-pub use automaton::UniversalAutomaton;
+pub use automaton::{UniversalAutomaton, UniversalOnlineAutomaton};
 
 pub use bit_vector::{characteristic_vector, encode_word_pair, CharacteristicVector};
 

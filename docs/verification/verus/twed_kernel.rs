@@ -196,4 +196,52 @@ proof fn concatenated_script_cost_is_additive(left_cost: nat, right_cost: nat)
 {
 }
 
+spec fn physical_delete_leaf(
+    value_delta: nat,
+    elapsed_time: nat,
+    nu: nat,
+    lambda: nat,
+) -> nat {
+    value_delta + nu * elapsed_time + lambda
+}
+
+/// Monotone timestamps and validated nonnegative parameters make every
+/// explicit-time deletion leaf nonnegative by construction.
+proof fn physical_delete_leaf_is_nonnegative(
+    value_delta: nat,
+    elapsed_time: nat,
+    nu: nat,
+    lambda: nat,
+)
+    ensures
+        physical_delete_leaf(value_delta, elapsed_time, nu, lambda) >= 0,
+{
+}
+
+/// An elapsed time of one canonical unit is exactly the unit-grid deletion
+/// leaf rather than an approximation to it.
+proof fn unit_elapsed_physical_delete_is_unit_grid(
+    value_delta: nat,
+    nu: nat,
+    lambda: nat,
+)
+    ensures
+        physical_delete_leaf(value_delta, 1, nu, lambda)
+            == value_delta + nu + lambda,
+{
+}
+
+/// Strict timestamp validation implies a positive elapsed-time term for every
+/// target sample after the first.
+proof fn strict_timestamp_step_has_positive_elapsed_time(
+    previous_time: int,
+    current_time: int,
+)
+    requires
+        previous_time < current_time,
+    ensures
+        current_time - previous_time > 0,
+{
+}
+
 }

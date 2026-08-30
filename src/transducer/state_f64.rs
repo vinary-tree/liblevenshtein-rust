@@ -32,9 +32,6 @@ use super::algorithm::Algorithm;
 use super::position_f64::PositionF64;
 use smallvec::SmallVec;
 
-/// Epsilon for float comparisons in state operations.
-const EPSILON: f64 = 1e-9;
-
 /// A state in the float-weighted Levenshtein automaton.
 ///
 /// A state is a collection of `PositionF64` values, maintained in sorted order.
@@ -51,7 +48,7 @@ const EPSILON: f64 = 1e-9;
 ///
 /// `StateF64` is `Send` and `Sync` when the underlying `PositionF64` is,
 /// allowing use in parallel algorithms.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct StateF64 {
     /// Positions in this state, maintained in sorted order.
     /// SmallVec avoids heap allocation for states with ≤ 8 positions.
@@ -126,7 +123,7 @@ impl StateF64 {
     /// ```
     pub fn from_positions(mut positions: Vec<PositionF64>) -> Self {
         positions.sort();
-        positions.dedup_by(|a, b| a.approx_eq(b));
+        positions.dedup();
         Self {
             positions: SmallVec::from_vec(positions),
         }
@@ -168,7 +165,7 @@ impl StateF64 {
         // witness: a retained representative can remove several subsumed ones.
         // Check if this position is subsumed by an existing one
         for existing in &self.positions {
-            if existing.approx_eq(&position)
+            if existing == &position
                 || existing.subsumes(&position, algorithm, query_length, max_index_op_cost)
             {
                 return false; // Already covered by existing position
@@ -264,6 +261,18 @@ impl StateF64 {
         self.positions.clear();
         self.positions.reserve(other.positions.len());
         self.positions.extend_from_slice(&other.positions);
+    }
+
+    /// Copy an already canonical position slice into this reusable state.
+    ///
+    /// The caller is responsible for preserving sorted, exact-deduplicated,
+    /// subsumption-minimal order. Query-local state arenas use this only for
+    /// canonical slices that were previously interned from a `StateF64`.
+    #[inline]
+    pub(crate) fn copy_from_canonical_positions(&mut self, positions: &[PositionF64]) {
+        self.positions.clear();
+        self.positions.reserve(positions.len());
+        self.positions.extend_from_slice(positions);
     }
 
     /// Get the minimum accumulated cost in this state.
@@ -413,7 +422,7 @@ impl StateF64 {
     pub fn all_exceed_threshold(&self, threshold: f64) -> bool {
         self.positions
             .iter()
-            .all(|p| p.accumulated_cost > threshold + EPSILON)
+            .all(|p| p.accumulated_cost > threshold)
     }
 }
 
@@ -507,6 +516,15 @@ mod tests {
         assert!(approx_eq(state.positions()[0].accumulated_cost, 0.5));
         assert_eq!(state.positions()[1].term_index, 3);
         assert!(approx_eq(state.positions()[1].accumulated_cost, 2.0));
+    }
+
+    #[test]
+    fn canonical_state_identity_never_merges_sub_epsilon_costs() {
+        let cheaper = PositionF64::new(3, 1.0);
+        let dearer = PositionF64::new(3, 1.0 + 5.0e-10);
+        let state = StateF64::from_positions(vec![dearer, cheaper]);
+
+        assert_eq!(state.positions(), &[cheaper, dearer]);
     }
 
     #[test]

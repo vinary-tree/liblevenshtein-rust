@@ -2,8 +2,9 @@
 //!
 //! [`GeneralizedAutomaton`] decides whether an `OperationSet` alignment fits an
 //! integer budget. Decimal operation weights are converted through one exact
-//! [`CostScale`], and a sparse topological alignment graph evaluates every
-//! configured source/target consumption rule.
+//! [`CostScale`]. Production evaluation binds one finite source and advances a
+//! target stream through a finite-lookback row ring; the test-only sparse
+//! topological graph remains an independent correspondence oracle.
 //!
 //! # Design Philosophy
 //!
@@ -14,7 +15,7 @@
 //! # Operation Support
 //!
 //! The public Boolean API fails closed on invalid cost domains, arithmetic
-//! overflow, or the alignment-state resource ceiling. Use
+//! overflow, or the retained-cell/per-step-work resource ceilings. Use
 //! [`GeneralizedAutomaton::try_accepts`] to distinguish those errors.
 //!
 //! # Theory Background
@@ -42,11 +43,42 @@
 
 use crate::cost::{CostScale, ScaleError};
 use crate::transducer::{OperationSet, OperationSetValidationError, OperationType};
+#[cfg(test)]
 use std::collections::{btree_map::Entry, BTreeMap};
 use std::fmt;
 
 /// Maximum number of reachable alignment cells explored by one generalized query.
 pub const MAX_GENERALIZED_ALIGNMENT_STATES: usize = 1_000_000;
+
+/// Explicit retained-state and per-step work ceilings for generalized online
+/// alignment.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GeneralizedOnlineLimits {
+    /// Maximum fixed DP cells across the finite-lookback row ring and scratch.
+    pub max_retained_cells: usize,
+    /// Maximum operation/cell relaxations performed for one input scalar.
+    pub max_step_work_units: usize,
+}
+
+impl Default for GeneralizedOnlineLimits {
+    fn default() -> Self {
+        Self {
+            max_retained_cells: MAX_GENERALIZED_ALIGNMENT_STATES,
+            max_step_work_units: 100_000_000,
+        }
+    }
+}
+
+/// Exact observation after one committed generalized target prefix.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GeneralizedOnlineObservation {
+    /// Number of target Unicode scalars committed.
+    pub consumed_target_len: usize,
+    /// Number of in-budget source coordinates in the current generation.
+    pub active_positions: usize,
+    /// Complete-prefix exact scaled distance, if it is within the budget.
+    pub distance_within_budget: Option<usize>,
+}
 
 /// Failure while preparing or evaluating a generalized automaton.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -133,11 +165,339 @@ pub struct GeneralizedAutomaton {
     /// Maximum edit distance n
     max_distance: u8,
 
-    /// Set of operations defining the edit distance metric
+    /// Set of operations defining the alignment cost. An arbitrary operation
+    /// set is not necessarily a metric.
     operations: OperationSet,
 
     /// Exact decimal scale shared by every operation and the public budget.
     cost_scale: Result<CostScale, ScaleError>,
+}
+
+#[derive(Clone)]
+struct CompiledOperation {
+    operation: OperationType,
+    scaled_cost: usize,
+}
+
+/// Exact finite-lookback generalized automaton for one fixed source word.
+///
+/// A rule consuming at most `r` target scalars can refer only to the previous
+/// `r` target generations. The machine therefore retains `r + 1` fixed-width
+/// rows, one scratch row, and the last `r` target scalars. Retained memory does
+/// not depend on the number of target scalars already consumed.
+pub struct GeneralizedOnlineAutomaton {
+    source: Box<str>,
+    source_offsets: Box<[usize]>,
+    source_len: usize,
+    operations: Box<[CompiledOperation]>,
+    budget: usize,
+    max_target_consumption: usize,
+    rows: Vec<Vec<usize>>,
+    row_generations: Vec<Option<usize>>,
+    scratch_row: Vec<usize>,
+    target_window: Vec<char>,
+    scratch_target_window: Vec<char>,
+    target_text: String,
+    target_offsets: Vec<usize>,
+    consumed_target_len: usize,
+    observation: GeneralizedOnlineObservation,
+}
+
+impl std::fmt::Debug for GeneralizedOnlineAutomaton {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("GeneralizedOnlineAutomaton")
+            .field("source_len", &self.source_len)
+            .field("operation_count", &self.operations.len())
+            .field("budget", &self.budget)
+            .field("retained_rows", &self.rows.len())
+            .field("max_target_consumption", &self.max_target_consumption)
+            .field("consumed_target_len", &self.consumed_target_len)
+            .finish_non_exhaustive()
+    }
+}
+
+impl GeneralizedOnlineAutomaton {
+    const TOP: usize = usize::MAX;
+
+    fn new(
+        automaton: &GeneralizedAutomaton,
+        source: &str,
+        limits: GeneralizedOnlineLimits,
+    ) -> Result<Self, GeneralizedAutomatonError> {
+        automaton.operations.validate()?;
+        let scale = automaton.cost_scale()?;
+        let budget = scale.scale_budget(automaton.max_distance)?;
+        let source_len = source.chars().count();
+        let source_width = source_len
+            .checked_add(1)
+            .ok_or(GeneralizedAutomatonError::ArithmeticOverflow)?;
+        let max_target_consumption = automaton
+            .operations
+            .iter()
+            .map(OperationType::consume_y)
+            .max()
+            .unwrap_or(0);
+        let row_count = max_target_consumption
+            .checked_add(1)
+            .ok_or(GeneralizedAutomatonError::ArithmeticOverflow)?;
+        let retained_cells = row_count
+            .checked_add(1)
+            .and_then(|rows| rows.checked_mul(source_width))
+            .ok_or(GeneralizedAutomatonError::ArithmeticOverflow)?;
+        if retained_cells > limits.max_retained_cells {
+            return Err(GeneralizedAutomatonError::ResourceLimit {
+                observed: retained_cells,
+                limit: limits.max_retained_cells,
+            });
+        }
+        let step_work = source_width
+            .checked_mul(automaton.operations.len())
+            .ok_or(GeneralizedAutomatonError::ArithmeticOverflow)?;
+        if step_work > limits.max_step_work_units {
+            return Err(GeneralizedAutomatonError::ResourceLimit {
+                observed: step_work,
+                limit: limits.max_step_work_units,
+            });
+        }
+
+        let mut operations = Vec::new();
+        operations
+            .try_reserve_exact(automaton.operations.len())
+            .map_err(|_| GeneralizedAutomatonError::ResourceLimit {
+                observed: automaton.operations.len(),
+                limit: limits.max_retained_cells,
+            })?;
+        for operation in automaton.operations.iter() {
+            operations.push(CompiledOperation {
+                operation: operation.clone(),
+                scaled_cost: scale.to_scaled(operation.weight())?,
+            });
+        }
+
+        let source_offsets = char_byte_offsets(source).into_boxed_slice();
+        let mut rows = Vec::new();
+        rows.try_reserve_exact(row_count).map_err(|_| {
+            GeneralizedAutomatonError::ResourceLimit {
+                observed: retained_cells,
+                limit: limits.max_retained_cells,
+            }
+        })?;
+        for _ in 0..row_count {
+            let mut row = Vec::new();
+            row.try_reserve_exact(source_width).map_err(|_| {
+                GeneralizedAutomatonError::ResourceLimit {
+                    observed: retained_cells,
+                    limit: limits.max_retained_cells,
+                }
+            })?;
+            row.resize(source_width, Self::TOP);
+            rows.push(row);
+        }
+        let mut scratch_row = Vec::new();
+        scratch_row.try_reserve_exact(source_width).map_err(|_| {
+            GeneralizedAutomatonError::ResourceLimit {
+                observed: retained_cells,
+                limit: limits.max_retained_cells,
+            }
+        })?;
+        scratch_row.resize(source_width, Self::TOP);
+
+        let mut target_window = Vec::new();
+        target_window
+            .try_reserve_exact(max_target_consumption)
+            .map_err(|_| GeneralizedAutomatonError::ResourceLimit {
+                observed: max_target_consumption,
+                limit: limits.max_retained_cells,
+            })?;
+        let mut scratch_target_window = Vec::new();
+        scratch_target_window
+            .try_reserve_exact(max_target_consumption)
+            .map_err(|_| GeneralizedAutomatonError::ResourceLimit {
+                observed: max_target_consumption,
+                limit: limits.max_retained_cells,
+            })?;
+        let target_bytes = max_target_consumption
+            .checked_mul(char::MAX.len_utf8())
+            .ok_or(GeneralizedAutomatonError::ArithmeticOverflow)?;
+        let mut target_text = String::new();
+        target_text.try_reserve(target_bytes).map_err(|_| {
+            GeneralizedAutomatonError::ResourceLimit {
+                observed: target_bytes,
+                limit: limits.max_retained_cells,
+            }
+        })?;
+        let mut target_offsets = Vec::new();
+        target_offsets
+            .try_reserve_exact(max_target_consumption.saturating_add(1))
+            .map_err(|_| GeneralizedAutomatonError::ResourceLimit {
+                observed: max_target_consumption.saturating_add(1),
+                limit: limits.max_retained_cells,
+            })?;
+
+        let mut machine = Self {
+            source: source.into(),
+            source_offsets,
+            source_len,
+            operations: operations.into_boxed_slice(),
+            budget,
+            max_target_consumption,
+            rows,
+            row_generations: vec![None; row_count],
+            scratch_row,
+            target_window,
+            scratch_target_window,
+            target_text,
+            target_offsets,
+            consumed_target_len: 0,
+            observation: GeneralizedOnlineObservation {
+                consumed_target_len: 0,
+                active_positions: 0,
+                distance_within_budget: None,
+            },
+        };
+        machine.rebuild_target_text();
+        machine.compute_generation(0, true)?;
+        machine.commit_generation(0);
+        Ok(machine)
+    }
+
+    /// Consume one Unicode scalar transactionally.
+    pub fn advance(
+        &mut self,
+        target: char,
+    ) -> Result<GeneralizedOnlineObservation, GeneralizedAutomatonError> {
+        let generation = self
+            .consumed_target_len
+            .checked_add(1)
+            .ok_or(GeneralizedAutomatonError::ArithmeticOverflow)?;
+
+        self.scratch_target_window.clear();
+        if self.max_target_consumption > 0 {
+            let retained_start = self
+                .target_window
+                .len()
+                .saturating_add(1)
+                .saturating_sub(self.max_target_consumption);
+            self.scratch_target_window
+                .extend_from_slice(&self.target_window[retained_start..]);
+            self.scratch_target_window.push(target);
+        }
+        std::mem::swap(&mut self.target_window, &mut self.scratch_target_window);
+        self.rebuild_target_text();
+
+        if let Err(error) = self.compute_generation(generation, false) {
+            std::mem::swap(&mut self.target_window, &mut self.scratch_target_window);
+            self.rebuild_target_text();
+            return Err(error);
+        }
+        self.commit_generation(generation);
+        self.scratch_target_window.clear();
+        Ok(self.observation)
+    }
+
+    /// Current exact prefix observation.
+    pub fn observation(&self) -> GeneralizedOnlineObservation {
+        self.observation
+    }
+
+    /// Fixed number of DP cells retained by the row ring and scratch row.
+    pub fn retained_cells(&self) -> usize {
+        self.rows
+            .len()
+            .saturating_add(1)
+            .saturating_mul(self.source_len.saturating_add(1))
+    }
+
+    fn rebuild_target_text(&mut self) {
+        self.target_text.clear();
+        self.target_offsets.clear();
+        self.target_offsets.push(0);
+        for character in &self.target_window {
+            self.target_text.push(*character);
+            self.target_offsets.push(self.target_text.len());
+        }
+    }
+
+    fn compute_generation(
+        &mut self,
+        generation: usize,
+        origin: bool,
+    ) -> Result<(), GeneralizedAutomatonError> {
+        self.scratch_row.fill(Self::TOP);
+        if origin {
+            self.scratch_row[0] = 0;
+        }
+        for source_end in 0..=self.source_len {
+            let mut best = self.scratch_row[source_end];
+            for compiled in &self.operations {
+                let operation = &compiled.operation;
+                let source_consumption = operation.consume_x();
+                let target_consumption = operation.consume_y();
+                if source_consumption > source_end || target_consumption > generation {
+                    continue;
+                }
+                let predecessor_source = source_end - source_consumption;
+                let predecessor = if target_consumption == 0 {
+                    self.scratch_row[predecessor_source]
+                } else {
+                    let predecessor_generation = generation - target_consumption;
+                    let slot = predecessor_generation % self.rows.len();
+                    if self.row_generations[slot] != Some(predecessor_generation) {
+                        continue;
+                    }
+                    self.rows[slot][predecessor_source]
+                };
+                if predecessor == Self::TOP {
+                    continue;
+                }
+
+                let source_start = source_end - source_consumption;
+                let source_slice = &self.source
+                    [self.source_offsets[source_start]..self.source_offsets[source_end]];
+                let target_end = self.target_offsets.len() - 1;
+                if target_consumption > target_end {
+                    continue;
+                }
+                let target_start = target_end - target_consumption;
+                let target_slice = &self.target_text
+                    [self.target_offsets[target_start]..self.target_offsets[target_end]];
+                if !operation_applies(operation, source_slice, target_slice) {
+                    continue;
+                }
+                let cost = predecessor
+                    .checked_add(compiled.scaled_cost)
+                    .ok_or(GeneralizedAutomatonError::ArithmeticOverflow)?;
+                if cost <= self.budget {
+                    best = best.min(cost);
+                }
+            }
+            self.scratch_row[source_end] = best;
+        }
+        Ok(())
+    }
+
+    fn commit_generation(&mut self, generation: usize) {
+        let active_positions = self
+            .scratch_row
+            .iter()
+            .filter(|cost| **cost != Self::TOP)
+            .count();
+        let distance_within_budget = self
+            .scratch_row
+            .get(self.source_len)
+            .copied()
+            .filter(|cost| *cost != Self::TOP && *cost <= self.budget);
+        let slot = generation % self.rows.len();
+        std::mem::swap(&mut self.rows[slot], &mut self.scratch_row);
+        self.row_generations[slot] = Some(generation);
+        self.consumed_target_len = generation;
+        self.observation = GeneralizedOnlineObservation {
+            consumed_target_len: generation,
+            active_positions,
+            distance_within_budget,
+        };
+    }
 }
 
 impl GeneralizedAutomaton {
@@ -245,6 +605,25 @@ impl GeneralizedAutomaton {
         self.cost_scale.clone().map_err(Into::into)
     }
 
+    /// Bind the operation set to one fixed source word and construct a stable
+    /// online target automaton with default hard limits.
+    pub fn online(
+        &self,
+        source: &str,
+    ) -> Result<GeneralizedOnlineAutomaton, GeneralizedAutomatonError> {
+        self.online_with_limits(source, GeneralizedOnlineLimits::default())
+    }
+
+    /// Construct a stable online target automaton with explicit retained-cell
+    /// and per-step work ceilings.
+    pub fn online_with_limits(
+        &self,
+        source: &str,
+        limits: GeneralizedOnlineLimits,
+    ) -> Result<GeneralizedOnlineAutomaton, GeneralizedAutomatonError> {
+        GeneralizedOnlineAutomaton::new(self, source, limits)
+    }
+
     /// Check whether an exact configured-operation alignment fits the budget.
     ///
     /// # Arguments
@@ -260,9 +639,10 @@ impl GeneralizedAutomaton {
     /// # Algorithm
     ///
     /// 1. Derive one exact decimal scale for the operation set.
-    /// 2. Traverse reachable alignment cells in topological order.
-    /// 3. Relax every applicable operation whose exact cost remains in budget.
-    /// 4. Accept only when both strings are completely consumed.
+    /// 2. Compile exact operation costs and the maximum target lookback.
+    /// 3. Advance the input one Unicode scalar at a time through the bounded row ring.
+    /// 4. Relax every applicable operation whose exact cost remains in budget.
+    /// 5. Accept only when both strings are completely consumed.
     ///
     /// # Examples
     ///
@@ -287,7 +667,8 @@ impl GeneralizedAutomaton {
     /// Fallible acceptance with exact operation-driven costs.
     ///
     /// Evaluation is a shortest-path computation over the acyclic alignment
-    /// grid. Only cells reachable within the scaled budget are materialized.
+    /// grid. Only the finite source width and the rows reachable through the
+    /// operation set's maximum target lookback are retained.
     pub fn try_accepts(&self, word: &str, input: &str) -> Result<bool, GeneralizedAutomatonError> {
         Ok(self.scaled_distance(word, input)?.is_some())
     }
@@ -298,9 +679,14 @@ impl GeneralizedAutomaton {
         word: &str,
         input: &str,
     ) -> Result<Option<usize>, GeneralizedAutomatonError> {
-        self.scaled_distance_with_limit(word, input, MAX_GENERALIZED_ALIGNMENT_STATES)
+        let mut online = self.online(word)?;
+        for target in input.chars() {
+            online.advance(target)?;
+        }
+        Ok(online.observation().distance_within_budget)
     }
 
+    #[cfg(test)]
     fn scaled_distance_with_limit(
         &self,
         word: &str,
@@ -448,6 +834,96 @@ fn operation_applies(operation: &OperationType, word: &str, input: &str) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn short_words(alphabet: &[char], max_len: usize) -> Vec<String> {
+        let mut words = vec![String::new()];
+        let mut level = vec![String::new()];
+        for _ in 0..max_len {
+            let mut next = Vec::new();
+            for prefix in &level {
+                for character in alphabet {
+                    let mut word = prefix.clone();
+                    word.push(*character);
+                    words.push(word.clone());
+                    next.push(word);
+                }
+            }
+            level = next;
+        }
+        words
+    }
+
+    #[test]
+    fn online_ring_matches_independent_sparse_grid_oracle_exhaustively() {
+        let words = short_words(&['a', 'b', 'é'], 3);
+        let automata = [
+            GeneralizedAutomaton::new(2),
+            GeneralizedAutomaton::with_operations(
+                2,
+                crate::transducer::OperationSet::with_transposition(),
+            ),
+            GeneralizedAutomaton::with_operations(
+                2,
+                crate::transducer::OperationSet::with_merge_split(),
+            ),
+        ];
+        for automaton in &automata {
+            for source in &words {
+                for target in &words {
+                    let expected = automaton
+                        .scaled_distance_with_limit(
+                            source,
+                            target,
+                            MAX_GENERALIZED_ALIGNMENT_STATES,
+                        )
+                        .expect("small sparse-grid oracle");
+                    let actual = automaton
+                        .scaled_distance(source, target)
+                        .expect("small online ring");
+                    assert_eq!(actual, expected, "source={source:?} target={target:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn online_ring_retention_is_independent_of_target_prefix_length() {
+        let automaton = GeneralizedAutomaton::new(2);
+        let mut online = automaton
+            .online("fixed source")
+            .expect("bounded online ring");
+        let retained = online.retained_cells();
+        for _ in 0..100_000 {
+            online.advance('x').expect("fixed per-step work");
+            assert_eq!(online.retained_cells(), retained);
+        }
+        assert_eq!(online.observation().consumed_target_len, 100_000);
+    }
+
+    #[test]
+    fn online_ring_preflights_retained_cells_and_step_work() {
+        let automaton = GeneralizedAutomaton::new(2);
+        assert!(matches!(
+            automaton.online_with_limits(
+                "abcd",
+                GeneralizedOnlineLimits {
+                    max_retained_cells: 1,
+                    max_step_work_units: usize::MAX,
+                },
+            ),
+            Err(GeneralizedAutomatonError::ResourceLimit { .. })
+        ));
+        assert!(matches!(
+            automaton.online_with_limits(
+                "abcd",
+                GeneralizedOnlineLimits {
+                    max_retained_cells: usize::MAX,
+                    max_step_work_units: 1,
+                },
+            ),
+            Err(GeneralizedAutomatonError::ResourceLimit { .. })
+        ));
+    }
 
     #[test]
     fn test_new() {

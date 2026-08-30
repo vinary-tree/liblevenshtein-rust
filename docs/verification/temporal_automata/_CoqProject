@@ -1,0 +1,4 @@
+-Q theories Liblevenshtein.TemporalAutomata
+
+theories/LazyWeightedFrontier.v
+theories/SoftDtwAnalysis.v

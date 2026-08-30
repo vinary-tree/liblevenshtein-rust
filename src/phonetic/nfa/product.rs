@@ -806,6 +806,14 @@ impl ProductAutomatonChar {
                 <= max_distance_budget_len(self.max_distance());
         }
 
+        // Standard Levenshtein is a stable cost-indexed frontier: it consumes
+        // the character iterator directly and retains no input prefix. The
+        // lookahead algorithms below keep their explicit finite batch path.
+        if self.algorithm == Algorithm::Standard {
+            return LanguageProduct::new(self.nfa.clone(), self.max_distance())
+                .accepts(input.chars());
+        }
+
         let input_chars: Vec<char> = input.chars().collect();
         let n = input_chars.len();
         let max_errors = self.max_distance(); // Use integer approximation
@@ -1078,6 +1086,13 @@ impl ProductAutomatonChar {
             } else {
                 None
             };
+        }
+
+        // Consume arbitrarily long standard input with one stable frontier;
+        // no `Vec<char>` proportional to the input is constructed.
+        if self.algorithm == Algorithm::Standard {
+            return LanguageProduct::new(self.nfa.clone(), self.max_distance())
+                .distance_to_language(input.chars());
         }
 
         let input_chars: Vec<char> = input.chars().collect();
