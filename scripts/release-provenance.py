@@ -18,9 +18,9 @@ import os
 import re
 import stat
 import subprocess
-import sys
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACT = ROOT / "release/rc6-candidate-provenance.json"
@@ -44,12 +44,19 @@ COMPONENT_SPECS = (
     ),
 )
 
-CANONICAL_PATHS = {
+BUILD_INPUT_SPECS = (
+    ("llattice", "LLATTICE_ROOT", ROOT.parent / "llattice", "llattice", "0.1.0"),
+)
+
+COORDINATED_DEPENDENCIES = {
     "liblevenshtein": {
-        "libdictenstein": "../libdictenstein",
-        "vinary-tree-interop": "../vinary-tree-interop",
+        "libdictenstein": (EXPECTED_RELEASE, "../libdictenstein"),
+        "vinary-tree-interop": (EXPECTED_RELEASE, "../vinary-tree-interop"),
     },
-    "libdictenstein": {"vinary-tree-interop": "../vinary-tree-interop"},
+    "libdictenstein": {
+        "llattice": ("0.1.0", "../llattice"),
+        "vinary-tree-interop": (EXPECTED_RELEASE, "../vinary-tree-interop"),
+    },
     "vinary-tree-interop": {},
 }
 
@@ -71,9 +78,7 @@ EXPECTED_LOCK_PACKAGES = {
             "vinary-tree-interop": EXPECTED_RELEASE,
         }
     },
-    "vinary-tree-interop": {
-        "Cargo.lock": {"vinary-tree-interop": EXPECTED_RELEASE}
-    },
+    "vinary-tree-interop": {"Cargo.lock": {"vinary-tree-interop": EXPECTED_RELEASE}},
 }
 
 
@@ -113,6 +118,18 @@ def component_roots() -> list[tuple[str, Path, str]]:
     return roots
 
 
+def build_input_roots() -> list[tuple[str, Path, str, str]]:
+    roots = []
+    for name, environment, default, canonical_directory, version in BUILD_INPUT_SPECS:
+        root = Path(os.environ.get(environment, default)).resolve()
+        if not (root / ".git").exists():
+            fail(f"{name}: build-input repository root does not exist: {root}")
+        roots.append((name, root, canonical_directory, version))
+    if len({root for _, root, _, _ in roots}) != len(roots):
+        fail("two build inputs resolve to the same repository root")
+    return roots
+
+
 def read_release_model(name: str, root: Path) -> dict[str, object]:
     path = root / "release/version.json"
     if not path.is_file():
@@ -140,17 +157,19 @@ def check_manifest(name: str, root: Path, require_canonical_paths: bool) -> None
         fail(f"{name}: Cargo package version is not {EXPECTED_RELEASE}")
     if manifest_value(source, "rust-version") != EXPECTED_RUST_VERSION:
         fail(f"{name}: rust-version is not {EXPECTED_RUST_VERSION}")
-    for dependency, canonical_path in CANONICAL_PATHS[name].items():
+    for dependency, (expected_version, canonical_path) in COORDINATED_DEPENDENCIES[
+        name
+    ].items():
         match = re.search(
-            rf'^{re.escape(dependency)}\s*=\s*\{{([^\n]+)\}}$',
+            rf"^{re.escape(dependency)}\s*=\s*\{{([^\n]+)\}}$",
             source,
             re.MULTILINE,
         )
         if match is None:
             fail(f"{name}: missing {dependency} dependency")
         fields = match.group(1)
-        if f'version = "={EXPECTED_RELEASE}"' not in fields:
-            fail(f"{name}: {dependency} is not pinned to ={EXPECTED_RELEASE}")
+        if f'version = "={expected_version}"' not in fields:
+            fail(f"{name}: {dependency} is not pinned to ={expected_version}")
         if require_canonical_paths and f'path = "{canonical_path}"' not in fields:
             fail(f"{name}: {dependency} does not use canonical path {canonical_path}")
 
@@ -164,7 +183,7 @@ def manifest_release_contract(name: str, root: Path) -> dict[str, object]:
     dependencies = manifest.get("dependencies", {})
 
     dependency_contract: dict[str, object] = {}
-    for dependency in sorted(CANONICAL_PATHS[name]):
+    for dependency in sorted(COORDINATED_DEPENDENCIES[name]):
         specification = dependencies.get(dependency)
         if not isinstance(specification, dict):
             fail(f"{name}: {dependency} dependency is not an explicit table")
@@ -182,6 +201,32 @@ def manifest_release_contract(name: str, root: Path) -> dict[str, object]:
         },
         "validatedCargoSelection": "--all-features",
         "coordinatedDependencies": dependency_contract,
+    }
+
+
+def check_build_input(name: str, root: Path, expected_version: str) -> None:
+    manifest = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
+    package = manifest.get("package", {})
+    if package.get("name") != name:
+        fail(f"{name}: build-input Cargo package name is {package.get('name')!r}")
+    if package.get("version") != expected_version:
+        fail(
+            f"{name}: build-input Cargo package version is "
+            f"{package.get('version')!r}, expected {expected_version!r}"
+        )
+
+
+def build_input_contract(root: Path) -> dict[str, object]:
+    manifest = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
+    package = manifest.get("package", {})
+    features = manifest.get("features", {})
+    return {
+        "packageVersion": package.get("version"),
+        "rustVersion": package.get("rust-version"),
+        "cargoFeatures": {
+            feature: list(members) for feature, members in sorted(features.items())
+        },
+        "validatedCargoSelection": "dependency-selected feature set",
     }
 
 
@@ -290,7 +335,10 @@ def tool_output(command: list[str]) -> str:
 
 
 def build_artifact(
-    roots: list[tuple[str, Path, str]], *, include_package_files: bool
+    roots: list[tuple[str, Path, str]],
+    build_inputs: list[tuple[str, Path, str, str]],
+    *,
+    include_package_files: bool,
 ) -> dict[str, object]:
     components = []
     for name, root, canonical_directory in roots:
@@ -323,6 +371,35 @@ def build_artifact(
             component["cargoPackageFileListSha256"] = package_sha
             component["cargoPackageFileCount"] = package_count
         components.append(component)
+    inputs = []
+    for name, root, canonical_directory, expected_version in build_inputs:
+        snapshot_sha, source_count = source_snapshot(root)
+        locks = {}
+        for lock in sorted(root.glob("**/Cargo.lock")):
+            if "target" in lock.relative_to(root).parts:
+                continue
+            source = lock.read_text(encoding="utf-8")
+            if "[[patch.unused]]" in source or 'name = "creusot-std"' in source:
+                fail(f"{name}: host-global unused patch leaked into {lock}")
+            locks[lock.relative_to(root).as_posix()] = sha256_file(lock)
+        build_input: dict[str, object] = {
+            "name": name,
+            "canonicalDirectory": canonical_directory,
+            "requiredVersion": expected_version,
+            "repository": manifest_value(
+                (root / "Cargo.toml").read_text(encoding="utf-8"), "repository"
+            ),
+            "subjectCommit": tool_output(["git", "-C", str(root), "rev-parse", "HEAD"]),
+            "cargoContract": build_input_contract(root),
+            "sourceSnapshotSha256": snapshot_sha,
+            "sourceFileCount": source_count,
+            "cargoLocksSha256": locks,
+        }
+        if include_package_files:
+            package_sha, package_count = package_file_set(root)
+            build_input["cargoPackageFileListSha256"] = package_sha
+            build_input["cargoPackageFileCount"] = package_count
+        inputs.append(build_input)
     return {
         "schemaVersion": 1,
         "kind": "coordinated-release-candidate-subject",
@@ -339,6 +416,7 @@ def build_artifact(
             ),
         },
         "components": components,
+        "buildInputs": inputs,
     }
 
 
@@ -351,15 +429,26 @@ def main() -> None:
     arguments = parser.parse_args()
 
     roots = component_roots()
+    build_inputs = build_input_roots()
+    all_roots = [(name, root) for name, root, _ in roots]
+    all_roots.extend((name, root) for name, root, _, _ in build_inputs)
+    if len({root for _, root in all_roots}) != len(all_roots):
+        fail("a release component and build input resolve to the same repository root")
     for name, root, _ in roots:
         read_release_model(name, root)
         check_manifest(name, root, arguments.require_canonical_paths)
         check_toolchain_file(name, root)
         check_lock_versions(name, root)
+    for name, root, _, expected_version in build_inputs:
+        check_build_input(name, root, expected_version)
 
-    actual = build_artifact(roots, include_package_files=arguments.include_package_files)
+    actual = build_artifact(
+        roots,
+        build_inputs,
+        include_package_files=arguments.include_package_files,
+    )
     if arguments.require_clean:
-        dirty = [name for name, root, _ in roots if status_lines(root)]
+        dirty = [name for name, root in all_roots if status_lines(root)]
         if dirty:
             fail(f"release subject is dirty: {', '.join(dirty)}")
 
