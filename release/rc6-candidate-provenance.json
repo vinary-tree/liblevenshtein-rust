@@ -227,8 +227,8 @@
       "releaseVersion": "4.0.0-rc.6",
       "repository": "https://github.com/vinary-tree/liblevenshtein-rust",
       "sourceFileCount": 3862,
-      "sourceSnapshotSha256": "0622f87d1f270e066f36edc1163ca8bf612b2aeba934e402c426d3186a50753f",
-      "subjectCommit": "c7cbd9c3d4def712174341eedf7906273630d640"
+      "sourceSnapshotSha256": "fee1598eab0690eed8fe7c991fc679419189b0d92441564e1d792be2733110d9",
+      "subjectCommit": "230ff5323d190aedbd28c839ec004abf357ab2ed"
     },
     {
       "canonicalDirectory": "libdictenstein",
