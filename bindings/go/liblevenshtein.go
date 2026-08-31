@@ -164,9 +164,13 @@ func (t *Transducer) withPointer(call func(*C.LlevTransducer) (*C.LlevQueryCurso
 	if err != nil {
 		return nil, err
 	}
+	return newIterator(cursor), nil
+}
+
+func newIterator(cursor *C.LlevQueryCursor) *Iterator {
 	result := &Iterator{pointer: cursor}
 	runtime.SetFinalizer(result, (*Iterator).finalize)
-	return result, nil
+	return result
 }
 
 // Query starts a lazy Unicode query and captures the current dictionary revision.
@@ -222,6 +226,146 @@ func (t *Transducer) QueryPattern(pattern *PhoneticPattern, maximumDistance uint
 		status := C.llev_transducer_query_pattern(pointer, pattern.pointer, C.uint8_t(maximumDistance), &cursor)
 		return cursor, check(status)
 	})
+}
+
+// QueryCacheStats is an immutable snapshot of aggregate TinyLFU/SIEVE policy
+// counters and current bounded residency.
+type QueryCacheStats struct {
+	Requests        uint64
+	Hits            uint64
+	Misses          uint64
+	Admissions      uint64
+	Rejections      uint64
+	Evictions       uint64
+	ResidentEntries uint
+	ResidentWeight  uint
+}
+
+// QueryCache is an exclusive synchronization-free cache for complete repeated
+// queries. Limits apply independently to traversal and distance-then-term
+// order. Create one cache per worker for parallel workloads.
+type QueryCache struct {
+	pointer *C.LlevQueryCache
+}
+
+// NewQueryCache retains a transducer and configures hard per-order bounds.
+func NewQueryCache(transducer *Transducer, maximumEntries, maximumWeight uint) (*QueryCache, error) {
+	if transducer == nil {
+		return nil, errors.New("transducer is nil")
+	}
+	transducer.mu.RLock()
+	defer transducer.mu.RUnlock()
+	if transducer.pointer == nil {
+		return nil, errors.New("transducer is closed")
+	}
+	var pointer *C.LlevQueryCache
+	if err := check(C.llev_query_cache_new(transducer.pointer, C.size_t(maximumEntries), C.size_t(maximumWeight), &pointer)); err != nil {
+		return nil, err
+	}
+	result := &QueryCache{pointer: pointer}
+	runtime.SetFinalizer(result, (*QueryCache).finalize)
+	return result, nil
+}
+
+func (c *QueryCache) finalize() { c.Close() }
+
+func (c *QueryCache) requireOpen() error {
+	if c == nil || c.pointer == nil {
+		return errors.New("query cache is closed")
+	}
+	return nil
+}
+
+// Stats copies aggregate policy counters and current residency.
+func (c *QueryCache) Stats() (QueryCacheStats, error) {
+	if err := c.requireOpen(); err != nil {
+		return QueryCacheStats{}, err
+	}
+	var raw C.LlevQueryCacheStats
+	if err := check(C.llev_query_cache_stats(c.pointer, &raw)); err != nil {
+		return QueryCacheStats{}, err
+	}
+	return QueryCacheStats{
+		Requests: uint64(raw.requests), Hits: uint64(raw.hits),
+		Misses: uint64(raw.misses), Admissions: uint64(raw.admissions),
+		Rejections: uint64(raw.rejections), Evictions: uint64(raw.evictions),
+		ResidentEntries: uint(raw.resident_entries), ResidentWeight: uint(raw.resident_weight),
+	}, nil
+}
+
+// Clear drops resident results while preserving policy counters.
+func (c *QueryCache) Clear() error {
+	if err := c.requireOpen(); err != nil {
+		return err
+	}
+	return check(C.llev_query_cache_clear(c.pointer))
+}
+
+// ResetStats resets counters while preserving residency and frequency state.
+func (c *QueryCache) ResetStats() error {
+	if err := c.requireOpen(); err != nil {
+		return err
+	}
+	return check(C.llev_query_cache_reset_stats(c.pointer))
+}
+
+// Query returns an independent cursor for cached or newly computed Unicode results.
+func (c *QueryCache) Query(query string, maximumDistance uint, order QueryOrder) (*Iterator, error) {
+	if err := c.requireOpen(); err != nil {
+		return nil, err
+	}
+	if !utf8.ValidString(query) {
+		return nil, errors.New("query is not valid UTF-8")
+	}
+	input := []byte(query)
+	var cursor *C.LlevQueryCursor
+	status := C.llev_query_cache_query_utf8(c.pointer, (*C.char)(unsafe.Pointer(bytesPointer(input))), C.size_t(len(input)), C.size_t(maximumDistance), C.uint32_t(order), &cursor)
+	runtime.KeepAlive(input)
+	if err := check(status); err != nil {
+		return nil, err
+	}
+	return newIterator(cursor), nil
+}
+
+// QueryBytes returns an independent cursor for an exact byte-domain key.
+func (c *QueryCache) QueryBytes(query []byte, maximumDistance uint, order QueryOrder) (*Iterator, error) {
+	if err := c.requireOpen(); err != nil {
+		return nil, err
+	}
+	var cursor *C.LlevQueryCursor
+	status := C.llev_query_cache_query_bytes(c.pointer, bytesPointer(query), C.size_t(len(query)), C.size_t(maximumDistance), C.uint32_t(order), &cursor)
+	runtime.KeepAlive(query)
+	if err := check(status); err != nil {
+		return nil, err
+	}
+	return newIterator(cursor), nil
+}
+
+// QueryU64 returns an independent cursor for an exact u64-token key.
+func (c *QueryCache) QueryU64(query []uint64, maximumDistance uint, order QueryOrder) (*Iterator, error) {
+	if err := c.requireOpen(); err != nil {
+		return nil, err
+	}
+	var data *C.uint64_t
+	if len(query) != 0 {
+		data = (*C.uint64_t)(unsafe.Pointer(&query[0]))
+	}
+	var cursor *C.LlevQueryCursor
+	status := C.llev_query_cache_query_u64(c.pointer, data, C.size_t(len(query)), C.size_t(maximumDistance), C.uint32_t(order), &cursor)
+	runtime.KeepAlive(query)
+	if err := check(status); err != nil {
+		return nil, err
+	}
+	return newIterator(cursor), nil
+}
+
+// Close releases the cache. Existing result cursors remain valid.
+func (c *QueryCache) Close() {
+	if c != nil && c.pointer != nil {
+		C.llev_query_cache_free(c.pointer)
+		c.pointer = nil
+		runtime.SetFinalizer(c, nil)
+	}
 }
 
 // Match owns one result copied from a bounded leased native batch. Exactly one

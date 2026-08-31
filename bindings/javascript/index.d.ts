@@ -138,12 +138,48 @@ export interface Transducer {
   /** Start a lazy Unicode query and capture the dictionary revision now. */
   query(query: string, maximumDistance: number, order?: QueryOrder): QueryCursor;
   /** Start a lazy raw-byte query. Traversal ordering is allocation-bounded. */
-  query(query: Uint8Array, maximumDistance: number): QueryCursor;
+  query(query: Uint8Array, maximumDistance: number, order?: QueryOrder): QueryCursor;
   /** Start a lazy unsigned 64-bit token query. */
-  query(query: BigUint64Array, maximumDistance: number): QueryCursor;
+  query(query: BigUint64Array, maximumDistance: number, order?: QueryOrder): QueryCursor;
   /** Start a dictionary-language product query using a compiled pattern. */
   query(pattern: PhoneticPattern, maximumDistance: number): QueryCursor;
   /** Release the retained dictionary and native transducer; idempotent. */
+  close(): void;
+}
+
+/** TinyLFU/SIEVE policy counters and current bounded residency. */
+export interface QueryCacheStats {
+  readonly requests: bigint;
+  readonly hits: bigint;
+  readonly misses: bigint;
+  readonly admissions: bigint;
+  readonly rejections: bigint;
+  readonly evictions: bigint;
+  readonly residentEntries: number;
+  readonly residentWeight: number;
+}
+
+/** Hard bounds for each result-order shard of a query cache. */
+export interface QueryCacheOptions {
+  readonly maximumEntries?: number;
+  readonly maximumWeight?: number;
+}
+
+/** Exclusive, synchronization-free cache for complete repeated query results. */
+export interface QueryCache {
+  /** Aggregate policy counters and current residency for both order shards. */
+  readonly stats: QueryCacheStats;
+  /** Query Unicode text, exact bytes, or exact unsigned 64-bit tokens. */
+  query(
+    query: string | Uint8Array | BigUint64Array,
+    maximumDistance: number,
+    order?: QueryOrder,
+  ): QueryCursor;
+  /** Drop resident results while preserving policy counters. */
+  clear(): this;
+  /** Reset counters while preserving residency and frequency state. */
+  resetStats(): this;
+  /** Release resident results and the retained transducer; idempotent. */
   close(): void;
 }
 
@@ -153,6 +189,8 @@ export interface LiblevenshteinNamespace {
   readonly runtimeIdentity: symbol | object;
   /** Retain `dictionary` and compile the selected edit semantics. */
   transducer(dictionary: DictionaryResource, algorithm?: Algorithm): Transducer;
+  /** Retain a transducer behind a bounded snapshot-aware complete-result cache. */
+  queryCache(transducer: Transducer, options?: QueryCacheOptions): QueryCache;
   /** Compile the phonetic regular-expression language. */
   phoneticPattern(source: string): PhoneticPattern;
   /** Compile an import-free LLRE document. */
@@ -165,6 +203,8 @@ export interface LiblevenshteinNamespace {
 export const runtimeIdentity: symbol | object;
 /** Retain a dictionary and compile a reusable edit transducer. */
 export function transducer(dictionary: DictionaryResource, algorithm?: Algorithm): Transducer;
+/** Create an exclusive bounded cache for repeated queries. */
+export function queryCache(transducer: Transducer, options?: QueryCacheOptions): QueryCache;
 /** Compile the phonetic regular-expression language. */
 export function phoneticPattern(source: string): PhoneticPattern;
 /** Compile an import-free LLRE document. */

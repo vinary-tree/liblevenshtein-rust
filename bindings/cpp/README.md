@@ -126,9 +126,15 @@ variants, protocols, or methods.
 | `llev_transducer_unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_true_damerau_distance` | `llev_true_damerau_distance` | standalone true-Damerau distance |
 | `llev_true_damerau_distance_threshold` | `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
+| `query_cache::clear` | `llev_query_cache_clear` | project ABI operation |
+| `query_cache::query` | `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64` | project ABI operation |
+| `query_cache::reset_stats` | `llev_query_cache_reset_stats` | project ABI operation |
+| `query_cache::stats` | `llev_query_cache_stats` | project ABI operation |
+| `query_cache::~query_cache` | `llev_query_cache_free` | project ABI operation |
 | `vinary_tree::liblevenshtein::batch::~batch` | `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `vinary_tree::liblevenshtein::detail::cursor_state::~cursor_state` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `vinary_tree::liblevenshtein::error` | `llev_last_error_message` | typed failure diagnostics |
+| `vinary_tree::liblevenshtein::query_cache` | `llev_query_cache_new` | project ABI operation |
 | `vinary_tree::liblevenshtein::query_cursor::next_batch` | `llev_query_cursor_next_batch` | streaming result traversal and batch leases |
 | `vinary_tree::liblevenshtein::transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `vinary_tree::liblevenshtein::transducer::query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64` | domain-preserving dictionary query |

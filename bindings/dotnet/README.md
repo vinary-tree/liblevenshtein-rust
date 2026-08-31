@@ -171,6 +171,12 @@ variants, protocols, or methods.
 | `PhoneticRuleSet.Parse` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
 | `Query.Dispose` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `Query.GetEnumerator` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `QueryCache` | `llev_query_cache_new` | project ABI operation |
+| `QueryCache.Clear` | `llev_query_cache_clear` | project ABI operation |
+| `QueryCache.Dispose` | `llev_query_cache_free` | project ABI operation |
+| `QueryCache.Query` | `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64` | project ABI operation |
+| `QueryCache.ResetStats` | `llev_query_cache_reset_stats` | project ABI operation |
+| `QueryCache.Stats` | `llev_query_cache_stats` | project ABI operation |
 | `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.Dispose` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.Query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; phonetic-pattern dictionary query |

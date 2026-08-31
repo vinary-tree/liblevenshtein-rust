@@ -168,6 +168,50 @@ LLEV_API LlevStatus llev_transducer_unit_domain(
     const LlevTransducer* transducer,
     VtUnitDomain* out_domain);
 
+/** Create an opt-in bounded complete-result cache retaining the transducer.
+ *
+ * The cache uses TinyLFU approximate-frequency admission and SIEVE eviction.
+ * Approximation changes residency only: every miss computes the exact result.
+ * Limits are hard bounds applied independently to traversal-order and
+ * distance-then-term shards. The handle has no internal lock and is exclusive;
+ * shard one cache per worker for parallel workloads.
+ *
+ * @param transducer borrowed configuration retained by the cache
+ * @param max_entries_per_order hard resident-entry bound for each order shard;
+ * zero disables admission while preserving exact computation
+ * @param max_weight_per_order hard logical-byte bound for each order shard;
+ * zero disables admission while preserving exact computation
+ * @param out_cache receives one caller-owned exclusive cache handle
+ * @return OK, NULL_POINTER, or PANIC
+ */
+LLEV_API LlevStatus llev_query_cache_new(
+    const LlevTransducer* transducer,
+    size_t max_entries_per_order,
+    size_t max_weight_per_order,
+    LlevQueryCache** out_cache);
+/** Drop every resident result while retaining the source transducer and counters.
+ * @param cache live, exclusively borrowed cache
+ * @return OK, NULL_POINTER, or PANIC
+ */
+LLEV_API LlevStatus llev_query_cache_clear(LlevQueryCache* cache);
+/** Reset policy counters without changing residency or frequency estimates.
+ * @param cache live, exclusively borrowed cache
+ * @return OK, NULL_POINTER, or PANIC
+ */
+LLEV_API LlevStatus llev_query_cache_reset_stats(LlevQueryCache* cache);
+/** Copy aggregate counters and current residency without changing policy state.
+ * @param cache live cache that is not concurrently mutated
+ * @param out_stats receives counters across both result-order shards
+ * @return OK, NULL_POINTER, or PANIC
+ */
+LLEV_API LlevStatus llev_query_cache_stats(
+    const LlevQueryCache* cache,
+    LlevQueryCacheStats* out_stats);
+/** Release the cache and its resident results; existing cursors remain valid.
+ * @param cache owned handle to consume; NULL is a no-op
+ */
+LLEV_API void llev_query_cache_free(LlevQueryCache* cache);
+
 /** Capture the provider revision now and start a lazy Unicode query.
  * @param transducer live configuration over a Unicode-scalar dictionary
  * @param query UTF-8 bytes, or NULL only when query_len is zero
@@ -216,6 +260,62 @@ LLEV_API LlevStatus llev_transducer_query_bytes(
  */
 LLEV_API LlevStatus llev_transducer_query_u64(
     const LlevTransducer* transducer,
+    const uint64_t* query,
+    size_t query_len,
+    size_t max_distance,
+    uint32_t order,
+    LlevQueryCursor** out_cursor);
+
+/** Query Unicode scalars through a bounded complete-result cache.
+ *
+ * A miss captures one immutable dictionary revision and materializes the exact
+ * result before admission. A hit returns an independent cursor over shared
+ * immutable matches. The provider must publish snapshot identity so mutations
+ * invalidate stale residency exactly.
+ *
+ * @param cache live, exclusively borrowed Unicode cache
+ * @param query UTF-8 bytes, or NULL only when query_len is zero
+ * @param query_len query byte length
+ * @param max_distance inclusive edit-distance bound
+ * @param order one published LlevQueryOrder numeric value
+ * @param out_cursor receives an exclusive caller-owned cursor on success
+ * @return OK, NULL_POINTER, INVALID_UTF8, INVALID_ARGUMENT, DOMAIN_MISMATCH,
+ * UNSUPPORTED when snapshot identity is absent, a provider status, or PANIC
+ */
+LLEV_API LlevStatus llev_query_cache_query_utf8(
+    LlevQueryCache* cache,
+    const char* query,
+    size_t query_len,
+    size_t max_distance,
+    uint32_t order,
+    LlevQueryCursor** out_cursor);
+/** Query raw bytes through a bounded complete-result cache.
+ * @param cache live, exclusively borrowed byte-domain cache
+ * @param query arbitrary bytes, or NULL only when query_len is zero
+ * @param query_len query byte length
+ * @param max_distance inclusive edit-distance bound
+ * @param order must be LLEV_QUERY_ORDER_TRAVERSAL
+ * @param out_cursor receives an exclusive caller-owned cursor on success
+ * @return OK or the corresponding pointer/domain/order/provider/cache failure
+ */
+LLEV_API LlevStatus llev_query_cache_query_bytes(
+    LlevQueryCache* cache,
+    const uint8_t* query,
+    size_t query_len,
+    size_t max_distance,
+    uint32_t order,
+    LlevQueryCursor** out_cursor);
+/** Query u64 tokens through a bounded complete-result cache.
+ * @param cache live, exclusively borrowed u64-domain cache
+ * @param query aligned tokens, or NULL only when query_len is zero
+ * @param query_len number of u64 tokens
+ * @param max_distance inclusive edit-distance bound
+ * @param order must be LLEV_QUERY_ORDER_TRAVERSAL
+ * @param out_cursor receives an exclusive caller-owned cursor on success
+ * @return OK or the corresponding pointer/domain/order/provider/cache failure
+ */
+LLEV_API LlevStatus llev_query_cache_query_u64(
+    LlevQueryCache* cache,
     const uint64_t* query,
     size_t query_len,
     size_t max_distance,

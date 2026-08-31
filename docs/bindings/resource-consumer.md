@@ -289,7 +289,7 @@ cannot flood memory with messages; the double check around each pull bounds
 fault latency to one match.
 
 `BindingError` is **total** over everything this layer can observe — all
-ten variants, their triggers, and their C-ABI mapping
+eleven variants, their triggers, and their C-ABI mapping
 (`map_binding_error`, § 3.1 of the [C-ABI reference](c-abi-reference.md)):
 
 | # | `BindingError` variant | Trigger | `LlevStatus` |
@@ -304,6 +304,7 @@ ten variants, their triggers, and their C-ABI mapping
 | 8 | `InvalidProviderOutput(&str)` | an out-of-range raw status code (refused at decode), or success with malformed payload: null snapshot/vtable, snapshot that changes domains, bad page lengths, no-progress paging, out-of-domain label, non-boolean flag bytes | `PROVIDER_ERROR` |
 | 9 | `UnsupportedOrdering(domain)` | `DistanceThenTerm` requested on a byte/u64 dictionary | `UNSUPPORTED` |
 | 10 | `EmptyBatch` | `next_batch` with `max_matches` = 0 | `INVALID_ARGUMENT` |
+| 11 | `MissingSnapshotIdentity` | cached query requested from a provider that cannot supply stable producer/revision identity | `UNSUPPORTED` |
 
 The map is total twice over: every hostile input class lands in exactly one
 variant, and every variant has exactly one `LlevStatus` image — there is no

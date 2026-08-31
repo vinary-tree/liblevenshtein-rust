@@ -114,6 +114,45 @@ def test_query_cursor_next_and_reduce_enforce_owned_and_borrowed_lifetimes() -> 
             _ = escaped[0].distance
 
 
+def test_bounded_query_cache_is_exact_observable_and_context_managed() -> None:
+    libdictenstein = pytest.importorskip("libdictenstein")
+    with libdictenstein.DynamicDawg() as dictionary:
+        dictionary["cat"] = 1
+        dictionary["cot"] = 2
+        with (
+            liblevenshtein.Transducer(dictionary) as transducer,
+            liblevenshtein.QueryCache(
+                transducer, max_entries=8, max_weight=1 << 20
+            ) as cache,
+        ):
+            cold = list(cache.query("cut", 1))
+            hit = list(cache.query("cut", 1))
+            assert hit == cold
+            assert (cache.stats.requests, cache.stats.hits, cache.stats.misses) == (
+                2,
+                1,
+                1,
+            )
+            assert len(cache) == cache.stats.resident_entries == 1
+            cache.reset_stats()
+            assert cache.stats.requests == 0
+            assert len(cache) == 1
+            cache.clear()
+            assert len(cache) == 0
+            with pytest.raises(ValueError, match="nonnegative"):
+                cache.query("cut", -1)
+
+
+def test_transducer_rejects_negative_distance_before_native_conversion() -> None:
+    current = Snapshot({"cat": 1})
+    with (
+        UnicodeDictionaryResource(lambda: current) as dictionary,
+        liblevenshtein.Transducer(dictionary) as transducer,
+        pytest.raises(ValueError, match="nonnegative"),
+    ):
+        transducer.query("cat", -1)
+
+
 def test_algorithm_and_query_order_selectors_have_distinguishing_semantics() -> None:
     current = Snapshot({"ab": 1, "c": 2, "abc": 3, "bat": 4, "cat": 5, "cats": 6})
 

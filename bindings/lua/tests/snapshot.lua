@@ -45,6 +45,26 @@ for trace = 1, 64 do
   assert(#fresh == 1 and fresh[1][1] == "after-" .. trace)
 end
 
+do
+  local words <close> = dictionary.dynamic_dawg("unicode")
+  words:put("cat", 1)
+  words:put("cot", 2)
+  local automaton <close> = levenshtein.transducer(words)
+  local cache <close> = levenshtein.query_cache(automaton, 8, 1024 * 1024)
+  local cold = collect(cache:query("cut", 1))
+  local hit = collect(cache:query("cut", 1))
+  assert(#cold == #hit)
+  for index = 1, #cold do
+    assert(cold[index][1] == hit[index][1] and cold[index][2] == hit[index][2])
+  end
+  local stats = cache:stats()
+  assert(stats.requests == 2 and stats.hits == 1 and stats.misses == 1)
+  assert(stats.resident_entries == 1 and stats.resident_weight > 0)
+  assert(cache:reset_stats():stats().requests == 0)
+  assert(cache:stats().resident_entries == 1)
+  assert(cache:clear():stats().resident_entries == 0)
+end
+
 local dat <close> = dictionary.double_array_trie({{"café", 7}, {"caff"}}, "unicode")
 assert(dat:get("café").value == 7)
 assert(dat:get("caff").found and dat:get("caff").value == nil)

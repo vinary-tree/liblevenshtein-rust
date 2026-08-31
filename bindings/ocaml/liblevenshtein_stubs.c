@@ -10,6 +10,7 @@
 #include "vinary_tree_ocaml.h"
 
 typedef struct { LlevTransducer* value; } OcamlTransducer;
+typedef struct { LlevQueryCache* value; } OcamlQueryCache;
 typedef struct {
     LlevQueryCursor* value;
     LlevMatchBatchView batch;
@@ -39,6 +40,10 @@ static void cursor_finalize(value block) {
     (void)llev_query_cursor_free(handle->value);
     handle->value = NULL;
 }
+static void query_cache_finalize(value block) {
+    OcamlQueryCache* handle = (OcamlQueryCache*)Data_custom_val(block);
+    if (handle->value) { llev_query_cache_free(handle->value); handle->value = NULL; }
+}
 static void pattern_finalize(value block) {
     OcamlPattern* handle = (OcamlPattern*)Data_custom_val(block);
     if (handle->value) { llev_phonetic_pattern_free(handle->value); handle->value = NULL; }
@@ -58,6 +63,8 @@ CUSTOM_OPERATIONS(transducer_operations,
                   "io.vinarytree.liblevenshtein.transducer.v1", transducer_finalize);
 CUSTOM_OPERATIONS(cursor_operations,
                   "io.vinarytree.liblevenshtein.cursor.v1", cursor_finalize);
+CUSTOM_OPERATIONS(query_cache_operations,
+                  "io.vinarytree.liblevenshtein.query-cache.v1", query_cache_finalize);
 CUSTOM_OPERATIONS(pattern_operations,
                   "io.vinarytree.liblevenshtein.pattern.v1", pattern_finalize);
 CUSTOM_OPERATIONS(rules_operations,
@@ -72,6 +79,11 @@ static OcamlCursor* cursor_val(value block) {
     OcamlCursor* result = (OcamlCursor*)Data_custom_val(block);
     if (!result->value) caml_invalid_argument("cursor is closed");
     return result;
+}
+static LlevQueryCache* query_cache_val(value block) {
+    OcamlQueryCache* result = (OcamlQueryCache*)Data_custom_val(block);
+    if (!result->value) caml_invalid_argument("query cache is closed");
+    return result->value;
 }
 static LlevPhoneticPattern* pattern_val(value block) {
     OcamlPattern* result = (OcamlPattern*)Data_custom_val(block);
@@ -94,6 +106,12 @@ static value copy_cursor(LlevQueryCursor* raw) {
     value block = caml_alloc_custom(&cursor_operations, sizeof(OcamlCursor), 0, 1);
     OcamlCursor* cursor = (OcamlCursor*)Data_custom_val(block);
     memset(cursor, 0, sizeof(*cursor)); cursor->value = raw;
+    return block;
+}
+static value copy_query_cache(LlevQueryCache* raw) {
+    value block = caml_alloc_custom(&query_cache_operations,
+                                    sizeof(OcamlQueryCache), 0, 1);
+    ((OcamlQueryCache*)Data_custom_val(block))->value = raw;
     return block;
 }
 static value copy_pattern(LlevPhoneticPattern* raw) {
@@ -165,6 +183,85 @@ CAMLprim value ocaml_llev_transducer(value resource, value algorithm) {
 }
 CAMLprim value ocaml_llev_transducer_close(value block) {
     CAMLparam1(block); transducer_finalize(block); CAMLreturn(Val_unit);
+}
+
+CAMLprim value ocaml_llev_query_cache_new(value transducer, value entries,
+                                           value weight) {
+    CAMLparam3(transducer, entries, weight);
+    if (Long_val(entries) < 0 || Long_val(weight) < 0)
+        caml_invalid_argument("negative query-cache limit");
+    LlevQueryCache* output = NULL;
+    check_status(llev_query_cache_new(transducer_val(transducer),
+        Long_val(entries), Long_val(weight), &output));
+    CAMLreturn(copy_query_cache(output));
+}
+CAMLprim value ocaml_llev_query_cache_close(value block) {
+    CAMLparam1(block); query_cache_finalize(block); CAMLreturn(Val_unit);
+}
+CAMLprim value ocaml_llev_query_cache_clear(value block) {
+    CAMLparam1(block);
+    check_status(llev_query_cache_clear(query_cache_val(block)));
+    CAMLreturn(Val_unit);
+}
+CAMLprim value ocaml_llev_query_cache_reset_stats(value block) {
+    CAMLparam1(block);
+    check_status(llev_query_cache_reset_stats(query_cache_val(block)));
+    CAMLreturn(Val_unit);
+}
+CAMLprim value ocaml_llev_query_cache_stats(value block) {
+    CAMLparam1(block); CAMLlocal2(result, counter);
+    LlevQueryCacheStats stats = {0};
+    check_status(llev_query_cache_stats(query_cache_val(block), &stats));
+    result = caml_alloc_tuple(8);
+#define STORE_COUNTER(index, field) \
+    counter = caml_copy_int64((int64_t)stats.field); Store_field(result, index, counter)
+    STORE_COUNTER(0, requests);
+    STORE_COUNTER(1, hits);
+    STORE_COUNTER(2, misses);
+    STORE_COUNTER(3, admissions);
+    STORE_COUNTER(4, rejections);
+    STORE_COUNTER(5, evictions);
+#undef STORE_COUNTER
+    Store_field(result, 6, Val_long(stats.resident_entries));
+    Store_field(result, 7, Val_long(stats.resident_weight));
+    CAMLreturn(result);
+}
+
+static value query_cache_text(value cache, value input, value maximum,
+                              value order, int bytes) {
+    CAMLparam4(cache, input, maximum, order);
+    if (Long_val(maximum) < 0) caml_invalid_argument("negative maximum distance");
+    LlevQueryCursor* output = NULL;
+    LlevStatus status = bytes
+        ? llev_query_cache_query_bytes(query_cache_val(cache),
+            (const uint8_t*)String_val(input), caml_string_length(input),
+            Long_val(maximum), (uint32_t)Int_val(order), &output)
+        : llev_query_cache_query_utf8(query_cache_val(cache), String_val(input),
+            caml_string_length(input), Long_val(maximum),
+            (uint32_t)Int_val(order), &output);
+    check_status(status); CAMLreturn(copy_cursor(output));
+}
+CAMLprim value ocaml_llev_query_cache_query(value cache, value input,
+                                             value maximum, value order) {
+    return query_cache_text(cache, input, maximum, order, 0);
+}
+CAMLprim value ocaml_llev_query_cache_query_bytes(value cache, value input,
+                                                   value maximum, value order) {
+    return query_cache_text(cache, input, maximum, order, 1);
+}
+CAMLprim value ocaml_llev_query_cache_query_u64(value cache, value input,
+                                                 value maximum, value order) {
+    CAMLparam4(cache, input, maximum, order);
+    if (Long_val(maximum) < 0) caml_invalid_argument("negative maximum distance");
+    size_t length = Wosize_val(input);
+    uint64_t* tokens = length ? malloc(length * sizeof(uint64_t)) : NULL;
+    if (length && !tokens) caml_raise_out_of_memory();
+    for (size_t index = 0; index < length; ++index)
+        tokens[index] = (uint64_t)Int64_val(Field(input, index));
+    LlevQueryCursor* output = NULL;
+    LlevStatus status = llev_query_cache_query_u64(query_cache_val(cache),
+        tokens, length, Long_val(maximum), (uint32_t)Int_val(order), &output);
+    free(tokens); check_status(status); CAMLreturn(copy_cursor(output));
 }
 
 static value query_text(value transducer, value input, value maximum,

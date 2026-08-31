@@ -37,6 +37,31 @@ test("delegated facade re-exports the full streaming and phonetic surface", asyn
   // C1: the transducer only ever borrows a DictionaryResource; it never
   // constructs storage, keeping ownership on the delegated shared JavaScript runtime.
   assert.match(declarations, /transducer\(dictionary: DictionaryResource/);
+  assert.match(declarations, /queryCache\(transducer: Transducer/);
+});
+
+test("project facade exposes the shared bounded snapshot-aware query cache", async () => {
+  const facade = await import("../facades/native.mjs");
+  const { libdictenstein } = await import("@vinary-tree/javascript-runtime");
+  const dictionary = libdictenstein.dynamicDawg();
+  dictionary.set("cat", 1n).set("cot", 2n);
+  const transducer = facade.transducer(dictionary);
+  const cache = facade.queryCache(transducer, { maximumEntries: 4, maximumWeight: 4096 });
+  const collect = (cursor) => {
+    try { return [...cursor].map(({ term }) => term.value); }
+    finally { cursor.close(); }
+  };
+  assert.deepEqual(collect(cache.query("cat", 1, "distance-then-term")), ["cat", "cot"]);
+  collect(cache.query("cat", 1, "distance-then-term"));
+  assert.equal(cache.stats.hits, 1n);
+  dictionary.delete("cot");
+  transducer.close();
+  dictionary.close();
+  assert.deepEqual(collect(cache.query("cat", 1, "distance-then-term")), ["cat"]);
+  cache.clear().resetStats();
+  assert.equal(cache.stats.residentEntries, 0);
+  assert.equal(cache.stats.requests, 0n);
+  cache.close();
 });
 
 test("public facade executes Algorithm, QueryOrder, domain, and phonetic contracts", async () => {

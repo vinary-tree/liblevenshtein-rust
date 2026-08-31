@@ -89,8 +89,29 @@ do {
     }
     precondition(firstBatch.count == 1 && remainingCount == 2)
     batchCursor.close()
+    let cache = try QueryCache(
+        transducer: batchTransducer,
+        maximumEntries: 4,
+        maximumWeight: 4096
+    )
+    _ = Array(try cache.query("cat", maximumDistance: 1, order: .distanceThenTerm))
+    _ = Array(try cache.query("cat", maximumDistance: 1, order: .distanceThenTerm))
+    let warmStats = try cache.stats()
+    precondition(warmStats.requests == 2 && warmStats.hits == 1)
+    try algorithmDictionary.remove("cot")
     batchTransducer.close()
     algorithmDictionary.close()
+    let refreshed = terms(
+        try cache.query("cat", maximumDistance: 1, order: .distanceThenTerm)
+    ).map(\.0)
+    precondition(refreshed == ["cat", "cut"])
+    _ = try cache.resetStats()
+    let resetCacheStats = try cache.stats()
+    precondition(resetCacheStats.requests == 0)
+    _ = try cache.clear()
+    let clearedCacheStats = try cache.stats()
+    precondition(clearedCacheStats.residentEntries == 0)
+    cache.close()
 
     let byteDictionary = try DynamicDAWG(unitDomain: .byte)
     try byteDictionary.put(bytes: [0x63, 0x61, 0x74], value: 11)

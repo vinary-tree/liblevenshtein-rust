@@ -17,6 +17,7 @@ isa-ok (ENGLISH-ORTHOGRAPHY), PhoneticRuleSetKind,
     'phonetic rule-set values retain their generated enum type';
 is nativesizeof(RawMatch), 48, 'match layout matches LP64 C';
 is nativesizeof(RawBatch), 24, 'batch layout matches LP64 C';
+is nativesizeof(RawQueryCacheStats), 64, 'query-cache stats layout matches LP64 C';
 is nativesizeof(OwnedString), 16, 'owned string layout matches LP64 C';
 
 is distance('kitten', 'sitting'), 3, 'standard distance';
@@ -37,6 +38,8 @@ $dictionary<m> = 11;
 $dictionary<ABC> = 12;
 my $provider = $dictionary.snapshot;
 my $transducer = Transducer.new(:dictionary($provider));
+throws-like { $transducer.query('cut', -1) }, X::AdHoc,
+    'transducer rejects negative maximum distance before native conversion';
 is $transducer.unit-domain, (UNICODE-SCALAR),
     'the transducer reports its provider unit domain';
 my @matches = $transducer.query(
@@ -53,6 +56,24 @@ isa-ok $batch-cursor, QueryCursor, 'queries return the public iterator type';
 is $batch-cursor.next-batch(1).elems, 1,
     'next-batch materializes one bounded native batch';
 $batch-cursor.close;
+
+my $cache = QueryCache.new(:$transducer, max-entries => 8, max-weight => 2**20);
+my @cold = $cache.query('cut', 1).map(*.term).List;
+my @hit = $cache.query('cut', 1).map(*.term).List;
+is-deeply @hit, @cold, 'resident query results remain exact';
+is-deeply [$cache.stats.requests, $cache.stats.hits, $cache.stats.misses],
+    [2, 1, 1], 'TinyLFU/SIEVE cache distinguishes cold and resident requests';
+is $cache.elems, 1, 'cache exposes resident entries through elems';
+ok $cache.stats.resident-weight > 0, 'cache reports bounded logical weight';
+$cache.reset-stats;
+is $cache.stats.requests, 0, 'counter reset preserves a live cache';
+is $cache.elems, 1, 'counter reset does not clear residency';
+$cache.clear;
+is $cache.elems, 0, 'clear drops resident results';
+throws-like { $cache.query('cut', -1) }, X::AdHoc,
+    'negative maximum distance is rejected before native conversion';
+$cache.close;
+nok $cache.opened, 'query cache closes deterministically';
 
 sub query-terms(Algorithm:D $algorithm, Str:D $input, Int:D $maximum --> List:D) {
     my $variant = Transducer.new(:dictionary($provider), :$algorithm);

@@ -17,10 +17,33 @@ C<QueryCursor> over the immutable revision captured at query start. Iterate
 the cursor for owned C<Match> values or call C<reduce-batches> for bounded
 batch processing.
 
+=head1 Bounded repeated-query caching
+
+C<QueryCache.new(:$transducer, :max-entries(1024),
+:max-weight(64 * 1024 * 1024))> retains the transducer and memoizes complete
+exact results. C<.query> accepts C<Str>, C<Blob>, and positional u64-token
+inputs. C<.stats> reports requests, hits, misses, admissions, rejections,
+evictions, resident entries, and logical weight; C<.clear> drops residency,
+while C<.reset-stats> preserves residency and resets counters.
+
+The native policy uses TinyLFU approximate-frequency admission and SIEVE
+victim selection. Approximation affects only residency: a miss always computes
+and returns the exact result. The cache has hard bounds and no internal lock.
+It is exclusive, so parallel programs create one cache per worker. A miss
+captures one immutable revision before materializing results; a provider that
+does not publish stable snapshot identity is rejected rather than allowed to
+serve stale matches.
+
+    my $cache = QueryCache.new(:$transducer, :max-entries(512));
+    LEAVE $cache.close;
+    my @matches = $cache.query('speling', 2).list;
+    say $cache.stats.hits;
+
 =head1 Ownership
 
-Call C<close> on transducers, cursors, phonetic patterns, and rewrite-rule
-sets. C<DESTROY> is a leak fallback. Each cursor is single-consumer, while
+Call C<close> on transducers, query caches, cursors, phonetic patterns, and
+rewrite-rule sets. C<DESTROY> is a leak fallback. Each cache and cursor is
+single-consumer, while
 independent cursors and immutable transducers may run concurrently.
 
 =head1 API
@@ -34,6 +57,11 @@ value when the exact distance is above the inclusive bound.
 
 Configure an algorithm over a retained provider and traverse owned results in
 bounded batches.
+
+=item C<QueryCache>, C<QueryCacheStats>
+
+Run repeated complete queries through the bounded native TinyLFU/SIEVE cache,
+inspect policy counters, and clear residency independently from counters.
 
 =item C<STANDARD>, C<TRANSPOSITION>, C<MERGE-AND-SPLIT>, C<DAMERAU-LEVENSHTEIN>
 

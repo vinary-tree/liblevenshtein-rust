@@ -12,6 +12,7 @@ public sealed record Match(object Term, nuint Distance, ulong? Id);
 public sealed class Transducer : IDisposable
 {
     private readonly TransducerHandle handle;
+    internal TransducerHandle Handle => handle;
 
     /// <summary>Retain a dictionary in O(1).</summary>
     public unsafe Transducer(IDictionaryResource dictionary, Algorithm algorithm = Algorithm.Standard)
@@ -63,6 +64,108 @@ public sealed class Transducer : IDisposable
     {
         NativeStatus.Check(NativeMethods.QueryPattern(handle, pattern.Handle, maximumDistance, out nint cursor));
         return new Query(new CursorHandle(cursor));
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => handle.Dispose();
+}
+
+/// <summary>Immutable TinyLFU/SIEVE counters and current bounded residency.</summary>
+public sealed record QueryCacheStats(
+    ulong Requests,
+    ulong Hits,
+    ulong Misses,
+    ulong Admissions,
+    ulong Rejections,
+    ulong Evictions,
+    nuint ResidentEntries,
+    nuint ResidentWeight);
+
+/// <summary>
+/// Exclusive synchronization-free cache for complete repeated query results.
+/// Limits apply independently to traversal and distance-then-term order.
+/// Create one cache per worker for parallel workloads.
+/// </summary>
+public sealed class QueryCache : IDisposable
+{
+    private readonly QueryCacheHandle handle;
+
+    /// <summary>Retain a transducer and configure hard per-order bounds.</summary>
+    public QueryCache(
+        Transducer transducer,
+        nuint maximumEntries = 1024,
+        nuint maximumWeight = 64 * 1024 * 1024)
+    {
+        ArgumentNullException.ThrowIfNull(transducer);
+        NativeStatus.Check(NativeMethods.QueryCacheNew(
+            transducer.Handle, maximumEntries, maximumWeight, out nint created));
+        handle = created != 0 ? new QueryCacheHandle(created)
+                              : throw new InvalidOperationException("native query cache was not returned");
+    }
+
+    /// <summary>Copy aggregate policy counters and current residency.</summary>
+    public QueryCacheStats Stats
+    {
+        get
+        {
+            NativeStatus.Check(NativeMethods.QueryCacheStats(handle, out var stats));
+            return new QueryCacheStats(
+                stats.Requests, stats.Hits, stats.Misses, stats.Admissions,
+                stats.Rejections, stats.Evictions, stats.ResidentEntries,
+                stats.ResidentWeight);
+        }
+    }
+
+    /// <summary>Drop resident results while preserving policy counters.</summary>
+    public void Clear() => NativeStatus.Check(NativeMethods.QueryCacheClear(handle));
+
+    /// <summary>Reset counters while preserving residency and frequency state.</summary>
+    public void ResetStats() => NativeStatus.Check(NativeMethods.QueryCacheResetStats(handle));
+
+    /// <summary>Query Unicode text through the bounded complete-result cache.</summary>
+    public unsafe Query Query(
+        string text,
+        nuint maximumDistance,
+        QueryOrder order = QueryOrder.Traversal)
+    {
+        byte[] input = Encoding.UTF8.GetBytes(text);
+        fixed (byte* data = input)
+        {
+            NativeStatus.Check(NativeMethods.QueryCacheUtf8(
+                handle, data, (nuint)input.Length, maximumDistance, (uint)order,
+                out nint cursor));
+            return new Query(new CursorHandle(cursor));
+        }
+    }
+
+    /// <summary>Query exact bytes through the bounded complete-result cache.</summary>
+    public unsafe Query Query(
+        ReadOnlySpan<byte> bytes,
+        nuint maximumDistance,
+        QueryOrder order = QueryOrder.Traversal)
+    {
+        fixed (byte* data = bytes)
+        {
+            NativeStatus.Check(NativeMethods.QueryCacheBytes(
+                handle, data, (nuint)bytes.Length, maximumDistance, (uint)order,
+                out nint cursor));
+            return new Query(new CursorHandle(cursor));
+        }
+    }
+
+    /// <summary>Query exact u64 tokens through the bounded complete-result cache.</summary>
+    public unsafe Query Query(
+        ReadOnlySpan<ulong> tokens,
+        nuint maximumDistance,
+        QueryOrder order = QueryOrder.Traversal)
+    {
+        fixed (ulong* data = tokens)
+        {
+            NativeStatus.Check(NativeMethods.QueryCacheU64(
+                handle, data, (nuint)tokens.Length, maximumDistance, (uint)order,
+                out nint cursor));
+            return new Query(new CursorHandle(cursor));
+        }
     }
 
     /// <inheritdoc />

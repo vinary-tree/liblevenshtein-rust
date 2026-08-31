@@ -31,6 +31,19 @@ internal unsafe struct NativeOwnedString
     internal nuint Length;
 }
 
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeQueryCacheStats
+{
+    internal ulong Requests;
+    internal ulong Hits;
+    internal ulong Misses;
+    internal ulong Admissions;
+    internal ulong Rejections;
+    internal ulong Evictions;
+    internal nuint ResidentEntries;
+    internal nuint ResidentWeight;
+}
+
 internal sealed class TransducerHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
     internal TransducerHandle(nint value) : base(true) => SetHandle(value);
@@ -41,6 +54,12 @@ internal sealed class CursorHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
     internal CursorHandle(nint value) : base(true) => SetHandle(value);
     protected override bool ReleaseHandle() => NativeMethods.CursorFree(handle) == Status.Ok;
+}
+
+internal sealed class QueryCacheHandle : SafeHandleZeroOrMinusOneIsInvalid
+{
+    internal QueryCacheHandle(nint value) : base(true) => SetHandle(value);
+    protected override bool ReleaseHandle() { NativeMethods.QueryCacheFree(handle); return true; }
 }
 
 internal sealed class PatternHandle : SafeHandleZeroOrMinusOneIsInvalid
@@ -83,6 +102,22 @@ internal static unsafe partial class NativeMethods
     internal static partial Status QueryBytes(TransducerHandle transducer, byte* query, nuint length, nuint maximumDistance, uint order, out nint cursor);
     [LibraryImport(Library, EntryPoint = "llev_transducer_query_u64")]
     internal static partial Status QueryU64(TransducerHandle transducer, ulong* query, nuint length, nuint maximumDistance, uint order, out nint cursor);
+    [LibraryImport(Library, EntryPoint = "llev_query_cache_new")]
+    internal static partial Status QueryCacheNew(TransducerHandle transducer, nuint maximumEntries, nuint maximumWeight, out nint cache);
+    [LibraryImport(Library, EntryPoint = "llev_query_cache_clear")]
+    internal static partial Status QueryCacheClear(QueryCacheHandle cache);
+    [LibraryImport(Library, EntryPoint = "llev_query_cache_reset_stats")]
+    internal static partial Status QueryCacheResetStats(QueryCacheHandle cache);
+    [LibraryImport(Library, EntryPoint = "llev_query_cache_stats")]
+    internal static partial Status QueryCacheStats(QueryCacheHandle cache, out NativeQueryCacheStats stats);
+    [LibraryImport(Library, EntryPoint = "llev_query_cache_free")]
+    internal static partial void QueryCacheFree(nint cache);
+    [LibraryImport(Library, EntryPoint = "llev_query_cache_query_utf8")]
+    internal static partial Status QueryCacheUtf8(QueryCacheHandle cache, byte* query, nuint length, nuint maximumDistance, uint order, out nint cursor);
+    [LibraryImport(Library, EntryPoint = "llev_query_cache_query_bytes")]
+    internal static partial Status QueryCacheBytes(QueryCacheHandle cache, byte* query, nuint length, nuint maximumDistance, uint order, out nint cursor);
+    [LibraryImport(Library, EntryPoint = "llev_query_cache_query_u64")]
+    internal static partial Status QueryCacheU64(QueryCacheHandle cache, ulong* query, nuint length, nuint maximumDistance, uint order, out nint cursor);
     [LibraryImport(Library, EntryPoint = "llev_query_cursor_next_batch")]
     internal static partial Status NextBatch(CursorHandle cursor, nuint maximum, out NativeBatch batch);
     [LibraryImport(Library, EntryPoint = "llev_query_cursor_release_batch")]

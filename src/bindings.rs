@@ -10,7 +10,8 @@ use crate::phonetic::nfa::NFAChar;
 #[cfg(feature = "bindings-phonetic")]
 use crate::transducer::language::{LanguageProduct, MappedLanguageQueryIterator};
 use crate::transducer::{
-    Algorithm, RankedValueQueryIterator, Suggestion, ValueYieldingQueryIterator,
+    Algorithm, QueryCacheLimits, QueryCacheStats, RankedValueQueryIterator, Suggestion,
+    ValueYieldingQueryIterator, VersionedQueryCache,
 };
 use arc_swap::ArcSwapOption;
 use libdictenstein::concurrent_slots::{AtomicOnceBox, AtomicTakeBox, HybridOnceBoxSlots};
@@ -75,6 +76,8 @@ pub enum BindingError {
     UnsupportedOrdering(VtUnitDomain),
     /// A batch size of zero was requested.
     EmptyBatch,
+    /// Cross-query caching requires stable producer/revision identity.
+    MissingSnapshotIdentity,
 }
 
 impl fmt::Display for BindingError {
@@ -111,6 +114,8 @@ impl fmt::Display for BindingError {
                 write!(formatter, "ordered streaming is unsupported for {domain:?}")
             }
             Self::EmptyBatch => formatter.write_str("batch size must be greater than zero"),
+            Self::MissingSnapshotIdentity => formatter
+                .write_str("query caching requires the provider snapshot-identity capability"),
         }
     }
 }
@@ -2005,6 +2010,22 @@ impl ForeignDictionary {
         }
     }
 
+    fn snapshot_identity(&self) -> Option<VtSnapshotIdentity> {
+        match self {
+            Self::Byte(provider) | Self::Unicode(provider) | Self::U64(provider) => {
+                provider.identity
+            }
+        }
+    }
+
+    fn fork_query_owner(&self) -> Arc<Provider> {
+        match self {
+            Self::Byte(provider) | Self::Unicode(provider) | Self::U64(provider) => {
+                provider.fork_query_owner()
+            }
+        }
+    }
+
     fn snapshot(&self) -> Result<Self, BindingError> {
         fn immutable_or_snapshot(provider: &Arc<Provider>) -> Result<Arc<Provider>, BindingError> {
             if provider.vtable().flags & dictionary_flags::IMMUTABLE != 0 {
@@ -2133,6 +2154,10 @@ enum CursorInner {
     CharOrdered(CharOrdered),
     #[cfg(feature = "bindings-phonetic")]
     CharLanguage(CharLanguage),
+    Cached {
+        results: Arc<[Match]>,
+        next: usize,
+    },
 }
 
 /// Lazy query cursor retaining the exact provider snapshot captured at query
@@ -2225,6 +2250,11 @@ impl QueryCursor {
                 distance: usize::from(item.distance),
                 id: item.value.and_then(|value| value.id),
             }),
+            CursorInner::Cached { results, next } => {
+                let item = results.get(*next).cloned();
+                *next = next.saturating_add(usize::from(item.is_some()));
+                item
+            }
         };
         if let Some(error) = self.provider.take_fault() {
             return Err(error);
@@ -2249,6 +2279,210 @@ impl QueryCursor {
             }
         }
         Ok(batch.len())
+    }
+}
+
+fn collect_query(mut cursor: QueryCursor) -> Result<Vec<Match>, BindingError> {
+    let mut batch = MatchBatch::default();
+    let mut results = Vec::new();
+    loop {
+        let count = cursor.next_batch(&mut batch, DEFAULT_MATCH_BATCH)?;
+        if count == 0 {
+            return Ok(results);
+        }
+        results.extend_from_slice(batch.as_slice());
+    }
+}
+
+fn match_results_weight(query_bytes: usize, results: &[Match]) -> usize {
+    results.iter().fold(
+        query_bytes.saturating_add(std::mem::size_of_val(results)),
+        |weight, result| {
+            let term_bytes = match &result.term {
+                MatchTerm::Utf8(term) => term.capacity(),
+                MatchTerm::Bytes(term) => term.capacity(),
+                MatchTerm::U64(term) => term.capacity().saturating_mul(std::mem::size_of::<u64>()),
+            };
+            weight.saturating_add(term_bytes)
+        },
+    )
+}
+
+/// Opt-in, bounded complete-result cache over a foreign dictionary resource.
+///
+/// The cache reuses the production TinyLFU-admission/SIEVE-eviction policy and
+/// is intentionally single-owner and synchronization-free. Every miss first
+/// captures one immutable provider revision and materializes its exact result;
+/// hits return independent cursors over shared immutable results. Approximate
+/// policy decisions affect residency only. Callers that need parallel access
+/// should shard one cache per worker rather than serialize a shared hot path.
+pub struct ResourceQueryCache {
+    transducer: ResourceTransducer,
+    traversal: VersionedQueryCache<Match>,
+    ordered: VersionedQueryCache<Match>,
+    identity: Option<VtSnapshotIdentity>,
+    token_key: Vec<u8>,
+}
+
+impl fmt::Debug for ResourceQueryCache {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("ResourceQueryCache")
+            .field("unit_domain", &self.transducer.unit_domain())
+            .field("limits", &self.traversal.limits())
+            .field("resident_entries", &self.len())
+            .field("resident_weight", &self.resident_weight())
+            .finish_non_exhaustive()
+    }
+}
+
+impl ResourceQueryCache {
+    /// Retain a transducer and create empty traversal/ordered policy shards.
+    pub fn new(transducer: ResourceTransducer, limits: QueryCacheLimits) -> Self {
+        Self {
+            transducer,
+            traversal: VersionedQueryCache::with_limits(limits),
+            ordered: VersionedQueryCache::with_limits(limits),
+            identity: None,
+            token_key: Vec::new(),
+        }
+    }
+
+    /// Configured hard limits for each result-order shard.
+    pub fn limits(&self) -> QueryCacheLimits {
+        self.traversal.limits()
+    }
+
+    /// Total number of resident entries across result-order shards.
+    pub fn len(&self) -> usize {
+        self.traversal.len().saturating_add(self.ordered.len())
+    }
+
+    /// Whether both result-order shards are empty.
+    pub fn is_empty(&self) -> bool {
+        self.traversal.is_empty() && self.ordered.is_empty()
+    }
+
+    /// Aggregate logical weight across result-order shards.
+    pub fn resident_weight(&self) -> usize {
+        self.traversal
+            .resident_weight()
+            .saturating_add(self.ordered.resident_weight())
+    }
+
+    /// Traversal-order policy counters.
+    pub fn traversal_stats(&self) -> QueryCacheStats {
+        self.traversal.stats()
+    }
+
+    /// Distance-then-term policy counters.
+    pub fn ordered_stats(&self) -> QueryCacheStats {
+        self.ordered.stats()
+    }
+
+    /// Drop all resident results while retaining the current source resource.
+    pub fn clear(&mut self) {
+        self.traversal.clear();
+        self.ordered.clear();
+    }
+
+    /// Reset counters without changing residency or frequency estimates.
+    pub fn reset_stats(&mut self) {
+        self.traversal.reset_stats();
+        self.ordered.reset_stats();
+    }
+
+    fn capture(&mut self) -> Result<(ResourceTransducer, VtSnapshotIdentity), BindingError> {
+        let snapshot = self.transducer.snapshot()?;
+        let identity = snapshot
+            .dictionary
+            .snapshot_identity()
+            .ok_or(BindingError::MissingSnapshotIdentity)?;
+        if self.identity != Some(identity) {
+            self.clear();
+            self.identity = Some(identity);
+        }
+        Ok((snapshot, identity))
+    }
+
+    fn cached_cursor(snapshot: &ResourceTransducer, results: Arc<[Match]>) -> QueryCursor {
+        QueryCursor {
+            inner: CursorInner::Cached { results, next: 0 },
+            provider: snapshot.dictionary.fork_query_owner(),
+        }
+    }
+
+    /// Query Unicode scalars, caching the complete exact result by revision.
+    pub fn query_utf8(
+        &mut self,
+        query: &str,
+        max_distance: usize,
+        order: QueryOrder,
+    ) -> Result<QueryCursor, BindingError> {
+        let (snapshot, identity) = self.capture()?;
+        let cache = match order {
+            QueryOrder::Traversal => &mut self.traversal,
+            QueryOrder::DistanceThenTerm => &mut self.ordered,
+        };
+        let results = cache.try_get_or_compute_key(
+            query.as_bytes(),
+            max_distance,
+            identity.revision,
+            || collect_query(snapshot.query_utf8(query, max_distance, order)?),
+            |results| match_results_weight(query.len(), results),
+        )?;
+        Ok(Self::cached_cursor(&snapshot, results))
+    }
+
+    /// Query raw bytes, caching the complete exact result by revision.
+    pub fn query_bytes(
+        &mut self,
+        query: &[u8],
+        max_distance: usize,
+        order: QueryOrder,
+    ) -> Result<QueryCursor, BindingError> {
+        let (snapshot, identity) = self.capture()?;
+        let cache = match order {
+            QueryOrder::Traversal => &mut self.traversal,
+            QueryOrder::DistanceThenTerm => &mut self.ordered,
+        };
+        let results = cache.try_get_or_compute_key(
+            query,
+            max_distance,
+            identity.revision,
+            || collect_query(snapshot.query_bytes(query, max_distance, order)?),
+            |results| match_results_weight(query.len(), results),
+        )?;
+        Ok(Self::cached_cursor(&snapshot, results))
+    }
+
+    /// Query u64 tokens, reusing one binary-key scratch allocation.
+    pub fn query_u64(
+        &mut self,
+        query: &[u64],
+        max_distance: usize,
+        order: QueryOrder,
+    ) -> Result<QueryCursor, BindingError> {
+        let (snapshot, identity) = self.capture()?;
+        self.token_key.clear();
+        self.token_key
+            .reserve(query.len().saturating_mul(std::mem::size_of::<u64>()));
+        for token in query {
+            self.token_key.extend_from_slice(&token.to_ne_bytes());
+        }
+        let key = self.token_key.as_slice();
+        let cache = match order {
+            QueryOrder::Traversal => &mut self.traversal,
+            QueryOrder::DistanceThenTerm => &mut self.ordered,
+        };
+        let results = cache.try_get_or_compute_key(
+            key,
+            max_distance,
+            identity.revision,
+            || collect_query(snapshot.query_u64(query, max_distance, order)?),
+            |results| match_results_weight(key.len(), results),
+        )?;
+        Ok(Self::cached_cursor(&snapshot, results))
     }
 }
 

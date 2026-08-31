@@ -11,6 +11,7 @@ export function transducer(dictionary, algorithm) {
   assertSameRuntime(dictionary, runtimeIdentity);
   return liblevenshtein.transducer(dictionary, algorithm);
 }
+export const queryCache = liblevenshtein.queryCache.bind(liblevenshtein);
 export const phoneticPattern = liblevenshtein.phoneticPattern.bind(liblevenshtein);
 export const llrePattern = liblevenshtein.llrePattern.bind(liblevenshtein);
 export const phoneticRules = liblevenshtein.phoneticRules.bind(liblevenshtein);
@@ -18,6 +19,7 @@ export default {
   ...liblevenshtein,
   runtimeIdentity,
   transducer,
+  queryCache,
   phoneticPattern,
   llrePattern,
   phoneticRules,

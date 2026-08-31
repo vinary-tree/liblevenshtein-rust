@@ -99,6 +99,30 @@ class LiblevenshteinCrossProjectTest < Minitest::Test
     dictionary&.close
   end
 
+  def test_bounded_query_cache_is_exact_observable_and_closeable
+    dictionary = text_dictionary([["cat", 1], ["cot", 2]])
+    transducer = LL::Transducer.new(dictionary)
+    cache = LL::QueryCache.new(transducer, max_entries: 8, max_weight: 1 << 20)
+    cold = collect(cache.query("cut", 1))
+    hit = collect(cache.query("cut", 1))
+    assert_equal cold, hit
+    assert_equal [2, 1, 1], [cache.stats.requests, cache.stats.hits, cache.stats.misses]
+    assert_equal 1, cache.length
+    assert_operator cache.stats.resident_weight, :>, 0
+    cache.reset_stats
+    assert_equal 0, cache.stats.requests
+    assert_equal 1, cache.length
+    cache.clear
+    assert_predicate cache, :empty?
+    assert_raises(ArgumentError) { cache.query("cut", -1) }
+    cache.close
+    assert_raises(IOError) { cache.stats }
+  ensure
+    cache&.close
+    transducer&.close
+    dictionary&.close
+  end
+
   def test_raw_byte_and_u64_queries_preserve_payloads_and_values
     byte_dictionary = LD::DynamicDawg.new(domain: LD::BYTE)
     byte_dictionary.put("\xff\x00\x7f".b, 9)

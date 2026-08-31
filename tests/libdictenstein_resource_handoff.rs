@@ -4,11 +4,19 @@ use libdictenstein::bindings::{
     BindingUnitDomain, DoubleArrayTrieBinding, DynamicDawgBinding, ScdawgBinding,
 };
 use liblevenshtein::bindings::{
-    Match, MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceTransducer,
+    Match, MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceQueryCache, ResourceTransducer,
 };
-use liblevenshtein::transducer::Algorithm;
+use liblevenshtein::ffi::{
+    llev_query_cache_clear, llev_query_cache_free, llev_query_cache_new,
+    llev_query_cache_query_utf8, llev_query_cache_reset_stats, llev_query_cache_stats,
+    llev_query_cursor_free, llev_query_cursor_next_batch, llev_query_cursor_release_batch,
+    llev_transducer_free, llev_transducer_new, LlevAlgorithm, LlevMatchBatchView, LlevQueryCache,
+    LlevQueryCacheStats, LlevQueryCursor, LlevQueryOrder, LlevStatus, LlevTransducer,
+};
+use liblevenshtein::transducer::{Algorithm, QueryCacheLimits};
 use proptest::prelude::*;
 use std::collections::BTreeMap;
+use std::ptr;
 
 fn drain(cursor: &mut QueryCursor) -> Vec<Match> {
     let mut output = Vec::new();
@@ -30,6 +38,132 @@ fn map(matches: impl IntoIterator<Item = Match>) -> BTreeMap<String, Option<u64>
             other => panic!("unexpected term domain: {other:?}"),
         })
         .collect()
+}
+
+unsafe fn drain_ffi_cursor(cursor: *mut LlevQueryCursor) -> usize {
+    let mut count = 0;
+    loop {
+        let mut view = LlevMatchBatchView::default();
+        match llev_query_cursor_next_batch(cursor, 2, &mut view) {
+            LlevStatus::Ok => {
+                count += view.len;
+                assert_eq!(
+                    llev_query_cursor_release_batch(cursor, view.generation),
+                    LlevStatus::Ok
+                );
+            }
+            LlevStatus::End => break,
+            status => panic!("unexpected cursor status {status:?}"),
+        }
+    }
+    assert_eq!(llev_query_cursor_free(cursor), LlevStatus::Ok);
+    count
+}
+
+#[test]
+fn c_query_cache_owns_results_reports_policy_and_leaves_cursors_independent() {
+    unsafe {
+        let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
+        for (term, value) in [("cat", 1), ("cot", 2), ("cut", 3)] {
+            dictionary
+                .insert_text(term.as_bytes(), Some(value))
+                .expect("seed dictionary");
+        }
+        let resource = dictionary.resource();
+        let raw = resource.as_raw();
+        let mut transducer: *mut LlevTransducer = ptr::null_mut();
+        assert_eq!(
+            llev_transducer_new(&raw, LlevAlgorithm::Standard as u32, &mut transducer),
+            LlevStatus::Ok
+        );
+        let mut cache: *mut LlevQueryCache = ptr::null_mut();
+        assert_eq!(
+            llev_query_cache_new(transducer, 8, 1 << 20, &mut cache),
+            LlevStatus::Ok
+        );
+
+        let mut cold: *mut LlevQueryCursor = ptr::null_mut();
+        assert_eq!(
+            llev_query_cache_query_utf8(
+                cache,
+                b"cat".as_ptr().cast(),
+                3,
+                1,
+                LlevQueryOrder::Traversal as u32,
+                &mut cold,
+            ),
+            LlevStatus::Ok
+        );
+        assert_eq!(drain_ffi_cursor(cold), 3);
+
+        let mut hit: *mut LlevQueryCursor = ptr::null_mut();
+        assert_eq!(
+            llev_query_cache_query_utf8(
+                cache,
+                b"cat".as_ptr().cast(),
+                3,
+                1,
+                LlevQueryOrder::Traversal as u32,
+                &mut hit,
+            ),
+            LlevStatus::Ok
+        );
+        let mut stats = LlevQueryCacheStats::default();
+        assert_eq!(llev_query_cache_stats(cache, &mut stats), LlevStatus::Ok);
+        assert_eq!((stats.requests, stats.hits, stats.misses), (2, 1, 1));
+        assert_eq!(stats.resident_entries, 1);
+        assert!(stats.resident_weight > 0);
+
+        assert_eq!(llev_query_cache_reset_stats(cache), LlevStatus::Ok);
+        assert_eq!(llev_query_cache_stats(cache, &mut stats), LlevStatus::Ok);
+        assert_eq!(stats.requests, 0);
+        assert_eq!(stats.resident_entries, 1);
+        assert_eq!(llev_query_cache_clear(cache), LlevStatus::Ok);
+        assert_eq!(llev_query_cache_stats(cache, &mut stats), LlevStatus::Ok);
+        assert_eq!(stats.resident_entries, 0);
+
+        llev_query_cache_free(cache);
+        llev_transducer_free(transducer);
+        drop(resource);
+        drop(dictionary);
+        assert_eq!(drain_ffi_cursor(hit), 3, "cursor retains its own result");
+    }
+}
+
+#[test]
+fn c_query_cache_rejects_null_handles_without_writing_outputs() {
+    unsafe {
+        let mut cache = std::ptr::dangling_mut::<LlevQueryCache>();
+        assert_eq!(
+            llev_query_cache_new(ptr::null(), 8, 1024, &mut cache),
+            LlevStatus::NullPointer
+        );
+        let mut cursor = std::ptr::dangling_mut::<LlevQueryCursor>();
+        assert_eq!(
+            llev_query_cache_query_utf8(
+                ptr::null_mut(),
+                ptr::null(),
+                0,
+                0,
+                LlevQueryOrder::Traversal as u32,
+                &mut cursor,
+            ),
+            LlevStatus::NullPointer
+        );
+        assert_eq!(
+            llev_query_cache_stats(ptr::null(), ptr::null_mut()),
+            LlevStatus::NullPointer
+        );
+        assert_eq!(
+            llev_query_cache_clear(ptr::null_mut()),
+            LlevStatus::NullPointer
+        );
+        assert_eq!(
+            llev_query_cache_reset_stats(ptr::null_mut()),
+            LlevStatus::NullPointer
+        );
+        llev_query_cache_free(ptr::null_mut());
+    }
 }
 
 #[test]
@@ -77,6 +211,99 @@ fn real_libdictenstein_resource_has_one_query_start_revision() {
             ("cut".to_owned(), Some(3)),
             ("scat".to_owned(), Some(4)),
         ])
+    );
+}
+
+#[test]
+fn bounded_resource_cache_hits_and_invalidates_on_revision_change() {
+    let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
+    for (term, value) in [("cat", 1), ("cot", 2), ("cut", 3)] {
+        dictionary
+            .insert_text(term.as_bytes(), Some(value))
+            .expect("seed dictionary");
+    }
+    let resource = dictionary.resource();
+    let transducer = unsafe {
+        ResourceTransducer::from_resource(resource.as_raw(), Algorithm::Standard).unwrap()
+    };
+    let mut cache = ResourceQueryCache::new(transducer, QueryCacheLimits::new(8, 1 << 20));
+
+    let first = map(drain(
+        &mut cache
+            .query_utf8("cat", 1, QueryOrder::Traversal)
+            .expect("cold cached query"),
+    ));
+    let second = map(drain(
+        &mut cache
+            .query_utf8("cat", 1, QueryOrder::Traversal)
+            .expect("resident cached query"),
+    ));
+    assert_eq!(second, first);
+    assert_eq!(cache.traversal_stats().requests(), 2);
+    assert_eq!(cache.traversal_stats().hits(), 1);
+    assert_eq!(cache.traversal_stats().misses(), 1);
+    assert_eq!(cache.len(), 1);
+
+    dictionary.remove_text(b"cot").expect("mutate dictionary");
+    dictionary
+        .insert_text(b"cit", Some(4))
+        .expect("mutate dictionary");
+    let revised = map(drain(
+        &mut cache
+            .query_utf8("cat", 1, QueryOrder::Traversal)
+            .expect("revision-invalidated query"),
+    ));
+    assert_ne!(revised, first);
+    assert_eq!(cache.traversal_stats().misses(), 2);
+    assert_eq!(
+        cache.len(),
+        1,
+        "stale residency is cleared before admission"
+    );
+}
+
+#[test]
+fn resource_cache_keeps_result_orders_in_independent_policy_shards() {
+    let dictionary = DynamicDawgBinding::new(BindingUnitDomain::UnicodeScalar);
+    for (term, value) in [("cat", 1), ("cot", 2), ("cut", 3)] {
+        dictionary
+            .insert_text(term.as_bytes(), Some(value))
+            .expect("seed dictionary");
+    }
+    let resource = dictionary.resource();
+    let transducer = unsafe {
+        ResourceTransducer::from_resource(resource.as_raw(), Algorithm::Standard).unwrap()
+    };
+    let mut cache = ResourceQueryCache::new(transducer, QueryCacheLimits::new(8, 1 << 20));
+
+    let _ = drain(&mut cache.query_utf8("cat", 1, QueryOrder::Traversal).unwrap());
+    let ordered = drain(
+        &mut cache
+            .query_utf8("cat", 1, QueryOrder::DistanceThenTerm)
+            .unwrap(),
+    );
+    let ordered_hit = drain(
+        &mut cache
+            .query_utf8("cat", 1, QueryOrder::DistanceThenTerm)
+            .unwrap(),
+    );
+
+    assert_eq!(ordered_hit, ordered);
+    assert_eq!(cache.traversal_stats().misses(), 1);
+    assert_eq!(cache.ordered_stats().misses(), 1);
+    assert_eq!(cache.ordered_stats().hits(), 1);
+    assert_eq!(cache.len(), 2);
+
+    dictionary.remove_text(b"cot").expect("mutate dictionary");
+    let _ = drain(
+        &mut cache
+            .query_utf8("cat", 1, QueryOrder::DistanceThenTerm)
+            .expect("revision-invalidated ordered query"),
+    );
+    assert_eq!(
+        cache.len(),
+        1,
+        "observing a new revision clears stale results from every order shard"
     );
 }
 

@@ -33,6 +33,10 @@ module VinaryTree
     end
 
     Match = Data.define(:term, :distance, :id, :domain)
+    QueryCacheStats = Data.define(
+      :requests, :hits, :misses, :admissions, :rejections, :evictions,
+      :resident_entries, :resident_weight
+    )
 
     module Finalizer
       module_function
@@ -122,6 +126,7 @@ module VinaryTree
       end
 
       def query_pattern(pattern, maximum_distance)
+        raise ArgumentError, "maximum distance must be between 0 and 255" unless (0..255).cover?(maximum_distance)
         with_pointer do |pointer|
           pattern.__send__(:with_pointer) do |pattern_pointer|
             output = Native.pointer_output
@@ -144,11 +149,99 @@ module VinaryTree
       end
 
       def start_query(function, input, maximum_distance, order, units = input.bytesize)
+        raise ArgumentError, "maximum distance must be nonnegative" if maximum_distance.negative?
         with_pointer do |pointer|
           output = Native.pointer_output
           Liblevenshtein.check(Native.public_send(function, pointer, input, units, maximum_distance, order, output))
           Query.new(Native.read_pointer(output))
         end
+      end
+    end
+
+    # Exclusive synchronization-free bounded memo for complete repeated
+    # queries. Limits apply independently to each result-order shard. Use one
+    # cache per worker for parallel workloads.
+    class QueryCache
+      DEFAULT_ENTRIES = 1024
+      DEFAULT_WEIGHT = 64 * 1024 * 1024
+
+      def initialize(transducer, max_entries: DEFAULT_ENTRIES, max_weight: DEFAULT_WEIGHT)
+        raise ArgumentError, "max_entries must be nonnegative" if max_entries.negative?
+        raise ArgumentError, "max_weight must be nonnegative" if max_weight.negative?
+        output = Native.pointer_output
+        transducer.__send__(:with_pointer) do |pointer|
+          Liblevenshtein.check(
+            Native.llev_query_cache_new(pointer, max_entries, max_weight, output)
+          )
+        end
+        @box = [Native.read_pointer(output)]
+        ObjectSpace.define_finalizer(
+          self, Finalizer.for(@box, Native.method(:llev_query_cache_free))
+        )
+      end
+
+      def stats
+        raw = Native::QueryCacheStats.malloc
+        Liblevenshtein.check(Native.llev_query_cache_stats(pointer, raw))
+        QueryCacheStats.new(
+          raw.requests, raw.hits, raw.misses, raw.admissions, raw.rejections,
+          raw.evictions, raw.resident_entries, raw.resident_weight
+        )
+      end
+
+      def length = stats.resident_entries
+      alias size length
+      def empty? = length.zero?
+
+      def clear
+        Liblevenshtein.check(Native.llev_query_cache_clear(pointer))
+        self
+      end
+
+      def reset_stats
+        Liblevenshtein.check(Native.llev_query_cache_reset_stats(pointer))
+        self
+      end
+
+      def query(text, maximum_distance, order: QueryOrder::TRAVERSAL)
+        start_query(:llev_query_cache_query_utf8, text.b, maximum_distance, order)
+      end
+
+      def query_bytes(bytes, maximum_distance, order: QueryOrder::TRAVERSAL)
+        start_query(:llev_query_cache_query_bytes, bytes.b, maximum_distance, order)
+      end
+
+      def query_u64(tokens, maximum_distance, order: QueryOrder::TRAVERSAL)
+        start_query(
+          :llev_query_cache_query_u64,
+          tokens.pack("Q*"), maximum_distance, order, tokens.length
+        )
+      end
+
+      def close
+        return nil if @box[0].zero?
+        Native.llev_query_cache_free(@box[0])
+        @box[0] = 0
+        ObjectSpace.undefine_finalizer(self)
+        nil
+      end
+
+      private
+
+      def pointer
+        raise IOError, "query cache is closed" if @box[0].zero?
+        @box[0]
+      end
+
+      def start_query(function, input, maximum_distance, order, units = input.bytesize)
+        raise ArgumentError, "maximum distance must be nonnegative" if maximum_distance.negative?
+        output = Native.pointer_output
+        Liblevenshtein.check(
+          Native.public_send(
+            function, pointer, input, units, maximum_distance, order, output
+          )
+        )
+        Query.new(Native.read_pointer(output))
       end
     end
 

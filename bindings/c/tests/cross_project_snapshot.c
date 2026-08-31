@@ -168,6 +168,42 @@ static void assert_reducer_api(LlevTransducer* transducer) {
     assert(llev_query_cursor_free(cursor) == LLEV_STATUS_OK);
 }
 
+static void assert_query_cache_api(LlevTransducer* transducer) {
+    LlevQueryCache* cache = NULL;
+    assert(llev_query_cache_new(transducer, 8, 1024 * 1024, &cache) ==
+           LLEV_STATUS_OK);
+    LlevQueryCursor* cursor = NULL;
+    assert(llev_query_cache_query_utf8(
+               cache, "cat", 3, 2, LLEV_QUERY_ORDER_TRAVERSAL, &cursor) ==
+           LLEV_STATUS_OK);
+    assert(llev_query_cursor_free(cursor) == LLEV_STATUS_OK);
+    assert(llev_query_cache_query_utf8(
+               cache, "cat", 3, 2, LLEV_QUERY_ORDER_TRAVERSAL, &cursor) ==
+           LLEV_STATUS_OK);
+    assert(llev_query_cursor_free(cursor) == LLEV_STATUS_OK);
+
+    const uint8_t bytes[] = {0, 1};
+    assert(llev_query_cache_query_bytes(
+               cache, bytes, 2, 1, LLEV_QUERY_ORDER_TRAVERSAL, &cursor) ==
+           LLEV_STATUS_DOMAIN_MISMATCH);
+    const uint64_t tokens[] = {0, 1};
+    assert(llev_query_cache_query_u64(
+               cache, tokens, 2, 1, LLEV_QUERY_ORDER_TRAVERSAL, &cursor) ==
+           LLEV_STATUS_DOMAIN_MISMATCH);
+
+    LlevQueryCacheStats stats = {0};
+    assert(llev_query_cache_stats(cache, &stats) == LLEV_STATUS_OK);
+    assert(stats.requests == 4 && stats.hits == 1 && stats.misses == 3);
+    assert(stats.resident_entries == 1 && stats.resident_weight > 0);
+    assert(llev_query_cache_clear(cache) == LLEV_STATUS_OK);
+    assert(llev_query_cache_stats(cache, &stats) == LLEV_STATUS_OK);
+    assert(stats.resident_entries == 0);
+    assert(llev_query_cache_reset_stats(cache) == LLEV_STATUS_OK);
+    assert(llev_query_cache_stats(cache, &stats) == LLEV_STATUS_OK);
+    assert(stats.requests == 0);
+    llev_query_cache_free(cache);
+}
+
 static void assert_phonetic_api(LlevTransducer* transducer) {
     assert((llev_build_features() & LLEV_BUILD_FEATURE_PHONETIC) != 0);
 
@@ -393,6 +429,7 @@ int main(void) {
            LLEV_STATUS_OK);
 
     assert_reducer_api(transducer);
+    assert_query_cache_api(transducer);
     assert_phonetic_api(transducer);
 
     LlevTransducer* frozen = NULL;

@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 36 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against the facade sources and regenerates bindings/conformance/completeness-matrix.tsv from this file. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 44 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against the facade sources and regenerates bindings/conformance/completeness-matrix.tsv from this file. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -89,6 +89,26 @@
         "llev_transducer_unit_domain": {
           "symbol": "llev_transducer_unit_domain"
         },
+        "llev_query_cache_new": {
+          "symbol": "llev_query_cache_new",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "llev_query_cache_clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "llev_query_cache_reset_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "llev_query_cache_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "llev_query_cache_free",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "llev_transducer_query_utf8"
         },
@@ -97,6 +117,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "llev_transducer_query_u64"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "llev_query_cache_query_utf8",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "llev_query_cache_query_bytes",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "llev_query_cache_query_u64",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "llev_query_cursor_next_batch"
@@ -253,6 +285,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "query-cache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "clear-cache!",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "reset-cache-stats!",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "cache-stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "close!",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "query"
         },
@@ -263,6 +315,18 @@
         "llev_transducer_query_u64": {
           "symbol": "query",
           "note": "reflective JVM overload dispatch on long[] terms"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": [
@@ -432,6 +496,26 @@
           "symbol": "llev_transducer_unit_domain",
           "note": "C API passthrough via the included liblevenshtein.h"
         },
+        "llev_query_cache_new": {
+          "symbol": "vinary_tree::liblevenshtein::query_cache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "query_cache::clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "query_cache::reset_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "query_cache::stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "query_cache::~query_cache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "vinary_tree::liblevenshtein::transducer::query"
         },
@@ -440,6 +524,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "vinary_tree::liblevenshtein::transducer::query"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "query_cache::query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "query_cache::query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "query_cache::query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "vinary_tree::liblevenshtein::query_cursor::next_batch"
@@ -614,6 +710,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "QueryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache.Clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache.ResetStats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache.Stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache.Dispose",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.Query"
         },
@@ -622,6 +738,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.Query"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache.Query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache.Query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache.Query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "Query.GetEnumerator"
@@ -778,6 +906,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "new_query_cache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "query_cache%clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "query_cache%reset_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "query_cache%stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "query_cache%close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "transducer%query_text"
         },
@@ -786,6 +934,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "transducer%query_u64"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "query_cache%query_text",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "query_cache%query_bytes",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "query_cache%query_u64",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "query_iterator%next"
@@ -941,6 +1101,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "NewQueryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache.Clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache.ResetStats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache.Stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache.Close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.Query"
         },
@@ -949,6 +1129,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.QueryU64"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache.Query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache.QueryBytes",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache.QueryU64",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "Iterator.Next"
@@ -1098,6 +1290,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "queryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "clearQueryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "resetQueryCacheStats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "queryCacheStats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "closeQueryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "queryText"
         },
@@ -1106,6 +1318,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "queryU64"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "cachedQueryText",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "cachedQueryBytes",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "cachedQueryU64",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": [
@@ -1272,6 +1496,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "queryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache.clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache.resetStats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache.stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache.close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
@@ -1280,6 +1524,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "QueryCursor.nextBatch"
@@ -1443,6 +1699,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "liblevenshtein.queryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache.clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache.resetStats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache.stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache.close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
@@ -1451,6 +1727,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "QueryCursor.nextBatch"
@@ -1527,7 +1815,9 @@
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Status.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeException.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeLibraryLoader.java",
-        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/GeneratedAbi.java"
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/GeneratedAbi.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/QueryCache.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/QueryCacheStats.java"
       ],
       "readme": "bindings/jvm/README.md",
       "tests": [
@@ -1632,6 +1922,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "QueryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache.clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache.resetStats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache.stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache.close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
@@ -1640,6 +1950,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": [
@@ -1797,6 +2119,26 @@
         "llev_transducer_unit_domain": {
           "symbol": "transducer:domain"
         },
+        "llev_query_cache_new": {
+          "symbol": "query_cache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache:clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache:reset_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache:stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache:close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "transducer:query"
         },
@@ -1805,6 +2147,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "transducer:query_u64"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache:query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache:query_bytes",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache:query_u64",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": [
@@ -1963,6 +2317,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "query_cache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "clear_query_cache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "reset_query_cache_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "query_cache_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "close_query_cache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "query"
         },
@@ -1971,6 +2345,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "query_u64"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "cached_query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "cached_query_bytes",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "cached_query_u64",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": [
@@ -2136,6 +2522,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "QueryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache.clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache.reset_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache.stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache.close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
@@ -2144,6 +2550,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "QueryCursor.__next__"
@@ -2308,6 +2726,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "QueryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache#clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache#reset_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache#stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache#close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "Transducer#query"
         },
@@ -2316,6 +2754,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer#query_u64"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache#query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache#query_bytes",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache#query_u64",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": "Query#each"
@@ -2475,6 +2925,26 @@
           "symbol": null,
           "_reason": "not bound; every match descriptor carries its own unit domain, so the transducer-level accessor is redundant for this facade"
         },
+        "llev_query_cache_new": {
+          "symbol": "QueryCache.init",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache.clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache.resetStats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache.stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache.close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
@@ -2483,6 +2953,18 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cursor_next_batch": {
           "symbol": [
@@ -2604,9 +3086,41 @@
         "llev_transducer_snapshot": {"symbol": "snapshot"},
         "llev_transducer_free": {"symbol": "close!"},
         "llev_transducer_unit_domain": {"symbol": "unit_domain"},
+        "llev_query_cache_new": {
+          "symbol": "QueryCache",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "clear!",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "reset_stats!",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "cache_stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "close!",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {"symbol": "query"},
         "llev_transducer_query_bytes": {"symbol": "query"},
         "llev_transducer_query_u64": {"symbol": "query"},
+        "llev_query_cache_query_utf8": {
+          "symbol": "query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_query_cursor_next_batch": {"symbol": "next_batch!"},
         "llev_query_cursor_release_batch": {
           "symbol": "next_batch!",
@@ -2696,9 +3210,41 @@
         "llev_transducer_snapshot": {"symbol": "Transducer.snapshot"},
         "llev_transducer_free": {"symbol": "Transducer.close"},
         "llev_transducer_unit_domain": {"symbol": "Transducer.unit-domain"},
+        "llev_query_cache_new": {
+          "symbol": "QueryCache.new",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_clear": {
+          "symbol": "QueryCache.clear",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_reset_stats": {
+          "symbol": "QueryCache.reset-stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_stats": {
+          "symbol": "QueryCache.stats",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_free": {
+          "symbol": "QueryCache.close",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_transducer_query_utf8": {"symbol": "Transducer.query"},
         "llev_transducer_query_bytes": {"symbol": "Transducer.query"},
         "llev_transducer_query_u64": {"symbol": "Transducer.query"},
+        "llev_query_cache_query_utf8": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_bytes": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_query_u64": {
+          "symbol": "QueryCache.query",
+          "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
         "llev_query_cursor_next_batch": {"symbol": "QueryCursor.next-batch"},
         "llev_query_cursor_release_batch": {
           "symbol": "QueryCursor.next-batch",

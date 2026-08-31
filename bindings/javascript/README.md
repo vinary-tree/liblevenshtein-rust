@@ -112,6 +112,12 @@ variants, protocols, or methods.
 | `PhoneticRuleSet.apply` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.size` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
+| `queryCache` | `llev_query_cache_new` | project ABI operation |
+| `QueryCache.clear` | `llev_query_cache_clear` | project ABI operation |
+| `QueryCache.close` | `llev_query_cache_free` | project ABI operation |
+| `QueryCache.query` | `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64` | project ABI operation |
+| `QueryCache.resetStats` | `llev_query_cache_reset_stats` | project ABI operation |
+| `QueryCache.stats` | `llev_query_cache_stats` | project ABI operation |
 | `QueryCursor.close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `QueryCursor.nextBatch` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |

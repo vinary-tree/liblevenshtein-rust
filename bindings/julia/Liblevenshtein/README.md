@@ -69,6 +69,9 @@ domains, batching, and snapshot behavior are otherwise identical.
 - Reuse a `Transducer` for repeated queries with the same dictionary and
   algorithm. Use `snapshot(transducer)` when several queries must observe the
   same revision even while the live dictionary changes.
+- Wrap a transducer in `QueryCache` when complete queries repeat. The native
+  cache applies hard entry and logical-weight bounds, TinyLFU admission, and
+  SIEVE eviction; approximation changes residency, never match correctness.
 - Iterate a `QueryCursor` for independently owned `Match` values. Use
   `reduce_batches!` for high-volume processing where callback-scoped native
   batches amortize the FFI boundary.
@@ -86,6 +89,10 @@ domains, batching, and snapshot behavior are otherwise identical.
 | `snapshot(transducer)` | Owned immutable transducer revision. |
 | `unit_domain(transducer)` | `BYTE`, `UNICODE_SCALAR`, or `U64`. |
 | `query(transducer, input, k; order=...)` | Lazy query over `String`, `Vector{UInt8}`, integer tokens, or a pattern. |
+| `QueryCache(transducer; max_entries=1024, max_weight=64 * 1024 * 1024)` | Retains the transducer in an exclusive, synchronization-free bounded result cache; limits apply per result-order shard. |
+| `query(cache, input, k; order=...)` | Materialize exactly on a miss or return an independent cursor over a resident immutable result. |
+| `cache_stats(cache)` | Copy requests, hits, misses, admissions, rejections, evictions, entries, and logical weight. |
+| `clear!(cache)`, `reset_stats!(cache)` | Drop residency or reset counters without conflating the two operations. |
 | `next_batch!(cursor, maximum)` | Copy one bounded leased batch into owned matches. |
 | `reduce_batches!(f, initial, cursor; batch_size=256)` | Invoke `f(accumulator, BorrowedBatch)` on lexical zero-copy batches and consume the cursor. |
 | `PhoneticPattern(source; llre=false)` | Compile regex or import-free LLRE source. |
@@ -115,6 +122,14 @@ single-consumer. Independent cursors and immutable transducers may be queried
 from separate tasks; do not race `close` against another operation on the same
 wrapper.
 
+`QueryCache` is also exclusive and intentionally contains no lock. For
+parallel workloads, allocate one cache per task or worker; each shard retains
+its own bounded hot set without imposing coordination on every hit. A cached
+miss captures one immutable revision before materialization. Providers must
+publish `vt.snapshot.id.1`; a missing identity fails with `STATUS_UNSUPPORTED`
+instead of risking stale matches. Traversal and distance-then-term results have
+independent policy shards because their sequences are observably different.
+
 ## Errors, compatibility, and security
 
 Fallible native statuses become `NativeError` with the exact numeric status,
@@ -137,6 +152,14 @@ lazy over a captured revision. Iteration allocates owned host terms by design;
 uses the ABI default of 256 matches to amortize calls. Benchmark native,
 pairwise-FFI, iterator, and reducer paths separately on an idle host before
 making performance claims.
+
+`QueryCache` uses the production policy described by Einziger, Friedman, and
+Manes, [TinyLFU](https://doi.org/10.1145/3149371), for approximate-frequency
+admission and Zhang et al., [SIEVE](https://www.usenix.org/conference/nsdi24/presentation/zhang-yazhuo),
+for low-overhead victim selection. A cold miss necessarily materializes the
+complete exact result, so use ordinary lazy `query(transducer, ...)` for
+one-shot or early-terminating workloads. A hit clones shared immutable native
+storage and exposes it through the same `QueryCursor` contract.
 
 The Julia package name is `Liblevenshtein`, without an organization prefix.
 Release publication is intentionally disabled for this RC6 candidate; a

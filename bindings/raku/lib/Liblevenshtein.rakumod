@@ -102,6 +102,28 @@ class RawBatch is repr('CStruct') is export {
     has uint64 $.generation;
 }
 
+class RawQueryCacheStats is repr('CStruct') is export {
+    has uint64 $.requests;
+    has uint64 $.hits;
+    has uint64 $.misses;
+    has uint64 $.admissions;
+    has uint64 $.rejections;
+    has uint64 $.evictions;
+    has size_t $.resident-entries;
+    has size_t $.resident-weight;
+}
+
+class QueryCacheStats is export {
+    has UInt:D $.requests is required;
+    has UInt:D $.hits is required;
+    has UInt:D $.misses is required;
+    has UInt:D $.admissions is required;
+    has UInt:D $.rejections is required;
+    has UInt:D $.evictions is required;
+    has Int:D $.resident-entries is required;
+    has Int:D $.resident-weight is required;
+}
+
 class OwnedString is repr('CStruct') is export {
     has Pointer $.data;
     has size_t $.len;
@@ -151,6 +173,16 @@ sub llev-transducer-free(Pointer)
     is native(&native-library) is symbol('llev_transducer_free') { * }
 sub llev-transducer-unit-domain(Pointer, uint32 is rw --> int32)
     is native(&native-library) is symbol('llev_transducer_unit_domain') { * }
+sub llev-query-cache-new(Pointer, size_t, size_t, Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_query_cache_new') { * }
+sub llev-query-cache-clear(Pointer --> int32)
+    is native(&native-library) is symbol('llev_query_cache_clear') { * }
+sub llev-query-cache-reset-stats(Pointer --> int32)
+    is native(&native-library) is symbol('llev_query_cache_reset_stats') { * }
+sub llev-query-cache-stats(Pointer, RawQueryCacheStats --> int32)
+    is native(&native-library) is symbol('llev_query_cache_stats') { * }
+sub llev-query-cache-free(Pointer)
+    is native(&native-library) is symbol('llev_query_cache_free') { * }
 sub llev-transducer-query-utf8(
     Pointer, Pointer, size_t, size_t, uint32, Pointer is rw --> int32
 ) is native(&native-library) is symbol('llev_transducer_query_utf8') { * }
@@ -160,6 +192,15 @@ sub llev-transducer-query-bytes(
 sub llev-transducer-query-u64(
     Pointer, Pointer, size_t, size_t, uint32, Pointer is rw --> int32
 ) is native(&native-library) is symbol('llev_transducer_query_u64') { * }
+sub llev-query-cache-query-utf8(
+    Pointer, Pointer, size_t, size_t, uint32, Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_query_cache_query_utf8') { * }
+sub llev-query-cache-query-bytes(
+    Pointer, Pointer, size_t, size_t, uint32, Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_query_cache_query_bytes') { * }
+sub llev-query-cache-query-u64(
+    Pointer, Pointer, size_t, size_t, uint32, Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_query_cache_query_u64') { * }
 sub llev-query-cursor-next-batch(Pointer, size_t, RawBatch --> int32)
     is native(&native-library) is symbol('llev_query_cursor_next_batch') { * }
 sub llev-query-cursor-release-batch(Pointer, uint64 --> int32)
@@ -489,6 +530,8 @@ class Transducer is export {
         $!handle
     }
 
+    method native-handle(--> Pointer:D) { self!handle }
+
     method snapshot(--> Transducer:D) {
         my Pointer $output .= new;
         check-status(llev-transducer-snapshot(self!handle, $output),
@@ -507,6 +550,7 @@ class Transducer is export {
         Str:D $input, Int:D $maximum-distance,
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
+        die 'maximum distance must be nonnegative' if $maximum-distance < 0;
         my $bytes = $input.encode('utf8');
         my Pointer $output .= new;
         check-status(llev-transducer-query-utf8(
@@ -520,6 +564,7 @@ class Transducer is export {
         Blob:D $input, Int:D $maximum-distance,
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
+        die 'maximum distance must be nonnegative' if $maximum-distance < 0;
         my Pointer $output .= new;
         check-status(llev-transducer-query-bytes(
             self!handle, raw-pointer($input), $input.elems, $maximum-distance,
@@ -532,6 +577,7 @@ class Transducer is export {
         Positional:D $input, Int:D $maximum-distance,
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
+        die 'maximum distance must be nonnegative' if $maximum-distance < 0;
         my $tokens = CArray[uint64].allocate($input.elems);
         for $input.list.kv -> $index, $token {
             die 'query token is outside uint64'
@@ -561,6 +607,122 @@ class Transducer is export {
     method close(--> Nil) {
         return if $!closed;
         llev-transducer-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class QueryCache is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    multi method new(
+        Transducer:D :$transducer!,
+        Int:D :$max-entries = 1024,
+        Int:D :$max-weight = 64 * 1024 * 1024,
+    ) {
+        die 'max-entries must be nonnegative' if $max-entries < 0;
+        die 'max-weight must be nonnegative' if $max-weight < 0;
+        my Pointer $output .= new;
+        check-status(llev-query-cache-new(
+            $transducer.native-handle, $max-entries, $max-weight, $output,
+        ), 'query-cache-new');
+        self.bless(handle => $output)
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(
+            status => CLOSED,
+            operation => 'query-cache',
+            detail => 'query cache is closed',
+        ).throw if $!closed;
+        $!handle
+    }
+
+    method stats(--> QueryCacheStats:D) {
+        my $raw = RawQueryCacheStats.new;
+        check-status(llev-query-cache-stats(self!handle, $raw),
+            'query-cache-stats');
+        QueryCacheStats.new(
+            requests => $raw.requests.UInt,
+            hits => $raw.hits.UInt,
+            misses => $raw.misses.UInt,
+            admissions => $raw.admissions.UInt,
+            rejections => $raw.rejections.UInt,
+            evictions => $raw.evictions.UInt,
+            resident-entries => $raw.resident-entries.Int,
+            resident-weight => $raw.resident-weight.Int,
+        )
+    }
+
+    method elems(--> Int:D) { self.stats.resident-entries }
+    method Bool(--> Bool:D) { so self.elems }
+
+    method clear(--> QueryCache:D) {
+        check-status(llev-query-cache-clear(self!handle), 'query-cache-clear');
+        self
+    }
+
+    method reset-stats(--> QueryCache:D) {
+        check-status(llev-query-cache-reset-stats(self!handle),
+            'query-cache-reset-stats');
+        self
+    }
+
+    multi method query(
+        Str:D $input, Int:D $maximum-distance,
+        QueryOrder:D :$order = TRAVERSAL,
+    --> QueryCursor:D) {
+        die 'maximum distance must be nonnegative' if $maximum-distance < 0;
+        my $bytes = $input.encode('utf8');
+        my Pointer $output .= new;
+        check-status(llev-query-cache-query-utf8(
+            self!handle, raw-pointer($bytes), $bytes.elems, $maximum-distance,
+            $order, $output,
+        ), 'query-cache-query-utf8');
+        QueryCursor.new(handle => $output)
+    }
+
+    multi method query(
+        Blob:D $input, Int:D $maximum-distance,
+        QueryOrder:D :$order = TRAVERSAL,
+    --> QueryCursor:D) {
+        die 'maximum distance must be nonnegative' if $maximum-distance < 0;
+        my Pointer $output .= new;
+        check-status(llev-query-cache-query-bytes(
+            self!handle, raw-pointer($input), $input.elems, $maximum-distance,
+            $order, $output,
+        ), 'query-cache-query-bytes');
+        QueryCursor.new(handle => $output)
+    }
+
+    multi method query(
+        Positional:D $input, Int:D $maximum-distance,
+        QueryOrder:D :$order = TRAVERSAL,
+    --> QueryCursor:D) {
+        die 'maximum distance must be nonnegative' if $maximum-distance < 0;
+        my $tokens = CArray[uint64].allocate($input.elems);
+        for $input.list.kv -> $index, $token {
+            die 'query token is outside uint64'
+                unless $token ~~ Int && 0 <= $token <= 2**64 - 1;
+            $tokens[$index] = $token;
+        }
+        my Pointer $output .= new;
+        check-status(llev-query-cache-query-u64(
+            self!handle, nativecast(Pointer, $tokens), $input.elems,
+            $maximum-distance, $order, $output,
+        ), 'query-cache-query-u64');
+        QueryCursor.new(handle => $output)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-query-cache-free($!handle);
         $!handle = Pointer;
         $!closed = True;
     }

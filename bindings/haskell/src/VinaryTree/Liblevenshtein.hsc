@@ -8,11 +8,21 @@ module VinaryTree.Liblevenshtein
   , Term(..)
   , Match(..)
   , Transducer
+  , QueryCache
+  , QueryCacheStats(..)
   , Cursor
   , PhoneticPattern
   , PhoneticRules
   , transducer
   , closeTransducer
+  , queryCache
+  , closeQueryCache
+  , queryCacheStats
+  , clearQueryCache
+  , resetQueryCacheStats
+  , cachedQueryText
+  , cachedQueryBytes
+  , cachedQueryU64
   , queryText
   , queryBytes
   , queryU64
@@ -62,6 +72,8 @@ import VinaryTree.Interop
 #include "liblevenshtein.h"
 
 data CTransducer
+data CQueryCache
+data CQueryCacheStats
 data CCursor
 data CPattern
 data CRules
@@ -78,6 +90,17 @@ data Term = BytesTerm !ByteString | TextTerm !Text | TokensTerm ![Word64]
 data Match = Match { term :: !Term, editDistance :: !Int, identifier :: !(Maybe Word64) }
   deriving stock (Eq, Show)
 newtype Transducer = Transducer (ForeignPtr CTransducer)
+newtype QueryCache = QueryCache (ForeignPtr CQueryCache)
+data QueryCacheStats = QueryCacheStats
+  { requests :: !Word64
+  , hits :: !Word64
+  , misses :: !Word64
+  , admissions :: !Word64
+  , rejections :: !Word64
+  , evictions :: !Word64
+  , residentEntries :: !Int
+  , residentWeight :: !Int
+  } deriving stock (Eq, Show)
 data Cursor = Cursor !(ForeignPtr CCursor) !(IORef [Match])
 newtype PhoneticPattern = PhoneticPattern (ForeignPtr CPattern)
 newtype PhoneticRules = PhoneticRules (ForeignPtr CRules)
@@ -88,6 +111,8 @@ foreign import ccall unsafe "&llev_transducer_free"
   cTransducerFree :: FunPtr (Ptr CTransducer -> IO ())
 foreign import ccall unsafe "&llev_query_cursor_free"
   cCursorFree :: FunPtr (Ptr CCursor -> IO ())
+foreign import ccall unsafe "&llev_query_cache_free"
+  cQueryCacheFree :: FunPtr (Ptr CQueryCache -> IO ())
 foreign import ccall unsafe "&llev_phonetic_pattern_free"
   cPatternFree :: FunPtr (Ptr CPattern -> IO ())
 foreign import ccall unsafe "&llev_phonetic_rules_free"
@@ -103,6 +128,24 @@ foreign import ccall unsafe "llev_transducer_query_bytes"
 foreign import ccall unsafe "llev_transducer_query_u64"
   cQueryU64 :: Ptr CTransducer -> Ptr Word64 -> CSize -> CSize -> Word32
             -> Ptr (Ptr CCursor) -> IO Status
+foreign import ccall unsafe "llev_query_cache_new"
+  cQueryCacheNew :: Ptr CTransducer -> CSize -> CSize
+                 -> Ptr (Ptr CQueryCache) -> IO Status
+foreign import ccall unsafe "llev_query_cache_clear"
+  cQueryCacheClear :: Ptr CQueryCache -> IO Status
+foreign import ccall unsafe "llev_query_cache_reset_stats"
+  cQueryCacheResetStats :: Ptr CQueryCache -> IO Status
+foreign import ccall unsafe "llev_query_cache_stats"
+  cQueryCacheStats :: Ptr CQueryCache -> Ptr CQueryCacheStats -> IO Status
+foreign import ccall unsafe "llev_query_cache_query_utf8"
+  cCachedQueryText :: Ptr CQueryCache -> Ptr CChar -> CSize -> CSize -> Word32
+                   -> Ptr (Ptr CCursor) -> IO Status
+foreign import ccall unsafe "llev_query_cache_query_bytes"
+  cCachedQueryBytes :: Ptr CQueryCache -> Ptr Word8 -> CSize -> CSize -> Word32
+                    -> Ptr (Ptr CCursor) -> IO Status
+foreign import ccall unsafe "llev_query_cache_query_u64"
+  cCachedQueryU64 :: Ptr CQueryCache -> Ptr Word64 -> CSize -> CSize -> Word32
+                  -> Ptr (Ptr CCursor) -> IO Status
 foreign import ccall unsafe "llev_transducer_query_pattern"
   cQueryPattern :: Ptr CTransducer -> Ptr CPattern -> Word8
                 -> Ptr (Ptr CCursor) -> IO Status
@@ -149,6 +192,8 @@ withTransducer :: Transducer -> (Ptr CTransducer -> IO a) -> IO a
 withTransducer (Transducer value) = withForeignPtr value
 withCursor :: Cursor -> (Ptr CCursor -> IO a) -> IO a
 withCursor (Cursor value _) = withForeignPtr value
+withQueryCache :: QueryCache -> (Ptr CQueryCache -> IO a) -> IO a
+withQueryCache (QueryCache value) = withForeignPtr value
 withPattern :: PhoneticPattern -> (Ptr CPattern -> IO a) -> IO a
 withPattern (PhoneticPattern value) = withForeignPtr value
 withRules :: PhoneticRules -> (Ptr CRules -> IO a) -> IO a
@@ -162,6 +207,40 @@ transducer algorithm resource = withDictionaryResource resource $ \resourcePoint
 
 closeTransducer :: Transducer -> IO ()
 closeTransducer (Transducer value) = finalizeForeignPtr value
+
+queryCache :: Int -> Int -> Transducer -> IO QueryCache
+queryCache maximumEntries maximumWeight value
+  | maximumEntries < 0 || maximumWeight < 0 =
+      throwIO (userError "query-cache limits must be non-negative")
+  | otherwise = withTransducer value $ \native ->
+      allocaBytes #{size void *} $ \output -> do
+        cQueryCacheNew native (fromIntegral maximumEntries)
+          (fromIntegral maximumWeight) output >>= check
+        QueryCache <$> (peekByteOff output 0 >>= newForeignPtr cQueryCacheFree)
+
+closeQueryCache :: QueryCache -> IO ()
+closeQueryCache (QueryCache value) = finalizeForeignPtr value
+
+queryCacheStats :: QueryCache -> IO QueryCacheStats
+queryCacheStats value = withQueryCache value $ \native ->
+  allocaBytes #{size LlevQueryCacheStats} $ \output -> do
+    cQueryCacheStats native output >>= check
+    QueryCacheStats
+      <$> #{peek LlevQueryCacheStats, requests} output
+      <*> #{peek LlevQueryCacheStats, hits} output
+      <*> #{peek LlevQueryCacheStats, misses} output
+      <*> #{peek LlevQueryCacheStats, admissions} output
+      <*> #{peek LlevQueryCacheStats, rejections} output
+      <*> #{peek LlevQueryCacheStats, evictions} output
+      <*> (fromIntegral <$> (#{peek LlevQueryCacheStats, resident_entries} output :: IO CSize))
+      <*> (fromIntegral <$> (#{peek LlevQueryCacheStats, resident_weight} output :: IO CSize))
+
+clearQueryCache :: QueryCache -> IO ()
+clearQueryCache value = withQueryCache value $ \native -> cQueryCacheClear native >>= check
+
+resetQueryCacheStats :: QueryCache -> IO ()
+resetQueryCacheStats value =
+  withQueryCache value $ \native -> cQueryCacheResetStats native >>= check
 
 newCursor :: Ptr CCursor -> IO Cursor
 newCursor pointer = Cursor <$> newForeignPtr cCursorFree pointer <*> newIORef []
@@ -191,6 +270,37 @@ queryU64 order value input maximum
         cQueryU64 native tokens (fromIntegral (length input)) (fromIntegral maximum)
           (fromIntegral (fromEnum order)) output >>= check
         peekByteOff output 0 >>= newCursor
+
+cachedQueryBytesWith :: (Ptr CQueryCache -> Ptr Word8 -> CSize -> CSize -> Word32
+                       -> Ptr (Ptr CCursor) -> IO Status)
+                     -> QueryOrder -> QueryCache -> ByteString -> Int -> IO Cursor
+cachedQueryBytesWith action order value input maximum
+  | maximum < 0 = throwIO (userError "maximum distance must be non-negative")
+  | otherwise = withQueryCache value $ \native ->
+      BSU.unsafeUseAsCStringLen input $ \(p, n) ->
+        allocaBytes #{size void *} $ \output -> do
+          action native (castPtr p) (fromIntegral n) (fromIntegral maximum)
+            (fromIntegral (fromEnum order)) output >>= check
+          peekByteOff output 0 >>= newCursor
+
+cachedQueryText :: QueryOrder -> QueryCache -> Text -> Int -> IO Cursor
+cachedQueryText order value input maximum =
+  cachedQueryBytesWith
+    (\cache p n m o out -> cCachedQueryText cache (castPtr p) n m o out)
+    order value (Text.encodeUtf8 input) maximum
+
+cachedQueryBytes :: QueryOrder -> QueryCache -> ByteString -> Int -> IO Cursor
+cachedQueryBytes = cachedQueryBytesWith cCachedQueryBytes
+
+cachedQueryU64 :: QueryOrder -> QueryCache -> [Word64] -> Int -> IO Cursor
+cachedQueryU64 order value input maximum
+  | maximum < 0 = throwIO (userError "maximum distance must be non-negative")
+  | otherwise = withQueryCache value $ \native -> withArray input $ \tokens ->
+      allocaBytes #{size void *} $ \output -> do
+        cCachedQueryU64 native tokens (fromIntegral (length input))
+          (fromIntegral maximum) (fromIntegral (fromEnum order)) output >>= check
+        peekByteOff output 0 >>= newCursor
+
 queryPattern :: Transducer -> PhoneticPattern -> Int -> IO Cursor
 queryPattern value pattern maximum
   | maximum < 0 || maximum > 255 = throwIO (userError "pattern distance is outside u8")

@@ -54,6 +54,7 @@ program test_cross_project
   call require(all(seen), "query-start snapshot changed")
 
   call assert_algorithms_and_order(dict)
+  call assert_query_cache(machine)
   call assert_non_text_domains()
   call assert_phonetic_surface(machine)
 
@@ -87,6 +88,46 @@ program test_cross_project
   print *, "Fortran cross-project snapshot conformance passed"
 
 contains
+  subroutine assert_query_cache(source)
+    type(transducer), intent(in) :: source
+    type(query_cache) :: cache
+    type(query_cache_stats) :: counters
+    type(query_iterator) :: stream
+    type(levenshtein_match) :: current
+    integer(c_int32_t) :: local_status
+    logical :: more
+    integer :: pass, count
+
+    call new_query_cache(cache, source, 8_c_size_t, 1048576_c_size_t, local_status)
+    call require(local_status == llev_ok, "query-cache constructor")
+    do pass = 1, 2
+      call cache%query_text("cat", 1_c_size_t, stream, status=local_status)
+      call require(local_status == llev_ok, "cached query")
+      count = 0
+      do
+        call stream%next(current, more, local_status)
+        call require(local_status == llev_ok, "cached cursor")
+        if (.not. more) exit
+        count = count + 1
+      end do
+      call require(count > 0, "cached result is empty")
+    end do
+    counters = cache%stats(local_status)
+    call require(local_status == llev_ok, "query-cache stats")
+    call require(counters%requests == 2 .and. counters%hits == 1 .and. &
+         counters%misses == 1, "query-cache hit accounting")
+    call require(counters%resident_entries == 1 .and. &
+         counters%resident_weight > 0, "query-cache residency")
+    call cache%reset_stats(local_status)
+    counters = cache%stats(local_status)
+    call require(counters%requests == 0 .and. counters%resident_entries == 1, &
+         "query-cache reset preserves residency")
+    call cache%clear(local_status)
+    counters = cache%stats(local_status)
+    call require(counters%resident_entries == 0, "query-cache clear")
+    call cache%close()
+  end subroutine
+
   subroutine require(condition, message)
     logical, intent(in) :: condition; character(len=*), intent(in) :: message
     if (.not. condition) error stop message

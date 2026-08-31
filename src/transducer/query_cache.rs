@@ -321,7 +321,7 @@ fn mix64(mut value: u64) -> u64 {
 }
 
 #[inline]
-fn cache_query_hash<S: BuildHasher>(hash_builder: &S, query: &str) -> u64 {
+fn cache_query_hash<S: BuildHasher>(hash_builder: &S, query: &[u8]) -> u64 {
     hash_builder.hash_one(query)
 }
 
@@ -355,7 +355,7 @@ fn allocating_victim_plan_enabled() -> bool {
 
 #[derive(Clone, Debug)]
 struct Resident<V> {
-    query: Arc<str>,
+    query: Arc<[u8]>,
     query_hash: u64,
     max_distance: usize,
     results: Arc<[V]>,
@@ -368,7 +368,7 @@ type QueryVariants = SmallVec<[(usize, usize); 4]>;
 
 #[derive(Clone, Debug)]
 struct QueryRecord {
-    query: Arc<str>,
+    query: Arc<[u8]>,
     variants: QueryVariants,
 }
 
@@ -377,7 +377,10 @@ type QueryHashBucket = SmallVec<[QueryRecord; 1]>;
 /// A bounded cache of fuzzy-query results scoped to one dictionary version.
 ///
 /// Results are shared via `Arc<[V]>`, so a hit clones only an `Arc`. Query
-/// lookup borrows `&str`; it does not allocate an owned lookup key. This type
+/// lookup borrows the query bytes; it does not allocate an owned lookup key.
+/// The string-oriented methods preserve the original ergonomic API, while the
+/// binary-key methods let byte, token, and structured-query callers share the
+/// same policy without lossy encoding. This type
 /// is intentionally mutable, single-owner, and synchronization-free: callers
 /// choose owner sharding or synchronization at the workload boundary instead
 /// of paying for coordination on every local hit.
@@ -488,8 +491,17 @@ where
 
     /// Test residency without affecting recency or frequency.
     pub fn contains(&self, query: &str, max_distance: usize) -> bool {
-        let query_hash = cache_query_hash(&self.query_hasher, query);
-        self.slot_for(query_hash, query, max_distance).is_some()
+        self.contains_key(query.as_bytes(), max_distance)
+    }
+
+    /// Test a binary query key without affecting recency or frequency.
+    ///
+    /// Callers sharing a cache across query families must include an
+    /// unambiguous family/domain discriminator in `query_key`. A cache owned by
+    /// one fixed automaton and unit domain can use the query units directly.
+    pub fn contains_key(&self, query_key: &[u8], max_distance: usize) -> bool {
+        let query_hash = cache_query_hash(&self.query_hasher, query_key);
+        self.slot_for(query_hash, query_key, max_distance).is_some()
     }
 
     /// Drop every entry while retaining the current dictionary version.
@@ -513,37 +525,105 @@ where
     where
         F: FnOnce() -> Vec<V>,
     {
+        match self.try_get_or_compute(query, max_distance, dict_version, || {
+            Ok::<_, std::convert::Infallible>(compute())
+        }) {
+            Ok(results) => results,
+            Err(error) => match error {},
+        }
+    }
+
+    /// Fallible form of [`get_or_compute`](Self::get_or_compute).
+    ///
+    /// A failed miss increments request/miss counters but never admits a
+    /// partial result. This is the appropriate entry point when exact
+    /// computation crosses an I/O, callback, or foreign-provider boundary.
+    pub fn try_get_or_compute<F, E>(
+        &mut self,
+        query: &str,
+        max_distance: usize,
+        dict_version: u64,
+        compute: F,
+    ) -> Result<Arc<[V]>, E>
+    where
+        F: FnOnce() -> Result<Vec<V>, E>,
+    {
+        self.try_get_or_compute_impl(
+            query.as_bytes(),
+            max_distance,
+            dict_version,
+            compute,
+            |weigher, results| weigher.weight(query, max_distance, results),
+        )
+    }
+
+    /// Look up an arbitrary binary query key or compute it exactly.
+    ///
+    /// `weigh` runs only after a successful miss and supplies the logical
+    /// residency weight. The key is copied only when the result is admitted;
+    /// hits and rejected misses use the caller's borrowed slice directly.
+    /// Approximate admission affects residency only, never returned values.
+    pub fn try_get_or_compute_key<F, E, M>(
+        &mut self,
+        query_key: &[u8],
+        max_distance: usize,
+        dict_version: u64,
+        compute: F,
+        weigh: M,
+    ) -> Result<Arc<[V]>, E>
+    where
+        F: FnOnce() -> Result<Vec<V>, E>,
+        M: FnOnce(&[V]) -> usize,
+    {
+        self.try_get_or_compute_impl(
+            query_key,
+            max_distance,
+            dict_version,
+            compute,
+            |_default_weigher, results| weigh(results),
+        )
+    }
+
+    fn try_get_or_compute_impl<F, E, M>(
+        &mut self,
+        query_key: &[u8],
+        max_distance: usize,
+        dict_version: u64,
+        compute: F,
+        weigh: M,
+    ) -> Result<Arc<[V]>, E>
+    where
+        F: FnOnce() -> Result<Vec<V>, E>,
+        M: FnOnce(&W, &[V]) -> usize,
+    {
         self.reconcile_version(dict_version);
         self.stats.requests = self.stats.requests.saturating_add(1);
 
         if !self.limits.admission_enabled() {
             self.stats.misses = self.stats.misses.saturating_add(1);
             self.stats.rejections = self.stats.rejections.saturating_add(1);
-            return compute().into();
+            return compute().map(Into::into);
         }
 
-        let query_hash = cache_query_hash(&self.query_hasher, query);
+        let query_hash = cache_query_hash(&self.query_hasher, query_key);
         let frequency_hash = cache_frequency_hash(query_hash, max_distance);
         self.frequency
             .get_or_insert_with(|| FrequencySketch::new(self.limits.max_entries))
             .record(frequency_hash);
 
-        if let Some(slot) = self.slot_for(query_hash, query, max_distance) {
+        if let Some(slot) = self.slot_for(query_hash, query_key, max_distance) {
             self.stats.hits = self.stats.hits.saturating_add(1);
             let resident = self.slots[slot].as_mut().expect("indexed resident slot");
             resident.visited = true;
-            return Arc::clone(&resident.results);
+            return Ok(Arc::clone(&resident.results));
         }
 
         self.stats.misses = self.stats.misses.saturating_add(1);
-        let results: Arc<[V]> = compute().into();
-        let weight = self
-            .weigher
-            .weight(query, max_distance, results.as_ref())
-            .max(1);
+        let results: Arc<[V]> = compute()?.into();
+        let weight = weigh(&self.weigher, results.as_ref()).max(1);
         if self.admit(
             query_hash,
-            query,
+            query_key,
             max_distance,
             &results,
             weight,
@@ -553,7 +633,7 @@ where
         } else {
             self.stats.rejections = self.stats.rejections.saturating_add(1);
         }
-        results
+        Ok(results)
     }
 
     fn reconcile_version(&mut self, dict_version: u64) {
@@ -578,7 +658,7 @@ where
     }
 
     #[inline]
-    fn slot_for(&self, query_hash: u64, query: &str, max_distance: usize) -> Option<usize> {
+    fn slot_for(&self, query_hash: u64, query: &[u8], max_distance: usize) -> Option<usize> {
         self.index.get(&query_hash).and_then(|bucket| {
             bucket
                 .iter()
@@ -596,7 +676,7 @@ where
     fn admit(
         &mut self,
         query_hash: u64,
-        query: &str,
+        query: &[u8],
         max_distance: usize,
         results: &Arc<[V]>,
         weight: usize,
@@ -814,13 +894,13 @@ where
     fn insert_resident(
         &mut self,
         query_hash: u64,
-        query: &str,
+        query: &[u8],
         max_distance: usize,
         results: &Arc<[V]>,
         weight: usize,
         frequency_hash: u64,
     ) {
-        let query: Arc<str> = self
+        let query: Arc<[u8]> = self
             .index
             .get(&query_hash)
             .and_then(|bucket| bucket.iter().find(|record| record.query.as_ref() == query))
@@ -1006,6 +1086,43 @@ mod tests {
     }
 
     #[test]
+    fn binary_keys_are_exact_and_allocate_only_when_admitted() {
+        let mut cache = unit_cache(4);
+        let first = cache
+            .try_get_or_compute_key(&[0, 0xff, 1], 2, 7, || Ok::<_, ()>(vec![11]), |_| 1)
+            .unwrap();
+        let second = cache
+            .try_get_or_compute_key(&[0, 0xff, 2], 2, 7, || Ok::<_, ()>(vec![22]), |_| 1)
+            .unwrap();
+        let hit = cache
+            .try_get_or_compute_key(&[0, 0xff, 1], 2, 7, || Ok::<_, ()>(vec![99]), |_| 1)
+            .unwrap();
+
+        assert_eq!(&*first, &[11]);
+        assert_eq!(&*second, &[22]);
+        assert!(Arc::ptr_eq(&first, &hit));
+        assert!(cache.contains_key(&[0, 0xff, 1], 2));
+        assert!(cache.contains_key(&[0, 0xff, 2], 2));
+        cache.assert_invariants();
+    }
+
+    #[test]
+    fn failed_computation_never_installs_a_partial_entry() {
+        let mut cache = unit_cache(4);
+        let error = cache
+            .try_get_or_compute("query", 1, 9, || Err::<Vec<u32>, _>("provider fault"))
+            .unwrap_err();
+
+        assert_eq!(error, "provider fault");
+        assert!(!cache.contains("query", 1));
+        assert_eq!(cache.stats().requests(), 1);
+        assert_eq!(cache.stats().misses(), 1);
+        assert_eq!(cache.stats().admissions(), 0);
+        assert_eq!(cache.stats().rejections(), 0);
+        cache.assert_invariants();
+    }
+
+    #[test]
     fn entry_and_weight_limits_hold_after_every_operation() {
         let weigher = |_query: &str, _distance: usize, results: &[u32]| results.len();
         let mut cache =
@@ -1070,13 +1187,13 @@ mod tests {
             let _ = cache.get_or_compute("one-query", distance, 0, || vec![distance as u32]);
         }
 
-        let query_hash = cache_query_hash(&cache.query_hasher, "one-query");
+        let query_hash = cache_query_hash(&cache.query_hasher, b"one-query");
         let variants = &cache
             .index
             .get(&query_hash)
             .expect("query hash is indexed")
             .iter()
-            .find(|record| record.query.as_ref() == "one-query")
+            .find(|record| record.query.as_ref() == b"one-query")
             .expect("query is indexed")
             .variants;
         assert!(variants.windows(2).all(|window| window[0].0 < window[1].0));
@@ -1088,7 +1205,7 @@ mod tests {
             .clone();
         for distance in 0..64 {
             let slot = cache
-                .slot_for(query_hash, "one-query", distance)
+                .slot_for(query_hash, b"one-query", distance)
                 .expect("variant exists");
             let resident = cache.slots[slot].as_ref().expect("variant is resident");
             assert!(Arc::ptr_eq(&first_query, &resident.query));
@@ -1322,7 +1439,7 @@ mod tests {
     #[test]
     fn nibble_counters_saturate_and_age_independently() {
         let mut sketch = FrequencySketch::new(8);
-        let query_hash = cache_query_hash(&AHashRandomState::new(), "hot");
+        let query_hash = cache_query_hash(&AHashRandomState::new(), b"hot");
         let hash = cache_frequency_hash(query_hash, 1);
         for _ in 0..1000 {
             sketch.record(hash);

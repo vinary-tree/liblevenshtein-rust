@@ -21,6 +21,8 @@ export ABI_VERSION,
     BorrowedMatch,
     BorrowedBatch,
     Transducer,
+    QueryCache,
+    QueryCacheStats,
     QueryCursor,
     PhoneticPattern,
     PhoneticRuleSet,
@@ -33,6 +35,9 @@ export ABI_VERSION,
     snapshot,
     unit_domain,
     query,
+    cache_stats,
+    clear!,
+    reset_stats!,
     next_batch!,
     reduce_batches!,
     materialize,
@@ -73,6 +78,29 @@ struct RawBatch
     matches::Ptr{RawMatch}
     len::Csize_t
     generation::UInt64
+end
+
+struct RawQueryCacheStats
+    requests::UInt64
+    hits::UInt64
+    misses::UInt64
+    admissions::UInt64
+    rejections::UInt64
+    evictions::UInt64
+    resident_entries::Csize_t
+    resident_weight::Csize_t
+end
+
+"""A copied snapshot of bounded query-cache policy and residency counters."""
+struct QueryCacheStats
+    requests::UInt64
+    hits::UInt64
+    misses::UInt64
+    admissions::UInt64
+    rejections::UInt64
+    evictions::UInt64
+    resident_entries::Int
+    resident_weight::Int
 end
 
 struct OwnedString
@@ -411,6 +439,7 @@ end
 
 function query(transducer::Transducer, input::AbstractString, maximum_distance::Integer;
     order::QueryOrder=ORDER_TRAVERSAL)
+    maximum_distance >= 0 || throw(ArgumentError("maximum_distance must be nonnegative"))
     bytes = text_bytes(input)
     output = Ref{Ptr{Cvoid}}(C_NULL)
     GC.@preserve bytes checked(ccall(native(:llev_transducer_query_utf8), Cint,
@@ -422,6 +451,7 @@ end
 
 function query(transducer::Transducer, input::AbstractVector{UInt8},
     maximum_distance::Integer; order::QueryOrder=ORDER_TRAVERSAL)
+    maximum_distance >= 0 || throw(ArgumentError("maximum_distance must be nonnegative"))
     bytes = Vector{UInt8}(input)
     output = Ref{Ptr{Cvoid}}(C_NULL)
     GC.@preserve bytes checked(ccall(native(:llev_transducer_query_bytes), Cint,
@@ -433,6 +463,7 @@ end
 
 function query(transducer::Transducer, input::AbstractVector{<:Integer},
     maximum_distance::Integer; order::QueryOrder=ORDER_TRAVERSAL)
+    maximum_distance >= 0 || throw(ArgumentError("maximum_distance must be nonnegative"))
     tokens = UInt64[]
     sizehint!(tokens, length(input))
     for token in input
@@ -458,6 +489,115 @@ end
 
 Base.close(transducer::Transducer) = close!(transducer)
 Base.isopen(transducer::Transducer) = !transducer.closed
+
+"""
+An exclusive bounded complete-query cache backed by native TinyLFU admission
+and SIEVE eviction. The object has no internal lock; use one cache per Julia
+task or worker when queries run in parallel.
+"""
+mutable struct QueryCache
+    handle::Ptr{Cvoid}
+    closed::Bool
+end
+
+function QueryCache(transducer::Transducer; max_entries::Integer=1024,
+    max_weight::Integer=64 * 1024 * 1024)
+    max_entries >= 0 || throw(ArgumentError("max_entries must be nonnegative"))
+    max_weight >= 0 || throw(ArgumentError("max_weight must be nonnegative"))
+    output = Ref{Ptr{Cvoid}}(C_NULL)
+    checked(ccall(native(:llev_query_cache_new), Cint,
+        (Ptr{Cvoid}, Csize_t, Csize_t, Ref{Ptr{Cvoid}}),
+        require_open(transducer), max_entries, max_weight, output),
+        :llev_query_cache_new)
+    value = QueryCache(output[], false)
+    finalizer(close!, value)
+    value
+end
+
+function require_open(cache::QueryCache)
+    cache.closed &&
+        throw(NativeError(Int32(STATUS_CLOSED), :query_cache, "query cache is closed"))
+    cache.handle
+end
+
+function cache_stats(cache::QueryCache)
+    output = Ref(RawQueryCacheStats(0, 0, 0, 0, 0, 0, 0, 0))
+    checked(ccall(native(:llev_query_cache_stats), Cint,
+        (Ptr{Cvoid}, Ref{RawQueryCacheStats}), require_open(cache), output),
+        :llev_query_cache_stats)
+    raw = output[]
+    QueryCacheStats(raw.requests, raw.hits, raw.misses, raw.admissions,
+        raw.rejections, raw.evictions, Int(raw.resident_entries),
+        Int(raw.resident_weight))
+end
+
+Base.length(cache::QueryCache) = cache_stats(cache).resident_entries
+Base.isempty(cache::QueryCache) = length(cache) == 0
+
+function clear!(cache::QueryCache)
+    checked(ccall(native(:llev_query_cache_clear), Cint, (Ptr{Cvoid},),
+        require_open(cache)), :llev_query_cache_clear)
+    cache
+end
+
+function reset_stats!(cache::QueryCache)
+    checked(ccall(native(:llev_query_cache_reset_stats), Cint, (Ptr{Cvoid},),
+        require_open(cache)), :llev_query_cache_reset_stats)
+    cache
+end
+
+function query(cache::QueryCache, input::AbstractString, maximum_distance::Integer;
+    order::QueryOrder=ORDER_TRAVERSAL)
+    maximum_distance >= 0 || throw(ArgumentError("maximum_distance must be nonnegative"))
+    bytes = text_bytes(input)
+    output = Ref{Ptr{Cvoid}}(C_NULL)
+    GC.@preserve bytes checked(ccall(native(:llev_query_cache_query_utf8), Cint,
+        (Ptr{Cvoid}, Ptr{UInt8}, Csize_t, Csize_t, UInt32, Ref{Ptr{Cvoid}}),
+        require_open(cache), isempty(bytes) ? C_NULL : pointer(bytes), length(bytes),
+        maximum_distance, UInt32(order), output), :llev_query_cache_query_utf8)
+    QueryCursor(output[])
+end
+
+function query(cache::QueryCache, input::AbstractVector{UInt8},
+    maximum_distance::Integer; order::QueryOrder=ORDER_TRAVERSAL)
+    maximum_distance >= 0 || throw(ArgumentError("maximum_distance must be nonnegative"))
+    bytes = Vector{UInt8}(input)
+    output = Ref{Ptr{Cvoid}}(C_NULL)
+    GC.@preserve bytes checked(ccall(native(:llev_query_cache_query_bytes), Cint,
+        (Ptr{Cvoid}, Ptr{UInt8}, Csize_t, Csize_t, UInt32, Ref{Ptr{Cvoid}}),
+        require_open(cache), isempty(bytes) ? C_NULL : pointer(bytes), length(bytes),
+        maximum_distance, UInt32(order), output), :llev_query_cache_query_bytes)
+    QueryCursor(output[])
+end
+
+function query(cache::QueryCache, input::AbstractVector{<:Integer},
+    maximum_distance::Integer; order::QueryOrder=ORDER_TRAVERSAL)
+    maximum_distance >= 0 || throw(ArgumentError("maximum_distance must be nonnegative"))
+    tokens = UInt64[]
+    sizehint!(tokens, length(input))
+    for token in input
+        0 <= token <= typemax(UInt64) || throw(ArgumentError("query token is outside UInt64"))
+        push!(tokens, UInt64(token))
+    end
+    output = Ref{Ptr{Cvoid}}(C_NULL)
+    GC.@preserve tokens checked(ccall(native(:llev_query_cache_query_u64), Cint,
+        (Ptr{Cvoid}, Ptr{UInt64}, Csize_t, Csize_t, UInt32, Ref{Ptr{Cvoid}}),
+        require_open(cache), isempty(tokens) ? C_NULL : pointer(tokens), length(tokens),
+        maximum_distance, UInt32(order), output), :llev_query_cache_query_u64)
+    QueryCursor(output[])
+end
+
+function close!(cache::QueryCache)
+    cache.closed && return nothing
+    handle = cache.handle
+    cache.handle = C_NULL
+    cache.closed = true
+    handle == C_NULL || ccall(native(:llev_query_cache_free), Cvoid, (Ptr{Cvoid},), handle)
+    nothing
+end
+
+Base.close(cache::QueryCache) = close!(cache)
+Base.isopen(cache::QueryCache) = !cache.closed
 
 mutable struct PhoneticPattern
     handle::Ptr{Cvoid}
@@ -539,6 +679,9 @@ end
 @doc "Capture an independently owned immutable transducer revision." snapshot
 @doc "Return a transducer's byte, Unicode-scalar, or u64 unit domain." unit_domain
 @doc "Start a lazy snapshot-consistent query selected by the input's Julia type." query
+@doc "Copy aggregate TinyLFU/SIEVE policy counters and current residency." cache_stats
+@doc "Drop all resident cached query results while retaining policy counters." clear!
+@doc "Reset cache counters without changing residency or frequency state." reset_stats!
 @doc "Copy and settle one bounded native cursor batch." next_batch!
 @doc "Consume callback-scoped zero-copy batches and close the cursor." reduce_batches!
 @doc "Copy a callback-scoped borrowed match into an independently owned Match." materialize

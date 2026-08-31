@@ -478,6 +478,20 @@ void assert_cpp_algorithms_order_and_lifecycle() {
     }
     assert(terms == (std::vector<std::string>{"cat", "bat", "cats"}));
 
+    // query_cache::~query_cache releases residency and the retained source at
+    // scope exit; no explicit close method can be forgotten on this path.
+    ll::query_cache cache(standard, 8, 1024 * 1024);
+    assert(cache.stats().requests == 0);
+    try {
+        static_cast<void>(cache.query("cat", 1));
+        assert(false && "cache accepted a provider without snapshot identity");
+    } catch (const ll::error& failure) {
+        assert(failure.status() == LLEV_STATUS_UNSUPPORTED);
+    }
+    cache.clear();
+    cache.reset_stats();
+    assert(cache.stats().requests == 0);
+
     const auto retains_before = retain_calls.load();
     const auto releases_before = release_calls.load();
     {

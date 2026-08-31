@@ -7,6 +7,15 @@
   ([dictionary {:keys [algorithm] :or {algorithm :standard}}]
    (native/transducer dictionary (name algorithm))))
 
+(defn query-cache
+  "Retain a transducer behind a hard-bounded snapshot-aware result cache."
+  ([automaton] (native/queryCache automaton))
+  ([automaton {:keys [maximum-entries maximum-weight]
+               :or {maximum-entries 1024 maximum-weight (* 64 1024 1024)}}]
+   (native/queryCache automaton
+                      #js {:maximumEntries maximum-entries
+                           :maximumWeight maximum-weight})))
+
 (defn close! [resource] (.close resource))
 
 (defn query
@@ -14,6 +23,20 @@
    (.query automaton term max-distance "traversal"))
   ([automaton term max-distance {:keys [order] :or {order :traversal}}]
    (.query automaton term max-distance (name order))))
+
+(defn cache-stats [cache]
+  (let [stats (.-stats cache)]
+    {:requests (.-requests stats)
+     :hits (.-hits stats)
+     :misses (.-misses stats)
+     :admissions (.-admissions stats)
+     :rejections (.-rejections stats)
+     :evictions (.-evictions stats)
+     :resident-entries (.-residentEntries stats)
+     :resident-weight (.-residentWeight stats)}))
+
+(defn clear-cache! [cache] (.clear cache))
+(defn reset-cache-stats! [cache] (.resetStats cache))
 
 (defn reduce-batches
   "Allocation-minimizing batch reduction; borrowed views must not escape f."

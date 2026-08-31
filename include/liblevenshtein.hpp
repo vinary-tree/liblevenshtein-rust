@@ -222,6 +222,7 @@ public:
 
 private:
     friend class transducer;
+    friend class query_cache;
 
     explicit query_cursor(LlevQueryCursor* value) try
         : state_(std::make_shared<detail::cursor_state>(value)) {}
@@ -301,11 +302,12 @@ public:
      */
     [[nodiscard]] query_cursor query(
         std::span<const std::byte> bytes,
-        std::size_t maximum_distance) const {
+        std::size_t maximum_distance,
+        query_order order = query_order::traversal) const {
         LlevQueryCursor* cursor = nullptr;
         check(llev_transducer_query_bytes(
             value_, reinterpret_cast<const std::uint8_t*>(bytes.data()), bytes.size(),
-            maximum_distance, LLEV_QUERY_ORDER_TRAVERSAL, &cursor));
+            maximum_distance, static_cast<std::uint32_t>(order), &cursor));
         return query_cursor(cursor);
     }
 
@@ -317,17 +319,106 @@ public:
      */
     [[nodiscard]] query_cursor query(
         std::span<const std::uint64_t> tokens,
-        std::size_t maximum_distance) const {
+        std::size_t maximum_distance,
+        query_order order = query_order::traversal) const {
         LlevQueryCursor* cursor = nullptr;
         check(llev_transducer_query_u64(value_, tokens.data(), tokens.size(),
                                         maximum_distance,
-                                        LLEV_QUERY_ORDER_TRAVERSAL,
+                                        static_cast<std::uint32_t>(order),
                                         &cursor));
         return query_cursor(cursor);
     }
 
 private:
+    friend class query_cache;
     LlevTransducer* value_ = nullptr;
+};
+
+/** Exclusive, synchronization-free bounded cache for complete query results.
+ *
+ * Limits apply independently to traversal and distance-then-term result-order
+ * shards. Construct one cache per worker for parallel workloads. Returned
+ * cursors own their immutable result and may outlive this object.
+ */
+class query_cache final {
+public:
+    /** Retain a transducer and configure hard per-order bounds.
+     * @param source live transducer whose provider is retained
+     * @param maximum_entries maximum resident results in each order shard
+     * @param maximum_weight maximum logical result weight in each order shard
+     */
+    query_cache(const transducer& source,
+                std::size_t maximum_entries = 1024,
+                std::size_t maximum_weight = 64 * 1024 * 1024) {
+        check(llev_query_cache_new(source.value_, maximum_entries,
+                                   maximum_weight, &value_));
+    }
+    query_cache(const query_cache&) = delete;
+    query_cache& operator=(const query_cache&) = delete;
+    /** Transfer exclusive cache ownership. */
+    query_cache(query_cache&& other) noexcept
+        : value_(std::exchange(other.value_, nullptr)) {}
+    /** Release current residency and transfer exclusive ownership. */
+    query_cache& operator=(query_cache&& other) noexcept {
+        if (this != &other) {
+            llev_query_cache_free(value_);
+            value_ = std::exchange(other.value_, nullptr);
+        }
+        return *this;
+    }
+    /** Release all resident results and the retained transducer. */
+    ~query_cache() { llev_query_cache_free(value_); }
+
+    /** Copy aggregate policy counters and current residency. */
+    [[nodiscard]] LlevQueryCacheStats stats() const {
+        LlevQueryCacheStats output{};
+        check(llev_query_cache_stats(value_, &output));
+        return output;
+    }
+
+    /** Drop resident results while preserving policy counters. */
+    void clear() { check(llev_query_cache_clear(value_)); }
+    /** Reset counters while preserving residency and frequency state. */
+    void reset_stats() { check(llev_query_cache_reset_stats(value_)); }
+
+    /** Query Unicode text through the bounded complete-result cache. */
+    [[nodiscard]] query_cursor query(
+        std::string_view text,
+        std::size_t maximum_distance,
+        query_order order = query_order::traversal) {
+        LlevQueryCursor* cursor = nullptr;
+        check(llev_query_cache_query_utf8(
+            value_, text.data(), text.size(), maximum_distance,
+            static_cast<std::uint32_t>(order), &cursor));
+        return query_cursor(cursor);
+    }
+
+    /** Query an exact byte sequence through the bounded result cache. */
+    [[nodiscard]] query_cursor query(
+        std::span<const std::byte> bytes,
+        std::size_t maximum_distance,
+        query_order order = query_order::traversal) {
+        LlevQueryCursor* cursor = nullptr;
+        check(llev_query_cache_query_bytes(
+            value_, reinterpret_cast<const std::uint8_t*>(bytes.data()), bytes.size(),
+            maximum_distance, static_cast<std::uint32_t>(order), &cursor));
+        return query_cursor(cursor);
+    }
+
+    /** Query exact u64 tokens through the bounded result cache. */
+    [[nodiscard]] query_cursor query(
+        std::span<const std::uint64_t> tokens,
+        std::size_t maximum_distance,
+        query_order order = query_order::traversal) {
+        LlevQueryCursor* cursor = nullptr;
+        check(llev_query_cache_query_u64(
+            value_, tokens.data(), tokens.size(), maximum_distance,
+            static_cast<std::uint32_t>(order), &cursor));
+        return query_cursor(cursor);
+    }
+
+private:
+    LlevQueryCache* value_ = nullptr;
 };
 
 } // namespace vinary_tree::liblevenshtein

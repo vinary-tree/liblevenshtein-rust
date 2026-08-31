@@ -81,8 +81,13 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `applyRules` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
+| `cachedQueryBytes` | `llev_query_cache_query_bytes` | project ABI operation |
+| `cachedQueryText` | `llev_query_cache_query_utf8` | project ABI operation |
+| `cachedQueryU64` | `llev_query_cache_query_u64` | project ABI operation |
+| `clearQueryCache` | `llev_query_cache_clear` | project ABI operation |
 | `closeCursor` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `closePattern` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
+| `closeQueryCache` | `llev_query_cache_free` | project ABI operation |
 | `closeRules` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `closeTransducer` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `damerauDistance` | `llev_damerau_distance` | standalone exact or thresholded distance |
@@ -96,10 +101,13 @@ variants, protocols, or methods.
 | `patternSize` | `llev_phonetic_pattern_size` | compiled phonetic-pattern lifecycle and matching |
 | `phoneticRules` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
 | `queryBytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |
+| `queryCache` | `llev_query_cache_new` | project ABI operation |
+| `queryCacheStats` | `llev_query_cache_stats` | project ABI operation |
 | `queryPattern` | `llev_transducer_query_pattern` | phonetic-pattern dictionary query |
 | `queryText` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
 | `queryU64` | `llev_transducer_query_u64` | domain-preserving dictionary query |
 | `regexPattern` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
+| `resetQueryCacheStats` | `llev_query_cache_reset_stats` | project ABI operation |
 | `rulesLength` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
 | `transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `trueDamerauDistance` | `llev_true_damerau_distance` | standalone true-Damerau distance |

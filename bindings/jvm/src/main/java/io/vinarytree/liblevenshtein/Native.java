@@ -35,6 +35,15 @@ final class Native {
             JAVA_LONG.withName("generation"));
     static final MemoryLayout OWNED_STRING = MemoryLayout.structLayout(
             ADDRESS.withName("data"), JAVA_LONG.withName("len"));
+    static final MemoryLayout QUERY_CACHE_STATS = MemoryLayout.structLayout(
+            JAVA_LONG.withName("requests"),
+            JAVA_LONG.withName("hits"),
+            JAVA_LONG.withName("misses"),
+            JAVA_LONG.withName("admissions"),
+            JAVA_LONG.withName("rejections"),
+            JAVA_LONG.withName("evictions"),
+            JAVA_LONG.withName("resident_entries"),
+            JAVA_LONG.withName("resident_weight"));
 
     private static final Linker LINKER = Linker.nativeLinker();
     private static final MethodHandle LAST_ERROR;
@@ -45,6 +54,14 @@ final class Native {
     private static final MethodHandle QUERY_BYTES;
     private static final MethodHandle QUERY_U64;
     private static final MethodHandle QUERY_PATTERN;
+    private static final MethodHandle QUERY_CACHE_NEW;
+    private static final MethodHandle QUERY_CACHE_CLEAR;
+    private static final MethodHandle QUERY_CACHE_RESET_STATS;
+    private static final MethodHandle QUERY_CACHE_STATS_HANDLE;
+    private static final MethodHandle QUERY_CACHE_FREE;
+    private static final MethodHandle QUERY_CACHE_UTF8;
+    private static final MethodHandle QUERY_CACHE_BYTES;
+    private static final MethodHandle QUERY_CACHE_U64;
     private static final MethodHandle NEXT_BATCH;
     private static final MethodHandle RELEASE_BATCH;
     private static final MethodHandle CURSOR_FREE;
@@ -74,6 +91,19 @@ final class Native {
         QUERY_U64 = queryHandle(symbols, "llev_transducer_query_u64");
         QUERY_PATTERN = downcall(symbols, "llev_transducer_query_pattern",
                 FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_BYTE, ADDRESS));
+        QUERY_CACHE_NEW = downcall(symbols, "llev_query_cache_new",
+                FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_LONG, JAVA_LONG, ADDRESS));
+        QUERY_CACHE_CLEAR = downcall(symbols, "llev_query_cache_clear",
+                FunctionDescriptor.of(JAVA_INT, ADDRESS));
+        QUERY_CACHE_RESET_STATS = downcall(symbols, "llev_query_cache_reset_stats",
+                FunctionDescriptor.of(JAVA_INT, ADDRESS));
+        QUERY_CACHE_STATS_HANDLE = downcall(symbols, "llev_query_cache_stats",
+                FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS));
+        QUERY_CACHE_FREE = downcall(symbols, "llev_query_cache_free",
+                FunctionDescriptor.ofVoid(ADDRESS));
+        QUERY_CACHE_UTF8 = queryHandle(symbols, "llev_query_cache_query_utf8");
+        QUERY_CACHE_BYTES = queryHandle(symbols, "llev_query_cache_query_bytes");
+        QUERY_CACHE_U64 = queryHandle(symbols, "llev_query_cache_query_u64");
         NEXT_BATCH = downcall(symbols, "llev_query_cursor_next_batch",
                 FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_LONG, ADDRESS));
         RELEASE_BATCH = downcall(symbols, "llev_query_cursor_release_batch",
@@ -131,6 +161,14 @@ final class Native {
     static int queryBytes(MemorySegment value, MemorySegment query, long len, long distance, int order, MemorySegment out) { return call(QUERY_BYTES, value, query, len, distance, order, out); }
     static int queryU64(MemorySegment value, MemorySegment query, long len, long distance, int order, MemorySegment out) { return call(QUERY_U64, value, query, len, distance, order, out); }
     static int queryPattern(MemorySegment value, MemorySegment pattern, byte distance, MemorySegment out) { return call(QUERY_PATTERN, value, pattern, distance, out); }
+    static int queryCacheNew(MemorySegment transducer, long entries, long weight, MemorySegment out) { return call(QUERY_CACHE_NEW, transducer, entries, weight, out); }
+    static int queryCacheClear(MemorySegment cache) { return call(QUERY_CACHE_CLEAR, cache); }
+    static int queryCacheResetStats(MemorySegment cache) { return call(QUERY_CACHE_RESET_STATS, cache); }
+    static int queryCacheStats(MemorySegment cache, MemorySegment out) { return call(QUERY_CACHE_STATS_HANDLE, cache, out); }
+    static void queryCacheFree(MemorySegment cache) { run(QUERY_CACHE_FREE, cache); }
+    static int queryCacheUtf8(MemorySegment cache, MemorySegment query, long len, long distance, int order, MemorySegment out) { return call(QUERY_CACHE_UTF8, cache, query, len, distance, order, out); }
+    static int queryCacheBytes(MemorySegment cache, MemorySegment query, long len, long distance, int order, MemorySegment out) { return call(QUERY_CACHE_BYTES, cache, query, len, distance, order, out); }
+    static int queryCacheU64(MemorySegment cache, MemorySegment query, long len, long distance, int order, MemorySegment out) { return call(QUERY_CACHE_U64, cache, query, len, distance, order, out); }
     static int nextBatch(MemorySegment cursor, long size, MemorySegment out) { return call(NEXT_BATCH, cursor, size, out); }
     static int releaseBatch(MemorySegment cursor, long generation) { return call(RELEASE_BATCH, cursor, generation); }
     static int cursorFree(MemorySegment cursor) { return call(CURSOR_FREE, cursor); }

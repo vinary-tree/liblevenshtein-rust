@@ -3,6 +3,17 @@ type query_order = Traversal | Distance_then_term
 type term = Text of string | Tokens of int64 array
 type match_result = { term : term; distance : int; id : int64 option }
 type transducer
+type query_cache
+type query_cache_stats = {
+  requests : int64;
+  hits : int64;
+  misses : int64;
+  admissions : int64;
+  rejections : int64;
+  evictions : int64;
+  resident_entries : int;
+  resident_weight : int;
+}
 type cursor
 type phonetic_pattern
 type phonetic_rules
@@ -10,6 +21,20 @@ type phonetic_rules
 external raw_transducer : Vinary_tree_interop.resource -> algorithm -> transducer
   = "ocaml_llev_transducer"
 external close_transducer : transducer -> unit = "ocaml_llev_transducer_close"
+external raw_query_cache : transducer -> int -> int -> query_cache
+  = "ocaml_llev_query_cache_new"
+external close_query_cache : query_cache -> unit = "ocaml_llev_query_cache_close"
+external clear_query_cache : query_cache -> unit = "ocaml_llev_query_cache_clear"
+external reset_query_cache_stats : query_cache -> unit
+  = "ocaml_llev_query_cache_reset_stats"
+external query_cache_stats : query_cache -> query_cache_stats
+  = "ocaml_llev_query_cache_stats"
+external raw_cached_query : query_cache -> string -> int -> query_order -> cursor
+  = "ocaml_llev_query_cache_query"
+external raw_cached_query_bytes : query_cache -> bytes -> int -> query_order -> cursor
+  = "ocaml_llev_query_cache_query_bytes"
+external raw_cached_query_u64 : query_cache -> int64 array -> int -> query_order -> cursor
+  = "ocaml_llev_query_cache_query_u64"
 external raw_query : transducer -> string -> int -> query_order -> cursor
   = "ocaml_llev_query"
 external raw_query_bytes : transducer -> bytes -> int -> query_order -> cursor
@@ -43,6 +68,14 @@ external true_damerau_distance_threshold : string -> string -> int -> int
   = "ocaml_llev_true_damerau_distance_threshold"
 
 let transducer ?(algorithm = Standard) resource = raw_transducer resource algorithm
+let query_cache ?(maximum_entries = 1024) ?(maximum_weight = 64 * 1024 * 1024)
+    transducer = raw_query_cache transducer maximum_entries maximum_weight
+let cached_query ?(order = Traversal) value text ~maximum_distance =
+  raw_cached_query value text maximum_distance order
+let cached_query_bytes ?(order = Traversal) value text ~maximum_distance =
+  raw_cached_query_bytes value text maximum_distance order
+let cached_query_u64 ?(order = Traversal) value tokens ~maximum_distance =
+  raw_cached_query_u64 value tokens maximum_distance order
 let query ?(order = Traversal) value text ~maximum_distance =
   raw_query value text maximum_distance order
 let query_bytes ?(order = Traversal) value text ~maximum_distance =

@@ -1,7 +1,7 @@
 # The `llev_*` C ABI, function by function
 
 This is the normative reference for liblevenshtein's project-owned C surface:
-all **36 exported `llev_*` functions**, each with its exact header signature,
+all **44 exported `llev_*` functions**, each with its exact header signature,
 preconditions, the complete set of statuses it can return (read from the
 implementation, not aspirationally), ownership rules, thread-safety truth, and
 cost. It is the **project layer above the family canon**: everything about the
@@ -27,6 +27,7 @@ The project-level terms this document adds:
 | Term | Definition |
 |---|---|
 | transducer | An opaque `LlevTransducer`: a Levenshtein-automaton configuration (algorithm choice) holding one owned retain of a dictionary resource. Constructing it never copies the dictionary. |
+| query cache | An opaque `LlevQueryCache`: an exclusive, synchronization-free, hard-bounded complete-result memo retaining one transducer. TinyLFU estimates reuse for admission; SIEVE selects victims. |
 | cursor | An opaque `LlevQueryCursor`: one lazy query. It owns the retained immutable snapshot captured at query start plus all storage later exposed through batch leases. |
 | batch | One bounded group of match descriptors transferred per boundary crossing (default capacity `LLEV_DEFAULT_MATCH_BATCH` = 256). |
 | lease | The borrow state of a batch: from a successful `next_batch` until the matching `release_batch`, the descriptor array and term arenas belong to the caller and the cursor refuses to advance, reduce, or close. |
@@ -52,7 +53,7 @@ specified by their interface.
 
 ![Class diagram of the vinary-tree-interop ABI: VtResource and its base vtable negotiate dictionary, visit, graph, snapshot-identity, and scalar-WFST capability vtables plus their borrowed value types.](../diagrams/bindings/vt-structs-class.svg)
 
-The 36 functions divide into five groups:
+The 44 functions divide into six groups:
 
 | Group | Count | Functions |
 |---|---|---|
@@ -60,6 +61,7 @@ The 36 functions divide into five groups:
 | [Strings (legacy)](#5-string-helpers-3-legacy) | 3 | `llev_string_free` · `llev_string_array_free` · `llev_string_dup` |
 | [Distances](#6-distance-functions-6) | 6 | `llev_distance` · `llev_distance_threshold` · `llev_damerau_distance` · `llev_damerau_distance_threshold` · `llev_true_damerau_distance` · `llev_true_damerau_distance_threshold` |
 | [Transducer + cursor](#7-transducer-and-cursor-11) | 11 | `llev_transducer_new` · `llev_transducer_snapshot` · `llev_transducer_free` · `llev_transducer_unit_domain` · `llev_transducer_query_utf8` · `llev_transducer_query_bytes` · `llev_transducer_query_u64` · `llev_query_cursor_next_batch` · `llev_query_cursor_release_batch` · `llev_query_cursor_reduce` · `llev_query_cursor_free` |
+| [Bounded query cache](#7a-bounded-query-cache-8) | 8 | `llev_query_cache_new` · `llev_query_cache_clear` · `llev_query_cache_reset_stats` · `llev_query_cache_stats` · `llev_query_cache_free` · `llev_query_cache_query_utf8` · `llev_query_cache_query_bytes` · `llev_query_cache_query_u64` |
 | [Phonetic](#8-phonetic-surface-12) | 12 | `llev_owned_string_free` · `llev_phonetic_pattern_compile_regex` · `llev_phonetic_pattern_compile_llre` · `llev_phonetic_pattern_free` · `llev_phonetic_pattern_size` · `llev_phonetic_pattern_matches` · `llev_transducer_query_pattern` · `llev_phonetic_rules_parse` · `llev_phonetic_rules_builtin` · `llev_phonetic_rules_free` · `llev_phonetic_rules_len` · `llev_phonetic_rules_apply` |
 
 Headers: [`include/liblevenshtein.h`](../../include/liblevenshtein.h)
@@ -106,7 +108,7 @@ the interop `VtStatus`. All 13 values, pinned in
 | 3 | `LLEV_STATUS_INVALID_UTF8` | A length-bearing text buffer was not valid UTF-8. | `utf8()` validation in every text-accepting entry point. |
 | 4 | `LLEV_STATUS_NULL_POINTER` | A required pointer was NULL. | Argument preflight in every entry point; also mapped from a provider's `VtStatus` `NullPointer`. |
 | 5 | `LLEV_STATUS_PANIC` | A Rust panic was caught at the boundary. The panic message is in the thread-local error slot. | Only from `boundary()`'s `catch_unwind` arm — no other code path constructs it. |
-| 6 | `LLEV_STATUS_UNSUPPORTED` | The operation is not available in this build or from this provider. | Phonetic entry points without the `bindings-phonetic` feature; ordered streaming on byte/u64 domains; a `Bytes` value-domain provider; mapped from provider `Unsupported`. |
+| 6 | `LLEV_STATUS_UNSUPPORTED` | The operation is not available in this build or from this provider. | Phonetic entry points without the `bindings-phonetic` feature; ordered streaming on byte/u64 domains; a `Bytes` value-domain provider; cached queries when snapshot identity is absent; mapped from provider `Unsupported`. |
 | 7 | `LLEV_STATUS_IO_ERROR` | A storage-backed provider failed on I/O. | Mapped verbatim from provider `IoError`. |
 | 8 | `LLEV_STATUS_CLOSED` | The provider reports its resource already torn down. | Mapped verbatim from provider `Closed`. |
 | 9 | `LLEV_STATUS_LIMIT_EXCEEDED` | A provider resource limit was hit. | Mapped verbatim from provider `LimitExceeded`. |
@@ -443,6 +445,72 @@ later query starts.
   $`\mathcal{O}(\lvert q \rvert + \lvert V\rvert + \lvert E\rvert)`$ for the
   first validating import only. Providers without the optional graph retain
   the $`\mathcal{O}(\lvert q \rvert)`$ lazy callback path.
+
+### 7A. Bounded query cache (8)
+
+```c
+LlevStatus llev_query_cache_new(const LlevTransducer* transducer,
+                                size_t max_entries_per_order,
+                                size_t max_weight_per_order,
+                                LlevQueryCache** out_cache);
+LlevStatus llev_query_cache_clear(LlevQueryCache* cache);
+LlevStatus llev_query_cache_reset_stats(LlevQueryCache* cache);
+LlevStatus llev_query_cache_stats(const LlevQueryCache* cache,
+                                  LlevQueryCacheStats* out_stats);
+void llev_query_cache_free(LlevQueryCache* cache);
+
+LlevStatus llev_query_cache_query_utf8(LlevQueryCache* cache,
+                                       const char* query, size_t query_len,
+                                       size_t max_distance, uint32_t order,
+                                       LlevQueryCursor** out_cursor);
+LlevStatus llev_query_cache_query_bytes(LlevQueryCache* cache,
+                                        const uint8_t* query, size_t query_len,
+                                        size_t max_distance, uint32_t order,
+                                        LlevQueryCursor** out_cursor);
+LlevStatus llev_query_cache_query_u64(LlevQueryCache* cache,
+                                      const uint64_t* query, size_t query_len,
+                                      size_t max_distance, uint32_t order,
+                                      LlevQueryCursor** out_cursor);
+```
+
+This API is an opt-in complete-result memo for repeated-query workloads. It
+uses TinyLFU approximate-frequency admission and SIEVE victim selection under
+hard entry and logical-weight bounds. Approximation changes residency only:
+every miss drains the exact snapshot-consistent product walk before returning,
+even if the candidate is too large or loses admission.
+
+- **Construction:** `new` retains the transducer in $`\mathcal{O}(1)`$ time.
+  Each hard limit applies independently to traversal and distance-then-term
+  order shards. A zero entry or weight limit disables admission but not exact
+  miss computation. On `OK`, `*out_cache` is settled by one `free`; failure
+  leaves it untouched. Statuses: `OK` · `NULL_POINTER` · `PANIC`.
+- **Query identity:** each query captures an immutable provider snapshot and
+  requires `vt.snapshot.id.1`. A producer change clears both shards; a revision
+  change clears stale residency before lookup. Missing identity is
+  `UNSUPPORTED`, never a best-effort stale cache. The three functions retain
+  the domain/order/status contracts of § 7.5 and add that identity failure.
+- **Result ownership:** a hit returns a fresh `LlevQueryCursor` over shared
+  immutable match storage. A miss returns the same cursor type after exact
+  materialization. Every cursor may outlive the cache and follows the ordinary
+  lease/reducer protocol.
+- **Counters:** `stats` copies requests, hits, misses, admissions, rejections,
+  evictions, resident entries, and logical weight across both shards in
+  $`\mathcal{O}(1)`$. `clear` drops residency and policy history while
+  preserving counters. `reset_stats` zeros counters while preserving residency
+  and frequency history. All three return `OK` · `NULL_POINTER` · `PANIC`.
+- **Thread safety:** one cache pointer is an exclusive mutable handle. The
+  implementation contains no lock. Concurrent callers shard one cache per
+  worker from the same shareable transducer; independent returned cursors are
+  concurrently usable under their own contracts.
+- **Complexity:** a hit is expected $`\mathcal{O}(\lvert q \rvert)`$ for exact
+  key hashing/comparison plus an `Arc` clone and cursor creation. A miss adds
+  the full query traversal and result materialization. Admission/eviction work
+  is bounded by resident metadata and performs no provider callback while a
+  lock is held because no cache lock exists.
+
+The full policy rationale, literate transaction algorithm, language idioms,
+and measurement guidance are in the
+[bounded query-cache guide](query-cache.md).
 
 ### 7.6 The lease protocol
 

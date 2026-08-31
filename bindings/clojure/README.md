@@ -160,12 +160,16 @@ variants, protocols, or methods.
 
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
-| `close!` | `llev_transducer_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free` | transducer lifecycle, snapshot, or domain metadata; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting |
+| `cache-stats` | `llev_query_cache_stats` | project ABI operation |
+| `clear-cache!` | `llev_query_cache_clear` | project ABI operation |
+| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting |
 | `llre-pattern` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
 | `phonetic-pattern` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
 | `phonetic-rules` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
-| `query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64` | domain-preserving dictionary query |
+| `query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64` | domain-preserving dictionary query; project ABI operation |
+| `query-cache` | `llev_query_cache_new` | project ABI operation |
 | `reduce-batches` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `reset-cache-stats!` | `llev_query_cache_reset_stats` | project ABI operation |
 | `ResultCursor` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `rewrite` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
 | `transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |

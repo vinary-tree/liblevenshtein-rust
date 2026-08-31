@@ -144,6 +144,28 @@
              (.statusCode ^NativeException failure)))
       (is (not-empty (.getMessage ^NativeException failure))))))
 
+(deftest query-cache-facade-preserves-bounds-counters-and-provider-requirements
+  (let [current (snapshot {"cat" 1})
+        capture (reify Supplier (get [_] current))]
+    (with-open [dictionary (UnicodeDictionaryResource. capture)
+                automaton (llev/transducer dictionary)
+                cache (llev/query-cache automaton {:maximum-entries 4
+                                                    :maximum-weight 4096})]
+      (is (= {:requests 0N :hits 0N :misses 0N :admissions 0N
+              :rejections 0N :evictions 0N :resident-entries 0N
+              :resident-weight 0N}
+             (llev/cache-stats cache)))
+      ;; This deliberately host-defined test provider predates stable snapshot
+      ;; identities. A cache must reject it diagnostically instead of serving
+      ;; potentially stale results; libdictenstein resources provide identity.
+      (let [failure (try
+                      (llev/query cache "cat" 0)
+                      nil
+                      (catch NativeException native-failure native-failure))]
+        (is (= Status/UNSUPPORTED (.status ^NativeException failure))))
+      (is (identical? cache (llev/clear-cache! cache)))
+      (is (identical? cache (llev/reset-cache-stats! cache))))))
+
 (deftest phonetic-pattern-idempotent-close-and-closed-guard
   ;; C2/C3: close is idempotent and a closed pattern rejects use with an
   ;; IllegalStateException rather than dereferencing freed native memory.
