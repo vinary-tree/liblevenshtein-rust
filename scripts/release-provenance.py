@@ -334,6 +334,36 @@ def tool_output(command: list[str]) -> str:
     return run(command, cwd=Path("/")).decode("utf-8").strip()
 
 
+def release_subject_commit(root: Path) -> str:
+    """Return the immutable commit whose bytes the artifact identifies.
+
+    The liblevenshtein attestation is necessarily committed one revision after
+    its subject. Recognize that revision only when its complete Git diff is the
+    generated artifact itself; every source-bearing revision remains its own
+    subject and therefore invalidates an older artifact.
+    """
+
+    head = tool_output(["git", "-C", str(root), "rev-parse", "HEAD"])
+    if root != ROOT:
+        return head
+    artifact = ARTIFACT.relative_to(ROOT).as_posix()
+    tracked = run(
+        ["git", "ls-files", "--error-unmatch", artifact], cwd=root, check=False
+    )
+    if not tracked:
+        return head
+    parent = run(["git", "rev-parse", "HEAD^"], cwd=root, check=False).strip()
+    if not parent:
+        return head
+    changed = run(
+        ["git", "diff", "--name-only", "-z", "HEAD^", "HEAD"], cwd=root
+    ).split(b"\0")
+    changed = [path for path in changed if path]
+    if changed == [os.fsencode(artifact)]:
+        return parent.decode("ascii")
+    return head
+
+
 def build_artifact(
     roots: list[tuple[str, Path, str]],
     build_inputs: list[tuple[str, Path, str, str]],
@@ -359,7 +389,7 @@ def build_artifact(
             "repository": manifest_value(
                 (root / "Cargo.toml").read_text(encoding="utf-8"), "repository"
             ),
-            "subjectCommit": tool_output(["git", "-C", str(root), "rev-parse", "HEAD"]),
+            "subjectCommit": release_subject_commit(root),
             "releaseVersion": model["canonical"],
             "cargoReleaseContract": release_contract,
             "sourceSnapshotSha256": snapshot_sha,
