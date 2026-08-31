@@ -229,7 +229,7 @@ def validate(model: dict) -> None:
     }
     if model.get("interop") != expected_interop:
         raise SystemExit("binding model changed the shared interop identity")
-    if model.get("abiVersion") != 1 or model.get("apiRevision") != 2:
+    if model.get("abiVersion") != 1 or model.get("apiRevision") != 3:
         raise SystemExit("unexpected ABI/API revision")
     if model.get("defaultMatchBatch") != 256:
         raise SystemExit("default match batch must remain 256 in ABI v1")
@@ -296,6 +296,8 @@ def render_c(model: dict) -> str:
             "typedef struct LlevTransducer LlevTransducer;",
             "/** Opaque, exclusive lazy traversal over one immutable query-start snapshot. */",
             "typedef struct LlevQueryCursor LlevQueryCursor;",
+            "/** Opaque, exclusive bounded complete-query cache. */",
+            "typedef struct LlevQueryCache LlevQueryCache;",
             "/** Opaque, immutable compiled phonetic-language automaton. */",
             "typedef struct LlevPhoneticPattern LlevPhoneticPattern;",
             "/** Opaque, immutable compiled phonetic rewrite-rule set. */",
@@ -319,6 +321,18 @@ def render_c(model: dict) -> str:
             "    size_t len; /**< Number of initialized descriptors. */",
             "    uint64_t generation; /**< Nonzero identity required by release_batch. */",
             "} LlevMatchBatchView;",
+            "",
+            "/** Aggregate query-cache policy and residency counters. */",
+            "typedef struct LlevQueryCacheStats {",
+            "    uint64_t requests; /**< Total cached-query requests. */",
+            "    uint64_t hits; /**< Requests served by resident immutable results. */",
+            "    uint64_t misses; /**< Requests whose exact product walk ran. */",
+            "    uint64_t admissions; /**< Computed results admitted to residency. */",
+            "    uint64_t rejections; /**< Computed results rejected by limits or admission. */",
+            "    uint64_t evictions; /**< Resident results displaced by SIEVE. */",
+            "    size_t resident_entries; /**< Entries across both result-order shards. */",
+            "    size_t resident_weight; /**< Logical weight across both shards. */",
+            "} LlevQueryCacheStats;",
             "",
             "/** Heap-owned, length-bearing UTF-8 returned by the phonetic-rule API. */",
             "typedef struct LlevOwnedString {",

@@ -1,0 +1,45 @@
+@startuml query-cache-flow
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam activity {
+  BackgroundColor #E0F2FE
+  BorderColor #0369A1
+  DiamondBackgroundColor #FEF3C7
+  DiamondBorderColor #B45309
+  StartColor #166534
+  EndColor #166534
+}
+
+start
+:Host owns one exclusive cache shard;
+:Capture immutable dictionary revision;
+if (Snapshot identity available?) then (yes)
+  if (Producer or revision changed?) then (yes)
+    :Clear stale bounded residency;
+  endif
+  :Record TinyLFU frequency estimate;
+  if (Exact key is resident?) then (hit)
+    :Set SIEVE visited bit;
+    :Return independent cursor over
+    shared immutable matches;
+  else (miss)
+    :Run exact automaton × dictionary walk;
+    if (Computation succeeded?) then (yes)
+      :Compute logical result weight;
+      if (Hard bounds and admission accept?) then (yes)
+        :Select SIEVE victims transactionally;
+        :Install immutable result;
+      else (no)
+        :Return exact result without residency;
+      endif
+      :Return independent result cursor;
+    else (no)
+      :Return typed failure;
+    endif
+  endif
+else (no)
+  :Return UNSUPPORTED;
+endif
+stop
+@enduml

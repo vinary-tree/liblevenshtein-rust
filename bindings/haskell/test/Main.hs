@@ -97,8 +97,13 @@ main = do
             && Lev.editDistance tokenMatch == 1
             && Lev.identifier tokenMatch == Just 12) "u64 query"
   Lev.closeCursor tokenCursor
+  tokenCache <- Lev.queryCache 4 4096 tokenAutomaton
   Dict.close tokens
   Lev.closeTransducer tokenAutomaton
+  cachedTokens <- Lev.cachedQueryU64 Lev.Traversal tokenCache [1, 2, 4] 1 >>= collect
+  assertIO (map Lev.term cachedTokens == [Lev.TokensTerm [1, 2, 3]])
+    "cached u64 query retains its source"
+  Lev.closeQueryCache tokenCache
 
   byteDictionary <- Dict.dynamicDawg Dict.Byte
   let byteTerm = Bytes.pack [0x63, 0x00, 0xff]
@@ -112,8 +117,13 @@ main = do
   exhaustedByteBatch <- Lev.nextBatch 1 byteCursor
   assertIO (exhaustedByteBatch == Nothing) "byte cursor end"
   Lev.closeCursor byteCursor
+  byteCache <- Lev.queryCache 4 4096 byteAutomaton
   Dict.close byteDictionary
   Lev.closeTransducer byteAutomaton
+  cachedBytes <- Lev.cachedQueryBytes Lev.Traversal byteCache byteTerm 0 >>= collect
+  assertIO (map Lev.term cachedBytes == [Lev.BytesTerm byteTerm])
+    "cached byte query retains its source"
+  Lev.closeQueryCache byteCache
 
   temporary <- getTemporaryDirectory
   let persistentPath = temporary </> "vinary-tree-haskell.artrie"
@@ -193,6 +203,23 @@ main = do
   assertIO (sort patternTerms == ["cat", "cot"])
     "regex product-automaton query"
   Lev.closePattern productPattern
+  cache <- Lev.queryCache 8 (1024 * 1024) equalityAutomaton
+  cold <- collect =<< Lev.cachedQueryText Lev.Traversal cache "cat" 1
+  hit <- collect =<< Lev.cachedQueryText Lev.Traversal cache "cat" 1
+  assertIO (cold == hit) "query cache preserves exact results"
+  stats <- Lev.queryCacheStats cache
+  assertIO
+    (Lev.requests stats == 2 && Lev.hits stats == 1 && Lev.misses stats == 1
+      && Lev.residentEntries stats == 1 && Lev.residentWeight stats > 0)
+    "query cache distinguishes cold and resident requests"
+  Lev.resetQueryCacheStats cache
+  resetStats <- Lev.queryCacheStats cache
+  assertIO (Lev.requests resetStats == 0 && Lev.residentEntries resetStats == 1)
+    "query-cache counter reset preserves residency"
+  Lev.clearQueryCache cache
+  clearedStats <- Lev.queryCacheStats cache
+  assertIO (Lev.residentEntries clearedStats == 0) "query-cache clear"
+  Lev.closeQueryCache cache
   Dict.close equalityDict
   Lev.closeTransducer equalityAutomaton
 

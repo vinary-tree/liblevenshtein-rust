@@ -27,8 +27,9 @@ surface, the resource consumer, the cursor laws, and the JS/WASM topology.
 
 | Document | What it specifies |
 |---|---|
-| [c-abi-reference.md](c-abi-reference.md) | All 36 `llev_*` functions: signatures, preconditions, exact returnable status sets, ownership, thread safety, complexity; the 13-value status table and its `VtStatus` mapping; the lease protocol with literate batch-loop and reducer pseudocode; a compile-checked complete C consumer. |
+| [c-abi-reference.md](c-abi-reference.md) | All 44 `llev_*` functions: signatures, preconditions, exact returnable status sets, ownership, thread safety, complexity; the 13-value status table and its `VtStatus` mapping; the bounded query cache; the lease protocol with literate batch-loop and reducer pseudocode; a compile-checked complete C consumer. |
 | [resource-consumer.md](resource-consumer.md) | The safe-Rust layer under the C ABI: intake (retain-validate-else-release), `ForeignNode` domains, the `CallGate` (VT-GATE-1..3), the status wire rule and fault latch, the total `BindingError` map, and the two-pass arena fixup. |
+| [query-cache.md](query-cache.md) | The shared bounded repeated-query layer: exact revision identity, binary keys, TinyLFU admission, SIEVE eviction, lock-free-by-ownership concurrency, Rust/C/Julia/Raku APIs, security, and measurement guidance. |
 | [collection-protocols.md](collection-protocols.md) | The approved native-Rust and foreign-language collection design: current gaps, generic snapshot traversal, idiomatic `Iterator`/`Set`/`Map` surfaces, batched ABI acceleration, lifecycle rules, gates, and implementation work packages. It is a roadmap, not a claim that every adapter already ships. |
 | [package-documentation-publication.md](package-documentation-publication.md) | The evidence model for ecosystem documentation: canonical destinations, immutable-source invariants, public readback algorithm, RC5 findings, and the protected deployment sequence. |
 | [wasm-topology.md](wasm-topology.md) | The JS exception to modular packaging: the `@vinary-tree/javascript-runtime` umbrella, the three runtime paths, the runtime-identity guard, WASI preopen policy, and panic-versus-status discipline. |
@@ -41,7 +42,7 @@ surface, the resource consumer, the cursor laws, and the JS/WASM topology.
 
 | Artifact | Role |
 |---|---|
-| [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order enums, the 36 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical query snapshot fixture, and entries-v1 identity/status/flag/operation/layout pins. `scripts/generate-bindings.py` emits the headers, constants, and fixtures; `--check` pins them in CI. |
+| [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order enums, the 44 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical query snapshot fixture, and entries-v1 identity/status/flag/operation/layout pins. `scripts/generate-bindings.py` emits the headers, constants, and fixtures; `--check` pins them in CI. |
 | [`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) | The per-facade completeness model driving the coverage matrix. |
 | [`bindings/conformance/`](../../bindings/conformance) | Generated conformance fixtures: the query-start snapshot oracle, entries-v1 constants and LP64/ARM32 layouts, and the facade completeness matrix. |
 | [`bindings/conformance/public-api-traceability.tsv`](../../bindings/conformance/public-api-traceability.tsv) | One row per modeled facade function, enum, or traversal protocol, with source, guide, executable-test, and canonical-example evidence plus explicit direct-reference gaps. |

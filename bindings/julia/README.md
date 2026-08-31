@@ -89,15 +89,19 @@ variants, protocols, or methods.
 | `abi_version` | `llev_abi_version` | ABI compatibility and feature discovery |
 | `api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `build_features` | `llev_build_features` | ABI compatibility and feature discovery |
-| `close!` | `llev_transducer_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free` | transducer lifecycle, snapshot, or domain metadata; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting |
+| `cache_stats` | `llev_query_cache_stats` | project ABI operation |
+| `clear!` | `llev_query_cache_clear` | project ABI operation |
+| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting |
 | `damerau_distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
 | `distance` | `llev_distance`, `llev_distance_threshold` | standalone exact or thresholded distance |
 | `NativeError` | `llev_last_error_message` | typed failure diagnostics |
 | `next_batch!` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `PhoneticPattern` | `llev_phonetic_pattern_compile_regex`, `llev_phonetic_pattern_compile_llre`, `llev_phonetic_pattern_size`, `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticRuleSet` | `llev_owned_string_free`, `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin`, `llev_phonetic_rules_len`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
-| `query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; phonetic-pattern dictionary query |
+| `query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; project ABI operation; phonetic-pattern dictionary query |
+| `QueryCache` | `llev_query_cache_new` | project ABI operation |
 | `reduce_batches!` | `llev_query_cursor_reduce` | streaming result traversal and batch leases |
+| `reset_stats!` | `llev_query_cache_reset_stats` | project ABI operation |
 | `snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `true_damerau_distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |

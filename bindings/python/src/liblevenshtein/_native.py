@@ -72,6 +72,33 @@ class _OwnedString(ctypes.Structure):
     _fields_ = [("data", ctypes.c_void_p), ("len", ctypes.c_size_t)]
 
 
+class _QueryCacheStats(ctypes.Structure):
+    _fields_ = [
+        ("requests", ctypes.c_uint64),
+        ("hits", ctypes.c_uint64),
+        ("misses", ctypes.c_uint64),
+        ("admissions", ctypes.c_uint64),
+        ("rejections", ctypes.c_uint64),
+        ("evictions", ctypes.c_uint64),
+        ("resident_entries", ctypes.c_size_t),
+        ("resident_weight", ctypes.c_size_t),
+    ]
+
+
+@dataclass(frozen=True, slots=True)
+class QueryCacheStats:
+    """Immutable TinyLFU/SIEVE counters and bounded native residency."""
+
+    requests: int
+    hits: int
+    misses: int
+    admissions: int
+    rejections: int
+    evictions: int
+    resident_entries: int
+    resident_weight: int
+
+
 def _library_names() -> tuple[str, ...]:
     system = platform.system()
     if system == "Windows":
@@ -128,6 +155,32 @@ _lib.llev_transducer_query_bytes.argtypes = list(
 _lib.llev_transducer_query_bytes.restype = ctypes.c_uint32
 _lib.llev_transducer_query_u64.argtypes = list(_lib.llev_transducer_query_utf8.argtypes)
 _lib.llev_transducer_query_u64.restype = ctypes.c_uint32
+_lib.llev_query_cache_new.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+_lib.llev_query_cache_new.restype = ctypes.c_uint32
+_lib.llev_query_cache_clear.argtypes = [ctypes.c_void_p]
+_lib.llev_query_cache_clear.restype = ctypes.c_uint32
+_lib.llev_query_cache_reset_stats.argtypes = [ctypes.c_void_p]
+_lib.llev_query_cache_reset_stats.restype = ctypes.c_uint32
+_lib.llev_query_cache_stats.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(_QueryCacheStats),
+]
+_lib.llev_query_cache_stats.restype = ctypes.c_uint32
+_lib.llev_query_cache_free.argtypes = [ctypes.c_void_p]
+_lib.llev_query_cache_free.restype = None
+for _cache_query_name in (
+    "llev_query_cache_query_utf8",
+    "llev_query_cache_query_bytes",
+    "llev_query_cache_query_u64",
+):
+    _cache_query = getattr(_lib, _cache_query_name)
+    _cache_query.argtypes = list(_lib.llev_transducer_query_utf8.argtypes)
+    _cache_query.restype = ctypes.c_uint32
 _lib.llev_query_cursor_next_batch.argtypes = [
     ctypes.c_void_p,
     ctypes.c_size_t,
@@ -516,6 +569,8 @@ class Transducer:
             NativeError: For a domain mismatch, invalid input, unsupported
                 ordering, provider fault, or closed native resource.
         """
+        if max_distance < 0:
+            raise ValueError("max_distance must be nonnegative")
         out = ctypes.c_void_p()
         if isinstance(query, PhoneticPattern):
             _check(
@@ -578,6 +633,108 @@ class Transducer:
 
     def __exit__(self, *_args: object) -> None:
         """Release the transducer on every context-manager exit path."""
+        self.close()
+
+
+class QueryCache:
+    """Exclusive, lock-free bounded memo for complete repeated queries.
+
+    Limits apply independently to traversal and distance-then-term order. Use
+    one cache per worker when queries execute concurrently.
+    """
+
+    def __init__(
+        self,
+        transducer: Transducer,
+        *,
+        max_entries: int = 1024,
+        max_weight: int = 64 * 1024 * 1024,
+    ) -> None:
+        """Retain ``transducer`` and configure hard per-order bounds."""
+        if max_entries < 0 or max_weight < 0:
+            raise ValueError("cache limits must be nonnegative")
+        self._handle = ctypes.c_void_p()
+        _check(
+            _lib.llev_query_cache_new(
+                transducer._handle,
+                max_entries,
+                max_weight,
+                ctypes.byref(self._handle),
+            )
+        )
+
+    @property
+    def stats(self) -> QueryCacheStats:
+        """Copy aggregate policy counters and current residency."""
+        raw = _QueryCacheStats()
+        _check(_lib.llev_query_cache_stats(self._handle, ctypes.byref(raw)))
+        return QueryCacheStats(*(getattr(raw, name) for name, _ in raw._fields_))
+
+    def __len__(self) -> int:
+        """Return resident entries across both result-order shards."""
+        return self.stats.resident_entries
+
+    def clear(self) -> None:
+        """Drop resident results while preserving policy counters."""
+        _check(_lib.llev_query_cache_clear(self._handle))
+
+    def reset_stats(self) -> None:
+        """Reset counters while preserving residency and frequency state."""
+        _check(_lib.llev_query_cache_reset_stats(self._handle))
+
+    def query(
+        self,
+        query: str | bytes | Sequence[int],
+        max_distance: int,
+        *,
+        order: QueryOrder = QueryOrder.TRAVERSAL,
+    ) -> QueryCursor:
+        """Return an independent cursor over an exact cached or computed result."""
+        if max_distance < 0:
+            raise ValueError("max_distance must be nonnegative")
+        out = ctypes.c_void_p()
+        if isinstance(query, str):
+            data = query.encode()
+            function = _lib.llev_query_cache_query_utf8
+            native_query: object = data
+        elif isinstance(query, bytes):
+            function = _lib.llev_query_cache_query_bytes
+            native_query = query
+            data = query
+        else:
+            data = tuple(query)
+            native_query = (ctypes.c_uint64 * len(data))(*data)
+            function = _lib.llev_query_cache_query_u64
+        _check(
+            function(
+                self._handle,
+                native_query,
+                len(data),
+                max_distance,
+                int(order),
+                ctypes.byref(out),
+            )
+        )
+        return QueryCursor(out.value)
+
+    def close(self) -> None:
+        """Release the cache; already-returned cursors remain valid."""
+        if self._handle:
+            _lib.llev_query_cache_free(self._handle)
+            self._handle = ctypes.c_void_p()
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:  # noqa: BLE001,S110
+            pass
+
+    def __enter__(self) -> Self:
+        """Enter a deterministic cache lifetime."""
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        """Release the cache on every context-manager exit path."""
         self.close()
 
 

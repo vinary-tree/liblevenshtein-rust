@@ -94,6 +94,14 @@ variants, protocols, or methods.
 | `llev_phonetic_rules_free` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `llev_phonetic_rules_len` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
 | `llev_phonetic_rules_parse` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
+| `llev_query_cache_clear` | `llev_query_cache_clear` | project ABI operation |
+| `llev_query_cache_free` | `llev_query_cache_free` | project ABI operation |
+| `llev_query_cache_new` | `llev_query_cache_new` | project ABI operation |
+| `llev_query_cache_query_bytes` | `llev_query_cache_query_bytes` | project ABI operation |
+| `llev_query_cache_query_u64` | `llev_query_cache_query_u64` | project ABI operation |
+| `llev_query_cache_query_utf8` | `llev_query_cache_query_utf8` | project ABI operation |
+| `llev_query_cache_reset_stats` | `llev_query_cache_reset_stats` | project ABI operation |
+| `llev_query_cache_stats` | `llev_query_cache_stats` | project ABI operation |
 | `llev_query_cursor_free` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `llev_query_cursor_next_batch` | `llev_query_cursor_next_batch` | streaming result traversal and batch leases |
 | `llev_query_cursor_reduce` | `llev_query_cursor_reduce` | streaming result traversal and batch leases |

@@ -8,11 +8,13 @@
 #include "vinary_tree_lua.h"
 
 #define TRANSDUCER_MT "vinary-tree.liblevenshtein.transducer"
+#define QUERY_CACHE_MT "vinary-tree.liblevenshtein.query-cache"
 #define CURSOR_MT "vinary-tree.liblevenshtein.cursor"
 #define PATTERN_MT "vinary-tree.liblevenshtein.pattern"
 #define RULES_MT "vinary-tree.liblevenshtein.rules"
 
 typedef struct LuaTransducer { LlevTransducer* value; } LuaTransducer;
+typedef struct LuaQueryCache { LlevQueryCache* value; } LuaQueryCache;
 typedef struct LuaCursor {
     LlevQueryCursor* value;
     LlevMatchBatchView batch;
@@ -76,6 +78,12 @@ static LuaTransducer* transducer(lua_State* state, int index) {
 static LuaCursor* cursor(lua_State* state, int index) {
     LuaCursor* value = (LuaCursor*)luaL_checkudata(state, index, CURSOR_MT);
     luaL_argcheck(state, value->value != NULL, index, "cursor is closed");
+    return value;
+}
+static LuaQueryCache* query_cache(lua_State* state, int index) {
+    LuaQueryCache* value =
+        (LuaQueryCache*)luaL_checkudata(state, index, QUERY_CACHE_MT);
+    luaL_argcheck(state, value->value != NULL, index, "query cache is closed");
     return value;
 }
 static LuaPattern* pattern(lua_State* state, int index) {
@@ -159,6 +167,105 @@ static int query_u64(lua_State* state) {
     const uint64_t* input = u64_sequence(state, 2, &length);
     LlevQueryCursor* output = NULL;
     LlevStatus status = llev_transducer_query_u64(
+        value->value, input, length, maximum, selected_order, &output);
+    return status == LLEV_STATUS_OK ? push_cursor(state, output) : fail(state, status);
+}
+
+static size_t nonnegative_limit(lua_State* state, int index, lua_Integer fallback) {
+    lua_Integer value = luaL_optinteger(state, index, fallback);
+    luaL_argcheck(state, value >= 0, index, "cache limit must be non-negative");
+    return (size_t)value;
+}
+
+static int query_cache_new(lua_State* state) {
+    LuaTransducer* source = transducer(state, 1);
+    LlevQueryCache* output = NULL;
+    LlevStatus status = llev_query_cache_new(
+        source->value,
+        nonnegative_limit(state, 2, 1024),
+        nonnegative_limit(state, 3, 64 * 1024 * 1024),
+        &output);
+    if (status != LLEV_STATUS_OK) return fail(state, status);
+    LuaQueryCache* value =
+        (LuaQueryCache*)lua_newuserdatauv(state, sizeof(*value), 0);
+    value->value = output;
+    luaL_setmetatable(state, QUERY_CACHE_MT);
+    return 1;
+}
+
+static int query_cache_close(lua_State* state) {
+    LuaQueryCache* value =
+        (LuaQueryCache*)luaL_checkudata(state, 1, QUERY_CACHE_MT);
+    if (value->value) {
+        llev_query_cache_free(value->value);
+        value->value = NULL;
+    }
+    return 0;
+}
+
+static int query_cache_stats(lua_State* state) {
+    LlevQueryCacheStats value = {0};
+    LlevStatus status = llev_query_cache_stats(query_cache(state, 1)->value, &value);
+    if (status != LLEV_STATUS_OK) return fail(state, status);
+    lua_createtable(state, 0, 8);
+#define CACHE_STAT(name) \
+    lua_pushinteger(state, (lua_Integer)value.name); lua_setfield(state, -2, #name)
+    CACHE_STAT(requests);
+    CACHE_STAT(hits);
+    CACHE_STAT(misses);
+    CACHE_STAT(admissions);
+    CACHE_STAT(rejections);
+    CACHE_STAT(evictions);
+    CACHE_STAT(resident_entries);
+    CACHE_STAT(resident_weight);
+#undef CACHE_STAT
+    return 1;
+}
+
+static int query_cache_clear(lua_State* state) {
+    LlevStatus status = llev_query_cache_clear(query_cache(state, 1)->value);
+    if (status != LLEV_STATUS_OK) return fail(state, status);
+    lua_settop(state, 1);
+    return 1;
+}
+
+static int query_cache_reset_stats(lua_State* state) {
+    LlevStatus status = llev_query_cache_reset_stats(query_cache(state, 1)->value);
+    if (status != LLEV_STATUS_OK) return fail(state, status);
+    lua_settop(state, 1);
+    return 1;
+}
+
+static int query_cache_query(lua_State* state) {
+    LuaQueryCache* value = query_cache(state, 1);
+    size_t length = 0;
+    const char* input = luaL_checklstring(state, 2, &length);
+    LlevQueryCursor* output = NULL;
+    LlevStatus status = llev_query_cache_query_utf8(
+        value->value, input, length, maximum_distance(state, 3),
+        order(state, 4), &output);
+    return status == LLEV_STATUS_OK ? push_cursor(state, output) : fail(state, status);
+}
+
+static int query_cache_query_bytes(lua_State* state) {
+    LuaQueryCache* value = query_cache(state, 1);
+    size_t length = 0;
+    const char* input = luaL_checklstring(state, 2, &length);
+    LlevQueryCursor* output = NULL;
+    LlevStatus status = llev_query_cache_query_bytes(
+        value->value, (const uint8_t*)input, length, maximum_distance(state, 3),
+        order(state, 4), &output);
+    return status == LLEV_STATUS_OK ? push_cursor(state, output) : fail(state, status);
+}
+
+static int query_cache_query_u64(lua_State* state) {
+    LuaQueryCache* value = query_cache(state, 1);
+    size_t maximum = maximum_distance(state, 3);
+    uint32_t selected_order = order(state, 4);
+    size_t length = 0;
+    const uint64_t* input = u64_sequence(state, 2, &length);
+    LlevQueryCursor* output = NULL;
+    LlevStatus status = llev_query_cache_query_u64(
         value->value, input, length, maximum, selected_order, &output);
     return status == LLEV_STATUS_OK ? push_cursor(state, output) : fail(state, status);
 }
@@ -436,16 +543,23 @@ int luaopen_vinary_tree_liblevenshtein(lua_State* state) {
     const luaL_Reg cursor_methods[] = {
         {"next", cursor_next}, {"next_batch", cursor_next_batch},
         {"reduce_batches", reduce_batches}, {"close", cursor_close}, {NULL, NULL}};
+    const luaL_Reg query_cache_methods[] = {
+        {"query", query_cache_query}, {"query_bytes", query_cache_query_bytes},
+        {"query_u64", query_cache_query_u64}, {"stats", query_cache_stats},
+        {"clear", query_cache_clear}, {"reset_stats", query_cache_reset_stats},
+        {"close", query_cache_close}, {NULL, NULL}};
     const luaL_Reg pattern_methods[] = {
         {"matches", pattern_matches}, {"size", pattern_size}, {"close", pattern_close}, {NULL, NULL}};
     const luaL_Reg rules_methods[] = {
         {"apply", rules_apply}, {"len", rules_length}, {"close", rules_close}, {NULL, NULL}};
     metatable(state, TRANSDUCER_MT, transducer_close, transducer_methods, NULL);
     metatable(state, CURSOR_MT, cursor_close, cursor_methods, cursor_next);
+    metatable(state, QUERY_CACHE_MT, query_cache_close, query_cache_methods, NULL);
     metatable(state, PATTERN_MT, pattern_close, pattern_methods, NULL);
     metatable(state, RULES_MT, rules_close, rules_methods, NULL);
     const luaL_Reg functions[] = {
-        {"transducer", transducer_new}, {"phonetic_pattern", regex}, {"llre_pattern", llre},
+        {"transducer", transducer_new}, {"query_cache", query_cache_new},
+        {"phonetic_pattern", regex}, {"llre_pattern", llre},
         {"phonetic_rules", rules_new}, {"distance", distance},
         {"distance_threshold", distance_threshold}, {"damerau_distance", damerau_distance},
         {"damerau_distance_threshold", damerau_distance_threshold},

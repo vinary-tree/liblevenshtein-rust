@@ -81,7 +81,12 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `apply_rules` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
+| `cached_query` | `llev_query_cache_query_utf8` | project ABI operation |
+| `cached_query_bytes` | `llev_query_cache_query_bytes` | project ABI operation |
+| `cached_query_u64` | `llev_query_cache_query_u64` | project ABI operation |
+| `clear_query_cache` | `llev_query_cache_clear` | project ABI operation |
 | `close_pattern` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
+| `close_query_cache` | `llev_query_cache_free` | project ABI operation |
 | `close_rules` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `close_transducer` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `cursor_close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
@@ -97,9 +102,12 @@ variants, protocols, or methods.
 | `phonetic_rules` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
 | `query` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
 | `query_bytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |
+| `query_cache` | `llev_query_cache_new` | project ABI operation |
+| `query_cache_stats` | `llev_query_cache_stats` | project ABI operation |
 | `query_pattern` | `llev_transducer_query_pattern` | phonetic-pattern dictionary query |
 | `query_u64` | `llev_transducer_query_u64` | domain-preserving dictionary query |
 | `regex_pattern` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
+| `reset_query_cache_stats` | `llev_query_cache_reset_stats` | project ABI operation |
 | `rules_length` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
 | `to_seq` | `llev_query_cursor_next_batch` | streaming result traversal and batch leases |
 | `transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |

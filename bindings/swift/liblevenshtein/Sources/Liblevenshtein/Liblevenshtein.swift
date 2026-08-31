@@ -144,7 +144,7 @@ public final class Transducer: @unchecked Sendable {
 
     deinit { close() }
 
-    private func handle() throws -> OpaquePointer {
+    fileprivate func handle() throws -> OpaquePointer {
         guard let raw else {
             throw LiblevenshteinError(status: .closed, message: "transducer is closed")
         }
@@ -156,6 +156,9 @@ public final class Transducer: @unchecked Sendable {
         maximumDistance: Int,
         order: QueryOrder = .traversal
     ) throws -> QueryCursor {
+        guard maximumDistance >= 0 else {
+            throw LiblevenshteinError(status: .invalidArgument, message: "maximumDistance must be nonnegative")
+        }
         let bytes = Array(text.utf8)
         var output: OpaquePointer?
         try bytes.withUnsafeBufferPointer { buffer in
@@ -172,6 +175,9 @@ public final class Transducer: @unchecked Sendable {
         maximumDistance: Int,
         order: QueryOrder = .traversal
     ) throws -> QueryCursor {
+        guard maximumDistance >= 0 else {
+            throw LiblevenshteinError(status: .invalidArgument, message: "maximumDistance must be nonnegative")
+        }
         var output: OpaquePointer?
         try bytes.withUnsafeBufferPointer { buffer in
             try checked(llev_transducer_query_bytes(
@@ -187,6 +193,9 @@ public final class Transducer: @unchecked Sendable {
         maximumDistance: Int,
         order: QueryOrder = .traversal
     ) throws -> QueryCursor {
+        guard maximumDistance >= 0 else {
+            throw LiblevenshteinError(status: .invalidArgument, message: "maximumDistance must be nonnegative")
+        }
         var output: OpaquePointer?
         try tokens.withUnsafeBufferPointer { buffer in
             try checked(llev_transducer_query_u64(
@@ -208,6 +217,136 @@ public final class Transducer: @unchecked Sendable {
     public func close() {
         if let raw {
             llev_transducer_free(raw)
+            self.raw = nil
+        }
+    }
+}
+
+/// Immutable TinyLFU/SIEVE counters and current bounded native residency.
+public struct QueryCacheStats: Sendable, Equatable {
+    public let requests: UInt64
+    public let hits: UInt64
+    public let misses: UInt64
+    public let admissions: UInt64
+    public let rejections: UInt64
+    public let evictions: UInt64
+    public let residentEntries: Int
+    public let residentWeight: Int
+}
+
+/// Exclusive synchronization-free bounded memo for complete repeated queries.
+/// Limits apply independently to traversal and distance-then-term result order.
+/// Create one instance per worker for parallel workloads.
+public final class QueryCache {
+    private var raw: OpaquePointer?
+
+    public init(
+        transducer: Transducer,
+        maximumEntries: Int = 1024,
+        maximumWeight: Int = 64 * 1024 * 1024
+    ) throws {
+        guard maximumEntries >= 0, maximumWeight >= 0 else {
+            throw LiblevenshteinError(status: .invalidArgument, message: "cache limits must be nonnegative")
+        }
+        var output: OpaquePointer?
+        try checked(llev_query_cache_new(
+            try transducer.handle(), maximumEntries, maximumWeight, &output
+        ))
+        raw = output!
+    }
+
+    deinit { close() }
+
+    private func handle() throws -> OpaquePointer {
+        guard let raw else {
+            throw LiblevenshteinError(status: .closed, message: "query cache is closed")
+        }
+        return raw
+    }
+
+    /// Copy aggregate policy counters and current residency.
+    public func stats() throws -> QueryCacheStats {
+        var value = LlevQueryCacheStats()
+        try checked(llev_query_cache_stats(try handle(), &value))
+        return QueryCacheStats(
+            requests: value.requests, hits: value.hits, misses: value.misses,
+            admissions: value.admissions, rejections: value.rejections,
+            evictions: value.evictions, residentEntries: value.resident_entries,
+            residentWeight: value.resident_weight
+        )
+    }
+
+    /// Drop resident results while preserving policy counters.
+    @discardableResult public func clear() throws -> QueryCache {
+        try checked(llev_query_cache_clear(try handle()))
+        return self
+    }
+
+    /// Reset counters while preserving residency and frequency state.
+    @discardableResult public func resetStats() throws -> QueryCache {
+        try checked(llev_query_cache_reset_stats(try handle()))
+        return self
+    }
+
+    public func query(
+        _ text: String,
+        maximumDistance: Int,
+        order: QueryOrder = .traversal
+    ) throws -> QueryCursor {
+        guard maximumDistance >= 0 else {
+            throw LiblevenshteinError(status: .invalidArgument, message: "maximumDistance must be nonnegative")
+        }
+        let bytes = Array(text.utf8)
+        var output: OpaquePointer?
+        try bytes.withUnsafeBufferPointer { buffer in
+            try checked(llev_query_cache_query_utf8(
+                try handle(), buffer.baseAddress, buffer.count,
+                maximumDistance, order.rawValue, &output
+            ))
+        }
+        return QueryCursor(raw: output!)
+    }
+
+    public func query(
+        _ bytes: [UInt8],
+        maximumDistance: Int,
+        order: QueryOrder = .traversal
+    ) throws -> QueryCursor {
+        guard maximumDistance >= 0 else {
+            throw LiblevenshteinError(status: .invalidArgument, message: "maximumDistance must be nonnegative")
+        }
+        var output: OpaquePointer?
+        try bytes.withUnsafeBufferPointer { buffer in
+            try checked(llev_query_cache_query_bytes(
+                try handle(), buffer.baseAddress, buffer.count,
+                maximumDistance, order.rawValue, &output
+            ))
+        }
+        return QueryCursor(raw: output!)
+    }
+
+    public func query(
+        _ tokens: [UInt64],
+        maximumDistance: Int,
+        order: QueryOrder = .traversal
+    ) throws -> QueryCursor {
+        guard maximumDistance >= 0 else {
+            throw LiblevenshteinError(status: .invalidArgument, message: "maximumDistance must be nonnegative")
+        }
+        var output: OpaquePointer?
+        try tokens.withUnsafeBufferPointer { buffer in
+            try checked(llev_query_cache_query_u64(
+                try handle(), buffer.baseAddress, buffer.count,
+                maximumDistance, order.rawValue, &output
+            ))
+        }
+        return QueryCursor(raw: output!)
+    }
+
+    /// Release the cache; cursors already returned by it remain valid.
+    public func close() {
+        if let raw {
+            llev_query_cache_free(raw)
             self.raw = nil
         }
     }

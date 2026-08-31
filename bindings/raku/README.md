@@ -5,6 +5,16 @@ liblevenshtein-rust. `NativeCall` reaches the stable C ABI while
 `Vinary::Tree::Interop` carries retained dictionaries from libdictenstein or
 customer-defined providers without serialization.
 
+For repeated complete queries, construct `QueryCache.new(:$transducer)` and
+call `.query` with the same `Str`, `Blob`, or u64-token inputs accepted by a
+transducer. The native implementation combines TinyLFU approximate-frequency
+admission with SIEVE eviction under hard entry and logical-weight bounds.
+Approximation changes residency only: every miss returns the exact result.
+The cache is exclusive and deliberately contains no lock, so parallel callers
+shard one cache per worker. See the package Pod and the
+[query-cache design](../../docs/bindings/query-cache.md) for lifecycle,
+revision, and workload-selection guidance.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract
@@ -91,6 +101,12 @@ variants, protocols, or methods.
 | `PhoneticRuleSet.close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.elems` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.new` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
+| `QueryCache.clear` | `llev_query_cache_clear` | project ABI operation |
+| `QueryCache.close` | `llev_query_cache_free` | project ABI operation |
+| `QueryCache.new` | `llev_query_cache_new` | project ABI operation |
+| `QueryCache.query` | `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64` | project ABI operation |
+| `QueryCache.reset-stats` | `llev_query_cache_reset_stats` | project ABI operation |
+| `QueryCache.stats` | `llev_query_cache_stats` | project ABI operation |
 | `QueryCursor.close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `QueryCursor.next-batch` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `Transducer.close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |

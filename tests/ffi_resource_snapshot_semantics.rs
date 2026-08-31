@@ -136,6 +136,39 @@ fn c_abi_enforces_batch_leases_and_one_long_lived_snapshot() {
     }
 }
 
+#[test]
+fn c_query_cache_requires_exact_provider_snapshot_identity() {
+    unsafe {
+        let dictionary = TestDictionary::new([("cat".to_owned(), Some(1))]);
+        let resource = dictionary.resource();
+        let mut transducer = ptr::null_mut();
+        assert_eq!(
+            llev_transducer_new(&resource, LlevAlgorithm::Standard as u32, &mut transducer),
+            LlevStatus::Ok
+        );
+        let mut cache = ptr::null_mut();
+        assert_eq!(
+            llev_query_cache_new(transducer, 8, 1 << 20, &mut cache),
+            LlevStatus::Ok
+        );
+        let mut cursor = ptr::null_mut();
+        assert_eq!(
+            llev_query_cache_query_utf8(
+                cache,
+                b"cat".as_ptr().cast(),
+                3,
+                0,
+                LlevQueryOrder::Traversal as u32,
+                &mut cursor,
+            ),
+            LlevStatus::Unsupported
+        );
+        assert!(cursor.is_null());
+        llev_query_cache_free(cache);
+        llev_transducer_free(transducer);
+    }
+}
+
 struct Reduced {
     terms: Vec<String>,
     calls: usize,

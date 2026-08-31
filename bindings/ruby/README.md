@@ -107,6 +107,14 @@ variants, protocols, or methods.
 | `PhoneticRuleSet.parse` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
 | `Query#close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `Query#each` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `QueryCache` | `llev_query_cache_new` | project ABI operation |
+| `QueryCache#clear` | `llev_query_cache_clear` | project ABI operation |
+| `QueryCache#close` | `llev_query_cache_free` | project ABI operation |
+| `QueryCache#query` | `llev_query_cache_query_utf8` | project ABI operation |
+| `QueryCache#query_bytes` | `llev_query_cache_query_bytes` | project ABI operation |
+| `QueryCache#query_u64` | `llev_query_cache_query_u64` | project ABI operation |
+| `QueryCache#reset_stats` | `llev_query_cache_reset_stats` | project ABI operation |
+| `QueryCache#stats` | `llev_query_cache_stats` | project ABI operation |
 | `Transducer#close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer#query` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
 | `Transducer#query_bytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |

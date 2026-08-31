@@ -5,8 +5,10 @@ use super::{
     LLEV_BUILD_FEATURE_CORE, LLEV_BUILD_FEATURE_PHONETIC,
 };
 use crate::bindings::{
-    BindingError, MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceTransducer,
+    BindingError, MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceQueryCache,
+    ResourceTransducer,
 };
+use crate::transducer::{QueryCacheLimits, QueryCacheStats};
 use std::cell::RefCell;
 use std::ffi::{c_char, c_void, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -17,6 +19,42 @@ use vinary_tree_interop::{VtResource, VtStatus, VtUnitDomain};
 /// resource.
 pub struct LlevTransducer {
     pub(crate) inner: ResourceTransducer,
+}
+
+/// Opaque, exclusive bounded complete-query cache.
+pub struct LlevQueryCache {
+    inner: ResourceQueryCache,
+}
+
+/// Aggregate cache-policy and residency counters across result-order shards.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct LlevQueryCacheStats {
+    /// Total cached-query requests.
+    pub requests: u64,
+    /// Requests served by resident immutable results.
+    pub hits: u64,
+    /// Requests whose exact product walk ran.
+    pub misses: u64,
+    /// Computed results admitted to residency.
+    pub admissions: u64,
+    /// Computed results rejected by limits or TinyLFU admission.
+    pub rejections: u64,
+    /// Resident results displaced by SIEVE selection.
+    pub evictions: u64,
+    /// Current entries across traversal and distance-ordered shards.
+    pub resident_entries: usize,
+    /// Current logical weight across both shards.
+    pub resident_weight: usize,
+}
+
+fn add_cache_stats(output: &mut LlevQueryCacheStats, stats: QueryCacheStats) {
+    output.requests = output.requests.saturating_add(stats.requests());
+    output.hits = output.hits.saturating_add(stats.hits());
+    output.misses = output.misses.saturating_add(stats.misses());
+    output.admissions = output.admissions.saturating_add(stats.admissions());
+    output.rejections = output.rejections.saturating_add(stats.rejections());
+    output.evictions = output.evictions.saturating_add(stats.evictions());
 }
 
 /// Domain-neutral borrowed match descriptor.
@@ -107,9 +145,9 @@ fn map_binding_error(error: &BindingError) -> LlevStatus {
     match error {
         BindingError::NullResource => LlevStatus::NullPointer,
         BindingError::UnitDomainMismatch { .. } => LlevStatus::DomainMismatch,
-        BindingError::UnsupportedValueDomain(_) | BindingError::UnsupportedOrdering(_) => {
-            LlevStatus::Unsupported
-        }
+        BindingError::UnsupportedValueDomain(_)
+        | BindingError::UnsupportedOrdering(_)
+        | BindingError::MissingSnapshotIdentity => LlevStatus::Unsupported,
         BindingError::EmptyBatch => LlevStatus::InvalidArgument,
         BindingError::Provider(status) => match status {
             VtStatus::InvalidArgument => LlevStatus::InvalidArgument,
@@ -323,6 +361,111 @@ pub unsafe extern "C" fn llev_transducer_unit_domain(
     })
 }
 
+/// Construct a synchronization-free bounded query cache retaining a transducer.
+///
+/// Limits apply independently to traversal and distance-then-term result-order
+/// shards. The returned handle is exclusive and must not be used concurrently;
+/// callers obtain parallelism by sharding one cache per worker.
+///
+/// # Safety
+///
+/// `transducer` and `out_cache` must be readable/writable respectively.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_new(
+    transducer: *const LlevTransducer,
+    max_entries_per_order: usize,
+    max_weight_per_order: usize,
+    out_cache: *mut *mut LlevQueryCache,
+) -> LlevStatus {
+    boundary(|| {
+        let transducer = transducer
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "transducer is null".into()))?;
+        if out_cache.is_null() {
+            return Err((LlevStatus::NullPointer, "out_cache is null".into()));
+        }
+        let inner = ResourceQueryCache::new(
+            transducer.inner.clone(),
+            QueryCacheLimits::new(max_entries_per_order, max_weight_per_order),
+        );
+        out_cache.write(Box::into_raw(Box::new(LlevQueryCache { inner })));
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Drop all resident results without changing policy counters.
+///
+/// # Safety
+///
+/// `cache` must be a live, exclusively borrowed cache handle.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_clear(cache: *mut LlevQueryCache) -> LlevStatus {
+    boundary(|| {
+        let cache = cache
+            .as_mut()
+            .ok_or((LlevStatus::NullPointer, "cache is null".into()))?;
+        cache.inner.clear();
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Reset policy counters without changing resident results or frequency state.
+///
+/// # Safety
+///
+/// `cache` must be a live, exclusively borrowed cache handle.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_reset_stats(cache: *mut LlevQueryCache) -> LlevStatus {
+    boundary(|| {
+        let cache = cache
+            .as_mut()
+            .ok_or((LlevStatus::NullPointer, "cache is null".into()))?;
+        cache.inner.reset_stats();
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Read aggregate counters and residency without mutating policy state.
+///
+/// # Safety
+///
+/// `cache` and `out_stats` must be readable/writable respectively.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_stats(
+    cache: *const LlevQueryCache,
+    out_stats: *mut LlevQueryCacheStats,
+) -> LlevStatus {
+    boundary(|| {
+        let cache = cache
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "cache is null".into()))?;
+        if out_stats.is_null() {
+            return Err((LlevStatus::NullPointer, "out_stats is null".into()));
+        }
+        let mut stats = LlevQueryCacheStats {
+            resident_entries: cache.inner.len(),
+            resident_weight: cache.inner.resident_weight(),
+            ..LlevQueryCacheStats::default()
+        };
+        add_cache_stats(&mut stats, cache.inner.traversal_stats());
+        add_cache_stats(&mut stats, cache.inner.ordered_stats());
+        out_stats.write(stats);
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Release an exclusive query-cache handle. Existing cursors remain valid.
+///
+/// # Safety
+///
+/// A non-null pointer must be a live cache handle and cannot be reused.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_free(cache: *mut LlevQueryCache) {
+    if !cache.is_null() {
+        drop(Box::from_raw(cache));
+    }
+}
+
 pub(crate) fn write_cursor(
     result: Result<QueryCursor, BindingError>,
     out_cursor: *mut *mut LlevQueryCursor,
@@ -421,6 +564,94 @@ pub unsafe extern "C" fn llev_transducer_query_u64(
             .ok_or((LlevStatus::NullPointer, "transducer is null".into()))?;
         write_cursor(
             transducer.inner.query_u64(
+                slice(query, query_len, "u64 query")?,
+                max_distance,
+                parse_order(order)?,
+            ),
+            out_cursor,
+        )
+    })
+}
+
+/// Materialize/cache one Unicode query result and return an independent cursor.
+///
+/// # Safety
+///
+/// The cache must be exclusively borrowed, output must be writable, and query
+/// bytes must be valid UTF-8.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_query_utf8(
+    cache: *mut LlevQueryCache,
+    query: *const c_char,
+    query_len: usize,
+    max_distance: usize,
+    order: u32,
+    out_cursor: *mut *mut LlevQueryCursor,
+) -> LlevStatus {
+    boundary(|| {
+        let cache = cache
+            .as_mut()
+            .ok_or((LlevStatus::NullPointer, "cache is null".into()))?;
+        write_cursor(
+            cache
+                .inner
+                .query_utf8(utf8(query, query_len)?, max_distance, parse_order(order)?),
+            out_cursor,
+        )
+    })
+}
+
+/// Materialize/cache one raw-byte query result and return an independent cursor.
+///
+/// # Safety
+///
+/// The cache must be exclusively borrowed, output must be writable, and query
+/// must address `query_len` bytes when non-empty.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_query_bytes(
+    cache: *mut LlevQueryCache,
+    query: *const u8,
+    query_len: usize,
+    max_distance: usize,
+    order: u32,
+    out_cursor: *mut *mut LlevQueryCursor,
+) -> LlevStatus {
+    boundary(|| {
+        let cache = cache
+            .as_mut()
+            .ok_or((LlevStatus::NullPointer, "cache is null".into()))?;
+        write_cursor(
+            cache.inner.query_bytes(
+                slice(query, query_len, "byte query")?,
+                max_distance,
+                parse_order(order)?,
+            ),
+            out_cursor,
+        )
+    })
+}
+
+/// Materialize/cache one u64-token query result and return an independent cursor.
+///
+/// # Safety
+///
+/// The cache must be exclusively borrowed, output must be writable, and query
+/// must address `query_len` aligned tokens when non-empty.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_query_u64(
+    cache: *mut LlevQueryCache,
+    query: *const u64,
+    query_len: usize,
+    max_distance: usize,
+    order: u32,
+    out_cursor: *mut *mut LlevQueryCursor,
+) -> LlevStatus {
+    boundary(|| {
+        let cache = cache
+            .as_mut()
+            .ok_or((LlevStatus::NullPointer, "cache is null".into()))?;
+        write_cursor(
+            cache.inner.query_u64(
                 slice(query, query_len, "u64 query")?,
                 max_distance,
                 parse_order(order)?,

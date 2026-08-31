@@ -8,8 +8,8 @@
     DictionaryValueDomain SnapshotIdentity UnsignedLong)
    (io.vinarytree.liblevenshtein
     Algorithm BorrowedBatchConsumer BorrowedMatchBatch Match PhoneticPattern
-    PhoneticRuleSet PhoneticRuleSetKind QueryCursor QueryOrder Term$Bytes
-    Term$U64 Term$Utf8 Transducer)
+    PhoneticRuleSet PhoneticRuleSetKind QueryCache QueryCacheStats QueryCursor
+    QueryOrder Term$Bytes Term$U64 Term$Utf8 Transducer)
    (java.lang AutoCloseable Iterable)
    (java.util Iterator OptionalLong)
    (java.util.concurrent.atomic AtomicBoolean)))
@@ -95,6 +95,31 @@
    (Transducer. dictionary))
   ([^DictionaryResource dictionary {:keys [algorithm] :or {algorithm :standard}}]
    (Transducer. dictionary (enum-value algorithms algorithm "algorithm"))))
+
+(defn query-cache
+  "Retain a transducer behind an exclusive hard-bounded result cache. Create
+  one cache per worker; each returned result cursor is independently owned."
+  ([^Transducer automaton]
+   (QueryCache. automaton))
+  ([^Transducer automaton {:keys [maximum-entries maximum-weight]
+                           :or {maximum-entries 1024
+                                maximum-weight (* 64 1024 1024)}}]
+   (QueryCache. automaton (long maximum-entries) (long maximum-weight))))
+
+(defn cache-stats [^QueryCache cache]
+  (let [^QueryCacheStats stats (.stats cache)
+        unsigned #(bigint (Long/toUnsignedString (long %)))]
+    {:requests (unsigned (.requests stats))
+     :hits (unsigned (.hits stats))
+     :misses (unsigned (.misses stats))
+     :admissions (unsigned (.admissions stats))
+     :rejections (unsigned (.rejections stats))
+     :evictions (unsigned (.evictions stats))
+     :resident-entries (unsigned (.residentEntries stats))
+     :resident-weight (unsigned (.residentWeight stats))}))
+
+(defn clear-cache! [^QueryCache cache] (.clear cache) cache)
+(defn reset-cache-stats! [^QueryCache cache] (.resetStats cache) cache)
 
 (defn close! [resource]
   (.close ^AutoCloseable resource))
@@ -200,11 +225,26 @@
 
 (defn query
   "Return a one-shot lazy/reducible query over a query-start snapshot."
-  ([^Transducer automaton term max-distance]
-   (ResultCursor. (.query automaton term (long max-distance)) (AtomicBoolean. false)))
-  ([^Transducer automaton term max-distance {:keys [order] :or {order :traversal}}]
+  ([automaton term max-distance]
    (ResultCursor.
-    (.query automaton term (long max-distance) (enum-value orders order "query order"))
+    (cond
+      (instance? Transducer automaton)
+      (.query ^Transducer automaton term (long max-distance))
+      (instance? QueryCache automaton)
+      (.query ^QueryCache automaton term (long max-distance) QueryOrder/TRAVERSAL)
+      :else (throw (IllegalArgumentException.
+                    "query target must be a Transducer or QueryCache")))
+    (AtomicBoolean. false)))
+  ([automaton term max-distance {:keys [order] :or {order :traversal}}]
+   (ResultCursor.
+    (let [selected (enum-value orders order "query order")]
+      (cond
+        (instance? Transducer automaton)
+        (.query ^Transducer automaton term (long max-distance) selected)
+        (instance? QueryCache automaton)
+        (.query ^QueryCache automaton term (long max-distance) selected)
+        :else (throw (IllegalArgumentException.
+                      "query target must be a Transducer or QueryCache"))))
     (AtomicBoolean. false))))
 
 (defn reduce-batches

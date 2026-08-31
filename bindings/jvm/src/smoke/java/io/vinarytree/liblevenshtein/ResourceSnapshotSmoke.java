@@ -19,6 +19,29 @@ public final class ResourceSnapshotSmoke {
     public static void verify() {
         verifySelectorsErrorsPhoneticsAndLifecycle();
         verifySnapshotIsolation();
+        verifyQueryCacheRequiresStableSnapshotIdentity();
+    }
+
+    private static void verifyQueryCacheRequiresStableSnapshotIdentity() {
+        try (UnicodeDictionaryResource dictionary =
+                        new UnicodeDictionaryResource(() -> initial());
+                Transducer transducer = new Transducer(dictionary);
+                QueryCache cache = new QueryCache(transducer, 4, 4096)) {
+            QueryCacheStats empty = cache.stats();
+            require(empty.requests() == 0 && empty.residentEntries() == 0,
+                    "new query cache did not start empty");
+            try (QueryCursor ignored = cache.query("cat", 1)) {
+                throw new AssertionError(
+                        "cache accepted a provider without stable snapshot identity");
+            } catch (NativeException failure) {
+                require(failure.status() == Status.UNSUPPORTED,
+                        "identity-less provider returned status " + failure.status());
+            }
+            cache.clear();
+            cache.resetStats();
+            require(cache.stats().requests() == 0,
+                    "query cache counters did not reset");
+        }
     }
 
     private static void verifySnapshotIsolation() {

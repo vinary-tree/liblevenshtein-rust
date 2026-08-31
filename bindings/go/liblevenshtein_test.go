@@ -278,6 +278,53 @@ func TestByteAndU64QueriesPreserveDomainsAndValues(t *testing.T) {
 	}
 }
 
+func TestBoundedQueryCacheReportsHitsAndPreservesExactResults(t *testing.T) {
+	dictionary := mustTextDictionary(t, map[string]*uint64{"cat": nil, "cot": nil})
+	defer dictionary.Close()
+	transducer := mustTransducer(t, dictionary, Standard)
+	defer transducer.Close()
+	cache, err := NewQueryCache(transducer, 8, 1<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cache.Close()
+	coldCursor, err := cache.Query("cut", 1, Traversal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cold := drain(t, coldCursor)
+	hitCursor, err := cache.Query("cut", 1, Traversal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hit := drain(t, hitCursor)
+	if !reflect.DeepEqual(hit, cold) {
+		t.Fatalf("cache changed exact result: cold=%v hit=%v", cold, hit)
+	}
+	stats, err := cache.Stats()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Requests != 2 || stats.Hits != 1 || stats.Misses != 1 ||
+		stats.ResidentEntries != 1 || stats.ResidentWeight == 0 {
+		t.Fatalf("unexpected cache stats: %+v", stats)
+	}
+	if err := cache.ResetStats(); err != nil {
+		t.Fatal(err)
+	}
+	stats, _ = cache.Stats()
+	if stats.Requests != 0 || stats.ResidentEntries != 1 {
+		t.Fatalf("reset changed residency: %+v", stats)
+	}
+	if err := cache.Clear(); err != nil {
+		t.Fatal(err)
+	}
+	stats, _ = cache.Stats()
+	if stats.ResidentEntries != 0 {
+		t.Fatalf("clear retained results: %+v", stats)
+	}
+}
+
 func TestQueryStartSnapshotSurvivesMutationAndProducerClose(t *testing.T) {
 	values := map[string]*uint64{}
 	for index, term := range []string{"cat", "cot", "cut", "scat"} {

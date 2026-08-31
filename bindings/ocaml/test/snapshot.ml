@@ -89,8 +89,20 @@ let () =
    | Lev.Text _ -> assert false);
   assert (token_match.distance = 1 && token_match.id = Some 12L);
   Lev.cursor_close token_cursor;
+  let token_cache =
+    Lev.query_cache ~maximum_entries:4 ~maximum_weight:4096 token_automaton
+  in
   Dict.close token_dictionary;
   Lev.close_transducer token_automaton;
+  let cached_tokens =
+    collect
+      (Lev.cached_query_u64 token_cache [|1L; 2L; 4L|] ~maximum_distance:1)
+  in
+  assert
+    (match cached_tokens with
+     | [{ Lev.term = Lev.Tokens [|1L; 2L; 3L|]; _ }] -> true
+     | _ -> false);
+  Lev.close_query_cache token_cache;
 
   let byte_dictionary =
     Dict.dynamic_dawg ~domain:Vinary_tree_interop.Byte ()
@@ -110,8 +122,21 @@ let () =
   assert (byte_batch.(0).distance = 0 && byte_batch.(0).id = Some 13L);
   assert (Lev.next_batch ~maximum:1 byte_cursor = None);
   Lev.cursor_close byte_cursor;
+  let byte_cache =
+    Lev.query_cache ~maximum_entries:4 ~maximum_weight:4096 byte_automaton
+  in
   Dict.close byte_dictionary;
   Lev.close_transducer byte_automaton;
+  let cached_bytes =
+    collect
+      (Lev.cached_query_bytes byte_cache (Bytes.of_string byte_text)
+         ~maximum_distance:0)
+  in
+  assert
+    (match cached_bytes with
+     | [{ Lev.term = Lev.Text text; _ }] -> text = byte_text
+     | _ -> false);
+  Lev.close_query_cache byte_cache;
 
   let persistent_path = temporary_path ".artrie" in
   let persistent = Dict.create_persistent_artrie persistent_path in
@@ -195,6 +220,22 @@ let () =
   assert
     (List.sort compare (List.map text_of_match product_matches) = ["cat"; "cot"]);
   Lev.close_pattern product_pattern;
+  let cache =
+    Lev.query_cache ~maximum_entries:8 ~maximum_weight:(1024 * 1024)
+      equality_automaton
+  in
+  let cold = collect (Lev.cached_query cache "cat" ~maximum_distance:1) in
+  let hit = collect (Lev.cached_query cache "cat" ~maximum_distance:1) in
+  assert (cold = hit);
+  let stats = Lev.query_cache_stats cache in
+  assert (stats.requests = 2L && stats.hits = 1L && stats.misses = 1L);
+  assert (stats.resident_entries = 1 && stats.resident_weight > 0);
+  Lev.reset_query_cache_stats cache;
+  assert ((Lev.query_cache_stats cache).requests = 0L);
+  assert ((Lev.query_cache_stats cache).resident_entries = 1);
+  Lev.clear_query_cache cache;
+  assert ((Lev.query_cache_stats cache).resident_entries = 0);
+  Lev.close_query_cache cache;
   Dict.close equality_dictionary;
   Lev.close_transducer equality_automaton;
 

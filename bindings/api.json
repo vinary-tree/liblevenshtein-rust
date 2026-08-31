@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.5",
   "abiVersion": 1,
-  "apiRevision": 2,
+  "apiRevision": 3,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -351,6 +351,21 @@
         "query_bytes",
         "query_u64",
         "query_pattern"
+      ]
+    },
+    "ResourceQueryCache": {
+      "ownership": "exclusive-single-owner-no-internal-locks",
+      "policy": "TinyLFU-admission-plus-SIEVE-eviction",
+      "limits": "hard-per-result-order-entry-and-logical-weight-bounds",
+      "requires": "snapshot-identity",
+      "methods": [
+        "query_utf8",
+        "query_bytes",
+        "query_u64",
+        "stats",
+        "clear",
+        "reset_stats",
+        "close"
       ]
     },
     "QueryCursor": {
@@ -493,6 +508,26 @@
       "rustModule": "index"
     },
     {
+      "name": "llev_query_cache_new",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cache_clear",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cache_reset_stats",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cache_stats",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cache_free",
+      "rustModule": "index"
+    },
+    {
       "name": "llev_transducer_query_utf8",
       "rustModule": "index"
     },
@@ -502,6 +537,18 @@
     },
     {
       "name": "llev_transducer_query_u64",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cache_query_utf8",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cache_query_bytes",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cache_query_u64",
       "rustModule": "index"
     },
     {

@@ -63,6 +63,7 @@ public final class Transducer implements AutoCloseable {
     /** Start a Unicode query and capture the current dictionary revision. */
     public QueryCursor query(String query, long maximumDistance, QueryOrder order) {
         ensureOpen();
+        requireDistance(maximumDistance);
         byte[] bytes = Objects.requireNonNull(query, "query").getBytes(StandardCharsets.UTF_8);
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment input = bytes(arena, bytes);
@@ -76,6 +77,7 @@ public final class Transducer implements AutoCloseable {
     /** Start a raw-byte query. */
     public QueryCursor query(byte[] query, long maximumDistance) {
         ensureOpen();
+        requireDistance(maximumDistance);
         Objects.requireNonNull(query, "query");
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment out = arena.allocate(ADDRESS);
@@ -88,6 +90,7 @@ public final class Transducer implements AutoCloseable {
     /** Start a raw u64-token query using Java long bit patterns. */
     public QueryCursor query(long[] query, long maximumDistance) {
         ensureOpen();
+        requireDistance(maximumDistance);
         Objects.requireNonNull(query, "query");
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment input = arena.allocate(
@@ -140,6 +143,7 @@ public final class Transducer implements AutoCloseable {
             QueryOrder order,
             Consumer<? super Match> consumer) {
         MemorySegment transducer = state.handle();
+        requireDistance(maximumDistance);
         byte[] encoded = Objects.requireNonNull(query, "query").getBytes(StandardCharsets.UTF_8);
         Objects.requireNonNull(order, "order");
         Objects.requireNonNull(consumer, "consumer");
@@ -162,6 +166,7 @@ public final class Transducer implements AutoCloseable {
             long maximumDistance,
             Consumer<? super Match> consumer) {
         MemorySegment transducer = state.handle();
+        requireDistance(maximumDistance);
         Objects.requireNonNull(query, "query");
         Objects.requireNonNull(consumer, "consumer");
         try (Arena arena = Arena.ofConfined()) {
@@ -183,6 +188,7 @@ public final class Transducer implements AutoCloseable {
             long maximumDistance,
             Consumer<? super Match> consumer) {
         MemorySegment transducer = state.handle();
+        requireDistance(maximumDistance);
         Objects.requireNonNull(query, "query");
         Objects.requireNonNull(consumer, "consumer");
         try (Arena arena = Arena.ofConfined()) {
@@ -254,7 +260,7 @@ public final class Transducer implements AutoCloseable {
         }
     }
 
-    private static MemorySegment bytes(Arena arena, byte[] bytes) {
+    static MemorySegment bytes(Arena arena, byte[] bytes) {
         MemorySegment result = arena.allocate(Math.max(1, bytes.length), 1);
         if (bytes.length != 0) {
             result.asSlice(0, bytes.length).copyFrom(MemorySegment.ofArray(bytes));
@@ -264,6 +270,16 @@ public final class Transducer implements AutoCloseable {
 
     private void ensureOpen() {
         state.handle();
+    }
+
+    MemorySegment handle() {
+        return state.handle();
+    }
+
+    static void requireDistance(long maximumDistance) {
+        if (maximumDistance < 0) {
+            throw new IllegalArgumentException("maximumDistance must be nonnegative");
+        }
     }
 
     @Override

@@ -2,7 +2,7 @@
 """Stable liblevenshtein native ABI generation."""
 const ABI_VERSION = UInt32(1)
 """Minimum additive native API revision required by this facade."""
-const API_REVISION = UInt32(2)
+const API_REVISION = UInt32(3)
 """Default maximum number of match descriptors per native batch."""
 const DEFAULT_MATCH_BATCH = 256
 """Compiled native feature bit: core."""

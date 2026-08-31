@@ -90,6 +90,7 @@ variants, protocols, or methods.
 | `damerau_distance_threshold` | `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
 | `levenshtein_distance` | `llev_distance` | standalone exact or thresholded distance |
 | `levenshtein_distance_threshold` | `llev_distance_threshold` | standalone exact or thresholded distance |
+| `new_query_cache` | `llev_query_cache_new` | project ABI operation |
 | `new_transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `parse_phonetic_rules` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
 | `phonetic_pattern%close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
@@ -98,6 +99,13 @@ variants, protocols, or methods.
 | `phonetic_rule_set%apply` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
 | `phonetic_rule_set%close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `phonetic_rule_set%length` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
+| `query_cache%clear` | `llev_query_cache_clear` | project ABI operation |
+| `query_cache%close` | `llev_query_cache_free` | project ABI operation |
+| `query_cache%query_bytes` | `llev_query_cache_query_bytes` | project ABI operation |
+| `query_cache%query_text` | `llev_query_cache_query_utf8` | project ABI operation |
+| `query_cache%query_u64` | `llev_query_cache_query_u64` | project ABI operation |
+| `query_cache%reset_stats` | `llev_query_cache_reset_stats` | project ABI operation |
+| `query_cache%stats` | `llev_query_cache_stats` | project ABI operation |
 | `query_iterator%close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `query_iterator%next` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `transducer%close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |

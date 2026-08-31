@@ -9,5 +9,6 @@ function transducer(dictionary, algorithm) {
   assertSameRuntime(dictionary, namespace.runtimeIdentity);
   return namespace.transducer(dictionary, algorithm);
 }
-const facade = Object.assign({}, namespace, { transducer });
+const queryCache = namespace.queryCache.bind(namespace);
+const facade = Object.assign({}, namespace, { transducer, queryCache });
 module.exports = Object.assign(facade, { default: facade });

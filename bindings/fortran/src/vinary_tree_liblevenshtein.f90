@@ -47,6 +47,17 @@ module vinary_tree_liblevenshtein
     integer(c_size_t) :: len
   end type c_owned_string
 
+  type, bind(c), public :: query_cache_stats
+    integer(c_int64_t) :: requests = 0
+    integer(c_int64_t) :: hits = 0
+    integer(c_int64_t) :: misses = 0
+    integer(c_int64_t) :: admissions = 0
+    integer(c_int64_t) :: rejections = 0
+    integer(c_int64_t) :: evictions = 0
+    integer(c_size_t) :: resident_entries = 0
+    integer(c_size_t) :: resident_weight = 0
+  end type query_cache_stats
+
   type, public :: levenshtein_match
     character(kind=c_char, len=:), allocatable :: text
     integer(c_int8_t), allocatable :: bytes(:)
@@ -81,6 +92,20 @@ module vinary_tree_liblevenshtein
     final :: transducer_finalize
   end type transducer
 
+  type, public :: query_cache
+    private
+    type(c_ptr) :: handle = c_null_ptr
+  contains
+    procedure, public :: query_text => cache_query_text
+    procedure, public :: query_bytes => cache_query_bytes
+    procedure, public :: query_u64 => cache_query_u64
+    procedure, public :: stats => cache_stats
+    procedure, public :: clear => cache_clear
+    procedure, public :: reset_stats => cache_reset_stats
+    procedure, public :: close => cache_close
+    final :: cache_finalize
+  end type query_cache
+
   type, public :: phonetic_pattern
     private
     type(c_ptr) :: handle = c_null_ptr
@@ -101,7 +126,7 @@ module vinary_tree_liblevenshtein
     final :: rules_finalize
   end type phonetic_rule_set
 
-  public :: new_transducer, compile_phonetic_regex, compile_phonetic_llre
+  public :: new_transducer, new_query_cache, compile_phonetic_regex, compile_phonetic_llre
   public :: parse_phonetic_rules, builtin_phonetic_rules
   public :: levenshtein_distance, levenshtein_distance_threshold
   public :: damerau_distance, damerau_distance_threshold
@@ -172,6 +197,57 @@ module vinary_tree_liblevenshtein
       integer(c_int32_t) :: status
     end function
     function c_query_u64(handle, input, count, maximum, order, output) bind(c, name="llev_transducer_query_u64") result(status)
+      import c_ptr, c_size_t, c_int32_t
+      type(c_ptr), value :: handle, input
+      integer(c_size_t), value :: count, maximum
+      integer(c_int32_t), value :: order
+      type(c_ptr), intent(out) :: output
+      integer(c_int32_t) :: status
+    end function
+    function c_query_cache_new(transducer, entries, weight, output) bind(c, name="llev_query_cache_new") result(status)
+      import c_ptr, c_size_t, c_int32_t
+      type(c_ptr), value :: transducer
+      integer(c_size_t), value :: entries, weight
+      type(c_ptr), intent(out) :: output
+      integer(c_int32_t) :: status
+    end function
+    function c_query_cache_clear(handle) bind(c, name="llev_query_cache_clear") result(status)
+      import c_ptr, c_int32_t
+      type(c_ptr), value :: handle
+      integer(c_int32_t) :: status
+    end function
+    function c_query_cache_reset_stats(handle) bind(c, name="llev_query_cache_reset_stats") result(status)
+      import c_ptr, c_int32_t
+      type(c_ptr), value :: handle
+      integer(c_int32_t) :: status
+    end function
+    function c_query_cache_stats(handle, output) bind(c, name="llev_query_cache_stats") result(status)
+      import c_ptr, c_int32_t, query_cache_stats
+      type(c_ptr), value :: handle
+      type(query_cache_stats), intent(out) :: output
+      integer(c_int32_t) :: status
+    end function
+    subroutine c_query_cache_free(handle) bind(c, name="llev_query_cache_free")
+      import c_ptr
+      type(c_ptr), value :: handle
+    end subroutine
+    function c_cache_query_text(handle, input, count, maximum, order, output) bind(c, name="llev_query_cache_query_utf8") result(status)
+      import c_ptr, c_size_t, c_int32_t
+      type(c_ptr), value :: handle, input
+      integer(c_size_t), value :: count, maximum
+      integer(c_int32_t), value :: order
+      type(c_ptr), intent(out) :: output
+      integer(c_int32_t) :: status
+    end function
+    function c_cache_query_bytes(handle, input, count, maximum, order, output) bind(c, name="llev_query_cache_query_bytes") result(status)
+      import c_ptr, c_size_t, c_int32_t
+      type(c_ptr), value :: handle, input
+      integer(c_size_t), value :: count, maximum
+      integer(c_int32_t), value :: order
+      type(c_ptr), intent(out) :: output
+      integer(c_int32_t) :: status
+    end function
+    function c_cache_query_u64(handle, input, count, maximum, order, output) bind(c, name="llev_query_cache_query_u64") result(status)
       import c_ptr, c_size_t, c_int32_t
       type(c_ptr), value :: handle, input
       integer(c_size_t), value :: count, maximum
@@ -349,6 +425,91 @@ contains
     if (present(status)) status = code
   end subroutine
 
+  subroutine new_query_cache(value, source, maximum_entries, maximum_weight, status)
+    type(query_cache), intent(out) :: value
+    type(transducer), intent(in) :: source
+    integer(c_size_t), intent(in), optional :: maximum_entries, maximum_weight
+    integer(c_int32_t), intent(out), optional :: status
+    integer(c_size_t) :: entries, weight
+    integer(c_int32_t) :: code
+    entries = 1024_c_size_t
+    weight = 64_c_size_t * 1024_c_size_t * 1024_c_size_t
+    if (present(maximum_entries)) entries = maximum_entries
+    if (present(maximum_weight)) weight = maximum_weight
+    code = c_query_cache_new(source%handle, entries, weight, value%handle)
+    if (present(status)) status = code
+  end subroutine
+
+  function cache_stats(self, status) result(value)
+    class(query_cache), intent(in) :: self
+    integer(c_int32_t), intent(out), optional :: status
+    type(query_cache_stats) :: value
+    integer(c_int32_t) :: code
+    code = c_query_cache_stats(self%handle, value)
+    if (present(status)) status = code
+  end function
+
+  subroutine cache_clear(self, status)
+    class(query_cache), intent(inout) :: self
+    integer(c_int32_t), intent(out), optional :: status
+    integer(c_int32_t) :: code
+    code = c_query_cache_clear(self%handle)
+    if (present(status)) status = code
+  end subroutine
+
+  subroutine cache_reset_stats(self, status)
+    class(query_cache), intent(inout) :: self
+    integer(c_int32_t), intent(out), optional :: status
+    integer(c_int32_t) :: code
+    code = c_query_cache_reset_stats(self%handle)
+    if (present(status)) status = code
+  end subroutine
+
+  subroutine cache_query_text(self, query, maximum, iterator, order, status)
+    class(query_cache), intent(inout) :: self
+    character(len=*), intent(in) :: query
+    integer(c_size_t), intent(in) :: maximum
+    integer(c_int32_t), intent(in), optional :: order
+    integer(c_int32_t), intent(out), optional :: status
+    type(query_iterator), intent(out) :: iterator
+    character(kind=c_char), allocatable, target :: input(:)
+    integer(c_int32_t) :: code, selected
+    selected = llev_traversal; if (present(order)) selected = order
+    input = string_bytes(query)
+    code = c_cache_query_text(self%handle, byte_pointer(input), int(size(input), c_size_t), maximum, selected, iterator%handle)
+    if (present(status)) status = code
+  end subroutine
+
+  subroutine cache_query_bytes(self, query, maximum, iterator, order, status)
+    class(query_cache), intent(inout) :: self
+    integer(c_int8_t), target, intent(in) :: query(:)
+    integer(c_size_t), intent(in) :: maximum
+    integer(c_int32_t), intent(in), optional :: order
+    integer(c_int32_t), intent(out), optional :: status
+    type(query_iterator), intent(out) :: iterator
+    integer(c_int32_t) :: code, selected
+    type(c_ptr) :: input
+    selected = llev_traversal; if (present(order)) selected = order
+    if (size(query) == 0) then; input = c_null_ptr; else; input = c_loc(query(1)); end if
+    code = c_cache_query_bytes(self%handle, input, int(size(query), c_size_t), maximum, selected, iterator%handle)
+    if (present(status)) status = code
+  end subroutine
+
+  subroutine cache_query_u64(self, query, maximum, iterator, order, status)
+    class(query_cache), intent(inout) :: self
+    integer(c_int64_t), target, intent(in) :: query(:)
+    integer(c_size_t), intent(in) :: maximum
+    integer(c_int32_t), intent(in), optional :: order
+    integer(c_int32_t), intent(out), optional :: status
+    type(query_iterator), intent(out) :: iterator
+    integer(c_int32_t) :: code, selected
+    type(c_ptr) :: input
+    selected = llev_traversal; if (present(order)) selected = order
+    if (size(query) == 0) then; input = c_null_ptr; else; input = c_loc(query(1)); end if
+    code = c_cache_query_u64(self%handle, input, int(size(query), c_size_t), maximum, selected, iterator%handle)
+    if (present(status)) status = code
+  end subroutine
+
   subroutine query_text(self, query, maximum, iterator, order, status)
     class(transducer), intent(in) :: self
     character(len=*), intent(in) :: query
@@ -465,6 +626,12 @@ contains
     self%handle = c_null_ptr
   end subroutine
   subroutine transducer_finalize(self); type(transducer), intent(inout) :: self; call self%close(); end subroutine
+  subroutine cache_close(self)
+    class(query_cache), intent(inout) :: self
+    if (c_associated(self%handle)) call c_query_cache_free(self%handle)
+    self%handle = c_null_ptr
+  end subroutine
+  subroutine cache_finalize(self); type(query_cache), intent(inout) :: self; call self%close(); end subroutine
 
   subroutine compile_phonetic_regex(value, source, status)
     type(phonetic_pattern), intent(out) :: value

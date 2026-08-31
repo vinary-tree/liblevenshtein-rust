@@ -57,6 +57,7 @@ foreach (PhoneticRuleSetKind kind in Enum.GetValues<PhoneticRuleSetKind>())
 }
 
 VerifySelectorsOrdersDomainsAndProductQuery();
+VerifyBoundedQueryCache();
 VerifyLlreAndTypedFailure();
 VerifyGeneratedEnumsAndLifecycle();
 
@@ -126,6 +127,30 @@ static void VerifySelectorsOrdersDomainsAndProductQuery()
         Require(match.Distance == 1 && match.Id == ulong.MaxValue,
                 "u64 query lost its term, distance, or value");
     }
+}
+
+static void VerifyBoundedQueryCache()
+{
+    using var dictionary = new DynamicDawg();
+    dictionary.Put("cat", 1);
+    dictionary.Put("cot", 2);
+    using var transducer = new Transducer(dictionary);
+    using var cache = new QueryCache(transducer, 8, 1 << 20);
+    using Query coldQuery = cache.Query("cut", 1);
+    List<Match> cold = coldQuery.ToList();
+    using Query hitQuery = cache.Query("cut", 1);
+    List<Match> hit = hitQuery.ToList();
+    Require(cold.SequenceEqual(hit), "query cache changed an exact result");
+    QueryCacheStats stats = cache.Stats;
+    Require((stats.Requests, stats.Hits, stats.Misses) == (2UL, 1UL, 1UL),
+            "query cache did not distinguish cold and resident requests");
+    Require(stats.ResidentEntries == 1 && stats.ResidentWeight > 0,
+            "query cache residency was not bounded and observable");
+    cache.ResetStats();
+    Require(cache.Stats.Requests == 0 && cache.Stats.ResidentEntries == 1,
+            "counter reset changed residency");
+    cache.Clear();
+    Require(cache.Stats.ResidentEntries == 0, "cache clear retained results");
 }
 
 static void VerifyLlreAndTypedFailure()

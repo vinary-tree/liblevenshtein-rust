@@ -41,6 +41,11 @@ module VinaryTree
       ]
       Batch = struct ["void* matches", "size_t len", "uint64_t generation"]
       OwnedString = struct ["void* data", "size_t len"]
+      QueryCacheStats = struct [
+        "uint64_t requests", "uint64_t hits", "uint64_t misses",
+        "uint64_t admissions", "uint64_t rejections", "uint64_t evictions",
+        "size_t resident_entries", "size_t resident_weight"
+      ]
 
       extern "const char* llev_last_error_message(void)"
       extern "size_t llev_distance(const char*, size_t, const char*, size_t)"
@@ -54,6 +59,14 @@ module VinaryTree
       extern "uint32_t llev_transducer_query_utf8(void*, const char*, size_t, size_t, uint32_t, void*)"
       extern "uint32_t llev_transducer_query_bytes(void*, const void*, size_t, size_t, uint32_t, void*)"
       extern "uint32_t llev_transducer_query_u64(void*, const void*, size_t, size_t, uint32_t, void*)"
+      extern "uint32_t llev_query_cache_new(void*, size_t, size_t, void*)"
+      extern "uint32_t llev_query_cache_clear(void*)"
+      extern "uint32_t llev_query_cache_reset_stats(void*)"
+      extern "uint32_t llev_query_cache_stats(void*, void*)"
+      extern "void llev_query_cache_free(void*)"
+      extern "uint32_t llev_query_cache_query_utf8(void*, const char*, size_t, size_t, uint32_t, void*)"
+      extern "uint32_t llev_query_cache_query_bytes(void*, const void*, size_t, size_t, uint32_t, void*)"
+      extern "uint32_t llev_query_cache_query_u64(void*, const void*, size_t, size_t, uint32_t, void*)"
       extern "uint32_t llev_query_cursor_next_batch(void*, size_t, void*)"
       extern "uint32_t llev_query_cursor_release_batch(void*, uint64_t)"
       extern "uint32_t llev_query_cursor_free(void*)"

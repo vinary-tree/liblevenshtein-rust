@@ -102,6 +102,7 @@ variants, protocols, or methods.
 | `Error.Status` | `llev_last_error_message` | typed failure diagnostics |
 | `Iterator.Close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `Iterator.Next` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `NewQueryCache` | `llev_query_cache_new` | project ABI operation |
 | `NewTransducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `ParsePhoneticRules` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
 | `PhoneticPattern.Close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
@@ -110,6 +111,13 @@ variants, protocols, or methods.
 | `PhoneticRuleSet.Apply` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.Close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.Len` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
+| `QueryCache.Clear` | `llev_query_cache_clear` | project ABI operation |
+| `QueryCache.Close` | `llev_query_cache_free` | project ABI operation |
+| `QueryCache.Query` | `llev_query_cache_query_utf8` | project ABI operation |
+| `QueryCache.QueryBytes` | `llev_query_cache_query_bytes` | project ABI operation |
+| `QueryCache.QueryU64` | `llev_query_cache_query_u64` | project ABI operation |
+| `QueryCache.ResetStats` | `llev_query_cache_reset_stats` | project ABI operation |
+| `QueryCache.Stats` | `llev_query_cache_stats` | project ABI operation |
 | `Transducer.Close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.Query` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
 | `Transducer.QueryBytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |

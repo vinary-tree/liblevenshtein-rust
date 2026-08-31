@@ -7,7 +7,7 @@ const LL = Liblevenshtein
 
 @testset "ABI identity and layouts" begin
     @test LL.abi_version() == LL.ABI_VERSION == 1
-    @test LL.api_revision() >= LL.API_REVISION == 2
+    @test LL.api_revision() >= LL.API_REVISION == 3
     @test LL.build_features() & LL.BUILD_FEATURE_CORE != 0
     @test LL.STATUS_OK isa LL.Status
     @test LL.ALGORITHM_STANDARD isa LL.Algorithm
@@ -15,7 +15,40 @@ const LL = Liblevenshtein
     @test LL.RULES_ENGLISH_ORTHOGRAPHY isa LL.PhoneticRuleSetKind
     @test sizeof(LL.RawMatch) == 48
     @test sizeof(LL.RawBatch) == 24
+    @test sizeof(LL.RawQueryCacheStats) == 64
     @test sizeof(LL.OwnedString) == 16
+end
+
+@testset "bounded TinyLFU/SIEVE query cache" begin
+    dictionary = Libdictenstein.DynamicDawg()
+    dictionary["cat"] = 7
+    dictionary["cot"] = nothing
+    provider = Libdictenstein.snapshot(dictionary)
+    transducer = LL.Transducer(provider)
+    cache = LL.QueryCache(transducer; max_entries=8, max_weight=1 << 20)
+    try
+        cold = collect(LL.query(cache, "cut", 1))
+        hit = collect(LL.query(cache, "cut", 1))
+        @test hit == cold
+        stats = LL.cache_stats(cache)
+        @test (stats.requests, stats.hits, stats.misses) == (2, 1, 1)
+        @test stats.resident_entries == length(cache) == 1
+        @test stats.resident_weight > 0
+
+        LL.reset_stats!(cache)
+        @test LL.cache_stats(cache).requests == 0
+        @test length(cache) == 1
+        LL.clear!(cache)
+        @test isempty(cache)
+        @test_throws ArgumentError LL.QueryCache(transducer; max_entries=-1)
+        @test_throws ArgumentError LL.query(cache, "cut", -1)
+    finally
+        LL.close!(cache)
+        LL.close!(transducer)
+        close(provider)
+        close(dictionary)
+    end
+    @test !isopen(cache)
 end
 
 @testset "resource-backed snapshots, iteration, and reduction" begin
@@ -29,6 +62,7 @@ end
     provider = Libdictenstein.snapshot(dictionary)
     transducer = LL.Transducer(provider)
     try
+        @test_throws ArgumentError LL.query(transducer, "cut", -1)
         cursor = LL.query(transducer, "cut", 1;
             order=LL.ORDER_DISTANCE_THEN_TERM)
         @test cursor isa LL.QueryCursor
