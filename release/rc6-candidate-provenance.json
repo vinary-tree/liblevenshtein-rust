@@ -1,0 +1,406 @@
+{
+  "buildInputs": [
+    {
+      "canonicalDirectory": "llattice",
+      "cargoContract": {
+        "cargoFeatures": {},
+        "packageVersion": "0.1.0",
+        "rustVersion": "1.70",
+        "validatedCargoSelection": "dependency-selected feature set"
+      },
+      "cargoLocksSha256": {
+        "Cargo.lock": "31f0618eb699d11fbbf627a24490fec1c237f5b8ff9060ef9b61666ae40823c2"
+      },
+      "cargoPackageFileCount": 89,
+      "cargoPackageFileListSha256": "987d8b6b5c92108877182cfad4d53cf8d3816b8b75ef698c5590422580b972ae",
+      "name": "llattice",
+      "repository": "https://github.com/vinary-tree/llattice",
+      "requiredVersion": "0.1.0",
+      "sourceFileCount": 87,
+      "sourceSnapshotSha256": "6a3c86596620c7ecda11459238dfdfea8756c2878c85a0c6b61169a5bd3d8da4",
+      "subjectCommit": "2ec21ca70ae3cbb2d8afdd295c9ed09517003324"
+    }
+  ],
+  "components": [
+    {
+      "canonicalDirectory": "liblevenshtein-rust",
+      "cargoLocksSha256": {
+        "Cargo.lock": "0cfd7f1dcab9887e2afd8737915a568efc077f92a06e5024a9a261081ed5d0c9",
+        "liblevenshtein-macros/Cargo.lock": "a51ba4f6fecd0ad9d00c0b4e892d3aadc2216aa02b3d34e17d5e9d091bce00c2"
+      },
+      "cargoPackageFileCount": 2567,
+      "cargoPackageFileListSha256": "aaec8231abb435ab999f643ddf17761b14cddf29336fd033ae94c94c9d2c3c31",
+      "cargoReleaseContract": {
+        "cargoFeatures": {
+          "benchmark-controls": [
+            "libdictenstein/benchmark-controls"
+          ],
+          "binding-integration-tests": [
+            "native-bindings-full",
+            "libdictenstein/bindings-core"
+          ],
+          "binding-persistent-integration-tests": [
+            "binding-integration-tests",
+            "serialization",
+            "libdictenstein/persistent-artrie"
+          ],
+          "bindings-core": [
+            "dep:vinary-tree-interop"
+          ],
+          "bindings-phonetic": [
+            "bindings-core",
+            "phonetic-rules"
+          ],
+          "c-bindings": [
+            "native-bindings-full"
+          ],
+          "causal-resource-profiling": [
+            "resource-profiling",
+            "perf-instrumentation"
+          ],
+          "clojure-bindings": [
+            "jvm-bindings"
+          ],
+          "clojurescript-bindings": [
+            "javascript-bindings"
+          ],
+          "compression": [
+            "flate2",
+            "serialization",
+            "libdictenstein/compression"
+          ],
+          "cpp-bindings": [
+            "native-bindings-full"
+          ],
+          "default": [
+            "parking_lot"
+          ],
+          "dotnet-bindings": [
+            "native-bindings-full"
+          ],
+          "embedded-rules": [
+            "phonetic-rules"
+          ],
+          "eviction-arc-str": [],
+          "eviction-coarse-timestamps": [],
+          "eviction-compact-metadata": [],
+          "eviction-dashmap": [
+            "dashmap"
+          ],
+          "eviction-opt-balanced": [
+            "eviction-parking-lot",
+            "eviction-arc-str",
+            "eviction-compact-metadata"
+          ],
+          "eviction-opt-concurrent": [
+            "eviction-dashmap",
+            "eviction-parking-lot",
+            "eviction-arc-str",
+            "eviction-compact-metadata"
+          ],
+          "eviction-opt-memory": [
+            "eviction-compact-metadata"
+          ],
+          "eviction-opt-none": [],
+          "eviction-parking-lot": [
+            "parking_lot"
+          ],
+          "ffi": [
+            "bindings-core"
+          ],
+          "fortran-bindings": [
+            "native-bindings-full"
+          ],
+          "go-bindings": [
+            "native-bindings-full"
+          ],
+          "haskell-bindings": [
+            "native-bindings-full"
+          ],
+          "javascript-bindings": [
+            "wasm",
+            "bindings-phonetic"
+          ],
+          "jvm-bindings": [
+            "native-bindings-full"
+          ],
+          "lua-bindings": [
+            "native-bindings-full"
+          ],
+          "native-bindings-full": [
+            "ffi",
+            "bindings-phonetic"
+          ],
+          "ocaml-bindings": [
+            "native-bindings-full"
+          ],
+          "parallel-grep": [
+            "rayon",
+            "phonetic-rules"
+          ],
+          "pathmap-backend": [
+            "pathmap",
+            "libdictenstein/pathmap-backend"
+          ],
+          "perf-instrumentation": [
+            "benchmark-controls",
+            "libdictenstein/perf-instrumentation"
+          ],
+          "persistent-artrie": [
+            "memmap2",
+            "parking_lot",
+            "serde",
+            "bincode",
+            "libdictenstein/persistent-artrie"
+          ],
+          "phonetic-rules": [
+            "unicode-normalization"
+          ],
+          "protobuf": [
+            "prost",
+            "bytes",
+            "prost-build",
+            "serialization",
+            "libdictenstein/protobuf"
+          ],
+          "python-bindings": [
+            "native-bindings-full"
+          ],
+          "resource-profiling": [
+            "benchmark-controls",
+            "bindings-core",
+            "libdictenstein/bindings-core"
+          ],
+          "ruby-bindings": [
+            "native-bindings-full"
+          ],
+          "serialization": [
+            "serde",
+            "bincode",
+            "libdictenstein/serialization"
+          ],
+          "swift-bindings": [
+            "native-bindings-full"
+          ],
+          "typescript-bindings": [
+            "javascript-bindings"
+          ],
+          "wasm": [
+            "bindings-core",
+            "wasm-bindgen",
+            "serde-wasm-bindgen",
+            "console_error_panic_hook",
+            "getrandom",
+            "getrandom-03",
+            "js-sys",
+            "serde"
+          ],
+          "wasm-ffi": [
+            "wasm",
+            "ffi"
+          ],
+          "wasm-phonetic": [
+            "wasm",
+            "phonetic-rules"
+          ]
+        },
+        "coordinatedDependencies": {
+          "libdictenstein": {
+            "defaultFeatures": true,
+            "features": [
+              "parking_lot"
+            ],
+            "optional": false,
+            "version": "=4.0.0-rc.6"
+          },
+          "vinary-tree-interop": {
+            "defaultFeatures": true,
+            "features": [],
+            "optional": true,
+            "version": "=4.0.0-rc.6"
+          }
+        },
+        "packageVersion": "4.0.0-rc.6",
+        "validatedCargoSelection": "--all-features"
+      },
+      "name": "liblevenshtein",
+      "releaseVersion": "4.0.0-rc.6",
+      "repository": "https://github.com/vinary-tree/liblevenshtein-rust",
+      "sourceFileCount": 3862,
+      "sourceSnapshotSha256": "0622f87d1f270e066f36edc1163ca8bf612b2aeba934e402c426d3186a50753f",
+      "subjectCommit": "c7cbd9c3d4def712174341eedf7906273630d640"
+    },
+    {
+      "canonicalDirectory": "libdictenstein",
+      "cargoLocksSha256": {
+        "Cargo.lock": "3b3cd87288aa67799d6a276c09d56f2851e39089a388c2c04fc18819de0a6d1e"
+      },
+      "cargoPackageFileCount": 630,
+      "cargoPackageFileListSha256": "b0eb9d502ef73981629d82f17e9dfc020700f51ddaff24b1feb7aa3851c37d64",
+      "cargoReleaseContract": {
+        "cargoFeatures": {
+          "bench-internals": [
+            "io-uring-backend"
+          ],
+          "benchmark-controls": [],
+          "bindings-core": [
+            "dep:vinary-tree-interop"
+          ],
+          "c-bindings": [
+            "native-bindings-full"
+          ],
+          "clojure-bindings": [
+            "jvm-bindings"
+          ],
+          "clojurescript-bindings": [
+            "javascript-bindings"
+          ],
+          "compression": [
+            "flate2"
+          ],
+          "cpp-bindings": [
+            "native-bindings-full"
+          ],
+          "default": [
+            "parking_lot"
+          ],
+          "dotnet-bindings": [
+            "native-bindings-full"
+          ],
+          "ffi": [
+            "bindings-core",
+            "persistent-artrie"
+          ],
+          "fortran-bindings": [
+            "native-bindings-full"
+          ],
+          "go-bindings": [
+            "native-bindings-full"
+          ],
+          "group-commit": [
+            "persistent-artrie",
+            "crossbeam-channel"
+          ],
+          "haskell-bindings": [
+            "native-bindings-full"
+          ],
+          "io-uring-backend": [
+            "persistent-artrie",
+            "dep:io-uring",
+            "dep:libc"
+          ],
+          "javascript-bindings": [
+            "bindings-core"
+          ],
+          "jvm-bindings": [
+            "native-bindings-full"
+          ],
+          "lua-bindings": [
+            "native-bindings-full"
+          ],
+          "native-bindings-full": [
+            "ffi"
+          ],
+          "ocaml-bindings": [
+            "native-bindings-full"
+          ],
+          "parallel-merge": [
+            "persistent-artrie",
+            "rayon"
+          ],
+          "pathmap-backend": [
+            "pathmap"
+          ],
+          "perf-instrumentation": [],
+          "persistent-artrie": [
+            "memmap2",
+            "parking_lot",
+            "serde",
+            "bincode",
+            "sysinfo",
+            "xxhash-rust",
+            "lru",
+            "dashmap",
+            "crossbeam-channel",
+            "serialization"
+          ],
+          "protobuf": [
+            "prost",
+            "prost-build",
+            "dep:protoc-bin-vendored"
+          ],
+          "python-bindings": [
+            "native-bindings-full"
+          ],
+          "ruby-bindings": [
+            "native-bindings-full"
+          ],
+          "serialization": [
+            "serde",
+            "bincode"
+          ],
+          "swift-bindings": [
+            "native-bindings-full"
+          ],
+          "typescript-bindings": [
+            "javascript-bindings"
+          ]
+        },
+        "coordinatedDependencies": {
+          "llattice": {
+            "defaultFeatures": true,
+            "features": [],
+            "optional": false,
+            "version": "=0.1.0"
+          },
+          "vinary-tree-interop": {
+            "defaultFeatures": true,
+            "features": [],
+            "optional": true,
+            "version": "=4.0.0-rc.6"
+          }
+        },
+        "packageVersion": "4.0.0-rc.6",
+        "validatedCargoSelection": "--all-features"
+      },
+      "name": "libdictenstein",
+      "releaseVersion": "4.0.0-rc.6",
+      "repository": "https://github.com/vinary-tree/libdictenstein",
+      "sourceFileCount": 1469,
+      "sourceSnapshotSha256": "078f84c5b2d54e30b5e306e5645736af890a165d201e77ae8ca24d8f76c62f9e",
+      "subjectCommit": "7556918c0f32c13a89246331d1ae259581bad823"
+    },
+    {
+      "canonicalDirectory": "vinary-tree-interop",
+      "cargoLocksSha256": {
+        "Cargo.lock": "68ac0326cab13e21f63259c94cc3cc860691ef7deb36dbc11fb897e6647c882b"
+      },
+      "cargoPackageFileCount": 20,
+      "cargoPackageFileListSha256": "20f6e84aa1958c33a978d6b3b97106785aec6b06b8f42c818a2a25d0c0f9293b",
+      "cargoReleaseContract": {
+        "cargoFeatures": {
+          "default": []
+        },
+        "coordinatedDependencies": {},
+        "packageVersion": "4.0.0-rc.6",
+        "validatedCargoSelection": "--all-features"
+      },
+      "name": "vinary-tree-interop",
+      "releaseVersion": "4.0.0-rc.6",
+      "repository": "https://github.com/vinary-tree/vinary-tree-interop",
+      "sourceFileCount": 107,
+      "sourceSnapshotSha256": "af4ada9815e5888929ad6b0aae32f4cac5faa3119624d2e5e5254f14a6f28927",
+      "subjectCommit": "3804bee22bac9861037b26fd41fd6530a00eff39"
+    }
+  ],
+  "finalCommitAttestationRequired": true,
+  "kind": "coordinated-release-candidate-subject",
+  "release": "4.0.0-rc.6",
+  "schemaVersion": 1,
+  "toolchain": {
+    "cargoVerbose": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)\nrelease: 1.95.0\ncommit-hash: f2d3ce0bd7f24a49f8f72d9000448f8838c4e850\ncommit-date: 2026-03-21\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.2 (sys:0.20.4 vendored)\nlibcurl: 8.15.0-DEV (sys:0.4.83+curl-8.15.0 vendored ssl:OpenSSL/3.5.4)\nssl: OpenSSL 3.5.4 30 Sep 2025\nos: Arch Linux Rolling Release [64-bit]",
+    "declaredChannel": "1.95.0",
+    "declaredRustVersion": "1.95",
+    "rustcVerbose": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.95.0\nLLVM version: 22.1.2"
+  }
+}
