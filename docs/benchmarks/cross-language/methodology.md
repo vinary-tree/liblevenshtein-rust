@@ -38,14 +38,14 @@ same cpuset, with the same heap settings, so the only difference is the library.
 ### 1.2 The measurement model
 
 A **cell** is the atomic unit: one (target, backend, mode, algorithm, distance,
-query set) coordinate, measured as `$`S`$` timed samples of one full pass.
+query set) coordinate, measured as $`S`$ timed samples of one full pass.
 
 A **pass** is: for every query in the set, run the query and drain its result
 cursor to exhaustion, materializing every `(term, distance)` pair. Passes are
 whole — never a per-query timer — because per-query timing at these magnitudes
 (tens of microseconds) is dominated by clock overhead and scheduling noise.
 
-Let `$`t_i`$` be the duration of sample `$`i`$`. The reported statistic is the
+Let $`t_i`$ be the duration of sample $`i`$. The reported statistic is the
 median, with dispersion as median absolute deviation:
 
 ```math
@@ -57,7 +57,7 @@ Medians and MAD are used rather than means and standard deviations because the
 dominant contaminants — a GC pause, a JIT recompilation, a scheduler preemption
 — are one-sided positive outliers. A mean absorbs them; a median resists them.
 
-Per-query cost and throughput are derived from the median, where `$`Q`$` is the
+Per-query cost and throughput are derived from the median, where $`Q`$ is the
 query count:
 
 ```math
@@ -73,7 +73,7 @@ Across-cell summaries of *ratios* use the geometric mean:
 ```
 
 An arithmetic mean of ratios is not symmetric under inversion: averaging
-`$`\{2, 1/2\}`$` arithmetically gives 1.25, implying an advantage where there is
+$`\{2, 1/2\}`$ arithmetically gives 1.25, implying an advantage where there is
 none, and reversing which arm is numerator changes the answer. The geometric
 mean gives 1 either way. Since every headline in this program is a ratio, this
 is a correctness requirement, not a stylistic preference.
@@ -104,20 +104,20 @@ modulo, which would bias toward low indices.
 
 ### 2.2 Mutation model and realized distance
 
-A query at nominal distance `$`k`$` is produced by sampling a dictionary word and
-applying `$`k`$` edit operations. The naive version of this is wrong: applying
-`$`k`$` random edits does **not** guarantee the result is at distance `$`k`$`
+A query at nominal distance $`k`$ is produced by sampling a dictionary word and
+applying $`k`$ edit operations. The naive version of this is wrong: applying
+$`k`$ random edits does **not** guarantee the result is at distance $`k`$
 from the source, because edits can cancel (inserting then deleting the same
 character) or coincide with a shorter path.
 
 The generator therefore computes the **realized** distance with an in-generator
 reference dynamic program — Wagner–Fischer [1] for the standard family,
 restricted Damerau (OSA) for the transposition family — and resamples until the
-realized distance equals `$`k`$`. Mutants must additionally differ from their
+realized distance equals $`k`$. Mutants must additionally differ from their
 source, be non-empty, and be at most 24 characters.
 
 The generator also emits `queries-meta/*.jsonl` recording, per query, its source
-term, requested `$`k`$`, realized distance, and whether the mutant is itself a
+term, requested $`k`$, realized distance, and whether the mutant is itself a
 dictionary word — so any later analysis can condition on those facts rather than
 assume them.
 
@@ -369,7 +369,7 @@ is recovered by subtracting everything the harness did while timing:
 t_{\text{start}} = t_{\text{stamp}} - \Bigl(\textstyle\sum_i s_i + w + c\Bigr)
 ```
 
-with `$`s_i`$` the timed samples, `$`w`$` the warmup floor, and `$`c`$` the
+with $`s_i`$ the timed samples, $`w`$ the warmup floor, and $`c`$ the
 construction time (the dictionary build happens in the same process and competes
 for the same core). The result is deliberately **over-wide**: a false positive
 costs one re-measurement, a false negative silently corrupts a published ratio.
@@ -385,7 +385,7 @@ Every published median carries a **bootstrap 95% confidence interval** (10,000
 resamples, SplitMix64 seed 42, so the interval is itself reproducible), plus MAD
 and the p10/p90 range. Sample counts: 30 per cell for self-timed harnesses, 20
 for JMH cells (2 forks × 10 iterations). Formal hypothesis decisions require
-deeper arms of `$`\ge 51`$` replicates; broad cell agreement is corroborating
+deeper arms of $`\ge 51`$ replicates; broad cell agreement is corroborating
 breadth, not the formal test, and is labelled as such.
 
 ---

@@ -15,7 +15,7 @@ of a transposition macro.
 
 ## Recurrence term used here
 
-If `$`k'`$` and `$`l`$` are the previous matching endpoints, the additional
+If $`k'`$ and $`l`$ are the previous matching endpoints, the additional
 candidate is:
 
 ```math
@@ -23,8 +23,8 @@ D[k'-1,l-1]+(i-k'-1)+(j-l-1)+1.
 ```
 
 The three added quantities are source-interior deletions, target-interior
-insertions, and one endpoint transposition. Under budget `$`k`$`, their sum
-implies the joint lookback bound `$`(i-k')+(j-l)\le k+1`$`.
+insertions, and one endpoint transposition. Under budget $`k`$, their sum
+implies the joint lookback bound $`(i-k')+(j-l)\le k+1`$.
 
 ## Translation into the crate
 
@@ -35,7 +35,7 @@ automaton refines one recurrence edge into a streaming chain:
 2. extend once per target-interior symbol;
 3. resolve when the opposite endpoint matches.
 
-The equality `$`\delta+b=(\delta-1)+b+1`$` proves the chain has exactly the
+The equality $`\delta+b=(\delta-1)+b+1`$ proves the chain has exactly the
 paper recurrence's local cost. See the [literate algorithm chapter](../../algorithms/11-true-damerau/README.md)
 and [formal tree](../../verification/damerau/).
 

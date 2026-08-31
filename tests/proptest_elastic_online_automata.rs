@@ -1,7 +1,7 @@
 //! Point-interval correspondence for every production online elastic automaton.
 
 use liblevenshtein::time_series::{
-    ElasticOnlineAutomaton, FrechetConfig, IncompleteReason, MsmConfig, MsmKernel,
+    DtwConfig, ElasticOnlineAutomaton, FrechetConfig, IncompleteReason, MsmConfig, MsmKernel,
     OnlineAutomatonLimits, OnlineStepOutcome, ResourceKind, TwedConfig,
 };
 use proptest::prelude::*;
@@ -125,6 +125,44 @@ proptest! {
             prop_assert!(close(
                 value.distance_within_cutoff,
                 config.distance_with_cutoff(&query, &target[..=index], cutoff),
+            ));
+        }
+    }
+
+    #[test]
+    fn banded_dtw_point_stream_matches_scalar_dp_after_every_prefix(
+        raw_query in prop::collection::vec(-10i16..=10, 1..12),
+        raw_target in prop::collection::vec(-10i16..=10, 0..18),
+        band in 0usize..=8,
+        cutoff in 0u16..=400,
+    ) {
+        let query: Vec<f64> = raw_query.into_iter().map(f64::from).collect();
+        let target: Vec<f64> = raw_target.into_iter().map(f64::from).collect();
+        let config = DtwConfig::new(band);
+        let cutoff = f64::from(cutoff);
+        let mut automaton = ElasticOnlineAutomaton::new(
+            &query,
+            config,
+            cutoff,
+            OnlineAutomatonLimits::default(),
+        )
+        .expect("small finite banded-DTW query has an online state");
+        prop_assert!(close(
+            automaton.observation().distance_within_cutoff,
+            config.distance_squared_with_cutoff(&query, &[], cutoff),
+        ));
+        for (index, sample) in target.iter().copied().enumerate() {
+            let outcome = automaton.advance(sample).expect("generated sample is finite");
+            let OnlineStepOutcome::Advanced { value, usage } = outcome else {
+                prop_assert!(false, "default limits rejected a small banded-DTW transition");
+                return Ok(());
+            };
+            prop_assert_eq!(value.consumed_target_len, index + 1);
+            prop_assert!(usage.queue_entries <= query.len().min(2 * band + 1));
+            prop_assert!(usage.work_units <= query.len().min(2 * band + 1));
+            prop_assert!(close(
+                value.distance_within_cutoff,
+                config.distance_squared_with_cutoff(&query, &target[..=index], cutoff),
             ));
         }
     }

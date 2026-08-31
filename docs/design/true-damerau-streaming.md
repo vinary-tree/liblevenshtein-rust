@@ -42,7 +42,7 @@ live in the [algorithm chapter](../algorithms/11-true-damerau/README.md).
 For every reachable position:
 
 - `Normal` implies `aux == 0`.
-- `DamerauPending` implies `$`1\le\mathrm{aux}\le255`$`.
+- `DamerauPending` implies $`1\le\mathrm{aux}\le255`$.
 - pending accumulated cost already includes one transposition and all skipped
   query endpoints;
 - pending positions never take an epsilon deletion;
@@ -92,7 +92,7 @@ Damerau.
 Rocq proves arithmetic and transition invariants without axioms or admissions.
 Verus checks a Rust-shaped executable model. Z3 and cvc5 independently show
 the negations of five bounded laws are unsatisfiable. TLA+ explores every
-state of the `$`k=3`$` entry/extension/resolution protocol and checks budget,
+state of the $`k=3`$ entry/extension/resolution protocol and checks budget,
 validity, and no-pending-epsilon invariants. Each law is mirrored in focused or
 generated Rust tests so the proof is connected to implementation behavior.
 

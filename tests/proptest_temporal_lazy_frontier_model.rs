@@ -182,6 +182,53 @@ fn canonical_nonnegative_bits(value: f64) -> Option<u64> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct InternedArenaModel {
+    max_states: usize,
+    max_depth: usize,
+    state_count: usize,
+    frames: Vec<usize>,
+}
+
+impl InternedArenaModel {
+    fn new(max_states: usize, max_depth: usize) -> Self {
+        Self {
+            max_states,
+            max_depth,
+            state_count: 1,
+            frames: vec![0],
+        }
+    }
+
+    fn push_reused(&mut self, state_id: usize) -> bool {
+        if self.frames.len() == self.max_depth || state_id >= self.state_count {
+            return false;
+        }
+        self.frames.push(state_id);
+        true
+    }
+
+    fn push_fresh(&mut self) -> bool {
+        if self.frames.len() == self.max_depth || self.state_count == self.max_states {
+            return false;
+        }
+        let fresh_id = self.state_count;
+        self.state_count += 1;
+        self.frames.push(fresh_id);
+        true
+    }
+
+    fn pop_frame(&mut self) -> bool {
+        self.frames.pop().is_some()
+    }
+
+    fn references_are_valid(&self) -> bool {
+        self.frames
+            .iter()
+            .all(|state_id| *state_id < self.state_count)
+    }
+}
+
 fn small_series() -> impl Strategy<Value = Vec<i16>> {
     prop::collection::vec(-8i16..=8, 0..8)
 }
@@ -375,6 +422,47 @@ proptest! {
             prop_assert_eq!(bits, 0);
         } else {
             prop_assert_eq!(bits, value.to_bits());
+        }
+    }
+
+    #[test]
+    fn bounded_interned_arena_preserves_stable_ids_under_arbitrary_iterative_dfs_actions(
+        max_states in 1usize..32,
+        max_depth in 1usize..32,
+        actions in prop::collection::vec((0u8..=2, any::<u16>()), 0..256),
+    ) {
+        let mut arena = InternedArenaModel::new(max_states, max_depth);
+        for (action, selector) in actions {
+            let before = arena.clone();
+            match action {
+                0 => {
+                    let state_id = usize::from(selector) % arena.state_count;
+                    let pushed = arena.push_reused(state_id);
+                    if pushed {
+                        prop_assert_eq!(arena.state_count, before.state_count);
+                        prop_assert_eq!(arena.frames.last(), Some(&state_id));
+                    } else {
+                        prop_assert_eq!(&arena, &before);
+                    }
+                }
+                1 => {
+                    let pushed = arena.push_fresh();
+                    if pushed {
+                        prop_assert_eq!(arena.state_count, before.state_count + 1);
+                        prop_assert_eq!(arena.frames.last(), Some(&before.state_count));
+                    } else {
+                        prop_assert_eq!(&arena, &before);
+                    }
+                }
+                _ => {
+                    let old_state_count = arena.state_count;
+                    arena.pop_frame();
+                    prop_assert_eq!(arena.state_count, old_state_count);
+                }
+            }
+            prop_assert!(arena.references_are_valid());
+            prop_assert!(arena.state_count <= arena.max_states);
+            prop_assert!(arena.frames.len() <= arena.max_depth);
         }
     }
 }

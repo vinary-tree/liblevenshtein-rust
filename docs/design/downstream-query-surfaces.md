@@ -58,8 +58,8 @@ The executable invariant is:
 E_t-L_t=operatorname{depth}_t,
 ```
 
-where `$`E_t`$` and `$`L_t`$` count callbacks through traversal event `$`t`$`.
-At completion, depth is zero and therefore `$`E=L`$`.
+where $`E_t`$ and $`L_t`$ count callbacks through traversal event $`t`$.
+At completion, depth is zero and therefore $`E=L`$.
 
 ### 2.2 Reachability is not membership
 
@@ -74,14 +74,14 @@ term. A generated test found precisely this boundary: the root was previously
 accepted when the filter excluded `""`. `permits_accept` now enforces exact
 membership independently of the optional score returned by `accept`.
 
-For an allowed term set `$`A`$`, the retained prefix set is:
+For an allowed term set $`A`$, the retained prefix set is:
 
 ```math
 P(A)=\{p\mid \exists a\in A,\;\exists s,\;a=p\mathbin{\|}s\}.
 ```
 
-Rejecting `$`p\notin P(A)`$` is sound because no descendant can belong to
-`$`A`$`. `NgramIndex::prefix_pruner` and `HybridMatcher::prefix_pruner` build
+Rejecting $`p\notin P(A)`$ is sound because no descendant can belong to
+$`A`$. `NgramIndex::prefix_pruner` and `HybridMatcher::prefix_pruner` build
 this downward-closed set from their complete candidate lists.
 
 ### 2.3 Why a shared mutable visitor is not wired into standard BFS
@@ -99,9 +99,9 @@ designs and their contracts:
 | Design | Correct? | Time | Live visitor state | Consequence |
 |---|---:|---:|---:|---|
 | one shared enter/leave stack on BFS | no | — | one stack | conflates sibling prefixes |
-| stateless prefix predicate | yes | `$`\mathcal{O}(1)`$` per edge after indexing | one predicate | cannot express incremental dynamic-programming scorers |
+| stateless prefix predicate | yes | $`\mathcal{O}(1)`$ per edge after indexing | one predicate | cannot express incremental dynamic-programming scorers |
 | clone a visitor snapshot into every queued node | yes | clone cost per retained edge | proportional to BFS frontier width | requires a cloneable/snapshot trait and potentially large memory |
-| replay the root-to-node prefix when a node is popped | yes | `$`\mathcal{O}(d)`$` per node at depth `$`d`$` | one scratch visitor | repeats scorer work and needs retained prefixes |
+| replay the root-to-node prefix when a node is popped | yes | $`\mathcal{O}(d)`$ per node at depth $`d`$ | one scratch visitor | repeats scorer work and needs retained prefixes |
 | explicit DFS with one balanced visitor | yes | one enter and leave per visited edge | proportional to key depth | changes traversal and result order |
 
 The original plan correctly observed the shared-stack incompatibility, but a
@@ -128,10 +128,10 @@ layers.
 
 ## 3. Subsequence DFS
 
-For query `$`q`$` and dictionary term `$`w`$`, the iterator accepts exactly
-when `$`q\preceq w`$`. Each stack frame stores the dictionary node, remaining
+For query $`q`$ and dictionary term $`w`$, the iterator accepts exactly
+when $`q\preceq w`$. Each stack frame stores the dictionary node, remaining
 edges, the number of matched query units, and the entering label. On edge
-`$`u`$`:
+$`u`$:
 
 ```math
 m'=m+[m<|q|\land u=q_m].
@@ -168,7 +168,7 @@ Distance is primary and cannot be traded for confidence. Only the current
 distance layer is materialized, scored, and sorted; `.take(k)` never
 materializes result strings or values from a later layer. Non-finite scorer
 output is normalized to negative infinity so ordering remains total and
-deterministic. `LogFrequencyScorer` uses `$`\ln(1+f)`$` for numeric frequency
+deterministic. `LogFrequencyScorer` uses $`\ln(1+f)`$ for numeric frequency
 values; applications can retain arbitrary value types by supplying a scorer.
 
 ### 4.1 Match modes are candidate filters, not prefix lower bounds
@@ -214,29 +214,29 @@ is an explicit, measured policy choice.
 
 ## 6. Bracket languages and the projection bound
 
-Opening kind `$`r`$` is token `$`r`$`; its closing token is `$`k+r`$`. An exact
-bounded-depth DFA state is the complete stack word. For `$`k`$` bracket kinds
-and maximum depth `$`D`$`, its state count is:
+Opening kind $`r`$ is token $`r`$; its closing token is $`k+r`$. An exact
+bounded-depth DFA state is the complete stack word. For $`k`$ bracket kinds
+and maximum depth $`D`$, its state count is:
 
 ```math
 N(k,D)=\sum_{d=0}^{D}k^d.
 ```
 
 Construction computes that sum with saturating arithmetic before allocating
-and rejects `$`N(k,D)>4096`$`. Thus `$`N(3,10)=88{,}573`$` fails with a typed,
+and rejects $`N(k,D)>4096`$. Thus $`N(3,10)=88{,}573`$ fails with a typed,
 informative error. `SmallDfaStateSet` is a dynamically sized bit vector, so the
 4,096-state public policy is also the representation limit.
 
-Let `$`\pi`$` erase bracket kinds while preserving opening versus closing. It is
+Let $`\pi`$ erase bracket kinds while preserving opening versus closing. It is
 length-preserving and maps every kind-sensitive Dyck word into the one-kind
-Dyck language. Mapping an edit script through `$`\pi`$` cannot increase its
+Dyck language. Mapping an edit script through $`\pi`$ cannot increase its
 cost, so:
 
 ```math
 d_{D_1}(\pi(w))\le d_{D_k}(w).
 ```
 
-After a one-kind scan leaves `$`o`$` unmatched opens and `$`c`$` unmatched
+After a one-kind scan leaves $`o`$ unmatched opens and $`c`$ unmatched
 closes, the exact projected distance is:
 
 ```math
@@ -245,7 +245,7 @@ h(w)=\left\lceil\frac{o}{2}\right\rceil+
 ```
 
 This remains an admissible lower bound, not the exact multi-kind answer.
-`DyckCorrector` supplies that exact answer with an `$`\mathcal{O}(kn^3)`$`
+`DyckCorrector` supplies that exact answer with an $`\mathcal{O}(kn^3)`$
 interval program and a replayable minimum-cost witness. lling-llang supplies a
 distinct-stack-marker PDA and bridge API for grammar pipelines. See the
 dedicated [Dyck theorem and algorithm note](grammar-correction/dyck-projection-lower-bound.md).
@@ -278,15 +278,15 @@ therefore computes a full DP column on each descended edge:
 C_i=\min(P_i+\iota_i,\;C_{i-1}+\delta_i,\;P_{i-1}+\sigma_i),
 ```
 
-where `$`P`$` is the parent column and `$`\iota_i,\delta_i,\sigma_i`$` are
+where $`P`$ is the parent column and $`\iota_i,\delta_i,\sigma_i`$ are
 contextual insertion, deletion, and substitution costs. `None`, a negative
 value, NaN, or infinity makes that operation unreachable. If every cell is
 over budget, the subtree is pruned.
 
 `min_nonzero_cost()` must be finite and strictly positive. The current
 iterator performs no cross-state subsumption; the declaration is an admission
-contract for safe future realignment. If two positions `$`i,j`$` were compared
-with cost slack `$`s`$`, the necessary guard would be:
+contract for safe future realignment. If two positions $`i,j`$ were compared
+with cost slack $`s`$, the necessary guard would be:
 
 ```math
 |i-j|c_{\min}\le s.
@@ -302,8 +302,8 @@ The pinned experiment compared equivalent standard costs on one
 Threadripper core. The control `QueryIteratorF64` mean was 1,802,404 ns and the
 contextual treatment mean was 1,184,158 ns for the frozen 10,000-term arm. The
 preregistered expectation of overhead was refuted on this workload; the
-treatment gate was accepted with `$`p=4.59\times10^{-56}`$` and Cohen's
-`$`d=-11.45`$`. This does **not** establish a general speed advantage: the two
+treatment gate was accepted with $`p=4.59\times10^{-56}`$ and Cohen's
+$`d=-11.45`$. This does **not** establish a general speed advantage: the two
 iterators have different state representations, and context-heavy rules can do
 more work.
 
@@ -315,7 +315,7 @@ more work.
 | balanced DFS callbacks and exact terminal membership | Rocq, Dafny, Verus, SMT, TLA+ | counted visitor and allowed-set intersection |
 | rank order antisymmetry | Rocq, Dafny, Verus, SMT | multiset equality and window ordering |
 | kind erasure never increases script cost | Rocq, Dafny, Verus, Z3, cvc5 | brute-force bounded Dyck comparison |
-| bracket geometric resource guard | Rocq, Dafny, Verus, Z3, cvc5 | `$`k=3,D=10`$` example and randomized inputs |
+| bracket geometric resource guard | Rocq, Dafny, Verus, Z3, cvc5 | $`k=3,D=10`$ example and randomized inputs |
 | contextual realignment symmetry | Rocq, Dafny, Verus, Z3, cvc5 | arithmetic property plus iterator differential |
 | traversal event/state safety | TLA+ | callback accounting and fail-closed cost test |
 | real-data applicability | — | 42,395 Birkbeck pairs and 128 ranked queries |

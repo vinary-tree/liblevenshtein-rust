@@ -1,7 +1,7 @@
 //! Insertion/deletion distance and its thresholded dynamic program.
 //!
 //! Substitution is absent: replacing one symbol therefore costs one deletion
-//! plus one insertion. Equivalently, for strings `$`x`$` and `$`y`$`,
+//! plus one insertion. Equivalently, for strings $`x`$ and $`y`$,
 //!
 //! ```math
 //! d_{\mathrm{indel}}(x,y)=|x|+|y|-2\,\operatorname{LCS}(x,y),

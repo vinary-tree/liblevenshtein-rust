@@ -25,7 +25,11 @@ where
                 ..
             } => {
                 let stats = next.retained_product_state_stats();
-                assert_eq!(stats.frames, stats.states);
+                if stats.frames == 0 {
+                    assert_eq!(stats.states, 0, "exact-scan mode retains no product arena");
+                } else {
+                    assert!(stats.states >= stats.frames);
+                }
                 outcome = next.resume(page);
             }
             OperationOutcome::Incomplete {

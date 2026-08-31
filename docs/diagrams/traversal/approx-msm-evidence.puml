@@ -1,0 +1,48 @@
+@startuml
+skinparam backgroundColor #FAFCFF
+skinparam shadowing false
+skinparam ArrowColor #354052
+skinparam activity {
+  BackgroundColor #EAF2FF
+  BorderColor #235789
+  DiamondBackgroundColor #FFF2CC
+  DiamondBorderColor #B8860B
+  StartColor #235789
+  EndColor #235789
+}
+
+start
+:Validate finite configuration,
+query, and stored state;
+if (Valid?) then (yes)
+  :Preflight checked work,
+capacity, and scratch ceilings;
+  if (Preflight and allocation succeed?) then (yes)
+    :Select <math>C=\min(N,\max(\ell,k))</math>
+PAA-ranked candidates;
+    :Exact full-precision MSM reranking
+with two reusable DP rows;
+    if (<math>C=N</math> and all <math>N</math> decided?) then (yes)
+      :Exhaustive
+exact scores and exact recall; <<#D5F5E3>>
+    else (no)
+      :Advisory
+exact emitted scores, no recall claim; <<#FFF2CC>>
+    endif
+  else (no)
+    :Incomplete
+explicit budget/allocation reason; <<#FADBD8>>
+  endif
+else (no)
+  :Validation error or Incomplete
+never a successful empty result; <<#FADBD8>>
+endif
+stop
+
+legend right
+  |= Color |= Evidence meaning |
+  |<#D5F5E3> green | exhaustive exact recall |
+  |<#FFF2CC> amber | exact scores, advisory coverage |
+  |<#FADBD8> red | no completeness claim |
+endlegend
+@enduml

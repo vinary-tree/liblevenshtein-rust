@@ -1,0 +1,1 @@
+# No legacy fixture documents.

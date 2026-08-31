@@ -22,22 +22,22 @@ approximation parameter selected internally.
 
 ## 2. Symbols and alignment geometry
 
-Let `$`x=(x_1,\ldots,x_m)`$` be the query and
-`$`y=(y_1,\ldots,y_n)`$` the candidate. A **warping path** is a sequence of
-grid cells beginning at `$`(1,1)`$`, ending at `$`(m,n)`$`, and taking steps
-from `$`\{(1,0),(0,1),(1,1)\}`$`. These steps preserve order but allow one
+Let $`x=(x_1,\ldots,x_m)`$ be the query and
+$`y=(y_1,\ldots,y_n)`$ the candidate. A **warping path** is a sequence of
+grid cells beginning at $`(1,1)`$, ending at $`(m,n)`$, and taking steps
+from $`\{(1,0),(0,1),(1,1)\}`$. These steps preserve order but allow one
 sample to align with several samples on the other side.
 
-The required **Sakoe–Chiba band** has inclusive half-width `$`w`$`:
+The required **Sakoe–Chiba band** has inclusive half-width $`w`$:
 
 ```math
 \lvert i-j\rvert\le w.
 ```
 
 Cells outside the band are unreachable and carry `TOP`, the extended cost
-`$`+\infty`$`. In particular, an endpoint is unreachable when
-`$`\lvert m-n\rvert>w`$`. The public `DtwConfig::new(w)` constructor therefore
-requires `$`w`$`; the API has no default or unbanded constructor.
+$`+\infty`$. In particular, an endpoint is unreachable when
+$`\lvert m-n\rvert>w`$. The public `DtwConfig::new(w)` constructor therefore
+requires $`w`$; the API has no default or unbanded constructor.
 
 ![A symmetric Sakoe–Chiba band, its live dynamic-programming cells, and the prefix-first pruning cascade](../../diagrams/time-series/sakoe-chiba-band.svg)
 
@@ -49,9 +49,9 @@ The implementation accumulates squared local deviations:
 C[i,j]=(x_i-y_j)^2+min\{C[i-1,j],C[i-1,j-1],C[i,j-1]\}.
 ```
 
-The boundary is `$`C[0,0]=0`$`; all other row-zero and column-zero cells are
-`TOP`. A cell is also `TOP` when `$`\lvert i-j\rvert>w`$`. The native kernel
-cost is `$`C[m,n]`$`, while the public distance is
+The boundary is $`C[0,0]=0`$; all other row-zero and column-zero cells are
+`TOP`. A cell is also `TOP` when $`\lvert i-j\rvert>w`$. The native kernel
+cost is $`C[m,n]`$, while the public distance is
 
 ```math
 D_w(x,y)=\sqrt{C[m,n]}.
@@ -63,11 +63,11 @@ square root per cell. `DtwTransducer` squares a public threshold on entry and
 square-roots exact results on exit. Thus a public threshold of `5.0` means a
 native cutoff of `25.0`, never `5.0`.
 
-The two-row implementation uses `$`\mathcal{O}(n)`$` storage after orienting
+The two-row implementation uses $`\mathcal{O}(n)`$ storage after orienting
 the shorter input along the stored row. It visits only live cells. For equal
-lengths this is `$`\mathcal{O}(m(2w+1))`$` time and
-`$`\mathcal{O}(m)`$` allocated storage; the live work per trie edge is
-`$`\mathcal{O}(2w+1)`$`.
+lengths this is $`\mathcal{O}(m(2w+1))`$ time and
+$`\mathcal{O}(m)`$ allocated storage; the live work per trie edge is
+$`\mathcal{O}(2w+1)`$.
 
 ## 4. Why the band is semantic and operational
 
@@ -86,7 +86,7 @@ distance's definition, not a tuning hint.
 
 ## 5. LB_Keogh candidate bound
 
-For target position `$`j`$`, define the query envelope over every query sample
+For target position $`j`$, define the query envelope over every query sample
 reachable through the band:
 
 ```math
@@ -95,7 +95,7 @@ L_j=\min_{\lvert i-j\rvert\le w}x_i,
 U_j=\max_{\lvert i-j\rvert\le w}x_i.
 ```
 
-The unavoidable deviation of candidate sample `$`y_j`$` is
+The unavoidable deviation of candidate sample $`y_j`$ is
 
 ```math
 \delta_j=
@@ -106,9 +106,9 @@ y_j-U_j & y_j>U_j,\\
 \end{cases}
 ```
 
-Every valid path couples `$`y_j`$` to at least one query sample inside this
-envelope. Therefore `$`\delta_j^2`$` is no larger than at least one local cost
-paid for position `$`j`$`, and summing once per candidate position gives
+Every valid path couples $`y_j`$ to at least one query sample inside this
+envelope. Therefore $`\delta_j^2`$ is no larger than at least one local cost
+paid for position $`j`$, and summing once per candidate position gives
 
 ```math
 \operatorname{LB}_{\mathrm{Keogh}}^2(x,y)
@@ -125,7 +125,7 @@ A **monotonic deque** is a double-ended queue whose stored query values remain
 ordered. One increasing deque exposes each window minimum; one decreasing
 deque exposes each window maximum. Every query index enters and leaves each
 deque at most once, so all centered envelopes are built in
-`$`\mathcal{O}(m)`$` time and `$`\mathcal{O}(m)`$` memory.
+$`\mathcal{O}(m)`$ time and $`\mathcal{O}(m)`$ memory.
 
 Positions just beyond the query tail can still be reachable when the candidate
 is longer. Suffix minima and maxima answer those envelope queries in constant
@@ -136,7 +136,7 @@ Generated tests compare the deque construction with a direct window scan over
 ## 7. Incremental interval LB_Keogh
 
 A trie edge denotes an unknown target value in a quantization interval
-`$`B_j=[\ell_j,h_j]`$`. Let `$`E_j=[L_j,U_j]`$` be the query envelope. The exact
+$`B_j=[\ell_j,h_j]`$. Let $`E_j=[L_j,U_j]`$ be the query envelope. The exact
 minimum separation between the two closed intervals is
 
 ```math
@@ -152,14 +152,14 @@ P_j=P_{j-1}+\operatorname{gap}(B_j,E_j)^2.
 
 Because this bound depends only on the parent prefix, current edge, and query
 plan, the generic walker evaluates it before allocating or computing the
-`$`\mathcal{O}(w)`$` child column. A rejected edge cannot conceal an in-range
+$`\mathcal{O}(w)`$ child column. A rejected edge cannot conceal an in-range
 descendant: every realization inside each bin has at least the interval gap,
 and every extension retains the already accumulated non-negative prefix cost.
 
 ## 8. Metric status is a code-level contract
 
 DTW is symmetric and non-negative, but it is not a metric. Under band one, let
-`$`x=[0]`$`, `$`y=[1]`$`, and `$`z=[1,1]`$`. Exact costs are
+$`x=[0]`$, $`y=[1]`$, and $`z=[1,1]`$. Exact costs are
 
 ```math
 D_1(x,y)=1,
@@ -180,7 +180,7 @@ path inflation, not metric balls.
 
 - Two empty sequences have distance zero.
 - Exactly one empty sequence has `TOP`: a pinned endpoint path does not exist.
-- A length difference larger than `$`w`$` has `TOP`.
+- A length difference larger than $`w`$ has `TOP`.
 - NaN or infinite samples are outside the exact and interval domains.
 - A negative or NaN range cutoff yields no result.
 - Finite overflow during squared accumulation saturates to `TOP` through the

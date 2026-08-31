@@ -12,11 +12,16 @@
 //! LB_Keogh and for an incremental prefix gate before each trie column.
 
 use std::hash::Hash;
+use std::mem::size_of;
 
 use super::super::elastic::interval::interval_dist;
-use super::super::elastic::{Cost, ElasticKernel, ElasticSearchStats, ElasticTransducer};
-use super::keogh::{interval_prefix_step, keogh_envelopes, lb_keogh_squared, KeoghPlan};
+use super::super::elastic::sparse::{charge_work, NeighborSeedRows};
+use super::super::elastic::{
+    Cost, ElasticKernel, ElasticSearchStats, ElasticTransducer, PointFrontierStep, QueryPlanStorage,
+};
+use super::keogh::{interval_prefix_step, lb_keogh_squared, try_keogh_envelopes, KeoghPlan};
 use crate::cost::{CostMonoid, WeightedCost};
+use crate::time_series::bounded::IncompleteReason;
 use crate::time_series::encoding::QuantizationConfig;
 
 #[inline]
@@ -38,6 +43,128 @@ fn squared_cutoff(cutoff: f64) -> f64 {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+fn sparse_frontier_step(
+    config: &DtwConfig,
+    previous: &[f64],
+    previous_active: &[usize],
+    query: &[f64],
+    target: (f64, f64),
+    previous_prefix_bound: Option<f64>,
+    depth: usize,
+    plan: &KeoghPlan,
+    cutoff: f64,
+    max_work: usize,
+    column: &mut [f64],
+    active: &mut Vec<usize>,
+) -> PointFrontierStep<f64, f64> {
+    let prefix_bound = depth.checked_sub(1).map_or(WeightedCost::ZERO, |index| {
+        interval_prefix_step(
+            previous_prefix_bound.unwrap_or(WeightedCost::ZERO),
+            target,
+            index,
+            config.band,
+            plan,
+        )
+    });
+    let expected = match query.len().checked_add(1) {
+        Some(expected) => expected,
+        None => {
+            return PointFrontierStep::Advanced {
+                lower_bound: WeightedCost::TOP,
+                carry: prefix_bound,
+                work: 0,
+            };
+        }
+    };
+    if depth == 0 || column.len() != expected || query.is_empty() {
+        return PointFrontierStep::Advanced {
+            lower_bound: WeightedCost::TOP,
+            carry: prefix_bound,
+            work: 0,
+        };
+    }
+
+    // A target prefix of length `depth` can reach only the inclusive
+    // Sakoe–Chiba strip below. The scheduler then constructs exactly the
+    // horizontal/diagonal seeds and their demanded vertical closure; rows
+    // outside this set are neither evaluated nor retained.
+    let first_row = depth.saturating_sub(config.band).max(1);
+    let last_row = depth.saturating_add(config.band).min(query.len());
+    if first_row > last_row {
+        return PointFrontierStep::Advanced {
+            lower_bound: WeightedCost::TOP,
+            carry: prefix_bound,
+            work: 0,
+        };
+    }
+
+    let mut work = 0_usize;
+    let mut column_bound = WeightedCost::TOP;
+    let mut evaluate_closure = |start: usize| {
+        let mut row = start;
+        loop {
+            if let Err(requested) = charge_work(&mut work, max_work) {
+                return Err((work, requested));
+            }
+            let previous_diagonal = if depth == 1 && row == 1 {
+                WeightedCost::ZERO
+            } else {
+                previous.get(row - 1).copied().unwrap_or(WeightedCost::TOP)
+            };
+            let previous_same = previous.get(row).copied().unwrap_or(WeightedCost::TOP);
+            let vertical = column.get(row - 1).copied().unwrap_or(WeightedCost::TOP);
+            let predecessor = previous_diagonal.min(previous_same).min(vertical);
+            let deviation = interval_dist(query[row - 1], target.0, target.1);
+            let cost = WeightedCost::combine(predecessor, square(deviation));
+            if WeightedCost::within(cost, cutoff) {
+                column[row] = cost;
+                active.push(row);
+                column_bound = column_bound.min(cost);
+                if row < last_row {
+                    row += 1;
+                    continue;
+                }
+            }
+            return Ok(row);
+        }
+    };
+
+    if depth == 1 {
+        if let Err((completed, requested)) = evaluate_closure(first_row) {
+            return PointFrontierStep::WorkLimitExceeded {
+                completed,
+                requested,
+            };
+        }
+    } else {
+        let mut seeds = NeighborSeedRows::new(previous_active, last_row)
+            .skip_while(|row| *row < first_row)
+            .peekable();
+        while let Some(seed) = seeds.next() {
+            match evaluate_closure(seed) {
+                Ok(last_evaluated) => {
+                    while seeds.peek().is_some_and(|row| *row <= last_evaluated) {
+                        seeds.next();
+                    }
+                }
+                Err((completed, requested)) => {
+                    return PointFrontierStep::WorkLimitExceeded {
+                        completed,
+                        requested,
+                    };
+                }
+            }
+        }
+    }
+
+    PointFrontierStep::Advanced {
+        lower_bound: column_bound.max(prefix_bound),
+        carry: prefix_bound,
+        work,
+    }
+}
+
 /// Required configuration and elastic kernel for banded DTW.
 ///
 /// `band` is the inclusive Sakoe–Chiba half-width. It is public for inspection
@@ -53,7 +180,7 @@ fn squared_cutoff(cutoff: f64) -> f64 {
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DtwConfig {
-    /// Inclusive half-width `$`|i-j| <= band`$`.
+    /// Inclusive half-width $`\lvert i-j\rvert\le\mathit{band}`$.
     pub band: usize,
 }
 
@@ -164,9 +291,33 @@ impl ElasticKernel for DtwConfig {
     type Carry = f64;
     type QueryPlan = KeoghPlan;
 
+    fn query_plan_storage(&self, query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        QueryPlanStorage::checked_per_element(
+            query_len,
+            4 * size_of::<f64>(),
+            2 * size_of::<usize>(),
+        )
+    }
+
+    #[inline]
+    fn canonical_carry_key(&self, carry: Self::Carry) -> Option<[u64; 2]> {
+        Some([
+            crate::time_series::elastic::canonical_f64_state_key(carry)?,
+            0,
+        ])
+    }
+
     #[inline]
     fn supports_interval_query(&self, query: &[f64]) -> bool {
         !query.is_empty() && series_is_finite(query)
+    }
+
+    #[inline]
+    fn alignment_is_structurally_possible(&self, query_len: usize, candidate_len: usize) -> bool {
+        if query_len == 0 || candidate_len == 0 {
+            return query_len == candidate_len;
+        }
+        query_len.abs_diff(candidate_len) <= self.band
     }
 
     #[inline]
@@ -233,6 +384,66 @@ impl ElasticKernel for DtwConfig {
         (column_bound.max(prefix_bound), prefix_bound)
     }
 
+    fn step_point_frontier(
+        &self,
+        previous: &[Cost<Self>],
+        previous_active: &[usize],
+        query: &[f64],
+        target: f64,
+        previous_carry: Option<Self::Carry>,
+        depth: usize,
+        plan: &Self::QueryPlan,
+        cutoff: Cost<Self>,
+        max_work: usize,
+        column: &mut [Cost<Self>],
+        active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        Some(sparse_frontier_step(
+            self,
+            previous,
+            previous_active,
+            query,
+            (target, target),
+            previous_carry,
+            depth,
+            plan,
+            cutoff,
+            max_work,
+            column,
+            active,
+        ))
+    }
+
+    fn step_interval_frontier(
+        &self,
+        previous: &[Cost<Self>],
+        previous_active: &[usize],
+        query: &[f64],
+        target: (f64, f64),
+        previous_carry: Option<Self::Carry>,
+        depth: usize,
+        plan: &Self::QueryPlan,
+        cutoff: Cost<Self>,
+        max_work: usize,
+        column: &mut [Cost<Self>],
+        active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        Some(sparse_frontier_step(
+            self,
+            previous,
+            previous_active,
+            query,
+            target,
+            previous_carry,
+            depth,
+            plan,
+            cutoff,
+            max_work,
+            column,
+            active,
+        ))
+    }
+
     #[inline]
     fn prefix_lower_bound(
         &self,
@@ -275,8 +486,8 @@ impl ElasticKernel for DtwConfig {
     }
 
     #[inline]
-    fn plan(&self, query: &[f64]) -> Self::QueryPlan {
-        keogh_envelopes(query, self.band).unwrap_or_default()
+    fn try_plan(&self, query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(try_keogh_envelopes(query, self.band)?.unwrap_or_default())
     }
 
     #[inline]

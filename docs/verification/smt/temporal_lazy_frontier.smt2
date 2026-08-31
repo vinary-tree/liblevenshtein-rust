@@ -171,23 +171,49 @@
 (check-sat)
 (pop)
 
-; A paired DFS push cannot break the live-frame/product-state bijection.
+; A reused exact residual adds one DFS frame without growing the interned
+; state arena, and its identifier remains in bounds.
 (declare-const live-frames Int)
-(declare-const live-states Int)
+(declare-const arena-states Int)
+(declare-const reused-state-id Int)
 (push)
 (assert (>= live-frames 0))
-(assert (>= live-states 0))
-(assert (= live-frames live-states))
-(assert (not (= (+ live-frames 1) (+ live-states 1))))
+(assert (> arena-states 0))
+(assert (>= reused-state-id 0))
+(assert (< reused-state-id arena-states))
+(assert (or (>= reused-state-id arena-states)
+            (< (+ live-frames 1) live-frames)))
 (check-sat)
 (pop)
 
-; A paired nonempty pop cannot break the same bijection.
+; A fresh residual receives the pre-commit arena length and is therefore in
+; bounds after the transactional append.
+(push)
+(assert (>= arena-states 0))
+(assert (not (< arena-states (+ arena-states 1))))
+(check-sat)
+(pop)
+
+; Popping a nonempty frame leaves the interned arena unchanged. There is no
+; false frame/state cardinality equality in the optimized product.
+(declare-const states-after-pop Int)
 (push)
 (assert (> live-frames 0))
-(assert (> live-states 0))
-(assert (= live-frames live-states))
-(assert (not (= (- live-frames 1) (- live-states 1))))
+(assert (>= arena-states 0))
+(assert (= states-after-pop arena-states))
+(assert (or (not (= states-after-pop arena-states))
+            (>= (- live-frames 1) live-frames)))
+(check-sat)
+(pop)
+
+; The explicit state budget bounds the retained interner independently of
+; DFS depth or the number of already visited dictionary nodes.
+(declare-const max-arena-states Int)
+(push)
+(assert (>= arena-states 0))
+(assert (>= max-arena-states 0))
+(assert (<= arena-states max-arena-states))
+(assert (> arena-states max-arena-states))
 (check-sat)
 (pop)
 

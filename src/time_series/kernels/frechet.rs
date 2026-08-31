@@ -16,9 +16,12 @@
 //! Distance*, Technical Report CD-TR 94/64, TU Vienna, 1994
 //! ([author-hosted report](https://www.kr.tuwien.ac.at/staff/eiter/et-archive/files/cdtr9464.pdf)).
 
+use super::super::bounded::IncompleteReason;
 use super::super::elastic::interval::interval_dist;
 use super::super::elastic::sparse::{charge_work, NeighborSeedRows};
-use super::super::elastic::{Cost, ElasticKernel, ElasticTransducer, PointFrontierStep};
+use super::super::elastic::{
+    Cost, ElasticKernel, ElasticTransducer, PointFrontierStep, QueryPlanStorage,
+};
 use crate::cost::{BottleneckCost, CostMonoid};
 
 #[inline]
@@ -195,8 +198,23 @@ impl ElasticKernel for FrechetConfig {
     type QueryPlan = ();
 
     #[inline]
+    fn query_plan_storage(&self, _query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        Ok(QueryPlanStorage::EMPTY)
+    }
+
+    #[inline]
+    fn canonical_carry_key(&self, carry: Self::Carry) -> Option<[u64; 2]> {
+        crate::time_series::elastic::canonical_f64_pair_state_key(carry.0, carry.1)
+    }
+
+    #[inline]
     fn supports_interval_query(&self, query: &[f64]) -> bool {
         series_is_finite(query)
+    }
+
+    #[inline]
+    fn alignment_is_structurally_possible(&self, query_len: usize, candidate_len: usize) -> bool {
+        query_len == candidate_len || (query_len > 0 && candidate_len > 0)
     }
 
     #[inline]
@@ -500,7 +518,9 @@ impl ElasticKernel for FrechetConfig {
     }
 
     #[inline]
-    fn plan(&self, _query: &[f64]) -> Self::QueryPlan {}
+    fn try_plan(&self, _query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(())
+    }
 
     #[inline]
     fn empty_pair_cost(&self) -> Cost<Self> {

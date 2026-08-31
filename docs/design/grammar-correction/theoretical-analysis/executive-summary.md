@@ -283,7 +283,7 @@ Joint optimization:
 |--------|-------------|---------------|--------------|
 | Hindley-Milner | Strong | Moderate | ✓ Decidable |
 | Dependent Types | Moderate | High | ✗ Undecidable |
-| Full π-Calculus | Weak | Very High | ✗ Undecidable |
+| Full $`\pi`$-Calculus | Weak | Very High | ✗ Undecidable |
 
 **Recommendation**: Use Hindley-Milner (decidable) for core, extensions optional.
 

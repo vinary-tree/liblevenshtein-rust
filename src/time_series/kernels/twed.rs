@@ -21,8 +21,10 @@ use super::super::elastic::interval::{interval_dist, interval_gap};
 use super::super::elastic::sparse::{charge_work, NeighborSeedRows};
 use super::super::elastic::{
     Cost, ElasticKernel, ElasticTransducer, MetricElasticKernel, PointFrontierStep,
+    QueryPlanStorage,
 };
 use crate::cost::{CostMonoid, WeightedCost};
+use crate::time_series::bounded::IncompleteReason;
 
 const DEFAULT_NU: f64 = 0.001;
 const DEFAULT_LAMBDA: f64 = 1.0;
@@ -377,6 +379,16 @@ impl<T: TwedPolicy> ElasticKernel for T {
     type Monoid = WeightedCost;
     type Carry = (f64, f64);
     type QueryPlan = ();
+
+    #[inline]
+    fn query_plan_storage(&self, _query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        Ok(QueryPlanStorage::EMPTY)
+    }
+
+    #[inline]
+    fn canonical_carry_key(&self, carry: Self::Carry) -> Option<[u64; 2]> {
+        crate::time_series::elastic::canonical_f64_pair_state_key(carry.0, carry.1)
+    }
 
     #[inline]
     fn normalized(self) -> Self {
@@ -790,7 +802,9 @@ impl<T: TwedPolicy> ElasticKernel for T {
     }
 
     #[inline]
-    fn plan(&self, _query: &[f64]) -> Self::QueryPlan {}
+    fn try_plan(&self, _query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(())
+    }
 
     #[inline]
     fn empty_pair_cost(&self) -> Cost<Self> {

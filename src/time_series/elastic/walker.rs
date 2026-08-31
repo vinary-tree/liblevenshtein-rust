@@ -8,7 +8,7 @@
 //! # Guarantee
 //!
 //! [`ElasticTransducer::search_range`] returns *exactly* the set
-//! `{ id : D(query, reference_id) ≤ τ }` — no false negatives and no false
+//! $`\{\mathit{id}:D(\mathit{query},\mathit{reference}_{\mathit{id}})\le\tau\}`$ — no false negatives and no false
 //! positives — and [`ElasticTransducer::search_knn`] returns exactly the `k`
 //! nearest finite-distance references under the kernel.
 //!
@@ -22,29 +22,60 @@
 //! * **Sound pruning (no false negatives).** The minimum live cell of a node's
 //!   column lower-bounds the true distance of *every* reference reachable below
 //!   it (K1), and lawful extensions cannot reduce accumulated cost (K2). A
-//!   subtree whose bound exceeds `τ` or the running k-th best is safely skipped.
+//!   subtree whose bound exceeds $`\tau`$ or the running k-th best is safely skipped.
 //! * **Exact verification (no false positives).** At each final node whose
-//!   column lower bound is within threshold, the candidate is re-scored against
-//!   the stored **full-precision** original with
-//!   [`ElasticKernel::exact_with_cutoff`]; only genuine matches are emitted
-//!   (K3), after an optional admissible candidate bound (K4).
+//!   column lower bound is within threshold, the stored **full-precision**
+//!   original is re-scored through the reusable exact point-frontier workspace;
+//!   only genuine matches are emitted (K3), after an optional admissible
+//!   candidate bound (K4). The workspace shares the online transition engine
+//!   and performs no per-candidate allocation.
 
+use std::fmt;
+
+/// SHA-256 identity of a complete canonical elastic snapshot payload.
+///
+/// The identity remains part of range certificates even when the optional
+/// persistent snapshot backend is not compiled: `None` identifies an
+/// in-memory index and `Some` binds evidence to one verified snapshot.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ElasticSnapshotIdentity(pub [u8; 32]);
+
+impl fmt::Display for ElasticSnapshotIdentity {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for byte in self.0 {
+            write!(formatter, "{byte:02x}")?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(feature = "persistent-artrie")]
 mod snapshot;
+#[cfg(feature = "persistent-artrie")]
 pub use snapshot::{
-    ElasticSnapshot, ElasticSnapshotError, ElasticSnapshotIdentity, ElasticSnapshotKernel,
-    ElasticSnapshotMetadata,
+    ElasticSnapshot, ElasticSnapshotError, ElasticSnapshotKernel, ElasticSnapshotLimits,
+    ElasticSnapshotMetadata, SnapshotPersistentDictionary,
 };
 
 use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::{BinaryHeap, HashMap, VecDeque};
+use std::hash::{Hash, Hasher};
 
-use libdictenstein::dynamic_dawg::{DynamicDawg, DynamicDawgNode};
-use libdictenstein::{Dictionary, DictionaryNode, MappedDictionaryNode};
+use libdictenstein::dynamic_dawg::DynamicDawg;
+#[cfg(feature = "persistent-artrie")]
+use libdictenstein::persistent_artrie::{PersistentARTrie, PersistentARTrieNode};
+use libdictenstein::{Dictionary, DictionaryNode, DictionaryTraversalRoot, MappedDictionaryNode};
+use rustc_hash::{FxHashMap, FxHasher};
+use smallvec::SmallVec;
+use thiserror::Error;
 
 use super::{Cost, ElasticKernel, PointFrontierStep};
 use crate::cost::CostMonoid;
-use crate::time_series::automaton::{ErpFrontierMachine, TemporalAutomatonError, TemporalStateId};
+use crate::time_series::automaton::{
+    BoundedTransitionCache, ErpFrontierMachine, ExactPointDecision, ExactPointWorkspace,
+    TemporalAutomatonError, TemporalStateId,
+};
 use crate::time_series::bounded::{
     IncompleteReason, Operand, OperationOutcome, PageBudget, ResourceKind, ResourceLedger,
     ResourceLimits, ResourceUsage, TemporalValidationError,
@@ -53,8 +84,136 @@ use crate::time_series::encoding::QuantizationConfig;
 use crate::time_series::kernels::ErpConfig;
 use crate::time_series::msm::MsmConfig;
 use crate::time_series::msm_kernel::MsmKernel;
+use crate::transducer::dictionary_traversal::{DfsNodeEdges, TraversalCursor, TraversalSession};
 
 const DEFAULT_RESULT_BUFFER_CAPACITY: usize = 64;
+
+/// Narrow dictionary boundary used by exact elastic traversal.
+///
+/// Search depends only on an immutable root whose labels are quantized bytes
+/// and whose terminal values identify collision buckets.  The default backend
+/// is [`DynamicDawg`]; complete snapshots load the same lazy product walker over
+/// a byte-keyed [`PersistentARTrie`] without projecting the dictionary into a
+/// second in-memory graph.
+pub trait ElasticDictionaryBackend: std::fmt::Debug {
+    /// Backend-native quantized edge label. Current scalar elastic indexes bind
+    /// this to `u8`; typed timestamp/vector profiles can implement the same
+    /// boundary with whole labels instead of flattening channels into bytes.
+    type Label: libdictenstein::CharUnit;
+
+    /// Immutable node handle for one captured dictionary revision.
+    type Node: DictionaryNode<Unit = Self::Label> + MappedDictionaryNode<Value = usize>;
+
+    /// Capture the root of one immutable revision.
+    fn elastic_root(&self) -> Self::Node;
+
+    /// Look up a collision-bucket id by its exact quantized byte key.
+    fn elastic_bucket(&self, key: &[Self::Label]) -> Option<usize>;
+
+    /// Exact number of terminal keys in the captured dictionary revision.
+    fn elastic_len(&self) -> Option<usize>;
+}
+
+/// Dictionary mutation boundary with a no-visible-change-on-error contract.
+///
+/// An implementation may return `Err` only if lookup, traversal, and terminal
+/// cardinality remain exactly as they were before the call. Backends that can
+/// publish a write before reporting a later durability error must not implement
+/// this trait. In particular, complete persistent snapshot dictionaries are
+/// deliberately search-only at the type boundary.
+pub trait ElasticMutableDictionaryBackend: ElasticDictionaryBackend {
+    /// Fallibly insert one absent exact quantized key without updating an
+    /// existing terminal. `Ok(false)` and `Err(_)` must leave it unchanged.
+    fn elastic_try_insert_bucket(
+        &mut self,
+        key: &[Self::Label],
+        bucket: usize,
+    ) -> Result<bool, ElasticMutationError>;
+}
+
+impl ElasticDictionaryBackend for DynamicDawg<usize> {
+    type Label = u8;
+    type Node = <Self as Dictionary>::Node;
+
+    fn elastic_root(&self) -> Self::Node {
+        self.root()
+    }
+
+    fn elastic_bucket(&self, key: &[u8]) -> Option<usize> {
+        self.get_bytes_value(key)
+    }
+
+    fn elastic_len(&self) -> Option<usize> {
+        Dictionary::len(self)
+    }
+}
+
+impl ElasticMutableDictionaryBackend for DynamicDawg<usize> {
+    fn elastic_try_insert_bucket(
+        &mut self,
+        key: &[u8],
+        bucket: usize,
+    ) -> Result<bool, ElasticMutationError> {
+        Ok(self.update_or_insert_bytes(key, bucket, |_| {}))
+    }
+}
+
+#[cfg(feature = "persistent-artrie")]
+impl ElasticDictionaryBackend for PersistentARTrie<usize> {
+    type Label = u8;
+    type Node = PersistentARTrieNode<usize>;
+
+    fn elastic_root(&self) -> Self::Node {
+        self.root()
+    }
+
+    fn elastic_bucket(&self, key: &[u8]) -> Option<usize> {
+        self.get_value_bytes(key)
+    }
+
+    fn elastic_len(&self) -> Option<usize> {
+        Dictionary::len(self)
+    }
+}
+
+/// Fail-closed error from a transactional elastic-index mutation.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ElasticMutationError {
+    /// A bounded heap reservation failed before state was changed.
+    AllocationFailed {
+        /// Requested byte count when it can be represented.
+        requested: usize,
+    },
+    /// The dictionary backend rejected its durable mutation.
+    Dictionary(String),
+    /// A missing key unexpectedly became present during the mutation boundary.
+    DictionaryConflict,
+    /// Existing dictionary, bucket, and original-series state disagreed.
+    InvalidState,
+}
+
+impl fmt::Display for ElasticMutationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AllocationFailed { requested } => {
+                write!(
+                    formatter,
+                    "elastic mutation allocation of {requested} bytes failed"
+                )
+            }
+            Self::Dictionary(error) => {
+                write!(formatter, "elastic dictionary mutation failed: {error}")
+            }
+            Self::DictionaryConflict => {
+                formatter.write_str("elastic dictionary changed during transactional mutation")
+            }
+            Self::InvalidState => formatter
+                .write_str("elastic dictionary, collision buckets, and originals are inconsistent"),
+        }
+    }
+}
+
+impl std::error::Error for ElasticMutationError {}
 
 type BucketLocation = (usize, usize);
 
@@ -157,6 +316,309 @@ pub struct ElasticSearchStats {
     pub cutoff_abandoned: usize,
 }
 
+/// Hard evidence/work ceilings for an optional exact range certificate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ElasticCertificateLimits {
+    /// Common validation, cumulative-work, and peak-retention ceilings.
+    pub resources: ResourceLimits,
+    /// Maximum evidence records retained.
+    pub max_records: usize,
+    /// Maximum total quantized-path bytes retained across all records.
+    pub max_path_bytes: usize,
+    /// Maximum charged transition/candidate dynamic-programming work.
+    pub max_work_units: usize,
+}
+
+impl Default for ElasticCertificateLimits {
+    fn default() -> Self {
+        let resources = ResourceLimits::default();
+        Self {
+            resources,
+            max_records: resources.max_results,
+            max_path_bytes: resources.max_witness_bytes,
+            max_work_units: resources.max_work_units,
+        }
+    }
+}
+
+/// One independently checkable K1--K4 decision in an exact range traversal.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ElasticRangeEvidence<C> {
+    /// K1 prefix bound rejected this edge and its complete descendant language.
+    PrefixPruned {
+        /// Quantized dictionary prefix whose descendant language was rejected.
+        quantized_path: Vec<u8>,
+        /// Certified K1 lower bound for every descendant of `quantized_path`.
+        lower_bound: C,
+    },
+    /// K2 interval-column bound rejected the complete child subtree.
+    SubtreePruned {
+        /// Quantized child prefix whose complete subtree was rejected.
+        quantized_path: Vec<u8>,
+        /// Certified K2 lower bound for every terminal below the child prefix.
+        lower_bound: C,
+    },
+    /// The accepting path's terminal interval row rejected this collision bucket.
+    TerminalPruned {
+        /// Quantized accepting key whose collision bucket was rejected.
+        quantized_path: Vec<u8>,
+        /// Certified terminal-row lower bound for the complete collision bucket.
+        lower_bound: C,
+    },
+    /// K4 rejected one full-precision collision member before exact scoring.
+    CandidatePruned {
+        /// Quantized key whose collision bucket contains the candidate.
+        quantized_path: Vec<u8>,
+        /// Stable identity of the rejected full-precision candidate.
+        stable_id: u64,
+        /// Certified K4 candidate-specific lower bound.
+        candidate_bound: C,
+    },
+    /// K3 exact verification result; `survived` is exactly `exact <= cutoff`.
+    ExactCandidate {
+        /// Quantized key whose collision bucket contains the candidate.
+        quantized_path: Vec<u8>,
+        /// Stable identity of the exactly evaluated full-precision candidate.
+        stable_id: u64,
+        /// Certified K4 lower bound evaluated before exact scoring.
+        candidate_bound: C,
+        /// Exact K3 score when it lies within the active cutoff.
+        exact: Option<C>,
+        /// Whether the exact candidate belongs to the requested closed range.
+        survived: bool,
+    },
+}
+
+/// Deterministic evidence stream for one exact range query.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ElasticRangeCertificate<C> {
+    /// Complete-snapshot identity when the searched index came from a snapshot.
+    pub snapshot_identity: Option<ElasticSnapshotIdentity>,
+    /// Exact IEEE-754 query words, in channel/sample order.
+    pub query_bits: Vec<u64>,
+    /// Exact range cutoff.
+    pub cutoff: C,
+    /// Canonically ordered K1--K4 decisions.
+    pub evidence: Vec<ElasticRangeEvidence<C>>,
+    /// Charged transition/candidate dynamic-programming work.
+    pub work_units: usize,
+    /// Total quantized-path bytes retained in `evidence`.
+    pub path_bytes: usize,
+    /// Total logical certificate storage charged to the witness ceiling.
+    ///
+    /// This includes the query bit pattern, every evidence-record header, and
+    /// every owned quantized path. It deliberately excludes allocator slack,
+    /// which never changes the serializable proof object.
+    pub witness_bytes: usize,
+}
+
+/// Fail-closed certificate construction error.
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
+pub enum ElasticCertificateError {
+    /// The query or cutoff is outside the kernel's documented domain.
+    #[error(transparent)]
+    Validation(#[from] TemporalValidationError),
+    /// This kernel/backend pair cannot produce complete replayable evidence.
+    #[error("this kernel/backend pair does not support complete replayable evidence")]
+    Unsupported,
+    /// The captured dictionary, bucket table, or original table is inconsistent.
+    #[error("the captured dictionary, collision buckets, and originals are inconsistent")]
+    InvalidStoredData,
+    /// Exact arithmetic produced a non-finite value inside a finite domain.
+    #[error("exact certificate arithmetic produced a non-finite value")]
+    NumericOverflow,
+    /// A declared evidence/work ceiling was exceeded.
+    #[error("{resource:?} budget exceeded: limit {limit}, requested {requested}")]
+    BudgetExceeded {
+        /// Resource whose declared ceiling would be exceeded.
+        resource: ResourceKind,
+        /// Declared inclusive ceiling for the resource.
+        limit: usize,
+        /// Resource amount required by the attempted operation.
+        requested: usize,
+    },
+    /// Checked accounting overflowed.
+    #[error("checked {resource:?} certificate accounting overflowed")]
+    ArithmeticOverflow {
+        /// Resource whose checked accounting overflowed.
+        resource: ResourceKind,
+    },
+    /// A fallible certificate allocation failed.
+    #[error("failed to allocate {requested} units of {resource:?} for the certificate")]
+    AllocationFailed {
+        /// Resource whose backing allocation failed.
+        resource: ResourceKind,
+        /// Requested allocation size in the resource's documented unit.
+        requested: usize,
+    },
+}
+
+impl From<IncompleteReason> for ElasticCertificateError {
+    fn from(reason: IncompleteReason) -> Self {
+        match reason {
+            IncompleteReason::BudgetExceeded {
+                resource,
+                limit,
+                requested,
+            } => Self::BudgetExceeded {
+                resource,
+                limit,
+                requested,
+            },
+            IncompleteReason::ArithmeticOverflow { resource } => {
+                Self::ArithmeticOverflow { resource }
+            }
+            IncompleteReason::AllocationFailed {
+                resource,
+                requested,
+            } => Self::AllocationFailed {
+                resource,
+                requested,
+            },
+            IncompleteReason::NumericOverflow => Self::NumericOverflow,
+            IncompleteReason::InvalidStoredData => Self::InvalidStoredData,
+            IncompleteReason::Unsupported | IncompleteReason::Cancelled => Self::Unsupported,
+        }
+    }
+}
+
+struct CertificateBuilder<C> {
+    limits: ElasticCertificateLimits,
+    evidence: Vec<ElasticRangeEvidence<C>>,
+    work_units: usize,
+    path_bytes: usize,
+    witness_bytes: usize,
+}
+
+impl<C> CertificateBuilder<C> {
+    fn new(
+        limits: ElasticCertificateLimits,
+        base_witness_bytes: usize,
+    ) -> Result<Self, ElasticCertificateError> {
+        if base_witness_bytes > limits.resources.max_witness_bytes {
+            return Err(ElasticCertificateError::BudgetExceeded {
+                resource: ResourceKind::WitnessBytes,
+                limit: limits.resources.max_witness_bytes,
+                requested: base_witness_bytes,
+            });
+        }
+        let mut evidence = Vec::new();
+        let record_bytes = std::mem::size_of::<ElasticRangeEvidence<C>>().max(1);
+        let witness_record_capacity = limits
+            .resources
+            .max_witness_bytes
+            .saturating_sub(base_witness_bytes)
+            / record_bytes;
+        let initial = limits
+            .max_records
+            .min(limits.resources.max_results)
+            .min(witness_record_capacity)
+            .min(DEFAULT_RESULT_BUFFER_CAPACITY);
+        evidence.try_reserve_exact(initial).map_err(|_| {
+            ElasticCertificateError::AllocationFailed {
+                resource: ResourceKind::WitnessBytes,
+                requested: initial.saturating_mul(std::mem::size_of::<ElasticRangeEvidence<C>>()),
+            }
+        })?;
+        Ok(Self {
+            limits,
+            evidence,
+            work_units: 0,
+            path_bytes: 0,
+            witness_bytes: base_witness_bytes,
+        })
+    }
+
+    fn charge_work(&mut self, amount: usize) -> Result<(), ElasticCertificateError> {
+        let requested = self.work_units.checked_add(amount).ok_or(
+            ElasticCertificateError::ArithmeticOverflow {
+                resource: ResourceKind::WorkUnits,
+            },
+        )?;
+        let limit = self
+            .limits
+            .max_work_units
+            .min(self.limits.resources.max_work_units);
+        if requested > limit {
+            return Err(ElasticCertificateError::BudgetExceeded {
+                resource: ResourceKind::WorkUnits,
+                limit,
+                requested,
+            });
+        }
+        self.work_units = requested;
+        Ok(())
+    }
+
+    fn record<F>(&mut self, path: &[u8], make: F) -> Result<(), ElasticCertificateError>
+    where
+        F: FnOnce(Vec<u8>) -> ElasticRangeEvidence<C>,
+    {
+        let requested_records = self.evidence.len().checked_add(1).ok_or(
+            ElasticCertificateError::ArithmeticOverflow {
+                resource: ResourceKind::Results,
+            },
+        )?;
+        let record_limit = self
+            .limits
+            .max_records
+            .min(self.limits.resources.max_results);
+        if requested_records > record_limit {
+            return Err(ElasticCertificateError::BudgetExceeded {
+                resource: ResourceKind::Results,
+                limit: record_limit,
+                requested: requested_records,
+            });
+        }
+        let requested_path_bytes = self.path_bytes.checked_add(path.len()).ok_or(
+            ElasticCertificateError::ArithmeticOverflow {
+                resource: ResourceKind::WitnessBytes,
+            },
+        )?;
+        if requested_path_bytes > self.limits.max_path_bytes {
+            return Err(ElasticCertificateError::BudgetExceeded {
+                resource: ResourceKind::WitnessBytes,
+                limit: self.limits.max_path_bytes,
+                requested: requested_path_bytes,
+            });
+        }
+        let record_bytes = std::mem::size_of::<ElasticRangeEvidence<C>>();
+        let requested_witness_bytes = self
+            .witness_bytes
+            .checked_add(record_bytes)
+            .and_then(|bytes| bytes.checked_add(path.len()))
+            .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                resource: ResourceKind::WitnessBytes,
+            })?;
+        if requested_witness_bytes > self.limits.resources.max_witness_bytes {
+            return Err(ElasticCertificateError::BudgetExceeded {
+                resource: ResourceKind::WitnessBytes,
+                limit: self.limits.resources.max_witness_bytes,
+                requested: requested_witness_bytes,
+            });
+        }
+        self.evidence.try_reserve_exact(1).map_err(|_| {
+            ElasticCertificateError::AllocationFailed {
+                resource: ResourceKind::WitnessBytes,
+                requested: requested_records
+                    .saturating_mul(std::mem::size_of::<ElasticRangeEvidence<C>>()),
+            }
+        })?;
+        let mut owned_path = Vec::new();
+        owned_path.try_reserve_exact(path.len()).map_err(|_| {
+            ElasticCertificateError::AllocationFailed {
+                resource: ResourceKind::WitnessBytes,
+                requested: requested_path_bytes,
+            }
+        })?;
+        owned_path.extend_from_slice(path);
+        self.evidence.push(make(owned_path));
+        self.path_bytes = requested_path_bytes;
+        self.witness_bytes = requested_witness_bytes;
+        Ok(())
+    }
+}
+
 impl ElasticSearchStats {
     /// Whether the two accounting partitions are internally consistent.
     ///
@@ -206,11 +668,15 @@ impl<K: ElasticKernel, V> Ord for KnnBestResult<K, V> {
 /// individually verified, so quantization collisions never silently drop a
 /// result.
 #[derive(Debug)]
-pub struct ElasticTransducer<K: ElasticKernel, V: Eq + std::hash::Hash + Clone = usize> {
+pub struct ElasticTransducer<
+    K: ElasticKernel,
+    V: Eq + std::hash::Hash + Clone = usize,
+    D: ElasticDictionaryBackend = DynamicDawg<usize>,
+> {
     /// Prefix-sharing trie over the u8-quantized reference sequences. The
     /// stored value is the final bucket id for all references that quantize to
     /// that byte key.
-    dawg: DynamicDawg<usize>,
+    dawg: D,
     /// Quantization configuration (defines the per-bin intervals).
     quant: QuantizationConfig,
     /// Kernel supplying relaxed columns and exact verification.
@@ -219,8 +685,11 @@ pub struct ElasticTransducer<K: ElasticKernel, V: Eq + std::hash::Hash + Clone =
     bin_bounds: Vec<(f64, f64)>,
     /// Final bucket id → all reference ids sharing that quantized key.
     buckets: Vec<Vec<V>>,
-    /// Reference id → original series and bucket slot (for exact verification and O(1) upserts).
+    /// Reference ID to original series and bucket slot for exact verification and
+    /// $`\mathcal{O}(1)`$ upserts.
     originals: HashMap<V, StoredSeries>,
+    /// Verified identity of the complete snapshot that produced this index.
+    snapshot_identity: Option<ElasticSnapshotIdentity>,
 }
 
 struct RangeWalkContext<'a, K: ElasticKernel, V> {
@@ -241,14 +710,60 @@ struct RangeFrame<K: ElasticKernel, N> {
     edges: VecDeque<(u8, N)>,
 }
 
+/// One explicit DFS frame for certificate construction.
+///
+/// As in the ordinary bounded product, the frame owns no DP column. A compact
+/// exact residual ID addresses the query-local canonical-state arena; the
+/// shared path zipper below the stack supplies replayable path evidence.
+struct CertifiedRangeFrame<N: DictionaryNode> {
+    depth: usize,
+    state: TemporalStateId,
+    candidate_bucket: Option<usize>,
+    candidates: Vec<u64>,
+    next_candidate: usize,
+    edges: DfsNodeEdges<N>,
+}
+
 /// Explicit bounded-traversal frame containing only a compact product-state
 /// identifier and dictionary cursor state.
-struct BoundedRangeFrame<N> {
+struct BoundedRangeFrame<N: DictionaryNode> {
     depth: usize,
     state: TemporalStateId,
     final_bucket: Option<usize>,
     next_candidate: usize,
-    edges: VecDeque<(u8, N)>,
+    edges: DfsNodeEdges<N>,
+}
+
+impl<N> BoundedRangeFrame<N>
+where
+    N: DictionaryNode<Unit = u8> + MappedDictionaryNode<Value = usize>,
+{
+    fn open(
+        traversal: &mut TraversalSession<N>,
+        cursor: TraversalCursor<N::SnapshotCursor>,
+        depth: usize,
+        state: TemporalStateId,
+        terminal_admitted: bool,
+    ) -> Result<Self, IncompleteReason> {
+        let final_value = traversal.final_value_at_cursor(cursor, None);
+        let edges = traversal.open_dfs_node(cursor);
+        let final_bucket = if edges.is_final() {
+            let bucket = final_value.ok_or(IncompleteReason::InvalidStoredData)?;
+            terminal_admitted.then_some(bucket)
+        } else {
+            if final_value.is_some() {
+                return Err(IncompleteReason::InvalidStoredData);
+            }
+            None
+        };
+        Ok(Self {
+            depth,
+            state,
+            final_bucket,
+            next_candidate: 0,
+            edges,
+        })
+    }
 }
 
 /// One live kernel state in the on-the-fly dictionary product.
@@ -258,16 +773,229 @@ struct RangeProductPosition<K: ElasticKernel> {
 }
 
 struct RangeProductState<K: ElasticKernel> {
+    depth: usize,
     carry: Option<K::Carry>,
     positions: Vec<RangeProductPosition<K>>,
+    final_cost: Cost<K>,
+}
+
+struct RangeProductStateArena<K: ElasticKernel> {
+    max_states: usize,
+    max_positions: usize,
+    position_count: usize,
+    position_capacity_count: usize,
+    collision_heap_capacity_count: usize,
+    reused_states: usize,
+    states: Vec<RangeProductState<K>>,
+    fingerprints: FxHashMap<u64, SmallVec<[TemporalStateId; 2]>>,
+}
+
+impl<K: ElasticKernel> RangeProductStateArena<K> {
+    fn new(max_states: usize, max_positions: usize) -> Self {
+        Self {
+            max_states,
+            max_positions,
+            position_count: 0,
+            position_capacity_count: 0,
+            collision_heap_capacity_count: 0,
+            reused_states: 0,
+            states: Vec::new(),
+            fingerprints: FxHashMap::default(),
+        }
+    }
+
+    fn fingerprint(kernel: &K, state: &RangeProductState<K>) -> Option<u64> {
+        let mut hasher = FxHasher::default();
+        state.depth.hash(&mut hasher);
+        match state.carry {
+            Some(carry) => {
+                1_u8.hash(&mut hasher);
+                kernel.canonical_carry_key(carry)?.hash(&mut hasher);
+            }
+            None => 0_u8.hash(&mut hasher),
+        }
+        K::Monoid::canonical_state_key(state.final_cost)?.hash(&mut hasher);
+        state.positions.len().hash(&mut hasher);
+        for position in &state.positions {
+            position.row.hash(&mut hasher);
+            K::Monoid::canonical_state_key(position.cost)?.hash(&mut hasher);
+        }
+        Some(hasher.finish())
+    }
+
+    fn exactly_equal(
+        kernel: &K,
+        left: &RangeProductState<K>,
+        right: &RangeProductState<K>,
+    ) -> bool {
+        if left.depth != right.depth || left.positions.len() != right.positions.len() {
+            return false;
+        }
+        let carries_equal = match (left.carry, right.carry) {
+            (None, None) => true,
+            (Some(left), Some(right)) => {
+                kernel.canonical_carry_key(left) == kernel.canonical_carry_key(right)
+            }
+            (None, Some(_)) | (Some(_), None) => false,
+        };
+        carries_equal
+            && K::Monoid::canonical_state_key(left.final_cost)
+                == K::Monoid::canonical_state_key(right.final_cost)
+            && left
+                .positions
+                .iter()
+                .zip(&right.positions)
+                .all(|(left, right)| {
+                    left.row == right.row
+                        && K::Monoid::canonical_state_key(left.cost)
+                            == K::Monoid::canonical_state_key(right.cost)
+                })
+    }
+
+    fn intern(
+        &mut self,
+        kernel: &K,
+        state: RangeProductState<K>,
+    ) -> Result<TemporalStateId, IncompleteReason> {
+        let fingerprint = Self::fingerprint(kernel, &state);
+        if let Some(fingerprint) = fingerprint {
+            if let Some(candidates) = self.fingerprints.get(&fingerprint) {
+                for candidate in candidates {
+                    let existing = self
+                        .states
+                        .get(candidate.index())
+                        .ok_or(IncompleteReason::InvalidStoredData)?;
+                    if Self::exactly_equal(kernel, existing, &state) {
+                        self.reused_states = self.reused_states.saturating_add(1);
+                        return Ok(*candidate);
+                    }
+                }
+            }
+        }
+
+        let requested_states =
+            self.states
+                .len()
+                .checked_add(1)
+                .ok_or(IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::QueueEntries,
+                })?;
+        if requested_states > self.max_states || requested_states > u32::MAX as usize {
+            return Err(IncompleteReason::BudgetExceeded {
+                resource: ResourceKind::QueueEntries,
+                limit: self.max_states.min(u32::MAX as usize),
+                requested: requested_states,
+            });
+        }
+        let requested_positions = self
+            .position_count
+            .checked_add(state.positions.len())
+            .ok_or(IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            })?;
+        if requested_positions > self.max_positions {
+            return Err(IncompleteReason::BudgetExceeded {
+                resource: ResourceKind::ScratchBytes,
+                limit: self.max_positions,
+                requested: requested_positions,
+            });
+        }
+
+        self.states
+            .try_reserve(1)
+            .map_err(|_| IncompleteReason::AllocationFailed {
+                resource: ResourceKind::ScratchBytes,
+                requested: requested_states,
+            })?;
+        let mut collision_capacity_before = 0;
+        if let Some(fingerprint) = fingerprint {
+            self.fingerprints
+                .try_reserve(1)
+                .map_err(|_| IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::ScratchBytes,
+                    requested: requested_states,
+                })?;
+            if let Some(bucket) = self.fingerprints.get_mut(&fingerprint) {
+                collision_capacity_before = if bucket.spilled() {
+                    bucket.capacity()
+                } else {
+                    0
+                };
+                bucket
+                    .try_reserve(1)
+                    .map_err(|_| IncompleteReason::AllocationFailed {
+                        resource: ResourceKind::ScratchBytes,
+                        requested: bucket.len().saturating_add(1),
+                    })?;
+            }
+        }
+
+        let id = TemporalStateId(u32::try_from(self.states.len()).map_err(|_| {
+            IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::QueueEntries,
+            }
+        })?);
+        let position_capacity = state.positions.capacity();
+        self.states.push(state);
+        if let Some(fingerprint) = fingerprint {
+            let bucket = self.fingerprints.entry(fingerprint).or_default();
+            bucket.push(id);
+            let collision_capacity_after = if bucket.spilled() {
+                bucket.capacity()
+            } else {
+                0
+            };
+            self.collision_heap_capacity_count = self
+                .collision_heap_capacity_count
+                .checked_sub(collision_capacity_before)
+                .and_then(|capacity| capacity.checked_add(collision_capacity_after))
+                .ok_or(IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::ScratchBytes,
+                })?;
+        }
+        self.position_count = requested_positions;
+        self.position_capacity_count = self
+            .position_capacity_count
+            .checked_add(position_capacity)
+            .ok_or(IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            })?;
+        Ok(id)
+    }
+
+    #[inline]
+    fn get(&self, id: TemporalStateId) -> Option<&RangeProductState<K>> {
+        self.states.get(id.index())
+    }
+
+    fn retained_bytes(&self) -> Option<usize> {
+        let headers = self
+            .states
+            .capacity()
+            .checked_mul(std::mem::size_of::<RangeProductState<K>>())?;
+        let positions = self
+            .position_capacity_count
+            .checked_mul(std::mem::size_of::<RangeProductPosition<K>>())?;
+        let fingerprints = self
+            .fingerprints
+            .capacity()
+            .checked_mul(std::mem::size_of::<(u64, SmallVec<[TemporalStateId; 2]>)>())?;
+        let collision_ids = self
+            .collision_heap_capacity_count
+            .checked_mul(std::mem::size_of::<TemporalStateId>())?;
+        headers
+            .checked_add(positions)?
+            .checked_add(fingerprints)?
+            .checked_add(collision_ids)
+    }
 }
 
 /// Retained-state diagnostics for one on-the-fly dictionary product.
 ///
-/// A trie traversal owns exactly one product state per live explicit DFS
-/// frame. `column_cells` counts the kernel cells retained by those states; it
-/// is independent of the number of target symbols consumed before the current
-/// point in a streaming traversal.
+/// The query-local arena retains every distinct canonical state reached so far,
+/// including states no longer on the explicit DFS path, because cached product
+/// transitions may reuse them later. `column_cells` counts cells in that full
+/// retained arena; it is independent of raw target-prefix length.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ElasticProductStateStats {
     /// Live explicit dictionary-traversal frames.
@@ -276,17 +1004,23 @@ pub struct ElasticProductStateStats {
     pub states: usize,
     /// Kernel cells retained by all live product states.
     pub column_cells: usize,
+    /// Complete observed transitions retained in the bounded cache.
+    pub cached_transitions: usize,
+    /// Equal canonical residuals that reused an existing state ID.
+    pub reused_states: usize,
 }
 
-enum RangeSessionMode<K: ElasticKernel> {
+#[expect(
+    clippy::large_enum_variant,
+    reason = "the hot trie session stays inline so page resumption adds no heap indirection or allocation"
+)]
+enum RangeSessionMode<K: ElasticKernel, N: DictionaryNode> {
     Trie {
-        stack: Vec<BoundedRangeFrame<DynamicDawgNode<usize>>>,
-        states: Vec<RangeProductState<K>>,
+        traversal: TraversalSession<N>,
+        stack: Vec<BoundedRangeFrame<N>>,
+        states: RangeProductStateArena<K>,
+        cache: BoundedTransitionCache<u8>,
         column_width: usize,
-        previous: Vec<Cost<K>>,
-        next: Vec<Cost<K>>,
-        previous_active: Vec<usize>,
-        next_active: Vec<usize>,
     },
     Scan {
         bucket: usize,
@@ -300,12 +1034,44 @@ enum RangeSessionMode<K: ElasticKernel> {
 /// Unlike [`RangeFrame`], this frame owns no dynamic-programming column. The
 /// query-local automaton arena owns each canonical antichain once and the DFS
 /// stack refers to it by a compact, collision-checked ID.
-struct ErpAutomatonRangeFrame {
+struct ErpAutomatonRangeFrame<N: DictionaryNode> {
     depth: usize,
     state: TemporalStateId,
     final_bucket: Option<usize>,
     next_candidate: usize,
-    edges: VecDeque<(u8, DynamicDawgNode<usize>)>,
+    edges: DfsNodeEdges<N>,
+}
+
+impl<N> ErpAutomatonRangeFrame<N>
+where
+    N: DictionaryNode<Unit = u8> + MappedDictionaryNode<Value = usize>,
+{
+    fn open(
+        traversal: &mut TraversalSession<N>,
+        cursor: TraversalCursor<N::SnapshotCursor>,
+        depth: usize,
+        state: TemporalStateId,
+        terminal_admitted: bool,
+    ) -> Result<Self, IncompleteReason> {
+        let final_value = traversal.final_value_at_cursor(cursor, None);
+        let edges = traversal.open_dfs_node(cursor);
+        let final_bucket = if edges.is_final() {
+            let bucket = final_value.ok_or(IncompleteReason::InvalidStoredData)?;
+            terminal_admitted.then_some(bucket)
+        } else {
+            if final_value.is_some() {
+                return Err(IncompleteReason::InvalidStoredData);
+            }
+            None
+        };
+        Ok(Self {
+            depth,
+            state,
+            final_bucket,
+            next_candidate: 0,
+            edges,
+        })
+    }
 }
 
 /// Resumable exact ERP range traversal using an on-demand automaton product.
@@ -314,15 +1080,16 @@ struct ErpAutomatonRangeFrame {
 /// Stack depth is represented by an explicit `Vec`, so traversal never uses
 /// the call stack. Quantization collisions remain candidates until every
 /// full-precision original has been independently verified.
-pub struct ErpAutomatonRangeContinuation<'a, V>
+pub struct ErpAutomatonRangeContinuation<'a, V, D: ElasticDictionaryBackend = DynamicDawg<usize>>
 where
     V: Eq + std::hash::Hash + Clone,
 {
-    index: &'a ElasticTransducer<ErpConfig, V>,
-    query: Box<[f64]>,
+    index: &'a ElasticTransducer<ErpConfig, V, D>,
+    query: Vec<f64>,
     tau: f64,
     machine: ErpFrontierMachine,
-    stack: Vec<ErpAutomatonRangeFrame>,
+    traversal: TraversalSession<D::Node>,
+    stack: Vec<ErpAutomatonRangeFrame<D::Node>>,
     results: Vec<(V, f64)>,
     pending_match: Option<(V, f64)>,
     ledger: ResourceLedger,
@@ -330,9 +1097,10 @@ where
     done: bool,
 }
 
-impl<V> std::fmt::Debug for ErpAutomatonRangeContinuation<'_, V>
+impl<V, D> std::fmt::Debug for ErpAutomatonRangeContinuation<'_, V, D>
 where
     V: Eq + std::hash::Hash + Clone,
+    D: ElasticDictionaryBackend<Label = u8>,
 {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (states, positions, cached_transitions) = self.machine.retained_counts();
@@ -354,18 +1122,20 @@ where
 /// In-memory continuation for one exact bounded range query.
 ///
 /// The continuation immutably borrows its index, so Rust prevents mutation of
-/// the indexed snapshot between pages. Partial results are exact members found
-/// so far but do not establish absence until [`OperationOutcome::Complete`].
-pub struct RangeContinuation<'a, K, V>
+/// the indexed snapshot between pages. Results discovered so far are borrowed
+/// through [`RangeContinuation::exact_partial`]; they do not establish absence
+/// until [`OperationOutcome::Complete`]. A paused outcome does not duplicate
+/// this potentially large vector into its optional `partial` field.
+pub struct RangeContinuation<'a, K, V, D: ElasticDictionaryBackend = DynamicDawg<usize>>
 where
     K: ElasticKernel,
     V: Eq + std::hash::Hash + Clone,
 {
-    index: &'a ElasticTransducer<K, V>,
-    query: Box<[f64]>,
-    plan: K::QueryPlan,
+    index: &'a ElasticTransducer<K, V, D>,
+    query: Vec<f64>,
+    workspace: Option<ExactPointWorkspace<K>>,
     tau: Cost<K>,
-    mode: RangeSessionMode<K>,
+    mode: RangeSessionMode<K, D::Node>,
     results: Vec<(V, Cost<K>)>,
     pending_match: Option<(V, Cost<K>)>,
     ledger: ResourceLedger,
@@ -375,21 +1145,25 @@ where
 /// Exact identifier/distance pairs returned by elastic range and kNN queries.
 pub type ExactRangeResults<K, V> = Vec<(V, Cost<K>)>;
 
+/// Exact results paired with their complete deterministic range certificate.
+pub type CertifiedRangeResults<K> = (Vec<(u64, Cost<K>)>, ElasticRangeCertificate<Cost<K>>);
+
 /// Tagged outcome of a bounded, resumable exact elastic range query.
-pub type BoundedRangeOutcome<'a, K, V> =
-    OperationOutcome<ExactRangeResults<K, V>, RangeContinuation<'a, K, V>>;
+pub type BoundedRangeOutcome<'a, K, V, D = DynamicDawg<usize>> =
+    OperationOutcome<ExactRangeResults<K, V>, RangeContinuation<'a, K, V, D>>;
 
 /// Tagged outcome of a bounded non-resumable exact elastic search.
 pub type ExactSearchOutcome<K, V> = OperationOutcome<ExactRangeResults<K, V>>;
 
 /// Tagged outcome of the specialized canonical ERP automaton product.
-pub type ErpAutomatonRangeOutcome<'a, V> =
-    OperationOutcome<Vec<(V, f64)>, ErpAutomatonRangeContinuation<'a, V>>;
+pub type ErpAutomatonRangeOutcome<'a, V, D = DynamicDawg<usize>> =
+    OperationOutcome<Vec<(V, f64)>, ErpAutomatonRangeContinuation<'a, V, D>>;
 
-impl<K, V> std::fmt::Debug for RangeContinuation<'_, K, V>
+impl<K, V, D> std::fmt::Debug for RangeContinuation<'_, K, V, D>
 where
     K: ElasticKernel,
     V: Eq + std::hash::Hash + Clone,
+    D: ElasticDictionaryBackend<Label = u8>,
 {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -408,10 +1182,11 @@ enum CandidateSource {
     Scan,
 }
 
-impl<'a, K, V> RangeContinuation<'a, K, V>
+impl<'a, K, V, D> RangeContinuation<'a, K, V, D>
 where
     K: ElasticKernel,
     V: Eq + std::hash::Hash + Clone,
+    D: ElasticDictionaryBackend<Label = u8>,
 {
     /// Exact matches discovered so far. This is an exact subset, but it is
     /// complete only after [`Self::resume`] returns `Complete`.
@@ -424,28 +1199,44 @@ where
         self.ledger.usage()
     }
 
+    /// Cancel this query explicitly without converting its exact partial set
+    /// into evidence of exhaustive absence.
+    pub fn cancel(mut self) -> OperationOutcome<Vec<(V, Cost<K>)>, Self> {
+        match self.take_finished_results() {
+            Ok(partial) => OperationOutcome::Incomplete {
+                partial: Some(partial),
+                reason: IncompleteReason::Cancelled,
+                continuation: None,
+                usage: self.ledger.usage(),
+            },
+            Err(reason) => OperationOutcome::Incomplete {
+                partial: None,
+                reason,
+                continuation: None,
+                usage: self.ledger.usage(),
+            },
+        }
+    }
+
     /// Return the live dictionary × kernel product-state footprint.
     ///
-    /// During interval-trie traversal `frames == states`: the state arena is a
-    /// stack arena whose last state is reclaimed with its DFS frame. Exact
+    /// `frames` counts the explicit DFS path. `states` counts distinct exact
+    /// residuals retained in the bounded query-local interner, so equal states
+    /// reached by different dictionary prefixes share one compact ID. Exact
     /// scan fallback and completed sessions retain no product states.
     pub fn retained_product_state_stats(&self) -> ElasticProductStateStats {
         match &self.mode {
             RangeSessionMode::Trie {
                 stack,
                 states,
-                column_width: _,
-                previous: _,
-                next: _,
-                previous_active: _,
-                next_active: _,
+                cache,
+                ..
             } => ElasticProductStateStats {
                 frames: stack.len(),
-                states: states.len(),
-                column_cells: states
-                    .iter()
-                    .map(|state| state.positions.len())
-                    .fold(0usize, usize::saturating_add),
+                states: states.states.len(),
+                column_cells: states.position_count,
+                cached_transitions: cache.len(),
+                reused_states: states.reused_states,
             },
             RangeSessionMode::Scan { .. } | RangeSessionMode::Done => {
                 ElasticProductStateStats::default()
@@ -467,14 +1258,32 @@ where
                 usage,
                 ..
             } => {
-                let partial = Some(ElasticTransducer::<K, V>::finish_range_results(
-                    self.results.clone(),
-                ));
-                OperationOutcome::Incomplete {
-                    partial,
-                    reason,
-                    continuation: continuation.map(|()| self),
-                    usage,
+                if continuation.is_some() {
+                    // The continuation already owns this exact subset. Do not
+                    // duplicate and re-sort an ever-growing result vector on
+                    // every page; callers can borrow it through
+                    // `exact_partial()` before resuming.
+                    OperationOutcome::Incomplete {
+                        partial: None,
+                        reason,
+                        continuation: Some(self),
+                        usage,
+                    }
+                } else {
+                    match self.take_finished_results() {
+                        Ok(partial) => OperationOutcome::Incomplete {
+                            partial: Some(partial),
+                            reason,
+                            continuation: None,
+                            usage,
+                        },
+                        Err(finalization_reason) => OperationOutcome::Incomplete {
+                            partial: None,
+                            reason: finalization_reason,
+                            continuation: None,
+                            usage,
+                        },
+                    }
                 }
             }
         }
@@ -528,79 +1337,92 @@ where
         Ok(())
     }
 
+    fn reserve_result_slot(&mut self) -> Result<(), IncompleteReason> {
+        if self.results.len() < self.results.capacity() {
+            return Ok(());
+        }
+        let requested =
+            self.results
+                .len()
+                .checked_add(1)
+                .ok_or(IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::Results,
+                })?;
+        self.results
+            .try_reserve_exact(1)
+            .map_err(|_| IncompleteReason::AllocationFailed {
+                resource: ResourceKind::Results,
+                requested,
+            })
+    }
+
+    fn take_finished_results(&mut self) -> Result<Vec<(V, Cost<K>)>, IncompleteReason> {
+        let retained_scratch = self
+            .workspace
+            .as_ref()
+            .map_or(0, ExactPointWorkspace::retained_bytes);
+        ElasticTransducer::<K, V, D>::try_finish_bounded_range_results(
+            std::mem::take(&mut self.results),
+            retained_scratch,
+            &mut self.ledger,
+        )
+    }
+
     fn observe_state_peaks(&mut self) -> Result<(), IncompleteReason> {
         let (queue_entries, automaton_bytes, edge_bytes) = match &self.mode {
             RangeSessionMode::Trie {
                 stack,
                 states,
-                previous,
-                next,
-                previous_active,
-                next_active,
+                cache,
                 ..
             } => {
-                let mut position_bytes = 0usize;
-                let mut edge_bytes = 0usize;
-                for state in states {
-                    position_bytes = position_bytes
-                        .checked_add(
-                            state
-                                .positions
-                                .capacity()
-                                .checked_mul(std::mem::size_of::<RangeProductPosition<K>>())
-                                .ok_or(IncompleteReason::ArithmeticOverflow {
-                                    resource: ResourceKind::ScratchBytes,
-                                })?,
-                        )
+                let state_bytes =
+                    states
+                        .retained_bytes()
                         .ok_or(IncompleteReason::ArithmeticOverflow {
                             resource: ResourceKind::ScratchBytes,
                         })?;
-                }
-                let dense_bytes = previous
-                    .capacity()
-                    .checked_add(next.capacity())
-                    .and_then(|cells| cells.checked_mul(std::mem::size_of::<Cost<K>>()))
-                    .ok_or(IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::ScratchBytes,
-                    })?;
-                let active_bytes = previous_active
-                    .capacity()
-                    .checked_add(next_active.capacity())
-                    .and_then(|cells| cells.checked_mul(std::mem::size_of::<usize>()))
-                    .ok_or(IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::ScratchBytes,
-                    })?;
-                let automaton_bytes = position_bytes
-                    .checked_add(dense_bytes)
-                    .and_then(|bytes| bytes.checked_add(active_bytes))
-                    .ok_or(IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::ScratchBytes,
-                    })?;
-                for frame in stack {
-                    edge_bytes = edge_bytes
-                        .checked_add(
-                            frame
-                                .edges
-                                .capacity()
-                                .checked_mul(std::mem::size_of::<(u8, DynamicDawgNode<usize>)>())
-                                .ok_or(IncompleteReason::ArithmeticOverflow {
-                                    resource: ResourceKind::ContinuationBytes,
-                                })?,
-                        )
+                let cache_bytes =
+                    cache
+                        .retained_bytes()
                         .ok_or(IncompleteReason::ArithmeticOverflow {
-                            resource: ResourceKind::ContinuationBytes,
+                            resource: ResourceKind::ScratchBytes,
                         })?;
-                }
-                debug_assert_eq!(stack.len(), states.len());
-                (stack.len(), automaton_bytes, edge_bytes)
+                let workspace_bytes = self
+                    .workspace
+                    .as_ref()
+                    .ok_or(IncompleteReason::InvalidStoredData)?
+                    .retained_bytes();
+                let automaton_bytes = state_bytes
+                    .checked_add(cache_bytes)
+                    .and_then(|bytes| bytes.checked_add(workspace_bytes))
+                    .ok_or(IncompleteReason::ArithmeticOverflow {
+                        resource: ResourceKind::ScratchBytes,
+                    })?;
+                // Each frame owns only one fixed-capacity inline edge page;
+                // that storage is already included in the frame header below.
+                (stack.len(), automaton_bytes, 0)
             }
-            RangeSessionMode::Scan { .. } | RangeSessionMode::Done => (0, 0, 0),
+            RangeSessionMode::Scan { .. } | RangeSessionMode::Done => (
+                0,
+                self.workspace
+                    .as_ref()
+                    .map_or(0, ExactPointWorkspace::retained_bytes),
+                0,
+            ),
         };
+
+        let construction_peak = self
+            .workspace
+            .as_ref()
+            .map_or(0, ExactPointWorkspace::construction_peak_bytes);
 
         self.ledger
             .observe_peak(ResourceKind::QueueEntries, queue_entries)?;
-        self.ledger
-            .observe_peak(ResourceKind::ScratchBytes, automaton_bytes)?;
+        self.ledger.observe_peak(
+            ResourceKind::ScratchBytes,
+            automaton_bytes.max(construction_peak),
+        )?;
 
         let query_bytes = self
             .query
@@ -619,16 +1441,7 @@ where
         let frame_bytes = match &self.mode {
             RangeSessionMode::Trie { stack, .. } => stack
                 .capacity()
-                .checked_mul(std::mem::size_of::<BoundedRangeFrame<DynamicDawgNode<usize>>>())
-                .ok_or(IncompleteReason::ArithmeticOverflow {
-                    resource: ResourceKind::ContinuationBytes,
-                })?,
-            RangeSessionMode::Scan { .. } | RangeSessionMode::Done => 0,
-        };
-        let state_header_bytes = match &self.mode {
-            RangeSessionMode::Trie { states, .. } => states
-                .capacity()
-                .checked_mul(std::mem::size_of::<RangeProductState<K>>())
+                .checked_mul(std::mem::size_of::<BoundedRangeFrame<D::Node>>())
                 .ok_or(IncompleteReason::ArithmeticOverflow {
                     resource: ResourceKind::ContinuationBytes,
                 })?,
@@ -638,7 +1451,6 @@ where
             .checked_add(automaton_bytes)
             .and_then(|bytes| bytes.checked_add(edge_bytes))
             .and_then(|bytes| bytes.checked_add(frame_bytes))
-            .and_then(|bytes| bytes.checked_add(state_header_bytes))
             .and_then(|bytes| bytes.checked_add(result_bytes))
             .ok_or(IncompleteReason::ArithmeticOverflow {
                 resource: ResourceKind::ContinuationBytes,
@@ -667,6 +1479,9 @@ where
                         } => self.paused(resource, limit, requested),
                         other => self.terminate(other),
                     };
+                }
+                if let Err(reason) = self.reserve_result_slot() {
+                    return self.terminate(reason);
                 }
                 if let Err(reason) = self.ledger.charge(ResourceKind::Results, 1) {
                     return self.terminate(reason);
@@ -723,9 +1538,10 @@ where
                     *slot = 0;
                 },
                 RangeSessionMode::Done => {
-                    self.results = ElasticTransducer::<K, V>::finish_range_results(std::mem::take(
-                        &mut self.results,
-                    ));
+                    self.results = match self.take_finished_results() {
+                        Ok(results) => results,
+                        Err(reason) => return self.terminate(reason),
+                    };
                     return OperationOutcome::Complete {
                         value: (),
                         usage: self.ledger.usage(),
@@ -742,12 +1558,13 @@ where
                 {
                     return self.terminate(IncompleteReason::InvalidStoredData);
                 }
-                let candidate_work = match self
-                    .query
-                    .len()
-                    .max(1)
-                    .checked_mul(stored.series.len().max(1))
-                {
+                let candidate_work = match self.query.len().checked_add(1).and_then(|rows| {
+                    stored
+                        .series
+                        .len()
+                        .checked_add(1)
+                        .and_then(|columns| rows.checked_mul(columns))
+                }) {
                     Some(work) => work,
                     None => {
                         return self.terminate(IncompleteReason::ArithmeticOverflow {
@@ -806,20 +1623,30 @@ where
                     _ => return self.terminate(IncompleteReason::InvalidStoredData),
                 }
 
+                let Some(workspace) = self.workspace.as_mut() else {
+                    return self.terminate(IncompleteReason::InvalidStoredData);
+                };
                 let candidate_bound = self.index.kernel.candidate_lower_bound(
                     &self.query,
                     &stored.series,
-                    &self.plan,
+                    workspace.plan(),
                 );
                 if !K::Monoid::within(candidate_bound, self.tau) {
                     continue;
                 }
-                let Some(exact) =
-                    self.index
-                        .kernel
-                        .exact_with_cutoff(&self.query, &stored.series, self.tau)
-                else {
-                    continue;
+                let step_work = workspace.current().len().max(1);
+                let exact = match workspace.score_candidate(
+                    &self.index.kernel,
+                    &self.query,
+                    &stored.series,
+                    self.tau,
+                    step_work,
+                ) {
+                    Ok(ExactPointDecision::WithinCutoff(exact)) => exact,
+                    Ok(ExactPointDecision::AboveCutoff | ExactPointDecision::NoFiniteAlignment) => {
+                        continue
+                    }
+                    Err(reason) => return self.terminate(reason),
                 };
                 if K::Monoid::compare(exact, K::Monoid::TOP) != Ordering::Less {
                     return self.terminate(IncompleteReason::NumericOverflow);
@@ -832,6 +1659,9 @@ where
                     let requested = page_results.saturating_add(1);
                     return self.paused(ResourceKind::Results, page.max_results, requested);
                 }
+                if let Err(reason) = self.reserve_result_slot() {
+                    return self.terminate(reason);
+                }
                 if let Err(reason) = self.ledger.charge(ResourceKind::Results, 1) {
                     return self.terminate(reason);
                 }
@@ -843,29 +1673,25 @@ where
                 continue;
             }
 
-            let edge_plan = match &self.mode {
+            let Some(workspace) = self.workspace.as_ref() else {
+                return self.terminate(IncompleteReason::InvalidStoredData);
+            };
+            let plan = workspace.plan();
+            let edge_plan = match &mut self.mode {
                 RangeSessionMode::Trie {
+                    traversal,
                     stack,
                     states,
+                    cache,
                     column_width,
                     ..
                 } => {
-                    let Some(frame) = stack.last() else {
+                    let Some(frame) = stack.last_mut() else {
                         self.mode = RangeSessionMode::Done;
                         continue;
                     };
-                    let Some((unit, child)) = frame.edges.front() else {
-                        let RangeSessionMode::Trie { stack, states, .. } = &mut self.mode else {
-                            unreachable!();
-                        };
-                        let popped = stack.pop().expect("last frame was observed above");
-                        let expected = states
-                            .len()
-                            .checked_sub(1)
-                            .and_then(|index| u32::try_from(index).ok())
-                            .map(TemporalStateId);
-                        debug_assert_eq!(expected, Some(popped.state));
-                        states.pop();
+                    let Some((unit, _)) = traversal.peek_dfs_edge(&mut frame.edges) else {
+                        stack.pop().expect("last frame was observed above");
                         continue;
                     };
                     let Some(child_depth) = frame.depth.checked_add(1) else {
@@ -873,27 +1699,34 @@ where
                             resource: ResourceKind::TrieNodes,
                         });
                     };
-                    let Some(state) = states.get(frame.state.index()) else {
+                    let Some(state) = states.get(frame.state) else {
                         return self.terminate(IncompleteReason::InvalidStoredData);
                     };
-                    let interval = self.index.bin_bounds_for(*unit);
-                    let prefix_lower_bound = self.index.kernel.prefix_lower_bound(
-                        &self.query,
-                        interval,
-                        state.carry,
-                        child_depth,
-                        &self.plan,
-                    );
-                    let build_column = K::Monoid::within(prefix_lower_bound, self.tau);
-                    let work = if build_column {
-                        let closure_and_step = if state.positions.is_empty() {
-                            Some(*column_width)
-                        } else {
-                            column_width.checked_mul(2)
-                        };
-                        closure_and_step.and_then(|work| work.checked_add(1))
+                    debug_assert_eq!(state.depth, frame.depth);
+                    let interval = self.index.bin_bounds_for(unit);
+                    let cached = cache.get(frame.state, unit);
+                    let (build_column, work) = if cached.is_some() {
+                        (true, Some(1))
                     } else {
-                        Some(1)
+                        let prefix_lower_bound = self.index.kernel.prefix_lower_bound(
+                            &self.query,
+                            interval,
+                            state.carry,
+                            child_depth,
+                            plan,
+                        );
+                        let build_column = K::Monoid::within(prefix_lower_bound, self.tau);
+                        let work = if build_column {
+                            let closure_and_step = if state.positions.is_empty() {
+                                Some(*column_width)
+                            } else {
+                                column_width.checked_mul(2)
+                            };
+                            closure_and_step.and_then(|work| work.checked_add(1))
+                        } else {
+                            Some(1)
+                        };
+                        (build_column, work)
                     };
                     let Some(work) = work else {
                         return self.terminate(IncompleteReason::ArithmeticOverflow {
@@ -901,20 +1734,20 @@ where
                         });
                     };
                     Some((
-                        *unit,
-                        child.clone(),
+                        unit,
                         child_depth,
                         interval,
                         frame.state,
                         build_column,
                         work,
+                        cached,
                     ))
                 }
                 RangeSessionMode::Scan { .. } => continue,
                 RangeSessionMode::Done => continue,
             };
 
-            let Some((unit, child, child_depth, interval, source, build_column, edge_work)) =
+            let Some((unit, child_depth, interval, source, build_column, edge_work, cached)) =
                 edge_plan
             else {
                 continue;
@@ -943,83 +1776,130 @@ where
             page_work += edge_work;
 
             let RangeSessionMode::Trie {
+                traversal,
                 stack,
                 states,
+                cache,
                 column_width,
-                previous,
-                next,
-                previous_active,
-                next_active,
             } = &mut self.mode
             else {
                 return self.terminate(IncompleteReason::InvalidStoredData);
             };
+            let Some(workspace) = self.workspace.as_mut() else {
+                return self.terminate(IncompleteReason::InvalidStoredData);
+            };
+            let workspace_retained_bytes = workspace.retained_bytes();
+            let plan = &workspace.plan;
+            let previous = &mut workspace.current;
+            let next = &mut workspace.next;
+            let previous_active = &mut workspace.current_active;
+            let next_active = &mut workspace.next_active;
             let Some(frame) = stack.last_mut() else {
                 return self.terminate(IncompleteReason::InvalidStoredData);
             };
-            if frame.edges.front().map(|(label, _)| *label) != Some(unit) {
-                return self.terminate(IncompleteReason::InvalidStoredData);
-            }
-            frame.edges.pop_front();
-            if !build_column {
-                continue;
-            }
-            let Some(source_state) = states.get(source.index()) else {
+            let Some((consumed_unit, child)) = traversal.next_dfs_edge(&mut frame.edges) else {
                 return self.terminate(IncompleteReason::InvalidStoredData);
             };
-            while let Some(row) = previous_active.pop() {
-                let Some(cost) = previous.get_mut(row) else {
+            if consumed_unit != unit {
+                return self.terminate(IncompleteReason::InvalidStoredData);
+            }
+
+            if let Some(cached_target) = cached {
+                let Some(state) = cached_target else {
+                    continue;
+                };
+                let Some(target_state) = states.get(state) else {
                     return self.terminate(IncompleteReason::InvalidStoredData);
                 };
-                *cost = K::Monoid::TOP;
-            }
-            for position in &source_state.positions {
-                let row = usize::try_from(position.row).map_err(|_| {
-                    IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::DpCells,
-                    }
-                });
-                let row = match row {
-                    Ok(row) if row < *column_width => row,
-                    Ok(_) => return self.terminate(IncompleteReason::InvalidStoredData),
+                if target_state.depth != child_depth {
+                    return self.terminate(IncompleteReason::InvalidStoredData);
+                }
+                let relaxed_admits = K::Monoid::within(target_state.final_cost, self.tau);
+                if stack.try_reserve(1).is_err() {
+                    let requested = stack.len().saturating_add(1);
+                    return self.terminate(IncompleteReason::AllocationFailed {
+                        resource: ResourceKind::ContinuationBytes,
+                        requested,
+                    });
+                }
+                if let Err(reason) = self.ledger.charge(ResourceKind::TrieNodes, 1) {
+                    return self.terminate(reason);
+                }
+                let frame = match BoundedRangeFrame::open(
+                    traversal,
+                    child,
+                    child_depth,
+                    state,
+                    relaxed_admits,
+                ) {
+                    Ok(frame) => frame,
                     Err(reason) => return self.terminate(reason),
                 };
-                previous[row] = position.cost;
-                previous_active.push(row);
+                stack.push(frame);
+                if let Err(reason) = self.observe_state_peaks() {
+                    return self.terminate(reason);
+                }
+                continue;
             }
-            // Reconstruct the epsilon closure represented by each retained
-            // antichain position only when the next consuming transition
-            // demands it. The scan stops at the next retained representative
-            // or as soon as the non-negative closure leaves the cutoff.
-            let held_target = source_state
-                .carry
-                .and_then(|carry| self.index.kernel.carry_interval(carry))
-                .unwrap_or((0.0, 0.0));
-            previous_active.clear();
-            for (position_index, position) in source_state.positions.iter().enumerate() {
-                let start = position.row as usize;
-                previous_active.push(start);
-                let stop = source_state
-                    .positions
-                    .get(position_index + 1)
-                    .map_or(*column_width, |next_position| next_position.row as usize);
-                for row in start.saturating_add(1)..stop {
-                    let Some(vertical) = self.index.kernel.vertical_epsilon_extension(
-                        &self.query,
-                        held_target,
-                        row,
-                        previous,
-                        &self.plan,
-                    ) else {
-                        break;
+
+            if !build_column {
+                let _ = cache.insert(source, unit, None);
+                continue;
+            }
+            let source_carry = {
+                let Some(source_state) = states.get(source) else {
+                    return self.terminate(IncompleteReason::InvalidStoredData);
+                };
+                while let Some(row) = previous_active.pop() {
+                    let Some(cost) = previous.get_mut(row) else {
+                        return self.terminate(IncompleteReason::InvalidStoredData);
                     };
-                    if !K::Monoid::within(vertical, self.tau) {
-                        break;
-                    }
-                    previous[row] = vertical;
+                    *cost = K::Monoid::TOP;
+                }
+                for position in &source_state.positions {
+                    let row = match usize::try_from(position.row) {
+                        Ok(row) if row < *column_width => row,
+                        Ok(_) => return self.terminate(IncompleteReason::InvalidStoredData),
+                        Err(_) => {
+                            return self.terminate(IncompleteReason::ArithmeticOverflow {
+                                resource: ResourceKind::DpCells,
+                            });
+                        }
+                    };
+                    previous[row] = position.cost;
                     previous_active.push(row);
                 }
-            }
+                let held_target = source_state
+                    .carry
+                    .and_then(|carry| self.index.kernel.carry_interval(carry))
+                    .unwrap_or((0.0, 0.0));
+                previous_active.clear();
+                for (position_index, position) in source_state.positions.iter().enumerate() {
+                    let start = position.row as usize;
+                    previous_active.push(start);
+                    let stop = source_state
+                        .positions
+                        .get(position_index + 1)
+                        .map_or(*column_width, |next_position| next_position.row as usize);
+                    for row in start.saturating_add(1)..stop {
+                        let Some(vertical) = self.index.kernel.vertical_epsilon_extension(
+                            &self.query,
+                            held_target,
+                            row,
+                            previous,
+                            plan,
+                        ) else {
+                            break;
+                        };
+                        if !K::Monoid::within(vertical, self.tau) {
+                            break;
+                        }
+                        previous[row] = vertical;
+                        previous_active.push(row);
+                    }
+                }
+                source_state.carry
+            };
             debug_assert!(previous_active.windows(2).all(|pair| pair[0] < pair[1]));
             while let Some(row) = next_active.pop() {
                 let Some(cost) = next.get_mut(row) else {
@@ -1033,9 +1913,9 @@ where
                 previous_active,
                 &self.query,
                 interval,
-                source_state.carry,
+                source_carry,
                 child_depth,
-                &self.plan,
+                plan,
                 self.tau,
                 *column_width,
                 next,
@@ -1066,9 +1946,9 @@ where
                         previous,
                         &self.query,
                         interval,
-                        source_state.carry,
+                        source_carry,
                         child_depth,
-                        &self.plan,
+                        plan,
                         next,
                     );
                     next_active.extend(next.iter().enumerate().filter_map(|(row, cost)| {
@@ -1078,13 +1958,13 @@ where
                 }
             };
             if !K::Monoid::within(lower_bound, self.tau) {
+                let _ = cache.insert(source, unit, None);
                 continue;
             }
             debug_assert!(next_active.windows(2).all(|pair| pair[0] < pair[1]));
             let final_row = self.index.kernel.final_row(self.query.len());
-            let relaxed_admits = next
-                .get(final_row)
-                .is_some_and(|cost| K::Monoid::within(*cost, self.tau));
+            let final_cost = next.get(final_row).copied().unwrap_or(K::Monoid::TOP);
+            let relaxed_admits = K::Monoid::within(final_cost, self.tau);
 
             // A row is removed only when the kernel reconstructs an explicit
             // immediate zero-input vertical extension with exactly the same
@@ -1099,30 +1979,25 @@ where
                     };
                     self.index
                         .kernel
-                        .vertical_epsilon_extension(&self.query, interval, **row, next, &self.plan)
+                        .vertical_epsilon_extension(&self.query, interval, **row, next, plan)
                         .is_none_or(|vertical| {
                             K::Monoid::compare(vertical, cost) != Ordering::Equal
                         })
                 })
                 .count();
 
-            let existing_position_bytes = states.iter().try_fold(0usize, |bytes, state| {
-                state
-                    .positions
-                    .capacity()
-                    .checked_mul(std::mem::size_of::<RangeProductPosition<K>>())
-                    .and_then(|state_bytes| bytes.checked_add(state_bytes))
-                    .ok_or(IncompleteReason::ArithmeticOverflow {
+            let existing_state_bytes = match states.retained_bytes() {
+                Some(bytes) => bytes,
+                None => {
+                    return self.terminate(IncompleteReason::ArithmeticOverflow {
                         resource: ResourceKind::ScratchBytes,
-                    })
-            });
-            let existing_position_bytes = match existing_position_bytes {
-                Ok(bytes) => bytes,
-                Err(reason) => return self.terminate(reason),
+                    });
+                }
             };
-            let requested_position_bytes = match canonical_position_count
+            let requested_state_bytes = match canonical_position_count
                 .checked_mul(std::mem::size_of::<RangeProductPosition<K>>())
-                .and_then(|bytes| bytes.checked_add(existing_position_bytes))
+                .and_then(|bytes| bytes.checked_add(std::mem::size_of::<RangeProductState<K>>()))
+                .and_then(|bytes| bytes.checked_add(existing_state_bytes))
             {
                 Some(bytes) => bytes,
                 None => {
@@ -1131,24 +2006,8 @@ where
                     });
                 }
             };
-            let fixed_scratch_bytes = match column_width
-                .checked_mul(std::mem::size_of::<Cost<K>>())
-                .and_then(|bytes| bytes.checked_mul(2))
-                .and_then(|bytes| {
-                    column_width
-                        .checked_mul(std::mem::size_of::<usize>())
-                        .and_then(|active_bytes| active_bytes.checked_mul(2))
-                        .and_then(|active_bytes| bytes.checked_add(active_bytes))
-                }) {
-                Some(bytes) => bytes,
-                None => {
-                    return self.terminate(IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::ScratchBytes,
-                    });
-                }
-            };
             let prospective_scratch_bytes =
-                match requested_position_bytes.checked_add(fixed_scratch_bytes) {
+                match requested_state_bytes.checked_add(workspace_retained_bytes) {
                     Some(bytes) => bytes,
                     None => {
                         return self.terminate(IncompleteReason::ArithmeticOverflow {
@@ -1187,60 +2046,43 @@ where
                 let dominated = self
                     .index
                     .kernel
-                    .vertical_epsilon_extension(&self.query, interval, row, next, &self.plan)
+                    .vertical_epsilon_extension(&self.query, interval, row, next, plan)
                     .is_some_and(|vertical| K::Monoid::compare(vertical, cost) == Ordering::Equal);
                 if K::Monoid::within(cost, self.tau) && !dominated {
                     positions.push(RangeProductPosition { row: raw_row, cost });
                 }
             }
             debug_assert_eq!(positions.len(), canonical_position_count);
+            if stack.try_reserve(1).is_err() {
+                let requested = stack.len().saturating_add(1);
+                return self.terminate(IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::ContinuationBytes,
+                    requested,
+                });
+            }
+            let state = match states.intern(
+                &self.index.kernel,
+                RangeProductState {
+                    depth: child_depth,
+                    carry: Some(carry),
+                    positions,
+                    final_cost,
+                },
+            ) {
+                Ok(state) => state,
+                Err(reason) => return self.terminate(reason),
+            };
+            let _ = cache.insert(source, unit, Some(state));
             if let Err(reason) = self.ledger.charge(ResourceKind::TrieNodes, 1) {
                 return self.terminate(reason);
             }
-            let final_bucket = (child.is_final() && relaxed_admits)
-                .then(|| child.value_at_final())
-                .flatten();
-            let edge_count = child.edge_count().unwrap_or(usize::from(u8::MAX) + 1);
-            let mut edges = VecDeque::new();
-            if edges.try_reserve_exact(edge_count).is_err() {
-                let requested =
-                    edge_count.saturating_mul(std::mem::size_of::<(u8, DynamicDawgNode<usize>)>());
-                return self.terminate(IncompleteReason::AllocationFailed {
-                    resource: ResourceKind::ContinuationBytes,
-                    requested,
-                });
-            }
-            child.for_each_edge(|label, grandchild| edges.push_back((label, grandchild)));
-            edges
-                .make_contiguous()
-                .sort_unstable_by_key(|(label, _)| *label);
-            let raw_state = match u32::try_from(states.len()) {
-                Ok(state) => state,
-                Err(_) => {
-                    return self.terminate(IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::QueueEntries,
-                    });
-                }
-            };
-            let state = TemporalStateId(raw_state);
-            if states.try_reserve(1).is_err() || stack.try_reserve(1).is_err() {
-                let requested = states.len().saturating_add(stack.len()).saturating_add(2);
-                return self.terminate(IncompleteReason::AllocationFailed {
-                    resource: ResourceKind::ContinuationBytes,
-                    requested,
-                });
-            }
-            states.push(RangeProductState {
-                carry: Some(carry),
-                positions,
-            });
-            stack.push(BoundedRangeFrame {
-                depth: child_depth,
-                state,
-                final_bucket,
-                next_candidate: 0,
-                edges,
-            });
+            let frame =
+                match BoundedRangeFrame::open(traversal, child, child_depth, state, relaxed_admits)
+                {
+                    Ok(frame) => frame,
+                    Err(reason) => return self.terminate(reason),
+                };
+            stack.push(frame);
             if let Err(reason) = self.observe_state_peaks() {
                 return self.terminate(reason);
             }
@@ -1248,9 +2090,10 @@ where
     }
 }
 
-impl<'a, V> ErpAutomatonRangeContinuation<'a, V>
+impl<'a, V, D> ErpAutomatonRangeContinuation<'a, V, D>
 where
     V: Eq + std::hash::Hash + Clone,
+    D: ElasticDictionaryBackend<Label = u8>,
 {
     /// Exact matches discovered so far. They prove membership individually,
     /// but prove completeness only after [`Self::resume`] returns `Complete`.
@@ -1261,6 +2104,25 @@ where
     /// Cumulative charges and retained-state peaks for this query.
     pub fn usage(&self) -> ResourceUsage {
         self.ledger.usage()
+    }
+
+    /// Cancel this query explicitly without claiming its partial exact set is
+    /// a complete range result.
+    pub fn cancel(mut self) -> OperationOutcome<Vec<(V, f64)>, Self> {
+        match self.take_finished_results() {
+            Ok(partial) => OperationOutcome::Incomplete {
+                partial: Some(partial),
+                reason: IncompleteReason::Cancelled,
+                continuation: None,
+                usage: self.ledger.usage(),
+            },
+            Err(reason) => OperationOutcome::Incomplete {
+                partial: None,
+                reason,
+                continuation: None,
+                usage: self.ledger.usage(),
+            },
+        }
     }
 
     /// Current canonical-state, canonical-position, and transition-cache
@@ -1283,14 +2145,28 @@ where
                 usage,
                 ..
             } => {
-                let partial = Some(ElasticTransducer::<ErpConfig, V>::finish_range_results(
-                    self.results.clone(),
-                ));
-                OperationOutcome::Incomplete {
-                    partial,
-                    reason,
-                    continuation: continuation.map(|()| self),
-                    usage,
+                if continuation.is_some() {
+                    OperationOutcome::Incomplete {
+                        partial: None,
+                        reason,
+                        continuation: Some(self),
+                        usage,
+                    }
+                } else {
+                    match self.take_finished_results() {
+                        Ok(partial) => OperationOutcome::Incomplete {
+                            partial: Some(partial),
+                            reason,
+                            continuation: None,
+                            usage,
+                        },
+                        Err(finalization_reason) => OperationOutcome::Incomplete {
+                            partial: None,
+                            reason: finalization_reason,
+                            continuation: None,
+                            usage,
+                        },
+                    }
                 }
             }
         }
@@ -1344,6 +2220,34 @@ where
         Ok(())
     }
 
+    fn reserve_result_slot(&mut self) -> Result<(), IncompleteReason> {
+        if self.results.len() < self.results.capacity() {
+            return Ok(());
+        }
+        let requested =
+            self.results
+                .len()
+                .checked_add(1)
+                .ok_or(IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::Results,
+                })?;
+        self.results
+            .try_reserve_exact(1)
+            .map_err(|_| IncompleteReason::AllocationFailed {
+                resource: ResourceKind::Results,
+                requested,
+            })
+    }
+
+    fn take_finished_results(&mut self) -> Result<Vec<(V, f64)>, IncompleteReason> {
+        let retained_scratch = self.machine.retained_scratch_bytes()?;
+        ElasticTransducer::<ErpConfig, V, D>::try_finish_bounded_range_results(
+            std::mem::take(&mut self.results),
+            retained_scratch,
+            &mut self.ledger,
+        )
+    }
+
     fn observe_state_peaks(&mut self) -> Result<(), IncompleteReason> {
         self.ledger
             .observe_peak(ResourceKind::QueueEntries, self.stack.len())?;
@@ -1351,22 +2255,10 @@ where
         self.ledger
             .observe_peak(ResourceKind::ScratchBytes, machine_bytes)?;
 
-        let edge_count = self.stack.iter().try_fold(0usize, |total, frame| {
-            total
-                .checked_add(frame.edges.len())
-                .ok_or(IncompleteReason::ArithmeticOverflow {
-                    resource: ResourceKind::ContinuationBytes,
-                })
-        })?;
-        let edge_bytes = edge_count
-            .checked_mul(std::mem::size_of::<(u8, DynamicDawgNode<usize>)>())
-            .ok_or(IncompleteReason::ArithmeticOverflow {
-                resource: ResourceKind::ContinuationBytes,
-            })?;
         let stack_bytes = self
             .stack
-            .len()
-            .checked_mul(std::mem::size_of::<ErpAutomatonRangeFrame>())
+            .capacity()
+            .checked_mul(std::mem::size_of::<ErpAutomatonRangeFrame<D::Node>>())
             .ok_or(IncompleteReason::ArithmeticOverflow {
                 resource: ResourceKind::ContinuationBytes,
             })?;
@@ -1379,14 +2271,13 @@ where
             })?;
         let result_bytes = self
             .results
-            .len()
+            .capacity()
             .checked_mul(std::mem::size_of::<(V, f64)>())
             .ok_or(IncompleteReason::ArithmeticOverflow {
                 resource: ResourceKind::ContinuationBytes,
             })?;
         let continuation_bytes = machine_bytes
-            .checked_add(edge_bytes)
-            .and_then(|bytes| bytes.checked_add(stack_bytes))
+            .checked_add(stack_bytes)
             .and_then(|bytes| bytes.checked_add(query_bytes))
             .and_then(|bytes| bytes.checked_add(result_bytes))
             .ok_or(IncompleteReason::ArithmeticOverflow {
@@ -1418,6 +2309,10 @@ where
                         other => self.terminate(other),
                     };
                 }
+                if let Err(reason) = self.reserve_result_slot() {
+                    self.pending_match = Some(pending);
+                    return self.terminate(reason);
+                }
                 if let Err(reason) = self.ledger.charge(ResourceKind::Results, 1) {
                     self.pending_match = Some(pending);
                     return self.terminate(reason);
@@ -1431,9 +2326,10 @@ where
             }
 
             if self.done {
-                self.results = ElasticTransducer::<ErpConfig, V>::finish_range_results(
-                    std::mem::take(&mut self.results),
-                );
+                self.results = match self.take_finished_results() {
+                    Ok(results) => results,
+                    Err(reason) => return self.terminate(reason),
+                };
                 return OperationOutcome::Complete {
                     value: (),
                     usage: self.ledger.usage(),
@@ -1463,13 +2359,13 @@ where
                 if stored.series.iter().any(|sample| !sample.is_finite()) {
                     return self.terminate(IncompleteReason::InvalidStoredData);
                 }
-                let candidate_work = match self.query.len().checked_add(1).and_then(|left| {
-                    stored
-                        .series
-                        .len()
-                        .checked_add(1)
-                        .and_then(|right| left.checked_mul(right))
-                }) {
+                let candidate_work = match self
+                    .query
+                    .len()
+                    .checked_add(1)
+                    .and_then(|width| width.checked_mul(2))
+                    .and_then(|per_step| per_step.checked_mul(stored.series.len()))
+                {
                     Some(work) => work,
                     None => {
                         return self.terminate(IncompleteReason::ArithmeticOverflow {
@@ -1520,12 +2416,10 @@ where
                 {
                     continue;
                 }
-                let Some(exact) =
-                    self.index
-                        .kernel
-                        .distance_with_cutoff(&self.query, &stored.series, self.tau)
-                else {
-                    continue;
+                let exact = match self.machine.score_candidate(&stored.series) {
+                    Ok(Some(exact)) => exact,
+                    Ok(None) => continue,
+                    Err(reason) => return self.terminate(reason),
                 };
                 if !exact.is_finite() {
                     return self.terminate(IncompleteReason::NumericOverflow);
@@ -1540,6 +2434,9 @@ where
                         page.max_results,
                         page_results.saturating_add(1),
                     );
+                }
+                if let Err(reason) = self.reserve_result_slot() {
+                    return self.terminate(reason);
                 }
                 if let Err(reason) = self.ledger.charge(ResourceKind::Results, 1) {
                     return self.terminate(reason);
@@ -1556,24 +2453,27 @@ where
                 frame.final_bucket = None;
             }
 
-            let Some(frame) = self.stack.last() else {
-                self.done = true;
-                continue;
-            };
-            let Some((unit, child)) = frame.edges.front().cloned() else {
-                self.stack.pop();
-                if let Err(reason) = self.observe_state_peaks() {
-                    return self.terminate(reason);
-                }
-                continue;
-            };
-            let child_depth = match frame.depth.checked_add(1) {
-                Some(depth) => depth,
-                None => {
-                    return self.terminate(IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::SeriesLength,
-                    });
-                }
+            let (unit, child_depth, source) = {
+                let Some(frame) = self.stack.last_mut() else {
+                    self.done = true;
+                    continue;
+                };
+                let Some((unit, _)) = self.traversal.peek_dfs_edge(&mut frame.edges) else {
+                    self.stack.pop();
+                    if let Err(reason) = self.observe_state_peaks() {
+                        return self.terminate(reason);
+                    }
+                    continue;
+                };
+                let child_depth = match frame.depth.checked_add(1) {
+                    Some(depth) => depth,
+                    None => {
+                        return self.terminate(IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::SeriesLength,
+                        });
+                    }
+                };
+                (unit, child_depth, frame.state)
             };
             if child_depth > self.ledger.limits().max_series_len {
                 return self.terminate(IncompleteReason::BudgetExceeded {
@@ -1582,7 +2482,7 @@ where
                     requested: child_depth,
                 });
             }
-            let edge_work = match self.machine.transition_work_bound(frame.state) {
+            let edge_work = match self.machine.transition_work_bound(source) {
                 Ok(work) => work,
                 Err(reason) => return self.terminate(reason),
             };
@@ -1609,14 +2509,19 @@ where
                 return self.terminate(reason);
             }
             page_work += edge_work;
-            let source = frame.state;
-            let Some(frame) = self.stack.last_mut() else {
-                return self.terminate(IncompleteReason::InvalidStoredData);
+            let child = {
+                let Some(frame) = self.stack.last_mut() else {
+                    return self.terminate(IncompleteReason::InvalidStoredData);
+                };
+                let Some((consumed_unit, child)) = self.traversal.next_dfs_edge(&mut frame.edges)
+                else {
+                    return self.terminate(IncompleteReason::InvalidStoredData);
+                };
+                if consumed_unit != unit {
+                    return self.terminate(IncompleteReason::InvalidStoredData);
+                }
+                child
             };
-            if frame.edges.front().map(|(label, _)| *label) != Some(unit) {
-                return self.terminate(IncompleteReason::InvalidStoredData);
-            }
-            frame.edges.pop_front();
 
             let transition =
                 match self
@@ -1640,21 +2545,24 @@ where
                 Ok(cost) => cost,
                 Err(reason) => return self.terminate(reason),
             };
-            let final_bucket = if child.is_final() && final_cost.is_some() {
-                child.value_at_final()
-            } else {
-                None
+            if self.stack.len() == self.stack.capacity() && self.stack.try_reserve_exact(1).is_err()
+            {
+                return self.terminate(IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::ContinuationBytes,
+                    requested: self.stack.len().saturating_add(1),
+                });
+            }
+            let frame = match ErpAutomatonRangeFrame::open(
+                &mut self.traversal,
+                child,
+                child_depth,
+                target,
+                final_cost.is_some(),
+            ) {
+                Ok(frame) => frame,
+                Err(reason) => return self.terminate(reason),
             };
-            let mut edges = Vec::new();
-            child.for_each_edge(|label, grandchild| edges.push((label, grandchild)));
-            edges.sort_by_key(|(label, _)| *label);
-            self.stack.push(ErpAutomatonRangeFrame {
-                depth: child_depth,
-                state: target,
-                final_bucket,
-                next_candidate: 0,
-                edges: edges.into(),
-            });
+            self.stack.push(frame);
             if let Err(reason) = self.observe_state_peaks() {
                 return self.terminate(reason);
             }
@@ -1667,12 +2575,22 @@ where
     K: ElasticKernel,
     V: Eq + std::hash::Hash + Clone,
 {
-    /// Create an empty transducer.
-    ///
-    /// Uses a byte-quantized trie, matching [`crate::time_series::TimeSeriesIndex`] and
-    /// [`crate::time_series::HybridSearchIndex`]. Quantizers wider than 256 bins are
-    /// coarsened to a byte-compatible 256-bin config over the same value range.
+    /// Create an empty transducer backed by the default in-memory byte DAWG.
     pub fn new<C>(quant: QuantizationConfig, kernel: C) -> Self
+    where
+        C: Into<K>,
+    {
+        Self::with_dictionary(quant, kernel, DynamicDawg::new())
+    }
+}
+
+impl<K, V, D> ElasticTransducer<K, V, D>
+where
+    K: ElasticKernel,
+    V: Eq + std::hash::Hash + Clone,
+    D: ElasticDictionaryBackend<Label = u8>,
+{
+    fn with_dictionary<C>(quant: QuantizationConfig, kernel: C, dawg: D) -> Self
     where
         C: Into<K>,
     {
@@ -1682,64 +2600,208 @@ where
             .map(|bin| quant.bin_bounds(bin))
             .collect();
         Self {
-            dawg: DynamicDawg::new(),
+            dawg,
             quant,
             kernel,
             bin_bounds,
             buckets: Vec::new(),
             originals: HashMap::new(),
+            snapshot_identity: None,
         }
     }
 
     /// Insert a reference series under identifier `value`.
     ///
-    /// Returns `true` if `value` was not previously present.
-    pub fn insert(&mut self, value: V, series: &[f64]) -> bool {
-        let key = self.quant.encode_u8(series);
-        let bucket_id = match self.dawg.get_bytes_value(&key) {
-            Some(existing) => existing,
+    /// Returns `true` if `value` was not previously present. For a fail-closed
+    /// result from a fallible persistent backend, use [`Self::try_insert`]. A
+    /// failed call through this compatibility surface returns `false` and
+    /// leaves all logical state and the verified snapshot identity unchanged.
+    pub fn insert(&mut self, value: V, series: &[f64]) -> bool
+    where
+        D: ElasticMutableDictionaryBackend,
+    {
+        self.try_insert(value, series).unwrap_or(false)
+    }
+
+    /// Transactionally insert or replace one full-precision reference series.
+    ///
+    /// All fallible heap reservations and value clones happen before the
+    /// dictionary mutation. If the backend rejects that mutation, the
+    /// dictionary, collision buckets, originals, and snapshot identity remain
+    /// observably unchanged. Once a missing dictionary key is durably inserted,
+    /// the remaining commit uses only capacity reserved in the prepare phase.
+    ///
+    /// Returns `Ok(true)` iff `value` was not previously present.
+    pub fn try_insert(&mut self, value: V, series: &[f64]) -> Result<bool, ElasticMutationError>
+    where
+        D: ElasticMutableDictionaryBackend,
+    {
+        let mut key = Vec::new();
+        key.try_reserve_exact(series.len()).map_err(|_| {
+            ElasticMutationError::AllocationFailed {
+                requested: series.len(),
+            }
+        })?;
+        key.extend(series.iter().map(|sample| self.quant.quantize_u8(*sample)));
+
+        let mut replacement_series = Vec::new();
+        replacement_series
+            .try_reserve_exact(series.len())
+            .map_err(|_| ElasticMutationError::AllocationFailed {
+                requested: series.len().saturating_mul(std::mem::size_of::<f64>()),
+            })?;
+        replacement_series.extend_from_slice(series);
+
+        let old_location = self
+            .originals
+            .get(&value)
+            .map(|stored| stored.bucket_location);
+        let is_new = old_location.is_none();
+        if is_new {
+            self.originals
+                .try_reserve(1)
+                .map_err(|_| ElasticMutationError::AllocationFailed {
+                    requested: self
+                        .originals
+                        .len()
+                        .saturating_add(1)
+                        .saturating_mul(std::mem::size_of::<(V, StoredSeries)>()),
+                })?;
+        }
+
+        // Clone every identifier that the commit can need before any state is
+        // changed. This includes the element swap_remove will relocate.
+        let displaced = match old_location {
+            Some((old_bucket, old_slot)) => {
+                let bucket = self
+                    .buckets
+                    .get(old_bucket)
+                    .ok_or(ElasticMutationError::InvalidState)?;
+                if bucket.get(old_slot) != Some(&value) {
+                    return Err(ElasticMutationError::InvalidState);
+                }
+                if old_slot + 1 < bucket.len() {
+                    let last_slot = bucket.len() - 1;
+                    let displaced = bucket[last_slot].clone();
+                    if self
+                        .originals
+                        .get(&displaced)
+                        .map(|stored| stored.bucket_location)
+                        != Some((old_bucket, last_slot))
+                    {
+                        return Err(ElasticMutationError::InvalidState);
+                    }
+                    Some(displaced)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        };
+
+        let existing_bucket = self.dawg.elastic_bucket(&key);
+        let mut prepared_bucket = None;
+        let bucket_id = match existing_bucket {
+            Some(bucket_id) => {
+                let bucket = self
+                    .buckets
+                    .get_mut(bucket_id)
+                    .ok_or(ElasticMutationError::InvalidState)?;
+                if old_location.is_none_or(|(old_bucket, _)| old_bucket != bucket_id) {
+                    bucket.try_reserve_exact(1).map_err(|_| {
+                        ElasticMutationError::AllocationFailed {
+                            requested: bucket
+                                .len()
+                                .saturating_add(1)
+                                .saturating_mul(std::mem::size_of::<V>()),
+                        }
+                    })?;
+                }
+                bucket_id
+            }
             None => {
                 let bucket_id = self.buckets.len();
-                self.buckets.push(Vec::with_capacity(1));
-                let inserted = self.dawg.insert_bytes_with_value(&key, bucket_id);
-                debug_assert!(
-                    inserted,
-                    "new elastic bucket key should insert exactly once"
-                );
+                self.buckets.try_reserve_exact(1).map_err(|_| {
+                    ElasticMutationError::AllocationFailed {
+                        requested: self
+                            .buckets
+                            .len()
+                            .saturating_add(1)
+                            .saturating_mul(std::mem::size_of::<Vec<V>>()),
+                    }
+                })?;
+                let mut bucket = Vec::new();
+                bucket.try_reserve_exact(1).map_err(|_| {
+                    ElasticMutationError::AllocationFailed {
+                        requested: std::mem::size_of::<V>(),
+                    }
+                })?;
+                bucket.push(value.clone());
+                prepared_bucket = Some(bucket);
                 bucket_id
             }
         };
-        let is_new = !self.originals.contains_key(&value);
 
-        let bucket_location = match self
-            .originals
-            .get(&value)
-            .map(|stored| stored.bucket_location)
+        let target_member = if existing_bucket.is_some()
+            && old_location.is_none_or(|(old_bucket, _)| old_bucket != bucket_id)
         {
-            Some((old_bucket_id, old_slot)) if old_bucket_id == bucket_id => (bucket_id, old_slot),
-            Some((old_bucket_id, old_slot)) => {
-                if self.remove_from_bucket(&value, old_bucket_id, old_slot) {
-                    self.release_empty_bucket_storage(old_bucket_id);
-                }
-                self.push_to_bucket(value.clone(), bucket_id)
-            }
-            None => self.push_to_bucket(value.clone(), bucket_id),
+            Some(value.clone())
+        } else {
+            None
         };
 
+        // This is the only fallible external mutation. Every subsequent write
+        // consumes capacity and clones prepared above.
+        if existing_bucket.is_none() && !self.dawg.elastic_try_insert_bucket(&key, bucket_id)? {
+            return Err(ElasticMutationError::DictionaryConflict);
+        }
+
+        if let Some(bucket) = prepared_bucket {
+            self.buckets.push(bucket);
+        }
+
+        if let Some((old_bucket, old_slot)) = old_location {
+            if old_bucket != bucket_id {
+                let became_empty = {
+                    let bucket = &mut self.buckets[old_bucket];
+                    let removed = bucket.swap_remove(old_slot);
+                    debug_assert!(removed == value);
+                    bucket.is_empty()
+                };
+                if let Some(displaced) = displaced {
+                    self.originals
+                        .get_mut(&displaced)
+                        .expect("displaced member validated during prepare")
+                        .bucket_location = (old_bucket, old_slot);
+                }
+                if became_empty {
+                    self.release_empty_bucket_storage(old_bucket);
+                }
+            }
+        }
+
+        let bucket_location = match old_location {
+            Some((old_bucket, old_slot)) if old_bucket == bucket_id => (bucket_id, old_slot),
+            _ if existing_bucket.is_none() => (bucket_id, 0),
+            _ => {
+                let bucket = &mut self.buckets[bucket_id];
+                let slot = bucket.len();
+                bucket.push(target_member.expect("prepared target member"));
+                (bucket_id, slot)
+            }
+        };
         self.originals.insert(
             value,
             StoredSeries {
-                series: series.to_vec(),
+                series: replacement_series,
                 bucket_location,
             },
         );
-        is_new
-    }
 
-    fn push_to_bucket(&mut self, value: V, bucket_id: usize) -> BucketLocation {
-        let slot = self.buckets[bucket_id].len();
-        self.buckets[bucket_id].push(value);
-        (bucket_id, slot)
+        // A successful content mutation detaches the live index from its
+        // immutable verified generation. Error paths above retain the binding.
+        self.snapshot_identity = None;
+        Ok(is_new)
     }
 
     fn remove_from_bucket(&mut self, value: &V, bucket_id: usize, slot: usize) -> bool {
@@ -1787,6 +2849,16 @@ where
         &self.kernel
     }
 
+    /// Verified complete-snapshot identity, or `None` for live/unsealed state.
+    ///
+    /// Any successful content mutation clears this binding, so evidence cannot
+    /// silently retain a stale generation identity. Failed transactional
+    /// mutations leave it unchanged.
+    #[inline]
+    pub fn snapshot_identity(&self) -> Option<ElasticSnapshotIdentity> {
+        self.snapshot_identity
+    }
+
     /// Retrieve the original series for a reference id, if present.
     #[inline]
     pub fn get_original(&self, value: &V) -> Option<&[f64]> {
@@ -1810,6 +2882,7 @@ where
         let Some(stored) = self.originals.remove(&value) else {
             return false;
         };
+        self.snapshot_identity = None;
 
         let (bucket_id, slot) = stored.bucket_location;
         if self.remove_from_bucket(&value, bucket_id, slot) {
@@ -1832,7 +2905,7 @@ where
         if m == 0 || !self.kernel.supports_interval_query(query) {
             return self.scan_range(query, &plan, tau);
         }
-        let root = self.dawg.root();
+        let root = self.dawg.elastic_root();
         let Some(column_width) = self.kernel.column_len(m) else {
             return Vec::new();
         };
@@ -1853,52 +2926,64 @@ where
     /// Start an exact, bounded, resumable range query.
     ///
     /// A complete empty vector proves that no indexed series is within the
-    /// cutoff. An incomplete empty vector is only an exact subset and carries
-    /// a continuation when another page can make progress.
+    /// cutoff. A paused outcome carries its exact subset only once, inside the
+    /// continuation, where [`RangeContinuation::exact_partial`] can borrow it.
     pub fn search_range_bounded(
         &self,
         query: &[f64],
         tau: Cost<K>,
         limits: ResourceLimits,
         page: PageBudget,
-    ) -> Result<BoundedRangeOutcome<'_, K, V>, TemporalValidationError> {
+    ) -> Result<BoundedRangeOutcome<'_, K, V, D>, TemporalValidationError> {
         if !self.kernel.cutoff_is_valid(tau) {
             return Err(TemporalValidationError::InvalidCutoff);
         }
         let mut ledger = ResourceLedger::new(limits);
         ledger.validate_finite_series(Operand::Query, query)?;
-        let plan = self.kernel.plan(query);
 
-        let (mode, terminal) = if self.is_empty() {
+        let mut query_storage = Vec::new();
+        if query_storage.try_reserve_exact(query.len()).is_err() {
+            return Ok(OperationOutcome::Incomplete {
+                partial: None,
+                reason: IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::ContinuationBytes,
+                    requested: query.len().saturating_mul(std::mem::size_of::<f64>()),
+                },
+                continuation: None,
+                usage: ledger.usage(),
+            });
+        }
+        query_storage.extend_from_slice(query);
+
+        let (mut workspace, mut construction_terminal) = if self.is_empty() {
+            (None, None)
+        } else {
+            match ExactPointWorkspace::try_new(&self.kernel, query, limits.max_scratch_bytes) {
+                Ok(workspace) => {
+                    let terminal = ledger
+                        .observe_peak(
+                            ResourceKind::ScratchBytes,
+                            workspace.construction_peak_bytes(),
+                        )
+                        .err();
+                    (Some(workspace), terminal)
+                }
+                Err(reason) => (None, Some(reason)),
+            }
+        };
+
+        let (mode, mode_terminal) = if construction_terminal.is_some() {
+            (RangeSessionMode::Done, construction_terminal)
+        } else if self.is_empty() {
             (RangeSessionMode::Done, None)
         } else if query.is_empty() || !self.kernel.supports_interval_query(query) {
             (RangeSessionMode::Scan { bucket: 0, slot: 0 }, None)
         } else if let Some(column_width) = self.kernel.column_len(query.len()) {
-            let root = self.dawg.root();
-            let final_bucket = root.value_at_final().filter(|_| root.is_final());
-            let mut edges = VecDeque::new();
-            let edge_count = root.edge_count().unwrap_or(usize::from(u8::MAX) + 1);
-            let mut terminal = None;
-            if edges.try_reserve_exact(edge_count).is_err() {
-                terminal = Some(IncompleteReason::AllocationFailed {
-                    resource: ResourceKind::ContinuationBytes,
-                    requested: edge_count
-                        .saturating_mul(std::mem::size_of::<(u8, DynamicDawgNode<usize>)>()),
-                });
-            }
-            if terminal.is_none() {
-                root.for_each_edge(|unit, child| edges.push_back((unit, child)));
-                edges
-                    .make_contiguous()
-                    .sort_unstable_by_key(|(label, _)| *label);
-            }
-            let frame = BoundedRangeFrame {
-                depth: 0,
-                state: TemporalStateId(0),
-                final_bucket,
-                next_candidate: 0,
-                edges,
-            };
+            let root = self.dawg.elastic_root();
+            let (mut traversal, root_cursor) =
+                TraversalSession::capture_mapped(DictionaryTraversalRoot::owned(root));
+            let mut terminal = (!traversal.supports_efficient_dfs_edge_paging())
+                .then_some(IncompleteReason::Unsupported);
             if terminal.is_none() {
                 terminal = ledger.charge(ResourceKind::TrieNodes, 1).err();
             }
@@ -1909,76 +2994,81 @@ where
                     requested: column_width,
                 });
             }
-            let scratch_requested = column_width
-                .checked_mul(std::mem::size_of::<Cost<K>>())
-                .and_then(|bytes| bytes.checked_mul(2))
-                .and_then(|bytes| {
-                    column_width
-                        .checked_mul(std::mem::size_of::<usize>())
-                        .and_then(|active| active.checked_mul(2))
-                        .and_then(|active| bytes.checked_add(active))
-                });
-            let scratch_requested = match scratch_requested {
-                Some(bytes) => bytes,
-                None => {
-                    terminal = Some(IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::ScratchBytes,
-                    });
-                    0
-                }
-            };
-            if scratch_requested > limits.max_scratch_bytes {
+            let workspace_retained = workspace
+                .as_ref()
+                .map_or(0, ExactPointWorkspace::retained_bytes);
+            let remaining_scratch = limits.max_scratch_bytes.saturating_sub(workspace_retained);
+            let arena_bytes = remaining_scratch.saturating_mul(3) / 4;
+            let cache_bytes = remaining_scratch.saturating_sub(arena_bytes);
+            let arena_header_bytes = arena_bytes / 2;
+            let arena_position_bytes = arena_bytes.saturating_sub(arena_header_bytes);
+            let bytes_per_state = std::mem::size_of::<RangeProductState<K>>()
+                .saturating_add(std::mem::size_of::<(u64, SmallVec<[TemporalStateId; 2]>)>())
+                .max(1);
+            let bytes_per_position = std::mem::size_of::<RangeProductPosition<K>>().max(1);
+            let bytes_per_cache_entry =
+                std::mem::size_of::<((TemporalStateId, u8), Option<TemporalStateId>)>()
+                    .saturating_add(std::mem::size_of::<(TemporalStateId, u8)>())
+                    .max(1);
+            let max_states = limits
+                .max_trie_nodes
+                .min(arena_header_bytes / bytes_per_state)
+                .min(u32::MAX as usize);
+            let max_positions = arena_position_bytes / bytes_per_position;
+            let max_cache_entries = limits
+                .max_trie_edges
+                .min(cache_bytes / bytes_per_cache_entry);
+            let mut stack = Vec::new();
+            let mut states = RangeProductStateArena::new(max_states, max_positions);
+            let cache = BoundedTransitionCache::new(max_cache_entries);
+            if terminal.is_none() && max_states == 0 {
                 terminal = Some(IncompleteReason::BudgetExceeded {
                     resource: ResourceKind::ScratchBytes,
                     limit: limits.max_scratch_bytes,
-                    requested: scratch_requested,
+                    requested: workspace_retained.saturating_add(bytes_per_state),
                 });
             }
-
-            let mut previous = Vec::new();
-            let mut next = Vec::new();
-            let mut previous_active = Vec::new();
-            let mut next_active = Vec::new();
-            if terminal.is_none()
-                && (previous.try_reserve_exact(column_width).is_err()
-                    || next.try_reserve_exact(column_width).is_err()
-                    || previous_active.try_reserve_exact(column_width).is_err()
-                    || next_active.try_reserve_exact(column_width).is_err())
-            {
-                terminal = Some(IncompleteReason::AllocationFailed {
-                    resource: ResourceKind::ScratchBytes,
-                    requested: scratch_requested,
-                });
-            }
-            if terminal.is_none() {
-                previous.resize(column_width, K::Monoid::TOP);
-                next.resize(column_width, K::Monoid::TOP);
-            }
-            let mut stack = Vec::new();
-            let mut states = Vec::new();
-            if stack.try_reserve_exact(1).is_err() || states.try_reserve_exact(1).is_err() {
+            if terminal.is_none() && stack.try_reserve_exact(1).is_err() {
                 terminal = Some(IncompleteReason::AllocationFailed {
                     resource: ResourceKind::ContinuationBytes,
-                    requested: std::mem::size_of::<BoundedRangeFrame<DynamicDawgNode<usize>>>()
-                        .saturating_add(std::mem::size_of::<RangeProductState<K>>()),
+                    requested: std::mem::size_of::<BoundedRangeFrame<D::Node>>(),
                 });
             }
             if terminal.is_none() {
-                stack.push(frame);
-                states.push(RangeProductState {
-                    carry: None,
-                    positions: Vec::new(),
-                });
+                match states.intern(
+                    &self.kernel,
+                    RangeProductState {
+                        depth: 0,
+                        carry: None,
+                        positions: Vec::new(),
+                        final_cost: self.kernel.empty_vs_nonempty_cost(query),
+                    },
+                ) {
+                    Ok(root_state) => {
+                        let terminal_admitted = states
+                            .get(root_state)
+                            .is_some_and(|state| K::Monoid::within(state.final_cost, tau));
+                        match BoundedRangeFrame::open(
+                            &mut traversal,
+                            root_cursor,
+                            0,
+                            root_state,
+                            terminal_admitted,
+                        ) {
+                            Ok(frame) => stack.push(frame),
+                            Err(reason) => terminal = Some(reason),
+                        }
+                    }
+                    Err(reason) => terminal = Some(reason),
+                }
             }
             (
                 RangeSessionMode::Trie {
+                    traversal,
                     stack,
                     states,
+                    cache,
                     column_width,
-                    previous,
-                    next,
-                    previous_active,
-                    next_active,
                 },
                 terminal,
             )
@@ -1991,20 +3081,28 @@ where
             )
         };
 
+        construction_terminal = mode_terminal;
+        let result_capacity = self
+            .len()
+            .min(DEFAULT_RESULT_BUFFER_CAPACITY)
+            .min(limits.max_results);
+        let mut results = Vec::new();
+        if construction_terminal.is_none() && results.try_reserve_exact(result_capacity).is_err() {
+            construction_terminal = Some(IncompleteReason::AllocationFailed {
+                resource: ResourceKind::Results,
+                requested: result_capacity,
+            });
+        }
         let mut continuation = RangeContinuation {
             index: self,
-            query: query.into(),
-            plan,
+            query: query_storage,
+            workspace: workspace.take(),
             tau,
             mode,
-            results: Vec::with_capacity(
-                self.len()
-                    .min(DEFAULT_RESULT_BUFFER_CAPACITY)
-                    .min(limits.max_results),
-            ),
+            results,
             pending_match: None,
             ledger,
-            terminal,
+            terminal: construction_terminal,
         };
         if continuation.terminal.is_none() {
             if let Err(reason) = continuation.observe_state_peaks() {
@@ -2060,7 +3158,29 @@ where
             });
         }
 
-        let plan = self.kernel.plan(query);
+        let mut workspace =
+            match ExactPointWorkspace::try_new(&self.kernel, query, limits.max_scratch_bytes) {
+                Ok(workspace) => workspace,
+                Err(reason) => {
+                    return Ok(OperationOutcome::Incomplete {
+                        partial: None,
+                        reason,
+                        continuation: None,
+                        usage: ledger.usage(),
+                    });
+                }
+            };
+        if let Err(reason) = ledger.observe_peak(
+            ResourceKind::ScratchBytes,
+            workspace.construction_peak_bytes(),
+        ) {
+            return Ok(OperationOutcome::Incomplete {
+                partial: None,
+                reason,
+                continuation: None,
+                usage: ledger.usage(),
+            });
+        }
         let mut cutoff = K::Monoid::TOP;
         let mut sequence = 0_usize;
         for id in self.ids_in_bucket_order() {
@@ -2110,39 +3230,32 @@ where
                     usage: ledger.usage(),
                 });
             }
-            let Some(scratch_bytes) = query
-                .len()
-                .max(stored.series.len())
-                .checked_add(1)
-                .and_then(|width| width.checked_mul(2))
-                .and_then(|cells| cells.checked_mul(std::mem::size_of::<Cost<K>>()))
-            else {
-                return Ok(OperationOutcome::Incomplete {
-                    partial: None,
-                    reason: IncompleteReason::ArithmeticOverflow {
-                        resource: ResourceKind::ScratchBytes,
-                    },
-                    continuation: None,
-                    usage: ledger.usage(),
-                });
-            };
-            if let Err(reason) = ledger.observe_peak(ResourceKind::ScratchBytes, scratch_bytes) {
-                return Ok(OperationOutcome::Incomplete {
-                    partial: None,
-                    reason,
-                    continuation: None,
-                    usage: ledger.usage(),
-                });
-            }
-
-            let lower_bound = self
-                .kernel
-                .candidate_lower_bound(query, &stored.series, &plan);
+            let lower_bound =
+                self.kernel
+                    .candidate_lower_bound(query, &stored.series, workspace.plan());
             if !K::Monoid::within(lower_bound, cutoff) {
                 continue;
             }
-            let Some(exact) = self.kernel.exact_with_cutoff(query, &stored.series, cutoff) else {
-                continue;
+            let step_work = workspace.current().len().max(1);
+            let exact = match workspace.score_candidate(
+                &self.kernel,
+                query,
+                &stored.series,
+                cutoff,
+                step_work,
+            ) {
+                Ok(ExactPointDecision::WithinCutoff(exact)) => exact,
+                Ok(ExactPointDecision::AboveCutoff | ExactPointDecision::NoFiniteAlignment) => {
+                    continue
+                }
+                Err(reason) => {
+                    return Ok(OperationOutcome::Incomplete {
+                        partial: None,
+                        reason,
+                        continuation: None,
+                        usage: ledger.usage(),
+                    });
+                }
             };
             let Some(candidate_sequence) = take_sequence(&mut sequence) else {
                 return Ok(OperationOutcome::Incomplete {
@@ -2158,10 +3271,18 @@ where
                 cutoff = Self::knn_cutoff(&best, k);
             }
         }
-        Ok(OperationOutcome::Complete {
-            value: Self::finish_knn_results(best),
-            usage: ledger.usage(),
-        })
+        match Self::try_finish_bounded_knn_results(best, workspace.retained_bytes(), &mut ledger) {
+            Ok(value) => Ok(OperationOutcome::Complete {
+                value,
+                usage: ledger.usage(),
+            }),
+            Err(reason) => Ok(OperationOutcome::Incomplete {
+                partial: None,
+                reason,
+                continuation: None,
+                usage: ledger.usage(),
+            }),
+        }
     }
 
     /// Deterministic exact fallback for queries outside interval traversal's
@@ -2195,7 +3316,7 @@ where
     /// this yields a reproducible sequence across process runs — unlike
     /// iterating the `originals` `HashMap`, whose default `RandomState` seeds a
     /// different iteration order per process. Every inserted id lives in exactly
-    /// one bucket slot (see `push_to_bucket`/`remove_from_bucket`), so this
+    /// one bucket slot (see transactional insertion and `remove_from_bucket`), so this
     /// visits each id exactly once, matching `originals.keys()` as a set.
     fn ids_in_bucket_order(&self) -> impl Iterator<Item = &V> {
         self.buckets.iter().flatten()
@@ -2379,7 +3500,7 @@ where
             lower_bound: K::Monoid::ZERO,
             sequence,
             depth: 0,
-            node: self.dawg.root(),
+            node: self.dawg.elastic_root(),
             column: vec![K::Monoid::TOP; column_width],
             carry: None,
         });
@@ -2598,6 +3719,65 @@ where
             .collect()
     }
 
+    /// Finish a bounded range result with one explicit permutation workspace.
+    ///
+    /// Bounded traversal visits each stored episode id exactly once: the
+    /// private `originals` map owns unique ids and every live bucket entry is
+    /// tied to that id's single `bucket_location`. Consequently the defensive
+    /// duplicate coalescing required by the legacy convenience walker is not
+    /// needed here. Original vector positions are the encounter sequence and
+    /// therefore a total tie key. The single `(old, destination)` permutation
+    /// is sorted without hidden allocation, charged together with the live
+    /// scorer state, and then applied to the existing payload vector by swaps.
+    fn try_finish_bounded_range_results(
+        mut results: Vec<(V, Cost<K>)>,
+        retained_scratch: usize,
+        ledger: &mut ResourceLedger,
+    ) -> Result<Vec<(V, Cost<K>)>, IncompleteReason> {
+        let len = results.len();
+        let permutation_bytes = len
+            .checked_mul(std::mem::size_of::<(usize, usize)>())
+            .ok_or(IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            })?;
+        let scratch_peak = retained_scratch.checked_add(permutation_bytes).ok_or(
+            IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            },
+        )?;
+        ledger.observe_peak(ResourceKind::ScratchBytes, scratch_peak)?;
+
+        let mut permutation = Vec::new();
+        permutation
+            .try_reserve_exact(len)
+            .map_err(|_| IncompleteReason::AllocationFailed {
+                resource: ResourceKind::ScratchBytes,
+                requested: permutation_bytes,
+            })?;
+        permutation.extend((0..len).map(|old| (old, 0_usize)));
+        permutation.sort_unstable_by(|left, right| {
+            K::Monoid::compare(results[left.0].1, results[right.0].1)
+                .then_with(|| left.0.cmp(&right.0))
+        });
+        for (destination, entry) in permutation.iter_mut().enumerate() {
+            entry.1 = destination;
+        }
+        permutation.sort_unstable_by_key(|entry| entry.0);
+        for position in 0..len {
+            let mut swaps = 0_usize;
+            while permutation[position].1 != position {
+                if swaps == len {
+                    return Err(IncompleteReason::InvalidStoredData);
+                }
+                let destination = permutation[position].1;
+                results.swap(position, destination);
+                permutation.swap(position, destination);
+                swaps += 1;
+            }
+        }
+        Ok(results)
+    }
+
     fn finish_knn_results(best: BinaryHeap<KnnBestResult<K, V>>) -> Vec<(V, Cost<K>)> {
         let mut best = best.into_vec();
         best.sort_by(|a, b| {
@@ -2606,6 +3786,40 @@ where
         best.into_iter()
             .map(|entry| (entry.value, entry.distance))
             .collect()
+    }
+
+    fn try_finish_bounded_knn_results(
+        best: BinaryHeap<KnnBestResult<K, V>>,
+        retained_scratch: usize,
+        ledger: &mut ResourceLedger,
+    ) -> Result<Vec<(V, Cost<K>)>, IncompleteReason> {
+        let mut best = best.into_vec();
+        best.sort_unstable_by(|left, right| {
+            K::Monoid::compare(left.distance, right.distance)
+                .then_with(|| left.sequence.cmp(&right.sequence))
+        });
+        let len = best.len();
+        let output_bytes = len.checked_mul(std::mem::size_of::<(V, Cost<K>)>()).ok_or(
+            IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            },
+        )?;
+        let scratch_peak = retained_scratch.checked_add(output_bytes).ok_or(
+            IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            },
+        )?;
+        ledger.observe_peak(ResourceKind::ScratchBytes, scratch_peak)?;
+
+        let mut finished = Vec::new();
+        finished
+            .try_reserve_exact(len)
+            .map_err(|_| IncompleteReason::AllocationFailed {
+                resource: ResourceKind::Results,
+                requested: len,
+            })?;
+        finished.extend(best.into_iter().map(|entry| (entry.value, entry.distance)));
+        Ok(finished)
     }
 }
 
@@ -2630,9 +3844,806 @@ where
     }
 }
 
-impl<V> ElasticTransducer<ErpConfig, V>
+impl<K, D> ElasticTransducer<K, u64, D>
+where
+    K: ElasticKernel,
+    Cost<K>: PartialEq,
+    D: ElasticDictionaryBackend<Label = u8>,
+{
+    /// Exact range search with deterministic, bounded K1--K4 evidence.
+    ///
+    /// Failure to retain the complete evidence stream fails closed: no partial
+    /// certificate is returned. Edges and collision members are ordered by byte
+    /// label and stable id, so the evidence is invariant under hash seeding and
+    /// remains byte-for-byte equal after complete-snapshot reload.
+    pub fn search_range_with_certificate(
+        &self,
+        query: &[f64],
+        tau: Cost<K>,
+        limits: ElasticCertificateLimits,
+    ) -> Result<CertifiedRangeResults<K>, ElasticCertificateError> {
+        if !self.kernel.cutoff_is_valid(tau) {
+            return Err(TemporalValidationError::InvalidCutoff.into());
+        }
+        let mut ledger = ResourceLedger::new(limits.resources);
+        ledger.validate_finite_series(Operand::Query, query)?;
+        if query.is_empty() || !self.kernel.supports_interval_query(query) {
+            return Err(ElasticCertificateError::Unsupported);
+        }
+        let column_width = self
+            .kernel
+            .column_len(query.len())
+            .ok_or(ElasticCertificateError::Unsupported)?;
+        if column_width > u32::MAX as usize {
+            return Err(ElasticCertificateError::BudgetExceeded {
+                resource: ResourceKind::DpCells,
+                limit: u32::MAX as usize,
+                requested: column_width,
+            });
+        }
+        let query_bits_bytes = query.len().checked_mul(std::mem::size_of::<u64>()).ok_or(
+            ElasticCertificateError::ArithmeticOverflow {
+                resource: ResourceKind::WitnessBytes,
+            },
+        )?;
+        if query_bits_bytes > limits.resources.max_witness_bytes {
+            return Err(ElasticCertificateError::BudgetExceeded {
+                resource: ResourceKind::WitnessBytes,
+                limit: limits.resources.max_witness_bytes,
+                requested: query_bits_bytes,
+            });
+        }
+        let mut query_bits = Vec::new();
+        query_bits.try_reserve_exact(query.len()).map_err(|_| {
+            ElasticCertificateError::AllocationFailed {
+                resource: ResourceKind::WitnessBytes,
+                requested: query.len().saturating_mul(std::mem::size_of::<u64>()),
+            }
+        })?;
+        query_bits.extend(query.iter().map(|value| value.to_bits()));
+        let mut builder = CertificateBuilder::new(limits, query_bits_bytes)?;
+        // The same fallible plan and two exact frontier generations drive both
+        // interval-product transitions and K3 full-precision survivor checks.
+        // Candidate verification resets them in place and never allocates.
+        let mut workspace =
+            ExactPointWorkspace::try_new(&self.kernel, query, limits.resources.max_scratch_bytes)?;
+        ledger.observe_peak(
+            ResourceKind::ScratchBytes,
+            workspace.construction_peak_bytes(),
+        )?;
+        let fixed_scratch_bytes = workspace.retained_bytes();
+
+        let remaining_scratch = limits
+            .resources
+            .max_scratch_bytes
+            .saturating_sub(fixed_scratch_bytes);
+        let bytes_per_state = std::mem::size_of::<RangeProductState<K>>()
+            .saturating_add(std::mem::size_of::<(u64, SmallVec<[TemporalStateId; 2]>)>())
+            .max(1);
+        let bytes_per_position = std::mem::size_of::<RangeProductPosition<K>>().max(1);
+        let max_states = limits
+            .resources
+            .max_trie_nodes
+            .min((remaining_scratch / 2) / bytes_per_state)
+            .min(u32::MAX as usize);
+        let max_positions =
+            (remaining_scratch.saturating_sub(remaining_scratch / 2)) / bytes_per_position;
+        if max_states == 0 {
+            return Err(ElasticCertificateError::BudgetExceeded {
+                resource: ResourceKind::ScratchBytes,
+                limit: limits.resources.max_scratch_bytes,
+                requested: fixed_scratch_bytes.saturating_add(bytes_per_state),
+            });
+        }
+        let mut states = RangeProductStateArena::new(max_states, max_positions);
+        let root_state = states.intern(
+            &self.kernel,
+            RangeProductState {
+                depth: 0,
+                carry: None,
+                positions: Vec::new(),
+                final_cost: self.kernel.empty_vs_nonempty_cost(query),
+            },
+        )?;
+
+        let root = self.dawg.elastic_root();
+        let (mut traversal, root_cursor) =
+            TraversalSession::capture_mapped(DictionaryTraversalRoot::owned(root));
+        if !traversal.supports_efficient_dfs_edge_paging() {
+            return Err(ElasticCertificateError::Unsupported);
+        }
+        ledger.charge(ResourceKind::TrieNodes, 1)?;
+        let root_final_value = traversal.final_value_at_cursor(root_cursor, None);
+        let root_edges = traversal.open_dfs_node(root_cursor);
+        let mut root_candidates = Vec::new();
+        let mut root_candidate_bucket = None;
+        if root_edges.is_final() {
+            let bucket_id = root_final_value.ok_or(ElasticCertificateError::InvalidStoredData)?;
+            let root_admitted = states
+                .get(root_state)
+                .is_some_and(|state| K::Monoid::within(state.final_cost, tau));
+            if root_admitted {
+                let bucket = self
+                    .buckets
+                    .get(bucket_id)
+                    .ok_or(ElasticCertificateError::InvalidStoredData)?;
+                if bucket.is_empty() {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                }
+                if bucket.len() > limits.resources.max_queue_entries {
+                    return Err(ElasticCertificateError::BudgetExceeded {
+                        resource: ResourceKind::QueueEntries,
+                        limit: limits.resources.max_queue_entries,
+                        requested: bucket.len(),
+                    });
+                }
+                root_candidates
+                    .try_reserve_exact(bucket.len())
+                    .map_err(|_| ElasticCertificateError::AllocationFailed {
+                        resource: ResourceKind::ScratchBytes,
+                        requested: bucket.len().saturating_mul(std::mem::size_of::<u64>()),
+                    })?;
+                root_candidates.extend(bucket.iter().copied());
+                root_candidates.sort_unstable();
+                if root_candidates.windows(2).any(|pair| pair[0] == pair[1]) {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                }
+                root_candidate_bucket = Some(bucket_id);
+            } else {
+                let terminal_bound = states
+                    .get(root_state)
+                    .map(|state| state.final_cost)
+                    .ok_or(ElasticCertificateError::InvalidStoredData)?;
+                builder.record(&[], |quantized_path| ElasticRangeEvidence::TerminalPruned {
+                    quantized_path,
+                    lower_bound: terminal_bound,
+                })?;
+            }
+        } else if root_final_value.is_some() {
+            return Err(ElasticCertificateError::InvalidStoredData);
+        }
+        let mut stack: Vec<CertifiedRangeFrame<D::Node>> = Vec::new();
+        stack
+            .try_reserve_exact(1)
+            .map_err(|_| ElasticCertificateError::AllocationFailed {
+                resource: ResourceKind::ContinuationBytes,
+                requested: std::mem::size_of::<CertifiedRangeFrame<D::Node>>(),
+            })?;
+        stack.push(CertifiedRangeFrame {
+            depth: 0,
+            state: root_state,
+            candidate_bucket: root_candidate_bucket,
+            candidates: root_candidates,
+            next_candidate: 0,
+            edges: root_edges,
+        });
+        let mut path = Vec::<u8>::new();
+        let mut results = Vec::new();
+        let initial_result_capacity = self
+            .len()
+            .min(DEFAULT_RESULT_BUFFER_CAPACITY)
+            .min(limits.resources.max_results);
+        results.try_reserve(initial_result_capacity).map_err(|_| {
+            ElasticCertificateError::AllocationFailed {
+                resource: ResourceKind::Results,
+                requested: initial_result_capacity
+                    .saturating_mul(std::mem::size_of::<(u64, Cost<K>)>()),
+            }
+        })?;
+
+        let initial_state_bytes =
+            states
+                .retained_bytes()
+                .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                    resource: ResourceKind::ScratchBytes,
+                })?;
+        ledger.observe_peak(
+            ResourceKind::ScratchBytes,
+            fixed_scratch_bytes.checked_add(initial_state_bytes).ok_or(
+                ElasticCertificateError::ArithmeticOverflow {
+                    resource: ResourceKind::ScratchBytes,
+                },
+            )?,
+        )?;
+        ledger.observe_peak(
+            ResourceKind::QueueEntries,
+            stack
+                .len()
+                .saturating_add(stack.last().map_or(0, |frame| frame.candidates.len())),
+        )?;
+
+        while !stack.is_empty() {
+            let candidate = {
+                let frame = stack.last_mut().expect("nonempty checked");
+                let candidate = frame
+                    .candidates
+                    .get(frame.next_candidate)
+                    .copied()
+                    .zip(frame.candidate_bucket);
+                if candidate.is_some() {
+                    frame.next_candidate = frame.next_candidate.saturating_add(1);
+                } else if !frame.candidates.is_empty() {
+                    // Drop the collision view before traversing children; no
+                    // exhausted bucket allocation is retained down the path.
+                    frame.candidates = Vec::new();
+                    frame.candidate_bucket = None;
+                    frame.next_candidate = 0;
+                }
+                candidate
+            };
+            if let Some((stable_id, bucket_id)) = candidate {
+                let Some(stored) = self.originals.get(&stable_id) else {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                };
+                let (stored_bucket, stored_slot) = stored.bucket_location;
+                if stored_bucket != bucket_id
+                    || self
+                        .buckets
+                        .get(stored_bucket)
+                        .and_then(|bucket| bucket.get(stored_slot))
+                        != Some(&stable_id)
+                    || stored.series.len() != path.len()
+                    || stored
+                        .series
+                        .iter()
+                        .zip(&path)
+                        .any(|(sample, unit)| self.quant.quantize(*sample) as u8 != *unit)
+                {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                }
+                if stored.series.len() > limits.resources.max_series_len
+                    || stored.series.iter().any(|sample| !sample.is_finite())
+                {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                }
+                let candidate_work = query
+                    .len()
+                    .checked_add(1)
+                    .and_then(|rows| {
+                        stored
+                            .series
+                            .len()
+                            .checked_add(1)
+                            .and_then(|columns| rows.checked_mul(columns))
+                    })
+                    .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::WorkUnits,
+                    })?;
+                builder.charge_work(candidate_work)?;
+                ledger.charge_many(&[
+                    (ResourceKind::Candidates, 1),
+                    (ResourceKind::DpCells, candidate_work),
+                    (ResourceKind::WorkUnits, candidate_work),
+                ])?;
+                let candidate_bound =
+                    self.kernel
+                        .candidate_lower_bound(query, &stored.series, workspace.plan());
+                if !K::Monoid::within(candidate_bound, tau) {
+                    builder.record(&path, |quantized_path| {
+                        ElasticRangeEvidence::CandidatePruned {
+                            quantized_path,
+                            stable_id,
+                            candidate_bound,
+                        }
+                    })?;
+                    continue;
+                }
+                let step_work = workspace.current().len().max(1);
+                let exact = match workspace.score_candidate(
+                    &self.kernel,
+                    query,
+                    &stored.series,
+                    tau,
+                    step_work,
+                )? {
+                    ExactPointDecision::WithinCutoff(exact) => Some(exact),
+                    ExactPointDecision::AboveCutoff | ExactPointDecision::NoFiniteAlignment => None,
+                };
+                let survived = exact.is_some();
+                builder.record(&path, |quantized_path| {
+                    ElasticRangeEvidence::ExactCandidate {
+                        quantized_path,
+                        stable_id,
+                        candidate_bound,
+                        exact,
+                        survived,
+                    }
+                })?;
+                if let Some(exact) = exact.filter(|cost| K::Monoid::within(*cost, tau)) {
+                    let requested_results = results.len().checked_add(1).ok_or(
+                        ElasticCertificateError::ArithmeticOverflow {
+                            resource: ResourceKind::Results,
+                        },
+                    )?;
+                    if requested_results > limits.resources.max_results {
+                        return Err(ElasticCertificateError::BudgetExceeded {
+                            resource: ResourceKind::Results,
+                            limit: limits.resources.max_results,
+                            requested: requested_results,
+                        });
+                    }
+                    ledger.charge(ResourceKind::Results, 1)?;
+                    results.try_reserve_exact(1).map_err(|_| {
+                        ElasticCertificateError::AllocationFailed {
+                            resource: ResourceKind::Results,
+                            requested: requested_results,
+                        }
+                    })?;
+                    results.push((stable_id, exact));
+                }
+                continue;
+            }
+
+            if stack.last().expect("nonempty checked").edges.remaining() == 0 {
+                let depth = stack.last().expect("nonempty checked").depth;
+                stack.pop();
+                if depth > 0 && path.pop().is_none() {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                }
+                continue;
+            }
+            let (unit, child_depth, source) = {
+                let frame = stack.last_mut().expect("nonempty checked");
+                let Some((unit, _)) = traversal.peek_dfs_edge(&mut frame.edges) else {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                };
+                let child_depth = frame.depth.checked_add(1).ok_or(
+                    ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::TrieNodes,
+                    },
+                )?;
+                (unit, child_depth, frame.state)
+            };
+            let requested_path =
+                path.len()
+                    .checked_add(1)
+                    .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::ContinuationBytes,
+                    })?;
+            if requested_path > limits.resources.max_series_len {
+                return Err(ElasticCertificateError::BudgetExceeded {
+                    resource: ResourceKind::SeriesLength,
+                    limit: limits.resources.max_series_len,
+                    requested: requested_path,
+                });
+            }
+            if requested_path > limits.resources.max_continuation_bytes {
+                return Err(ElasticCertificateError::BudgetExceeded {
+                    resource: ResourceKind::ContinuationBytes,
+                    limit: limits.resources.max_continuation_bytes,
+                    requested: requested_path,
+                });
+            }
+            if path.len() == path.capacity() {
+                path.try_reserve_exact(1).map_err(|_| {
+                    ElasticCertificateError::AllocationFailed {
+                        resource: ResourceKind::ContinuationBytes,
+                        requested: requested_path,
+                    }
+                })?;
+            }
+            let interval = self.bin_bounds_for(unit);
+            let plan = &workspace.plan;
+            let previous = &mut workspace.current;
+            let next = &mut workspace.next;
+            let previous_active = &mut workspace.current_active;
+            let next_active = &mut workspace.next_active;
+            let source_state = states
+                .get(source)
+                .ok_or(ElasticCertificateError::InvalidStoredData)?;
+            if source_state.depth.checked_add(1) != Some(child_depth) {
+                return Err(ElasticCertificateError::InvalidStoredData);
+            }
+            let prefix_bound = self.kernel.prefix_lower_bound(
+                query,
+                interval,
+                source_state.carry,
+                child_depth,
+                plan,
+            );
+            let build_column = K::Monoid::within(prefix_bound, tau);
+            let transition_bound = if source_state.positions.is_empty() {
+                column_width
+            } else {
+                column_width
+                    .checked_mul(2)
+                    .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::WorkUnits,
+                    })?
+            };
+            let edge_work = (if build_column { transition_bound } else { 0 })
+                .checked_add(1)
+                .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                    resource: ResourceKind::WorkUnits,
+                })?;
+            builder.charge_work(edge_work)?;
+            ledger.charge_many(&[
+                (ResourceKind::TrieEdges, 1),
+                (ResourceKind::WorkUnits, edge_work),
+                (ResourceKind::DpCells, transition_bound),
+            ])?;
+            let child = {
+                let frame = stack.last_mut().expect("nonempty checked");
+                let Some((consumed_unit, child)) = traversal.next_dfs_edge(&mut frame.edges) else {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                };
+                if consumed_unit != unit {
+                    return Err(ElasticCertificateError::InvalidStoredData);
+                }
+                path.push(unit);
+                if !K::Monoid::within(prefix_bound, tau) {
+                    builder.record(&path, |quantized_path| ElasticRangeEvidence::PrefixPruned {
+                        quantized_path,
+                        lower_bound: prefix_bound,
+                    })?;
+                    path.pop();
+                    None
+                } else {
+                    Some(child)
+                }
+            };
+            let Some(child) = child else {
+                continue;
+            };
+
+            // Reconstruct only the exact dense generation demanded by this
+            // transition from the canonical sparse residual.
+            while let Some(row) = previous_active.pop() {
+                *previous
+                    .get_mut(row)
+                    .ok_or(ElasticCertificateError::InvalidStoredData)? = K::Monoid::TOP;
+            }
+            let source_state = states
+                .get(source)
+                .ok_or(ElasticCertificateError::InvalidStoredData)?;
+            for position in &source_state.positions {
+                let row = usize::try_from(position.row).map_err(|_| {
+                    ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::DpCells,
+                    }
+                })?;
+                *previous
+                    .get_mut(row)
+                    .ok_or(ElasticCertificateError::InvalidStoredData)? = position.cost;
+            }
+            let held_target = source_state
+                .carry
+                .and_then(|carry| self.kernel.carry_interval(carry))
+                .unwrap_or((0.0, 0.0));
+            for (position_index, position) in source_state.positions.iter().enumerate() {
+                let start = position.row as usize;
+                previous_active.push(start);
+                let stop = source_state
+                    .positions
+                    .get(position_index + 1)
+                    .map_or(column_width, |next_position| next_position.row as usize);
+                for row in start.saturating_add(1)..stop {
+                    let Some(vertical) = self.kernel.vertical_epsilon_extension(
+                        query,
+                        held_target,
+                        row,
+                        previous,
+                        plan,
+                    ) else {
+                        break;
+                    };
+                    if !K::Monoid::within(vertical, tau) {
+                        break;
+                    }
+                    previous[row] = vertical;
+                    previous_active.push(row);
+                }
+            }
+            while let Some(row) = next_active.pop() {
+                *next
+                    .get_mut(row)
+                    .ok_or(ElasticCertificateError::InvalidStoredData)? = K::Monoid::TOP;
+            }
+
+            let source_carry = source_state.carry;
+            let sparse = self.kernel.step_interval_frontier(
+                previous,
+                previous_active,
+                query,
+                interval,
+                source_carry,
+                child_depth,
+                plan,
+                tau,
+                transition_bound,
+                next,
+                next_active,
+            );
+            let (lower_bound, carry) =
+                match sparse {
+                    Some(PointFrontierStep::Advanced {
+                        lower_bound,
+                        carry,
+                        work,
+                    }) => {
+                        if work > transition_bound {
+                            return Err(ElasticCertificateError::InvalidStoredData);
+                        }
+                        (lower_bound, carry)
+                    }
+                    Some(PointFrontierStep::WorkLimitExceeded { requested, .. }) => {
+                        return Err(ElasticCertificateError::BudgetExceeded {
+                            resource: ResourceKind::WorkUnits,
+                            limit: transition_bound,
+                            requested,
+                        });
+                    }
+                    None => {
+                        let (lower_bound, carry) = self.kernel.step_column(
+                            previous,
+                            query,
+                            interval,
+                            source_carry,
+                            child_depth,
+                            plan,
+                            next,
+                        );
+                        next_active.extend(next.iter().enumerate().filter_map(|(row, cost)| {
+                            K::Monoid::within(*cost, tau).then_some(row)
+                        }));
+                        (lower_bound, carry)
+                    }
+                };
+            if !K::Monoid::within(lower_bound, tau) {
+                builder.record(&path, |quantized_path| {
+                    ElasticRangeEvidence::SubtreePruned {
+                        quantized_path,
+                        lower_bound,
+                    }
+                })?;
+                path.pop();
+                continue;
+            }
+
+            let final_row = self.kernel.final_row(query.len());
+            let final_cost = next.get(final_row).copied().unwrap_or(K::Monoid::TOP);
+            let canonical_position_count = next_active
+                .iter()
+                .filter(|row| {
+                    let Some(cost) = next.get(**row).copied() else {
+                        return true;
+                    };
+                    self.kernel
+                        .vertical_epsilon_extension(query, interval, **row, next, plan)
+                        .is_none_or(|vertical| {
+                            K::Monoid::compare(vertical, cost) != Ordering::Equal
+                        })
+                })
+                .count();
+            let current_state_bytes =
+                states
+                    .retained_bytes()
+                    .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::ScratchBytes,
+                    })?;
+            let prospective_state_bytes = current_state_bytes
+                .checked_add(std::mem::size_of::<RangeProductState<K>>())
+                .and_then(|bytes| {
+                    canonical_position_count
+                        .checked_mul(std::mem::size_of::<RangeProductPosition<K>>())
+                        .and_then(|positions| bytes.checked_add(positions))
+                })
+                .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                    resource: ResourceKind::ScratchBytes,
+                })?;
+            ledger.observe_peak(
+                ResourceKind::ScratchBytes,
+                fixed_scratch_bytes
+                    .checked_add(prospective_state_bytes)
+                    .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::ScratchBytes,
+                    })?,
+            )?;
+            let mut positions = Vec::new();
+            positions
+                .try_reserve_exact(canonical_position_count)
+                .map_err(|_| ElasticCertificateError::AllocationFailed {
+                    resource: ResourceKind::ScratchBytes,
+                    requested: prospective_state_bytes,
+                })?;
+            for row in next_active.iter().copied() {
+                let cost = next
+                    .get(row)
+                    .copied()
+                    .ok_or(ElasticCertificateError::InvalidStoredData)?;
+                let dominated = self
+                    .kernel
+                    .vertical_epsilon_extension(query, interval, row, next, plan)
+                    .is_some_and(|vertical| K::Monoid::compare(vertical, cost) == Ordering::Equal);
+                if K::Monoid::within(cost, tau) && !dominated {
+                    positions.push(RangeProductPosition {
+                        row: u32::try_from(row).map_err(|_| {
+                            ElasticCertificateError::ArithmeticOverflow {
+                                resource: ResourceKind::DpCells,
+                            }
+                        })?,
+                        cost,
+                    });
+                }
+            }
+            if positions.len() != canonical_position_count {
+                return Err(ElasticCertificateError::InvalidStoredData);
+            }
+            let state = states.intern(
+                &self.kernel,
+                RangeProductState {
+                    depth: child_depth,
+                    carry: Some(carry),
+                    positions,
+                    final_cost,
+                },
+            )?;
+            ledger.charge(ResourceKind::TrieNodes, 1)?;
+
+            let mut candidates = Vec::new();
+            let mut candidate_bucket = None;
+            let final_value = traversal.final_value_at_cursor(child, None);
+            let edges = traversal.open_dfs_node(child);
+            if edges.is_final() {
+                let bucket_id = final_value.ok_or(ElasticCertificateError::InvalidStoredData)?;
+                let terminal_bound = states
+                    .get(state)
+                    .map(|state| state.final_cost)
+                    .ok_or(ElasticCertificateError::InvalidStoredData)?;
+                if K::Monoid::within(terminal_bound, tau) {
+                    if let Some(bucket) = self.buckets.get(bucket_id) {
+                        if bucket.is_empty() {
+                            return Err(ElasticCertificateError::InvalidStoredData);
+                        }
+                        if bucket.len() > limits.resources.max_queue_entries {
+                            return Err(ElasticCertificateError::BudgetExceeded {
+                                resource: ResourceKind::QueueEntries,
+                                limit: limits.resources.max_queue_entries,
+                                requested: bucket.len(),
+                            });
+                        }
+                        candidates.try_reserve_exact(bucket.len()).map_err(|_| {
+                            ElasticCertificateError::AllocationFailed {
+                                resource: ResourceKind::ScratchBytes,
+                                requested: bucket.len().saturating_mul(std::mem::size_of::<u64>()),
+                            }
+                        })?;
+                        candidates.extend(bucket.iter().copied());
+                        candidates.sort_unstable();
+                        if candidates.windows(2).any(|pair| pair[0] == pair[1]) {
+                            return Err(ElasticCertificateError::InvalidStoredData);
+                        }
+                        candidate_bucket = Some(bucket_id);
+                    } else {
+                        return Err(ElasticCertificateError::InvalidStoredData);
+                    }
+                } else {
+                    builder.record(&path, |quantized_path| {
+                        ElasticRangeEvidence::TerminalPruned {
+                            quantized_path,
+                            lower_bound: terminal_bound,
+                        }
+                    })?;
+                }
+            } else if final_value.is_some() {
+                return Err(ElasticCertificateError::InvalidStoredData);
+            }
+
+            let requested_frames =
+                stack
+                    .len()
+                    .checked_add(1)
+                    .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::ContinuationBytes,
+                    })?;
+            let frame_bytes = requested_frames
+                .checked_mul(std::mem::size_of::<CertifiedRangeFrame<D::Node>>())
+                .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                    resource: ResourceKind::ContinuationBytes,
+                })?;
+            let new_candidate_bytes = candidates
+                .capacity()
+                .checked_mul(std::mem::size_of::<u64>())
+                .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                    resource: ResourceKind::ContinuationBytes,
+                })?;
+            // DFS exhausts and releases a frame's accepting bucket before it
+            // visits any outgoing edge, so only the prospective child can own
+            // collision-candidate storage at this point.
+            let candidate_bytes = new_candidate_bytes;
+            let retained_product_bytes =
+                states
+                    .retained_bytes()
+                    .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::ContinuationBytes,
+                    })?;
+            let retained_column_bytes = frame_bytes
+                .checked_add(candidate_bytes)
+                .and_then(|bytes| bytes.checked_add(path.capacity()))
+                .and_then(|bytes| bytes.checked_add(fixed_scratch_bytes))
+                .and_then(|bytes| bytes.checked_add(retained_product_bytes))
+                .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                    resource: ResourceKind::ContinuationBytes,
+                })?;
+            if retained_column_bytes > limits.resources.max_continuation_bytes {
+                return Err(ElasticCertificateError::BudgetExceeded {
+                    resource: ResourceKind::ContinuationBytes,
+                    limit: limits.resources.max_continuation_bytes,
+                    requested: retained_column_bytes,
+                });
+            }
+            stack
+                .try_reserve_exact(1)
+                .map_err(|_| ElasticCertificateError::AllocationFailed {
+                    resource: ResourceKind::ContinuationBytes,
+                    requested: requested_frames,
+                })?;
+            stack.push(CertifiedRangeFrame {
+                depth: child_depth,
+                state,
+                candidate_bucket,
+                candidates,
+                next_candidate: 0,
+                edges,
+            });
+            ledger.observe_peak(
+                ResourceKind::QueueEntries,
+                stack
+                    .len()
+                    .checked_add(stack.last().map_or(0, |frame| frame.candidates.len()))
+                    .ok_or(ElasticCertificateError::ArithmeticOverflow {
+                        resource: ResourceKind::QueueEntries,
+                    })?,
+            )?;
+        }
+
+        results.sort_unstable_by(|left, right| {
+            K::Monoid::compare(left.1, right.1).then_with(|| left.0.cmp(&right.0))
+        });
+        Ok((
+            results,
+            ElasticRangeCertificate {
+                snapshot_identity: self.snapshot_identity,
+                query_bits,
+                cutoff: tau,
+                evidence: builder.evidence,
+                work_units: builder.work_units,
+                path_bytes: builder.path_bytes,
+                witness_bytes: builder.witness_bytes,
+            },
+        ))
+    }
+
+    /// Recompute and compare every certificate decision against an expected
+    /// query and cutoff. Any mutated bound, path, survivor, id, ordering, query,
+    /// cutoff, or snapshot identity fails verification.
+    pub fn verify_range_certificate(
+        &self,
+        query: &[f64],
+        tau: Cost<K>,
+        certificate: &ElasticRangeCertificate<Cost<K>>,
+        limits: ElasticCertificateLimits,
+    ) -> Result<bool, ElasticCertificateError> {
+        if certificate.snapshot_identity != self.snapshot_identity
+            || certificate.cutoff != tau
+            || certificate.query_bits.len() != query.len()
+            || !certificate
+                .query_bits
+                .iter()
+                .zip(query)
+                .all(|(bits, value)| *bits == value.to_bits())
+        {
+            return Ok(false);
+        }
+        let (_, expected) = self.search_range_with_certificate(query, tau, limits)?;
+        Ok(&expected == certificate)
+    }
+}
+
+impl<V, D> ElasticTransducer<ErpConfig, V, D>
 where
     V: Eq + std::hash::Hash + Clone,
+    D: ElasticDictionaryBackend<Label = u8>,
 {
     /// Start a bounded exact ERP range query using the lazy automaton product.
     ///
@@ -2646,48 +4657,74 @@ where
         tau: f64,
         limits: ResourceLimits,
         page: PageBudget,
-    ) -> Result<ErpAutomatonRangeOutcome<'_, V>, TemporalAutomatonError> {
+    ) -> Result<ErpAutomatonRangeOutcome<'_, V, D>, TemporalAutomatonError> {
         let mut ledger = ResourceLedger::new(limits);
         let machine = ErpFrontierMachine::new(query, self.kernel, tau, limits)?;
+        let mut query_storage = Vec::new();
+        query_storage.try_reserve_exact(query.len()).map_err(|_| {
+            TemporalAutomatonError::Resource(IncompleteReason::AllocationFailed {
+                resource: ResourceKind::ContinuationBytes,
+                requested: query.len().saturating_mul(std::mem::size_of::<f64>()),
+            })
+        })?;
+        query_storage.extend_from_slice(query);
         let mut stack = Vec::new();
         let mut terminal = None;
         let done = self.is_empty();
+        let root = self.dawg.elastic_root();
+        let (mut traversal, root_cursor) =
+            TraversalSession::capture_mapped(DictionaryTraversalRoot::owned(root));
 
         if !done {
-            let root = self.dawg.root();
+            if !traversal.supports_efficient_dfs_edge_paging() {
+                terminal = Some(IncompleteReason::Unsupported);
+            }
             let seed = machine.seed();
             let final_cost = machine
                 .final_cost(seed)
                 .map_err(TemporalAutomatonError::Resource)?;
-            let final_bucket = if root.is_final() && final_cost.is_some() {
-                root.value_at_final()
-            } else {
-                None
-            };
-            let mut edges = Vec::new();
-            root.for_each_edge(|label, child| edges.push((label, child)));
-            edges.sort_by_key(|(label, _)| *label);
-            stack.push(ErpAutomatonRangeFrame {
-                depth: 0,
-                state: seed,
-                final_bucket,
-                next_candidate: 0,
-                edges: edges.into(),
-            });
-            terminal = ledger.charge(ResourceKind::TrieNodes, 1).err();
+            if terminal.is_none() && stack.try_reserve_exact(1).is_err() {
+                terminal = Some(IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::ContinuationBytes,
+                    requested: std::mem::size_of::<ErpAutomatonRangeFrame<D::Node>>(),
+                });
+            }
+            if terminal.is_none() {
+                match ErpAutomatonRangeFrame::open(
+                    &mut traversal,
+                    root_cursor,
+                    0,
+                    seed,
+                    final_cost.is_some(),
+                ) {
+                    Ok(frame) => stack.push(frame),
+                    Err(reason) => terminal = Some(reason),
+                }
+            }
+            if terminal.is_none() {
+                terminal = ledger.charge(ResourceKind::TrieNodes, 1).err();
+            }
         }
 
         let result_capacity = self
             .len()
             .min(DEFAULT_RESULT_BUFFER_CAPACITY)
             .min(limits.max_results);
+        let mut results = Vec::new();
+        if terminal.is_none() && results.try_reserve_exact(result_capacity).is_err() {
+            terminal = Some(IncompleteReason::AllocationFailed {
+                resource: ResourceKind::Results,
+                requested: result_capacity,
+            });
+        }
         let mut continuation = ErpAutomatonRangeContinuation {
             index: self,
-            query: query.into(),
+            query: query_storage,
             tau,
             machine,
+            traversal,
             stack,
-            results: Vec::with_capacity(result_capacity),
+            results,
             pending_match: None,
             ledger,
             terminal,
@@ -2702,9 +4739,10 @@ where
     }
 }
 
-impl<V> ElasticTransducer<MsmKernel, V>
+impl<V, D> ElasticTransducer<MsmKernel, V, D>
 where
     V: Eq + std::hash::Hash + Clone,
+    D: ElasticDictionaryBackend<Label = u8>,
 {
     /// Effective MSM configuration for the compatibility
     /// [`crate::time_series::MsmTransducer`] specialization.
@@ -2717,9 +4755,116 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::time_series::kernels::ErpConfig;
     use crate::time_series::msm_interval::interval_column_len;
     use crate::time_series::MsmTransducer;
     use proptest::prelude::*;
+
+    #[derive(Debug, Default)]
+    struct RejectingDictionary {
+        inner: DynamicDawg<usize>,
+    }
+
+    impl ElasticDictionaryBackend for RejectingDictionary {
+        type Label = u8;
+        type Node = <DynamicDawg<usize> as Dictionary>::Node;
+
+        fn elastic_root(&self) -> Self::Node {
+            self.inner.root()
+        }
+
+        fn elastic_bucket(&self, key: &[u8]) -> Option<usize> {
+            self.inner.get_bytes_value(key)
+        }
+
+        fn elastic_len(&self) -> Option<usize> {
+            Dictionary::len(&self.inner)
+        }
+    }
+
+    impl ElasticMutableDictionaryBackend for RejectingDictionary {
+        fn elastic_try_insert_bucket(
+            &mut self,
+            _key: &[u8],
+            _bucket: usize,
+        ) -> Result<bool, ElasticMutationError> {
+            Err(ElasticMutationError::Dictionary(
+                "injected durable write failure".to_owned(),
+            ))
+        }
+    }
+
+    fn erp_product_state(cost: f64) -> RangeProductState<ErpConfig> {
+        RangeProductState {
+            depth: 1,
+            carry: Some(()),
+            positions: vec![RangeProductPosition { row: 1, cost }],
+            final_cost: cost,
+        }
+    }
+
+    #[test]
+    fn exact_residual_interner_canonicalizes_signed_zero_and_reuses_one_id() {
+        let kernel = ErpConfig::new(0.0);
+        let mut arena = RangeProductStateArena::new(8, 8);
+        let negative_zero = arena
+            .intern(&kernel, erp_product_state(-0.0))
+            .expect("first lawful residual fits");
+        let positive_zero = arena
+            .intern(&kernel, erp_product_state(0.0))
+            .expect("equal lawful residual reuses the arena entry");
+
+        assert_eq!(negative_zero, positive_zero);
+        assert_eq!(arena.states.len(), 1);
+        assert_eq!(arena.reused_states, 1);
+    }
+
+    #[test]
+    fn fingerprint_collision_never_merges_unequal_exact_residuals() {
+        let kernel = ErpConfig::new(0.0);
+        let mut arena = RangeProductStateArena::new(8, 8);
+        let first = arena
+            .intern(&kernel, erp_product_state(1.0))
+            .expect("first lawful residual fits");
+        let second_state = erp_product_state(2.0);
+        let second_fingerprint = RangeProductStateArena::fingerprint(&kernel, &second_state)
+            .expect("weighted costs expose exact canonical keys");
+        arena
+            .fingerprints
+            .entry(second_fingerprint)
+            .or_default()
+            .push(first);
+
+        let second = arena
+            .intern(&kernel, second_state)
+            .expect("collision bucket is exact-checked before insertion");
+        assert_ne!(first, second);
+        assert_eq!(arena.states.len(), 2);
+    }
+
+    #[test]
+    fn residual_arena_limit_rejects_before_inserting_a_distinct_state() {
+        let kernel = ErpConfig::new(0.0);
+        let mut arena = RangeProductStateArena::new(1, 8);
+        let first = arena
+            .intern(&kernel, erp_product_state(1.0))
+            .expect("first residual fits the exact state limit");
+        let error = arena
+            .intern(&kernel, erp_product_state(2.0))
+            .expect_err("second distinct residual crosses the state limit");
+
+        assert!(matches!(
+            error,
+            IncompleteReason::BudgetExceeded {
+                resource: ResourceKind::QueueEntries,
+                limit: 1,
+                requested: 2,
+            }
+        ));
+        assert_eq!(arena.states.len(), 1);
+        assert_eq!(arena.states[0].positions[0].cost, 1.0);
+        assert_eq!(first, TemporalStateId(0));
+    }
 
     /// Brute-force reference set: every series within `tau`, sorted ascending.
     fn brute_range(
@@ -2732,7 +4877,7 @@ mod tests {
             .iter()
             .enumerate()
             .map(|(i, s)| (i, msm.distance(query, s)))
-            .filter(|(_, d)| *d <= tau + 1e-9)
+            .filter(|(_, d)| *d <= tau)
             .collect();
         v.sort_by(|a, b| a.1.total_cmp(&b.1));
         v
@@ -2985,6 +5130,38 @@ mod tests {
 
         let got = idx.search_range(&[10.01, 20.01, 30.01], 0.0);
         assert_eq!(got, vec![(7, 0.0)]);
+    }
+
+    #[test]
+    fn dictionary_failure_leaves_all_index_components_and_identity_unchanged() {
+        let mut index: ElasticTransducer<MsmKernel, u64, RejectingDictionary> =
+            ElasticTransducer::with_dictionary(
+                QuantizationConfig::for_u8(0.0, 100.0),
+                MsmConfig::new(1.0),
+                RejectingDictionary::default(),
+            );
+        let identity = ElasticSnapshotIdentity([0x5a; 32]);
+        index.snapshot_identity = Some(identity);
+
+        assert!(matches!(
+            index.try_insert(7, &[10.0, 20.0]),
+            Err(ElasticMutationError::Dictionary(message))
+                if message == "injected durable write failure"
+        ));
+        assert_eq!(index.snapshot_identity(), Some(identity));
+        assert_eq!(index.len(), 0);
+        assert_eq!(index.dawg.elastic_len(), Some(0));
+        assert!(index.buckets.is_empty());
+        assert!(index.originals.is_empty());
+
+        // The infallible compatibility surface also remains fail-closed; it
+        // exposes no error detail, so callers that need evidence use try_insert.
+        assert!(!index.insert(7, &[10.0, 20.0]));
+        assert_eq!(index.snapshot_identity(), Some(identity));
+        assert_eq!(index.len(), 0);
+        assert_eq!(index.dawg.elastic_len(), Some(0));
+        assert!(index.buckets.is_empty());
+        assert!(index.originals.is_empty());
     }
 
     #[test]

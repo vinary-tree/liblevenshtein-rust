@@ -15,9 +15,12 @@
 //! Distance*, VLDB 2004, DOI
 //! [10.1016/B978-012088469-8.50070-X](https://doi.org/10.1016/B978-012088469-8.50070-X).
 
+use super::super::bounded::IncompleteReason;
 use super::super::elastic::interval::interval_dist;
 use super::super::elastic::sparse::{charge_work, NeighborSeedRows};
-use super::super::elastic::{Cost, ElasticKernel, ElasticTransducer, PointFrontierStep};
+use super::super::elastic::{
+    Cost, ElasticKernel, ElasticTransducer, PointFrontierStep, QueryPlanStorage,
+};
 use crate::cost::{CostMonoid, WeightedCost};
 
 const DEFAULT_ERP_GAP: f64 = 0.0;
@@ -192,6 +195,16 @@ impl ElasticKernel for ErpConfig {
     type Monoid = WeightedCost;
     type Carry = ();
     type QueryPlan = ();
+
+    #[inline]
+    fn query_plan_storage(&self, _query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        Ok(QueryPlanStorage::EMPTY)
+    }
+
+    #[inline]
+    fn canonical_carry_key(&self, (): Self::Carry) -> Option<[u64; 2]> {
+        Some([0, 0])
+    }
 
     #[inline]
     fn normalized(self) -> Self {
@@ -534,7 +547,9 @@ impl ElasticKernel for ErpConfig {
     }
 
     #[inline]
-    fn plan(&self, _query: &[f64]) -> Self::QueryPlan {}
+    fn try_plan(&self, _query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(())
+    }
 
     #[inline]
     fn empty_pair_cost(&self) -> Cost<Self> {
@@ -657,7 +672,7 @@ mod tests {
             let actual = ErpConfig::new(g).distance(&x, &y);
             prop_assert_eq!(actual, reference_distance(&x, &y, g));
             let cutoff = f64::from(cutoff);
-            let expected_cutoff = (actual <= cutoff + WeightedCost::EPSILON).then_some(actual);
+            let expected_cutoff = (actual <= cutoff).then_some(actual);
             prop_assert_eq!(ErpConfig::new(g).distance_with_cutoff(&x, &y, cutoff), expected_cutoff);
         }
 

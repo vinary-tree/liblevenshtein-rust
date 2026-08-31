@@ -1,7 +1,10 @@
 //! Move-Split-Merge implementation of [`super::elastic::ElasticKernel`].
 
+use super::bounded::IncompleteReason;
 use super::elastic::sparse::{charge_work, NeighborSeedRows};
-use super::elastic::{Cost, ElasticKernel, MetricElasticKernel, PointFrontierStep};
+use super::elastic::{
+    Cost, ElasticKernel, MetricElasticKernel, PointFrontierStep, QueryPlanStorage,
+};
 use super::lower_bounds::length_lb;
 use super::msm::{series_values_are_finite, MetricMsmConfig, MsmConfig};
 use super::msm_interval::{
@@ -46,6 +49,16 @@ impl ElasticKernel for MsmKernel {
     type QueryPlan = ();
 
     #[inline]
+    fn query_plan_storage(&self, _query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        Ok(QueryPlanStorage::EMPTY)
+    }
+
+    #[inline]
+    fn canonical_carry_key(&self, carry: Self::Carry) -> Option<[u64; 2]> {
+        crate::time_series::elastic::canonical_f64_pair_state_key(carry.0, carry.1)
+    }
+
+    #[inline]
     fn normalized(self) -> Self {
         Self::new(self.config)
     }
@@ -53,6 +66,11 @@ impl ElasticKernel for MsmKernel {
     #[inline]
     fn supports_interval_query(&self, query: &[f64]) -> bool {
         series_values_are_finite(query)
+    }
+
+    #[inline]
+    fn alignment_is_structurally_possible(&self, query_len: usize, candidate_len: usize) -> bool {
+        query_len == candidate_len || (query_len > 0 && candidate_len > 0)
     }
 
     #[inline]
@@ -423,7 +441,9 @@ impl ElasticKernel for MsmKernel {
     }
 
     #[inline]
-    fn plan(&self, _query: &[f64]) -> Self::QueryPlan {}
+    fn try_plan(&self, _query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(())
+    }
 
     #[inline]
     fn empty_pair_cost(&self) -> Cost<Self> {
@@ -473,8 +493,23 @@ impl ElasticKernel for MetricMsmKernel {
     type QueryPlan = <MsmKernel as ElasticKernel>::QueryPlan;
 
     #[inline]
+    fn query_plan_storage(&self, query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        self.inner.query_plan_storage(query_len)
+    }
+
+    #[inline]
+    fn canonical_carry_key(&self, carry: Self::Carry) -> Option<[u64; 2]> {
+        self.inner.canonical_carry_key(carry)
+    }
+
+    #[inline]
     fn supports_interval_query(&self, query: &[f64]) -> bool {
         !query.is_empty() && self.inner.supports_interval_query(query)
+    }
+
+    #[inline]
+    fn alignment_is_structurally_possible(&self, query_len: usize, candidate_len: usize) -> bool {
+        query_len > 0 && candidate_len > 0
     }
 
     #[inline]
@@ -624,8 +659,8 @@ impl ElasticKernel for MetricMsmKernel {
     }
 
     #[inline]
-    fn plan(&self, query: &[f64]) -> Self::QueryPlan {
-        self.inner.plan(query)
+    fn try_plan(&self, query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        self.inner.try_plan(query)
     }
 
     #[inline]

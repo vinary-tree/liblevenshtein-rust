@@ -1,6 +1,7 @@
 use liblevenshtein::time_series::{
     ExactDecision, IncompleteReason, MsmAlignmentStep, MsmAlignmentWitness, MsmConfig,
     MsmWitnessReplayError, OperationOutcome, ResourceKind, ResourceLimits,
+    MSM_ALIGNMENT_WITNESS_VERSION,
 };
 use proptest::prelude::*;
 
@@ -57,6 +58,20 @@ fn malformed_or_incomplete_witnesses_fail_closed() {
     assert_eq!(
         error,
         MsmWitnessReplayError::MalformedPath { step_index: 0 }
+    );
+}
+
+#[test]
+fn unsupported_msm_witness_versions_fail_closed() {
+    let witness = MsmAlignmentWitness::from_parts(
+        MSM_ALIGNMENT_WITNESS_VERSION + 1,
+        vec![MsmAlignmentStep::Move],
+    );
+    assert_eq!(
+        witness.replay(&[1.0], &[1.0], &MsmConfig::new(1.0)),
+        Err(MsmWitnessReplayError::UnsupportedVersion {
+            found: MSM_ALIGNMENT_WITNESS_VERSION + 1,
+        })
     );
 }
 

@@ -139,9 +139,9 @@ for the recurrence, proof/test mapping, and resource measurements.
 
 **Operations:** Match, Substitute, Query Gap, Dictionary Gap
 
-An affine gap charges one opening cost `$`g_o`$` and one extension cost
-`$`g_e`$` per symbol. A length-`$`r`$` run therefore costs
-`$`G(r)=g_o+r g_e`$`. This makes one contiguous insertion or deletion region
+An affine gap charges one opening cost $`g_o`$ and one extension cost
+$`g_e`$ per symbol. A length-$`r`$ run therefore costs
+$`G(r)=g_o+r g_e`$. This makes one contiguous insertion or deletion region
 cheaper than repeatedly opening short gaps.
 
 ```rust
@@ -222,7 +222,7 @@ All algorithms share the same asymptotics, differing only by small constant fact
 - **Standard**: $`\mathcal{O}(n \times k)`$ state space
 - **Transposition**: $`\mathcal{O}(n \times k)`$ state space with transposition tracking
 - **Unrestricted Damerau**: $`\mathcal{O}(n \times k^2)`$ worst-case pending-history frontier
-- **Affine gap**: three layer-tagged `$`\mathcal{O}(n \times k)`$ frontiers; zero extension can expose the full remaining query
+- **Affine gap**: three layer-tagged $`\mathcal{O}(n \times k)`$ frontiers; zero extension can expose the full remaining query
 - **Merge and Split**: $`\mathcal{O}(n \times k)`$ state space with merge/split tracking
 
 ### Benchmark Comparison
@@ -405,7 +405,7 @@ See the [language-product algorithm](../algorithms/13-language-products/README.m
 
 Use Edit distance with Real Penalty (ERP) when samples are real-valued, local
 time shifts matter, and unmatched samples should be charged relative to one
-fixed baseline `$`g`$`. `ErpTransducer` supports exact threshold and k-nearest
+fixed baseline $`g`$. `ErpTransducer` supports exact threshold and k-nearest
 search over a quantized prefix trie:
 
 ```rust
@@ -430,8 +430,8 @@ assert_eq!(nearest_two.len(), 2);
 
 Quantization affects prefix sharing and pruning strength, not returned scores:
 every survivor is re-evaluated against its stored full-precision original.
-Choose `$`g`$` once for the index. Inserting or deleting a sample equal to
-`$`g`$` costs zero, so ERP is a pseudometric on raw sequences and may produce
+Choose $`g`$ once for the index. Inserting or deleting a sample equal to
+$`g`$ costs zero, so ERP is a pseudometric on raw sequences and may produce
 zero-distance ties between different vectors. Reject NaN and infinities at an
 external API boundary and cap both query and reference lengths; exact ERP is
 quadratic in the worst case.
@@ -444,11 +444,11 @@ See the [ERP paper analysis](../research/erp/PAPER_SUMMARY.md),
 
 Use Time Warp Edit Distance (TWED) when adjacent-sample shape and temporal
 displacement should both contribute to an additive edit cost. The crate uses
-unit-spaced timestamps. `$`\nu`$` controls temporal stiffness and
-`$`\lambda`$` is the constant part of every insertion or deletion.
+unit-spaced timestamps. $`\nu`$ controls temporal stiffness and
+$`\lambda`$ is the constant part of every insertion or deletion.
 
-For a metric-safe index configuration, validate finite `$`\nu>0`$` and finite
-`$`\lambda\ge0`$`:
+For a metric-safe index configuration, validate finite $`\nu>0`$ and finite
+$`\lambda\ge0`$:
 
 ```rust
 use liblevenshtein::time_series::{
@@ -475,7 +475,7 @@ assert_eq!(nearest_two.len(), 2);
 ```
 
 `TwedConfig` exposes the complete non-negative family when the application
-intentionally needs `$`\nu=0`$`. It does not implement the metric marker:
+intentionally needs $`\nu=0`$. It does not implement the metric marker:
 
 ```rust
 use liblevenshtein::time_series::TwedConfig;
@@ -493,8 +493,8 @@ triangle inequality.
 Quantization affects prefix sharing and bound tightness, never returned
 scores. Empty/nonempty distance is finite and accumulates segment deletions
 from the zero sentinel. Non-finite samples are outside the exact search domain.
-Worst-case time is `$`\mathcal{O}(mn)`$`, so cap both sequence lengths and total
-candidate work for untrusted requests. Setting `$`\lambda=0`$` also disables
+Worst-case time is $`\mathcal{O}(mn)`$, so cap both sequence lengths and total
+candidate work for untrusted requests. Setting $`\lambda=0`$ also disables
 the length lower bound and can reduce pruning without changing correctness.
 
 See the [Marteau source analysis](../research/twed/PAPER_SUMMARY.md),
@@ -536,7 +536,7 @@ come from the full-precision two-row DP. Consecutive duplicates collapse at
 zero cost, so distinct raw vectors can tie at zero. Both-empty distance is
 zero, exactly one empty side has infinite distance, and kNN emits finite scores
 only. Reject non-finite samples and cap both sides before accepting untrusted
-work: worst-case exact time remains `$`\mathcal{O}(mn)`$`.
+work: worst-case exact time remains $`\mathcal{O}(mn)`$.
 
 See the [Eiter–Mannila analysis](../research/frechet/PAPER_SUMMARY.md),
 [formal proof map](../verification/README.md), and
@@ -547,7 +547,7 @@ See the [Eiter–Mannila analysis](../research/frechet/PAPER_SUMMARY.md),
 Use banded dynamic time warping (DTW) when the application wants an additive
 alignment cost, accepts a caller-selected temporal window, and does not require
 metric-tree semantics. The **band** is the inclusive Sakoe–Chiba half-width
-`$`w`$`: only alignments with `$`\lvert i-j\rvert\le w`$` exist. It is required
+$`w`$: only alignments with $`\lvert i-j\rvert\le w`$ exist. It is required
 because it changes both the distance and the resource bound.
 
 ```rust
@@ -577,7 +577,7 @@ assert_eq!(nearest_two.len(), 2);
 The kernel accumulates squared deviations internally, including LB_Keogh and
 trie-column bounds, and converts units only at the public boundary.
 Quantization affects sharing and pruning but never emitted scores. A length
-difference larger than `$`w`$`, exactly one empty side, or a non-finite sample
+difference larger than $`w`$, exactly one empty side, or a non-finite sample
 has no finite result.
 
 DTW is **not a metric**. It is symmetric and non-negative, but it can violate

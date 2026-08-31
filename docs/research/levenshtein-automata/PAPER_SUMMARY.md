@@ -219,7 +219,7 @@ While stack not empty:
 ```
 
 **Complexity**: 
-- $`\mathcal{O}(\lvert W\rvert)`$ to construct A^W (proven in Chapter 5)
+- $`\mathcal{O}(\lvert W\rvert)`$ to construct $`A^W`$ (proven in Chapter 5)
 - $`\mathcal{O}(\lvert D\rvert)`$ for parallel traversal where |D| = number of edges in dictionary
 
 **Key Insight**: The automaton guides the search, avoiding distance computation for each dictionary word.
@@ -408,7 +408,7 @@ where $`\sqcup`$ is the **join operation**: union of sets, then remove subsumed 
 [i#e]↑k = (i+k)#(e+k)
 ```
 
-For state M = {i#0, $`\pi_1, \ldots, \pi_m`$}:
+For state M = $`\{i#0, $﷐0﷑$\}`$:
 ```
 [M]↑k = {(i+k)#0, [π₁]↑k,...,[π_m]↑k}
 ```
@@ -428,7 +428,7 @@ For state M = {i#0, $`\pi_1, \ldots, \pi_m`$}:
 - **$`\Sigma`$**: Alphabet
 - **$`\Delta`$**: State transition function (as defined above)
 - **$`q_0`$** = {0#0}: Initial state
-- **$`F`$**: Set of all states M such that M $`\cap`$ {i#e | $`i = \lvert W\rvert`$, $`0 \le e \le n`$} $`\ne \emptyset`$
+- **$`F`$**: Set of all states M such that M $`\cap`$ $`\{i#e | $﷐2﷑$, $﷐3﷑$\}`$ $`\ne \emptyset`$
   - I.e., states containing at least one position i#e where $`i = \lvert W\rvert`$
 
 **Theorem 4.0.32 (Main Theorem)**: 
@@ -634,7 +634,7 @@ Similar to Table 5.1, but with t-positions:
 
 **Tables 7.2 and 7.3** (pages 40-41): Transition tables for transposition variant
 
-**Theorem 7.2.4**: For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
+**Theorem 7.2.4**: For any fixed degree n, $`\text{LEV}^T_n(W)`$ (with transpositions) can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 **State Count**: Approximately double the standard variant (due to transposition flag).
 
@@ -779,7 +779,7 @@ For any fixed degree n, there exists an algorithm that computes LEV_n(W) in time
 For any input W, the minimal deterministic Levenshtein-automaton of fixed degree n for W can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 ### Theorem 7.2.4 (Transposition Variant)
-For any fixed degree n, LEV^T_n(W) (with transpositions) can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
+For any fixed degree n, $`\text{LEV}^T_n(W)`$ (with transpositions) can be computed in time and space $`\mathcal{O}(\lvert W\rvert)`$.
 
 ### Lemma 2.0.2 (Suffix Independence)
 If W = UW' and V = UV', then d_L(V,W) = d_L(V',W').

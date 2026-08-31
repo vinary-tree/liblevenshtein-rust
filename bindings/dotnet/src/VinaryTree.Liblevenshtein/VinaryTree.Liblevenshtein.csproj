@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <PackageId>Liblevenshtein</PackageId>
-    <Version>4.0.0-rc.5</Version>
+    <Version>4.0.0-rc.6</Version>
     <Description>Snapshot-consistent streaming Levenshtein search for .NET</Description>
     <Authors>Dylon Edwards</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -16,7 +16,7 @@
     <ProjectReference Include="$(VinaryTreeInteropRoot)/bindings/dotnet/src/VinaryTree.Interop/VinaryTree.Interop.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(VinaryTreeInteropRoot)' == ''">
-    <PackageReference Include="VinaryTree.Interop" Version="4.0.0-rc.5" />
+    <PackageReference Include="VinaryTree.Interop" Version="4.0.0-rc.6" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="README.md" />

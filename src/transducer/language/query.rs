@@ -240,7 +240,7 @@ where
     }
 
     fn resolve_node(&self, source: DeferredNodeSource<N>) -> N {
-        self.inner.traversal().resolve_node(source)
+        TraversalSession::resolve_node(self.inner.traversal(), source)
     }
 }
 

@@ -16,10 +16,10 @@ discrete recurrence for one-dimensional, real-valued sample sequences.
 
 ## 2. Couplings and the leash intuition
 
-Let `$`x=(x_1,\ldots,x_m)`$` and `$`y=(y_1,\ldots,y_n)`$` be nonempty
-sequences in a metric space with point distance `$`d`$`. A **coupling** starts
-at `$`(1,1)`$`, ends at `$`(m,n)`$`, and advances by one of
-`$`(1,0)`$`, `$`(0,1)`$`, or `$`(1,1)`$`. Thus every point of both sequences
+Let $`x=(x_1,\ldots,x_m)`$ and $`y=(y_1,\ldots,y_n)`$ be nonempty
+sequences in a metric space with point distance $`d`$. A **coupling** starts
+at $`(1,1)`$, ends at $`(m,n)`$, and advances by one of
+$`(1,0)`$, $`(0,1)`$, or $`(1,1)`$. Thus every point of both sequences
 is visited, order is preserved, and neither participant backtracks.
 
 The coupling's length is its longest link:
@@ -39,7 +39,7 @@ and the score is the shortest leash sufficient for the whole ordered walk.
 
 ## 3. Table 1 dynamic program
 
-For scalar samples this crate uses `$`d(a,b)=\lvert a-b\rvert`$`. Eiter and
+For scalar samples this crate uses $`d(a,b)=\lvert a-b\rvert`$. Eiter and
 Mannila's Table 1 recurrence is:
 
 ```math
@@ -59,8 +59,8 @@ D[1,j]&=\max(D[1,j-1],\lvert x_1-y_j\rvert).
 \end{aligned}
 ```
 
-The report proves `$`\mathcal{O}(mn)`$` time. The Rust implementation retains
-only two rows and exploits symmetry to use `$`\mathcal{O}(\min(m,n))`$` memory.
+The report proves $`\mathcal{O}(mn)`$ time. The Rust implementation retains
+only two rows and exploits symmetry to use $`\mathcal{O}(\min(m,n))`$ memory.
 The source report supplies the recurrence rather than a numeric worked table;
 the source-conformance unit test therefore executes every Table 1 branch on
 small hand-checkable sequences.
@@ -75,7 +75,7 @@ the traversed curve and costs zero. For example:
 D_{\mathrm{dF}}([1,1,2],[1,2])=0.
 ```
 
-Let `$`R(x)`$` collapse every maximal run of equal adjacent samples to one
+Let $`R(x)`$ collapse every maximal run of equal adjacent samples to one
 sample. The executable API is consequently described as a pseudometric on raw
 vectors and a metric modulo run-length collapse:
 
@@ -89,7 +89,7 @@ vertex lists that trace the same zero-length-stuttered polygonal curve.
 ## 5. Trie interval relaxation
 
 A quantized trie edge represents an unknown target value
-`$`y_j\in B_j=[\ell_j,h_j]`$`. The only free scalar leaf is replaced by its
+$`y_j\in B_j=[\ell_j,h_j]`$. The only free scalar leaf is replaced by its
 exact interval minimum:
 
 ```math
@@ -122,30 +122,30 @@ Every coupling contains both endpoint links, hence:
 \right)\le D_{\mathrm{dF}}(x,y).
 ```
 
-Every `$`x_i`$` is coupled to some `$`y_j`$`, yielding the one-sided Hausdorff
+Every $`x_i`$ is coupled to some $`y_j`$, yielding the one-sided Hausdorff
 bound:
 
 ```math
 \max_i\min_j\lvert x_i-y_j\rvert\le D_{\mathrm{dF}}(x,y).
 ```
 
-The implementation sorts `$`y`$` and evaluates nearest neighbours in
-`$`\mathcal{O}((m+n)\log n)`$`; it takes the maximum of this value and the
+The implementation sorts $`y`$ and evaluates nearest neighbours in
+$`\mathcal{O}((m+n)\log n)`$; it takes the maximum of this value and the
 constant-time endpoint bound. Both are formalized independently before their
 combination is used as K4.
 
 ## 7. Why `BottleneckCost` is sufficient
 
 The generic walker requires path inflation, not addition. With non-negative
-link `$`w`$`:
+link $`w`$:
 
 ```math
 a\le\max(a,w).
 ```
 
 Thus a pruned prefix cannot recover below the cutoff. The walker still compares
-alternative paths by minimum; only path extension changes from `$`+`$` to
-`$`\max`$`. No range or k-nearest-neighbour traversal code changes for this
+alternative paths by minimum; only path extension changes from $`+`$ to
+$`\max`$. No range or k-nearest-neighbour traversal code changes for this
 kernel.
 
 ## 8. Empty and non-finite inputs

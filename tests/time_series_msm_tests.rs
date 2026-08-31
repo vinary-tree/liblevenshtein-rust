@@ -2,7 +2,7 @@
 //!
 //! These tests verify:
 //! - MSM metric properties (symmetry, identity, triangle inequality)
-//! - Wavefront vs automaton implementation consistency
+//! - Optimized and cutoff scorer consistency
 //! - Proven lower-bound validity plus heuristic counterexamples
 //! - Quantization/encoding correctness
 
@@ -10,8 +10,7 @@
 mod time_series_strategies;
 
 use liblevenshtein::time_series::{
-    combined_lb, euclidean_lb, l1_lb, length_lb, msm_distance_automaton, msm_distance_wavefront,
-    MsmConfig, QuantizationConfig,
+    combined_lb, euclidean_lb, l1_lb, length_lb, MsmConfig, QuantizationConfig,
 };
 use proptest::prelude::*;
 use time_series_strategies::short_time_series_strategy;
@@ -25,6 +24,55 @@ const TEST_C_CONST: f64 = 1.0;
 
 fn test_config() -> MsmConfig {
     MsmConfig::new(TEST_C_CONST)
+}
+
+/// Independent full-matrix MSM oracle used only by the correspondence tests.
+///
+/// This deliberately shares neither the production two-row scorer nor its
+/// cutoff/final-admission helpers.  Keeping the recurrence here makes a
+/// deleted terminal cutoff check observable instead of comparing one
+/// production function to itself.
+fn full_matrix_msm_oracle(left: &[f64], right: &[f64], split_merge: f64) -> f64 {
+    if left.is_empty() && right.is_empty() {
+        return 0.0;
+    }
+    if left.is_empty() || right.is_empty() {
+        return f64::INFINITY;
+    }
+
+    fn operation_cost(value: f64, left_context: f64, right_context: f64, base: f64) -> f64 {
+        if (left_context <= value && value <= right_context)
+            || (left_context >= value && value >= right_context)
+        {
+            base
+        } else {
+            base + (value - left_context)
+                .abs()
+                .min((value - right_context).abs())
+        }
+    }
+
+    let rows = left.len();
+    let columns = right.len();
+    let mut matrix = vec![vec![f64::INFINITY; columns]; rows];
+    matrix[0][0] = (left[0] - right[0]).abs();
+    for column in 1..columns {
+        matrix[0][column] = matrix[0][column - 1]
+            + operation_cost(right[column], left[0], right[column - 1], split_merge);
+    }
+    for row in 1..rows {
+        matrix[row][0] =
+            matrix[row - 1][0] + operation_cost(left[row], left[row - 1], right[0], split_merge);
+        for column in 1..columns {
+            let moved = matrix[row - 1][column - 1] + (left[row] - right[column]).abs();
+            let merged = matrix[row - 1][column]
+                + operation_cost(left[row], left[row - 1], right[column], split_merge);
+            let split = matrix[row][column - 1]
+                + operation_cost(right[column], left[row], right[column - 1], split_merge);
+            matrix[row][column] = moved.min(merged).min(split);
+        }
+    }
+    matrix[rows - 1][columns - 1]
 }
 
 // ============================================================================
@@ -136,15 +184,15 @@ proptest! {
 }
 
 // ============================================================================
-// Wavefront vs Automaton Consistency Tests
+// Optimized and Cutoff Scorer Consistency Tests
 // ============================================================================
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(200))]
 
-    /// Wavefront and automaton implementations should produce same results
+    /// Baseline and two-row implementations produce the same exact score.
     #[test]
-    fn prop_wavefront_automaton_consistency(
+    fn prop_two_row_scorer_matches_independent_full_matrix_oracle(
         x in short_time_series_strategy(),
         y in short_time_series_strategy(),
     ) {
@@ -153,35 +201,13 @@ proptest! {
         }
 
         let config = test_config();
-        let max_cost = f64::INFINITY;
-
-        let wavefront_result = msm_distance_wavefront(&x, &y, &config, max_cost);
-        let automaton_result = msm_distance_automaton(&x, &y, &config, max_cost);
-
-        match (wavefront_result, automaton_result) {
-            (Some(w), Some(a)) => {
-                prop_assert!(
-                    (w - a).abs() < 1e-6,
-                    "Wavefront ({}) and automaton ({}) disagree",
-                    w, a
-                );
-            }
-            (None, None) => {
-                // Both returned None, consistent
-            }
-            (w, a) => {
-                prop_assert!(
-                    false,
-                    "Inconsistent None results: wavefront={:?}, automaton={:?}",
-                    w, a
-                );
-            }
-        }
+        let oracle = full_matrix_msm_oracle(&x, &y, TEST_C_CONST);
+        prop_assert!((oracle - config.distance_optimized(&x, &y)).abs() < 1e-9);
     }
 
     /// Wavefront with threshold should return same as without when distance is below threshold
     #[test]
-    fn prop_wavefront_threshold_consistency(
+    fn prop_cutoff_accepts_scores_above_the_exact_distance(
         x in short_time_series_strategy(),
         y in short_time_series_strategy(),
     ) {
@@ -192,12 +218,12 @@ proptest! {
         let config = test_config();
 
         // First compute without threshold
-        let full_result = msm_distance_wavefront(&x, &y, &config, f64::INFINITY);
+        let full_result = config.distance_with_cutoff(&x, &y, f64::INFINITY);
 
         if let Some(full_dist) = full_result {
             // Compute with a threshold above the actual distance
             let threshold = full_dist + 10.0;
-            let threshold_result = msm_distance_wavefront(&x, &y, &config, threshold);
+            let threshold_result = config.distance_with_cutoff(&x, &y, threshold);
 
             prop_assert!(
                 threshold_result.is_some(),
@@ -218,7 +244,7 @@ proptest! {
     /// equal to, and above the exact distance rather than testing only the
     /// permissive side of the contract.
     #[test]
-    fn prop_wavefront_cutoff_matches_exact_dp(
+    fn prop_cutoff_matches_independent_full_matrix_oracle(
         x in short_time_series_strategy(),
         y in short_time_series_strategy(),
         split_merge_cost in 0.0f64..10.0,
@@ -229,8 +255,9 @@ proptest! {
         }
 
         let config = MsmConfig::new(split_merge_cost);
-        let expected = config.distance_with_cutoff(&x, &y, cutoff);
-        let actual = msm_distance_wavefront(&x, &y, &config, cutoff);
+        let exact = full_matrix_msm_oracle(&x, &y, config.split_merge_cost());
+        let expected = (exact <= cutoff).then_some(exact);
+        let actual = config.distance_with_cutoff(&x, &y, cutoff);
 
         match (actual, expected) {
             (Some(actual), Some(expected)) => {
@@ -238,21 +265,52 @@ proptest! {
             }
             (None, None) => {}
             (actual, expected) => {
-                prop_assert!(false, "cutoff disagreement: wavefront={actual:?}, exact={expected:?}, cutoff={cutoff}");
+                prop_assert!(false, "cutoff disagreement: scorer={actual:?}, oracle={expected:?}, cutoff={cutoff}");
             }
         }
     }
 }
 
 #[test]
-fn wavefront_rejects_finite_distance_above_cutoff() {
+fn cutoff_scorer_rejects_finite_distance_above_cutoff() {
     let config = MsmConfig::new(100.0);
     let query = [0.0, 10.0];
     let target = [0.0, 20.0];
 
     assert_eq!(config.distance(&query, &target), 10.0);
     assert_eq!(config.distance_with_cutoff(&query, &target, 1.0), None);
-    assert_eq!(msm_distance_wavefront(&query, &target, &config, 1.0), None);
+}
+
+#[test]
+fn cutoff_final_guard_omission_source_mutant_is_killed() {
+    let config = MsmConfig::new(0.0);
+
+    // The first cell keeps the only initialized row below the cutoff, while
+    // the terminal cell lies above it.  Early row-minimum abandonment cannot
+    // mask a deleted terminal admission guard for this shape.
+    let query = [0.0, 0.0];
+    let target = [0.0, 10.0];
+    assert_eq!(config.distance(&query, &target), 10.0);
+    assert_eq!(config.distance_with_cutoff(&query, &target, 1.0), None);
+}
+
+#[test]
+fn cutoff_scorer_rejects_the_immediately_adjacent_binary64_cost() {
+    let config = MsmConfig::new(100.0);
+    let exact = 1.0_f64.next_up();
+
+    assert_eq!(config.distance(&[0.0], &[exact]), exact);
+    assert_eq!(config.distance_with_cutoff(&[0.0], &[exact], 1.0), None);
+    assert_eq!(
+        config.distance_with_cutoff(&[0.0], &[exact], exact),
+        Some(exact)
+    );
+}
+
+#[test]
+fn cutoff_scorer_preserves_the_empty_empty_boundary() {
+    let config = test_config();
+    assert_eq!(config.distance_with_cutoff(&[], &[], 0.0), Some(0.0));
 }
 
 // ============================================================================
@@ -451,17 +509,17 @@ fn test_msm_shifted_series() {
 }
 
 #[test]
-fn test_wavefront_threshold_pruning() {
+fn test_scalar_cutoff_threshold_pruning() {
     let config = test_config();
     let x = vec![0.0, 0.0, 0.0];
     let y = vec![100.0, 100.0, 100.0];
 
     // With a very low threshold, should return None
-    let result = msm_distance_wavefront(&x, &y, &config, 1.0);
+    let result = config.distance_with_cutoff(&x, &y, 1.0);
     assert!(result.is_none(), "Should be pruned with low threshold");
 
     // With a high threshold, should return Some
-    let result = msm_distance_wavefront(&x, &y, &config, 1000.0);
+    let result = config.distance_with_cutoff(&x, &y, 1000.0);
     assert!(result.is_some(), "Should not be pruned with high threshold");
 }
 

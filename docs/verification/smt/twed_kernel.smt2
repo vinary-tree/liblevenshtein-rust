@@ -188,3 +188,21 @@
 (assert (<= (- current-time previous-time) 0))
 (check-sat)
 (pop)
+
+; AP/K1 composition: independently admissible value and physical-time
+; components remain admissible after nonnegative stiffness and gap addition.
+(declare-const value-lower Int)
+(declare-const time-lower Int)
+(declare-const value-exact Int)
+(declare-const time-exact Int)
+(push)
+(assert (>= value-lower 0))
+(assert (>= time-lower 0))
+(assert (<= value-lower value-exact))
+(assert (<= time-lower time-exact))
+(assert (>= nu 0))
+(assert (>= lambda 0))
+(assert (> (+ value-lower (* nu time-lower) lambda)
+           (+ value-exact (* nu time-exact) lambda)))
+(check-sat)
+(pop)

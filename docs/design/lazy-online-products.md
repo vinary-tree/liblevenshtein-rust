@@ -49,7 +49,12 @@ L(D\otimes A)=L(D)\cap L(A).
 For an elastic time-series index, the query side initially recognizes a
 relaxed interval language. A final interval state is only a candidate gate;
 the reported answer comes from an exact scorer over every stored
-full-precision series in the quantization-collision bucket.
+full-precision series in the quantization-collision bucket. Strict bounded
+surfaces construct one fallible query-lifetime point workspace containing the
+immutable query plan, current/next cost generations, and current/next active
+row IDs. Each candidate resets those generations in place; it does not allocate
+new rows. The specialized ERP product instead restores its existing worker from
+the interned empty-target seed and reuses that worker for the same K3 check.
 
 Finalization and cutoff admission are deliberately separate operations. A
 finalizer may close trailing query-only edits after the last dictionary edge,
@@ -141,6 +146,7 @@ after that prefix.
 ```text
 ALGORITHM LAZY-PRODUCT(dictionary, machine, cutoff, limits)
   session <- captureImmutableDictionaryRevision(dictionary)
+  verifier <- machine.tryExactWorkspace(cutoff, limits)
   rootId  <- machine.intern(machine.seed(cutoff))
   pending <- one frame (session.root, rootId)
 
@@ -150,8 +156,11 @@ ALGORITHM LAZY-PRODUCT(dictionary, machine, cutoff, limits)
     if dictionaryFinal(frame.cursor) then
       final <- machine.finalize(frame.stateId)
       if final is finite and final is within cutoff then
-      for every exact original represented by this final key do
-        if exactScore(original) is within cutoff then emit exact result
+        for every exact original represented by this final key do
+          preflight and charge the checked candidate work bound
+          decision <- verifier.scoreAfterReset(original)
+          if decision is WithinCutoff then emit exact result
+          if decision is a tagged failure then return INCOMPLETE
 
     for every real edge (label, child) from frame.cursor do
       class <- machine.classify(label)
@@ -171,16 +180,21 @@ ALGORITHM LAZY-PRODUCT(dictionary, machine, cutoff, limits)
 ```
 
 The implementation is iterative. Depth-first products use an explicit frame
-stack and reclaim paired scratch state on pop. Breadth-first, ranked, and
-best-first products use explicit queues or heaps. No dictionary key depth can
-overflow the process call stack.
+stack and release frame-local dictionary edges on pop. A bounded query-local
+arena may retain distinct canonical query states for the whole search so that
+later product paths can reuse the same machine-word state ID; its transition
+cache is independently bounded and may evict entries without changing
+answers. Streaming machines instead rotate two live generations and retain no
+historical arena. Breadth-first, ranked, and best-first products use explicit
+queues or heaps. No dictionary key depth can overflow the process call stack.
 
 ## 5. Stable unknown-length target streams
 
 An **online automaton** in this library fixes a finite query and consumes target
 labels one at a time. It commits one generation only after validation and
 resource preflight succeed, then reuses the previous generation as scratch.
-It retains no consumed target prefix.
+It retains no unbounded consumed target prefix; a kernel may retain its declared
+fixed-size lookback, such as the immediately preceding TWED target point.
 
 ![A fixed query, bounded cache, current frontier, and scratch frontier suffice regardless of how many target labels were previously consumed.](../diagrams/architectures/online-retention-contract.svg)
 
@@ -210,6 +224,44 @@ retaining history or accepting a windowed/approximate contract. Nor does it
 make an unbounded result collection safe: a caller that collects an infinite
 output stream necessarily owns unbounded output.
 
+### 5.1 Append semantics and rolling-window semantics are different machines
+
+For a fixed query $`q`$, append-only prefix processing is the coalgebraic
+transition
+
+```math
+S_{t+1}=\operatorname{step}(S_t,x_{t+1}),
+```
+
+where $`S_t`$ is a sufficient residual for the complete prefix
+$`x_1\ldots x_t`$. This is the contract implemented by the online temporal
+automata: an accepted transition rotates current and scratch generations and
+never needs an earlier target sample beyond the kernel's declared finite
+lookback.
+
+A width-$`L`$ rolling window instead changes both ends:
+
+```math
+W_{t+1}=\operatorname{dropFirst}(W_t)\mathbin{\|}x_{t+1}.
+```
+
+It is not generally possible to obtain the exact elastic-DP residual for
+$`W_{t+1}`$ by “subtracting” the expired sample from $`S_t`$. Minimum and
+bottleneck aggregation discard losing-path provenance and therefore have no
+lawful generic inverse. Pretending otherwise would silently change the
+distance. `BoundedRollingWindow` consequently implements the honest exact
+contract: retain one fixed-capacity circular window, materialize an immutable
+chronological snapshot only at a preregistered emission boundary, and start a
+separate bounded exact-index product for that snapshot. Its retained stream
+memory is $`\mathcal{O}(L)`$; an emitted owned snapshot is also
+$`\mathcal{O}(L)`$ and is charged before the triggering sample commits.
+
+The two continuation types must not be conflated. Stream state answers “which
+window is current?” Search continuation state answers “which part of this one
+immutable dictionary-product query remains?” A paused search stays bound to
+its original query window, kernel configuration, limits, and dictionary
+revision even while a producer continues to append later samples.
+
 ## 6. Resource and failure semantics
 
 “Stable” has two parts. First, retained automaton memory is independent of
@@ -231,6 +283,32 @@ incomplete outcome. A complete empty result means only that the finite search
 was exhausted and no survivor existed. Convenience iterators without these
 ceilings are not release evidence for Regresspec.
 
+Query-plan accounting distinguishes bytes retained for the query lifetime from
+the larger transient construction peak. In particular, DTW retains four
+query-width `f64` envelope arrays and temporarily uses two query-width `usize`
+monotone deques. The bounded online, range, kNN, and certificate surfaces check
+that peak before fallible construction and report the retained workspace after
+construction.
+
+Exact leaf verification uses the same point-frontier transition spine as the
+online machine. Generic range, kNN, and certificate paths conservatively charge
+the checked full-grid bound $`(|q|+1)(|x|+1)`$ before scoring candidate $`x`$;
+the specialized ERP product charges its checked two-pass bound
+$`2(|q|+1)|x|`$. A structural predicate distinguishes an impossible alignment
+from arithmetic exhaustion: structural impossibility is a lawful
+`NoFiniteAlignment`, whereas a structurally reachable `TOP` under an unbounded
+cutoff is `NumericOverflow`. Neither case can be converted into an untagged
+complete empty result.
+
+Result materialization obeys the same discipline. Resumable range pauses do
+not clone an accumulated result vector: the continuation owns the only copy
+and exposes it by `exact_partial()`. Completion uses one fallibly allocated,
+ledger-charged index permutation and reorders the unique-id payload vector in
+place by `(cost, discovery sequence)`. Generic bounded kNN preflights its
+fallible output conversion, while timestamped TWED maintains the public result
+vector directly as an iterative max heap and sorts that buffer in place. Thus
+paging and finalization add no unreported allocator-dependent collection.
+
 ## 7. Architecture audit matrix
 
 | Surface | Product/frontier architecture | Unknown-target retention | Trusted use boundary |
@@ -242,20 +320,27 @@ ceilings are not release evidence for Regresspec.
 | Regular-language distance | Exact-interned cost-indexed language frontier ID | Fixed finite language automaton and cutoff | Standard unit edits only; arbitrary NFA subset diversity still needs limits |
 | Universal Levenshtein variants | `UniversalOnlineAutomaton` advances one characteristic vector at a time | Fixed word, canonical state, scalar counter | Reference/correspondence surface; claim only named proved variants |
 | Generalized operations | Finite-lookback row ring in `GeneralizedOnlineAutomaton` | $`r+1`$ rows and $`r`$ target labels | Arbitrary operation sets are not automatically metrics |
-| MSM, ERP, unit-grid TWED, scalar Fréchet | Sparse temporal frontier IDs for dictionary products; two generations online | Fixed query; no target prefix | Metric status follows typed domain; legacy MSM wavefront prohibited |
+| MSM, ERP, unit-grid TWED, scalar Fréchet | Sparse temporal frontier IDs for dictionary products; two generations online | Fixed query and finite kernel carry; no unbounded target prefix | Metric status follows typed domain; legacy MSM wavefront prohibited |
 | Timestamped TWED | Exact online point automaton with strict typed timestamps | Current/next state plus previous timestamped target point | Finite, strictly monotone, common-unit timestamps only |
 | Vector Fréchet | Whole vector labels; current/next query-width generations | Fixed query and dimension | Stutter-quotient metric domain only; coordinates never flattened |
 | Banded DTW | Same stable elastic online engine | Fixed query and band | Exact diagnostic challenger; never a metric marker |
+| Bounded elastic range, kNN, and certificates | One fallible query plan and two reusable exact point generations; specialized ERP restores its existing worker from the interned seed | Candidate prefixes are consumed and discarded one at a time | Exact only after full-precision K3 checks; tagged failure is never absence evidence |
 | Approximate quantized `TimeSeriesIndex` | Delegates to the compact production Levenshtein product | Dictionary query, not stream history | Candidate/advisory use only; never absence evidence |
 | Prefix/subsequence traversal | Explicit DFS stack; scalar or compact frontier per active depth | Dictionary-depth memory, not target-history memory | Structural query surfaces; result paths are materialized only on demand |
 | Context-dependent edit costs | Iterative dictionary traversal with a full query column per pending prefix | Finite dictionary only | Nonmetric model may inspect the entire prefix; excluded from metric-state sharing |
 | Articulatory phonetic full scan | Finite dictionary scan and exact terminal rescoring | Bounded dictionary depth policy | Fractional context-dependent compatibility path, not a metric product claim |
-| Soft-DTW | Two-row batch analysis scorer | Finite operands only | Analysis challenger; no exact antichain retrieval or absence claim |
+| Soft-DTW score / gradient | Two-row bounded score; full forward and adjoint matrices for the gradient | Finite operands only; gradient storage is preflighted $`\mathcal{O}(mn)`$ batch memory | Analysis challenger; no exact antichain retrieval or absence claim |
 
-The old `Intersection`, `IntersectionF64`, and `AutomatonZipper` values remain
-manual-navigation or compatibility types. Their ownership of one full state is
-appropriate for one cursor controlled by the caller; production dictionary
-query queues do not use them as per-node frontier storage.
+The old `Intersection`, `IntersectionF64`, `AutomatonZipper`, and historically
+named `IntersectionZipper` values remain manual-navigation or compatibility
+types. Their ownership of one full state is appropriate for one cursor
+controlled by the caller; production dictionary query queues do not use them
+as per-node frontier storage. `IntersectionZipper` is nevertheless a
+synchronized product in the terminology of this chapter. Its persistent
+reverse path is an `Arc`-shared spine, and its custom destructor drains a
+uniquely owned suffix with an explicit loop, stopping at the first shared node;
+releasing a path therefore does not turn dictionary depth into native call-stack
+depth.
 
 ## 8. Performance design
 
@@ -308,8 +393,12 @@ kernel recurrences:
 - pause/resume observations equal uninterrupted execution;
 - complete empty is possible only after exhaustion;
 - current/next generation retention is prefix independent;
-- DFS frame/state push and pop preserve a live-path bijection;
+- every DFS frame references an in-bounds exact arena state; reused states grow
+  only the frame stack, fresh states are committed transactionally, and frame
+  pop preserves all stable arena identifiers;
 - erasing path-only zipper context preserves native focus and snapshot identity;
+- iterative zipper-spine release examines at most one node per retained node,
+  stops at a shared suffix, and drains a uniquely owned suffix exactly once;
 - projecting the query transition before dictionary descent constructs exactly
   the live product children and no rejected child;
 - rejected scratch preflight is transactional;
@@ -328,6 +417,9 @@ The Rust property layer then connects those theorems to implementation:
    behavior;
 7. replay every emitted alignment witness to the returned exact cost;
 8. corrupt snapshots and budget boundaries to require fail-closed outcomes.
+9. pin query-plan arithmetic, exact retained/construction-peak boundaries,
+   workspace reuse, tagged plan failure, and structural-versus-numeric `TOP`
+   classification across bounded range, kNN, and certificate endpoints.
 
 The authoritative inventory is
 [`FORMAL_VERIFICATION_MANIFEST.tsv`](../verification/FORMAL_VERIFICATION_MANIFEST.tsv).

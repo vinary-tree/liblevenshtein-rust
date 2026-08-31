@@ -381,55 +381,71 @@ Proof.
   - intros pair Hin; now apply nodup_In in Hin.
 Qed.
 
-(** The bounded dictionary product stores one compact automaton-state ID for
-    every live explicit DFS frame.  The two stacks are mutated as one
-    transaction. *)
-Definition paired_product_stack {A B : Type}
-    (frames : list A) (states : list B) : Prop :=
-  length frames = length states.
+(** The optimized bounded product separates two stores: explicit DFS frames
+    contain compact identifiers, while a query-local exact interner retains
+    every distinct canonical residual constructed so far.  Popping a frame
+    therefore does not pop an arena state. *)
+Definition arena_references_valid {B : Type}
+    (frames : list nat) (states : list B) : Prop :=
+  Forall (fun state_id => state_id < length states) frames.
 
-Theorem paired_product_push_preserves_bijection : forall
-    A B (frame : A) (state : B) frames states,
-  paired_product_stack frames states ->
-  paired_product_stack (frame :: frames) (state :: states).
+(** Reaching an already-interned residual pushes one identifier and allocates
+    no state. *)
+Theorem push_reused_state_preserves_valid_references : forall
+    B (states : list B) frames state_id,
+  arena_references_valid frames states ->
+  state_id < length states ->
+  arena_references_valid (state_id :: frames) states.
 Proof.
-  intros A B frame state frames states Hpaired.
-  unfold paired_product_stack in *; simpl; now rewrite Hpaired.
+  intros B states frames state_id Hvalid Hid.
+  now constructor.
 Qed.
 
-(** Removing the last live path entry from both arrays preserves the
-    frame/state cardinality invariant.  [firstn] models stack-arena
-    reclamation without recursion in the executable walker. *)
-Theorem paired_product_pop_preserves_bijection : forall
-    A B (frames : list A) (states : list B),
-  paired_product_stack frames states ->
-  paired_product_stack
-    (firstn (Nat.pred (length frames)) frames)
-    (firstn (Nat.pred (length states)) states).
+(** A fresh residual is committed to the arena before its new identifier is
+    placed in a frame. Existing identifiers remain valid because arena indices
+    never move during a query. *)
+Theorem push_fresh_state_preserves_valid_references : forall
+    B (state : B) states frames,
+  arena_references_valid frames states ->
+  arena_references_valid (length states :: frames) (state :: states).
 Proof.
-  intros A B frames states Hpaired.
-  unfold paired_product_stack in *.
-  repeat rewrite length_firstn.
-  now rewrite Hpaired.
+  intros B state states frames Hvalid.
+  constructor; simpl; [lia |].
+  induction Hvalid as [| state_id remaining Hid Hremaining IH].
+  - constructor.
+  - constructor; [simpl; lia | exact IH].
 Qed.
 
-Definition retained_stack_bytes
+(** Iterative DFS pop removes only the top frame. Every remaining identifier
+    still names the same immutable arena entry. *)
+Theorem pop_frame_preserves_valid_references : forall
+    B (states : list B) frames,
+  arena_references_valid frames states ->
+  arena_references_valid (tl frames) states.
+Proof.
+  intros B states frames Hvalid.
+  destruct frames as [| state_id remaining].
+  - constructor.
+  - simpl; inversion Hvalid; assumption.
+Qed.
+
+Definition retained_arena_bytes
     (state_count column_width cell_bytes : nat) : nat :=
   state_count * column_width * cell_bytes.
 
-(** A bounded live DFS depth implies a retained-column bound independent of
-    how many dictionary nodes were previously visited and reclaimed. *)
-Theorem stack_arena_retention_is_history_independent : forall
-    (visited_nodes live_states max_depth column_width cell_bytes : nat),
-  live_states <= max_depth ->
-  retained_stack_bytes live_states column_width cell_bytes <=
-  retained_stack_bytes max_depth column_width cell_bytes.
+(** The explicit state budget, rather than live DFS depth, bounds the exact
+    interner independently of the number of dictionary nodes already visited. *)
+Theorem interned_arena_retention_is_history_independent : forall
+    (visited_nodes state_count max_states column_width cell_bytes : nat),
+  state_count <= max_states ->
+  retained_arena_bytes state_count column_width cell_bytes <=
+  retained_arena_bytes max_states column_width cell_bytes.
 Proof.
-  intros visited_nodes live_states max_depth column_width cell_bytes Hdepth.
-  unfold retained_stack_bytes.
+  intros visited_nodes state_count max_states column_width cell_bytes Hstates.
+  unfold retained_arena_bytes.
   apply Nat.mul_le_mono_r.
   apply Nat.mul_le_mono_r.
-  exact Hdepth.
+  exact Hstates.
 Qed.
 
 (** The prospective scratch gate is transactional: a rejected child leaves

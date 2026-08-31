@@ -1,4 +1,9 @@
 -Q theories Liblevenshtein.TemporalAutomata
 
 theories/LazyWeightedFrontier.v
+theories/LazyProductOperations.v
 theories/SoftDtwAnalysis.v
+theories/ApproximateMsmEvidence.v
+theories/ElasticSnapshot.v
+theories/ExactWorkspaceResources.v
+theories/RangeCertificates.v

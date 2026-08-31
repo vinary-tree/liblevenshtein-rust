@@ -218,18 +218,18 @@ where
 {
     #[inline(always)]
     fn step_prepared(&mut self, source: u64, policy: &P, label: U, query: &[U]) -> Option<u64> {
-        self.step_prepared(source, policy, label, query)
+        PackedStandardMachine::step_prepared(self, source, policy, label, query)
     }
 
     #[inline(always)]
     fn prepare_source_row(&self, source: u64) -> Option<ExactLabelDfaRow> {
-        self.prepare_source_row(source)
+        PackedStandardMachine::prepare_source_row(self, source)
     }
 
     #[cfg(feature = "perf-instrumentation")]
     #[inline(always)]
     fn source_row_label_is_class_zero(&self, label: U) -> bool {
-        self.source_row_label_is_class_zero(label)
+        PackedStandardMachine::source_row_label_is_class_zero(self, label)
     }
 
     #[inline(always)]
@@ -240,17 +240,17 @@ where
         label: U,
         query: &[U],
     ) -> Option<u64> {
-        self.step_prepared_source_row(source, policy, label, query)
+        PackedStandardMachine::step_prepared_source_row(self, source, policy, label, query)
     }
 
     #[inline(always)]
     fn complete_distance(&self, frontier: u64) -> Option<usize> {
-        self.complete_distance(frontier)
+        PackedStandardMachine::complete_distance(self, frontier)
     }
 
     #[inline(always)]
     fn min_distance(&self, frontier: u64) -> Option<usize> {
-        self.min_distance(frontier)
+        PackedStandardMachine::min_distance(self, frontier)
     }
 
     #[inline(always)]
@@ -266,7 +266,7 @@ where
     #[cfg(feature = "perf-instrumentation")]
     #[inline(always)]
     fn active_len(&self, frontier: u64) -> usize {
-        self.active_len(frontier)
+        PackedStandardMachine::active_len(self, frontier)
     }
 }
 
@@ -278,18 +278,18 @@ where
 {
     #[inline(always)]
     fn step_prepared(&mut self, source: u64, _policy: &P, label: U, _query: &[U]) -> Option<u64> {
-        self.step_prepared(source, label)
+        PackedSpecialMachine::step_prepared(self, source, label)
     }
 
     #[inline(always)]
     fn prepare_source_row(&self, source: u64) -> Option<ExactLabelDfaRow> {
-        self.prepare_source_row(source)
+        PackedSpecialMachine::prepare_source_row(self, source)
     }
 
     #[cfg(feature = "perf-instrumentation")]
     #[inline(always)]
     fn source_row_label_is_class_zero(&self, label: U) -> bool {
-        self.source_row_label_is_class_zero(label)
+        PackedSpecialMachine::source_row_label_is_class_zero(self, label)
     }
 
     #[inline(always)]
@@ -300,17 +300,17 @@ where
         label: U,
         _query: &[U],
     ) -> Option<u64> {
-        self.step_prepared_source_row(source, label)
+        PackedSpecialMachine::step_prepared_source_row(self, source, label)
     }
 
     #[inline(always)]
     fn complete_distance(&self, frontier: u64) -> Option<usize> {
-        self.complete_distance(frontier)
+        PackedSpecialMachine::complete_distance(self, frontier)
     }
 
     #[inline(always)]
     fn min_distance(&self, frontier: u64) -> Option<usize> {
-        self.min_distance(frontier)
+        PackedSpecialMachine::min_distance(self, frontier)
     }
 
     #[inline(always)]
@@ -344,7 +344,7 @@ where
     #[cfg(feature = "perf-instrumentation")]
     #[inline(always)]
     fn active_len(&self, frontier: u64) -> usize {
-        self.active_len(frontier)
+        PackedSpecialMachine::active_len(self, frontier)
     }
 }
 
@@ -891,7 +891,7 @@ impl<
         );
         let (traversal, root) = TraversalSession::capture(root);
         let inner = if static_packed_query_dispatch_disabled() {
-            QueryIteratorInner::Unit(PathQueryIteratorCore::new(
+            QueryIteratorInner::Unit(PathQueryIteratorCore::from_captured_traversal(
                 root,
                 traversal,
                 frontier,
@@ -906,8 +906,8 @@ impl<
             ))
         } else {
             match transitions {
-                UnitCostMachine::PackedStandard(transitions) => {
-                    QueryIteratorInner::PackedStandard(PathQueryIteratorCore::new(
+                UnitCostMachine::PackedStandard(transitions) => QueryIteratorInner::PackedStandard(
+                    PathQueryIteratorCore::from_captured_traversal(
                         root,
                         traversal,
                         frontier,
@@ -916,10 +916,10 @@ impl<
                         policy,
                         substring_mode,
                         PackedQueryKernel { transitions },
-                    ))
-                }
+                    ),
+                ),
                 UnitCostMachine::PackedOsa(transitions) => {
-                    QueryIteratorInner::PackedOsa(PathQueryIteratorCore::new(
+                    QueryIteratorInner::PackedOsa(PathQueryIteratorCore::from_captured_traversal(
                         root,
                         traversal,
                         frontier,
@@ -931,19 +931,21 @@ impl<
                     ))
                 }
                 UnitCostMachine::PackedMergeSplit(transitions) => {
-                    QueryIteratorInner::PackedMergeSplit(PathQueryIteratorCore::new(
-                        root,
-                        traversal,
-                        frontier,
-                        query_units,
-                        max_distance,
-                        policy,
-                        substring_mode,
-                        PackedQueryKernel { transitions },
-                    ))
+                    QueryIteratorInner::PackedMergeSplit(
+                        PathQueryIteratorCore::from_captured_traversal(
+                            root,
+                            traversal,
+                            frontier,
+                            query_units,
+                            max_distance,
+                            policy,
+                            substring_mode,
+                            PackedQueryKernel { transitions },
+                        ),
+                    )
                 }
                 UnitCostMachine::Positional(transitions) => {
-                    QueryIteratorInner::Unit(PathQueryIteratorCore::new(
+                    QueryIteratorInner::Unit(PathQueryIteratorCore::from_captured_traversal(
                         root,
                         traversal,
                         frontier,
@@ -1033,7 +1035,7 @@ impl<
             UnitCostMachine::seeded_affine(query_units.len(), &initial, settings);
         let (traversal, root) = TraversalSession::capture(root);
         Self {
-            inner: QueryIteratorInner::Affine(PathQueryIteratorCore::new(
+            inner: QueryIteratorInner::Affine(PathQueryIteratorCore::from_captured_traversal(
                 root,
                 traversal,
                 initial,
@@ -1058,7 +1060,7 @@ where
     K: QueryKernel<N::Unit, P, Frontier = F>,
 {
     #[allow(clippy::too_many_arguments)]
-    fn new(
+    fn from_captured_traversal(
         root: TraversalCursor<N::SnapshotCursor>,
         traversal: TraversalSession<N>,
         frontier: F,

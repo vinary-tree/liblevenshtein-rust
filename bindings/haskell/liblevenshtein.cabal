@@ -1,7 +1,7 @@
 cabal-version: 3.6
 name: liblevenshtein
 version: 4.0.0
-x-release-candidate: rc.5
+x-release-candidate: rc.6
 synopsis: Fast streaming Levenshtein automata for Haskell
 description: Snapshot-consistent, bounded-batch bindings to liblevenshtein.
 category: Text

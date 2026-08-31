@@ -45,7 +45,7 @@ impl Ord for CanonicalFinite {
 impl Hash for CanonicalFinite {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_bits().hash(state);
+        state.write_u64(self.0.to_bits());
     }
 }
 

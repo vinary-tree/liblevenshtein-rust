@@ -8,7 +8,7 @@ current public API?
 
 ## Method
 
-The audit used the immutable `4.0.0-rc.5` corrective source graph. The
+The audit used the immutable `4.0.0-rc.6` corrective source graph. The
 liblevenshtein checkout was paired with the exact libdictenstein,
 vinary-tree-interop, and llattice source refs used by that release rather than
 the potentially different branches in ordinary sibling directories. All

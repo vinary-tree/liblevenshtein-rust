@@ -47,6 +47,37 @@ proof fn zipper_descent_extends_path_depth(depth: nat)
 {
 }
 
+pub open spec fn iterative_spine_release_iterations(
+    uniquely_owned_nodes: nat,
+    reaches_shared_suffix: bool,
+) -> nat {
+    uniquely_owned_nodes + if reaches_shared_suffix { 1nat } else { 0nat }
+}
+
+/// An iterative shared-spine release performs one loop iteration per unique
+/// node and at most one additional failed-unwrapping iteration at a shared
+/// suffix.  Its native call-stack depth is independent of path depth.
+proof fn iterative_spine_release_has_linear_work_and_constant_call_stack(
+    uniquely_owned_nodes: nat,
+    reaches_shared_suffix: bool,
+)
+    ensures
+        iterative_spine_release_iterations(
+            uniquely_owned_nodes,
+            reaches_shared_suffix,
+        ) <= uniquely_owned_nodes + 1nat,
+{
+}
+
+/// A release that encounters a shared suffix does not drain that suffix; its
+/// final owner will resume the same iterative rule later.
+proof fn shared_spine_release_stops_after_unwrap_failure(unique_nodes: nat)
+    ensures
+        iterative_spine_release_iterations(unique_nodes, true)
+            == unique_nodes + 1nat,
+{
+}
+
 pub open spec fn query_first_child_live(
     dictionary_child_exists: bool,
     query_child_live: bool,

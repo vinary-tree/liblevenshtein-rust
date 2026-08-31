@@ -189,9 +189,24 @@ impl ErpFrontierMachine {
             .saturating_add(size_of::<Option<TemporalStateId>>())
             .saturating_mul(3)
             .max(1);
+        let seed_bytes = worker.current.len().checked_mul(bytes_per_position).ok_or(
+            TemporalAutomatonError::Resource(IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            }),
+        )?;
+        let mut seed_positions = Vec::new();
+        seed_positions
+            .try_reserve_exact(worker.current.len())
+            .map_err(|_| {
+                TemporalAutomatonError::Resource(IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::ScratchBytes,
+                    requested: seed_bytes,
+                })
+            })?;
+        seed_positions.extend_from_slice(&worker.current);
         let mut arena = TemporalStateArena::new(arena_limits);
         let seed = arena
-            .intern((), worker.current.clone())
+            .intern((), seed_positions)
             .map_err(TemporalAutomatonError::Resource)?;
         Ok(Self {
             worker,
@@ -256,6 +271,34 @@ impl ErpFrontierMachine {
         // recomputed later.
         let _ = self.cache.insert(source, label, target);
         Ok(ErpFrontierTransition { target, work_units })
+    }
+
+    /// Reuse the product worker for one full-precision K3 survivor check.
+    ///
+    /// The worker is restored from the interned empty-target seed, consumes
+    /// the candidate through its ordinary point transitions, and retains no
+    /// candidate prefix. A later dictionary edge independently reconstructs
+    /// its source residual from the arena, so scoring needs no checkpoint or
+    /// additional query-width allocation.
+    pub(crate) fn score_candidate(
+        &mut self,
+        candidate: &[f64],
+    ) -> Result<Option<f64>, IncompleteReason> {
+        self.worker.current.clear();
+        self.worker
+            .current
+            .extend_from_slice(&self.arena.get(self.seed).positions);
+        self.worker.next.clear();
+        self.worker.consumed_target_len = 0;
+        for target in candidate {
+            let interval =
+                ScalarInterval::point(*target).ok_or(IncompleteReason::InvalidStoredData)?;
+            match self.worker.advance_interval(interval) {
+                OnlineStepOutcome::Advanced { .. } => {}
+                OnlineStepOutcome::Incomplete { reason, .. } => return Err(reason),
+            }
+        }
+        self.worker.final_distance_within_cutoff()
     }
 
     pub(crate) fn lower_bound(&self, state: TemporalStateId) -> f64 {
@@ -499,6 +542,16 @@ impl ErpOnlineAutomaton {
                 .map(|position| position.cost.get())
                 .min_by(f64::total_cmp),
         }
+    }
+
+    /// Fixed logical bytes retained by this query-specialized machine.
+    ///
+    /// The value is independent of the number of target samples already
+    /// consumed and therefore provides an executable online-stability
+    /// invariant for unknown-length streams.
+    #[inline]
+    pub fn scratch_bytes(&self) -> usize {
+        self.scratch_bytes
     }
 
     /// Consume one finite target sample.

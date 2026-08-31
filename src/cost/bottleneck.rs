@@ -39,9 +39,11 @@ impl CostMonoid for BottleneckCost {
         if cost.is_nan() || threshold.is_nan() {
             return false;
         }
-        if threshold == Self::TOP {
-            return cost <= Self::TOP;
-        }
-        Self::compare(cost, threshold + Self::EPSILON) != Ordering::Greater
+        Self::compare(cost, threshold) != Ordering::Greater
+    }
+
+    #[inline]
+    fn canonical_state_key(cost: Self::Cost) -> Option<u64> {
+        (!cost.is_nan()).then(|| if cost == 0.0 { 0 } else { cost.to_bits() })
     }
 }

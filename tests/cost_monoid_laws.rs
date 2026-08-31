@@ -139,3 +139,14 @@ fn floating_domains_reject_nan_at_budget_boundary_and_absorb_top() {
         BottleneckCost::TOP
     );
 }
+
+#[test]
+fn floating_cost_membership_is_exactly_inclusive() {
+    let cutoff = 1.0_f64;
+    let immediately_above = cutoff.next_up();
+
+    assert!(WeightedCost::within(cutoff, cutoff));
+    assert!(!WeightedCost::within(immediately_above, cutoff));
+    assert!(BottleneckCost::within(cutoff, cutoff));
+    assert!(!BottleneckCost::within(immediately_above, cutoff));
+}

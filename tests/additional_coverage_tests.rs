@@ -11,7 +11,7 @@ use proptest::prelude::*;
 // ============================================================================
 
 mod time_series_msm_coverage {
-    use liblevenshtein::time_series::{msm_distance_wavefront, MsmConfig};
+    use liblevenshtein::time_series::MsmConfig;
 
     // --- MsmConfig Tests ---
 
@@ -147,7 +147,7 @@ mod time_series_msm_coverage {
         let y = vec![1.0, 2.0, 3.0];
         let config = MsmConfig::new(1.0);
 
-        let result = msm_distance_wavefront(&x, &y, &config, 10.0);
+        let result = config.distance_with_cutoff(&x, &y, 10.0);
         assert!(result.is_some());
         assert_eq!(result.unwrap(), 0.0);
     }
@@ -158,7 +158,7 @@ mod time_series_msm_coverage {
         let y = vec![10.0, 20.0, 30.0, 40.0, 50.0];
         let config = MsmConfig::new(1.0);
 
-        let result = msm_distance_wavefront(&x, &y, &config, 1.0);
+        let result = config.distance_with_cutoff(&x, &y, 1.0);
         assert!(result.is_none(), "Should exceed threshold");
     }
 
@@ -168,7 +168,7 @@ mod time_series_msm_coverage {
         let y = vec![1.0, 2.0, 4.0];
         let config = MsmConfig::new(1.0);
 
-        let result = msm_distance_wavefront(&x, &y, &config, 10.0);
+        let result = config.distance_with_cutoff(&x, &y, 10.0);
         assert!(result.is_some());
         assert!(result.unwrap() >= 1.0);
     }
@@ -177,12 +177,12 @@ mod time_series_msm_coverage {
     fn test_msm_wavefront_empty_series() {
         let config = MsmConfig::new(1.0);
 
-        let result1 = msm_distance_wavefront(&[], &[], &config, 10.0);
+        let result1 = config.distance_with_cutoff(&[], &[], 10.0);
         assert!(result1.is_some());
         assert_eq!(result1.unwrap(), 0.0);
 
         // Empty vs non-empty may return None (infinite distance) or Some based on implementation
-        let result2 = msm_distance_wavefront(&[1.0], &[], &config, 10.0);
+        let result2 = config.distance_with_cutoff(&[1.0], &[], 10.0);
         // Just verify it doesn't panic; the result depends on how inf is handled
         let _ = result2;
     }

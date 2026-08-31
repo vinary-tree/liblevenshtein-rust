@@ -324,7 +324,7 @@ Located in `/src/transducer/position.rs`:
 
 ### Impact of Restricted Substitutions
 
-**Paper warning** (Section 3): The generalized distance d_L^S may **not satisfy triangle inequality** when substitutions are restricted.
+**Paper warning** (Section 3): The generalized distance $`d_L^S`$ may **not satisfy triangle inequality** when substitutions are restricted.
 
 **Implication**: Subsumption logic may need adjustment.
 

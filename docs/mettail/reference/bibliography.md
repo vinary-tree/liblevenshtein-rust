@@ -16,7 +16,7 @@ arXiv:2305.17218.
 
 - **Summary**: Defines MeTTa as a state machine with rewrite rules
 - **Key contribution**: State tuple $`\langle i, k, w, o\rangle`$ and five core rules
-- **Relevance**: Foundation for formalizing MeTTa as a λ-theory
+- **Relevance**: Foundation for formalizing MeTTa as $`a \lambda`$-theory
 - **Section 8**: Explicitly recommends OSLF for deriving type systems
 - **DOI**: [10.48550/arXiv.2305.17218](https://doi.org/10.48550/arXiv.2305.17218)
 
@@ -39,7 +39,7 @@ In: Applied Category Theory (ACT 2021).
 EPTCS 372, pp. 116-132.
 
 - **Summary**: Derives type systems from operational semantics via 2-functor composition
-- **Key contribution**: λ-theory →[P]→ presheaf topos →[L]→ type system
+- **Key contribution**: $`\lambda`$-theory →[P]→ presheaf topos →[L]→ type system
 - **Relevance**: Mathematical foundation for semantic type checking
 - **Key concepts**: Presheaf construction, internal language, behavioral types
 - **DOI**: [10.4204/EPTCS.372.9](https://doi.org/10.4204/EPTCS.372.9) (arXiv:2102.04672)
@@ -178,10 +178,10 @@ PhD thesis, Columbia University.
 ### Pi-Calculus
 
 **Sangiorgi, D. & Walker, D.** (2001).
-*The π-calculus: A Theory of Mobile Processes*.
+*The $`\pi`$-calculus: A Theory of Mobile Processes*.
 Cambridge University Press.
 
-- **Summary**: Comprehensive treatment of π-calculus
+- **Summary**: Comprehensive treatment of $`\pi`$-calculus
 - **Relevance**: Background for understanding RHO calculus
 - **Key concepts**: Bisimulation, behavioral equivalence, mobility
 
@@ -366,7 +366,7 @@ Local research papers and working documents providing theoretical foundations.
 
 - **Location**: `/home/dylon/Workspace/f1r3fly.io/rho4u/oslf/oslf.pdf`
 - **Description**: Full OSLF paper with 2-functor construction
-- **Key contribution**: λ-theory →[P]→ presheaf topos →[L]→ type system
+- **Key contribution**: $`\lambda`$-theory →[P]→ presheaf topos →[L]→ type system
 
 **OSLF to Native Types Clean Type System**
 
@@ -439,7 +439,7 @@ Local research papers and working documents providing theoretical foundations.
 - **Location**: `/home/dylon/Workspace/f1r3fly.io/rho4u/metta-calculus/metta-calculus.pdf`
 - **Description**: Formal calculus treatment of MeTTa
 - **Key contribution**: Rigorous mathematical treatment of MeTTa rewriting
-- **Relevance**: Foundation for formalizing MeTTa as λ-theory for OSLF
+- **Relevance**: Foundation for formalizing MeTTa as $`\lambda`$-theory for OSLF
 
 ### Space Calculus
 

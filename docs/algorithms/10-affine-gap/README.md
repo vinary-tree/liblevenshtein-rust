@@ -12,21 +12,21 @@ invariant to an executable property.
 
 A **gap** is a contiguous run of symbols consumed from only one input. An
 **affine gap cost** charges an opening penalty once and an extension penalty for
-every symbol in the run. Write `$`g_o`$` for the non-negative gap-open cost and
-`$`g_e`$` for the non-negative per-symbol gap-extension cost. A run of length
-`$`r>0`$` costs:
+every symbol in the run. Write $`g_o`$ for the non-negative gap-open cost and
+$`g_e`$ for the non-negative per-symbol gap-extension cost. A run of length
+$`r>0`$ costs:
 
 ```math
 G(r)=g_o+r g_e.
 ```
 
-This convention includes the first gap symbol in `$`r g_e`$`. Some literature
-uses `$`g_o+(r-1)g_e`$`; translating between the conventions requires changing
+This convention includes the first gap symbol in $`r g_e`$. Some literature
+uses $`g_o+(r-1)g_e`$; translating between the conventions requires changing
 the reported open parameter. The crate never makes that conversion implicitly.
 
-Write `$`s`$` for substitution cost. A matching diagonal costs zero. The
-implementation permits zero-valued parameters, including `$`g_o=0`$`; when
-`$`g_o=0`$`, `$`g_e=s=1`$`, the distance is ordinary Levenshtein distance.
+Write $`s`$ for substitution cost. A matching diagonal costs zero. The
+implementation permits zero-valued parameters, including $`g_o=0`$; when
+$`g_o=0`$, $`g_e=s=1`$, the distance is ordinary Levenshtein distance.
 
 Affine costs are useful when a single missing or extra region is more plausible
 than several independent gaps. Sequence alignment and optical character
@@ -35,8 +35,8 @@ recognition are common examples.
 ## 2. Exact fixed-point domain
 
 `AffineGapParams` derives a [`CostScale`](../../../src/cost/scale.rs) from the
-shortest decimal representations of `$`g_o`$`, `$`g_e`$`, and `$`s`$`. If the
-least common denominator is `$`S`$`, every transition uses the exact integers:
+shortest decimal representations of $`g_o`$, $`g_e`$, and $`s`$. If the
+least common denominator is $`S`$, every transition uses the exact integers:
 
 ```math
 \widehat g_o=Sg_o,\qquad
@@ -62,12 +62,12 @@ assert_eq!(costs.substitution(), 4);
 
 ## 3. Gotoh's three matrices
 
-Let `$`x=x_1\ldots x_m`$` be the query and `$`y=y_1\ldots y_n`$` the dictionary
+Let $`x=x_1\ldots x_m`$ be the query and $`y=y_1\ldots y_n`$ the dictionary
 term. Three dynamic-programming layers remember the preceding operation:
 
-- `$`M[i,j]`$` ends with a diagonal match or substitution;
-- `$`I_x[i,j]`$` ends with a gap consuming query symbols;
-- `$`I_y[i,j]`$` ends with a gap consuming dictionary symbols.
+- $`M[i,j]`$ ends with a diagonal match or substitution;
+- $`I_x[i,j]`$ ends with a gap consuming query symbols;
+- $`I_y[i,j]`$ ends with a gap consuming dictionary symbols.
 
 Define a layer-dependent gap step:
 
@@ -80,10 +80,10 @@ g_o+g_e,&\ell\ne\tau.
 ```
 
 The direct recurrence takes the minimum of the compatible predecessor in each
-layer. A diagonal resets the layer to `$`M`$`; a gap remains in or enters its
+layer. A diagonal resets the layer to $`M`$; a gap remains in or enters its
 target layer. The implementation in `distance::affine_gap_distance_units`
-materializes all three `$`(m+1)(n+1)`$` matrices. It is intentionally obvious
-`$`\mathcal{O}(mn)`$` code and is the differential oracle, not the trie search
+materializes all three $`(m+1)(n+1)`$ matrices. It is intentionally obvious
+$`\mathcal{O}(mn)`$ code and is the differential oracle, not the trie search
 engine.
 
 ## 4. Position layers in the lazy automaton
@@ -93,9 +93,9 @@ exactly to Gotoh's matrices:
 
 | Mathematical layer | `PositionKind` | What the next gap step remembers |
 |---|---|---|
-| `$`M`$` | `Normal` | no gap is open |
-| `$`I_x`$` | `AffineQueryGap` | a query-consuming gap is open |
-| `$`I_y`$` | `AffineDictGap` | a dictionary-consuming gap is open |
+| $`M`$ | `Normal` | no gap is open |
+| $`I_x`$ | `AffineQueryGap` | a query-consuming gap is open |
+| $`I_y`$ | `AffineDictGap` | a dictionary-consuming gap is open |
 
 ![Three-layer affine-gap state machine](../../diagrams/automata/affine-gap-layers.svg)
 
@@ -120,7 +120,7 @@ EPSILON-QUERY-GAP(position p, query length m, budget k):
                           cost=p.cost+increment)
 ```
 
-For dictionary symbol `$`b`$`, a position may take a diagonal or consume `$`b`$`
+For dictionary symbol $`b`$, a position may take a diagonal or consume $`b`$
 inside a dictionary gap:
 
 ```text
@@ -156,10 +156,10 @@ substitution policy. The kernel is generic over byte, Unicode-scalar, and
 ## 6. Initial and final gaps
 
 The initial state starts at `(0, 0, M)` and applies the same epsilon closure.
-It therefore seeds a query-prefix run at exactly `$`g_o+r g_e`$`, rather than
+It therefore seeds a query-prefix run at exactly $`g_o+r g_e`$, rather than
 the unit-cost `(r, r)` prefix used by the legacy variants.
 
-At the end of a dictionary term, let `$`r=m-i`$` query symbols remain. The
+At the end of a dictionary term, let $`r=m-i`$ query symbols remain. The
 layer-aware finishing rule is:
 
 ```math
@@ -171,8 +171,8 @@ c+g_o+r g_e,&r>0\land\ell\ne I_x.
 \end{cases}
 ```
 
-The second row is essential: a trailing query gap already open in `$`I_x`$`
-must not pay `$`g_o`$` twice. `State::infer_distance_with::<AffineV>` applies
+The second row is essential: a trailing query gap already open in $`I_x`$
+must not pay $`g_o`$ twice. `State::infer_distance_with::<AffineV>` applies
 this rule to every representative and returns the minimum.
 
 ## 7. Subsumption derivation
@@ -187,10 +187,10 @@ the layer preorder is:
 \ell_1=\ell_2\ \lor\ \ell_2=M.
 ```
 
-The two gap layers precede `$`M`$` because they may reuse an open gap. They are
-incomparable when `$`g_o>0`$`: continuing a query gap separates `$`I_x`$` from
-`$`I_y`$`, while continuing a dictionary gap separates them in the opposite
-direction. For any two incoming layers, switching costs at most `$`g_o`$`:
+The two gap layers precede $`M`$ because they may reuse an open gap. They are
+incomparable when $`g_o>0`$: continuing a query gap separates $`I_x`$ from
+$`I_y`$, while continuing a dictionary gap separates them in the opposite
+direction. For any two incoming layers, switching costs at most $`g_o`$:
 
 ```math
 C(i,\ell_1,v)\le C(i,\ell_2,v)+g_o.
@@ -212,22 +212,22 @@ TLC exhaustively checks bounded traces.
 ### 7.1 Forward B-5 and fused realization
 
 A forward cross-index comparison first prices the non-empty query-gap run from
-the earlier position to the later query index. Let `$`r=i_2-i_1>0`$` and
-`$`Q(c,\ell,r)=c+[\ell\ne I_x]g_o+r g_e`$`. The earlier position subsumes the
+the earlier position to the later query index. Let $`r=i_2-i_1>0`$ and
+$`Q(c,\ell,r)=c+[\ell\ne I_x]g_o+r g_e`$. The earlier position subsumes the
 later one when
 
 ```math
 Q(c_1,\ell_1,r)+[\ell_2=I_y]g_o\le c_2.
 ```
 
-After the concrete query-gap run, the left representative is in `$`I_x`$` at
-`$`i_2`$`. For right layers `$`M`$` and `$`I_x`$`, the inequality supplies the
-layer-preorder arm of B-4. For `$`I_y`$`, the extra `$`g_o`$` supplies B-4's
+After the concrete query-gap run, the left representative is in $`I_x`$ at
+$`i_2`$. For right layers $`M`$ and $`I_x`$, the inequality supplies the
+layer-preorder arm of B-4. For $`I_y`$, the extra $`g_o`$ supplies B-4's
 uniform switch-penalty arm. Thus B-5 reduces to B-4 at the later index and
 inherits its arbitrary-suffix proof.
 
-The saved minimal counterexample is query `ba`, term `a`, `$`g_o=0`$`,
-`$`g_e=s=1`$`, and budget 1. Pruning `(1,1,I_x)` under `(0,0,M)` loses the only
+The saved minimal counterexample is query `ba`, term `a`, $`g_o=0`$,
+$`g_e=s=1`$, and budget 1. Pruning `(1,1,I_x)` under `(0,0,M)` loses the only
 match unless the successor fuses “skip `b`” and “consume `a`.” The consuming
 kernel now emits that fused transition, with a property proving it equals the
 explicit epsilon chain followed by the same dictionary-edge action. Therefore:
@@ -242,7 +242,7 @@ explicit epsilon chain followed by the same dictionary-edge action. Therefore:
 
 Scaled cost is not an operation count. Using a raw scaled budget as a
 characteristic-vector width would turn a budget of `2.0` at scale 1,000 into a
-2,001-unit window. For a position of cost `$`c`$` and `$`g_e>0`$`, every
+2,001-unit window. For a position of cost $`c`$ and $`g_e>0`$, every
 affordable gap run has length less than:
 
 ```math
@@ -250,7 +250,7 @@ W(c)=\left\lfloor\frac{k-c}{g_e}\right\rfloor+1.
 ```
 
 `AffineV::skip_window` computes this value, caps it by the remaining query, and
-uses checked/saturating boundary arithmetic. If `$`g_e=0`$`, correctness
+uses checked/saturating boundary arithmetic. If $`g_e=0`$, correctness
 requires the full remaining query window; callers should treat that
 configuration as potentially linear-width work.
 
@@ -286,7 +286,7 @@ by `AffineGapParams` through `VariantSpec::AffineGap`.
 
 ## 10. Complexity and security
 
-The reference DP uses `$`\mathcal{O}(mn)`$` time and space. The automaton walks
+The reference DP uses $`\mathcal{O}(mn)`$ time and space. The automaton walks
 only dictionary prefixes whose exact lower bound fits the budget; its work is
 proportional to reached edges times the canonical frontier size. B-4/B-5
 canonicalization is conservative, so a permissive budget may still visit most
@@ -295,7 +295,7 @@ of a dictionary.
 Every untrusted service should cap query length, dictionary-key length,
 fixed-point denominator, scaled budget, result count, and wall time. Scaling and
 accumulation are checked. A zero extension cost is supported exactly but
-disables the `$`\mathcal{O}(k)`$` window guarantee.
+disables the $`\mathcal{O}(k)`$ window guarantee.
 
 ## 11. Verification and test map
 

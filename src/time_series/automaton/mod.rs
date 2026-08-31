@@ -25,7 +25,9 @@ mod state;
 mod timestamped_twed;
 
 pub use arena::{TemporalArenaLimits, TemporalStateId};
+pub(crate) use cache::BoundedTransitionCache;
 pub use column::{ElasticOnlineAutomaton, ElasticOnlineObservation};
+pub(crate) use column::{ExactPointDecision, ExactPointWorkspace};
 pub(crate) use erp::ErpFrontierMachine;
 pub use erp::{ErpOnlineAutomaton, ErpOnlineObservation, OnlineAutomatonLimits};
 pub use timestamped_twed::{TimestampedTwedOnlineAutomaton, TimestampedTwedOnlineObservation};

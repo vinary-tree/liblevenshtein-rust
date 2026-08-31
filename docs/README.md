@@ -72,7 +72,7 @@ index maps everything else.
 - [Binding documentation hub](bindings/README.md) — the corpus map and reading order: the [`llev_*` C-ABI reference](bindings/c-abi-reference.md) (all 35 functions, status sets, the lease protocol, a compile-checked C consumer), the [resource consumer](bindings/resource-consumer.md) (intake, `CallGate`, fault channel, arenas), the [WASM/JS topology](bindings/wasm-topology.md) (shared JavaScript runtime, identity guard, WASI preopens), and the machine-readable governance (`bindings/api.json`, conformance fixtures, `ABI_INVARIANTS.tsv`).
 - Family ABI canon (hosted with the interop crate): [portal](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) · [ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) · [evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md) · [security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md).
 - [Developer Guide → Architecture](developer-guide/architecture.md) — the **intra-crate** module design and traits.
-- [Design specifications](design/README.md) — feature-level designs, including [Class-A presets](design/class-a-presets.md), the [ordered cost monoid](design/cost-monoid.md), [language products](design/language-product.md), dynamic DAWG, suffix automaton, contextual completion, protobuf serialization, and grammar correction.
+- [Design specifications](design/README.md) — feature-level designs, including [Class-A presets](design/class-a-presets.md), the [ordered cost monoid](design/cost-monoid.md), [language products](design/language-product.md), [complete content-addressed elastic snapshots](design/complete-elastic-snapshots.md), dynamic DAWG, suffix automaton, contextual completion, protobuf serialization, and grammar correction.
 - [Algorithm Reference layers 01–09](algorithms/README.md) — the layered architecture, bottom-up.
 - Diagrams: [crate boundary](diagrams/architectures/crate-boundary.svg) · [component stack](diagrams/architectures/component-stack.svg) · [C4 context](diagrams/architectures/c4-context.svg) / [container](diagrams/architectures/c4-container.svg) · [feature-flag DAG](diagrams/architectures/feature-flag-dag.svg) · [module dependencies](diagrams/architectures/module-dependency.svg).
 
@@ -94,7 +94,7 @@ index maps everything else.
 - [Releasing language bindings](releasing-language-bindings.md) — the publish-order DAG, registry coordinates and credentials, pin-coherence preconditions, and pre-publication gates.
 - [Release evidence ledgers](releases/README.md) — immutable source commits,
   workflow runs, registry digests, public-byte smokes, incidents, and recovery
-  decisions. The [`4.0.0-rc.5` ledger](releases/4.0.0-rc.5.md) remains the latest
+  decisions. The [`4.0.0-rc.6` ledger](releases/4.0.0-rc.6.md) remains the latest
   completed publication ledger; it does not describe the coherent `rc.6`
   development tuple.
 - [Resource-exhaustion controls](security/resource-exhaustion.md) — automaton state ceilings, edit budgets, elastic-DP guards, and deployment policy.

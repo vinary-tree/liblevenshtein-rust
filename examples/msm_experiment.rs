@@ -23,9 +23,8 @@ use std::time::Instant;
 use liblevenshtein::cost::CostMonoid;
 use liblevenshtein::time_series::elastic::{ElasticKernel, ElasticSearchStats, ElasticTransducer};
 use liblevenshtein::time_series::{
-    length_lb, msm_distance_automaton, msm_distance_wavefront, ApproxMsmConfig, ApproxMsmIndex,
-    DtwConfig, ErpConfig, FrechetConfig, MsmConfig, MsmKernel, MsmTransducer, QuantizationConfig,
-    TwedConfig,
+    length_lb, ApproxMsmConfig, ApproxMsmIndex, DtwConfig, ErpConfig, FrechetConfig, MsmConfig,
+    MsmKernel, MsmTransducer, QuantizationConfig, TwedConfig,
 };
 
 #[derive(Debug, Clone)]
@@ -953,41 +952,6 @@ fn ucr_1nn_outcomes_cutoff(
         .collect()
 }
 
-fn measure_legacy_ratio(scenario: &str) -> f64 {
-    let x = generate_series(24, 12345);
-    let y = generate_series(24, 67890);
-    let config = MsmConfig::new(1.0);
-    let iterations = 128;
-
-    let started = Instant::now();
-    let mut optimized_checksum = 0.0;
-    for _ in 0..iterations {
-        optimized_checksum += config.distance_optimized(&x, &y);
-    }
-    let optimized_ms = started.elapsed().as_secs_f64() * 1000.0;
-
-    let started = Instant::now();
-    let mut candidate_checksum = 0.0;
-    for _ in 0..iterations {
-        candidate_checksum += match scenario {
-            "legacy-wavefront-ratio" => {
-                msm_distance_wavefront(&x, &y, &config, f64::INFINITY).unwrap()
-            }
-            "legacy-automaton-ratio" => {
-                msm_distance_automaton(&x, &y, &config, f64::INFINITY).unwrap()
-            }
-            other => panic!("unknown legacy scenario: {other}"),
-        };
-    }
-    let candidate_ms = started.elapsed().as_secs_f64() * 1000.0;
-
-    assert!(
-        (optimized_checksum - candidate_checksum).abs() < 1e-6,
-        "legacy path diverged from optimized DP"
-    );
-    candidate_ms / optimized_ms
-}
-
 fn main() {
     let mut args = env::args().skip(1);
     let scenario = args.next().unwrap_or_else(|| "exact-range".to_string());
@@ -1194,10 +1158,6 @@ fn main() {
                 let (train, test) = ucr_case.as_ref().unwrap();
                 let (correct, _, accuracy) = ucr_1nn_accuracy(train, test, MsmConfig::new(1.0));
                 (accuracy, correct, accuracy)
-            }
-            "legacy-wavefront-ratio" | "legacy-automaton-ratio" => {
-                let ratio = measure_legacy_ratio(&scenario);
-                (ratio, 1, ratio)
             }
             other => panic!("unknown scenario: {other}"),
         };

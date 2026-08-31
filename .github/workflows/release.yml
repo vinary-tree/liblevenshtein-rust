@@ -208,7 +208,7 @@ jobs:
       - name: Checkout the exact Python interop dependency
         shell: bash
         run: >-
-          git clone --depth 1 --branch v4.0.0-rc.5
+          git clone --depth 1 --branch v4.0.0-rc.6
           https://github.com/vinary-tree/vinary-tree-interop.git
           .release-deps/vinary-tree-interop
       - uses: dtolnay/rust-toolchain@1.95
@@ -435,7 +435,7 @@ jobs:
       - name: Checkout the exact interop .NET dependency
         shell: bash
         run: >-
-          git clone --depth 1 --branch v4.0.0-rc.5
+          git clone --depth 1 --branch v4.0.0-rc.6
           https://github.com/vinary-tree/vinary-tree-interop.git
           .release-deps/vinary-tree-interop
       - uses: actions/download-artifact@v7
@@ -561,23 +561,23 @@ jobs:
         with:
           name: native-x86_64-unknown-linux-gnu
           path: dist
-      - run: luarocks lint bindings/lua/liblevenshtein-4.0.0rc5-1.rockspec
+      - run: luarocks lint bindings/lua/liblevenshtein-4.0.0rc6-1.rockspec
       - name: Build both rocks against exact native SDKs and run the public handoff
         shell: bash
         run: |
-          tar -xzf dist/liblevenshtein-4.0.0-rc.5-x86_64-unknown-linux-gnu.tar.gz -C dist
-          package_root="$PWD/dist/liblevenshtein-4.0.0-rc.5-x86_64-unknown-linux-gnu"
+          tar -xzf dist/liblevenshtein-4.0.0-rc.6-x86_64-unknown-linux-gnu.tar.gz -C dist
+          package_root="$PWD/dist/liblevenshtein-4.0.0-rc.6-x86_64-unknown-linux-gnu"
           rock_tree="$RUNNER_TEMP/luarocks-tree"
           cargo build --release --manifest-path ../libdictenstein/Cargo.toml --features ffi
           (
             cd ../libdictenstein
             luarocks --lua-version 5.4 make --tree "$rock_tree" \
-              bindings/lua/libdictenstein-4.0.0rc5-1.rockspec \
+              bindings/lua/libdictenstein-4.0.0rc6-1.rockspec \
               LIBDICTENSTEIN_INCDIR="$PWD/include" \
               LIBDICTENSTEIN_LIBDIR="$PWD/target/release"
           )
           luarocks --lua-version 5.4 make --tree "$rock_tree" \
-            bindings/lua/liblevenshtein-4.0.0rc5-1.rockspec \
+            bindings/lua/liblevenshtein-4.0.0rc6-1.rockspec \
             LIBLEVENSHTEIN_INCDIR="$package_root/include" \
             LIBLEVENSHTEIN_LIBDIR="$package_root/lib"
           LUA_CPATH="$rock_tree/lib/lua/5.4/?.so;;" \
@@ -585,7 +585,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: luarocks-package
-          path: bindings/lua/liblevenshtein-4.0.0rc5-1.rockspec
+          path: bindings/lua/liblevenshtein-4.0.0rc6-1.rockspec
           if-no-files-found: error
 
   opam-package:
@@ -603,13 +603,13 @@ jobs:
         run: |
           scripts/stage-ocaml-package.sh "$RUNNER_TEMP/opam-package" "$GITHUB_REF_NAME"
           opam lint "$RUNNER_TEMP/opam-package/opam"
-          tar -tjf "$RUNNER_TEMP/opam-package/liblevenshtein-4.0.0-rc.5.tbz"
+          tar -tjf "$RUNNER_TEMP/opam-package/liblevenshtein-4.0.0-rc.6.tbz"
       - uses: actions/upload-artifact@v7
         with:
           name: opam-package
           path: |
             ${{ runner.temp }}/opam-package/opam
-            ${{ runner.temp }}/opam-package/liblevenshtein-4.0.0-rc.5.tbz
+            ${{ runner.temp }}/opam-package/liblevenshtein-4.0.0-rc.6.tbz
           if-no-files-found: error
 
   crates-io:
@@ -631,8 +631,8 @@ jobs:
         run: |
           parent=$(dirname "$GITHUB_WORKSPACE")
           git clone --depth 1 --branch v0.1.0 https://github.com/vinary-tree/llattice.git "$parent/llattice"
-          git clone --depth 1 --branch v4.0.0-rc.5 https://github.com/vinary-tree/libdictenstein.git "$parent/libdictenstein"
-          git clone --depth 1 --branch v4.0.0-rc.5 https://github.com/vinary-tree/vinary-tree-interop.git "$parent/vinary-tree-interop"
+          git clone --depth 1 --branch v4.0.0-rc.6 https://github.com/vinary-tree/libdictenstein.git "$parent/libdictenstein"
+          git clone --depth 1 --branch v4.0.0-rc.6 https://github.com/vinary-tree/vinary-tree-interop.git "$parent/vinary-tree-interop"
       - name: Authenticate with crates.io
         id: crates-io-auth
         uses: rust-lang/crates-io-auth-action@v1
@@ -720,7 +720,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           grep -Fx 'module github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4' bindings/go/go.mod
-          grep -F 'github.com/vinary-tree/vinary-tree-interop/bindings/go/v4 v4.0.0-rc.5' bindings/go/go.mod
+          grep -F 'github.com/vinary-tree/vinary-tree-interop/bindings/go/v4 v4.0.0-rc.6' bindings/go/go.mod
           GOWORK=off go -C bindings/go mod verify
           version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
           module_tag="bindings/go/v$version"
@@ -765,7 +765,7 @@ jobs:
         env:
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: >-
-          luarocks upload dist/liblevenshtein-4.0.0rc5-1.rockspec
+          luarocks upload dist/liblevenshtein-4.0.0rc6-1.rockspec
           --temp-key "$LUAROCKS_API_KEY"
 
   opam:
@@ -926,7 +926,6 @@ jobs:
         shell: bash
         run: |
           version=$(python3 -c 'import json; print(json.load(open("release/version.json"))["registries"]["maven"])')
-          expected_jar_sha=$(python3 -c 'import json; print(json.load(open("release/version.json"))["publication"]["canonicalMavenJarSha256"])')
           base="https://repo.maven.apache.org/maven2/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version"
           mkdir -p "$RUNNER_TEMP/canonical-maven-readback"
           for attempt in $(seq 1 30); do
@@ -945,8 +944,12 @@ jobs:
           cmp \
             "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.pom" \
             "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.pom"
-          echo "$expected_jar_sha  $RUNNER_TEMP/canonical-maven-readback/liblevenshtein.jar" \
-            | sha256sum --check --strict -
+          cmp \
+            "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.jar" \
+            "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.jar"
+          sha256sum \
+            "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.jar" \
+            "$RUNNER_TEMP/canonical-maven-readback/liblevenshtein.jar"
       - name: Deploy only the selected historical relocation POM
         uses: jreleaser/release-action@v2
         with:

@@ -7,11 +7,13 @@
 use liblevenshtein::cost::{CostMonoid, WeightedCost};
 use liblevenshtein::time_series::elastic::interval::interval_dist;
 use liblevenshtein::time_series::elastic::MetricElasticKernel;
-use liblevenshtein::time_series::elastic::{Cost, ElasticKernel, ElasticTransducer};
+use liblevenshtein::time_series::elastic::{
+    Cost, ElasticKernel, ElasticTransducer, QueryPlanStorage,
+};
 use liblevenshtein::time_series::{
-    AuditedMetricTimeSeriesIndex, DtwConfig, ErpConfig, FrechetConfig, MetricErpTransducer,
-    MetricFrechetTransducer, MetricMsmConfig, MetricMsmKernel, MetricTwedConfig, MsmKernel,
-    QuantizationConfig, TwedConfig,
+    AuditedMetricTimeSeriesIndex, DtwConfig, ErpConfig, FrechetConfig, IncompleteReason,
+    MetricErpTransducer, MetricFrechetTransducer, MetricMsmConfig, MetricMsmKernel,
+    MetricTwedConfig, MsmKernel, QuantizationConfig, TwedConfig,
 };
 use proptest::prelude::*;
 
@@ -25,6 +27,10 @@ impl ElasticKernel for PointwiseL1 {
     type Monoid = WeightedCost;
     type Carry = ();
     type QueryPlan = ();
+
+    fn query_plan_storage(&self, _query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        Ok(QueryPlanStorage::EMPTY)
+    }
 
     fn column_len(&self, _query_len: usize) -> Option<usize> {
         Some(1)
@@ -93,7 +99,9 @@ impl ElasticKernel for PointwiseL1 {
         }
     }
 
-    fn plan(&self, _query: &[f64]) -> Self::QueryPlan {}
+    fn try_plan(&self, _query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(())
+    }
 
     fn empty_pair_cost(&self) -> Cost<Self> {
         WeightedCost::ZERO

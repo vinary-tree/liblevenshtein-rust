@@ -2,7 +2,9 @@
 
 use liblevenshtein::cost::CostMonoid;
 use liblevenshtein::time_series::elastic::{ElasticKernel, PointFrontierStep};
-use liblevenshtein::time_series::{ErpConfig, FrechetConfig, MsmConfig, MsmKernel, TwedConfig};
+use liblevenshtein::time_series::{
+    DtwConfig, ErpConfig, FrechetConfig, MsmConfig, MsmKernel, TwedConfig,
+};
 use proptest::prelude::*;
 
 fn assert_sparse_matches_dense<K>(kernel: K, query: &[f64], intervals: &[(f64, f64)], cutoff: f64)
@@ -23,7 +25,7 @@ where
     for (index, interval) in intervals.iter().copied().enumerate() {
         let depth = index + 1;
         let mut dense_next = Vec::with_capacity(width);
-        let (_, next_dense_carry) = kernel.step_column(
+        let (dense_lower_bound, next_dense_carry) = kernel.step_column(
             &dense_previous,
             query,
             interval,
@@ -61,11 +63,9 @@ where
         assert!(sparse_next_active.windows(2).all(|pair| pair[0] < pair[1]));
 
         let mut expected_active = Vec::new();
-        let mut expected_lower = K::Monoid::TOP;
         for (row, dense) in dense_next.iter().copied().enumerate() {
             let expected = if K::Monoid::within(dense, cutoff) {
                 expected_active.push(row);
-                expected_lower = K::Monoid::select(expected_lower, dense);
                 dense
             } else {
                 K::Monoid::TOP
@@ -77,8 +77,13 @@ where
             );
         }
         assert_eq!(sparse_next_active, expected_active);
+        let expected_transition_bound = if expected_active.is_empty() {
+            K::Monoid::TOP
+        } else {
+            dense_lower_bound
+        };
         assert_eq!(
-            K::Monoid::compare(lower_bound, expected_lower),
+            K::Monoid::compare(lower_bound, expected_transition_bound),
             std::cmp::Ordering::Equal
         );
 
@@ -158,6 +163,22 @@ proptest! {
         let query: Vec<_> = query.into_iter().map(f64::from).collect();
         assert_sparse_matches_dense(
             FrechetConfig::new(),
+            &query,
+            &finite_intervals(&target),
+            f64::from(cutoff),
+        );
+    }
+
+    #[test]
+    fn banded_dtw_sparse_interval_frontier_equals_cutoff_pruned_dense_column(
+        query in prop::collection::vec(-10i8..=10, 1..16),
+        target in prop::collection::vec((-10i8..=10, 0u8..=8), 0..20),
+        band in 0usize..=8,
+        cutoff in 0u16..=400,
+    ) {
+        let query: Vec<_> = query.into_iter().map(f64::from).collect();
+        assert_sparse_matches_dense(
+            DtwConfig::new(band),
             &query,
             &finite_intervals(&target),
             f64::from(cutoff),

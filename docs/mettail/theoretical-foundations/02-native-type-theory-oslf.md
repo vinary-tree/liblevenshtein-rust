@@ -17,7 +17,7 @@ See [06-inference-rules.md](./06-inference-rules.md) for notation guide.
 
 1. [Notation Guide (Read This First)](#notation-guide-read-this-first)
 2. [The Core Idea](#the-core-idea)
-3. [λ-Theories with Equality](#λ-theories-with-equality)
+$`3. [\lambda`$-Theories with Equality](#$`\lambda`$-theories-with-equality)
 4. [The Presheaf Construction](#the-presheaf-construction)
 5. [The Internal Language Functor](#the-internal-language-functor)
 6. [Native Types](#native-types)
@@ -90,7 +90,7 @@ operational semantics. The key insight is a 2-functor composition:
 ```
 
 Where:
-- **T** is the operational semantics formalized as a λ-theory
+- **T** is the operational semantics formalized as $`a \lambda`$-theory
 - **P** is the presheaf construction (categorical completion)
 - **L** is the internal language functor (extracts the type theory)
 
@@ -101,17 +101,17 @@ The resulting type system LP(T) is called **native** because:
 
 ---
 
-## λ-Theories with Equality
+## $`\lambda`$-Theories with Equality
 
-### Definition: λ-Theory
+### Definition: $`\lambda`$-Theory
 
-A **λ-theory** T consists of:
+A **$`\lambda`$-theory** T consists of:
 
 1. **Sorts**: A set S of type sorts (e.g., `Term`, `State`, `Name`)
 2. **Operations**: Typed function symbols f : s₁ × ... × sₙ → s
 3. **Equations**: Equality axioms between terms
 
-### Example: Simple λ-Theory for Terms
+### Example: Simple $`\lambda`$-Theory for Terms
 
 ```
 Theory T_Terms:
@@ -126,7 +126,7 @@ Theory T_Terms:
     app(lam(M), N) = M[N]  ; β-reduction (as equation)
 ```
 
-### MeTTa as a λ-Theory
+### MeTTa as $`a \lambda`$-Theory
 
 MeTTa can be formalized with:
 
@@ -165,7 +165,7 @@ Theory T_MeTTa:
 
 ### Definition: Presheaf Category
 
-Given a λ-theory T viewed as a category, the **presheaf category** P(T) consists of:
+Given $`a \lambda`$-theory T viewed as a category, the **presheaf category** P(T) consists of:
 
 - **Objects**: Functors F : $`T^\text{op}`$ → Set (contravariant functors to sets)
 - **Morphisms**: Natural transformations between functors

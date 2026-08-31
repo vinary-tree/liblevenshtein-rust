@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liblevenshtein"
-version = "4.0.0rc5"
+version = "4.0.0rc6"
 description = "Fast streaming fuzzy search backed by liblevenshtein"
 requires-python = ">=3.10"
 license = "Apache-2.0"
@@ -24,7 +24,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries",
   "Topic :: Text Processing",
 ]
-dependencies = ["vinary-tree-interop==4.0.0rc5"]
+dependencies = ["vinary-tree-interop==4.0.0rc6"]
 
 [project.optional-dependencies]
 # C8/C9 dev tooling: Hypothesis drives the property suite (tests/test_property.py);

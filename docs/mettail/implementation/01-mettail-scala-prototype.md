@@ -277,7 +277,7 @@ coercions Expr 2 ;
 
 | Feature | Status | Relation to OSLF |
 |---------|--------|------------------|
-| Theory definition syntax | ✅ Complete | Provides λ-theory input |
+| Theory definition syntax | ✅ Complete | Provides $`\lambda`$-theory input |
 | Hypercube transformation | ✅ Working | Related, less expressive |
 | Modal types (◇) | 🔄 Partial | Similar goal, different mechanism |
 | Category/sort validation | ✅ Complete | Necessary foundation |
@@ -389,7 +389,7 @@ val typedTheory = Hypercube.transform(lambdaTheory, "Type")
 
 The MeTTaIL Scala prototype provides:
 
-1. **Theory definition language** for λ-theories
+1. **Theory definition language** for $`\lambda`$-theories
 2. **Category-based validation** of sorts and constructors
 3. **Hypercube transformation** for type indexing
 4. **BNFC generation** for parser creation

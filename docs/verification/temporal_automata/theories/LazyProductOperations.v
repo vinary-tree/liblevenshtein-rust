@@ -115,6 +115,50 @@ Theorem cloned_focus_has_identical_descent : forall descend_node focus label,
   descend_focus descend_node focus label.
 Proof. reflexivity. Qed.
 
+(** ** Iterative release of shared zipper spines *)
+
+(** [owner_counts] lists the strong-owner count observed from a released
+    zipper node toward the root.  The production loop attempts one node per
+    iteration: it continues through a uniquely owned node and stops at the
+    first shared node.  This function counts loop iterations, not native-stack
+    frames. *)
+Fixpoint iterative_release_steps (owner_counts : list nat) : nat :=
+  match owner_counts with
+  | [] => 0
+  | owners :: suffix =>
+      S (if owners =? 1 then iterative_release_steps suffix else 0)
+  end.
+
+(** Iterative release performs no more work than the retained spine length;
+    the Rust correspondence uses a [while] loop, so this bound does not become
+    a native-stack-depth bound. *)
+Theorem iterative_release_steps_bounded : forall owner_counts,
+  iterative_release_steps owner_counts <= length owner_counts.
+Proof.
+  induction owner_counts as [| owners suffix IH]; simpl; [lia |].
+  destruct (owners =? 1); simpl; lia.
+Qed.
+
+(** Encountering a shared node releases the current handle and stops without
+    consuming any node of the shared suffix. *)
+Theorem iterative_release_stops_at_shared_suffix : forall owners suffix,
+  owners <> 1 -> iterative_release_steps (owners :: suffix) = 1.
+Proof.
+  intros owners suffix Hshared; simpl.
+  apply Nat.eqb_neq in Hshared; now rewrite Hshared.
+Qed.
+
+(** A uniquely owned spine is drained completely, one loop iteration per
+    node. *)
+Theorem iterative_release_drains_unique_spine : forall owner_counts,
+  Forall (fun owners => owners = 1) owner_counts ->
+  iterative_release_steps owner_counts = length owner_counts.
+Proof.
+  intros owner_counts Hall.
+  induction Hall; simpl; [reflexivity |].
+  subst; rewrite Nat.eqb_refl, IHHall; reflexivity.
+Qed.
+
 (** An opaque traversal node retains precisely the snapshot and native focus;
     path-only zipper context is reconstructed by the product scheduler. *)
 Record traversal_focus : Type := {

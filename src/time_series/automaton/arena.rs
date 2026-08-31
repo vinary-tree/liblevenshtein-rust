@@ -113,18 +113,24 @@ where
 
         self.states
             .try_reserve(1)
-            .map_err(|_| IncompleteReason::BudgetExceeded {
+            .map_err(|_| IncompleteReason::AllocationFailed {
                 resource: ResourceKind::ScratchBytes,
-                limit: self.limits.max_positions,
-                requested: requested_positions,
+                requested: requested_states,
             })?;
         self.fingerprints
             .try_reserve(1)
-            .map_err(|_| IncompleteReason::BudgetExceeded {
+            .map_err(|_| IncompleteReason::AllocationFailed {
                 resource: ResourceKind::ScratchBytes,
-                limit: self.limits.max_positions,
-                requested: requested_positions,
+                requested: requested_states,
             })?;
+        if let Some(bucket) = self.fingerprints.get_mut(&fingerprint) {
+            bucket
+                .try_reserve(1)
+                .map_err(|_| IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::ScratchBytes,
+                    requested: bucket.len().saturating_add(1),
+                })?;
+        }
 
         let id = TemporalStateId(raw_id);
         self.states

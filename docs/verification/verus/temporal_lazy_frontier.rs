@@ -187,31 +187,71 @@ proof fn exact_canonical_key_reuse_preserves_membership(
 {
 }
 
-/// A paired push adds exactly one explicit DFS frame and one compact product
-/// state, preserving their live-path bijection.
-proof fn paired_product_push_preserves_bijection(
-    live_frames: nat,
-    live_states: nat,
+/// Pushing a frame for an already-interned residual grows only the explicit
+/// DFS stack. The referenced state identifier remains inside the unchanged
+/// query-local arena.
+pub open spec fn state_count_after_reused_push(state_count: nat) -> nat {
+    state_count
+}
+
+proof fn reused_state_push_preserves_arena_reference(
+    frame_count: nat,
+    state_count: nat,
+    state_id: nat,
 )
     requires
-        live_frames == live_states,
+        state_id < state_count,
     ensures
-        live_frames + 1 == live_states + 1,
+        state_id < state_count_after_reused_push(state_count),
+        frame_count + 1 > frame_count,
 {
 }
 
-/// A paired pop reclaims exactly one frame and its corresponding stack-arena
-/// state without depending on the number of nodes visited earlier.
-proof fn paired_product_pop_preserves_bijection(
-    live_frames: nat,
-    live_states: nat,
+/// A freshly committed residual receives the old arena length as its stable
+/// identifier, which is in bounds immediately after the commit.
+proof fn fresh_state_identifier_is_in_bounds(state_count: nat)
+    ensures
+        state_count < state_count + 1,
+{
+}
+
+/// Popping a DFS frame reclaims the path entry but intentionally retains the
+/// interned residual for exact reuse by another reached dictionary prefix.
+pub open spec fn state_count_after_frame_pop(state_count: nat) -> nat {
+    state_count
+}
+
+proof fn frame_pop_retains_interned_arena(
+    frame_count: nat,
+    state_count: nat,
+    state_id: nat,
 )
     requires
-        live_frames == live_states,
-        live_frames > 0,
-        live_states > 0,
+        frame_count > 0,
+        state_id < state_count,
     ensures
-        live_frames - 1 == live_states - 1,
+        frame_count - 1 < frame_count,
+        state_id < state_count_after_frame_pop(state_count),
+{
+}
+
+/// Arena retention is governed by the explicit canonical-state budget, not
+/// by a false frame/state cardinality equality.
+pub open spec fn state_count_after_fresh_attempt(
+    state_count: nat,
+    max_states: nat,
+) -> nat {
+    if state_count < max_states { state_count + 1 } else { state_count }
+}
+
+proof fn interned_arena_respects_explicit_state_limit(
+    state_count: nat,
+    max_states: nat,
+)
+    requires
+        state_count <= max_states,
+    ensures
+        state_count_after_fresh_attempt(state_count, max_states) <= max_states,
 {
 }
 

@@ -1,7 +1,7 @@
 use liblevenshtein::time_series::{
-    ExactDecision, IncompleteReason, MetricMsmConfig, MetricMsmConfigError, MsmConfig,
-    MsmTransducer, OperationOutcome, PageBudget, QuantizationConfig, ResourceKind, ResourceLimits,
-    TemporalValidationError,
+    ErpConfig, ErpTransducer, ExactDecision, IncompleteReason, MetricMsmConfig,
+    MetricMsmConfigError, MsmConfig, MsmTransducer, OperationOutcome, PageBudget,
+    QuantizationConfig, ResourceKind, ResourceLimits, TemporalValidationError,
 };
 
 #[test]
@@ -128,7 +128,7 @@ fn paged_exact_range_equals_uninterrupted_search() {
             1.0,
             ResourceLimits::default(),
             PageBudget {
-                max_work_units: 10,
+                max_work_units: 16,
                 max_results: 1,
             },
         )
@@ -147,10 +147,13 @@ fn paged_exact_range_equals_uninterrupted_search() {
                 ..
             } => {
                 pauses += 1;
-                let partial = partial.unwrap();
-                assert!(partial.iter().all(|entry| expected.contains(entry)));
+                assert!(partial.is_none());
+                assert!(continuation
+                    .exact_partial()
+                    .iter()
+                    .all(|entry| expected.contains(entry)));
                 outcome = continuation.resume(PageBudget {
-                    max_work_units: 10,
+                    max_work_units: 16,
                     max_results: 1,
                 });
             }
@@ -275,7 +278,7 @@ fn strict_bounded_knn_never_turns_candidate_exhaustion_into_empty_completion() {
 }
 
 #[test]
-fn bounded_product_retains_one_compact_state_per_live_dfs_frame() {
+fn bounded_product_root_frame_uses_one_compact_state_id() {
     let index = MsmTransducer::from_series(
         QuantizationConfig::for_u8(-10.0, 10.0),
         MsmConfig::try_new(1.0).expect("positive MSM operation cost is valid"),
@@ -307,7 +310,7 @@ fn bounded_product_retains_one_compact_state_per_live_dfs_frame() {
 
     let stats = continuation.retained_product_state_stats();
     assert_eq!(stats.frames, 1);
-    assert_eq!(stats.states, stats.frames);
+    assert_eq!(stats.states, 1);
     assert_eq!(
         stats.column_cells, 0,
         "the root compact state has no reachable recurrence positions"
@@ -348,7 +351,7 @@ fn bounded_product_retains_a_canonical_position_antichain_not_a_dense_column() {
 
     let stats = continuation.retained_product_state_stats();
     assert_eq!(stats.frames, 2);
-    assert_eq!(stats.states, stats.frames);
+    assert!(stats.states >= stats.frames);
     assert_eq!(
         stats.column_cells, 1,
         "the child stores one non-subsumed position; its vertical closure is lazy"
@@ -356,7 +359,7 @@ fn bounded_product_retains_a_canonical_position_antichain_not_a_dense_column() {
 }
 
 #[test]
-fn product_scratch_ceiling_is_checked_before_a_child_state_is_retained() {
+fn product_scratch_ceiling_rejects_the_root_arena_before_traversal() {
     let index = MsmTransducer::from_series(
         QuantizationConfig::for_u8(-10.0, 10.0),
         MsmConfig::try_new(1.0).expect("positive MSM operation cost is valid"),
@@ -364,12 +367,10 @@ fn product_scratch_ceiling_is_checked_before_a_child_state_is_retained() {
     );
     // A two-sample MSM query has a three-cell column. The product owns exactly
     // two shared cost columns and two shared active-row arrays; no DFS frame
-    // owns a dense column. The root fits that fixed scratch exactly, while the
-    // first child needs one compact `(row, cost)` representative; the second
-    // recurrence row is exactly its vertical epsilon extension and is proved
-    // subsumed.
+    // owns a dense column. Exact state interning additionally requires a root
+    // state header and collision-checked fingerprint bucket, so a ceiling that
+    // fits only the two recurrence generations must fail before traversal.
     let fixed_scratch_bytes = 3 * 2 * (std::mem::size_of::<f64>() + std::mem::size_of::<usize>());
-    let first_child_bytes = std::mem::size_of::<(u32, f64)>();
     let limits = ResourceLimits {
         max_scratch_bytes: fixed_scratch_bytes,
         ..ResourceLimits::default()
@@ -396,7 +397,89 @@ fn product_scratch_ceiling_is_checked_before_a_child_state_is_retained() {
             },
             continuation: None,
             ..
-        } if limit == fixed_scratch_bytes
-            && requested == fixed_scratch_bytes + first_child_bytes
+        } if limit == fixed_scratch_bytes && requested > fixed_scratch_bytes
+    ));
+}
+
+#[test]
+fn cancelling_a_generic_product_preserves_exact_membership_without_completeness() {
+    let index = MsmTransducer::from_series(
+        QuantizationConfig::for_u8(-10.0, 10.0),
+        MsmConfig::try_new(1.0).expect("positive MSM operation cost is valid"),
+        &[vec![0.0], vec![0.0], vec![5.0]],
+    );
+    let outcome = index
+        .search_range_bounded(
+            &[0.0],
+            0.0,
+            ResourceLimits::default(),
+            PageBudget {
+                max_work_units: 10_000,
+                max_results: 1,
+            },
+        )
+        .expect("finite query and cutoff are valid");
+    let OperationOutcome::Incomplete {
+        partial: None,
+        continuation: Some(continuation),
+        ..
+    } = outcome
+    else {
+        panic!("one-result page must pause with more exact work pending");
+    };
+    let before = continuation.exact_partial().to_vec();
+
+    match continuation.cancel() {
+        OperationOutcome::Incomplete {
+            partial: Some(after),
+            reason: IncompleteReason::Cancelled,
+            continuation: None,
+            ..
+        } => {
+            assert_eq!(after, before);
+            assert!(after
+                .iter()
+                .all(|entry| index.search_range(&[0.0], 0.0).contains(entry)));
+        }
+        other => panic!("cancellation must remain explicitly incomplete: {other:?}"),
+    }
+}
+
+#[test]
+fn cancelling_the_specialized_erp_product_is_deterministic_and_terminal() {
+    let index = ErpTransducer::from_series(
+        QuantizationConfig::for_u8(-10.0, 10.0),
+        ErpConfig::new(0.0),
+        &[vec![0.0], vec![0.0], vec![5.0]],
+    );
+    let outcome = index
+        .search_range_automaton_bounded(
+            &[0.0],
+            0.0,
+            ResourceLimits::default(),
+            PageBudget {
+                max_work_units: 10_000,
+                max_results: 1,
+            },
+        )
+        .expect("finite ERP query and cutoff are valid");
+    let OperationOutcome::Incomplete {
+        partial: None,
+        continuation: Some(continuation),
+        ..
+    } = outcome
+    else {
+        panic!("one-result ERP page must pause with exact work pending");
+    };
+    let before = continuation.exact_partial().to_vec();
+
+    assert!(matches!(
+        continuation.cancel(),
+        OperationOutcome::Incomplete {
+            partial: Some(ref after),
+            reason: IncompleteReason::Cancelled,
+            continuation: None,
+            ..
+        } if *after == before
     ));
 }

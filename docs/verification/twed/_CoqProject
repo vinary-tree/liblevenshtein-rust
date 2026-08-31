@@ -1,3 +1,4 @@
 -R theories Liblevenshtein.TWED
 
 theories/Metric/TwedProperties.v
+theories/Metric/TimestampedProductIndex.v

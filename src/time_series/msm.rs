@@ -26,8 +26,12 @@ use super::bounded::{
     ResourceLedger, ResourceLimits, TemporalValidationError,
 };
 
-const CUTOFF_EPSILON: f64 = 1e-9;
 const DEFAULT_MSM_C: f64 = 1.0;
+
+#[inline]
+fn terminal_distance_within_cutoff(distance: f64, cutoff: f64) -> bool {
+    distance <= cutoff
+}
 
 #[inline]
 pub(super) fn series_values_are_finite(series: &[f64]) -> bool {
@@ -261,7 +265,7 @@ impl MsmConfig {
     /// a finite cutoff; a `+∞` cutoff returns the same value as
     /// [`Self::distance_optimized`].
     pub fn distance_with_cutoff(&self, x: &[f64], y: &[f64], max_cost: f64) -> Option<f64> {
-        if max_cost.is_nan() || max_cost < -CUTOFF_EPSILON {
+        if max_cost.is_nan() || max_cost < 0.0 {
             return None;
         }
         if max_cost.is_infinite() && max_cost.is_sign_positive() {
@@ -275,7 +279,7 @@ impl MsmConfig {
 
         let m = x.len();
         let n = y.len();
-        let cutoff = max_cost + CUTOFF_EPSILON;
+        let cutoff = max_cost;
 
         if m == 0 && n == 0 {
             return (0.0 <= cutoff).then_some(0.0);
@@ -322,7 +326,7 @@ impl MsmConfig {
         }
 
         let distance = prev[n];
-        (distance <= cutoff).then_some(distance)
+        terminal_distance_within_cutoff(distance, cutoff).then_some(distance)
     }
 
     /// Strict, fail-closed MSM cutoff decision under explicit resource limits.

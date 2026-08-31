@@ -37,14 +37,18 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `complete_if_and_only_if_exhausted` | `temporal_automata/theories/LazyWeightedFrontier.v` | Complete—including complete empty—is constructible exactly after search exhaustion. |
 | `generational_retention_is_prefix_independent` | `temporal_automata/theories/LazyWeightedFrontier.v` | Two bounded frontier generations plus a bounded cache retain memory independent of consumed-prefix length. |
 | `sparse_transition_storage_is_observation_bounded` | `temporal_automata/theories/LazyWeightedFrontier.v` | Sparse generated-target storage grows only with distinct transitions actually observed. |
-| `paired_product_push_preserves_bijection` | `temporal_automata/theories/LazyWeightedFrontier.v` | Pushing one explicit DFS frame and one compact product state preserves their live-path bijection. |
-| `paired_product_pop_preserves_bijection` | `temporal_automata/theories/LazyWeightedFrontier.v` | Reclaiming the last frame and stack-arena state together preserves their cardinality invariant. |
-| `stack_arena_retention_is_history_independent` | `temporal_automata/theories/LazyWeightedFrontier.v` | Retained column bytes depend on live DFS depth and query width, not on already visited dictionary nodes. |
+| `push_reused_state_preserves_valid_references` | `temporal_automata/theories/LazyWeightedFrontier.v` | Reusing an interned residual adds a valid frame identifier without allocating an arena state. |
+| `push_fresh_state_preserves_valid_references` | `temporal_automata/theories/LazyWeightedFrontier.v` | Appending a fresh residual before its frame preserves every existing and new arena reference. |
+| `pop_frame_preserves_valid_references` | `temporal_automata/theories/LazyWeightedFrontier.v` | Frame-only DFS pop leaves every remaining append-only arena identifier valid. |
+| `interned_arena_retention_is_history_independent` | `temporal_automata/theories/LazyWeightedFrontier.v` | The configured state ceiling bounds the append-only arena independently of visited-node count; this is not a live-depth-only bound. |
 | `rejected_child_preflight_is_atomic` | `temporal_automata/theories/LazyWeightedFrontier.v` | A prospective child above the scratch ceiling leaves retained product state unchanged. |
 | `equal_observation_has_equal_transition` | `temporal_automata/theories/LazyProductOperations.v` | State-relative equal observations induce exactly equal transitions when the concrete transition factors through the observation. |
 | `complete_cache_eviction_is_transparent` | `temporal_automata/theories/LazyProductOperations.v` | Evicting a complete transition entry and recomputing the same successor changes no observation. |
 | `descend_preserves_snapshot_revision` | `temporal_automata/theories/LazyProductOperations.v` | Every successful zipper descent remains scoped to its parent's immutable dictionary revision. |
 | `descend_materializes_path_append` | `temporal_automata/theories/LazyProductOperations.v` | Delayed reconstruction from a shared reverse parent spine equals eager path append. |
+| `iterative_release_steps_bounded` | `temporal_automata/theories/LazyProductOperations.v` | Releasing a zipper parent spine examines at most one node per retained spine node. |
+| `iterative_release_stops_at_shared_suffix` | `temporal_automata/theories/LazyProductOperations.v` | A failed unique-owner unwrap stops before consuming the shared suffix. |
+| `iterative_release_drains_unique_spine` | `temporal_automata/theories/LazyProductOperations.v` | A uniquely owned parent spine is drained completely by one loop iteration per node. |
 | `erase_path_preserves_successful_descent` | `temporal_automata/theories/LazyProductOperations.v` | Consuming a zipper into an opaque traversal focus may erase path-only context without changing any successful native descent. |
 | `erase_path_preserves_absent_descent` | `temporal_automata/theories/LazyProductOperations.v` | Opaque path erasure cannot introduce a dictionary edge that the captured focus did not have. |
 | `product_child_components` | `temporal_automata/theories/LazyProductOperations.v` | Every constructed product child consists of a dictionary descent and live query transition on the same label. |
@@ -57,6 +61,86 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `admitted_final_is_within_cutoff` | `temporal_automata/theories/LazyProductOperations.v` | A finite exact finalizer score becomes a public range result only when it is no greater than the configured cutoff. |
 | `over_cutoff_final_is_rejected` | `temporal_automata/theories/LazyProductOperations.v` | Closing trailing query-only operations cannot leak a finite over-cutoff score into public results. |
 | `completed_schedule_permutation_preserves_membership` | `temporal_automata/theories/LazyProductOperations.v` | Completed unordered schedulers may reorder work without changing result membership. |
+
+### Sparse timestamped-TWED product
+
+| Theorem | Location | Description |
+|---|---|---|
+| `same_typed_label_reflects_every_component` | `twed/theories/Metric/TimestampedProductIndex.v` | Typed token equality includes value bin, time bin, and canonical unit. |
+| `exact_state_equalb_reflects_complete_residual` | `twed/theories/Metric/TimestampedProductIndex.v` | Exact reuse compares previous typed label, every sparse row/cost-bit anchor, and final-cost bits. |
+| `collision_checked_reuse_is_exact` | `twed/theories/Metric/TimestampedProductIndex.v` | A fingerprint bucket can return a reused state only after complete residual equality. |
+| `equal_fingerprint_does_not_authorize_unequal_reuse` | `twed/theories/Metric/TimestampedProductIndex.v` | A fingerprint collision alone cannot authorize reuse. |
+| `omitted_cell_has_exact_subsumption_witness` | `twed/theories/Metric/TimestampedProductIndex.v` | Every omitted row has the exact vertical query-deletion equality witness used by canonicalization. |
+| `enumerated_sparse_positions_are_strictly_ordered` | `twed/theories/Metric/TimestampedProductIndex.v` | Enumerating retained canonical cells produces strictly increasing explicit row positions. |
+| `canonical_sparse_map_reconstructs_dense_exactly` | `twed/theories/Metric/TimestampedProductIndex.v` | Reintroducing exact vertical omissions reconstructs every dense recurrence cell. |
+| `canonical_sparse_residual_is_exact_and_no_larger_than_dense` | `twed/theories/Metric/TimestampedProductIndex.v` | Sparse reconstruction is exact and retains no more explicit positions than the dense column. |
+| `absent_transition_is_recomputed_on_demand` | `twed/theories/Metric/TimestampedProductIndex.v` | An unobserved state/token pair is computed lazily rather than materialized in advance. |
+| `exact_cached_transition_refines_recomputation` | `twed/theories/Metric/TimestampedProductIndex.v` | A cache hit is transparent when it stores the exact complete successor, including a dead successor. |
+| `cursor_page_then_resume_equals_uninterrupted_edges` | `twed/theories/Metric/TimestampedProductIndex.v` | A DFS edge page followed by its cursor suffix equals the immutable uninterrupted edge sequence. |
+| `cursor_advance_preserves_edge_accounting` | `twed/theories/Metric/TimestampedProductIndex.v` | Cursor advance transfers edges from remaining to consumed without loss or duplication. |
+| `zipper_push_preserves_revision_and_arena_reference` | `twed/theories/Metric/TimestampedProductIndex.v` | Descending pushes a child on the same captured revision with an in-bounds compact state ID. |
+| `zipper_pop_preserves_revision_and_arena_references` | `twed/theories/Metric/TimestampedProductIndex.v` | Iterative pop preserves all remaining revision and arena-reference invariants. |
+| `retained_product_memory_is_bounded_by_explicit_ceilings` | `twed/theories/Metric/TimestampedProductIndex.v` | Frames, append-only residuals, sparse positions, and observed cache entries are bounded by their explicit ceilings, not by live depth alone. |
+
+### Complete elastic snapshots
+
+| Theorem | Location | Description |
+|---|---|---|
+| `semantics_require_checksum` | `temporal_automata/theories/ElasticSnapshot.v` | No abstract semantic phase is available before checksum verification. |
+| `acceptance_requires_checksum` | `temporal_automata/theories/ElasticSnapshot.v` | An accepted snapshot necessarily passed checksum verification. |
+| `visible_manifest_names_sealed_generation` | `temporal_automata/theories/ElasticSnapshot.v` | Publish-last ordering prevents a visible manifest from naming an unsealed generation. |
+| `exact_key_bijection_permutation` | `temporal_automata/theories/ElasticSnapshot.v` | Duplicate-free bucket and terminal key sets with equal membership are permutations. |
+| `exact_key_bijection_cardinality` | `temporal_automata/theories/ElasticSnapshot.v` | The exact finite key bijection implies equal bucket and terminal cardinality. |
+| `changed_manifest_invalidates_semantic_identity` | `temporal_automata/theories/ElasticSnapshot.v` | Unequal canonical manifest bytes cannot retain abstract identity equality. |
+
+These theorems form an abstract protocol/finite-set island. Cryptographic
+collision resistance, filesystem behavior, persistent-trie correctness, and
+Rust correspondence remain explicit trust boundaries.
+
+### Replayable exact-range certificates
+
+| Theorem | Location | Description |
+|---|---|---|
+| `binding_eqb_true_iff` | `temporal_automata/theories/RangeCertificates.v` | Boolean binding equality is exact for snapshot, query words, and cutoff. |
+| `replay_binds_exact_query_cutoff_and_snapshot` | `temporal_automata/theories/RangeCertificates.v` | Successful replay is bound to the recomputed query, cutoff, and snapshot identity. |
+| `replay_reproduces_canonical_evidence` | `temporal_automata/theories/RangeCertificates.v` | Successful replay reproduces the complete canonical evidence stream. |
+| `replay_validates_every_k1_through_k4_decision` | `temporal_automata/theories/RangeCertificates.v` | Replay revalidates every K1 through K4 decision rather than trusting recorded bounds. |
+| `replay_survivors_are_exactly_recomputed_survivors` | `temporal_automata/theories/RangeCertificates.v` | Replayed survivor IDs equal exact recomputation. |
+| `any_evidence_mutation_is_rejected` | `temporal_automata/theories/RangeCertificates.v` | Any changed evidence field or order fails replay. |
+| `any_binding_mutation_is_rejected` | `temporal_automata/theories/RangeCertificates.v` | Any changed query/cutoff/snapshot binding fails replay. |
+| `replay_never_exceeds_any_declared_ceiling` | `temporal_automata/theories/RangeCertificates.v` | Accepted replay respects record, path, work, and witness ceilings. |
+| `record_limit_violation_fails_closed` | `temporal_automata/theories/RangeCertificates.v` | Record-limit overflow cannot replay successfully. |
+| `path_limit_violation_fails_closed` | `temporal_automata/theories/RangeCertificates.v` | Path-byte overflow cannot replay successfully. |
+| `work_limit_violation_fails_closed` | `temporal_automata/theories/RangeCertificates.v` | Work-unit overflow cannot replay successfully. |
+| `witness_limit_violation_fails_closed` | `temporal_automata/theories/RangeCertificates.v` | Witness-byte overflow cannot replay successfully. |
+| `equal_inputs_construct_equal_certificates` | `temporal_automata/theories/RangeCertificates.v` | Equal canonical inputs construct structurally equal certificates. |
+| `certificate_is_issued_only_after_exhaustion` | `temporal_automata/theories/RangeCertificates.v` | A complete certificate is issued only in the exhausted phase. |
+| `running_query_cannot_issue_complete_empty` | `temporal_automata/theories/RangeCertificates.v` | A running query cannot issue complete-empty evidence. |
+| `failed_query_cannot_issue_complete_empty` | `temporal_automata/theories/RangeCertificates.v` | A failed query cannot issue complete-empty evidence. |
+
+### Reusable exact-workspace resources and classifications
+
+| Theorem | Location | Description |
+|---|---|---|
+| `plan_first_peak_is_max` | `temporal_automata/theories/ExactWorkspaceResources.v` | Plan-first construction peaks at the larger of plan construction and the retained plan plus frontier. |
+| `accepted_construction_preflight_is_within_limit` | `temporal_automata/theories/ExactWorkspaceResources.v` | Successful exact-boundary preflight implies the construction peak is within the ceiling. |
+| `rejected_construction_preflight_exceeds_limit` | `temporal_automata/theories/ExactWorkspaceResources.v` | Rejected exact-boundary preflight means the declared peak exceeds the ceiling. |
+| `post_construction_peak_reduces_to_plan_or_live_state` | `temporal_automata/theories/ExactWorkspaceResources.v` | The session peak is the larger of plan construction and retained workspace plus later live state. |
+| `accepted_post_construction_state_is_within_limit` | `temporal_automata/theories/ExactWorkspaceResources.v` | Accepted later arena/queue state plus retained workspace remains within the ceiling. |
+| `candidate_reuse_preserves_retained_storage` | `temporal_automata/theories/ExactWorkspaceResources.v` | Reset-and-reuse cannot grow logical workspace retention with candidate count or length. |
+| `structural_impossibility_is_no_finite_alignment` | `temporal_automata/theories/ExactWorkspaceResources.v` | Structural impossibility takes priority over numeric TOP for every cutoff and observation. |
+| `finite_cutoff_top_is_above` | `temporal_automata/theories/ExactWorkspaceResources.v` | TOP is safely outside a finite cutoff. |
+| `top_cutoff_top_fails_closed` | `temporal_automata/theories/ExactWorkspaceResources.v` | TOP under an unbounded cutoff is ambiguous with overflow and fails closed. |
+
+### Approximate MSM evidence boundary
+
+| Theorem | Location | Description |
+|---|---|---|
+| `exhaustive_tag_if_and_only_if_full_reranking` | `temporal_automata/theories/ApproximateMsmEvidence.v` | The strict API constructs exhaustive evidence exactly when candidate and exact-decision coverage both equal index size. |
+| `classified_success_proves_recall_if_and_only_if_full_reranking` | `temporal_automata/theories/ApproximateMsmEvidence.v` | Runtime recall evidence is equivalent to full exact reranking. |
+| `empty_advisory_never_proves_absence` | `temporal_automata/theories/ApproximateMsmEvidence.v` | Empty heuristic advice remains structurally unable to prove absence. |
+| `every_mapped_emission_is_exact` | `temporal_automata/theories/ApproximateMsmEvidence.v` | Every emitted candidate receives its score from the exact verifier authority. |
+| `proper_candidate_pool_has_no_recall_certificate` | `temporal_automata/theories/ApproximateMsmEvidence.v` | Inspecting a proper heuristic subset cannot produce a recall certificate. |
 
 ### Generalized finite-lookback scheduling
 

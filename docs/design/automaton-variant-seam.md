@@ -67,8 +67,8 @@ artificially widen the type and regress those targets.
 | `Normal` | No multi-edge operation is pending. | `aux == 0` |
 | `OsaTransposing` | The first edge of an adjacent OSA swap has been consumed. | `aux == 0` |
 | `Splitting` | The first edge of a split continuation has been consumed. | `aux == 0` |
-| `AffineQueryGap` | Gotoh `$`I_x`$`: a query-consuming gap is open. | `aux == 0`; the next query-gap symbol pays extension only |
-| `AffineDictGap` | Gotoh `$`I_y`$`: a dictionary-consuming gap is open. | `aux == 0`; the next dictionary-gap symbol pays extension only |
+| `AffineQueryGap` | Gotoh $`I_x`$: a query-consuming gap is open. | `aux == 0`; the next query-gap symbol pays extension only |
+| `AffineDictGap` | Gotoh $`I_y`$: a dictionary-consuming gap is open. | `aux == 0`; the next dictionary-gap symbol pays extension only |
 | `DamerauPending` | A true-Damerau macro transition is in flight. | `aux` stores the positive bounded endpoint delta |
 
 The fields are private. `kind()`, `aux()`, and `is_special()` are read-only
@@ -126,7 +126,7 @@ precondition at each built-in leaf.
 
 ### 4.1 Soundness invariants
 
-For a position `$`p`$` and dictionary suffix `$`v`$`, let `$`F(p,v)`$` be the
+For a position $`p`$ and dictionary suffix $`v`$, let $`F(p,v)`$ be the
 minimum additional completion cost, or infinity when completion is impossible.
 Subsumption has the central obligation
 

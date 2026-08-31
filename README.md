@@ -8,7 +8,7 @@
 
 **Approximate matching that scales with the explored match frontier, not dictionary size.** `liblevenshtein`'s defining idea is to traverse an **on-the-fly synchronized product** of two machines: a query automaton, whose compact states retain only viable positions and costs, and a dictionary automaton such as a trie or directed acyclic word graph (DAWG). The *product* is the operational construction—advance both machines on the same label—while *language intersection* names its semantic result when both components are acceptors. The Cartesian product is never materialized: only product states demanded by real dictionary edges are constructed, canonicalized, cached, and pruned by position, cost, and proved subsumption. For Levenshtein distance this accepts exactly the keys within error bound $`k`$ of query $`W`$; exact elastic time-series retrieval uses the same architecture with admissible interval states followed by full-precision verification. Fixed-query online machines likewise retain only their current and next frontiers, so an unknown-length target stream does not make memory grow with the consumed prefix. This lazy product architecture—not a buffered scan against every stored value—is what makes the library distinctive. The general mathematical foundation is documented as [lazy ordered-cost product automata](docs/theory/lazy-ordered-cost-product-automata.md).
 
-On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted/weighted edits, **phonetic** matching (53 built-in languages), **time-series** similarity (Move–Split–Merge), the **WallBreaker** filter for very large error bounds, IDE-style **contextual completion**, composable fuzzy **caches**, and **WFST** adapters for language-model composition (in the companion **duallity** crate). Every dictionary is `Send + Sync` and cheap to share across threads; reads run concurrently and **lock-free** on every backend — static dicts read immutable arrays, dynamic dicts load an `ArcSwap` snapshot, and a reader never blocks on a writer.
+On top of that core it ships a toolbox: Unicode-correct dictionaries, restricted/weighted edits, **phonetic** matching (53 built-in languages), **time-series** similarity (Move–Split–Merge), the **WallBreaker** filter for very large error bounds, IDE-style **contextual completion**, composable fuzzy **caches**, and **WFST** adapters for language-model composition (in the companion **duallity** crate). Every dictionary is `Send + Sync` and cheap to share across threads. Immutable-array and `ArcSwap` backends provide nonblocking reads; reader–writer-lock backends allow concurrent readers but briefly exclude them during a write. The backend capability table below is the normative concurrency contract.
 
 > Based on Schulz & Mihov, *Fast String Correction with Levenshtein-Automata* (2002) [[1]](#references), and the universal construction of Mitankin, Mihov & Schulz (2009) [[2]](#references).
 
@@ -120,15 +120,16 @@ for candidate in transducer.query_with_distance("tset", 2) {
 
 ```toml
 [dependencies]
-liblevenshtein = "0.10"
+liblevenshtein = "=4.0.0-rc.6"
 
 # Phonetic rules, time-series, persistence, etc. are opt-in features:
-# liblevenshtein = { version = "0.9", features = ["phonetic-rules"] }
+# liblevenshtein = { version = "=4.0.0-rc.6", features = ["phonetic-rules"] }
 ```
 
 SIMD (AVX2/SSE4.1) is automatic on `x86_64` via runtime CPU detection — no feature flag. Dictionary backends live in the companion crate **`libdictenstein`** and are re-exported through `liblevenshtein::prelude` (byte-level types) or imported directly (`use libdictenstein::double_array_trie::DoubleArrayTrieChar;` for the Unicode variants).
 
-> **crates.io note:** the optional `pathmap-backend` uses a git dependency and is unavailable from a plain `crates.io` install; build from source with `--features pathmap-backend` to use it.
+The optional `pathmap-backend` uses the reviewed crates.io PathMap release range,
+so it is available from both registry packages and source checkouts.
 
 ---
 
@@ -173,8 +174,8 @@ Built for concurrent workloads from the ground up. **All dictionary types are `S
 
 | Operation | Semantics |
 |-----------|-----------|
-| **Query / Contains** | Concurrent and **lock-free** on every backend — static dicts read immutable arrays, dynamic dicts load an `ArcSwap` snapshot; a reader never blocks on a writer |
-| **Insert / Remove** (dynamic dicts) | **Lock-free**: writers publish new state by an atomic pointer swap / `compare_exchange` CAS, never excluding readers |
+| **Query / Contains** | Concurrent on every backend. Immutable-array and `ArcSwap` backends do not block; reader–writer-lock backends admit concurrent readers and briefly exclude them during a write |
+| **Insert / Remove** (dynamic dicts) | Backend-specific: snapshot/CAS backends publish atomically without excluding readers; reader–writer-lock backends serialize mutation and briefly exclude readers |
 
 ```rust
 use std::thread;
@@ -520,6 +521,14 @@ obligations ensure that no true neighbor is pruned and every reported distance
 is recomputed at full precision. See the
 [design contract](docs/design/elastic-kernels.md) and
 [literate algorithm](docs/algorithms/12-elastic-measures/README.md):
+
+`ApproxMsmIndex` is a separate advisory accelerator: PAA selects a bounded
+candidate pool and exact MSM scores only that pool. Its strict bounded API tags
+full-index exact reranking as `Exhaustive`, a proper heuristic pool as
+`Advisory`, and resource or numeric failure as `Incomplete`. Thus every emitted
+distance is exact, but only `Exhaustive` proves recall or absence; in particular,
+an empty advisory vector proves nothing about omitted entries. See the
+[bounded approximate-MSM evidence contract](docs/design/approximate-msm-evidence.md).
 
 ```rust
 use liblevenshtein::time_series::{MsmConfig, MsmTransducer, QuantizationConfig};

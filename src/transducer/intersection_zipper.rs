@@ -1,7 +1,10 @@
-//! Zipper for the intersection of dictionary and automaton traversal.
+//! Zipper for the synchronized product of dictionary and automaton traversal.
 //!
-//! This module provides a zipper that composes dictionary navigation with
-//! automaton state tracking, enabling efficient fuzzy string matching.
+//! The public type retains its historical `IntersectionZipper` name, but the
+//! construction is a product: each reachable state pairs one dictionary
+//! cursor with one automaton state, and an edge is retained only when both
+//! components can consume the same label. Its accepted language is therefore
+//! the intersection of the component languages.
 
 use crate::transducer::{AutomatonZipper, StatePool};
 use libdictenstein::zipper::DictZipper;
@@ -12,6 +15,25 @@ struct ZipperPathNode {
     label: u8,
     depth: usize,
     parent: Option<Arc<ZipperPathNode>>,
+}
+
+impl Drop for ZipperPathNode {
+    fn drop(&mut self) {
+        // An ordinary recursive `Arc` chain drops through native-stack frames
+        // when its final owner is released. Detach the uniquely owned suffix
+        // iteratively. A shared suffix is left for its final owner, whose own
+        // `Drop` invocation performs the same bounded-stack loop.
+        let mut parent = self.parent.take();
+        while let Some(node) = parent {
+            match Arc::try_unwrap(node) {
+                Ok(mut node) => parent = node.parent.take(),
+                Err(shared) => {
+                    drop(shared);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 impl ZipperPathNode {
@@ -41,12 +63,13 @@ impl ZipperPathNode {
     }
 }
 
-/// Zipper for traversing the intersection of dictionary and Levenshtein automaton.
+/// Zipper for traversing the synchronized dictionary–Levenshtein product.
 ///
 /// An `IntersectionZipper` combines a dictionary zipper (tracking position in the
 /// dictionary graph) with an automaton zipper (tracking Levenshtein state). This
 /// composition enables efficient fuzzy string matching by simultaneously navigating
-/// both structures.
+/// both structures. “Intersection” names the language recognized by the product;
+/// “product” names the state-space construction itself.
 ///
 /// # Type Parameters
 ///
@@ -529,6 +552,34 @@ mod path_node_tests {
         let node = ZipperPathNode::new(b'b', Some(parent));
 
         assert_eq!(node.depth(), usize::MAX);
+    }
+
+    #[test]
+    fn deep_shared_zipper_path_drop_is_stack_safe() {
+        const DEPTH: usize = 100_000;
+
+        std::thread::Builder::new()
+            .name("zipper-path-deep-drop".into())
+            .stack_size(64 * 1024)
+            .spawn(|| {
+                let mut path = None;
+                for _ in 0..DEPTH {
+                    path = Some(Arc::new(ZipperPathNode::new(b'x', path.take())));
+                }
+                assert_eq!(path.as_deref().map(ZipperPathNode::depth), Some(DEPTH));
+                let shared = path.take().expect("the path is non-empty");
+                let left = Arc::new(ZipperPathNode::new(b'l', Some(shared.clone())));
+                let right = Arc::new(ZipperPathNode::new(b'r', Some(shared)));
+
+                // Releasing the first branch stops at the shared suffix. The
+                // second release becomes the final owner and drains the full
+                // suffix iteratively.
+                drop(left);
+                drop(right);
+            })
+            .expect("the constrained-stack worker must start")
+            .join()
+            .expect("iterative path release must not overflow the native stack");
     }
 }
 

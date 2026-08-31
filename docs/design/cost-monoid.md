@@ -99,8 +99,8 @@ For three finite inputs, the executable envelope is:
 ```
 
 The machine-checked Flocq statement keeps the binary64 constants symbolic.
-Let `$`u=u_{\mathrm{ro}}/(1+u_{\mathrm{ro}})`$` be Flocq's
-round-to-nearest relative bound and let `$`\eta=2^{-1075}`$` be half the
+Let $`u=u_{\mathrm{ro}}/(1+u_{\mathrm{ro}})`$ be Flocq's
+round-to-nearest relative bound and let $`\eta=2^{-1075}`$ be half the
 smallest subnormal quantum. For non-negative inputs, it proves:
 
 ```math

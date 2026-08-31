@@ -244,4 +244,29 @@ proof fn strict_timestamp_step_has_positive_elapsed_time(
 {
 }
 
+/// AP/K1 composition rule for an explicit-time interval leaf.  The interval
+/// lemmas above establish the component premises; multiplication by validated
+/// nonnegative stiffness and addition of the gap preserve their order.
+proof fn physical_interval_components_preserve_admissibility(
+    value_lower: int,
+    time_lower: int,
+    value_exact: int,
+    time_exact: int,
+    nu: int,
+    lambda: int,
+)
+    requires
+        0 <= value_lower,
+        0 <= time_lower,
+        value_lower <= value_exact,
+        time_lower <= time_exact,
+        0 <= nu,
+        0 <= lambda,
+    ensures
+        value_lower + nu * time_lower + lambda
+            <= value_exact + nu * time_exact + lambda,
+{
+    lemma_mul_inequality(time_lower, time_exact, nu);
+}
+
 }

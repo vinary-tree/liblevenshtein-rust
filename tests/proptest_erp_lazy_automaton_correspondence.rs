@@ -183,7 +183,8 @@ fn an_unstarted_page_is_incomplete_not_complete_empty() {
                 },
             ..
         } => {
-            assert_eq!(partial, Some(Vec::new()));
+            assert_eq!(partial, None);
+            assert!(continuation.exact_partial().is_empty());
             assert_eq!(continuation.retained_counts().0, 1);
         }
         other => panic!("zero-work page must pause with a continuation: {other:?}"),

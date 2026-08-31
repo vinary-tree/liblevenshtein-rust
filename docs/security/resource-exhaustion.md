@@ -33,7 +33,7 @@ potentially attacker-controlled.
 | bracket kinds $`b`$ and depth $`h`$ | $`N(b,h)=(b^{h+1}-1)/(b-1)`$ states for $`b>1`$ | reject above 4,096 states | enforced before allocation |
 | true Damerau budget $`k`$ | up to $`\mathcal{O}(k^2)`$ pending positions per state | hard representability ceiling 255; recommend 1–3; measured `SmallVec` spill | enforced and measured |
 | unbanded dynamic time warping | lower bound can remain zero, causing a full dictionary scan | require a Sakoe–Chiba band | enforced by the public constructor's type shape |
-| TWED length and carry-aware columns | `$`\mathcal{O}(mn)`$` exact work; broad bins or `$`\lambda=0`$` weaken pruning | cap both lengths, visited work, and candidate evaluations independently of pruning | implemented semantics; deployment policy required |
+| TWED length and carry-aware columns | $`\mathcal{O}(mn)`$ exact work; broad bins or $`\lambda=0`$ weaken pruning | cap both lengths, visited work, and candidate evaluations independently of pruning | implemented semantics; deployment policy required |
 | scaled affine costs | multiplication and accumulated-cost overflow; zero extension widens the transition window | exact fallible scaling, checked arithmetic, budget-derived windows, service-level length/budget caps | enforced; deployment caps remain caller policy |
 | NaN or infinite series values | expressions such as $`+\infty+(-\infty)`$ become NaN | explicit `is_finite` guards and fuzz cases | retained in MSM; required for every elastic kernel |
 
@@ -91,10 +91,10 @@ stores delta in one byte, so `Algorithm::MAX_DAMERAU_DISTANCE` is 255. Every
 public unit-transition, state, pooled-state, and initial-state entry point
 checks this contract before traversal. A larger budget panics instead of
 silently dropping unrepresentable macro transitions. Because reachable state
-size is still `$`\mathcal{O}(k^2)`$`, deployments should impose a much smaller
+size is still $`\mathcal{O}(k^2)`$, deployments should impose a much smaller
 fallible request limit; the measured spell-correction range is 1–3.
 
-At `$`k=1,2,3`$`, the preregistered maximum reachable state sizes were 2, 4,
+At $`k=1,2,3`$, the preregistered maximum reachable state sizes were 2, 4,
 and 7. One-position successor buffers held 2, 3, and 4 values respectively and
 did not spill their inline `SmallVec<[Position; 4]>`. This evidence justifies
 the current inline capacity only over that measured range; it is not a promise
@@ -154,15 +154,15 @@ arithmetic. Overflow makes a route unreachable or returns `ScaleError`; it
 never wraps into a low-cost route.
 
 The characteristic-vector width is derived from affordable **operations**, not
-from the scaled integer budget. For current scaled cost `$`c`$`, maximum cost
-`$`k`$`, and positive extension cost `$`g_e`$`, the kernel inspects at most:
+from the scaled integer budget. For current scaled cost $`c`$, maximum cost
+$`k`$, and positive extension cost $`g_e`$, the kernel inspects at most:
 
 ```math
 W(c)=\left\lfloor\frac{k-c}{g_e}\right\rfloor+1
 ```
 
 query units, capped by the remaining query length. This prevents decimal scale
-from multiplying per-edge work. When `$`g_e=0`$`, an arbitrarily long gap is
+from multiplying per-edge work. When $`g_e=0`$, an arbitrarily long gap is
 affordable, so correctness requires the full remaining-query window. Services
 that accept caller-selected costs must cap query length, dictionary depth,
 exact scaled budget, and wall-clock work independently; a zero extension cost
@@ -176,11 +176,24 @@ $`+\infty+(-\infty)`$ meaningful. Interval lower-bound code must keep its
 finite-cell guards even when a generic cost abstraction is introduced.
 
 `ElasticTransducer` work is proportional to visited trie edges times the
-kernel's live DP width. A loose bound or `$`+\infty`$` cutoff can intentionally visit the
+kernel's live DP width. A loose bound or $`+\infty`$ cutoff can intentionally visit the
 whole trie, so deployments must cap indexed-series length, query length, result
-count, and wall-clock work at the service boundary. The current range walk is
-recursive with depth equal to target-series length; untrusted ingestion must
-therefore impose a stack-safe length ceiling.
+count, and wall-clock work at the service boundary. Both convenience and strict
+range walks use explicit iterative DFS frames; dictionary depth therefore
+consumes heap state rather than process stack. The strict surface also caps
+frames, interned states, cached transitions, results, and continuation bytes,
+and can resume without reconstructing an unbounded prefix.
+
+Paused range outcomes do not duplicate their accumulated result vector.
+Callers inspect the continuation's borrowed `exact_partial()` subset and must
+not treat it as absence evidence. Completion charges one
+$`2n\operatorname{sizeof}(\mathtt{usize})`$ permutation together with live
+workspace scratch before allocation and applies it in place. Generic bounded
+kNN similarly charges its fallible output conversion. Timestamped TWED uses
+its eventual public output vector as the max heap, so its final sort is
+allocation-free. These guarantees cover allocations controlled by the
+library; an opaque generic `V: Clone` implementation remains a caller trust
+boundary because Rust has no standard fallible-clone contract.
 
 Kernel authors must satisfy K1–K4 as specified in the
 [elastic-kernel design](../design/elastic-kernels.md). A heuristic mislabeled as
@@ -198,7 +211,7 @@ Dynamic time warping requires an explicit band in `DtwConfig::new(band)`.
 Without a band, a dictionary interval column can maintain a zero lower bound
 through arbitrary stutters, converting an indexed walk into an
 attacker-controlled full scan. A supplied band is still untrusted: when
-`$`w\ge\max(m,n)`$`, live work approaches `$`\mathcal{O}(mn)`$`. Cap `$`w`$`
+$`w\ge\max(m,n)`$, live work approaches $`\mathcal{O}(mn)`$. Cap $`w`$
 independently of the sequence lengths and reject endpoint length gaps wider
 than the configured policy before search.
 
@@ -218,29 +231,29 @@ pruning, not merely a performance caveat.
 ERP accepts empty sequences and samples equal to its gap value. Those cases can
 have zero distance despite different raw lengths, so services must not use a
 length-difference guard as an ERP security or pruning bound. Exact ERP takes
-`$`\mathcal{O}(mn)`$` time; its row cutoff is opportunistic, not a guaranteed
+$`\mathcal{O}(mn)`$ time; its row cutoff is opportunistic, not a guaranteed
 work limit. Cap both sequence lengths before constructing the DP, and reject
 non-finite samples rather than relying on the deterministic scan fallback.
 
-TWED also has `$`\mathcal{O}(mn)`$` worst-case exact time and
-`$`\mathcal{O}(\min(m,n))`$` DP memory. Its interval recurrence must carry the
+TWED also has $`\mathcal{O}(mn)`$ worst-case exact time and
+$`\mathcal{O}(\min(m,n))`$ DP memory. Its interval recurrence must carry the
 previous target bin, but that fixed-size carry is not a work cap. Broad bins can
-weaken the two-sample leaf minima, and `$`\lambda=0`$` reduces the length bound
+weaken the two-sample leaf minima, and $`\lambda=0`$ reduces the length bound
 to zero. Cap query length, indexed-series length, visited edges, exact candidate
 evaluations, and wall time independently of observed pruning. Empty/nonempty
 distance is finite, so a final trie root remains a legitimate exact candidate.
 Reject non-finite samples at the service boundary.
 
 `MetricTwedConfig` validates algebraic premises, not resource limits. Its
-strict `$`\nu>0`$` guarantee makes metric-dependent use sound but does not make
+strict $`\nu>0`$ guarantee makes metric-dependent use sound but does not make
 the quadratic recurrence subquadratic. Conversely, raw `TwedConfig` at
-`$`\nu=0`$` is valid for exact trie search but must never cross a
+$`\nu=0`$ is valid for exact trie search but must never cross a
 triangle-dependent index boundary.
 
-Discrete Fréchet also takes `$`\mathcal{O}(mn)`$` worst-case exact time and
-`$`\mathcal{O}(\min(m,n))`$` DP memory. Its candidate cascade copies and sorts
-one side for a one-sided Hausdorff bound, adding `$`\mathcal{O}(n)`$` temporary
-memory and `$`\mathcal{O}(n\log n)`$` preprocessing per exact candidate check.
+Discrete Fréchet also takes $`\mathcal{O}(mn)`$ worst-case exact time and
+$`\mathcal{O}(\min(m,n))`$ DP memory. Its candidate cascade copies and sorts
+one side for a one-sided Hausdorff bound, adding $`\mathcal{O}(n)`$ temporary
+memory and $`\mathcal{O}(n\log n)`$ preprocessing per exact candidate check.
 Broad quantization bins or a permissive cutoff can keep interval columns below
 threshold and visit the entire trie. Cap sequence lengths, result count,
 visited-edge work, and wall time; do not treat successful pruning on typical
@@ -286,7 +299,7 @@ the returned decompressor observation and cover only the crate-owned adapter.
   counters do not cap work. Reject or cancel requests using independent policy
   limits, then use `accounting_is_consistent` to detect incomplete telemetry.
 - For banded DTW, record prefix prunes and columns built separately so a cheap
-  first gate cannot conceal an unexpectedly broad `$`\mathcal{O}(w)`$` stage.
+  first gate cannot conceal an unexpectedly broad $`\mathcal{O}(w)`$ stage.
 
 ## 7. Verification and tests
 
@@ -298,8 +311,8 @@ appears in deterministic tests or a formal model:
 | Fuzz target | Deterministic trip test | Formal or mathematical invariant |
 |---|---|---|
 | `regex_nfa_resource` | `query_regex_rejects_automata_above_the_resource_ceiling` covers a 2,050-scalar literal and `a{1000000}` | saturating preflight and the 4,096-state postcondition; language-product frontier and bit-shift obligations are checked by Rocq, Verus, Z3, and cvc5 |
-| `bracket_state_growth` | `exponential_guard_precedes_allocation` checks `$`N(3,10)=88{,}573>4{,}096`$ and the diagnostic | `bracket_state_count_is_depth_monotone`, the exact witness, and the policy rejection are proved in Rocq and mirrored in Dafny and Verus |
-| `true_damerau_budget` | `damerau_budget_ceiling_rejects_incomplete_semantics` trips at 256 while the adjacent test accepts 255 | Rocq proves the one-byte positive-delta representation and `$`k^2`$` frontier envelope; Verus, TLA+, Z3, and cvc5 check the executable refinements |
+| `bracket_state_growth` | `exponential_guard_precedes_allocation` checks $`N(3,10)=88{,}573>4{,}096`$ and the diagnostic | `bracket_state_count_is_depth_monotone`, the exact witness, and the policy rejection are proved in Rocq and mirrored in Dafny and Verus |
+| `true_damerau_budget` | `damerau_budget_ceiling_rejects_incomplete_semantics` trips at 256 while the adjacent test accepts 255 | Rocq proves the one-byte positive-delta representation and $`k^2`$ frontier envelope; Verus, TLA+, Z3, and cvc5 check the executable refinements |
 | `banded_dtw` | the `DtwConfig::default()` compile-fail test proves that callers cannot omit the band | Rocq, Verus, Z3, and cvc5 prove band reachability, recurrence symmetry, admissible bounds, and non-negativity |
 | `cost_scale_overflow` | `rejects_inexact_nonfinite_negative_and_overflowing_values` forces conversion and rescaling overflow | Rocq, Verus, Z3, and cvc5 check guarded scale multiplication and monotonic non-wrapping accumulation |
 | `msm_nonfinite` | `invalid_numeric_inputs_fail_closed_without_nan_cells` forces NaN, both infinities, reversed intervals, invalid constants, and malformed predecessor cells | Rocq proves the interval move, merge, and split minima over explicit finite and infinite endpoints; Rust guards connect IEEE-754 invalid values to the model's valid domain |

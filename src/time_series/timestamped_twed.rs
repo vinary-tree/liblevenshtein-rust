@@ -69,12 +69,87 @@ pub enum TimestampedTwedError {
     /// The metric configuration had a negative or nonfinite gap penalty.
     #[error("timestamped TWED gap penalty must be finite and nonnegative")]
     InvalidGapPenalty,
+    /// A closed scalar-value interval contained NaN or reversed endpoints.
+    #[error("timestamped TWED value interval contains NaN or is reversed")]
+    InvalidValueInterval,
+    /// A closed physical-time interval had a nonfinite or reversed endpoint.
+    #[error("timestamped TWED time interval is nonfinite or reversed")]
+    InvalidTimestampInterval,
     /// Scalar values failed the shared bounded validation contract.
     #[error(transparent)]
     InvalidSeries(#[from] TemporalValidationError),
     /// A bounded online machine could not construct its fixed state.
     #[error("timestamped TWED online resource construction failed: {0:?}")]
     Resource(IncompleteReason),
+}
+
+/// One abstract scalar/time label for a timestamped-TWED dictionary product.
+///
+/// The two closed intervals denote every concrete point represented by one
+/// quantization label. Correlation between value and time is intentionally
+/// forgotten; this can weaken a lower bound but cannot make it inadmissible.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TimestampedScalarBox {
+    value: (f64, f64),
+    time: (f64, f64),
+    unit: TimestampUnit,
+}
+
+impl TimestampedScalarBox {
+    /// Validate a NaN-free ordered value interval and a finite ordered
+    /// physical-time interval. Value endpoints may be infinite so the extreme
+    /// bins of a clamping quantizer remain admissible; timestamps may not.
+    pub fn try_new(
+        value: (f64, f64),
+        time: (f64, f64),
+        unit: TimestampUnit,
+    ) -> Result<Self, TimestampedTwedError> {
+        if !valid_value_interval(value) {
+            return Err(TimestampedTwedError::InvalidValueInterval);
+        }
+        if !valid_time_interval(time) {
+            return Err(TimestampedTwedError::InvalidTimestampInterval);
+        }
+        Ok(Self { value, time, unit })
+    }
+
+    /// Construct the exact singleton abstraction of one concrete point.
+    pub fn point(
+        value: f64,
+        timestamp: f64,
+        unit: TimestampUnit,
+    ) -> Result<Self, TimestampedTwedError> {
+        Self::try_new((value, value), (timestamp, timestamp), unit)
+    }
+
+    /// Return the closed scalar-value interval.
+    #[inline]
+    pub fn value_interval(self) -> (f64, f64) {
+        self.value
+    }
+
+    /// Return the closed physical-time interval.
+    #[inline]
+    pub fn time_interval(self) -> (f64, f64) {
+        self.time
+    }
+
+    /// Return the canonical physical-time unit.
+    #[inline]
+    pub fn timestamp_unit(self) -> TimestampUnit {
+        self.unit
+    }
+
+    /// Whether this label is a precision refinement of `coarse`.
+    pub fn refines(self, coarse: Self) -> Result<bool, TimestampedTwedError> {
+        if self.unit != coarse.unit {
+            return Err(TimestampedTwedError::MixedUnits);
+        }
+        Ok(
+            interval_contains(coarse.value, self.value)
+                && interval_contains(coarse.time, self.time),
+        )
+    }
 }
 
 /// Validated, nonempty scalar samples paired with physical timestamps.
@@ -114,7 +189,7 @@ impl TimestampedSeries {
         if values.is_empty() {
             return Err(TimestampedTwedError::EmptySeries);
         }
-        let ledger = ResourceLedger::new(limits);
+        let mut ledger = ResourceLedger::new(limits);
         ledger.validate_finite_series(Operand::Query, values)?;
         if !origin.is_finite() {
             return Err(TimestampedTwedError::NonFiniteTimestamp { index: None });
@@ -135,9 +210,39 @@ impl TimestampedSeries {
         {
             return Err(TimestampedTwedError::NonMonotoneTimestamp { index });
         }
+        let retained_bytes = values
+            .len()
+            .checked_mul(2)
+            .and_then(|slots| slots.checked_mul(std::mem::size_of::<f64>()))
+            .ok_or(TimestampedTwedError::Resource(
+                IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::ScratchBytes,
+                },
+            ))?;
+        ledger
+            .observe_peak(ResourceKind::ScratchBytes, retained_bytes)
+            .map_err(TimestampedTwedError::Resource)?;
+        let mut value_storage = Vec::new();
+        value_storage.try_reserve_exact(values.len()).map_err(|_| {
+            TimestampedTwedError::Resource(IncompleteReason::AllocationFailed {
+                resource: ResourceKind::ScratchBytes,
+                requested: retained_bytes,
+            })
+        })?;
+        let mut timestamp_storage = Vec::new();
+        timestamp_storage
+            .try_reserve_exact(timestamps.len())
+            .map_err(|_| {
+                TimestampedTwedError::Resource(IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::ScratchBytes,
+                    requested: retained_bytes,
+                })
+            })?;
+        value_storage.extend_from_slice(values);
+        timestamp_storage.extend_from_slice(timestamps);
         Ok(Self {
-            values: values.into(),
-            timestamps: timestamps.into(),
+            values: value_storage.into_boxed_slice(),
+            timestamps: timestamp_storage.into_boxed_slice(),
             unit,
             origin,
         })
@@ -199,6 +304,73 @@ impl MetricTimestampedTwedConfig {
         self.lambda
     }
 
+    /// Admissible local deletion cost for two consecutive abstract candidate
+    /// labels. Singleton boxes reproduce the exact TWED deletion term.
+    pub fn interval_delete_lower_bound(
+        &self,
+        current: TimestampedScalarBox,
+        previous: TimestampedScalarBox,
+    ) -> Result<f64, TimestampedTwedError> {
+        if current.unit != previous.unit {
+            return Err(TimestampedTwedError::MixedUnits);
+        }
+        let value = interval_gap(current.value, previous.value);
+        let elapsed = interval_gap(current.time, previous.time);
+        Ok(WeightedCost::combine(
+            WeightedCost::combine(value, self.nu * elapsed),
+            self.lambda,
+        ))
+    }
+
+    /// Admissible local match cost between two exact query points and two
+    /// consecutive abstract candidate labels.
+    ///
+    /// This is the K1 abstraction used by a lazy dictionary product. It is
+    /// deliberately correlation-blind, so refinement can only increase the
+    /// bound and singleton labels reproduce the concrete recurrence exactly.
+    #[allow(clippy::too_many_arguments)]
+    pub fn interval_match_lower_bound(
+        &self,
+        query_current_value: f64,
+        query_previous_value: f64,
+        query_current_time: f64,
+        query_previous_time: f64,
+        query_unit: TimestampUnit,
+        candidate_current: TimestampedScalarBox,
+        candidate_previous: TimestampedScalarBox,
+    ) -> Result<f64, TimestampedTwedError> {
+        if candidate_current.unit != candidate_previous.unit || candidate_current.unit != query_unit
+        {
+            return Err(TimestampedTwedError::MixedUnits);
+        }
+        for (index, value) in [query_current_value, query_previous_value]
+            .into_iter()
+            .enumerate()
+        {
+            if !value.is_finite() {
+                return Err(TemporalValidationError::NonFiniteSample {
+                    operand: Operand::Query,
+                    index,
+                }
+                .into());
+            }
+        }
+        if !query_current_time.is_finite() || !query_previous_time.is_finite() {
+            return Err(TimestampedTwedError::NonFiniteTimestamp { index: None });
+        }
+        if query_current_time <= query_previous_time {
+            return Err(TimestampedTwedError::NonMonotoneTimestamp { index: 1 });
+        }
+        let value = WeightedCost::combine(
+            point_interval_distance(query_current_value, candidate_current.value),
+            point_interval_distance(query_previous_value, candidate_previous.value),
+        );
+        let time = self.nu
+            * (point_interval_distance(query_current_time, candidate_current.time)
+                + point_interval_distance(query_previous_time, candidate_previous.time));
+        Ok(WeightedCost::combine(value, time))
+    }
+
     /// Compute an exact fail-closed cutoff decision with deterministic limits.
     pub fn distance_bounded(
         &self,
@@ -256,7 +428,10 @@ impl MetricTimestampedTwedConfig {
             return Ok(incomplete(ledger, reason));
         }
 
-        let exact = timestamped_distance_with_cutoff(self, left, right, cutoff);
+        let exact = match timestamped_distance_with_cutoff(self, left, right, cutoff) {
+            Ok(exact) => exact,
+            Err(reason) => return Ok(incomplete(ledger, reason)),
+        };
         let usage = ledger.usage();
         Ok(match exact {
             Some(distance) if distance.is_finite() => OperationOutcome::Complete {
@@ -280,6 +455,43 @@ impl MetricTimestampedTwedConfig {
     }
 }
 
+#[inline]
+fn valid_value_interval(interval: (f64, f64)) -> bool {
+    !interval.0.is_nan() && !interval.1.is_nan() && interval.0 <= interval.1
+}
+
+#[inline]
+fn valid_time_interval(interval: (f64, f64)) -> bool {
+    interval.0.is_finite() && interval.1.is_finite() && interval.0 <= interval.1
+}
+
+#[inline]
+fn interval_contains(outer: (f64, f64), inner: (f64, f64)) -> bool {
+    outer.0 <= inner.0 && inner.1 <= outer.1
+}
+
+#[inline]
+fn point_interval_distance(point: f64, interval: (f64, f64)) -> f64 {
+    if point < interval.0 {
+        interval.0 - point
+    } else if point > interval.1 {
+        point - interval.1
+    } else {
+        0.0
+    }
+}
+
+#[inline]
+fn interval_gap(left: (f64, f64), right: (f64, f64)) -> f64 {
+    if left.1 < right.0 {
+        right.0 - left.1
+    } else if right.1 < left.0 {
+        left.0 - right.1
+    } else {
+        0.0
+    }
+}
+
 fn incomplete(ledger: ResourceLedger, reason: IncompleteReason) -> OperationOutcome<ExactDecision> {
     OperationOutcome::Incomplete {
         partial: None,
@@ -294,15 +506,45 @@ fn timestamped_distance_with_cutoff(
     left: &TimestampedSeries,
     right: &TimestampedSeries,
     cutoff: f64,
-) -> Option<f64> {
-    // Symmetry permits allocating on the shorter axis.
-    if right.values.len() > left.values.len() {
-        return timestamped_distance_with_cutoff(config, right, left, cutoff);
-    }
+) -> Result<Option<f64>, IncompleteReason> {
+    // Symmetry permits allocating on the shorter axis without recursive
+    // argument swapping, preserving the iterative stack-safety contract.
+    let (left, right) = if right.values.len() > left.values.len() {
+        (right, left)
+    } else {
+        (left, right)
+    };
 
-    let row_len = right.values.len().checked_add(1)?;
-    let mut previous = vec![WeightedCost::TOP; row_len];
-    let mut current = vec![WeightedCost::TOP; row_len];
+    let row_len =
+        right
+            .values
+            .len()
+            .checked_add(1)
+            .ok_or(IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::DpCells,
+            })?;
+    let requested = row_len
+        .checked_mul(2)
+        .and_then(|slots| slots.checked_mul(std::mem::size_of::<f64>()))
+        .ok_or(IncompleteReason::ArithmeticOverflow {
+            resource: ResourceKind::ScratchBytes,
+        })?;
+    let mut previous = Vec::new();
+    previous
+        .try_reserve_exact(row_len)
+        .map_err(|_| IncompleteReason::AllocationFailed {
+            resource: ResourceKind::ScratchBytes,
+            requested,
+        })?;
+    previous.resize(row_len, WeightedCost::TOP);
+    let mut current = Vec::new();
+    current
+        .try_reserve_exact(row_len)
+        .map_err(|_| IncompleteReason::AllocationFailed {
+            resource: ResourceKind::ScratchBytes,
+            requested,
+        })?;
+    current.resize(row_len, WeightedCost::TOP);
     previous[0] = WeightedCost::ZERO;
 
     let mut previous_value = 0.0;
@@ -369,7 +611,7 @@ fn timestamped_distance_with_cutoff(
             right_previous_time = right_time;
         }
         if !WeightedCost::within(row_min, cutoff) {
-            return None;
+            return Ok(None);
         }
         std::mem::swap(&mut previous, &mut current);
         left_previous_value = left_value;
@@ -377,7 +619,7 @@ fn timestamped_distance_with_cutoff(
     }
 
     let exact = previous[right.values.len()];
-    WeightedCost::within(exact, cutoff).then_some(exact)
+    Ok(WeightedCost::within(exact, cutoff).then_some(exact))
 }
 
 #[inline]
@@ -497,5 +739,55 @@ mod tests {
             config.distance_bounded(&seconds, &millis, 1.0, limits),
             Err(TimestampedTwedError::MixedUnits)
         );
+    }
+
+    #[test]
+    fn retained_and_rolling_storage_obey_the_scratch_ceiling() {
+        let construction_limits = ResourceLimits {
+            max_scratch_bytes: 31,
+            ..ResourceLimits::default()
+        };
+        assert!(matches!(
+            TimestampedSeries::try_new(
+                &[1.0, 2.0],
+                &[1.0, 2.0],
+                TimestampUnit::Seconds,
+                construction_limits,
+            ),
+            Err(TimestampedTwedError::Resource(
+                IncompleteReason::BudgetExceeded {
+                    resource: ResourceKind::ScratchBytes,
+                    limit: 31,
+                    requested: 32,
+                }
+            ))
+        ));
+
+        let series = TimestampedSeries::try_new(
+            &[1.0, 2.0],
+            &[1.0, 2.0],
+            TimestampUnit::Seconds,
+            ResourceLimits::default(),
+        )
+        .unwrap();
+        let scoring_limits = ResourceLimits {
+            max_scratch_bytes: 47,
+            ..ResourceLimits::default()
+        };
+        let outcome = MetricTimestampedTwedConfig::try_new(1.0, 0.0)
+            .unwrap()
+            .distance_bounded(&series, &series, f64::INFINITY, scoring_limits)
+            .unwrap();
+        assert!(matches!(
+            outcome,
+            OperationOutcome::Incomplete {
+                reason: IncompleteReason::BudgetExceeded {
+                    resource: ResourceKind::ScratchBytes,
+                    limit: 47,
+                    requested: 48,
+                },
+                ..
+            }
+        ));
     }
 }

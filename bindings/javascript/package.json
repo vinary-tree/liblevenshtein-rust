@@ -1,6 +1,6 @@
 {
   "name": "@vinary-tree/liblevenshtein",
-  "version": "4.0.0-rc.5",
+  "version": "4.0.0-rc.6",
   "description": "Modular liblevenshtein facade over the shared vinary-tree runtime",
   "author": {
     "name": "Dylon Edwards",
@@ -18,8 +18,8 @@
     "node": ">=22.14"
   },
   "dependencies": {
-    "@vinary-tree/vinary-tree-interop": "4.0.0-rc.5",
-    "@vinary-tree/javascript-runtime": "4.0.0-rc.5"
+    "@vinary-tree/vinary-tree-interop": "4.0.0-rc.6",
+    "@vinary-tree/javascript-runtime": "4.0.0-rc.6"
   },
   "devDependencies": {
     "@vinary-tree/libdictenstein": "file:../../../libdictenstein/bindings/javascript"

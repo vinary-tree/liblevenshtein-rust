@@ -29,15 +29,13 @@ readme = "README.md"
 # vinary-tree language bindings. Keep this crate generic and dependency-free so
 # libdictenstein, liblevenshtein, lling-llang, and duallity can exchange live
 # objects without a Rust dynamic-library ABI dependency.
-vinary-tree-interop = { path = "../vinary-tree-interop-regresspec-complete", version = "=4.0.0-rc.6", optional = true }
+vinary-tree-interop = { path = "../vinary-tree-interop", version = "=4.0.0-rc.6", optional = true }
 
 # Dictionary implementations (extracted to libdictenstein crate)
-libdictenstein = { path = "../libdictenstein-regresspec-complete", version = "=4.0.0-rc.6", features = ["parking_lot"] }
+libdictenstein = { path = "../libdictenstein", version = "=4.0.0-rc.6", features = ["parking_lot"] }
 
-# PathMap as an optional dictionary backend
-# NOTE: PathMap uses a git dependency and is NOT available when installing from crates.io
-# To use PathMap, build from source: cargo install --git <repo-url> --features pathmap-backend
-# pathmap = { git = "https://github.com/Adam-Vandervorst/PathMap.git", branch = "master", optional = true }
+# PathMap as an optional dictionary backend. Keep the bounded registry range so
+# crates.io packages and source checkouts resolve the same reviewed release family.
 pathmap = { version = ">=0.2.2, <0.4", optional = true }
 # SmallVec for stack-allocated vectors (performance optimization)
 smallvec = { version = "1.13", features = ["serde"] }
@@ -280,6 +278,10 @@ harness = false
 
 [[bench]]
 name = "elastic_kernel_benchmarks"
+harness = false
+
+[[bench]]
+name = "temporal_campaign_benchmarks"
 harness = false
 
 [[bench]]
