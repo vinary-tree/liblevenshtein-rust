@@ -228,7 +228,7 @@
       "repository": "https://github.com/vinary-tree/liblevenshtein-rust",
       "sourceFileCount": 3862,
       "sourceSnapshotSha256": "fee1598eab0690eed8fe7c991fc679419189b0d92441564e1d792be2733110d9",
-      "subjectCommit": "230ff5323d190aedbd28c839ec004abf357ab2ed"
+      "subjectCommit": "c4c79c2144f1cd2558bc3d84fa9f9a3c7451cd0e"
     },
     {
       "canonicalDirectory": "libdictenstein",
@@ -368,7 +368,7 @@
       "repository": "https://github.com/vinary-tree/libdictenstein",
       "sourceFileCount": 1469,
       "sourceSnapshotSha256": "078f84c5b2d54e30b5e306e5645736af890a165d201e77ae8ca24d8f76c62f9e",
-      "subjectCommit": "7556918c0f32c13a89246331d1ae259581bad823"
+      "subjectCommit": "eba969358aaf6c945d689579960ca59a40f9a8b8"
     },
     {
       "canonicalDirectory": "vinary-tree-interop",
@@ -390,7 +390,7 @@
       "repository": "https://github.com/vinary-tree/vinary-tree-interop",
       "sourceFileCount": 107,
       "sourceSnapshotSha256": "af4ada9815e5888929ad6b0aae32f4cac5faa3119624d2e5e5254f14a6f28927",
-      "subjectCommit": "3804bee22bac9861037b26fd41fd6530a00eff39"
+      "subjectCommit": "d28ce116df6abb5b3484586c0f5030932b742057"
     }
   ],
   "finalCommitAttestationRequired": true,
