@@ -8,7 +8,89 @@ use crate::transducer::dictionary_traversal::{
 #[cfg(any(feature = "bindings-phonetic", feature = "phonetic-rules"))]
 use libdictenstein::MappedDictionaryNode;
 use libdictenstein::{CharUnit, Dictionary, DictionaryNode, DictionaryTraversalRoot};
+use rustc_hash::{FxHashMap, FxHasher};
+use smallvec::SmallVec;
 use std::collections::VecDeque;
+use std::hash::{Hash, Hasher};
+
+/// Compact query-local name for one canonical language-product frontier.
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+struct LanguageFrontierId(usize);
+
+/// Collision-checked state interner and observed-edge cache.
+///
+/// The dictionary queue carries only `LanguageFrontierId`; complete bit-set
+/// frontiers live once in this arena. No subset graph is constructed eagerly.
+struct LanguageFrontierArena<U, S> {
+    frontiers: Vec<Frontier<S>>,
+    by_fingerprint: FxHashMap<u64, SmallVec<[LanguageFrontierId; 1]>>,
+    transitions: FxHashMap<(LanguageFrontierId, U), Option<LanguageFrontierId>>,
+}
+
+impl<U, S> LanguageFrontierArena<U, S>
+where
+    U: Copy + Eq + Hash,
+    S: Eq + Hash,
+{
+    fn new(initial: Frontier<S>) -> Self {
+        let fingerprint = Self::fingerprint(&initial);
+        let mut by_fingerprint = FxHashMap::default();
+        by_fingerprint.insert(fingerprint, SmallVec::from_slice(&[LanguageFrontierId(0)]));
+        Self {
+            frontiers: vec![initial],
+            by_fingerprint,
+            transitions: FxHashMap::default(),
+        }
+    }
+
+    #[inline]
+    fn fingerprint(frontier: &Frontier<S>) -> u64 {
+        let mut hasher = FxHasher::default();
+        frontier.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    fn intern(&mut self, frontier: Frontier<S>) -> LanguageFrontierId {
+        let fingerprint = Self::fingerprint(&frontier);
+        if let Some(states) = self.by_fingerprint.get(&fingerprint) {
+            if let Some(&id) = states.iter().find(|&&id| self.frontiers[id.0] == frontier) {
+                return id;
+            }
+        }
+
+        // The fingerprint narrows the lookup only; exact frontier equality is
+        // required before reusing an ID.
+        let id = LanguageFrontierId(self.frontiers.len());
+        self.frontiers.push(frontier);
+        self.by_fingerprint.entry(fingerprint).or_default().push(id);
+        id
+    }
+
+    #[inline]
+    fn step<L>(
+        &mut self,
+        product: &LanguageProduct<U, L>,
+        source: LanguageFrontierId,
+        unit: U,
+    ) -> Option<LanguageFrontierId>
+    where
+        L: LanguageAutomaton<U, StateSet = S>,
+    {
+        if let Some(target) = self.transitions.get(&(source, unit)) {
+            return *target;
+        }
+        let next = product.step(&self.frontiers[source.0], &unit);
+        let target = (!next.is_empty()).then(|| self.intern(next));
+        self.transitions.insert((source, unit), target);
+        target
+    }
+
+    #[inline(always)]
+    fn frontier(&self, id: LanguageFrontierId) -> &Frontier<S> {
+        &self.frontiers[id.0]
+    }
+}
 
 /// Actual traversal work performed by [`LanguageQueryIterator`].
 ///
@@ -49,8 +131,9 @@ struct PendingLanguageMatch<N: DictionaryNode> {
 
 /// Lazy, iterative dictionary × language-product iterator.
 ///
-/// The queue owns cloned dictionary nodes and bounded frontiers. No recursion is
-/// used, so dictionary depth cannot overflow the process stack.
+/// The queue owns dictionary path traces and one machine-word frontier ID.
+/// Complete canonical frontiers live once in the query-local arena. No
+/// recursion is used, so dictionary depth cannot overflow the process stack.
 pub struct LanguageQueryIterator<N, L>
 where
     N: DictionaryNode,
@@ -75,7 +158,8 @@ where
     K: ResultPathStrategy<N>,
 {
     product: LanguageProduct<N::Unit, L>,
-    pending: VecDeque<PathFrontier<K::Trace, Frontier<L::StateSet>>>,
+    frontiers: LanguageFrontierArena<N::Unit, L::StateSet>,
+    pending: VecDeque<PathFrontier<K::Trace, LanguageFrontierId>>,
     traversal: TraversalSession<N>,
     path_storage: K::Storage,
     stats: LanguageQueryStats,
@@ -156,7 +240,7 @@ where
     }
 
     fn resolve_node(&self, source: DeferredNodeSource<N>) -> N {
-        self.inner.traversal().resolve_node(source)
+        TraversalSession::resolve_node(self.inner.traversal(), source)
     }
 }
 
@@ -220,10 +304,12 @@ where
         product: LanguageProduct<N::Unit, L>,
     ) -> Self {
         let frontier = product.initial_frontier();
+        let frontiers = LanguageFrontierArena::new(frontier);
         let (mut pending, path_storage) = K::cold_queue();
-        pending.push_back(PathFrontier::new(K::root(root), frontier));
+        pending.push_back(PathFrontier::new(K::root(root), LanguageFrontierId(0)));
         Self {
             product,
+            frontiers,
             pending,
             traversal,
             path_storage,
@@ -238,7 +324,8 @@ where
                 self.stats.nodes_visited = self.stats.nodes_visited.saturating_add(1);
             }
             let mut expansion = K::begin_expansion(&entry.trace);
-            let product = &mut self.product;
+            let product = &self.product;
+            let frontiers = &mut self.frontiers;
             let pending = &mut self.pending;
             let path_storage = &mut self.path_storage;
             #[cfg(feature = "perf-instrumentation")]
@@ -250,8 +337,7 @@ where
                     {
                         stats.edges_enumerated = stats.edges_enumerated.saturating_add(1);
                     }
-                    let frontier = product.step(&entry.frontier, &unit);
-                    (!frontier.is_empty()).then_some(frontier)
+                    frontiers.step(product, entry.frontier, unit)
                 },
                 |unit, child_position, frontier| {
                     pending.push_back(PathFrontier::new(
@@ -266,9 +352,10 @@ where
                     ));
                 },
             );
-            let distance = final_source
-                .as_ref()
-                .and_then(|_| self.product.min_accepting_distance(&entry.frontier));
+            let distance = final_source.as_ref().and_then(|_| {
+                self.product
+                    .min_accepting_distance(self.frontiers.frontier(entry.frontier))
+            });
 
             if let Some(distance) = distance {
                 let units = K::materialize_units(&entry.trace, &self.traversal, &self.path_storage);
@@ -370,4 +457,40 @@ where
     N::Unit: CharUnit,
     L: LanguageAutomaton<N::Unit>,
 {
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::transducer::language::SmallDfa;
+
+    #[test]
+    fn language_frontiers_are_interned_once_and_edges_are_constructed_on_demand() {
+        let mut language = SmallDfa::new();
+        let accepting = language.add_state(true).expect("small fixture state");
+        language
+            .add_transition(0, b'a', accepting)
+            .expect("small fixture edge");
+        let product = LanguageProduct::new(language, 1);
+        let mut arena = LanguageFrontierArena::new(product.initial_frontier());
+
+        assert_eq!(arena.frontiers.len(), 1);
+        assert!(arena.transitions.is_empty());
+        let first = arena
+            .step(&product, LanguageFrontierId(0), b'a')
+            .expect("matching product edge remains live");
+        let states_after_first = arena.frontiers.len();
+        assert_eq!(arena.transitions.len(), 1);
+
+        let repeated = arena
+            .step(&product, LanguageFrontierId(0), b'a')
+            .expect("cached matching product edge remains live");
+        assert_eq!(repeated, first);
+        assert_eq!(arena.frontiers.len(), states_after_first);
+        assert_eq!(arena.transitions.len(), 1);
+        assert_eq!(
+            std::mem::size_of::<LanguageFrontierId>(),
+            std::mem::size_of::<usize>()
+        );
+    }
 }

@@ -418,6 +418,16 @@ static void metatable(lua_State* state, const char* name, lua_CFunction close,
     lua_pop(state, 1);
 }
 
+static void string_constant(lua_State* state, const char* name, const char* value) {
+    lua_pushstring(state, value);
+    lua_setfield(state, -2, name);
+}
+
+static void status_constant(lua_State* state, const char* name, LlevStatus value) {
+    lua_pushinteger(state, (lua_Integer)value);
+    lua_setfield(state, -2, name);
+}
+
 int luaopen_vinary_tree_liblevenshtein(lua_State* state) {
     const luaL_Reg transducer_methods[] = {
         {"query", query}, {"query_bytes", query_bytes}, {"query_u64", query_u64},
@@ -444,5 +454,39 @@ int luaopen_vinary_tree_liblevenshtein(lua_State* state) {
         {NULL, NULL}
     };
     luaL_newlib(state, functions);
+
+    lua_createtable(state, 0, 4);
+    string_constant(state, "standard", "standard");
+    string_constant(state, "transposition", "transposition");
+    string_constant(state, "merge_and_split", "merge-and-split");
+    string_constant(state, "damerau_levenshtein", "damerau-levenshtein");
+    lua_setfield(state, -2, "algorithm");
+
+    lua_createtable(state, 0, 2);
+    string_constant(state, "traversal", "traversal");
+    string_constant(state, "distance_then_term", "distance-then-term");
+    lua_setfield(state, -2, "order");
+
+    lua_createtable(state, 0, 2);
+    string_constant(state, "english_orthography", "english-orthography");
+    string_constant(state, "english_phonetic", "english-phonetic");
+    lua_setfield(state, -2, "phonetic_rule_set_kind");
+
+    lua_createtable(state, 0, 13);
+    status_constant(state, "ok", LLEV_STATUS_OK);
+    status_constant(state, "end_of_stream", LLEV_STATUS_END);
+    status_constant(state, "invalid_argument", LLEV_STATUS_INVALID_ARGUMENT);
+    status_constant(state, "invalid_utf8", LLEV_STATUS_INVALID_UTF8);
+    status_constant(state, "null_pointer", LLEV_STATUS_NULL_POINTER);
+    status_constant(state, "panic", LLEV_STATUS_PANIC);
+    status_constant(state, "unsupported", LLEV_STATUS_UNSUPPORTED);
+    status_constant(state, "io_error", LLEV_STATUS_IO_ERROR);
+    status_constant(state, "closed", LLEV_STATUS_CLOSED);
+    status_constant(state, "limit_exceeded", LLEV_STATUS_LIMIT_EXCEEDED);
+    status_constant(state, "provider_error", LLEV_STATUS_PROVIDER_ERROR);
+    status_constant(state, "batch_in_use", LLEV_STATUS_BATCH_IN_USE);
+    status_constant(state, "domain_mismatch", LLEV_STATUS_DOMAIN_MISMATCH);
+    lua_setfield(state, -2, "status");
+
     return 1;
 }

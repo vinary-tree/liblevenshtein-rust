@@ -36,7 +36,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::thai;
 //!
 //! let rules = thai::base();

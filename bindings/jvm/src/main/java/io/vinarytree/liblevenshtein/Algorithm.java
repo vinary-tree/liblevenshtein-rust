@@ -1,6 +1,8 @@
 package io.vinarytree.liblevenshtein;
 
-/** Edit-distance algorithm. */
+/** Edit-distance algorithm.
+ * <p>Generated from bindings/api.json; do not edit numeric values manually.
+ */
 public enum Algorithm {
     /** Standard insert/delete/substitute distance. */
     STANDARD(0),
@@ -12,6 +14,12 @@ public enum Algorithm {
     DAMERAU_LEVENSHTEIN(3);
 
     private final int nativeValue;
-    Algorithm(int nativeValue) { this.nativeValue = nativeValue; }
-    int nativeValue() { return nativeValue; }
+
+    Algorithm(int nativeValue) {
+        this.nativeValue = nativeValue;
+    }
+
+    int nativeValue() {
+        return nativeValue;
+    }
 }

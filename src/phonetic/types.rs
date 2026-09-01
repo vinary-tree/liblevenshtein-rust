@@ -89,7 +89,7 @@ use super::common::syllable::SyllableExpr;
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::types::Phone;
 ///
 /// // Byte-level (ASCII)
@@ -297,7 +297,7 @@ impl<U: PhoneticUnit> std::fmt::Display for Phone<U> {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::types::Context;
 ///
 /// // Byte-level
@@ -436,7 +436,7 @@ impl<U: PhoneticUnit> std::fmt::Display for Context<U> {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::types::{Phone, Context, RewriteRule};
 ///
 /// // Byte-level rule: "gh" -> "f" (anywhere)

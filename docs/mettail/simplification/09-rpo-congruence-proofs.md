@@ -172,9 +172,9 @@ Transitions from `(P | Q) | R` arise from P, Q, or R independently, or from pair
 | $`P \to [\alpha ] P'`$ gives (P' \| Q) \| R | $`P \to [\alpha ] P'`$ gives P' \| (Q \| R) | ✓ |
 | $`Q \to [\alpha ] Q'`$ gives (P \| Q') \| R | $`Q \to [\alpha ] Q'`$ gives P \| (Q' \| R) | ✓ |
 | $`R \to [\alpha ] R'`$ gives (P \| Q) \| R' | $`R \to [\alpha ] R'`$ gives P \| (Q \| R') | ✓ |
-| P,Q sync: τ-transition | P,Q sync: same τ-transition | ✓ |
-| P,R sync: τ-transition | P,R sync: same τ-transition | ✓ |
-| Q,R sync: τ-transition | Q,R sync: same τ-transition | ✓ |
+| P,Q sync: $`\tau`$-transition | P,Q sync: same $`\tau`$-transition | ✓ |
+| P,R sync: $`\tau`$-transition | P,R sync: same $`\tau`$-transition | ✓ |
+| Q,R sync: $`\tau`$-transition | Q,R sync: same $`\tau`$-transition | ✓ |
 
 **Conclusion**: R is a bisimulation, so $`(P | Q) | R \approx  P | (Q | R). \blacksquare`$
 
@@ -214,7 +214,7 @@ R = {(new x.(P | Q), (new x.P) | Q) | x ∉ FV(Q)} ∪ (bisimilarity closure)
 **Constraint**: The free-variable check $`x \notin  \text{FV}(Q)`$ is **essential for soundness**.
 
 **Counterexample without constraint**: If $`x \in  \text{FV}(Q)`$:
-- `new x.(x!v | x?y.R)` can synchronize internally (τ-transition)
+- `new x.(x!v | x?y.R)` can synchronize internally $`(\tau`$-transition)
 - `(new x.x!v) | x?y.R` exposes x in Q, changing behavior
 
 **Conclusion**: With the constraint, R is a bisimulation. $`\blacksquare`$

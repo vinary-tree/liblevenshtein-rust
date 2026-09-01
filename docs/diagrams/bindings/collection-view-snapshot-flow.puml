@@ -1,7 +1,7 @@
 @startuml
-skinparam backgroundColor transparent
+skinparam backgroundColor #FFFFFF
 skinparam shadowing false
-skinparam defaultFontName SansSerif
+skinparam defaultFontName "DejaVu Sans"
 skinparam ArrowColor #415A77
 skinparam rectangleBorderColor #415A77
 skinparam rectangleBackgroundColor #F4F7FA
@@ -9,7 +9,7 @@ skinparam rectangleBackgroundColor #F4F7FA
 title Collection traversal: one revision, two ownership products
 
 rectangle "Live Rust dictionary\n(any applicable automaton)" as live #D9EAD3
-rectangle "O(1) immutable\nsnapshot root / graph" as snap #D9EAD3
+rectangle "<latex>\mathcal{O}(1)</latex> immutable\nsnapshot root / graph" as snap #D9EAD3
 rectangle "Generic monomorphic\nentry traversal" as walk #B6D7A8
 rectangle "Pure Rust\nIterator + fold/visitor" as rust #93C47D
 rectangle "Optional batched ABI\nvt.dict.entry.v1" as abi #FCE5CD
@@ -34,7 +34,7 @@ the native snapshot is already released.
 end note
 
 note bottom of stream
-Large dictionaries avoid O(output) host memory;
+Large dictionaries avoid <latex>\mathcal{O}(\mathrm{output})</latex> host memory;
 try-with-resources / using / context manager.
 end note
 @enduml

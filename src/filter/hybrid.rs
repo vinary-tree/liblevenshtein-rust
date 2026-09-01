@@ -17,7 +17,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::filter::HybridMatcher;
 //!
 //! // Build matcher from dictionary
@@ -81,7 +81,7 @@ impl HybridMatcher {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::filter::HybridMatcher;
     ///
     /// let terms = ["apple", "banana", "cherry"];
@@ -190,7 +190,7 @@ impl HybridMatcher {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::filter::HybridMatcher;
     ///
     /// let matcher = HybridMatcher::new(["apple", "apply", "banana"].iter().map(|s| s.to_string()));

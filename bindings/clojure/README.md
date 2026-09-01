@@ -4,13 +4,13 @@ This is the idiomatic Clojure facade over the Java 22 Foreign Function &
 Memory binding. It is published to Clojars as:
 
 ```clojure
-[io.vinarytree/liblevenshtein-clojure "4.0.0-rc.4"]
+[io.vinarytree/liblevenshtein-clojure "4.0.0-rc.6"]
 ```
 
 Tools.deps users use the same coordinate:
 
 ```clojure
-io.vinarytree/liblevenshtein-clojure {:mvn/version "4.0.0-rc.4"}
+io.vinarytree/liblevenshtein-clojure {:mvn/version "4.0.0-rc.6"}
 ```
 
 The transitive JVM artifact embeds native libraries for Linux x86_64/aarch64,
@@ -61,6 +61,32 @@ integers. `dictionary-snapshot` returns `:keys`, `:entries`,
 `:ordered-entries`, and exact domain/length/identity metadata. The entry cursor
 is one-shot and reducible; reduction closes on EOF, exceptions, and `reduced`.
 
+Compiled LLRE languages and phonetic rewrite rules are also deterministic
+`AutoCloseable` resources:
+
+```clojure
+(with-open [pattern (llev/llre-pattern "@name \"Greeting\"\n^hello$")
+            rules (llev/phonetic-rules :english-orthography)]
+  {:accepted? (.matches pattern "hello")
+   :normalized (llev/rewrite rules "phone")})
+```
+
+The thin facade deliberately preserves the JVM exception type instead of
+discarding its generated status enum. Clojure callers can branch without
+parsing diagnostic prose and can still record a status introduced by a newer
+compatible native ABI:
+
+```clojure
+(import '(io.vinarytree.liblevenshtein NativeException Status))
+
+(try
+  (llev/phonetic-pattern "(")
+  (catch NativeException failure
+    {:invalid-argument? (= Status/INVALID_ARGUMENT (.status failure))
+     :status-code (.statusCode failure)
+     :diagnostic (.getMessage failure)}))
+```
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract
@@ -106,6 +132,21 @@ The idiomatic facade groups the stable surface into these concepts:
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
 
+### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same.
+
 Strings select Unicode traversal; byte arrays and long collections use the corresponding JVM overloads. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
@@ -143,7 +184,7 @@ variants, protocols, or methods.
 
 | Model value | Idiomatic treatment |
 |---|---|
-| `status` | the delegated NativeException carries the numeric status; no Clojure re-exposure |
+| `status` | the delegated NativeException.status returns the generated JVM Status enum and statusCode preserves unknown raw values; the deliberately thin facade does not duplicate them as Clojure keywords |
 
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every
@@ -182,7 +223,7 @@ an API violation even when the next operation happens to reuse the same arena.
 
 ## Errors and failure containment
 
-Native/JVM failures become `ExceptionInfo` with structured status data and the native diagnostic.
+Native failures retain the delegated JVM `NativeException`, generated `Status` enum, exact raw status code, and copied native diagnostic.
 
 Malformed utf-8, unsupported unit domains, incompatible resource versions, closed handles, invalid bounds, allocation failures, provider faults, and contained rust panics are distinct failures. Never parse diagnostic prose to
 branch on an error: inspect the typed status/exception first and treat the

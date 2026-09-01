@@ -1,0 +1,180 @@
+---
+name: Publish versioned package documentation
+
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: liblevenshtein-package-documentation
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build immutable API references
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Require the authoritative immutable source tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_tag="$(
+            python3 -c \
+              'import json;'\
+              'd=json.load(open("release/version.json"));'\
+              'print(d["publication"]["sourceTag"])'
+          )"
+          if [ "$GITHUB_REF" != "refs/tags/$source_tag" ]; then
+            echo "::error::Dispatch against $source_tag, not $GITHUB_REF." >&2
+            exit 1
+          fi
+      - uses: dtolnay/rust-toolchain@1.95
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          source-ref-manifest: release/version.json
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32  # v3.0.2
+        with:
+          version: "1.12"
+      - uses: Raku/setup-raku@b8b1a4ebe85ef112edfc65e9edc8c57735367e3f  # v1
+      # setup-uv v7.6.0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          enable-cache: false
+      # doxygen-install v2
+      - uses: >-
+          ssciwr/doxygen-install@fa3e94d34131d3990b6b8ba939ab982964aa3758
+        with:
+          version: "1.18.0"
+      - name: Install locked documentation generators
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv sync \
+            --project bindings/python \
+            --group documentation \
+            --frozen \
+            --no-install-project
+          npm ci --prefix bindings/javascript --ignore-scripts
+          echo "$GITHUB_WORKSPACE/bindings/python/.venv/bin" >> "$GITHUB_PATH"
+      - name: Build the exact native library
+        run: cargo build --locked --features native-bindings-full
+      - name: Build and verify all generated references
+        env:
+          LIBLEVENSHTEIN_LIBRARY: >-
+            ${{ github.workspace }}/target/debug/libliblevenshtein.so
+        run: python3 scripts/build-package-documentation.py --surface all
+      - name: Create the deterministic version archive
+        run: python3 scripts/package-documentation-site.py build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package-documentation-release
+          path: target/package-documentation-artifacts/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Preserve release archive and deploy Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v7
+        with:
+          name: package-documentation-release
+          path: target/package-documentation-artifacts
+      - name: Preserve the immutable archive as a release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(
+            python3 -c \
+              'import json;'\
+              'd=json.load(open("release/version.json"));'\
+              'print(d["canonical"])'
+          )"
+          archive="target/package-documentation-artifacts/"
+          archive+="liblevenshtein-package-documentation-$version.tar.gz"
+          test -f "$archive"
+          asset="$(basename "$archive")"
+          if gh release view "$GITHUB_REF_NAME" --json assets \
+               --jq '.assets[].name' | grep -Fqx "$asset"; then
+            mkdir -p target/existing-package-documentation
+            gh release download "$GITHUB_REF_NAME" \
+              --pattern "$asset" \
+              --dir target/existing-package-documentation
+            existing="target/existing-package-documentation/$asset"
+            cmp --silent "$archive" "$existing" || {
+              echo "::error::Immutable asset exists with different bytes." >&2
+              exit 1
+            }
+          else
+            gh release upload "$GITHUB_REF_NAME" "$archive"
+          fi
+      - name: Download every immutable version archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/all-package-documentation-archives
+          asset_query='.[] | .assets[] | '
+          asset_query+='select(.name | test("^liblevenshtein-package-'
+          asset_query+='documentation-[0-9]+\\.[0-9]+\\.[0-9]+'
+          asset_query+='(?:-[0-9A-Za-z.-]+)?\\.tar\\.gz$")) | '
+          asset_query+='[.id, .name] | @tsv'
+          gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq "$asset_query" \
+            > target/package-documentation-assets.tsv
+          test -s target/package-documentation-assets.tsv
+          while IFS=$'\t' read -r asset_id asset_name; do
+            destination="target/all-package-documentation-archives/$asset_name"
+            if [ -e "$destination" ]; then
+              echo "::error::Duplicate asset name: $asset_name" >&2
+              exit 1
+            fi
+            gh api \
+              -H 'Accept: application/octet-stream' \
+              "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" \
+              > "$destination"
+          done < target/package-documentation-assets.tsv
+      - name: Assemble every version without overwriting history
+        run: >-
+          python3 scripts/package-documentation-site.py assemble
+          --archives target/all-package-documentation-archives
+      # configure-pages v5
+      - uses: >-
+          actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
+      # upload-pages-artifact v4
+      - uses: >-
+          actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
+        with:
+          path: target/package-documentation-site
+      - name: Deploy the versioned site
+        id: deployment
+        # deploy-pages v4
+        uses: >-
+          actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e

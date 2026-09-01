@@ -7,6 +7,8 @@ on:
       - 'docs/verification/**'
       - 'rocq/**'
       - 'scripts/verify-formal.sh'
+      - 'scripts/verify-temporal-mutations.sh'
+      - '.cargo/temporal-mutants/**'
       - 'scripts/check-abi-invariants.py'
       - '.github/workflows/formal-verification.yml'
   pull_request:
@@ -15,6 +17,8 @@ on:
       - 'docs/verification/**'
       - 'rocq/**'
       - 'scripts/verify-formal.sh'
+      - 'scripts/verify-temporal-mutations.sh'
+      - '.cargo/temporal-mutants/**'
       - 'scripts/check-abi-invariants.py'
       - '.github/workflows/formal-verification.yml'
   workflow_dispatch:

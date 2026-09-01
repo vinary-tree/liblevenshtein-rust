@@ -46,19 +46,34 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
-//! use liblevenshtein::phonetic::llev::{RuleSet, parse_file};
+//! ```rust,no_run
+//! use liblevenshtein::phonetic::llev::{load_file, RuleSet};
+//! use liblevenshtein::phonetic::{
+//!     apply_rules_seq, rules_to_nfa, PhoneByte, MAX_EXPANSION_FACTOR,
+//! };
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Load rules from a file
-//! let rules = parse_file("english.llev")?;
+//! let file = load_file("english.llev")?;
+//! let rules = RuleSet::from_llev(&file)?;
 //!
-//! // Use with existing phonetic functions
-//! use liblevenshtein::phonetic::apply_rules_seq;
-//! let result = apply_rules_seq(&rules.rules, "phone");
+//! // Use the byte-level rules with the low-level rewrite engine.
+//! let input = vec![
+//!     PhoneByte::Consonant(b'p'),
+//!     PhoneByte::Consonant(b'h'),
+//!     PhoneByte::Vowel(b'o'),
+//!     PhoneByte::Consonant(b'n'),
+//!     PhoneByte::Vowel(b'e'),
+//! ];
+//! let fuel = input.len() * rules.len() * MAX_EXPANSION_FACTOR;
+//! let normalized = apply_rules_seq(&rules.rules, &input, fuel)
+//!     .expect("rewriting returns the reached fixed point");
 //!
-//! // Or compile to NFA
-//! use liblevenshtein::phonetic::rules_to_nfa;
+//! // Or compile the rule patterns to an NFA.
 //! let nfa = rules_to_nfa(&rules.rules);
+//! assert!(nfa.accepts(b"ph"));
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # AOT Compilation

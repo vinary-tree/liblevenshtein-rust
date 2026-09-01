@@ -1,0 +1,47 @@
+@startuml
+title Vinary Tree 4.0.0-rc.5 npm identity correction
+
+skinparam backgroundColor #FAFCFF
+skinparam shadowing false
+skinparam ArrowColor #334155
+skinparam defaultFontColor #0F172A
+skinparam rectangle {
+  BorderColor #334155
+  RoundCorner 12
+}
+
+rectangle "Immutable RC.4 observations" as old #FEE2E2 {
+  rectangle "@vinary-tree/interop\n(mistaken interop coordinate)" as oldInterop #FCA5A5
+  rectangle "@vinary-tree/vinary-tree\n(mistaken runtime coordinate)" as oldRuntime #FCA5A5
+}
+
+rectangle "RC.5 source-of-truth gate" as gate #FEF3C7 {
+  rectangle "release/version.json\ncanonical owner → coordinate map" as model #FDE68A
+  rectangle "owner synchronizers\nmanifest + lock + docs" as sync #FDE68A
+  rectangle "seven-owner aggregate check\nreject drift and malformed prefixes" as aggregate #FDE68A
+  model --> sync : generate and validate
+  sync --> aggregate : prove exact graph
+}
+
+rectangle "Canonical public graph" as canonical #DCFCE7 {
+  rectangle "@vinary-tree/vinary-tree-interop" as interop #86EFAC
+  rectangle "@vinary-tree/javascript-runtime" as runtime #86EFAC
+  rectangle "scoped project facades\n+ unscoped compatibility facade" as facades #86EFAC
+  interop --> runtime : exact RC.5 dependency
+  runtime --> facades : exact RC.5 dependency
+}
+
+oldInterop ..> model : preserve as history
+oldRuntime ..> model : preserve as history
+aggregate --> interop : publish, read back, smoke
+aggregate --> runtime : publish after interop
+aggregate --> facades : publish after runtime
+facades --> oldInterop : deprecate only after canonical readback
+facades --> oldRuntime : deprecate only after canonical readback
+
+legend right
+  <#FCA5A5> immutable mistaken coordinate
+  <#FDE68A> pre-publication fail-closed proof
+  <#86EFAC> canonical coordinate and dependency order
+endlegend
+@enduml

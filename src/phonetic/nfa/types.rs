@@ -22,7 +22,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::nfa::{StateId, NFAState, Transition, TransitionLabel};
 //!
 //! // Create a simple NFA state
@@ -73,9 +73,13 @@ pub(crate) fn checked_state_id_add(lhs: StateId, rhs: StateId) -> Option<StateId
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
+/// use liblevenshtein::phonetic::nfa::NFAState;
+///
 /// let initial = NFAState::new(0, false);
-/// let accepting = NFAState::new(1, true);
+/// let accepting = NFAState::final_state(1);
+/// assert_eq!(initial.to_string(), "q0");
+/// assert_eq!(accepting.to_string(), "q1*");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
@@ -134,15 +138,23 @@ impl fmt::Display for NFAState {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
+/// use liblevenshtein::phonetic::nfa::CharClassChar;
+///
 /// // Vowels: [aeiou]
 /// let vowels = CharClassChar::from_chars(&['a', 'e', 'i', 'o', 'u']);
+/// assert!(vowels.matches('e'));
+/// assert!(!vowels.matches('z'));
 ///
 /// // Non-vowels: [^aeiou]
 /// let consonants = CharClassChar::from_chars(&['a', 'e', 'i', 'o', 'u']).negated();
+/// assert!(consonants.matches('z'));
+/// assert!(!consonants.matches('e'));
 ///
 /// // Lowercase: [a-z]
 /// let lowercase = CharClassChar::from_range('a', 'z');
+/// assert!(lowercase.matches('m'));
+/// assert!(!lowercase.matches('M'));
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
@@ -698,12 +710,17 @@ impl fmt::Display for TransitionLabel {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
+/// use liblevenshtein::phonetic::nfa::TransitionChar;
+///
 /// // Epsilon transition from state 0 to state 1
 /// let eps = TransitionChar::epsilon(0, 1);
+/// assert!(eps.label.is_epsilon());
 ///
 /// // Transition on 'a' from state 1 to state 2
 /// let on_a = TransitionChar::on_char(1, 'a', 2);
+/// assert!(on_a.label.matches('a'));
+/// assert!(!on_a.label.matches('b'));
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]

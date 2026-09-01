@@ -1,16 +1,16 @@
 @startuml wasm-umbrella-deployment
-' The JavaScript umbrella topology: one @vinary-tree/vinary-tree runtime owns
+' The JavaScript umbrella topology: one @vinary-tree/javascript-runtime runtime owns
 ' one coherent resource table per selected runtime path — native N-API by
 ' default, browser WASM and WASI Preview 1 behind explicit subpath exports —
 ' and every lightweight project facade verifies the runtime identity before
 ' accepting a resource, so raw handles can never cross incompatible
 ' instances. WASI receives only explicitly preopened directories.
-' Color: umbrella runtime + facades = engines purple #E1BEE7 / #F3E5F5
+' Color: shared JavaScript runtime + facades = engines purple #E1BEE7 / #F3E5F5
 '   (#6A1B9A); runtime instances (sandbox/trust surfaces) = trust-boundary
 '   #FFCDD2 / tint #FFEBEE (#B71C1C); the per-runtime resource table =
 '   VtResource green #DCEDC8 (#33691E); host filesystem grant = leased
 '   memory #FFECB3 (#FF6F00).
-' Source of truth: bindings/javascript-runtime/package.json (exports),
+' Source of truth: the standalone javascript-runtime/package.json (exports),
 '   native.mjs / wasm.mjs / wasi-runtime.mjs (runtimeIdentity, preopens),
 '   runtime-factory.mjs (requireDictionary/requireWfst identity guard),
 '   docs/bindings/wasm-topology.md.
@@ -38,7 +38,7 @@ title Umbrella deployment — one runtime, one resource table, identity-guarded 
 node "Host JavaScript process (Node or browser)" as HOST {
   rectangle "Project facades (typed, lightweight)\n@vinary-tree/liblevenshtein · @vinary-tree/libdictenstein\n@vinary-tree/lling-llang · @vinary-tree/duallity" as FACADES #F3E5F5
 
-  rectangle "@vinary-tree/vinary-tree — umbrella runtime" as UMBRELLA #E1BEE7 {
+  rectangle "@vinary-tree/javascript-runtime — shared JavaScript runtime" as UMBRELLA #E1BEE7 {
     rectangle "'.' default export\nnative N-API addon\nidentity: vinary-tree-node-napi-v1\n(all four Rust components\nstatically linked)" as NAPI #FFEBEE
     rectangle "'./wasm' export\nbrowser WebAssembly instance\nidentity: vinary-tree-wasm-v1\n(no persistent backend)" as WASM #FFEBEE
     rectangle "'./wasi' export\nWASI Preview 1 instance\nidentity: vinary-tree-wasi-preview1-v1" as WASI #FFEBEE

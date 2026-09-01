@@ -23,7 +23,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::filter::{HybridMatcher, NgramIndex};
 //!
 //! // Build index from dictionary

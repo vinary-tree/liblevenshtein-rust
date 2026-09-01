@@ -1,6 +1,8 @@
 package io.vinarytree.liblevenshtein;
 
-/** Lazy result ordering. */
+/** Lazy result ordering.
+ * <p>Generated from bindings/api.json; do not edit numeric values manually.
+ */
 public enum QueryOrder {
     /** Provider traversal order with bounded buffering. */
     TRAVERSAL(0),
@@ -8,6 +10,12 @@ public enum QueryOrder {
     DISTANCE_THEN_TERM(1);
 
     private final int nativeValue;
-    QueryOrder(int nativeValue) { this.nativeValue = nativeValue; }
-    int nativeValue() { return nativeValue; }
+
+    QueryOrder(int nativeValue) {
+        this.nativeValue = nativeValue;
+    }
+
+    int nativeValue() {
+        return nativeValue;
+    }
 }

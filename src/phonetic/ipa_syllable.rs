@@ -14,7 +14,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::ipa_syllable::ipa_syllable_count;
 //!
 //! // English examples
@@ -126,7 +126,7 @@ pub fn is_ipa_consonant(c: char) -> bool {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::ipa_syllable::ipa_syllable_count;
 ///
 /// // Simple words

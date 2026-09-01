@@ -335,7 +335,7 @@ Accepting: F = {q₀}
 
 **Key Property**: Regular languages have **finite memory** (bounded by number of states). This makes Levenshtein automata possible for spell checking.
 
-**Non-Example**: L = {$`a^n`$ $`b^n`$ | $`n \ge 0`$} is **not regular**
+**Non-Example**: L = $`\{$﷐0﷑$ $﷐1﷑$ | $﷐2﷑$\}`$ is **not regular**
 - Requires unbounded counting
 - Pumping lemma proves this
 
@@ -442,7 +442,7 @@ Right tree: 1 + (2 * 3) = 7  [WRONG for typical precedence]
 
 **Key Difference from Finite Automata**: Unbounded **stack** for memory.
 
-**Example**: PDA for L = {$`a^n`$ $`b^n`$ | $`n \ge 0`$} (balanced strings):
+**Example**: PDA for L = $`\{$﷐0﷑$ $﷐1﷑$ | $﷐2﷑$\}`$ (balanced strings):
 
 ```
 States: Q = {q₀, q₁, q₂}
@@ -734,9 +734,9 @@ Result: λx. x + 1 :: Int → Int
 
 ### 2.7 Process Calculi Foundations
 
-**Process calculi** are formal models for concurrent, communicating systems. We focus on **π-calculus** (basis for most process calculi) and **ρ-calculus** (basis for Rholang).
+**Process calculi** are formal models for concurrent, communicating systems. We focus on **$`\pi`$-calculus** (basis for most process calculi) and **$`\rho`$-calculus** (basis for Rholang).
 
-#### 2.7.1 π-Calculus
+#### $`2.7.1 \pi`$-Calculus
 
 **Syntax**:
 ```
@@ -803,9 +803,9 @@ Execution:
 This sends channel 'a' over channel 'c', then sends 'v' over the received channel.
 ```
 
-#### 2.7.2 ρ-Calculus
+#### $`2.7.2 \rho`$-Calculus
 
-**Extension of π-calculus**: Adds **reflection** (higher-order processes).
+**Extension of $`\pi`$-calculus**: Adds **reflection** (higher-order processes).
 
 **Key Idea**:
 - **Quotes**: Turn processes into names: `@P`
@@ -844,14 +844,14 @@ Now S can use *(@Q) to execute the received process Q.
 ```
 
 **Relevance to Rholang**:
-- Rholang is based on ρ-calculus
+- Rholang is based on $`\rho`$-calculus
 - Processes are first-class (can be sent/received)
 - Enables meta-programming, protocol composition
 - More complex semantics → more semantic errors to correct
 
 **Comparison**:
 
-| Feature | π-Calculus | ρ-Calculus (Rholang) |
+| Feature $`| \pi`$-Calculus $`| \rho`$-Calculus (Rholang) |
 |---------|-----------|---------------------|
 | Channels | Names (first-order) | Processes (higher-order) |
 | Communication | Values | Processes |
@@ -4440,7 +4440,7 @@ fn conflicts(a: &Access, b: &Access) -> bool {
 3. **Race Condition Analysis**: Identify unsynchronized accesses
 4. **Duality Checking**: Ensure client-server compatibility
 
-**Decidability**: Decidable for finite session types, undecidable for full π-calculus
+**Decidability**: Decidable for finite session types, undecidable for full $`\pi`$-calculus
 
 **Integration**: Run after Layer 3 (type validation), before Layer 4 (repair)
 
@@ -5033,7 +5033,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 ### Process Calculi
 
-12. **π-Calculus**: Milner et al. (1992). "A Calculus of Mobile Processes"
+12. **$`\pi`$-Calculus**: Milner et al. (1992). "A Calculus of Mobile Processes"
 13. **Rholang**: Meredith & Radestock (2005). "A Reflective Higher-Order Calculus"
 14. **Deadlock Detection**: Coffman et al. (1971). "System Deadlocks"
 

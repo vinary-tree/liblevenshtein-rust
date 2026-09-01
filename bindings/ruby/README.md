@@ -10,8 +10,9 @@ to participate in O(1) retained-resource handoff. The libdictenstein gem does
 so without serialization or an object-format conversion.
 
 Set `LIBLEVENSHTEIN_LIBRARY` for a source-tree build. Release gems contain the
-platform shared library under `lib/vinary_tree/native/<platform>/`; a system
-installation remains a supported loader fallback.
+platform shared library under
+`lib/vinary_tree/liblevenshtein/native/<platform>/`; a system installation
+remains a supported loader fallback.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
@@ -36,11 +37,11 @@ and the [family hub](../../docs/bindings/README.md) when combining independently
 ## Executable example and verification
 
 The repository's canonical executable example is
-[`bindings/ruby/test/test_liblevenshtein.rb`](../../bindings/ruby/test/test_liblevenshtein.rb). It exercises the same public package a user
+[`bindings/ruby/test/test_cross_project.rb`](../../bindings/ruby/test/test_cross_project.rb). It exercises the same public package a user
 installs and is run by the binding CI with:
 
 ```sh
-ruby -Ibindings/ruby/lib bindings/ruby/test/test_liblevenshtein.rb
+ruby -Ibindings/ruby/lib -I../libdictenstein/bindings/ruby/lib bindings/ruby/test/test_cross_project.rb
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -58,6 +59,21 @@ The idiomatic facade groups the stable surface into these concepts:
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
 
+### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same.
+
 Ruby strings use explicit encoding rules; byte strings and integer arrays select non-Unicode domains. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
@@ -72,6 +88,7 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `Error` | `llev_last_error_message` | typed failure diagnostics |
+| `Error#status` | `llev_last_error_message` | typed failure diagnostics |
 | `Liblevenshtein.damerau_distance` | `llev_damerau_distance` | standalone exact or thresholded distance |
 | `Liblevenshtein.damerau_distance_threshold` | `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
 | `Liblevenshtein.distance` | `llev_distance` | standalone exact or thresholded distance |
@@ -91,26 +108,26 @@ variants, protocols, or methods.
 | `Query#close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `Query#each` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `Transducer#close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
-| `Transducer#initialize` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer#query` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
 | `Transducer#query_bytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |
 | `Transducer#query_pattern` | `llev_transducer_query_pattern` | phonetic-pattern dictionary query |
 | `Transducer#query_u64` | `llev_transducer_query_u64` | domain-preserving dictionary query |
+| `Transducer.new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 
 ### Public types and traversal protocols
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `Error#status` | Typed native status or error carrier | Public facade type |
-| `Transducer::STANDARD` | Edit-distance algorithm selection | STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants |
-| `PhoneticRuleSet::ENGLISH_ORTHOGRAPHY` | Built-in phonetic rule-set selection | ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants |
+| `Status` | Typed native status or error carrier | all stable statuses are named constants while unknown future integer values remain representable on Error#status |
+| `Algorithm` | Edit-distance algorithm selection | STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants; Transducer aliases remain compatible |
+| `QueryOrder` | Result traversal ordering | TRAVERSAL/DISTANCE_THEN_TERM constants |
+| `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants; PhoneticRuleSet aliases remain compatible |
 | `Query#each` | One-shot owned-result iteration | Public facade protocol |
 
 ### Facade-encapsulated model values
 
 | Model value | Idiomatic treatment |
 |---|---|
-| `queryOrder` | Transducer#query takes a raw integer order: keyword; named constants are not provided |
 | `reducer` | no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally |
 
 Native operations omitted from the public-symbol table are deliberately
@@ -123,7 +140,7 @@ such operation with its reviewed rationale; an unreasoned absence fails CI.
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
 | Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Maximum result throughput | Drain the facade iterator; no public reducer is exposed | The iterator still amortizes native calls with bounded internal batches, then releases each lease before exposing host-owned matches. |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
@@ -144,9 +161,9 @@ mutations cannot invalidate that query. Acquisition either completes with one
 owned retain or fails with no ownership transfer. Teardown order is therefore
 free across dictionary, transducer, and completed query handles.
 
-Borrowed results are intentionally lexical. Copy data that must outlive the
-callback; retaining a raw address, slice, memory segment, or foreign pointer is
-an API violation even when the next operation happens to reuse the same arena.
+Iterator results are copied into host-owned values before their native batch
+lease is released. They remain valid after iteration advances or the cursor is
+closed; no raw pointer or borrowed native view reaches user code.
 
 ## Errors and failure containment
 
@@ -170,7 +187,7 @@ the host language must not add a weaker promise.
 
 - Reuse transducers for repeated queries against the same resource.
 - Prefer streaming cursors to whole-result materialization.
-- Prefer batch/reducer APIs when per-match boundary crossings dominate.
+- Drain each cursor once; the iterator already fetches bounded native batches before materializing host-owned matches.
 - Keep Unicode, byte, and token domains explicit to avoid transcoding.
 - Measure native, WASM, and WASI paths independently; they have different
   startup and marshalling costs but identical query semantics.

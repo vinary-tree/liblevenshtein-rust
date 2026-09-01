@@ -45,6 +45,13 @@ $`\deg(v)`$ a dictionary node's out-degree.
 
 ![Three-layer architecture: language facades over the four project C ABIs over the shared vinary-tree-interop resource plane, governed by bindings/api.json.](../diagrams/bindings/three-layer-architecture.svg)
 
+The shared resource plane is a small capability graph: a two-word
+`VtResource` discovers versioned dictionary, graph, snapshot-identity, and
+WFST vtables; borrowed edges and arcs remain provider-owned for the duration
+specified by their interface.
+
+![Class diagram of the vinary-tree-interop ABI: VtResource and its base vtable negotiate dictionary, visit, graph, snapshot-identity, and scalar-WFST capability vtables plus their borrowed value types.](../diagrams/bindings/vt-structs-class.svg)
+
 The 36 functions divide into five groups:
 
 | Group | Count | Functions |
@@ -75,6 +82,12 @@ mention `llev_index_`). A module-level doc example still demonstrating the
 retired API is ledgered as finding LLEV-B1 in the
 [findings ledger](FINDINGS_LEDGER.md) and is being rewritten in this wave
 (W3) to the `llev_transducer_new` flow shown in [§ 9](#9-a-complete-c-consumer).
+
+Additive ABI evolution extends a size-delimited vtable under the same interface
+identity. A breaking semantic or layout change receives a new identity so old
+and new providers can coexist and be negotiated explicitly.
+
+![ABI evolution timeline: additive fields preserve an interface identity and old struct size, while breaking changes fork a new identity that can coexist through query-interface negotiation.](../diagrams/bindings/abi-evolution-timeline.svg)
 
 ---
 
@@ -178,7 +191,7 @@ const char* llev_last_error_message(void);
 | Function | Returns | Contract |
 |---|---|---|
 | `llev_abi_version` | `LLEV_ABI_VERSION` = 1 | The project ABI generation. A facade built for generation $`g`$ must refuse a library reporting a different generation. |
-| `llev_api_revision` | `LLEV_API_REVISION` = 1 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. |
+| `llev_api_revision` | `LLEV_API_REVISION` = 2 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. |
 | `llev_build_features` | bitset | `LLEV_BUILD_FEATURE_CORE` (1) is always set; `LLEV_BUILD_FEATURE_PHONETIC` (2) is set exactly when the library was compiled with `bindings-phonetic`. Probe it instead of trial-calling the phonetic surface. |
 | `llev_last_error_message` | borrowed `const char*` | § 3.2. Never NULL; empty string when the last call on this thread succeeded. |
 
@@ -294,6 +307,8 @@ Validation enforces the base handshake (`struct_size`, `abi_version` = 1,
 at `minimum_version` = 1, and requires the interface ops the consumer needs
 (`snapshot`, `root`, `node_is_final`, `node_edges`; `node_value_u64` exactly
 when the value domain is `OPTIONAL_U64`).
+
+![Interface-negotiation activity: the consumer validates and retains a copied VtResource, invokes the provider across the foreign trust boundary, then validates the returned size-delimited vtable before constructing a transducer or releasing on failure.](../diagrams/bindings/interface-negotiation-activity.svg)
 
 - **Preconditions:** `dictionary` and `out_transducer` non-NULL; the resource
   obeys the interop contract for the whole life of the transducer.

@@ -19,18 +19,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::swedish;
 //!
 //! let rules = swedish::base();
 //!
 //! // SJ-sound
 //! let result = rules.apply("sjö");
-//! assert!(result.contains("ʃ"), "sj → SJ");
+//! assert_eq!(result, "ɧø");
 //!
 //! // Special vowels
 //! let result = rules.apply("å");
-//! assert!(result.contains('O'), "å → O");
+//! assert_eq!(result, "ɔ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

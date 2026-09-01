@@ -27,7 +27,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::hungarian;
 //!
 //! let rules = hungarian::base();

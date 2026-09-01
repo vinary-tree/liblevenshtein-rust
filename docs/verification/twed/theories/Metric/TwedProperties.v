@@ -314,3 +314,176 @@ Proof.
   replace (1 - 1) with 0 by ring.
   repeat rewrite Rabs_R0. lra.
 Qed.
+
+(** Explicit-timestamp TWED replaces the unit-grid stiffness constant by the
+    elapsed physical time in one canonical unit. *)
+Definition physical_delete_exact
+    (current previous time previous_time nu lambda : R) : R :=
+  Rabs (current - previous) + nu * (time - previous_time) + lambda.
+
+Theorem physical_delete_is_nonnegative : forall
+    current previous time previous_time nu lambda,
+  previous_time <= time -> 0 <= nu -> 0 <= lambda ->
+  0 <= physical_delete_exact
+    current previous time previous_time nu lambda.
+Proof.
+  intros current previous time previous_time nu lambda Htime Hnu Hlambda.
+  unfold physical_delete_exact.
+  pose proof (Rabs_pos (current - previous)). nra.
+Qed.
+
+(** Unit-spaced physical timestamps reproduce the unit-grid deletion leaf
+    exactly; this is the local correspondence used by the executable
+    generated test. *)
+Theorem unit_elapsed_physical_delete_is_unit_grid : forall
+    current previous previous_time nu lambda,
+  physical_delete_exact
+    current previous (previous_time + 1) previous_time nu lambda =
+  delete_exact current previous nu lambda.
+Proof.
+  intros. unfold physical_delete_exact, delete_exact. ring.
+Qed.
+
+Definition physical_match_exact
+    (xcur xprev xtime xprev_time
+     ycur yprev ytime yprev_time nu : R) : R :=
+  Rabs (xcur - ycur) + Rabs (xprev - yprev) +
+  nu * (Rabs (xtime - ytime) + Rabs (xprev_time - yprev_time)).
+
+Theorem physical_match_is_nonnegative : forall
+    xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu,
+  0 <= nu ->
+  0 <= physical_match_exact
+    xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu.
+Proof.
+  intros xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu Hnu.
+  unfold physical_match_exact.
+  pose proof (Rabs_pos (xcur - ycur)).
+  pose proof (Rabs_pos (xprev - yprev)).
+  pose proof (Rabs_pos (xtime - ytime)).
+  pose proof (Rabs_pos (xprev_time - yprev_time)). nra.
+Qed.
+
+(** The online constructor's monotonicity gate makes every committed elapsed
+    target-time term nonnegative. *)
+Theorem validated_timestamp_step_has_nonnegative_elapsed_time : forall
+    previous_time current_time,
+  previous_time < current_time -> 0 <= current_time - previous_time.
+Proof. intros; lra. Qed.
+
+(** The explicit-time interval deletion leaf composes independent value and
+    physical-time box distances.  This theorem is over finite mathematical
+    reals.  The executable boundary separately admits infinite value-box
+    endpoints for clamped quantizer bins, while requiring finite timestamps. *)
+Definition physical_delete_relaxed
+    (current_lo current_hi previous_lo previous_hi
+     time_lo time_hi previous_time_lo previous_time_hi nu lambda : R) : R :=
+  interval_gap current_lo current_hi previous_lo previous_hi
+  + nu * interval_gap time_lo time_hi previous_time_lo previous_time_hi
+  + lambda.
+
+Theorem physical_delete_interval_admissible : forall
+    current_lo current_hi previous_lo previous_hi
+    time_lo time_hi previous_time_lo previous_time_hi
+    current previous time previous_time nu lambda,
+  current_lo <= current_hi -> previous_lo <= previous_hi ->
+  time_lo <= time_hi -> previous_time_lo <= previous_time_hi ->
+  current_lo <= current <= current_hi ->
+  previous_lo <= previous <= previous_hi ->
+  time_lo <= time <= time_hi ->
+  previous_time_lo <= previous_time <= previous_time_hi ->
+  previous_time <= time -> 0 <= nu ->
+  physical_delete_relaxed
+    current_lo current_hi previous_lo previous_hi
+    time_lo time_hi previous_time_lo previous_time_hi nu lambda
+  <= physical_delete_exact current previous time previous_time nu lambda.
+Proof.
+  intros current_lo current_hi previous_lo previous_hi
+    time_lo time_hi previous_time_lo previous_time_hi
+    current previous time previous_time nu lambda
+    Hcurrent_box Hprevious_box Htime_box Hprevious_time_box
+    Hcurrent Hprevious Htime Hprevious_time Hmonotone Hnu.
+  unfold physical_delete_relaxed, physical_delete_exact.
+  pose proof (interval_gap_admissible
+    current_lo current_hi previous_lo previous_hi current previous
+    Hcurrent_box Hprevious_box Hcurrent Hprevious) as Hvalue.
+  pose proof (interval_gap_admissible
+    time_lo time_hi previous_time_lo previous_time_hi time previous_time
+    Htime_box Hprevious_time_box Htime Hprevious_time) as Hphysical_time.
+  rewrite Rabs_right in Hphysical_time by lra.
+  nra.
+Qed.
+
+Theorem physical_delete_point_intervals_exact : forall
+    current previous time previous_time nu lambda,
+  previous_time <= time ->
+  physical_delete_relaxed
+    current current previous previous
+    time time previous_time previous_time nu lambda
+  = physical_delete_exact current previous time previous_time nu lambda.
+Proof.
+  intros current previous time previous_time nu lambda Htime.
+  unfold physical_delete_relaxed, physical_delete_exact.
+  rewrite !interval_gap_degenerate.
+  replace (Rabs (time - previous_time)) with (time - previous_time)
+    by (rewrite Rabs_right; lra).
+  reflexivity.
+Qed.
+
+Definition physical_match_relaxed
+    (xcur xprev xtime xprev_time
+     ycur_lo ycur_hi yprev_lo yprev_hi
+     ytime_lo ytime_hi yprev_time_lo yprev_time_hi nu : R) : R :=
+  interval_dist xcur ycur_lo ycur_hi
+  + interval_dist xprev yprev_lo yprev_hi
+  + nu * (interval_dist xtime ytime_lo ytime_hi
+          + interval_dist xprev_time yprev_time_lo yprev_time_hi).
+
+Theorem physical_match_interval_admissible : forall
+    xcur xprev xtime xprev_time
+    ycur_lo ycur_hi yprev_lo yprev_hi
+    ytime_lo ytime_hi yprev_time_lo yprev_time_hi
+    ycur yprev ytime yprev_time nu,
+  ycur_lo <= ycur_hi -> yprev_lo <= yprev_hi ->
+  ytime_lo <= ytime_hi -> yprev_time_lo <= yprev_time_hi ->
+  ycur_lo <= ycur <= ycur_hi -> yprev_lo <= yprev <= yprev_hi ->
+  ytime_lo <= ytime <= ytime_hi ->
+  yprev_time_lo <= yprev_time <= yprev_time_hi ->
+  0 <= nu ->
+  physical_match_relaxed
+    xcur xprev xtime xprev_time
+    ycur_lo ycur_hi yprev_lo yprev_hi
+    ytime_lo ytime_hi yprev_time_lo yprev_time_hi nu
+  <= physical_match_exact
+    xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu.
+Proof.
+  intros xcur xprev xtime xprev_time
+    ycur_lo ycur_hi yprev_lo yprev_hi
+    ytime_lo ytime_hi yprev_time_lo yprev_time_hi
+    ycur yprev ytime yprev_time nu
+    Hycur_box Hyprev_box Hytime_box Hyprev_time_box
+    Hycur Hyprev Hytime Hyprev_time Hnu.
+  unfold physical_match_relaxed, physical_match_exact.
+  pose proof (interval_dist_admissible
+    xcur ycur_lo ycur_hi ycur Hycur_box Hycur) as Hcurrent.
+  pose proof (interval_dist_admissible
+    xprev yprev_lo yprev_hi yprev Hyprev_box Hyprev) as Hprevious.
+  pose proof (interval_dist_admissible
+    xtime ytime_lo ytime_hi ytime Hytime_box Hytime) as Hcurrent_time.
+  pose proof (interval_dist_admissible
+    xprev_time yprev_time_lo yprev_time_hi yprev_time
+    Hyprev_time_box Hyprev_time) as Hprevious_time.
+  nra.
+Qed.
+
+Theorem physical_match_point_intervals_exact : forall
+    xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu,
+  physical_match_relaxed
+    xcur xprev xtime xprev_time
+    ycur ycur yprev yprev ytime ytime yprev_time yprev_time nu
+  = physical_match_exact
+    xcur xprev xtime xprev_time ycur yprev ytime yprev_time nu.
+Proof.
+  intros. unfold physical_match_relaxed, physical_match_exact.
+  now rewrite !interval_dist_degenerate.
+Qed.

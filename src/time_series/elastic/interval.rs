@@ -6,7 +6,7 @@
 
 /// Distance from scalar `value` to closed interval `[low, high]`.
 ///
-/// This equals `$`\min_{x\in[\ell,h]} |v-x|`$` and remains well-defined for
+/// This equals $`\min_{x\in[\ell,h]} \lvert v-x\rvert`$ and remains well-defined for
 /// semi-infinite quantization boundary bins.
 #[inline]
 pub fn interval_dist(value: f64, low: f64, high: f64) -> f64 {
@@ -15,8 +15,8 @@ pub fn interval_dist(value: f64, low: f64, high: f64) -> f64 {
 
 /// Minimum absolute distance between two closed intervals.
 ///
-/// For `$`A=[\ell_A,h_A]`$` and `$`B=[\ell_B,h_B]`$`, this computes
-/// `$`\min_{a\in A,b\in B}|a-b| = \max(0,\ell_A-h_B,\ell_B-h_A)`$`.
+/// For $`A=[\ell_A,h_A]`$ and $`B=[\ell_B,h_B]`$, this computes
+/// $`\min_{a\in A,b\in B}\lvert a-b\rvert = \max(0,\ell_A-h_B,\ell_B-h_A)`$.
 #[inline]
 pub fn interval_gap(a: (f64, f64), b: (f64, f64)) -> f64 {
     (a.0 - b.1).max(0.0).max(b.0 - a.1)

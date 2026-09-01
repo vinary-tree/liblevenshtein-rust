@@ -102,6 +102,11 @@ Comprehensive analysis of DAT implementation:
 
 ### Algorithm-Specific Analysis
 
+#### [Lazy-product engineering check (2026-08-29)](lazy-product-engineering-check-2026-08-29.md)
+Current bounded engineering measurements for the compact PathMap zipper,
+cutoff-pruned ERP online frontier, and bounded elastic dictionary product,
+including the scalar-fallback and remeasurement decisions.
+
 #### [Optimization and Profiling Methodology](optimization-and-profiling-methodology.md)
 The end-to-end hypothesis, correctness, host-admission, statistical,
 headless-profiler, visualization, acceptance, and propagation contract for the
@@ -116,6 +121,11 @@ ranked hypotheses that gate the optimization campaign.
 Backend-by-backend and query-surface-by-query-surface classification of every
 accepted parity optimization, including the generic invariant, specialized
 adaptations, explicit inapplicability reasons, and completion gates.
+
+#### [Generated-target Storage Requalification](generated-target-storage-requalification.md)
+Root-cause analysis, bounded adaptive representation, property and deep-stack
+tests, and paired latency/RSS evidence for the positional automaton's
+generated-target cache.
 
 #### [Academic Benchmark Reproduction](academic-benchmarks.md)
 Repeatable commands for the UCR/UEA MSM archive benchmark and the CMUdict

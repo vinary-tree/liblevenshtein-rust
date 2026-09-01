@@ -16,7 +16,7 @@
     "crate": "vinary-tree-interop",
     "cPrefix": "vt_",
     "cHeader": "vinary_tree_interop.h",
-    "npm": "@vinary-tree/interop",
+    "npm": "@vinary-tree/vinary-tree-interop",
     "maven": "io.vinarytree:vinary-tree-interop",
     "javaPackage": "io.vinarytree.interop",
     "resourceLayout": [
@@ -222,13 +222,15 @@
     "maven": "io.vinarytree:liblevenshtein",
     "clojars": "io.vinarytree/liblevenshtein-clojure",
     "nuget": "Liblevenshtein",
-    "goModule": "github.com/vinary-tree/liblevenshtein-rust/bindings/go",
+    "goModule": "github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4",
     "swift": "Liblevenshtein",
     "rubygems": "liblevenshtein",
     "fpm": "liblevenshtein",
     "opam": "liblevenshtein",
     "hackage": "liblevenshtein",
-    "luarocks": "liblevenshtein"
+    "luarocks": "liblevenshtein",
+    "julia": "Liblevenshtein",
+    "zef": "Liblevenshtein"
   },
   "supportTiers": {
     "tier1": [
@@ -251,10 +253,12 @@
     "tier3": [
       "ocaml",
       "haskell",
-      "lua"
+      "lua",
+      "julia",
+      "raku"
     ]
   },
-  "packageVersion": "4.0.0-rc.4",
+  "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
   "apiRevision": 2,
   "defaultMatchBatch": 256,
@@ -570,6 +574,22 @@
     "architecture": "docs/language-bindings.md",
     "collectionProtocols": "docs/bindings/collection-protocols.md",
     "optimizationMethodology": "docs/benchmarks/optimization-and-profiling-methodology.md",
+    "citationLedger": "docs/verification/binding-citation-ledger.json",
+    "packageDocumentation": {
+      "manifest": "release/package-documentation.json",
+      "checker": "scripts/check-package-documentation.py",
+      "builder": "scripts/build-package-documentation.py",
+      "siteAssembler": "scripts/package-documentation-site.py",
+      "workflow": ".github/workflows/package-documentation.yml"
+    },
+    "operationalDocuments": [
+      "docs/bindings/PERFORMANCE_EXPERIMENTS.md",
+      "docs/bindings/c-abi-reference.md",
+      "docs/bindings/package-documentation-publication.md",
+      "docs/bindings/resource-consumer.md",
+      "docs/bindings/wasm-topology.md",
+      "docs/releasing-language-bindings.md"
+    ],
     "generator": "scripts/generate-binding-guides.py",
     "requiredTopics": [
       "Support and package contract",
@@ -656,14 +676,14 @@
           "Ruby"
         ],
         "guide": "bindings/ruby/README.md",
-        "example": "bindings/ruby/test/test_liblevenshtein.rb"
+        "example": "bindings/ruby/test/test_cross_project.rb"
       },
       "fortran": {
         "languages": [
           "Fortran"
         ],
         "guide": "bindings/fortran/README.md",
-        "example": "bindings/fortran/test/test_distance.f90"
+        "example": "bindings/fortran/integration/test/test_cross_project.f90"
       },
       "ocaml": {
         "languages": [
@@ -685,12 +705,26 @@
         ],
         "guide": "bindings/lua/README.md",
         "example": "bindings/lua/tests/snapshot.lua"
+      },
+      "julia": {
+        "languages": [
+          "Julia"
+        ],
+        "guide": "bindings/julia/README.md",
+        "example": "bindings/julia/Liblevenshtein/test/runtests.jl"
+      },
+      "raku": {
+        "languages": [
+          "Raku"
+        ],
+        "guide": "bindings/raku/README.md",
+        "example": "bindings/raku/t/01-conformance.rakutest"
       }
     },
     "interopDocumentation": "https://github.com/vinary-tree/vinary-tree-interop/tree/master/bindings"
   },
   "wasm": {
-    "umbrellaPackage": "@vinary-tree/vinary-tree",
+    "runtimePackage": "@vinary-tree/javascript-runtime",
     "projectPackage": "@vinary-tree/liblevenshtein",
     "relatedProjectPackages": [
       "@vinary-tree/libdictenstein",
@@ -756,23 +790,25 @@
     ]
   },
   "release": {
-    "canonical": "4.0.0-rc.4",
+    "canonical": "4.0.0-rc.6",
     "registries": {
-      "cargo": "4.0.0-rc.4",
-      "clojars": "4.0.0-rc.4",
-      "cmake": "4.0.0-rc.4",
+      "cargo": "4.0.0-rc.6",
+      "clojars": "4.0.0-rc.6",
+      "cmake": "4.0.0-rc.6",
       "fpm": "4.0.0",
-      "goTag": "v4.0.0-rc.4",
+      "goTag": "v4.0.0-rc.6",
       "hackage": "4.0.0",
-      "luaRocks": "4.0.0rc4-2",
-      "maven": "4.0.0-rc.4",
-      "npm": "4.0.0-rc.4",
-      "nuget": "4.0.0-rc.4",
-      "opam": "4.0.0~rc4",
-      "pkgConfig": "4.0.0-rc.4",
-      "pypi": "4.0.0rc4",
-      "rubygems": "4.0.0.rc.4",
-      "swiftTag": "4.0.0-rc.4"
+      "julia": "4.0.0-rc.6",
+      "luaRocks": "4.0.0rc6-1",
+      "maven": "4.0.0-rc.6",
+      "npm": "4.0.0-rc.6",
+      "nuget": "4.0.0-rc.6",
+      "opam": "4.0.0~rc6",
+      "pkgConfig": "4.0.0-rc.6",
+      "pypi": "4.0.0rc6",
+      "rubygems": "4.0.0.rc.6",
+      "swiftTag": "4.0.0-rc.6",
+      "zef": "4.0.0-rc.6"
     },
     "distTag": "next"
   }

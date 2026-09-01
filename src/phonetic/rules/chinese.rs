@@ -55,18 +55,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::chinese;
 //!
 //! let rules = chinese::pinyin();
 //!
 //! // Tone mark removal
 //! let result = rules.apply("nǐ hǎo");
-//! assert!(!result.contains('ǐ'), "tones should be stripped");
+//! assert_eq!(result, "ni hao");
 //!
 //! // Retroflex consonants
 //! let result = rules.apply("zhōngguó");
-//! assert!(result.contains('Z'), "zh → Z");
+//! assert_eq!(result, "ʈ͡ʂongguo");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

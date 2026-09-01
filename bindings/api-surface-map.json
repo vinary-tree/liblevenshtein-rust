@@ -8,7 +8,7 @@
         "include/liblevenshtein.h",
         "include/liblevenshtein_abi.h"
       ],
-      "readme": null,
+      "readme": "bindings/c/README.md",
       "tests": [
         "bindings/c/tests/cross_project_snapshot.c"
       ],
@@ -161,7 +161,7 @@
       "enums": {
         "status": {
           "symbol": null,
-          "_reason": "the delegated NativeException carries the numeric status; no Clojure re-exposure"
+          "_reason": "the delegated NativeException.status returns the generated JVM Status enum and statusCode preserves unknown raw values; the deliberately thin facade does not duplicate them as Clojure keywords"
         },
         "algorithm": {
           "symbol": "algorithms",
@@ -201,7 +201,7 @@
         },
         "llev_last_error_message": {
           "symbol": null,
-          "_reason": "the delegated JVM NativeException (message + status) propagates unchanged; no Clojure-specific wrapper symbol"
+          "_reason": "the delegated JVM NativeException (copied message + typed Status + exact raw statusCode) propagates unchanged; the deliberately thin facade does not introduce a second error wrapper"
         },
         "llev_string_free": {
           "symbol": null,
@@ -217,27 +217,27 @@
         },
         "llev_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -508,30 +508,34 @@
       "binding": "c-abi",
       "sourceFiles": [
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/Native.cs",
+        "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs",
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs",
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/Phonetic.cs",
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/Distance.cs"
       ],
       "readme": "bindings/dotnet/README.md",
       "tests": [
-        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/Program.cs"
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/Program.cs",
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/DictionaryCollectionTests.cs",
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/PropertyTests.cs",
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.Tests/LeakTests.cs"
       ],
       "enums": {
         "status": {
-          "symbol": "LiblevenshteinException.StatusCode",
-          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Native.cs"
+          "symbol": "Status",
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         },
         "algorithm": {
           "symbol": "Algorithm",
-          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs"
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         },
         "queryOrder": {
           "symbol": "QueryOrder",
-          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Transducer.cs"
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         },
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
-          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/Phonetic.cs"
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         }
       },
       "iterator": {
@@ -556,8 +560,12 @@
           "_reason": "not bound; phonetic availability surfaces at call time as LiblevenshteinException with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "LiblevenshteinException",
-          "note": "thrown failures carry the native message and StatusCode"
+          "symbol": [
+            "LiblevenshteinException",
+            "LiblevenshteinException.Status",
+            "LiblevenshteinException.StatusCode"
+          ],
+          "note": "thrown failures carry the copied native message, typed Status, and exact raw StatusCode"
         },
         "llev_string_free": {
           "symbol": null,
@@ -675,13 +683,15 @@
       "readme": "bindings/fortran/README.md",
       "tests": [
         "bindings/fortran/test/test_distance.f90",
+        "bindings/fortran/test/test_property.f90",
+        "bindings/fortran/test/test_leak.f90",
         "bindings/fortran/integration/test/test_cross_project.f90"
       ],
       "enums": {
         "status": {
           "symbol": "llev_ok",
           "definedIn": "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
-          "note": "only OK and END carry named parameters; other codes stay numeric"
+          "note": "all stable native status values carry named llev_* parameters; unknown future integer values remain representable"
         },
         "algorithm": {
           "symbol": "llev_standard",
@@ -694,8 +704,9 @@
           "note": "llev_traversal/llev_distance_then_term"
         },
         "phoneticRuleSetKind": {
-          "symbol": null,
-          "_reason": "builtin_phonetic_rules takes a raw integer kind; named constants are not provided"
+          "symbol": "llev_english_orthography",
+          "definedIn": "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
+          "note": "llev_english_orthography/llev_english_phonetic"
         }
       },
       "iterator": {
@@ -831,28 +842,31 @@
     "go": {
       "binding": "c-abi",
       "sourceFiles": [
-        "bindings/go/liblevenshtein.go"
+        "bindings/go/liblevenshtein.go",
+        "bindings/go/generated_enums.go"
       ],
       "readme": "bindings/go/README.md",
       "tests": [
-        "bindings/go/liblevenshtein_test.go"
+        "bindings/go/liblevenshtein_test.go",
+        "bindings/go/property_test.go",
+        "bindings/go/leak_test.go"
       ],
       "enums": {
         "status": {
-          "symbol": "Error.Status",
-          "definedIn": "bindings/go/liblevenshtein.go"
+          "symbol": "Status",
+          "definedIn": "bindings/go/generated_enums.go"
         },
         "algorithm": {
           "symbol": "Algorithm",
-          "definedIn": "bindings/go/liblevenshtein.go"
+          "definedIn": "bindings/go/generated_enums.go"
         },
         "queryOrder": {
           "symbol": "QueryOrder",
-          "definedIn": "bindings/go/liblevenshtein.go"
+          "definedIn": "bindings/go/generated_enums.go"
         },
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
-          "definedIn": "bindings/go/liblevenshtein.go"
+          "definedIn": "bindings/go/generated_enums.go"
         }
       },
       "iterator": {
@@ -877,8 +891,11 @@
           "_reason": "not bound; phonetic availability surfaces at call time as Error with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "Error",
-          "note": "returned failures carry the native message and Status"
+          "symbol": [
+            "Error",
+            "Error.Status"
+          ],
+          "note": "returned failures carry the copied native message and typed forward-compatible Status"
         },
         "llev_string_free": {
           "symbol": null,
@@ -1219,27 +1236,27 @@
         },
         "llev_distance": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_damerau_distance": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "delegated to the umbrella runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+          "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -1328,7 +1345,7 @@
         "../javascript-runtime/index.d.ts",
         "../javascript-runtime/native/src/addon.cc"
       ],
-      "readme": "../javascript-runtime/README.md",
+      "readme": "../javascript-runtime/docs/api-reference.md",
       "tests": [
         "../javascript-runtime/test/native.test.mjs",
         "../javascript-runtime/test/wasi.test.mjs",
@@ -1350,7 +1367,7 @@
           "note": "string-literal union mapped by the orders table in native.mjs"
         },
         "phoneticRuleSetKind": {
-          "symbol": "phoneticRules",
+          "symbol": "liblevenshtein.phoneticRules",
           "definedIn": "../javascript-runtime/index.d.ts",
           "note": "string selectors \"english-orthography\"/\"english-phonetic\" dispatched in addon.cc"
         }
@@ -1507,6 +1524,7 @@
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Match.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Term.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/AutomatonSize.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Status.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeException.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeLibraryLoader.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/GeneratedAbi.java"
@@ -1519,9 +1537,9 @@
       ],
       "enums": {
         "status": {
-          "symbol": "NativeException.status",
-          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeException.java",
-          "note": "numeric values are generated into GeneratedAbi.java"
+          "symbol": "Status",
+          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/Status.java",
+          "note": "generated from bindings/api.json; NativeException.status returns this enum and preserves unknown raw values separately"
         },
         "algorithm": {
           "symbol": "Algorithm",
@@ -1557,8 +1575,13 @@
           "_reason": "not bound; phonetic availability surfaces at call time as NativeException with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "NativeException",
-          "note": "thrown failures carry the native message and status"
+          "symbol": [
+            "NativeException",
+            "NativeException.status",
+            "NativeException.statusCode",
+            "Status.code"
+          ],
+          "note": "thrown failures carry the copied native message, typed status, and exact forward-compatible raw code"
         },
         "llev_string_free": {
           "symbol": null,
@@ -1574,27 +1597,27 @@
         },
         "llev_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_transducer_new": {
           "symbol": "Transducer"
@@ -1687,8 +1710,9 @@
       ],
       "enums": {
         "status": {
-          "symbol": null,
-          "_reason": "raised Lua errors embed the numeric code as \"(status %d)\" text; no named constants"
+          "symbol": "status",
+          "definedIn": "bindings/lua/src/liblevenshtein_lua.c",
+          "note": "stable numeric constants are public while raised Lua errors retain the native code in their message"
         },
         "algorithm": {
           "symbol": "algorithm",
@@ -1701,9 +1725,9 @@
           "note": "string names \"traversal\"/\"distance-then-term\""
         },
         "phoneticRuleSetKind": {
-          "symbol": "phonetic_rules",
+          "symbol": "phonetic_rule_set_kind",
           "definedIn": "bindings/lua/src/liblevenshtein_lua.c",
-          "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+          "note": "named string selectors \"english-orthography\"/\"english-phonetic\""
         }
       },
       "iterator": {
@@ -2023,7 +2047,7 @@
         "status": {
           "symbol": "Status",
           "definedIn": "bindings/python/src/liblevenshtein/_generated.py",
-          "note": "NativeError.status carries the raw value; Status itself is not re-exported from the package root"
+          "note": "known NativeError.status values use the root-exported Status enum; unknown future values remain raw integers"
         },
         "algorithm": {
           "symbol": "Algorithm",
@@ -2076,27 +2100,27 @@
         },
         "llev_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
-          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript umbrella runtime carries them for JS callers)"
+          "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
         },
         "llev_transducer_new": {
           "symbol": "Transducer.__init__"
@@ -2180,30 +2204,36 @@
       "sourceFiles": [
         "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
         "bindings/ruby/lib/vinary_tree/liblevenshtein/native.rb",
+        "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
         "bindings/ruby/lib/vinary_tree/liblevenshtein/version.rb"
       ],
       "readme": "bindings/ruby/README.md",
       "tests": [
-        "bindings/ruby/test/test_liblevenshtein.rb"
+        "bindings/ruby/test/test_liblevenshtein.rb",
+        "bindings/ruby/test/test_cross_project.rb",
+        "bindings/ruby/test/test_property.rb",
+        "bindings/ruby/test/test_leak.rb"
       ],
       "enums": {
         "status": {
-          "symbol": "Error#status",
-          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb"
+          "symbol": "Status",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
+          "note": "all stable statuses are named constants while unknown future integer values remain representable on Error#status"
         },
         "algorithm": {
-          "symbol": "Transducer::STANDARD",
-          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
-          "note": "STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants"
+          "symbol": "Algorithm",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
+          "note": "STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants; Transducer aliases remain compatible"
         },
         "queryOrder": {
-          "symbol": null,
-          "_reason": "Transducer#query takes a raw integer order: keyword; named constants are not provided"
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
+          "note": "TRAVERSAL/DISTANCE_THEN_TERM constants"
         },
         "phoneticRuleSetKind": {
-          "symbol": "PhoneticRuleSet::ENGLISH_ORTHOGRAPHY",
-          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein.rb",
-          "note": "ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants"
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
+          "note": "ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants; PhoneticRuleSet aliases remain compatible"
         }
       },
       "iterator": {
@@ -2228,8 +2258,11 @@
           "_reason": "not bound; phonetic availability surfaces at call time as raised Error exceptions with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "Error",
-          "note": "raised failures carry the native message and #status"
+          "symbol": [
+            "Error",
+            "Error#status"
+          ],
+          "note": "raised failures carry the copied native message and exact numeric #status"
         },
         "llev_string_free": {
           "symbol": null,
@@ -2262,7 +2295,7 @@
           "symbol": "Liblevenshtein.true_damerau_distance_threshold"
         },
         "llev_transducer_new": {
-          "symbol": "Transducer#initialize"
+          "symbol": "Transducer.new"
         },
         "llev_transducer_snapshot": {
           "symbol": null,
@@ -2340,16 +2373,20 @@
       "binding": "c-abi",
       "sourceFiles": [
         "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift",
+        "bindings/swift/liblevenshtein/Sources/Liblevenshtein/GeneratedEnums.swift",
         "bindings/swift/liblevenshtein/Sources/CLiblevenshtein/CLiblevenshtein.h"
       ],
       "readme": "bindings/swift/README.md",
       "tests": [
-        "bindings/swift/Integration/Sources/SwiftBindingIntegration/main.swift"
+        "bindings/swift/Integration/Sources/SwiftBindingIntegration/main.swift",
+        "bindings/swift/Integration/Sources/SwiftBindingIntegration/Property.swift",
+        "bindings/swift/Integration/Sources/SwiftBindingIntegration/Leak.swift"
       ],
       "enums": {
         "status": {
-          "symbol": null,
-          "_reason": "LiblevenshteinError carries only the message text; the numeric status is not re-exposed"
+          "symbol": "Status",
+          "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/GeneratedEnums.swift",
+          "note": "open RawRepresentable value preserves statuses introduced by newer compatible API revisions"
         },
         "algorithm": {
           "symbol": "Algorithm",
@@ -2385,8 +2422,11 @@
           "_reason": "not bound; phonetic availability surfaces at call time as thrown LiblevenshteinError values with the UNSUPPORTED status"
         },
         "llev_last_error_message": {
-          "symbol": "LiblevenshteinError",
-          "note": "thrown failures carry the native message"
+          "symbol": [
+            "LiblevenshteinError",
+            "LiblevenshteinError.status"
+          ],
+          "note": "thrown failures carry the copied native message and exact open status value"
         },
         "llev_string_free": {
           "symbol": null,
@@ -2497,6 +2537,193 @@
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"
         }
+      }
+    },
+    "julia": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/julia/Liblevenshtein/src/Liblevenshtein.jl",
+        "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+      ],
+      "readme": "bindings/julia/README.md",
+      "tests": [
+        "bindings/julia/Liblevenshtein/test/runtests.jl"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "Status",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor"
+      },
+      "reducer": {
+        "symbol": "reduce_batches!"
+      },
+      "phoneticGating": "build_features",
+      "functions": {
+        "llev_abi_version": {"symbol": "abi_version"},
+        "llev_api_revision": {"symbol": "api_revision"},
+        "llev_build_features": {"symbol": "build_features"},
+        "llev_last_error_message": {
+          "symbol": "NativeError",
+          "note": "checked copies the native diagnostic into every thrown NativeError"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev_string_dup allocations"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev_string_dup arrays"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; Julia-owned strings cross as borrowed pointer-plus-length values"
+        },
+        "llev_distance": {"symbol": "distance"},
+        "llev_distance_threshold": {"symbol": "distance"},
+        "llev_damerau_distance": {"symbol": "damerau_distance"},
+        "llev_damerau_distance_threshold": {"symbol": "damerau_distance"},
+        "llev_true_damerau_distance": {"symbol": "true_damerau_distance"},
+        "llev_true_damerau_distance_threshold": {"symbol": "true_damerau_distance"},
+        "llev_transducer_new": {"symbol": "Transducer"},
+        "llev_transducer_snapshot": {"symbol": "snapshot"},
+        "llev_transducer_free": {"symbol": "close!"},
+        "llev_transducer_unit_domain": {"symbol": "unit_domain"},
+        "llev_transducer_query_utf8": {"symbol": "query"},
+        "llev_transducer_query_bytes": {"symbol": "query"},
+        "llev_transducer_query_u64": {"symbol": "query"},
+        "llev_query_cursor_next_batch": {"symbol": "next_batch!"},
+        "llev_query_cursor_release_batch": {
+          "symbol": "next_batch!",
+          "note": "the exact batch generation is settled after owned materialization"
+        },
+        "llev_query_cursor_reduce": {"symbol": "reduce_batches!"},
+        "llev_query_cursor_free": {"symbol": "close!"},
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet",
+          "note": "rule application frees its LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {"symbol": "PhoneticPattern"},
+        "llev_phonetic_pattern_compile_llre": {"symbol": "PhoneticPattern"},
+        "llev_phonetic_pattern_free": {"symbol": "close!"},
+        "llev_phonetic_pattern_size": {"symbol": "PhoneticPattern"},
+        "llev_phonetic_pattern_matches": {"symbol": "PhoneticPattern"},
+        "llev_transducer_query_pattern": {"symbol": "query"},
+        "llev_phonetic_rules_parse": {"symbol": "PhoneticRuleSet"},
+        "llev_phonetic_rules_builtin": {"symbol": "PhoneticRuleSet"},
+        "llev_phonetic_rules_free": {"symbol": "close!"},
+        "llev_phonetic_rules_len": {"symbol": "PhoneticRuleSet"},
+        "llev_phonetic_rules_apply": {"symbol": "PhoneticRuleSet"}
+      }
+    },
+    "raku": {
+      "binding": "c-abi",
+      "sourceFiles": [
+        "bindings/raku/lib/Liblevenshtein.rakumod",
+        "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+      ],
+      "readme": "bindings/raku/README.md",
+      "tests": [
+        "bindings/raku/t/01-conformance.rakutest"
+      ],
+      "enums": {
+        "status": {
+          "symbol": "Status",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        },
+        "algorithm": {
+          "symbol": "Algorithm",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        },
+        "queryOrder": {
+          "symbol": "QueryOrder",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        },
+        "phoneticRuleSetKind": {
+          "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        }
+      },
+      "iterator": {
+        "symbol": "QueryCursor"
+      },
+      "reducer": {
+        "symbol": "reduce-batches"
+      },
+      "phoneticGating": "build-features",
+      "functions": {
+        "llev_abi_version": {"symbol": "abi-version"},
+        "llev_api_revision": {"symbol": "api-revision"},
+        "llev_build_features": {"symbol": "build-features"},
+        "llev_last_error_message": {
+          "symbol": "X::Liblevenshtein",
+          "note": "check-status copies the native diagnostic into every thrown exception"
+        },
+        "llev_string_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev_string_dup allocations"
+        },
+        "llev_string_array_free": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; this facade never receives llev_string_dup arrays"
+        },
+        "llev_string_dup": {
+          "symbol": null,
+          "_reason": "legacy independent C string ABI; Raku-owned strings cross as borrowed pointer-plus-length values"
+        },
+        "llev_distance": {"symbol": "distance"},
+        "llev_distance_threshold": {"symbol": "distance"},
+        "llev_damerau_distance": {"symbol": "damerau-distance"},
+        "llev_damerau_distance_threshold": {"symbol": "damerau-distance"},
+        "llev_true_damerau_distance": {"symbol": "true-damerau-distance"},
+        "llev_true_damerau_distance_threshold": {"symbol": "true-damerau-distance"},
+        "llev_transducer_new": {"symbol": "Transducer.new"},
+        "llev_transducer_snapshot": {"symbol": "Transducer.snapshot"},
+        "llev_transducer_free": {"symbol": "Transducer.close"},
+        "llev_transducer_unit_domain": {"symbol": "Transducer.unit-domain"},
+        "llev_transducer_query_utf8": {"symbol": "Transducer.query"},
+        "llev_transducer_query_bytes": {"symbol": "Transducer.query"},
+        "llev_transducer_query_u64": {"symbol": "Transducer.query"},
+        "llev_query_cursor_next_batch": {"symbol": "QueryCursor.next-batch"},
+        "llev_query_cursor_release_batch": {
+          "symbol": "QueryCursor.next-batch",
+          "note": "the exact batch generation is settled after owned materialization"
+        },
+        "llev_query_cursor_reduce": {
+          "symbol": null,
+          "_reason": "the facade's bounded reduce-batches operation is built over next-batch/release-batch because NativeCall callbacks would add a slower runtime trampoline without improving ownership or allocation semantics"
+        },
+        "llev_query_cursor_free": {"symbol": "QueryCursor.close"},
+        "llev_owned_string_free": {
+          "symbol": "PhoneticRuleSet.apply",
+          "note": "rule application frees its LlevOwnedString after copying"
+        },
+        "llev_phonetic_pattern_compile_regex": {"symbol": "PhoneticPattern.new"},
+        "llev_phonetic_pattern_compile_llre": {"symbol": "PhoneticPattern.new"},
+        "llev_phonetic_pattern_free": {"symbol": "PhoneticPattern.close"},
+        "llev_phonetic_pattern_size": {"symbol": "PhoneticPattern.size"},
+        "llev_phonetic_pattern_matches": {"symbol": "PhoneticPattern.accepts"},
+        "llev_transducer_query_pattern": {"symbol": "Transducer.query"},
+        "llev_phonetic_rules_parse": {"symbol": "PhoneticRuleSet.new"},
+        "llev_phonetic_rules_builtin": {"symbol": "PhoneticRuleSet.new"},
+        "llev_phonetic_rules_free": {"symbol": "PhoneticRuleSet.close"},
+        "llev_phonetic_rules_len": {"symbol": "PhoneticRuleSet.elems"},
+        "llev_phonetic_rules_apply": {"symbol": "PhoneticRuleSet.apply"}
       }
     }
   }

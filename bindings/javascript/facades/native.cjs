@@ -1,8 +1,8 @@
 "use strict";
-const namespace = require("@vinary-tree/vinary-tree").liblevenshtein;
-const { assertDictionaryResource, assertSameRuntime } = require("@vinary-tree/interop");
+const namespace = require("@vinary-tree/javascript-runtime").liblevenshtein;
+const { assertDictionaryResource, assertSameRuntime } = require("@vinary-tree/vinary-tree-interop");
 if (!namespace || !namespace.runtimeIdentity) {
-  throw new Error("@vinary-tree/vinary-tree does not expose a runtime identity");
+  throw new Error("@vinary-tree/javascript-runtime does not expose a runtime identity");
 }
 function transducer(dictionary, algorithm) {
   assertDictionaryResource(dictionary);

@@ -31,6 +31,7 @@ pub use query::{LanguageMatch, LanguageQueryIterator, LanguageQueryStats};
 pub const LANGUAGE_PRODUCT_MAX_STATES: usize = 4_096;
 
 use std::fmt::Debug;
+use std::hash::Hash;
 
 /// The finite-state operations required by a Levenshtein language product.
 ///
@@ -40,7 +41,7 @@ use std::fmt::Debug;
 /// substitution and deletion.
 pub trait LanguageAutomaton<U>: Clone {
     /// A canonical set of active language states.
-    type StateSet: Clone + Debug;
+    type StateSet: Clone + Debug + Eq + Hash;
 
     /// Empty state set.
     fn empty(&self) -> Self::StateSet;

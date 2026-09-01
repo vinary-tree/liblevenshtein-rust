@@ -11,7 +11,7 @@
 //! # Usage from JavaScript
 //!
 //! ```javascript
-//! import init, { levenshtein } from '@vinary-tree/vinary-tree/liblevenshtein';
+//! import init, { levenshtein } from '@vinary-tree/javascript-runtime/liblevenshtein';
 //!
 //! async function main() {
 //!     await init();
@@ -20,7 +20,7 @@
 //!     console.log(levenshtein("hello", "helo")); // 1
 //!
 //!     // Cross-project dictionary/automaton bindings are linked by the
-//!     // @vinary-tree/vinary-tree umbrella runtime so every facade shares one
+//!     // @vinary-tree/javascript-runtime shared JavaScript runtime so every facade shares one
 //!     // WebAssembly instance and one resource table.
 //! }
 //! ```

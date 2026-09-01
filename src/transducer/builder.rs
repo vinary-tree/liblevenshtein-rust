@@ -10,14 +10,16 @@ use libdictenstein::Dictionary;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 ///
 /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
 /// let transducer = TransducerBuilder::new()
 ///     .dictionary(dict)
 ///     .algorithm(Algorithm::Transposition)
-///     .build()?;
+///     .build()
+///     .expect("the dictionary and algorithm are configured");
+/// assert_eq!(transducer.algorithm(), Algorithm::Transposition);
 /// ```
 pub struct TransducerBuilder<D: Dictionary> {
     dictionary: Option<D>,
@@ -52,10 +54,16 @@ impl<D: Dictionary> TransducerBuilder<D> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test"]);
-    /// let builder = TransducerBuilder::new()
-    ///     .dictionary(dict);
+    /// let transducer = TransducerBuilder::new()
+    ///     .dictionary(dict)
+    ///     .algorithm(Algorithm::Standard)
+    ///     .build()
+    ///     .expect("the dictionary is configured");
+    /// assert_eq!(transducer.query_terms("test", 0).collect::<Vec<_>>(), ["test"]);
     /// ```
     pub fn dictionary(mut self, dictionary: D) -> Self {
         self.dictionary = Some(dictionary);
@@ -70,9 +78,13 @@ impl<D: Dictionary> TransducerBuilder<D> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// let builder = TransducerBuilder::new()
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::transducer::BuilderError;
+    ///
+    /// let builder = TransducerBuilder::<DoubleArrayTrie>::new()
     ///     .algorithm(Algorithm::Transposition);
+    /// assert!(matches!(builder.build(), Err(BuilderError::MissingDictionary)));
     /// ```
     pub fn algorithm(mut self, algorithm: Algorithm) -> Self {
         self.algorithm = Some(algorithm);
@@ -94,11 +106,16 @@ impl<D: Dictionary> TransducerBuilder<D> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test"]);
     /// let transducer = TransducerBuilder::new()
     ///     .dictionary(dict)
     ///     .algorithm(Algorithm::Standard)
-    ///     .build()?;
+    ///     .build()
+    ///     .expect("the builder is complete");
+    /// assert_eq!(transducer.query_terms("test", 0).collect::<Vec<_>>(), ["test"]);
     /// ```
     pub fn build(self) -> Result<Transducer<D>, BuilderError> {
         let dictionary = self.dictionary.ok_or(BuilderError::MissingDictionary)?;

@@ -19,7 +19,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::indonesian;
 //!
 //! let rules = indonesian::base();

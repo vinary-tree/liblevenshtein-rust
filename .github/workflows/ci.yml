@@ -10,6 +10,16 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  documentation-math:
+    name: Mathematical documentation syntax
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install the pinned scanner runtime
+        run: sudo apt-get update && sudo apt-get install -y rakudo ripgrep
+      - name: Verify living Markdown, Rustdoc, fixtures, and classification
+        run: scripts/doc-mathlint.sh
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -38,6 +48,22 @@ jobs:
       - run: cargo test --locked --manifest-path ../vinary-tree-interop/Cargo.toml
       - run: cargo fmt --all --check
 
+  temporal-mutation-gate:
+    name: Temporal cutoff/interner/cache mutants
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@1.95
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants@27.1.0
+      - name: Kill the pinned bounded temporal mutants
+        env:
+          TEMPORAL_MUTANTS_OUTPUT: ${{ runner.temp }}/liblevenshtein-temporal-mutants
+        run: scripts/verify-temporal-mutations.sh
+
   sanitizers:
     name: Sanitizers (ASan/TSan)
     runs-on: ubuntu-24.04
@@ -57,6 +83,10 @@ jobs:
   miri:
     name: Miri (interop + consumer ABI)
     runs-on: ubuntu-24.04
+    # The prior complete hosted baseline took 58 minutes. Preserve more than a
+    # twofold noise margin without allowing an interpreter stall to consume the
+    # six-hour GitHub Actions default.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
       # The consumer-ABI correspondence tests below build against the
@@ -237,8 +267,8 @@ jobs:
           popd
           scripts/stage-native-package.sh \
             x86_64-unknown-linux-gnu target/debug target/native-package
-          interop_prefix="$PWD/target/native-package/vinary-tree-interop-4.0.0-rc.4"
-          liblevenshtein_prefix="$PWD/target/native-package/liblevenshtein-4.0.0-rc.4-x86_64-unknown-linux-gnu"
+          interop_prefix="$PWD/target/native-package/vinary-tree-interop-4.0.0-rc.6"
+          liblevenshtein_prefix="$PWD/target/native-package/liblevenshtein-4.0.0-rc.6-x86_64-unknown-linux-gnu"
           cmake -S bindings/cpp/tests/package -B target/cmake-package-smoke \
             -DCMAKE_PREFIX_PATH="$interop_prefix;$liblevenshtein_prefix"
           cmake --build target/cmake-package-smoke
@@ -256,7 +286,7 @@ jobs:
             x86_64-unknown-linux-gnu target/debug \
             "$GITHUB_WORKSPACE/target/native-package"
           popd
-          libdictenstein_prefix="$PWD/target/native-package/libdictenstein-4.0.0-rc.4-x86_64-unknown-linux-gnu"
+          libdictenstein_prefix="$PWD/target/native-package/libdictenstein-4.0.0-rc.6-x86_64-unknown-linux-gnu"
           package_prefixes="$interop_prefix;$liblevenshtein_prefix;$libdictenstein_prefix"
           cmake -S bindings/cpp/tests/package-cross \
             -B target/cmake-cross-project-shared \
@@ -338,6 +368,91 @@ jobs:
             ${{ github.workspace }}/../libdictenstein/bindings/python/src:${{ github.workspace }}/bindings/python/src:${{ github.workspace }}/../vinary-tree-interop/bindings/python/src
         run: python -m pytest -q ../libdictenstein/bindings/python/tests
 
+  julia-bindings:
+    name: Julia ${{ matrix.julia-version }} fuzzy-search facade
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        julia-version: ["1.10", "1.12"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          coordinated-ref: ${{ github.head_ref || github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32  # v3.0.2
+        with:
+          version: ${{ matrix.julia-version }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --locked --features native-bindings-full
+      - run: cargo build --locked --manifest-path ../libdictenstein/Cargo.toml --features ffi
+      - name: Test the fresh local package graph
+        env:
+          LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
+        shell: bash
+        run: |
+          set -euo pipefail
+          julia --startup-file=no -e '
+            using Pkg
+            Pkg.activate("target/julia-test")
+            Pkg.develop([
+              PackageSpec(path="../vinary-tree-interop/bindings/julia/VinaryTreeInterop"),
+              PackageSpec(path="../libdictenstein/bindings/julia/Libdictenstein"),
+              PackageSpec(path="bindings/julia/Liblevenshtein"),
+            ])
+            Pkg.test("Liblevenshtein")
+          '
+      - name: Build the strict Documenter API reference
+        if: matrix.julia-version == '1.12'
+        env:
+          LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
+          LIBLEVENSHTEIN_DOCS_DEPLOY: "0"
+        shell: bash
+        run: |
+          set -euo pipefail
+          julia --startup-file=no -e '
+            using Pkg
+            Pkg.activate("target/julia-docs")
+            Pkg.develop([
+              PackageSpec(path="../vinary-tree-interop/bindings/julia/VinaryTreeInterop"),
+              PackageSpec(path="bindings/julia/Liblevenshtein"),
+            ])
+            Pkg.add(PackageSpec(name="Documenter", version="1"))
+            include("bindings/julia/Liblevenshtein/docs/make.jl")
+          '
+
+  raku-bindings:
+    name: Raku fuzzy-search facade
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          coordinated-ref: ${{ github.head_ref || github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Raku/setup-raku@b8b1a4ebe85ef112edfc65e9edc8c57735367e3f  # v1
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --locked --features native-bindings-full
+      - run: cargo build --locked --manifest-path ../libdictenstein/Cargo.toml --features ffi
+      - name: Install the shared ABI and dictionary providers
+        run: |
+          zef install --/test ../vinary-tree-interop/bindings/raku
+          zef install --/test ../libdictenstein/bindings/raku
+      - name: Test the fresh pure-Raku distribution
+        env:
+          LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
+        # This distribution has no native build phase: Cargo produced the
+        # shared library above and the Raku package is a NativeCall facade.
+        # Calling `zef build` without META6 `builder` metadata or a legacy
+        # Build.rakumod is an error, not a useful package validation.
+        run: zef test ./bindings/raku
+      - name: Compile the public Raku Pod
+        run: raku --doc=Text bindings/raku/docs/Liblevenshtein.rakudoc >/dev/null
+
   javascript-bindings:
     name: Node ${{ matrix.node-version }} facade
     runs-on: ubuntu-24.04
@@ -387,6 +502,16 @@ jobs:
           npm run build
           npm run test:contract
           npm pack --dry-run
+      - name: Build the generated TypeDoc API reference
+        if: matrix.node-version == '24'
+        working-directory: bindings/javascript
+        run: |
+          npm run docs
+          test -f ../../target/package-documentation/javascript/index.html
+          grep -R -F 'LiblevenshteinNamespace' \
+            ../../target/package-documentation/javascript/interfaces
+          grep -R -F 'QueryCursor' \
+            ../../target/package-documentation/javascript/interfaces
 
   jvm-latest:
     name: JVM current JDK 26
@@ -656,6 +781,7 @@ jobs:
       - name: SwiftPM cross-project snapshot integration
         env:
           VINARY_TREE_INTEROP_ROOT: ${{ github.workspace }}/../vinary-tree-interop/bindings/swift/vinary-tree-interop
+          LIBDICTENSTEIN_ROOT: ${{ github.workspace }}/../libdictenstein
           LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
         run: swift run --package-path bindings/swift/Integration -c release
@@ -683,10 +809,13 @@ jobs:
           RUBYLIB: ${{ github.workspace }}/bindings/ruby/lib:${{ github.workspace }}/../libdictenstein/bindings/ruby/lib
         run: |
           ruby bindings/ruby/test/test_liblevenshtein.rb
+          ruby bindings/ruby/test/test_cross_project.rb
           ruby bindings/ruby/test/test_property.rb
           ruby bindings/ruby/test/test_leak.rb
           ruby ../libdictenstein/bindings/ruby/test/test_cross_project.rb
-      - run: gem build bindings/ruby/liblevenshtein.gemspec
+      - name: Build the RubyGems package from its package root
+        working-directory: bindings/ruby
+        run: gem build liblevenshtein.gemspec
 
   fortran-bindings:
     name: Fortran 2018 / ${{ matrix.toolchain.compiler }}
@@ -765,7 +894,9 @@ jobs:
         env:
           LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
           LD_LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
+          VINARY_TREE_TEST_TMPDIR: ${{ github.workspace }}/target/ocaml/tmp
         run: |
+          mkdir -p "$VINARY_TREE_TEST_TMPDIR"
           opam exec -- dune build --root ../vinary-tree-interop/bindings/ocaml @install
           opam exec -- dune install --root ../vinary-tree-interop/bindings/ocaml
           opam exec -- dune build --root ../libdictenstein/bindings/ocaml @install
@@ -821,7 +952,7 @@ jobs:
       - name: Build modular Lua rocks and run cross-project snapshots
         shell: bash
         run: |
-          mkdir -p target/lua/vinary_tree
+          mkdir -p target/lua/vinary_tree target/lua/tmp
           read -r -a lua_cflags <<< "$(pkg-config --cflags lua5.4)"
           cc -std=c17 -Wall -Wextra -Werror -shared -fPIC \
             "${lua_cflags[@]}" \
@@ -839,6 +970,7 @@ jobs:
             -Ltarget/debug -lliblevenshtein \
             -o target/lua/vinary_tree/liblevenshtein.so
           LUA_CPATH="$PWD/target/lua/?.so;$PWD/target/lua/?/?.so;;" \
+          VINARY_TREE_TEST_TMPDIR="$PWD/target/lua/tmp" \
           LD_LIBRARY_PATH="$PWD/target/debug:$PWD/../libdictenstein/target/debug" \
             lua5.4 bindings/lua/tests/snapshot.lua
           LUA_CPATH="$PWD/target/lua/?.so;$PWD/target/lua/?/?.so;;" \
@@ -933,6 +1065,7 @@ jobs:
             os: openbsd
             version: "7.9"
             install: sudo pkg_add rust
+            cxx: /usr/bin/c++
             # OpenBSD 7.9 currently packages rustc 1.94.1, below this family's
             # declared Rust 1.95 MSRV. The VM still validates the native C ABI;
             # a required current-Rust OpenBSD compile is maintained below.
@@ -941,7 +1074,13 @@ jobs:
           - name: DragonFly BSD 6.4.2 x86_64
             os: dragonflybsd
             version: "6.4.2"
-            install: sudo pkg install -y rust
+            # DragonFly's base GCC accepts the historical C++20 flag spelling
+            # but predates required library facilities such as <span>. The
+            # default dports GCC package supplies a maintained C++20 compiler
+            # and standard library. Use its absolute unversioned symlink so a
+            # same-named compiler in DragonFly's base PATH cannot shadow it.
+            install: sudo pkg install -y rust gcc
+            cxx: /usr/local/bin/g++
             # DragonFly 6.4 currently packages rustc 1.85.1, below this
             # family's declared Rust 1.95 MSRV. Keep the VM as an experimental
             # native C/C++ ABI portability gate instead of asking an obsolete
@@ -952,6 +1091,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-portable-siblings
       - name: Start ${{ matrix.platform.name }} VM
+        # Healthy BSD starts in this matrix complete in under one minute. The
+        # wider ceiling tolerates runner noise while bounding a stuck QEMU boot.
+        timeout-minutes: 10
         uses: cross-platform-actions/action@v1.3.0
         with:
           operating_system: ${{ matrix.platform.os }}
@@ -960,7 +1102,7 @@ jobs:
           shell: sh
           memory: 6G
           cpu_count: 2
-      - name: Install Rust
+      - name: Install platform toolchain prerequisites
         shell: cpa.sh {0}
         run: |
           attempt=1
@@ -996,7 +1138,30 @@ jobs:
           cc -std=c17 -Wall -Wextra -Werror \
             -Iinclude -Ivendor/vinary-tree-interop/include \
             -x c -fsyntax-only include/liblevenshtein.h
-          c++ -std=c++20 -Wall -Wextra -Werror \
+          cxx='${{ matrix.platform.cxx }}'
+          cxx_standard=
+          if [ ! -x "$cxx" ]; then
+            echo "configured C++ compiler is not executable: $cxx" >&2
+            exit 1
+          fi
+          "$cxx" --version
+          for standard in c++20 c++2a; do
+            if printf '#include <span>\n' | \
+              "$cxx" "-std=$standard" -x c++ -fsyntax-only - \
+                >/dev/null 2>&1; then
+              cxx_standard="-std=$standard"
+              break
+            fi
+          done
+          if [ -z "$cxx_standard" ]; then
+            echo "$cxx has no C++20 mode and standard library with <span>" >&2
+            for standard in c++20 c++2a; do
+              printf '#include <span>\n' | \
+                "$cxx" "-std=$standard" -x c++ -fsyntax-only - || true
+            done
+            exit 1
+          fi
+          "$cxx" "$cxx_standard" -Wall -Wextra -Werror \
             -Iinclude -Ivendor/vinary-tree-interop/include \
             -x c++ -fsyntax-only include/liblevenshtein.hpp
 
@@ -1079,6 +1244,10 @@ jobs:
       - uses: ./.github/actions/checkout-dev-siblings
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: python3 scripts/check-rust-doc-examples.py
+      - env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo test --locked --all-features --doc
       - env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --locked --all-features --no-deps

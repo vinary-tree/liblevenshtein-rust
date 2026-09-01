@@ -39,7 +39,7 @@ mod builder_api;
 mod contextual_costs;
 mod contextual_query;
 pub mod costs_f64;
-mod dictionary_traversal;
+pub(crate) mod dictionary_traversal;
 pub mod generalized;
 pub mod helpers;
 mod intersection;
@@ -195,7 +195,7 @@ use std::collections::HashSet;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 ///
 /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
@@ -208,20 +208,19 @@ use std::collections::HashSet;
 ///
 /// # Custom Substitution Policy
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
+/// use liblevenshtein::transducer::{Restricted, SubstitutionSet};
 ///
-/// // Allow phonetic substitutions like 'f' ↔ 'ph', 'c' ↔ 'k'
+/// // Allow phonetic substitutions such as 'c' ↔ 'k'.
 /// let policy_set = SubstitutionSet::phonetic_basic();
 /// let policy = Restricted::new(&policy_set);
 ///
-/// let dict = DoubleArrayTrie::from_terms(vec!["phone", "cat"]);
+/// let dict = DoubleArrayTrie::from_terms(["cat"]);
 /// let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
 ///
-/// // "fone" matches "phone" with restricted substitutions
-/// for term in transducer.query("fone", 1) {
-///     println!("Found: {}", term);
-/// }
+/// let matches: Vec<_> = transducer.query_terms("kat", 0).collect();
+/// assert_eq!(matches, ["cat"]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Transducer<D: Dictionary, P: SubstitutionPolicy = Unrestricted> {
@@ -251,7 +250,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
@@ -269,7 +268,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["the", "quick"]);
@@ -287,7 +286,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["everyone", "someone"]);
@@ -319,7 +318,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::transducer::{SubstitutionSet, Algorithm};
     ///
@@ -371,22 +370,20 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
+    /// use liblevenshtein::transducer::{Restricted, SubstitutionSet};
     ///
     /// // Create a phonetic substitution set
     /// let mut policy_set = SubstitutionSet::new();
-    /// policy_set.allow('f', 'p');  // Allow f ↔ p
     /// policy_set.allow('c', 'k');  // Allow c ↔ k
     ///
     /// let policy = Restricted::new(&policy_set);
-    /// let dict = DoubleArrayTrie::from_terms(vec!["phone", "cat"]);
+    /// let dict = DoubleArrayTrie::from_terms(["cat"]);
     /// let transducer = Transducer::with_policy(dict, Algorithm::Standard, policy);
     ///
-    /// // "fone" will match "phone" via f↔p substitution
-    /// for term in transducer.query("fone", 1) {
-    ///     println!("Found: {}", term);
-    /// }
+    /// let matches: Vec<_> = transducer.query_terms("kat", 0).collect();
+    /// assert_eq!(matches, ["cat"]);
     /// ```
     pub fn with_policy(dictionary: D, algorithm: Algorithm, policy: P) -> Self {
         Self {
@@ -449,7 +446,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
@@ -724,7 +721,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest"]);
@@ -846,7 +843,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing"]);
@@ -870,7 +867,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest"]);
@@ -895,7 +892,7 @@ impl<
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::prelude::*;
     ///
     /// let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest"]);
@@ -982,7 +979,9 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     ///
@@ -1002,6 +1001,7 @@ where
     ///
     /// // Returns: [("my_func", 2)] - other_func fails the value predicate
     /// // before its term string is returned.
+    /// # }
     /// ```
     ///
     /// # Use Cases
@@ -1074,7 +1074,9 @@ where
     ///
     /// # Example: Hierarchical Lexical Scope
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use std::collections::HashSet;
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
@@ -1099,6 +1101,7 @@ where
     ///
     /// // Returns: ["my_func", "helper"] - only from visible scopes
     /// // Does NOT return items from other modules/files
+    /// # }
     /// ```
     ///
     /// # Performance

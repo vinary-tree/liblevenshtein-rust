@@ -14,7 +14,15 @@ consumer exercises it.
 
 ## Ledgers
 
-- [`4.0.0-rc.4`](4.0.0-rc.4.md) — current corrective release train. It makes
+- [`4.0.0-rc.6`](4.0.0-rc.6.md) — current coordinated temporal-metric and
+  release-coherence candidate. It records the exact candidate source subject,
+  lockfiles, toolchain, package file sets, validation state, and the remaining
+  final-commit attestation gate without promoting incomplete evidence.
+- [`4.0.0-rc.5`](4.0.0-rc.5.md) — coordinated identity-correction predecessor.
+  It restores the two standalone npm package names to their exact
+  project names, aligns Maven and Clojars product descriptions, and adds
+  fail-closed cross-repository identity contracts before publication.
+- [`4.0.0-rc.4`](4.0.0-rc.4.md) — immutable predecessor. It makes
   native JavaScript/JVM prerequisites explicit, brings Cargo lockfiles under
   release synchronization, and rehearses both repairs from a build-clean family.
 - [`4.0.0-rc.3`](4.0.0-rc.3.md) — rejected corrective candidate. Its verified

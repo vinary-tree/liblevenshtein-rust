@@ -1,0 +1,20 @@
+examine_globs = ["src/time_series/timestamped_twed_index.rs"]
+examine_re = [
+  "replace timestamped_match_order ->",
+  "in timestamped_knn_heap_push",
+  "replace timestamped_knn_heap_sift_down with \\(\\)",
+  "in timestamped_knn_heap_sift_down",
+]
+additional_cargo_args = [
+  "--locked",
+  "--offline",
+  "--lib",
+  "--test=proptest_timestamped_twed_product",
+  "timestamped_knn_push_preserves_the_total_max_heap_order",
+]
+test_package = ["liblevenshtein"]
+copy_target = false
+copy_vcs = false
+gitignore = true
+minimum_test_timeout = 60.0
+timeout_multiplier = 3.0

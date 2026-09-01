@@ -22,14 +22,18 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::transducer::universal::{UniversalPosition, Standard};
 //!
 //! // Create I-type position: I + 0#0 (initial state)
-//! let initial = UniversalPosition::<Standard>::new_i(0, 0, 2)?;
+//! let initial = UniversalPosition::<Standard>::new_i(0, 0, 2)
+//!     .expect("0#0 satisfies the I-position invariant");
+//! assert!(initial.is_i_type());
 //!
 //! // Create M-type position: M + (-1)#1 (one error, one char before end)
-//! let final_pos = UniversalPosition::<Standard>::new_m(-1, 1, 2)?;
+//! let final_pos = UniversalPosition::<Standard>::new_m(-1, 1, 2)
+//!     .expect("-1#1 satisfies the M-position invariant");
+//! assert!(final_pos.is_m_type());
 //! ```
 
 use std::fmt;
@@ -736,10 +740,16 @@ impl<V: PositionVariant> UniversalPosition<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let pos = UniversalPosition::<Standard>::new_i(0, 0, 2)?;  // I + 0#0
-    /// let pos = UniversalPosition::<Standard>::new_i(1, 1, 2)?;  // I + 1#1
-    /// let pos = UniversalPosition::<Standard>::new_i(-2, 2, 2)?; // I + (-2)#2
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalPosition};
+    ///
+    /// let initial = UniversalPosition::<Standard>::new_i(0, 0, 2)
+    ///     .expect("0#0 satisfies the I-position invariant");
+    /// let ahead = UniversalPosition::<Standard>::new_i(1, 1, 2)
+    ///     .expect("1#1 satisfies the I-position invariant");
+    /// let behind = UniversalPosition::<Standard>::new_i(-2, 2, 2)
+    ///     .expect("-2#2 satisfies the I-position invariant");
+    /// assert_eq!((initial.offset(), ahead.offset(), behind.offset()), (0, 1, -2));
     /// ```
     pub fn new_i(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
         // Check invariant: |offset| ≤ errors ∧ -n ≤ offset ≤ n ∧ 0 ≤ errors ≤ max_distance
@@ -772,10 +782,16 @@ impl<V: PositionVariant> UniversalPosition<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let pos = UniversalPosition::<Standard>::new_m(0, 0, 2)?;   // M + 0#0
-    /// let pos = UniversalPosition::<Standard>::new_m(-1, 1, 2)?;  // M + (-1)#1
-    /// let pos = UniversalPosition::<Standard>::new_m(-2, 0, 2)?;  // M + (-2)#0
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalPosition};
+    ///
+    /// let at_end = UniversalPosition::<Standard>::new_m(0, 0, 2)
+    ///     .expect("0#0 satisfies the M-position invariant");
+    /// let before_end = UniversalPosition::<Standard>::new_m(-1, 1, 2)
+    ///     .expect("-1#1 satisfies the M-position invariant");
+    /// let two_before = UniversalPosition::<Standard>::new_m(-2, 0, 2)
+    ///     .expect("-2#0 satisfies the M-position invariant");
+    /// assert_eq!((at_end.offset(), before_end.offset(), two_before.offset()), (0, -1, -2));
     /// ```
     pub fn new_m(offset: i32, errors: u8, max_distance: u8) -> Result<Self, PositionError> {
         if m_invariant_violated(offset, errors, max_distance) {
@@ -806,11 +822,16 @@ impl<V: PositionVariant> UniversalPosition<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{
+    ///     Transposition, TranspositionState, UniversalPosition,
+    /// };
+    ///
     /// // Create transposition state position
     /// let pos = UniversalPosition::<Transposition>::new_i_with_state(
     ///     1, 1, 2, TranspositionState::Transposing
-    /// )?;
+    /// ).expect("1#1 satisfies the I-position invariant");
+    /// assert_eq!(pos.variant_state(), &TranspositionState::Transposing);
     /// ```
     pub fn new_i_with_state(
         offset: i32,

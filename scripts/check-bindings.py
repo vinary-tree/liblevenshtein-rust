@@ -63,6 +63,14 @@ def text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def surface_file(relative: str) -> Path:
+    """Resolve modeled facade evidence against its configured repository root."""
+    runtime_prefix = "../javascript-runtime/"
+    if relative.startswith(runtime_prefix):
+        return RUNTIME_ROOT / relative.removeprefix(runtime_prefix)
+    return ROOT / relative
+
+
 subprocess.run(
     [sys.executable, str(ROOT / "scripts" / "generate-bindings.py"), "--check"],
     cwd=ROOT,
@@ -555,6 +563,64 @@ require(
     '"target/release"' not in luarocks_package,
     "LuaRocks package must not link against a source-checkout target directory",
 )
+julia_project = tomllib.loads(
+    text(ROOT / "bindings" / "julia" / "Liblevenshtein" / "Project.toml")
+)
+require(julia_project["name"] == packages["julia"], "wrong Julia package")
+require(
+    julia_project["version"] == RELEASE_MODEL["registries"]["julia"],
+    "wrong Julia package version",
+)
+require(
+    julia_project.get("deps", {}).get("VinaryTreeInterop")
+    == "8d6503e5-4d65-4bd8-a8ee-293a0149584e"
+    and julia_project.get("compat", {}).get("VinaryTreeInterop") == "4",
+    "Julia package must depend on the canonical VinaryTreeInterop package",
+)
+raku_meta = json.loads(text(ROOT / "bindings" / "raku" / "META6.json"))
+require(raku_meta["name"] == packages["zef"], "wrong Raku package")
+require(
+    raku_meta["version"] == RELEASE_MODEL["registries"]["zef"],
+    "wrong Raku package version",
+)
+raku_interop_version = RELEASE_MODEL["dependencies"]["vinary-tree-interop"].replace(
+    "-rc.", ".rc."
+)
+require(
+    f"Vinary-Tree-Interop:ver<{raku_interop_version}>:auth<zef:vinary-tree>"
+    in raku_meta.get("depends", []),
+    "Raku package must depend on the canonical Vinary-Tree-Interop distribution",
+)
+raku_libdict_version = RELEASE_MODEL["dependencies"]["libdictenstein"].replace(
+    "-rc.", ".rc."
+)
+require(
+    f"Libdictenstein:ver<{raku_libdict_version}>:auth<zef:vinary-tree>"
+    in raku_meta.get("test-depends", []),
+    "Raku tests must pin the coordinated Libdictenstein distribution",
+)
+raku_abi = text(
+    ROOT / "bindings" / "raku" / "lib" / "Liblevenshtein" / "GeneratedAbi.rakumod"
+)
+raku_facade = text(ROOT / "bindings" / "raku" / "lib" / "Liblevenshtein.rakumod")
+generated_raku_exports = set(
+    re.findall(
+        r"^our (?:constant|enum) ([A-Z][A-Za-z0-9-]*) is export", raku_abi, re.MULTILINE
+    )
+)
+generated_raku_exports.update(
+    re.findall(r"^    ([A-Z][A-Z0-9-]*) =>", raku_abi, re.MULTILINE)
+)
+for name in generated_raku_exports:
+    require(
+        re.search(
+            rf"^our constant {re.escape(name)} is export =",
+            raku_facade,
+            re.MULTILINE,
+        )
+        is not None,
+        f"Raku facade does not re-export generated ABI name {name}",
+    )
 python_interop = tomllib.loads(
     text(INTEROP_ROOT / "bindings" / "python" / "pyproject.toml")
 )
@@ -577,6 +643,10 @@ go_interop_module = "github.com/vinary-tree/vinary-tree-interop/bindings/go/v4"
 require(
     f"module {go_interop_module}" in go_interop,
     "shared Go module path must match its versioned repository subdirectory",
+)
+require(
+    f"module {packages['goModule']}" in go_project,
+    "project Go module path differs from the canonical package model",
 )
 require(
     go_interop_module in go_project, "project Go module uses the wrong interop path"
@@ -677,9 +747,9 @@ require(
     "project npm facade must pin the interop package exactly",
 )
 require(
-    javascript["dependencies"][MODEL["wasm"]["umbrellaPackage"]]
+    javascript["dependencies"][MODEL["wasm"]["runtimePackage"]]
     == MODEL["packageVersion"],
-    "project npm facade must consume the exact umbrella runtime version",
+    "project npm facade must consume the exact shared JavaScript runtime version",
 )
 for export in (".", "./typescript", "./clojurescript", "./wasm", "./wasi"):
     require(export in javascript["exports"], f"npm package lacks {export} export")
@@ -710,8 +780,9 @@ for project, (project_root, package_name, guard) in related_packages.items():
         f"wrong {project} npm version",
     )
     require(
-        package["dependencies"]["@vinary-tree/vinary-tree"] == MODEL["packageVersion"],
-        f"{project} must pin the umbrella runtime exactly",
+        package["dependencies"]["@vinary-tree/javascript-runtime"]
+        == MODEL["packageVersion"],
+        f"{project} must pin the shared JavaScript runtime exactly",
     )
     for export in (".", "./typescript", "./clojurescript", "./wasm", "./wasi"):
         require(export in package["exports"], f"{project} npm package lacks {export}")
@@ -799,18 +870,15 @@ for marker in (
     "jreleaser_deploy_maven_mavencentral_canonical_active: release",
     "jreleaser_deploy_maven_mavencentral_legacydylon_active:",
     "jreleaser_deploy_maven_mavencentral_legacyuniversalautomata_active:",
-    "require the pinned canonical artifact to be public first",
-    "canonicalmavenjarsha256",
-    "sha256sum --check --strict",
+    "require exact canonical artifact bytes to be public first",
+    "bindings/jvm/build/staging-deploy/io/vinarytree/liblevenshtein/$version/liblevenshtein-$version.jar",
 ):
     require(marker in release, f"Maven publication workflow is missing {marker}")
 relocation_stager = text(ROOT / "scripts" / "stage-maven-relocations.py")
 jreleaser_configuration = text(ROOT / "bindings" / "jvm" / "jreleaser.yml")
 jvm_build = text(ROOT / "bindings" / "jvm" / "build.gradle.kts")
-jvm_description = (
-    "A high-performance library for spelling correction, fuzzy dictionary search, "
-    "and phonetic matching using Levenshtein and related finite-state automata."
-)
+release_model = json.loads(text(ROOT / "release" / "version.json"))
+jvm_description = release_model["metadata"]["description"]
 require(
     f'description = "{jvm_description}"' in jvm_build,
     "Maven POM description does not explain the product's purpose",
@@ -818,6 +886,11 @@ require(
 require(
     f"description: {jvm_description}" in jreleaser_configuration,
     "JReleaser and Maven POM descriptions have drifted",
+)
+require(
+    f':description "{jvm_description}"'
+    in text(ROOT / "bindings" / "clojure" / "project.clj"),
+    "Clojars and Maven descriptions have drifted",
 )
 require(
     not re.search(
@@ -1151,10 +1224,12 @@ FACADE_LANGUAGES = (
     "haskell",
     "javascript",
     "javascript-runtime",
+    "julia",
     "jvm",
     "lua",
     "ocaml",
     "python",
+    "raku",
     "ruby",
     "swift",
 )
@@ -1246,13 +1321,19 @@ for language in FACADE_LANGUAGES:
             f"{context} delegates to an unmodeled facade",
         )
     require(bool(facade["sourceFiles"]), f"{context} lists no facade sources")
-    corpus = "\n".join(text(ROOT / relative) for relative in facade["sourceFiles"])
+    corpus = "\n".join(
+        text(surface_file(relative)) for relative in facade["sourceFiles"]
+    )
     readme = facade["readme"]
     if readme is not None:
-        require((ROOT / readme).is_file(), f"{context} README is missing: {readme}")
+        require(
+            surface_file(readme).is_file(), f"{context} README is missing: {readme}"
+        )
     require(bool(facade["tests"]), f"{context} lists no executable tests")
     for relative in facade["tests"]:
-        require((ROOT / relative).is_file(), f"{context} test is missing: {relative}")
+        require(
+            surface_file(relative).is_file(), f"{context} test is missing: {relative}"
+        )
 
     functions = facade["functions"]
     require(
@@ -1314,7 +1395,7 @@ for language in FACADE_LANGUAGES:
             f"{enum_context} must be defined in a listed facade source",
         )
         require(
-            named_in(symbol_leaf(entry["symbol"]), text(ROOT / defined_in)),
+            named_in(symbol_leaf(entry["symbol"]), text(surface_file(defined_in))),
             f"{enum_context} names unlocatable symbol {entry['symbol']!r}",
         )
         enums_exposed += 1

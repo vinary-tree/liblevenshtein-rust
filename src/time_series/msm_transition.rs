@@ -27,13 +27,14 @@
 //! - `c` is the adjacent value in the target series
 //! - `c_const` is the base cost for split/merge operations
 
-use super::msm::{msm_infinity_matrix, series_pair_values_are_finite, MsmConfig};
+use super::msm::{series_pair_values_are_finite, MsmConfig};
 use super::msm_position::MsmPosition;
 use super::msm_state::MsmState;
 use smallvec::SmallVec;
 
-/// Epsilon for float comparisons.
-const COST_EPSILON: f64 = 1e-9;
+/// Exact dominance tolerance: public cutoff membership and automaton
+/// subsumption never admit a numerically distinct cost.
+const COST_EPSILON: f64 = 0.0;
 
 /// Maximum speculative capacity reserved for one MSM transition step.
 const MSM_TRANSITION_PREALLOC_LIMIT: usize = 4096;
@@ -100,7 +101,7 @@ pub fn transition_msm_position(
     // Cost = |x_i - y_j|
     if let (Some(qv), Some(tv)) = (query_value, target_value) {
         let move_cost = position.accumulated_cost + (qv - tv).abs();
-        if move_cost <= max_cost + COST_EPSILON {
+        if move_cost <= max_cost {
             let new_pos = MsmPosition::new(
                 position.query_index + 1,
                 position.target_index + 1,
@@ -123,7 +124,7 @@ pub fn transition_msm_position(
         // Use the last_target_value as the context
         let c_cost = config.c_func(qv, position.last_query_value, position.last_target_value);
         let merge_cost = position.accumulated_cost + c_cost;
-        if merge_cost <= max_cost + COST_EPSILON {
+        if merge_cost <= max_cost {
             let new_pos = MsmPosition::new(
                 position.query_index + 1,
                 position.target_index, // Target index doesn't change
@@ -145,7 +146,7 @@ pub fn transition_msm_position(
         let query_context = query_value.unwrap_or(position.last_query_value);
         let c_cost = config.c_func(tv, query_context, position.last_target_value);
         let split_cost = position.accumulated_cost + c_cost;
-        if split_cost <= max_cost + COST_EPSILON {
+        if split_cost <= max_cost {
             let new_pos = MsmPosition::new(
                 position.query_index, // Query index doesn't change
                 position.target_index + 1,
@@ -325,7 +326,7 @@ pub fn msm_distance_automaton(
 
     // Process first position: Cost(1,1) = |x_0 - y_0|
     let initial_cost = (query[0] - target[0]).abs();
-    if initial_cost > max_cost + COST_EPSILON {
+    if initial_cost > max_cost {
         return None;
     }
 
@@ -349,7 +350,7 @@ pub fn msm_distance_automaton(
         let c_cost = config.c_func(query[i - 1], query[i - 2], target[0]);
         let new_cost = prev_cost + c_cost;
 
-        if new_cost <= max_cost + COST_EPSILON {
+        if new_cost <= max_cost {
             first_col.insert_unchecked(MsmPosition::new(i, 1, new_cost, query[i - 1], target[0]));
         }
     }
@@ -367,7 +368,7 @@ pub fn msm_distance_automaton(
         let c_cost = config.c_func(target[j - 1], query[0], target[j - 2]);
         let new_cost = prev_cost + c_cost;
 
-        if new_cost <= max_cost + COST_EPSILON {
+        if new_cost <= max_cost {
             current_row.insert_unchecked(MsmPosition::new(1, j, new_cost, query[0], target[j - 1]));
         }
     }
@@ -433,7 +434,7 @@ pub fn msm_distance_automaton(
                 }
             }
 
-            if best_cost <= max_cost + COST_EPSILON {
+            if best_cost <= max_cost {
                 state.insert_unchecked(MsmPosition::new(i, j, best_cost, best_qv, best_tv));
             }
         }
@@ -443,80 +444,30 @@ pub fn msm_distance_automaton(
     state.min_final_distance(m, n)
 }
 
-/// MSM distance computation using a more efficient wavefront approach.
+/// Retired compatibility entry point for the repaired MSM frontier scorer.
 ///
-/// This implementation maintains only the necessary frontier of positions
-/// rather than all positions, making it more suitable for the automaton model.
+/// The historical implementation contradicted its name by retaining the
+/// complete two-dimensional matrix and once omitted the final cutoff guard.
+/// Compatibility calls now use the canonical checked two-generation scorer:
+/// memory is linear in the shorter operand, stack use is constant, and
+/// `Some(distance)` is returned exactly when the distance satisfies the
+/// inclusive cutoff. New code must use [`MsmConfig::distance_bounded`] or the
+/// sparse dictionary-product automaton, whose outcomes are fully tagged.
+#[deprecated(
+    since = "4.0.0-rc.6",
+    note = "use MsmConfig::distance_bounded or the sparse exact transducer"
+)]
 pub fn msm_distance_wavefront(
     query: &[f64],
     target: &[f64],
     config: &MsmConfig,
     max_cost: f64,
 ) -> Option<f64> {
-    let m = query.len();
-    let n = target.len();
-
-    // Handle empty series
-    if m == 0 && n == 0 {
-        return Some(0.0);
-    }
-    if m == 0 || n == 0 {
-        return None;
-    }
-    if max_cost.is_nan() || max_cost < 0.0 || !series_pair_values_are_finite(query, target) {
-        return None;
-    }
-
-    // Use 2D cost array (same as DP but with early termination potential)
-    let mut cost = msm_infinity_matrix(m, n)?;
-
-    // Base case
-    cost[1][1] = (query[0] - target[0]).abs();
-    if cost[1][1] > max_cost + COST_EPSILON {
-        return None;
-    }
-
-    // Initialize first column
-    for i in 2..=m {
-        let c_cost = config.c_func(query[i - 1], query[i - 2], target[0]);
-        cost[i][1] = cost[i - 1][1] + c_cost;
-    }
-
-    // Initialize first row
-    for j in 2..=n {
-        let c_cost = config.c_func(target[j - 1], query[0], target[j - 2]);
-        cost[1][j] = cost[1][j - 1] + c_cost;
-    }
-
-    // Fill the matrix with early termination
-    for i in 2..=m {
-        let mut row_has_valid = false;
-        for j in 2..=n {
-            let move_cost = cost[i - 1][j - 1] + (query[i - 1] - target[j - 1]).abs();
-            let merge_cost =
-                cost[i - 1][j] + config.c_func(query[i - 1], query[i - 2], target[j - 1]);
-            let split_cost =
-                cost[i][j - 1] + config.c_func(target[j - 1], query[i - 1], target[j - 2]);
-
-            cost[i][j] = move_cost.min(merge_cost).min(split_cost);
-
-            if cost[i][j] <= max_cost + COST_EPSILON {
-                row_has_valid = true;
-            }
-        }
-        if !row_has_valid {
-            break;
-        }
-    }
-
-    if cost[m][n].is_finite() {
-        Some(cost[m][n])
-    } else {
-        None
-    }
+    config.distance_with_cutoff(query, target, max_cost)
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
 
@@ -757,9 +708,61 @@ mod tests {
 
         // Should be filtered by threshold
         let dist = msm_distance_wavefront(&x, &y, &config, 5.0);
-        // May or may not return None depending on early termination
-        if let Some(d) = dist {
-            assert!(d > 5.0);
+        assert_eq!(dist, None);
+    }
+
+    #[test]
+    fn cutoff_omission_mutant_is_killed_by_the_pinned_counterexample() {
+        let config = MsmConfig::new(100.0);
+        let query = [0.0, 10.0];
+        let target = [0.0, 20.0];
+
+        // This is the historical final-guard omission mutant: it returns the
+        // finite terminal cell without comparing it to the caller's cutoff.
+        let omission_mutant = || Some(config.distance(&query, &target));
+        assert_eq!(omission_mutant(), Some(10.0));
+        assert_eq!(msm_distance_wavefront(&query, &target, &config, 1.0), None);
+    }
+
+    #[test]
+    fn repaired_compatibility_scorers_exhaustively_match_scalar_dp() {
+        fn extend(prefix: &mut Vec<f64>, remaining: usize, out: &mut Vec<Vec<f64>>) {
+            if remaining == 0 {
+                out.push(prefix.clone());
+                return;
+            }
+            for value in [-1.0, 0.0, 2.0] {
+                prefix.push(value);
+                extend(prefix, remaining - 1, out);
+                prefix.pop();
+            }
+        }
+
+        let mut series = Vec::new();
+        for length in 1..=3 {
+            extend(&mut Vec::new(), length, &mut series);
+        }
+        for split_merge in [0.0, 0.5, 2.0] {
+            let config = MsmConfig::new(split_merge);
+            for query in &series {
+                for target in &series {
+                    let exact = config.distance(query, target);
+                    assert_eq!(
+                        msm_distance_wavefront(query, target, &config, f64::INFINITY),
+                        Some(exact)
+                    );
+                    assert_eq!(
+                        msm_distance_automaton(query, target, &config, f64::INFINITY),
+                        Some(exact)
+                    );
+                    for cutoff in [0.0, 0.5, exact, exact + 1.0] {
+                        assert_eq!(
+                            msm_distance_wavefront(query, target, &config, cutoff),
+                            config.distance_with_cutoff(query, target, cutoff)
+                        );
+                    }
+                }
+            }
         }
     }
 

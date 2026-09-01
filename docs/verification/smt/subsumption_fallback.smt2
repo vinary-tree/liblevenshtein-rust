@@ -52,37 +52,37 @@
 (define-fun shared-weighted
   ((mode Int) (li Int) (lc Real) (ls Bool)
    (ri Int) (rc Real) (rs Bool) (ql Int) (step Real)) Bool
-  (and (<= lc (+ rc (/ 1.0 1000000000.0)))
+  (and (<= lc rc)
     (ite (= mode 0)
       (<= (* (to_real (abs-int (- li ri))) step)
-          (+ (- rc lc) (/ 1.0 1000000000.0)))
+          (- rc lc))
       (ite (= mode 1)
         (ite (and ls rs) (= li ri)
           (ite (or ls rs) false
             (<= (* (to_real (abs-int (- li ri))) step)
-                (+ (- rc lc) (/ 1.0 1000000000.0)))))
+                (- rc lc))))
         (and (= ls rs) (<= li ql)
           (not (and ls (>= li ql) (< ri ql)))
-          (< lc (- rc (/ 1.0 1000000000.0))) (= li ri))))))
+          (< lc rc) (= li ri))))))
 
 (define-fun legacy-weighted
   ((mode Int) (li Int) (lc Real) (ls Bool)
    (ri Int) (rc Real) (rs Bool) (ql Int) (step Real)) Bool
   (ite (= mode 0)
-    (and (<= lc (+ rc (/ 1.0 1000000000.0)))
+    (and (<= lc rc)
       (<= (* (to_real (abs-int (- li ri))) step)
-          (+ (- rc lc) (/ 1.0 1000000000.0))))
+          (- rc lc)))
     (ite (= mode 1)
       (ite (and ls rs)
-        (and (<= lc (+ rc (/ 1.0 1000000000.0))) (= li ri))
+        (and (<= lc rc) (= li ri))
         (ite (or ls rs) false
-          (and (<= lc (+ rc (/ 1.0 1000000000.0)))
+          (and (<= lc rc)
             (<= (* (to_real (abs-int (- li ri))) step)
-                (+ (- rc lc) (/ 1.0 1000000000.0))))))
-      (and (<= lc (+ rc (/ 1.0 1000000000.0)))
+                (- rc lc)))))
+      (and (<= lc rc)
         (= ls rs) (<= li ql)
         (not (and ls (>= li ql) (< ri ql)))
-        (< lc (- rc (/ 1.0 1000000000.0))) (= li ri)))))
+        (< lc rc) (= li ri)))))
 
 (declare-const lcr Real)
 (declare-const rcr Real)
@@ -93,5 +93,13 @@
              (<= 0 ql) (<= 0 stepr)))
 (assert (not (= (shared-weighted mode li lcr ls ri rcr rs ql stepr)
                 (legacy-weighted mode li lcr ls ri rcr rs ql stepr))))
+(check-sat)
+(pop)
+
+; Exact weighted dominance can never accept a more expensive representative,
+; including differences smaller than the former epsilon tolerance.
+(push)
+(assert (> lcr rcr))
+(assert (shared-weighted 0 li lcr false li rcr false ql stepr))
 (check-sat)
 (pop)

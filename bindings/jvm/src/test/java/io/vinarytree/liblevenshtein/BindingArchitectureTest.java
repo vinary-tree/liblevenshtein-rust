@@ -21,6 +21,15 @@ final class BindingArchitectureTest {
                 .anyMatch(constructor -> constructor.getParameterCount() == 0));
     }
 
+    @Test
+    void unknownForwardCompatibleStatusRetainsItsExactRawCode() {
+        NativeException failure = new NativeException(65_535, "future status");
+        assertEquals(Status.UNKNOWN, failure.status());
+        assertEquals(65_535, failure.statusCode());
+        assertEquals(-1, Status.UNKNOWN.code());
+        assertEquals("future status", failure.getMessage());
+    }
+
     // C2/C3: a compiled pattern reports a positive size, closes idempotently, and
     // rejects use after close with IllegalStateException rather than crashing.
     @Test

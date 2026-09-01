@@ -5,6 +5,14 @@ program test_distance
   type(phonetic_pattern) :: pattern
   integer(c_int32_t) :: status = -1
   logical :: accepted
+  if (llev_ok /= 0 .or. llev_end /= 1) error stop "terminal statuses"
+  if (llev_invalid_argument /= 2 .or. llev_invalid_utf8 /= 3) error stop "input statuses"
+  if (llev_null_pointer /= 4 .or. llev_panic /= 5) error stop "boundary statuses"
+  if (llev_unsupported /= 6 .or. llev_io_error /= 7) error stop "capability statuses"
+  if (llev_closed /= 8 .or. llev_limit_exceeded /= 9) error stop "lifecycle statuses"
+  if (llev_provider_error /= 10 .or. llev_batch_in_use /= 11) error stop "provider statuses"
+  if (llev_domain_mismatch /= 12) error stop "domain status"
+  if (llev_english_orthography /= 0 .or. llev_english_phonetic /= 1) error stop "rule-set kinds"
   if (levenshtein_distance("kitten", "sitting") /= 3_c_size_t) error stop "distance"
   if (damerau_distance("ab", "ba") /= 1_c_size_t) error stop "Damerau"
   if (true_damerau_distance("ca", "abc") /= 2_c_size_t) error stop "true Damerau"

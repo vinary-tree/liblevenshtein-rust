@@ -71,6 +71,7 @@ pub(crate) fn nonnegative_ceil_to_usize(value: f64) -> usize {
 /// - `left < right` → `-(right - left)`, saturating to `i64::MIN` when the gap
 ///   exceeds `i64::MAX`.
 #[inline]
+#[cfg(test)]
 pub(crate) fn saturating_usize_difference_i64(left: usize, right: usize) -> i64 {
     if left >= right {
         i64::try_from(left - right).unwrap_or(i64::MAX)

@@ -36,7 +36,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::marathi;
 //!
 //! let rules = marathi::base();

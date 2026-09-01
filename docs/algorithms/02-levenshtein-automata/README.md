@@ -231,7 +231,7 @@ substitution and metricity matters. The separating example is `CA` → `ABC`:
 unrestricted Damerau distance is 2, while OSA is 3.
 
 The bounded implementation uses a history-carrying continuation and has a
-`$`\mathcal{O}(k^2)`$` state envelope. See the dedicated
+$`\mathcal{O}(k^2)`$ state envelope. See the dedicated
 [literate chapter](../11-true-damerau/README.md) for the recurrence,
 subsumption proof, formal evidence, resource ceiling, and corpus results.
 
@@ -624,7 +624,7 @@ What's your use case?
 **Use unrestricted Damerau–Levenshtein when:**
 - ✅ A later edit may affect a transposed region
 - ✅ Triangle-inequality-dependent indexing or reasoning is required
-- ✅ The higher `$`\mathcal{O}(k^2)`$` frontier cost is acceptable
+- ✅ The higher $`\mathcal{O}(k^2)`$ frontier cost is acceptable
 - ✅ The service can enforce a small practical budget such as 1 through 3
 
 **Use Merge-and-Split when:**

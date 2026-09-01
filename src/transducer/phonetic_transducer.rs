@@ -15,25 +15,31 @@
 //!
 //! # Examples
 //!
-//! ```ignore
-//! use liblevenshtein::transducer::PhoneticTransducer;
-//! use liblevenshtein::dictionary::DoubleArrayTrie;
-//! use liblevenshtein::phonetic::nfa::{compile, NFAChar};
+//! ```rust
+//! use libdictenstein::double_array_trie::DoubleArrayTrieChar;
+//! use liblevenshtein::transducer::PhoneticTransducerChar;
+//! use liblevenshtein::phonetic::nfa::compile;
 //! use liblevenshtein::phonetic::regex::parse;
 //!
 //! // Build dictionary
-//! let dict = DoubleArrayTrie::from_terms(vec!["phone", "phones", "fone", "elephant"]);
+//! let dict = DoubleArrayTrieChar::from_terms(["phone", "phones", "fone", "elephant"]);
 //!
 //! // Build phonetic NFA for pattern "(ph|f)one"
-//! let pattern = compile(&parse("(ph|f)one").expect("doc example: regex parses")).expect("doc example: regex compiles");
+//! let regex = parse("(ph|f)one").expect("the documented regex is valid");
+//! let pattern = compile(&regex).expect("the documented regex compiles");
 //!
 //! // Create phonetic transducer
-//! let transducer = PhoneticTransducer::new(dict, pattern, 1);
+//! let transducer = PhoneticTransducerChar::new(dict, pattern, 1);
 //!
-//! // Query - finds "phone", "phones", "fone" (all within distance 1 of pattern)
-//! for candidate in transducer.query("fone") {
-//!     println!("{}: distance {}", candidate.term, candidate.distance);
-//! }
+//! // Exact alternatives in the pattern are retained by the product traversal.
+//! let terms: Vec<_> = transducer
+//!     .query_sorted("fone")
+//!     .into_iter()
+//!     .map(|candidate| candidate.term)
+//!     .collect();
+//! assert!(terms.contains(&"fone".to_string()));
+//! assert!(terms.contains(&"phone".to_string()));
+//! assert!(!terms.contains(&"elephant".to_string()));
 //! ```
 
 #[cfg(feature = "phonetic-rules")]

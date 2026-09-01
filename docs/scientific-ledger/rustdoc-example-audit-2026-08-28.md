@@ -1,0 +1,251 @@
+# Rustdoc executable-example audit — 2026-08-28
+
+## Question
+
+How many ignored Rustdoc examples represent unavoidable non-executable prose,
+and how many are stale suppressions hiding examples that already satisfy the
+current public API?
+
+## Method
+
+The audit used the immutable `4.0.0-rc.6` corrective source graph. The
+liblevenshtein checkout was paired with the exact libdictenstein,
+vinary-tree-interop, and llattice source refs used by that release rather than
+the potentially different branches in ordinary sibling directories. All
+commands ran from repository-local storage under `target/`; no RAM-backed
+temporary filesystem was used.
+
+The control run compiled documentation with every feature and warnings denied,
+then ran the existing doctest classification:
+
+```bash
+RUSTDOCFLAGS="-D warnings" cargo +1.95 doc --offline --all-features --no-deps
+RUSTDOCFLAGS="-D warnings" cargo +1.95 test --offline --all-features --doc
+```
+
+For the experiment, a disposable copy changed every `rust,ignore` and `ignore`
+opening fence to an ordinary `rust` fence. No example body or library source
+was changed. The same all-feature doctest command then measured which examples
+passed unchanged. A second run applied only the proven passing conversions to
+the reviewed source.
+
+## Results
+
+| Stage | Passed | Failed | Ignored | Total |
+|---|---:|---:|---:|---:|
+| Control classification | 265 | 0 | 348 | 613 |
+| Every ignored fence activated | 430 | 183 | 0 | 613 |
+| Proven passing fences activated | 430 | 0 | 183 | 613 |
+
+The experiment established that 165 of 348 suppressions, or 47.4%, were stale:
+the examples compiled and executed unchanged. All 46 examples under
+`src/cache/` were among the passing set. The cache examples now have a
+zero-ignore policy and a minimum executable-example count.
+
+## Interpretation
+
+The ignored count was not a reliable proxy for examples that inherently could
+not run. It mixed at least two populations:
+
+- valid, current intended-usage examples carrying obsolete suppressions; and
+- genuine documentation defects, including stale imports, missing setup,
+  incomplete fragments, incorrect assertions, and examples written against
+  older API shapes.
+
+Activating only the first population improves customer-facing evidence without
+changing runtime behavior. The 183 failures are retained as visible,
+monotonically bounded debt rather than being relabeled wholesale. Each must be
+classified before repair so pseudocode, expected compiler errors, and runnable
+usage are represented honestly.
+
+## Controls and limitations
+
+- Every experiment used all crate features and the same Rust toolchain and
+  source graph; this controls feature-gated imports and sibling API drift.
+- The full activation changed fence metadata only, preserving example bodies.
+- A passing doctest establishes compilation and observed execution for that
+  configuration. It does not by itself prove that the example is the clearest
+  or most idiomatic presentation; prose and API-quality review remain required.
+- The global ignored-count ratchet prevents debt growth but does not replace
+  review of the semantic quality of individual examples.
+
+## Decision
+
+Accept the 165 evidence-backed fence conversions. Add an automated ratchet,
+run all-feature doctests in the documentation lane, and repair the remaining
+183 examples in bounded subsystem batches. New public examples must be
+executable by default; `ignore` is not an accepted escape hatch.
+
+## Repair follow-through
+
+The same immutable source graph and all-feature command were retained for each
+bounded repair batch. Unlike the initial fence-only experiment, these batches
+reviewed the example bodies and public semantics before changing their
+classification.
+
+| Reviewed state | Passed | Failed | Ignored | Total |
+|---|---:|---:|---:|---:|
+| After crate, corpus, migration, synchronization, serialization, WallBreaker, builder, and query-policy repairs | 460 | 0 | 152 | 612 |
+| After phonetic-core and embedded-language repairs | 492 | 0 | 120 | 612 |
+| After `.llev` and LLRE repairs | 509 | 0 | 103 | 612 |
+| After universal-automata repairs | 533 | 0 | 78 | 611 |
+| After generalized-alignment repairs | 541 | 0 | 70 | 611 |
+| After zipper-intersection repairs | 547 | 0 | 64 | 611 |
+| After helper-and-pool repairs | 551 | 0 | 60 | 611 |
+| After phonetic-entry repairs | 557 | 0 | 54 | 611 |
+| After NFA-foundation repairs | 563 | 0 | 48 | 611 |
+| After NFA-runtime repairs | 572 | 0 | 39 | 611 |
+| After phonetic-surface repairs | 578 | 0 | 33 | 611 |
+| After corpus-and-query repairs | 582 | 0 | 29 | 611 |
+| After basic-grep repairs | 590 | 0 | 21 | 611 |
+| After online-grep repairs | 604 | 0 | 7 | 611 |
+| After token-grep repairs | 611 | 0 | 0 | 611 |
+
+The total can decrease when review proves that a fence is pseudocode or a
+private implementation fragment rather than customer-compilable usage. Such a
+fence is relabeled `text`; it is not counted as a doctest and does not consume
+the ignored-example allowance.
+
+The universal-automata batch also served as a semantic control. It found three
+classes of stale documentation: missing standalone imports, examples whose
+positions violated the documented invariants, and characteristic-vector bits
+whose asserted indices disagreed with exact character equality. All were
+corrected and executed. One advertised behavior was not repaired as prose:
+`UniversalAutomaton::with_policy` accepts and discards its policy value, while
+the encoder constructs vectors using exact equality. The API documentation now
+states that limitation, and pgmcp item
+`wire-universalautomaton-substitution-policies-into-characteristic-vector-matching-ba95ee`
+tracks the required policy-aware implementation and semantic tests.
+
+The generalized-alignment batch demonstrated why examples execute rather than
+merely compile. The comprehensive English phonetic preset originally placed
+both double-to-single and single-to-double restriction pairs in one operation
+declared as consuming two source scalars and one target scalar. Operation-set
+validation therefore rejected every reverse pair, and the Boolean acceptance
+API failed closed. The preset now uses distinct `2 → 1` simplification and
+`1 → 2` expansion operations, validates as a complete set, and is exercised
+through a full `phone` to `fone` alignment after composition with the standard
+edit operations.
+
+The zipper-intersection batch replaced six contextless fragments with complete
+product-traversal experiments. Each example constructs an owned,
+snapshot-backed PathMap zipper, pairs it with an automaton zipper, and observes
+the public result after actual traversal. This verifies the boundary accessors
+for distance, depth, reconstructed terms, viability, dictionary finality, and
+query metadata rather than proving only that isolated method names compile.
+
+The helper-and-pool batch found two kinds of semantic drift. The hierarchical
+filter examples queried `var` at edit distance one but expected matches such as
+`global_var`; whole-term Levenshtein matching cannot produce those results.
+They now use four equally eligible near spellings and demonstrate that the
+scope predicate retains the three visible values while excluding the fourth.
+The state-pool examples and prose also predated the current position storage:
+they now exercise the actual insertion signatures and distinguish owned
+integer-state storage from the weighted state's inline-and-spilled `SmallVec`
+representation.
+
+The phonetic-entry batch corrected six independently stale examples. The
+transducer overview had paired a byte dictionary/transducer with a
+character-NFA compiler; the executable version now uses the character surface
+consistently and proves both phonetic alternatives while excluding an unrelated
+term. Named-class extraction now checks concrete trigraph and tetragraph
+members. Its sequence example no longer names an unregistered
+`complex_clusters` class and instead demonstrates the documented distinction
+between an existing class with no open-ended `Sequence` variants and a missing
+class. Finally, the verified-rule examples compile a real selected rule set,
+and the explicit rewrite-rule literal includes the current syllable condition.
+
+The NFA-foundation batch made six core examples executable. State display and
+finality, positive and negated Unicode character classes, consuming versus
+epsilon transitions, and Thompson alternation/star/concatenation now have
+observable acceptance or rejection assertions. The compiler overview parses
+and compiles both a regular expression and a rewrite rule through their actual
+public entry points. The flag example no longer uses the invalid
+`(?iu:café)` spelling: it demonstrates case-insensitive NFA expansion and the
+separate `(?u:NFC:...)` runtime-normalization result explicitly.
+
+The NFA-runtime batch repaired nine examples that previously could not serve as
+customer evidence. Direct construction now uses the initial state created by
+`NFAChar::new` and finalizes its CSR transitions before matching. Both optimizer
+surfaces compile an intentionally unoptimized regular expression, compare the
+language before and after transformation, and inspect real statistics instead
+of calling nonexistent helpers. Context, incremental, lazy-DFA, and memoized
+examples now build complete public automata and assert their boundary, reset,
+transition-cache, and result-cache behavior. The memoization prose also matches
+the implementation: a matcher owns a product automaton with one fixed distance
+bound, so character-level cache keys are query strings rather than redundant
+`(query, distance)` pairs.
+
+The phonetic-surface batch made six examples executable across articulatory
+product costs, normalization-cycle recovery, the regex rule-set parser,
+language-selected normalized dictionaries, embedded-language dispatch, and
+script classifiers. Five needed complete public setup, accurate supported-tag
+assertions, or the trait import Rust requires for classifier methods. The
+newline-delimited `parse_rules` example revealed a functional defect: its lexer
+treated newlines as generic whitespace, so the parser consumed each following
+pattern as part of the preceding replacement and failed on the next arrow. The
+parser now retains the original source, parses each nonempty line as one rule,
+propagates symbol and group-reference settings, rejects trailing per-line input,
+and translates parse errors back to source-wide line and byte positions. Two
+unit tests cover mixed LF/CRLF and blank lines plus error location on a later
+rule.
+
+The corpus-and-query batch repaired four examples at the boundary between
+external data and executable matching. The aggregate corpus example is now a
+`no_run` program because its two files belong to the caller; it compiles the
+real loaders and iteration shape without pretending those paths exist during
+Rustdoc. It also reflects that `BigTxtCorpus::unique_words` returns a count, not
+a collection. Original-term regex matching now supplies an explicit `ph` to
+`f` rewrite rule, expands a real pattern, and proves inclusion and exclusion
+against stored spellings. Both priority-query examples build a public
+`DynamicDawg<()>`, retain its snapshot root through the iterator, and assert
+distance bounds and exact-match priority rather than printing undefined values.
+
+The basic-grep batch repaired eight examples spanning `PhoneticGrep`, the
+incremental phonetic transducer, and the online scanner. The grep examples now
+compile their patterns explicitly and verify line numbering, exact and fuzzy
+distances, case and accent flags, runtime case folding, and transposition-aware
+matching. The two streaming examples use an explicit `ph` to `f` rule rather
+than relying on a preset whose contents are unrelated to the API contract. The
+transducer collects emitted characters across `feed` and `finish`, while the
+scanner proves the original range is normalized to the query at distance zero.
+
+The online-grep batch repaired 14 examples covering construction with parsed
+rewrite rules, case-insensitive and fuzzy substring search, normalized-query
+inspection, chunked input, parallel candidate verification, parallel document
+search, filtering, counting, and the `StreamingScanner` lifecycle. The first
+executable chunked-input experiment found a runtime defect: an accepting product
+state was stored only as a distance on its live candidate. Subsequent characters
+could kill and prune that candidate before `finish`, silently losing a match
+that had already been accepted. Preserving the accepting state alone then
+revealed the deeper source-mapping defect documented by the pre-existing
+property suite: because one transducer was shared by candidates started at raw
+character positions, delayed output from a multi-character rewrite could be
+assigned to a later candidate. For `ph -> f`, scanning `my phone` could report
+the normalized text `fone` against the original text `one `.
+
+The repaired incremental-input surface accumulates the original UTF-8 stream
+and invokes the same optimized, span-aware bounded-window engine used by
+`PhoneticGrepOnline::scan` at `finish`. This removes the divergent active-state
+implementation, preserves right context across arbitrary chunks, retains
+original case, and makes byte ranges, character ranges, and `original_text`
+refer to the same source span. Repeated `finish` calls are idempotent, appending
+after a finish reports only newly observed matches, and `reset` starts an
+independent stream. Five focused unit tests cover exact and phonetic matches,
+trailing input, chunk boundaries, final-context rewrites, fuzzy deletion,
+statistics, and reset. Four 300-case property tests cover distance bounds,
+source-slice correspondence, determinism, result ordering, and exact embedded
+occurrence completeness.
+
+The token-grep batch repaired the final seven ignored examples. The three
+module examples now execute ordinary multi-token matching, strict versus fuzzy
+per-token bounds, wildcard separators, and a parsed `ph -> f` normalization
+rule. Constructor documentation proves both default and explicit distance
+syntax against concrete results. The parallel example sorts its arbitrary-order
+Rayon output before asserting the exact matching document identifiers. Both
+streaming examples feed real word text with byte offsets, distinguish partial
+from complete matches, and verify the resulting range and distance rather than
+referring to an undefined reader or printing an unchecked value. The controlled
+all-feature run consequently reached 611 passing examples, zero failures, and
+zero ignored examples; the automated ratchet now rejects any reintroduction of
+ignored Rust API examples.

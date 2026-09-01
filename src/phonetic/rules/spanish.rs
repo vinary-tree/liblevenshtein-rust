@@ -18,7 +18,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::spanish;
 //!
 //! // Castilian Spanish distinguishes z from s

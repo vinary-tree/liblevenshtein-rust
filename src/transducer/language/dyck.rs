@@ -2,7 +2,7 @@
 //!
 //! Opening kind `r` is token `r`; its matching closer is `kinds + r`.
 //! The interval dynamic program is exact for insertion, deletion, and
-//! substitution cost one. It uses `$`O(k n^3)`$` time and `$`O(n^2)`$`
+//! substitution cost one. It uses $`\mathcal{O}(kn^3)`$ time and $`\mathcal{O}(n^2)`$
 //! memory, and records deterministic backpointers for a minimum-cost witness.
 
 use std::error::Error;
@@ -36,7 +36,7 @@ pub enum DyckCorrectionError {
         kinds: usize,
         /// Input token count.
         input_len: usize,
-        /// Saturating estimate `$`k(n+1)^3`$`.
+        /// Saturating estimate $`k(n+1)^3`$.
         estimated: usize,
         /// Configured ceiling.
         limit: usize,
@@ -202,7 +202,7 @@ impl DyckCorrector {
         }
     }
 
-    /// Construct a corrector with an explicit `$`k(n+1)^3`$` work ceiling.
+    /// Construct a corrector with an explicit $`k(n+1)^3`$ work ceiling.
     pub const fn with_max_work(kinds: usize, max_work: usize) -> Self {
         Self { kinds, max_work }
     }

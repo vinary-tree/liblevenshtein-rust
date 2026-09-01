@@ -12,20 +12,20 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::grep::PhoneticGrep;
 //!
 //! // Search for fuzzy matches
-//! let grep = PhoneticGrep::from_pattern("phone", 1)?;
-//! for line_match in grep.grep_file(file_content) {
-//!     for m in &line_match.matches {
-//!         println!("{}:{}: {} (distance {})",
-//!             line_match.line_number,
-//!             m.start_column,
-//!             m.matched_text,
-//!             m.distance);
-//!     }
-//! }
+//! let grep = PhoneticGrep::from_pattern("phone", 1)
+//!     .expect("doc: phonetic grep pattern must compile");
+//! let content = "exact phone\nnear phon\nunrelated tablet";
+//! let matches: Vec<_> = grep.grep_file(content).collect();
+//!
+//! assert_eq!(matches.len(), 2);
+//! assert_eq!(matches[0].line_number, 1);
+//! assert_eq!(matches[0].matches[0].distance, 0);
+//! assert_eq!(matches[1].line_number, 2);
+//! assert_eq!(matches[1].matches[0].distance, 1);
 //! ```
 
 use std::path::Path;
@@ -114,13 +114,17 @@ pub struct LineMatch {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
+/// use liblevenshtein::phonetic::grep::PhoneticGrep;
+///
 /// // Case-insensitive via pattern flag
-/// let grep = PhoneticGrep::from_pattern("(?i:hello)", 0)?;
+/// let grep = PhoneticGrep::from_pattern("(?i:hello)", 0)
+///     .expect("doc: case-insensitive pattern must compile");
 /// assert!(grep.matches("HELLO").is_some());
 ///
 /// // Accent-insensitive
-/// let grep = PhoneticGrep::from_pattern("(?a:cafe)", 0)?;
+/// let grep = PhoneticGrep::from_pattern("(?a:cafe)", 0)
+///     .expect("doc: accent-insensitive pattern must compile");
 /// assert!(grep.matches("café").is_some());
 /// ```
 pub struct PhoneticGrep {
@@ -151,16 +155,22 @@ impl PhoneticGrep {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep::PhoneticGrep;
+    ///
     /// // Basic pattern
-    /// let grep = PhoneticGrep::from_pattern("phone", 1)?;
+    /// let grep = PhoneticGrep::from_pattern("phone", 1)
+    ///     .expect("doc: basic pattern must compile");
+    /// assert_eq!(grep.matches("phon"), Some(1));
     ///
     /// // Case-insensitive via (?i) flag
-    /// let grep = PhoneticGrep::from_pattern("(?i:phone)", 1)?;
+    /// let grep = PhoneticGrep::from_pattern("(?i:phone)", 1)
+    ///     .expect("doc: case-insensitive pattern must compile");
     /// assert!(grep.matches("PHONE").is_some());
     ///
     /// // Accent-insensitive via (?a) flag
-    /// let grep = PhoneticGrep::from_pattern("(?a:cafe)", 0)?;
+    /// let grep = PhoneticGrep::from_pattern("(?a:cafe)", 0)
+    ///     .expect("doc: accent-insensitive pattern must compile");
     /// assert!(grep.matches("café").is_some());
     /// ```
     pub fn from_pattern(pattern: &str, max_distance: u8) -> Result<Self, GrepError> {
@@ -187,9 +197,17 @@ impl PhoneticGrep {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep::PhoneticGrep;
     /// use liblevenshtein::transducer::Algorithm;
-    /// let grep = PhoneticGrep::from_pattern_with_algorithm("phone", 1, Algorithm::Transposition)?;
+    ///
+    /// let grep = PhoneticGrep::from_pattern_with_algorithm(
+    ///     "phone",
+    ///     1,
+    ///     Algorithm::Transposition,
+    /// ).expect("doc: transposition pattern must compile");
+    /// assert_eq!(grep.get_algorithm(), Algorithm::Transposition);
+    /// assert_eq!(grep.matches("phoen"), Some(1));
     /// ```
     pub fn from_pattern_with_algorithm(
         pattern: &str,
@@ -270,10 +288,15 @@ impl PhoneticGrep {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrep::from_pattern("hello", 0)?
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep::PhoneticGrep;
+    ///
+    /// let grep = PhoneticGrep::from_pattern("hello", 0)
+    ///     .expect("doc: pattern must compile")
     ///     .case_insensitive(true);
-    /// assert!(grep.find_in_line("HELLO World").len() == 1);
+    /// let matches = grep.find_in_line("HELLO World");
+    /// assert_eq!(matches.len(), 1);
+    /// assert_eq!(matches[0].matched_text, "HELLO");
     /// ```
     pub fn case_insensitive(mut self, yes: bool) -> Self {
         self.case_insensitive = yes;
@@ -284,10 +307,15 @@ impl PhoneticGrep {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep::PhoneticGrep;
     /// use liblevenshtein::transducer::Algorithm;
-    /// let grep = PhoneticGrep::from_pattern("hello", 1)?
+    ///
+    /// let grep = PhoneticGrep::from_pattern("hello", 1)
+    ///     .expect("doc: pattern must compile")
     ///     .algorithm(Algorithm::Transposition);
+    /// assert_eq!(grep.get_algorithm(), Algorithm::Transposition);
+    /// assert_eq!(grep.matches("hlelo"), Some(1));
     /// ```
     pub fn algorithm(mut self, algorithm: Algorithm) -> Self {
         self.algorithm = algorithm;

@@ -42,15 +42,6 @@ public sealed class PhoneticPattern : IDisposable
     public void Dispose() => Handle.Dispose();
 }
 
-/// <summary>A built-in rewrite-rule set.</summary>
-public enum PhoneticRuleSetKind : uint
-{
-    /// <summary>English spelling-oriented rewrites.</summary>
-    EnglishOrthography = 0,
-    /// <summary>English pronunciation-oriented rewrites.</summary>
-    EnglishPhonetic = 1,
-}
-
 /// <summary>A reusable phonetic rewrite-rule set.</summary>
 public sealed class PhoneticRuleSet : IDisposable
 {

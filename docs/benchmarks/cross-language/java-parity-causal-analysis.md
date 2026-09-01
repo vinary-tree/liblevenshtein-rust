@@ -454,16 +454,24 @@ Standard distance-2 median fell from 85.694 ms to 80.427 ms (6.146%); an
 instrumented run observed 6,748,273 table hits and 247,969 misses, a 96.46%
 hit rate.
 
-For the positional engine, `DenseGeneratedTargets` retains canonical position
-slices in stable boxes but stores every target in one row-major allocation. A
-power-of-two row width grows losslessly only if a substitution policy creates
-more label classes than the query-length-derived initial bound. This reduced
-Transposition distance-2 from 132.211 ms to 125.787 ms (4.858%),
-Merge-and-Split distance-2 from 758.19 ms to 718.33 ms (5.26%), and
-unrestricted Damerau distance-2 from 154.76 ms to 135.17 ms (12.66%). A
-follow-up `u32` target encoding improved only 0.182%, missed its 3% gate, and
-was reverted. The result supports dense locality, not narrowing IDs at the
-cost of checked conversions.
+For the positional engine, the original `DenseGeneratedTargets` retained
+canonical position slices in stable boxes and stored targets in one row-major
+allocation. That layout reduced Transposition distance-2 from 132.211 ms to
+125.787 ms (4.858%), Merge-and-Split distance-2 from 758.19 ms to 718.33 ms
+(5.26%), and unrestricted Damerau distance-2 from 154.76 ms to 135.17 ms
+(12.66%). A follow-up `u32` target encoding improved only 0.182%, missed its 3%
+gate, and was reverted.
+
+The unbounded row width nevertheless multiplied every reached state by query
+length and could consume quadratic heap on long paths. `GeneratedTargets` now
+retains row-major locality only while one row is at most 2,048 bytes; longer
+queries store observed state/class pairs sparsely. Requalification found
+the final dense advantage at 255 units and the first sparse advantage at 256
+units; the retained boundary made sparse storage 3.74–4.00% faster than forced
+dense storage at 256. Final paired processes used 59,968 KiB versus 60,044 KiB
+peak RSS, with exact randomized oracle parity and a passing 100,000-unit run on
+a 256 KiB thread. The complete root-cause and reproduction ledger is the
+[generated-target storage requalification](../generated-target-storage-requalification.md).
 
 ## 4. Resource and language boundary
 

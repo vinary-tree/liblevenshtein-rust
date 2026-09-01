@@ -18,10 +18,12 @@
 //!
 //! # Examples
 //!
-//! ```ignore
-//! use liblevenshtein::phonetic::nfa::{LazyDFAChar, NFAChar};
+//! ```rust
+//! use liblevenshtein::phonetic::nfa::{compile, LazyDFAChar};
+//! use liblevenshtein::phonetic::regex::parse;
 //!
-//! let nfa = /* build NFA for pattern */;
+//! let regex = parse("(ph|f)one").expect("doc: regex parse must succeed");
+//! let nfa = compile(&regex).expect("doc: NFA compilation must succeed");
 //! let mut dfa = LazyDFAChar::new(nfa);
 //!
 //! // Check if string matches
@@ -29,7 +31,10 @@
 //! assert!(!dfa.accepts("xyz"));
 //!
 //! // Subsequent queries benefit from cached transitions
-//! assert!(dfa.accepts("phone")); // Uses cached transitions
+//! let cached_transitions = dfa.cache_size();
+//! assert!(cached_transitions > 0);
+//! assert!(dfa.accepts("phone"));
+//! assert_eq!(dfa.cache_size(), cached_transitions);
 //! ```
 
 use super::state_set::StateSet;

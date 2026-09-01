@@ -24,18 +24,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::welsh;
 //!
 //! let rules = welsh::base();
 //!
-//! // LL digraph (unique Welsh sound)
+//! // LL is normalized before later soft-mutation rules run.
 //! let result = rules.apply("ll");
-//! assert!(result.contains("ʎ"), "ll → LL");
+//! assert_eq!(result, "l");
 //!
 //! // F = v sound (ff = f sound)
 //! let result = rules.apply("f");
-//! assert!(result.contains("v"), "f → v");
+//! assert_eq!(result, "v");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

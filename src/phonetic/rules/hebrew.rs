@@ -27,18 +27,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::hebrew;
 //!
 //! let rules = hebrew::base();
 //!
 //! // Basic consonant
 //! let result = rules.apply("ב");
-//! assert!(result.contains("v"), "ב → v");
+//! assert_eq!(result, "b");
 //!
 //! // Shin with dot
 //! let result = rules.apply("שׁ");
-//! assert!(result.contains("ʃ"), "שׁ → sh");
+//! assert_eq!(result, "ʃ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

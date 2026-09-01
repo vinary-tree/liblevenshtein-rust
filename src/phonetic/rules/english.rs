@@ -12,7 +12,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::english;
 //!
 //! let rules = english::base();

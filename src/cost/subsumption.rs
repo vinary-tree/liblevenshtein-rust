@@ -2,7 +2,7 @@
 //!
 //! The two position representations intentionally remain distinct. This seam
 //! centralizes only their common Standard/OSA/MergeSplit decision tree while
-//! keeping exact integer and epsilon-aware floating arithmetic explicit.
+//! keeping exact integer and canonical floating arithmetic explicit.
 
 use super::{CostMonoid, UnitCost, WeightedCost};
 use std::cmp::Ordering;
@@ -51,7 +51,7 @@ impl SubsumptionCost for WeightedCost {
     #[inline(always)]
     fn non_greater(lhs: f64, rhs: f64) -> bool {
         matches!(
-            lhs.partial_cmp(&(rhs + Self::EPSILON)),
+            lhs.partial_cmp(&rhs),
             Some(Ordering::Less | Ordering::Equal)
         )
     }
@@ -64,15 +64,12 @@ impl SubsumptionCost for WeightedCost {
         maximum_index_operation_cost: f64,
     ) -> bool {
         let slack = rhs - lhs;
-        index_difference as f64 * maximum_index_operation_cost <= slack + Self::EPSILON
+        index_difference as f64 * maximum_index_operation_cost <= slack
     }
 
     #[inline(always)]
     fn strictly_less(lhs: f64, rhs: f64) -> bool {
-        matches!(
-            lhs.partial_cmp(&(rhs - Self::EPSILON)),
-            Some(Ordering::Less)
-        )
+        matches!(lhs.partial_cmp(&rhs), Some(Ordering::Less))
     }
 }
 
@@ -88,7 +85,7 @@ pub(crate) enum SubsumptionMode {
 ///
 /// `maximum_index_operation_cost` is one for unit costs and
 /// `max(insertion, deletion)` for the weighted family. The carrier extension
-/// preserves the pre-existing exact/epsilon arithmetic; this function owns
+/// preserves exact carrier arithmetic; this function owns
 /// all variant-state branching.
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
@@ -195,12 +192,12 @@ mod tests {
         query_length: usize,
         maximum_index_operation_cost: f64,
     ) -> bool {
-        if lhs_cost > rhs_cost + WeightedCost::EPSILON {
+        if lhs_cost > rhs_cost {
             return false;
         }
         let realignment_fits = || {
             lhs_index.abs_diff(rhs_index) as f64 * maximum_index_operation_cost
-                <= rhs_cost - lhs_cost + WeightedCost::EPSILON
+                <= rhs_cost - lhs_cost
         };
         match mode {
             SubsumptionMode::Standard => realignment_fits(),
@@ -213,7 +210,7 @@ mod tests {
                 lhs_special == rhs_special
                     && lhs_index <= query_length
                     && !(lhs_special && lhs_index >= query_length && rhs_index < query_length)
-                    && lhs_cost < rhs_cost - WeightedCost::EPSILON
+                    && lhs_cost < rhs_cost
                     && lhs_index == rhs_index
             }
         }

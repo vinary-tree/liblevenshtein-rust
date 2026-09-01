@@ -32,7 +32,7 @@ Scientific and engineering reading of the 1975 recurrence:
 #### [Edit distance with Real Penalty](erp/PAPER_SUMMARY.md)
 Scientific analysis of Chen and Ng's ERP measure:
 - exact recurrence and source examples
-- raw-sequence pseudometric versus `$`g`$`-quotient identity
+- raw-sequence pseudometric versus $`g`$-quotient identity
 - gap-mass and interval lower-bound derivations
 - implementation, test, and formal-proof mapping
 

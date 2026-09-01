@@ -207,7 +207,7 @@ If every context is either **reactive** or **IPO uniform**, then weak bisimilari
 
 ### Application to Rholang/RHO Calculus
 
-The ρ-calculus (and Rholang) satisfies this condition:
+The $`\rho`$-calculus (and Rholang) satisfies this condition:
 
 1. **Reactive contexts**: $`\text{out}(n,-) | \text{in}(n,\lambda x.-)`$ (communication pairs)
 2. **Non-reactive contexts**: All structural contexts (Par, New, etc.)

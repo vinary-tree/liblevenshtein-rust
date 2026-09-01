@@ -1,7 +1,7 @@
-# WASM and JavaScript topology — one umbrella runtime, three paths
+# WASM and JavaScript topology — one shared JavaScript runtime, three paths
 
 Why the JavaScript ecosystem gets a deliberately different shape from every
-other binding: **one** runtime package, `@vinary-tree/vinary-tree`, owns one
+other binding: **one** runtime package, `@vinary-tree/javascript-runtime`, owns one
 coherent native/WASM instance and one resource table per selected path, and
 the per-project packages (`@vinary-tree/liblevenshtein`,
 `@vinary-tree/libdictenstein`, `@vinary-tree/lling-llang`,
@@ -18,7 +18,7 @@ and the panic-versus-status discipline at each boundary.
 
 | Term | Definition |
 |---|---|
-| umbrella runtime | `bindings/javascript-runtime` — the npm package that statically combines interop + all four family projects into one loadable unit per path. The one sanctioned all-of-family surface. |
+| shared JavaScript runtime | The standalone [`javascript-runtime`](https://github.com/vinary-tree/javascript-runtime) repository, published as `@vinary-tree/javascript-runtime`. It statically combines interop + all four family projects into one loadable unit per path. This is the one sanctioned all-of-family JavaScript surface, never an embedded subproject. |
 | facade | A per-project npm package re-exporting its slice of the umbrella with idiomatic types; it holds **no** native payload of its own. |
 | runtime path | One of the three loadable backends: native N-API, browser WASM, WASI Preview 1. |
 | runtime identity | A frozen object each path publishes (`runtimeIdentity`) and stamps onto every resource it creates; the provenance token the guard compares. |
@@ -45,14 +45,16 @@ without copies. Membership is bounded by the family data-flow relation:
 only projects that exchange resources belong (an unrelated project must
 stay outside the umbrella).
 
+![WASM and native FFI boundaries around the Rust core: typed JavaScript calls cross wasm-bindgen into sandboxed linear memory, while C and WASI calls cross panic-contained extern-C functions into the same core.](../diagrams/bindings/wasm-ffi-boundary.svg)
+
 ## 3. The three runtime paths
 
-The package's `exports` map is the topology (from
-`bindings/javascript-runtime/package.json`):
+The package's `exports` map is the topology (from the standalone runtime's
+[`package.json`](https://github.com/vinary-tree/javascript-runtime/blob/master/package.json)):
 
 | Export | Backend | Runtime identity | Persistence | Selection |
 |---|---|---|---|---|
-| `.` (default) | native N-API addon; all four Rust components statically linked — no shared library to install, no loader path to configure | `vinary-tree-node-napi-v1` | full native semantics | `import ... from "@vinary-tree/vinary-tree"` |
+| `.` (default) | native N-API addon; all four Rust components statically linked — no shared library to install, no loader path to configure | `vinary-tree-node-napi-v1` | full native semantics | `import ... from "@vinary-tree/javascript-runtime"` |
 | `./wasm` | browser WebAssembly instance | `vinary-tree-wasm-v1` | **none** — no persistent backend is shipped at all | explicit subpath |
 | `./wasi` | WASI Preview 1 instance under `node:wasi` | `vinary-tree-wasi-preview1-v1` | persistent ARTrie, **only** at preopened paths, only in builds whose `wasi` feature enables `libdictenstein/persistent-artrie` | explicit subpath |
 

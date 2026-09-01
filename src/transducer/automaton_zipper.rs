@@ -5,9 +5,7 @@
 //! the automaton zipper tracks the current state of the Levenshtein automaton
 //! as it processes input characters.
 
-use crate::transducer::transition::{
-    transition_state_pooled_ref, CachedUnitTransitions, TransitionSettings,
-};
+use crate::transducer::transition::{transition_state_pooled_ref, TransitionSettings};
 use crate::transducer::{Algorithm, Position, State, StatePool, Unrestricted};
 use std::sync::Arc;
 
@@ -201,37 +199,6 @@ impl AutomatonZipper {
                 self.algorithm,
             )
         })
-    }
-
-    /// Transition through a traversal-owned query cache.
-    ///
-    /// Zipper values remain immutable and cheaply cloneable; the enclosing
-    /// query iterator owns this mutable cache so sibling zippers reuse one
-    /// characteristic vector per distinct dictionary label without a lock.
-    #[inline]
-    pub(crate) fn transition_cached(
-        &self,
-        dict_char: u8,
-        pool: &mut StatePool,
-        transitions: &mut CachedUnitTransitions<u8>,
-    ) -> Option<Self> {
-        transitions
-            .transition(
-                &self.state,
-                pool,
-                &Unrestricted,
-                dict_char,
-                &self.query,
-                TransitionSettings::new(self.max_distance, self.algorithm, false),
-            )
-            .map(|next_state| {
-                AutomatonZipper::with_state(
-                    next_state,
-                    Arc::clone(&self.query),
-                    self.max_distance,
-                    self.algorithm,
-                )
-            })
     }
 
     /// Get the minimum edit distance if the automaton is in an accepting state.

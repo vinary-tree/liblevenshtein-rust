@@ -6,7 +6,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::syllable::*;
 //!
 //! assert_eq!(syllable_count("cat"), 1);        // Monosyllable
@@ -125,7 +125,9 @@ fn find_vowel_positions(chars: &[char]) -> Vec<usize> {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
+/// use liblevenshtein::phonetic::syllable::syllable_count;
+///
 /// assert_eq!(syllable_count("cat"), 1);
 /// assert_eq!(syllable_count("happy"), 2);
 /// assert_eq!(syllable_count("example"), 3);
@@ -175,9 +177,11 @@ pub fn syllable_count(word: &str) -> usize {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
+/// use liblevenshtein::phonetic::syllable::syllable_boundaries;
+///
 /// let bounds = syllable_boundaries("happy");
-/// // Returns [0, 3] meaning "hap" and "py"
+/// assert_eq!(bounds, [0, 3]); // "hap" and "py"
 /// ```
 pub fn syllable_boundaries(word: &str) -> Vec<usize> {
     let chars: Vec<char> = word.chars().collect();
@@ -249,9 +253,11 @@ fn find_onset_boundary(consonants: &str, start_pos: usize) -> usize {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
+/// use liblevenshtein::phonetic::syllable::is_open_syllable;
+///
 /// // "be" is an open syllable
-/// assert!(is_open_syllable("be", 0));
+/// assert!(is_open_syllable("be", 1));
 ///
 /// // "cat" has a closed syllable
 /// assert!(!is_open_syllable("cat", 1));
@@ -304,7 +310,9 @@ pub fn is_open_syllable(word: &str, vowel_pos: usize) -> bool {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
+/// use liblevenshtein::phonetic::syllable::is_before_doubled_consonant;
+///
 /// // "ll" in "hello" means short 'e'
 /// assert!(is_before_doubled_consonant("hello", 1));
 /// ```
@@ -387,7 +395,7 @@ pub fn evaluate_syllable_condition(
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::syllable::evaluate_syllable_expr;
 /// use liblevenshtein::phonetic::common::syllable::{SyllableExpr, SyllableCondition};
 ///
@@ -395,9 +403,9 @@ pub fn evaluate_syllable_condition(
 /// let expr = SyllableExpr::cond(SyllableCondition::Monosyllable);
 /// assert!(evaluate_syllable_expr(&expr, "fly", 0));
 ///
-/// // Check if "flying" is NOT a monosyllable - it isn't (polysyllable)
+/// // Check if "running" is not a monosyllable.
 /// let expr = SyllableExpr::negate(SyllableExpr::cond(SyllableCondition::Monosyllable));
-/// assert!(evaluate_syllable_expr(&expr, "flying", 0));
+/// assert!(evaluate_syllable_expr(&expr, "running", 0));
 /// ```
 pub fn evaluate_syllable_expr(expr: &SyllableExpr, word: &str, match_pos: usize) -> bool {
     match expr {
@@ -435,7 +443,7 @@ pub fn evaluate_syllable_expr(expr: &SyllableExpr, word: &str, match_pos: usize)
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::syllable::evaluate_syllable_condition_ipa;
 /// use liblevenshtein::phonetic::common::syllable::SyllableCondition;
 ///
@@ -477,7 +485,7 @@ pub fn evaluate_syllable_condition_ipa(
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::syllable::evaluate_syllable_expr_ipa;
 /// use liblevenshtein::phonetic::common::syllable::{SyllableExpr, SyllableCondition};
 ///

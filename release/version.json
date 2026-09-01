@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
   "component": "liblevenshtein",
-  "canonical": "4.0.0-rc.4",
+  "canonical": "4.0.0-rc.6",
   "coordinates": {
+    "npmPackage": "@vinary-tree/liblevenshtein",
     "mavenGroup": "io.vinarytree",
     "mavenArtifact": "liblevenshtein",
     "interopMavenGroup": "io.vinarytree",
@@ -13,47 +14,52 @@
       "com.github.universal-automata"
     ]
   },
+  "metadata": {
+    "summary": "Fast spelling correction and fuzzy search with Levenshtein automata",
+    "description": "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
+  },
   "registries": {
-    "cargo": "4.0.0-rc.4",
-    "clojars": "4.0.0-rc.4",
-    "cmake": "4.0.0-rc.4",
+    "cargo": "4.0.0-rc.6",
+    "clojars": "4.0.0-rc.6",
+    "cmake": "4.0.0-rc.6",
     "fpm": "4.0.0",
-    "goTag": "v4.0.0-rc.4",
+    "goTag": "v4.0.0-rc.6",
     "hackage": "4.0.0",
-    "luaRocks": "4.0.0rc4-2",
-    "maven": "4.0.0-rc.4",
-    "npm": "4.0.0-rc.4",
-    "nuget": "4.0.0-rc.4",
-    "opam": "4.0.0~rc4",
-    "pkgConfig": "4.0.0-rc.4",
-    "pypi": "4.0.0rc4",
-    "rubygems": "4.0.0.rc.4",
-    "swiftTag": "4.0.0-rc.4"
+    "julia": "4.0.0-rc.6",
+    "luaRocks": "4.0.0rc6-1",
+    "maven": "4.0.0-rc.6",
+    "npm": "4.0.0-rc.6",
+    "nuget": "4.0.0-rc.6",
+    "opam": "4.0.0~rc6",
+    "pkgConfig": "4.0.0-rc.6",
+    "pypi": "4.0.0rc6",
+    "rubygems": "4.0.0.rc.6",
+    "swiftTag": "4.0.0-rc.6",
+    "zef": "4.0.0-rc.6"
   },
   "dependencies": {
-    "duallity": "4.0.0-rc.4",
-    "libdictenstein": "4.0.0-rc.4",
+    "duallity": "4.0.0-rc.6",
+    "libdictenstein": "4.0.0-rc.6",
     "llattice": "0.1.0",
-    "liblevenshtein": "4.0.0-rc.4",
-    "lling-llang": "4.0.0-rc.4",
-    "vinary-tree-interop": "4.0.0-rc.4",
-    "@vinary-tree/interop": "4.0.0-rc.4",
-    "@vinary-tree/vinary-tree": "4.0.0-rc.4"
+    "liblevenshtein": "4.0.0-rc.6",
+    "lling-llang": "4.0.0-rc.6",
+    "vinary-tree-interop": "4.0.0-rc.6",
+    "@vinary-tree/vinary-tree-interop": "4.0.0-rc.6",
+    "@vinary-tree/javascript-runtime": "4.0.0-rc.6"
   },
   "sourceRefs": {
-    "vinary-tree-interop": "v4.0.0-rc.4-release.3",
-    "javascript-runtime": "v4.0.0-rc.4-release.3",
-    "liblevenshtein-npm": "v4.0.0-rc.4-release.1",
+    "vinary-tree-interop": "v4.0.0-rc.6",
+    "javascript-runtime": "v4.0.0-rc.6",
+    "liblevenshtein-npm": "v4.0.0-rc.6",
     "llattice": "v0.1.0",
-    "libdictenstein": "v4.0.0-rc.4-release.5",
-    "lling-llang": "v4.0.0-rc.4-release.1",
-    "duallity": "v4.0.0-rc.4-release.1"
+    "libdictenstein": "v4.0.0-rc.6",
+    "lling-llang": "v4.0.0-rc.6",
+    "duallity": "v4.0.0-rc.6"
   },
   "publication": {
     "distTag": "next",
-    "luaRocksRevision": 2,
-    "sourceTag": "v4.0.0-rc.4-release.7",
-    "canonicalMavenJarSha256": "af55e27520375c6b9465f765a4d9e8facd221f5fbfadd72c37cbb34b285b210b",
+    "luaRocksRevision": 1,
+    "sourceTag": "v4.0.0-rc.6",
     "fpm": false,
     "fpmReason": "fpm accepts numeric package versions only; validate 4.0.0 as a source candidate and defer registry publication until the final release.",
     "hackage": false,

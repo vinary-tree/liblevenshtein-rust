@@ -104,7 +104,7 @@ GUIDES: dict[str, Guide] = {
         "Clojars coordinate `io.vinarytree/liblevenshtein-clojure`",
         "The idiomatic namespace delegates to the JVM facade and therefore introduces no second native boundary.",
         "Wrap transducers and cursors in `with-open`; lazy sequences that are abandoned before EOF must be closed explicitly.",
-        "Native/JVM failures become `ExceptionInfo` with structured status data and the native diagnostic.",
+        "Native failures retain the delegated JVM `NativeException`, generated `Status` enum, exact raw status code, and copied native diagnostic.",
         "Independent resources are reentrant. Consume a single reducible cursor from one thread, and never retain a `reduce-batches` view after its callback.",
         "Strings select Unicode traversal; byte arrays and long collections use the corresponding JVM overloads.",
         "bindings/clojure/src/vinary_tree/liblevenshtein.clj",
@@ -116,10 +116,10 @@ GUIDES: dict[str, Guide] = {
         "JavaScript, TypeScript, and ClojureScript on Node.js, browsers, or WASI",
         "Tier 1",
         "npm package `@vinary-tree/liblevenshtein`",
-        "The facade delegates to the singleton `@vinary-tree/vinary-tree` runtime: native N-API by default, WebAssembly or WASI through explicit exports.",
-        "Use explicit resource management (`using`) where available or call `close()`/`close!` in `finally`. GC finalizers are fallback containment.",
-        "Status codes become `VinaryTreeError` values carrying project, operation, status, and native diagnostic fields.",
-        "Independent handles may be used concurrently. A cursor is single-consumer, callbacks are synchronous, and borrowed batches expire on callback return.",
+        "The facade delegates to the singleton `@vinary-tree/javascript-runtime` runtime: native N-API by default, WebAssembly or WASI through explicit exports.",
+        "Dictionaries and query cursors implement `Symbol.dispose` and support `using`. Close transducers and phonetic resources in `finally`; ClojureScript uses `close!`. GC finalizers are fallback containment.",
+        "Native failures become thrown `Error` values carrying a copied native diagnostic. The facade does not expose the numeric status, so callers handle failures by operation and error category rather than parsing message text.",
+        "Wrapper objects belong to one JavaScript runtime instance and Worker and must not be transferred between Workers. A cursor is single-consumer; returned matches and batches are host-owned values.",
         "Strings are Unicode; `Uint8Array` and `BigUint64Array` select byte and packed-token queries. IDs are `bigint`, never lossy JavaScript numbers.",
         "bindings/javascript",
         "bindings/javascript/test/facades.test.mjs",
@@ -178,8 +178,8 @@ GUIDES: dict[str, Guide] = {
         "Separate native handles are reentrant. Enumerate one cursor on one fiber/thread and never retain callback-scoped buffers.",
         "Ruby strings use explicit encoding rules; byte strings and integer arrays select non-Unicode domains.",
         "bindings/ruby/lib/vinary_tree/liblevenshtein",
-        "bindings/ruby/test/test_liblevenshtein.rb",
-        "ruby -Ibindings/ruby/lib bindings/ruby/test/test_liblevenshtein.rb",
+        "bindings/ruby/test/test_cross_project.rb",
+        "ruby -Ibindings/ruby/lib -I../libdictenstein/bindings/ruby/lib bindings/ruby/test/test_cross_project.rb",
     ),
     "fortran": Guide(
         "Fortran",
@@ -192,8 +192,8 @@ GUIDES: dict[str, Guide] = {
         "Independent derived handles are reentrant. Do not access one mutable iterator from multiple images or retain a leased C pointer.",
         "Character data is UTF-8 marshalled explicitly; `integer(c_int8_t)` and `integer(c_int64_t)` arrays preserve byte/token domains.",
         "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
-        "bindings/fortran/test/test_distance.f90",
-        "fpm test --profile release --package liblevenshtein",
+        "bindings/fortran/integration/test/test_cross_project.f90",
+        "fpm test -C bindings/fortran/integration --profile release",
     ),
     "ocaml": Guide(
         "OCaml",
@@ -237,13 +237,41 @@ GUIDES: dict[str, Guide] = {
         "bindings/lua/tests/snapshot.lua",
         "lua bindings/lua/tests/snapshot.lua",
     ),
+    "julia": Guide(
+        "Julia",
+        "Julia 1.10+",
+        "Tier 3",
+        "General-registry package `Liblevenshtein`",
+        "`ccall` reaches the stable C ABI and `VinaryTreeInterop` carries retained dictionary resources between independent packages.",
+        "Use `close` in `finally` for transducers, cursors, patterns, and rule sets; finalizers are leak containment rather than deterministic scheduling.",
+        "Non-OK statuses become `NativeError` values carrying the exact numeric status, operation, and copied diagnostic.",
+        "Immutable transducers and independent cursors may run in separate tasks. A cursor and its live lexical batch remain exclusive and single-consumer.",
+        "`String`, `AbstractVector{UInt8}`, and integer vectors preserve Unicode-scalar, byte, and u64-token domains through multiple dispatch.",
+        "bindings/julia/Liblevenshtein/src/Liblevenshtein.jl",
+        "bindings/julia/Liblevenshtein/test/runtests.jl",
+        "julia --project=bindings/julia/Liblevenshtein -e 'using Pkg; Pkg.test()'",
+    ),
+    "raku": Guide(
+        "Raku",
+        "Raku through Rakudo and NativeCall",
+        "Tier 3",
+        "zef/fez distribution `Liblevenshtein`",
+        "`NativeCall` reaches the stable C ABI and `Vinary::Tree::Interop` carries retained dictionary resources between independent distributions.",
+        "Call `.close` or use `LEAVE` for transducers, cursors, patterns, and rule sets; `DESTROY` is only leak containment.",
+        "Non-OK statuses become `X::Liblevenshtein` values carrying the exact numeric status, operation, and copied diagnostic.",
+        "Immutable transducers and independent cursors may run on separate threads. A cursor remains exclusive and single-consumer.",
+        "`Str`, `Blob`, and `Positional` token values preserve Unicode-scalar, byte, and u64-token domains through multi methods.",
+        "bindings/raku/lib/Liblevenshtein.rakumod",
+        "bindings/raku/t/01-conformance.rakutest",
+        "raku -Ibindings/raku/lib -I../vinary-tree-interop/bindings/raku/lib -I../libdictenstein/bindings/raku/lib bindings/raku/t/01-conformance.rakutest",
+    ),
 }
 
 
 INTEROP_PACKAGES = {
     "python": "PyPI package `vinary-tree-interop`",
     "jvm": "Maven coordinate `io.vinarytree:vinary-tree-interop`",
-    "javascript": "npm package `@vinary-tree/interop`",
+    "javascript": "npm package `@vinary-tree/vinary-tree-interop`",
     "go": "Go module `github.com/vinary-tree/vinary-tree-interop/bindings/go/v4`",
     "swift": "SwiftPM product `VinaryTreeInterop`",
     "fortran": "fpm package `vinary-tree-interop`",
@@ -475,14 +503,36 @@ views expire when their callback returns."""
 | Transducer | Immutable query configuration plus a retained dictionary provider; construction is constant-time with respect to dictionary size. |
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |"""
+        algorithm_contract = """### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same."""
         ownership_detail = """A transducer retains the provider resource, and a query retains the revision
 visible at query start. Closing the original dictionary or publishing later
 mutations cannot invalidate that query. Acquisition either completes with one
 owned retain or fails with no ownership transfer. Teardown order is therefore
 free across dictionary, transducer, and completed query handles."""
-        performance = """- Reuse transducers for repeated queries against the same resource.
+        reducer_exposed = (
+            SURFACE_MODEL["languages"][key or ""]["reducer"].get("symbol") is not None
+        )
+        traversal_performance = (
+            "- Prefer batch/reducer APIs when per-match boundary crossings dominate."
+            if reducer_exposed
+            else "- Drain each cursor once; the iterator already fetches bounded native batches before materializing host-owned matches."
+        )
+        performance = f"""- Reuse transducers for repeated queries against the same resource.
 - Prefer streaming cursors to whole-result materialization.
-- Prefer batch/reducer APIs when per-match boundary crossings dominate.
+{traversal_performance}
 - Keep Unicode, byte, and token domains explicit to avoid transcoding.
 - Measure native, WASM, and WASI paths independently; they have different
   startup and marshalling costs but identical query semantics.
@@ -497,6 +547,63 @@ approximate because all values remain derivable from the retained snapshot."""
         surface_contract = "[`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) and the [generated completeness matrix](../../bindings/conformance/completeness-matrix.tsv)"
 
     surface = "" if interop else facade_surface(key or "")
+    if interop:
+        algorithm_contract = ""
+    if interop or reducer_exposed:
+        maximum_throughput_use = "The facade batch/reducer protocol"
+    else:
+        maximum_throughput_use = (
+            "Drain the facade iterator; no public reducer is exposed"
+        )
+
+    if not interop and key == "raku":
+        batch_rationale = (
+            "It amortizes NativeCall while copying each bounded batch and settling "
+            "its exact generation before host values escape."
+        )
+        result_lifetime = """Every Raku match and bounded batch is copied into host-owned values before
+the native generation is released. Values may outlive the cursor; no raw native
+pointer or lexical lease is exposed to application code."""
+        error_guidance = f"""{failure_scope.capitalize()} are distinct failures. Inspect
+`X::Liblevenshtein.status` and `operation`, never diagnostic prose; the copied
+message is human context."""
+    elif not interop and key == "javascript":
+        batch_rationale = (
+            "It amortizes the foreign boundary while returning bounded, "
+            "host-owned arrays."
+        )
+        result_lifetime = """Matches and batches are copied into host-owned values before returning to
+JavaScript. They remain valid independently of the cursor, and no native lease
+or raw pointer is exposed to user code."""
+        error_guidance = """Malformed UTF-8, unsupported unit domains, incompatible resource versions,
+closed handles, invalid bounds, allocation failures, provider faults, and
+contained Rust panics remain distinct native causes. The facade preserves their
+diagnostics but intentionally does not promise a public numeric status; branch
+on the JavaScript error class and failing operation, never diagnostic prose."""
+    elif interop or reducer_exposed:
+        batch_rationale = (
+            "It amortizes the foreign boundary and keeps borrowed views inside "
+            "one lexical lease."
+        )
+        result_lifetime = """Borrowed results are intentionally lexical. Copy data that must outlive the
+callback; retaining a raw address, slice, memory segment, or foreign pointer is
+an API violation even when the next operation happens to reuse the same arena."""
+        error_guidance = f"""{failure_scope.capitalize()} are distinct failures. Never parse diagnostic prose to
+branch on an error: inspect the typed status/exception first and treat the
+message as human context. Diagnostics must be copied before another native
+call on the same thread."""
+    else:
+        batch_rationale = (
+            "The iterator still amortizes native calls with bounded internal "
+            "batches, then releases each lease before exposing host-owned matches."
+        )
+        result_lifetime = """Iterator results are copied into host-owned values before their native batch
+lease is released. They remain valid after iteration advances or the cursor is
+closed; no raw pointer or borrowed native view reaches user code."""
+        error_guidance = f"""{failure_scope.capitalize()} are distinct failures. Never parse diagnostic prose to
+branch on an error: inspect the typed status/exception first and treat the
+message as human context. Diagnostics must be copied before another native
+call on the same thread."""
 
     return f"""{MARKER}
 
@@ -538,6 +645,8 @@ The idiomatic facade groups the stable surface into these concepts:
 
 {concepts}
 
+{algorithm_contract}
+
 {guide.units} Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
@@ -550,7 +659,7 @@ a sentinel value that removes a valid input from the domain.
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
 | Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Maximum result throughput | {maximum_throughput_use} | {batch_rationale} |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
@@ -567,18 +676,13 @@ exhaustive coverage is governed by {surface_contract}.
 
 {ownership_detail}
 
-Borrowed results are intentionally lexical. Copy data that must outlive the
-callback; retaining a raw address, slice, memory segment, or foreign pointer is
-an API violation even when the next operation happens to reuse the same arena.
+{result_lifetime}
 
 ## Errors and failure containment
 
 {guide.errors}
 
-{failure_scope.capitalize()} are distinct failures. Never parse diagnostic prose to
-branch on an error: inspect the typed status/exception first and treat the
-message as human context. Diagnostics must be copied before another native
-call on the same thread.
+{error_guidance}
 
 ## Concurrency and reentrancy
 

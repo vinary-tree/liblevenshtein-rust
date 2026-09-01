@@ -21,6 +21,37 @@ with Transducer(dictionary) as automaton:
             print(match.term, match.distance, match.id)
 ```
 
+Select alternate edit semantics and deterministic distance ranking with enums,
+not numeric constants:
+
+```python
+from liblevenshtein import Algorithm, QueryOrder, Transducer
+
+with Transducer(dictionary, Algorithm.TRANSPOSITION) as automaton:
+    with automaton.query(
+        "tset", 1, order=QueryOrder.DISTANCE_THEN_TERM
+    ) as matches:
+        ranked = list(matches)
+```
+
+For large outputs, reduce borrowed native batches without allocating one owned
+`Match` per result:
+
+```python
+def collect_terms(terms, batch):
+    terms.extend(match.materialize().term for match in batch)
+    return terms
+
+with Transducer(dictionary) as automaton:
+    with automaton.query("cat", 2) as matches:
+        terms = matches.reduce(collect_terms, [], batch_size=256)
+```
+
+Every borrowed match expires when its reducer callback returns. Native failures
+raise `NativeError`; known `NativeError.status` values use the exported `Status`
+enum, while an unknown status from a newer native library remains an integer so
+its diagnostic is not lost.
+
 The safe iterator materializes at most one reusable batch. `QueryCursor.reduce`
 is the expert path: its borrowed buffer views are valid only during the reducer
 callback and avoid allocating one Python match object per result. Both paths
@@ -71,6 +102,21 @@ The idiomatic facade groups the stable surface into these concepts:
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
 
+### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same.
+
 `str` selects Unicode scalars, `bytes` selects raw bytes, and integer sequences select the packed `u64` domain. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
@@ -104,7 +150,7 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `Status` | Typed native status or error carrier | NativeError.status carries the raw value; Status itself is not re-exported from the package root |
+| `Status` | Typed native status or error carrier | known NativeError.status values use the root-exported Status enum; unknown future values remain raw integers |
 | `Algorithm` | Edit-distance algorithm selection | Public facade type |
 | `QueryOrder` | Result traversal ordering | Public facade type |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |

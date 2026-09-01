@@ -16,7 +16,9 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
+//! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::CostAware;
@@ -28,6 +30,7 @@
 //!
 //! let cost_aware = CostAware::new(dict);
 //! assert_eq!(cost_aware.get_value("foo"), Some(42));
+//! # }
 //! ```
 
 use crate::dictionary::node_adapter::{
@@ -88,7 +91,9 @@ impl EntryMetadata {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::cache::eviction::CostAware;
@@ -100,6 +105,7 @@ impl EntryMetadata {
 ///
 /// let cost_aware = CostAware::new(dict);
 /// assert_eq!(cost_aware.get_value("hello"), Some(1));
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct CostAware<D> {
@@ -116,7 +122,9 @@ impl<D> CostAware<D> {
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::CostAware;
     ///
@@ -125,6 +133,7 @@ impl<D> CostAware<D> {
     /// ]);
     ///
     /// let cost_aware = CostAware::new(dict);
+    /// # }
     /// ```
     pub fn new(dict: D) -> Self {
         Self {

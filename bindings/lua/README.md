@@ -8,14 +8,14 @@ published as `liblevenshtein` on LuaRocks.
 ## Installation
 
 The Lua rock contains the idiomatic C facade; the native SDK remains an
-explicit system dependency. Install matching `4.0.0-rc.4` native SDKs first,
+explicit system dependency. Install matching `4.0.0-rc.6` native SDKs first,
 then identify their header and library directories when installing the rocks:
 
 ```sh
-luarocks install libdictenstein 4.0.0rc4-2 \
+luarocks install libdictenstein 4.0.0rc6-1 \
   LIBDICTENSTEIN_INCDIR=/opt/vinary-tree/include \
   LIBDICTENSTEIN_LIBDIR=/opt/vinary-tree/lib
-luarocks install liblevenshtein 4.0.0rc4-2 \
+luarocks install liblevenshtein 4.0.0rc6-1 \
   LIBLEVENSHTEIN_INCDIR=/opt/vinary-tree/include \
   LIBLEVENSHTEIN_LIBDIR=/opt/vinary-tree/lib
 ```
@@ -72,6 +72,21 @@ The idiomatic facade groups the stable surface into these concepts:
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
 
+### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same.
+
 Lua strings are byte sequences; Unicode entry points validate UTF-8, while explicit byte/token constructors preserve their domains. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
@@ -115,17 +130,12 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
+| `status` | Typed native status or error carrier | stable numeric constants are public while raised Lua errors retain the native code in their message |
 | `algorithm` | Edit-distance algorithm selection | string names "standard"/"transposition"/"merge-and-split"/"damerau-levenshtein" |
 | `order` | Result traversal ordering | string names "traversal"/"distance-then-term" |
-| `phonetic_rules` | Built-in phonetic rule-set selection | string selectors "english-orthography"/"english-phonetic" |
+| `phonetic_rule_set_kind` | Built-in phonetic rule-set selection | named string selectors "english-orthography"/"english-phonetic" |
 | `cursor:next` | One-shot owned-result iteration | Public facade protocol |
 | `cursor:reduce_batches` | Bounded batch/reducer traversal | Public facade protocol |
-
-### Facade-encapsulated model values
-
-| Model value | Idiomatic treatment |
-|---|---|
-| `status` | raised Lua errors embed the numeric code as "(status %d)" text; no named constants |
 
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every

@@ -107,6 +107,65 @@ The [all-backend protocol](backend-propagation-evidence.md) emits explicit
 `inapplicable` rows. It never assigns a finite-term construction optimization
 to a suffix index or fabricates a timing for an unsupported unit domain.
 
+### 4.1 Temporal lazy-product workload cells
+
+The `temporal_campaign_benchmarks` binary registers controlled cells for the
+new exact temporal surfaces. These registrations are an experiment design, not
+performance evidence: no latency or throughput claim is accepted until the
+host-admission, paired-replication, semantic-signature, and profiling gates in
+this document have been run and archived.
+
+Every cell identifier records the axes that determine product work:
+
+| Axis | Controlled interpretation |
+|---|---|
+| depth | Number of labels in each indexed dictionary path |
+| fanout | Distinct first-label branches in the captured dictionary revision |
+| query length | Width of the query-specialized residual recurrence |
+| cutoff selectivity | Narrow admits only exact or near-exact paths; broad keeps distant paths live |
+| transition cache | Same workload with the bounded residual-transition cache enabled or disabled |
+| collision bucket | Full-precision originals sharing one quantized dictionary key |
+| vector ground metric | $`\ell_1`$, $`\ell_2`$, or $`\ell_\infty`$ point cost under the same online Fréchet workload |
+
+The suite changes one principal axis from a named baseline instead of running
+an unstructured Cartesian sweep. This exposes causal effects while keeping an
+initial audit bounded. A later admitted campaign may add interaction cells
+when a profile predicts a specific crossover, for example between fanout and
+cache reuse.
+
+Timed-region boundaries are explicit:
+
+| Benchmark group | Included in timing | Excluded setup |
+|---|---|---|
+| explicit-timestamp TWED range | bounded query construction and complete lazy-product drain | typed series generation and index insertion |
+| bounded exact kNN | fail-closed exact scan, dynamic cutoff tightening, and result ordering | corpus generation and index insertion |
+| range-certificate construction | K1--K4 traversal, evidence retention, and deterministic ordering | corpus generation and index insertion |
+| range-certificate replay | complete deterministic verification | construction of the certificate being replayed |
+| vector online kernels | transition of the complete target stream | query/target allocation and online-machine construction |
+| persistent snapshot load | checksum/configuration verification, generation copy, and persistent-trie open | snapshot publication; large-result destruction is deferred by Criterion |
+| persistent snapshot query | bounded exact query over an already loaded persistent generation | publication and load |
+
+Snapshot fixtures are created below the repository's disk-backed `target`
+directory, never in a memory-backed temporary filesystem, and their narrowly
+scoped fixture directory is removed when the benchmark owner drops. Snapshot
+cells compile only with the `persistent-artrie` feature; all other cells remain
+available in the default benchmark build.
+
+Compile the registrations without executing their measurement sweeps:
+
+```sh
+cargo check --bench temporal_campaign_benchmarks
+cargo check --features persistent-artrie --bench temporal_campaign_benchmarks
+```
+
+After host admission, select one hypothesis group rather than running every
+cell opportunistically:
+
+```sh
+cargo bench --bench temporal_campaign_benchmarks -- timestamped_twed_lazy_range_product
+cargo bench --features persistent-artrie --bench temporal_campaign_benchmarks -- persistent_elastic_snapshot
+```
+
 ## 5. Host admission and thermal control
 
 Benchmark processes are pinned. Before and after every pair, the admission gate
@@ -129,7 +188,7 @@ samples.
 
 ## 6. Statistical model
 
-Let paired times be Rust `$`r_i`$` and legacy/control `$`c_i`$`. The primary
+Let paired times be Rust $`r_i`$ and legacy/control $`c_i`$. The primary
 cell statistic is the median. Dispersion is median absolute deviation (MAD):
 
 ```math
@@ -137,9 +196,9 @@ cell statistic is the median. Dispersion is median absolute deviation (MAD):
 \operatorname{MAD}=\operatorname{median}(|t_i-\widetilde{t}|)
 ```
 
-The paired speedup is `$`s_i=c_i/r_i`$`; values above one favor the treatment.
+The paired speedup is $`s_i=c_i/r_i`$; values above one favor the treatment.
 Confidence intervals for medians use a deterministic bootstrap. The analyzer
-also reports the paired-difference distribution, pooled Cohen's `$`d`$`, and
+also reports the paired-difference distribution, pooled Cohen's $`d`$, and
 whether median intervals overlap. Across heterogeneous cells, ratios aggregate
 with the geometric mean:
 
@@ -151,7 +210,7 @@ Practical significance accompanies statistical significance. The propagation
 matrix uses construction negative controls to calibrate protocol noise; ratios
 near one whose bootstrap interval includes one are classified as equivalent,
 not wins or regressions. Many exploratory hypotheses are not promoted merely
-because one noisy `$`p`$` value crossed a threshold.
+because one noisy $`p`$ value crossed a threshold.
 
 The benchmark program follows the steady-state/replication cautions of Georges,
 Buytaert, and Eeckhout [1], the experimental-design guidance of Kalibera and
@@ -241,7 +300,7 @@ Java uses `AutoCloseable` with try-with-resources; Kotlin uses `use`; Scala uses
    Performance Evaluation.” *OOPSLA*, 2007.
    [DOI:10.1145/1297027.1297033](https://doi.org/10.1145/1297027.1297033)
 2. T. Kalibera, R. Jones. “Rigorous Benchmarking in Reasonable Time.” *ISMM*,
-   2013. [DOI:10.1145/2660193.2660196](https://doi.org/10.1145/2660193.2660196)
+   2013. [DOI:10.1145/2464157.2464160](https://doi.org/10.1145/2464157.2464160)
 3. B. Efron. “Bootstrap Methods: Another Look at the Jackknife.” *The Annals
    of Statistics* 7(1), 1979.
    [DOI:10.1214/aos/1176344552](https://doi.org/10.1214/aos/1176344552)

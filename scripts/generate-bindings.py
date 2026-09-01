@@ -215,7 +215,7 @@ def validate(model: dict) -> None:
         "crate": "vinary-tree-interop",
         "cPrefix": "vt_",
         "cHeader": "vinary_tree_interop.h",
-        "npm": "@vinary-tree/interop",
+        "npm": "@vinary-tree/vinary-tree-interop",
         "maven": "io.vinarytree:vinary-tree-interop",
         "javaPackage": "io.vinarytree.interop",
         "resourceLayout": ["context", "vtable"],
@@ -248,62 +248,90 @@ def validate(model: dict) -> None:
 
 def render_c(model: dict) -> str:
     lines = [
-        f"/* {NOTICE} */",
+        "/** @file",
+        f" * @brief {NOTICE}",
+        " */",
         "#ifndef LIBLEVENSHTEIN_ABI_H",
         "#define LIBLEVENSHTEIN_ABI_H",
         "",
         "#include <stddef.h>",
         "#include <stdint.h>",
         "#ifndef VT_INTEROP_HEADER",
+        "/** Overrideable include spelling for the shared resource-ABI header. */",
         '#define VT_INTEROP_HEADER "vinary_tree_interop.h"',
         "#endif",
         "#include VT_INTEROP_HEADER",
         "",
+        "/** Binary ABI generation implemented by this header and library. */",
         f"#define LLEV_ABI_VERSION {model['abiVersion']}u",
+        "/** Additive API revision within LLEV_ABI_VERSION. */",
         f"#define LLEV_API_REVISION {model['apiRevision']}u",
+        "/** Default maximum descriptors borrowed by one cursor batch. */",
         f"#define LLEV_DEFAULT_MATCH_BATCH {model['defaultMatchBatch']}u",
         "",
     ]
     for name, value in model["buildFeatures"].items():
+        description = {
+            "CORE": "Core distance, transducer, cursor, and batch surface.",
+            "PHONETIC": "Compiled phonetic patterns and rewrite-rule sets.",
+        }[name]
+        lines.append(f"/** Build-feature bit: {description} */")
         lines.append(f"#define LLEV_BUILD_FEATURE_{name} UINT64_C({value})")
     lines.append("")
-    for enum in model["enums"].values():
+    for key, enum in model["enums"].items():
+        lines.append(f"/** {JAVA_ENUM_DOCS[key]} */")
         lines.append(f"typedef enum {enum['cType']} {{")
         values = list(enum["values"].items())
         for index, (name, value) in enumerate(values):
             comma = "," if index + 1 < len(values) else ""
-            lines.append(f"    {enum['cPrefix']}{name} = {value}{comma}")
+            description = JAVA_VALUE_DOCS[key][name]
+            lines.append(
+                f"    {enum['cPrefix']}{name} = {value}{comma} /**< {description} */"
+            )
         lines.append(f"}} {enum['cType']};")
         lines.append("")
     lines.extend(
         [
+            "/** Opaque, shareable automaton configuration retaining a dictionary resource. */",
             "typedef struct LlevTransducer LlevTransducer;",
+            "/** Opaque, exclusive lazy traversal over one immutable query-start snapshot. */",
             "typedef struct LlevQueryCursor LlevQueryCursor;",
+            "/** Opaque, immutable compiled phonetic-language automaton. */",
             "typedef struct LlevPhoneticPattern LlevPhoneticPattern;",
+            "/** Opaque, immutable compiled phonetic rewrite-rule set. */",
             "typedef struct LlevPhoneticRuleSet LlevPhoneticRuleSet;",
             "",
+            "/** One borrowed match descriptor inside a live cursor batch lease. */",
             "typedef struct LlevMatch {",
-            "    const void* term_data;",
-            "    size_t term_len;",
-            "    size_t byte_len;",
-            "    size_t distance;",
-            "    uint64_t id;",
-            "    VtUnitDomain unit_domain;",
-            "    uint8_t has_id;",
-            "    uint8_t reserved[3];",
+            "    const void* term_data; /**< Borrowed term bytes or aligned u64 tokens. */",
+            "    size_t term_len; /**< Logical unit count: scalars, bytes, or u64 tokens. */",
+            "    size_t byte_len; /**< Physical bytes addressed by term_data. */",
+            "    size_t distance; /**< Exact edit distance from the query. */",
+            "    uint64_t id; /**< Dictionary value when has_id is one. */",
+            "    VtUnitDomain unit_domain; /**< Encoding and alignment of term_data. */",
+            "    uint8_t has_id; /**< One when id is present, otherwise zero. */",
+            "    uint8_t reserved[3]; /**< Must be ignored; reserved for additive evolution. */",
             "} LlevMatch;",
             "",
+            "/** Borrowed contiguous match lease returned by cursor advancement. */",
             "typedef struct LlevMatchBatchView {",
-            "    const LlevMatch* matches;",
-            "    size_t len;",
-            "    uint64_t generation;",
+            "    const LlevMatch* matches; /**< Descriptor array valid until exact release. */",
+            "    size_t len; /**< Number of initialized descriptors. */",
+            "    uint64_t generation; /**< Nonzero identity required by release_batch. */",
             "} LlevMatchBatchView;",
             "",
+            "/** Heap-owned, length-bearing UTF-8 returned by the phonetic-rule API. */",
             "typedef struct LlevOwnedString {",
-            "    char* data;",
-            "    size_t len;",
+            "    char* data; /**< Owned bytes, not necessarily NUL-terminated. */",
+            "    size_t len; /**< Number of initialized UTF-8 bytes. */",
             "} LlevOwnedString;",
             "",
+            "/** Consume one borrowed reducer batch on the calling thread.",
+            " * @param context unchanged caller context supplied to cursor_reduce",
+            " * @param matches descriptors valid only for this callback invocation",
+            " * @param len number of descriptors in matches",
+            " * @return OK to continue, END to stop successfully, or another published status to abort",
+            " */",
             "typedef LlevStatus (*LlevBatchReducer)(void* context,",
             "                                       const LlevMatch* matches,",
             "                                       size_t len);",
@@ -320,6 +348,91 @@ RUST_DOCS = {
     "algorithm": "Edit-distance algorithm.",
     "queryOrder": "Lazy result order.",
     "phoneticRuleSetKind": "Built-in phonetic rewrite-rule set.",
+}
+
+PUBLIC_ENUM_NAMES = {
+    "status": "Status",
+    "algorithm": "Algorithm",
+    "queryOrder": "QueryOrder",
+    "phoneticRuleSetKind": "PhoneticRuleSetKind",
+}
+
+JAVA_ENUM_DOCS = {
+    "status": "Result of a fallible native operation.",
+    "algorithm": "Edit-distance algorithm.",
+    "queryOrder": "Lazy result ordering.",
+    "phoneticRuleSetKind": "Built-in phonetic rewrite-rule set.",
+}
+
+JAVA_VALUE_DOCS = {
+    "status": {
+        "OK": "The operation completed successfully.",
+        "END": "A finite cursor reached the end of its stream.",
+        "INVALID_ARGUMENT": "An argument violated the operation's contract.",
+        "INVALID_UTF8": "Input advertised as text was not valid UTF-8.",
+        "NULL_POINTER": "A required native pointer was null.",
+        "PANIC": "A contained Rust panic crossed the failure boundary.",
+        "UNSUPPORTED": "The requested capability is unavailable in this build.",
+        "IO_ERROR": "An input/output operation failed.",
+        "CLOSED": "The target resource was already closed.",
+        "LIMIT_EXCEEDED": "A configured resource or traversal limit was exceeded.",
+        "PROVIDER_ERROR": "A foreign dictionary provider reported a failure.",
+        "BATCH_IN_USE": "A cursor was advanced while its previous batch remained borrowed.",
+        "DOMAIN_MISMATCH": "The query and dictionary use different unit domains.",
+    },
+    "algorithm": {
+        "STANDARD": "Standard insert/delete/substitute distance.",
+        "TRANSPOSITION": "Optimal string alignment with adjacent transposition.",
+        "MERGE_AND_SPLIT": "Merge-and-split edit distance.",
+        "DAMERAU_LEVENSHTEIN": "Unrestricted Damerau-Levenshtein distance.",
+    },
+    "queryOrder": {
+        "TRAVERSAL": "Provider traversal order with bounded buffering.",
+        "DISTANCE_THEN_TERM": "Distance then term, buffering at most one distance layer.",
+    },
+    "phoneticRuleSetKind": {
+        "ENGLISH_ORTHOGRAPHY": "English orthography normalization.",
+        "ENGLISH_PHONETIC": "English phonetic transformation.",
+    },
+}
+
+GO_VALUE_NAMES = {
+    "status": {
+        "OK": "StatusOK",
+        "END": "StatusEnd",
+        "INVALID_ARGUMENT": "StatusInvalidArgument",
+        "INVALID_UTF8": "StatusInvalidUTF8",
+        "NULL_POINTER": "StatusNullPointer",
+        "PANIC": "StatusPanic",
+        "UNSUPPORTED": "StatusUnsupported",
+        "IO_ERROR": "StatusIOError",
+        "CLOSED": "StatusClosed",
+        "LIMIT_EXCEEDED": "StatusLimitExceeded",
+        "PROVIDER_ERROR": "StatusProviderError",
+        "BATCH_IN_USE": "StatusBatchInUse",
+        "DOMAIN_MISMATCH": "StatusDomainMismatch",
+    },
+    "algorithm": {
+        "STANDARD": "Standard",
+        "TRANSPOSITION": "Transposition",
+        "MERGE_AND_SPLIT": "MergeAndSplit",
+        "DAMERAU_LEVENSHTEIN": "DamerauLevenshtein",
+    },
+    "queryOrder": {
+        "TRAVERSAL": "Traversal",
+        "DISTANCE_THEN_TERM": "DistanceThenTerm",
+    },
+    "phoneticRuleSetKind": {
+        "ENGLISH_ORTHOGRAPHY": "EnglishOrthography",
+        "ENGLISH_PHONETIC": "EnglishPhonetic",
+    },
+}
+
+RUBY_VALUE_NAMES = {
+    "status": {
+        # END is a Ruby parser keyword and cannot be assigned as a constant.
+        "END": "END_OF_STREAM",
+    }
 }
 
 
@@ -380,12 +493,96 @@ def render_python(model: dict) -> str:
         f"DEFAULT_MATCH_BATCH = {model['defaultMatchBatch']}",
         "",
     ]
-    for enum in model["enums"].values():
+    for key, enum in model["enums"].items():
         name = enum["cType"].removeprefix("Llev")
         lines.append(f"class {name}(IntEnum):")
+        lines.append(f'    """{JAVA_ENUM_DOCS[key]}"""')
         for item, value in enum["values"].items():
             lines.append(f"    {item} = {value}")
+            lines.append(f'    """{JAVA_VALUE_DOCS[key][item]}"""')
         lines.append("")
+    return "\n".join(lines)
+
+
+def render_julia(model: dict) -> str:
+    """Render Julia ABI constants and enums from the shared model."""
+
+    enum_names = {
+        "status": "Status",
+        "algorithm": "Algorithm",
+        "queryOrder": "QueryOrder",
+        "phoneticRuleSetKind": "PhoneticRuleSetKind",
+    }
+    prefixes = {
+        "status": "STATUS_",
+        "algorithm": "ALGORITHM_",
+        "queryOrder": "ORDER_",
+        "phoneticRuleSetKind": "RULES_",
+    }
+    lines = [
+        "# Code generated by scripts/generate-bindings.py from bindings/api.json; DO NOT EDIT.",
+        '"""Stable liblevenshtein native ABI generation."""',
+        f"const ABI_VERSION = UInt32({model['abiVersion']})",
+        '"""Minimum additive native API revision required by this facade."""',
+        f"const API_REVISION = UInt32({model['apiRevision']})",
+        '"""Default maximum number of match descriptors per native batch."""',
+        f"const DEFAULT_MATCH_BATCH = {model['defaultMatchBatch']}",
+    ]
+    for name, value in model["buildFeatures"].items():
+        lines.append(f'"""Compiled native feature bit: {name.lower()}."""')
+        lines.append(f"const BUILD_FEATURE_{name} = UInt64({value})")
+    lines.append("")
+    for key, enum in model["enums"].items():
+        storage = "Cint" if key == "status" else "UInt32"
+        lines.append(f'"""{JAVA_ENUM_DOCS[key]}"""')
+        lines.append(f"@enum {enum_names[key]}::{storage} begin")
+        for name, value in enum["values"].items():
+            lines.append(f"    {prefixes[key]}{name} = {value}")
+        lines.extend(["end", ""])
+    return "\n".join(lines)
+
+
+def render_raku(model: dict) -> str:
+    """Render Raku NativeCall ABI constants and enums from the shared model."""
+
+    enum_names = {
+        "status": "Status",
+        "algorithm": "Algorithm",
+        "queryOrder": "QueryOrder",
+        "phoneticRuleSetKind": "PhoneticRuleSetKind",
+    }
+    renamed = {
+        ("status", "INVALID_ARGUMENT"): "INVALID-ARGUMENT",
+        ("status", "INVALID_UTF8"): "INVALID-UTF8",
+        ("status", "NULL_POINTER"): "NULL-POINTER",
+        ("status", "IO_ERROR"): "IO-ERROR",
+        ("status", "LIMIT_EXCEEDED"): "LIMIT-EXCEEDED",
+        ("status", "PROVIDER_ERROR"): "PROVIDER-ERROR",
+        ("status", "BATCH_IN_USE"): "BATCH-IN-USE",
+        ("status", "DOMAIN_MISMATCH"): "DOMAIN-MISMATCH",
+        ("algorithm", "MERGE_AND_SPLIT"): "MERGE-AND-SPLIT",
+        ("algorithm", "DAMERAU_LEVENSHTEIN"): "DAMERAU-LEVENSHTEIN",
+        ("queryOrder", "DISTANCE_THEN_TERM"): "DISTANCE-THEN-TERM",
+        ("phoneticRuleSetKind", "ENGLISH_ORTHOGRAPHY"): "ENGLISH-ORTHOGRAPHY",
+        ("phoneticRuleSetKind", "ENGLISH_PHONETIC"): "ENGLISH-PHONETIC",
+    }
+    lines = [
+        "unit module Liblevenshtein::GeneratedAbi;",
+        "",
+        "# Code generated by scripts/generate-bindings.py from bindings/api.json; DO NOT EDIT.",
+        f"our constant ABI-VERSION is export = {model['abiVersion']};",
+        f"our constant API-REVISION is export = {model['apiRevision']};",
+        f"our constant DEFAULT-MATCH-BATCH is export = {model['defaultMatchBatch']};",
+    ]
+    for name, value in model["buildFeatures"].items():
+        lines.append(f"our constant BUILD-FEATURE-{name} is export = {value};")
+    lines.append("")
+    for key, enum in model["enums"].items():
+        lines.append(f"our enum {enum_names[key]} is export (")
+        for name, value in enum["values"].items():
+            public = renamed.get((key, name), name.replace("_", "-"))
+            lines.append(f"    {public} => {value},")
+        lines.extend([");", ""])
     return "\n".join(lines)
 
 
@@ -404,6 +601,243 @@ def render_java(model: dict) -> str:
     for name, value in status.items():
         lines.append(f"    static final int STATUS_{name} = {value};")
     lines.extend(["}", ""])
+    return "\n".join(lines)
+
+
+def render_java_enum(model: dict, key: str) -> str:
+    """Render one public JVM enum from the language-neutral ABI model."""
+
+    enum = model["enums"][key]
+    class_name = PUBLIC_ENUM_NAMES[key]
+    lines = [
+        f"package {model['organization']['javaPackage']};",
+        "",
+        f"/** {JAVA_ENUM_DOCS[key]}",
+        f" * <p>{NOTICE}",
+        " */",
+        f"public enum {class_name} {{",
+    ]
+    descriptions = JAVA_VALUE_DOCS.get(key, {})
+    values = list(enum["values"].items())
+    for index, (name, value) in enumerate(values):
+        description = descriptions.get(
+            name, name.lower().replace("_", " ").capitalize() + "."
+        )
+        separator = "," if index + 1 < len(values) or key == "status" else ";"
+        lines.extend([f"    /** {description} */", f"    {name}({value}){separator}"])
+    if key == "status":
+        lines.extend(
+            [
+                "    /** A status introduced by a newer compatible ABI revision. */",
+                "    UNKNOWN(-1);",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "    private final int nativeValue;",
+            "",
+            f"    {class_name}(int nativeValue) {{",
+            "        this.nativeValue = nativeValue;",
+            "    }",
+            "",
+        ]
+    )
+    if key == "status":
+        lines.extend(
+            [
+                "    /**",
+                "     * Return this known status's stable numeric ABI value.",
+                "     *",
+                "     * <p>{@link #UNKNOWN} returns {@code -1}; use",
+                "     * {@link NativeException#statusCode()} to recover an unknown status's",
+                "     * original forward-compatible value.",
+                "     *",
+                "     * @return stable ABI value, or {@code -1} for {@link #UNKNOWN}",
+                "     */",
+                "    public int code() {",
+                "        return nativeValue;",
+                "    }",
+                "",
+                "    static Status fromNativeValue(int value) {",
+                "        return switch (value) {",
+            ]
+        )
+        for name, value in values:
+            lines.append(f"            case {value} -> {name};")
+        lines.extend(
+            ["            default -> UNKNOWN;", "        };", "    }", "}", ""]
+        )
+    else:
+        lines.extend(
+            [
+                "    int nativeValue() {",
+                "        return nativeValue;",
+                "    }",
+                "}",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def render_dotnet_enums(model: dict) -> str:
+    """Render public .NET enums from the language-neutral ABI model."""
+
+    lines = [
+        "// <auto-generated />",
+        f"// {NOTICE}",
+        "",
+        "namespace VinaryTree.Liblevenshtein;",
+        "",
+    ]
+    for key, enum in model["enums"].items():
+        class_name = PUBLIC_ENUM_NAMES[key]
+        summary = JAVA_ENUM_DOCS[key]
+        if key == "status":
+            summary += (
+                " The uint backing value preserves statuses introduced by a newer "
+                "compatible API revision."
+            )
+        lines.extend(
+            [
+                "/// <summary>",
+                f"/// {summary}",
+                "/// </summary>",
+                f"public enum {class_name} : uint",
+                "{",
+            ]
+        )
+        descriptions = JAVA_VALUE_DOCS.get(key, {})
+        for name, value in enum["values"].items():
+            description = descriptions.get(
+                name, name.lower().replace("_", " ").capitalize() + "."
+            )
+            lines.extend(
+                [
+                    f"    /// <summary>{description}</summary>",
+                    f"    {pascal(name)} = {value},",
+                ]
+            )
+        lines.extend(["}", ""])
+    return "\n".join(lines)
+
+
+def render_go_enums(model: dict) -> str:
+    """Render public Go enum types from the language-neutral ABI model."""
+
+    lines = [
+        "// Code generated by scripts/generate-bindings.py from bindings/api.json; DO NOT EDIT.",
+        "",
+        "package liblevenshtein",
+        "",
+    ]
+    for key, enum in model["enums"].items():
+        type_name = PUBLIC_ENUM_NAMES[key]
+        lines.extend(
+            [
+                f"// {type_name} is the {JAVA_ENUM_DOCS[key].lower()}",
+                f"type {type_name} uint32",
+                "",
+                "const (",
+            ]
+        )
+        for name, value in enum["values"].items():
+            public_name = GO_VALUE_NAMES[key][name]
+            description = JAVA_VALUE_DOCS[key][name]
+            lines.extend(
+                [
+                    f"\t// {public_name} indicates {description[:1].lower() + description[1:]}",
+                    f"\t{public_name} {type_name} = {value}",
+                ]
+            )
+        lines.extend([")", ""])
+    return "\n".join(lines)
+
+
+def render_ruby_enums(model: dict) -> str:
+    """Render public Ruby constant modules from the language-neutral ABI model."""
+
+    lines = [
+        "# frozen_string_literal: true",
+        "",
+        "# Code generated by scripts/generate-bindings.py from bindings/api.json; DO NOT EDIT.",
+        "module VinaryTree",
+        "  module Liblevenshtein",
+    ]
+    for key, enum in model["enums"].items():
+        lines.append(f"    module {PUBLIC_ENUM_NAMES[key]}")
+        for name, value in enum["values"].items():
+            public_name = RUBY_VALUE_NAMES.get(key, {}).get(name, name)
+            lines.append(f"      {public_name} = {value}")
+        lines.extend(["    end", ""])
+    lines.extend(["  end", "end", ""])
+    return "\n".join(lines)
+
+
+def render_swift_enums(model: dict) -> str:
+    """Render public Swift ABI selections while preserving unknown statuses."""
+
+    lines = [
+        "// Code generated by scripts/generate-bindings.py from bindings/api.json; DO NOT EDIT.",
+        "",
+    ]
+    for key, enum in model["enums"].items():
+        type_name = PUBLIC_ENUM_NAMES[key]
+        summary = JAVA_ENUM_DOCS[key]
+        descriptions = JAVA_VALUE_DOCS[key]
+        if key == "status":
+            lines.extend(
+                [
+                    f"/// {summary}",
+                    "///",
+                    "/// This is an open raw-value wrapper so statuses introduced by a newer",
+                    "/// compatible API revision remain observable rather than being discarded.",
+                    f"public struct {type_name}: RawRepresentable, Hashable, Sendable, CustomStringConvertible {{",
+                    "    public let rawValue: UInt32",
+                    "",
+                    "    public init(rawValue: UInt32) { self.rawValue = rawValue }",
+                    "",
+                ]
+            )
+            for name, value in enum["values"].items():
+                public_name = camel(name)
+                lines.extend(
+                    [
+                        f"    /// {descriptions[name]}",
+                        f"    public static let {public_name} = Status(rawValue: {value})",
+                    ]
+                )
+            lines.extend(
+                ["", "    public var description: String {", "        switch self {"]
+            )
+            for name in enum["values"]:
+                public_name = camel(name)
+                lines.append(f'        case .{public_name}: "{name}"')
+            lines.extend(
+                [
+                    '        default: "UNKNOWN(\\(rawValue))"',
+                    "        }",
+                    "    }",
+                    "}",
+                    "",
+                ]
+            )
+            continue
+        lines.extend(
+            [
+                f"/// {summary}",
+                f"public enum {type_name}: UInt32, Sendable {{",
+            ]
+        )
+        for name, value in enum["values"].items():
+            lines.extend(
+                [
+                    f"    /// {descriptions[name]}",
+                    f"    case {camel(name)} = {value}",
+                ]
+            )
+        lines.extend(["}", ""])
     return "\n".join(lines)
 
 
@@ -481,6 +915,7 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
     lua_header = (INTEROP_ROOT / "bindings" / "lua" / "vinary_tree_lua.h").read_text(
         encoding="utf-8"
     )
+    java_source_root = ROOT / "bindings" / "jvm" / "src" / "main" / "java" / java_path
     generated = {
         ROOT / "include" / "liblevenshtein_abi.h": render_c(model),
         ROOT / "src" / "ffi" / "generated.rs": render_rust(model),
@@ -492,12 +927,44 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
         / "_generated.py": render_python(model),
         ROOT
         / "bindings"
-        / "jvm"
+        / "julia"
+        / "Liblevenshtein"
         / "src"
-        / "main"
-        / "java"
-        / java_path
-        / "GeneratedAbi.java": render_java(model),
+        / "GeneratedAbi.jl": render_julia(model),
+        ROOT
+        / "bindings"
+        / "raku"
+        / "lib"
+        / "Liblevenshtein"
+        / "GeneratedAbi.rakumod": render_raku(model),
+        java_source_root / "GeneratedAbi.java": render_java(model),
+        java_source_root / "Status.java": render_java_enum(model, "status"),
+        java_source_root / "Algorithm.java": render_java_enum(model, "algorithm"),
+        java_source_root / "QueryOrder.java": render_java_enum(model, "queryOrder"),
+        java_source_root / "PhoneticRuleSetKind.java": render_java_enum(
+            model, "phoneticRuleSetKind"
+        ),
+        ROOT
+        / "bindings"
+        / "dotnet"
+        / "src"
+        / "VinaryTree.Liblevenshtein"
+        / "GeneratedEnums.cs": render_dotnet_enums(model),
+        ROOT / "bindings" / "go" / "generated_enums.go": render_go_enums(model),
+        ROOT
+        / "bindings"
+        / "ruby"
+        / "lib"
+        / "vinary_tree"
+        / "liblevenshtein"
+        / "generated_enums.rb": render_ruby_enums(model),
+        ROOT
+        / "bindings"
+        / "swift"
+        / "liblevenshtein"
+        / "Sources"
+        / "Liblevenshtein"
+        / "GeneratedEnums.swift": render_swift_enums(model),
         ROOT / "bindings" / "javascript" / "abi.d.ts": render_typescript(model),
         ROOT / "bindings" / "conformance" / "query_start_snapshot.tsv": render_fixture(
             model

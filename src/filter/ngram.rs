@@ -24,7 +24,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::filter::NgramIndex;
 //!
 //! let mut index = NgramIndex::new(2); // Bigrams
@@ -83,7 +83,7 @@ impl NgramIndex {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::filter::NgramIndex;
     ///
     /// let bigram_index = NgramIndex::new(2);
@@ -108,7 +108,7 @@ impl NgramIndex {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::filter::NgramIndex;
     ///
     /// let terms = vec!["apple", "banana", "cherry"];
@@ -169,7 +169,7 @@ impl NgramIndex {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::filter::NgramIndex;
     ///
     /// let mut index = NgramIndex::new(2);
@@ -325,7 +325,7 @@ impl NgramIndex {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::filter::NgramIndex;
     ///
     /// let mut index = NgramIndex::new(2);

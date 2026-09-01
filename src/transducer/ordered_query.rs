@@ -67,7 +67,7 @@ impl<E> OrderedIntersection<E> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 ///
 /// let dict = DoubleArrayTrie::from_terms(vec!["test", "best", "rest", "testing"]);
@@ -655,13 +655,22 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test", "Best"]);
+    /// let transducer = Transducer::standard(dict);
     /// // Filter to only identifiers starting with lowercase
-    /// query.filter(|candidate| {
-    ///     candidate.term.chars().next()
-    ///         .map(|c| c.is_lowercase())
-    ///         .unwrap_or(false)
-    /// })
+    /// let matches: Vec<_> = transducer
+    ///     .query_ordered("test", 1)
+    ///     .filter(|candidate| {
+    ///         candidate.term.chars().next()
+    ///             .map(char::is_lowercase)
+    ///             .unwrap_or(false)
+    ///     })
+    ///     .map(|candidate| candidate.term)
+    ///     .collect();
+    /// assert_eq!(matches, ["test"]);
     /// ```
     pub fn filter<F>(self, predicate: F) -> FilteredOrderedQueryIterator<N, P, F>
     where
@@ -683,10 +692,18 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// // Query: "tes"
-    /// // Matches: "test" (d=0), "testing" (d=0), "tester" (d=0), "best" (d=1)
-    /// query.prefix()
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test", "testing", "tester", "best"]);
+    /// let transducer = Transducer::standard(dict);
+    /// let matches: Vec<_> = transducer
+    ///     .query_ordered("tes", 1)
+    ///     .prefix()
+    ///     .map(|candidate| candidate.term)
+    ///     .collect();
+    /// assert!(matches.iter().any(|term| term == "testing"));
+    /// assert!(matches.iter().any(|term| term == "best"));
     /// ```
     pub fn prefix(mut self) -> PrefixOrderedQueryIterator<N, P> {
         self.inner.enable_prefix();

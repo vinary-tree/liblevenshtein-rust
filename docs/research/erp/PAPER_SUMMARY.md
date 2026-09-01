@@ -11,20 +11,20 @@ Distance,” *Proceedings of the 30th VLDB Conference*, pp. 792–803, 2004.
 
 Chen and Ng seek a time-series measure that combines the local time-shift
 tolerance of edit-style alignment with the triangle inequality of the
-`$`L_1`$` norm. Their Edit distance with Real Penalty (ERP) uses real-valued
+$`L_1`$ norm. Their Edit distance with Real Penalty (ERP) uses real-valued
 absolute deviations for matched samples and compares every unmatched sample
-to one fixed real gap value `$`g`$`. The paper also proposes one-dimensional
+to one fixed real gap value $`g`$. The paper also proposes one-dimensional
 lower-bound indexing and combines it with triangle-inequality pruning.
 
 The fixed gap is the decisive choice. Dynamic time warping prices a repeated
-sample relative to alignment history; ERP prices a gap relative to `$`g`$`.
+sample relative to alignment history; ERP prices a gap relative to $`g`$.
 This makes each local alignment cost an ordinary absolute distance on the
 augmented alphabet of real values plus the gap representative.
 
 ## 2. Definitions
 
-Let `$`x=(x_1,\ldots,x_m)`$` and `$`y=(y_1,\ldots,y_n)`$` be finite real
-sequences. Define `$`D[i,j]`$` as the best ERP cost between their prefixes.
+Let $`x=(x_1,\ldots,x_m)`$ and $`y=(y_1,\ldots,y_n)`$ be finite real
+sequences. Define $`D[i,j]`$ as the best ERP cost between their prefixes.
 The boundary conditions are running gap costs:
 
 ```math
@@ -43,20 +43,20 @@ D[i,j-1]+\lvert y_j-g\rvert. & \text{insert }y_j
 \end{cases}
 ```
 
-It takes `$`\mathcal{O}(mn)`$` time. Retaining two rows or columns reduces
-working memory to `$`\mathcal{O}(\min(m,n))`$`.
+It takes $`\mathcal{O}(mn)`$ time. Retaining two rows or columns reduces
+working memory to $`\mathcal{O}(\min(m,n))`$.
 
 ## 3. Worked source example
 
-The paper uses `$`Q=[0]`$`, `$`R=[1,2]`$`, and `$`S=[2,3,3]`$` with `$`g=0`$`.
+The paper uses $`Q=[0]`$, $`R=[1,2]`$, and $`S=[2,3,3]`$ with $`g=0`$.
 It reports:
 
 ```math
 D(Q,R)=3,\qquad D(R,S)=5,\qquad D(Q,S)=8.
 ```
 
-Thus `$`D(Q,S)=D(Q,R)+D(R,S)`$` in this example. A second source example
-changes `$`Q`$` to `[3]`, illustrating that inserting a zero gap permits local
+Thus $`D(Q,S)=D(Q,R)+D(R,S)`$ in this example. A second source example
+changes $`Q`$ to `[3]`, illustrating that inserting a zero gap permits local
 time displacement while still charging real deviation.
 
 ## 4. Metric claim and the raw-sequence qualification
@@ -66,15 +66,15 @@ alignments once each underlying element/gap cost obeys the triangle inequality.
 Symmetry and non-negativity are immediate from absolute value.
 
 On a Rust API that admits empty sequences and explicitly represents samples
-equal to `$`g`$`, identity of indiscernibles needs a qualification:
+equal to $`g`$, identity of indiscernibles needs a qualification:
 
 ```math
 D([g],[])=0.
 ```
 
-More generally, inserting or deleting any occurrence of `$`g`$` costs zero.
-Define the **`$`g`$`-quotient normal form** `$`N_g(x)`$` by deleting every
-sample equal to `$`g`$`. Then ERP is a pseudometric on raw sequences and its
+More generally, inserting or deleting any occurrence of $`g`$ costs zero.
+Define the **$`g`$-quotient normal form** $`N_g(x)`$ by deleting every
+sample equal to $`g`$. Then ERP is a pseudometric on raw sequences and its
 identity law is:
 
 ```math
@@ -82,7 +82,7 @@ D(x,y)=0\quad\Longleftrightarrow\quad N_g(x)=N_g(y).
 ```
 
 This is not a contradiction in the recurrence; it is the exact algebra induced
-by making `$`g`$` the gap representative. Documentation and tests must not call
+by making $`g`$ the gap representative. Documentation and tests must not call
 raw ERP a strict metric without stating the quotient.
 
 ## 5. Lower bounds used by this implementation
@@ -108,12 +108,12 @@ and applying the triangle inequality yields the admissible candidate bound:
 \big\lvert\Phi_g(x)-\Phi_g(y)\big\rvert\le D(x,y).
 ```
 
-Length difference is not a substitute: extra samples equal to `$`g`$` cost
+Length difference is not a substitute: extra samples equal to $`g`$ cost
 zero, so arbitrary length mismatch can have zero ERP distance.
 
 ## 6. Quantized-trie interval relaxation
 
-When a target sample is represented by a bin `$`B=[\ell,h]`$`, the exact box
+When a target sample is represented by a bin $`B=[\ell,h]`$, the exact box
 minimum is
 
 ```math
@@ -122,8 +122,8 @@ minimum is
 ```
 
 The interval recurrence replaces match cost by
-`$`\operatorname{dist}(x_i,B)`$` and insertion cost by
-`$`\operatorname{dist}(g,B)`$`; deletion cost `$`\lvert x_i-g\rvert`$` is
+$`\operatorname{dist}(x_i,B)`$ and insertion cost by
+$`\operatorname{dist}(g,B)`$; deletion cost $`\lvert x_i-g\rvert`$ is
 already exact. Point bins reproduce the scalar DP exactly. Non-point bins
 lower-bound every concrete realization and therefore support no-false-negative
 subtree pruning.
@@ -132,7 +132,7 @@ subtree pruning.
 
 | Paper concept | Repository implementation |
 |---|---|
-| Fixed gap `$`g`$` | `ErpConfig::new(g)` and normalized public field |
+| Fixed gap $`g`$ | `ErpConfig::new(g)` and normalized public field |
 | Formula (5) recurrence | `ErpConfig::distance_with_cutoff` |
 | Running empty-side sums | `empty_vs_nonempty_cost` and DP boundaries |
 | Two-row optimization | production exact scorer |

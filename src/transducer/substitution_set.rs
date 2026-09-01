@@ -14,7 +14,7 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::transducer::{SubstitutionSet, Transducer, Algorithm};
 //! use liblevenshtein::prelude::*;
 //!
@@ -752,21 +752,21 @@ impl SubstitutionSet {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// # use liblevenshtein::transducer::{SubstitutionSet, Transducer, Algorithm};
     /// # use liblevenshtein::prelude::*;
     /// let phonetic = SubstitutionSet::phonetic_basic();
     ///
-    /// let dict = DoubleArrayTrie::from_terms(vec!["phone", "cat"]);
+    /// let dict = DoubleArrayTrie::from_terms(["cat"]);
     /// let transducer = Transducer::with_substitutions(
     ///     dict,
     ///     Algorithm::Standard,
     ///     phonetic
     /// );
     ///
-    /// // "fone" matches "phone" (f ↔ ph)
-    /// let results: Vec<_> = transducer.query("fone", 1).collect();
-    /// assert!(results.contains(&"phone"));
+    /// // "kat" matches "cat" through the allowed c ↔ k substitution.
+    /// let results: Vec<_> = transducer.query_terms("kat", 0).collect();
+    /// assert_eq!(results, ["cat"]);
     /// ```
     pub fn phonetic_basic() -> Self {
         let mut set = Self::with_capacity(Self::PHONETIC_PAIRS.len());

@@ -13,20 +13,20 @@ automaton variants.
 
 ## 1. Vocabulary and orientation
 
-Let `$`x`$` be the source string, `$`y`$` the target string, and `$`|x|`$` the
-number of Unicode scalar values in `$`x`$`. An operation is a tuple
-`$`\langle t^x,t^y,t^w\rangle`$`: it consumes `$`t^x`$` source scalars and
-`$`t^y`$` target scalars at non-negative cost `$`t^w`$`.
+Let $`x`$ be the source string, $`y`$ the target string, and $`|x|`$ the
+number of Unicode scalar values in $`x`$. An operation is a tuple
+$`\langle t^x,t^y,t^w\rangle`$: it consumes $`t^x`$ source scalars and
+$`t^y`$ target scalars at non-negative cost $`t^w`$.
 
 | Preset | Operations `(source, target, cost)` | Exact meaning |
 |---|---|---|
 | `OperationSet::hamming()` | match `(1,1,0)`, substitute `(1,1,1)` | mismatch count when lengths agree; undefined otherwise |
 | `OperationSet::indel()` | match `(1,1,0)`, insert `(0,1,1)`, delete `(1,0,1)` | minimum insertion/deletion count; substitution costs two |
-| `OperationSet::bounded_skip()` | match `(1,1,0)`, delete `(1,0,1)` | `$`y`$` is a subsequence of `$`x`$`; cost is skipped source length |
+| `OperationSet::bounded_skip()` | match `(1,1,0)`, delete `(1,0,1)` | $`y`$ is a subsequence of $`x`$; cost is skipped source length |
 
 “Bounded skip” is directional. `accepts("crate", "cat")` can succeed at cost
 2, while reversing the arguments cannot. It supplies structural subsequence
-matching only. It does not implement fzf bonuses, gains, ranking, or top-`$`k`$`
+matching only. It does not implement fzf bonuses, gains, ranking, or top-$`k`$
 selection.
 
 ## 2. Mathematical contracts
@@ -39,29 +39,29 @@ For equal-length strings, Hamming distance is:
 d_H(x,y)=\sum_{i=1}^{|x|}[x_i\ne y_i].
 ```
 
-The Rust API returns `None` when `$`|x|\ne|y|`$`; Hamming is a metric on each
+The Rust API returns `None` when $`|x|\ne|y|`$; Hamming is a metric on each
 fixed-length space, not on the disjoint union with an invented finite
 cross-length cost. This distinction is executable:
-`$`d_{\mathrm{Lev}}(\texttt{abc},\texttt{bca})=2`$`, while
-`$`d_H(\texttt{abc},\texttt{bca})=3`$`.
+$`d_{\mathrm{Lev}}(\texttt{abc},\texttt{bca})=2`$, while
+$`d_H(\texttt{abc},\texttt{bca})=3`$.
 
 ### 2.2 Insertion/deletion distance
 
-Let `$`\operatorname{LCS}(x,y)`$` denote longest-common-subsequence length.
+Let $`\operatorname{LCS}(x,y)`$ denote longest-common-subsequence length.
 Every retained common symbol avoids one deletion and one insertion, hence:
 
 ```math
 d_I(x,y)=|x|+|y|-2\operatorname{LCS}(x,y).
 ```
 
-Consequently `$`||x|-|y||\le d_I(x,y)\le |x|+|y|`$`, and `$`d_I(x,y)`$` has
-the same parity as `$`||x|-|y||`$`. The reference implementation uses two rows
-and `$`\mathcal{O}(\min(|x|,|y|))`$` memory. Its thresholded form evaluates
-only the diagonals that can still fit budget `$`k`$`.
+Consequently $`||x|-|y||\le d_I(x,y)\le |x|+|y|`$, and $`d_I(x,y)`$ has
+the same parity as $`||x|-|y||`$. The reference implementation uses two rows
+and $`\mathcal{O}(\min(|x|,|y|))`$ memory. Its thresholded form evaluates
+only the diagonals that can still fit budget $`k`$.
 
 ### 2.3 Bounded skip
 
-Write `$`y\preceq x`$` when `$`y`$` is a subsequence of `$`x`$`. Then:
+Write $`y\preceq x`$ when $`y`$ is a subsequence of $`x`$. Then:
 
 ```math
 d_S(x,y)=
@@ -71,7 +71,7 @@ d_S(x,y)=
 \end{cases}
 ```
 
-The generalized API represents `$`\top`$` as `None`. Because insertion is
+The generalized API represents $`\top`$ as `None`. Because insertion is
 absent, no alignment can create a target scalar that was not encountered in
 source order.
 
@@ -107,7 +107,7 @@ collections. It rejects:
 2. negative or non-finite weights;
 3. a zero-weight length-changing operation;
 4. checked-overflow in aggregate consumption; and
-5. aggregate `$`\sum_t(t^x+t^y)>4096`$`.
+5. aggregate $`\sum_t(t^x+t^y)>4096`$.
 
 The aggregate ceiling bounds per-cell rule-slice work as well as obviously
 pathological arities. `GeneralizedAutomaton::try_with_operations` validates
@@ -122,8 +122,8 @@ alignment and are not a resource risk.
 
 The Phase-0 experiment compared specialized Hamming and indel walkers with an
 honest baseline over the complete frozen matrix
-`$`k\in\{0,1,2,3\}`$`, dictionary sizes `$`10^3,10^4,10^5`$`, and query
-lengths `$`4,8,16`$`. Runtime exceeded the two-times threshold, but structural
+$`k\in\{0,1,2,3\}`$, dictionary sizes $`10^3,10^4,10^5`$, and query
+lengths $`4,8,16`$. Runtime exceeded the two-times threshold, but structural
 edge reduction was only `1.229` times, below the required four-times threshold.
 The compound shipping rule therefore rejected both walkers.
 
@@ -138,10 +138,10 @@ is append-only.
 
 | API | Time | Extra memory |
 |---|---:|---:|
-| `hamming_distance` | `$`\mathcal{O}(\lvert x\rvert)`$` | `$`\mathcal{O}(1)`$` |
-| `indel_distance` | `$`\mathcal{O}(\lvert x\rvert\lvert y\rvert)`$` | `$`\mathcal{O}(\min(\lvert x\rvert,\lvert y\rvert))`$` |
-| `indel_distance_bounded` | `$`\mathcal{O}(k\min(\lvert x\rvert,\lvert y\rvert))`$` in the retained band | `$`\mathcal{O}(\lvert y\rvert)`$` |
-| generalized preset | reachable-cell bound from the generalized grid | `$`\mathcal{O}(R)`$` for `$`R`$` reached cells |
+| `hamming_distance` | $`\mathcal{O}(\lvert x\rvert)`$ | $`\mathcal{O}(1)`$ |
+| `indel_distance` | $`\mathcal{O}(\lvert x\rvert\lvert y\rvert)`$ | $`\mathcal{O}(\min(\lvert x\rvert,\lvert y\rvert))`$ |
+| `indel_distance_bounded` | $`\mathcal{O}(k\min(\lvert x\rvert,\lvert y\rvert))`$ in the retained band | $`\mathcal{O}(\lvert y\rvert)`$ |
+| generalized preset | reachable-cell bound from the generalized grid | $`\mathcal{O}(R)`$ for $`R`$ reached cells |
 
 The bounded indel implementation handles empty sides before entering the
 band. This is a correctness boundary: an all-deletion or all-insertion path at

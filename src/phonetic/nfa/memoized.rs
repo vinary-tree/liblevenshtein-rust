@@ -13,23 +13,35 @@
 //! # Design
 //!
 //! The cache uses LRU (Least Recently Used) eviction when the cache
-//! reaches its maximum size. Cache keys are (query_string, max_distance)
-//! pairs, and values are the matching results.
+//! reaches its maximum size. Each matcher owns one product automaton—and
+//! therefore one maximum edit distance—so cache keys are query strings and
+//! values are the matching results (plus an optional computed distance).
 //!
 //! # Examples
 //!
-//! ```ignore
-//! use liblevenshtein::phonetic::nfa::{MemoizedMatcherChar, ProductAutomatonChar};
+//! ```rust
+//! use liblevenshtein::phonetic::nfa::{
+//!     compile, MemoizedMatcherChar, ProductAutomatonChar,
+//! };
+//! use liblevenshtein::phonetic::regex::parse;
 //!
+//! let regex = parse("(ph|f)one").expect("doc: regex parse must succeed");
+//! let nfa = compile(&regex).expect("doc: NFA compilation must succeed");
 //! let product = ProductAutomatonChar::new(nfa, 2);
 //! let mut cache = MemoizedMatcherChar::new(product, 1000);
 //!
 //! // First query computes result
 //! let result1 = cache.accepts("phone");
+//! assert!(result1);
+//! assert_eq!(cache.stats().misses, 1);
 //!
 //! // Second query uses cached result
 //! let result2 = cache.accepts("phone");
 //! assert_eq!(result1, result2);
+//! let stats = cache.stats();
+//! assert_eq!(stats.size, 1);
+//! assert_eq!(stats.hits, 1);
+//! assert_eq!(stats.misses, 1);
 //! ```
 
 use super::lazy_dfa::{LazyDFA, LazyDFAChar};

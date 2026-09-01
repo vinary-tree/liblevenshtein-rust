@@ -3,7 +3,7 @@
 
   Implements harnesses/common/PROTOCOL.md over the project-owned CLJS
   facades (vinary-tree.liblevenshtein / vinary-tree.libdictenstein) riding
-  the shared N-API runtime (@vinary-tree/vinary-tree). Runs on Node
+  the shared N-API runtime (@vinary-tree/javascript-runtime). Runs on Node
   (:target :nodejs, :optimizations :simple); the runner pins Node cpusets.
 
   Fairness notes (PROTOCOL.md §10): Node without V8 flag overrides; 64-bit

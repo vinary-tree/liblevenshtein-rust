@@ -265,21 +265,18 @@ impl<'a, 'b> Iterator for TransitionsFromCharIter<'a, 'b> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::nfa::NFAChar;
 ///
-/// // Create empty NFA
+/// // NFAChar::new() creates state 0 as the non-final initial state.
 /// let mut nfa = NFAChar::new();
-///
-/// // Add states
-/// let q0 = nfa.add_state(false);  // initial, non-final
-/// let q1 = nfa.add_state(true);   // final
-///
-/// // Add transition on 'a'
+/// let q0 = nfa.start();
+/// let q1 = nfa.add_state(true);
 /// nfa.add_transition_char(q0, 'a', q1);
+/// nfa.finalize();
 ///
-/// // Check acceptance
 /// assert!(nfa.accepts("a"));
+/// assert!(!nfa.accepts(""));
 /// assert!(!nfa.accepts("b"));
 /// ```
 #[derive(Debug, Clone)]
@@ -1255,10 +1252,21 @@ impl NFAChar {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let nfa = compile(&regex)?;
+    /// ```rust
+    /// use liblevenshtein::phonetic::nfa::NFACompilerChar;
+    /// use liblevenshtein::phonetic::regex::parse;
+    ///
+    /// let regex = parse("(a|b)*c").expect("doc: regex parse must succeed");
+    /// let mut compiler = NFACompilerChar::new().without_optimization();
+    /// let nfa = compiler
+    ///     .compile(&regex)
+    ///     .expect("doc: NFA compilation must succeed");
     /// let optimized = nfa.optimize();
-    /// assert!(optimized.accepts("hello") == nfa.accepts("hello"));
+    ///
+    /// for input in ["c", "abc", "bbaac", "ab"] {
+    ///     assert_eq!(optimized.accepts(input), nfa.accepts(input));
+    /// }
+    /// assert!(optimized.count_epsilon_transitions() <= nfa.count_epsilon_transitions());
     /// ```
     pub fn optimize(&self) -> NFAChar {
         use super::optimizer::{NfaOptimizerChar, OptimizationConfig};
@@ -1282,14 +1290,21 @@ impl NFAChar {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// use liblevenshtein::phonetic::nfa::optimizer::OptimizationConfig;
+    /// ```rust
+    /// use liblevenshtein::phonetic::nfa::{NFACompilerChar, OptimizationConfig};
+    /// use liblevenshtein::phonetic::regex::parse;
     ///
-    /// let nfa = compile(&regex)?;
+    /// let regex = parse("(a|b)*c").expect("doc: regex parse must succeed");
+    /// let mut compiler = NFACompilerChar::new().without_optimization();
+    /// let nfa = compiler
+    ///     .compile(&regex)
+    ///     .expect("doc: NFA compilation must succeed");
     /// let (optimized, stats) = nfa.optimize_with(OptimizationConfig::quick());
-    /// println!("Removed {} states ({:.1}% reduction)",
-    ///     stats.states_removed,
-    ///     stats.state_reduction_percent());
+    ///
+    /// assert_eq!(stats.original_states, nfa.num_states());
+    /// assert_eq!(stats.final_states, optimized.num_states());
+    /// assert_eq!(stats.epsilon_transitions_eliminated, 0);
+    /// assert_eq!(optimized.accepts("ababc"), nfa.accepts("ababc"));
     /// ```
     pub fn optimize_with(
         &self,

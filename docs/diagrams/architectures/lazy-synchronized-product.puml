@@ -1,0 +1,59 @@
+@startuml lazy-synchronized-product
+' Operational construction shared by string, language, and temporal queries.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam sequence {
+  ArrowColor #37474F
+  ArrowThickness 2
+  LifeLineBorderColor #455A64
+  ParticipantFontColor #102027
+}
+
+title Lazy synchronized product — construct only transitions demanded by dictionary edges
+
+actor "Query caller" as Caller #B2EBF2
+participant "Traversal scheduler" as Scheduler #FFE0B2
+participant "Dictionary automaton\nnode / cursor" as Dictionary #C8E6C9
+participant "Transition cache\n(StateId, label class)" as Cache #D1C4E9
+participant "Canonical state arena\nStateId ↔ exact frontier" as Arena #BBDEFB
+participant "Exact leaf verifier" as Verifier #F8BBD0
+
+Caller -> Scheduler : begin(fixed query, cutoff, limits)
+Scheduler -> Arena : intern(seed frontier)
+Arena --> Scheduler : root StateId
+
+loop while a live dictionary-product frame remains
+  Scheduler -> Dictionary : inspect finality and outgoing edges
+  loop each real edge label
+    Scheduler -> Cache : lookup(source StateId, label class)
+    alt observed transition
+      Cache --> Scheduler : cached target StateId or dead
+    else first observation
+      Cache -> Arena : borrow exact source frontier
+      Arena --> Cache : canonical positions and continuation context
+      Cache -> Cache : generate successors; epsilon-close;\nprune only by proved dominance
+      Cache -> Arena : collision-checked exact intern
+      Arena --> Cache : canonical target StateId or dead
+      Cache --> Scheduler : target StateId or dead
+    end
+    alt dead target
+      note over Scheduler,Dictionary #FFCDD2
+        Prune the entire child subtree.
+      end note
+    else live target
+      Scheduler -> Scheduler : enqueue/push(child cursor, target StateId)
+    end
+  end
+  opt dictionary final and relaxed automaton final
+    Scheduler -> Verifier : score every full-precision collision member
+    Verifier --> Caller : exact survivor only
+  end
+end
+
+note over Dictionary,Arena #E8F5E9
+  Operational object: a reachable fragment of the synchronized product.
+  Semantic language for two acceptors: their language intersection.
+  The Cartesian state space is never materialized.
+end note
+@enduml

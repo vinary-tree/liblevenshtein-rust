@@ -24,7 +24,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::basque;
 //!
 //! let rules = basque::base();

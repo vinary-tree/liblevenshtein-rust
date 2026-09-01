@@ -36,6 +36,65 @@ the convenient object view. Every borrowed view expires when its batch callback
 returns. Cursors and transducers use `Cleaner` only as a leak-safety fallback;
 applications should close them deterministically.
 
+A Java caller receives a dictionary resource from its chosen storage package,
+then uses ordinary try-with-resources for both the reusable transducer and each
+one-shot query cursor:
+
+```java
+import io.vinarytree.interop.DictionaryResource;
+import io.vinarytree.liblevenshtein.Algorithm;
+import io.vinarytree.liblevenshtein.Match;
+import io.vinarytree.liblevenshtein.QueryOrder;
+import io.vinarytree.liblevenshtein.Transducer;
+import java.util.ArrayList;
+import java.util.List;
+
+final class FuzzyExample {
+    private FuzzyExample() {}
+
+    static List<Match> fuzzy(DictionaryResource dictionary, String query) {
+        try (var transducer = new Transducer(dictionary, Algorithm.TRANSPOSITION);
+                var matches = transducer.query(query, 2, QueryOrder.DISTANCE_THEN_TERM)) {
+            var result = new ArrayList<Match>();
+            matches.forEachRemaining(result::add);
+            return List.copyOf(result);
+        }
+    }
+}
+```
+
+Phonetic automata and rewrite rules are reusable native resources too. Failures
+carry both an enum suitable for control flow and the exact raw status for
+forward-compatible diagnostics:
+
+```java
+import io.vinarytree.liblevenshtein.NativeException;
+import io.vinarytree.liblevenshtein.PhoneticPattern;
+import io.vinarytree.liblevenshtein.PhoneticRuleSet;
+import io.vinarytree.liblevenshtein.PhoneticRuleSetKind;
+import io.vinarytree.liblevenshtein.Status;
+
+final class PhoneticExample {
+    private PhoneticExample() {}
+
+    static String normalizeIfAccepted(String input) {
+        try (var pattern = PhoneticPattern.compileLlre(
+                        "@name \"Greeting\"\n^hello$");
+                var rules = PhoneticRuleSet.builtin(
+                        PhoneticRuleSetKind.ENGLISH_ORTHOGRAPHY)) {
+            return pattern.matches(input) ? rules.apply(input) : input;
+        } catch (NativeException failure) {
+            String detail =
+                    "native status " + failure.statusCode() + ": " + failure.getMessage();
+            if (failure.status() == Status.UNSUPPORTED) {
+                throw new UnsupportedOperationException(detail, failure);
+            }
+            throw new IllegalStateException(detail, failure);
+        }
+    }
+}
+```
+
 Dictionary resources also provide natural immutable collections through the
 neutral interop artifact. No Kotlin or Scala runtime is pulled into the Java
 artifact:
@@ -121,6 +180,21 @@ The idiomatic facade groups the stable surface into these concepts:
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
 
+### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same.
+
 Java `String` is UTF-8 encoded for Unicode queries; byte arrays and `long[]` select the byte and packed-token domains. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
@@ -135,6 +209,8 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `NativeException` | `llev_last_error_message` | typed failure diagnostics |
+| `NativeException.status` | `llev_last_error_message` | typed failure diagnostics |
+| `NativeException.statusCode` | `llev_last_error_message` | typed failure diagnostics |
 | `PhoneticPattern.close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.compileLlre` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.compileRegex` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
@@ -148,6 +224,7 @@ variants, protocols, or methods.
 | `QueryCursor.close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `QueryCursor.forEachBatch` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `QueryCursor.next` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `Status.code` | `llev_last_error_message` | typed failure diagnostics |
 | `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; phonetic-pattern dictionary query |
@@ -157,7 +234,7 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `NativeException.status` | Typed native status or error carrier | numeric values are generated into GeneratedAbi.java |
+| `Status` | Typed native status or error carrier | generated from bindings/api.json; NativeException.status returns this enum and preserves unknown raw values separately |
 | `Algorithm` | Edit-distance algorithm selection | Public facade type |
 | `QueryOrder` | Result traversal ordering | Public facade type |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |

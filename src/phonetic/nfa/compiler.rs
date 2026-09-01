@@ -4,19 +4,22 @@
 //!
 //! # Examples
 //!
-//! ```ignore
-//! use liblevenshtein::phonetic::nfa::compiler::compile;
-//! use liblevenshtein::phonetic::regex::parse;
+//! ```rust
+//! use liblevenshtein::phonetic::nfa::{compile, compile_rewrite};
+//! use liblevenshtein::phonetic::regex::{parse, parse_rule};
 //!
 //! // Compile a simple pattern
-//! let nfa = compile(&parse("(ph|f)one").expect("doc: regex parse must succeed")).expect("doc: nfa compile must succeed");
+//! let regex = parse("(ph|f)one").expect("the documented regex is valid");
+//! let nfa = compile(&regex).expect("the documented regex compiles");
 //! assert!(nfa.accepts("phone"));
 //! assert!(nfa.accepts("fone"));
 //! assert!(!nfa.accepts("bone"));
 //!
 //! // Compile a rewrite rule
-//! let rule = parse_rule("ph -> f").expect("doc: rewrite rule parse must succeed");
-//! let rewrite = compile_rewrite(&rule).expect("doc: rewrite compile must succeed");
+//! let rule = parse_rule("ph -> f").expect("the documented rewrite rule is valid");
+//! let rewrite = compile_rewrite(&rule).expect("the documented rewrite rule compiles");
+//! assert!(rewrite.source.accepts("ph"));
+//! assert_eq!(rewrite.replacement, ['f']);
 //! ```
 
 use std::borrow::Cow;
@@ -112,7 +115,7 @@ pub struct CompileResultChar {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::regex::parse;
 /// use liblevenshtein::phonetic::nfa::compiler::compile;
 ///
@@ -222,21 +225,23 @@ fn thompson_state_bound(regex: &Regex) -> usize {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::regex::parse;
-/// use liblevenshtein::phonetic::nfa::compiler::compile_with_flags;
+/// use liblevenshtein::phonetic::regex::ast::UnicodeNormalization;
+/// use liblevenshtein::phonetic::nfa::compile_with_flags;
 ///
-/// let regex = parse("(?iu:café)").expect("doc: regex parse must succeed");
-/// let result = compile_with_flags(&regex).expect("doc: compile_with_flags must succeed");
+/// let regex = parse("(?i:café)").expect("the case-insensitive regex is valid");
+/// let result = compile_with_flags(&regex).expect("the regex compiles");
 ///
 /// // NFA matches case-insensitively (transformed)
 /// assert!(result.nfa.accepts("café"));
 /// assert!(result.nfa.accepts("CAFÉ"));
 ///
-/// // Unicode normalization available for runtime use
-/// if let Some(norm) = result.unicode_normalization {
-///     // Apply normalization to input before matching
-/// }
+/// // Unicode normalization is returned as a runtime preprocessing contract.
+/// let regex = parse("(?u:NFC:café)").expect("the normalization flag is valid");
+/// let result = compile_with_flags(&regex).expect("the normalized regex compiles");
+/// assert_eq!(result.unicode_normalization, Some(UnicodeNormalization::NFC));
+/// assert!(result.nfa.accepts("café"));
 /// ```
 pub fn compile_with_flags(regex: &Regex) -> ParseResult<CompileResultChar> {
     let mut compiler = NFACompilerChar::new();

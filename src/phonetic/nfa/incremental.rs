@@ -15,10 +15,12 @@
 //!
 //! # Examples
 //!
-//! ```ignore
-//! use liblevenshtein::phonetic::nfa::{IncrementalMatcherChar, NFAChar};
+//! ```rust
+//! use liblevenshtein::phonetic::nfa::{compile, IncrementalMatcherChar};
+//! use liblevenshtein::phonetic::regex::parse;
 //!
-//! let nfa = /* build NFA for pattern "hello" */;
+//! let regex = parse("hello").expect("doc: regex parse must succeed");
+//! let nfa = compile(&regex).expect("doc: NFA compilation must succeed");
 //! let mut matcher = IncrementalMatcherChar::new(nfa);
 //!
 //! // Process characters one by one
@@ -33,6 +35,8 @@
 //!
 //! // Reset for new input
 //! matcher.reset();
+//! assert_eq!(matcher.chars_processed(), 0);
+//! assert!(!matcher.is_accepting());
 //! ```
 
 use super::state_set::StateSet;

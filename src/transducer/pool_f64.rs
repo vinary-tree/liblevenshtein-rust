@@ -5,30 +5,41 @@
 //!
 //! # Performance
 //!
-//! Same rationale as `StatePool`: State cloning accounts for significant runtime.
-//! By reusing StateF64 allocations, we eliminate Vec allocation overhead.
+//! [`StateF64`](super::StateF64) keeps typical position sets inline in a
+//! `SmallVec`. Pooling is most valuable when a large frontier spills beyond
+//! that inline capacity: clearing and retaining the state preserves its heap
+//! allocation for a later transition.
 
 use super::state_f64::StateF64;
 
 /// Pool of reusable StateF64 allocations.
 ///
-/// The pool maintains a collection of StateF64 instances that can be reused
+/// The pool maintains a collection of `StateF64` instances that can be reused
 /// across multiple transitions within a single query, eliminating the need
-/// to repeatedly allocate and deallocate `Vec<PositionF64>` structures.
+/// to repeatedly allocate and discard spilled `SmallVec` storage.
 ///
 /// # Usage
 ///
-/// ```ignore
+/// ```rust
+/// use liblevenshtein::transducer::{Algorithm, PositionF64, StatePoolF64};
+///
 /// let mut pool = StatePoolF64::new();
+/// assert_eq!(pool.pool_size(), 4); // Pre-warmed states.
 ///
 /// // Acquire a state (from pool or allocate new)
 /// let mut state = pool.acquire();
-///
-/// // Use the state...
-/// state.insert(PositionF64::new(0, 0.0), Algorithm::Standard, 4, 1.0);
+/// assert!(state.insert(
+///     PositionF64::new(0, 0.0),
+///     Algorithm::Standard,
+///     4,
+///     1.0,
+/// ));
 ///
 /// // Return to pool when done
 /// pool.release(state);
+/// let state = pool.acquire();
+/// assert!(state.is_empty()); // `acquire` clears retained positions.
+/// assert_eq!(pool.total_reuses(), 2);
 /// ```
 ///
 /// # Pool Management
@@ -88,11 +99,11 @@ impl StatePoolF64 {
     ///
     /// # Performance
     ///
-    /// - Pool hit: O(1) - pop from Vec + clear positions Vec
-    /// - Pool miss: O(1) - allocate new `Vec<PositionF64>`
+    /// - Pool hit: O(1) - pop from `Vec` + clear positions
+    /// - Pool miss: O(1) - construct an inline-empty `SmallVec`
     ///
-    /// The state's `Vec<PositionF64>` allocation is reused when available,
-    /// which is the primary performance benefit.
+    /// Any spilled `SmallVec` allocation is reused when available, which is
+    /// the primary performance benefit for large frontiers.
     #[inline]
     pub fn acquire(&mut self) -> StateF64 {
         if let Some(mut state) = self.pool.pop() {
@@ -114,7 +125,7 @@ impl StatePoolF64 {
     ///
     /// - O(1) - push to Vec (unless pool is full, then drop)
     ///
-    /// The state's internal `Vec<PositionF64>` allocation is preserved for reuse.
+    /// The state's spilled `SmallVec` allocation is preserved for reuse.
     #[inline]
     pub fn release(&mut self, state: StateF64) {
         if self.pool.len() < Self::MAX_POOL_SIZE {

@@ -3,14 +3,14 @@
 **Status:** implemented · **Cost model:** unit insertion, deletion, and
 substitution · **Alphabet:** token IDs, not text
 
-A **Dyck word** is a properly nested delimiter word. For `$`k`$` delimiter
-kinds, opening kind `$`r`$` is token `$`r`$` and its only valid closer is token
-`$`k+r`$`, where `$`0\le r<k`$`. Keeping the alphabet numeric avoids a text
+A **Dyck word** is a properly nested delimiter word. For $`k`$ delimiter
+kinds, opening kind $`r`$ is token $`r`$ and its only valid closer is token
+$`k+r`$, where $`0\le r<k`$. Keeping the alphabet numeric avoids a text
 conversion boundary and makes the API suitable for parsers and token streams.
 
 `DyckCorrector::correct` returns:
 
-- the exact unit-cost Levenshtein distance to `$`D_k`$`;
+- the exact unit-cost Levenshtein distance to $`D_k`$;
 - one deterministic minimum-cost balanced token sequence; and
 - a replayable edit witness containing keeps, deletions, substitutions, and
   insertions at original-input boundaries.
@@ -21,12 +21,12 @@ cross-kind mismatch.
 
 ## 1. Exact interval recurrence
 
-Let `$`C(i,j)`$` be the minimum cost to correct the half-open input interval
-`$`w[i..j)`$` to `$`D_k`$`. The base case is `$`C(i,i)=0`$`. For a non-empty
+Let $`C(i,j)`$ be the minimum cost to correct the half-open input interval
+$`w[i..j)`$ to $`D_k`$. The base case is $`C(i,i)=0`$. For a non-empty
 interval, the implementation enumerates the four grammar-complete edit forms
 below and takes their minimum.
 
-For replacement cost `$`\rho(a,b)=0`$` when `$`a=b`$` and `$`1`$` otherwise:
+For replacement cost $`\rho(a,b)=0`$ when $`a=b`$ and $`1`$ otherwise:
 
 ```math
 \begin{aligned}
@@ -39,17 +39,17 @@ C(i,j)=\min\{&
 \end{aligned}
 ```
 
-where the first row ranges over `$`0\le r<k`$` and `$`i<p<j`$`, the second
-over `$`0\le r<k`$` and `$`i\le p<j`$`, and the third over
-`$`0\le r<k`$`. The rows mean:
+where the first row ranges over $`0\le r<k`$ and $`i<p<j`$, the second
+over $`0\le r<k`$ and $`i\le p<j`$, and the third over
+$`0\le r<k`$. The rows mean:
 
-1. consume the first token as an opener and token `$`p`$` as its closer;
-2. insert a missing opener and consume token `$`p`$` as its closer;
+1. consume the first token as an opener and token $`p`$ as its closer;
+2. insert a missing opener and consume token $`p`$ as its closer;
 3. consume the first token as an opener and insert its closer; and
 4. delete the first token.
 
 Every non-empty Dyck word has the first-pair decomposition
-`$`r\;u\;(k+r)\;v`$` with `$`u,v\in D_k`$`. Therefore the first two forms
+$`r\;u\;(k+r)\;v`$ with $`u,v\in D_k`$. Therefore the first two forms
 cover targets whose first pair consumes an existing closer, the third covers
 an inserted closer, and deletion permits the alignment to begin after an
 unusable input token. This is the optimal-substructure basis of the interval
@@ -58,7 +58,7 @@ program.
 The correctness specification is deliberately not this recurrence.  In Rocq,
 `levenshtein_alignment` independently defines the ordinary left-to-right edit
 relation with insertion, deletion, keep, and substitution columns.  The proof
-normalizes every such alignment whose target is in `$`D_k`$` into one of the
+normalizes every such alignment whose target is in $`D_k`$ into one of the
 four reconstruction trees at no greater cost.  The converse maps every
 reconstruction tree back to an ordinary alignment at exactly the same cost.
 Consequently, the table minimum is extensionally equal to the standard
@@ -96,9 +96,9 @@ CORRECT-DYCK(input, kinds)
   return the exact cost, corrected token sequence, and edit witness
 ```
 
-The time bound is `$`\mathcal{O}(kn^3)`$`; the cost and backpointer tables use
-`$`\mathcal{O}(n^2)`$` memory. `DyckCorrector::with_max_work` applies a
-saturating `$`k(n+1)^3`$` guard before table allocation. Invalid token IDs,
+The time bound is $`\mathcal{O}(kn^3)`$; the cost and backpointer tables use
+$`\mathcal{O}(n^2)`$ memory. `DyckCorrector::with_max_work` applies a
+saturating $`k(n+1)^3`$ guard before table allocation. Invalid token IDs,
 zero bracket kinds, alphabet overflow, table-size overflow, and work-policy
 violations are typed errors.
 
@@ -142,21 +142,21 @@ not a semantic nesting limit.
 
 ## 4. Admissible kind-erasure bound
 
-Define projection `$`\pi`$` by mapping every opener to a single opening symbol
+Define projection $`\pi`$ by mapping every opener to a single opening symbol
 and every closer to a single closing symbol. It preserves length and maps
-`$`D_k`$` onto `$`D_1`$`. For unit-cost Levenshtein distance to a language:
+$`D_k`$ onto $`D_1`$. For unit-cost Levenshtein distance to a language:
 
 ```math
 d(\pi(w),D_1)\le d(w,D_k).
 ```
 
-To see why, map any edit script from `$`w`$` to `$`v\in D_k`$` through
-`$`\pi`$`. Insertions and deletions retain their cost, matches remain matches,
+To see why, map any edit script from $`w`$ to $`v\in D_k`$ through
+$`\pi`$. Insertions and deletions retain their cost, matches remain matches,
 and a substitution may become a match but never becomes more expensive. The
-projected script ends in `$`\pi(v)\in D_1`$`. Minimizing both sides proves the
+projected script ends in $`\pi(v)\in D_1`$. Minimizing both sides proves the
 inequality.
 
-A scan of the projected word leaves `$`o`$` unmatched openings and `$`c`$`
+A scan of the projected word leaves $`o`$ unmatched openings and $`c`$
 unmatched closings. Its exact one-kind correction distance is:
 
 ```math
@@ -164,20 +164,20 @@ unmatched closings. Its exact one-kind correction distance is:
 \left\lceil\frac{c}{2}\right\rceil.
 ```
 
-Thus `balance_lower_bound` runs in `$`\mathcal{O}(n)`$` time and constant
+Thus `balance_lower_bound` runs in $`\mathcal{O}(n)`$ time and constant
 additional memory. It may be zero for a cross-kind mismatch, so it is a
 heuristic, never the exact multi-kind answer.
 
 ## 5. Bounded regular approximation
 
-`balanced_depth_dfa(k,D)` recognizes exactly the words in `$`D_k`$` whose
-nesting depth is at most `$`D`$`. Its state is the complete stack word, giving:
+`balanced_depth_dfa(k,D)` recognizes exactly the words in $`D_k`$ whose
+nesting depth is at most $`D`$. Its state is the complete stack word, giving:
 
 ```math
 N(k,D)=\sum_{d=0}^{D}k^d.
 ```
 
-Construction rejects `$`N(k,D)>4096`$` before allocating the transition table.
+Construction rejects $`N(k,D)>4096`$ before allocating the transition table.
 `SmallDfaStateSet` is a dynamically sized bit vector, so the public 4,096-state
 policy is now the actual representation limit rather than a 32-bit-carrier
 accident.
@@ -187,7 +187,7 @@ accident.
 - Rocq proves typed-Dyck constructor soundness, zero-cost balanced identity,
   exact-minimum existence for every source, finite branch-enumeration
   completeness, unconditional interval-fill optimality, the
-  `$`|target|\le 2|source|`$` oracle cutoff, first-pair decomposition,
+  $`|target|\le 2|source|`$ oracle cutoff, first-pair decomposition,
   cross-kind separation, and bidirectional refinement to an independently
   defined standard Levenshtein relation without axioms or admitted goals.
 - Dafny and Verus check the replacement, typed-pair, recurrence-minimum, and

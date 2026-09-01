@@ -1,8 +1,8 @@
-import { liblevenshtein } from "@vinary-tree/vinary-tree";
-import { assertDictionaryResource, assertSameRuntime } from "@vinary-tree/interop";
+import { liblevenshtein } from "@vinary-tree/javascript-runtime";
+import { assertDictionaryResource, assertSameRuntime } from "@vinary-tree/vinary-tree-interop";
 
 if (!liblevenshtein?.runtimeIdentity) {
-  throw new Error("@vinary-tree/vinary-tree does not expose a runtime identity");
+  throw new Error("@vinary-tree/javascript-runtime does not expose a runtime identity");
 }
 
 export const runtimeIdentity = liblevenshtein.runtimeIdentity;

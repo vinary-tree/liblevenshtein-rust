@@ -13,6 +13,43 @@ enumerators deterministically; `SafeHandle` supplies the leak-safe fallback.
 Build and test with `dotnet run --project tests/VinaryTree.Liblevenshtein.Tests`.
 NuGet packaging is produced with `dotnet pack -c Release`.
 
+The ordinary search path composes a libdictenstein dictionary resource with a
+reusable edit-distance transducer. Both native owners participate in C#'s
+deterministic `using` protocol:
+
+```csharp
+using VinaryTree.Libdictenstein;
+using VinaryTree.Liblevenshtein;
+
+using var dictionary = new DynamicDawg();
+dictionary.Put("cat", 7);
+dictionary.Put("cats");
+
+using var transducer = new Transducer(dictionary, Algorithm.Standard);
+using Query query = transducer.Query("cat", 1, QueryOrder.DistanceThenTerm);
+foreach (Match match in query)
+{
+    Console.WriteLine($"{match.Term}: distance={match.Distance}, id={match.Id}");
+}
+```
+
+Failures carry both a typed status and its exact numeric ABI value. The latter
+keeps diagnostics lossless when a compatible native revision introduces a
+status that an older managed package does not yet name:
+
+```csharp
+try
+{
+    using PhoneticPattern pattern = PhoneticPattern.CompileRegex("(");
+}
+catch (LiblevenshteinException failure)
+{
+    if (failure.Status == Status.InvalidArgument)
+        Console.Error.WriteLine(failure.Message);
+    Console.Error.WriteLine($"native status: {failure.StatusCode}");
+}
+```
+
 Dictionary producers implementing `IDictionaryResource` gain immutable native
 .NET collection views from `VinaryTree.Interop`:
 
@@ -88,6 +125,21 @@ The idiomatic facade groups the stable surface into these concepts:
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
 
+### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same.
+
 `string`, `ReadOnlySpan<byte>`, and `ReadOnlySpan<ulong>` select Unicode, byte, and token domains. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
 a sentinel value that removes a valid input from the domain.
@@ -105,6 +157,8 @@ variants, protocols, or methods.
 | `Distance.Levenshtein` | `llev_distance`, `llev_distance_threshold` | standalone exact or thresholded distance |
 | `Distance.TrueDamerau` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
 | `LiblevenshteinException` | `llev_last_error_message` | typed failure diagnostics |
+| `LiblevenshteinException.Status` | `llev_last_error_message` | typed failure diagnostics |
+| `LiblevenshteinException.StatusCode` | `llev_last_error_message` | typed failure diagnostics |
 | `PhoneticPattern.CompileLlre` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.CompileRegex` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.Dispose` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
@@ -125,7 +179,7 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `LiblevenshteinException.StatusCode` | Typed native status or error carrier | Public facade type |
+| `Status` | Typed native status or error carrier | Public facade type |
 | `Algorithm` | Edit-distance algorithm selection | Public facade type |
 | `QueryOrder` | Result traversal ordering | Public facade type |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |
@@ -147,7 +201,7 @@ such operation with its reviewed rationale; an unreasoned absence fails CI.
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
 | Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Maximum result throughput | Drain the facade iterator; no public reducer is exposed | The iterator still amortizes native calls with bounded internal batches, then releases each lease before exposing host-owned matches. |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
@@ -168,9 +222,9 @@ mutations cannot invalidate that query. Acquisition either completes with one
 owned retain or fails with no ownership transfer. Teardown order is therefore
 free across dictionary, transducer, and completed query handles.
 
-Borrowed results are intentionally lexical. Copy data that must outlive the
-callback; retaining a raw address, slice, memory segment, or foreign pointer is
-an API violation even when the next operation happens to reuse the same arena.
+Iterator results are copied into host-owned values before their native batch
+lease is released. They remain valid after iteration advances or the cursor is
+closed; no raw pointer or borrowed native view reaches user code.
 
 ## Errors and failure containment
 
@@ -194,7 +248,7 @@ the host language must not add a weaker promise.
 
 - Reuse transducers for repeated queries against the same resource.
 - Prefer streaming cursors to whole-result materialization.
-- Prefer batch/reducer APIs when per-match boundary crossings dominate.
+- Drain each cursor once; the iterator already fetches bounded native batches before materializing host-owned matches.
 - Keep Unicode, byte, and token domains explicit to avoid transcoding.
 - Measure native, WASM, and WASI paths independently; they have different
   startup and marshalling costs but identical query semantics.

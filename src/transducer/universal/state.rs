@@ -37,7 +37,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::transducer::universal::{UniversalState, UniversalPosition, Standard};
 //!
 //! // Create initial state: {I + 0#0}
@@ -46,8 +46,13 @@
 //!
 //! // Create state with multiple positions
 //! let mut state = UniversalState::<Standard>::new(2);
-//! state.add_position(UniversalPosition::new_i(0, 0, 2)?);
-//! state.add_position(UniversalPosition::new_i(1, 1, 2)?);
+//! state.add_position(
+//!     UniversalPosition::new_i(0, 0, 2).expect("0#0 satisfies the I-position invariant"),
+//! );
+//! state.add_position(
+//!     UniversalPosition::new_i(1, 1, 2).expect("1#1 satisfies the I-position invariant"),
+//! );
+//! assert_eq!(state.len(), 1); // Subsumption retains the stronger position.
 //! ```
 
 use smallvec::SmallVec;
@@ -142,7 +147,9 @@ impl<V: PositionVariant> UniversalState<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalState};
+    ///
     /// let state = UniversalState::<Standard>::new(2);
     /// assert!(state.is_empty());
     /// ```
@@ -164,7 +171,9 @@ impl<V: PositionVariant> UniversalState<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalState};
+    ///
     /// let initial = UniversalState::<Standard>::initial(2);
     /// assert_eq!(initial.len(), 1);
     /// assert!(!initial.is_final());
@@ -195,10 +204,19 @@ impl<V: PositionVariant> UniversalState<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{
+    ///     Standard, UniversalPosition, UniversalState,
+    /// };
+    ///
     /// let mut state = UniversalState::<Standard>::new(2);
-    /// state.add_position(UniversalPosition::new_i(0, 0, 2)?);
-    /// state.add_position(UniversalPosition::new_i(1, 1, 2)?);
+    /// state.add_position(
+    ///     UniversalPosition::new_i(0, 0, 2).expect("0#0 satisfies the I-position invariant"),
+    /// );
+    /// state.add_position(
+    ///     UniversalPosition::new_i(1, 1, 2).expect("1#1 satisfies the I-position invariant"),
+    /// );
+    /// assert_eq!(state.len(), 1); // The second position is subsumed.
     /// ```
     pub fn add_position(&mut self, pos: UniversalPosition<V>) {
         // Check if this position is subsumed by an existing one
@@ -248,9 +266,15 @@ impl<V: PositionVariant> UniversalState<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{
+    ///     Standard, UniversalPosition, UniversalState,
+    /// };
+    ///
     /// let mut state = UniversalState::<Standard>::new(2);
-    /// state.add_position(UniversalPosition::new_m(0, 0, 2)?);
+    /// state.add_position(
+    ///     UniversalPosition::new_m(0, 0, 2).expect("0#0 satisfies the M-position invariant"),
+    /// );
     /// assert!(state.is_final());
     /// ```
     pub fn is_final(&self) -> bool {
@@ -328,10 +352,15 @@ impl<V: PositionVariant> UniversalState<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{
+    ///     CharacteristicVector, Standard, UniversalState,
+    /// };
+    ///
     /// let state = UniversalState::<Standard>::initial(2);
     /// let bit_vector = CharacteristicVector::new('a', "abc");
     /// let next_state = state.transition(&bit_vector, 1);
+    /// assert!(next_state.is_some());
     /// ```
     pub fn transition(
         &self,
@@ -418,7 +447,11 @@ impl<V: PositionVariant> UniversalState<V> {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{
+    ///     CharacteristicVector, Standard, UniversalState,
+    /// };
+    ///
     /// let state = UniversalState::<Standard>::initial(2);
     /// let bv = CharacteristicVector::new('a', "abc");
     ///

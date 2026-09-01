@@ -12,7 +12,9 @@
 //! | Costs | Hardcoded `+1` | `OperationCostsF64` |
 //! | Result | `Candidate { distance: usize }` | `CandidateF64 { distance: f64 }` |
 
-use super::transition_f64::{initial_state_f64, CachedF64Transitions, TransitionSettingsF64};
+use super::transition_f64::{
+    initial_state_f64, CachedF64Transitions, GeneratedStateIdF64, TransitionSettingsF64,
+};
 use super::{
     Algorithm, OperationCostsF64, StateF64, StatePoolF64, SubstitutionPolicy,
     SubstitutionPolicyFor, Unrestricted,
@@ -111,9 +113,10 @@ impl<U: CharUnit> QueryResultF64<U> for UnitCandidateF64<U> {
 ///
 /// # Performance
 ///
-/// Uses `StatePoolF64` to eliminate `StateF64` cloning overhead during traversal.
-/// The pool is created per-query and reuses `StateF64` allocations across
-/// all transitions.
+/// Traversal is the lazy synchronized product of dictionary cursors and compact
+/// query-local weighted-state IDs. Canonical frontiers are interned once;
+/// `StatePoolF64` materializes reusable scratch only on transition-cache misses.
+/// The iterator constructs no dictionary-independent automaton graph up front.
 ///
 /// # Examples
 ///
@@ -149,7 +152,7 @@ where
     P: SubstitutionPolicy,
     S: ResultPathStrategy<N>,
 {
-    pending: VecDeque<PathFrontier<S::Trace, StateF64>>,
+    pending: VecDeque<PathFrontier<S::Trace, GeneratedStateIdF64>>,
     traversal: TraversalSession<N>,
     query: Vec<N::Unit>,
     max_cost: f64,
@@ -370,10 +373,14 @@ where
         algorithm: Algorithm,
         costs: OperationCostsF64,
         policy: P,
-        unit_transitions: CachedF64Transitions<N::Unit>,
+        mut unit_transitions: CachedF64Transitions<N::Unit>,
         substring_mode: bool,
     ) -> Self {
         let (mut pending, path_storage) = S::acquire_queue();
+        let initial = unit_transitions.seed_generated_state(
+            &initial,
+            TransitionSettingsF64::new(max_cost, algorithm, &costs, substring_mode),
+        );
         pending.push_back(PathFrontier::new(S::root(root), initial));
         Self {
             pending,
@@ -410,18 +417,20 @@ where
             if is_final {
                 // Infer the distance based on matching mode
                 let distance = if self.substring_mode {
-                    &intersection
-                        .frontier
-                        .min_distance()
+                    self.unit_transitions
+                        .generated_min_distance(intersection.frontier)
                         .unwrap_or(f64::INFINITY)
                 } else {
-                    &intersection
-                        .frontier
-                        .infer_distance(self.query.len(), self.costs.deletion)
+                    self.unit_transitions
+                        .generated_complete_distance(
+                            intersection.frontier,
+                            self.query.len(),
+                            self.costs.deletion,
+                        )
                         .unwrap_or(f64::INFINITY)
                 };
 
-                if *distance <= self.max_cost + 1e-9 {
+                if distance <= self.max_cost {
                     let units = S::materialize_units(
                         &intersection.trace,
                         &self.traversal,
@@ -430,7 +439,7 @@ where
                     if !self.traversal.accepts_final_units(&units) {
                         continue;
                     }
-                    return Some(R::from_match(&units, *distance));
+                    return Some(R::from_match(&units, distance));
                 }
             }
         }
@@ -442,7 +451,7 @@ where
     /// Queue child intersections for exploration
     fn queue_children_and_finality(
         &mut self,
-        intersection: &PathFrontier<S::Trace, StateF64>,
+        intersection: &PathFrontier<S::Trace, GeneratedStateIdF64>,
     ) -> bool {
         let mut expansion = S::begin_expansion(&intersection.trace);
         let query = &self.query;
@@ -459,8 +468,8 @@ where
         self.traversal.filter_map_edges_and_finality(
             S::position(&intersection.trace),
             |label| {
-                unit_transitions.transition(
-                    &intersection.frontier,
+                unit_transitions.transition_generated(
+                    intersection.frontier,
                     state_pool,
                     policy,
                     label,

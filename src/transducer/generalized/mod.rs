@@ -25,17 +25,22 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use liblevenshtein::transducer::{GeneralizedAutomaton, OperationSet};
+//! ```rust
+//! use liblevenshtein::transducer::generalized::GeneralizedAutomaton;
 //! use liblevenshtein::transducer::phonetic::phonetic_english_basic;
+//! use liblevenshtein::transducer::{OperationSet, OperationSetBuilder};
 //!
 //! // Standard operations
-//! let ops = OperationSet::standard();
-//! let automaton = GeneralizedAutomaton::with_operations(2, ops);
+//! let standard = GeneralizedAutomaton::with_operations(2, OperationSet::standard());
+//! assert!(standard.accepts("test", "text"));
 //!
-//! // Phonetic operations
-//! let ops = phonetic_english_basic();
-//! let automaton = GeneralizedAutomaton::with_operations(2, ops);
+//! // Add phonetic rules to the standard operations needed to traverse exact spans.
+//! let mut builder = OperationSetBuilder::new().with_standard_ops();
+//! for operation in phonetic_english_basic().operations() {
+//!     builder = builder.with_operation(operation.clone());
+//! }
+//! let phonetic = GeneralizedAutomaton::with_operations(1, builder.build());
+//! assert!(phonetic.accepts("phone", "fone"));
 //! ```
 //!
 //! # Implementation Status
@@ -62,7 +67,8 @@ mod subsumption;
 
 pub use crate::transducer::universal::bit_vector::CharacteristicVector;
 pub use automaton::{
-    GeneralizedAutomaton, GeneralizedAutomatonError, MAX_GENERALIZED_ALIGNMENT_STATES,
+    GeneralizedAutomaton, GeneralizedAutomatonError, GeneralizedOnlineAutomaton,
+    GeneralizedOnlineLimits, GeneralizedOnlineObservation, MAX_GENERALIZED_ALIGNMENT_STATES,
 };
 pub use position::{GeneralizedPosition, PositionError};
 pub use state::{GeneralizedState, GeneralizedStateError, GeneralizedTransitionInput};

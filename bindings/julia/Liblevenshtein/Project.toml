@@ -1,0 +1,19 @@
+name = "Liblevenshtein"
+uuid = "e9326fdd-6246-4d39-8cad-1afab836aa7b"
+authors = ["Dylon Edwards <dylon.devo@gmail.com>"]
+version = "4.0.0-rc.6"
+
+[deps]
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+VinaryTreeInterop = "8d6503e5-4d65-4bd8-a8ee-293a0149584e"
+
+[compat]
+VinaryTreeInterop = "4"
+julia = "1.10"
+
+[extras]
+Libdictenstein = "bafc558c-9074-40dc-b084-d73291979eb7"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Libdictenstein", "Test"]

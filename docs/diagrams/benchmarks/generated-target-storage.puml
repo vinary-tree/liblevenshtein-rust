@@ -1,0 +1,43 @@
+@startuml
+title Bounded generated-target storage selection
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #E7F5FF
+  BorderColor #1864AB
+  DiamondBackgroundColor #FFF3BF
+  DiamondBorderColor #E67700
+  StartColor #2B8A3E
+  EndColor #2B8A3E
+  ArrowColor #495057
+}
+
+start
+:Receive immutable query length <latex>q</latex>;
+:Compute characteristic capacity
+<latex>w = 2^{\lceil\log_2(q+1)\rceil}</latex>;
+:Compute one-row footprint
+<latex>R = w\,\mathrm{sizeof}(\mathrm{GeneratedTarget})</latex>;
+
+if (<latex>R \leq B</latex> with <latex>B=2048\,\mathrm{bytes}</latex>?) then (yes)
+  #D3F9D8:Create fixed-stride row-major storage;
+  :Append at most <latex>B</latex> bytes per generated state;
+  :Store policy-created overflow classes sparsely;
+else (no)
+  #E5DBFF:Create sparse transition map;
+  :Append no target cells when a state is interned;
+  :Store only observed <latex>(\mathrm{state},\mathrm{class})</latex> targets;
+endif
+
+:Return the same exact target or UNCOMPUTED sentinel;
+stop
+
+legend right
+  |= Color |= Meaning |
+  |<#E7F5FF> blue | shared calculation and semantic result |
+  |<#FFF3BF> amber | fixed resource-policy decision |
+  |<#D3F9D8> green | bounded dense hot path |
+  |<#E5DBFF> violet | long-query sparse path |
+endlegend
+@enduml

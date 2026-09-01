@@ -2,11 +2,12 @@
 
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use liblevenshtein::time_series::{
     erp_gap_mass_lower_bound, frechet_candidate_lower_bound, lb_keogh, twed_length_lower_bound,
-    DtwConfig, DtwTransducer, ErpConfig, ErpTransducer, FrechetConfig, FrechetTransducer,
-    QuantizationConfig, TwedConfig, TwedTransducer,
+    DtwConfig, DtwTransducer, ErpConfig, ErpOnlineAutomaton, ErpTransducer, FrechetConfig,
+    FrechetTransducer, OnlineAutomatonLimits, OperationOutcome, PageBudget, QuantizationConfig,
+    ResourceLimits, TwedConfig, TwedTransducer,
 };
 
 fn deterministic_series(count: usize, len: usize) -> Vec<Vec<f64>> {
@@ -35,6 +36,42 @@ fn erp_exact(c: &mut Criterion) {
     group.finish();
 }
 
+fn erp_online_frontier(c: &mut Criterion) {
+    let query = deterministic_series(1, 256).pop().expect("one query");
+    let target = deterministic_series(2, 256).pop().expect("one target");
+    let config = ErpConfig::new(0.0);
+    let mut group = c.benchmark_group("erp_online_frontier");
+    for (name, cutoff) in [("narrow", 8.0), ("unbounded", f64::INFINITY)] {
+        group.bench_function(name, |b| {
+            b.iter_batched(
+                || {
+                    ErpOnlineAutomaton::new(
+                        &query,
+                        config,
+                        cutoff,
+                        OnlineAutomatonLimits::default(),
+                    )
+                    .expect("benchmark query fits default online limits")
+                },
+                |mut automaton| {
+                    for sample in &target {
+                        let _ = black_box(
+                            automaton
+                                .advance(black_box(*sample))
+                                .expect("benchmark target is finite"),
+                        );
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+    }
+    group.bench_function("two_row_scalar", |b| {
+        b.iter(|| config.distance(black_box(&query), black_box(&target)));
+    });
+    group.finish();
+}
+
 fn erp_candidate_bound(c: &mut Criterion) {
     let x = deterministic_series(1, 256).pop().expect("one series");
     let y = deterministic_series(2, 256).pop().expect("two series");
@@ -53,6 +90,50 @@ fn erp_trie_range(c: &mut Criterion) {
     );
     c.bench_function("erp_trie_range/1000x64", |b| {
         b.iter(|| index.search_range(black_box(&query), black_box(12.0)));
+    });
+}
+
+fn erp_automaton_trie_range(c: &mut Criterion) {
+    let references = deterministic_series(1_000, 64);
+    let query = references[137].clone();
+    let index = ErpTransducer::from_series(
+        QuantizationConfig::for_u8(-8.0, 8.0),
+        ErpConfig::new(0.0),
+        &references,
+    );
+    c.bench_function("erp_automaton_trie_range/1000x64", |b| {
+        b.iter(|| {
+            let mut outcome = index
+                .search_range_automaton_bounded(
+                    black_box(&query),
+                    black_box(12.0),
+                    ResourceLimits::default(),
+                    PageBudget {
+                        max_work_units: usize::MAX,
+                        max_results: usize::MAX,
+                    },
+                )
+                .expect("benchmark query is valid");
+            loop {
+                match outcome {
+                    OperationOutcome::Complete { value, .. } => break black_box(value),
+                    OperationOutcome::Incomplete {
+                        continuation: Some(next),
+                        ..
+                    } => {
+                        outcome = next.resume(PageBudget {
+                            max_work_units: usize::MAX,
+                            max_results: usize::MAX,
+                        });
+                    }
+                    OperationOutcome::Incomplete {
+                        continuation: None,
+                        reason,
+                        ..
+                    } => panic!("benchmark traversal terminated: {reason:?}"),
+                }
+            }
+        });
     });
 }
 
@@ -163,8 +244,10 @@ fn twed_trie_range(c: &mut Criterion) {
 criterion_group!(
     elastic_kernel_benches,
     erp_exact,
+    erp_online_frontier,
     erp_candidate_bound,
     erp_trie_range,
+    erp_automaton_trie_range,
     frechet_exact,
     frechet_candidate_bound,
     frechet_trie_range,

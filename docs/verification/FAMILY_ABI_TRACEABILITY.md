@@ -124,3 +124,31 @@ Every DOI across the five repositories' docs is resolved against `doi.org`
 
 All DOIs across the family now resolve (the negative control excepted). The sweep
 is the falsifiable artifact — re-run the resolution to reproduce.
+
+## DOI identity gate (W10)
+
+Resolution proves that a DOI exists; it does **not** prove that it identifies the
+work named by the surrounding bibliography. A second audit on 2026-08-29 found
+one such false positive in the binding benchmark methodology:
+`10.1145/2660193.2660196` resolves successfully, but Crossref identifies it as
+Kambadur and Kim's 2014 *An experimental survey of energy management across the
+stack*, not Kalibera and Jones's 2013 *Rigorous Benchmarking in Reasonable Time*.
+The citation now uses the latter work's registered DOI,
+[`10.1145/2464157.2464160`](https://doi.org/10.1145/2464157.2464160).
+
+The machine-readable
+[`binding-citation-ledger.json`](binding-citation-ledger.json) pins Crossref
+title, lead author, publication year, publisher, type, and governed source for
+the binding corpus's seven unique DOI-bearing works. The offline
+[`check-binding-docs.py`](../../scripts/check-binding-docs.py) gate now rejects:
+
+- malformed or unlabeled DOI links;
+- a DOI label that differs from its target;
+- a bibliography title, lead author, or year that differs from the registered
+  work; and
+- ledger/document drift, including unregistered references and unused metadata.
+
+Network access is deliberately excluded from normal CI. A maintainer verifies
+new or changed ledger entries against Crossref, records the verification date,
+and commits the immutable metadata; routine checks are deterministic and remain
+available during registry or network outages.

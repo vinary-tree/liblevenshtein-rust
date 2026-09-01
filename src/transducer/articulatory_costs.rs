@@ -15,7 +15,12 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! This example requires the `phonetic-rules` feature; without it,
+//! `substitution_cost` deliberately falls back to the configured base cost.
+//!
+//! ```rust
+//! # #[cfg(feature = "phonetic-rules")]
+//! # {
 //! use liblevenshtein::transducer::ArticulatoryCosts;
 //!
 //! let costs = ArticulatoryCosts::default();
@@ -27,6 +32,7 @@
 //! // Distant sounds have high substitution cost
 //! let ph_cost = costs.substitution_cost('p', 'h');
 //! assert!(ph_cost > 0.7); // Place + manner differ significantly
+//! # }
 //! ```
 //!
 //! # Integration with Automata
@@ -114,7 +120,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::ArticulatoryCosts;
     ///
     /// let costs = ArticulatoryCosts::new();
@@ -143,7 +149,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::ArticulatoryCosts;
     ///
     /// // Heavily weight articulatory features
@@ -172,7 +178,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::{ArticulatoryCosts, OperationCostsF64};
     ///
     /// let base = OperationCostsF64::typo_friendly();
@@ -247,7 +253,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::ArticulatoryCosts;
     ///
     /// let costs = ArticulatoryCosts::default();
@@ -298,7 +304,7 @@ impl ArticulatoryCosts {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::transducer::ArticulatoryCosts;
     ///
     /// let costs = ArticulatoryCosts::default();

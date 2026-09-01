@@ -68,8 +68,12 @@
 
 pub use super::elastic::interval::interval_dist;
 
-/// Epsilon for float comparisons (mirrors `msm_transition::COST_EPSILON`).
-pub const COST_EPSILON: f64 = 1e-9;
+/// Exact tolerance used by interval-product cutoff and state-admission checks.
+///
+/// Binary64 rounding envelopes belong in proof and differential assertions;
+/// they must never expand the public inclusive cutoff or establish state
+/// equality/subsumption.
+pub const COST_EPSILON: f64 = 0.0;
 
 /// Admissible lower bound on the MSM `C(a, b, c)` **Merge** cost when `a` and
 /// `b` are scalars and `c` ranges over the bin interval `[lo, hi]`.

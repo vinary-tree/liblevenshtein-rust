@@ -29,31 +29,31 @@ All symbols are defined before they enter a recurrence.
 
 | Symbol | Definition |
 |---|---|
-| `$`x=(x_1,\ldots,x_m)`$` | query series of `$`m`$` finite real samples |
-| `$`y=(y_1,\ldots,y_n)`$` | reference series of `$`n`$` finite real samples |
-| `$`t_i=i`$`, `$`s_j=j`$` | unit-spaced timestamps used by the crate |
-| `$`x_0=y_0=0`$` | shared sentinel sample |
-| `$`\nu`$` | non-negative temporal stiffness; the metric witness requires `$`\nu>0`$` |
-| `$`\lambda`$` | non-negative constant deletion penalty |
-| `$`D(i,j)`$` | optimal TWED between prefixes `$`x_{1:i}`$` and `$`y_{1:j}`$` |
-| `$`I=[\ell,h]`$` | closed quantization interval containing a target sample |
-| `$`\operatorname{dist}(a,I)`$` | minimum `$`\lvert a-v\rvert`$` over `$`v\in I`$` |
-| `$`\operatorname{gap}(I,J)`$` | minimum `$`\lvert u-v\rvert`$` over `$`u\in I,v\in J`$` |
+| $`x=(x_1,\ldots,x_m)`$ | query series of $`m`$ finite real samples |
+| $`y=(y_1,\ldots,y_n)`$ | reference series of $`n`$ finite real samples |
+| $`t_i=i`$, $`s_j=j`$ | unit-spaced timestamps used by the crate |
+| $`x_0=y_0=0`$ | shared sentinel sample |
+| $`\nu`$ | non-negative temporal stiffness; the metric witness requires $`\nu>0`$ |
+| $`\lambda`$ | non-negative constant deletion penalty |
+| $`D(i,j)`$ | optimal TWED between prefixes $`x_{1:i}`$ and $`y_{1:j}`$ |
+| $`I=[\ell,h]`$ | closed quantization interval containing a target sample |
+| $`\operatorname{dist}(a,I)`$ | minimum $`\lvert a-v\rvert`$ over $`v\in I`$ |
+| $`\operatorname{gap}(I,J)`$ | minimum $`\lvert u-v\rvert`$ over $`u\in I,v\in J`$ |
 
 The word **deletion** covers either direction of the alignment: deleting from
-`$`x`$` or inserting into `$`x`$` by deleting the corresponding sample from
-`$`y`$`. Both are symmetric segment edits.
+$`x`$ or inserting into $`x`$ by deleting the corresponding sample from
+$`y`$. Both are symmetric segment edits.
 
 ## 3. The unit-spaced recurrence
 
-Define the cost of deleting query sample `$`x_i`$` after `$`x_{i-1}`$`:
+Define the cost of deleting query sample $`x_i`$ after $`x_{i-1}`$:
 
 ```math
 \delta_x(i)=\lvert x_i-x_{i-1}\rvert+\nu+\lambda.
 ```
 
-The reference-side deletion `$`\delta_y(j)`$` is identical after replacing
-`$`x`$` by `$`y`$`. Matching the two current segments costs:
+The reference-side deletion $`\delta_y(j)`$ is identical after replacing
+$`x`$ by $`y`$. Matching the two current segments costs:
 
 ```math
 \mu(i,j)=
@@ -94,8 +94,8 @@ not recurrence semantics.
 **Purpose.** Compute exact TWED and abandon a row when non-negative future
 steps cannot return below the cutoff.
 
-**Invariant.** Before row `$`i`$` begins, `previous[j]` is exactly `$`D(i-1,j)`$`.
-After column `$`j`$` is assigned, `current[j]` is exactly `$`D(i,j)`$`.
+**Invariant.** Before row $`i`$ begins, `previous[j]` is exactly $`D(i-1,j)`$.
+After column $`j`$ is assigned, `current[j]` is exactly $`D(i,j)`$.
 
 ```text
 ALGORITHM TWED-DISTANCE(x, y, nu, lambda, cutoff)
@@ -124,7 +124,7 @@ ALGORITHM TWED-DISTANCE(x, y, nu, lambda, cutoff)
 
 Every local term is non-negative. Once every cell in a completed row exceeds
 the cutoff, every continuation also exceeds it. Exact time is
-`$`\mathcal{O}(mn)`$`; live DP memory is `$`\mathcal{O}(\min(m,n))`$`.
+$`\mathcal{O}(mn)`$; live DP memory is $`\mathcal{O}(\min(m,n))`$.
 
 ## 4. Interval relaxation for the elastic trie
 
@@ -132,11 +132,11 @@ the cutoff, every continuation also exceeds it. Exact time is
 
 The trie stores quantization bins, not one concrete value per edge. TWED's
 current leaf depends on the current and preceding target values, so the kernel
-carries the preceding target interval `$`I_{j-1}`$`. At the root the carry is
-the singleton sentinel interval `$`[0,0]`$`.
+carries the preceding target interval $`I_{j-1}`$. At the root the carry is
+the singleton sentinel interval $`[0,0]`$.
 
-For query segment `$`(x_{i-1},x_i)`$`, current target interval `$`I_j`$`, and
-previous target interval `$`I_{j-1}`$`, the exact interval minimum of the match
+For query segment $`(x_{i-1},x_i)`$, current target interval $`I_j`$, and
+previous target interval $`I_{j-1}`$, the exact interval minimum of the match
 leaf is separable:
 
 ```math
@@ -147,7 +147,7 @@ leaf is separable:
 ```
 
 The variables occur in distinct absolute-value terms, so minimizing their sum
-over the rectangle `$`I_{j-1}\times I_j`$` equals the sum of the two independent
+over the rectangle $`I_{j-1}\times I_j`$ equals the sum of the two independent
 minima. No correlation assumption is introduced.
 
 The target-deletion leaf is likewise an exact box minimum:
@@ -165,15 +165,15 @@ from hiding a useless always-zero bound.
 
 ## 5. Candidate length lower bound
 
-Any alignment changing length `$`m`$` to length `$`n`$` contains at least
-`$`\lvert m-n\rvert`$` length-changing edits. Each pays `$`\lambda`$` plus
+Any alignment changing length $`m`$ to length $`n`$ contains at least
+$`\lvert m-n\rvert`$ length-changing edits. Each pays $`\lambda`$ plus
 non-negative segment and timestamp terms. Therefore:
 
 ```math
 \lvert m-n\rvert\lambda\le D(m,n).
 ```
 
-This bound is deliberately modest. It becomes zero when `$`\lambda=0`$` and
+This bound is deliberately modest. It becomes zero when $`\lambda=0`$ and
 does not inspect sample values. Its purpose is to reject impossible candidates
 cheaply before exact dynamic programming, never to replace the carry-aware
 column bound.
@@ -189,7 +189,7 @@ the crate's names this is:
 ```
 
 The strict inequality is load-bearing for identity of indiscernibles. When
-`$`\nu=\lambda=0`$`, unequal sequences can have zero cost. The executable
+$`\nu=\lambda=0`$, unequal sequences can have zero cost. The executable
 witness used by the crate is:
 
 ```math
@@ -204,8 +204,8 @@ The API encodes the distinction:
 
 - `TwedConfig` accepts the complete normalized non-negative family and has
   `ElasticKernel::IS_METRIC = false`;
-- `MetricTwedConfig::try_new` rejects non-finite values, `$`\nu\le0`$`, and
-  `$`\lambda<0`$`;
+- `MetricTwedConfig::try_new` rejects non-finite values, $`\nu\le0`$, and
+  $`\lambda<0`$;
 - only `MetricTwedConfig` implements `MetricElasticKernel`.
 
 This is stronger than a runtime warning: generic code requiring a metric
@@ -265,7 +265,7 @@ chance that a recurrence mistake is copied into every oracle.
 ## 9. Security and operational limits
 
 Exact TWED remains quadratic in the worst case. A permissive cutoff, broad
-quantization bins, or `$`\lambda=0`$` can weaken pruning enough to approach a
+quantization bins, or $`\lambda=0`$ can weaken pruning enough to approach a
 full scan. Deployments should cap query length, indexed-series length, total
 samples per request, and candidate evaluations independently of observed
 pruning.

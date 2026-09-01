@@ -9,7 +9,7 @@ use std::collections::HashMap;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::common::utils::negate_char_class;
 ///
 /// let vowels = vec!['a', 'e', 'i', 'o', 'u'];

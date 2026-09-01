@@ -11,6 +11,17 @@
 (check-sat)
 (pop)
 
+; A validated zero-target operation must advance the source coordinate, so a
+; current-row recurrence is topological rather than cyclic.
+(push)
+(declare-const source-consumption (_ BitVec 16))
+(declare-const target-consumption (_ BitVec 16))
+(assert (not (= (bvadd source-consumption target-consumption) #x0000)))
+(assert (= target-consumption #x0000))
+(assert (= source-consumption #x0000))
+(check-sat)
+(pop)
+
 ; The discovery counter is checked for overflow and against the ceiling before
 ; a new cell is materialized.
 (push)

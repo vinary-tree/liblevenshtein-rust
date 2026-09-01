@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liblevenshtein"
-version = "4.0.0rc4"
-description = "Fast streaming fuzzy search backed by liblevenshtein"
+version = "4.0.0rc6"
+description = "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
 requires-python = ">=3.10"
 license = "Apache-2.0"
 readme = "README.md"
@@ -24,12 +24,18 @@ classifiers = [
   "Topic :: Software Development :: Libraries",
   "Topic :: Text Processing",
 ]
-dependencies = ["vinary-tree-interop==4.0.0rc4"]
+dependencies = [
+  "typing-extensions>=4.4; python_version < '3.11'",
+  "vinary-tree-interop==4.0.0rc6",
+]
 
 [project.optional-dependencies]
 # C8/C9 dev tooling: Hypothesis drives the property suite (tests/test_property.py);
 # the leak suite (tests/test_leak.py) relies only on the stdlib (tracemalloc, gc).
 test = ["pytest>=8", "hypothesis>=6"]
+
+[dependency-groups]
+documentation = ["pdoc==16.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/vinary-tree/liblevenshtein-rust"

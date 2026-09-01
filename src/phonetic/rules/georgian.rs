@@ -36,18 +36,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::georgian;
 //!
 //! let rules = georgian::base();
 //!
 //! // Georgian vowels
 //! let result = rules.apply("ა");
-//! assert!(result.contains('a'), "ა → a");
+//! assert_eq!(result, "a");
 //!
 //! // Ejective consonant
 //! let result = rules.apply("კ");
-//! assert!(result.contains("k'"), "კ → k' (ejective)");
+//! assert_eq!(result, "k");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

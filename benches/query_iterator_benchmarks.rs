@@ -28,6 +28,31 @@ fn create_dictionary(size: usize) -> DoubleArrayTrie {
     DoubleArrayTrie::from_terms(words)
 }
 
+/// Build a deterministic long-query corpus whose shared prefixes and
+/// distributed mutations exercise generated positional transition caching.
+fn create_generated_target_corpus(
+    query_length: usize,
+    variants: usize,
+) -> (DoubleArrayTrie, String) {
+    let query: String = (0..query_length)
+        .map(|index| char::from(b'a' + u8::try_from(index % 26).expect("modulo fits u8")))
+        .collect();
+    let mut terms = Vec::with_capacity(variants + 1);
+    terms.push(query.clone());
+    for variant in 0..variants {
+        let mut term = query.as_bytes().to_vec();
+        for edit in 0..=2 {
+            let position =
+                (query_length / 4 + variant * (edit + 3) + edit * query_length.saturating_div(5))
+                    % query_length;
+            term[position] =
+                b'a' + u8::try_from((variant + edit + 7) % 26).expect("modulo fits u8");
+        }
+        terms.push(String::from_utf8(term).expect("benchmark corpus is ASCII"));
+    }
+    (DoubleArrayTrie::from_terms(terms), query)
+}
+
 /// Benchmark: Ordered query vs unordered query
 fn bench_ordered_vs_unordered(c: &mut Criterion) {
     let dict = create_dictionary(1000);
@@ -262,6 +287,35 @@ fn bench_ordered_query_dict_size_scaling(c: &mut Criterion) {
     group.finish();
 }
 
+/// Measure the dense-to-sparse generated-target crossover on the positional
+/// unrestricted Damerau-Levenshtein engine. Run a second process with
+/// `LIBLEVENSHTEIN_CAUSAL_FORCE_DENSE_GENERATED_TARGETS=1` and feature
+/// `benchmark-controls` to obtain the former dense-table causal control.
+fn bench_generated_target_storage_crossover(c: &mut Criterion) {
+    let mut group = c.benchmark_group("generated_target_storage_crossover");
+    group.sample_size(20);
+    group.warm_up_time(std::time::Duration::from_secs(1));
+    group.measurement_time(std::time::Duration::from_secs(3));
+
+    for query_length in [64, 128, 255, 256, 512] {
+        let (dictionary, query) = create_generated_target_corpus(query_length, 64);
+        let transducer = Transducer::new(dictionary, Algorithm::DamerauLevenshtein);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(query_length),
+            &query,
+            |b, query| {
+                b.iter(|| {
+                    let results: Vec<_> = transducer
+                        .query(black_box(query.as_str()), black_box(2))
+                        .collect();
+                    black_box(results)
+                });
+            },
+        );
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_ordered_vs_unordered,
@@ -274,6 +328,7 @@ criterion_group!(
     bench_prefix_varying_query_length,
     bench_large_distance_queries,
     bench_ordered_query_dict_size_scaling,
+    bench_generated_target_storage_crossover,
 );
 
 criterion_main!(benches);

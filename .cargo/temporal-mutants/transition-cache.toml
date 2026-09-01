@@ -1,0 +1,17 @@
+examine_globs = ["src/time_series/automaton/cache.rs"]
+examine_re = [
+  "replace BoundedTransitionCache<L>::get ->",
+  "replace BoundedTransitionCache<L>::insert ->",
+]
+additional_cargo_args = [
+  "--locked",
+  "--offline",
+  "--lib",
+  "temporal_mutation_gate_cache",
+]
+test_package = ["liblevenshtein"]
+copy_target = false
+copy_vcs = false
+gitignore = true
+minimum_test_timeout = 60.0
+timeout_multiplier = 3.0

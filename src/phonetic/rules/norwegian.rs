@@ -23,7 +23,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::norwegian;
 //!
 //! let rules = norwegian::base();

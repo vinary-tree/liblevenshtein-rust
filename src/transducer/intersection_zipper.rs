@@ -1,9 +1,11 @@
-//! Zipper for the intersection of dictionary and automaton traversal.
+//! Zipper for the synchronized product of dictionary and automaton traversal.
 //!
-//! This module provides a zipper that composes dictionary navigation with
-//! automaton state tracking, enabling efficient fuzzy string matching.
+//! The public type retains its historical `IntersectionZipper` name, but the
+//! construction is a product: each reachable state pairs one dictionary
+//! cursor with one automaton state, and an edge is retained only when both
+//! components can consume the same label. Its accepted language is therefore
+//! the intersection of the component languages.
 
-use crate::transducer::transition::CachedUnitTransitions;
 use crate::transducer::{AutomatonZipper, StatePool};
 use libdictenstein::zipper::DictZipper;
 use std::sync::Arc;
@@ -13,6 +15,25 @@ struct ZipperPathNode {
     label: u8,
     depth: usize,
     parent: Option<Arc<ZipperPathNode>>,
+}
+
+impl Drop for ZipperPathNode {
+    fn drop(&mut self) {
+        // An ordinary recursive `Arc` chain drops through native-stack frames
+        // when its final owner is released. Detach the uniquely owned suffix
+        // iteratively. A shared suffix is left for its final owner, whose own
+        // `Drop` invocation performs the same bounded-stack loop.
+        let mut parent = self.parent.take();
+        while let Some(node) = parent {
+            match Arc::try_unwrap(node) {
+                Ok(mut node) => parent = node.parent.take(),
+                Err(shared) => {
+                    drop(shared);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 impl ZipperPathNode {
@@ -42,12 +63,13 @@ impl ZipperPathNode {
     }
 }
 
-/// Zipper for traversing the intersection of dictionary and Levenshtein automaton.
+/// Zipper for traversing the synchronized dictionary–Levenshtein product.
 ///
 /// An `IntersectionZipper` combines a dictionary zipper (tracking position in the
 /// dictionary graph) with an automaton zipper (tracking Levenshtein state). This
 /// composition enables efficient fuzzy string matching by simultaneously navigating
-/// both structures.
+/// both structures. “Intersection” names the language recognized by the product;
+/// “product” names the state-space construction itself.
 ///
 /// # Type Parameters
 ///
@@ -72,7 +94,9 @@ impl ZipperPathNode {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// # // Note: This example requires the 'pathmap-backend' feature
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
 /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -100,6 +124,7 @@ impl ZipperPathNode {
 ///         println!("  Match found: {}", child.term());
 ///     }
 /// }
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct IntersectionZipper<D>
@@ -129,7 +154,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// # // Note: This example requires the 'pathmap-backend' feature
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -141,6 +168,7 @@ where
     /// let auto_zipper = AutomatonZipper::new("test".as_bytes(), 1, Algorithm::Standard);
     ///
     /// let intersection = IntersectionZipper::new(dict_zipper, auto_zipper);
+    /// # }
     /// ```
     pub fn new(dict: D, automaton: AutomatonZipper) -> Self {
         IntersectionZipper {
@@ -177,7 +205,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// # // Note: This example requires the 'pathmap-backend' feature
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -205,6 +235,7 @@ where
     /// }
     /// // Still not a match after just 'c'
     /// assert!(!intersection.is_match());
+    /// # }
     /// ```
     #[inline]
     pub fn is_match(&self) -> bool {
@@ -228,11 +259,32 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// // After navigating to a final node
-    /// if let Some(dist) = intersection.distance() {
-    ///     println!("Match with distance: {}", dist);
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"bat", 1, Algorithm::Standard);
+    /// let mut intersection = IntersectionZipper::new(dictionary, automaton);
+    /// let mut pool = StatePool::new();
+    ///
+    /// for &expected in b"cat" {
+    ///     let children: Vec<_> = intersection.children(&mut pool).collect();
+    ///     intersection = children
+    ///         .into_iter()
+    ///         .find(|(label, _)| *label == expected)
+    ///         .expect("the dictionary contains the requested path")
+    ///         .1;
     /// }
+    /// assert_eq!(intersection.distance(), Some(1));
+    /// # }
     /// ```
     #[inline]
     pub fn distance(&self) -> Option<usize> {
@@ -258,11 +310,33 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// assert_eq!(intersection.depth(), 0);  // At root
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
     ///
-    /// // After transitioning through "cat"
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"cat", 0, Algorithm::Standard);
+    /// let mut intersection = IntersectionZipper::new(dictionary, automaton);
+    /// assert_eq!(intersection.depth(), 0);
+    ///
+    /// let mut pool = StatePool::new();
+    /// for &expected in b"cat" {
+    ///     let children: Vec<_> = intersection.children(&mut pool).collect();
+    ///     intersection = children
+    ///         .into_iter()
+    ///         .find(|(label, _)| *label == expected)
+    ///         .expect("the dictionary contains the requested path")
+    ///         .1;
+    /// }
     /// assert_eq!(intersection.depth(), 3);
+    /// # }
     /// ```
     #[inline]
     pub fn depth(&self) -> usize {
@@ -277,9 +351,32 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let term = intersection.term();
-    /// println!("Matched term: {}", term);
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"cat", 0, Algorithm::Standard);
+    /// let mut intersection = IntersectionZipper::new(dictionary, automaton);
+    /// let mut pool = StatePool::new();
+    ///
+    /// for &expected in b"cat" {
+    ///     let children: Vec<_> = intersection.children(&mut pool).collect();
+    ///     intersection = children
+    ///         .into_iter()
+    ///         .find(|(label, _)| *label == expected)
+    ///         .expect("the dictionary contains the requested path")
+    ///         .1;
+    /// }
+    /// assert_eq!(intersection.term(), "cat");
+    /// # }
     /// ```
     pub fn term(&self) -> String {
         let mut units = Vec::with_capacity(self.depth());
@@ -311,7 +408,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// # // Note: This example requires the 'pathmap-backend' feature
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -332,6 +431,7 @@ where
     /// // Should have one child: 'c'
     /// assert_eq!(children.len(), 1);
     /// assert_eq!(children[0].0, b'c');
+    /// # }
     /// ```
     pub fn children<'a>(
         &'a self,
@@ -356,45 +456,35 @@ where
         })
     }
 
-    /// Navigate to viable children through one traversal-owned transition
-    /// cache. This is the allocation-free hot path used by
-    /// `ZipperQueryIterator`; the public `children` method remains the
-    /// compatibility path for independently manipulated zipper values.
-    pub(crate) fn children_cached<'a>(
-        &'a self,
-        pool: &'a mut StatePool,
-        transitions: &'a mut CachedUnitTransitions<u8>,
-    ) -> impl Iterator<Item = (u8, Self)> + 'a {
-        let parent_for_children = self.parent.clone();
-        let automaton = &self.automaton;
-
-        self.dict.children().filter_map(move |(label, dict_child)| {
-            automaton
-                .transition_cached(label, pool, transitions)
-                .map(|auto_child| {
-                    let new_parent = Some(Arc::new(ZipperPathNode::new(
-                        label,
-                        parent_for_children.clone(),
-                    )));
-                    (
-                        label,
-                        IntersectionZipper::with_parent(dict_child, auto_child, new_parent),
-                    )
-                })
-        })
-    }
-
     /// Check if the automaton state is viable (has positions).
     ///
     /// A non-viable state means no further matches are possible from this position.
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// if !intersection.is_viable() {
-    ///     // Dead end, stop exploring this branch
-    ///     return;
-    /// }
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"cat", 0, Algorithm::Standard);
+    /// let intersection = IntersectionZipper::new(dictionary, automaton);
+    /// assert!(intersection.is_viable());
+    ///
+    /// // `children` prunes failed automaton transitions, so every yielded
+    /// // dictionary/automaton intersection remains viable.
+    /// let mut pool = StatePool::new();
+    /// let children: Vec<_> = intersection.children(&mut pool).collect();
+    /// assert_eq!(children.len(), 1);
+    /// assert!(children.iter().all(|(_, child)| child.is_viable()));
+    /// # }
     /// ```
     pub fn is_viable(&self) -> bool {
         self.automaton.is_viable()
@@ -404,11 +494,34 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let dict_zipper = intersection.dict_zipper();
-    /// if dict_zipper.is_final() {
-    ///     println!("At a final dictionary node");
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use libdictenstein::DictZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper, StatePool,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// dictionary.insert("cat");
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"cat", 0, Algorithm::Standard);
+    /// let mut intersection = IntersectionZipper::new(dictionary, automaton);
+    /// assert!(!intersection.dict_zipper().is_final());
+    ///
+    /// let mut pool = StatePool::new();
+    /// for &expected in b"cat" {
+    ///     let children: Vec<_> = intersection.children(&mut pool).collect();
+    ///     intersection = children
+    ///         .into_iter()
+    ///         .find(|(label, _)| *label == expected)
+    ///         .expect("the dictionary contains the requested path")
+    ///         .1;
     /// }
+    /// assert!(intersection.dict_zipper().is_final());
+    /// # }
     /// ```
     pub fn dict_zipper(&self) -> &D {
         &self.dict
@@ -418,9 +531,23 @@ where
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let auto_zipper = intersection.automaton_zipper();
-    /// println!("Query: {:?}", auto_zipper.query());
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
+    /// use libdictenstein::pathmap::PathMapDictionary;
+    /// use libdictenstein::pathmap::zipper::PathMapZipper;
+    /// use liblevenshtein::transducer::{
+    ///     Algorithm, AutomatonZipper, IntersectionZipper,
+    /// };
+    ///
+    /// let dictionary = PathMapDictionary::<()>::new();
+    /// let dictionary = PathMapZipper::new_from_dict(&dictionary);
+    /// let automaton = AutomatonZipper::new(b"needle", 2, Algorithm::Standard);
+    /// let intersection = IntersectionZipper::new(dictionary, automaton);
+    ///
+    /// assert_eq!(intersection.automaton_zipper().query(), b"needle");
+    /// assert_eq!(intersection.automaton_zipper().max_distance(), 2);
+    /// # }
     /// ```
     pub fn automaton_zipper(&self) -> &AutomatonZipper {
         &self.automaton
@@ -455,6 +582,34 @@ mod path_node_tests {
         let node = ZipperPathNode::new(b'b', Some(parent));
 
         assert_eq!(node.depth(), usize::MAX);
+    }
+
+    #[test]
+    fn deep_shared_zipper_path_drop_is_stack_safe() {
+        const DEPTH: usize = 100_000;
+
+        std::thread::Builder::new()
+            .name("zipper-path-deep-drop".into())
+            .stack_size(64 * 1024)
+            .spawn(|| {
+                let mut path = None;
+                for _ in 0..DEPTH {
+                    path = Some(Arc::new(ZipperPathNode::new(b'x', path.take())));
+                }
+                assert_eq!(path.as_deref().map(ZipperPathNode::depth), Some(DEPTH));
+                let shared = path.take().expect("the path is non-empty");
+                let left = Arc::new(ZipperPathNode::new(b'l', Some(shared.clone())));
+                let right = Arc::new(ZipperPathNode::new(b'r', Some(shared)));
+
+                // Releasing the first branch stops at the shared suffix. The
+                // second release becomes the final owner and drains the full
+                // suffix iteratively.
+                drop(left);
+                drop(right);
+            })
+            .expect("the constrained-stack worker must start")
+            .join()
+            .expect("iterative path release must not overflow the native stack");
     }
 }
 

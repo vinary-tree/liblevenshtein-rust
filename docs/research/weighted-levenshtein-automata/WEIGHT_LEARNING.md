@@ -393,7 +393,7 @@ P_smoothed(b|a) = (count(a→b) + k) / (count(a) + k×|Σ|)
 
 ### Algorithm
 
-**Input**: Training pairs {(W₁, V₁), (W₂, V₂), ..., (Wₙ, Vₙ)}
+**Input**: Training pairs $`\{(W_{1}, V_{1}), (W_{2}, V_{2}), ..., (W_{n}, V_{n})\}`$
 **Output**: Operation probabilities P_sub(a,b), P_ins(a), P_del(a)
 
 #### E-Step: Compute Expected Alignments

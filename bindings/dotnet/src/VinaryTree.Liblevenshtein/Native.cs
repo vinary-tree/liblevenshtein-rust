@@ -3,14 +3,6 @@ using Microsoft.Win32.SafeHandles;
 
 namespace VinaryTree.Liblevenshtein;
 
-internal enum Status : uint
-{
-    Ok = 0, End = 1, InvalidArgument = 2, InvalidUtf8 = 3,
-    NullPointer = 4, Panic = 5, Unsupported = 6, IoError = 7,
-    Closed = 8, LimitExceeded = 9, ProviderError = 10,
-    BatchInUse = 11, DomainMismatch = 12,
-}
-
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeMatch
 {
@@ -133,10 +125,18 @@ internal static class NativeStatus
     }
 }
 
-/// <summary>A native binding failure with its stable status code.</summary>
+/// <summary>A native binding failure with typed and lossless status information.</summary>
 public sealed class LiblevenshteinException : Exception
 {
-    internal LiblevenshteinException(Status status, string message) : base(message) => StatusCode = (uint)status;
-    /// <summary>The stable ABI status value.</summary>
+    internal LiblevenshteinException(Status status, string message) : base(message)
+    {
+        Status = status;
+        StatusCode = (uint)status;
+    }
+
+    /// <summary>The symbolic status when known, or its forward-compatible enum value.</summary>
+    public Status Status { get; }
+
+    /// <summary>The exact stable ABI status value, including values introduced later.</summary>
     public uint StatusCode { get; }
 }

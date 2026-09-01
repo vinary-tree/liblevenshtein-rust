@@ -14,9 +14,9 @@ a clean seam so each crate has a single concern:
 
 | Crate | Relationship | Owns |
 |---|---|---|
-| **liblevenshtein** (this crate, `v4.0.0-rc.4`) | — | the Levenshtein **transducer/automata**, edit-distance functions, pre-filters, higher-level reusable engines (phonetic, time-series MSM, WallBreaker, contextual completion, fuzzy cache), plus WASM/FFI/serialization surfaces |
+| **liblevenshtein** (this crate, `v4.0.0-rc.6`) | — | the Levenshtein **transducer/automata**, edit-distance functions, pre-filters, higher-level reusable engines (phonetic, time-series MSM, WallBreaker, contextual completion, fuzzy cache), plus WASM/FFI/serialization surfaces |
 | **liblevenshtein-cli** (`v0.10.0`) | depends on this crate | the `liblevenshtein` executable, REPL, filesystem grep, compression/archive readers, document parsers, and optional OCR |
-| **libdictenstein** (`v4.0.0-rc.4`) | **exact package dependency with a development path** (`Cargo.toml`: `path` plus `version = "=4.0.0-rc.4"`) | **all dictionary backends** (`DoubleArrayTrie`, `DynamicDawg`/`DynamicDawgU64`, `SuffixAutomaton`, `Scdawg`, `PersistentARTrie`, `PathMapDictionary`) and the `Dictionary` / `DictionaryNode` / `MappedDictionary` traits, plus SIMD + bloom-filter pruning and prefix zippers |
+| **libdictenstein** (`v4.0.0-rc.6`) | **exact package dependency with a development path** (`Cargo.toml`: `path` plus `version = "=4.0.0-rc.6"`) | **all dictionary backends** (`DoubleArrayTrie`, `DynamicDawg`/`DynamicDawgU64`, `SuffixAutomaton`, `Scdawg`, `PersistentARTrie`, `PathMapDictionary`) and the `Dictionary` / `DictionaryNode` / `MappedDictionary` traits, plus SIMD + bloom-filter pruning and prefix zippers |
 | **duallity** | **external, optional** integration (referenced for WFST composition; *not* a build dependency of this crate) | weighted finite-state transducer (WFST) / language-model composition |
 | **liblevenshtein-macros** | **independent Cargo workspace**, local path integration | compile-time regex → NFA generation without duplicating the library `cdylib` artifact |
 
@@ -72,9 +72,12 @@ A query threads through all three areas in one lock-step pass:
 1. A `Transducer<D, P>` wraps any `D: Dictionary` from libdictenstein and is
    parameterized by an `Algorithm` and a `SubstitutionPolicy`.
 2. A query **lazily simulates** a parameterized Levenshtein automaton $`A(W, k)`$
-   (position-sets reduced by subsumption) and **intersects** it with the
-   dictionary in a single depth-first walk, pruning the instant no automaton state
-   survives — see [Lazy vs. Eager Automata](../concepts/LAZY_VS_EAGER_AUTOMATA.md).
+   (position-sets reduced by subsumption) and traverses its synchronized
+   **product** with the dictionary in a single depth-first walk, pruning the
+   instant no automaton state survives. Because both components are acceptors,
+   the product recognizes their language **intersection** — see
+   [Lazy vs. Eager Automata](../concepts/LAZY_VS_EAGER_AUTOMATA.md) and
+   [Lazy synchronized products](../design/lazy-online-products.md).
 3. The **engines** are built on that core: phonetic matching forms the product of
    a pattern NFA with the Levenshtein automaton; time-series search reuses the
    position machinery for the MSM metric; WallBreaker splits large-$`k`$ queries and

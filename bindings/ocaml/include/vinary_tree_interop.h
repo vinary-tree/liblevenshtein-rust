@@ -16,8 +16,16 @@ extern "C" {
 #define VT_DICTIONARY_ENTRIES_INTERFACE_VERSION 1u
 #define VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION 1u
 #define VT_WFST_INTERFACE_VERSION 1u
+#define VT_LATTICE_INTERFACE_VERSION 1u
+#define VT_SEMIRING_INTERFACE_VERSION 1u
+#define VT_SEMIRING_DIVISION_INTERFACE_VERSION 1u
+#define VT_SEMIRING_STAR_INTERFACE_VERSION 1u
+#define VT_SEMIRING_NUMERIC_INTERFACE_VERSION 1u
+#define VT_SEMIRING_PROPERTIES_INTERFACE_VERSION 1u
 #define VT_RECOMMENDED_EDGE_BATCH 256u
 #define VT_RECOMMENDED_ARC_BATCH 256u
+#define VT_RECOMMENDED_LATTICE_BATCH 256u
+#define VT_RECOMMENDED_SEMIRING_BATCH 256u
 
 #define VT_DICTIONARY_FLAG_PARALLEL_REENTRANT UINT64_C(1)
 #define VT_DICTIONARY_FLAG_SUFFIX_BASED UINT64_C(2)
@@ -300,6 +308,162 @@ typedef struct VtWfstVTable {
                            size_t* out_written, size_t* out_total);
 } VtWfstVTable;
 
+#define VT_LATTICE_FLAG_THREAD_BOUND UINT64_C(1)
+#define VT_LATTICE_FLAG_PARALLEL_REENTRANT UINT64_C(2)
+#define VT_LATTICE_FLAG_STABLE_BYTES UINT64_C(4)
+#define VT_LATTICE_FLAG_BATCH UINT64_C(8)
+
+/*
+ * One immutable lattice value. Binary operations accept only resources whose
+ * VtLatticeVTable has the same domain_id. Every successful operation writes
+ * one new owned VtResource. join_many/meet_many are associative left folds;
+ * an empty operand array returns an independent retain of the receiver.
+ */
+typedef struct VtLatticeVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    uint64_t flags;
+    VtInterfaceId domain_id;
+    VtStatus (*join)(void* context, const VtResource* other,
+                     VtResource* out_value);
+    VtStatus (*meet)(void* context, const VtResource* other,
+                     VtResource* out_value);
+    VtStatus (*equal)(void* context, const VtResource* other,
+                      uint8_t* out_equal);
+    VtStatus (*stable_bytes)(void* context, uint8_t* out_bytes,
+                             size_t capacity, size_t* out_written,
+                             size_t* out_required);
+    VtStatus (*diagnostic)(void* context, uint8_t* out_bytes,
+                           size_t capacity, size_t* out_written,
+                           size_t* out_required);
+    VtStatus (*join_many)(void* context, const VtResource* others,
+                          size_t count, VtResource* out_value);
+    VtStatus (*meet_many)(void* context, const VtResource* others,
+                          size_t count, VtResource* out_value);
+} VtLatticeVTable;
+
+#define VT_SEMIRING_FLAG_THREAD_BOUND UINT64_C(1)
+#define VT_SEMIRING_FLAG_PARALLEL_REENTRANT UINT64_C(2)
+#define VT_SEMIRING_FLAG_STABLE_BYTES UINT64_C(4)
+#define VT_SEMIRING_FLAG_BATCH UINT64_C(8)
+
+#define VT_SEMIRING_PROPERTY_HASHABLE UINT64_C(1)
+#define VT_SEMIRING_PROPERTY_IDEMPOTENT_PLUS UINT64_C(2)
+#define VT_SEMIRING_PROPERTY_K_CLOSED UINT64_C(4)
+#define VT_SEMIRING_PROPERTY_ZERO_SUM_FREE UINT64_C(8)
+#define VT_SEMIRING_PROPERTY_COMMUTATIVE_TIMES UINT64_C(16)
+#define VT_SEMIRING_PROPERTY_TOTALLY_ORDERED UINT64_C(32)
+#define VT_SEMIRING_PROPERTY_NONNEGATIVE UINT64_C(64)
+
+#define VT_SEMIRING_ORDER_BETTER (-1)
+#define VT_SEMIRING_ORDER_EQUAL 0
+#define VT_SEMIRING_ORDER_WORSE 1
+#define VT_SEMIRING_ORDER_INCOMPARABLE 2
+
+/*
+ * Compact provider-scoped weight token. A token is valid only while the
+ * retained semiring operation-context resource that issued it remains alive.
+ * Providers may encode an inline value or a generational arena identifier in
+ * these two words. Consumers must clone and release owned tokens through the
+ * semiring vtable; copying the words does not clone ownership.
+ */
+typedef struct VtSemiringValue {
+    uint64_t word0;
+    uint64_t word1;
+} VtSemiringValue;
+
+/*
+ * Base dynamic-semiring capability. Every successful constructor or algebra
+ * callback writes one owned value token. release_values consumes each token
+ * exactly once. Batch folds use the additive or multiplicative identity for
+ * an empty input. No callback may retain caller-owned input-array storage.
+ */
+typedef struct VtSemiringVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    uint64_t flags;
+    VtInterfaceId domain_id;
+    VtStatus (*zero)(void* context, VtSemiringValue* out_value);
+    VtStatus (*one)(void* context, VtSemiringValue* out_value);
+    VtStatus (*clone_value)(void* context, const VtSemiringValue* value,
+                            VtSemiringValue* out_value);
+    VtStatus (*release_values)(void* context, VtSemiringValue* values,
+                               size_t count);
+    VtStatus (*plus)(void* context, const VtSemiringValue* left,
+                     const VtSemiringValue* right,
+                     VtSemiringValue* out_value);
+    VtStatus (*times)(void* context, const VtSemiringValue* left,
+                      const VtSemiringValue* right,
+                      VtSemiringValue* out_value);
+    VtStatus (*equal)(void* context, const VtSemiringValue* left,
+                      const VtSemiringValue* right, uint8_t* out_equal);
+    VtStatus (*approx_equal)(void* context, const VtSemiringValue* left,
+                             const VtSemiringValue* right, double epsilon,
+                             uint8_t* out_equal);
+    VtStatus (*natural_order)(void* context, const VtSemiringValue* left,
+                              const VtSemiringValue* right,
+                              int32_t* out_order);
+    VtStatus (*stable_bytes)(void* context, const VtSemiringValue* value,
+                             uint8_t* out_bytes, size_t capacity,
+                             size_t* out_written, size_t* out_required);
+    VtStatus (*diagnostic)(void* context, const VtSemiringValue* value,
+                           uint8_t* out_bytes, size_t capacity,
+                           size_t* out_written, size_t* out_required);
+    VtStatus (*plus_many)(void* context, const VtSemiringValue* values,
+                          size_t count, VtSemiringValue* out_value);
+    VtStatus (*times_many)(void* context, const VtSemiringValue* values,
+                           size_t count, VtSemiringValue* out_value);
+} VtSemiringVTable;
+
+/* Optional division capabilities. VT_STATUS_END denotes an undefined result. */
+typedef struct VtSemiringDivisionVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*divide)(void* context, const VtSemiringValue* dividend,
+                       const VtSemiringValue* divisor,
+                       VtSemiringValue* out_value);
+    VtStatus (*left_divide)(void* context, const VtSemiringValue* value,
+                            const VtSemiringValue* divisor,
+                            VtSemiringValue* out_value);
+} VtSemiringDivisionVTable;
+
+/* Optional Kleene-closure capability. VT_STATUS_END denotes divergence. */
+typedef struct VtSemiringStarVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*star)(void* context, const VtSemiringValue* value,
+                     VtSemiringValue* out_value);
+} VtSemiringStarVTable;
+
+/* Optional numerical projections used by specialized algorithms. */
+typedef struct VtSemiringNumericVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*numerical_value)(void* context,
+                                const VtSemiringValue* value,
+                                double* out_value);
+    VtStatus (*quantize)(void* context, const VtSemiringValue* value,
+                         double epsilon, int64_t* out_value);
+    VtStatus (*to_probability)(void* context,
+                               const VtSemiringValue* value,
+                               double* out_value);
+} VtSemiringNumericVTable;
+
+/* Optional declared algebraic laws and bounded-closure metadata. */
+typedef struct VtSemiringPropertiesVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    uint64_t properties;
+    VtStatus (*closure_bound)(void* context, size_t* out_bound,
+                              uint8_t* out_known);
+} VtSemiringPropertiesVTable;
+
 static const VtInterfaceId VT_DICTIONARY_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','i','o','n','a','r','y','.','v','1' }
 };
@@ -322,6 +486,30 @@ static const VtInterfaceId VT_SNAPSHOT_IDENTITY_INTERFACE_ID = {
 
 static const VtInterfaceId VT_WFST_INTERFACE_ID = {
     { 'v','t','.','s','c','a','l','a','r','-','w','f','s','t','.','1' }
+};
+
+static const VtInterfaceId VT_LATTICE_INTERFACE_ID = {
+    { 'v','t','.','l','a','t','t','i','c','e','.','v','a','l','.','1' }
+};
+
+static const VtInterfaceId VT_SEMIRING_INTERFACE_ID = {
+    { 'v','t','.','s','e','m','i','r','i','n','g','.','v','a','l','1' }
+};
+
+static const VtInterfaceId VT_SEMIRING_DIVISION_INTERFACE_ID = {
+    { 'v','t','.','s','e','m','i','r','i','n','g','.','d','i','v','1' }
+};
+
+static const VtInterfaceId VT_SEMIRING_STAR_INTERFACE_ID = {
+    { 'v','t','.','s','e','m','i','r','i','n','g','.','s','t','r','1' }
+};
+
+static const VtInterfaceId VT_SEMIRING_NUMERIC_INTERFACE_ID = {
+    { 'v','t','.','s','e','m','i','r','i','n','g','.','n','u','m','1' }
+};
+
+static const VtInterfaceId VT_SEMIRING_PROPERTIES_INTERFACE_ID = {
+    { 'v','t','.','s','e','m','i','r','i','n','g','.','p','r','p','1' }
 };
 
 #ifdef __cplusplus

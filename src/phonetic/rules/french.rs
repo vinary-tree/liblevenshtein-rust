@@ -18,7 +18,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::french;
 //!
 //! // Standard French - no affrication

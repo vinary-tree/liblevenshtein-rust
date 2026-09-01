@@ -1,0 +1,53 @@
+@startuml online-retention-contract
+' Fixed-query unknown-target-stream retention and reclamation contract.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam component {
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Unknown-length target stream — prefix-independent retained memory
+
+queue "target labels\nunknown total length" as Stream #B2EBF2
+
+package "Retained for the machine lifetime" #E3F2FD {
+  component "validated fixed query\nand query plan" as Query #BBDEFB
+  component "bounded transition cache\nor finite ring metadata" as Cache #D1C4E9
+}
+
+package "Two-generation transition" #E8F5E9 {
+  component "current frontier / row" as Current #C8E6C9
+  component "scratch next frontier / row" as Next #DCEDC8
+}
+
+component "observation\nexact prefix result or tagged incomplete" as Observation #FFE0B2
+collections "discarded target prefix" as Discarded #ECEFF1
+
+Stream -[#1565C0,thickness=3]-> Next : one label
+Query -[#1565C0]-> Next : fixed recurrence data
+Current -[#1565C0]-> Next : live predecessors only
+Cache -[#5E35B1]-> Next : observed transition reuse
+Next -[#2E7D32,thickness=3]-> Observation : validate before commit
+Next -[#2E7D32,thickness=3]-> Current : swap generations
+Current -[#78909C]-> Discarded : old generation reclaimed
+
+note bottom of Current #FFF3E0
+  <latex>M = O(|q| + |F| + |C|)</latex>
+  depends on the fixed query, live frontier, and configured cache;
+  it does not depend on the number of target labels already consumed.
+end note
+
+note right of Observation #FFECB3
+  A budget, arithmetic, validation, or allocation failure is explicit.
+  It is never converted into a complete empty answer.
+end note
+
+note bottom of Discarded #FFCDD2
+  No exact fixed-query online automaton stores the consumed target history.
+  Exact distance between two mutually unbounded histories is not this contract.
+end note
+@enduml

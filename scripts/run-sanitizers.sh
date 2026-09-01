@@ -12,7 +12,7 @@
 # `-Zbuild-std`, which rebuilds std with the sanitizer runtime).
 #
 # Usage:
-#   scripts/run-sanitizers.sh                 # asan+lsan then tsan, whole suite
+#   scripts/run-sanitizers.sh                 # asan+lsan then tsan, lib and test targets
 #   SANITIZER_ONLY=address scripts/run-sanitizers.sh --test abi_paging_correspondence
 #   SANITIZER_NIGHTLY=nightly-2026-04-21 scripts/run-sanitizers.sh
 set -euo pipefail
@@ -29,7 +29,7 @@ run_one() {
   RUSTDOCFLAGS="-Zsanitizer=${san}" \
   ASAN_OPTIONS="detect_leaks=1:detect_stack_use_after_return=1" \
     cargo +"$NIGHTLY" test -Zbuild-std \
-      --target "$TARGET" --features "$FEATURES" "$@"
+      --target "$TARGET" --features "$FEATURES" --lib --tests "$@"
 }
 
 for san in $ONLY; do

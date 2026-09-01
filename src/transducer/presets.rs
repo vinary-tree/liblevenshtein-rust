@@ -22,7 +22,7 @@ impl OperationSet {
     /// Insertion/deletion operations: match, insertion, and deletion.
     ///
     /// Substitution is absent, so replacement costs two. The induced distance
-    /// is `$`|x|+|y|-2\operatorname{LCS}(x,y)`$`; it is named `indel` because
+    /// is $`\lvert x\rvert+\lvert y\rvert-2\operatorname{LCS}(x,y)`$; it is named `indel` because
     /// that value is a distance, whereas LCS itself is a similarity length.
     #[must_use]
     pub fn indel() -> Self {

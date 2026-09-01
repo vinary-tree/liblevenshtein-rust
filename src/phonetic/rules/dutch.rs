@@ -23,18 +23,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::dutch;
 //!
 //! let rules = dutch::base();
 //!
 //! // IJ digraph
 //! let wijn = rules.apply("wijn");
-//! assert!(wijn.contains("eɪ"), "ij → EI");
+//! assert_eq!(wijn, "ʋɛin");
 //!
 //! // Guttural G
 //! let goed = rules.apply("goed");
-//! assert!(goed.starts_with("X"), "g → X");
+//! assert_eq!(goed, "xut");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

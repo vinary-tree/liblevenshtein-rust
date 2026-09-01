@@ -1,0 +1,19 @@
+# liblevenshtein native API
+
+The C and C++ interfaces provide high-performance approximate string matching
+over retained, versioned dictionary resources. This reference was generated
+from release **@VERSION@** and covers every public declaration in the installed
+headers.
+
+Start with the immutable [C package guide](@SOURCE_URL@/bindings/c/README.md)
+or [C++ package guide](@SOURCE_URL@/bindings/cpp/README.md). The
+[complete C ABI contract](@SOURCE_URL@/docs/bindings/c-abi-reference.md)
+defines every status, precondition, ownership transition, concurrency rule,
+complexity bound, batch lease, and callback obligation. The generated pages
+below provide declaration-level navigation and source correspondence.
+
+The central lifetime rule is simple: a transducer retains its dictionary
+resource, each query cursor retains the immutable revision captured at query
+start, and a borrowed batch remains valid only until its exact generation is
+released. The C++ wrappers encode those transitions with move-only resource
+acquisition is initialization (RAII) objects.

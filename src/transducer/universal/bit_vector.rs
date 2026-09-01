@@ -15,9 +15,9 @@
 //!
 //! **Examples**:
 //! ```text
-//! β('a', "banana") = "101010"
-//! β('b', "banana") = "010000"
-//! β('n', "banana") = "001101"
+//! β('a', "banana") = "010101"
+//! β('b', "banana") = "100000"
+//! β('n', "banana") = "001010"
 //! ```
 //!
 //! ## Word-Pair Encoding hₙ (Page 51)
@@ -51,21 +51,23 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::transducer::universal::{characteristic_vector, encode_word_pair};
 //!
 //! // Characteristic vector
 //! let cv = characteristic_vector('a', "banana");
 //! assert_eq!(cv.len(), 6);
-//! assert_eq!(cv.is_match(0), true);  // b[0] = 1 (a = a)
-//! assert_eq!(cv.is_match(1), false); // b[1] = 0 (a ≠ b)
-//! assert_eq!(cv.is_match(2), true);  // b[2] = 1 (a = a)
+//! assert!(!cv.is_match(0)); // `b` does not match `a`.
+//! assert!(cv.is_match(1));  // The first `a` is at index 1.
+//! assert!(!cv.is_match(2)); // `n` does not match `a`.
 //!
 //! // Word-pair encoding
-//! let encoding = encode_word_pair("abcabb", "dacab", 3);
+//! let encoding = encode_word_pair("abcabb", "dacab", 3)
+//!     .expect("the input length is within the encoding domain");
 //! assert_eq!(encoding.len(), 5);  // One bit vector per character in "dacab"
 //! ```
 
+use smallvec::SmallVec;
 use std::fmt;
 
 /// Characteristic vector β(x, w) representing which positions in w match character x.
@@ -78,22 +80,23 @@ use std::fmt;
 ///
 /// # Implementation
 ///
-/// Bits are stored as a `Vec<bool>` for simplicity and clarity. For production use, this could
-/// be optimized to use a bit-packed representation (e.g., `Vec<u64>` or `bitvec` crate).
+/// Bits use inline storage for the short windows produced by ordinary universal
+/// automata and spill only when the configured distance requires a larger
+/// window. Storage depends on the fixed distance bound, never input length.
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::transducer::universal::CharacteristicVector;
 ///
 /// let cv = CharacteristicVector::new('a', "banana");
 /// assert_eq!(cv.len(), 6);
-/// assert_eq!(cv.to_string(), "101010");
+/// assert_eq!(cv.to_string(), "010101");
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CharacteristicVector {
     /// Bit vector: `bits[i] = true` if the character matches at position `i`.
-    bits: Vec<bool>,
+    bits: SmallVec<[bool; 16]>,
 }
 
 impl CharacteristicVector {
@@ -117,17 +120,29 @@ impl CharacteristicVector {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::CharacteristicVector;
+    ///
     /// let cv = CharacteristicVector::new('a', "banana");
-    /// assert_eq!(cv.to_string(), "101010");
-    /// //                           ^  ^  ^
-    /// //                           |  |  |
-    /// //                           |  |  positions 0, 2, 4 match 'a'
-    /// //                           |  position 1, 3, 5 don't match
-    /// //                           positions: b a n a n a
+    /// assert_eq!(cv.to_string(), "010101");
+    /// //                            ^ ^ ^
+    /// //                            | | positions 3 and 5 match `a`
+    /// //                            | position 1 matches `a`
+    /// //                            positions: b a n a n a
     /// ```
     pub fn new(character: char, word: &str) -> Self {
         let bits = word.chars().map(|c| c == character).collect();
+        Self { bits }
+    }
+
+    /// Build a universal window without materializing its padded subword.
+    ///
+    /// Padding symbols are outside the input alphabet and therefore always
+    /// contribute `false`, even when the concrete input character is `$`.
+    pub(crate) fn from_padded_chars(character: char, false_prefix: usize, word: &[char]) -> Self {
+        let mut bits = SmallVec::with_capacity(false_prefix.saturating_add(word.len()));
+        bits.resize(false_prefix, false);
+        bits.extend(word.iter().map(|&candidate| candidate == character));
         Self { bits }
     }
 
@@ -211,7 +226,7 @@ impl CharacteristicVector {
     /// A new CharacteristicVector containing bits from start to the end
     pub fn suffix(&self, start: usize) -> Self {
         Self {
-            bits: self.bits[start..].to_vec(),
+            bits: self.bits[start..].iter().copied().collect(),
         }
     }
 
@@ -234,10 +249,12 @@ impl CharacteristicVector {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::CharacteristicVector;
+    ///
     /// let cv = CharacteristicVector::new('a', "banana");
-    /// assert!(cv.starts_with(&[true, false]));   // "10..." matches pattern [1, 0]
-    /// assert!(!cv.starts_with(&[false, true]));  // "10..." doesn't match [0, 1]
+    /// assert!(cv.starts_with(&[false, true]));
+    /// assert!(!cv.starts_with(&[true, false]));
     /// ```
     pub fn starts_with(&self, pattern: &[bool]) -> bool {
         if pattern.len() > self.bits.len() {
@@ -277,11 +294,11 @@ impl fmt::Display for CharacteristicVector {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::transducer::universal::characteristic_vector;
 ///
 /// let cv = characteristic_vector('a', "banana");
-/// println!("{}", cv);  // Prints "101010"
+/// assert_eq!(cv.to_string(), "010101");
 /// ```
 pub fn characteristic_vector(character: char, word: &str) -> CharacteristicVector {
     CharacteristicVector::new(character, word)
@@ -319,10 +336,10 @@ const PADDING_CHAR: char = '$';
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```text
 /// // For w = "abc", n = 2, i = 1:
 /// // sₙ(w, 1) should give us w_{-1}w_0w_1w_2w_3 = "$$abc"
-/// let subword = relevant_subword("abc", 1, 2);
+/// let subword = relevant_subword_from_chars(&['a', 'b', 'c'], 1, 2);
 /// assert_eq!(subword, "$$abc");
 /// ```
 fn relevant_subword_from_chars(word_chars: &[char], position: usize, max_distance: u8) -> String {
@@ -387,7 +404,7 @@ fn relevant_subword(word: &str, position: usize, max_distance: u8) -> String {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::transducer::universal::encode_word_pair;
 ///
 /// // Example from thesis page 52:
@@ -437,6 +454,15 @@ pub fn encode_word_pair(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn universal_padding_never_matches_a_concrete_dollar_scalar() {
+        let vector = CharacteristicVector::from_padded_chars('$', 3, &['$', 'a']);
+        assert_eq!(
+            vector.iter().collect::<Vec<_>>(),
+            vec![false, false, false, true, false]
+        );
+    }
 
     // ==================== CharacteristicVector Tests ====================
 

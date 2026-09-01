@@ -25,7 +25,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::icelandic;
 //!
 //! let rules = icelandic::base();

@@ -1,0 +1,14 @@
+examine_globs = ["src/time_series/timestamped_twed_index.rs"]
+examine_re = ["replace exact_vertical_subsumes -> bool with false"]
+additional_cargo_args = [
+  "--locked",
+  "--offline",
+  "--lib",
+  "exact_vertical_subsumption_is_bitwise_and_omission_is_detectable",
+]
+test_package = ["liblevenshtein"]
+copy_target = false
+copy_vcs = false
+gitignore = true
+minimum_test_timeout = 60.0
+timeout_multiplier = 3.0

@@ -44,7 +44,7 @@
 //!
 //! ## Basic LRU Wrapper
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -63,7 +63,7 @@
 //!
 //! ## Composing Wrappers
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;
@@ -83,7 +83,7 @@
 //!
 //! ## Memory Pressure Tracking
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::dictionary::dynamic_dawg_char::DynamicDawgChar;

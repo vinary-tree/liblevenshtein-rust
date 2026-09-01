@@ -30,7 +30,7 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::nfa::ThompsonBuilderChar;
 //!
 //! let mut builder = ThompsonBuilderChar::new();
@@ -62,8 +62,10 @@ use super::{NFAChar, NFA};
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let mut builder = ThompsonBuilderChar::new();
+/// ```rust
+/// use liblevenshtein::phonetic::nfa::ThompsonBuilderChar;
+///
+/// let builder = ThompsonBuilderChar::new();
 ///
 /// // Pattern: (a|b)*c
 /// let a = builder.single_char('a');
@@ -76,6 +78,7 @@ use super::{NFAChar, NFA};
 /// assert!(pattern.accepts("c"));
 /// assert!(pattern.accepts("abc"));
 /// assert!(pattern.accepts("aabc"));
+/// assert!(!pattern.accepts("ab"));
 /// ```
 #[derive(Debug, Default)]
 pub struct ThompsonBuilderChar {

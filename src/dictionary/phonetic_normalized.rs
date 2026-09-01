@@ -21,7 +21,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
 //!
 //! // Create dictionary with default Zompist rules
@@ -236,7 +236,7 @@ impl std::error::Error for TermIdDictionaryBuildError {}
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
 ///
 /// let dict = PhoneticNormalizedDictionary::<()>::from_terms([
@@ -689,7 +689,7 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
     /// use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
     ///
     /// let dict = PhoneticNormalizedDictionary::<()>::from_terms([
@@ -1286,16 +1286,34 @@ where
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// let dict = PhoneticNormalizedDictionary::<()>::from_terms(["phone", "fone", "bone"]);
+    /// ```rust
+    /// use liblevenshtein::dictionary::phonetic_normalized::PhoneticNormalizedDictionary;
+    /// use liblevenshtein::phonetic::{ContextChar, PhoneChar, RewriteRuleChar};
+    ///
+    /// let ph_to_f = RewriteRuleChar {
+    ///     rule_id: 1,
+    ///     rule_name: "ph to f".into(),
+    ///     pattern: vec![PhoneChar::Consonant('p'), PhoneChar::Consonant('h')],
+    ///     replacement: vec![PhoneChar::Consonant('f')],
+    ///     context: ContextChar::Anywhere,
+    ///     weight: 0.1,
+    ///     syllable_condition: None,
+    /// };
+    /// let dict = PhoneticNormalizedDictionary::<()>::from_terms_with_rules(
+    ///     ["phone", "fone", "bone"],
+    ///     vec![ph_to_f],
+    /// );
     ///
     /// // Expand "fone" to phonetic pattern
     /// let pattern = dict.expand_to_phonetic_pattern("fone");
-    /// // pattern = "(ph|f)on" (based on rules)
-    ///
     /// // Search original terms with the pattern
-    /// let results = dict.query_original_regex(&pattern, 0)?;
-    /// // Returns: ["phone", "fone"] (original terms matching pattern)
+    /// let results = dict
+    ///     .query_original_regex(&pattern, 0)
+    ///     .expect("doc: generated pattern must compile");
+    /// let terms: Vec<_> = results.iter().map(|candidate| candidate.term.as_str()).collect();
+    /// assert!(terms.contains(&"phone"));
+    /// assert!(terms.contains(&"fone"));
+    /// assert!(!terms.contains(&"bone"));
     /// ```
     pub fn query_original_regex(
         &self,

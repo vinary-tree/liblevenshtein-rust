@@ -21,7 +21,7 @@
 //!
 //! # Usage
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::features::{PhoneticFeature, get_features, chars_with_features};
 //!
 //! // Get features for a character

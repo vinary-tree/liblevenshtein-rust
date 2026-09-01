@@ -4,6 +4,21 @@ Technical specifications and design documents for major features and algorithms.
 
 ## Contents
 
+### [Lazy Ordered-Cost Product Automata](../theory/lazy-ordered-cost-product-automata.md)
+Mathematical foundation shared by the specialized implementations:
+- query-specialized weighted residuals and an exact applicability criterion
+- ordered path algebras, continuation simulations, and canonical antichains
+- exact versus abstract synchronized products and exact leaf authority
+- coalgebraic online stability and a separate metric-qualification layer
+
+### [Lazy Synchronized Products and Stable Online Automata](lazy-online-products.md)
+Defining execution architecture across string, language, and time-series queries:
+- why product names the on-demand machine while intersection names its accepted language
+- compact canonical state IDs and observed-label transition caches
+- proved-only subsumption and exact leaf authority
+- fixed-query unknown-stream memory, stack safety, fail-closed limits, and audit matrix
+- formal-to-property-test traceability and optimization constraints
+
 ### [Crate Boundary and Pruning Duality](crate-boundary-and-prune-duality.md)
 Placement rule for future measures:
 - why non-negative min-plus costs stay in liblevenshtein
@@ -102,26 +117,31 @@ Complete implementation history and status of the contextual code completion eng
 - Future enhancement roadmap
 
 ### [Zipper vs Node Performance](zipper-vs-node-performance.md)
-Comprehensive performance analysis of zipper-based vs node-based query iteration:
-- Benchmark results (1.66-1.97× performance difference)
-- Root cause analysis (indirection, locks, allocations, cache effects)
-- Architectural trade-offs and benefits
-- Use case recommendations (when to use each approach)
-- Future optimization opportunities
+Historical performance analysis plus a current architecture note:
+- the superseded 2025 full-state zipper baseline
+- the 2026 shared compact product scheduler
+- query-first edge projection and opaque path-context erasure
+- snapshot, relative-path, ordering, and stack-safety gates
+- the [current bounded engineering check](../benchmarks/lazy-product-engineering-check-2026-08-29.md)
 
 ## Performance Characteristics
 
-**Contextual Completion Engine** (Zipper-based):
+**Historical 2025 contextual-completion measurements** (superseded query
+architecture):
 - Insert character: ~4 µs (12 M chars/sec)
 - Checkpoint: ~116 ns per operation
 - Query (500 terms, distance 1): ~11.5 µs
 - Query (distance 2): ~309 µs
 - Thread-safe, hierarchical context support
 
-**Simple Fuzzy Matching** (Node-based):
-- Query (distance 1): ~53 µs (1.88× faster)
-- Query (distance 2): ~156 µs (1.97× faster)
-- Best for single-dictionary, high-throughput scenarios
+**Current compact PathMap product** (115-term bounded engineering check,
+2026-08-29):
+- cutoff 0: node 1.1417 µs; zipper 1.1474 µs
+- cutoff 1: node 4.1509 µs; zipper 4.2055 µs
+- cutoff 2: node 11.794 µs; zipper 11.480 µs
+- zipper traversal is within 1.3% of direct-node traversal in every measured
+  query; these one-host figures are engineering checks, not portable latency
+  promises
 
 ## Related Documentation
 

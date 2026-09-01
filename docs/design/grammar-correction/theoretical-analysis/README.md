@@ -325,7 +325,7 @@ Fix: Add domain constraints ("balance must be Int")
 
 ## Open Problems
 
-1. **Approximation Ratio for Beam Search**: Is there a beam width k that guarantees α-approximation?
+1. **Approximation Ratio for Beam Search**: Is there a beam width k that guarantees $`\alpha`$-approximation?
 
 2. **Optimal Feedback Update**: What feedback rule maximizes long-term correction quality?
 

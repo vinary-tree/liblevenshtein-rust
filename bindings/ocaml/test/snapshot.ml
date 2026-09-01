@@ -14,12 +14,26 @@ let text_of_match result =
 let remove_if_present path =
   if Sys.file_exists path then Sys.remove path
 
+let scratch_directory =
+  match Sys.getenv_opt "VINARY_TREE_TEST_TMPDIR" with
+  | Some path -> path
+  | None ->
+      invalid_arg
+        "VINARY_TREE_TEST_TMPDIR must name a writable non-tmpfs test directory"
+
 let temporary_path suffix =
-  let path = Filename.temp_file "vinary-tree-ocaml-" suffix in
-  Sys.remove path;
+  let path = Filename.concat scratch_directory ("liblevenshtein-ocaml" ^ suffix) in
+  List.iter remove_if_present [path; path ^ ".wal"; path ^ ".wlock"];
   path
 
 let () =
+  let algorithms : Lev.algorithm list =
+    [Lev.Standard; Lev.Transposition; Lev.Merge_and_split;
+     Lev.Damerau_levenshtein]
+  in
+  let orders : Lev.query_order list = [Lev.Traversal; Lev.Distance_then_term] in
+  assert (List.length algorithms = 4 && List.length orders = 2);
+
   for trace = 0 to 63 do
     let words = Dict.dynamic_dawg () in
     let entries =
@@ -78,6 +92,27 @@ let () =
   Dict.close token_dictionary;
   Lev.close_transducer token_automaton;
 
+  let byte_dictionary =
+    Dict.dynamic_dawg ~domain:Vinary_tree_interop.Byte ()
+  in
+  let byte_text = "\x63\x00\xff" in
+  assert (Dict.put byte_dictionary byte_text (Some 13L));
+  let byte_automaton = Lev.transducer (Dict.resource byte_dictionary) in
+  let byte_cursor =
+    Lev.query_bytes byte_automaton (Bytes.of_string byte_text)
+      ~maximum_distance:0
+  in
+  let byte_batch = Option.get (Lev.next_batch ~maximum:1 byte_cursor) in
+  assert (Array.length byte_batch = 1);
+  (match byte_batch.(0).term with
+   | Lev.Text text -> assert (text = byte_text)
+   | Lev.Tokens _ -> assert false);
+  assert (byte_batch.(0).distance = 0 && byte_batch.(0).id = Some 13L);
+  assert (Lev.next_batch ~maximum:1 byte_cursor = None);
+  Lev.cursor_close byte_cursor;
+  Dict.close byte_dictionary;
+  Lev.close_transducer byte_automaton;
+
   let persistent_path = temporary_path ".artrie" in
   let persistent = Dict.create_persistent_artrie persistent_path in
   ignore (Dict.put persistent "durable" (Some 17L));
@@ -121,6 +156,18 @@ let () =
   ignore (Dict.put equality_dictionary "cot" (Some 2L));
   ignore (Dict.put equality_dictionary "cut" (Some 3L));
   let equality_automaton = Lev.transducer (Dict.resource equality_dictionary) in
+  List.iter
+    (fun algorithm ->
+       let selected =
+         Lev.transducer ~algorithm (Dict.resource equality_dictionary)
+       in
+       let exact =
+         collect
+           (Lev.query ~order:Lev.Traversal selected "cat" ~maximum_distance:0)
+       in
+       assert (List.map text_of_match exact = ["cat"]);
+       Lev.close_transducer selected)
+    algorithms;
   let by_iterator =
     List.sort compare
       (List.map (fun result -> result.Lev.term)
@@ -136,6 +183,18 @@ let () =
   Lev.cursor_close reducer_cursor;
   assert (by_iterator = by_reducer);
   assert (List.length by_iterator = 3);
+  let llre = Lev.llre_pattern "@name \"Greeting\"\n^hello$" in
+  assert (Lev.pattern_matches llre "hello");
+  assert (not (Lev.pattern_matches llre "world"));
+  Lev.close_pattern llre;
+  let product_pattern = Lev.regex_pattern "c[ao]t" in
+  let product_matches =
+    collect
+      (Lev.query_pattern equality_automaton product_pattern ~maximum_distance:0)
+  in
+  assert
+    (List.sort compare (List.map text_of_match product_matches) = ["cat"; "cot"]);
+  Lev.close_pattern product_pattern;
   Dict.close equality_dictionary;
   Lev.close_transducer equality_automaton;
 
@@ -157,6 +216,6 @@ let () =
    | exception Invalid_argument _ -> ());
 
   List.iter remove_if_present
-    [ persistent_path; persistent_path ^ ".wal";
-      vocabulary_path; vocabulary_path ^ ".wal" ];
+    [ persistent_path; persistent_path ^ ".wal"; persistent_path ^ ".wlock";
+      vocabulary_path; vocabulary_path ^ ".wal"; vocabulary_path ^ ".wlock" ];
   print_endline "OCaml binding snapshot integration passed"

@@ -129,7 +129,7 @@ pub trait SubstitutionPolicy: Clone {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::transducer::substitution_policy::{SubstitutionPolicy, SubstitutionPolicyFor};
 /// use liblevenshtein::dictionary::CharUnit;
 ///

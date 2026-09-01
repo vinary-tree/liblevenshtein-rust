@@ -25,15 +25,19 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
-//! use liblevenshtein::transducer::PriorityQueryIterator;
+//! ```rust
+//! use libdictenstein::{dynamic_dawg::DynamicDawg, Dictionary};
+//! use liblevenshtein::transducer::{Algorithm, PriorityQueryIterator};
 //!
-//! let dict = DynamicDawg::from_iter(["apple", "apply", "banana"]);
+//! let dict = DynamicDawg::<()>::new();
+//! for term in ["apple", "apply", "banana"] {
+//!     dict.insert(term);
+//! }
 //! let iter = PriorityQueryIterator::new(dict.root(), "aple", 2, Algorithm::Standard);
 //!
-//! for candidate in iter.take(3) {
-//!     println!("{}: {}", candidate.term, candidate.distance);
-//! }
+//! let candidates: Vec<_> = iter.take(3).collect();
+//! assert!(candidates.iter().all(|candidate| candidate.distance <= 2));
+//! assert!(candidates.iter().any(|candidate| candidate.term == "apple"));
 //! ```
 
 use super::transition::{
@@ -328,8 +332,17 @@ impl<N: DictionaryNode> PriorityQueryIterator<N, Unrestricted> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use libdictenstein::{dynamic_dawg::DynamicDawg, Dictionary};
+    /// use liblevenshtein::transducer::{Algorithm, PriorityQueryIterator};
+    ///
+    /// let dict = DynamicDawg::<()>::new();
+    /// dict.insert("test");
+    /// dict.insert("best");
     /// let iter = PriorityQueryIterator::new(dict.root(), "test", 2, Algorithm::Standard);
+    /// let results: Vec<_> = iter.collect();
+    /// assert_eq!(results[0].term, "test");
+    /// assert_eq!(results[0].distance, 0);
     /// ```
     pub fn new(root: N, query: &str, max_distance: usize, algorithm: Algorithm) -> Self {
         Self::with_policy(root, query, max_distance, algorithm, Unrestricted)

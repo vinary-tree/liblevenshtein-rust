@@ -14,7 +14,7 @@
 //!
 //! # Subsumption with Floats
 //!
-//! The subsumption relation is adapted for float costs with epsilon handling and
+//! The subsumption relation uses exact canonical float costs and is
 //! generalized to weighted insertion/deletion costs:
 //!
 //! Position `p1` at (i, e) subsumes `p2` at (j, f) if:
@@ -40,12 +40,9 @@
 //! state manipulation during automaton traversal.
 
 use super::algorithm::Algorithm;
-use crate::cost::{subsumes_with, SubsumptionMode, WeightedCost};
+use crate::cost::{subsumes_with, CostMonoid, SubsumptionMode, WeightedCost};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
-
-/// Epsilon for float comparisons in subsumption.
-const EPSILON: f64 = 1e-9;
 
 /// A position in the float-weighted Levenshtein automaton state.
 ///
@@ -102,6 +99,11 @@ impl PositionF64 {
             accumulated_cost >= 0.0,
             "Accumulated cost must be non-negative"
         );
+        let accumulated_cost = if accumulated_cost == 0.0 {
+            0.0
+        } else {
+            accumulated_cost
+        };
         Self {
             term_index,
             accumulated_cost,
@@ -128,6 +130,11 @@ impl PositionF64 {
             accumulated_cost >= 0.0,
             "Accumulated cost must be non-negative"
         );
+        let accumulated_cost = if accumulated_cost == 0.0 {
+            0.0
+        } else {
+            accumulated_cost
+        };
         Self {
             term_index,
             accumulated_cost,
@@ -160,7 +167,7 @@ impl PositionF64 {
     ///
     /// The subsumption formula adapts the integer version for floats and
     /// generalizes it to weighted insertion/deletion costs:
-    /// - `self.accumulated_cost <= other.accumulated_cost` (with epsilon)
+    /// - `self.accumulated_cost <= other.accumulated_cost` (exactly)
     /// - `|i - j| * max(insertion, deletion) <= (f - e)` (worst-case cost of
     ///   realigning the term index by `|i - j|` steps must fit within the cost
     ///   slack; reduces to the classic `|i - j| <= f - e` when insertion and
@@ -252,10 +259,11 @@ impl PositionF64 {
 
     /// Check if this position is approximately equal to another.
     ///
-    /// Uses epsilon tolerance for float comparison.
+    /// This diagnostic helper is never used for state identity, interning, or
+    /// subsumption. Exact product construction uses [`PartialEq`].
     pub fn approx_eq(&self, other: &PositionF64) -> bool {
         self.term_index == other.term_index
-            && (self.accumulated_cost - other.accumulated_cost).abs() < EPSILON
+            && (self.accumulated_cost - other.accumulated_cost).abs() < WeightedCost::EPSILON
             && self.is_special == other.is_special
     }
 }
@@ -383,6 +391,14 @@ mod tests {
             !p1.subsumes(&p2, Algorithm::Standard, max_distance, 1.0),
             "Higher cost position cannot subsume lower cost position"
         );
+    }
+
+    #[test]
+    fn sub_epsilon_cost_difference_never_reverses_exact_dominance() {
+        let more_expensive = PositionF64::new(3, 1.0 + 5.0e-10);
+        let cheaper = PositionF64::new(3, 1.0);
+        assert!(!more_expensive.subsumes(&cheaper, Algorithm::Standard, 8, 1.0));
+        assert!(cheaper.subsumes(&more_expensive, Algorithm::Standard, 8, 1.0));
     }
 
     #[test]
@@ -514,8 +530,9 @@ mod tests {
         let negative_zero = PositionF64::new(0, -0.0);
 
         assert!(positive_zero.approx_eq(&negative_zero));
-        assert_ne!(positive_zero, negative_zero);
-        assert_ne!(positive_zero.cmp(&negative_zero), Ordering::Equal);
+        assert_eq!(positive_zero, negative_zero);
+        assert_eq!(positive_zero.cmp(&negative_zero), Ordering::Equal);
+        assert_eq!(position_hash(&positive_zero), position_hash(&negative_zero));
 
         let nan_position = PositionF64 {
             term_index: 0,

@@ -35,18 +35,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::armenian;
 //!
 //! let rules = armenian::base();
 //!
 //! // Armenian vowel
 //! let result = rules.apply("\u{0531}");
-//! assert!(result.contains('a'), "Delays → a");
+//! assert_eq!(result, "a");
 //!
 //! // Aspirated consonant
 //! let result = rules.apply("\u{0539}");
-//! assert!(result.contains('T'), "Թ → T (aspirated)");
+//! assert_eq!(result, "t");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

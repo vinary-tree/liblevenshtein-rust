@@ -1,5 +1,27 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "documentationTopics": [
+    {"id": "overview", "description": "Purpose, scope, audience, and relationship to the rest of the Vinary Tree family."},
+    {"id": "installation", "description": "Package-manager coordinates, supported platforms, prerequisites, and installation verification."},
+    {"id": "quick-start", "description": "The shortest validated path from a fresh consumer to a useful result."},
+    {"id": "common-usage", "description": "Validated examples for the operations most users perform."},
+    {"id": "intended-usage", "description": "Validated examples for the capability's designed role, including important alternate paths."},
+    {"id": "api-reference", "description": "Every public symbol, signature, overload, generic parameter, and nullability or optionality contract."},
+    {"id": "semantics", "description": "Observable behavior, invariants, ordering, mutation, snapshot, and unsupported-combination semantics."},
+    {"id": "errors", "description": "Exceptions, results, status codes, cancellation, and failure-containment behavior."},
+    {"id": "lifecycle", "description": "Creation, deterministic closure, finalization fallback, and use-after-close behavior."},
+    {"id": "ownership", "description": "Borrowing, retention, transfer, aliasing, and resource-handoff rules."},
+    {"id": "concurrency", "description": "Thread safety, reentrancy, synchronization, and cancellation guarantees."},
+    {"id": "collections-iterators", "description": "Language-native collections, iterators, reducers, streams, and traversal behavior."},
+    {"id": "snapshots", "description": "Snapshot identity, isolation, consistency, mutation visibility, and cursor lifetime."},
+    {"id": "zero-copy-batching", "description": "Borrowed views, batch leases, buffer validity, paging, and copying tradeoffs."},
+    {"id": "examples", "description": "Syntactically and semantically validated common, intended, error, lifecycle, and performance examples."},
+    {"id": "migration", "description": "Migration from legacy coordinates, APIs, behaviors, and prior release lines."},
+    {"id": "compatibility", "description": "Runtime, ABI, platform, feature, and version compatibility guarantees."},
+    {"id": "performance", "description": "Complexity, allocation, marshalling, benchmark interpretation, and performance-sensitive usage."},
+    {"id": "security", "description": "Trust boundaries, hostile-input limits, callback safety, and vulnerability-reporting guidance."},
+    {"id": "release", "description": "Publication ownership, immutable-source provenance, registry verification, and release operations."}
+  ],
   "languages": [
     {"id": "rust", "packageManager": "crates.io", "hostIdioms": "traits; IntoIterator/Iterator; Result; Drop"},
     {"id": "c", "packageManager": "CMake/pkg-config/GitHub Releases", "hostIdioms": "opaque handles; status codes; bounded buffers; vtables"},
@@ -21,7 +43,8 @@
     {"id": "ocaml", "packageManager": "opam", "hostIdioms": "abstract types; Seq; result; Fun.protect"},
     {"id": "haskell", "packageManager": "Hackage", "hostIdioms": "type classes; Foldable; bracket; Either"},
     {"id": "lua", "packageManager": "LuaRocks", "hostIdioms": "generic-for iterators; __close; tables; error values"},
-    {"id": "raku", "packageManager": "zef/fez", "hostIdioms": "NativeCall; Iterable/Positional/Associative; LEAVE; exceptions"}
+    {"id": "raku", "packageManager": "zef/fez", "hostIdioms": "NativeCall; Iterable/Positional/Associative; LEAVE; exceptions"},
+    {"id": "julia", "packageManager": "General registry/Julia package server", "hostIdioms": "ccall; multiple dispatch; AbstractDict/AbstractSet; iteration; do blocks; deterministic close and finalizers; @cfunction interfaces"}
   ],
   "projects": [
     {
@@ -29,12 +52,13 @@
       "role": "core-abi",
       "root": "../vinary-tree-interop",
       "unitDomains": ["byte", "unicode-scalar", "u64", "not-unit-bearing"],
-      "capabilities": ["retained-resource", "dictionary-snapshot", "dictionary-visit", "dictionary-graph", "dictionary-entries", "snapshot-identity", "scalar-wfst"],
+      "capabilities": ["retained-resource", "dictionary-snapshot", "dictionary-visit", "dictionary-graph", "dictionary-entries", "snapshot-identity", "scalar-wfst", "lattice-value"],
       "declaredLanguageEvidence": {
         "rust": "Cargo.toml", "c": "include/vinary_tree_interop.h", "cpp": "include/vinary_tree_interop.h",
         "python": "bindings/python", "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm",
         "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
-        "swift": "bindings/swift", "fortran": "bindings/fortran", "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+        "swift": "bindings/swift", "fortran": "bindings/fortran", "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
+        "raku": "bindings/raku", "julia": "bindings/julia/VinaryTreeInterop"
       }
     },
     {
@@ -43,7 +67,9 @@
       "root": "../llattice",
       "unitDomains": ["not-unit-bearing"],
       "capabilities": ["lattice-trait", "numeric-lattices", "boolean-lattice", "option-lattice", "set-lattice", "vector-content-lattice"],
-      "declaredLanguageEvidence": {"rust": "src/lib.rs"}
+      "declaredLanguageEvidence": {
+        "rust": "src/lib.rs", "raku": "bindings/raku", "julia": "bindings/julia/LLattice"
+      }
     },
     {
       "id": "libdictenstein",
@@ -56,7 +82,8 @@
         "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm", "clojure": "bindings/clojure",
         "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
         "clojurescript": "bindings/javascript/cljs", "swift": "bindings/swift", "ruby": "bindings/ruby", "fortran": "bindings/fortran",
-        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
+        "raku": "bindings/raku", "julia": "bindings/julia/Libdictenstein"
       }
     },
     {
@@ -70,7 +97,8 @@
         "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm", "clojure": "bindings/clojure",
         "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
         "clojurescript": "bindings/javascript/cljs", "swift": "bindings/swift", "ruby": "bindings/ruby", "fortran": "bindings/fortran",
-        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
+        "raku": "bindings/raku", "julia": "bindings/julia/Liblevenshtein"
       }
     },
     {
@@ -81,7 +109,8 @@
       "capabilities": ["semiring", "wfst", "composition", "lattice", "algorithms", "cfg", "differentiable", "pushdown", "symbolic", "acoustic-asr-ctc", "correction-layers", "llm-decoder", "custom-provider"],
       "declaredLanguageEvidence": {
         "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "javascript": "bindings/javascript",
-        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs"
+        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs",
+        "raku": "bindings/raku", "julia": "bindings/julia/LlingLlang"
       }
     },
     {
@@ -92,7 +121,8 @@
       "capabilities": ["dictionary-backend", "levenshtein-wfst", "universal-wfst", "generalized-wfst", "phonetic-wfst", "wallbreaker-wfst", "fzf-wfst", "resource-bridge"],
       "declaredLanguageEvidence": {
         "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "javascript": "bindings/javascript",
-        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs"
+        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs",
+        "raku": "bindings/raku", "julia": "bindings/julia/Duallity"
       }
     },
     {
@@ -102,7 +132,7 @@
       "unitDomains": ["not-unit-bearing"],
       "capabilities": ["native-napi-runtime", "browser-wasm-runtime", "wasi-runtime", "resource-table", "runtime-identity"],
       "declaredLanguageEvidence": {"javascript": "package.json", "typescript": "index.d.ts"},
-      "reviewRequiredLanguages": ["rust", "c", "cpp", "python", "java", "kotlin", "scala", "clojure", "csharp", "fsharp", "go", "clojurescript", "swift", "ruby", "fortran", "ocaml", "haskell", "lua", "raku"]
+      "reviewRequiredLanguages": ["rust", "c", "cpp", "python", "java", "kotlin", "scala", "clojure", "csharp", "fsharp", "go", "clojurescript", "swift", "ruby", "fortran", "ocaml", "haskell", "lua", "raku", "julia"]
     },
     {
       "id": "liblevenshtein-npm",
@@ -111,7 +141,7 @@
       "unitDomains": ["byte", "unicode-scalar", "u64"],
       "capabilities": ["unscoped-package-bridge"],
       "declaredLanguageEvidence": {"javascript": "package.json", "typescript": "index.d.ts", "clojurescript": "clojurescript.mjs"},
-      "reviewRequiredLanguages": ["rust", "c", "cpp", "python", "java", "kotlin", "scala", "clojure", "csharp", "fsharp", "go", "swift", "ruby", "fortran", "ocaml", "haskell", "lua", "raku"]
+      "reviewRequiredLanguages": ["rust", "c", "cpp", "python", "java", "kotlin", "scala", "clojure", "csharp", "fsharp", "go", "swift", "ruby", "fortran", "ocaml", "haskell", "lua", "raku", "julia"]
     }
   ],
   "cellOverrides": {}

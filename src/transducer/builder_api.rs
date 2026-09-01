@@ -13,7 +13,7 @@ use libdictenstein::Dictionary;
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::prelude::*;
 ///
 /// let dict = DoubleArrayTrie::from_terms(vec!["test", "testing", "tested"]);
@@ -68,11 +68,17 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// let results = transducer
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test", "testing"]);
+    /// let transducer = Transducer::standard(dict);
+    /// let results: Vec<_> = transducer
     ///     .query_builder("test")
     ///     .max_distance(2)  // Allow up to 2 edits
-    ///     .execute();
+    ///     .execute()
+    ///     .collect();
+    /// assert!(results.contains(&"test".to_owned()));
     /// ```
     pub fn max_distance(mut self, distance: usize) -> Self {
         self.max_distance = distance;
@@ -83,11 +89,18 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// let results = transducer
-    ///     .query_builder("test")
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test"]);
+    /// let transducer = Transducer::standard(dict);
+    /// let results: Vec<_> = transducer
+    ///     .query_builder("tset")
+    ///     .max_distance(1)
     ///     .algorithm(Algorithm::Transposition)
-    ///     .execute();
+    ///     .execute()
+    ///     .collect();
+    /// assert_eq!(results, ["test"]);
     /// ```
     pub fn algorithm(mut self, algorithm: Algorithm) -> Self {
         self.algorithm = algorithm;
@@ -147,25 +160,38 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test", "best", "rest"]);
+    /// let transducer = Transducer::standard(dict);
     /// let results: Vec<_> = transducer
     ///     .query_builder("test")
     ///     .max_distance(2)
     ///     .ordered()
     ///     .take(5)  // Get top 5 closest matches
+    ///     .map(|candidate| candidate.term)
     ///     .collect();
+    /// assert_eq!(results.first().map(String::as_str), Some("test"));
     /// ```
     ///
     /// # Prefix Matching
     ///
     /// For prefix matching, chain `.prefix()` after this method:
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test", "tested", "best"]);
+    /// let transducer = Transducer::standard(dict);
     /// let results: Vec<_> = transducer
     ///     .query_builder("te")
+    ///     .max_distance(0)
     ///     .ordered()
     ///     .prefix()  // Match terms starting with query
+    ///     .map(|candidate| candidate.term)
     ///     .collect();
+    /// assert_eq!(results, ["test", "tested"]);
     /// ```
     pub fn ordered(self) -> OrderedQueryIterator<D::Node, P>
     where
@@ -187,11 +213,16 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test", "best"]);
+    /// let transducer = Transducer::standard(dict);
     /// let results = transducer
     ///     .query_builder("test")
     ///     .max_distance(1)
     ///     .collect_vec();
+    /// assert_eq!(results.len(), 2);
     /// ```
     pub fn collect_vec(self) -> Vec<String>
     where
@@ -204,11 +235,17 @@ impl<'a, D: Dictionary, P: SubstitutionPolicy> QueryBuilder<'a, D, P> {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
-    /// let results = transducer
+    /// ```rust
+    /// use liblevenshtein::prelude::*;
+    ///
+    /// let dict = DoubleArrayTrie::from_terms(["test", "best", "rest"]);
+    /// let transducer = Transducer::standard(dict);
+    /// let results: Vec<_> = transducer
     ///     .query_builder("test")
     ///     .max_distance(2)
-    ///     .limit(10);
+    ///     .limit(2)
+    ///     .collect();
+    /// assert_eq!(results.len(), 2);
     /// ```
     pub fn limit(self, n: usize) -> impl Iterator<Item = String>
     where

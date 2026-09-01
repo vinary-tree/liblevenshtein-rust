@@ -18,7 +18,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::portuguese;
 //!
 //! // European Portuguese - uvular R, s → sh before consonants

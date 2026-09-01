@@ -197,7 +197,7 @@ pub const MAX_TOTAL_EXPANSION: usize = 100;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::{has_position_dependent_rules, orthography_rules, phonetic_rules};
 ///
 /// // orthography_rules contains rule_silent_e_final with Context::Final
@@ -282,7 +282,7 @@ pub fn can_apply_at<U: PhoneticUnit>(rule: &RewriteRule<U>, s: &[Phone<U>], pos:
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::phonetic::{apply_rule_at, Phone, Context, RewriteRule};
 ///
 /// let rule = RewriteRule {
@@ -602,18 +602,42 @@ impl<U: PhoneticUnit> NormalizationResult<U> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// // With rules u -> you and you -> u:
-/// // Input "u" will detect a cycle and return {u, you}
-/// match apply_rules_with_cycle_detection(&rules, &phones, fuel) {
+/// ```rust
+/// use liblevenshtein::phonetic::{
+///     apply_rules_with_cycle_detection, ContextByte, NormalizationResult,
+///     PhoneByte, RewriteRuleByte,
+/// };
+///
+/// let ab = vec![PhoneByte::Vowel(b'a'), PhoneByte::Consonant(b'b')];
+/// let ba = vec![PhoneByte::Consonant(b'b'), PhoneByte::Vowel(b'a')];
+/// let rules = vec![
+///     RewriteRuleByte {
+///         rule_id: 1,
+///         rule_name: "ab to ba".into(),
+///         pattern: ab.clone(),
+///         replacement: ba.clone(),
+///         context: ContextByte::Anywhere,
+///         weight: 0.0,
+///         syllable_condition: None,
+///     },
+///     RewriteRuleByte {
+///         rule_id: 2,
+///         rule_name: "ba to ab".into(),
+///         pattern: ba.clone(),
+///         replacement: ab.clone(),
+///         context: ContextByte::Anywhere,
+///         weight: 0.0,
+///         syllable_condition: None,
+///     },
+/// ];
+///
+/// match apply_rules_with_cycle_detection(&rules, &ab, 100) {
 ///     NormalizationResult::Cycle(forms) => {
-///         // forms contains all equivalent normalizations
-///         let canonical = forms.iter().min_by_key(|f| f.len()).unwrap();
+///         assert_eq!(forms.len(), 2);
+///         assert!(forms.contains(&ab));
+///         assert!(forms.contains(&ba));
 ///     }
-///     NormalizationResult::FixedPoint(result) => {
-///         // Normal case - no cycle
-///     }
-///     _ => {}
+///     other => panic!("expected a cycle, got {other:?}"),
 /// }
 /// ```
 pub fn apply_rules_with_cycle_detection<U: PhoneticUnit>(

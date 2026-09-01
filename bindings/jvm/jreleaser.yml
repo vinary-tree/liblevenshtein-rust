@@ -1,6 +1,6 @@
 project:
   name: liblevenshtein
-  version: 4.0.0-rc.4
+  version: 4.0.0-rc.6
   description: A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata.
   authors:
     - Dylon Edwards

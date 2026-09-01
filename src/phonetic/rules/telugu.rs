@@ -39,7 +39,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::telugu;
 //!
 //! let rules = telugu::base();

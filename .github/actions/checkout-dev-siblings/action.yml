@@ -18,9 +18,19 @@ inputs:
     required: false
     default: ""
   ref:
-    description: Git ref (branch, tag, or SHA) to check out for the sibling crates.
+    description: >
+      Baseline development ref. The triggering branch is tried independently
+      for every non-llattice sibling and used wherever that exact remote branch
+      exists, unless a coordinated ref is supplied explicitly.
     required: false
     default: master
+  coordinated-ref:
+    description: >
+      Optional development branch to use for each sibling where that exact
+      remote branch exists; repositories without it retain their configured
+      per-owner or baseline fallback. Ignored when source-ref-manifest is set.
+    required: false
+    default: ""
   llattice-ref:
     description: Exact llattice ref; defaults to `ref`.
     required: false
@@ -32,11 +42,11 @@ inputs:
   lling-llang-ref:
     description: Exact lling-llang ref; defaults to `ref`.
     required: false
-    default: "release/4.0.0-rc.4"
+    default: ""
   duallity-ref:
     description: Exact duallity ref; defaults to `ref`.
     required: false
-    default: "release/4.0.0-rc.4"
+    default: ""
   interop-ref:
     description: Exact vinary-tree-interop ref; defaults to `ref`.
     required: false
@@ -55,6 +65,17 @@ runs:
   steps:
     - name: Clone sibling crates into the workspace parent
       shell: bash
+      env:
+        SOURCE_REF_MANIFEST: ${{ inputs.source-ref-manifest }}
+        BASELINE_REF: ${{ inputs.ref }}
+        COORDINATED_REF: ${{ inputs.coordinated-ref }}
+        LLATTICE_REF: ${{ inputs.llattice-ref }}
+        LIBDICTENSTEIN_REF: ${{ inputs.libdictenstein-ref }}
+        LLING_LLANG_REF: ${{ inputs.lling-llang-ref }}
+        DUALLITY_REF: ${{ inputs.duallity-ref }}
+        INTEROP_REF: ${{ inputs.interop-ref }}
+        JAVASCRIPT_RUNTIME_REF: ${{ inputs.javascript-runtime-ref }}
+        LIBLEVENSHTEIN_NPM_REF: ${{ inputs.liblevenshtein-npm-ref }}
       run: |
         set -euo pipefail
         # The main repo is checked out at $GITHUB_WORKSPACE; its parent is where
@@ -62,31 +83,49 @@ runs:
         # libdictenstein consumes llattice, lling-llang consumes both dictionary
         # crates, and duallity consumes the three lower layers.
         parent="$(dirname "$GITHUB_WORKSPACE")"
-        manifest="${{ inputs.source-ref-manifest }}"
+        manifest="$SOURCE_REF_MANIFEST"
         if [ -n "$manifest" ]; then
           if [[ "$manifest" != /* ]]; then
             manifest="$GITHUB_WORKSPACE/$manifest"
           fi
           test -f "$manifest"
         fi
+        event_ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}"
+        coordinated_ref="$COORDINATED_REF"
+        if [ -z "$coordinated_ref" ]; then
+          coordinated_ref="$event_ref"
+        fi
+        if [[ "$event_ref" == release/* ]]; then
+          development_ref="$event_ref"
+        else
+          development_ref="$BASELINE_REF"
+        fi
+        git check-ref-format --branch "$development_ref" >/dev/null
         for repo in vinary-tree-interop javascript-runtime liblevenshtein-npm llattice libdictenstein lling-llang duallity; do
           if [ -n "$manifest" ]; then
             selected_ref="$(python3 "$GITHUB_WORKSPACE/scripts/release_source_refs.py" \
               --manifest "$manifest" --component "$repo")"
           else
             case "$repo" in
-              vinary-tree-interop) selected_ref="${{ inputs.interop-ref }}" ;;
-              javascript-runtime) selected_ref="${{ inputs.javascript-runtime-ref }}" ;;
-              liblevenshtein-npm) selected_ref="${{ inputs.liblevenshtein-npm-ref }}" ;;
-              llattice) selected_ref="${{ inputs.llattice-ref }}" ;;
-              libdictenstein) selected_ref="${{ inputs.libdictenstein-ref }}" ;;
-              lling-llang) selected_ref="${{ inputs.lling-llang-ref }}" ;;
-              duallity) selected_ref="${{ inputs.duallity-ref }}" ;;
+              vinary-tree-interop) selected_ref="$INTEROP_REF" ;;
+              javascript-runtime) selected_ref="$JAVASCRIPT_RUNTIME_REF" ;;
+              liblevenshtein-npm) selected_ref="$LIBLEVENSHTEIN_NPM_REF" ;;
+              llattice) selected_ref="$LLATTICE_REF" ;;
+              libdictenstein) selected_ref="$LIBDICTENSTEIN_REF" ;;
+              lling-llang) selected_ref="$LLING_LLANG_REF" ;;
+              duallity) selected_ref="$DUALLITY_REF" ;;
             esac
             if [ -z "$selected_ref" ]; then
-              selected_ref="${{ inputs.ref }}"
+              selected_ref="$development_ref"
+            fi
+            if [ -n "$coordinated_ref" ] &&
+               git ls-remote --exit-code --heads \
+                 "https://github.com/vinary-tree/$repo.git" \
+                 "$coordinated_ref" >/dev/null 2>&1; then
+              selected_ref="$coordinated_ref"
             fi
           fi
+          git check-ref-format --branch "$selected_ref" >/dev/null
           dest="$parent/$repo"
           if [ -d "$dest/.git" ]; then
             echo "::group::Updating $repo to $selected_ref"

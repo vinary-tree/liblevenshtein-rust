@@ -1,11 +1,12 @@
 require "thread"
 require_relative "liblevenshtein/version"
 require_relative "liblevenshtein/native"
+require_relative "liblevenshtein/generated_enums"
 
 module VinaryTree
   module Liblevenshtein
-    OK = 0
-    END_STATUS = 1
+    OK = Status::OK
+    END_STATUS = Status::END_OF_STREAM
     BYTE_DOMAIN = 1
     UNICODE_DOMAIN = 2
     U64_DOMAIN = 3
@@ -89,10 +90,10 @@ module VinaryTree
     end
 
     class Transducer
-      STANDARD = 0
-      TRANSPOSITION = 1
-      MERGE_AND_SPLIT = 2
-      DAMERAU_LEVENSHTEIN = 3
+      STANDARD = Algorithm::STANDARD
+      TRANSPOSITION = Algorithm::TRANSPOSITION
+      MERGE_AND_SPLIT = Algorithm::MERGE_AND_SPLIT
+      DAMERAU_LEVENSHTEIN = Algorithm::DAMERAU_LEVENSHTEIN
 
       def initialize(dictionary, algorithm: STANDARD)
         raise ArgumentError, "dictionary must respond to with_resource" unless dictionary.respond_to?(:with_resource)
@@ -107,17 +108,17 @@ module VinaryTree
         ObjectSpace.define_finalizer(self, ConcurrentHandle.finalizer(@handle))
       end
 
-      def query(text, maximum_distance, order: 0)
+      def query(text, maximum_distance, order: QueryOrder::TRAVERSAL)
         start_query(:llev_transducer_query_utf8, text.b, maximum_distance, order)
       end
 
-      def query_bytes(bytes, maximum_distance)
-        start_query(:llev_transducer_query_bytes, bytes.b, maximum_distance, 0)
+      def query_bytes(bytes, maximum_distance, order: QueryOrder::TRAVERSAL)
+        start_query(:llev_transducer_query_bytes, bytes.b, maximum_distance, order)
       end
 
-      def query_u64(tokens, maximum_distance)
+      def query_u64(tokens, maximum_distance, order: QueryOrder::TRAVERSAL)
         packed = tokens.pack("Q*")
-        start_query(:llev_transducer_query_u64, packed, maximum_distance, 0, tokens.length)
+        start_query(:llev_transducer_query_u64, packed, maximum_distance, order, tokens.length)
       end
 
       def query_pattern(pattern, maximum_distance)
@@ -249,8 +250,8 @@ module VinaryTree
     end
 
     class PhoneticRuleSet
-      ENGLISH_ORTHOGRAPHY = 0
-      ENGLISH_PHONETIC = 1
+      ENGLISH_ORTHOGRAPHY = PhoneticRuleSetKind::ENGLISH_ORTHOGRAPHY
+      ENGLISH_PHONETIC = PhoneticRuleSetKind::ENGLISH_PHONETIC
       def self.parse(source)
         output = Native.pointer_output; Liblevenshtein.check(Native.llev_phonetic_rules_parse(source.b, source.bytesize, output)); new(Native.read_pointer(output))
       end

@@ -284,7 +284,7 @@ Given grammar $`G = (N, \Sigma , P, S)`$:
 1. Each non-terminal → sub-WFST
 2. Production $`A \to  \alpha`$ becomes path through `T_A`
 3. Terminals = input/output symbols
-4. Non-terminals = ε-transitions to sub-WFSTs
+4. Non-terminals = $`\varepsilon`$-transitions to sub-WFSTs
 
 **Example** (simplified Rholang):
 ```
@@ -702,7 +702,7 @@ struct LatticeEdge {
 ### 10.2 Efficient Operations
 
 **Composition**:
-- Use **filter** for ε-removal
+- Use **filter** for $`\varepsilon`$-removal
 - **Determinize** to minimize states
 - **Minimize** for smallest equivalent WFST
 
@@ -999,7 +999,7 @@ Layer 0 ranks by usage frequency.
 
 ### 15.5 Process Calculus
 
-10. **Milner, R.** (1999). *Communicating and Mobile Systems: The π-Calculus*. Cambridge University Press.
+10. **Milner, R.** (1999). *Communicating and Mobile Systems: The $`\pi`$-Calculus*. Cambridge University Press.
 
 11. **Honda, K., Vasconcelos, V. T., & Kubo, M.** (1998). "Language Primitives and Type Discipline for Structured Communication-Based Programming." *ESOP 1998*.
 

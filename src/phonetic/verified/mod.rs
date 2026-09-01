@@ -22,16 +22,19 @@
 //!
 //! # Usage
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::verified::{zompist_nfa_char, rules_to_nfa_char};
-//! use liblevenshtein::phonetic::rules::zompist_rules_char;
+//! use liblevenshtein::phonetic::rules::orthography_rules_char;
 //!
 //! // Get pre-compiled NFA for all Zompist rules
 //! let nfa = zompist_nfa_char();
+//! assert!(nfa.accepts("ph"));
 //!
-//! // Or compile a custom rule set
-//! let custom_rules = vec![...];
+//! // Or compile a selected rule set supplied by an application.
+//! let custom_rules = orthography_rules_char();
 //! let custom_nfa = rules_to_nfa_char(&custom_rules);
+//! assert!(custom_nfa.accepts("ch"));
+//! assert!(!custom_nfa.accepts("not-a-rule-pattern"));
 //! ```
 
 pub mod rules_to_nfa;

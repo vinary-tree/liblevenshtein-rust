@@ -1,0 +1,14 @@
+examine_globs = ["src/time_series/elastic/walker.rs"]
+examine_re = ["replace RangeProductStateArena<K>::exactly_equal -> bool with true"]
+additional_cargo_args = [
+  "--locked",
+  "--offline",
+  "--lib",
+  "fingerprint_collision_never_merges_unequal_exact_residuals",
+]
+test_package = ["liblevenshtein"]
+copy_target = false
+copy_vcs = false
+gitignore = true
+minimum_test_timeout = 60.0
+timeout_multiplier = 3.0

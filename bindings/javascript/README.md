@@ -3,17 +3,22 @@
 This package is the project-local JavaScript, TypeScript, and ClojureScript
 facade for liblevenshtein. It does not contain a second copy of the runtime.
 Every entry point re-exports the liblevenshtein namespace from the exact same
-version of `@vinary-tree/vinary-tree`, so objects created by
+version of `@vinary-tree/javascript-runtime`, so objects created by
 `@vinary-tree/libdictenstein` can be passed directly to `transducer()`.
 
 ```ts
 import { dynamicDawg } from "@vinary-tree/libdictenstein";
 import { transducer } from "@vinary-tree/liblevenshtein";
 
-using dictionary = dynamicDawg(["cat", "cot", "cut"]);
-using automaton = transducer(dictionary, "standard");
-using cursor = automaton.query("cat", 1);
-for (const match of cursor) console.log(match);
+using dictionary = dynamicDawg();
+dictionary.set("cat", 1n).set("cot", 2n).set("cut", null);
+const automaton = transducer(dictionary, "standard");
+try {
+  using cursor = automaton.query("cat", 1);
+  for (const match of cursor) console.log(match);
+} finally {
+  automaton.close();
+}
 ```
 
 Node selects the native N-API runtime by default. Use
@@ -35,7 +40,7 @@ The ClojureScript facade mirrors the Clojure names: `transducer`, `query`,
 | Languages/runtime | JavaScript, TypeScript, and ClojureScript on Node.js, browsers, or WASI |
 | Support tier | Tier 1 |
 | Distribution | npm package `@vinary-tree/liblevenshtein` |
-| Native boundary | The facade delegates to the singleton `@vinary-tree/vinary-tree` runtime: native N-API by default, WebAssembly or WASI through explicit exports. |
+| Native boundary | The facade delegates to the singleton `@vinary-tree/javascript-runtime` runtime: native N-API by default, WebAssembly or WASI through explicit exports. |
 | Canonical facade source | [`bindings/javascript`](../../bindings/javascript) |
 
 The support tier controls release gating, not semantic quality: every tier has
@@ -69,6 +74,21 @@ The idiomatic facade groups the stable surface into these concepts:
 | Transducer | Immutable query configuration plus a retained dictionary provider; construction is constant-time with respect to dictionary size. |
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
+
+### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same.
 
 Strings are Unicode; `Uint8Array` and `BigUint64Array` select byte and packed-token queries. IDs are `bigint`, never lossy JavaScript numbers. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
@@ -124,7 +144,7 @@ such operation with its reviewed rationale; an unreasoned absence fails CI.
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
 | Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary while returning bounded, host-owned arrays. |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
@@ -137,7 +157,7 @@ exhaustive coverage is governed by [`bindings/api-surface-map.json`](../../bindi
 
 ## Ownership, snapshots, and resource handoff
 
-Use explicit resource management (`using`) where available or call `close()`/`close!` in `finally`. GC finalizers are fallback containment.
+Dictionaries and query cursors implement `Symbol.dispose` and support `using`. Close transducers and phonetic resources in `finally`; ClojureScript uses `close!`. GC finalizers are fallback containment.
 
 A transducer retains the provider resource, and a query retains the revision
 visible at query start. Closing the original dictionary or publishing later
@@ -145,22 +165,23 @@ mutations cannot invalidate that query. Acquisition either completes with one
 owned retain or fails with no ownership transfer. Teardown order is therefore
 free across dictionary, transducer, and completed query handles.
 
-Borrowed results are intentionally lexical. Copy data that must outlive the
-callback; retaining a raw address, slice, memory segment, or foreign pointer is
-an API violation even when the next operation happens to reuse the same arena.
+Matches and batches are copied into host-owned values before returning to
+JavaScript. They remain valid independently of the cursor, and no native lease
+or raw pointer is exposed to user code.
 
 ## Errors and failure containment
 
-Status codes become `VinaryTreeError` values carrying project, operation, status, and native diagnostic fields.
+Native failures become thrown `Error` values carrying a copied native diagnostic. The facade does not expose the numeric status, so callers handle failures by operation and error category rather than parsing message text.
 
-Malformed utf-8, unsupported unit domains, incompatible resource versions, closed handles, invalid bounds, allocation failures, provider faults, and contained rust panics are distinct failures. Never parse diagnostic prose to
-branch on an error: inspect the typed status/exception first and treat the
-message as human context. Diagnostics must be copied before another native
-call on the same thread.
+Malformed UTF-8, unsupported unit domains, incompatible resource versions,
+closed handles, invalid bounds, allocation failures, provider faults, and
+contained Rust panics remain distinct native causes. The facade preserves their
+diagnostics but intentionally does not promise a public numeric status; branch
+on the JavaScript error class and failing operation, never diagnostic prose.
 
 ## Concurrency and reentrancy
 
-Independent handles may be used concurrently. A cursor is single-consumer, callbacks are synchronous, and borrowed batches expire on callback return.
+Wrapper objects belong to one JavaScript runtime instance and Worker and must not be transferred between Workers. A cursor is single-consumer; returned matches and batches are host-owned values.
 
 Snapshot capture is a linearization point, not a dictionary-wide query lock.
 First-party immutable snapshots can be walked concurrently. A foreign provider

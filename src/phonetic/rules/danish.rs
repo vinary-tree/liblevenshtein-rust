@@ -24,18 +24,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::danish;
 //!
 //! let rules = danish::base();
 //!
 //! // Special vowels
 //! let result = rules.apply("æ");
-//! assert!(result.contains("æ"), "æ → AE");
+//! assert_eq!(result, "æ");
 //!
 //! // Old spelling for å
 //! let result = rules.apply("aa");
-//! assert!(result.contains('O'), "aa → O");
+//! assert_eq!(result, "ɔ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

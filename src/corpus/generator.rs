@@ -25,7 +25,7 @@ use std::collections::HashMap;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::corpus::TypoGenerator;
 ///
 /// let mut gen = TypoGenerator::new(42);
@@ -235,15 +235,23 @@ impl TypoGenerator {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use liblevenshtein::corpus::{BigTxtCorpus, QueryWorkload};
 ///
+/// # fn main() -> std::io::Result<()> {
 /// let corpus = BigTxtCorpus::load("data/corpora/big.txt")?;
-/// let workload = QueryWorkload::from_corpus(&corpus, 1000, 42);
+/// let workload = QueryWorkload::from_frequencies(
+///     &corpus.frequencies,
+///     corpus.total_tokens(),
+///     1000,
+///     42,
+/// );
 ///
 /// for (query, expected_freq) in &workload.queries {
 ///     // Test with realistic query distribution...
 /// }
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct QueryWorkload {

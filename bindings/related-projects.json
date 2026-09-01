@@ -4,15 +4,15 @@
     "ref": "v0.1.0"
   },
   "libdictenstein": {
-    "version": "4.0.0-rc.4",
-    "ref": "v4.0.0-rc.4"
+    "version": "4.0.0-rc.6",
+    "ref": "v4.0.0-rc.6"
   },
   "lling-llang": {
-    "version": "4.0.0-rc.4",
-    "ref": "v4.0.0-rc.4"
+    "version": "4.0.0-rc.6",
+    "ref": "v4.0.0-rc.6"
   },
   "duallity": {
-    "version": "4.0.0-rc.4",
-    "ref": "v4.0.0-rc.4"
+    "version": "4.0.0-rc.6",
+    "ref": "v4.0.0-rc.6"
   }
 }

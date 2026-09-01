@@ -10,14 +10,11 @@ use super::packed_special::{
 };
 use super::packed_standard::PackedStandardMachine;
 use super::query_result::QueryResult;
-use super::state::State;
 use super::transition::{
     initial_state_affine, AffineTransitionSettings, FinishMode, TransitionSettings,
     UnitCostFrontier, UnitCostMachine,
 };
-use super::variants::{AffineGapParams, AffineV};
-#[cfg(feature = "perf-instrumentation")]
-use super::Position;
+use super::variants::AffineGapParams;
 use super::{Algorithm, StatePool, SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
 use libdictenstein::{CharUnit, DictionaryNode, DictionaryTraversalRoot};
 use std::collections::VecDeque;
@@ -221,18 +218,18 @@ where
 {
     #[inline(always)]
     fn step_prepared(&mut self, source: u64, policy: &P, label: U, query: &[U]) -> Option<u64> {
-        self.step_prepared(source, policy, label, query)
+        PackedStandardMachine::step_prepared(self, source, policy, label, query)
     }
 
     #[inline(always)]
     fn prepare_source_row(&self, source: u64) -> Option<ExactLabelDfaRow> {
-        self.prepare_source_row(source)
+        PackedStandardMachine::prepare_source_row(self, source)
     }
 
     #[cfg(feature = "perf-instrumentation")]
     #[inline(always)]
     fn source_row_label_is_class_zero(&self, label: U) -> bool {
-        self.source_row_label_is_class_zero(label)
+        PackedStandardMachine::source_row_label_is_class_zero(self, label)
     }
 
     #[inline(always)]
@@ -243,17 +240,17 @@ where
         label: U,
         query: &[U],
     ) -> Option<u64> {
-        self.step_prepared_source_row(source, policy, label, query)
+        PackedStandardMachine::step_prepared_source_row(self, source, policy, label, query)
     }
 
     #[inline(always)]
     fn complete_distance(&self, frontier: u64) -> Option<usize> {
-        self.complete_distance(frontier)
+        PackedStandardMachine::complete_distance(self, frontier)
     }
 
     #[inline(always)]
     fn min_distance(&self, frontier: u64) -> Option<usize> {
-        self.min_distance(frontier)
+        PackedStandardMachine::min_distance(self, frontier)
     }
 
     #[inline(always)]
@@ -269,7 +266,7 @@ where
     #[cfg(feature = "perf-instrumentation")]
     #[inline(always)]
     fn active_len(&self, frontier: u64) -> usize {
-        self.active_len(frontier)
+        PackedStandardMachine::active_len(self, frontier)
     }
 }
 
@@ -281,18 +278,18 @@ where
 {
     #[inline(always)]
     fn step_prepared(&mut self, source: u64, _policy: &P, label: U, _query: &[U]) -> Option<u64> {
-        self.step_prepared(source, label)
+        PackedSpecialMachine::step_prepared(self, source, label)
     }
 
     #[inline(always)]
     fn prepare_source_row(&self, source: u64) -> Option<ExactLabelDfaRow> {
-        self.prepare_source_row(source)
+        PackedSpecialMachine::prepare_source_row(self, source)
     }
 
     #[cfg(feature = "perf-instrumentation")]
     #[inline(always)]
     fn source_row_label_is_class_zero(&self, label: U) -> bool {
-        self.source_row_label_is_class_zero(label)
+        PackedSpecialMachine::source_row_label_is_class_zero(self, label)
     }
 
     #[inline(always)]
@@ -303,17 +300,17 @@ where
         label: U,
         _query: &[U],
     ) -> Option<u64> {
-        self.step_prepared_source_row(source, label)
+        PackedSpecialMachine::step_prepared_source_row(self, source, label)
     }
 
     #[inline(always)]
     fn complete_distance(&self, frontier: u64) -> Option<usize> {
-        self.complete_distance(frontier)
+        PackedSpecialMachine::complete_distance(self, frontier)
     }
 
     #[inline(always)]
     fn min_distance(&self, frontier: u64) -> Option<usize> {
-        self.min_distance(frontier)
+        PackedSpecialMachine::min_distance(self, frontier)
     }
 
     #[inline(always)]
@@ -347,7 +344,7 @@ where
     #[cfg(feature = "perf-instrumentation")]
     #[inline(always)]
     fn active_len(&self, frontier: u64) -> usize {
-        self.active_len(frontier)
+        PackedSpecialMachine::active_len(self, frontier)
     }
 }
 
@@ -599,7 +596,7 @@ where
     U: CharUnit,
     P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
 {
-    type Frontier = State;
+    type Frontier = UnitCostFrontier;
 
     #[inline]
     fn step(
@@ -613,8 +610,8 @@ where
         substring_mode: bool,
     ) -> Option<QueryStep<Self::Frontier>> {
         self.transitions
-            .transition_affine(
-                frontier,
+            .transition_affine_generated(
+                *frontier,
                 state_pool,
                 policy,
                 label,
@@ -623,11 +620,9 @@ where
             )
             .map(|frontier| QueryStep {
                 #[cfg(feature = "perf-instrumentation")]
-                position_count: frontier.len(),
+                position_count: self.transitions.active_len(frontier),
                 #[cfg(feature = "perf-instrumentation")]
-                storage_bytes: frontier
-                    .len()
-                    .saturating_mul(std::mem::size_of::<Position>()),
+                storage_bytes: std::mem::size_of::<UnitCostFrontier>(),
                 frontier,
             })
     }
@@ -639,11 +634,17 @@ where
         query_length: usize,
         substring_mode: bool,
     ) -> Option<usize> {
-        if substring_mode {
-            frontier.min_distance()
-        } else {
-            frontier.infer_distance_with::<AffineV>(query_length, self.params)
-        }
+        self.transitions.finish_affine_distance(
+            *frontier,
+            query_length,
+            self.params,
+            substring_mode,
+        )
+    }
+
+    #[inline(always)]
+    fn unit_frontier(&self, frontier: &Self::Frontier) -> Option<UnitCostFrontier> {
+        Some(*frontier)
     }
 }
 
@@ -729,7 +730,7 @@ enum QueryIteratorInner<N: DictionaryNode, R, P: SubstitutionPolicy> {
         >,
     ),
     Unit(PathQueryIteratorCore<N, R, P, UnitCostQueryKernel<N::Unit>, UnitCostFrontier>),
-    Affine(PathQueryIteratorCore<N, R, P, AffineQueryKernel<N::Unit>, State>),
+    Affine(PathQueryIteratorCore<N, R, P, AffineQueryKernel<N::Unit>, UnitCostFrontier>),
 }
 
 enum PathQueryIteratorCore<N, R, P, K, F: 'static>
@@ -890,7 +891,7 @@ impl<
         );
         let (traversal, root) = TraversalSession::capture(root);
         let inner = if static_packed_query_dispatch_disabled() {
-            QueryIteratorInner::Unit(PathQueryIteratorCore::new(
+            QueryIteratorInner::Unit(PathQueryIteratorCore::from_captured_traversal(
                 root,
                 traversal,
                 frontier,
@@ -905,8 +906,8 @@ impl<
             ))
         } else {
             match transitions {
-                UnitCostMachine::PackedStandard(transitions) => {
-                    QueryIteratorInner::PackedStandard(PathQueryIteratorCore::new(
+                UnitCostMachine::PackedStandard(transitions) => QueryIteratorInner::PackedStandard(
+                    PathQueryIteratorCore::from_captured_traversal(
                         root,
                         traversal,
                         frontier,
@@ -915,10 +916,10 @@ impl<
                         policy,
                         substring_mode,
                         PackedQueryKernel { transitions },
-                    ))
-                }
+                    ),
+                ),
                 UnitCostMachine::PackedOsa(transitions) => {
-                    QueryIteratorInner::PackedOsa(PathQueryIteratorCore::new(
+                    QueryIteratorInner::PackedOsa(PathQueryIteratorCore::from_captured_traversal(
                         root,
                         traversal,
                         frontier,
@@ -930,19 +931,21 @@ impl<
                     ))
                 }
                 UnitCostMachine::PackedMergeSplit(transitions) => {
-                    QueryIteratorInner::PackedMergeSplit(PathQueryIteratorCore::new(
-                        root,
-                        traversal,
-                        frontier,
-                        query_units,
-                        max_distance,
-                        policy,
-                        substring_mode,
-                        PackedQueryKernel { transitions },
-                    ))
+                    QueryIteratorInner::PackedMergeSplit(
+                        PathQueryIteratorCore::from_captured_traversal(
+                            root,
+                            traversal,
+                            frontier,
+                            query_units,
+                            max_distance,
+                            policy,
+                            substring_mode,
+                            PackedQueryKernel { transitions },
+                        ),
+                    )
                 }
                 UnitCostMachine::Positional(transitions) => {
-                    QueryIteratorInner::Unit(PathQueryIteratorCore::new(
+                    QueryIteratorInner::Unit(PathQueryIteratorCore::from_captured_traversal(
                         root,
                         traversal,
                         frontier,
@@ -1027,10 +1030,12 @@ impl<
         substring_mode: bool,
     ) -> Self {
         let initial = initial_state_affine(query_units.len(), max_cost, params);
-        let transitions = UnitCostMachine::unseeded_positional(query_units.len(), max_cost);
+        let settings = AffineTransitionSettings::new(max_cost, params, substring_mode);
+        let (transitions, initial) =
+            UnitCostMachine::seeded_affine(query_units.len(), &initial, settings);
         let (traversal, root) = TraversalSession::capture(root);
         Self {
-            inner: QueryIteratorInner::Affine(PathQueryIteratorCore::new(
+            inner: QueryIteratorInner::Affine(PathQueryIteratorCore::from_captured_traversal(
                 root,
                 traversal,
                 initial,
@@ -1055,7 +1060,7 @@ where
     K: QueryKernel<N::Unit, P, Frontier = F>,
 {
     #[allow(clippy::too_many_arguments)]
-    fn new(
+    fn from_captured_traversal(
         root: TraversalCursor<N::SnapshotCursor>,
         traversal: TraversalSession<N>,
         frontier: F,

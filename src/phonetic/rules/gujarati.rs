@@ -37,18 +37,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::gujarati;
 //!
 //! let rules = gujarati::base();
 //!
 //! // Retroflex lateral
 //! let result = rules.apply("ળ");
-//! assert!(result.contains("ʎ"), "ળ → LL");
+//! assert_eq!(result, "ɭ");
 //!
 //! // Standard consonants
 //! let result = rules.apply("ક");
-//! assert!(result.contains('k'), "ક → k");
+//! assert_eq!(result, "k");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

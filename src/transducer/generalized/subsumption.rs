@@ -54,10 +54,14 @@ use super::position::GeneralizedPosition;
 ///
 /// # Example
 ///
-/// ```ignore
-/// let pos1 = GeneralizedPosition::new_i(4, 1, 3)?;
-/// let pos2 = GeneralizedPosition::new_i(5, 2, 3)?;
-/// assert!(subsumes(&pos1, &pos2, 3));  // 4#1 <^ε_s 5#2
+/// ```rust
+/// use liblevenshtein::transducer::generalized::{subsumes, GeneralizedPosition};
+///
+/// let pos1 = GeneralizedPosition::new_i(1, 1, 3)
+///     .expect("1#1 satisfies the generalized I-position invariant");
+/// let pos2 = GeneralizedPosition::new_i(2, 2, 3)
+///     .expect("2#2 satisfies the generalized I-position invariant");
+/// assert!(subsumes(&pos1, &pos2, 3)); // 1#1 <^ε_s 2#2
 /// ```
 #[inline(always)]
 pub fn subsumes(pos1: &GeneralizedPosition, pos2: &GeneralizedPosition, max_distance: u8) -> bool {

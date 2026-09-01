@@ -8,18 +8,18 @@ resolver = "2"
 
 [package]
 name = "liblevenshtein"
-version = "4.0.0-rc.4"
+version = "4.0.0-rc.6"
 autobins = false
 edition = "2021"
-# Matches the libdictenstein path dependency, whose --all-features floor is set by
+# Matches the libdictenstein dependency, whose --all-features floor is set by
 # sysinfo 0.39 (1.95). The previous 1.70 was already false: libdictenstein pulls
 # pathmap 0.2.2 (1.88) and bincode 2.0.1 / lru 0.18 (1.85).
 rust-version = "1.95"
 authors = ["Dylon Edwards <dylon.devo@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/vinary-tree/liblevenshtein-rust"
-exclude = ["docs/", "examples/"]
-description = "Levenshtein/Universal Automata for approximate string matching using various dictionary backends"
+exclude = ["docs/", "examples/", "release/rc6-candidate-provenance.json"]
+description = "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
 keywords = ["levenshtein", "edit-distance", "spell-checking", "fuzzy-search", "automata"]
 categories = ["algorithms", "data-structures", "text-processing"]
 readme = "README.md"
@@ -29,15 +29,13 @@ readme = "README.md"
 # vinary-tree language bindings. Keep this crate generic and dependency-free so
 # libdictenstein, liblevenshtein, lling-llang, and duallity can exchange live
 # objects without a Rust dynamic-library ABI dependency.
-vinary-tree-interop = { path = "../vinary-tree-interop", version = "=4.0.0-rc.4", optional = true }
+vinary-tree-interop = { path = "../vinary-tree-interop", version = "=4.0.0-rc.6", optional = true }
 
 # Dictionary implementations (extracted to libdictenstein crate)
-libdictenstein = { path = "../libdictenstein", version = "=4.0.0-rc.4", features = ["parking_lot"] }
+libdictenstein = { path = "../libdictenstein", version = "=4.0.0-rc.6", features = ["parking_lot"] }
 
-# PathMap as an optional dictionary backend
-# NOTE: PathMap uses a git dependency and is NOT available when installing from crates.io
-# To use PathMap, build from source: cargo install --git <repo-url> --features pathmap-backend
-# pathmap = { git = "https://github.com/Adam-Vandervorst/PathMap.git", branch = "master", optional = true }
+# PathMap as an optional dictionary backend. Keep the bounded registry range so
+# crates.io packages and source checkouts resolve the same reviewed release family.
 pathmap = { version = ">=0.2.2, <0.4", optional = true }
 # SmallVec for stack-allocated vectors (performance optimization)
 smallvec = { version = "1.13", features = ["serde"] }
@@ -280,6 +278,10 @@ harness = false
 
 [[bench]]
 name = "elastic_kernel_benchmarks"
+harness = false
+
+[[bench]]
+name = "temporal_campaign_benchmarks"
 harness = false
 
 [[bench]]
@@ -531,6 +533,8 @@ fortran-bindings = ["native-bindings-full"]
 ocaml-bindings = ["native-bindings-full"]
 haskell-bindings = ["native-bindings-full"]
 lua-bindings = ["native-bindings-full"]
+julia-bindings = ["native-bindings-full"]
+raku-bindings = ["native-bindings-full"]
 javascript-bindings = ["wasm", "bindings-phonetic"]
 typescript-bindings = ["javascript-bindings"]
 clojurescript-bindings = ["javascript-bindings"]

@@ -8,9 +8,9 @@
 //!
 //! The online grep combines:
 //! - **Pre-normalized query**: Query is normalized once using phonetic rules
-//! - **Streaming transducer**: Document text is normalized character-by-character
-//! - **Product automaton**: NFA × Levenshtein for fuzzy matching
-//! - **Multi-match tracking**: Concurrent match attempts at every position
+//! - **Chunk accumulation**: Original UTF-8 is retained across input boundaries
+//! - **Span-aware normalization**: Rewrite output maps back to exact source ranges
+//! - **Product automaton**: NFA × Levenshtein verifies bounded candidate windows
 //!
 //! # Comparison with PhoneticGrep
 //!
@@ -18,41 +18,52 @@
 //! |---------|--------------|-------------------|
 //! | Matching | Word boundaries | Character-by-character |
 //! | Normalization | Per-word | Streaming |
-//! | Memory | O(1) per word | O(active_matches) |
+//! | Memory | O(1) per word | O(document size) |
 //! | Use case | Dictionary lookup | Document scanning |
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
-//! use liblevenshtein::phonetic::rules::english;
+//! use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
 //!
-//! // "fude" and "food" both normalize to "fud", so distance is 0
-//! let grep = PhoneticGrepOnline::with_rules("fude", english::base().rules_vec(), 0);
+//! let file = parse_str("ph -> f;").expect("doc: rewrite rule must parse");
+//! let rules = RuleSetChar::from_llev(&file)
+//!     .expect("doc: rewrite rule must compile")
+//!     .rules;
+//! let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
 //!
-//! let matches = grep.scan("The food was delicious.");
+//! let matches = grep.scan("Call my fone.");
 //! assert_eq!(matches.len(), 1);
-//! assert_eq!(matches[0].original_text, "food");
-//! assert_eq!(matches[0].distance, 0);  // phonetically equivalent!
+//! assert_eq!(matches[0].original_text, "fone");
+//! assert_eq!(matches[0].distance, 0);
 //! ```
 //!
 //! # Streaming API
 //!
 //! For processing large documents or streams:
 //!
-//! ```ignore
-//! let grep = PhoneticGrepOnline::with_rules("phone", rules, 1);
+//! ```rust
+//! use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
+//! use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
+//!
+//! let file = parse_str("ph -> f;").expect("doc: rewrite rule must parse");
+//! let rules = RuleSetChar::from_llev(&file)
+//!     .expect("doc: rewrite rule must compile")
+//!     .rules;
+//! let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
 //! let mut stream = grep.streaming();
 //!
 //! // Feed chunks as they arrive
 //! stream.feed("My pho");
-//! stream.feed("ne is ringing");
+//! stream.feed("ne");
 //!
 //! // Get all matches when done
 //! let matches = stream.finish();
+//! assert!(!matches.is_empty());
+//! assert_eq!(matches[0].distance, 0);
 //! ```
 
-use std::borrow::Cow;
 use std::path::Path;
 
 #[cfg(feature = "parallel-grep")]
@@ -182,13 +193,19 @@ impl SharedNormalized {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust
 /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
-/// use liblevenshtein::phonetic::rules::english;
+/// use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
 ///
-/// // Find phonetic equivalents
-/// let grep = PhoneticGrepOnline::with_rules("phone", english::base().rules_vec(), 0);
-/// let matches = grep.scan("Call my fone!"); // "fone" normalizes to same as "phone"
+/// let file = parse_str("ph -> f;").expect("doc: rewrite rule must parse");
+/// let rules = RuleSetChar::from_llev(&file)
+///     .expect("doc: rewrite rule must compile")
+///     .rules;
+/// let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
+/// let matches = grep.scan("Call my fone!");
+/// assert_eq!(matches.len(), 1);
+/// assert_eq!(matches[0].original_text, "fone");
+/// assert_eq!(matches[0].distance, 0);
 /// ```
 #[derive(Debug, Clone)]
 pub struct PhoneticGrepOnline {
@@ -214,14 +231,17 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// use liblevenshtein::phonetic::rules::english;
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
+    /// use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
     ///
-    /// let grep = PhoneticGrepOnline::with_rules(
-    ///     "phone",
-    ///     english::base().rules_vec(),
-    ///     1, // Allow 1 edit after normalization
-    /// );
+    /// let file = parse_str("ph -> f;").expect("doc: rewrite rule must parse");
+    /// let rules = RuleSetChar::from_llev(&file)
+    ///     .expect("doc: rewrite rule must compile")
+    ///     .rules;
+    /// let grep = PhoneticGrepOnline::with_rules("phone", rules, 1);
+    /// assert_eq!(grep.normalized_query(), "fone");
+    /// assert_eq!(grep.max_distance(), 1);
     /// ```
     pub fn with_rules(pattern: &str, mut rules: Vec<RewriteRuleChar>, max_distance: u8) -> Self {
         rules.sort_by(compare_rule_weight_desc);
@@ -281,10 +301,13 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
+    ///
     /// let grep = PhoneticGrepOnline::without_rules("hello", 0)
     ///     .case_insensitive(true);
     /// let matches = grep.scan("HELLO World");
+    /// assert_eq!(matches.len(), 1);
     /// assert_eq!(matches[0].original_text, "HELLO");
     /// ```
     pub fn case_insensitive(mut self, yes: bool) -> Self {
@@ -331,33 +354,27 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("phone", rules, 1);
-    /// let matches = grep.scan("My fone and phone are both matched.");
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
     ///
-    /// for m in matches {
-    ///     println!("{} at {}-{} (distance {})",
-    ///         m.original_text,
-    ///         m.byte_range.0,
-    ///         m.byte_range.1,
-    ///         m.distance);
-    /// }
+    /// let grep = PhoneticGrepOnline::without_rules("phone", 1);
+    /// let matches = grep.scan("phon");
+    /// assert_eq!(matches.len(), 1);
+    /// assert_eq!(matches[0].original_text, "phon");
+    /// assert_eq!(matches[0].distance, 1);
     /// ```
     pub fn scan(&self, document: &str) -> Vec<ScanMatch> {
         self.scan_buffered(document)
     }
 
-    /// Scan a document with the original active-state streaming engine.
+    /// Scan a document through the incremental-input compatibility surface.
     ///
-    /// This preserves the prior implementation for streaming parity tests and
-    /// scientific A/B evaluation. For ordinary whole-document scanning, prefer
-    /// [`Self::scan`], which uses the buffered bounded-window engine.
+    /// This uses the same span-aware bounded-window engine as [`Self::scan`], so
+    /// both entry points return equivalent matches. For a document already held
+    /// as one string, prefer [`Self::scan`] and avoid the compatibility wrapper.
     pub fn scan_stateful(&self, document: &str) -> Vec<ScanMatch> {
-        let pattern = self.prepare_pattern();
-        let doc = self.prepare_document(document);
-
-        let mut scanner = OnlinePhoneticScannerChar::new(&pattern, &self.rules, self.max_distance);
-        scanner.scan(doc.as_ref())
+        let mut scanner = OnlinePhoneticScannerChar::from_matcher(self.clone());
+        scanner.scan(document)
     }
 
     /// Scan a document and return matches with statistics.
@@ -389,9 +406,16 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("phone", english_rules, 0);
-    /// assert_eq!(grep.normalized_query(), "fone"); // ph → f
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
+    /// use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
+    ///
+    /// let file = parse_str("ph -> f;").expect("doc: rewrite rule must parse");
+    /// let rules = RuleSetChar::from_llev(&file)
+    ///     .expect("doc: rewrite rule must compile")
+    ///     .rules;
+    /// let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
+    /// assert_eq!(grep.normalized_query(), "fone");
     /// ```
     pub fn normalized_query(&self) -> String {
         self.compiled.normalized.clone()
@@ -404,43 +428,30 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("hello", rules, 1);
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
+    /// use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
+    ///
+    /// let file = parse_str("ph -> f;").expect("doc: rewrite rule must parse");
+    /// let rules = RuleSetChar::from_llev(&file)
+    ///     .expect("doc: rewrite rule must compile")
+    ///     .rules;
+    /// let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
     /// let mut stream = grep.streaming();
     ///
     /// // Feed chunks as they arrive
-    /// for chunk in reader.chunks() {
-    ///     stream.feed(&chunk);
+    /// for chunk in ["My pho", "ne"] {
+    ///     stream.feed(chunk);
     /// }
     ///
     /// // Get all matches
     /// let matches = stream.finish();
+    /// assert!(!matches.is_empty());
+    /// assert_eq!(matches[0].distance, 0);
     /// ```
     pub fn streaming(&self) -> StreamingScanner {
-        let pattern = self.prepare_pattern();
-        let scanner = OnlinePhoneticScannerChar::new(&pattern, &self.rules, self.max_distance);
-        StreamingScanner {
-            inner: scanner,
-            case_insensitive: self.case_insensitive,
-        }
-    }
-
-    /// Prepare the pattern for matching (apply case transformation if needed).
-    fn prepare_pattern(&self) -> String {
-        if self.case_insensitive {
-            self.pattern.to_lowercase()
-        } else {
-            self.pattern.clone()
-        }
-    }
-
-    /// Prepare the document for matching (apply case transformation if needed).
-    fn prepare_document<'a>(&self, document: &'a str) -> Cow<'a, str> {
-        if self.case_insensitive {
-            Cow::Owned(document.to_lowercase())
-        } else {
-            Cow::Borrowed(document)
-        }
+        let scanner = OnlinePhoneticScannerChar::from_matcher(self.clone());
+        StreamingScanner { inner: scanner }
     }
 
     /// Scan a document using a normalized buffer and bounded candidate windows.
@@ -830,11 +841,13 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("phone", rules, 1);
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
     ///
-    /// // For large documents, parallel scanning may be faster
-    /// let matches = grep.scan_parallel(&large_document);
+    /// let grep = PhoneticGrepOnline::without_rules("phone", 1);
+    /// let matches = grep.scan_parallel("My phon is ringing.");
+    /// assert_eq!(matches.len(), 1);
+    /// assert_eq!(matches[0].distance, 1);
     /// ```
     #[cfg(feature = "parallel-grep")]
     pub fn scan_parallel(&self, document: &str) -> Vec<ScanMatch> {
@@ -1017,19 +1030,21 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("phone", rules, 1);
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
     ///
+    /// let grep = PhoneticGrepOnline::without_rules("phone", 0);
     /// let documents = vec![
     ///     ("file1.txt", "My phone is ringing"),
-    ///     ("file2.txt", "Call my fone"),
+    ///     ("file2.txt", "A phone call"),
     ///     ("file3.txt", "No match here"),
     /// ];
     ///
     /// let results = grep.scan_documents_parallel(documents);
-    /// for (doc_id, matches) in results {
-    ///     println!("{}: {} matches", doc_id, matches.len());
-    /// }
+    /// assert_eq!(results.len(), 3);
+    /// assert_eq!(results[0].1.len(), 1);
+    /// assert_eq!(results[1].1.len(), 1);
+    /// assert!(results[2].1.is_empty());
     /// ```
     #[cfg(feature = "parallel-grep")]
     pub fn scan_documents_parallel<'a, I, D>(&self, documents: I) -> Vec<(D, Vec<ScanMatch>)>
@@ -1072,16 +1087,18 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("phone", rules, 1);
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
     ///
-    /// // Large documents benefit from nested parallelism
-    /// let large_docs = vec![
-    ///     ("book1.txt", &large_text_1),
-    ///     ("book2.txt", &large_text_2),
+    /// let grep = PhoneticGrepOnline::without_rules("phone", 0);
+    /// let documents = vec![
+    ///     ("book1.txt", "A phone rings"),
+    ///     ("book2.txt", "The other phone answers"),
     /// ];
     ///
-    /// let results = grep.scan_documents_parallel_nested(large_docs);
+    /// let results = grep.scan_documents_parallel_nested(documents);
+    /// assert_eq!(results.len(), 2);
+    /// assert!(results.iter().all(|(_, matches)| matches.len() == 1));
     /// ```
     #[cfg(feature = "parallel-grep")]
     pub fn scan_documents_parallel_nested<'a, I, D>(&self, documents: I) -> Vec<(D, Vec<ScanMatch>)>
@@ -1116,15 +1133,17 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("error", rules, 1);
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
     ///
-    /// let log_files: Vec<_> = logs.iter()
-    ///     .map(|log| (log.path.clone(), log.content.as_str()))
-    ///     .collect();
-    ///
-    /// // Get only logs containing "error" (phonetically)
-    /// let matching_logs = grep.filter_documents_parallel(log_files);
+    /// let grep = PhoneticGrepOnline::without_rules("error", 0);
+    /// let logs = vec![
+    ///     ("server.log", "fatal error"),
+    ///     ("healthy.log", "request complete"),
+    /// ];
+    /// let matching_logs = grep.filter_documents_parallel(logs);
+    /// assert_eq!(matching_logs.len(), 1);
+    /// assert_eq!(matching_logs[0].0, "server.log");
     /// ```
     #[cfg(feature = "parallel-grep")]
     pub fn filter_documents_parallel<'a, I, D>(&self, documents: I) -> Vec<(D, Vec<ScanMatch>)>
@@ -1163,16 +1182,17 @@ impl PhoneticGrepOnline {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// let grep = PhoneticGrepOnline::with_rules("needle", rules, 0);
+    /// ```rust
+    /// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
     ///
-    /// let source_files: Vec<_> = files.iter()
-    ///     .map(|f| (f.path(), f.content()))
-    ///     .collect();
-    ///
-    /// let match_counts = grep.count_documents_parallel(source_files);
+    /// let grep = PhoneticGrepOnline::without_rules("needle", 0);
+    /// let documents = vec![
+    ///     ("one.txt", "a needle here"),
+    ///     ("two.txt", "nothing here"),
+    /// ];
+    /// let match_counts = grep.count_documents_parallel(documents);
     /// let total: usize = match_counts.iter().map(|(_, c)| c).sum();
-    /// println!("Total matches: {}", total);
+    /// assert_eq!(total, 1);
     /// ```
     #[cfg(feature = "parallel-grep")]
     pub fn count_documents_parallel<'a, I, D>(&self, documents: I) -> Vec<(D, usize)>
@@ -1198,38 +1218,41 @@ impl PhoneticGrepOnline {
 ///
 /// # Example
 ///
-/// ```ignore
-/// let grep = PhoneticGrepOnline::with_rules("pattern", rules, 1);
+/// ```rust
+/// use liblevenshtein::phonetic::grep_online::PhoneticGrepOnline;
+/// use liblevenshtein::phonetic::llev::{parse_str, RuleSetChar};
+///
+/// let file = parse_str("ph -> f;").expect("doc: rewrite rule must parse");
+/// let rules = RuleSetChar::from_llev(&file)
+///     .expect("doc: rewrite rule must compile")
+///     .rules;
+/// let grep = PhoneticGrepOnline::with_rules("phone", rules, 0);
 /// let mut stream = grep.streaming();
 ///
-/// stream.feed("first chunk ");
-/// stream.feed("second chunk");
+/// stream.feed("my pho");
+/// stream.feed("ne");
 ///
 /// let matches = stream.finish();
+/// assert!(!matches.is_empty());
+/// assert_eq!(matches[0].distance, 0);
 /// ```
 pub struct StreamingScanner {
     inner: OnlinePhoneticScannerChar,
-    case_insensitive: bool,
 }
 
 impl StreamingScanner {
     /// Feed a chunk of text to the scanner.
     ///
-    /// Characters are processed immediately, but matches may not be complete
-    /// until more context is available or `finish()` is called.
+    /// Characters and their exact UTF-8 positions are retained immediately.
+    /// Phonetic normalization and product traversal occur when `finish()` is
+    /// called because rewrite rules may require right context.
     ///
     /// # Arguments
     ///
     /// * `chunk` - Text chunk to process
     pub fn feed(&mut self, chunk: &str) {
-        if self.case_insensitive {
-            for c in chunk.to_lowercase().chars() {
-                self.inner.feed(c, c.len_utf8());
-            }
-        } else {
-            for c in chunk.chars() {
-                self.inner.feed(c, c.len_utf8());
-            }
+        for c in chunk.chars() {
+            self.inner.feed(c, c.len_utf8());
         }
     }
 
@@ -1456,10 +1479,29 @@ mod tests {
 
         let mut stream = grep.streaming();
         stream.feed("my pho");
-        stream.feed("ne");
+        stream.feed("ne is ringing");
 
         let matches = stream.finish();
         assert!(!matches.is_empty(), "streaming should find match");
+        assert_eq!(matches[0].distance, 0);
+        assert_eq!(matches[0].original_text, "phone");
+        assert_eq!(matches[0].byte_range, (3, 8));
+    }
+
+    #[test]
+    fn test_streaming_preserves_case_insensitive_source_text() {
+        let grep = PhoneticGrepOnline::without_rules("hello", 0).case_insensitive(true);
+        let mut stream = grep.streaming();
+        stream.feed("Say HE");
+        stream.feed("LLO now");
+
+        let matches = stream.finish();
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].original_text, "HELLO");
+        assert_eq!(matches[0].byte_range, (4, 9));
+        assert_eq!(matches[0].char_range, (4, 9));
+        assert_eq!(matches[0].normalized_text, "hello");
     }
 
     #[test]

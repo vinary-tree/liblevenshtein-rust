@@ -11,7 +11,7 @@ of Molecular Biology* 162(3), 705–708 (1982).
 A naive affine-gap alignment recurrence may inspect every possible preceding
 gap length at every cell. Gotoh separates alignments by their final operation,
 allowing the gap continuation minimum to be updated in constant time per cell.
-The resulting pairwise dynamic program is `$`\mathcal{O}(mn)`$`.
+The resulting pairwise dynamic program is $`\mathcal{O}(mn)`$.
 
 ## Translation into this crate
 
@@ -27,7 +27,7 @@ fusion are library-specific engineering obligations.
 
 ## Cost-convention note
 
-This crate defines a length-`$`r`$` run as `$`g_o+r g_e`$`. Readers comparing
+This crate defines a length-$`r`$ run as $`g_o+r g_e`$. Readers comparing
 reported parameters must check whether another source charges the first symbol
 inside the opening term. The recurrence is equivalent after parameter
 translation; the public API intentionally does not guess a convention.

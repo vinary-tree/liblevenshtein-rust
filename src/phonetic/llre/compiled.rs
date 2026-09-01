@@ -24,9 +24,10 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
-//! use liblevenshtein::phonetic::llre::{compile, save, load};
+//! ```rust,no_run
+//! use liblevenshtein::phonetic::llre::{compile, load, parse_str, save};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Compile and save
 //! let file = parse_str("^hello$")?;
 //! let compiled = compile(&file)?;
@@ -35,6 +36,8 @@
 //! // Load pre-compiled
 //! let loaded = load("pattern.llre.bin")?;
 //! assert!(loaded.matches("hello"));
+//! # Ok(())
+//! # }
 //! ```
 
 #[cfg(feature = "serialization")]

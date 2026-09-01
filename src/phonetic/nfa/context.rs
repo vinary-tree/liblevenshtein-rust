@@ -12,12 +12,14 @@
 //!
 //! # Examples
 //!
-//! ```ignore
-//! use liblevenshtein::phonetic::nfa::context::{ContextMatcher, ContextMatcherChar};
+//! ```rust
+//! use liblevenshtein::phonetic::nfa::{compile, ContextMatcherChar};
+//! use liblevenshtein::phonetic::regex::parse;
 //!
 //! // c -> s before front vowels (e, i)
 //! // Rule: c -> s / _[ei]
-//! let right_nfa = compile(&parse("[ei]").unwrap()).unwrap();
+//! let regex = parse("[ei]").expect("doc: regex parse must succeed");
+//! let right_nfa = compile(&regex).expect("doc: context NFA compilation must succeed");
 //! let matcher = ContextMatcherChar::new(None, Some(right_nfa));
 //!
 //! // "city" at position 0: c before i -> matches
@@ -34,7 +36,9 @@
 //! - After the last character for right context
 //! - Before/after whitespace or punctuation
 //!
-//! ```ignore
+//! ```rust
+//! use liblevenshtein::phonetic::nfa::ContextMatcherChar;
+//!
 //! // e -> (empty) at word end
 //! // Rule: e -> / _#
 //! let matcher = ContextMatcherChar::word_end();

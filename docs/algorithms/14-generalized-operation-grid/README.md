@@ -1,131 +1,144 @@
-# Exact generalized-operation grid
+# Exact finite-lookback generalized-operation automaton
 
-This chapter develops the algorithm behind `GeneralizedAutomaton` in literate
-pseudocode. Read the [repair design](../../design/generalized-automaton-repair.md)
-first for the public contract and compatibility boundary.
+This chapter develops the production algorithm behind
+`GeneralizedOnlineAutomaton` in literate pseudocode. Read the
+[repair design](../../design/generalized-automaton-repair.md) first for its
+public contract, mathematical recurrence, and compatibility boundary.
 
-## 1. Inputs and output
+## 1. Inputs, output, and online contract
 
-The algorithm receives a source string, a target string, an integer budget,
-and a finite operation set. Each operation declares source consumption, target
-consumption, a non-negative decimal weight, and an optional allowed-pair set.
-It returns the least exact scaled cost when that cost is within budget.
+The machine receives one fixed source string, an integer budget, and a finite
+operation set. Each operation declares source consumption, target consumption,
+a non-negative decimal weight, and an optional allowed-pair set. After
+construction, `advance` consumes one Unicode target scalar and returns the
+least exact scaled cost for the newly committed target prefix when that cost
+is within budget.
 
-The central invariant is:
+Let $`D_j[i]`$ be the least in-budget cost after consuming the first $`i`$
+source scalars and first $`j`$ target scalars. The central invariant is:
 
-> `pending[(i, j)]` is the least cost discovered for consuming exactly the
-> first `i` source scalars and first `j` target scalars.
+> A row-ring slot tagged generation $`j`$ contains exactly $`D_j`$; an
+> untagged or differently tagged slot is never read as that generation.
 
 ## 2. Preparation
 
-UTF-8 byte offsets are computed once so an operation can count scalars while
-restriction lookup borrows exact string slices.
+UTF-8 byte offsets for the fixed source are computed once so an operation can
+count Unicode scalars while restriction lookup borrows exact string slices.
+One exact cost scale is also derived before target work begins.
 
-```pseudocode
-procedure PREPARE(text)
-    offsets ← every UTF-8 byte index at which a scalar starts
-    append byte_length(text) to offsets
-    return offsets
-end procedure
+```text
+PROCEDURE PREPARE(automaton, source, limits)
+  validate every operation; reject a zero/zero consuming operation
+  sourceOffsets <- UTF-8 scalar boundaries of source plus byte length
+  scale <- least common denominator of reduced decimal operation weights
+  budget <- checkedMultiply(integerBudget, scale.denominator)
+  compiled <- each operation paired with scale.toScaled(operation.weight)
+
+  r <- maximum target consumption among compiled operations
+  width <- scalarLength(source) + 1, using checked addition
+  retainedCells <- checkedMultiply(r + 2, width)
+  stepWork <- checkedMultiply(width, numberOf(compiled))
+  reject before allocation if either configured ceiling is exceeded
+
+  rows <- r + 1 rows of TOP, each with width cells
+  tags <- r + 1 absent generation tags
+  scratch <- one width-cell row of TOP
+  targetWindow <- capacity for at most r scalars
+
+  COMPUTE-GENERATION(0, origin = true)
+  COMMIT(0)
+END PROCEDURE
 ```
 
-One cost scale is derived before any graph work:
+`try_reserve_exact` precedes each allocation. Invalid decimal costs,
+arithmetic overflow, allocation failure, or a resource ceiling returns a
+tagged `GeneralizedAutomatonError`; none is converted into an empty successful
+alignment.
 
-```pseudocode
-procedure PREPARE_COSTS(operations, integer_budget)
-    scale ← least common denominator of reduced decimal operation weights
-    budget ← checked_multiply(integer_budget, scale.denominator)
-    weighted ← empty list
+## 3. Why finite lookback is complete
 
-    for each operation in operations do
-        step ← scale.to_scaled(operation.weight)
-        append (operation, step) to weighted
+Let operation $`t`$ consume $`t^x`$ source scalars and $`t^y`$ target
+scalars. Its predecessor for cell $`(i,j)`$ is
+$`(i-t^x,j-t^y)`$. If $`r=\max_t t^y`$, every target-consuming predecessor
+of generation $`j`$ lies in generations $`j-r`$ through $`j-1`$.
+
+An operation with $`t^y=0`$ reads the current scratch row at a smaller source
+coordinate. Because source coordinates are processed in increasing order,
+that predecessor is already final. Thus $`r+1`$ committed rows plus one
+scratch row form a complete topological schedule of the alignment graph.
+
+## 4. Literate online transition
+
+**Purpose.** Commit the exact next target-prefix row without retaining any
+older target history than an operation can inspect.
+
+**Invariant.** Before relaxing source coordinate $`i`$, every current-row
+predecessor at a smaller coordinate and every tagged earlier-row predecessor
+already equals its exact least in-budget cost.
+
+```text
+PROCEDURE ADVANCE(targetScalar)
+  generation <- checkedAdd(committedGeneration, 1)
+
+  prospectiveWindow <- suffix(targetWindow + targetScalar, maximumLength = r)
+  rebuild UTF-8 text and scalar offsets for prospectiveWindow
+  fill scratch with TOP
+
+  for sourceEnd from 0 through sourceLength do
+    best <- scratch[sourceEnd]
+
+    for each (operation, stepCost) in compiled do
+      sx <- operation.sourceConsumption
+      ty <- operation.targetConsumption
+      skip if sx > sourceEnd or ty > generation
+
+      predecessorSource <- sourceEnd - sx
+      if ty = 0 then
+        predecessor <- scratch[predecessorSource]
+      else
+        predecessorGeneration <- generation - ty
+        slot <- predecessorGeneration modulo numberOf(rows)
+        skip unless tags[slot] = predecessorGeneration
+        predecessor <- rows[slot][predecessorSource]
+      end if
+      skip if predecessor is TOP
+
+      sourceSlice <- fixed source scalars [sourceEnd - sx, sourceEnd)
+      targetSlice <- prospective target suffix of length ty
+      skip unless operation applies to these exact slices
+
+      candidate <- checkedAdd(predecessor, stepCost)
+      if candidate <= budget then best <- minimum(best, candidate)
     end for
 
-    return (scale, budget, weighted)
-end procedure
+    scratch[sourceEnd] <- best
+  end for
+
+  COMMIT(generation):
+    swap scratch with rows[generation modulo numberOf(rows)]
+    tag that slot with generation
+    replace targetWindow with prospectiveWindow
+    publish final-cell distance and active-position count
+END PROCEDURE
 ```
 
-Any invalid decimal or overflow returns an error. There is no fallback to a
-rounded floating-point cost.
+Prospective window construction and row computation occur before commit. If a
+checked operation fails, the old row tags, committed generation, target window,
+and public observation remain unchanged.
 
-## 3. Sparse topological traversal
+## 5. Batch evaluation is an online fold
 
-Each operation moves right, down, or diagonally in the alignment grid. A
-zero-consumption operation is ignored because it cannot advance a finite
-alignment. Every other edge moves to a lexicographically later coordinate, so
-a sorted map supplies topological order without a separate visited set.
+`GeneralizedAutomaton::scaled_distance(source, target)` constructs the online
+machine, feeds `target.chars()` one at a time, and reads the final observation.
+It does not materialize a target-sized DP matrix or sparse map.
 
-```pseudocode
-procedure SCALED_DISTANCE(source, target, operations, integer_budget)
-    source_offsets ← PREPARE(source)
-    target_offsets ← PREPARE(target)
-    (scale, budget, weighted) ← PREPARE_COSTS(operations, integer_budget)
+The former sorted-map evaluator remains under `cfg(test)` as an independent
+oracle. It uses a different storage shape and is exhaustively compared to the
+row ring for all source/target strings of length at most three over
+`{ "a", "b", "é" }` across Standard, transposition, and merge/split operation
+sets.
 
-    if MAX_GENERALIZED_ALIGNMENT_STATES equals 0 then
-        return resource-limit error with observed = 1
-    end if
-    pending ← sorted map containing ((0, 0), 0)
-    discovered ← 1
-
-    while pending is not empty do
-        ((i, j), accumulated) ← remove lexicographically first entry
-
-        if i equals scalar_length(source)
-           and j equals scalar_length(target) then
-            return accumulated
-        end if
-
-        for each (operation, step) in weighted do
-            if operation consumes neither side then
-                continue
-            end if
-
-            next_i ← checked_add(i, operation.consume_source)
-            next_j ← checked_add(j, operation.consume_target)
-            if either destination exceeds its string length then
-                continue
-            end if
-
-            source_slice ← source scalars in [i, next_i)
-            target_slice ← target scalars in [j, next_j)
-            if operation does not apply to both slices then
-                continue
-            end if
-
-            next_cost ← checked_add(accumulated, step)
-            if next_cost exceeds budget then
-                continue
-            end if
-
-            if pending contains (next_i, next_j) then
-                pending[(next_i, next_j)] ← minimum of
-                    pending[(next_i, next_j)], next_cost
-            else
-                next_discovered ← checked_add(discovered, 1)
-                if next_discovered exceeds MAX_GENERALIZED_ALIGNMENT_STATES then
-                    return resource-limit error before insertion
-                end if
-                discovered ← next_discovered
-                pending[(next_i, next_j)] ← next_cost
-            end if
-        end for
-    end while
-
-    return no in-budget alignment
-end procedure
-```
-
-## 4. Why the first removal is final
-
-Consider a cell $`(i,j)`$. Every incoming edge starts at $`(p,q)`$ with either
-$`p<i`$, or $`p=i`$ and $`q<j`$. Thus every predecessor is removed before
-$`(i,j)`$. All its candidate costs have already been merged by minimum when the
-cell is removed. This is dynamic programming in sparse graph form, not
-Dijkstra's algorithm; edge non-negativity supports budget pruning, while
-topological order supplies finality.
-
-## 5. Worked fractional example
+## 6. Worked fractional example
 
 Let match cost zero, substitution cost `0.15`, and integer budget `1`. The
 derived denominator is 20, each substitution costs 3, and the budget is 20.
@@ -139,10 +152,29 @@ derived denominator is 20, each substitution costs 3, and the budget is 20.
 The comparison is integer-exact. No epsilon or floating-point accumulation is
 involved.
 
-## 6. Derived preset invariants
+## 7. Complexity and stable retention
 
-The same traversal becomes several familiar algorithms by changing only the
-operation set:
+For fixed source length $`m`$, consumed target length $`n`$, maximum target
+consumption $`r`$, and operation count $`|\mathcal{O}|`$, the batch fold
+takes:
+
+```math
+\mathcal{O}\left(n(m+1)|\mathcal{O}|\right)
+```
+
+operation relaxations. Retained DP memory is:
+
+```math
+\mathcal{O}\left((r+2)(m+1)\right),
+```
+
+plus the fixed source, compiled operations, and $`r`$ target scalars. It is
+independent of $`n`$. A 100,000-scalar unit test pins the exact retained-cell
+count while the consumed generation grows.
+
+## 8. Derived preset invariants
+
+The same automaton becomes familiar algorithms by changing the operation set:
 
 - Hamming: every edge consumes one scalar from each side, so accepted strings
   have equal length.
@@ -151,18 +183,17 @@ operation set:
 - Bounded skip: match and source deletion only; the target must be a
   subsequence of the source.
 - Standard Levenshtein: match, substitution, insertion, and deletion reproduce
-  the ordinary dynamic-programming distance.
+  ordinary dynamic-programming distance.
 
-These statements are executable differential properties, not examples alone.
+These statements are formal and executable differential properties, not
+examples alone. An arbitrary custom operation set is an alignment cost model;
+it is not automatically a metric.
 
-## 7. Failure handling
+## 9. References
 
-Fallible APIs distinguish invalid cost domains, checked arithmetic failure,
-and resource exhaustion. The Boolean compatibility method maps all such
-failures to rejection. This fail-closed policy is appropriate for matching;
-diagnostic and configuration code should call `try_accepts` or
-`scaled_distance` so it can report the cause.
-
-The discovery count measures unique materialized cells, not processed cells.
-It is checked before a vacant map entry is inserted, so an adversarial frontier
-cannot allocate beyond the ceiling while waiting to be popped.
+- P. Mitankin, S. Mihov, and K. U. Schulz, “Deciding word neighborhood with
+  universal neighborhood automata,” *Theoretical Computer Science* 412(22),
+  2011. [doi:10.1016/j.tcs.2011.01.013](https://doi.org/10.1016/j.tcs.2011.01.013)
+- R. A. Wagner and M. J. Fischer, “The string-to-string correction problem,”
+  *Journal of the ACM* 21(1), 1974.
+  [doi:10.1145/321796.321811](https://doi.org/10.1145/321796.321811)

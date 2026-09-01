@@ -146,9 +146,22 @@ sub wrap-bare-math(Str $prose) {
 my $BARE-ONLY = False;   # --bare-only: skip backticked-span conversion (for signature-bearing files)
 
 sub convert-line(Str $line) {
+    # Normalize the legacy transposed wrapper `` `$`x`$` `` before the ordinary
+    # code-span pass.  Its extra outer backticks split the two dollar signs into
+    # separate one-character code spans, so treating code spans independently
+    # cannot recognize it.  Convert Unicode content here as well, otherwise the
+    # later span converter would introduce a second pair of dollar delimiters.
+    my $normalized = $line.subst(
+        / '`' '$' '`' (.*?) '`' '$' '`' /,
+        -> $m {
+            my $inner = $m[0].Str;
+            '$`' ~ (has-math($inner) ?? convert-content($inner) !! $inner) ~ '`$'
+        },
+        :g,
+    );
     my @spans;
     # 1. Protect backtick spans behind placeholders, converting the math ones → `$…$`.
-    my $prose = $line.subst(
+    my $prose = $normalized.subst(
         / ('`'+) ( .*? ) $0 /,
         -> $m {
             my $v = (!$BARE-ONLY && $m[0].Str.chars == 1 && has-math($m[1].Str))

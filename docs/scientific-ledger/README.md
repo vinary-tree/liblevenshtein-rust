@@ -8,6 +8,8 @@ preserved verbatim as the project's experimental record.
 
 ## Records
 
+- [metric-automata-architecture-audit-2026-08-30.md](metric-automata-architecture-audit-2026-08-30.md) —
+  independent source, SCC, retention, stack-safety, and metric-boundary audit of lazy products and online automata (2026-08-30)
 - [operation-set-binary-persistence-2026-08-02.md](operation-set-binary-persistence-2026-08-02.md) —
   complete bincode/protobuf semantics and optional-gzip size/latency gate (2026-08-02)
 - [automata-wfst-completion-audit.md](automata-wfst-completion-audit.md) — Automata WFST Completion Audit

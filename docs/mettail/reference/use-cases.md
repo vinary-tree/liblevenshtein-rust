@@ -254,7 +254,7 @@ These rules type reduction contexts, enabling behavioral type checking:
 Γ, Δ ⊢ parR(P, R) : parR(T, E)
 ```
 
-### Reduction Rules from the λ-theory
+### Reduction Rules from the $`\lambda`$-theory
 
 These rules type the source and target of reductions:
 

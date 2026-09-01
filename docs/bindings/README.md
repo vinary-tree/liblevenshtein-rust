@@ -30,7 +30,8 @@ surface, the resource consumer, the cursor laws, and the JS/WASM topology.
 | [c-abi-reference.md](c-abi-reference.md) | All 36 `llev_*` functions: signatures, preconditions, exact returnable status sets, ownership, thread safety, complexity; the 13-value status table and its `VtStatus` mapping; the lease protocol with literate batch-loop and reducer pseudocode; a compile-checked complete C consumer. |
 | [resource-consumer.md](resource-consumer.md) | The safe-Rust layer under the C ABI: intake (retain-validate-else-release), `ForeignNode` domains, the `CallGate` (VT-GATE-1..3), the status wire rule and fault latch, the total `BindingError` map, and the two-pass arena fixup. |
 | [collection-protocols.md](collection-protocols.md) | The approved native-Rust and foreign-language collection design: current gaps, generic snapshot traversal, idiomatic `Iterator`/`Set`/`Map` surfaces, batched ABI acceleration, lifecycle rules, gates, and implementation work packages. It is a roadmap, not a claim that every adapter already ships. |
-| [wasm-topology.md](wasm-topology.md) | The JS exception to modular packaging: the `@vinary-tree/vinary-tree` umbrella, the three runtime paths, the runtime-identity guard, WASI preopen policy, and panic-versus-status discipline. |
+| [package-documentation-publication.md](package-documentation-publication.md) | The evidence model for ecosystem documentation: canonical destinations, immutable-source invariants, public readback algorithm, RC5 findings, and the protected deployment sequence. |
+| [wasm-topology.md](wasm-topology.md) | The JS exception to modular packaging: the `@vinary-tree/javascript-runtime` umbrella, the three runtime paths, the runtime-identity guard, WASI preopen policy, and panic-versus-status discipline. |
 | [../theory/snapshot-semantics.md](../theory/snapshot-semantics.md) | The cursor laws S1-S6 as display math, the $`\mathcal{O}(1)`$-capture argument from path-copied revisions, the partial-persistence classification, the refcount lineage, and the law ↔ model ↔ test correspondence table. |
 | [../security/binding-trust-model.md](../security/binding-trust-model.md) | The family trust model instantiated for this consumer: `boundary()`, the bounded error channel, the decoded status wire, lease-refusal as UAF prevention, duty status per hostile-input class. |
 | [FINDINGS_LEDGER.md](FINDINGS_LEDGER.md) | The scientific ledger of confirmed binding findings (LLEV-B1…), append-only, with fix commits and verification. |
@@ -43,19 +44,27 @@ surface, the resource consumer, the cursor laws, and the JS/WASM topology.
 | [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order enums, the 36 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical query snapshot fixture, and entries-v1 identity/status/flag/operation/layout pins. `scripts/generate-bindings.py` emits the headers, constants, and fixtures; `--check` pins them in CI. |
 | [`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) | The per-facade completeness model driving the coverage matrix. |
 | [`bindings/conformance/`](../../bindings/conformance) | Generated conformance fixtures: the query-start snapshot oracle, entries-v1 constants and LP64/ARM32 layouts, and the facade completeness matrix. |
+| [`bindings/conformance/public-api-traceability.tsv`](../../bindings/conformance/public-api-traceability.tsv) | One row per modeled facade function, enum, or traversal protocol, with source, guide, executable-test, and canonical-example evidence plus explicit direct-reference gaps. |
+| [`docs/verification/binding-citation-ledger.json`](../verification/binding-citation-ledger.json) | Crossref-verified metadata for the DOI-bearing binding, snapshot, WASM, and benchmarking references enforced by the documentation gate. It pins identity, not merely resolver existence. |
 | [`scripts/check-bindings.py`](../../scripts/check-bindings.py) | The contract gate: symbol parity model ↔ Rust ↔ header, entries-v1 metadata/header/mirror/fixture agreement, forbidden retired APIs, umbrella identity guard, coordinates, feature-alias policy. |
 | [`scripts/generate-binding-guides.py`](../../scripts/generate-binding-guides.py) | Idempotently renders liblevenshtein's shared operational contract, exhaustive modeled facade-symbol index, modeled type/protocol exposure, and intended-usage paths in every shipped facade guide while preserving its hand-written tutorial. |
-| [`scripts/check-binding-docs.py`](../../scripts/check-binding-docs.py) | Fails closed on an undocumented declared language, missing required topic, stale generated section, missing modeled public symbol, absent intended-usage table or executable example, untagged code fence, placeholder, or broken local link. |
+| [`scripts/check-binding-docs.py`](../../scripts/check-binding-docs.py) | Fails closed on an undocumented declared language, missing required topic, stale generated section, missing modeled public symbol, absent intended-usage table or executable example, wrong or retired package coordinate, untagged code fence, placeholder, broken local link/anchor, or DOI whose label, title, lead author, year, and governed source disagree with the verified citation ledger. |
+| [`release/package-documentation.json`](../../release/package-documentation.json) | One package-surface ledger separating registry publication, rendered guides, generated references, immutable source, and dated public readback evidence. |
+| [`scripts/check-package-documentation.py`](../../scripts/check-package-documentation.py) | Validates the package-documentation ledger locally, reads public services on demand, and fails the strict gate while publication is pending or any released guide or API destination is incomplete. |
+| [`scripts/build-package-documentation.py`](../../scripts/build-package-documentation.py) | Builds the native Doxygen, Python pdoc, and JavaScript TypeDoc references from the authoritative release version and source tag, then fails when a modeled public declaration is absent or undocumented. |
+| [`scripts/package-documentation-site.py`](../../scripts/package-documentation-site.py) | Creates reproducible, hash-manifested release archives and safely assembles every immutable version into one GitHub Pages tree without deleting historical references. |
+| [`.github/workflows/package-documentation.yml`](../../.github/workflows/package-documentation.yml) | Manual exact-tag workflow that builds all references, preserves byte-identical release assets, and deploys the reconstructed version history through the protected `github-pages` environment. |
 | [`docs/verification/ABI_INVARIANTS.tsv`](../verification/ABI_INVARIANTS.tsv) | The canonical invariant registry (VT-LIFE, VT-QI, VT-GATE, VT-ABI, and the wave-W3 rows as they land) tying each law to its model, test, and gate. |
 
 5. **Diagrams:** the binding suite lives in
    [`docs/diagrams/bindings/`](../diagrams/bindings) (sources + committed
-   SVGs, rendered by `docs/diagrams/render.sh bindings`): the four canon
-   diagrams (vt-structs class, interface negotiation, evolution timeline,
-   trust zones) and the ten project diagrams (three-layer architecture,
-   family data flow, registry topology, resource handoff, lease lifecycle,
-   cursor-lease FSM, resource-lifecycle FSM, reducer flow, call-gate
-   serialization, WASM umbrella deployment).
+   SVGs, rendered by `docs/diagrams/render.sh bindings`). The twenty diagrams
+   cover ABI shape and evolution, interface negotiation, trust zones, family
+   data and release flow, snapshots and leases, reducers, collection views,
+   conformance gates, JavaScript runtime topology, and WASM/WASI boundaries.
+   Every source has one SVG, every SVG is embedded in a living document, and
+   `docs/diagrams/render.sh --check bindings` proves byte-for-byte freshness
+   without using system `tmpfs` storage.
 
 ## Language coverage matrix
 
@@ -86,6 +95,7 @@ never such a proof.
 | Haskell | [guide](../../bindings/haskell/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/haskell/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/haskell/README.md) |
 | Lua | [guide](../../bindings/lua/README.md) | [guide](https://github.com/vinary-tree/libdictenstein/blob/master/bindings/lua/README.md) | — | — | — | [adapter guide](https://github.com/vinary-tree/vinary-tree-interop/blob/master/bindings/lua/README.md) |
 | Raku | — | — | — | — | — | — |
+| Julia | — | — | — | — | — | — |
 
 The `llattice` crate currently ships only its optimized native Rust API. That
 is the observed state, not a permanent inapplicability decision: the follow-up

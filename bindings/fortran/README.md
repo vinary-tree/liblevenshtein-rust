@@ -33,11 +33,11 @@ and the [family hub](../../docs/bindings/README.md) when combining independently
 ## Executable example and verification
 
 The repository's canonical executable example is
-[`bindings/fortran/test/test_distance.f90`](../../bindings/fortran/test/test_distance.f90). It exercises the same public package a user
+[`bindings/fortran/integration/test/test_cross_project.f90`](../../bindings/fortran/integration/test/test_cross_project.f90). It exercises the same public package a user
 installs and is run by the binding CI with:
 
 ```sh
-fpm test --profile release --package liblevenshtein
+fpm test -C bindings/fortran/integration --profile release
 ```
 
 Examples deliberately construct or receive resources through public project
@@ -54,6 +54,21 @@ The idiomatic facade groups the stable surface into these concepts:
 | Transducer | Immutable query configuration plus a retained dictionary provider; construction is constant-time with respect to dictionary size. |
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
 | Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
+
+### Automaton selection
+
+| Algorithm | Edit semantics | Metric? | Typical use |
+|---|---|---:|---|
+| Standard | Insert, delete, and substitute | yes | General spelling correction |
+| Transposition | Optimal string alignment with adjacent swaps | no | Typographical swaps when metric-tree laws are unnecessary |
+| Merge and split | Standard edits plus symmetric two-to-one and one-to-two edits | yes | Optical character recognition and segmentation errors |
+| Damerau-Levenshtein | Unrestricted, history-composable adjacent transpositions | yes | True Damerau matching and metric indexes |
+
+The transposition and unrestricted Damerau variants are deliberately distinct:
+for example, optimal string alignment assigns distance 3 from `CA` to `ABC`,
+while unrestricted Damerau-Levenshtein assigns distance 2. Select the algorithm
+when constructing the transducer; all query domains and snapshot laws remain the
+same.
 
 Character data is UTF-8 marshalled explicitly; `integer(c_int8_t)` and `integer(c_int64_t)` arrays preserve byte/token domains. Empty terms, embedded zero bytes, non-ASCII text, and the full
 unsigned 64-bit identifier range are represented explicitly; no facade may use
@@ -97,16 +112,16 @@ variants, protocols, or methods.
 
 | Facade type or protocol | Purpose | Exposure note |
 |---|---|---|
-| `llev_ok` | Typed native status or error carrier | only OK and END carry named parameters; other codes stay numeric |
+| `llev_ok` | Typed native status or error carrier | all stable native status values carry named llev_* parameters; unknown future integer values remain representable |
 | `llev_standard` | Edit-distance algorithm selection | llev_standard/llev_transposition/llev_merge_and_split/llev_damerau_levenshtein |
 | `llev_traversal` | Result traversal ordering | llev_traversal/llev_distance_then_term |
+| `llev_english_orthography` | Built-in phonetic rule-set selection | llev_english_orthography/llev_english_phonetic |
 | `query_iterator%next` | One-shot owned-result iteration | Public facade protocol |
 
 ### Facade-encapsulated model values
 
 | Model value | Idiomatic treatment |
 |---|---|
-| `phoneticRuleSetKind` | builtin_phonetic_rules takes a raw integer kind; named constants are not provided |
 | `reducer` | no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally |
 
 Native operations omitted from the public-symbol table are deliberately
@@ -119,7 +134,7 @@ such operation with its reviewed rationale; an unreasoned absence fails CI.
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
 | Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Maximum result throughput | Drain the facade iterator; no public reducer is exposed | The iterator still amortizes native calls with bounded internal batches, then releases each lease before exposing host-owned matches. |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
@@ -140,9 +155,9 @@ mutations cannot invalidate that query. Acquisition either completes with one
 owned retain or fails with no ownership transfer. Teardown order is therefore
 free across dictionary, transducer, and completed query handles.
 
-Borrowed results are intentionally lexical. Copy data that must outlive the
-callback; retaining a raw address, slice, memory segment, or foreign pointer is
-an API violation even when the next operation happens to reuse the same arena.
+Iterator results are copied into host-owned values before their native batch
+lease is released. They remain valid after iteration advances or the cursor is
+closed; no raw pointer or borrowed native view reaches user code.
 
 ## Errors and failure containment
 
@@ -166,7 +181,7 @@ the host language must not add a weaker promise.
 
 - Reuse transducers for repeated queries against the same resource.
 - Prefer streaming cursors to whole-result materialization.
-- Prefer batch/reducer APIs when per-match boundary crossings dominate.
+- Drain each cursor once; the iterator already fetches bounded native batches before materializing host-owned matches.
 - Keep Unicode, byte, and token domains explicit to avoid transcoding.
 - Measure native, WASM, and WASI paths independently; they have different
   startup and marshalling costs but identical query semantics.

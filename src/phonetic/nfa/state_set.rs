@@ -25,6 +25,7 @@
 
 use super::types::StateId;
 use rustc_hash::FxHashSet;
+use std::hash::{Hash, Hasher};
 
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
@@ -67,7 +68,7 @@ fn bitset_count_len(bit_count: u32) -> usize {
 ///
 /// Uses a 256-bit bitset for NFAs with ≤256 states, falling back to `FxHashSet`
 /// for larger automata.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct StateSet {
     /// Bitset representation for small state sets (states 0-255).
@@ -78,6 +79,22 @@ pub struct StateSet {
     /// Fallback for states >= 256.
     #[cfg_attr(feature = "serialization", serde(skip))]
     overflow: Option<Box<FxHashSet<StateId>>>,
+}
+
+impl Hash for StateSet {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.bits.hash(state);
+        // Hash-set iteration order is deliberately not part of canonical
+        // identity. State IDs are sorted before hashing the uncommon overflow
+        // representation so equal sets always receive equal fingerprints.
+        let mut overflow = self
+            .overflow
+            .iter()
+            .flat_map(|states| states.iter().copied())
+            .collect::<Vec<_>>();
+        overflow.sort_unstable();
+        overflow.hash(state);
+    }
 }
 
 impl StateSet {

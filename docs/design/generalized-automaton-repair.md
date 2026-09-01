@@ -4,14 +4,17 @@
 empty-side operations now affect acceptance exactly
 
 This document specifies the repaired `GeneralizedAutomaton`. The public engine
-is an exact, operation-driven oracle for runtime `OperationSet` values. It no
-longer asks a unit-cost universal-position state whether a configured weighted
-alignment should accept.
+is an exact, operation-driven automaton for runtime `OperationSet` values. It
+binds one finite source and advances an unknown-length target stream through a
+finite-lookback row ring; the former sparse alignment graph remains a
+test-only independent oracle. It never asks a unit-cost universal-position
+state whether a configured weighted alignment should accept.
 
-![The generalized automaton explores only exact-cost alignment cells reachable within the scaled budget.](../diagrams/automata/generalized-operation-grid.svg)
+![The generalized alignment graph contains only configured consuming operations; production evaluates it a target generation at a time through a finite-lookback row ring.](../diagrams/automata/generalized-operation-grid.svg)
 
-*Each edge consumes the operation's declared source and target lengths. A cell
-stores the least exact scaled cost seen for that coordinate pair.*
+*Each edge consumes the operation's declared source and target lengths. The
+production row ring and independent sparse oracle compute the same least exact
+scaled cost for every coordinate pair.*
 
 ## 1. Defect and required semantics
 
@@ -39,7 +42,7 @@ operation set—match plus substitution—there is no path between unequal-lengt
 strings at any budget. For a phonetic operation of weight `0.15`, six uses fit
 budget `1`, while seven do not.
 
-## 2. Alignment graph
+## 2. Alignment graph and finite-lookback online evaluation
 
 For word $`w`$ of length $`m`$ and input $`x`$ of length $`n`$, an **alignment
 cell** $`(i,j)`$ means that the first $`i`$ source characters and first $`j`$
@@ -55,11 +58,18 @@ slices satisfy the operation restriction. Its edge cost is the exact scaled
 integer representation of $`t^w`$.
 
 Every admitted operation must consume at least one character. Coordinates
-therefore strictly increase in lexicographic order: a `BTreeMap<(usize,
-usize), usize>` is both the sparse frontier and a topological work queue. When
-a cell is popped, every predecessor has already contributed to its minimum.
-There is no heuristic acceptance completion and no special case for either
-empty string.
+therefore strictly increase in lexicographic order. Let $`r`$ be the maximum
+target consumption of any configured operation. A cell in target generation
+$`j`$ can read only generations $`j-r`$ through $`j`$. Production keeps
+exactly $`r+1`$ committed source-width rows, one scratch row, and the last
+$`r`$ target scalars. Generation tags distinguish a live predecessor row
+from an overwritten ring slot.
+
+Source-only operations have target consumption zero. The source coordinate is
+evaluated in increasing order inside the scratch row, so those predecessors
+are already final when read. Target-consuming operations read a tagged earlier
+row. This is a topological schedule of the same acyclic alignment graph; no
+heuristic acceptance completion or empty-string special case is needed.
 
 The bounded recurrence is:
 
@@ -69,7 +79,15 @@ D[i+t^x,j+t^y]
 ```
 
 An update is retained only when its cost is at most the scaled public budget.
-Acceptance is equivalent to reaching $`(m,n)`$.
+Acceptance is equivalent to reaching $`(m,n)`$. `advance` is transactional:
+it builds the prospective target window and row in scratch, and commits the
+generation only after validation and checked arithmetic succeed. An error
+therefore leaves the previous observation intact.
+
+The test configuration retains the earlier `BTreeMap<(usize, usize), usize>`
+evaluator as an independent sparse-grid oracle. Exhaustive small Unicode
+examples compare every production online result to that differently shaped
+implementation.
 
 ## 3. Exact cost domain
 
@@ -158,20 +176,31 @@ target consumption pair, so arbitrary arities are never silently ignored.
 
 ## 7. Complexity and resource policy
 
-Let $`R`$ be the number of alignment cells reachable within budget and
-$`\lvert\mathcal{O}\rvert`$ the number of operations. Time is:
+Let $`m`$ be the fixed source length, $`n`$ the consumed target length,
+$`r`$ the maximum target consumption, and $`\lvert\mathcal{O}\rvert`$ the
+number of operations. Excluding the cost of a restriction-table lookup, time is:
 
 ```math
-\mathcal{O}\left(R\lvert\mathcal{O}\rvert\log R\right)
+\mathcal{O}\left(n(m+1)\lvert\mathcal{O}\rvert\right).
 ```
 
-and frontier memory is $`\mathcal{O}(R)`$. The sparse graph usually occupies a
-narrow cost-bounded band. Zero-cost length-preserving operations remain on a
-diagonal. Nevertheless, attacker-controlled operation sets and inputs can
-increase $`R`$; evaluation stops before discovering cell
-`MAX_GENERALIZED_ALIGNMENT_STATES + 1` and returns a resource error. The
-initial cell counts as the first materialized cell. All coordinate, cost,
-scale, and discovery-count additions are checked before indexing or insertion.
+The DP ring and scratch row retain:
+
+```math
+(r+2)(m+1)
+```
+
+exact scaled-cost cells, plus the fixed source, compiled operations, Unicode
+offsets, and at most $`r`$ target scalars. Memory is therefore independent of
+$`n`$. `GeneralizedOnlineLimits::max_retained_cells` preflights the displayed
+cell count, while `max_step_work_units` preflights
+$`(m+1)\lvert\mathcal{O}\rvert`$ before the first target transition. Defaults
+are one million retained cells and one hundred million relaxations per step.
+
+Every coordinate and cost addition is checked. `try_reserve_exact` precedes
+ring, scratch, operation, and lookback allocation. A resource or arithmetic
+error is explicit, and a rejected target step does not commit its prospective
+window or generation.
 
 ## 8. API
 
@@ -188,6 +217,12 @@ let oracle = GeneralizedAutomaton::try_with_operations(1, operations)?;
 assert!(oracle.accepts("aaaaaa", "bbbbbb"));
 assert!(!oracle.accepts("aaaaaaa", "bbbbbbb"));
 assert_eq!(oracle.cost_scale()?.denominator(), 20);
+
+let mut online = oracle.online("aaaaaa")?;
+for target in "bbbbbb".chars() {
+    online.advance(target)?;
+}
+assert_eq!(online.observation().distance_within_budget, Some(18));
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
@@ -196,10 +231,10 @@ assert_eq!(oracle.cost_scale()?.denominator(), 20);
 | Evidence | Invariant |
 |---|---|
 | Rocq `GeneralizedAutomatonRepair.v` | path folds, completion charging, exact rescaling, explicit-infinity and finite rates, certified/conservative subsumption, discovery guarding, operation-order independence, antichain set semantics, Hamming length preservation, absent-deletion rejection, coordinate progress |
-| Verus `generalized_automaton.rs` | positive completion charging, exact rescaling, exact rate comparison, certified/conservative subsumption, discovery guarding, minimum-cost order independence, equal-position insertion idempotence, checked accumulation, `0.15` boundary |
-| Z3 + cvc5 `generalized_automaton.smt2` | twelve bounded counterexample queries are UNSAT in both solvers |
+| Verus `generalized_automaton.rs` | positive completion charging, exact rescaling, exact rate comparison, certified/conservative subsumption, discovery guarding, minimum-cost order independence, equal-position insertion idempotence, checked accumulation, `0.15` boundary, finite-lookback predecessor retention, and topological source-only ordering |
+| Z3 + cvc5 `generalized_automaton.smt2` | thirteen bounded counterexample queries, including finite-lookback/topological scheduling, are UNSAT in both solvers |
 | `proptest_generalized_automaton_repair.rs` | standard/reference, Hamming, indel/LCS, bounded-skip/subsequence, budget monotonicity, fractional, Unicode, invalid values |
-| generalized unit suite | standard, transpose, merge/split, phonetic, empty-side, and changed exact-weight examples |
+| generalized unit suite | standard, transpose, merge/split, phonetic, empty-side, exact-weight examples, exhaustive online-versus-sparse Unicode correspondence, transactional limits, and a 100,000-scalar prefix-retention gate |
 
 The generalized operation model follows Mitankin, Mihov, and Schulz,
 “Deciding word neighborhood with universal neighborhood automata,”

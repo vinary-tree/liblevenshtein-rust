@@ -18,7 +18,7 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```rust
 //! use liblevenshtein::phonetic::regex::{parse, transform::apply_flags};
 //!
 //! let regex = parse("(?i:hello)").unwrap();

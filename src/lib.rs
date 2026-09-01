@@ -11,17 +11,15 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::prelude::*;
-//! use liblevenshtein::dictionary::MappedDictionary;
 //!
 //! let terms = vec!["test", "testing", "tested"];
-//! let dict = PathMapDictionary::from_terms(terms);
+//! let dict = DoubleArrayTrie::from_terms(terms);
 //! let transducer = Transducer::new(dict, Algorithm::Standard);
 //!
-//! for term in transducer.query("tset", 2) {
-//!     println!("Match: {}", term);
-//! }
+//! let matches: Vec<_> = transducer.query_terms("tset", 2).collect();
+//! assert_eq!(matches, ["test"]);
 //! ```
 
 #![warn(missing_docs)]
@@ -63,7 +61,7 @@ pub mod transducer;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use liblevenshtein::dictionary::scdawg::Scdawg;
 /// use liblevenshtein::wallbreaker::WallBreaker;
 ///

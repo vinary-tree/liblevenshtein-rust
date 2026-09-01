@@ -1,11 +1,11 @@
 # Documentation Index
 
-Complete documentation for **liblevenshtein-rust v4.0.0-rc.4** — Levenshtein and
+Complete documentation for **liblevenshtein-rust v4.0.0-rc.6** — Levenshtein and
 related (phonetic, time-series) automata for error-tolerant search over strings
 and byte arrays, with several trie/DAWG dictionaries, fuzzy maps, and fuzzy
 caches.
 
-**Last Updated:** 2026-08-24  ·  **Version:** 4.0.0-rc.4
+**Last Updated:** 2026-08-29  ·  **Version:** 4.0.0-rc.6
 
 ![Documentation map: the nine sections of this documentation set.](diagrams/architectures/documentation-map.svg)
 
@@ -20,8 +20,8 @@ index maps everything else.
 
 ### Document conventions
 
-- **Math** is written as **MathJax LaTeX**, never as Unicode literals. Inline math is a
-  backtick code span whose content is dollar-delimited — `` `$\mathcal{O}(\lvert W\rvert)$` ``
+- **Math** is written as **MathJax LaTeX**, never as Unicode literals. Inline math uses
+  dollar delimiters around a backtick-delimited expression — `` $`\mathcal{O}(\lvert W\rvert)`$ ``
   renders as $`\mathcal{O}(\lvert W\rvert)`$ — and display math is a fenced block whose
   info-string is `math`. We never use *bare* dollar-delimited math (dollars without the
   enclosing backticks): GitHub's CommonMark pass strips backslash escapes before MathJax
@@ -36,7 +36,7 @@ index maps everything else.
 ### Living vs. Historical — the rule that bounds edits
 
 > A document is **LIVING** if it describes the *current* behaviour, API, theory,
-> or architecture of liblevenshtein v4.0.0-rc.4 — something you would consult to *use
+> or architecture of liblevenshtein v4.0.0-rc.6 — something you would consult to *use
 > or extend the library today*. A document is **HISTORICAL** if it is a dated
 > record of *how we got here*: a scientific ledger, hypothesis log, experiment
 > record, phase/session/completion report, or benchmark dump. Per the project's
@@ -58,6 +58,7 @@ index maps everything else.
 
 - [Lazy vs. Eager Automata](concepts/LAZY_VS_EAGER_AUTOMATA.md) — the central idea: a query *lazily simulates* a parameterized Levenshtein automaton, it is **not** a precompiled universal DFA.
 - [Levenshtein-automata theory](research/levenshtein-automata/README.md) — the Schulz–Mihov method, glossary, and code-to-paper mapping (theory home; also cross-linked from the glossary).
+- [Lazy ordered-cost product automata](theory/lazy-ordered-cost-product-automata.md) — the general theory of weighted residuals, simulation antichains, abstract interval products, stable online state, and separately qualified metric instances.
 - [Algorithm layer 02 — Levenshtein automata](algorithms/02-levenshtein-automata/README.md) — the position/subsumption model, with diagrams.
 - [Edit-distance classification](theory/edit-distance-classification.md) — the alignment/script boundary, four implementation classes, metricity-versus-pruning distinction, and placement checklist for future measures.
 - [Snapshot semantics](theory/snapshot-semantics.md) — the cursor laws S1-S6 as display math, the $`\mathcal{O}(1)`$-capture argument from path-copied revisions, the partial-persistence classification (Driscoll; Okasaki), and the law ↔ formal-model ↔ test correspondence table.
@@ -68,10 +69,10 @@ index maps everything else.
 
 - [Architecture Overview](architecture/overview.md) — the **inter-crate** view: liblevenshtein ↔ libdictenstein ↔ optional duallity (WFST) ↔ the `.llev`/`.llre` DSL layer.
 - [Language-bindings architecture](language-bindings.md) — the three-layer binding decision (versioned C resource ABI + generated constants + hand-written facades), the shared `VtResource` boundary, snapshot/marshalling contracts, tiers, distribution, and platform policy.
-- [Binding documentation hub](bindings/README.md) — the corpus map and reading order: the [`llev_*` C-ABI reference](bindings/c-abi-reference.md) (all 35 functions, status sets, the lease protocol, a compile-checked C consumer), the [resource consumer](bindings/resource-consumer.md) (intake, `CallGate`, fault channel, arenas), the [WASM/JS topology](bindings/wasm-topology.md) (umbrella runtime, identity guard, WASI preopens), and the machine-readable governance (`bindings/api.json`, conformance fixtures, `ABI_INVARIANTS.tsv`).
+- [Binding documentation hub](bindings/README.md) — the corpus map and reading order: the [`llev_*` C-ABI reference](bindings/c-abi-reference.md) (all 35 functions, status sets, the lease protocol, a compile-checked C consumer), the [resource consumer](bindings/resource-consumer.md) (intake, `CallGate`, fault channel, arenas), the [WASM/JS topology](bindings/wasm-topology.md) (shared JavaScript runtime, identity guard, WASI preopens), and the machine-readable governance (`bindings/api.json`, conformance fixtures, `ABI_INVARIANTS.tsv`).
 - Family ABI canon (hosted with the interop crate): [portal](https://github.com/vinary-tree/vinary-tree-interop/blob/master/README.md) · [ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) · [evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md) · [security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md).
 - [Developer Guide → Architecture](developer-guide/architecture.md) — the **intra-crate** module design and traits.
-- [Design specifications](design/README.md) — feature-level designs, including [Class-A presets](design/class-a-presets.md), the [ordered cost monoid](design/cost-monoid.md), [language products](design/language-product.md), dynamic DAWG, suffix automaton, contextual completion, protobuf serialization, and grammar correction.
+- [Design specifications](design/README.md) — feature-level designs, including [Class-A presets](design/class-a-presets.md), the [ordered cost monoid](design/cost-monoid.md), [language products](design/language-product.md), [complete content-addressed elastic snapshots](design/complete-elastic-snapshots.md), dynamic DAWG, suffix automaton, contextual completion, protobuf serialization, and grammar correction.
 - [Algorithm Reference layers 01–09](algorithms/README.md) — the layered architecture, bottom-up.
 - Diagrams: [crate boundary](diagrams/architectures/crate-boundary.svg) · [component stack](diagrams/architectures/component-stack.svg) · [C4 context](diagrams/architectures/c4-context.svg) / [container](diagrams/architectures/c4-container.svg) · [feature-flag DAG](diagrams/architectures/feature-flag-dag.svg) · [module dependencies](diagrams/architectures/module-dependency.svg).
 
@@ -86,13 +87,16 @@ index maps everything else.
 ## 5 · Developer Guide
 
 - [Developer Guide](developer-guide/README.md) — [building](developer-guide/building.md), [contributing](developer-guide/contributing.md), [performance](developer-guide/performance.md), [publishing](developer-guide/publishing.md).
+- [Executable Rust API examples](developer-guide/rustdoc-examples.md) — fence semantics, all-feature Rustdoc gates, the ignored-example ratchet, and the evidence-based repair workflow.
 - [Migration to the split CLI](migration-cli-split-0.10.md) — the v0.10 package and API boundary.
 - [Security & threat model](SECURITY.md) — untrusted-input surfaces (FFI/WASM boundaries, serialization, `.llre` parsing).
 - [Binding trust model](security/binding-trust-model.md) — the family trust model instantiated for the resource consumer: `boundary()` containment, the bounded error channel, the decoded status wire, lease refusal as use-after-free prevention, and duty status per hostile-input class.
 - [Releasing language bindings](releasing-language-bindings.md) — the publish-order DAG, registry coordinates and credentials, pin-coherence preconditions, and pre-publication gates.
 - [Release evidence ledgers](releases/README.md) — immutable source commits,
   workflow runs, registry digests, public-byte smokes, incidents, and recovery
-  decisions; start with the [`4.0.0-rc.4` ledger](releases/4.0.0-rc.4.md).
+  decisions. The [`4.0.0-rc.6` ledger](releases/4.0.0-rc.6.md) remains the latest
+  completed publication ledger; it does not describe the coherent `rc.6`
+  development tuple.
 - [Resource-exhaustion controls](security/resource-exhaustion.md) — automaton state ceilings, edit budgets, elastic-DP guards, and deployment policy.
 - [Automaton-variant security](security/automaton-variants.md) — continuation-tag integrity, subsumption soundness, selector stability, and extension review controls.
 - [Migration](migration/README.md) — terminology and version-migration notes (including the libdictenstein extraction).

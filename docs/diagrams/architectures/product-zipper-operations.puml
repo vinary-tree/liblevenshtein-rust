@@ -1,0 +1,41 @@
+@startuml product-zipper-operations
+' One operational step of a focused dictionary/query product.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  BorderColor #37474F
+  FontColor #102027
+  RoundCorner 12
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Product zipper operation — advance one reachable focus
+
+rectangle "Product focus\n(snapshot, dictionary cursor, StateId)" as Focus #BBDEFB
+rectangle "Inspect one real dictionary edge\nlabel a, child cursor" as Edge #C8E6C9
+rectangle "Classify observation χ(a)" as Class #B2EBF2
+rectangle "Lookup cached\n(StateId, χ(a))" as Cache #D1C4E9
+rectangle "Observed transition?" as Observed #FFF9C4
+rectangle "Generate reachable positions\nclose, normalize, exact-intern" as Generate #FFE0B2
+rectangle "Live successor?" as Live #FFF9C4
+rectangle "Child product focus\n(same snapshot, child cursor, next StateId)" as Child #DCEDC8
+rectangle "Prune child subtree" as Prune #FFCDD2
+
+Focus --> Edge
+Edge --> Class
+Class --> Cache
+Cache --> Observed
+Observed --> Live : yes / cached ID or dead
+Observed --> Generate : no
+Generate --> Cache : record exact result
+Generate --> Live
+Live --> Child : yes
+Live --> Prune : no
+
+note bottom of Child #E3F2FD
+  Dictionary focus and query state
+  always denote the same consumed path.
+end note
+@enduml

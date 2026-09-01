@@ -1,11 +1,11 @@
 @startuml
 title Vinary Tree foreign-language runtime and package topology
 
-skinparam backgroundColor #FAFCFF
+skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam componentStyle rectangle
 skinparam ArrowColor #455A64
-skinparam defaultFontName DejaVu Sans
+skinparam defaultFontName "DejaVu Sans"
 
 rectangle "Host-language packages" as hosts #E3F2FD {
   component "C / C++\nmanual + RAII" as native_host #BBDEFB

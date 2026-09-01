@@ -7,8 +7,11 @@
 //! yields an O(1) incremental prefix bound per trie edge.
 
 use std::collections::VecDeque;
+use std::mem::size_of;
 
+use super::super::bounded::{IncompleteReason, ResourceKind};
 use super::super::elastic::interval::interval_gap;
+use super::super::elastic::QueryPlanStorage;
 use crate::cost::{CostMonoid, WeightedCost};
 
 #[inline]
@@ -74,14 +77,50 @@ impl KeoghPlan {
 /// samples are rejected because their ordering and squared deviations do not
 /// define a lawful lower bound.
 pub fn keogh_envelopes(query: &[f64], band: usize) -> Option<KeoghPlan> {
+    try_keogh_envelopes(query, band)
+        .unwrap_or_else(|error| panic!("LB_Keogh plan allocation failed: {error:?}"))
+}
+
+/// Fallibly build centered Sakoe–Chiba envelopes in linear time.
+///
+/// The four retained query-width arrays and both transient monotone queues are
+/// allocated explicitly so bounded callers never turn allocation failure into
+/// an unsafe empty/default envelope.
+pub(crate) fn try_keogh_envelopes(
+    query: &[f64],
+    band: usize,
+) -> Result<Option<KeoghPlan>, IncompleteReason> {
     if query.is_empty() || query.iter().any(|value| !value.is_finite()) {
-        return None;
+        return Ok(None);
     }
 
-    let mut lower = vec![0.0; query.len()];
-    let mut upper = vec![0.0; query.len()];
-    let mut minima = VecDeque::with_capacity(query.len());
-    let mut maxima = VecDeque::with_capacity(query.len());
+    let storage = QueryPlanStorage::checked_per_element(
+        query.len(),
+        4 * size_of::<f64>(),
+        2 * size_of::<usize>(),
+    )?;
+    let allocation_error = || IncompleteReason::AllocationFailed {
+        resource: ResourceKind::ScratchBytes,
+        requested: storage.construction_peak_bytes(),
+    };
+    let mut lower = Vec::new();
+    let mut upper = Vec::new();
+    let mut minima = VecDeque::new();
+    let mut maxima = VecDeque::new();
+    lower
+        .try_reserve_exact(query.len())
+        .map_err(|_| allocation_error())?;
+    upper
+        .try_reserve_exact(query.len())
+        .map_err(|_| allocation_error())?;
+    minima
+        .try_reserve_exact(query.len())
+        .map_err(|_| allocation_error())?;
+    maxima
+        .try_reserve_exact(query.len())
+        .map_err(|_| allocation_error())?;
+    lower.resize(query.len(), 0.0);
+    upper.resize(query.len(), 0.0);
     let mut next_to_add = 0usize;
 
     for center in 0..query.len() {
@@ -114,12 +153,23 @@ pub fn keogh_envelopes(query: &[f64], band: usize) -> Option<KeoghPlan> {
         while maxima.front().is_some_and(|index| *index < left) {
             maxima.pop_front();
         }
-        lower[center] = query[*minima.front()?];
-        upper[center] = query[*maxima.front()?];
+        let (Some(&minimum), Some(&maximum)) = (minima.front(), maxima.front()) else {
+            return Ok(None);
+        };
+        lower[center] = query[minimum];
+        upper[center] = query[maximum];
     }
 
-    let mut suffix_lower = vec![0.0; query.len()];
-    let mut suffix_upper = vec![0.0; query.len()];
+    let mut suffix_lower = Vec::new();
+    let mut suffix_upper = Vec::new();
+    suffix_lower
+        .try_reserve_exact(query.len())
+        .map_err(|_| allocation_error())?;
+    suffix_upper
+        .try_reserve_exact(query.len())
+        .map_err(|_| allocation_error())?;
+    suffix_lower.resize(query.len(), 0.0);
+    suffix_upper.resize(query.len(), 0.0);
     let last = query.len() - 1;
     suffix_lower[last] = query[last];
     suffix_upper[last] = query[last];
@@ -128,12 +178,12 @@ pub fn keogh_envelopes(query: &[f64], band: usize) -> Option<KeoghPlan> {
         suffix_upper[index] = query[index].max(suffix_upper[index + 1]);
     }
 
-    Some(KeoghPlan {
+    Ok(Some(KeoghPlan {
         lower,
         upper,
         suffix_lower,
         suffix_upper,
-    })
+    }))
 }
 
 /// Full candidate LB_Keogh in squared-cost units.

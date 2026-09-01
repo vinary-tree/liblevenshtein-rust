@@ -44,7 +44,7 @@ report unsupported arities rather than ignoring them.
 
 ## 2. Semantic model
 
-Let `$`x`$` be the source or dictionary word and `$`y`$` the target or query.
+Let $`x`$ be the source or dictionary word and $`y`$ the target or query.
 Lengths and consumption counts are numbers of Unicode scalar values. The
 semantic part of an operation is:
 
@@ -54,22 +54,22 @@ t=\langle t^x,t^y,t^w,a\rangle,
 
 where:
 
-- `$`t^x`$` is the number of source scalars consumed;
-- `$`t^y`$` is the number of target scalars consumed;
-- `$`t^w\ge 0`$` is the operation cost; and
-- `$`a`$` is the applicability predicate for the two consumed slices.
+- $`t^x`$ is the number of source scalars consumed;
+- $`t^y`$ is the number of target scalars consumed;
+- $`t^w\ge 0`$ is the operation cost; and
+- $`a`$ is the applicability predicate for the two consumed slices.
 
 The stored name is intentionally outside this tuple. It exists for diagnostics
 and profiling; renaming an operation cannot change acceptance or distance.
 
-An alignment cell `$`(i,j)`$` has consumed the first `$`i`$` source scalars and
-the first `$`j`$` target scalars. An applicable rule creates the edge:
+An alignment cell $`(i,j)`$ has consumed the first $`i`$ source scalars and
+the first $`j`$ target scalars. An applicable rule creates the edge:
 
 ```math
 (i,j)\longrightarrow(i+t^x,j+t^y)
 ```
 
-with cost `$`t^w`$`. Acceptance means reaching `$`(|x|,|y|)`$` without
+with cost $`t^w`$. Acceptance means reaching $`(|x|,|y|)`$ without
 exceeding the integer budget configured on `GeneralizedAutomaton`.
 
 ### 2.1 Applicability is explicit
@@ -110,9 +110,9 @@ canonical-equivalence or grapheme semantics are required.
 `CostScale` converts every configured finite decimal weight to a common integer
 domain. It interprets the shortest round-tripping decimal representation of
 the `f64`, reduces the value as a rational, and derives the least common
-denominator. For denominator `$`q`$`, the public integer budget `$`k`$` becomes
-`$`kq`$` and a rule weight `$`w`$` becomes an exact integer
-`$`\operatorname{scaled}(w)`$`.
+denominator. For denominator $`q`$, the public integer budget $`k`$ becomes
+$`kq`$ and a rule weight $`w`$ becomes an exact integer
+$`\operatorname{scaled}(w)`$.
 
 The recurrence is therefore integer-exact:
 
@@ -230,14 +230,14 @@ scale, and traverses reachable cells in lexicographic order through a
 sparse topological dynamic programming rather than Dijkstra's algorithm. A
 cell stores only the least discovered scaled cost.
 
-Let `$`R`$` be the number of in-budget cells reached and
-`$`|\mathcal O|`$` the number of operations. The current implementation uses:
+Let $`R`$ be the number of in-budget cells reached and
+$`|\mathcal O|`$ the number of operations. The current implementation uses:
 
 ```math
 \mathcal O\left(R|\mathcal O|\log R\right)
 ```
 
-time and `$`\mathcal{O}(R)`$` frontier memory. Evaluation fails with a resource
+time and $`\mathcal{O}(R)`$ frontier memory. Evaluation fails with a resource
 error before materializing more than 1,000,000 unique alignment cells. Cell
 coordinates, accumulated costs, scale arithmetic, and discovery counts use
 checked operations.

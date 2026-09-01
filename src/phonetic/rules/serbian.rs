@@ -29,18 +29,18 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust
 //! use liblevenshtein::phonetic::rules::serbian;
 //!
 //! // Cyrillic script
 //! let cyrillic_rules = serbian::base();
 //! let result = cyrillic_rules.apply("љ");
-//! assert!(result.contains("lj"), "љ → lj");
+//! assert_eq!(result, "ʎ");
 //!
 //! // Latin script
 //! let latin_rules = serbian::latin();
 //! let result = latin_rules.apply("č");
-//! assert!(result.contains("t͡ʃ"), "č → ch");
+//! assert_eq!(result, "t͡ʃ");
 //! ```
 
 use crate::phonetic::llev::RuleSetChar;

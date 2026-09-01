@@ -628,9 +628,9 @@ t : TT, Γ ⊢ P : T    Δ ⊢ x : V
 The Meta-MeTTa paper explicitly recommends OSLF for deriving "a type system for MeTTa
 that includes spatial and behavioral types."
 
-MeTTa's operational semantics can be formalized as a **λ-theory with equality**:
+MeTTa's operational semantics can be formalized as a **$`\lambda`$-theory with equality**:
 
-| MeTTa Concept | λ-Theory Formalization |
+| MeTTa Concept $`| \lambda`$-Theory Formalization |
 |---------------|------------------------|
 | Term sorts | Sorts in the theory signature |
 | Constructors | Operations in the signature |

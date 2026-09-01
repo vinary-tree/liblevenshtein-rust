@@ -1,5 +1,5 @@
-import { liblevenshtein } from "@vinary-tree/vinary-tree/wasm";
-import { assertDictionaryResource, assertSameRuntime } from "@vinary-tree/interop";
+import { liblevenshtein } from "@vinary-tree/javascript-runtime/wasm";
+import { assertDictionaryResource, assertSameRuntime } from "@vinary-tree/vinary-tree-interop";
 export const runtimeIdentity = liblevenshtein.runtimeIdentity;
 export function transducer(dictionary, algorithm) {
   assertDictionaryResource(dictionary);

@@ -41,7 +41,6 @@
 
 use super::msm::MsmConfig;
 
-const DISTANCE_EPSILON: f64 = 1e-9;
 const DEFAULT_RESULT_BUFFER_CAPACITY: usize = 64;
 
 /// Prefix Euclidean distance heuristic for MSM.
@@ -307,7 +306,7 @@ fn is_invalid_threshold(threshold: f64) -> bool {
 
 #[inline]
 fn inclusive_cutoff(threshold: f64) -> f64 {
-    threshold + DISTANCE_EPSILON
+    threshold
 }
 
 #[inline]
@@ -666,18 +665,18 @@ mod tests {
     }
 
     #[test]
-    fn test_search_with_lb_preserves_inclusive_epsilon() {
+    fn test_search_with_lb_uses_the_exact_inclusive_cutoff() {
         let config = MsmConfig::new(1.0);
         let query = vec![10.0, 20.0, 30.0];
         let database: Vec<(usize, Vec<f64>)> = vec![
             (0, query.clone()),
-            (1, vec![10.0, 20.0, 30.0 + EPSILON / 2.0]),
+            (1, vec![10.0, 20.0, 30.0_f64.next_up()]),
             (2, vec![100.0, 100.0, 100.0]),
         ];
 
         let results = search_with_lb(&query, &database, 0.0, &config);
         let found_ids: Vec<usize> = results.iter().map(|(id, _)| *id).collect();
-        assert_eq!(found_ids, vec![0, 1]);
+        assert_eq!(found_ids, vec![0]);
 
         #[cfg(feature = "rayon")]
         assert_eq!(
@@ -688,7 +687,7 @@ mod tests {
         let (stats_results, stats) = search_with_lb_stats(&query, &database, 0.0, &config);
         assert_eq!(stats_results, results);
         assert_eq!(stats.total_candidates, 3);
-        assert_eq!(stats.passed_exact, 2);
+        assert_eq!(stats.passed_exact, 1);
     }
 
     #[test]

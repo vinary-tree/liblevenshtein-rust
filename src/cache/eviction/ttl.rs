@@ -20,7 +20,9 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
+//! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Ttl;
@@ -35,6 +37,7 @@
 //!
 //! // Values expire after 5 minutes
 //! assert_eq!(ttl_dict.get_value("foo"), Some(42));
+//! # }
 //! ```
 
 use crate::dictionary::node_adapter::{
@@ -78,7 +81,9 @@ impl EntryMetadata {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::cache::eviction::Ttl;
@@ -91,6 +96,7 @@ impl EntryMetadata {
 ///
 /// let ttl = Ttl::new(dict, Duration::from_secs(300));
 /// assert_eq!(ttl.get_value("hello"), Some(1));
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct Ttl<D>
@@ -117,7 +123,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Ttl;
     /// use std::time::Duration;
@@ -127,6 +135,7 @@ where
     /// ]);
     ///
     /// let ttl = Ttl::new(dict, Duration::from_secs(300));
+    /// # }
     /// ```
     pub fn new(dict: D, ttl: Duration) -> Self {
         Self {
