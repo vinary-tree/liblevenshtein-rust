@@ -196,4 +196,77 @@ proof fn concatenated_script_cost_is_additive(left_cost: nat, right_cost: nat)
 {
 }
 
+spec fn physical_delete_leaf(
+    value_delta: nat,
+    elapsed_time: nat,
+    nu: nat,
+    lambda: nat,
+) -> nat {
+    value_delta + nu * elapsed_time + lambda
+}
+
+/// Monotone timestamps and validated nonnegative parameters make every
+/// explicit-time deletion leaf nonnegative by construction.
+proof fn physical_delete_leaf_is_nonnegative(
+    value_delta: nat,
+    elapsed_time: nat,
+    nu: nat,
+    lambda: nat,
+)
+    ensures
+        physical_delete_leaf(value_delta, elapsed_time, nu, lambda) >= 0,
+{
+}
+
+/// An elapsed time of one canonical unit is exactly the unit-grid deletion
+/// leaf rather than an approximation to it.
+proof fn unit_elapsed_physical_delete_is_unit_grid(
+    value_delta: nat,
+    nu: nat,
+    lambda: nat,
+)
+    ensures
+        physical_delete_leaf(value_delta, 1, nu, lambda)
+            == value_delta + nu + lambda,
+{
+}
+
+/// Strict timestamp validation implies a positive elapsed-time term for every
+/// target sample after the first.
+proof fn strict_timestamp_step_has_positive_elapsed_time(
+    previous_time: int,
+    current_time: int,
+)
+    requires
+        previous_time < current_time,
+    ensures
+        current_time - previous_time > 0,
+{
+}
+
+/// AP/K1 composition rule for an explicit-time interval leaf.  The interval
+/// lemmas above establish the component premises; multiplication by validated
+/// nonnegative stiffness and addition of the gap preserve their order.
+proof fn physical_interval_components_preserve_admissibility(
+    value_lower: int,
+    time_lower: int,
+    value_exact: int,
+    time_exact: int,
+    nu: int,
+    lambda: int,
+)
+    requires
+        0 <= value_lower,
+        0 <= time_lower,
+        value_lower <= value_exact,
+        time_lower <= time_exact,
+        0 <= nu,
+        0 <= lambda,
+    ensures
+        value_lower + nu * time_lower + lambda
+            <= value_exact + nu * time_exact + lambda,
+{
+    lemma_mul_inequality(time_lower, time_exact, nu);
+}
+
 }

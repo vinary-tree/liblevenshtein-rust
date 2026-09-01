@@ -139,6 +139,6 @@ pairwise-FFI, iterator, and reducer paths separately on an idle host before
 making performance claims.
 
 The Julia package name is `Liblevenshtein`, without an organization prefix.
-Release publication is intentionally disabled on this RC5 feature branch; a
+Release publication is intentionally disabled for this RC6 candidate; a
 signed source tag and registry review remain required before General-registry
 registration and Documenter deployment.

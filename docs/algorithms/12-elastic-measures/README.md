@@ -7,8 +7,8 @@ worked, literate implementation view.
 
 ## 1. Problem statement
 
-Given a database `$`T=\{t_1,\ldots,t_n\}`$` of real-valued series, a query
-`$`q`$`, and threshold `$`\tau`$`, range search returns
+Given a database $`T=\{t_1,\ldots,t_n\}`$ of real-valued series, a query
+$`q`$, and threshold $`\tau`$, range search returns
 
 ```math
 R(q,\tau)=\{(i,D(q,t_i))\mid D(q,t_i)\le\tau\}.
@@ -24,14 +24,14 @@ reported distances.
 
 ## 2. Geometry of a quantized edge
 
-For a scalar query sample `$`v`$` and bin `$`[\ell,h]`$`, the exact minimum
+For a scalar query sample $`v`$ and bin $`[\ell,h]`$, the exact minimum
 absolute deviation is
 
 ```math
 \operatorname{dist}(v,[\ell,h])=\max(0,\ell-v,v-h).
 ```
 
-For two bins `$`A=[\ell_A,h_A]`$` and `$`B=[\ell_B,h_B]`$`, the exact minimum
+For two bins $`A=[\ell_A,h_A]`$ and $`B=[\ell_B,h_B]`$, the exact minimum
 pairwise deviation is
 
 ```math
@@ -39,7 +39,7 @@ pairwise deviation is
 ```
 
 The second identity is symmetric, non-negative, zero exactly for intersecting
-closed intervals, and reduces to `$`|a-b|`$` for point bins. These properties
+closed intervals, and reduces to $`|a-b|`$ for point bins. These properties
 are proved in Verus/SMT and mirrored by a 2,000-case property test.
 
 ## 3. Prefix-amortized columns
@@ -56,10 +56,13 @@ root
          └─ bin(9) → exact-score t₂
 ```
 
-At depth `$`d`$`, `columns[d]` is reused for all sibling visits after recursion
-returns. Thus memory is `$`\mathcal{O}(mL)`$` for query length `$`m`$` and maximum live
-trie depth `$`L`$`, while each edge transition is `$`\mathcal{O}(m)`$` for full-column
-kernels or `$`\mathcal{O}(w)`$` for a band of half-width `$`w`$`.
+The convenience path keeps one column per live explicit DFS frame, so its
+memory is $`\mathcal{O}(mL)`$ for query length $`m`$ and maximum live trie
+depth $`L`$. The strict bounded path instead stores a canonical sparse
+frontier behind one `TemporalStateId` per frame and uses two query-width arrays
+as shared transition scratch. Each edge transition is $`\mathcal{O}(m)`$ in
+the dense fallback or $`\mathcal{O}(w)`$ for a live frontier/band width $`w`$.
+Both paths are iterative and therefore process-stack safe.
 
 ## 4. Exact range algorithm
 
@@ -149,11 +152,11 @@ MSM has three operations:
 
 | Operation | Scalar step |
 |---|---|
-| Move | `$`\lvert x_i-y_j\rvert`$` |
-| Merge | `$`C(x_i,x_{i-1},y_j)`$` |
-| Split | `$`C(y_j,x_i,y_{j-1})`$` |
+| Move | $`\lvert x_i-y_j\rvert`$ |
+| Merge | $`C(x_i,x_{i-1},y_j)`$ |
+| Split | $`C(y_j,x_i,y_{j-1})`$ |
 
-where `$`C`$` charges constant `$`c`$` when its first argument lies between the
+where $`C`$ charges constant $`c`$ when its first argument lies between the
 other two and otherwise adds the nearer deviation. `MsmKernel` carries the
 previous target bin so the interval recurrence can lower-bound the split term.
 It delegates directly to the previously tested MSM column code; extraction did
@@ -161,7 +164,7 @@ not reimplement the recurrence.
 
 ## 7. ERP instantiation
 
-Edit distance with Real Penalty (ERP) fixes a real gap value `$`g`$`. Its DP
+Edit distance with Real Penalty (ERP) fixes a real gap value $`g`$. Its DP
 has match, delete, and insert predecessors. The boundary row and column are
 running gap-mass sums, not unit edit counts.
 
@@ -169,8 +172,8 @@ running gap-mass sums, not unit edit counts.
 
 **Purpose.** Compute exact ERP while retaining only the shorter matrix axis.
 
-**Invariant.** Before processing `$`x_i`$`, `previous[j]` equals the exact ERP
-distance between `$`x_{1..i-1}`$` and `$`y_{1..j}`$`.
+**Invariant.** Before processing $`x_i`$, `previous[j]` equals the exact ERP
+distance between $`x_{1..i-1}`$ and $`y_{1..j}`$.
 
 ```text
 ALGORITHM ERP-DISTANCE(x, y, g, cutoff)
@@ -198,26 +201,26 @@ completed row and every later edge cost is non-negative.
 
 ### 7.2 Interval column
 
-For target bin `$`B_j`$`, replace the match and insertion leaves by
-`$`\operatorname{dist}(x_i,B_j)`$` and
-`$`\operatorname{dist}(g,B_j)`$`. The deletion leaf stays exact. The minimum
+For target bin $`B_j`$, replace the match and insertion leaves by
+$`\operatorname{dist}(x_i,B_j)`$ and
+$`\operatorname{dist}(g,B_j)`$. The deletion leaf stays exact. The minimum
 cell in the completed column is the subtree bound.
 
-Point intervals `$`B_j=[y_j,y_j]`$` satisfy
-`$`\operatorname{dist}(v,B_j)=\lvert v-y_j\rvert`$`, so they reproduce the
+Point intervals $`B_j=[y_j,y_j]`$ satisfy
+$`\operatorname{dist}(v,B_j)=\lvert v-y_j\rvert`$, so they reproduce the
 scalar DP exactly. This is stronger than admissibility and prevents a
 degenerate always-zero implementation from passing the gate.
 
 ### 7.3 Candidate potential
 
-Let `$`\Phi_g(x)=\sum_i\lvert x_i-g\rvert`$`. Every alignment edit changes
-`$`\Phi_g`$` by at most its own ERP cost, so:
+Let $`\Phi_g(x)=\sum_i\lvert x_i-g\rvert`$. Every alignment edit changes
+$`\Phi_g`$ by at most its own ERP cost, so:
 
 ```math
 \big\lvert\Phi_g(x)-\Phi_g(y)\big\rvert\le D_{\mathrm{ERP}}(x,y).
 ```
 
-The walker evaluates this `$`\mathcal{O}(m+n)`$` bound before the exact DP.
+The walker evaluates this $`\mathcal{O}(m+n)`$ bound before the exact DP.
 
 ### 7.4 Public example
 
@@ -240,8 +243,8 @@ assert!(exact.iter().all(|(_, distance)| *distance == 0.0));
 ## 8. TWED instantiation
 
 Time Warp Edit Distance (TWED) edits adjacent segments. The crate uses
-unit-spaced timestamps, a shared zero sentinel, temporal stiffness `$`\nu`$`,
-and deletion penalty `$`\lambda`$`. The three local alternatives are a query
+unit-spaced timestamps, a shared zero sentinel, temporal stiffness $`\nu`$,
+and deletion penalty $`\lambda`$. The three local alternatives are a query
 segment deletion, a segment match, and a target segment deletion.
 
 ### 8.1 Literate exact DP
@@ -249,9 +252,9 @@ segment deletion, a segment match, and a target segment deletion.
 **Purpose.** Compute exact unit-spaced TWED in quadratic time while retaining
 only two rows.
 
-**Invariant.** Before processing query sample `$`x_i`$`, `previous[j]` equals
-the exact value `$`D(i-1,j)`$`. During the row, `current[j-1]` equals
-`$`D(i,j-1)`$`.
+**Invariant.** Before processing query sample $`x_i`$, `previous[j]` equals
+the exact value $`D(i-1,j)`$. During the row, `current[j-1]` equals
+$`D(i,j-1)`$.
 
 ```text
 ALGORITHM TWED-DISTANCE(x, y, nu, lambda, cutoff)
@@ -283,13 +286,13 @@ ALGORITHM TWED-DISTANCE(x, y, nu, lambda, cutoff)
     return previous[length(y)] only when it is within cutoff
 ```
 
-The sentinel values in the pseudocode are `$`x_0=y_0=0`$`. Every local cost
+The sentinel values in the pseudocode are $`x_0=y_0=0`$. Every local cost
 is non-negative, so a completed row above the cutoff cannot recover later.
 
 ### 8.2 Carry-aware interval column
 
-The current target edge gives interval `$`I_j`$`; the carry gives
-`$`I_{j-1}`$`. The exact box minima are:
+The current target edge gives interval $`I_j`$; the carry gives
+$`I_{j-1}`$. The exact box minima are:
 
 ```math
 \begin{aligned}
@@ -309,15 +312,15 @@ and leaves yields a lower-bounding column.
 
 ### 8.3 Candidate bound and metric domain
 
-Every length-changing edit pays `$`\lambda`$`, so:
+Every length-changing edit pays $`\lambda`$, so:
 
 ```math
 \lvert m-n\rvert\lambda\le D_{\mathrm{TWED}}(x,y).
 ```
 
-The unrestricted family includes `$`\nu=0`$` and is not uniformly metric.
-Use `MetricTwedConfig::try_new` to validate finite `$`\nu>0`$` and finite
-`$`\lambda\ge0`$`; only that wrapper implements `MetricElasticKernel`.
+The unrestricted family includes $`\nu=0`$ and is not uniformly metric.
+Use `MetricTwedConfig::try_new` to validate finite $`\nu>0`$ and finite
+$`\lambda\ge0`$; only that wrapper implements `MetricElasticKernel`.
 
 ### 8.4 Public example
 
@@ -350,8 +353,8 @@ uses `max`; the production kernel therefore selects `BottleneckCost`.
 **Purpose.** Compute Eiter and Mannila's Table 1 coupling distance with two
 rows.
 
-**Invariant.** Before processing `$`x_i`$`, `previous[j]` is the minimum
-bottleneck among all couplings from `$`(1,1)`$` to `$`(i-1,j)`$`.
+**Invariant.** Before processing $`x_i`$, `previous[j]` is the minimum
+bottleneck among all couplings from $`(1,1)`$ to $`(i-1,j)`$.
 
 ```text
 ALGORITHM DISCRETE-FRECHET(x, y, cutoff)
@@ -380,8 +383,8 @@ minimum above the cutoff cannot recover.
 
 ### 9.2 Interval column and tightness
 
-For a trie edge representing `$`B_j=[\ell_j,h_j]`$`, replace each link leaf
-with `$`\operatorname{dist}(x_i,B_j)`$`. The recurrence itself is unchanged.
+For a trie edge representing $`B_j=[\ell_j,h_j]`$, replace each link leaf
+with $`\operatorname{dist}(x_i,B_j)`$. The recurrence itself is unchanged.
 Minimum and maximum are monotone, so the relaxed column is cellwise admissible.
 Point bins recover the scalar link and the entire scalar column exactly.
 
@@ -435,7 +438,7 @@ formal correspondence are explained in the
 
 Dynamic time warping (DTW) aligns samples by monotone horizontal, vertical,
 and diagonal steps. This implementation requires a symmetric Sakoe–Chiba
-half-width `$`w`$`; a cell is live exactly when `$`\lvert i-j\rvert\le w`$`.
+half-width $`w`$; a cell is live exactly when $`\lvert i-j\rvert\le w`$.
 It accumulates squared deviations and exposes their square root publicly.
 
 ### 10.1 Literate exact banded DP
@@ -443,8 +446,8 @@ It accumulates squared deviations and exposes their square root publicly.
 **Purpose.** Compute exact DTW for the caller-selected band, returning `TOP`
 when no pinned path reaches the endpoint.
 
-**Invariant.** Before row `$`i`$`, `previous[j]` is the exact squared cost for
-`$`(i-1,j)`$` inside the band and `TOP` outside it. `current[j-1]` is the exact
+**Invariant.** Before row $`i`$, `previous[j]` is the exact squared cost for
+$`(i-1,j)`$ inside the band and `TOP` outside it. `current[j-1]` is the exact
 left predecessor for the current row.
 
 ```text
@@ -473,8 +476,8 @@ because every future path extends a current cell by non-negative local costs.
 
 ### 10.2 Monotonic-deque LB_Keogh plan
 
-For target position `$`j`$`, the query envelope is the minimum and maximum of
-query samples reachable within `$`w`$`. One increasing deque computes all
+For target position $`j`$, the query envelope is the minimum and maximum of
+query samples reachable within $`w`$. One increasing deque computes all
 window minima and one decreasing deque computes all maxima. Each query index
 enters and leaves each deque once.
 
@@ -490,21 +493,21 @@ ALGORITHM BUILD-KEOGH-PLAN(query, band)
   return lower, upper, suffix extrema
 ```
 
-This preprocessing is `$`\mathcal{O}(m)`$` regardless of the numeric band
-value and allocates only `$`\mathcal{O}(m)`$` query metadata.
+This preprocessing is $`\mathcal{O}(m)`$ regardless of the numeric band
+value and allocates only $`\mathcal{O}(m)`$ query metadata.
 
 ### 10.3 Prefix gate before band column
 
-At trie depth `$`j`$`, let `$`B_j`$` be the target bin and `$`E_j`$` the query
+At trie depth $`j`$, let $`B_j`$ be the target bin and $`E_j`$ the query
 envelope. The carry stores
 
 ```math
 P_j=P_{j-1}+\operatorname{gap}(B_j,E_j)^2.
 ```
 
-`prefix_lower_bound` computes `$`P_j`$` in constant time. The walker compares
+`prefix_lower_bound` computes $`P_j`$ in constant time. The walker compares
 it with the range cutoff or current kth exact cost before growing the column
-buffer. Only a surviving edge pays for at most `$`2w+1`$` cells. At a final,
+buffer. Only a surviving edge pays for at most $`2w+1`$ cells. At a final,
 full-series LB_Keogh is the K4 gate before exact DP.
 
 The prefix and column bounds are independent admissible bounds. Their maximum
@@ -546,19 +549,19 @@ inflation instead. See the [source analysis](../../research/dtw/PAPER_SUMMARY.md
 | Input | MSM result | Walker behavior |
 |---|---:|---|
 | empty vs empty | `0` | exact fallback emits the empty candidate |
-| empty vs nonempty | `TOP` | no finite result; `$`+\infty`$` range preserves legacy behavior |
+| empty vs nonempty | `TOP` | no finite result; $`+\infty`$ range preserves legacy behavior |
 | finite query vs NaN candidate | `TOP` | exact scorer rejects finite cutoffs |
 | NaN query | `TOP` | avoids interval heap/column arithmetic and uses deterministic scan |
 | quantization collision | per-original exact scores | every identifier in the bucket is rescored |
 | `k = 0` | empty | returns before heap allocation |
 
 ERP differs on empty sides: empty/nonempty distance is the finite running sum
-`$`\sum_i\lvert x_i-g\rvert`$`. Consequently the trie root can be a valid kNN
+$`\sum_i\lvert x_i-g\rvert`$. Consequently the trie root can be a valid kNN
 candidate; the generic walker exact-scores it instead of assuming MSM's `TOP`.
 
 TWED also assigns finite empty/nonempty distance. Its boundary accumulates
 adjacent-sample change, stiffness, and penalty from the zero sentinel. At
-`$`\nu=\lambda=0`$`, unequal sequences can tie at zero; this is why only the
+$`\nu=\lambda=0`$, unequal sequences can tie at zero; this is why only the
 validated wrapper carries the static metric marker.
 
 Discrete Fréchet follows MSM's one-empty `TOP` rule but for a different reason:
@@ -571,7 +574,7 @@ root-valued; its internal DP, lower bounds, and cutoffs are squared.
 
 ## 12. Testing recipe for a new kernel
 
-1. Write an obviously correct `$`\mathcal{O}(mn)`$` scalar reference DP.
+1. Write an obviously correct $`\mathcal{O}(mn)`$ scalar reference DP.
 2. Prove and property-test every closed-form interval step (leaf exactness).
 3. Generate point bins and assert the relaxed column equals the scalar column
    exactly (degenerate-bin exactness).
@@ -587,15 +590,15 @@ degenerate-bin exactness gate; this is why both properties are mandatory.
 
 ## 13. Complexity and operational guidance
 
-Let `$`E_v`$` be visited trie edges, `$`m`$` query length, `$`w`$` band width,
-and `$`S`$` exact-scored survivors.
+Let $`E_v`$ be visited trie edges, $`m`$ query length, $`w`$ band width,
+and $`S`$ exact-scored survivors.
 
 | Kernel shape | Traversal time | Exact verification | Reusable-column memory |
 |---|---:|---:|---:|
-| full column | `$`\mathcal{O}(E_v m)`$` | `$`S\cdot\mathcal{O}(mn)`$` worst case | `$`\mathcal{O}(mL)`$` |
-| TWED full column with carry | `$`\mathcal{O}(E_v m)`$` | `$`S\cdot\mathcal{O}(mn)`$` worst case | `$`\mathcal{O}(mL)`$` plus one interval carry per depth |
-| banded | `$`\mathcal{O}(E_v w)`$` | kernel-dependent | `$`\mathcal{O}(wL)`$` possible |
-| DTW with prefix gate | `$`\mathcal{O}(E_v)+\mathcal{O}(E_c w)`$`, where `$`E_c`$` edges pass the prefix gate | `$`S\cdot\mathcal{O}(mw)`$` worst case | current implementation retains checked query-width buffers per live depth |
+| full column | $`\mathcal{O}(E_v m)`$ | $`S\cdot\mathcal{O}(mn)`$ worst case | $`\mathcal{O}(mL)`$ |
+| TWED full column with carry | $`\mathcal{O}(E_v m)`$ | $`S\cdot\mathcal{O}(mn)`$ worst case | $`\mathcal{O}(mL)`$ plus one interval carry per depth |
+| banded | $`\mathcal{O}(E_v w)`$ | kernel-dependent | $`\mathcal{O}(wL)`$ possible |
+| DTW with prefix gate | $`\mathcal{O}(E_v)+\mathcal{O}(E_c w)`$, where $`E_c`$ edges pass the prefix gate | $`S\cdot\mathcal{O}(mw)`$ worst case | current implementation retains checked query-width buffers per live depth |
 
 Quantization controls trie sharing and lower-bound tightness, never correctness.
 Coarser bins share more prefixes but weaken bounds; finer bins strengthen bounds

@@ -6,7 +6,7 @@ calls the stable versioned C ABI directly and shares provider handles through
 `VinaryTreeInterop`; dictionary data is never serialized or copied merely to
 cross package boundaries.
 
-The package version is `4.0.0-rc.5`. This feature branch prepares the package
+The package version is `4.0.0-rc.6`. This feature branch prepares the package
 for the Julia General registry but does not publish it.
 
 See [`Liblevenshtein/README.md`](Liblevenshtein/README.md) for installation,

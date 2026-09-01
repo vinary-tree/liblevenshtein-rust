@@ -489,7 +489,7 @@ Output: Well-typed parse trees
 ### 5.2 Determinism Analysis
 
 **Theorem 5.1 (Type Inference Determinism)**:
-Algorithm W (Hindley-Milner type inference) is deterministic: for a given AST, it produces a unique principal type (up to α-renaming).
+Algorithm W (Hindley-Milner type inference) is deterministic: for a given AST, it produces a unique principal type (up to $`\alpha`$-renaming).
 
 **Proof**:
 - Algorithm W is a deterministic algorithm
@@ -559,7 +559,7 @@ Hindley-Milner type inference is decidable.
 $`\blacksquare`$
 
 **Extension: System F**:
-- System F (polymorphic λ-calculus with explicit type abstraction) has undecidable type inference
+- System F (polymorphic $`\lambda`$-calculus with explicit type abstraction) has undecidable type inference
 - But Hindley-Milner (implicit polymorphism) is decidable
 
 ### 5.6 Summary: Layer 3 Properties
@@ -736,7 +736,7 @@ $`\blacksquare`$
 
 ### 7.1 Algorithm Description
 
-Layer 5 checks **session types** for process calculi (e.g., Rholang based on ρ-calculus).
+Layer 5 checks **session types** for process calculi (e.g., Rholang based on $`\rho`$-calculus).
 
 **Session Types**: Behavioral types that specify communication protocols.
 
@@ -769,10 +769,10 @@ Session type checking is deterministic for deterministic processes.
 
 **Proof**:
 - Type checking algorithm is deterministic
-- Process semantics are deterministic (for π-calculus)
+- Process semantics are deterministic (for $`\pi`$-calculus)
 $`\blacksquare`$
 
-**Caveat**: ρ-calculus (Rholang) has non-deterministic choice (e.g., parallel composition with race conditions). Session type checking must account for all possible interleavings.
+**Caveat**: $`\rho`$-calculus (Rholang) has non-deterministic choice (e.g., parallel composition with race conditions). Session type checking must account for all possible interleavings.
 
 **Corollary 7.2 (Non-Deterministic Process Checking)**:
 For non-deterministic processes, session type checking considers all traces. The **result** (accept/reject) is deterministic, but the **trace** is not.
@@ -814,7 +814,7 @@ $`\blacksquare`$
 For process size n:
 - **Linear session types**: $`\mathcal{O}(n)`$ (single channel, sequential)
 - **Non-linear session types**: $`\mathcal{O}(n^k)`$ for k parallel sessions
-- **General π-calculus**: Undecidable (name mobility leads to unbounded behavior)
+- **General $`\pi`$-calculus**: Undecidable (name mobility leads to unbounded behavior)
 
 **Proof**:
 - Linear case: Traverse process once
@@ -834,8 +834,8 @@ Session type checking is decidable for **finite session types** and **bounded pr
 **Proof**: Finite session types have regular structure; checking reduces to finite state verification.
 $`\blacksquare`$
 
-**Theorem 7.10 (Undecidability for General π-Calculus)**:
-Behavioral equivalence checking for π-calculus is undecidable.
+**Theorem 7.10 (Undecidability for General $`\pi`$-Calculus)**:
+Behavioral equivalence checking for $`\pi`$-calculus is undecidable.
 
 **Proof**: Reduction from halting problem [Palamidessi 2003].
 $`\blacksquare`$
@@ -1220,7 +1220,7 @@ Suggested corrections:
 ### 10.1 Theoretical Open Problems
 
 **Problem 10.1 (Approximation Ratio for Beam Search)**:
-Is there a beam width k such that beam search guarantees an α-approximation for some constant $`\alpha`$?
+Is there a beam width k such that beam search guarantees an $`\alpha`$-approximation for some constant $`\alpha`$?
 
 **Difficulty**: Depends on grammar structure and error distribution. May require average-case analysis.
 
@@ -1317,7 +1317,7 @@ Combine text-based correction with test-based repair (e.g., fix to pass tests).
 
 [15] Wadler, P. (2012). "Propositions as Sessions." *Proceedings of the 17th ACM SIGPLAN International Conference on Functional Programming*, 273-286.
 
-[16] Palamidessi, C. (2003). "Comparing the Expressive Power of the Synchronous and Asynchronous π-Calculi." *Mathematical Structures in Computer Science*, 13(5), 685-719.
+[16] Palamidessi, C. (2003). "Comparing the Expressive Power of the Synchronous and Asynchronous $`\pi`$-Calculi." *Mathematical Structures in Computer Science*, 13(5), 685-719.
 
 ### 11.7 Multi-Objective Optimization
 
@@ -1405,7 +1405,7 @@ $`\blacksquare`$
 | **Layer 4** | Template Repair | $`\mathcal{O}(\text{templates} \times  \text{match})`$ | $`\mathcal{O}(\text{AST})`$ | ✓ Yes |
 | **Layer 4** | SMT Repair | NP-hard | $`\mathcal{O}(\text{constraints})`$ | ✗ No (general) |
 | **Layer 5** | Session Types (linear) | $`\mathcal{O}(n)`$ | $`\mathcal{O}(n)`$ | ✓ Yes |
-| **Layer 5** | Session Types (general) | $`\mathcal{O}(n^k)`$ | $`\mathcal{O}(n^k)`$ | ✗ No (full π-calc) |
+| **Layer 5** | Session Types (general) | $`\mathcal{O}(n^k)`$ | $`\mathcal{O}(n^k)`$ | ✗ No (full $`\pi`$-calc) |
 | **Full Pipeline** | Sequential | Sum of above | Max of above | ✓ Yes (restricted) |
 | **Joint Optimization** | Exact | Exponential | Exponential | ✗ No (intractable) |
 
@@ -1480,7 +1480,7 @@ Implement these measures to ensure determinism:
 
 3. **Optimality** is layer-specific. Global optimality is intractable; practical systems must use approximations (beam search, Pareto optimality).
 
-4. **Decidability** holds for restricted versions of each layer. General cases (full SMT, general π-calculus) are undecidable.
+4. **Decidability** holds for restricted versions of each layer. General cases (full SMT, general $`\pi`$-calculus) are undecidable.
 
 5. **Composition** preserves correctness but not optimality. Greedy layer-wise optimization is globally suboptimal.
 

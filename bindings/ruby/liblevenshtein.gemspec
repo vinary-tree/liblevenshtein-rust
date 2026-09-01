@@ -5,8 +5,8 @@ Gem::Specification.new do |spec|
   spec.version = VinaryTree::Liblevenshtein::VERSION
   spec.authors = ["Dylon Edwards"]
   spec.email = ["dylon.devo@gmail.com"]
-  spec.summary = "Snapshot-consistent streaming Levenshtein search"
-  spec.description = "Idiomatic Ruby bindings to Vinary Tree's high-performance liblevenshtein native ABI"
+  spec.summary = "Fast spelling correction and fuzzy search with Levenshtein automata"
+  spec.description = "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
   spec.homepage = "https://github.com/vinary-tree/liblevenshtein-rust"
   spec.license = "Apache-2.0"
   spec.required_ruby_version = ">= 3.3"

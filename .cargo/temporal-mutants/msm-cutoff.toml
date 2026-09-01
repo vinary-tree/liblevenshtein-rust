@@ -1,0 +1,14 @@
+examine_globs = ["src/time_series/msm.rs"]
+examine_re = ["replace terminal_distance_within_cutoff -> bool with true"]
+additional_cargo_args = [
+  "--locked",
+  "--offline",
+  "--test=time_series_msm_tests",
+  "cutoff",
+]
+test_package = ["liblevenshtein"]
+copy_target = false
+copy_vcs = false
+gitignore = true
+minimum_test_timeout = 60.0
+timeout_multiplier = 3.0

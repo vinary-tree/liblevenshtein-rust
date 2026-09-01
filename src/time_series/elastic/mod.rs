@@ -18,8 +18,10 @@
 //! - **K2 — inflation:** every lawful step cost is no smaller than the monoid
 //!   identity. Together with monotonicity, extending a path cannot lower its
 //!   accumulated cost.
-//! - **K3 — exact survivors:** [`ElasticKernel::exact_with_cutoff`] returns the
-//!   exact `D(query, candidate)` whenever that value is within the cutoff.
+//! - **K3 — exact survivors:** the exact point-frontier recurrence used by
+//!   bounded verification and [`ElasticKernel::exact_with_cutoff`] used by
+//!   unbounded compatibility calls agree on the exact `D(query, candidate)`
+//!   whenever that value is within the cutoff.
 //! - **K4 — bound coherence:** every value returned by
 //!   [`ElasticKernel::candidate_lower_bound`] is no greater than `D`.
 //!
@@ -32,15 +34,125 @@
 //! [`crate::cost::CostMonoid`].
 
 use crate::cost::CostMonoid;
+use crate::time_series::bounded::{IncompleteReason, ResourceKind};
 use std::fmt::Debug;
 
 pub mod interval;
+pub(crate) mod sparse;
+
+/// Internal tagged result of one exact sparse point transition.
+#[doc(hidden)]
+pub enum PointFrontierStep<C, Carry> {
+    /// The next generation was constructed within its hard work ceiling.
+    Advanced {
+        lower_bound: C,
+        carry: Carry,
+        work: usize,
+    },
+    /// Construction stopped before evaluating the requested row.
+    WorkLimitExceeded { completed: usize, requested: usize },
+}
 mod walker;
 
-pub use walker::{ElasticSearchStats, ElasticTransducer};
+pub use walker::{
+    BoundedRangeOutcome, CertifiedRangeResults, ElasticCertificateError, ElasticCertificateLimits,
+    ElasticDictionaryBackend, ElasticMutableDictionaryBackend, ElasticMutationError,
+    ElasticProductStateStats, ElasticRangeCertificate, ElasticRangeEvidence, ElasticSearchStats,
+    ElasticSnapshotIdentity, ElasticTransducer, ErpAutomatonRangeContinuation,
+    ErpAutomatonRangeOutcome, ExactRangeResults, ExactSearchOutcome, RangeContinuation,
+};
+#[cfg(feature = "persistent-artrie")]
+pub use walker::{
+    ElasticSnapshot, ElasticSnapshotError, ElasticSnapshotKernel, ElasticSnapshotLimits,
+    ElasticSnapshotMetadata, SnapshotPersistentDictionary,
+};
 
 /// Cost carrier selected by an elastic kernel.
 pub type Cost<K> = <<K as ElasticKernel>::Monoid as CostMonoid>::Cost;
+
+/// Logical storage owned while constructing and retaining one query plan.
+///
+/// `retained_bytes` remains live for the query lifetime. `construction_peak_bytes`
+/// includes retained storage plus transient plan-building scratch. Allocator
+/// bookkeeping and capacity rounding are intentionally outside this logical
+/// resource ABI, consistently with the other temporal resource ledgers.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct QueryPlanStorage {
+    retained_bytes: usize,
+    construction_peak_bytes: usize,
+}
+
+impl QueryPlanStorage {
+    /// A query plan that owns no heap storage.
+    pub const EMPTY: Self = Self {
+        retained_bytes: 0,
+        construction_peak_bytes: 0,
+    };
+
+    /// Describe an exact logical retained size and construction peak.
+    ///
+    /// The peak is normalized upward to the retained size because retained
+    /// storage necessarily exists at the end of construction.
+    pub const fn new(retained_bytes: usize, construction_peak_bytes: usize) -> Self {
+        Self {
+            retained_bytes,
+            construction_peak_bytes: if construction_peak_bytes < retained_bytes {
+                retained_bytes
+            } else {
+                construction_peak_bytes
+            },
+        }
+    }
+
+    /// Checked storage for `elements` fixed-width retained and transient units.
+    pub fn checked_per_element(
+        elements: usize,
+        retained_bytes_per_element: usize,
+        transient_bytes_per_element: usize,
+    ) -> Result<Self, IncompleteReason> {
+        let retained_bytes = elements.checked_mul(retained_bytes_per_element).ok_or(
+            IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            },
+        )?;
+        let transient_bytes = elements.checked_mul(transient_bytes_per_element).ok_or(
+            IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            },
+        )?;
+        let construction_peak_bytes = retained_bytes.checked_add(transient_bytes).ok_or(
+            IncompleteReason::ArithmeticOverflow {
+                resource: ResourceKind::ScratchBytes,
+            },
+        )?;
+        Ok(Self::new(retained_bytes, construction_peak_bytes))
+    }
+
+    /// Logical bytes retained for the complete query lifetime.
+    #[inline]
+    pub const fn retained_bytes(self) -> usize {
+        self.retained_bytes
+    }
+
+    /// Peak logical plan-owned bytes during construction.
+    #[inline]
+    pub const fn construction_peak_bytes(self) -> usize {
+        self.construction_peak_bytes
+    }
+}
+
+#[inline]
+pub(crate) fn canonical_f64_state_key(value: f64) -> Option<u64> {
+    (!value.is_nan()).then(|| if value == 0.0 { 0 } else { value.to_bits() })
+}
+
+#[inline]
+pub(crate) fn canonical_f64_pair_state_key(left: f64, right: f64) -> Option<[u64; 2]> {
+    Some([
+        canonical_f64_state_key(left)?,
+        canonical_f64_state_key(right)?,
+    ])
+}
 
 /// Dynamic-programming and exact-scoring policy for one elastic distance.
 ///
@@ -70,10 +182,41 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
     /// DTW uses lower/upper envelopes; kernels without preprocessing use `()`.
     type QueryPlan: Default + Debug + Send + Sync;
 
+    /// Exact logical plan storage for a query of `query_len` samples.
+    ///
+    /// Implementations must include all retained query metadata and all
+    /// transient plan-building storage, and the declaration must correspond to
+    /// the allocations performed by [`Self::try_plan`]. Checked overflow is a
+    /// tagged resource failure; bounded callers preflight this value before
+    /// constructing the plan.
+    fn query_plan_storage(&self, query_len: usize) -> Result<QueryPlanStorage, IncompleteReason>;
+
+    /// Exact canonical key for continuation context retained in a product state.
+    ///
+    /// Equal keys must imply identical future transition behavior. Returning
+    /// `None` disables interning and transition caching for the affected state
+    /// without changing exact results. Approximate floating equality is never
+    /// a lawful key.
+    #[doc(hidden)]
+    #[inline]
+    fn canonical_carry_key(&self, _carry: Self::Carry) -> Option<[u64; 2]> {
+        None
+    }
+
     /// Normalize public configuration values at the construction boundary.
     #[inline]
     fn normalized(self) -> Self {
         self
+    }
+
+    /// Whether `cutoff` belongs to the kernel's lawful nonnegative cost domain.
+    ///
+    /// The default accepts values ordered between the monoid identity and top.
+    /// Floating-point monoids order NaN outside that closed interval.
+    #[inline]
+    fn cutoff_is_valid(&self, cutoff: Cost<Self>) -> bool {
+        Self::Monoid::compare(cutoff, Self::Monoid::ZERO) != std::cmp::Ordering::Less
+            && Self::Monoid::compare(cutoff, Self::Monoid::TOP) != std::cmp::Ordering::Greater
     }
 
     /// Whether interval traversal is defined for this query.
@@ -84,6 +227,20 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
     #[inline]
     fn supports_interval_query(&self, query: &[f64]) -> bool {
         query.iter().all(|value| value.is_finite())
+    }
+
+    /// Whether the recurrence admits any alignment for these operand lengths,
+    /// independently of sample values and finite path cost.
+    ///
+    /// A bounded scorer consults this predicate only when its cutoff is
+    /// [`Self::Monoid::TOP`]. A structurally reachable final state that instead
+    /// evaluates to `TOP` is numeric overflow, not evidence of absence.
+    /// Kernels with forbidden empty operands or constrained bands override the
+    /// default.
+    #[doc(hidden)]
+    #[inline]
+    fn alignment_is_structurally_possible(&self, _query_len: usize, _candidate_len: usize) -> bool {
+        true
     }
 
     /// Required DP column length for a query of `query_len` samples.
@@ -108,6 +265,93 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
         column: &mut Vec<Cost<Self>>,
     ) -> (Cost<Self>, Self::Carry);
 
+    /// Construct one exact point-label frontier from the rows reachable in the
+    /// preceding generation.
+    ///
+    /// Returning `None` selects the dense-column fallback. A specialized
+    /// implementation writes only finite in-cutoff rows into `column`, appends
+    /// their strictly increasing row indices to `active`, and returns the
+    /// minimum live cost plus the exact number of recurrence rows evaluated.
+    /// It must charge each row before evaluation and return
+    /// [`PointFrontierStep::WorkLimitExceeded`] without evaluating a row that
+    /// would cross `max_work`.
+    /// Query-sized scratch remains allocated once by the caller; no target
+    /// prefix is retained.
+    #[doc(hidden)]
+    #[allow(clippy::too_many_arguments)]
+    fn step_point_frontier(
+        &self,
+        _previous: &[Cost<Self>],
+        _previous_active: &[usize],
+        _query: &[f64],
+        _target: f64,
+        _previous_carry: Option<Self::Carry>,
+        _depth: usize,
+        _plan: &Self::QueryPlan,
+        _cutoff: Cost<Self>,
+        _max_work: usize,
+        _column: &mut [Cost<Self>],
+        _active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        None
+    }
+
+    /// Construct one interval-relaxed sparse frontier for a dictionary edge.
+    ///
+    /// The contract is the interval analogue of
+    /// [`Self::step_point_frontier`]. Returning `None` selects the legacy dense
+    /// column transition; a specialized implementation schedules only rows
+    /// seeded by the previous frontier and its immediate successors, then
+    /// performs the kernel's vertical closure. Each row is charged before it
+    /// is evaluated.
+    #[doc(hidden)]
+    #[allow(clippy::too_many_arguments)]
+    fn step_interval_frontier(
+        &self,
+        _previous: &[Cost<Self>],
+        _previous_active: &[usize],
+        _query: &[f64],
+        _target: (f64, f64),
+        _previous_carry: Option<Self::Carry>,
+        _depth: usize,
+        _plan: &Self::QueryPlan,
+        _cutoff: Cost<Self>,
+        _max_work: usize,
+        _column: &mut [Cost<Self>],
+        _active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        None
+    }
+
+    /// Recompute the immediate vertical epsilon extension ending at `row`.
+    ///
+    /// The dictionary product removes a row only when this value compares
+    /// exactly equal to the row's recurrence cost. Returning `None` disables
+    /// cross-row subsumption. Implementations must return only a concrete
+    /// zero-target-consumption transition in the kernel's formal model.
+    #[doc(hidden)]
+    fn vertical_epsilon_extension(
+        &self,
+        _query: &[f64],
+        _target: (f64, f64),
+        _row: usize,
+        _column: &[Cost<Self>],
+        _plan: &Self::QueryPlan,
+    ) -> Option<Cost<Self>> {
+        None
+    }
+
+    /// Recover the target interval held by a canonical frontier context.
+    ///
+    /// Kernels whose vertical epsilon cost depends on the held target label
+    /// return it here so a compact state can lazily reconstruct only the
+    /// closure rows demanded by the next transition. Context-free vertical
+    /// costs may return any fixed finite interval.
+    #[doc(hidden)]
+    fn carry_interval(&self, _carry: Self::Carry) -> Option<(f64, f64)> {
+        None
+    }
+
     /// Optional constant-time lower bound evaluated before a child DP column.
     ///
     /// The default identity bound preserves existing kernels. Banded DTW uses
@@ -128,8 +372,14 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
         Self::Monoid::ZERO
     }
 
-    /// Exact candidate score, returning `None` exactly when it exceeds cutoff
-    /// (or is outside the kernel's lawful domain).
+    /// Unbounded compatibility scorer for one complete candidate.
+    ///
+    /// Strict bounded operations instead reuse their fallibly allocated exact
+    /// point-frontier workspace. Implementations must keep this scorer in exact
+    /// correspondence with [`Self::step_point_frontier`]. `None` means the
+    /// distance exceeds cutoff or no alignment exists; bounded callers use the
+    /// structural predicate and tagged arithmetic path rather than relying on
+    /// this intentionally compact legacy result.
     fn exact_with_cutoff(
         &self,
         query: &[f64],
@@ -145,8 +395,19 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
         plan: &Self::QueryPlan,
     ) -> Cost<Self>;
 
-    /// Build immutable query metadata once per search.
-    fn plan(&self, query: &[f64]) -> Self::QueryPlan;
+    /// Fallibly build immutable query metadata once per search.
+    fn try_plan(&self, query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason>;
+
+    /// Build query metadata for an explicitly unbounded compatibility surface.
+    ///
+    /// Strict production adapters call [`Self::try_plan`] and preserve its
+    /// tagged failure. This convenience method panics rather than silently
+    /// substituting an unsafe default plan after allocation failure.
+    #[inline]
+    fn plan(&self, query: &[f64]) -> Self::QueryPlan {
+        self.try_plan(query)
+            .unwrap_or_else(|error| panic!("elastic query-plan construction failed: {error:?}"))
+    }
 
     /// Exact distance between two empty series.
     fn empty_pair_cost(&self) -> Cost<Self>;

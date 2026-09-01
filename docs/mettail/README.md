@@ -44,7 +44,7 @@ type checking for MeTTa.
 | Document | Description |
 |----------|-------------|
 | [01-metta-operational-semantics.md](./theoretical-foundations/01-metta-operational-semantics.md) | MeTTa as a state machine with rewrite rules |
-| [02-native-type-theory-oslf.md](./theoretical-foundations/02-native-type-theory-oslf.md) | The 2-functor construction from λ-theories to type systems |
+| [02-native-type-theory-oslf.md](./theoretical-foundations/02-native-type-theory-oslf.md) | The 2-functor construction from $`\lambda`$-theories to type systems |
 | [03-gph-enriched-lawvere.md](./theoretical-foundations/03-gph-enriched-lawvere.md) | Simpler semantics when binding is eliminated via reflection |
 | [04-rho-calculus.md](./theoretical-foundations/04-rho-calculus.md) | Rholang's theoretical foundation and reflection mechanism |
 | [05-type-lifting.md](./theoretical-foundations/05-type-lifting.md) | Deriving types from operational semantics via T(-) transformation |
@@ -192,7 +192,7 @@ The core mathematical construction underlying full semantic type checking:
 ```
 
 Where:
-- **T** = MeTTa formalized as a λ-theory with equality
+- **T** = MeTTa formalized as $`a \lambda`$-theory with equality
 - **P** = Presheaf construction (preserves products, equality, function types)
 - **L** = Internal language functor (extracts the type theory)
 

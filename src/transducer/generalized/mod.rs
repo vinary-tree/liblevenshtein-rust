@@ -67,7 +67,8 @@ mod subsumption;
 
 pub use crate::transducer::universal::bit_vector::CharacteristicVector;
 pub use automaton::{
-    GeneralizedAutomaton, GeneralizedAutomatonError, MAX_GENERALIZED_ALIGNMENT_STATES,
+    GeneralizedAutomaton, GeneralizedAutomatonError, GeneralizedOnlineAutomaton,
+    GeneralizedOnlineLimits, GeneralizedOnlineObservation, MAX_GENERALIZED_ALIGNMENT_STATES,
 };
 pub use position::{GeneralizedPosition, PositionError};
 pub use state::{GeneralizedState, GeneralizedStateError, GeneralizedTransitionInput};

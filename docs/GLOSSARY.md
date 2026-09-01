@@ -48,14 +48,14 @@ This glossary covers implementation details, performance optimizations, data str
 **Categories:** [Algorithm], [Edit Operations], [Mathematics]
 
 **Definition:** A contiguous run of symbols consumed from only one input whose
-cost is `$`G(r)=g_o+r g_e`$` for run length `$`r>0`$`. The **gap-open cost**
-`$`g_o`$` is paid once per run; the **gap-extension cost** `$`g_e`$` is paid for
+cost is $`G(r)=g_o+r g_e`$ for run length $`r>0`$. The **gap-open cost**
+$`g_o`$ is paid once per run; the **gap-extension cost** $`g_e`$ is paid for
 each symbol, including the first. The lazy automaton remembers whether a query
-gap or dictionary gap is already open, so extension does not pay `$`g_o`$`
+gap or dictionary gap is already open, so extension does not pay $`g_o`$
 again.
 
 **Implementation:** `AffineGapParams` converts decimal costs to exact scaled
-integers. `AffineV` maps Gotoh's `$`M`$`, `$`I_x`$`, and `$`I_y`$` matrices to
+integers. `AffineV` maps Gotoh's $`M`$, $`I_x`$, and $`I_y`$ matrices to
 `Normal`, `AffineQueryGap`, and `AffineDictGap` positions.
 
 **Code:** [`src/transducer/variants/affine.rs`](../src/transducer/variants/affine.rs)
@@ -916,7 +916,7 @@ interior units and resolve only when the opposite endpoint matches.
 ### Parallel Traversal
 **Categories:** [Algorithm], [Performance]
 
-**Definition:** Simultaneous navigation of dictionary automaton A^D and Levenshtein automaton LEV_n(W), advancing through both in lockstep during query execution.
+**Definition:** Simultaneous navigation of dictionary automaton $`A^D`$ and Levenshtein automaton LEV_n(W), advancing through both in lockstep during query execution.
 
 **Algorithm:**
 ```
@@ -1675,7 +1675,7 @@ Levenshtein followed by a length check.
 
 **Definition:** Minimum insertion/deletion cost when substitution is absent.
 Replacing one scalar costs two, and the value equals
-$`|x|+|y|-2\operatorname{LCS}(x,y)`$`, where LCS is longest common
+$`\lvert x\rvert+\lvert y\rvert-2\operatorname{LCS}(x,y)`$, where LCS is longest common
 subsequence. `indel_distance_bounded` returns the exact value only when it does
 not exceed the supplied threshold.
 
@@ -1889,11 +1889,11 @@ diversity remain resource surfaces; untrusted `query_regex` calls enforce a
 **Categories:** [Algorithm], [Time Series], [Mathematics]
 
 **Definition:** An elastic edit distance for real-valued sequences with one
-fixed real gap value `$`g`$`. A match costs `$`\lvert x-y\rvert`$`; deleting
-or inserting a sample `$`v`$` costs `$`\lvert v-g\rvert`$`. ERP is a
-pseudometric on raw sequences because occurrences of `$`g`$` can be inserted
-or removed at zero cost. It is a metric modulo the **`$`g`$`-quotient**, which
-identifies sequences after all occurrences of `$`g`$` are removed.
+fixed real gap value $`g`$. A match costs $`\lvert x-y\rvert`$; deleting
+or inserting a sample $`v`$ costs $`\lvert v-g\rvert`$. ERP is a
+pseudometric on raw sequences because occurrences of $`g`$ can be inserted
+or removed at zero cost. It is a metric modulo the **$`g`$-quotient**, which
+identifies sequences after all occurrences of $`g`$ are removed.
 
 **Code:** [`src/time_series/kernels/erp.rs`](../src/time_series/kernels/erp.rs) ·
 **Research:** [ERP paper analysis](research/erp/PAPER_SUMMARY.md) · **DOI:**
@@ -1902,9 +1902,9 @@ identifies sequences after all occurrences of `$`g`$` are removed.
 #### Gap-Mass Potential
 **Categories:** [Algorithm], [Mathematics], [Time Series]
 
-**Definition:** For ERP gap value `$`g`$`, the scalar
-`$`\Phi_g(x)=\sum_i\lvert x_i-g\rvert`$`. The reverse triangle inequality
-proves `$`\lvert\Phi_g(x)-\Phi_g(y)\rvert\le D_{\mathrm{ERP}}(x,y)`$`, so the
+**Definition:** For ERP gap value $`g`$, the scalar
+$`\Phi_g(x)=\sum_i\lvert x_i-g\rvert`$. The reverse triangle inequality
+proves $`\lvert\Phi_g(x)-\Phi_g(y)\rvert\le D_{\mathrm{ERP}}(x,y)`$, so the
 absolute potential difference is an admissible candidate lower bound.
 
 #### TWED (Time Warp Edit Distance)
@@ -1913,15 +1913,15 @@ absolute potential difference is an admissible candidate lower bound.
 **Definition:** An elastic edit distance for timestamped numeric sequences that
 compares adjacent sample segments. In the crate's unit-spaced specialization,
 deleting a segment pays its absolute sample change plus temporal stiffness
-`$`\nu`$` and deletion penalty `$`\lambda`$`; matching pays current and previous
-sample deviations plus `$`2\nu\lvert i-j\rvert`$`. The previous target
+$`\nu`$ and deletion penalty $`\lambda`$; matching pays current and previous
+sample deviations plus $`2\nu\lvert i-j\rvert`$. The previous target
 quantization interval is carried between trie edges so both segment terms have
 exact interval-box minima.
 
-The complete `TwedConfig` family permits `$`\nu=0`$` and is not uniformly
+The complete `TwedConfig` family permits $`\nu=0`$ and is not uniformly
 metric. `MetricTwedConfig` validates the primary-source domain
-`$`\nu>0,\lambda\ge0`$` and alone implements `MetricElasticKernel`. At
-`$`\nu=\lambda=0`$`, `$`D([0,1],[1])=0`$` is an identity counterexample.
+$`\nu>0,\lambda\ge0`$ and alone implements `MetricElasticKernel`. At
+$`\nu=\lambda=0`$, $`D([0,1],[1])=0`$ is an identity counterexample.
 
 **Code:** [`src/time_series/kernels/twed.rs`](../src/time_series/kernels/twed.rs) ·
 **Research:** [Marteau analysis](research/twed/PAPER_SUMMARY.md) · **DOI:**
@@ -1931,7 +1931,7 @@ metric. `MetricTwedConfig` validates the primary-source domain
 #### TWED Stiffness
 **Categories:** [Algorithm], [Time Series], [Mathematics]
 
-**Definition:** The non-negative coefficient `$`\nu`$` multiplying timestamp
+**Definition:** The non-negative coefficient $`\nu`$ multiplying timestamp
 displacement in TWED. Larger values resist temporal warping. Strict positivity
 is part of the metric proof's identity premise; non-negativity alone is enough
 for additive inflation and exact lower-bound trie pruning.
@@ -1955,11 +1955,11 @@ holds modulo **run-length collapse**.
 #### One-Sided Hausdorff Lower Bound
 **Categories:** [Algorithm], [Mathematics], [Time Series]
 
-**Definition:** For sequences `$`x`$` and `$`y`$`, the quantity
-`$`\max_i\min_j\lvert x_i-y_j\rvert`$`. Every discrete Fréchet coupling pairs
-each `$`x_i`$` with some `$`y_j`$`, so this value lower-bounds the coupling
-bottleneck and the exact distance. “One-sided” matters: exchanging `$`x`$` and
-`$`y`$` can change the value.
+**Definition:** For sequences $`x`$ and $`y`$, the quantity
+$`\max_i\min_j\lvert x_i-y_j\rvert`$. Every discrete Fréchet coupling pairs
+each $`x_i`$ with some $`y_j`$, so this value lower-bounds the coupling
+bottleneck and the exact distance. “One-sided” matters: exchanging $`x`$ and
+$`y`$ can change the value.
 
 #### Run-Length Collapse
 **Categories:** [Algorithm], [Mathematics], [Time Series]
@@ -1981,8 +1981,8 @@ form rather than literal vector equality.
 
 **Definition:** An elastic time-series similarity measure whose monotone path
 may advance either input or both inputs. This crate's exact variant requires a
-symmetric Sakoe–Chiba half-width `$`w`$`, accumulates squared deviations inside
-`$`\lvert i-j\rvert\le w`$`, and returns the square root publicly. DTW is not a
+symmetric Sakoe–Chiba half-width $`w`$, accumulates squared deviations inside
+$`\lvert i-j\rvert\le w`$, and returns the square root publicly. DTW is not a
 metric because it can violate the triangle inequality, so it is inadmissible
 for BK-trees, VP-trees, cover trees, and other metric-ball pruning. It remains
 admissible for this crate's quantized trie because interval columns and
@@ -1999,10 +1999,10 @@ The code-level labels are `DtwConfig::IS_METRIC = false` and absence of a
 #### Sakoe–Chiba Band
 **Categories:** [Algorithm], [Security]
 
-**Definition:** The symmetric DTW constraint `$`\lvert i-j\rvert\le w`$`,
-where `$`w`$` is an inclusive half-width. It makes cells outside the diagonal
-strip unreachable, rejects endpoint length gaps larger than `$`w`$`, and caps
-live work per DP column at `$`2w+1`$` cells. The band changes the distance and
+**Definition:** The symmetric DTW constraint $`\lvert i-j\rvert\le w`$,
+where $`w`$ is an inclusive half-width. It makes cells outside the diagonal
+strip unreachable, rejects endpoint length gaps larger than $`w`$, and caps
+live work per DP column at $`2w+1`$ cells. The band changes the distance and
 is therefore required in `DtwConfig::new(w)` rather than selected by a default.
 
 **See also:** DTW, LB_Keogh

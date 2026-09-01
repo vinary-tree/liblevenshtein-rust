@@ -1,7 +1,7 @@
 name = "Liblevenshtein"
 uuid = "e9326fdd-6246-4d39-8cad-1afab836aa7b"
 authors = ["Dylon Edwards <dylon.devo@gmail.com>"]
-version = "4.0.0-rc.5"
+version = "4.0.0-rc.6"
 
 [deps]
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"

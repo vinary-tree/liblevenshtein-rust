@@ -5,6 +5,11 @@ time-series trie without binding the traversal to one distance recurrence. It
 defines the vocabulary, algebraic obligations, public API, safety boundary,
 and verification strategy before describing the implementation.
 
+The companion [complete elastic snapshot design](complete-elastic-snapshots.md)
+specifies how a persistent exact index binds this dictionary language to every
+full-precision collision original and to the configuration that gives the keys
+meaning.
+
 ## 1. Vocabulary
 
 An **elastic distance** compares two sequences while allowing the dynamic
@@ -14,9 +19,9 @@ real penalty (ERP), time-warp edit distance (TWED), discrete Fréchet, or banded
 dynamic time warping (DTW). The **walker** is the measure-independent trie
 algorithm that shares work between candidates with a common quantized prefix.
 
-A **quantization bin** is a closed interval `$`[\ell,h]`$` represented by one
+A **quantization bin** is a closed interval $`[\ell,h]`$ represented by one
 `u8` trie edge. An **interval relaxation** replaces a step involving an unknown
-concrete value `$`y\in[\ell,h]`$` by the minimum step cost over the entire bin.
+concrete value $`y\in[\ell,h]`$ by the minimum step cost over the entire bin.
 An **admissible lower bound** never exceeds the corresponding exact cost. A
 **candidate** is a full-precision series stored at a final trie node.
 
@@ -32,7 +37,7 @@ The implementation is split as follows:
 | `ErpConfig` / `ErpKernel` | ERP recurrence, interval relaxation, and gap-mass candidate bound |
 | `ErpTransducer<V>` | exact ERP specialization of `ElasticTransducer<ErpKernel,V>` |
 | `TwedConfig` / `TwedKernel` | complete non-negative TWED family, adjacent-bin carry, exact recurrence, and length bound |
-| `MetricTwedConfig` | validated `$`\nu>0`$`, `$`\lambda\ge0`$` witness implementing `MetricElasticKernel` |
+| `MetricTwedConfig` | validated $`\nu>0`$, $`\lambda\ge0`$ witness implementing `MetricElasticKernel` |
 | `TwedTransducer<V>` / `MetricTwedTransducer<V>` | exact raw-family and validated-metric TWED specializations |
 | `FrechetConfig` / `FrechetKernel` | discrete Fréchet bottleneck recurrence, interval relaxation, and endpoint/Hausdorff candidate bound |
 | `FrechetTransducer<V>` | exact discrete Fréchet specialization of `ElasticTransducer<FrechetKernel,V>` |
@@ -43,15 +48,15 @@ The implementation is split as follows:
 
 ## 2. Why this is a cost-monoid problem
 
-Let `$`K`$` be a totally ordered cost carrier. A path appends a step using
-`$`\otimes`$`, while alternative paths are selected by minimum:
+Let $`K`$ be a totally ordered cost carrier. A path appends a step using
+$`\otimes`$, while alternative paths are selected by minimum:
 
 ```math
 C[i,j] = \min_{p\in\mathrm{pred}(i,j)} C[p]\otimes w(p,i,j).
 ```
 
-MSM, ERP, TWED, and DTW use additive `WeightedCost`, so `$`a\otimes b=a+b`$`.
-Discrete Fréchet uses `BottleneckCost`, so `$`a\otimes b=\max(a,b)`$`. The
+MSM, ERP, TWED, and DTW use additive `WeightedCost`, so $`a\otimes b=a+b`$.
+Discrete Fréchet uses `BottleneckCost`, so $`a\otimes b=\max(a,b)`$. The
 walker calls only `CostMonoid::compare`, `within`, and the kernel transition;
 it never assumes addition or exposes a configurable choice operator.
 
@@ -62,23 +67,23 @@ are non-negative relative to the monoid identity:
 a \le a\otimes w.
 ```
 
-Both `$`a+w`$` for `$`w\ge0`$` and `$`\max(a,w)`$` satisfy this inflation law.
+Both $`a+w`$ for $`w\ge0`$ and $`\max(a,w)`$ satisfy this inflation law.
 The triangle inequality is irrelevant to the proof.
 
 ## 3. The K1–K4 contract
 
-Let `$`p`$` be a trie prefix, `$`B_p[i]`$` its relaxed DP column, and `$`t`$`
+Let $`p`$ be a trie prefix, $`B_p[i]`$ its relaxed DP column, and $`t`$
 any full-precision descendant represented by that prefix.
 
 ### K1 — interval admissibility
 
-For every row `$`i`$`, the relaxed cell lower-bounds the concrete cell:
+For every row $`i`$, the relaxed cell lower-bounds the concrete cell:
 
 ```math
 B_p[i] \le C_t[i,|p|].
 ```
 
-Consequently the node bound `$`b_p=\min_i B_p[i]`$` lower-bounds every exact
+Consequently the node bound $`b_p=\min_i B_p[i]`$ lower-bounds every exact
 descendant distance whose path must cross that column. Each kernel proves K1
 with its own interval geometry. For MSM the existing Rocq development proves
 move, split, and merge box minima and lifts them to the complete column.
@@ -97,7 +102,7 @@ exceeded the cutoff.
 ### K3 — exact survivors
 
 `exact_with_cutoff(q, t, tau)` returns the exact distance whenever it is within
-`$`\tau`$`, and returns no value below `$`\tau`$` for an out-of-range candidate.
+$`\tau`$, and returns no value below $`\tau`$ for an out-of-range candidate.
 The walker never emits an interval score; it emits only this exact result.
 
 ### K4 — candidate-bound coherence
@@ -108,7 +113,7 @@ The optional full-series bound obeys
 \operatorname{candidateLB}(q,t) \le D(q,t).
 ```
 
-Returning `$`0_K`$` is valid when no stronger bound exists. This stage avoids
+Returning $`0_K`$ is valid when no stronger bound exists. This stage avoids
 some exact DP evaluations but is not necessary for subtree correctness.
 
 The resulting two-stage implication is:
@@ -148,9 +153,9 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
 Two details intentionally refine the initial design sketch:
 
 1. `step_column` and `candidate_lower_bound` receive `&QueryPlan`. DTW can
-   construct Sakoe–Chiba envelopes once in `$`\mathcal{O}(m)`$` rather than once per edge.
+   construct Sakoe–Chiba envelopes once in $`\mathcal{O}(m)`$ rather than once per edge.
 2. `empty_vs_nonempty_cost` receives the concrete nonempty series. ERP charges
-   a running `$`|x_i-g|`$` cost, so no nullary constant can represent it.
+   a running $`|x_i-g|`$ cost, so no nullary constant can represent it.
 3. `prefix_lower_bound` defaults to the monoid identity. DTW overrides it with
    incremental interval LB_Keogh so a constant-time gate runs before child
    column allocation and computation.
@@ -160,53 +165,134 @@ Two details intentionally refine the initial design sketch:
 
 These changes make the seam elastic-measure-shaped rather than MSM-shaped.
 
+### 4.1 Exact-workspace storage algebra and decision tags
+
+Bounded survivor verification and online scanning share one reusable exact
+point workspace. Let $`P_{\mathrm{ret}}`$ be bytes retained by the kernel query
+plan, $`P_{\mathrm{peak}}`$ its construction peak, and $`F`$ the bytes in two
+cost generations plus two active-row generations. The workspace values are:
+
+```math
+W_{\mathrm{ret}} = P_{\mathrm{ret}} + F,
+\qquad
+W_{\mathrm{peak}} =
+\max\!\left(P_{\mathrm{peak}}, W_{\mathrm{ret}}\right).
+```
+
+The order is load-bearing: construct the plan first, release its transient
+builder queues, and only then allocate $`F`$. A preflight rejects before either
+phase unless $`W_{\mathrm{peak}}`$ is within the scratch ceiling. If later
+product state retains $`S`$ bytes, the session ledger observes:
+
+```math
+\max\!\left(W_{\mathrm{peak}}, W_{\mathrm{ret}}+S\right)
+=
+\max\!\left(P_{\mathrm{peak}}, W_{\mathrm{ret}}+S\right).
+```
+
+Resetting between candidates changes costs, active rows, carry, and consumed
+depth in place; it does not change $`W_{\mathrm{ret}}`$. Logical bytes exclude
+allocator bookkeeping and capacity rounding, consistently with
+`ResourceLedger`.
+
+Exact scoring keeps structural reachability distinct from the numeric TOP
+sentinel. The complete classification table is:
+
+| Structural alignment | Cutoff | Exact observation | Result |
+|---|---|---|---|
+| impossible | finite or TOP | any | `NoFiniteAlignment` |
+| possible | finite | finite and within | `WithinCutoff` |
+| possible | finite | finite and above | `AboveCutoff` |
+| possible | finite | TOP | `AboveCutoff` |
+| possible | TOP | finite | `WithinCutoff` |
+| possible | TOP | TOP or invalid | incomplete `NumericOverflow` |
+
+This priority prevents a band-excluded path from being mislabeled numeric
+overflow, while an unbounded cutoff never turns an ambiguous TOP into a
+complete empty result. `ExactWorkspaceResources.v` proves the abstract storage
+and classification laws; `proptest_exact_workspace_resources.rs` and the
+bounded scalar properties establish their executable correspondence.
+
 ## 5. Literate range traversal
 
-The algorithm maintains one reusable column buffer per recursion depth. The
-prose and pseudocode deliberately mirror one another.
+The convenience range algorithm maintains one column per live explicit DFS
+frame. It never recurses on the process stack. The strict bounded adapter goes
+further: its DFS frames carry compact `TemporalStateId` values, while sparse
+canonical positions live in a paired stack arena and two query-width arrays
+serve as reusable transition scratch.
 
 **Purpose.** Visit exactly the trie subtrees whose lower bound is within the
 inclusive cutoff and exact-score every viable final.
 
-**Invariant.** On entry to `VISIT(node, depth)`, `columns[depth]` is the K1
-interval column for the node's prefix and `carry` describes precisely that
-prefix's kernel-specific state.
+**Invariant.** Every live frame is paired with exactly one state arena entry.
+That entry is the canonical K1 interval frontier for the frame's real
+dictionary prefix, and its carry describes precisely the kernel context needed
+by future transitions.
 
 ```text
 ALGORITHM RANGE-SEARCH(query, cutoff)
   plan ← kernel.plan(query)
   if query is empty or unsupported by interval arithmetic then
       return deterministic exact scan using K4 then K3
-  columns[0] ← TOP repeated kernel.column_len(|query|) times
-  VISIT(root, depth = 0, carry = none)
-  stable-sort and deduplicate exact results by monoid order
+  stateArena[0] ← canonical seed frontier
+  stack ← one frame (root, depth = 0, stateId = 0)
 
-PROCEDURE VISIT(node, depth, carry)
-  if node is final and (depth = 0 or final cell is within cutoff) then
-      for each full-precision candidate in node's collision bucket do
-          if K4 candidate bound is within cutoff then
-              if K3 exact score is within cutoff then emit it
+  while stack is not empty do
+      frame ← stack.last
+      state ← stateArena[frame.stateId]
 
-  for each (bin, child) edge do
-      prefix_bound ← kernel.prefix_lower_bound(
-          query, bin, carry, depth + 1, plan)
-      if prefix_bound exceeds cutoff then continue
-      (bound, next_carry) ← kernel.step_column(
-          columns[depth], query, bin, carry, depth + 1, plan,
-          columns[depth + 1])
-      if bound is within cutoff then
-          VISIT(child, depth + 1, next_carry)
+      if frame has an unverified viable final then
+          exact-score its next collision member through K4 then K3
+          continue
+
+      if frame has an unvisited edge then
+          consume that edge from the frame
+          prefix_bound ← kernel.prefix_lower_bound(
+              query, edge.bin, state.carry, frame.depth + 1, plan)
+          if prefix_bound exceeds cutoff then continue
+
+          reconstruct only the represented epsilon closure into scratch
+          next ← kernel sparse transition, or exact dense fallback in scratch
+          canonical ← remove only exact zero-input-simulation duplicates
+          if canonical bound is within cutoff then
+              preflight state, stack, work, and scratch ceilings
+              push child frame and paired canonical state
+          continue
+
+      pop frame and its paired state together
+
+  allocate one checked permutation of result indices
+  order it by (monoid cost, discovery sequence)
+  apply its cycles to the existing unique-id result vector in place
 ```
 
-K1 and K2 justify the recursive guard. K3 justifies emission. K4 justifies the
-leaf-level short circuit. Because the DAWG is finite and depth increases on
-every recursive call, traversal terminates.
+K1 and K2 justify the child guard. K3 justifies emission. K4 justifies the
+leaf-level short circuit. Each loop either consumes one finite edge/candidate,
+pushes a deeper finite dictionary frame, or pops a frame; therefore a finite
+acyclic dictionary traversal terminates. The explicit stack makes dictionary
+depth stack-safe, while a page budget can pause and resume the same immutable
+snapshot/query/config traversal without relabelling an incomplete result as
+complete.
+
+Bounded traversal obtains every identifier from its unique private
+`bucket_location`, so it cannot emit the same stored episode twice. Let $`n`$
+be the number of emitted survivors and let
+$`R=2n\operatorname{sizeof}(\mathtt{usize})`$ be the `(old,destination)`
+permutation. Finalization preflights $`W_{\mathrm{ret}}+R`$ against the scratch
+ceiling, fallibly reserves exactly that permutation, uses allocation-free
+unstable sorts with the total key `(cost, discovery sequence)`, and applies the
+permutation through an explicitly step-bounded cycle loop. This preserves the
+prior stable tie semantics without a hidden stable-sort allocation or a second
+`V` payload buffer. A paused outcome returns `partial: None` because its
+continuation already owns the exact subset;
+`RangeContinuation::exact_partial` borrows that single copy. Terminal
+cancellation or failure transfers the owned subset.
 
 ## 6. Literate best-first kNN traversal
 
 The kNN variant orders trie nodes by relaxed lower bound and retains a max-heap
-of the best exact results. Once the result heap has `$`k`$` entries, its maximum
-is the active cutoff `$`\tau_k`$`.
+of the best exact results. Once the result heap has $`k`$ entries, its maximum
+is the active cutoff $`\tau_k`$.
 
 ```text
 ALGORITHM KNN(query, k)
@@ -227,6 +313,17 @@ ALGORITHM KNN(query, k)
 Stopping is sound because every queued bound is at least the popped minimum,
 and each queued bound lower-bounds every exact descendant.
 
+Strict generic kNN converts its private heap into the public result vector
+through a fallibly reserved output buffer. The transient output bytes are
+added to the live exact-workspace bytes and checked as scratch before the
+conversion; its `(cost, discovery sequence)` sort is allocation-free.
+Physical-timestamp TWED goes further: its
+`Vec<TimestampedTwedRangeMatch>` is itself maintained as an iterative max heap,
+then sorted in place by the total `(distance, episode_id)` key. No
+wrapper-to-output collection exists on that path. The zero-based parent formula
+and the lone-left-child sift-down boundary are pinned by direct heap invariants
+as well as the full-matrix kNN oracle.
+
 ### 6.1 Observational kNN telemetry
 
 `search_knn_with_stats` executes the same implementation as `search_knn` and
@@ -237,7 +334,7 @@ method while converting result distances from squared native costs to public
 root units.
 
 Two exclusive partitions make corrupt or incomplete reports detectable. If
-`$`E`$` is the number of inspected edges and `$`X`$` the number of
+$`E`$ is the number of inspected edges and $`X`$ the number of
 full-precision candidates considered at admitted finals, then
 
 ```math
@@ -284,10 +381,10 @@ range results, and kNN results remain covered by the unchanged tests.
 
 ## 8. ERP instantiation
 
-Edit distance with Real Penalty (ERP) uses one fixed real **gap value** `$`g`$`.
-Matching samples costs `$`\lvert x_i-y_j\rvert`$`; deleting or inserting a
-sample costs its distance to `$`g`$`. `ErpConfig` is both configuration and
-kernel because `$`g`$` is its only runtime state. `ErpKernel` is a semantic type
+Edit distance with Real Penalty (ERP) uses one fixed real **gap value** $`g`$.
+Matching samples costs $`\lvert x_i-y_j\rvert`$; deleting or inserting a
+sample costs its distance to $`g`$. `ErpConfig` is both configuration and
+kernel because $`g`$ is its only runtime state. `ErpKernel` is a semantic type
 alias and `ErpTransducer<V>` selects the generic walker.
 
 The scalar recurrence is:
@@ -300,7 +397,7 @@ D[i,j-1]+\lvert y_j-g\rvert.
 \end{cases}
 ```
 
-At a target bin `$`B=[\ell,h]`$`, K1 replaces the target-dependent leaves by
+At a target bin $`B=[\ell,h]`$, K1 replaces the target-dependent leaves by
 their exact box minima:
 
 ```math
@@ -309,14 +406,14 @@ their exact box minima:
 \lvert y_j-g\rvert\rightsquigarrow\operatorname{dist}(g,B).
 ```
 
-Deletion `$`\lvert x_i-g\rvert`$` has no free target variable and remains
+Deletion $`\lvert x_i-g\rvert`$ has no free target variable and remains
 exact. Because every leaf is a lower bound and the recurrence uses only
 addition of non-negative costs and minimum, the complete interval column is
 admissible. Point bins recover every scalar leaf and therefore the entire
 scalar column exactly.
 
 ERP's K4 candidate bound uses the gap-mass potential
-`$`\Phi_g(x)=\sum_i\lvert x_i-g\rvert`$`:
+$`\Phi_g(x)=\sum_i\lvert x_i-g\rvert`$:
 
 ```math
 \big\lvert\Phi_g(x)-\Phi_g(y)\big\rvert\le D_{\mathrm{ERP}}(x,y).
@@ -324,12 +421,12 @@ ERP's K4 candidate bound uses the gap-mass potential
 
 The inequality follows edit-by-edit from the reverse triangle inequality and
 is proved over arbitrary alignment scripts in Rocq. A length-only lower bound
-would be unsound as a positive estimate: inserting `$`g`$` has zero cost.
+would be unsound as a positive estimate: inserting $`g`$ has zero cost.
 
 ### 8.1 Quotient metric status
 
-Raw ERP is a pseudometric when sequences may contain `$`g`$` or be empty:
-`$`D([g],[])=0`$`. Let `$`N_g`$` delete every occurrence of `$`g`$`. Identity
+Raw ERP is a pseudometric when sequences may contain $`g`$ or be empty:
+$`D([g],[])=0`$. Let $`N_g`$ delete every occurrence of $`g`$. Identity
 holds modulo this quotient:
 
 ```math
@@ -346,9 +443,9 @@ implementation analysis are linked from
 ## 9. TWED instantiation
 
 Time Warp Edit Distance (TWED) compares adjacent sample segments and charges
-temporal displacement. The crate fixes unit-spaced timestamps `$`t_i=i`$` and
-the shared sentinel `$`x_0=y_0=0`$`. Its parameters are temporal stiffness
-`$`\nu\ge0`$` and deletion penalty `$`\lambda\ge0`$`.
+temporal displacement. The crate fixes unit-spaced timestamps $`t_i=i`$ and
+the shared sentinel $`x_0=y_0=0`$. Its parameters are temporal stiffness
+$`\nu\ge0`$ and deletion penalty $`\lambda\ge0`$.
 
 For current query and target segments, the local terms are:
 
@@ -378,8 +475,8 @@ requires the generic walker to exact-score a final root.
 ### 9.1 Carry and exact interval leaves
 
 Unlike ERP, TWED needs the preceding target sample. The minimal trie state is
-therefore the preceding target interval `$`I_{j-1}`$`; the current edge
-supplies `$`I_j`$`. The match relaxation is:
+therefore the preceding target interval $`I_{j-1}`$; the current edge
+supplies $`I_j`$. The match relaxation is:
 
 ```math
 \underline{\mu}(i,j)=
@@ -403,8 +500,8 @@ exactly, which pins tightness rather than merely admissibility.
 
 ### 9.2 Length bound and metric witness
 
-Every path between lengths `$`m`$` and `$`n`$` contains at least
-`$`\lvert m-n\rvert`$` deletions, and every deletion pays `$`\lambda`$` plus
+Every path between lengths $`m`$ and $`n`$ contains at least
+$`\lvert m-n\rvert`$ deletions, and every deletion pays $`\lambda`$ plus
 non-negative terms. K4 may therefore use:
 
 ```math
@@ -414,18 +511,47 @@ L_{\mathrm{len}}(x,y)=\lvert m-n\rvert\lambda\le D_{\mathrm{TWED}}(x,y).
 The complete family is not uniformly metric. Marteau's metric proposition
 requires the timestamp coefficient to be strictly positive. Accordingly,
 `TwedConfig` has `IS_METRIC = false`, while `MetricTwedConfig::try_new`
-requires finite `$`\nu>0`$` and finite `$`\lambda\ge0`$` and alone implements
+requires finite $`\nu>0`$ and finite $`\lambda\ge0`$ and alone implements
 `MetricElasticKernel`. The distinction is executable: at
-`$`\nu=\lambda=0`$`, `$`D([0,1],[1])=0`$` despite unequal inputs.
+$`\nu=\lambda=0`$, $`D([0,1],[1])=0`$ despite unequal inputs.
 
 The [primary-source analysis](../research/twed/PAPER_SUMMARY.md) derives the
 recurrence, interval geometry, lower bound, metric correction, testing map,
 and operational limits.
 
+### 9.3 Explicit physical-time TWED is a separate typed kernel
+
+`MetricTimestampedTwedConfig` does not reinterpret sample indices as physical
+time. Each nonempty `TimestampedSeries` carries finite, strictly increasing
+timestamps, one canonical `TimestampUnit`, and one shared physical origin.
+Comparison rejects mixed units and mixed origins before evaluating any cell.
+The local temporal terms therefore use actual elapsed and displaced time:
+
+```math
+\begin{aligned}
+\delta_y(j)&=\lvert y_j-y_{j-1}\rvert
+  +\nu(t_j-t_{j-1})+\lambda,\\
+\mu(i,j)&=\lvert x_i-y_j\rvert
+  +\lvert x_{i-1}-y_{j-1}\rvert\\
+&\quad+\nu\bigl(\lvert s_i-t_j\rvert
+  +\lvert s_{i-1}-t_{j-1}\rvert\bigr).
+\end{aligned}
+```
+
+`TimestampedScalarBox` is its typed K1 label abstraction: one closed value
+interval, one closed physical-time interval, and one timestamp unit. Its
+delete lower bound uses the distance between consecutive value intervals and
+the distance between consecutive time intervals. Its match lower bound uses
+the four independent point-to-interval distances. Forgetting correlations can
+only lower these values. Refinement is interval inclusion, and singleton boxes
+reproduce the concrete local recurrence exactly. These are the proof-facing
+label operations of the typed dictionary-product boundary; physical-time pairs
+must never be flattened through the byte-keyed scalar `ElasticTransducer`.
+
 ## 10. Discrete Fréchet instantiation
 
 Discrete Fréchet minimizes the longest link in an order-preserving coupling.
-For scalar point distance `$`d(x,y)=\lvert x-y\rvert`$`, the interior
+For scalar point distance $`d(x,y)=\lvert x-y\rvert`$, the interior
 recurrence is:
 
 ```math
@@ -437,7 +563,7 @@ D[i,j]=\max\!\left(
 
 `FrechetConfig` is a named unit kernel, `FrechetKernel` is its semantic alias,
 and `FrechetTransducer<V>` selects `ElasticTransducer<FrechetKernel,V>`. Its
-monoid is `BottleneckCost`; therefore `$`a\otimes w=\max(a,w)`$`. This is the
+monoid is `BottleneckCost`; therefore $`a\otimes w=\max(a,w)`$. This is the
 first production proof that the walker depends on K2 inflation rather than on
 addition:
 
@@ -449,7 +575,7 @@ No walker branch changes between ERP and Fréchet.
 
 ### 10.1 Interval recurrence
 
-At target bin `$`B=[\ell,h]`$`, the only target-dependent leaf becomes its
+At target bin $`B=[\ell,h]`$, the only target-dependent leaf becomes its
 exact interval minimum:
 
 ```math
@@ -489,13 +615,13 @@ L_{\rightarrow H}(x,y)=\max_i\min_j\lvert x_i-y_j\rvert.
 
 The implementation sorts the candidate once per bound evaluation and finds
 nearest neighbours by binary search. K4 uses
-`$`\max(L_{\mathrm{end}},L_{\rightarrow H})`$`; the maximum of independently
+$`\max(L_{\mathrm{end}},L_{\rightarrow H})`$; the maximum of independently
 admissible bounds remains admissible.
 
 ### 10.3 Quotient and boundary semantics
 
 Raw vectors admit zero-cost consecutive stutters:
-`$`D([1,1,2],[1,2])=0`$`. If `$`R`$` collapses each maximal run of equal
+$`D([1,1,2],[1,2])=0`$. If $`R`$ collapses each maximal run of equal
 samples, identity is interpreted as:
 
 ```math
@@ -512,8 +638,8 @@ documented in the [paper analysis](../research/frechet/PAPER_SUMMARY.md).
 
 ## 11. Banded DTW and prefix LB_Keogh
 
-`DtwConfig::new(w)` requires the inclusive Sakoe–Chiba half-width `$`w`$`.
-There is no default or unbanded constructor because `$`w`$` changes endpoint
+`DtwConfig::new(w)` requires the inclusive Sakoe–Chiba half-width $`w`$.
+There is no default or unbanded constructor because $`w`$ changes endpoint
 reachability, live DP cells, worst-case work, and the distance itself. The
 native recurrence is
 
@@ -531,8 +657,8 @@ in one additive domain.
 
 The query plan constructs centered lower and upper envelopes with one
 increasing and one decreasing monotonic deque. Every index enters and leaves
-each deque once, so planning is `$`\mathcal{O}(m)`$`. For query envelope
-`$`E_j=[L_j,U_j]`$` and target bin `$`B_j`$`, the carry advances as
+each deque once, so planning is $`\mathcal{O}(m)`$. For query envelope
+$`E_j=[L_j,U_j]`$ and target bin $`B_j`$, the carry advances as
 
 ```math
 P_j=P_{j-1}+\operatorname{gap}(B_j,E_j)^2.
@@ -540,7 +666,7 @@ P_j=P_{j-1}+\operatorname{gap}(B_j,E_j)^2.
 
 This interval prefix LB_Keogh costs constant time per edge and is evaluated
 before the child column. A surviving child then computes only rows satisfying
-the band, at most `$`2w+1`$` cells. At a full candidate, ordinary LB_Keogh is a
+the band, at most $`2w+1`$ cells. At a full candidate, ordinary LB_Keogh is a
 final K4 gate before exact scoring.
 
 ![The required band and prefix-before-column cascade](../diagrams/time-series/sakoe-chiba-band.svg)
@@ -548,8 +674,8 @@ final K4 gate before exact scoring.
 ### 11.2 Non-metric labelling contract
 
 DTW is symmetric and non-negative but fails the triangle inequality. With
-band one, `$`x=[0]`$`, `$`y=[1]`$`, and `$`z=[1,1]`$` have distances `$`1`$`,
-`$`0`$`, and `$`\sqrt{2}`$` respectively. Consequently
+band one, $`x=[0]`$, $`y=[1]`$, and $`z=[1,1]`$ have distances $`1`$,
+$`0`$, and $`\sqrt{2}`$ respectively. Consequently
 `DtwConfig::IS_METRIC` is `false`, and it does not implement
 `MetricElasticKernel`. The generic trie remains sound because its proof uses
 K1–K4 rather than metric balls.
@@ -558,10 +684,94 @@ The [DTW paper analysis](../research/dtw/PAPER_SUMMARY.md) derives LB_Keogh,
 explains the monotonic deques and unit boundary, and maps each claim to its
 Rust and formal evidence.
 
-## 12. Failure and resource boundaries
+## 12. Typed multichannel completion
+
+`FixedChannelMetric` fixes an ordered `ChannelIdentity` list before any pair is
+compared. Each identity contains both an application channel name and an exact
+physical-unit name. For immutable fold-local scales $`s_c>0`$ and weights
+$`w_c>0`$, its point metric is
+
+```math
+d(x,y)=\sum_{c=1}^{C} w_c\frac{|x_c-y_c|}{s_c}.
+```
+
+`FoldLocalScaleProvenance` binds the scale vector to one training-fold
+identity and estimator revision. A sample, interval box, or scorer using a
+different layout fails validation. There is no missing-coordinate value, zero
+weight, channel padding, unit conversion, or pair-dependent renormalization in
+this metric domain. In particular, the implementation never changes the
+denominator or total weight according to which values happen to be present in
+one compared pair.
+
+The fixed positive sum preserves the point-metric laws coordinatewise.
+Higher-level metric claims are deliberately narrower:
+
+- vector ERP uses `VectorErpSeries`, which removes every exact fixed gap sample
+  and is a metric on that gap-insertion quotient;
+- vector discrete Fréchet remains a metric on the consecutive-stutter
+  quotient;
+- explicit-time vector TWED requires nonempty series, one exact channel
+  layout, one timestamp unit, one physical origin, finite strictly increasing
+  timestamps, $`\nu>0`$, $`\lambda\ge0`$, and one shared point sentinel; and
+- vector banded DTW is an exact diagnostic scorer only. It has no metric marker
+  because repetition can identify distinct raw series and the triangle law is
+  false.
+
+### 12.1 Vector K1–K4 seam
+
+`VectorBox` is an axis-aligned closed box carrying the exact channel layout;
+`TimestampedVectorBox` adds a closed physical-time interval and timestamp
+unit. These types are the label abstractions needed by an on-demand
+vector-metric × dictionary product. The current scalar `ElasticTransducer`
+stores scalar `f64` edges, so no public vector dictionary is fabricated by
+flattening coordinates. Instead the vector APIs expose the proved kernel seam
+that such a dictionary consumes:
+
+- **K1:** `point_box_lower_bound` sums exact coordinate-to-interval gaps.
+  `box_box_lower_bound` sums exact interval gaps. ERP, Fréchet, and squared DTW
+  expose their local relaxations; timestamped TWED exposes relaxed adjacent
+  delete and match costs for vector/time boxes.
+- **Refinement:** if box $`B'`$ is a coordinatewise subset of $`B`$, then
+  $`\operatorname{lb}(q,B)\le\operatorname{lb}(q,B')`$. Degenerate boxes are
+  exact point labels. Ignoring correlations between interval coordinates or
+  consecutive times may weaken a bound but cannot raise it above a concrete
+  realization.
+- **K2:** ERP, TWED, and DTW append nonnegative local costs additively;
+  Fréchet uses nonnegative bottleneck `max`. Both accumulators inflate under
+  lawful extensions.
+- **K3:** every survivor is re-evaluated by a bounded exact scorer over the
+  full-precision typed samples. ERP and timestamped TWED retain two rows;
+  vector DTW retains two rows and evaluates only live band cells; vector
+  Fréchet retains two rows or two sparse online generations.
+- **K4:** vector ERP uses the reverse difference of fixed-gap masses and vector
+  Fréchet uses endpoint distance. Timestamped TWED and diagnostic DTW return
+  the identity bound until a stronger complete-candidate theorem is supplied.
+
+All exact calls preflight checked cell, logical-work, band, and scratch limits
+before recurrence evaluation. A rejected preflight returns tagged
+incompleteness, and no implementation recurses with sequence length.
+
+### 12.2 Explicit vector MSM decision
+
+Vector MSM is unsupported. Scalar MSM's split/merge price uses the total order
+and betweenness of three scalar values. Coordinatewise betweenness and a
+norm-only substitute define different algorithms; neither is selected by the
+source paper, and this crate has no reviewed metric or interval-admissibility
+proof for either. `VECTOR_MSM_SUPPORT` exposes the machine-readable
+`UnsupportedNoCanonicalBetweenness` decision. This is preferable to silently
+flattening channels or attaching the scalar metric label to an unproved
+generalization.
+
+The Rust property suite pins metric laws only on the lawful quotient/domain,
+box admissibility and refinement, exact degenerate boxes, K4 coherence,
+resource preflight, DTW's nonmetric identity counterexample, and a
+missing-channel pair-renormalization triangle counterexample. The matching
+Verus model proves fixed-positive-sum lifting and the K1–K4 arithmetic seam.
+
+## 13. Failure and resource boundaries
 
 - Checked column lengths reject `usize` overflow before allocation.
-- Query preprocessing occurs once per search and must be `$`\mathcal{O}(m)`$` unless a
+- Query preprocessing occurs once per search and must be $`\mathcal{O}(m)`$ unless a
   kernel documents a stronger bound.
 - NaN or infinite queries never enter interval arithmetic by default. Range
   search uses deterministic exact scanning; kNN retains finite exact results.
@@ -572,26 +782,26 @@ Rust and formal evidence.
   series should cap series length at ingestion; see the security guide.
 - Kernel implementations must not use a heuristic as K1 or K4. A bound without
   a proof and property tests belongs only in an explicitly approximate API.
-- ERP's exact DP uses `$`\mathcal{O}(\min(m,n))`$` memory but still takes
-  `$`\mathcal{O}(mn)`$` time. Cap both sequence lengths; a cutoff can abandon
+- ERP's exact DP uses $`\mathcal{O}(\min(m,n))`$ memory but still takes
+  $`\mathcal{O}(mn)`$ time. Cap both sequence lengths; a cutoff can abandon
   rows but is not a worst-case complexity guard.
 - TWED has the same quadratic-time/two-row-memory worst case. Its carry-aware
-  bound can weaken under broad bins, and `$`\lambda=0`$` disables the length
+  bound can weaken under broad bins, and $`\lambda=0`$ disables the length
   bound. Cap both sequence lengths and total request work; validation of
   `MetricTwedConfig` establishes algebraic semantics, not a resource quota.
 - Discrete Fréchet has the same quadratic-time/two-row-memory profile. Its
   one-sided Hausdorff K4 additionally sorts one candidate copy. A permissive
   cutoff or broad bins can still visit the whole trie; cap sequence lengths and
   total request work independently of observed pruning.
-- Banded DTW takes `$`\mathcal{O}(m(2w+1))`$` live-cell work for comparable
-  lengths. A caller can still choose `$`w`$` as large as the sequence, so cap
+- Banded DTW takes $`\mathcal{O}(m(2w+1))`$ live-cell work for comparable
+  lengths. A caller can still choose $`w`$ as large as the sequence, so cap
   both width and length. Envelope suffix arrays remain query-sized even for a
-  huge width; no allocation scales with `$`w`$` alone.
+  huge width; no allocation scales with $`w`$ alone.
 - Squared DTW values can overflow to `TOP`; root conversion occurs only after
   exact scoring. Never compare a public root threshold directly with a native
   squared bound.
 
-## 13. Verification and executable invariants
+## 14. Verification and executable invariants
 
 | Obligation | Rocq | Verus | Z3 + cvc5 | TLC | Rust |
 |---|---:|---:|---:|---:|---:|

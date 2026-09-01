@@ -72,9 +72,6 @@ unsafe impl Sync for PositionStorage {}
 pub struct State {
     /// Positions in this state, maintained in sorted order.
     positions: PositionStorage,
-    /// Query-local generated-table identity. Zero denotes an external or
-    /// otherwise non-interned state and is never used as a trusted identity.
-    generated_id: u64,
 }
 
 impl PartialEq for State {
@@ -90,7 +87,6 @@ impl State {
     pub fn new() -> Self {
         Self {
             positions: PositionStorage::Owned(Box::default()),
-            generated_id: 0,
         }
     }
 
@@ -100,7 +96,6 @@ impl State {
         positions.push(position);
         Self {
             positions: PositionStorage::Owned(Box::new(positions)),
-            generated_id: 0,
         }
     }
 
@@ -112,7 +107,6 @@ impl State {
         positions.dedup();
         Self {
             positions: PositionStorage::Owned(Box::new(SmallVec::from_vec(positions))),
-            generated_id: 0,
         }
     }
 
@@ -219,7 +213,6 @@ impl State {
             }
         }
 
-        self.generated_id = 0;
         let positions = self.owned_positions_mut();
 
         // Remove any positions that this new position subsumes
@@ -303,47 +296,9 @@ impl State {
     }
 
     #[inline(always)]
-    pub(crate) const fn generated_id(&self) -> u64 {
-        self.generated_id
-    }
-
-    #[inline(always)]
-    pub(crate) const fn borrows_canonical_positions(&self) -> bool {
-        matches!(self.positions, PositionStorage::BorrowedCanonical(_))
-    }
-
-    #[inline(always)]
-    pub(crate) fn from_canonical_positions(
-        positions: NonNull<[Position]>,
-        generated_id: u64,
-    ) -> Self {
-        debug_assert_ne!(generated_id, 0);
+    pub(crate) fn from_canonical_positions(positions: NonNull<[Position]>) -> Self {
         Self {
             positions: PositionStorage::BorrowedCanonical(positions),
-            generated_id,
-        }
-    }
-
-    /// Replace mutable transition scratch with one canonical shared slice and
-    /// return the scratch allocation in a pool-ready state.
-    #[inline]
-    pub(crate) fn adopt_canonical_positions(
-        &mut self,
-        positions: NonNull<[Position]>,
-        generated_id: u64,
-    ) -> Option<Self> {
-        debug_assert_ne!(generated_id, 0);
-        let previous = std::mem::replace(
-            &mut self.positions,
-            PositionStorage::BorrowedCanonical(positions),
-        );
-        self.generated_id = generated_id;
-        match previous {
-            PositionStorage::Owned(positions) => Some(Self {
-                positions: PositionStorage::Owned(positions),
-                generated_id: 0,
-            }),
-            PositionStorage::BorrowedCanonical(_) => None,
         }
     }
 
@@ -398,7 +353,6 @@ impl State {
     #[inline]
     pub fn clear(&mut self) {
         self.owned_positions_mut().clear();
-        self.generated_id = 0;
     }
 
     /// Copy all positions from another state into this one.
@@ -427,7 +381,6 @@ impl State {
         positions.clear();
         positions.reserve(other_positions.len());
         positions.extend_from_slice(other_positions);
-        self.generated_id = 0;
     }
 
     /// Get the minimum edit distance in this state

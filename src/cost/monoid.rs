@@ -45,11 +45,13 @@ pub trait CostMonoid: 'static {
     /// Unreachable/infinite cost, absorbing under [`Self::combine`].
     const TOP: Self::Cost;
 
-    /// Carrier-specific comparison tolerance.
+    /// Carrier-specific numerical proof/test envelope.
     ///
-    /// Integer costs use zero. Floating-point carriers expose their supported
-    /// budget-comparison tolerance without weakening [`Self::compare`]'s total
-    /// ordering.
+    /// Integer costs use zero. Floating-point carriers expose the rounding
+    /// envelope used by analytical laws and differential assertions. This
+    /// value must never expand an inclusive budget, establish canonical state
+    /// equality, or justify product-state subsumption; [`Self::within`] remains
+    /// exact under [`Self::compare`].
     const EPSILON: Self::Cost;
 
     /// Append `step` to `accumulated`.
@@ -60,6 +62,20 @@ pub trait CostMonoid: 'static {
 
     /// Return whether `cost` is within the inclusive `threshold`.
     fn within(cost: Self::Cost, threshold: Self::Cost) -> bool;
+
+    /// Exact canonical key for a cost retained in a lazy product state.
+    ///
+    /// Returning `Some` opts the carrier into collision-checked state
+    /// interning and observed-transition caching. Equal keys must imply equal
+    /// future arithmetic for every lawful use of the cost. Returning `None`
+    /// preserves exact execution but disables those two optimizations.
+    /// Floating carriers must canonicalize signed zero and must never use an
+    /// approximate or rounded key.
+    #[doc(hidden)]
+    #[inline]
+    fn canonical_state_key(_cost: Self::Cost) -> Option<u64> {
+        None
+    }
 
     /// Choose the smaller cost under [`Self::compare`].
     ///

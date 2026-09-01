@@ -258,7 +258,7 @@
       "raku"
     ]
   },
-  "packageVersion": "4.0.0-rc.5",
+  "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
   "apiRevision": 2,
   "defaultMatchBatch": 256,
@@ -699,27 +699,27 @@
         "guide": "bindings/haskell/README.md",
         "example": "bindings/haskell/test/Main.hs"
       },
-    "lua": {
-      "languages": [
-        "Lua"
-      ],
-      "guide": "bindings/lua/README.md",
-      "example": "bindings/lua/tests/snapshot.lua"
-    },
-    "julia": {
-      "languages": [
-        "Julia"
-      ],
-      "guide": "bindings/julia/README.md",
-      "example": "bindings/julia/Liblevenshtein/test/runtests.jl"
-    },
-    "raku": {
-      "languages": [
-        "Raku"
-      ],
-      "guide": "bindings/raku/README.md",
-      "example": "bindings/raku/t/01-conformance.rakutest"
-    }
+      "lua": {
+        "languages": [
+          "Lua"
+        ],
+        "guide": "bindings/lua/README.md",
+        "example": "bindings/lua/tests/snapshot.lua"
+      },
+      "julia": {
+        "languages": [
+          "Julia"
+        ],
+        "guide": "bindings/julia/README.md",
+        "example": "bindings/julia/Liblevenshtein/test/runtests.jl"
+      },
+      "raku": {
+        "languages": [
+          "Raku"
+        ],
+        "guide": "bindings/raku/README.md",
+        "example": "bindings/raku/t/01-conformance.rakutest"
+      }
     },
     "interopDocumentation": "https://github.com/vinary-tree/vinary-tree-interop/tree/master/bindings"
   },
@@ -790,25 +790,25 @@
     ]
   },
   "release": {
-    "canonical": "4.0.0-rc.5",
+    "canonical": "4.0.0-rc.6",
     "registries": {
-      "cargo": "4.0.0-rc.5",
-      "clojars": "4.0.0-rc.5",
-      "cmake": "4.0.0-rc.5",
+      "cargo": "4.0.0-rc.6",
+      "clojars": "4.0.0-rc.6",
+      "cmake": "4.0.0-rc.6",
       "fpm": "4.0.0",
-      "goTag": "v4.0.0-rc.5",
+      "goTag": "v4.0.0-rc.6",
       "hackage": "4.0.0",
-      "luaRocks": "4.0.0rc5-1",
-      "maven": "4.0.0-rc.5",
-      "npm": "4.0.0-rc.5",
-      "nuget": "4.0.0-rc.5",
-      "opam": "4.0.0~rc5",
-      "pkgConfig": "4.0.0-rc.5",
-      "pypi": "4.0.0rc5",
-      "rubygems": "4.0.0.rc.5",
-      "swiftTag": "4.0.0-rc.5",
-      "julia": "4.0.0-rc.5",
-      "zef": "4.0.0-rc.5"
+      "julia": "4.0.0-rc.6",
+      "luaRocks": "4.0.0rc6-1",
+      "maven": "4.0.0-rc.6",
+      "npm": "4.0.0-rc.6",
+      "nuget": "4.0.0-rc.6",
+      "opam": "4.0.0~rc6",
+      "pkgConfig": "4.0.0-rc.6",
+      "pypi": "4.0.0rc6",
+      "rubygems": "4.0.0.rc.6",
+      "swiftTag": "4.0.0-rc.6",
+      "zef": "4.0.0-rc.6"
     },
     "distTag": "next"
   }

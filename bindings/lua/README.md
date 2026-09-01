@@ -8,14 +8,14 @@ published as `liblevenshtein` on LuaRocks.
 ## Installation
 
 The Lua rock contains the idiomatic C facade; the native SDK remains an
-explicit system dependency. Install matching `4.0.0-rc.5` native SDKs first,
+explicit system dependency. Install matching `4.0.0-rc.6` native SDKs first,
 then identify their header and library directories when installing the rocks:
 
 ```sh
-luarocks install libdictenstein 4.0.0rc5-1 \
+luarocks install libdictenstein 4.0.0rc6-1 \
   LIBDICTENSTEIN_INCDIR=/opt/vinary-tree/include \
   LIBDICTENSTEIN_LIBDIR=/opt/vinary-tree/lib
-luarocks install liblevenshtein 4.0.0rc5-1 \
+luarocks install liblevenshtein 4.0.0rc6-1 \
   LIBLEVENSHTEIN_INCDIR=/opt/vinary-tree/include \
   LIBLEVENSHTEIN_LIBDIR=/opt/vinary-tree/lib
 ```

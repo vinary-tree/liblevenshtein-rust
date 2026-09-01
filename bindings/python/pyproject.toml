@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liblevenshtein"
-version = "4.0.0rc5"
-description = "Fast streaming fuzzy search backed by liblevenshtein"
+version = "4.0.0rc6"
+description = "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
 requires-python = ">=3.10"
 license = "Apache-2.0"
 readme = "README.md"
@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
   "typing-extensions>=4.4; python_version < '3.11'",
-  "vinary-tree-interop==4.0.0rc5",
+  "vinary-tree-interop==4.0.0rc6",
 ]
 
 [project.optional-dependencies]

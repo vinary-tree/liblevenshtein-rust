@@ -1,0 +1,22 @@
+examine_globs = [
+  "src/time_series/elastic/mod.rs",
+  "src/time_series/kernels/dtw.rs",
+]
+examine_re = [
+  "replace QueryPlanStorage::checked_per_element ->",
+  "replace QueryPlanStorage::retained_bytes -> usize with [01]",
+  "replace QueryPlanStorage::construction_peak_bytes -> usize with [01]",
+  "replace <impl ElasticKernel for DtwConfig>::query_plan_storage ->",
+  "replace \\* with [+/] in <impl ElasticKernel for DtwConfig>::query_plan_storage",
+]
+additional_cargo_args = [
+  "--locked",
+  "--offline",
+  "--test=proptest_query_plan_workspace",
+]
+test_package = ["liblevenshtein"]
+copy_target = false
+copy_vcs = false
+gitignore = true
+minimum_test_timeout = 60.0
+timeout_multiplier = 3.0

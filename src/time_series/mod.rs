@@ -28,28 +28,28 @@
 //! println!("MSM distance: {}", distance);
 //! ```
 //!
-//! # MSM Automaton
-//!
-//! In addition to the standard DP algorithm, this module provides an automaton-based
-//! implementation of MSM. The automaton approach enables:
-//!
-//! - Early termination when cost exceeds threshold
-//! - Future integration with trie-based time series indexing
-//! - Alternative computational model for research purposes
-//!
-//! ## Automaton Example
+//! # Lazy MSM product automaton
 //!
 //! ```rust
-//! use liblevenshtein::time_series::{MsmConfig, msm_distance_wavefront};
+//! use liblevenshtein::time_series::{
+//!     MsmConfig, MsmTransducer, PageBudget, QuantizationConfig, ResourceLimits,
+//! };
 //!
-//! let config = MsmConfig::new(1.0);
-//! let x = vec![1.0, 2.0, 3.0];
-//! let y = vec![1.5, 2.5, 3.5];
-//!
-//! // With threshold (returns None if distance exceeds threshold)
-//! let distance = msm_distance_wavefront(&x, &y, &config, 2.0);
-//! assert!(distance.is_some());
+//! let index = MsmTransducer::from_series(
+//!     QuantizationConfig::for_u8(-10.0, 10.0),
+//!     MsmConfig::new(1.0),
+//!     &[vec![1.0, 2.0, 3.0], vec![8.0, 9.0]],
+//! );
+//! let outcome = index.search_range_bounded(
+//!     &[1.0, 2.1, 3.0], 1.0, ResourceLimits::default(), PageBudget::default(),
+//! ).unwrap();
+//! assert!(outcome.is_complete());
 //! ```
+//!
+//! The product constructs only weighted residual states reached by dictionary
+//! traversal and retains no target prefix. Historical wavefront diagnostics
+//! remain internal, test-only regression controls and are not part of the
+//! public compatibility surface.
 //!
 //! # Edit distance with Real Penalty
 //!
@@ -218,33 +218,72 @@
 //! - Stefan, Alexandra, et al. "The move-split-merge metric for time series."
 //!   IEEE transactions on Knowledge and Data Engineering 25.6 (2012): 1425-1438.
 
+mod alignment;
 mod approx_msm;
+pub mod automaton;
+pub mod bounded;
 pub mod elastic;
 mod encoding;
 mod hybrid_search;
 pub mod kernels;
 mod lower_bounds;
+mod metric_domains;
 mod msm;
 pub mod msm_interval;
 mod msm_kernel;
+#[cfg(test)]
 mod msm_position;
+#[cfg(test)]
 mod msm_state;
 mod msm_transducer;
+#[cfg(test)]
 mod msm_transition;
+mod rolling;
+mod scoring;
+mod timestamped_twed;
+mod timestamped_twed_index;
 mod trie_index;
+mod vector;
 
 // MSM metric exports
-pub use approx_msm::{paa_features, ApproxMsmConfig, ApproxMsmIndex};
-pub use msm::{MsmConfig, MsmResult};
-pub use msm_kernel::MsmKernel;
-pub use msm_position::{msm_subsumes, MsmPosition};
-pub use msm_state::MsmState;
-pub use msm_transition::{
-    initial_msm_state, msm_distance_automaton, msm_distance_wavefront, transition_msm_position,
-    transition_msm_state,
+pub use alignment::{
+    MsmAlignmentStep, MsmAlignmentWitness, MsmWitnessReplayError, TemporalAlignmentKind,
+    TemporalAlignmentOperation, TemporalAlignmentStep, TemporalAlignmentWitness,
+    TemporalWitnessReplayError, MSM_ALIGNMENT_WITNESS_VERSION, TEMPORAL_ALIGNMENT_WITNESS_VERSION,
 };
+pub use approx_msm::{
+    paa_features, ApproxMsmConfig, ApproxMsmCoverage, ApproxMsmIndex, ApproxMsmNeighbor,
+    ApproxMsmSearchOutcome, ApproxMsmSearchResult,
+};
+pub use automaton::{
+    ElasticOnlineAutomaton, ElasticOnlineObservation, ErpOnlineAutomaton, ErpOnlineObservation,
+    OnlineAutomatonLimits, OnlineStepOutcome, TemporalArenaLimits, TemporalAutomatonError,
+    TemporalStateId, TimestampedTwedOnlineAutomaton, TimestampedTwedOnlineObservation,
+};
+pub use bounded::{
+    ExactDecision, IncompleteReason, NoWitness, Operand, OperationOutcome, PageBudget,
+    ResourceKind, ResourceLedger, ResourceLimits, ResourceUsage, TemporalValidationError,
+};
+pub use metric_domains::{
+    AuditedMetricTimeSeriesIndex, ErpQuotientSeries, FrechetStutterClass, MetricDomainError,
+    MetricErpConfig, MetricErpTransducer, MetricFrechetTransducer,
+};
+pub use msm::{MetricMsmConfig, MetricMsmConfigError, MsmConfig, MsmConfigError, MsmResult};
+pub use msm_kernel::{MetricMsmKernel, MsmKernel};
+pub use rolling::{BoundedRollingWindow, RollingWindowSnapshot, RollingWindowStep};
 
 // Encoding exports
+pub use elastic::{
+    CertifiedRangeResults, ElasticCertificateError, ElasticCertificateLimits,
+    ElasticDictionaryBackend, ElasticMutableDictionaryBackend, ElasticMutationError,
+    ElasticProductStateStats, ElasticRangeCertificate, ElasticRangeEvidence,
+    ElasticSnapshotIdentity, ErpAutomatonRangeContinuation,
+};
+#[cfg(feature = "persistent-artrie")]
+pub use elastic::{
+    ElasticSnapshot, ElasticSnapshotError, ElasticSnapshotKernel, ElasticSnapshotLimits,
+    ElasticSnapshotMetadata, SnapshotPersistentDictionary,
+};
 pub use encoding::QuantizationConfig;
 pub use encoding::{delta_encoding, float_encoding, sax_encoding};
 
@@ -255,11 +294,30 @@ pub use kernels::{
     frechet_one_sided_hausdorff_lower_bound, keogh_envelopes, lb_keogh, lb_keogh_squared,
     twed_length_lower_bound, DtwConfig, DtwKernel, DtwTransducer, ErpConfig, ErpKernel,
     ErpTransducer, FrechetConfig, FrechetKernel, FrechetTransducer, KeoghPlan, MetricTwedConfig,
-    MetricTwedConfigError, MetricTwedKernel, MetricTwedTransducer, TwedConfig, TwedKernel,
-    TwedTransducer,
+    MetricTwedConfigError, MetricTwedKernel, MetricTwedTransducer, MetricUnitGridTwedConfig,
+    MetricUnitGridTwedKernel, MetricUnitGridTwedTransducer, SoftDtwAnalysis, SoftDtwConfig,
+    SoftDtwConfigError, SoftDtwGradientAnalysis, TwedConfig, TwedKernel, TwedTransducer,
+    UnitGridTwedConfig, UnitGridTwedKernel, UnitGridTwedTransducer,
 };
-pub use msm_transducer::MsmTransducer;
+pub use msm_transducer::{MetricMsmTransducer, MsmTransducer};
+pub use timestamped_twed::{
+    MetricTimestampedTwedConfig, TimestampUnit, TimestampedScalarBox, TimestampedSeries,
+    TimestampedTwedError,
+};
+pub use timestamped_twed_index::{
+    TimestampedTwedIndex, TimestampedTwedIndexError, TimestampedTwedKnnOutcome,
+    TimestampedTwedProductLimits, TimestampedTwedProductStats, TimestampedTwedQuantizer,
+    TimestampedTwedRangeContinuation, TimestampedTwedRangeMatch, TimestampedTwedRangeOutcome,
+};
 pub use trie_index::{TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats};
+pub use vector::{
+    ChannelIdentity, ChannelLayout, ChannelVectorSeries, FixedChannelMetric,
+    FoldLocalScaleProvenance, GroundMetric, L1GroundMetric, L2GroundMetric, LinfGroundMetric,
+    MetricChannel, TimestampedVectorBox, TimestampedVectorSeries, VectorBandedDtwScorer, VectorBox,
+    VectorErpMetric, VectorErpSeries, VectorFrechetMetric, VectorFrechetOnlineAutomaton,
+    VectorFrechetOnlineObservation, VectorFrechetPath, VectorMetricError, VectorMsmSupportDecision,
+    VectorSample, VectorTimestampedTwedMetric, VECTOR_MSM_SUPPORT,
+};
 
 // Lower bound exports
 #[cfg(feature = "rayon")]

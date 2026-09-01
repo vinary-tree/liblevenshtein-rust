@@ -2,6 +2,17 @@
 
 [← Documentation Index](../README.md)
 
+> **Historical design boundary (2026-08-29).** This 2025 proposal records the
+> hierarchical contextual-completion design; its `AutomatonZipper` sketches are
+> not the current production query representation. Production
+> `ZipperQueryIterator` now traverses a lazy synchronized dictionary/query
+> product through the same scheduler as node-rooted queries. Its pending frame
+> holds an opaque dictionary focus, a parent-arena cursor, and an eight-byte
+> canonical `UnitCostFrontier` identifier; PathMap projects an edge through the
+> automaton before constructing a child focus. See
+> [Lazy synchronized products and stable online automata](lazy-online-products.md)
+> and the [current performance currency note](zipper-vs-node-performance.md).
+
 ## Document Status
 - **Status**: Design Approved
 - **Created**: 2025-10-31

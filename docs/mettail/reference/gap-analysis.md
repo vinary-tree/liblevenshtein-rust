@@ -551,7 +551,7 @@ TOGL connects to OSLF through the following pathway:
 3. **Well-formedness**: No judgment infrastructure for graph validity
 4. **Graph equivalence**: No structural/behavioral equivalence on graphs
 5. **Path analysis**: No path enumeration for reachability analysis
-6. **OSLF embedding**: No functor from λ-theory graphs to presheaves
+6. **OSLF embedding**: No functor from $`\lambda`$-theory graphs to presheaves
 7. **Behavioral lift**: No mechanism to lift graph predicates to type predicates
 
 ### TOGL Implementation Requirements

@@ -374,8 +374,8 @@ impl OperationSet {
     /// This complements the assertions in [`OperationType::new`]. It checks
     /// every member again, rejects non-progressing rules, and uses checked
     /// arithmetic to enforce
-    /// `$`\sum_{t\in\mathcal O}(t^x+t^y)\le 4096`$` across the whole set.
-    /// The zero-weight condition `$`t^w=0\Rightarrow t^x=t^y`$` is the
+    /// $`\sum_{t\in\mathcal O}(t^x+t^y)\le 4096`$ across the whole set.
+    /// The zero-weight condition $`t^w=0\Rightarrow t^x=t^y`$ is the
     /// bounded-diagonal obligation from Mitankin, Mihov, and Schulz.
     pub fn validate(&self) -> Result<(), OperationSetValidationError> {
         let mut total = 0usize;
@@ -761,7 +761,7 @@ impl OperationSetBuilder {
         self
     }
 
-    /// Add match operation: ⟨1, 1, 0.0⟩.
+    /// Add match operation: $`\langle 1,1,0.0\rangle`$.
     ///
     /// Matches a single character with zero cost.
     ///
@@ -777,7 +777,7 @@ impl OperationSetBuilder {
         self.with_operation(OperationType::new(1, 1, 0.0, "match"))
     }
 
-    /// Add substitution operation: ⟨1, 1, 1.0⟩.
+    /// Add substitution operation: $`\langle 1,1,1.0\rangle`$.
     ///
     /// Substitutes one character for another with cost 1.
     ///
@@ -793,7 +793,7 @@ impl OperationSetBuilder {
         self.with_operation(OperationType::new(1, 1, 1.0, "substitute"))
     }
 
-    /// Add insertion operation: ⟨0, 1, 1.0⟩.
+    /// Add insertion operation: $`\langle 0,1,1.0\rangle`$.
     ///
     /// Inserts a character from the query with cost 1.
     ///
@@ -809,7 +809,7 @@ impl OperationSetBuilder {
         self.with_operation(OperationType::new(0, 1, 1.0, "insert"))
     }
 
-    /// Add deletion operation: ⟨1, 0, 1.0⟩.
+    /// Add deletion operation: $`\langle 1,0,1.0\rangle`$.
     ///
     /// Deletes a character from the dictionary with cost 1.
     ///
@@ -825,7 +825,7 @@ impl OperationSetBuilder {
         self.with_operation(OperationType::new(1, 0, 1.0, "delete"))
     }
 
-    /// Add transposition operation: ⟨2, 2, 1.0⟩.
+    /// Add transposition operation: $`\langle 2,2,1.0\rangle`$.
     ///
     /// Swaps two adjacent characters with cost 1.
     ///
@@ -841,7 +841,7 @@ impl OperationSetBuilder {
         self.with_operation(OperationType::adjacent_transposition(1.0, "transpose"))
     }
 
-    /// Add merge operation: ⟨1, 2, 1.0⟩.
+    /// Add merge operation: $`\langle 1,2,1.0\rangle`$.
     ///
     /// Merges two characters in the query into one in the dictionary.
     /// Example: "every one" → "everyone"
@@ -858,7 +858,7 @@ impl OperationSetBuilder {
         self.with_operation(OperationType::new(1, 2, 1.0, "merge"))
     }
 
-    /// Add split operation: ⟨2, 1, 1.0⟩.
+    /// Add split operation: $`\langle 2,1,1.0\rangle`$.
     ///
     /// Splits one character in the dictionary into two in the query.
     /// Example: "everyone" → "every one"

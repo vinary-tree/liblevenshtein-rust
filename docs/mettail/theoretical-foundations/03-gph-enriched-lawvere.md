@@ -387,8 +387,8 @@ Hom_G(A, B) = ⟨V, E, s, t⟩
 ```
 
 Where:
-- V = {f : A → B} (terms of appropriate type)
-- E = {r : f ⇒ g} (reductions from f to g)
+- V = $`\{f : A \to  B\}`$ (terms of appropriate type)
+- E = $`\{r : f \Rightarrow  g\}`$ (reductions from f to g)
 - s(r) = f, t(r) = g
 
 ### Composition of Reductions

@@ -113,7 +113,7 @@ mod tests {
     }
 
     /// Evaluate one representative without applying subsumption. This is the
-    /// executable residual-language `$`F(p,v)`$` used by the soundness contract.
+    /// executable residual-language $`F(p,v)`$ used by the soundness contract.
     fn completion_cost(
         start: Position,
         suffix: &[u8],

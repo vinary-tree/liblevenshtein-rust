@@ -67,7 +67,11 @@ The retained code changes are:
 - `MsmTransducer::search_knn` now uses one exact best-first branch-and-bound
   traversal instead of repeated threshold-doubling range searches.
 - `ApproxMsmIndex` is retained as an explicit approximate index, separate from
-  exact retrieval, with PAA candidate generation and exact MSM reranking.
+  exact retrieval, with PAA candidate generation and exact MSM reranking. Its
+  strict bounded outcome distinguishes exhaustive full-index reranking,
+  heuristic advice, invalid state, and resource failure; only exhaustive
+  reranking is evidence of recall or absence. See the
+  [evidence contract](../design/approximate-msm-evidence.md).
 - The MSM experiment harness supports UCR `.txt` and UEA-style `.ts` split
   formats for standard time-series benchmark evaluation without committing
   large corpora to the repository.

@@ -194,7 +194,7 @@ end procedure
 This design never uses the current branch as evidence for an older tag and
 never replaces a historical version directory with a newer build. The RC5
 manifest consequently remains `missing` for native Doxygen and Python pdoc:
-the exact `v4.0.0-rc.5` source does not contain this later automation, and an
+the exact `v4.0.0-rc.6` source does not contain this later automation, and an
 unpublished local build cannot retroactively satisfy public evidence.
 
 ## RC5 evidence and confirmed gaps

@@ -82,6 +82,20 @@ def release_description(model: dict[str, object]) -> str:
     return description
 
 
+def release_summary(model: dict[str, object]) -> str:
+    metadata = model.get("metadata")
+    if not isinstance(metadata, dict) or not isinstance(metadata.get("summary"), str):
+        raise TypeError("release/version.json requires string metadata.summary")
+    summary = str(metadata["summary"]).strip()
+    if not summary:
+        raise ValueError("release/version.json metadata.summary cannot be empty")
+    if len(summary) > 80:
+        raise ValueError("release/version.json metadata.summary must fit 80 characters")
+    if summary.endswith("."):
+        raise ValueError("release/version.json metadata.summary must not end with a period")
+    return summary
+
+
 def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
@@ -191,8 +205,14 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     interop_artifact = str(coordinates["interopMavenArtifact"])
     npm_package = str(coordinates["npmPackage"])
     description = release_description(model)
+    summary = release_summary(model)
 
     replace("Cargo.toml", r'^version = "[^"]+"$', f'version = "{canonical}"')
+    replace(
+        "Cargo.toml",
+        r'^description = "[^"]+"$',
+        f'description = "{description}"',
+    )
     replace(
         "Cargo.toml",
         r"^vinary-tree-interop = \{[^\n]+\}$",
@@ -228,6 +248,93 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
 
     update_json("bindings/api.json", api)
 
+    package_documentation_versions = {
+        "rust": versions["cargo"],
+        "native-c-cpp": canonical,
+        "python": versions["pypi"],
+        "jvm-java": versions["maven"],
+        "jvm-kotlin-scala": versions["maven"],
+        "clojure": versions["clojars"],
+        "javascript": versions["npm"],
+        "dotnet": versions["nuget"],
+        "go": versions["goTag"],
+        "swift": versions["swiftTag"],
+        "ruby": versions["rubygems"],
+        "lua": versions["luaRocks"],
+        "ocaml": versions["opam"],
+        "haskell": versions["hackage"],
+        "fortran": versions["fpm"],
+        "julia": versions["julia"],
+        "raku": versions["zef"],
+    }
+
+    def package_documentation(value: dict) -> None:
+        value["canonicalVersion"] = canonical
+        value["sourceRef"] = model["publication"]["sourceTag"]
+        packages = value.get("packages", [])
+        if not isinstance(packages, list):
+            raise TypeError("release/package-documentation.json packages must be an array")
+        seen: set[str] = set()
+        for package in packages:
+            if not isinstance(package, dict) or not isinstance(package.get("id"), str):
+                raise TypeError(
+                    "release/package-documentation.json packages require string ids"
+                )
+            identifier = package["id"]
+            if identifier not in package_documentation_versions:
+                raise ValueError(f"unknown package-documentation id: {identifier}")
+            seen.add(identifier)
+            wanted = package_documentation_versions[identifier]
+            if package.get("registryVersion") != wanted:
+                package["registryVersion"] = wanted
+                package["releaseState"] = "candidate-only"
+                package["releaseProof"] = (
+                    "The RC6 source and documentation are validated locally; the user "
+                    "explicitly prohibited publishing this candidate until the coordinated "
+                    "feature branches are reviewed."
+                )
+                package.pop("registryReadback", None)
+                evidence = package.get("sourceEvidence", [])
+                if not isinstance(evidence, list):
+                    raise TypeError(
+                        f"release/package-documentation.json {identifier} sourceEvidence "
+                        "must be an array"
+                    )
+                destinations = package.get("destinations", [])
+                if not isinstance(destinations, list):
+                    raise TypeError(
+                        f"release/package-documentation.json {identifier} destinations "
+                        "must be an array"
+                    )
+                for destination in destinations:
+                    if not isinstance(destination, dict):
+                        raise TypeError(
+                            f"release/package-documentation.json {identifier} destination "
+                            "must be an object"
+                        )
+                    if destination.get("state") == "verified":
+                        destination["state"] = "build-only"
+                        destination["reason"] = (
+                            "This RC6 documentation surface is validated from source; public "
+                            "deployment is intentionally deferred until release approval."
+                        )
+                        destination["buildEvidence"] = evidence
+                        for field in (
+                            "url",
+                            "readbackUrl",
+                            "verifiedAt",
+                            "markers",
+                        ):
+                            destination.pop(field, None)
+        missing = set(package_documentation_versions) - seen
+        if missing:
+            raise ValueError(
+                "release/package-documentation.json lacks package ids: "
+                + ", ".join(sorted(missing))
+            )
+
+    update_json("release/package-documentation.json", package_documentation)
+
     def related(value: dict) -> None:
         value.clear()
         for name in ("llattice", "libdictenstein", "lling-llang", "duallity"):
@@ -239,6 +346,7 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     def npm(value: dict) -> None:
         value["name"] = npm_package
         value["version"] = versions["npm"]
+        value["description"] = description
         value["dependencies"]["@vinary-tree/vinary-tree-interop"] = dependencies[
             "@vinary-tree/vinary-tree-interop"
         ]
@@ -295,9 +403,41 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     )
     replace(
         "bindings/python/pyproject.toml",
-        r'^dependencies = \["vinary-tree-interop==[^"]+"\]$',
-        f'dependencies = ["vinary-tree-interop=={versions["pypi"]}"]',
+        r'^description = "[^"]+"$',
+        f'description = "{description}"',
     )
+    replace(
+        "bindings/python/pyproject.toml",
+        r'vinary-tree-interop==[^"]+',
+        f'vinary-tree-interop=={versions["pypi"]}',
+    )
+    replace(
+        "bindings/julia/Liblevenshtein/Project.toml",
+        r'^version = "[^"]+"$',
+        f'version = "{versions["julia"]}"',
+    )
+
+    raku_dependency_version = canonical.replace("-rc.", ".rc.")
+
+    def raku(value: dict) -> None:
+        value["version"] = versions["zef"]
+        value["description"] = description
+        for field in ("depends", "test-depends"):
+            dependencies_for_field = value.get(field, [])
+            if not isinstance(dependencies_for_field, list):
+                raise TypeError(f"bindings/raku/META6.json {field} must be an array")
+            value[field] = [
+                re.sub(
+                    r":ver<[^>]+>",
+                    f":ver<{raku_dependency_version}>",
+                    dependency,
+                )
+                if isinstance(dependency, str)
+                else dependency
+                for dependency in dependencies_for_field
+            ]
+
+    update_json("bindings/raku/META6.json", raku)
     replace(
         "bindings/jvm/build.gradle.kts",
         r'^version = "[^"]+"$',
@@ -375,6 +515,11 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     )
     replace(
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj",
+        r"^    <Description>[^<]+</Description>$",
+        f"    <Description>{description}</Description>",
+    )
+    replace(
+        "bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj",
         r'<PackageReference Include="VinaryTree\.Interop" Version="[^"]+" />',
         f'<PackageReference Include="VinaryTree.Interop" Version="{versions["nuget"]}" />',
     )
@@ -384,14 +529,34 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         f'    VERSION = "{versions["rubygems"]}"',
     )
     replace(
+        "bindings/ruby/liblevenshtein.gemspec",
+        r'^  spec\.summary = "[^"]+"$',
+        f'  spec.summary = "{summary}"',
+    )
+    replace(
+        "bindings/ruby/liblevenshtein.gemspec",
+        r'^  spec\.description = "[^"]+"$',
+        f'  spec.description = "{description}"',
+    )
+    replace(
         "bindings/fortran/fpm.toml",
         r'^version = "[^"]+"$',
         f'version = "{versions["fpm"]}"',
     )
     replace(
+        "bindings/fortran/fpm.toml",
+        r'^description = "[^"]+"$',
+        f'description = "{description}"',
+    )
+    replace(
         "bindings/fortran/fpm.publish.toml",
         r'^version = "[^"]+"$',
         f'version = "{versions["fpm"]}"',
+    )
+    replace(
+        "bindings/fortran/fpm.publish.toml",
+        r'^description = "[^"]+"$',
+        f'description = "{description}"',
     )
     replace(
         "bindings/fortran/fpm.publish.toml",
@@ -425,6 +590,8 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         "bindings/ocaml/liblevenshtein.opam",
         "bindings/ocaml/liblevenshtein.opam.template",
     ):
+        replace(path, r'^synopsis: "[^"]+"$', f'synopsis: "{summary}"')
+        replace(path, r'^description: "[^"]+"$', f'description: "{description}"')
         replace(
             path,
             r'"vinary-tree-interop" \{[^}]+\}',
@@ -441,9 +608,24 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
             f'["pkg-config" "--atleast-version={versions["pkgConfig"]}" "liblevenshtein"]',
         )
     replace(
+        "bindings/ocaml/dune-project",
+        r'^ \(synopsis "[^"]+"\)$',
+        f' (synopsis "{summary}")',
+    )
+    replace(
         "bindings/haskell/liblevenshtein.cabal",
         r"^version: \S+$",
         f"version: {versions['hackage']}",
+    )
+    replace(
+        "bindings/haskell/liblevenshtein.cabal",
+        r"^synopsis: .+$",
+        f"synopsis: {summary}",
+    )
+    replace(
+        "bindings/haskell/liblevenshtein.cabal",
+        r"^description: .+$",
+        f"description: {description}",
     )
     cabal_path = ROOT / "bindings/haskell/liblevenshtein.cabal"
     cabal = cabal_path.read_text(encoding="utf-8")
@@ -519,6 +701,11 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     replace(lua_path, r'^version = "[^"]+"$', f'version = "{versions["luaRocks"]}"')
     replace(
         lua_path,
+        r'^(description = \{ summary = ")[^"]+(".*)$',
+        rf"\g<1>{summary}\2",
+    )
+    replace(
+        lua_path,
         r'^(source = \{ url = "[^"]+", tag = ")[^"]+(" \})$',
         rf"\g<1>{model['publication']['sourceTag']}\2",
     )
@@ -540,6 +727,11 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     )
     replace(
         "pkgconfig/liblevenshtein.pc",
+        r"^Description: .+$",
+        f"Description: {summary}",
+    )
+    replace(
+        "pkgconfig/liblevenshtein.pc",
         r"^Requires: vinary-tree-interop = \S+$",
         f"Requires: vinary-tree-interop = {versions['pkgConfig']}",
     )
@@ -551,6 +743,7 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
             "bindings/**/*.md",
             "docs/**/*.md",
             "docs/**/*.puml",
+            "release/package-documentation.json",
         ),
         canonical,
         int(model["publication"].get("luaRocksRevision", 1)),
@@ -597,6 +790,7 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     interop_artifact = str(coordinates["interopMavenArtifact"])
     npm_package = str(coordinates["npmPackage"])
     description = release_description(model)
+    summary = release_summary(model)
     if npm_package != "@vinary-tree/liblevenshtein":
         failures.append("the canonical npm package must be @vinary-tree/liblevenshtein")
     if maven_group != "io.vinarytree":
@@ -626,6 +820,16 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
             "bindings/python/pyproject.toml",
             r'^version = "([^"]+)"$',
             versions["pypi"],
+        ),
+        "Julia": (
+            "bindings/julia/Liblevenshtein/Project.toml",
+            r'^version = "([^"]+)"$',
+            versions["julia"],
+        ),
+        "Raku": (
+            "bindings/raku/META6.json",
+            r'^  "version": "([^"]+)",$',
+            versions["zef"],
         ),
         "JVM": (
             "bindings/jvm/build.gradle.kts",
@@ -792,6 +996,20 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
         or api.get("release", {}).get("registries") != versions
     ):
         failures.append("bindings/api.json release identity is stale")
+    raku = json.loads(read("bindings/raku/META6.json"))
+    expected_raku_dependency_version = canonical.replace("-rc.", ".rc.")
+    for field in ("depends", "test-depends"):
+        dependencies_for_field = raku.get(field, [])
+        if not isinstance(dependencies_for_field, list):
+            failures.append(f"Raku {field} must be an array")
+            continue
+        for dependency in dependencies_for_field:
+            if (
+                isinstance(dependency, str)
+                and ":ver<" in dependency
+                and f":ver<{expected_raku_dependency_version}>" not in dependency
+            ):
+                failures.append(f"Raku {field} dependency is stale: {dependency}")
     package = json.loads(read("bindings/javascript/package.json"))
     if package.get("name") != npm_package:
         failures.append("npm facade package coordinate is stale")
@@ -805,14 +1023,46 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     if package.get("publishConfig", {}).get("tag") != publication.get("distTag"):
         failures.append("npm facade dist-tag policy is stale")
     description_surfaces = {
+        "Cargo": read("Cargo.toml"),
+        "npm": read("bindings/javascript/package.json"),
+        "PyPI": read("bindings/python/pyproject.toml"),
         "Maven POM": read("bindings/jvm/build.gradle.kts"),
         "JReleaser": read("bindings/jvm/jreleaser.yml"),
         "Clojars": read("bindings/clojure/project.clj"),
+        "NuGet": read(
+            "bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj"
+        ),
+        "RubyGems": read("bindings/ruby/liblevenshtein.gemspec"),
+        "fpm development": read("bindings/fortran/fpm.toml"),
+        "fpm publication": read("bindings/fortran/fpm.publish.toml"),
+        "opam": read("bindings/ocaml/liblevenshtein.opam"),
+        "opam template": read("bindings/ocaml/liblevenshtein.opam.template"),
+        "Dune": read("bindings/ocaml/dune-project"),
+        "Hackage": read("bindings/haskell/liblevenshtein.cabal"),
+        "LuaRocks": read(
+            f"bindings/lua/liblevenshtein-{versions['luaRocks']}.rockspec"
+        ),
+        "Raku": read("bindings/raku/META6.json"),
+        "pkg-config": read("pkgconfig/liblevenshtein.pc"),
     }
     description_markers = {
+        "Cargo": f'description = "{description}"',
+        "npm": f'"description": "{description}"',
+        "PyPI": f'description = "{description}"',
         "Maven POM": f'description = "{description}"',
         "JReleaser": f"description: {description}",
         "Clojars": f':description "{description}"',
+        "NuGet": f"<Description>{description}</Description>",
+        "RubyGems": f'spec.summary = "{summary}"',
+        "fpm development": f'description = "{description}"',
+        "fpm publication": f'description = "{description}"',
+        "opam": f'synopsis: "{summary}"',
+        "opam template": f'synopsis: "{summary}"',
+        "Dune": f'(synopsis "{summary}")',
+        "Hackage": f"synopsis: {summary}",
+        "LuaRocks": f'summary = "{summary}"',
+        "Raku": f'"description": "{description}"',
+        "pkg-config": f"Description: {summary}",
     }
     for surface, source in description_surfaces.items():
         if description_markers[surface] not in source:

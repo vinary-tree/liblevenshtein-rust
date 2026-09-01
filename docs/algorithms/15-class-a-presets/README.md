@@ -24,15 +24,15 @@ procedure HAMMING(source, target)
 end procedure
 ```
 
-The loop invariant is: after `$`i`$` iterations, both prefixes have length
-`$`i`$` and `mismatches` equals their mismatch count. This invariant yields
+The loop invariant is: after $`i`$ iterations, both prefixes have length
+$`i`$ and `mismatches` equals their mismatch count. This invariant yields
 identity and symmetry directly. Coordinate-wise Boolean triangle inequality
 gives the metric triangle law on every fixed-length space.
 
 ## 2. Indel: two-row dynamic programming
 
-Let `$`D[i,j]`$` be the minimum insertion/deletion cost between prefixes of
-length `$`i`$` and `$`j`$`. There is no substitution edge:
+Let $`D[i,j]`$ be the minimum insertion/deletion cost between prefixes of
+length $`i`$ and $`j`$. There is no substitution edge:
 
 ```math
 D[i,j]=\min\left(
@@ -66,14 +66,14 @@ end procedure
 Reversing an edit script swaps insertions and deletions without changing cost,
 which proves symmetry. Concatenating scripts adds their costs, which proves the
 triangle inequality. Counting length change in a script gives
-`$`||x|-|y||\le d_I(x,y)`$`; counting insert/delete parity gives the parity
+$`||x|-|y||\le d_I(x,y)`$; counting insert/delete parity gives the parity
 invariant used by property tests.
 
 ## 3. Thresholded indel band
 
-An affordable path of cost at most `$`k`$` cannot visit a cell with
-`$`|i-j|>k`$`. The bounded algorithm retains at most `$`2k+1`$` diagonals and
-uses `$`k+1`$` as an unreachable cap.
+An affordable path of cost at most $`k`$ cannot visit a cell with
+$`|i-j|>k`$. The bounded algorithm retains at most $`2k+1`$ diagonals and
+uses $`k+1`$ as an unreachable cap.
 
 ```pseudocode
 procedure BOUNDED_INDEL(source, target, k)
@@ -159,7 +159,7 @@ procedure VALIDATE(operations)
 end procedure
 ```
 
-The prefix invariant is `$`0\le\text{total}\le4096`$` after every accepted
+The prefix invariant is $`0\le\text{total}\le4096`$ after every accepted
 operation. Checked addition prevents wraparound from converting a huge rule
 into a cheap-looking one. Validation precedes generalized traversal and is
 also repeated at fallible evaluation boundaries.

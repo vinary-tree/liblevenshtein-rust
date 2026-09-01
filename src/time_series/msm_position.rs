@@ -137,7 +137,7 @@ impl MsmPosition {
         let length_diff = remaining_query.abs_diff(remaining_target);
         let min_remaining_cost = length_diff as f64 * c_const;
 
-        self.accumulated_cost + min_remaining_cost <= max_cost + 1e-9
+        self.accumulated_cost + min_remaining_cost <= max_cost
     }
 
     /// Check if this position has reached final state (both series consumed).

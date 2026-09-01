@@ -4,8 +4,8 @@
 
 ## 1. Problem and constraints
 
-Affine gaps need history: the next gap symbol costs `$`g_e`$` when the same gap
-is open and `$`g_o+g_e`$` otherwise. A scalar `(index, cost)` position cannot
+Affine gaps need history: the next gap symbol costs $`g_e`$ when the same gap
+is open and $`g_o+g_e`$ otherwise. A scalar `(index, cost)` position cannot
 distinguish those cases. The design must preserve byte/character/token
 genericity, exact comparison, pooled traversal, and the 24-byte position seam.
 
@@ -66,7 +66,7 @@ added together.
 - B-4 compares positions at the same query index.
 - Forward B-5 first realizes the exact query-gap run and reduces to B-4 at the
   later index; backward cross-index positions remain incomparable.
-- `$`g_e=0`$` is exact but uses the full remaining-query window.
+- $`g_e=0`$ is exact but uses the full remaining-query window.
 - Suffix dictionaries retain their documented substring completion semantics.
 
 ## 5. Verification architecture

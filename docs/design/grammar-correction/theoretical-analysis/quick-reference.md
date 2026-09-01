@@ -89,7 +89,7 @@ See `complete-analysis.md` for full analysis with proofs.
 
 **Theorem (Session Type Decidability)**: Session type checking is decidable for finite session types and bounded processes.
 
-**Theorem (π-Calculus Undecidability)**: Behavioral equivalence for full π-calculus is undecidable.
+**Theorem $`(\pi`$-Calculus Undecidability)**: Behavioral equivalence for full $`\pi`$-calculus is undecidable.
 
 ---
 
@@ -231,7 +231,7 @@ Total:                  450ms  (acceptable for IDE)
 
 ## Open Problems
 
-1. **Approximation Ratio for Beam Search**: Is there a beam width k that guarantees α-approximation?
+1. **Approximation Ratio for Beam Search**: Is there a beam width k that guarantees $`\alpha`$-approximation?
 
 2. **Optimal Feedback Update**: What feedback rule maximizes long-term correction quality?
 

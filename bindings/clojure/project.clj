@@ -1,4 +1,4 @@
-(defproject io.vinarytree/liblevenshtein-clojure "4.0.0-rc.5"
+(defproject io.vinarytree/liblevenshtein-clojure "4.0.0-rc.6"
   :description "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
   :url "https://github.com/vinary-tree/liblevenshtein-rust"
   :license {:name "Apache License 2.0"
@@ -13,8 +13,8 @@
                   [:name "Dylon Edwards"]
                   [:email "dylon.devo@gmail.com"]]]
   :dependencies [[org.clojure/clojure "1.12.5" :scope "provided"]
-                 [io.vinarytree/vinary-tree-interop "4.0.0-rc.5"]
-                 [io.vinarytree/liblevenshtein "4.0.0-rc.5"]]
+                 [io.vinarytree/vinary-tree-interop "4.0.0-rc.6"]
+                 [io.vinarytree/liblevenshtein "4.0.0-rc.6"]]
   :profiles {:test {:dependencies [[org.clojure/test.check "1.1.1"]]}}
   :source-paths ["src"]
   :test-paths ["test"]

@@ -4,9 +4,9 @@ libdir=${prefix}/lib
 includedir=${prefix}/include
 
 Name: liblevenshtein
-Description: Snapshot-consistent streaming Levenshtein search
-Version: 4.0.0-rc.5
-Requires: vinary-tree-interop = 4.0.0-rc.5
+Description: Fast spelling correction and fuzzy search with Levenshtein automata
+Version: 4.0.0-rc.6
+Requires: vinary-tree-interop = 4.0.0-rc.6
 Libs: -L${libdir} -lliblevenshtein
 Libs.private: -ldl -lpthread -lm
 Cflags: -I${includedir}

@@ -2,7 +2,7 @@
 
 This guide defines the release architecture, version policy, publication order,
 validation gates, credentials, and recovery procedure for the Vinary Tree
-family. It is normative for the `4.0.0-rc.5` release train.
+family. It is normative for the `4.0.0-rc.6` release train.
 
 The central rule is **one artifact owner, one repository, one release
 workflow**. Project repositories may test an exact dependency, but they never
@@ -37,7 +37,7 @@ The release has five invariants:
    publication of a new package even when that publication uses another tag,
    each new scoped coordinate is reserved by an inert `0.0.0` bootstrap. After
    the real RC passes installed-artifact smoke tests, its scoped `latest`
-   pointer is moved from `0.0.0` to `4.0.0-rc.5` and the `bootstrap` tag is
+   pointer is moved from `0.0.0` to `4.0.0-rc.6` and the `bootstrap` tag is
    removed. The legacy unscoped coordinate is never moved during the RC.
 
 Cargo documents why a published crate version is immutable and recommends a
@@ -92,12 +92,12 @@ checks must compare every manifest with `bindings/api.json` so a prefixed
 distribution cannot silently return.
 
 For RC.4, the already-published global-distribution artifacts came from
-append-only root source `v4.0.0-rc.5-release.5` and libdictenstein source
-`v4.0.0-rc.5-release.2`. Publisher-environment recovery advanced the first
+append-only root source `v4.0.0-rc.6-release.5` and libdictenstein source
+`v4.0.0-rc.6-release.2`. Publisher-environment recovery advanced the first
 LuaRocks metadata to root `release.6` and libdictenstein `release.4`. A public
-clean-install test then proved that those `4.0.0rc5-1` rocks linked to a
+clean-install test then proved that those `4.0.0rc6-1` rocks linked to a
 nonexistent source-archive `target/release` directory. The corrected rocks use
-LuaRocks packaging revision 2—`4.0.0rc5-1`—and append-only root `release.7`
+LuaRocks packaging revision 2—`4.0.0rc6-1`—and append-only root `release.7`
 and libdictenstein `release.5`; the Rust RC, native ABI, and language APIs do
 not change. Source-fetching metadata must distinguish the semantic package
 version, the Lua packaging revision, and the corrective source tag.
@@ -133,12 +133,12 @@ For example, validate one owner and then publish only its npm artifact:
 ```bash
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.5 \
+  --ref v4.0.0-rc.6 \
   -f registry=validate-only
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.5 \
+  --ref v4.0.0-rc.6 \
   -f registry=npm
 ```
 
@@ -185,7 +185,7 @@ every intended change before creating the tag. A release tag is annotated so it
 records an explicit release event rather than merely naming a commit.
 
 ```bash
-RELEASE_VERSION="4.0.0-rc.5"
+RELEASE_VERSION="4.0.0-rc.6"
 RELEASE_TAG="v${RELEASE_VERSION}"
 
 python3 scripts/sync-release-version.py
@@ -220,8 +220,8 @@ following are true:
 6. if another coordinate from that owner is already public, the workflow guard
    permits only `validate-only` and the exact still-unpublished registry lane.
 
-For example, `v4.0.0-rc.5-release.1` may authoritatively produce packages whose
-version remains `4.0.0-rc.5`. The workflow guard accepts the canonical tag or a
+For example, `v4.0.0-rc.6-release.1` may authoritatively produce packages whose
+version remains `4.0.0-rc.6`. The workflow guard accepts the canonical tag or a
 positive, numbered corrective suffix and rejects branches, unnumbered suffixes,
 and suffix zero. If the target coordinate is already public, the target payload
 changes, or the library/package behavior changes, advance the package version
@@ -231,7 +231,7 @@ The shared interop RC.4 Maven lane is the narrow multi-registry case. Its crate
 and npm package are already public from the canonical tag, while its Maven
 coordinate is not. The nested JReleaser invocation at that tag lacks Git-root
 discovery. `vinary-tree-interop` therefore uses
-`v4.0.0-rc.5-release.1` solely for `validate-only` and `maven-central`; its
+`v4.0.0-rc.6-release.1` solely for `validate-only` and `maven-central`; its
 workflow rejects every already-published or unrelated registry lane.
 
 ### 2. Dispatch and observe validation
@@ -309,7 +309,36 @@ The approval does not provide a reusable registry secret: npm and PyPI obtain
 short-lived OpenID Connect (OIDC) credentials from their configured trusted
 publishers.
 
-### 5. Prove the public bytes before releasing a dependent
+### 5. Freeze and verify the local release subject
+
+Before creating any tag, generate the coordinated candidate provenance from
+the three canonical sibling checkouts. The subject digest covers each
+non-ignored source path, its executable mode, its byte length, and its bytes;
+it therefore detects edits, additions, deletions, renames, and executable-bit
+drift. The artifact separately records every Cargo lockfile digest, the Cargo
+package file-list digest, and the exact Rust compiler and Cargo build identity.
+
+```bash
+python3 scripts/release-provenance.py \
+  --write \
+  --include-package-files \
+  --require-clean \
+  --require-canonical-paths
+python3 scripts/release-provenance.py \
+  --include-package-files \
+  --require-clean \
+  --require-canonical-paths
+```
+
+The candidate artifact records a location-independent content subject; it does
+not claim a final release commit before that commit exists. After all three
+release commits exist, an append-only release attestation must bind their
+immutable commit and tag identifiers to the already-verified content digests.
+This two-stage record avoids the impossible self-reference of asking a commit
+to contain its own identifier. Worktree cleanliness remains a live validation
+gate rather than mutable status embedded in the stable content artifact.
+
+### 6. Prove the public bytes before releasing a dependent
 
 A successful upload step is necessary but insufficient. Wait for registry
 indexing, resolve the exact coordinate, verify registry metadata and digest,
@@ -380,7 +409,7 @@ Repeat this read-modify-read protocol for `@vinary-tree/vinary-tree-interop`,
 `@vinary-tree/javascript-runtime`, `@vinary-tree/libdictenstein`,
 `@vinary-tree/liblevenshtein`, `@vinary-tree/lling-llang`, and
 `@vinary-tree/duallity`. The postcondition is
-`latest = next = 4.0.0-rc.5`, no `bootstrap` tag, and an explicit deprecation
+`latest = next = 4.0.0-rc.6`, no `bootstrap` tag, and an explicit deprecation
 message on `0.0.0`.
 
 Do not create or store a token that bypasses two-factor authentication (2FA)
@@ -397,46 +426,46 @@ npm view liblevenshtein dist-tags --json
 ```
 
 During the RC, it must report `latest = 2.0.4` and
-`next = 4.0.0-rc.5`. Never apply the scoped-package `latest` command to this
+`next = 4.0.0-rc.6`. Never apply the scoped-package `latest` command to this
 coordinate.
 
 ## Version function
 
 Let `M`, `m`, and `p` denote the major, minor, and patch components, let `r`
 denote the release-candidate ordinal, and let `q` denote a registry-local
-packaging revision. For this train, `$`M = 4`$`, `$`m = 0`$`, `$`p = 0`$`,
-`$`r = 5`$`, and LuaRocks alone uses `$`q = 2`$`. Define the canonical version
-`$`v`$` and numeric base `$`b`$` as follows:
+packaging revision. For this train, $`M = 4`$, $`m = 0`$, $`p = 0`$,
+$`r = 6`$, and LuaRocks alone uses $`q = 2`$. Define the canonical version
+$`v`$ and numeric base $`b`$ as follows:
 
 ```math
-v = M.m.p\text{-rc}.r = \text{4.0.0-rc.5}, \qquad b = M.m.p = \text{4.0.0}.
+v = M.m.p\text{-rc}.r = \text{4.0.0-rc.6}, \qquad b = M.m.p = \text{4.0.0}.
 ```
 
-Each registry renderer `$`R_e`$` maps `$`v`$` into the syntax accepted by
-ecosystem `$`e`$`:
+Each registry renderer $`R_e`$ maps $`v`$ into the syntax accepted by
+ecosystem $`e`$:
 
 ```math
 R_e(v) =
 \begin{cases}
-\text{4.0.0-rc.5} & e \in \{\text{Cargo,npm,Maven,Clojars,NuGet,Swift,CMake,C++}\},\\
-\text{4.0.0rc5} & e = \text{PyPI},\\
-\text{4.0.0rc5-1} & e = \text{LuaRocks},\\
-\text{4.0.0.rc.5} & e = \text{RubyGems},\\
-\text{4.0.0\textasciitilde rc5} & e = \text{opam},\\
-\text{v4.0.0-rc.5} & e = \text{Go tag},\\
+\text{4.0.0-rc.6} & e \in \{\text{Cargo,npm,Maven,Clojars,NuGet,Swift,CMake,C++}\},\\
+\text{4.0.0rc6} & e = \text{PyPI},\\
+\text{4.0.0rc6-1} & e = \text{LuaRocks},\\
+\text{4.0.0.rc.6} & e = \text{RubyGems},\\
+\text{4.0.0\textasciitilde rc6} & e = \text{opam},\\
+\text{v4.0.0-rc.6} & e = \text{Go tag},\\
 \text{4.0.0} & e \in \{\text{Hackage,fpm candidates}\}.
 \end{cases}
 ```
 
 | Ecosystem | RC spelling | Publication policy |
 |---|---|---|
-| Cargo, npm, Maven, Clojars, NuGet, Swift, CMake, pkg-config | `4.0.0-rc.5` | Publish after its owner passes all gates |
-| PyPI | `4.0.0rc5` | Publish after wheel tests |
-| RubyGems | `4.0.0.rc.5` | Publish after native-resource inspection |
-| opam | `4.0.0~rc5` | Submit an opam-repository pull request |
-| Go | module path ending in `/v4`; tag `v4.0.0-rc.5` | Create the immutable subdirectory tag after dependencies resolve |
-| LuaRocks | `4.0.0rc5-1` | Compile the rock against a staged native SDK, run its installed facade, then publish; the final integer is a Lua packaging revision, not another Rust RC |
-| Hackage | `4.0.0` with `x-release-candidate: rc.5` | Build candidate only; do not upload |
+| Cargo, npm, Maven, Clojars, NuGet, Swift, CMake, pkg-config | `4.0.0-rc.6` | Publish after its owner passes all gates |
+| PyPI | `4.0.0rc6` | Publish after wheel tests |
+| RubyGems | `4.0.0.rc.6` | Publish after native-resource inspection |
+| opam | `4.0.0~rc6` | Submit an opam-repository pull request |
+| Go | module path ending in `/v4`; tag `v4.0.0-rc.6` | Create the immutable subdirectory tag after dependencies resolve |
+| LuaRocks | `4.0.0rc6-1` | Compile the rock against a staged native SDK, run its installed facade, then publish; the final integer is a Lua packaging revision, not another Rust RC |
+| Hackage | `4.0.0` with `x-release-candidate: rc.6` | Build candidate only; do not upload |
 | fpm | `4.0.0` | Build candidate only; do not upload |
 
 `llattice` is intentionally outside the synchronized major-version train and
@@ -467,8 +496,8 @@ shaped validation and publication then follow dependency order:
 6. Publish and verify the four scoped npm project facades against that exact
    runtime. Install and exercise all scoped packages together, then normalize
    their `latest`, `next`, `bootstrap`, and bootstrap-deprecation metadata.
-7. Publish `liblevenshtein@4.0.0-rc.5` from `liblevenshtein-npm`, also with
-   `--tag next`, after `@vinary-tree/liblevenshtein@4.0.0-rc.5` resolves.
+7. Publish `liblevenshtein@4.0.0-rc.6` from `liblevenshtein-npm`, also with
+   `--tag next`, after `@vinary-tree/liblevenshtein@4.0.0-rc.6` resolves.
 
 The libdictenstein workflow uses liblevenshtein source for a cross-project
 consumer test. That is a **validation dependency**, not a reason to invert the
@@ -484,16 +513,16 @@ command merely returning success.
 
 ```text
 procedure VALIDATE_OWNER(owner):
-    owner.dispatch(tag = "v4.0.0-rc.5", registry = "validate-only")
+    owner.dispatch(tag = "v4.0.0-rc.6", registry = "validate-only")
     require owner.validation.is_success
     require owner.github_prerelease.has_valid_checksums
 
 procedure PUBLISH_AND_VERIFY(owner, registry):
-    owner.dispatch(tag = "v4.0.0-rc.5", registry = registry)
+    owner.dispatch(tag = "v4.0.0-rc.6", registry = registry)
     wait_until_every_published_coordinate_resolves(owner, registry)
     rerun_owner_smoke_tests_against_registry_bytes(owner, registry)
 
-procedure RELEASE_4_RC_5(owners):
+procedure RELEASE_4_RC_6(owners):
     # Establish one immutable source state for every owner.
     for owner in owners:
         require owner.worktree_is_clean
@@ -506,7 +535,7 @@ procedure RELEASE_4_RC_5(owners):
     # Push every tag without triggering a workflow. Each source-tag graph is
     # therefore complete before validation starts.
     for owner in owners:
-        owner.push_annotated_tag("v4.0.0-rc.5")
+        owner.push_annotated_tag("v4.0.0-rc.6")
 
     # Each stage starts only after the preceding public-byte barriers pass.
     VALIDATE_OWNER(interop)
@@ -528,10 +557,10 @@ procedure RELEASE_4_RC_5(owners):
     PUBLISH_AND_VERIFY(legacy_npm_facade, npm)
 
     for package in new_scoped_npm_coordinates:
-        require npm_dist_tag(package, "next") = "4.0.0-rc.5"
-        npm_set_dist_tag(package, "latest", "4.0.0-rc.5")
+        require npm_dist_tag(package, "next") = "4.0.0-rc.6"
+        npm_set_dist_tag(package, "latest", "4.0.0-rc.6")
         npm_remove_dist_tag(package, "bootstrap")
-        require npm_dist_tag(package, "latest") = "4.0.0-rc.5"
+        require npm_dist_tag(package, "latest") = "4.0.0-rc.6"
 
     require npm_dist_tag("liblevenshtein", "latest") = "2.0.4"
     record_checksums_and_release_evidence()
@@ -662,14 +691,14 @@ allowed fence types and the monotone repair process for legacy ignored examples.
 
 ### Python, JVM, Clojure, .NET, and Ruby
 
-Python wheels use the PyPI spelling `4.0.0rc5`, bundle only their project native
-library, and depend exactly on `vinary-tree-interop==4.0.0rc5`.
+Python wheels use the PyPI spelling `4.0.0rc6`, bundle only their project native
+library, and depend exactly on `vinary-tree-interop==4.0.0rc6`.
 
 The JVM artifact targets the documented Java level, uses Foreign Function &
 Memory resource lifetimes, bundles its project native resources, and depends
-on `io.vinarytree:vinary-tree-interop:4.0.0-rc.5`. The Clojure facade directly
+on `io.vinarytree:vinary-tree-interop:4.0.0-rc.6`. The Clojure facade directly
 depends on both that interop coordinate and
-`io.vinarytree:liblevenshtein:4.0.0-rc.5`; a validation job must therefore
+`io.vinarytree:liblevenshtein:4.0.0-rc.6`; a validation job must therefore
 install the exact staged JAR and POM for both coordinates into its local test
 repository before Leiningen starts. The JVM producer transports the two
 staging trees as separately named workflow artifacts. Root JReleaser jobs
@@ -683,7 +712,7 @@ directory to an absolute path before Gradle forks a test process. A developer's
 pre-existing `target` directory is never an acceptable provider.
 
 For RC.4, publish and independently resolve
-`io.vinarytree:vinary-tree-interop:4.0.0-rc.5` from the interop corrective
+`io.vinarytree:vinary-tree-interop:4.0.0-rc.6` from the interop corrective
 source tag before dispatching the root Maven lane. Root validation continues to
 build the immutable canonical interop source locally; the corrective interop
 commit changes release metadata and automation only, not Java sources or ABI.
@@ -700,7 +729,7 @@ The legacy pure-Java release remains immutable at
 `com.github.universal-automata:liblevenshtein:3.0.0` in
 [Maven Central](https://repo1.maven.org/maven2/com/github/universal-automata/liblevenshtein/3.0.0/).
 The Rust-backed JVM facade is staged at
-`io.vinarytree:liblevenshtein:4.0.0-rc.5`. Before the first upload under that
+`io.vinarytree:liblevenshtein:4.0.0-rc.6`. Before the first upload under that
 group, the operator must prove that the Central Portal account controls the
 `io.vinarytree` namespace. Sonatype defines a group identifier as a controlled
 reverse-domain namespace and requires ownership proof in its
@@ -712,9 +741,9 @@ The canonical group is `io.vinarytree`. The reviewed Maven lane stages its
 complete signed artifact and two namespace-isolated, POM-only migration
 notices at the same version:
 
-- `com.github.dylon:liblevenshtein:4.0.0-rc.5` relocates to the canonical
+- `com.github.dylon:liblevenshtein:4.0.0-rc.6` relocates to the canonical
   coordinate; and
-- `com.github.universal-automata:liblevenshtein:4.0.0-rc.5` relocates to the
+- `com.github.universal-automata:liblevenshtein:4.0.0-rc.6` relocates to the
   canonical coordinate.
 
 The three inputs use separate JReleaser Maven Central deployers whose declared
@@ -731,11 +760,11 @@ the value pinned in `release/version.json` may the operator dispatch
 relocation POMs have `pom` packaging, carry Central's required project
 metadata, contain no implementation JAR, and are generated only from
 `release/version.json`.
-The relocation lane deliberately does not compare that canonical JAR with its
-independent rebuild: platform toolchains can emit non-bit-reproducible native
-members, and no implementation JAR is part of a relocation upload. Pinning the
-already-published artifact's digest proves the public target without confusing
-rebuild reproducibility with relocation safety.
+The relocation lane compares the publicly readable canonical POM and JAR byte
+for byte with the canonical signed bundle staged by the same immutable-tag
+workflow. It then records both JAR checksums in the workflow log. This proves
+that the relocation points at the exact canonical artifact without assuming an
+independent native rebuild is bit-reproducible.
 The [official Maven relocation procedure](https://maven.apache.org/guides/mini/guide-relocation.html)
 causes old-coordinate consumers to resolve the new group while emitting a
 migration warning. Never alter the already-published historical POMs, and never
@@ -750,20 +779,20 @@ that transport but exposed an aggregate-policy provenance defect: the root
 contract audited current sibling publisher rules after checking out their
 older canonical tags. Both tags remain immutable. The complete graph and its
 single-source sibling-ref manifest were first frozen at root
-`v4.0.0-rc.5-release.3`. Its exact-source validation then exposed a malformed
+`v4.0.0-rc.6-release.3`. Its exact-source validation then exposed a malformed
 CRLF blob in interop's Windows Gradle launcher: Git's declared text filter made
 a fresh exact-tag checkout appear modified. Interop
-`v4.0.0-rc.5-release.3` stores canonical LF object data while preserving CRLF
+`v4.0.0-rc.6-release.3` stores canonical LF object data while preserving CRLF
 checkout semantics and rejects noncanonical tracked text in its verification
-gate. JavaScript runtime `v4.0.0-rc.5-release.3` consumes that corrected exact
-source. Root `v4.0.0-rc.5-release.4` advances only those two source refs; it
+gate. JavaScript runtime `v4.0.0-rc.6-release.3` consumes that corrected exact
+source. Root `v4.0.0-rc.6-release.4` advances only those two source refs; it
 retains the external owner topology, the unchanged package version, and
-libdictenstein `v4.0.0-rc.5-release.2`, which preserves its namespaced Fortran
+libdictenstein `v4.0.0-rc.6-release.2`, which preserves its namespaced Fortran
 module while disabling fpm's optional package-name module convention.
 
 Root release.4 built and tested every JVM artifact, but
 `actions/upload-artifact@v7` rejected the sibling-relative upload path because
-its archive root contained `..`. Root `v4.0.0-rc.5-release.5` copies the exact
+its archive root contained `..`. Root `v4.0.0-rc.6-release.5` copies the exact
 interop Maven tree into a checkout-owned staging directory, proves the expected
 POM and JAR exist on both sides of the copy, and uploads only that owned path.
 The binding contract rejects future scalar artifact paths containing parent
@@ -777,17 +806,17 @@ for each run to finish and record its run URL before continuing:
 ```bash
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.5-release.5 \
+  --ref v4.0.0-rc.6-release.5 \
   -f registry=maven-central
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.5-release.6 \
+  --ref v4.0.0-rc.6-release.6 \
   -f registry=maven-relocation-dylon
 
 gh workflow run release.yml \
   --repo vinary-tree/liblevenshtein-rust \
-  --ref v4.0.0-rc.5-release.6 \
+  --ref v4.0.0-rc.6-release.6 \
   -f registry=maven-relocation-universal-automata
 ```
 
@@ -847,17 +876,17 @@ Use the interactive, read-modify-read procedure in
 It deliberately includes `--auth-type=web` and verifies the tags and
 deprecation after mutation.
 
-The scoped postcondition is `latest = next = 4.0.0-rc.5`, with no `bootstrap`
+The scoped postcondition is `latest = next = 4.0.0-rc.6`, with no `bootstrap`
 tag. The immutable `0.0.0` audit artifact remains explicitly deprecated.
 
 Before and after publishing the legacy name, verify its stable tag:
 
 ```bash
 npm view liblevenshtein dist-tags --json
-npm view liblevenshtein@4.0.0-rc.5 version
+npm view liblevenshtein@4.0.0-rc.6 version
 ```
 
-The required postcondition is `latest = 2.0.4` and `next = 4.0.0-rc.5`.
+The required postcondition is `latest = 2.0.4` and `next = 4.0.0-rc.6`.
 
 ### Haskell and Fortran candidates
 
@@ -877,15 +906,15 @@ its native payload loads.
 
 | Registry | Resolution proof | Minimum fresh-consumer proof |
 |---|---|---|
-| crates.io | `cargo info NAME@4.0.0-rc.5` | Temporary crate with `NAME = "=4.0.0-rc.5"`; `cargo check --locked`; run a construction/query smoke where the crate exposes behavior |
-| npm | `npm view NAME@4.0.0-rc.5 version dist.integrity dist.shasum --json` | Install the exact version into `mktemp -d`; test CommonJS and ESM entry points, runtime identity, iteration, and deterministic closure |
-| PyPI | `python -m pip download --no-deps NAME==4.0.0rc5` | New virtual environment; install only downloaded wheels and exact dependencies; import, construct, iterate, snapshot, close |
-| Maven Central | Resolve `GROUP:ARTIFACT:4.0.0-rc.5` from Central in an empty Gradle/Maven cache | Compile and run the Java collection and try-with-resources fixtures against the resolved JAR and extracted native library |
-| Clojars | Resolve `[GROUP/ARTIFACT "4.0.0-rc.5"]` from Clojars | Run the idiomatic Clojure collection, snapshot, and resource-lifetime fixtures without a local Maven override |
+| crates.io | `cargo info NAME@4.0.0-rc.6` | Temporary crate with `NAME = "=4.0.0-rc.6"`; `cargo check --locked`; run a construction/query smoke where the crate exposes behavior |
+| npm | `npm view NAME@4.0.0-rc.6 version dist.integrity dist.shasum --json` | Install the exact version into `mktemp -d`; test CommonJS and ESM entry points, runtime identity, iteration, and deterministic closure |
+| PyPI | `python -m pip download --no-deps NAME==4.0.0rc6` | New virtual environment; install only downloaded wheels and exact dependencies; import, construct, iterate, snapshot, close |
+| Maven Central | Resolve `GROUP:ARTIFACT:4.0.0-rc.6` from Central in an empty Gradle/Maven cache | Compile and run the Java collection and try-with-resources fixtures against the resolved JAR and extracted native library |
+| Clojars | Resolve `[GROUP/ARTIFACT "4.0.0-rc.6"]` from Clojars | Run the idiomatic Clojure collection, snapshot, and resource-lifetime fixtures without a local Maven override |
 | NuGet | Query the exact package version from nuget.org | Empty `dotnet new` project; add exact package; run collection, enumeration, snapshot, and `IDisposable` fixtures |
-| RubyGems | `gem fetch NAME -v 4.0.0.rc.5` | Install to an isolated gem home; require the gem, traverse data, and close native resources |
-| Go proxy | `go list -m MODULE@v4.0.0-rc.5` | New module with the exact `/v4` requirement; `go test` the ownership and iteration fixture |
-| LuaRocks | Inspect/download `NAME 4.0.0rc5-1` from the configured server and compare the rockspec bytes | Isolated tree; install against an explicit native SDK through `NAME_INCDIR` and `NAME_LIBDIR`, load the module, and run resource and traversal fixtures |
+| RubyGems | `gem fetch NAME -v 4.0.0.rc.6` | Install to an isolated gem home; require the gem, traverse data, and close native resources |
+| Go proxy | `go list -m MODULE@v4.0.0-rc.6` | New module with the exact `/v4` requirement; `go test` the ownership and iteration fixture |
+| LuaRocks | Inspect/download `NAME 4.0.0rc6-1` from the configured server and compare the rockspec bytes | Isolated tree; install against an explicit native SDK through `NAME_INCDIR` and `NAME_LIBDIR`, load the module, and run resource and traversal fixtures |
 | opam | Inspect the submitted `opam-repository` pull request and source checksum | Fresh switch; pin the candidate metadata, build, and execute its examples before merge |
 | GitHub release | Verify `SHA256SUMS` against every downloaded asset | Relocate each native SDK archive and build both shared and static sample consumers where supported |
 
@@ -1168,14 +1197,14 @@ pass it in a remote URL. The workflow configures Git's credential helper from
 `GH_TOKEN`, never persists the token in a checkout, and fixes the fork identity
 rather than inferring it from the authenticating user.
 
-The package-directory version is the opam spelling `4.0.0~rc5`, read from each
+The package-directory version is the opam spelling `4.0.0~rc6`, read from each
 owner's `release/version.json`; branch names use the canonical
-`4.0.0-rc.5` spelling because `~` is illegal in Git refs. Submit and obtain
+`4.0.0-rc.6` spelling because `~` is illegal in Git refs. Submit and obtain
 public read-back in dependency order:
 
-1. `vinary-tree-interop.4.0.0~rc5`;
-2. `libdictenstein.4.0.0~rc5`; and
-3. `liblevenshtein.4.0.0~rc5`.
+1. `vinary-tree-interop.4.0.0~rc6`;
+2. `libdictenstein.4.0.0~rc6`; and
+3. `liblevenshtein.4.0.0~rc6`.
 
 Each upstream pull request must pass opam-repository CI and be merged before the
 next package is submitted. After merge, create a fresh switch against the
@@ -1195,7 +1224,7 @@ environment variable. Do not provision `NUGET_API_KEY` secrets.
 ## Pre-publication checklist
 
 - [ ] Every worktree intended for release is clean and committed.
-- [ ] Every `release/version.json` says `4.0.0-rc.5` and every sync script is
+- [ ] Every `release/version.json` says `4.0.0-rc.6` and every sync script is
       idempotent.
 - [ ] Every primary Cargo lock contains exact RC.4 family entries, rejects a
       deliberately stale probe, and remains unchanged after locked clean builds.
@@ -1215,8 +1244,8 @@ environment variable. Do not provision `NUGET_API_KEY` secrets.
       registry dispatch.
 - [ ] Every registry dispatch names exactly one target and runs against the
       ledger-recorded immutable source tag, never a branch. The ordinary tag is
-      `refs/tags/v4.0.0-rc.5`; an eligible unpublished-owner recovery may use
-      `refs/tags/v4.0.0-rc.5-release.N`.
+      `refs/tags/v4.0.0-rc.6`; an eligible unpublished-owner recovery may use
+      `refs/tags/v4.0.0-rc.6-release.N`.
 - [ ] Registry namespaces, trusted publishers, signing keys, and protected
       environments exist.
 - [ ] Central Portal shows `io.vinarytree` as a verified namespace available
@@ -1230,7 +1259,7 @@ environment variable. Do not provision `NUGET_API_KEY` secrets.
       passes before JReleaser signs any namespace-scoped input.
 - [ ] The canonical Maven POM and JAR resolve publicly and are byte-identical
       to the staged files before either historical relocation is dispatched.
-- [ ] Every new scoped npm package has `latest = next = 4.0.0-rc.5`, has no
+- [ ] Every new scoped npm package has `latest = next = 4.0.0-rc.6`, has no
       `bootstrap` tag, and deprecates its immutable `0.0.0` reservation.
 - [ ] `npm view liblevenshtein dist-tags --json` reports `latest: 2.0.4`.
 - [ ] Hackage and fpm jobs are visibly candidate-only.

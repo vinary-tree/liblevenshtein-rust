@@ -89,9 +89,9 @@ Don't rely on single metrics. A comprehensive evaluation requires:
 
 | Aspect | Complexity | Verification Method |
 |--------|-----------|---------------------|
-| **Construction** | O(\|W\|) for fixed n | Measure time vs \|W\| |
-| **Query** | O(\|D\|) where \|D\| = edges | Measure time vs dictionary size |
-| **Space** | O(\|W\|) states | Count automaton states |
+| **Construction** | $`\mathcal{O}(\|W\|)`$ for fixed n | Measure time vs \|W\| |
+| **Query** | $`\mathcal{O}(\|D\|)`$ where \|D\| = edges | Measure time vs dictionary size |
+| **Space** | $`\mathcal{O}(\|W\|)`$ states | Count automaton states |
 
 #### Construction Time Verification
 
@@ -161,7 +161,7 @@ Conclusion: Linear with edges ✓ (slight improvement with size due to caching)
 
 ### State Count Analysis
 
-**Theoretical Bound**: O(\|W\|) states for fixed n
+**Theoretical Bound**: $`\mathcal{O}(\|W\|)`$ states for fixed n
 
 **Measurement**:
 ```rust

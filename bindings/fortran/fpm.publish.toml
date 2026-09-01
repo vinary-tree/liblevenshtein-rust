@@ -3,7 +3,7 @@ version = "4.0.0"
 license = "Apache-2.0"
 author = "Dylon Edwards"
 maintainer = "Dylon Edwards <dylon.devo@gmail.com>"
-description = "Snapshot-consistent streaming Levenshtein search"
+description = "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
 homepage = "https://github.com/vinary-tree/liblevenshtein-rust"
 
 [library]

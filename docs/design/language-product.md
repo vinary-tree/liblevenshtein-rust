@@ -41,7 +41,7 @@ The ungated module `transducer::language` contains four pieces:
 | `LanguageAutomaton<U>` | Set operations and one-symbol transitions for a language recognizer |
 | `SmallDfa<U>` | Explicit DFA for at most 31 states, using a `u32` state-set bit mask |
 | `LanguageProduct<U, L>` | Standard-edit transition kernel and canonical cost frontier |
-| `LanguageQueryIterator<N, L>` | Iterative dictionary intersection and lazy `LanguageMatch` emission |
+| `LanguageQueryIterator<N, L>` | Iterative dictionary product, exact frontier interning, observed-edge caching, and lazy `LanguageMatch` emission |
 
 The phonetic feature implements `LanguageAutomaton<char>` for `NFAChar` and
 `LanguageAutomaton<u8>` for `NFA`. `Transducer::query_regex` compiles a pattern
@@ -120,10 +120,21 @@ the full frontier law.
 entire child subtree.*
 
 `LanguageQueryIterator` uses an explicit queue rather than recursion. A pending
-entry owns a dictionary node, its bounded frontier, and a compact parent link.
-Paths are materialized only for accepted nodes. The iterator has no fixed depth
-100 and cannot overflow the process call stack merely because a dictionary key
-is deep.
+entry owns a dictionary path trace and one machine-word `LanguageFrontierId`.
+The complete cost-indexed frontier is stored once in a query-local arena. A
+collision-checked exact interner maps equal canonical frontiers to the same ID,
+and an observed-edge table maps `(source ID, exact unit)` to the target ID or a
+dead transition. Paths are materialized only for accepted nodes. The iterator
+has no fixed depth 100 and cannot overflow the process call stack merely
+because a dictionary key is deep.
+
+Interning is an on-demand representation optimization, not eager subset
+construction. The arena contains only distinct frontiers reached through real
+dictionary edges. Its size is finite for a finite automaton and edit cutoff,
+but the convenience iterator does not impose a caller-configurable arena or
+queue ceiling. A service that treats complete empty as release evidence must
+place this engine behind the bounded/tagged adapter described in
+[the shared product architecture](lazy-online-products.md#6-resource-and-failure-semantics).
 
 The dictionary graph must present a finite traversal. Tries and directed
 acyclic word graphs satisfy this directly. A backend whose `edges()` relation
@@ -138,20 +149,22 @@ edges enumerated. The counters are zero-cost-disabled in normal builds.
 
 Let $`Q`$ be the language-state set, $`k`$ the edit budget, $`E_D`$ the
 dictionary edges actually explored, and $`W_Q`$ the machine words needed for a
-state set. The frontier occupies:
+state set. One canonical frontier occupies:
 
 ```math
 \mathcal{O}(kW_Q)
 ```
 
-and a dictionary edge costs $`\mathcal{O}(kW_Q)`$ set work plus the recognizer's
-transition work. Traversal is therefore:
+and one pending product entry stores only an ID plus its dictionary path trace.
+A cache miss costs $`\mathcal{O}(kW_Q)`$ set work plus the recognizer's
+transition work; a cache hit is an ID lookup. In the no-reuse case traversal is:
 
 ```math
 \mathcal{O}(E_D k W_Q).
 ```
 
-The bound is independent of product-history multiplicity, but it does not make
+Repeated `(source ID, exact unit)` observations reduce this work. The bound is
+independent of product-history multiplicity, but it does not make
 regular-language intersection immune to subset diversity. In the worst case,
 different dictionary prefixes can still induce exponentially many distinct NFA
 subsets across the traversal. A lazy subset-DFA cache is a compatible future
@@ -224,8 +237,9 @@ The formal evidence is deliberately redundant:
 - assumption-free Rocq proves relational-image distribution, acceptance
   preservation, disjointness, and the 256-level bound;
 - Z3 and cvc5 independently prove four bounded counterexample queries UNSAT;
-- property tests compare literal DFAs to the scalar reference, NFAs to the
-  legacy product, regex queries to brute force, and byte/character/token paths;
+- property tests pin exact frontier-ID and observed-edge reuse, compare literal
+  DFAs to the scalar reference, NFAs to the legacy product, regex queries to
+  brute force, and byte/character/token paths;
 - the instrumented 5,000-term regression requires more than a tenfold edge
   reduction versus a full scan.
 

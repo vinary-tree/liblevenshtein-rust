@@ -48,6 +48,7 @@ current trusted/partial/legacy status.
 - **Elastic-kernel K1–K4 conformance** → [core/theories/Conformance/ElasticKernel.v](core/theories/Conformance/ElasticKernel.v)
 - **Traversal-level K1+K2 no-false-negative theorem** → [elastic/theories/WalkerSoundness.v](elastic/theories/WalkerSoundness.v)
 - **Elastic-kernel Rust-facing model** → [verus/elastic_kernel.rs](verus/elastic_kernel.rs)
+- **Typed vector-kernel Rust-facing model** → [verus/vector_kernels.rs](verus/vector_kernels.rs)
 - **Elastic-kernel cross-solver model** → [smt/elastic_kernel.smt2](smt/elastic_kernel.smt2)
 - **Elastic-trie operational model** → [tla/ElasticTrieSearch.tla](tla/ElasticTrieSearch.tla)
 - **Banded-DTW interval, prefix, and reachability proofs** → [dtw/theories/Indexing/DtwProperties.v](dtw/theories/Indexing/DtwProperties.v)

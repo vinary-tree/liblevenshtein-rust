@@ -10,6 +10,16 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  documentation-math:
+    name: Mathematical documentation syntax
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install the pinned scanner runtime
+        run: sudo apt-get update && sudo apt-get install -y rakudo ripgrep
+      - name: Verify living Markdown, Rustdoc, fixtures, and classification
+        run: scripts/doc-mathlint.sh
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -37,6 +47,22 @@ jobs:
       # negotiation pins. Cross-repository CI replays them at the same ref.
       - run: cargo test --locked --manifest-path ../vinary-tree-interop/Cargo.toml
       - run: cargo fmt --all --check
+
+  temporal-mutation-gate:
+    name: Temporal cutoff/interner/cache mutants
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/checkout-dev-siblings
+      - uses: dtolnay/rust-toolchain@1.95
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants@27.1.0
+      - name: Kill the pinned bounded temporal mutants
+        env:
+          TEMPORAL_MUTANTS_OUTPUT: ${{ runner.temp }}/liblevenshtein-temporal-mutants
+        run: scripts/verify-temporal-mutations.sh
 
   sanitizers:
     name: Sanitizers (ASan/TSan)
@@ -241,8 +267,8 @@ jobs:
           popd
           scripts/stage-native-package.sh \
             x86_64-unknown-linux-gnu target/debug target/native-package
-          interop_prefix="$PWD/target/native-package/vinary-tree-interop-4.0.0-rc.5"
-          liblevenshtein_prefix="$PWD/target/native-package/liblevenshtein-4.0.0-rc.5-x86_64-unknown-linux-gnu"
+          interop_prefix="$PWD/target/native-package/vinary-tree-interop-4.0.0-rc.6"
+          liblevenshtein_prefix="$PWD/target/native-package/liblevenshtein-4.0.0-rc.6-x86_64-unknown-linux-gnu"
           cmake -S bindings/cpp/tests/package -B target/cmake-package-smoke \
             -DCMAKE_PREFIX_PATH="$interop_prefix;$liblevenshtein_prefix"
           cmake --build target/cmake-package-smoke
@@ -260,7 +286,7 @@ jobs:
             x86_64-unknown-linux-gnu target/debug \
             "$GITHUB_WORKSPACE/target/native-package"
           popd
-          libdictenstein_prefix="$PWD/target/native-package/libdictenstein-4.0.0-rc.5-x86_64-unknown-linux-gnu"
+          libdictenstein_prefix="$PWD/target/native-package/libdictenstein-4.0.0-rc.6-x86_64-unknown-linux-gnu"
           package_prefixes="$interop_prefix;$liblevenshtein_prefix;$libdictenstein_prefix"
           cmake -S bindings/cpp/tests/package-cross \
             -B target/cmake-cross-project-shared \

@@ -15,8 +15,12 @@
 //! Distance*, VLDB 2004, DOI
 //! [10.1016/B978-012088469-8.50070-X](https://doi.org/10.1016/B978-012088469-8.50070-X).
 
+use super::super::bounded::IncompleteReason;
 use super::super::elastic::interval::interval_dist;
-use super::super::elastic::{Cost, ElasticKernel, ElasticTransducer, MetricElasticKernel};
+use super::super::elastic::sparse::{charge_work, NeighborSeedRows};
+use super::super::elastic::{
+    Cost, ElasticKernel, ElasticTransducer, PointFrontierStep, QueryPlanStorage,
+};
 use crate::cost::{CostMonoid, WeightedCost};
 
 const DEFAULT_ERP_GAP: f64 = 0.0;
@@ -184,11 +188,23 @@ pub fn erp_gap_mass_lower_bound(x: &[f64], y: &[f64], g: f64) -> f64 {
 }
 
 impl ElasticKernel for ErpConfig {
-    const IS_METRIC: bool = true;
+    // Raw sequences form a pseudometric: inserting the configured gap value
+    // has zero cost. Metric consumers must use the canonical quotient type.
+    const IS_METRIC: bool = false;
 
     type Monoid = WeightedCost;
     type Carry = ();
     type QueryPlan = ();
+
+    #[inline]
+    fn query_plan_storage(&self, _query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        Ok(QueryPlanStorage::EMPTY)
+    }
+
+    #[inline]
+    fn canonical_carry_key(&self, (): Self::Carry) -> Option<[u64; 2]> {
+        Some([0, 0])
+    }
 
     #[inline]
     fn normalized(self) -> Self {
@@ -261,6 +277,255 @@ impl ElasticKernel for ErpConfig {
         (lower_bound, ())
     }
 
+    fn step_point_frontier(
+        &self,
+        previous: &[Cost<Self>],
+        previous_active: &[usize],
+        query: &[f64],
+        target: f64,
+        _previous_carry: Option<Self::Carry>,
+        depth: usize,
+        _plan: &Self::QueryPlan,
+        cutoff: Cost<Self>,
+        max_work: usize,
+        column: &mut [Cost<Self>],
+        active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        let expected = query.len().checked_add(1)?;
+        if column.len() != expected || depth == 0 {
+            return Some(PointFrontierStep::Advanced {
+                lower_bound: WeightedCost::TOP,
+                carry: (),
+                work: 0,
+            });
+        }
+        let gap = self.gap_value();
+        let target_gap = (target - gap).abs();
+        let last_row = query.len();
+        let mut lower_bound = WeightedCost::TOP;
+        let mut work = 0usize;
+
+        if depth == 1 {
+            if let Err(requested) = charge_work(&mut work, max_work) {
+                return Some(PointFrontierStep::WorkLimitExceeded {
+                    completed: work,
+                    requested,
+                });
+            }
+            if WeightedCost::within(target_gap, cutoff) {
+                column[0] = target_gap;
+                active.push(0);
+                lower_bound = target_gap;
+            }
+            let mut root_previous = WeightedCost::ZERO;
+            for row in 1..=last_row {
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let query_gap = (query[row - 1] - gap).abs();
+                let root_current = WeightedCost::combine(root_previous, query_gap);
+                let substitute =
+                    WeightedCost::combine(root_previous, (query[row - 1] - target).abs());
+                let delete = WeightedCost::combine(column[row - 1], query_gap);
+                let insert = WeightedCost::combine(root_current, target_gap);
+                let cost = substitute.min(delete).min(insert);
+                if WeightedCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                }
+                root_previous = root_current;
+            }
+            return Some(PointFrontierStep::Advanced {
+                lower_bound,
+                carry: (),
+                work,
+            });
+        }
+
+        let mut seeds = NeighborSeedRows::new(previous_active, last_row);
+        let mut next_seed = seeds.next();
+        while let Some(start) = next_seed {
+            let mut row = start;
+            loop {
+                while next_seed == Some(row) {
+                    next_seed = seeds.next();
+                }
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let cost = if row == 0 {
+                    WeightedCost::combine(previous[0], target_gap)
+                } else {
+                    let query_gap = (query[row - 1] - gap).abs();
+                    let substitute =
+                        WeightedCost::combine(previous[row - 1], (query[row - 1] - target).abs());
+                    let delete = WeightedCost::combine(column[row - 1], query_gap);
+                    let insert = WeightedCost::combine(previous[row], target_gap);
+                    substitute.min(delete).min(insert)
+                };
+                if WeightedCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                    if row < last_row {
+                        row += 1;
+                        continue;
+                    }
+                }
+                break;
+            }
+        }
+        Some(PointFrontierStep::Advanced {
+            lower_bound,
+            carry: (),
+            work,
+        })
+    }
+
+    fn step_interval_frontier(
+        &self,
+        previous: &[Cost<Self>],
+        previous_active: &[usize],
+        query: &[f64],
+        target: (f64, f64),
+        _previous_carry: Option<Self::Carry>,
+        depth: usize,
+        _plan: &Self::QueryPlan,
+        cutoff: Cost<Self>,
+        max_work: usize,
+        column: &mut [Cost<Self>],
+        active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        let expected = query.len().checked_add(1)?;
+        if column.len() != expected || depth == 0 {
+            return Some(PointFrontierStep::Advanced {
+                lower_bound: WeightedCost::TOP,
+                carry: (),
+                work: 0,
+            });
+        }
+        let (low, high) = target;
+        let gap = self.gap_value();
+        let target_gap = interval_dist(gap, low, high);
+        let last_row = query.len();
+        let mut lower_bound = WeightedCost::TOP;
+        let mut work = 0usize;
+
+        if depth == 1 {
+            if let Err(requested) = charge_work(&mut work, max_work) {
+                return Some(PointFrontierStep::WorkLimitExceeded {
+                    completed: work,
+                    requested,
+                });
+            }
+            if WeightedCost::within(target_gap, cutoff) {
+                column[0] = target_gap;
+                active.push(0);
+                lower_bound = target_gap;
+            }
+            let mut root_previous = WeightedCost::ZERO;
+            for row in 1..=last_row {
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let query_gap = (query[row - 1] - gap).abs();
+                let root_current = WeightedCost::combine(root_previous, query_gap);
+                let substitute =
+                    WeightedCost::combine(root_previous, interval_dist(query[row - 1], low, high));
+                let delete = WeightedCost::combine(column[row - 1], query_gap);
+                let insert = WeightedCost::combine(root_current, target_gap);
+                let cost = substitute.min(delete).min(insert);
+                if WeightedCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                }
+                root_previous = root_current;
+            }
+            return Some(PointFrontierStep::Advanced {
+                lower_bound,
+                carry: (),
+                work,
+            });
+        }
+
+        let mut seeds = NeighborSeedRows::new(previous_active, last_row);
+        let mut next_seed = seeds.next();
+        while let Some(start) = next_seed {
+            let mut row = start;
+            loop {
+                while next_seed == Some(row) {
+                    next_seed = seeds.next();
+                }
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let cost = if row == 0 {
+                    WeightedCost::combine(previous[0], target_gap)
+                } else {
+                    let query_gap = (query[row - 1] - gap).abs();
+                    let substitute = WeightedCost::combine(
+                        previous[row - 1],
+                        interval_dist(query[row - 1], low, high),
+                    );
+                    let delete = WeightedCost::combine(column[row - 1], query_gap);
+                    let insert = WeightedCost::combine(previous[row], target_gap);
+                    substitute.min(delete).min(insert)
+                };
+                if WeightedCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                    if row < last_row {
+                        row += 1;
+                        continue;
+                    }
+                }
+                break;
+            }
+        }
+        Some(PointFrontierStep::Advanced {
+            lower_bound,
+            carry: (),
+            work,
+        })
+    }
+
+    #[inline]
+    fn vertical_epsilon_extension(
+        &self,
+        query: &[f64],
+        _target: (f64, f64),
+        row: usize,
+        column: &[Cost<Self>],
+        _plan: &Self::QueryPlan,
+    ) -> Option<Cost<Self>> {
+        let predecessor = *column.get(row.checked_sub(1)?)?;
+        let query_value = *query.get(row - 1)?;
+        Some(WeightedCost::combine(
+            predecessor,
+            (query_value - self.gap_value()).abs(),
+        ))
+    }
+
+    #[inline]
+    fn carry_interval(&self, _carry: Self::Carry) -> Option<(f64, f64)> {
+        Some((0.0, 0.0))
+    }
+
     #[inline]
     fn exact_with_cutoff(
         &self,
@@ -282,7 +547,9 @@ impl ElasticKernel for ErpConfig {
     }
 
     #[inline]
-    fn plan(&self, _query: &[f64]) -> Self::QueryPlan {}
+    fn try_plan(&self, _query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(())
+    }
 
     #[inline]
     fn empty_pair_cost(&self) -> Cost<Self> {
@@ -298,8 +565,6 @@ impl ElasticKernel for ErpConfig {
         }
     }
 }
-
-impl MetricElasticKernel for ErpConfig {}
 
 #[cfg(test)]
 mod tests {
@@ -407,7 +672,7 @@ mod tests {
             let actual = ErpConfig::new(g).distance(&x, &y);
             prop_assert_eq!(actual, reference_distance(&x, &y, g));
             let cutoff = f64::from(cutoff);
-            let expected_cutoff = (actual <= cutoff + WeightedCost::EPSILON).then_some(actual);
+            let expected_cutoff = (actual <= cutoff).then_some(actual);
             prop_assert_eq!(ErpConfig::new(g).distance_with_cutoff(&x, &y, cutoff), expected_cutoff);
         }
 

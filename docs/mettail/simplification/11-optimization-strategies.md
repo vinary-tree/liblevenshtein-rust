@@ -327,8 +327,8 @@ This is the **comm rule** - the fundamental reduction of process calculi.
 **Claim**: Communication fusion produces a bisimilar (actually, more reduced) process.
 
 **Proof**: The comm rule is a **reduction**, not just a congruence. It's the defining operational semantics. The reduced process is bisimilar to the unreduced one since:
-- The unreduced version can take a τ-step to the reduced
-- Weak bisimilarity equates processes related by τ-steps
+- The unreduced version can take $`a \tau`$-step to the reduced
+- Weak bisimilarity equates processes related by $`\tau`$-steps
 
 ### Implementation
 

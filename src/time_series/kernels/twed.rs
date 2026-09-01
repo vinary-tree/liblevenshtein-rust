@@ -18,8 +18,13 @@
 //! [10.1109/TPAMI.2008.76](https://doi.org/10.1109/TPAMI.2008.76).
 
 use super::super::elastic::interval::{interval_dist, interval_gap};
-use super::super::elastic::{Cost, ElasticKernel, ElasticTransducer, MetricElasticKernel};
+use super::super::elastic::sparse::{charge_work, NeighborSeedRows};
+use super::super::elastic::{
+    Cost, ElasticKernel, ElasticTransducer, MetricElasticKernel, PointFrontierStep,
+    QueryPlanStorage,
+};
 use crate::cost::{CostMonoid, WeightedCost};
+use crate::time_series::bounded::IncompleteReason;
 
 const DEFAULT_NU: f64 = 0.001;
 const DEFAULT_LAMBDA: f64 = 1.0;
@@ -294,14 +299,32 @@ impl MetricTwedConfig {
 /// TWED kernel name for APIs that distinguish configuration from policy.
 pub type TwedKernel = TwedConfig;
 
+/// Explicit name for index-displacement TWED on a unit sampling grid.
+pub type UnitGridTwedConfig = TwedConfig;
+
+/// Explicit metric-domain name for index-displacement TWED on a unit grid.
+pub type MetricUnitGridTwedConfig = MetricTwedConfig;
+
+/// Explicit kernel name for full-family unit-grid TWED.
+pub type UnitGridTwedKernel = TwedConfig;
+
+/// Explicit kernel name for metric unit-grid TWED.
+pub type MetricUnitGridTwedKernel = MetricTwedConfig;
+
 /// Exact full-family TWED index backed by the generic elastic trie walker.
 pub type TwedTransducer<V = usize> = ElasticTransducer<TwedKernel, V>;
+
+/// Exact full-family unit-grid TWED index.
+pub type UnitGridTwedTransducer<V = usize> = TwedTransducer<V>;
 
 /// Validated metric TWED kernel name.
 pub type MetricTwedKernel = MetricTwedConfig;
 
 /// Exact metric-only TWED index.
 pub type MetricTwedTransducer<V = usize> = ElasticTransducer<MetricTwedKernel, V>;
+
+/// Exact metric unit-grid TWED index.
+pub type MetricUnitGridTwedTransducer<V = usize> = MetricTwedTransducer<V>;
 
 /// Lower bound from the number of unavoidable length-changing edits.
 ///
@@ -356,6 +379,16 @@ impl<T: TwedPolicy> ElasticKernel for T {
     type Monoid = WeightedCost;
     type Carry = (f64, f64);
     type QueryPlan = ();
+
+    #[inline]
+    fn query_plan_storage(&self, _query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        Ok(QueryPlanStorage::EMPTY)
+    }
+
+    #[inline]
+    fn canonical_carry_key(&self, carry: Self::Carry) -> Option<[u64; 2]> {
+        crate::time_series::elastic::canonical_f64_pair_state_key(carry.0, carry.1)
+    }
 
     #[inline]
     fn normalized(self) -> Self {
@@ -439,6 +472,315 @@ impl<T: TwedPolicy> ElasticKernel for T {
         (lower_bound, current_interval)
     }
 
+    fn step_point_frontier(
+        &self,
+        previous: &[Cost<Self>],
+        previous_active: &[usize],
+        query: &[f64],
+        target: f64,
+        previous_carry: Option<Self::Carry>,
+        depth: usize,
+        _plan: &Self::QueryPlan,
+        cutoff: Cost<Self>,
+        max_work: usize,
+        column: &mut [Cost<Self>],
+        active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        let expected = query.len().checked_add(1)?;
+        if column.len() != expected || depth == 0 {
+            return Some(PointFrontierStep::Advanced {
+                lower_bound: WeightedCost::TOP,
+                carry: (target, target),
+                work: 0,
+            });
+        }
+        let config = self.config();
+        let nu = config.stiffness();
+        let lambda = config.gap_penalty();
+        let target_previous = previous_carry.map_or(0.0, |interval| interval.0);
+        let target_delete = segment_cost(target, target_previous, nu, lambda);
+        let last_row = query.len();
+        let mut lower_bound = WeightedCost::TOP;
+        let mut work = 0usize;
+
+        if depth == 1 {
+            if let Err(requested) = charge_work(&mut work, max_work) {
+                return Some(PointFrontierStep::WorkLimitExceeded {
+                    completed: work,
+                    requested,
+                });
+            }
+            if WeightedCost::within(target_delete, cutoff) {
+                column[0] = target_delete;
+                active.push(0);
+                lower_bound = target_delete;
+            }
+            let mut root_previous = WeightedCost::ZERO;
+            for row in 1..=last_row {
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let query_current = query[row - 1];
+                let query_previous = row
+                    .checked_sub(2)
+                    .and_then(|index| query.get(index))
+                    .copied()
+                    .unwrap_or(0.0);
+                let query_delete = segment_cost(query_current, query_previous, nu, lambda);
+                let root_current = WeightedCost::combine(root_previous, query_delete);
+                let pair = WeightedCost::combine(
+                    root_previous,
+                    match_cost(query_current, query_previous, target, 0.0, row, 1, nu),
+                );
+                let delete_query = WeightedCost::combine(column[row - 1], query_delete);
+                let delete_target = WeightedCost::combine(root_current, target_delete);
+                let cost = pair.min(delete_query).min(delete_target);
+                if WeightedCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                }
+                root_previous = root_current;
+            }
+            return Some(PointFrontierStep::Advanced {
+                lower_bound,
+                carry: (target, target),
+                work,
+            });
+        }
+
+        let mut seeds = NeighborSeedRows::new(previous_active, last_row);
+        let mut next_seed = seeds.next();
+        while let Some(start) = next_seed {
+            let mut row = start;
+            loop {
+                while next_seed == Some(row) {
+                    next_seed = seeds.next();
+                }
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let cost = if row == 0 {
+                    WeightedCost::combine(previous[0], target_delete)
+                } else {
+                    let query_current = query[row - 1];
+                    let query_previous = row
+                        .checked_sub(2)
+                        .and_then(|index| query.get(index))
+                        .copied()
+                        .unwrap_or(0.0);
+                    let query_delete = segment_cost(query_current, query_previous, nu, lambda);
+                    let pair = WeightedCost::combine(
+                        previous[row - 1],
+                        match_cost(
+                            query_current,
+                            query_previous,
+                            target,
+                            target_previous,
+                            row,
+                            depth,
+                            nu,
+                        ),
+                    );
+                    let delete_query = WeightedCost::combine(column[row - 1], query_delete);
+                    let delete_target = WeightedCost::combine(previous[row], target_delete);
+                    pair.min(delete_query).min(delete_target)
+                };
+                if WeightedCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                    if row < last_row {
+                        row += 1;
+                        continue;
+                    }
+                }
+                break;
+            }
+        }
+        Some(PointFrontierStep::Advanced {
+            lower_bound,
+            carry: (target, target),
+            work,
+        })
+    }
+
+    fn step_interval_frontier(
+        &self,
+        previous: &[Cost<Self>],
+        previous_active: &[usize],
+        query: &[f64],
+        target: (f64, f64),
+        previous_carry: Option<Self::Carry>,
+        depth: usize,
+        _plan: &Self::QueryPlan,
+        cutoff: Cost<Self>,
+        max_work: usize,
+        column: &mut [Cost<Self>],
+        active: &mut Vec<usize>,
+    ) -> Option<PointFrontierStep<Cost<Self>, Self::Carry>> {
+        let expected = query.len().checked_add(1)?;
+        if column.len() != expected || depth == 0 {
+            return Some(PointFrontierStep::Advanced {
+                lower_bound: WeightedCost::TOP,
+                carry: target,
+                work: 0,
+            });
+        }
+        let config = self.config();
+        let nu = config.stiffness();
+        let lambda = config.gap_penalty();
+        let target_previous = previous_carry.unwrap_or(ORIGIN_INTERVAL);
+        let target_delete = add3(interval_gap(target, target_previous), nu, lambda);
+        let last_row = query.len();
+        let mut lower_bound = WeightedCost::TOP;
+        let mut work = 0usize;
+
+        if depth == 1 {
+            if let Err(requested) = charge_work(&mut work, max_work) {
+                return Some(PointFrontierStep::WorkLimitExceeded {
+                    completed: work,
+                    requested,
+                });
+            }
+            if WeightedCost::within(target_delete, cutoff) {
+                column[0] = target_delete;
+                active.push(0);
+                lower_bound = target_delete;
+            }
+            let mut root_previous = WeightedCost::ZERO;
+            for row in 1..=last_row {
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let query_current = query[row - 1];
+                let query_previous = row
+                    .checked_sub(2)
+                    .and_then(|index| query.get(index))
+                    .copied()
+                    .unwrap_or(0.0);
+                let query_delete = segment_cost(query_current, query_previous, nu, lambda);
+                let root_current = WeightedCost::combine(root_previous, query_delete);
+                let displacement = row.abs_diff(1) as f64;
+                let pair_cost = add3(
+                    interval_dist(query_current, target.0, target.1),
+                    interval_dist(query_previous, 0.0, 0.0),
+                    2.0 * nu * displacement,
+                );
+                let pair = WeightedCost::combine(root_previous, pair_cost);
+                let delete_query = WeightedCost::combine(column[row - 1], query_delete);
+                let delete_target = WeightedCost::combine(root_current, target_delete);
+                let cost = pair.min(delete_query).min(delete_target);
+                if WeightedCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                }
+                root_previous = root_current;
+            }
+            return Some(PointFrontierStep::Advanced {
+                lower_bound,
+                carry: target,
+                work,
+            });
+        }
+
+        let mut seeds = NeighborSeedRows::new(previous_active, last_row);
+        let mut next_seed = seeds.next();
+        while let Some(start) = next_seed {
+            let mut row = start;
+            loop {
+                while next_seed == Some(row) {
+                    next_seed = seeds.next();
+                }
+                if let Err(requested) = charge_work(&mut work, max_work) {
+                    return Some(PointFrontierStep::WorkLimitExceeded {
+                        completed: work,
+                        requested,
+                    });
+                }
+                let cost = if row == 0 {
+                    WeightedCost::combine(previous[0], target_delete)
+                } else {
+                    let query_current = query[row - 1];
+                    let query_previous = row
+                        .checked_sub(2)
+                        .and_then(|index| query.get(index))
+                        .copied()
+                        .unwrap_or(0.0);
+                    let query_delete = segment_cost(query_current, query_previous, nu, lambda);
+                    let displacement = row.abs_diff(depth) as f64;
+                    let pair_cost = add3(
+                        interval_dist(query_current, target.0, target.1),
+                        interval_dist(query_previous, target_previous.0, target_previous.1),
+                        2.0 * nu * displacement,
+                    );
+                    let pair = WeightedCost::combine(previous[row - 1], pair_cost);
+                    let delete_query = WeightedCost::combine(column[row - 1], query_delete);
+                    let delete_target = WeightedCost::combine(previous[row], target_delete);
+                    pair.min(delete_query).min(delete_target)
+                };
+                if WeightedCost::within(cost, cutoff) {
+                    column[row] = cost;
+                    active.push(row);
+                    lower_bound = lower_bound.min(cost);
+                    if row < last_row {
+                        row += 1;
+                        continue;
+                    }
+                }
+                break;
+            }
+        }
+        Some(PointFrontierStep::Advanced {
+            lower_bound,
+            carry: target,
+            work,
+        })
+    }
+
+    #[inline]
+    fn vertical_epsilon_extension(
+        &self,
+        query: &[f64],
+        _target: (f64, f64),
+        row: usize,
+        column: &[Cost<Self>],
+        _plan: &Self::QueryPlan,
+    ) -> Option<Cost<Self>> {
+        let predecessor = *column.get(row.checked_sub(1)?)?;
+        let query_current = *query.get(row - 1)?;
+        let query_previous = row
+            .checked_sub(2)
+            .and_then(|index| query.get(index))
+            .copied()
+            .unwrap_or(0.0);
+        let config = self.config();
+        Some(WeightedCost::combine(
+            predecessor,
+            segment_cost(
+                query_current,
+                query_previous,
+                config.stiffness(),
+                config.gap_penalty(),
+            ),
+        ))
+    }
+
+    #[inline]
+    fn carry_interval(&self, carry: Self::Carry) -> Option<(f64, f64)> {
+        Some(carry)
+    }
+
     #[inline]
     fn exact_with_cutoff(
         &self,
@@ -460,7 +802,9 @@ impl<T: TwedPolicy> ElasticKernel for T {
     }
 
     #[inline]
-    fn plan(&self, _query: &[f64]) -> Self::QueryPlan {}
+    fn try_plan(&self, _query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(())
+    }
 
     #[inline]
     fn empty_pair_cost(&self) -> Cost<Self> {

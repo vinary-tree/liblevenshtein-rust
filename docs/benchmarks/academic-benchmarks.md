@@ -177,9 +177,9 @@ ELASTIC_UCR_MAX_CELLS=1000000000 ELASTIC_UCR_MAX_DATASETS=1000 \
   scripts/run-academic-benchmarks.sh elastic-ucr-all
 ```
 
-Its fixed configurations are MSM `$`c=1`$`, ERP `$`g=0`$`, TWED
-`$`\nu=1`$` and `$`\lambda=1`$`, discrete Fréchet, and banded DTW with
-`$`w=\max(1,\lceil0.1L\rceil)`$`. Quantization uses 256 uniform bins derived
+Its fixed configurations are MSM $`c=1`$, ERP $`g=0`$, TWED
+$`\nu=1`$ and $`\lambda=1`$, discrete Fréchet, and banded DTW with
+$`w=\max(1,\lceil0.1L\rceil)`$. Quantization uses 256 uniform bins derived
 from training data only. These settings are preregistered and are not tuned
 from test accuracy or timing.
 

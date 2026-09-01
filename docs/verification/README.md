@@ -85,7 +85,7 @@ See the [literate algorithm](../algorithms/10-affine-gap/README.md), [design](..
 
 The Phase 6 proof island verifies the finite-history refinement used by
 `Algorithm::DamerauLevenshtein`. A pending position stores the positive query
-endpoint displacement `$`\delta`$`; entry prepays the transposition and skipped
+endpoint displacement $`\delta`$; entry prepays the transposition and skipped
 query units, each extension charges one dictionary insertion, and resolution
 advances to the exact opposite endpoint without changing cost.
 
@@ -94,11 +94,11 @@ advances to the exact opposite endpoint without changing cost.
 | Rocq | `damerau/theories/DamerauStreaming.v` | entry budget and payload validity; extension and resolution; no pending epsilon; Lowrance–Wagner macro-cost equivalence; kind-aware subsumption; quadratic frontier envelope |
 | Verus | `verus/damerau_streaming.rs` | six Rust-facing entry, extension, resolution, cost, and pending-key obligations |
 | Z3 + cvc5 | `smt/damerau_streaming.smt2` | five independent negated budget, macro-cost, endpoint, and pending-subsumption obligations are UNSAT in both solvers |
-| TLA+ TLC | `tla/DamerauStreaming.tla` | all `$`k=3`$` entry/extend/resolve traces preserve charge, delta, endpoint, consumption, and terminal-cost invariants |
+| TLA+ TLC | `tla/DamerauStreaming.tla` | all $`k=3`$ entry/extend/resolve traces preserve charge, delta, endpoint, consumption, and terminal-cost invariants |
 | proptest | `tests/proptest_true_damerau.rs`, `tests/proptest_true_damerau_metric.rs` | exact reference-map equivalence for budgets 0 through 3 and the four metric laws |
 
 The central refinement equation is
-`$`\delta+b=(\delta-1)+b+1`$`: the streaming charge equals the
+$`\delta+b=(\delta-1)+b+1`$: the streaming charge equals the
 Lowrance–Wagner query-interior deletions, dictionary-interior insertions, and
 one transposition. See the [literate algorithm](../algorithms/11-true-damerau/README.md)
 and [streaming design](../design/true-damerau-streaming.md) for the
@@ -124,6 +124,54 @@ establish that reported work is internally consistent once K1–K4 decide each
 branch. The [elastic-kernel design](../design/elastic-kernels.md) and
 [shared UCR protocol](../scientific-ledger/elastic-ucr-harness-2026-08-01.md)
 state the exact correspondence.
+
+## Lazy temporal-product proof island
+
+The temporal product campaign verifies the reusable operational seam, not an
+undifferentiated claim about every metric or the whole historical MSM tree.
+The optimized search keeps compact DFS frames separate from a bounded,
+query-local exact residual interner: reused residuals add only a frame, fresh
+residuals are appended after resource preflight, and frame pop preserves every
+stable arena identifier. Streaming machines are a different profile and keep
+only bounded live generations rather than the search-session arena.
+
+| Tool | Artifact | Checked invariant |
+|---|---|---|
+| Rocq | `temporal_automata/theories/LazyWeightedFrontier.v` | exact canonical-state reuse, interval refinement, tagged completion, bounded generations, stable frame-to-arena references, frame-only pop, and transactional preflight |
+| Rocq | `temporal_automata/theories/LazyProductOperations.v` | observation congruence, exact cache refinement, immutable zipper descent, bounded iterative shared-spine release, query-first product construction, final cutoff admission, and scheduler membership |
+| Rocq | `temporal_automata/theories/RangeCertificates.v` | exact query/cutoff/snapshot binding, canonical K1-K4 evidence replay, mutation rejection, logical resource ceilings, deterministic construction, and completion-only-after-exhaustion |
+| Rocq | `temporal_automata/theories/ExactWorkspaceResources.v` | exact plan/frontier retained and construction-peak algebra, preflight boundaries, retained-plus-later composition, candidate-reuse invariance, and the structural/finite/TOP-cutoff classification table |
+| Verus | `verus/temporal_lazy_frontier.rs`, `verus/lazy_product_operations.rs` | Rust-shaped arithmetic and state-lifecycle mirrors of the Rocq laws, including constant-call-stack zipper-spine release |
+| Z3 + cvc5 | `smt/temporal_lazy_frontier.smt2`, `smt/lazy_product_operations.smt2` | independent negated counterexample checks for arena IDs, cache equality, final admission, and bounded commit |
+| TLA+ TLC | `tla/TemporalLazyProduct.tla`, `tla/TemporalStreamingGenerations.tla`, `tla/TemporalDfsStackArena.tla` | bounded resumable search, prefix-independent streaming generations, iterative DFS, exact interning, and explicit incomplete states |
+| proptest | `tests/proptest_temporal_lazy_frontier_model.rs`, `tests/proptest_temporal_dictionary_product.rs`, `tests/proptest_exact_workspace_resources.rs`, `tests/time_series_msm_tests.rs` | independent recurrence oracle, arbitrary arena actions, exact workspace resource-boundary correspondence, paged/unpaged product correspondence, and cutoff mutation controls |
+
+Kernel-specific recurrence and metric statements remain separate proof
+islands. In particular, the trusted MSM entries cover only the individually
+named indexing, lower-bound, and metric theorems in the manifest. The partial
+MSM project entry remains partial; this section does not claim whole-MSM or
+whole-automaton verification.
+
+## Complete elastic-snapshot protocol proof island
+
+A complete exact snapshot binds the canonical manifest, every full-precision
+collision original, the quantized dictionary language, and all semantic
+configuration. Loading verifies the manifest checksum before parsing attacker-
+controlled lengths, verifies the sealed content-addressed generation, reopens
+the disk-backed dictionary, and checks the exact originals/buckets/terminals
+bijection before returning a search-only index.
+
+| Tool | Artifact | Checked invariant |
+|---|---|---|
+| Rocq | `temporal_automata/theories/ElasticSnapshot.v` | semantic decoding implies checksum verification; a visible manifest names a sealed generation; exact finite key-set equivalence gives permutation and equal cardinality; changed manifest bytes invalidate abstract identity equality |
+| TLA+ TLC | `tla/ElasticSnapshotPublication.tla` | checksum rejection, decode ordering, staging, sealing, publish-last, and crash preserve four protocol invariants over the complete finite state graph |
+| Rust tests | `tests/complete_elastic_snapshot.rs` and snapshot-local tests | checksum-before-allocation, configuration mismatch, corruption, insertion-order identity, collision retention, genuine create/checkpoint/reopen, exact bijection rejection, publication convergence, and 100,000-sample create/reload/drop on a 128-KiB stack |
+
+These are named protocol and finite-set proof islands. They do not establish
+SHA-256 collision resistance, POSIX rename semantics, `PersistentARTrie`
+correctness, or whole-program correspondence. The
+[complete snapshot design](../design/complete-elastic-snapshots.md) states the
+trusted boundaries and exact resource model.
 
 ## Current language-product proof island
 
@@ -241,17 +289,34 @@ premises consumed by the already verified generic walker:
 
 | Tool | Artifact | Checked invariant |
 |---|---|---|
-| Rocq | `twed/theories/Metric/TwedProperties.v` | arbitrary-real interval match/delete admissibility and point exactness; additive recurrence monotonicity; arbitrary-script length bound; strict stiffness; zero-parameter witness; script-cost composition |
-| Verus | `verus/twed_kernel.rs` | 13 Rust-shaped interval, separability, recurrence, K4, metric-gate, degeneracy, and composition obligations |
-| Z3 + cvc5 | `smt/twed_kernel.smt2` | 13 independent negated integer-arithmetic obligations, all required `UNSAT` in both solvers |
+| Rocq | `twed/theories/Metric/TwedProperties.v` | arbitrary-real interval match/delete admissibility and point exactness; explicit-time value/time-box AP composition and point exactness; additive recurrence monotonicity; arbitrary-script length bound; strict stiffness; zero-parameter witness; script-cost composition |
+| Rocq | `twed/theories/Metric/TimestampedProductIndex.v` | typed-token equality; canonical sparse-residual dense reconstruction; exact-bit collision-checked interning and vertical subsumption; lazy transition/cache laws; immutable DFS cursor/zipper paging; tagged exhaustion; explicit-ceiling memory scope |
+| Verus | `verus/twed_kernel.rs` | Rust-shaped interval, separability, recurrence, K4, metric-gate, degeneracy, interval-primitive point exactness, and physical-component composition obligations |
+| Z3 + cvc5 | `smt/twed_kernel.smt2` | independent negated integer-arithmetic obligations, including interval-primitive point exactness and explicit-time component composition, all required `UNSAT` in both solvers |
 | TLA+ | `tla/ElasticTrieSearch.tla` | unchanged generic carry-aware K1/K4 traversal, exact emission, root/full terminal completeness, and termination |
-| proptest | `src/time_series/kernels/twed.rs`, `tests/twed_transducer_tests.rs` | 8,000 kernel/reference/invariant/metric cases and 4,000 public range/kNN databases |
+| proptest | `src/time_series/kernels/twed.rs`, `tests/twed_transducer_tests.rs`, `tests/proptest_timestamped_twed_intervals.rs`, `tests/proptest_timestamped_twed_product.rs` | unit-grid kernel/reference/invariant/metric and public range/kNN cases; explicit-time interval laws; exact sparse product versus full-matrix oracle; collision reranking; bounded paging/resume; small-stack iterative traversal |
 
 The Rocq file does not assume or admit the full Marteau metric theorem. It
 proves the local and arbitrary-script obligations represented in the kernel;
 generated Rust triples exercise the complete executable triangle recurrence.
 The API independently makes the theorem's strict stiffness premise a type
 invariant: only `MetricTwedConfig` implements `MetricElasticKernel`.
+
+The timestamped product model scopes its resource claim narrowly. Rust uses
+explicit heap-resident DFS frames, so dictionary depth does not consume the
+language call stack. The frame vector tracks live traversal depth, while the
+append-only residual arena, sparse-position store, and observed transition
+cache may retain distinct states from already visited nodes until their
+configured ceilings. Reaching a ceiling produces a tagged incomplete result;
+the proof does not claim live-depth-only memory or unbounded-stream retention.
+
+The mathematical proof artifacts quantify over finite real or integer
+endpoints. The executable explicit-time boundary deliberately has a narrower
+rule for timestamps and a wider rule for values: every physical-time endpoint
+must be finite and ordered, while ordered value endpoints may be infinite so
+that clamped quantizer edge bins remain admissible. The Rust properties cover
+that domain split, unit matching, refinement, and finite represented points;
+the proof manifest does not claim that Rocq's real numbers model infinities.
 
 See the [TWED source analysis](../research/twed/PAPER_SUMMARY.md),
 [literate recurrence](../algorithms/12-elastic-measures/README.md), and

@@ -1,9 +1,9 @@
 cabal-version: 3.6
 name: liblevenshtein
 version: 4.0.0
-x-release-candidate: rc.5
-synopsis: Fast streaming Levenshtein automata for Haskell
-description: Snapshot-consistent, bounded-batch bindings to liblevenshtein.
+x-release-candidate: rc.6
+synopsis: Fast spelling correction and fuzzy search with Levenshtein automata
+description: A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata.
 category: Text
 license: Apache-2.0
 license-file: LICENSE

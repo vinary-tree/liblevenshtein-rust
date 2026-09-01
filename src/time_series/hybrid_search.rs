@@ -42,7 +42,6 @@ use std::collections::HashMap;
 
 type BucketLocation = (usize, usize);
 
-const DISTANCE_EPSILON: f64 = 1e-9;
 const DEFAULT_RESULT_BUFFER_CAPACITY: usize = 64;
 const DEFAULT_TRIE_THRESHOLD_MULTIPLIER: f64 = 2.0;
 
@@ -359,7 +358,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
 
     #[inline]
     fn inclusive_cutoff(msm_threshold: f64) -> f64 {
-        msm_threshold + DISTANCE_EPSILON
+        msm_threshold
     }
 
     #[inline]
@@ -1139,14 +1138,14 @@ mod tests {
     }
 
     #[test]
-    fn test_search_cutoff_preserves_inclusive_epsilon() {
+    fn test_search_cutoff_is_exactly_inclusive() {
         let quant_config = QuantizationConfig::for_u8(0.0, 100.0);
         let msm_config = MsmConfig::new(1.0);
         let mut index = HybridSearchIndex::new(quant_config, msm_config);
         let query = [10.0, 20.0, 30.0];
 
         index.insert(0usize, &query);
-        index.insert(1usize, &[10.0, 20.0, 30.0 + EPSILON / 2.0]);
+        index.insert(1usize, &[10.0, 20.0, 30.0_f64.next_up()]);
 
         let hybrid_results = index.search_exact(&query, 0.0);
         let brute_results = index.search_brute_force(&query, 0.0);
@@ -1157,11 +1156,11 @@ mod tests {
                 .iter()
                 .map(|(value, _)| *value)
                 .collect::<HashSet<_>>(),
-            HashSet::from([0, 1])
+            HashSet::from([0])
         );
 
         let stats = index.search_stats(&query, 0.0);
-        assert_eq!(stats.passed_exact, 2);
+        assert_eq!(stats.passed_exact, 1);
     }
 
     #[test]

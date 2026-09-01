@@ -573,6 +573,20 @@ impl<N: DictionaryNode> DfsNodeEdges<N> {
     pub(crate) fn is_final(&self) -> bool {
         self.is_final
     }
+
+    /// Number of outgoing edges not yet returned to the consumer.
+    ///
+    /// Paged sources answer from metadata plus the inline page iterator; this
+    /// never materializes or rescans the remaining fanout.
+    #[inline]
+    pub(crate) fn remaining(&self) -> usize {
+        match &self.source {
+            DfsEdgeSource::Eager(edges) => edges.len(),
+            DfsEdgeSource::Paged {
+                next, total, page, ..
+            } => page.len().saturating_add(total.saturating_sub(*next)),
+        }
+    }
 }
 
 impl<T, F> PathFrontier<T, F> {
@@ -1010,6 +1024,27 @@ impl<N: DictionaryNode> TraversalSession<N> {
         Self::owned(owner)
     }
 
+    /// Whether this captured revision can page every node without eagerly
+    /// materializing its complete fanout.
+    ///
+    /// Strict fail-closed query surfaces check this before opening the root.
+    /// Compatibility walkers may continue to use the eager fallback.
+    #[inline]
+    pub(crate) fn supports_efficient_dfs_edge_paging(&self) -> bool {
+        match &self.mode {
+            TraversalMode::Owned(arena) => arena
+                .nodes
+                .iter()
+                .flatten()
+                .next()
+                .is_some_and(DictionaryNode::supports_efficient_edge_paging),
+            TraversalMode::Graph { .. } => true,
+            TraversalMode::Native { owner } => {
+                owner.supports_efficient_snapshot_cursor_edge_paging()
+            }
+        }
+    }
+
     fn owned(root: N) -> (Self, TraversalCursor<N::SnapshotCursor>) {
         let root_cursor = SnapshotTraversalCursor::new(1).expect("one is non-zero");
         let owned_final_units_owner = root.requires_final_units().then(|| root.clone());
@@ -1157,96 +1192,110 @@ impl<N: DictionaryNode> TraversalSession<N> {
         Self::eager_dfs_node(is_final, edges)
     }
 
+    /// Inspect the next outgoing edge without advancing the cursor.
+    ///
+    /// At most one bounded inline page is fetched. This permits a bounded
+    /// consumer to preflight the complete transition before committing the
+    /// dictionary cursor, so a pause never loses or repeats an edge.
+    pub(crate) fn peek_dfs_edge(&mut self, edges: &mut DfsNodeEdges<N>) -> Option<DfsEdge<N>> {
+        if let DfsEdgeSource::Eager(eager) = &edges.source {
+            return eager.as_slice().first().copied();
+        }
+        self.refill_dfs_edge_page(edges);
+        match &edges.source {
+            DfsEdgeSource::Paged { page, .. } => page.as_slice().first().copied(),
+            DfsEdgeSource::Eager(_) => unreachable!("paged refill preserves its source kind"),
+        }
+    }
+
+    fn refill_dfs_edge_page(&mut self, edges: &mut DfsNodeEdges<N>) {
+        let is_final = edges.is_final;
+        let DfsEdgeSource::Paged {
+            position,
+            owned,
+            next,
+            total,
+            page,
+        } = &mut edges.source
+        else {
+            return;
+        };
+        if !page.as_slice().is_empty() || *next >= *total {
+            return;
+        }
+
+        let start = *next;
+        let mut refill = DfsEdgePage::<N>::new();
+        let page_capacity = dfs_edge_page_capacity();
+        crate::causal_perf::record_dfs_edge_page_requests(1);
+        match (owned.as_ref(), &mut self.mode) {
+            (Some(node), TraversalMode::Owned(arena)) => {
+                let confirmed_total = node.visit_edge_page(start, page_capacity, |label, child| {
+                    let child = arena.insert(child);
+                    refill.push((label, TraversalCursor::dense(child)));
+                });
+                assert_eq!(confirmed_total, *total, "captured edge count changed");
+            }
+            (None, TraversalMode::Graph { owner: _, graph }) => {
+                // SAFETY: the frame retains a cursor from this exact immutable
+                // graph-mode session.
+                let node = unsafe { graph.edges_and_finality_unchecked(position.dense_value()) };
+                debug_assert_eq!(node.is_final(), is_final);
+                debug_assert_eq!(node.edges().len(), *total);
+                refill.extend(
+                    node.edges()
+                        .iter()
+                        .skip(start)
+                        .take(page_capacity)
+                        .map(|edge| (edge.label(), TraversalCursor::dense(edge.target_cursor()))),
+                );
+            }
+            (None, TraversalMode::Native { owner }) => {
+                let (confirmed_final, confirmed_total) = unsafe {
+                    owner
+                        .visit_snapshot_cursor_edge_page(
+                            position.native_value(),
+                            start,
+                            page_capacity,
+                            |label, child| refill.push((label, TraversalCursor::native(child))),
+                        )
+                        .expect("an opened native pager remains supported")
+                };
+                assert_eq!(confirmed_final, is_final, "captured finality changed");
+                assert_eq!(confirmed_total, *total, "captured edge count changed");
+            }
+            (Some(_), TraversalMode::Graph { .. } | TraversalMode::Native { .. })
+            | (None, TraversalMode::Owned(_)) => {
+                unreachable!("DFS page origin and traversal mode remain paired")
+            }
+        }
+        assert!(
+            !refill.is_empty(),
+            "a non-empty edge remainder yielded no page"
+        );
+        crate::causal_perf::record_dfs_edges_fetched(refill.len() as u64);
+        crate::causal_perf::record_dfs_edge_buffer_size(refill.len());
+        if refill.spilled() {
+            crate::causal_perf::record_dfs_edge_buffer_spills(1);
+        }
+        *next = next
+            .checked_add(refill.len())
+            .expect("a dictionary edge index fits in usize");
+        *page = refill.into_iter();
+    }
+
     /// Consume the next outgoing edge, refilling one bounded inline page only
     /// when the previous page is exhausted.
     pub(crate) fn next_dfs_edge(&mut self, edges: &mut DfsNodeEdges<N>) -> Option<DfsEdge<N>> {
-        match &mut edges.source {
-            DfsEdgeSource::Eager(edges) => {
-                let edge = edges.next();
-                if edge.is_some() {
-                    crate::causal_perf::record_dfs_edges_consumed(1);
-                }
-                edge
-            }
-            DfsEdgeSource::Paged {
-                position,
-                owned,
-                next,
-                total,
-                page,
-            } => {
-                if let Some(edge) = page.next() {
-                    crate::causal_perf::record_dfs_edges_consumed(1);
-                    return Some(edge);
-                }
-                if *next >= *total {
-                    return None;
-                }
-
-                let start = *next;
-                let mut refill = DfsEdgePage::<N>::new();
-                let page_capacity = dfs_edge_page_capacity();
-                crate::causal_perf::record_dfs_edge_page_requests(1);
-                match (owned.as_ref(), &mut self.mode) {
-                    (Some(node), TraversalMode::Owned(arena)) => {
-                        let confirmed_total =
-                            node.visit_edge_page(start, page_capacity, |label, child| {
-                                let child = arena.insert(child);
-                                refill.push((label, TraversalCursor::dense(child)));
-                            });
-                        assert_eq!(confirmed_total, *total, "captured edge count changed");
-                    }
-                    (None, TraversalMode::Graph { owner: _, graph }) => {
-                        // SAFETY: the frame retains a cursor from this exact
-                        // immutable graph-mode session.
-                        let node =
-                            unsafe { graph.edges_and_finality_unchecked(position.dense_value()) };
-                        debug_assert_eq!(node.is_final(), edges.is_final);
-                        debug_assert_eq!(node.edges().len(), *total);
-                        refill.extend(node.edges().iter().skip(start).take(page_capacity).map(
-                            |edge| (edge.label(), TraversalCursor::dense(edge.target_cursor())),
-                        ));
-                    }
-                    (None, TraversalMode::Native { owner }) => {
-                        let (is_final, confirmed_total) = unsafe {
-                            owner
-                                .visit_snapshot_cursor_edge_page(
-                                    position.native_value(),
-                                    start,
-                                    page_capacity,
-                                    |label, child| {
-                                        refill.push((label, TraversalCursor::native(child)))
-                                    },
-                                )
-                                .expect("an opened native pager remains supported")
-                        };
-                        assert_eq!(is_final, edges.is_final, "captured finality changed");
-                        assert_eq!(confirmed_total, *total, "captured edge count changed");
-                    }
-                    (Some(_), TraversalMode::Graph { .. } | TraversalMode::Native { .. })
-                    | (None, TraversalMode::Owned(_)) => {
-                        unreachable!("DFS page origin and traversal mode remain paired")
-                    }
-                }
-                assert!(
-                    !refill.is_empty(),
-                    "a non-empty edge remainder yielded no page"
-                );
-                crate::causal_perf::record_dfs_edges_fetched(refill.len() as u64);
-                crate::causal_perf::record_dfs_edge_buffer_size(refill.len());
-                if refill.spilled() {
-                    crate::causal_perf::record_dfs_edge_buffer_spills(1);
-                }
-                *next = next
-                    .checked_add(refill.len())
-                    .expect("a dictionary edge index fits in usize");
-                *page = refill.into_iter();
-                let edge = page.next();
-                debug_assert!(edge.is_some());
-                crate::causal_perf::record_dfs_edges_consumed(1);
-                edge
-            }
+        self.refill_dfs_edge_page(edges);
+        let edge = match &mut edges.source {
+            DfsEdgeSource::Eager(edges) => edges.next(),
+            DfsEdgeSource::Paged { page, .. } => page.next(),
+        };
+        if edge.is_some() {
+            crate::causal_perf::record_dfs_edges_consumed(1);
         }
+        edge
     }
 
     /// Read finality and project outgoing edges without changing the queued
@@ -1546,6 +1595,66 @@ impl<N: MappedDictionaryNode> TraversalSession<N> {
             }
         }
         Self::owned(owner)
+    }
+
+    /// Resolve the mapped value at one captured cursor without expanding its
+    /// outgoing edges or materializing an owned child handle.
+    ///
+    /// `units` is required only by semantic dictionary decorators whose value
+    /// visibility depends on the complete root-relative key.
+    #[inline]
+    pub(crate) fn final_value_at_cursor(
+        &self,
+        cursor: TraversalCursor<N::SnapshotCursor>,
+        units: Option<&[N::Unit]>,
+    ) -> Option<N::Value> {
+        debug_assert!(
+            !self.requires_final_units() || units.is_some(),
+            "semantic dictionary wrappers require root-relative terminal units"
+        );
+        match &self.mode {
+            TraversalMode::Owned(arena) => {
+                // SAFETY: owned sessions construct only dense cursors and the
+                // node remains in its arena slot until `open_dfs_node`.
+                let node = arena.nodes[unsafe { cursor.dense_value() }.get() - 1].as_ref()?;
+                match units {
+                    Some(units) => node.value_at_final_with_units(units),
+                    None => node.value_at_final(),
+                }
+            }
+            TraversalMode::Native { owner } => match units {
+                Some(units) => {
+                    // SAFETY: owner, cursor, and units belong to this captured
+                    // immutable revision.
+                    unsafe { owner.snapshot_cursor_value_with_units(cursor.native_value(), units) }
+                        .expect("capture_mapped validated cursor value access")
+                }
+                None => {
+                    // SAFETY: the cursor was produced by this retained owner.
+                    unsafe { owner.snapshot_cursor_value(cursor.native_value()) }
+                        .expect("capture_mapped validated cursor value access")
+                }
+            },
+            TraversalMode::Graph { owner, graph } => match units {
+                Some(units) => {
+                    // SAFETY: graph, cursor, owner, and units were captured as
+                    // one immutable revision.
+                    unsafe {
+                        owner.snapshot_graph_cursor_value_with_units(
+                            graph,
+                            cursor.dense_value(),
+                            units,
+                        )
+                    }
+                    .expect("capture_mapped validated graph value access")
+                }
+                None => {
+                    // SAFETY: graph and cursor originate from this session.
+                    unsafe { owner.snapshot_graph_cursor_value(graph, cursor.dense_value()) }
+                        .expect("capture_mapped validated graph value access")
+                }
+            },
+        }
     }
 
     /// Resolve a final node's value after the automaton has accepted it.

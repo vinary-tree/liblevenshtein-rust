@@ -7,10 +7,13 @@
 use liblevenshtein::cost::{CostMonoid, WeightedCost};
 use liblevenshtein::time_series::elastic::interval::interval_dist;
 use liblevenshtein::time_series::elastic::MetricElasticKernel;
-use liblevenshtein::time_series::elastic::{Cost, ElasticKernel, ElasticTransducer};
+use liblevenshtein::time_series::elastic::{
+    Cost, ElasticKernel, ElasticTransducer, QueryPlanStorage,
+};
 use liblevenshtein::time_series::{
-    DtwConfig, ErpConfig, FrechetConfig, MetricTwedConfig, MsmKernel, QuantizationConfig,
-    TwedConfig,
+    AuditedMetricTimeSeriesIndex, DtwConfig, ErpConfig, FrechetConfig, IncompleteReason,
+    MetricErpTransducer, MetricFrechetTransducer, MetricMsmConfig, MetricMsmKernel,
+    MetricTwedConfig, MsmKernel, QuantizationConfig, TwedConfig,
 };
 use proptest::prelude::*;
 
@@ -24,6 +27,10 @@ impl ElasticKernel for PointwiseL1 {
     type Monoid = WeightedCost;
     type Carry = ();
     type QueryPlan = ();
+
+    fn query_plan_storage(&self, _query_len: usize) -> Result<QueryPlanStorage, IncompleteReason> {
+        Ok(QueryPlanStorage::EMPTY)
+    }
 
     fn column_len(&self, _query_len: usize) -> Option<usize> {
         Some(1)
@@ -92,7 +99,9 @@ impl ElasticKernel for PointwiseL1 {
         }
     }
 
-    fn plan(&self, _query: &[f64]) -> Self::QueryPlan {}
+    fn try_plan(&self, _query: &[f64]) -> Result<Self::QueryPlan, IncompleteReason> {
+        Ok(())
+    }
 
     fn empty_pair_cost(&self) -> Cost<Self> {
         WeightedCost::ZERO
@@ -107,21 +116,27 @@ impl MetricElasticKernel for PointwiseL1 {}
 
 fn assert_metric_kernel<K: MetricElasticKernel>() {}
 
+fn assert_audited_metric_index<I: AuditedMetricTimeSeriesIndex>() {}
+
 #[test]
 fn metric_status_is_queryable_and_triangle_dependent_code_is_type_gated() {
     const {
-        assert!(MsmKernel::IS_METRIC);
-        assert!(ErpConfig::IS_METRIC);
-        assert!(FrechetConfig::IS_METRIC);
+        assert!(!MsmKernel::IS_METRIC);
+        assert!(MetricMsmKernel::IS_METRIC);
+        assert!(!ErpConfig::IS_METRIC);
+        assert!(!FrechetConfig::IS_METRIC);
         assert!(MetricTwedConfig::IS_METRIC);
         assert!(!DtwConfig::IS_METRIC);
         assert!(!TwedConfig::IS_METRIC);
     }
-    assert_metric_kernel::<MsmKernel>();
-    assert_metric_kernel::<ErpConfig>();
-    assert_metric_kernel::<FrechetConfig>();
+    let _ = MetricMsmConfig::try_new(1.0).unwrap();
+    assert_metric_kernel::<MetricMsmKernel>();
     assert_metric_kernel::<MetricTwedConfig>();
     assert_metric_kernel::<PointwiseL1>();
+    assert_audited_metric_index::<ElasticTransducer<MetricMsmKernel>>();
+    assert_audited_metric_index::<ElasticTransducer<MetricTwedConfig>>();
+    assert_audited_metric_index::<MetricErpTransducer>();
+    assert_audited_metric_index::<MetricFrechetTransducer>();
 }
 
 fn brute_force(series: &[Vec<f64>], query: &[f64], cutoff: f64) -> Vec<(usize, f64)> {

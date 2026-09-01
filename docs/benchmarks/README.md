@@ -102,6 +102,11 @@ Comprehensive analysis of DAT implementation:
 
 ### Algorithm-Specific Analysis
 
+#### [Lazy-product engineering check (2026-08-29)](lazy-product-engineering-check-2026-08-29.md)
+Current bounded engineering measurements for the compact PathMap zipper,
+cutoff-pruned ERP online frontier, and bounded elastic dictionary product,
+including the scalar-fallback and remeasurement decisions.
+
 #### [Optimization and Profiling Methodology](optimization-and-profiling-methodology.md)
 The end-to-end hypothesis, correctness, host-admission, statistical,
 headless-profiler, visualization, acceptance, and propagation contract for the

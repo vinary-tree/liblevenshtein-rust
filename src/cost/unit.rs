@@ -30,4 +30,9 @@ impl CostMonoid for UnitCost {
     fn within(cost: Self::Cost, threshold: Self::Cost) -> bool {
         cost <= threshold
     }
+
+    #[inline]
+    fn canonical_state_key(cost: Self::Cost) -> Option<u64> {
+        u64::try_from(cost).ok()
+    }
 }

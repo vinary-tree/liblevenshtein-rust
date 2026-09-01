@@ -303,6 +303,22 @@ impl<U: CharUnit> UnitCostMachine<U> {
         )
     }
 
+    /// Seed an exact affine-gap query as a compact generated frontier.
+    pub(crate) fn seeded_affine(
+        query_length: usize,
+        initial: &State,
+        settings: AffineTransitionSettings,
+    ) -> (Self, UnitCostFrontier) {
+        let mut transitions = CachedUnitTransitions::new(query_length, settings.max_cost);
+        let root = transitions.seed_affine_state(initial, settings);
+        (
+            Self::Positional(transitions),
+            UnitCostFrontier(
+                u64::try_from(root.0).expect("generated affine state identifier exceeds u64"),
+            ),
+        )
+    }
+
     /// Materialize one opaque frontier as the canonical positional antichain.
     ///
     /// This representation bridge is intentionally cold. Ordinary traversal
@@ -657,22 +673,60 @@ impl<U: CharUnit> UnitCostMachine<U> {
         }
     }
 
-    pub(crate) fn transition_affine<P>(
+    pub(crate) fn transition_affine_generated<P>(
         &mut self,
-        state: &State,
+        state: UnitCostFrontier,
         pool: &mut StatePool,
         policy: &P,
         label: U,
         query: &[U],
         settings: AffineTransitionSettings,
-    ) -> Option<State>
+    ) -> Option<UnitCostFrontier>
     where
         P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
     {
         match self {
-            Self::Positional(transitions) => {
-                transitions.transition_affine(state, pool, policy, label, query, settings)
+            Self::Positional(transitions) => transitions
+                .transition_affine_generated(
+                    GeneratedStateId(
+                        usize::try_from(state.0)
+                            .expect("generated affine state identifier exceeds usize"),
+                    ),
+                    pool,
+                    policy,
+                    label,
+                    query,
+                    settings,
+                )
+                .map(|state| {
+                    UnitCostFrontier(
+                        u64::try_from(state.0)
+                            .expect("generated affine state identifier exceeds u64"),
+                    )
+                }),
+            Self::PackedStandard(_) | Self::PackedOsa(_) | Self::PackedMergeSplit(_) => {
+                unreachable!("affine queries always select the positional transition machine")
             }
+        }
+    }
+
+    pub(crate) fn finish_affine_distance(
+        &self,
+        state: UnitCostFrontier,
+        query_length: usize,
+        params: AffineGapParams,
+        prefix_mode: bool,
+    ) -> Option<usize> {
+        match self {
+            Self::Positional(transitions) => transitions.finish_affine_generated(
+                GeneratedStateId(
+                    usize::try_from(state.0)
+                        .expect("generated affine state identifier exceeds usize"),
+                ),
+                query_length,
+                params,
+                prefix_mode,
+            ),
             Self::PackedStandard(_) | Self::PackedOsa(_) | Self::PackedMergeSplit(_) => {
                 unreachable!("affine queries always select the positional transition machine")
             }
@@ -1329,10 +1383,10 @@ impl GeneratedStateId {
 
 /// Maximum fixed storage committed to one generated-state transition row.
 ///
-/// Thirty-two ordinary 64-byte cache lines retain the measured short-query locality
-/// benefit without letting query width multiply every generated state. The
-/// bound is expressed in bytes so 32-bit and 64-bit targets obey the same
-/// per-state memory contract.
+/// Thirty-two ordinary 64-byte cache lines retain the measured short-query
+/// locality benefit without letting query width multiply every generated
+/// state. The bound is expressed in bytes so 32-bit and 64-bit targets obey
+/// the same per-state memory contract.
 const MAX_DENSE_GENERATED_ROW_BYTES: usize = 32 * 64;
 
 /// Adaptive transition targets for generated positional states.
@@ -1482,6 +1536,7 @@ impl GeneratedTargets {
 pub(crate) struct CachedUnitTransitions<U: CharUnit> {
     cache: CharacteristicCache<U>,
     generated_config: Option<(Algorithm, bool)>,
+    affine_config: Option<(bool, AffineGapParams)>,
     generated_sources: Vec<Box<[Position]>>,
     generated_targets: GeneratedTargets,
     #[cfg(feature = "benchmark-controls")]
@@ -1497,6 +1552,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         Self {
             cache: CharacteristicCache::new(query_length, max_distance),
             generated_config: None,
+            affine_config: None,
             generated_sources: Vec::new(),
             generated_targets: GeneratedTargets::new(query_length.saturating_add(1)),
             #[cfg(feature = "benchmark-controls")]
@@ -1570,6 +1626,10 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         settings: TransitionSettings,
     ) -> GeneratedStateId {
         debug_assert_eq!(settings.max_distance, self.max_distance);
+        if self.affine_config.take().is_some() {
+            self.clear_generated_table();
+            self.generated_states.clear();
+        }
         let config = (settings.algorithm, settings.prefix_mode);
         match self.generated_config {
             Some(existing) => assert_eq!(existing, config, "generated transition mode changed"),
@@ -1647,10 +1707,7 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
 
         crate::causal_perf::record_generated_transition_misses(1);
         let matches = self.cache.matches(characteristic_class);
-        let source_state = State::from_canonical_positions(
-            self.generated_positions(source),
-            Self::nonzero_state_tag(source),
-        );
+        let source_state = State::from_canonical_positions(self.generated_positions(source));
         let generated = transition_epsilon_closed_state_pooled_cached(
             &source_state,
             pool,
@@ -1674,16 +1731,8 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
     }
 
     #[inline(always)]
-    pub(crate) fn generated_state(&self, id: GeneratedStateId) -> State {
-        State::from_canonical_positions(
-            self.generated_positions(id),
-            u64::try_from(id.0).expect("generated state identifier exceeds u64"),
-        )
-    }
-
-    #[inline(always)]
     pub(crate) fn generated_frontier_state(&self, id: GeneratedStateId) -> State {
-        State::from_canonical_positions(self.generated_positions(id), Self::nonzero_state_tag(id))
+        State::from_canonical_positions(self.generated_positions(id))
     }
 
     #[inline(always)]
@@ -1692,113 +1741,8 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         self.generated_sources[id.0].len()
     }
 
-    #[inline(always)]
-    fn nonzero_state_tag(id: GeneratedStateId) -> u64 {
-        u64::try_from(id.0)
-            .expect("generated state identifier exceeds u64")
-            .checked_add(1)
-            .expect("generated state identifier exhausts nonzero tags")
-    }
-
-    #[inline]
-    pub(crate) fn transition<P>(
-        &mut self,
-        state: &State,
-        pool: &mut StatePool,
-        policy: &P,
-        dict_unit: U,
-        query: &[U],
-        settings: TransitionSettings,
-    ) -> Option<State>
-    where
-        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
-    {
-        debug_assert_eq!(settings.max_distance, self.max_distance);
-        let characteristic_class = self.cache.class_for(policy, dict_unit, query);
-        let config = (settings.algorithm, settings.prefix_mode);
-        if self.generated_config.is_none() {
-            self.generated_config = Some(config);
-            let id = self.push_generated_source(state.positions().into());
-            debug_assert_eq!(id, GeneratedStateId(0));
-        }
-        let row_index = usize::try_from(state.generated_id()).ok();
-        let cacheable = self.generated_config == Some(config)
-            && row_index
-                .and_then(|index| self.generated_sources.get(index))
-                .is_some_and(|source| {
-                    if state.generated_id() == 0 {
-                        source.as_ref() == state.positions()
-                    } else {
-                        std::ptr::eq(source.as_ref(), state.positions())
-                    }
-                });
-
-        if let Some(index) = row_index.filter(|_| cacheable) {
-            let target = self
-                .cached_generated_target(GeneratedStateId(index), characteristic_class as usize);
-            if target != GeneratedTarget::UNCOMPUTED {
-                crate::causal_perf::record_transition_attempts(1);
-                crate::causal_perf::record_generated_transition_hits(1);
-                return (target != GeneratedTarget::EMPTY)
-                    .then(|| self.generated_state(target.state_id()));
-            }
-        };
-
-        crate::causal_perf::record_generated_transition_misses(1);
-        let matches = self.cache.matches(characteristic_class);
-        let mut generated = transition_epsilon_closed_state_pooled_cached(
-            state,
-            pool,
-            matches,
-            query.len(),
-            settings,
-        );
-        if cacheable {
-            let target = match generated.as_mut() {
-                Some(target) => {
-                    let (id, positions) = self.intern_generated_state(target);
-                    let raw_id =
-                        u64::try_from(id.0).expect("query-local generated state count exceeds u64");
-                    if let Some(reusable) = target.adopt_canonical_positions(positions, raw_id) {
-                        pool.release(reusable);
-                    }
-                    GeneratedTarget::state(id)
-                }
-                None => GeneratedTarget::EMPTY,
-            };
-            self.store_generated_target(
-                GeneratedStateId(row_index.expect("cacheable row")),
-                characteristic_class as usize,
-                target,
-            );
-        }
-        generated
-    }
-
     fn generated_positions(&self, id: GeneratedStateId) -> NonNull<[Position]> {
         NonNull::from(self.generated_sources[id.0].as_ref())
-    }
-
-    fn intern_generated_state(
-        &mut self,
-        state: &mut State,
-    ) -> (GeneratedStateId, NonNull<[Position]>) {
-        let fingerprint = state.transition_fingerprint();
-        if let Some(states) = self.generated_states.get(&fingerprint) {
-            if let Some(&id) = states
-                .iter()
-                .find(|&&id| self.generated_sources[id.0].as_ref() == state.positions())
-            {
-                return (id, self.generated_positions(id));
-            }
-        }
-
-        let id = self.push_generated_source(state.positions().into());
-        self.generated_states
-            .entry(fingerprint)
-            .or_default()
-            .push(id);
-        (id, self.generated_positions(id))
     }
 
     fn intern_positions(&mut self, positions: &[Position], fingerprint: u64) -> GeneratedStateId {
@@ -1819,46 +1763,65 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
         id
     }
 
-    /// Transition an affine-gap state through the same query-local
-    /// characteristic cache and epsilon-closed queue invariant.
-    #[inline]
-    pub(crate) fn transition_affine<P>(
+    /// Intern the root of an exact fixed-point affine-gap query.
+    ///
+    /// Affine and unit-cost characteristic classes share the label cache, but
+    /// their generated transition tables are deliberately mode-separated.
+    pub(crate) fn seed_affine_state(
         &mut self,
         state: &State,
+        settings: AffineTransitionSettings,
+    ) -> GeneratedStateId {
+        debug_assert_eq!(settings.max_cost, self.max_distance);
+        if self.generated_config.take().is_some() {
+            self.clear_generated_table();
+            self.generated_states.clear();
+        }
+        let config = (settings.prefix_mode, settings.params);
+        match self.affine_config {
+            Some(existing) => assert_eq!(
+                existing, config,
+                "affine generated-transition mode changed within one query"
+            ),
+            None => self.affine_config = Some(config),
+        }
+        self.cache
+            .ensure_padding(self.cache.query_length.saturating_add(1));
+        self.intern_positions(state.positions(), state.transition_fingerprint())
+    }
+
+    /// Lazily construct one reached affine-gap/dictionary product edge from a
+    /// compact query-local state ID.
+    #[inline]
+    pub(crate) fn transition_affine_generated<P>(
+        &mut self,
+        source: GeneratedStateId,
         pool: &mut StatePool,
         policy: &P,
         dict_unit: U,
         query: &[U],
         settings: AffineTransitionSettings,
-    ) -> Option<State>
+    ) -> Option<GeneratedStateId>
     where
         P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
     {
         debug_assert_eq!(settings.max_cost, self.max_distance);
-
-        // A unit-cost result may borrow its positions from `generated_sources`.
-        // Mixed internal use is unusual, but it is legal: materialize that
-        // input before invalidating the unit-cost table below. Ordinary query
-        // surfaces select exactly one transition mode and never pay this copy.
-        let materialized_state = state
-            .borrows_canonical_positions()
-            .then(|| State::from_positions(state.positions().to_vec()));
-        let state = materialized_state.as_ref().unwrap_or(state);
-
-        // Characteristic-class identifiers are local to the current padding
-        // layout. Affine queries may widen that layout, so discard any unit-
-        // cost generated table before remapping classes. Normal query
-        // surfaces select exactly one mode; this protects mixed internal use.
-        if self.generated_config.take().is_some() {
-            self.clear_generated_table();
-            self.generated_states.clear();
+        assert_eq!(
+            self.affine_config,
+            Some((settings.prefix_mode, settings.params)),
+            "affine generated transition used without its exact seeded configuration"
+        );
+        let characteristic_class = self.cache.class_for(policy, dict_unit, query);
+        let cached = self.cached_generated_target(source, characteristic_class as usize);
+        if cached != GeneratedTarget::UNCOMPUTED {
+            crate::causal_perf::record_transition_attempts(1);
+            crate::causal_perf::record_generated_transition_hits(1);
+            return (cached != GeneratedTarget::EMPTY).then(|| cached.state_id());
         }
 
-        // An affine query gap can inspect every remaining query unit when its
-        // extension cost is zero. Grow the false suffix once before borrowing
-        // the label vector so every legal window remains a direct slice.
-        self.cache.ensure_padding(query.len().saturating_add(1));
-        let (matches, _) = self.cache.matches_for(policy, dict_unit, query);
+        crate::causal_perf::record_generated_transition_misses(1);
+        let source_state = self.generated_frontier_state(source);
+        let matches = self.cache.matches(characteristic_class);
         let ctx = TransitionCtx::new(
             query.len(),
             settings.max_cost,
@@ -1866,12 +1829,38 @@ impl<U: CharUnit> CachedUnitTransitions<U> {
             settings.params,
         );
         let characteristics = CachedCharacteristics::new(matches, query.len());
-        transition_epsilon_closed_state_pooled_with::<AffineV, _>(
-            state,
+        let generated = transition_epsilon_closed_state_pooled_with::<AffineV, _>(
+            &source_state,
             pool,
             &characteristics,
             &ctx,
-        )
+        );
+        let target = match generated {
+            Some(state) => {
+                let id = self.intern_positions(state.positions(), state.transition_fingerprint());
+                pool.release(state);
+                GeneratedTarget::state(id)
+            }
+            None => GeneratedTarget::EMPTY,
+        };
+        self.store_generated_target(source, characteristic_class as usize, target);
+        (target != GeneratedTarget::EMPTY).then(|| target.state_id())
+    }
+
+    #[inline]
+    pub(crate) fn finish_affine_generated(
+        &self,
+        state: GeneratedStateId,
+        query_length: usize,
+        params: AffineGapParams,
+        prefix_mode: bool,
+    ) -> Option<usize> {
+        let state = self.generated_frontier_state(state);
+        if prefix_mode {
+            state.min_distance()
+        } else {
+            state.infer_distance_with::<AffineV>(query_length, params)
+        }
     }
 }
 
@@ -1961,10 +1950,11 @@ impl<U: CharUnit> CharacteristicCache<U> {
     }
 
     #[inline(always)]
-    fn matches(&self, class: u32) -> &[bool] {
+    pub(crate) fn matches(&self, class: u32) -> &[bool] {
         self.class_patterns[class as usize].as_ref()
     }
 
+    #[cfg(test)]
     #[inline]
     pub(crate) fn matches_for<P>(&mut self, policy: &P, dict_unit: U, query: &[U]) -> (&[bool], u32)
     where
@@ -3796,7 +3786,6 @@ mod tests {
             }
         }
     }
-
     #[test]
     fn test_characteristic_vector() {
         let query = b"test";
@@ -3915,16 +3904,17 @@ mod tests {
                     let settings = TransitionSettings::new(max_distance, algorithm, prefix_mode);
                     let mut generated = CachedUnitTransitions::new(query.len(), max_distance);
                     let initial = initial_state(query.len(), max_distance, algorithm);
-                    let mut frontier = vec![(initial.clone(), initial)];
+                    let root = generated.seed_generated_state(&initial, settings);
+                    let mut frontier = vec![(root, initial)];
                     let mut generated_pool = StatePool::new();
                     let mut reference_pool = StatePool::new();
 
                     for _depth in 0..4 {
                         let mut next_frontier = Vec::new();
-                        for (generated_state, reference_state) in frontier {
+                        for (generated_state_id, reference_state) in frontier {
                             for label in labels {
-                                let actual = generated.transition(
-                                    &generated_state,
+                                let actual_id = generated.transition_generated(
+                                    generated_state_id,
                                     &mut generated_pool,
                                     &policy,
                                     label,
@@ -3946,14 +3936,16 @@ mod tests {
                                     query.len(),
                                     settings,
                                 );
+                                let actual = actual_id
+                                    .map(|state_id| generated.generated_frontier_state(state_id));
 
                                 assert_eq!(
                                     actual.as_ref().map(State::positions),
                                     expected.as_ref().map(State::positions),
                                     "algorithm={algorithm:?} distance={max_distance} prefix={prefix_mode} label={label:?}",
                                 );
-                                if let (Some(actual), Some(expected)) = (actual, expected) {
-                                    next_frontier.push((actual, expected));
+                                if let (Some(actual_id), Some(expected)) = (actual_id, expected) {
+                                    next_frontier.push((actual_id, expected));
                                 }
                             }
                         }
@@ -3965,44 +3957,50 @@ mod tests {
     }
 
     #[test]
-    fn affine_transition_materializes_a_borrowed_unit_cost_frontier_before_reset() {
+    fn affine_generated_frontier_matches_direct_transition_and_caches_reached_edge() {
         let query = b"abca";
         let policy = Unrestricted;
         let max_cost = 2;
-        let mut mixed = CachedUnitTransitions::new(query.len(), max_cost);
-        let mut mixed_pool = StatePool::new();
-        let initial = initial_state(query.len(), max_cost, Algorithm::Standard);
-        let borrowed = mixed
-            .transition(
-                &initial,
-                &mut mixed_pool,
-                &policy,
-                b'a',
-                query,
-                TransitionSettings::new(max_cost, Algorithm::Standard, false),
-            )
-            .expect("unit-cost transition");
-        assert!(borrowed.borrows_canonical_positions());
-
-        let owned = State::from_positions(borrowed.positions().to_vec());
         let params = AffineGapParams::new(1.0, 1.0, 1.0).expect("unit affine costs");
         let settings = AffineTransitionSettings::new(max_cost, params, false);
-        let actual =
-            mixed.transition_affine(&borrowed, &mut mixed_pool, &policy, b'b', query, settings);
+        let initial = initial_state_affine(query.len(), max_cost, params);
+        let mut generated = CachedUnitTransitions::new(query.len(), max_cost);
+        let root = generated.seed_affine_state(&initial, settings);
+        assert_eq!(generated.seed_affine_state(&initial, settings), root);
+        assert_eq!(generated.generated_sources.len(), 1);
 
-        let mut reference = CachedUnitTransitions::new(query.len(), max_cost);
-        let mut reference_pool = StatePool::new();
-        let expected = reference.transition_affine(
-            &owned,
-            &mut reference_pool,
-            &policy,
-            b'b',
-            query,
-            settings,
-        );
+        let mut generated_pool = StatePool::new();
+        let actual = generated
+            .transition_affine_generated(root, &mut generated_pool, &policy, b'a', query, settings)
+            .expect("affine match remains live");
+        let states_after_first = generated.generated_sources.len();
+        let cells_after_first = generated.generated_targets.dense_cell_count()
+            + generated.generated_targets.sparse_cell_count();
+
+        let repeated = generated
+            .transition_affine_generated(root, &mut generated_pool, &policy, b'a', query, settings)
+            .expect("cached affine match remains live");
+        assert_eq!(repeated, actual);
+        assert_eq!(generated.generated_sources.len(), states_after_first);
         assert_eq!(
-            actual.as_ref().map(State::positions),
-            expected.as_ref().map(State::positions)
+            generated.generated_targets.dense_cell_count()
+                + generated.generated_targets.sparse_cell_count(),
+            cells_after_first
+        );
+
+        let characteristics = OnDemandCharacteristics::new(&policy, b'a', query);
+        let ctx = TransitionCtx::new(query.len(), max_cost, false, params);
+        let mut direct_pool = StatePool::new();
+        let expected = transition_epsilon_closed_state_pooled_with::<AffineV, _>(
+            &initial,
+            &mut direct_pool,
+            &characteristics,
+            &ctx,
+        )
+        .expect("direct affine match remains live");
+        assert_eq!(
+            generated.generated_frontier_state(actual).positions(),
+            expected.positions()
         );
     }
 

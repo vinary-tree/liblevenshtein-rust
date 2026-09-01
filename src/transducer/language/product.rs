@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 /// `e`, after canonicalization removes states already reachable more cheaply.
 /// Consequently the number of levels is always at most `max_distance + 1`,
 /// regardless of input history or language nondeterminism.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Frontier<S> {
     levels: SmallVec<[Option<S>; 4]>,
 }

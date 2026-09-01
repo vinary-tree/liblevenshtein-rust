@@ -125,4 +125,28 @@ proof fn mixed_transposition_states_are_incomparable(
 {
 }
 
+/// Weighted costs are compared in their exact canonical order. A state with
+/// greater accumulated cost cannot dominate an equal-control state merely
+/// because the difference is numerically small.
+proof fn exact_weighted_dominance_never_reverses_cost(
+    dominator_cost: int,
+    dominated_cost: int,
+)
+    requires
+        dominator_cost <= dominated_cost,
+    ensures
+        !(dominator_cost > dominated_cost),
+{
+}
+
+/// Inclusive cutoff admission is exact: the accepted value itself is no
+/// greater than the registered cutoff.
+proof fn exact_weighted_cutoff_admission(cost: int, cutoff: int)
+    requires
+        cost <= cutoff,
+    ensures
+        !(cost > cutoff),
+{
+}
+
 }

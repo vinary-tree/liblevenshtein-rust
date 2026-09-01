@@ -40,16 +40,10 @@
 //!   then verifies with exact MSM distance. Accurate but slower.
 
 use super::encoding::QuantizationConfig;
-use crate::transducer::transition::{initial_state, CachedUnitTransitions, TransitionSettings};
-use crate::transducer::{Algorithm, State, StatePool, Unrestricted};
+use crate::transducer::{Algorithm, ValueYieldingQueryIterator};
 use libdictenstein::dynamic_dawg::DynamicDawg;
-use libdictenstein::{Dictionary, DictionaryNode, DictionaryValue, MappedDictionaryNode};
-use std::collections::{HashMap, VecDeque};
-
-struct ByteSearchNode<N> {
-    node: N,
-    state: State,
-}
+use libdictenstein::{Dictionary, DictionaryValue};
+use std::collections::HashMap;
 
 type BucketLocation = (usize, usize);
 
@@ -362,46 +356,17 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
             return results;
         }
 
-        let settings = TransitionSettings::new(max_distance, algorithm, false);
-        let mut pending = VecDeque::with_capacity(encoded.len().saturating_add(1));
         let mut results = Vec::with_capacity(self.count.min(DEFAULT_SEARCH_RESULT_CAPACITY));
-        let mut state_pool = StatePool::new();
-        let mut unit_transitions = CachedUnitTransitions::new(encoded.len(), max_distance);
-
-        pending.push_back(ByteSearchNode {
-            node: self.dawg.root(),
-            state: initial_state(encoded.len(), max_distance, algorithm),
-        });
-
-        while let Some(current) = pending.pop_front() {
-            let is_final = current.node.visit_edges_and_finality(|label, child| {
-                if let Some(next_state) = unit_transitions.transition(
-                    &current.state,
-                    &mut state_pool,
-                    &Unrestricted,
-                    label,
-                    &encoded,
-                    settings,
-                ) {
-                    pending.push_back(ByteSearchNode {
-                        node: child,
-                        state: next_state,
-                    });
-                }
-            });
-
-            if is_final {
-                let distance = current
-                    .state
-                    .infer_distance(encoded.len())
-                    .unwrap_or(usize::MAX);
-                if distance <= max_distance {
-                    if let Some(bucket_id) = current.node.value_at_final() {
-                        if let Some(bucket) = self.buckets.get(bucket_id) {
-                            results.extend(bucket.iter().map(|&value| (value, distance)));
-                        }
-                    }
-                }
+        let matches: ValueYieldingQueryIterator<_, Vec<u8>> =
+            ValueYieldingQueryIterator::with_unit_query_traversal_root(
+                self.dawg.traversal_root(),
+                encoded,
+                max_distance,
+                algorithm,
+            );
+        for (_, distance, bucket_id) in matches {
+            if let Some(bucket) = self.buckets.get(bucket_id) {
+                results.extend(bucket.iter().map(|&value| (value, distance)));
             }
         }
 

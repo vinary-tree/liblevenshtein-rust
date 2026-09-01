@@ -1,0 +1,17 @@
+examine_globs = ["src/time_series/elastic/walker.rs"]
+examine_re = [
+  "replace RangeProductStateArena<K>::exactly_equal -> bool with false",
+  "replace RangeProductStateArena<K>::intern ->",
+]
+additional_cargo_args = [
+  "--locked",
+  "--offline",
+  "--lib",
+  "exact_residual_interner_canonicalizes_signed_zero_and_reuses_one_id",
+]
+test_package = ["liblevenshtein"]
+copy_target = false
+copy_vcs = false
+gitignore = true
+minimum_test_timeout = 60.0
+timeout_multiplier = 3.0

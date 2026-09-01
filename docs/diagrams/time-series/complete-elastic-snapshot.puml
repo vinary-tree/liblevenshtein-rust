@@ -1,0 +1,63 @@
+@startuml
+skinparam backgroundColor #FAFCFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam ArrowColor #334155
+skinparam activity {
+  BackgroundColor #DBEAFE
+  BorderColor #2563EB
+  DiamondBackgroundColor #FEF3C7
+  DiamondBorderColor #D97706
+  EndColor #166534
+  StartColor #1D4ED8
+}
+
+title Complete elastic snapshot: publish, verify, reopen, and admit
+
+partition "Writer" #E0F2FE {
+  start
+  :Validate metadata, limits, and exact live bijection;
+  :Stream canonical manifest to same-directory partial;
+  :Hash persisted payload, append footer, and fsync;
+}
+
+partition "Content-addressed generation" #DCFCE7 {
+  :Create bounded disk-backed PersistentARTrie in staging;
+  :Insert canonical key-to-bucket map;
+  :Checkpoint, close, reopen, and validate;
+  :Hash dictionary and WAL;
+  :Write physical bundle seal;
+  :Fsync and rename staging to semantic SHA-256 identity;
+}
+
+partition "Publication" #FEF3C7 {
+  :Atomically rename public manifest;
+  :Fsync parent directory;
+}
+
+partition "Loader: opaque framing" #FCE7F3 {
+  :Open manifest under byte ceiling;
+  :Hash opaque payload with fixed scratch;
+  if (Checksum matches?) then (yes)
+    :Rewind for semantic pass;
+  else (no)
+    #FECACA:Return fail-closed checksum error;
+    stop
+  endif
+}
+
+partition "Loader: semantic admission" #EDE9FE {
+  :Verify generation inventory and physical seal;
+  :Compare schema, kernel, quantizer, fold, scales, and weights;
+  :Copy dictionary into private disk-backed load directory;
+  :Reopen PersistentARTrie and rebuild originals and buckets;
+  if (Exact dictionary/bucket/original bijection?) then (yes)
+    #DCFCE7:Return search-only exact index bound to snapshot identity;
+    stop
+  else (no)
+    #FECACA:Close backend, remove private copy, and return error;
+    stop
+  endif
+}
+
+@enduml

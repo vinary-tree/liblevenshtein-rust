@@ -39,7 +39,7 @@ mod builder_api;
 mod contextual_costs;
 mod contextual_query;
 pub mod costs_f64;
-mod dictionary_traversal;
+pub(crate) mod dictionary_traversal;
 pub mod generalized;
 pub mod helpers;
 mod intersection;

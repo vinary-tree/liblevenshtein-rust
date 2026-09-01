@@ -1,63 +1,76 @@
 {
   "schemaVersion": 1,
   "component": "liblevenshtein",
-  "canonicalVersion": "4.0.0-rc.5",
-  "sourceRef": "v4.0.0-rc.5",
+  "canonicalVersion": "4.0.0-rc.6",
+  "sourceRef": "v4.0.0-rc.6",
   "sourceRepository": "https://github.com/vinary-tree/liblevenshtein-rust",
   "observedAt": "2026-08-29",
   "packages": [
     {
       "id": "rust",
-      "languages": ["Rust"],
+      "languages": [
+        "Rust"
+      ],
       "ecosystem": "crates.io/docs.rs",
       "coordinate": "liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["Cargo.toml", "src/lib.rs"],
-      "registryReadback": {
-        "url": "https://docs.rs/liblevenshtein/4.0.0-rc.5/liblevenshtein/",
-        "markers": ["liblevenshtein", "4.0.0-rc.5"]
-      },
+      "registryVersion": "4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "Cargo.toml",
+        "src/lib.rs"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "docs.rs crate landing page",
-          "url": "https://docs.rs/liblevenshtein/4.0.0-rc.5/liblevenshtein/",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "markers": ["liblevenshtein", "4.0.0-rc.5"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "Cargo.toml",
+            "src/lib.rs"
+          ]
         },
         {
           "kind": "api-reference",
           "service": "rustdoc on docs.rs",
-          "url": "https://docs.rs/liblevenshtein/4.0.0-rc.5/liblevenshtein/",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "markers": ["liblevenshtein", "4.0.0-rc.5"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "Cargo.toml",
+            "src/lib.rs"
+          ]
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "native-c-cpp",
-      "languages": ["C", "C++"],
+      "languages": [
+        "C",
+        "C++"
+      ],
       "ecosystem": "CMake/pkg-config/GitHub Releases",
       "coordinate": "liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["include/liblevenshtein.h", "include/liblevenshtein.hpp", "bindings/c/README.md", "bindings/cpp/README.md"],
-      "registryReadback": {
-        "url": "https://api.github.com/repos/vinary-tree/liblevenshtein-rust/releases/tags/v4.0.0-rc.5",
-        "markers": ["v4.0.0-rc.5", "liblevenshtein-4.0.0-rc.5-x86_64-unknown-linux-gnu.tar.gz"]
-      },
+      "registryVersion": "4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "include/liblevenshtein.h",
+        "include/liblevenshtein.hpp",
+        "bindings/c/README.md",
+        "bindings/cpp/README.md"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "immutable GitHub source guide",
-          "url": "https://github.com/vinary-tree/liblevenshtein-rust/blob/v4.0.0-rc.5/bindings/c/README.md",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "readbackUrl": "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/v4.0.0-rc.5/bindings/c/README.md",
-          "markers": ["Vinary Tree C interop binding", "liblevenshtein"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "include/liblevenshtein.h",
+            "include/liblevenshtein.hpp",
+            "bindings/c/README.md",
+            "bindings/cpp/README.md"
+          ]
         },
         {
           "kind": "api-reference",
@@ -65,29 +78,34 @@
           "state": "missing",
           "reason": "No public versioned Doxygen deployment exists for the released C and C++ headers."
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "python",
-      "languages": ["Python"],
+      "languages": [
+        "Python"
+      ],
       "ecosystem": "PyPI",
       "coordinate": "liblevenshtein",
-      "registryVersion": "4.0.0rc5",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/python/pyproject.toml", "bindings/python/README.md", "bindings/python/src/liblevenshtein/__init__.py"],
-      "registryReadback": {
-        "url": "https://pypi.org/pypi/liblevenshtein/4.0.0rc5/json",
-        "markers": ["liblevenshtein", "4.0.0rc5", "Transducer"]
-      },
+      "registryVersion": "4.0.0rc6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/python/pyproject.toml",
+        "bindings/python/README.md",
+        "bindings/python/src/liblevenshtein/__init__.py"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "PyPI project description",
-          "url": "https://pypi.org/project/liblevenshtein/4.0.0rc5/",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "readbackUrl": "https://pypi.org/pypi/liblevenshtein/4.0.0rc5/json",
-          "markers": ["Transducer", "QueryCursor"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/python/pyproject.toml",
+            "bindings/python/README.md",
+            "bindings/python/src/liblevenshtein/__init__.py"
+          ]
         },
         {
           "kind": "api-reference",
@@ -95,61 +113,73 @@
           "state": "missing",
           "reason": "No public versioned pdoc deployment exists for the released Python facade."
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "jvm-java",
-      "languages": ["Java"],
+      "languages": [
+        "Java"
+      ],
       "ecosystem": "Maven Central/javadoc.io",
       "coordinate": "io.vinarytree:liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/jvm/build.gradle.kts", "bindings/jvm/README.md", "bindings/jvm/src/main/java"],
-      "registryReadback": {
-        "url": "https://repo1.maven.org/maven2/io/vinarytree/liblevenshtein/4.0.0-rc.5/liblevenshtein-4.0.0-rc.5-javadoc.jar",
-        "markers": []
-      },
+      "registryVersion": "4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/jvm/build.gradle.kts",
+        "bindings/jvm/README.md",
+        "bindings/jvm/src/main/java"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "Maven Central POM and immutable JVM guide",
-          "url": "https://github.com/vinary-tree/liblevenshtein-rust/blob/v4.0.0-rc.5/bindings/jvm/README.md",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "readbackUrl": "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/v4.0.0-rc.5/bindings/jvm/README.md",
-          "markers": ["JVM binding", "try-with-resources"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/jvm/build.gradle.kts",
+            "bindings/jvm/README.md",
+            "bindings/jvm/src/main/java"
+          ]
         },
         {
           "kind": "api-reference",
           "service": "Javadoc on javadoc.io",
-          "url": "https://javadoc.io/doc/io.vinarytree/liblevenshtein/4.0.0-rc.5/index.html",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "markers": []
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/jvm/build.gradle.kts",
+            "bindings/jvm/README.md",
+            "bindings/jvm/src/main/java"
+          ]
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "jvm-kotlin-scala",
-      "languages": ["Kotlin", "Scala"],
+      "languages": [
+        "Kotlin",
+        "Scala"
+      ],
       "ecosystem": "Maven Central",
       "coordinate": "io.vinarytree:liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/jvm/README.md", "bindings/jvm/src/main/java"],
-      "registryReadback": {
-        "url": "https://repo1.maven.org/maven2/io/vinarytree/liblevenshtein/4.0.0-rc.5/liblevenshtein-4.0.0-rc.5.pom",
-        "markers": ["io.vinarytree", "liblevenshtein", "4.0.0-rc.5"]
-      },
+      "registryVersion": "4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/jvm/README.md",
+        "bindings/jvm/src/main/java"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "immutable JVM guide",
-          "url": "https://github.com/vinary-tree/liblevenshtein-rust/blob/v4.0.0-rc.5/bindings/jvm/README.md",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "readbackUrl": "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/v4.0.0-rc.5/bindings/jvm/README.md",
-          "markers": ["Kotlin", "Scala"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/jvm/README.md",
+            "bindings/jvm/src/main/java"
+          ]
         },
         {
           "kind": "api-reference",
@@ -157,87 +187,115 @@
           "state": "missing",
           "reason": "The released JVM artifact has Javadoc but no language-specific Dokka or Scaladoc deployment."
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "clojure",
-      "languages": ["Clojure"],
+      "languages": [
+        "Clojure"
+      ],
       "ecosystem": "Clojars/cljdoc",
       "coordinate": "io.vinarytree/liblevenshtein-clojure",
-      "registryVersion": "4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/clojure/project.clj", "bindings/clojure/README.md", "bindings/clojure/src/vinary_tree/liblevenshtein.clj"],
-      "registryReadback": {
-        "url": "https://repo.clojars.org/io/vinarytree/liblevenshtein-clojure/4.0.0-rc.5/liblevenshtein-clojure-4.0.0-rc.5.pom",
-        "markers": ["liblevenshtein-clojure", "4.0.0-rc.5"]
-      },
+      "registryVersion": "4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/clojure/project.clj",
+        "bindings/clojure/README.md",
+        "bindings/clojure/src/vinary_tree/liblevenshtein.clj"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "cljdoc",
-          "url": "https://cljdoc.org/d/io.vinarytree/liblevenshtein-clojure/4.0.0-rc.5",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "markers": ["4.0.0-rc.5", "vinary-tree.liblevenshtein"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/clojure/project.clj",
+            "bindings/clojure/README.md",
+            "bindings/clojure/src/vinary_tree/liblevenshtein.clj"
+          ]
         },
         {
           "kind": "api-reference",
           "service": "cljdoc namespace API",
-          "url": "https://cljdoc.org/d/io.vinarytree/liblevenshtein-clojure/4.0.0-rc.5/api/vinary-tree.liblevenshtein",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "markers": ["vinary-tree.liblevenshtein", "transducer"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/clojure/project.clj",
+            "bindings/clojure/README.md",
+            "bindings/clojure/src/vinary_tree/liblevenshtein.clj"
+          ]
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "javascript",
-      "languages": ["JavaScript", "TypeScript", "ClojureScript"],
+      "languages": [
+        "JavaScript",
+        "TypeScript",
+        "ClojureScript"
+      ],
       "ecosystem": "npm",
       "coordinate": "@vinary-tree/liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/javascript/package.json", "bindings/javascript/README.md", "bindings/javascript/index.d.ts"],
-      "registryReadback": {
-        "url": "https://registry.npmjs.org/@vinary-tree%2fliblevenshtein/4.0.0-rc.5",
-        "markers": ["@vinary-tree/liblevenshtein", "4.0.0-rc.5"]
-      },
+      "registryVersion": "4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/javascript/package.json",
+        "bindings/javascript/README.md",
+        "bindings/javascript/index.d.ts"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "npm package README",
-          "state": "missing",
-          "reason": "The RC5 tarball contains README.md, but npm's public package metadata retained an empty readme field, so the package page has no verifiable rendered guide."
+          "state": "build-only",
+          "reason": "The RC6 package README is present and packageable, but this candidate is intentionally not published.",
+          "buildEvidence": [
+            "bindings/javascript/package.json",
+            "bindings/javascript/README.md"
+          ]
         },
         {
           "kind": "api-reference",
           "service": "TypeDoc",
-          "state": "missing",
-          "reason": "The exact v4.0.0-rc.5 source lacks the later TypeDoc configuration and no protected public deployment serves an RC5 API reference. Current-branch automation cannot retroactively qualify as immutable release evidence."
+          "state": "build-only",
+          "reason": "The RC6 TypeDoc reference is configured and built in CI, but public deployment awaits release approval.",
+          "buildEvidence": [
+            "bindings/javascript/typedoc.json",
+            "bindings/javascript/package.json",
+            ".github/workflows/ci.yml",
+            ".github/workflows/release.yml"
+          ]
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "dotnet",
-      "languages": ["C#", "F#"],
+      "languages": [
+        "C#",
+        "F#"
+      ],
       "ecosystem": "NuGet",
       "coordinate": "Liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj", "bindings/dotnet/README.md"],
-      "registryReadback": {
-        "url": "https://api.nuget.org/v3-flatcontainer/liblevenshtein/index.json",
-        "markers": ["4.0.0-rc.5"]
-      },
+      "registryVersion": "4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj",
+        "bindings/dotnet/README.md"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "NuGet package README",
-          "url": "https://www.nuget.org/packages/Liblevenshtein/4.0.0-rc.5",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "readbackUrl": "https://api.nuget.org/v3-flatcontainer/liblevenshtein/index.json",
-          "markers": ["4.0.0-rc.5"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj",
+            "bindings/dotnet/README.md"
+          ]
         },
         {
           "kind": "api-reference",
@@ -245,60 +303,74 @@
           "state": "missing",
           "reason": "The NuGet archive contains compiler XML documentation, but no public browsable DocFX deployment exists."
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "go",
-      "languages": ["Go"],
+      "languages": [
+        "Go"
+      ],
       "ecosystem": "Go module proxy/pkg.go.dev",
       "coordinate": "github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4",
-      "registryVersion": "v4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/go/go.mod", "bindings/go/README.md", "bindings/go/liblevenshtein.go"],
-      "registryReadback": {
-        "url": "https://pkg.go.dev/github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4@v4.0.0-rc.5",
-        "markers": ["liblevenshtein", "v4.0.0-rc.5"]
-      },
+      "registryVersion": "v4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/go/go.mod",
+        "bindings/go/README.md",
+        "bindings/go/liblevenshtein.go"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "pkg.go.dev overview",
-          "url": "https://pkg.go.dev/github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4@v4.0.0-rc.5",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "markers": ["liblevenshtein", "v4.0.0-rc.5"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/go/go.mod",
+            "bindings/go/README.md",
+            "bindings/go/liblevenshtein.go"
+          ]
         },
         {
           "kind": "api-reference",
           "service": "pkg.go.dev generated API",
-          "url": "https://pkg.go.dev/github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4@v4.0.0-rc.5",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "markers": ["Transducer", "Iterator"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "bindings/go/go.mod",
+            "bindings/go/README.md",
+            "bindings/go/liblevenshtein.go"
+          ]
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "swift",
-      "languages": ["Swift"],
+      "languages": [
+        "Swift"
+      ],
       "ecosystem": "Swift Package Manager/Swift Package Index",
       "coordinate": "Liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["Package.swift", "bindings/swift/README.md", "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"],
-      "registryReadback": {
-        "url": "https://api.github.com/repos/vinary-tree/liblevenshtein-rust/git/ref/tags/v4.0.0-rc.5",
-        "markers": ["refs/tags/v4.0.0-rc.5"]
-      },
+      "registryVersion": "4.0.0-rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "Package.swift",
+        "bindings/swift/README.md",
+        "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "immutable Swift guide",
-          "url": "https://github.com/vinary-tree/liblevenshtein-rust/blob/v4.0.0-rc.5/bindings/swift/README.md",
-          "state": "verified",
-          "verifiedAt": "2026-08-29",
-          "readbackUrl": "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/v4.0.0-rc.5/bindings/swift/README.md",
-          "markers": ["Swift bindings", "Sequence"]
+          "state": "build-only",
+          "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
+          "buildEvidence": [
+            "Package.swift",
+            "bindings/swift/README.md",
+            "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"
+          ]
         },
         {
           "kind": "api-reference",
@@ -306,20 +378,23 @@
           "state": "missing",
           "reason": "The released SwiftPM tag is public, but the package has no verified Swift Package Index DocC page."
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "ruby",
-      "languages": ["Ruby"],
+      "languages": [
+        "Ruby"
+      ],
       "ecosystem": "RubyGems/RubyDoc.info",
       "coordinate": "liblevenshtein",
-      "registryVersion": "4.0.0.rc.5",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/ruby/liblevenshtein.gemspec", "bindings/ruby/README.md", "bindings/ruby/lib/vinary_tree/liblevenshtein.rb"],
-      "registryReadback": {
-        "url": "https://rubygems.org/api/v2/rubygems/liblevenshtein/versions/4.0.0.rc.5.json",
-        "markers": ["liblevenshtein", "4.0.0.rc.5"]
-      },
+      "registryVersion": "4.0.0.rc.6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/ruby/liblevenshtein.gemspec",
+        "bindings/ruby/README.md",
+        "bindings/ruby/lib/vinary_tree/liblevenshtein.rb"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
@@ -331,22 +406,25 @@
           "kind": "api-reference",
           "service": "RubyDoc.info/RDoc",
           "state": "missing",
-          "reason": "RubyDoc.info returns 404 for liblevenshtein 4.0.0.rc.5."
+          "reason": "RubyDoc.info returns 404 for liblevenshtein 4.0.0.rc.6."
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "lua",
-      "languages": ["Lua"],
+      "languages": [
+        "Lua"
+      ],
       "ecosystem": "LuaRocks",
       "coordinate": "liblevenshtein",
-      "registryVersion": "4.0.0rc5-1",
-      "releaseState": "released",
-      "sourceEvidence": ["bindings/lua/liblevenshtein-4.0.0rc5-1.rockspec", "bindings/lua/README.md", "bindings/lua/src/liblevenshtein_lua.c"],
-      "registryReadback": {
-        "url": "https://luarocks.org/modules/dylon/liblevenshtein/4.0.0rc5-1",
-        "markers": ["liblevenshtein", "4.0.0rc5-1"]
-      },
+      "registryVersion": "4.0.0rc6-1",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/lua/liblevenshtein-4.0.0rc6-1.rockspec",
+        "bindings/lua/README.md",
+        "bindings/lua/src/liblevenshtein_lua.c"
+      ],
       "destinations": [
         {
           "kind": "package-guide",
@@ -360,17 +438,24 @@
           "state": "missing",
           "reason": "No public generated Lua API reference exists."
         }
-      ]
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
     },
     {
       "id": "ocaml",
-      "languages": ["OCaml"],
+      "languages": [
+        "OCaml"
+      ],
       "ecosystem": "opam/ocaml.org",
       "coordinate": "liblevenshtein",
-      "registryVersion": "4.0.0~rc5",
-      "releaseState": "pending-publication",
-      "sourceEvidence": ["bindings/ocaml/liblevenshtein.opam", "bindings/ocaml/README.md", "bindings/ocaml/vinary_tree_liblevenshtein.mli"],
-      "releaseProof": "The immutable GitHub prerelease contains the opam candidate, but opam.ocaml.org returned 404 on 2026-08-29 because the upstream opam-repository contribution is not merged.",
+      "registryVersion": "4.0.0~rc6",
+      "releaseState": "candidate-only",
+      "sourceEvidence": [
+        "bindings/ocaml/liblevenshtein.opam",
+        "bindings/ocaml/README.md",
+        "bindings/ocaml/vinary_tree_liblevenshtein.mli"
+      ],
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed.",
       "destinations": [
         {
           "kind": "package-guide",
@@ -388,13 +473,19 @@
     },
     {
       "id": "haskell",
-      "languages": ["Haskell"],
+      "languages": [
+        "Haskell"
+      ],
       "ecosystem": "Hackage/Haddock",
       "coordinate": "liblevenshtein",
       "registryVersion": "4.0.0",
       "releaseState": "candidate-only",
-      "sourceEvidence": ["bindings/haskell/liblevenshtein.cabal", "bindings/haskell/README.md", "bindings/haskell/src/VinaryTree/Liblevenshtein.hsc"],
-      "releaseProof": "Hackage versions are numeric-only; publishing the 4.0.0 candidate during RC5 would consume the future final coordinate.",
+      "sourceEvidence": [
+        "bindings/haskell/liblevenshtein.cabal",
+        "bindings/haskell/README.md",
+        "bindings/haskell/src/VinaryTree/Liblevenshtein.hsc"
+      ],
+      "releaseProof": "Hackage versions are numeric-only; publishing the 4.0.0 candidate during RC6 would consume the future final coordinate.",
       "destinations": [
         {
           "kind": "package-guide",
@@ -412,13 +503,19 @@
     },
     {
       "id": "fortran",
-      "languages": ["Fortran"],
+      "languages": [
+        "Fortran"
+      ],
       "ecosystem": "fpm registry",
       "coordinate": "liblevenshtein",
       "registryVersion": "4.0.0",
       "releaseState": "candidate-only",
-      "sourceEvidence": ["bindings/fortran/fpm.toml", "bindings/fortran/README.md", "bindings/fortran/src/vinary_tree_liblevenshtein.f90"],
-      "releaseProof": "fpm versions are numeric-only; publishing the 4.0.0 candidate during RC5 would consume the future final coordinate.",
+      "sourceEvidence": [
+        "bindings/fortran/fpm.toml",
+        "bindings/fortran/README.md",
+        "bindings/fortran/src/vinary_tree_liblevenshtein.f90"
+      ],
+      "releaseProof": "fpm versions are numeric-only; publishing the 4.0.0 candidate during RC6 would consume the future final coordinate.",
       "destinations": [
         {
           "kind": "package-guide",
@@ -436,10 +533,12 @@
     },
     {
       "id": "julia",
-      "languages": ["Julia"],
+      "languages": [
+        "Julia"
+      ],
       "ecosystem": "Julia General registry/Documenter",
       "coordinate": "Liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
+      "registryVersion": "4.0.0-rc.6",
       "releaseState": "candidate-only",
       "sourceEvidence": [
         "bindings/julia/Liblevenshtein/Project.toml",
@@ -447,7 +546,7 @@
         "bindings/julia/Liblevenshtein/src/Liblevenshtein.jl",
         "bindings/julia/Liblevenshtein/docs/make.jl"
       ],
-      "releaseProof": "The user authorized feature-branch CI but explicitly prohibited publication from the RC5 binding campaign.",
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed.",
       "destinations": [
         {
           "kind": "package-guide",
@@ -473,10 +572,12 @@
     },
     {
       "id": "raku",
-      "languages": ["Raku"],
+      "languages": [
+        "Raku"
+      ],
       "ecosystem": "zef/fez ecosystem",
       "coordinate": "Liblevenshtein",
-      "registryVersion": "4.0.0-rc.5",
+      "registryVersion": "4.0.0-rc.6",
       "releaseState": "candidate-only",
       "sourceEvidence": [
         "bindings/raku/META6.json",
@@ -484,7 +585,7 @@
         "bindings/raku/lib/Liblevenshtein.rakumod",
         "bindings/raku/docs/Liblevenshtein.rakudoc"
       ],
-      "releaseProof": "The user authorized feature-branch CI but explicitly prohibited publication from the RC5 binding campaign.",
+      "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed.",
       "destinations": [
         {
           "kind": "package-guide",

@@ -8,9 +8,8 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::time_series::{
-    combined_lb, euclidean_lb, length_lb, msm_distance_automaton, msm_distance_wavefront,
-    search_with_lb, HybridSearchIndex, LowerBoundType, MsmConfig, MsmTransducer,
-    QuantizationConfig,
+    combined_lb, euclidean_lb, length_lb, search_with_lb, HybridSearchIndex, LowerBoundType,
+    MsmConfig, MsmTransducer, QuantizationConfig,
 };
 use std::hint::black_box;
 
@@ -333,44 +332,6 @@ fn bench_exact_msm_transducer(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_legacy_msm_automata(c: &mut Criterion) {
-    let mut group = c.benchmark_group("legacy_msm_automata");
-    group.sample_size(20);
-    let config = MsmConfig::new(1.0);
-
-    for len in [12, 24].iter() {
-        let x = generate_series(*len, 12345);
-        let y = generate_series(*len, 67890);
-
-        group.throughput(Throughput::Elements(*len as u64));
-        group.bench_with_input(BenchmarkId::new("optimized_dp", len), len, |b, _| {
-            b.iter(|| config.distance_optimized(black_box(&x), black_box(&y)));
-        });
-        group.bench_with_input(BenchmarkId::new("wavefront", len), len, |b, _| {
-            b.iter(|| {
-                msm_distance_wavefront(
-                    black_box(&x),
-                    black_box(&y),
-                    black_box(&config),
-                    black_box(f64::INFINITY),
-                )
-            });
-        });
-        group.bench_with_input(BenchmarkId::new("automaton", len), len, |b, _| {
-            b.iter(|| {
-                msm_distance_automaton(
-                    black_box(&x),
-                    black_box(&y),
-                    black_box(&config),
-                    black_box(f64::INFINITY),
-                )
-            });
-        });
-    }
-
-    group.finish();
-}
-
 criterion_group!(
     benches,
     bench_msm_dp,
@@ -381,6 +342,5 @@ criterion_group!(
     bench_lb_type_comparison,
     bench_quantization_levels,
     bench_exact_msm_transducer,
-    bench_legacy_msm_automata,
 );
 criterion_main!(benches);

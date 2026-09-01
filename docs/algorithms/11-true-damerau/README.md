@@ -40,10 +40,10 @@ explicit OSA projection; an `OperationSet` cannot carry the required history.
 
 ## 2. Reference recurrence
 
-Let `$`x=x_1\ldots x_m`$` and `$`y=y_1\ldots y_n`$`. Let `$`D[i,j]`$` be the
+Let $`x=x_1\ldots x_m`$ and $`y=y_1\ldots y_n`$. Let $`D[i,j]`$ be the
 best script cost for their prefixes. In addition to the three ordinary
 Levenshtein predecessors, Lowrance and Wagner use the last matching source and
-target positions `$`k'`$` and `$`l`$`:
+target positions $`k'`$ and $`l`$:
 
 ```math
 D[i,j]=\min\left(
@@ -57,12 +57,12 @@ D[i,j]=\min\left(
 The last term deletes the intervening source symbols, inserts the intervening
 target symbols, and transposes the two matching endpoints. The crate's
 `damerau_levenshtein_distance` implements the full last-occurrence table over
-the union alphabet. It is intentionally obvious `$`\mathcal{O}(mn)`$` code and
+the union alphabet. It is intentionally obvious $`\mathcal{O}(mn)`$ code and
 serves as the differential oracle rather than the search engine.
 
 ## 3. Why bounded history is finite
 
-Suppose a query accepts only scripts costing at most `$`k`$`. The transposition
+Suppose a query accepts only scripts costing at most $`k`$. The transposition
 term contributes:
 
 ```math
@@ -89,14 +89,14 @@ can still complete within budget. Two position kinds are relevant:
 
 - `Normal` uses ordinary Levenshtein transitions.
 - `DamerauPending` has prepaid a transposition and query-interior deletions;
-  its one-byte `aux` field stores a positive endpoint delta `$`\delta`$`.
+  its one-byte `aux` field stores a positive endpoint delta $`\delta`$.
 
 On 64-bit targets the representation remains 24 bytes: two `usize` fields, a
 one-byte `PositionKind`, a one-byte auxiliary payload, and alignment padding.
 The payload ceiling is therefore
 `Algorithm::MAX_DAMERAU_DISTANCE == 255`. Public unit-transition entry points
 panic before traversal for a larger budget; they never return an incomplete
-result. The measured and recommended spell-correction range is `$`k\in\{1,2,3\}`$`.
+result. The measured and recommended spell-correction range is $`k\in\{1,2,3\}`$.
 
 ## 5. Literate streaming algorithm
 
@@ -116,7 +116,7 @@ ENTER-MACROS(normal position p, characteristic vector cv, budget k):
                          delta=delta)
 ```
 
-The entry cost `$`\delta`$` prepays `$`\delta-1`$` query deletions plus one
+The entry cost $`\delta`$ prepays $`\delta-1`$ query deletions plus one
 transposition. Second, each intervening dictionary symbol is an insertion and
 adds one:
 
@@ -140,7 +140,7 @@ RESOLVE(pending position p, characteristic vector cv):
 ```
 
 Pending positions have no epsilon successor: their query-interior deletions
-were already charged at entry. If `$`b`$` dictionary symbols were consumed
+were already charged at entry. If $`b`$ dictionary symbols were consumed
 between entry and resolution, the streaming cost is:
 
 ```math
@@ -168,11 +168,11 @@ valid future resolution and create a false negative.
 
 ## 7. Complexity and resource policy
 
-There are `$`\mathcal{O}(k)`$` live query diagonals and up to
-`$`\mathcal{O}(k)`$` pending deltas on each, so the frontier envelope is
-`$`\mathcal{O}(k^2)`$`. The preregistered repeated-unit profile measured:
+There are $`\mathcal{O}(k)`$ live query diagonals and up to
+$`\mathcal{O}(k)`$ pending deltas on each, so the frontier envelope is
+$`\mathcal{O}(k^2)`$. The preregistered repeated-unit profile measured:
 
-| `$`k`$` | maximum state size | maximum divided by `$`k^2`$` | one-position successors | spilled? |
+| $`k`$ | maximum state size | maximum divided by $`k^2`$ | one-position successors | spilled? |
 |---:|---:|---:|---:|---:|
 | 1 | 2 | 2.000000 | 2 | no |
 | 2 | 4 | 1.000000 | 3 | no |
@@ -218,7 +218,7 @@ The formal model and generated properties share the same invariants:
 |---|---|---|
 | entry delta is positive and within budget | Rocq, Verus, SMT | exact differential property |
 | extension increases cost by one | Rocq, Verus, SMT, TLA+ | transition examples/properties |
-| resolution advances by `$`\delta+1`$` without extra cost | all four tool families | exact map equality |
+| resolution advances by $`\delta+1`$ without extra cost | all four tool families | exact map equality |
 | pending has no epsilon deletion | Rocq, Verus, SMT, TLA+ | focused transition tests |
 | pending key needs origin and delta | Rocq, Verus, SMT | canonical-state properties |
 | frontier envelope is quadratic | Rocq arithmetic theorem | release state profile |

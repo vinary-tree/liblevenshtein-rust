@@ -160,3 +160,49 @@
 (assert (not (= composed-cost (+ right-cost left-cost))))
 (check-sat)
 (pop)
+
+; A physical-time deletion leaf is nonnegative under monotone timestamps and
+; validated nonnegative stiffness and gap penalty.
+(declare-const current-time Int)
+(declare-const previous-time Int)
+(declare-const value-delta Int)
+(push)
+(assert (>= value-delta 0))
+(assert (>= current-time previous-time))
+(assert (>= nu 0))
+(assert (>= lambda 0))
+(assert (< (+ value-delta (* nu (- current-time previous-time)) lambda) 0))
+(check-sat)
+(pop)
+
+; One canonical elapsed unit reproduces the unit-grid deletion leaf exactly.
+(push)
+(assert (not (= (+ value-delta (* nu 1) lambda)
+                (+ value-delta nu lambda))))
+(check-sat)
+(pop)
+
+; A strictly increasing committed timestamp has positive elapsed time.
+(push)
+(assert (> current-time previous-time))
+(assert (<= (- current-time previous-time) 0))
+(check-sat)
+(pop)
+
+; AP/K1 composition: independently admissible value and physical-time
+; components remain admissible after nonnegative stiffness and gap addition.
+(declare-const value-lower Int)
+(declare-const time-lower Int)
+(declare-const value-exact Int)
+(declare-const time-exact Int)
+(push)
+(assert (>= value-lower 0))
+(assert (>= time-lower 0))
+(assert (<= value-lower value-exact))
+(assert (<= time-lower time-exact))
+(assert (>= nu 0))
+(assert (>= lambda 0))
+(assert (> (+ value-lower (* nu time-lower) lambda)
+           (+ value-exact (* nu time-exact) lambda)))
+(check-sat)
+(pop)

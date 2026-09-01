@@ -74,7 +74,7 @@ compressed bytes, and invalid semantic models never reach `Done`.
 Explores the Hamming, indel, and bounded-skip operation grids together. The
 finite model checks operation progress and declared-consumption policy for
 every preset, equal coordinates for Hamming, both indel length lower bounds,
-and the exact directional equation `$`\text{source}=\text{target}+\text{cost}`$`
+and the exact directional equation $`\text{source}=\text{target}+\text{cost}`$
 for bounded skip. With source, target, and cost capped at 4, TLC explores all
 72 reachable states with no violation.
 
@@ -84,10 +84,10 @@ for bounded skip. With source, target, and cost capped at 4, TLC explores all
 ### DamerauStreaming.tla
 
 Specifies one finite unrestricted-Damerau macro from entry through zero or
-more interior extensions to resolution. The `$`k=3`$` model checks that a
+more interior extensions to resolution. The $`k=3`$ model checks that a
 pending continuation carries a positive delta, entry plus extensions preserve
 `errors = delta + between`, every pending state has consumed a dictionary
-unit, and resolution advances the query endpoint by exactly `$`\delta+1`$`
+unit, and resolution advances the query endpoint by exactly $`\delta+1`$
 without changing the macro charge.
 
 **Corresponds to:** `src/transducer/variants/damerau.rs` and the
@@ -116,6 +116,24 @@ previous transition behavior.
 
 **Corresponds to:** `src/time_series/elastic/walker.rs` and the assumption-free
 Rocq/Verus/SMT K1–K4 artifacts.
+
+### ElasticSnapshotPublication.tla
+
+Models the complete-snapshot protocol independently of the search recurrence.
+The decode machine cannot reach a semantic or accepted phase without a matching
+checksum. The publication machine creates an unreferenced staging generation,
+seals it, atomically publishes the generation, and only then makes its identity
+visible through the manifest; crash removes only staging state.
+
+The finite `ElasticSnapshotPublication.cfg` instance checks `TypeOK`, checksum-
+before-semantics, manifest-to-sealed-generation closure, and permanent rejection
+after checksum failure. The model abstracts digests as identities and rename as
+an atomic action; it does not prove SHA-256, filesystem, persistent-trie, or Rust
+implementation correctness.
+
+**Corresponds to:** `src/time_series/elastic/walker/snapshot.rs`,
+`docs/verification/temporal_automata/theories/ElasticSnapshot.v`, and
+`docs/design/complete-elastic-snapshots.md`.
 
 ### MsmTrieSearch.tla
 
