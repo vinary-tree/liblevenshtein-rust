@@ -11,7 +11,7 @@ name = "liblevenshtein"
 version = "4.0.0-rc.5"
 autobins = false
 edition = "2021"
-# Matches the libdictenstein path dependency, whose --all-features floor is set by
+# Matches the libdictenstein dependency, whose --all-features floor is set by
 # sysinfo 0.39 (1.95). The previous 1.70 was already false: libdictenstein pulls
 # pathmap 0.2.2 (1.88) and bincode 2.0.1 / lru 0.18 (1.85).
 rust-version = "1.95"
