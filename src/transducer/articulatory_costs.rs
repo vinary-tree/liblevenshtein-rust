@@ -15,7 +15,12 @@
 //!
 //! # Example
 //!
+//! This example requires the `phonetic-rules` feature; without it,
+//! `substitution_cost` deliberately falls back to the configured base cost.
+//!
 //! ```rust
+//! # #[cfg(feature = "phonetic-rules")]
+//! # {
 //! use liblevenshtein::transducer::ArticulatoryCosts;
 //!
 //! let costs = ArticulatoryCosts::default();
@@ -27,6 +32,7 @@
 //! // Distant sounds have high substitution cost
 //! let ph_cost = costs.substitution_cost('p', 'h');
 //! assert!(ph_cost > 0.7); // Place + manner differ significantly
+//! # }
 //! ```
 //!
 //! # Integration with Automata

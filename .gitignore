@@ -210,6 +210,7 @@ perf.data*
 /bindings/python/dist/
 /bindings/python/src/*.egg-info/
 /bindings/python/tests/__pycache__/
+/bindings/raku/**/.precomp/
 /bindings/ruby/ext/**/Makefile
 /bindings/ruby/ext/**/*.o
 /bindings/ruby/ext/**/*.so

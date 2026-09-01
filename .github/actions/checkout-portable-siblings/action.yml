@@ -6,8 +6,8 @@ description: >
 inputs:
   ref:
     description: >
-      Baseline development ref. A release/* pull-request head selects the same
-      coordinated branch for mutable siblings.
+      Baseline development ref. The triggering branch is selected for each
+      mutable sibling where that exact remote branch exists.
     required: false
     default: master
   llattice-ref:
@@ -37,13 +37,25 @@ runs:
       run: |
         set -euo pipefail
         event_ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}"
-        if [[ "$event_ref" == release/* ]]; then
-          mutable_ref="$event_ref"
-        else
-          mutable_ref="$BASELINE_REF"
+        mutable_ref="$BASELINE_REF"
+        interop_ref="$INTEROP_REF"
+        libdictenstein_ref="$LIBDICTENSTEIN_REF"
+        if [ -z "$interop_ref" ] && [ -n "$event_ref" ] && \
+          git ls-remote --exit-code --heads \
+            https://github.com/vinary-tree/vinary-tree-interop.git \
+            "$event_ref" >/dev/null 2>&1
+        then
+          interop_ref="$event_ref"
         fi
-        interop_ref="${INTEROP_REF:-$mutable_ref}"
-        libdictenstein_ref="${LIBDICTENSTEIN_REF:-$mutable_ref}"
+        if [ -z "$libdictenstein_ref" ] && [ -n "$event_ref" ] && \
+          git ls-remote --exit-code --heads \
+            https://github.com/vinary-tree/libdictenstein.git \
+            "$event_ref" >/dev/null 2>&1
+        then
+          libdictenstein_ref="$event_ref"
+        fi
+        interop_ref="${interop_ref:-$mutable_ref}"
+        libdictenstein_ref="${libdictenstein_ref:-$mutable_ref}"
         for ref in "$interop_ref" "$LLATTICE_REF" "$libdictenstein_ref"; do
           git check-ref-format --branch "$ref" >/dev/null
         done
@@ -92,5 +104,36 @@ runs:
         if after == before:
             raise SystemExit("development dependency paths were not found")
         manifest.write_text(after)
+
+        # Some sibling release branches end their package manifest with an
+        # empty `[workspace]` sentinel so a normal standalone checkout cannot
+        # be captured by an unrelated parent workspace. Portable CI
+        # intentionally nests these copies below this workspace, where
+        # retaining such a sentinel would create multiple workspace roots.
+        # Remove a verified empty terminal table when present; a sibling that
+        # already has no workspace table is already normalized. Reject every
+        # other workspace declaration instead of silently changing its model.
+        for portable_root in (
+            "vendor/libdictenstein",
+            "vendor/llattice",
+            "vendor/vinary-tree-interop",
+        ):
+            sibling_manifest = Path(portable_root, "Cargo.toml")
+            sibling = sibling_manifest.read_text()
+            workspace_headers = [
+                line_number
+                for line_number, line in enumerate(sibling.splitlines(), start=1)
+                if line.strip() == "[workspace]"
+            ]
+            if not workspace_headers:
+                continue
+            prefix, marker, suffix = sibling.rpartition("\n[workspace]\n")
+            if len(workspace_headers) == 1 and marker and not suffix.strip():
+                sibling_manifest.write_text(prefix.rstrip() + "\n")
+            else:
+                raise SystemExit(
+                    f"{sibling_manifest} has a nonterminal, nonempty, or repeated "
+                    f"workspace table at line(s) {workspace_headers}"
+                )
         PY
         cargo generate-lockfile

@@ -228,7 +228,9 @@
     "fpm": "liblevenshtein",
     "opam": "liblevenshtein",
     "hackage": "liblevenshtein",
-    "luarocks": "liblevenshtein"
+    "luarocks": "liblevenshtein",
+    "julia": "Liblevenshtein",
+    "zef": "Liblevenshtein"
   },
   "supportTiers": {
     "tier1": [
@@ -251,7 +253,9 @@
     "tier3": [
       "ocaml",
       "haskell",
-      "lua"
+      "lua",
+      "julia",
+      "raku"
     ]
   },
   "packageVersion": "4.0.0-rc.5",
@@ -695,13 +699,27 @@
         "guide": "bindings/haskell/README.md",
         "example": "bindings/haskell/test/Main.hs"
       },
-      "lua": {
-        "languages": [
-          "Lua"
-        ],
-        "guide": "bindings/lua/README.md",
-        "example": "bindings/lua/tests/snapshot.lua"
-      }
+    "lua": {
+      "languages": [
+        "Lua"
+      ],
+      "guide": "bindings/lua/README.md",
+      "example": "bindings/lua/tests/snapshot.lua"
+    },
+    "julia": {
+      "languages": [
+        "Julia"
+      ],
+      "guide": "bindings/julia/README.md",
+      "example": "bindings/julia/Liblevenshtein/test/runtests.jl"
+    },
+    "raku": {
+      "languages": [
+        "Raku"
+      ],
+      "guide": "bindings/raku/README.md",
+      "example": "bindings/raku/t/01-conformance.rakutest"
+    }
     },
     "interopDocumentation": "https://github.com/vinary-tree/vinary-tree-interop/tree/master/bindings"
   },
@@ -788,7 +806,9 @@
       "pkgConfig": "4.0.0-rc.5",
       "pypi": "4.0.0rc5",
       "rubygems": "4.0.0.rc.5",
-      "swiftTag": "4.0.0-rc.5"
+      "swiftTag": "4.0.0-rc.5",
+      "julia": "4.0.0-rc.5",
+      "zef": "4.0.0-rc.5"
     },
     "distTag": "next"
   }

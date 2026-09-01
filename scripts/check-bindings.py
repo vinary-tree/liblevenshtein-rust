@@ -563,6 +563,64 @@ require(
     '"target/release"' not in luarocks_package,
     "LuaRocks package must not link against a source-checkout target directory",
 )
+julia_project = tomllib.loads(
+    text(ROOT / "bindings" / "julia" / "Liblevenshtein" / "Project.toml")
+)
+require(julia_project["name"] == packages["julia"], "wrong Julia package")
+require(
+    julia_project["version"] == RELEASE_MODEL["registries"]["julia"],
+    "wrong Julia package version",
+)
+require(
+    julia_project.get("deps", {}).get("VinaryTreeInterop")
+    == "8d6503e5-4d65-4bd8-a8ee-293a0149584e"
+    and julia_project.get("compat", {}).get("VinaryTreeInterop") == "4",
+    "Julia package must depend on the canonical VinaryTreeInterop package",
+)
+raku_meta = json.loads(text(ROOT / "bindings" / "raku" / "META6.json"))
+require(raku_meta["name"] == packages["zef"], "wrong Raku package")
+require(
+    raku_meta["version"] == RELEASE_MODEL["registries"]["zef"],
+    "wrong Raku package version",
+)
+raku_interop_version = RELEASE_MODEL["dependencies"]["vinary-tree-interop"].replace(
+    "-rc.", ".rc."
+)
+require(
+    f"Vinary-Tree-Interop:ver<{raku_interop_version}>:auth<zef:vinary-tree>"
+    in raku_meta.get("depends", []),
+    "Raku package must depend on the canonical Vinary-Tree-Interop distribution",
+)
+raku_libdict_version = RELEASE_MODEL["dependencies"]["libdictenstein"].replace(
+    "-rc.", ".rc."
+)
+require(
+    f"Libdictenstein:ver<{raku_libdict_version}>:auth<zef:vinary-tree>"
+    in raku_meta.get("test-depends", []),
+    "Raku tests must pin the coordinated Libdictenstein distribution",
+)
+raku_abi = text(
+    ROOT / "bindings" / "raku" / "lib" / "Liblevenshtein" / "GeneratedAbi.rakumod"
+)
+raku_facade = text(ROOT / "bindings" / "raku" / "lib" / "Liblevenshtein.rakumod")
+generated_raku_exports = set(
+    re.findall(
+        r"^our (?:constant|enum) ([A-Z][A-Za-z0-9-]*) is export", raku_abi, re.MULTILINE
+    )
+)
+generated_raku_exports.update(
+    re.findall(r"^    ([A-Z][A-Z0-9-]*) =>", raku_abi, re.MULTILINE)
+)
+for name in generated_raku_exports:
+    require(
+        re.search(
+            rf"^our constant {re.escape(name)} is export =",
+            raku_facade,
+            re.MULTILINE,
+        )
+        is not None,
+        f"Raku facade does not re-export generated ABI name {name}",
+    )
 python_interop = tomllib.loads(
     text(INTEROP_ROOT / "bindings" / "python" / "pyproject.toml")
 )
@@ -1166,10 +1224,12 @@ FACADE_LANGUAGES = (
     "haskell",
     "javascript",
     "javascript-runtime",
+    "julia",
     "jvm",
     "lua",
     "ocaml",
     "python",
+    "raku",
     "ruby",
     "swift",
 )

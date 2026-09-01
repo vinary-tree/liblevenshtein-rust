@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -20,14 +21,19 @@ SPEC.loader.exec_module(GENERATOR)
 
 class BindingTraceabilityTests(unittest.TestCase):
     def test_runtime_evidence_uses_configured_sibling_root(self) -> None:
-        configured_root = (
-            GENERATOR.WORKSPACE / "npm-coordinate-migration" / "javascript-runtime"
-        )
-        with patch.object(GENERATOR, "RUNTIME_ROOT", configured_root):
-            resolved = GENERATOR.resolve(
-                "../javascript-runtime/index.d.ts", "runtime declaration"
-            )
-            self.assertEqual(resolved, (configured_root / "index.d.ts").resolve())
+        target = ROOT / "target"
+        target.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(
+            prefix="traceability-runtime-", dir=target
+        ) as directory:
+            configured_root = Path(directory)
+            declaration = configured_root / "index.d.ts"
+            declaration.write_text("export {};\n", encoding="utf-8")
+            with patch.object(GENERATOR, "RUNTIME_ROOT", configured_root):
+                resolved = GENERATOR.resolve(
+                    "../javascript-runtime/index.d.ts", "runtime declaration"
+                )
+                self.assertEqual(resolved, declaration.resolve())
 
     def test_symbol_leaf_preserves_host_method_identity(self) -> None:
         self.assertEqual(GENERATOR.symbol_leaf("QueryCursor.__next__"), "__next__")

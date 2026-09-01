@@ -52,12 +52,13 @@
       "role": "core-abi",
       "root": "../vinary-tree-interop",
       "unitDomains": ["byte", "unicode-scalar", "u64", "not-unit-bearing"],
-      "capabilities": ["retained-resource", "dictionary-snapshot", "dictionary-visit", "dictionary-graph", "dictionary-entries", "snapshot-identity", "scalar-wfst"],
+      "capabilities": ["retained-resource", "dictionary-snapshot", "dictionary-visit", "dictionary-graph", "dictionary-entries", "snapshot-identity", "scalar-wfst", "lattice-value"],
       "declaredLanguageEvidence": {
         "rust": "Cargo.toml", "c": "include/vinary_tree_interop.h", "cpp": "include/vinary_tree_interop.h",
         "python": "bindings/python", "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm",
         "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
-        "swift": "bindings/swift", "fortran": "bindings/fortran", "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+        "swift": "bindings/swift", "fortran": "bindings/fortran", "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
+        "raku": "bindings/raku", "julia": "bindings/julia/VinaryTreeInterop"
       }
     },
     {
@@ -66,7 +67,9 @@
       "root": "../llattice",
       "unitDomains": ["not-unit-bearing"],
       "capabilities": ["lattice-trait", "numeric-lattices", "boolean-lattice", "option-lattice", "set-lattice", "vector-content-lattice"],
-      "declaredLanguageEvidence": {"rust": "src/lib.rs"}
+      "declaredLanguageEvidence": {
+        "rust": "src/lib.rs", "raku": "bindings/raku", "julia": "bindings/julia/LLattice"
+      }
     },
     {
       "id": "libdictenstein",
@@ -79,7 +82,8 @@
         "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm", "clojure": "bindings/clojure",
         "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
         "clojurescript": "bindings/javascript/cljs", "swift": "bindings/swift", "ruby": "bindings/ruby", "fortran": "bindings/fortran",
-        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
+        "raku": "bindings/raku", "julia": "bindings/julia/Libdictenstein"
       }
     },
     {
@@ -93,7 +97,8 @@
         "java": "bindings/jvm", "kotlin": "bindings/jvm", "scala": "bindings/jvm", "clojure": "bindings/clojure",
         "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
         "clojurescript": "bindings/javascript/cljs", "swift": "bindings/swift", "ruby": "bindings/ruby", "fortran": "bindings/fortran",
-        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua"
+        "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
+        "raku": "bindings/raku", "julia": "bindings/julia/Liblevenshtein"
       }
     },
     {
@@ -104,7 +109,8 @@
       "capabilities": ["semiring", "wfst", "composition", "lattice", "algorithms", "cfg", "differentiable", "pushdown", "symbolic", "acoustic-asr-ctc", "correction-layers", "llm-decoder", "custom-provider"],
       "declaredLanguageEvidence": {
         "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "javascript": "bindings/javascript",
-        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs"
+        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs",
+        "raku": "bindings/raku", "julia": "bindings/julia/LlingLlang"
       }
     },
     {
@@ -115,7 +121,8 @@
       "capabilities": ["dictionary-backend", "levenshtein-wfst", "universal-wfst", "generalized-wfst", "phonetic-wfst", "wallbreaker-wfst", "fzf-wfst", "resource-bridge"],
       "declaredLanguageEvidence": {
         "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "javascript": "bindings/javascript",
-        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs"
+        "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs",
+        "raku": "bindings/raku", "julia": "bindings/julia/Duallity"
       }
     },
     {

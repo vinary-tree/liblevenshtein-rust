@@ -22,6 +22,8 @@
 //! ## Default Initialization
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInitDefault;
@@ -31,11 +33,14 @@
 //!
 //! // Returns 0 (default i32) for terms without values
 //! assert_eq!(lazy.get_value("foo"), Some(0));
+//! # }
 //! ```
 //!
 //! ## Custom Function
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInitFn;
@@ -51,11 +56,14 @@
 //!
 //! // Each access generates a new ID
 //! assert!(lazy.get_value("foo").is_some());
+//! # }
 //! ```
 //!
 //! ## Context-Aware Initialization
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInit;
@@ -71,6 +79,7 @@
 //! fn compute_user_setting(user: &str) -> String {
 //!     format!("default_for_{}", user)
 //! }
+//! # }
 //! ```
 
 use crate::dictionary::node_adapter::{
@@ -316,11 +325,14 @@ impl<D> LazyInitDefault<D> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::LazyInitDefault;
     ///
     /// let dict = PathMapDictionary::<i32>::from_terms(["foo", "bar"]);
     /// let lazy = LazyInitDefault::new(dict);
+    /// # }
     /// ```
     #[inline]
     pub fn new(dict: D) -> Self {
@@ -455,6 +467,8 @@ impl<D, V> LazyInitFn<D, V> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::LazyInitFn;
     ///
@@ -462,6 +476,7 @@ impl<D, V> LazyInitFn<D, V> {
     ///
     /// let dict: PathMapDictionary = PathMapDictionary::from_terms(["foo", "bar"]);
     /// let lazy = LazyInitFn::new(dict, zero);
+    /// # }
     /// ```
     #[inline]
     pub fn new(dict: D, initializer: fn() -> V) -> Self {
@@ -611,6 +626,8 @@ impl<D, F> LazyInit<D, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::LazyInit;
     ///
@@ -620,6 +637,7 @@ impl<D, F> LazyInit<D, F> {
     /// let lazy = LazyInit::new(dict, || {
     ///     format!("default_for_{}", context)
     /// });
+    /// # }
     /// ```
     #[inline]
     pub fn new(dict: D, initializer: F) -> Self {

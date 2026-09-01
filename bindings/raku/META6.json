@@ -1,0 +1,24 @@
+{
+  "name": "Liblevenshtein",
+  "version": "4.0.0-rc.5",
+  "auth": "zef:vinary-tree",
+  "api": "4",
+  "description": "Fast edit distances and snapshot-consistent fuzzy search",
+  "license": "Apache-2.0",
+  "source-url": "git://github.com/vinary-tree/liblevenshtein-rust.git",
+  "support": {
+    "source": "https://github.com/vinary-tree/liblevenshtein-rust",
+    "bugtracker": "https://github.com/vinary-tree/liblevenshtein-rust/issues"
+  },
+  "depends": [
+    "Vinary-Tree-Interop:ver<4.0.0.rc.5>:auth<zef:vinary-tree>"
+  ],
+  "test-depends": [
+    "Libdictenstein:ver<4.0.0.rc.5>:auth<zef:vinary-tree>"
+  ],
+  "provides": {
+    "Liblevenshtein": "lib/Liblevenshtein.rakumod",
+    "Liblevenshtein::GeneratedAbi": "lib/Liblevenshtein/GeneratedAbi.rakumod"
+  },
+  "resources": []
+}

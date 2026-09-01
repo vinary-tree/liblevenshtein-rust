@@ -17,6 +17,8 @@
 //! # Examples
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Lru;
@@ -28,6 +30,7 @@
 //!
 //! let lru = Lru::new(dict);
 //! assert_eq!(lru.get_value("foo"), Some(42));
+//! # }
 //! ```
 
 use crate::dictionary::node_adapter::{
@@ -76,6 +79,8 @@ impl EntryMetadata {
 /// # Examples
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use liblevenshtein::prelude::*;
 /// use liblevenshtein::dictionary::MappedDictionary;
 /// use liblevenshtein::cache::eviction::Lru;
@@ -87,6 +92,7 @@ impl EntryMetadata {
 ///
 /// let lru = Lru::new(dict);
 /// assert_eq!(lru.get_value("hello"), Some(1));
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct Lru<D> {
@@ -104,6 +110,8 @@ impl<D> Lru<D> {
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// use liblevenshtein::prelude::*;
     /// use liblevenshtein::cache::eviction::Lru;
     ///
@@ -112,6 +120,7 @@ impl<D> Lru<D> {
     /// ]);
     ///
     /// let lru = Lru::new(dict);
+    /// # }
     /// ```
     pub fn new(dict: D) -> Self {
         Self {

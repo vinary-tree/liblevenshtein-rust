@@ -342,6 +342,91 @@ jobs:
             ${{ github.workspace }}/../libdictenstein/bindings/python/src:${{ github.workspace }}/bindings/python/src:${{ github.workspace }}/../vinary-tree-interop/bindings/python/src
         run: python -m pytest -q ../libdictenstein/bindings/python/tests
 
+  julia-bindings:
+    name: Julia ${{ matrix.julia-version }} fuzzy-search facade
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        julia-version: ["1.10", "1.12"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          coordinated-ref: ${{ github.head_ref || github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32  # v3.0.2
+        with:
+          version: ${{ matrix.julia-version }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --locked --features native-bindings-full
+      - run: cargo build --locked --manifest-path ../libdictenstein/Cargo.toml --features ffi
+      - name: Test the fresh local package graph
+        env:
+          LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
+        shell: bash
+        run: |
+          set -euo pipefail
+          julia --startup-file=no -e '
+            using Pkg
+            Pkg.activate("target/julia-test")
+            Pkg.develop([
+              PackageSpec(path="../vinary-tree-interop/bindings/julia/VinaryTreeInterop"),
+              PackageSpec(path="../libdictenstein/bindings/julia/Libdictenstein"),
+              PackageSpec(path="bindings/julia/Liblevenshtein"),
+            ])
+            Pkg.test("Liblevenshtein")
+          '
+      - name: Build the strict Documenter API reference
+        if: matrix.julia-version == '1.12'
+        env:
+          LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
+          LIBLEVENSHTEIN_DOCS_DEPLOY: "0"
+        shell: bash
+        run: |
+          set -euo pipefail
+          julia --startup-file=no -e '
+            using Pkg
+            Pkg.activate("target/julia-docs")
+            Pkg.develop([
+              PackageSpec(path="../vinary-tree-interop/bindings/julia/VinaryTreeInterop"),
+              PackageSpec(path="bindings/julia/Liblevenshtein"),
+            ])
+            Pkg.add(PackageSpec(name="Documenter", version="1"))
+            include("bindings/julia/Liblevenshtein/docs/make.jl")
+          '
+
+  raku-bindings:
+    name: Raku fuzzy-search facade
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          coordinated-ref: ${{ github.head_ref || github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Raku/setup-raku@b8b1a4ebe85ef112edfc65e9edc8c57735367e3f  # v1
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --locked --features native-bindings-full
+      - run: cargo build --locked --manifest-path ../libdictenstein/Cargo.toml --features ffi
+      - name: Install the shared ABI and dictionary providers
+        run: |
+          zef install --/test ../vinary-tree-interop/bindings/raku
+          zef install --/test ../libdictenstein/bindings/raku
+      - name: Test the fresh pure-Raku distribution
+        env:
+          LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
+        # This distribution has no native build phase: Cargo produced the
+        # shared library above and the Raku package is a NativeCall facade.
+        # Calling `zef build` without META6 `builder` metadata or a legacy
+        # Build.rakumod is an error, not a useful package validation.
+        run: zef test ./bindings/raku
+      - name: Compile the public Raku Pod
+        run: raku --doc=Text bindings/raku/docs/Liblevenshtein.rakudoc >/dev/null
+
   javascript-bindings:
     name: Node ${{ matrix.node-version }} facade
     runs-on: ubuntu-24.04

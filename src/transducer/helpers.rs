@@ -37,6 +37,8 @@
 /// # Use Case: Code Completion with Hierarchical Scopes
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use libdictenstein::pathmap::PathMapDictionary;
 /// use liblevenshtein::transducer::helpers::sorted_vec_intersection;
 /// use liblevenshtein::transducer::{Algorithm, Transducer};
@@ -62,6 +64,7 @@
 ///
 /// results.sort();
 /// assert_eq!(results, ["halper", "helper", "helper2"]);
+/// # }
 /// ```
 #[inline]
 pub fn sorted_vec_intersection(a: &[u32], b: &[u32]) -> bool {
@@ -139,6 +142,8 @@ pub fn sorted_vec_intersection(a: &[u32], b: &[u32]) -> bool {
 /// # Use Case: Fast Code Completion (≤64 scopes)
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// use libdictenstein::pathmap::PathMapDictionary;
 /// use liblevenshtein::transducer::helpers::bitmask_intersection;
 /// use liblevenshtein::transducer::{Algorithm, Transducer};
@@ -164,6 +169,7 @@ pub fn sorted_vec_intersection(a: &[u32], b: &[u32]) -> bool {
 ///
 /// results.sort();
 /// assert_eq!(results, ["halper", "helper", "helper2"]);
+/// # }
 /// ```
 #[inline(always)]
 pub fn bitmask_intersection(mask_a: u64, mask_b: u64) -> bool {

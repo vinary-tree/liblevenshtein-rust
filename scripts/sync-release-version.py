@@ -31,6 +31,7 @@ def derived(canonical: str, lua_rocks_revision: int = 1) -> dict[str, str]:
         "fpm": base,
         "goTag": f"v{canonical}",
         "hackage": base,
+        "julia": canonical,
         "luaRocks": f"{base}rc{candidate}-{lua_rocks_revision}",
         "maven": canonical,
         "npm": canonical,
@@ -40,6 +41,7 @@ def derived(canonical: str, lua_rocks_revision: int = 1) -> dict[str, str]:
         "pypi": f"{base}rc{candidate}",
         "rubygems": f"{base}.rc.{candidate}",
         "swiftTag": canonical,
+        "zef": canonical,
     }
 
 

@@ -16,8 +16,10 @@ extern "C" {
 #define VT_DICTIONARY_ENTRIES_INTERFACE_VERSION 1u
 #define VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION 1u
 #define VT_WFST_INTERFACE_VERSION 1u
+#define VT_LATTICE_INTERFACE_VERSION 1u
 #define VT_RECOMMENDED_EDGE_BATCH 256u
 #define VT_RECOMMENDED_ARC_BATCH 256u
+#define VT_RECOMMENDED_LATTICE_BATCH 256u
 
 #define VT_DICTIONARY_FLAG_PARALLEL_REENTRANT UINT64_C(1)
 #define VT_DICTIONARY_FLAG_SUFFIX_BASED UINT64_C(2)
@@ -300,6 +302,41 @@ typedef struct VtWfstVTable {
                            size_t* out_written, size_t* out_total);
 } VtWfstVTable;
 
+#define VT_LATTICE_FLAG_THREAD_BOUND UINT64_C(1)
+#define VT_LATTICE_FLAG_PARALLEL_REENTRANT UINT64_C(2)
+#define VT_LATTICE_FLAG_STABLE_BYTES UINT64_C(4)
+#define VT_LATTICE_FLAG_BATCH UINT64_C(8)
+
+/*
+ * One immutable lattice value. Binary operations accept only resources whose
+ * VtLatticeVTable has the same domain_id. Every successful operation writes
+ * one new owned VtResource. join_many/meet_many are associative left folds;
+ * an empty operand array returns an independent retain of the receiver.
+ */
+typedef struct VtLatticeVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    uint64_t flags;
+    VtInterfaceId domain_id;
+    VtStatus (*join)(void* context, const VtResource* other,
+                     VtResource* out_value);
+    VtStatus (*meet)(void* context, const VtResource* other,
+                     VtResource* out_value);
+    VtStatus (*equal)(void* context, const VtResource* other,
+                      uint8_t* out_equal);
+    VtStatus (*stable_bytes)(void* context, uint8_t* out_bytes,
+                             size_t capacity, size_t* out_written,
+                             size_t* out_required);
+    VtStatus (*diagnostic)(void* context, uint8_t* out_bytes,
+                           size_t capacity, size_t* out_written,
+                           size_t* out_required);
+    VtStatus (*join_many)(void* context, const VtResource* others,
+                          size_t count, VtResource* out_value);
+    VtStatus (*meet_many)(void* context, const VtResource* others,
+                          size_t count, VtResource* out_value);
+} VtLatticeVTable;
+
 static const VtInterfaceId VT_DICTIONARY_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','i','o','n','a','r','y','.','v','1' }
 };
@@ -322,6 +359,10 @@ static const VtInterfaceId VT_SNAPSHOT_IDENTITY_INTERFACE_ID = {
 
 static const VtInterfaceId VT_WFST_INTERFACE_ID = {
     { 'v','t','.','s','c','a','l','a','r','-','w','f','s','t','.','1' }
+};
+
+static const VtInterfaceId VT_LATTICE_INTERFACE_ID = {
+    { 'v','t','.','l','a','t','t','i','c','e','.','v','a','l','.','1' }
 };
 
 #ifdef __cplusplus

@@ -29,6 +29,8 @@ use std::collections::VecDeque;
 /// # Examples
 ///
 /// ```rust
+/// # #[cfg(feature = "pathmap-backend")]
+/// # {
 /// # // Note: This example requires the 'pathmap-backend' feature
 /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
 /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -51,6 +53,7 @@ use std::collections::VecDeque;
 /// let results: Vec<_> = iter.collect();
 /// assert!(results.iter().any(|c| c.term == "cat"));
 /// assert!(results.iter().any(|c| c.term == "car"));
+/// # }
 /// ```
 pub struct ZipperQueryIterator<D>
 where
@@ -82,6 +85,8 @@ where
     /// # Examples
     ///
     /// ```rust
+    /// # #[cfg(feature = "pathmap-backend")]
+    /// # {
     /// # // Note: This example requires the 'pathmap-backend' feature
     /// use liblevenshtein::dictionary::pathmap::PathMapDictionary;
     /// use liblevenshtein::dictionary::pathmap_zipper::PathMapZipper;
@@ -101,6 +106,7 @@ where
     /// let results: Vec<_> = iter.collect();
     /// assert_eq!(results.len(), 1);
     /// assert_eq!(results[0].term, "test");
+    /// # }
     /// ```
     pub fn new(dict_zipper: D, query: &str, max_distance: usize, algorithm: Algorithm) -> Self {
         let automaton = AutomatonZipper::new(query.as_bytes(), max_distance, algorithm);

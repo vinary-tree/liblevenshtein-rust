@@ -53,6 +53,8 @@
 //! ## Basic Usage
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::Lru;
@@ -67,6 +69,7 @@
 //!
 //! // Find least recently used entry
 //! let lru_term = lru.find_lru(&["hello", "world"]);
+//! # }
 //! ```
 //!
 //! ## Composing Wrappers
@@ -74,6 +77,8 @@
 //! Wrappers can be composed to combine multiple eviction strategies:
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::{Lru, Ttl};
@@ -89,11 +94,14 @@
 //! let lru = Lru::new(ttl);
 //!
 //! assert_eq!(lru.get_value("foo"), Some(42));
+//! # }
 //! ```
 //!
 //! ## Memory-Aware Caching
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::MemoryPressure;
@@ -111,11 +119,14 @@
 //!
 //! // Find entry with highest memory pressure
 //! let high_pressure = memory.find_highest_pressure(&["large_data", "small_data"]);
+//! # }
 //! ```
 //!
 //! ## Cost-Based Eviction
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::CostAware;
@@ -137,11 +148,14 @@
 //!     "old_rarely_used",
 //!     "new_frequently_used"
 //! ]);
+//! # }
 //! ```
 //!
 //! ## Lazy Initialization
 //!
 //! ```rust
+//! # #[cfg(feature = "pathmap-backend")]
+//! # {
 //! use liblevenshtein::prelude::*;
 //! use liblevenshtein::dictionary::MappedDictionary;
 //! use liblevenshtein::cache::eviction::LazyInit;
@@ -158,6 +172,7 @@
 //!
 //! // Access existing value
 //! assert_eq!(lazy.get_value("lazy_value"), Some(42));
+//! # }
 //! ```
 //!
 //! # Use Cases

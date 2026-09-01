@@ -47,6 +47,7 @@ REGISTRY_SPELLINGS = {
     "fpm": BASE,
     "goTag": f"v{EXPECTED}",
     "hackage": BASE,
+    "julia": EXPECTED,
     "maven": EXPECTED,
     "npm": EXPECTED,
     "nuget": EXPECTED,
@@ -55,6 +56,7 @@ REGISTRY_SPELLINGS = {
     "pypi": f"{BASE}rc{CANDIDATE}",
     "rubygems": f"{BASE}.rc.{CANDIDATE}",
     "swiftTag": EXPECTED,
+    "zef": EXPECTED,
 }
 
 NPM_PACKAGES = {
