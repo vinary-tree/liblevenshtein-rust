@@ -17,8 +17,9 @@ silently disappear behind a broad claim such as â€œcustom providers supported.â€
 
 ## Terms and scope
 
-A **host** is the process or runtime supplying callbacks, such as a JVM, Julia,
-Raku, CPython, or native C application. A **provider** is a host-owned
+A **host** is the process or runtime supplying callbacks, such as .NET, the
+Java Virtual Machine (JVM), Julia, Raku, CPython, or a native C application. A
+**provider** is a host-owned
 implementation made available through a negotiated `VtResource` capability.
 An **adapter** validates that capability and presents it to a Rust algorithm.
 A **facade** is the target-language API that owns callbacks and resources using
@@ -107,12 +108,14 @@ The shared interop header currently supplies three relevant foundations:
 The current WFST table carries `double` arc weights. It completely represents
 the deliberately scalar `ScalarWfstProvider`, but only a scalar-weight
 specialization of the generic Rust `Wfst`, `LazyWfst`, and `StateSource`
-traits. Their C, C++, Julia, and Raku rows are consequently `partial`, not
-`complete`. C++ does have an idiomatic C++20 provider facade for that scalar
-WFST specialization as well as the generic semiring capability; small
-semiring values use allocation-free inline tokens, and resource ownership is
-mutex-free. General semiring-valued WFSTs still require a future weight-domain
-capability rather than an inflated claim about the scalar table.
+traits. Their C, C++, C#, F#, Julia, and Raku rows are consequently `partial`,
+not `complete`. C++ and .NET have idiomatic provider facades for that scalar
+WFST specialization as well as the generic semiring capability. Small C++ and
+.NET semiring values use allocation-free inline tokens, while provider
+resource ownership is mutex-free. C# exposes ordinary interfaces and
+`IDisposable`; F# implements those interfaces directly and uses `use` scopes.
+General semiring-valued WFSTs still require a future weight-domain capability
+rather than an inflated claim about the scalar table.
 
 ![The consumer queries an exact interface identity, validates its version and size, and either admits the capability or releases the retained resource.](../diagrams/bindings/interface-negotiation-activity.svg)
 

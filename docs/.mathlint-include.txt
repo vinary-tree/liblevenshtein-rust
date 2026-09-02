@@ -305,3 +305,5 @@ docs/design/lazy-online-products.md
 docs/design/approximate-msm-evidence.md
 docs/security/binding-trust-model.md
 docs/bindings/PERFORMANCE_EXPERIMENTS.md
+docs/bindings/host-extension-trait-governance.md
+docs/bindings/query-cache.md

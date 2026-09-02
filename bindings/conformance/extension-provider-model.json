@@ -108,6 +108,20 @@
           {"project": "vinary-tree-interop", "path": "tests/cpp/providers.cpp"}
         ]
       },
+      "csharp": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/SemiringProviders.cs"},
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.ProviderTests/Program.cs"}
+        ]
+      },
+      "fsharp": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/SemiringProviders.cs"},
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.FSharpProviders/Program.fs"}
+        ]
+      },
       "raku": {
         "status": "complete",
         "evidence": [
@@ -129,6 +143,20 @@
         "evidence": [
           {"project": "vinary-tree-interop", "path": "include/vinary_tree/interop.hpp"},
           {"project": "vinary-tree-interop", "path": "tests/cpp/providers.cpp"}
+        ]
+      },
+      "csharp": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/ScalarWfstProviders.cs"},
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.ProviderTests/Program.cs"}
+        ]
+      },
+      "fsharp": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/ScalarWfstProviders.cs"},
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.FSharpProviders/Program.fs"}
         ]
       },
       "raku": {
@@ -153,6 +181,22 @@
         "evidence": [
           {"project": "vinary-tree-interop", "path": "include/vinary_tree/interop.hpp"},
           {"project": "vinary-tree-interop", "path": "tests/cpp/providers.cpp"}
+        ]
+      },
+      "csharp": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/ScalarWfstProviders.cs"},
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.ProviderTests/Program.cs"}
+        ]
+      },
+      "fsharp": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/ScalarWfstProviders.cs"},
+          {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.FSharpProviders/Program.fs"}
         ]
       },
       "raku": {
@@ -188,6 +232,20 @@
           "evidence": [
             {"project": "vinary-tree-interop", "path": "include/vinary_tree/interop.hpp"},
             {"project": "vinary-tree-interop", "path": "tests/cpp/providers.cpp"}
+          ]
+        },
+        "csharp": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/LatticeProviders.cs"},
+            {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.ProviderTests/Program.cs"}
+          ]
+        },
+        "fsharp": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/LatticeProviders.cs"},
+            {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.FSharpProviders/Program.fs"}
           ]
         },
         "raku": {
