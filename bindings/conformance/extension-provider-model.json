@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "projects": {
+    "llattice": {
+      "root": "../llattice",
+      "rootEnvironment": "LLATTICE_ROOT"
+    },
+    "lling-llang": {
+      "root": "../lling-llang",
+      "rootEnvironment": "LLING_LLANG_ROOT"
+    }
+  },
+  "evidenceProjects": {
+    "vinary-tree-interop": {
+      "root": "../vinary-tree-interop",
+      "rootEnvironment": "VINARY_TREE_INTEROP_ROOT"
+    }
+  },
+  "classifications": {
+    "direct-capability-vtable": [
+      "llattice:src/lib.rs:Lattice",
+      "lling-llang:src/semiring/signed/signed_tropical.rs:FallibleStarSemiring",
+      "lling-llang:src/semiring/traits.rs:DivisibleSemiring",
+      "lling-llang:src/semiring/traits.rs:KClosedSemiring",
+      "lling-llang:src/semiring/traits.rs:NumericalWeight",
+      "lling-llang:src/semiring/traits.rs:QuantizableSemiring",
+      "lling-llang:src/semiring/traits.rs:Semiring",
+      "lling-llang:src/semiring/traits.rs:StarSemiring",
+      "lling-llang:src/semiring/traits.rs:StochasticSemiring",
+      "lling-llang:src/semiring/traits.rs:TotallyOrderedSemiring",
+      "lling-llang:src/semiring/traits.rs:WeaklyLeftDivisibleSemiring"
+    ],
+    "resource-cursor-protocol": [
+      "lling-llang:src/backend/pathmap.rs:PathMapSharingBackend",
+      "lling-llang:src/backend/traits.rs:LatticeBackend",
+      "lling-llang:src/backend/traits.rs:SharingBackend",
+      "lling-llang:src/bindings.rs:ScalarWfstProvider",
+      "lling-llang:src/layers/filtering/edit_distance.rs:Dictionary",
+      "lling-llang:src/multitape/traits.rs:MultiTapeWfst",
+      "lling-llang:src/programming/traits.rs:SyntaxNodeRef",
+      "lling-llang:src/pushdown/traits.rs:WeightedPda",
+      "lling-llang:src/tree_transducers/transducer.rs:WeightedTreeTransducer",
+      "lling-llang:src/wfst/lazy.rs:StateSource",
+      "lling-llang:src/wfst/traits.rs:LazyWfst",
+      "lling-llang:src/wfst/traits.rs:Wfst"
+    ],
+    "bounded-batch-protocol": [
+      "lling-llang:src/wfst/traits.rs:MutableWfst"
+    ],
+    "high-level-operation-interface": [
+      "lling-llang:src/acoustic/mod.rs:AcousticModel",
+      "lling-llang:src/algorithms/queue.rs:ShortestDistanceQueue",
+      "lling-llang:src/differentiable/layers.rs:WfstConvLabel",
+      "lling-llang:src/layers/latex/repair.rs:RepairStrategy",
+      "lling-llang:src/layers/rescoring/lm_rerank.rs:LanguageModel",
+      "lling-llang:src/layers/rescoring/phonetic_rescore.rs:PhoneticReference",
+      "lling-llang:src/layers/syntactic/mettail_type.rs:TypeChecker",
+      "lling-llang:src/layers/syntactic/pos_tagging.rs:PosModel",
+      "lling-llang:src/layers/traits.rs:CorrectionLayer",
+      "lling-llang:src/llm/mod.rs:ConstrainedDecoder",
+      "lling-llang:src/multilingual/language.rs:LanguageModel",
+      "lling-llang:src/programming/traits.rs:ParserBackend",
+      "lling-llang:src/symbolic/algebra_tower.rs:HeytingAlgebra",
+      "lling-llang:src/symbolic/algebra_tower.rs:RejectSafeAlgebra",
+      "lling-llang:src/symbolic/behavioral_algebra.rs:HostTerm",
+      "lling-llang:src/symbolic/collection_algebra.rs:Singleton",
+      "lling-llang:src/symbolic/logict.rs:ConstraintTheory",
+      "lling-llang:src/symbolic/ordered_field.rs:OrderedPoint",
+      "lling-llang:src/symbolic/sfa.rs:BooleanAlgebra",
+      "lling-llang:src/transducer/traits.rs:AcousticEncoder",
+      "lling-llang:src/transducer/traits.rs:AutoregressivePredictor",
+      "lling-llang:src/transducer/traits.rs:JointNetwork",
+      "lling-llang:src/transducer/traits.rs:NeuralTransducer",
+      "lling-llang:src/tree_transducers/alphabet.rs:RankedAlphabet"
+    ],
+    "declared-law-marker": [
+      "lling-llang:src/semiring/traits.rs:CommutativeTimesSemiring",
+      "lling-llang:src/semiring/traits.rs:HashableSemiring",
+      "lling-llang:src/semiring/traits.rs:IdempotentSemiring",
+      "lling-llang:src/semiring/traits.rs:NonnegativeSemiring",
+      "lling-llang:src/semiring/traits.rs:ZeroSumFreeSemiring"
+    ],
+    "derived-adapter": [
+      "lling-llang:src/lattice/iterator.rs:LatticePathExt",
+      "lling-llang:src/lattice_bridge.rs:SemiringLattice",
+      "lling-llang:src/multitape/traits.rs:MultiTapeWfstOps",
+      "lling-llang:src/tree_transducers/transducer.rs:TreeTransducerOps"
+    ],
+    "reviewed-rust-only-proof": [
+      "lling-llang:src/dynamic_lattice.rs:LatticeAccess",
+      "lling-llang:src/dynamic_lattice.rs:Sealed",
+      "lling-llang:src/dynamic_semiring.rs:Sealed",
+      "lling-llang:src/dynamic_semiring.rs:SemiringAccess"
+    ]
+  },
+  "rustOnlyProofs": {
+    "lling-llang:src/dynamic_lattice.rs:LatticeAccess": "docs/bindings/host-extension-trait-governance.md#sealed-dynamic-adapter-markers",
+    "lling-llang:src/dynamic_lattice.rs:Sealed": "docs/bindings/host-extension-trait-governance.md#sealed-dynamic-adapter-markers",
+    "lling-llang:src/dynamic_semiring.rs:Sealed": "docs/bindings/host-extension-trait-governance.md#sealed-dynamic-adapter-markers",
+    "lling-llang:src/dynamic_semiring.rs:SemiringAccess": "docs/bindings/host-extension-trait-governance.md#sealed-dynamic-adapter-markers"
+  },
+  "languageProfiles": {
+    "lling-semiring-hosts": {
+      "raku": {
+        "status": "complete",
+        "evidence": [
+          {"project": "lling-llang", "path": "bindings/raku/lib/Lling/Llang.rakumod"},
+          {"project": "lling-llang", "path": "bindings/raku/t/01-conformance.rakutest"}
+        ]
+      },
+      "julia": {
+        "status": "complete",
+        "evidence": [
+          {"project": "lling-llang", "path": "bindings/julia/LlingLlang/src/LlingLlang.jl"},
+          {"project": "lling-llang", "path": "bindings/julia/LlingLlang/test/runtests.jl"}
+        ]
+      }
+    },
+    "lling-scalar-wfst-hosts": {
+      "raku": {
+        "status": "complete",
+        "evidence": [
+          {"project": "lling-llang", "path": "bindings/raku/lib/Lling/Llang.rakumod"},
+          {"project": "lling-llang", "path": "bindings/raku/t/01-conformance.rakutest"}
+        ]
+      },
+      "julia": {
+        "status": "complete",
+        "evidence": [
+          {"project": "lling-llang", "path": "bindings/julia/LlingLlang/src/LlingLlang.jl"},
+          {"project": "lling-llang", "path": "bindings/julia/LlingLlang/test/runtests.jl"}
+        ]
+      }
+    },
+    "lling-generic-wfst-hosts": {
+      "raku": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "lling-llang", "path": "bindings/raku/lib/Lling/Llang.rakumod"},
+          {"project": "lling-llang", "path": "bindings/raku/t/01-conformance.rakutest"}
+        ]
+      },
+      "julia": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "lling-llang", "path": "bindings/julia/LlingLlang/src/LlingLlang.jl"},
+          {"project": "lling-llang", "path": "bindings/julia/LlingLlang/test/runtests.jl"}
+        ]
+      }
+    }
+  },
+  "implementations": {
+    "llattice:src/lib.rs:Lattice": {
+      "abiCapabilities": ["VtLatticeVTable"],
+      "languages": {
+        "c": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}
+          ]
+        },
+        "cpp": {
+          "status": "abi-available",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}
+          ]
+        },
+        "raku": {
+          "status": "complete",
+          "evidence": [
+            {"project": "llattice", "path": "bindings/raku/lib/LLattice.rakumod"},
+            {"project": "llattice", "path": "bindings/raku/t/02-provider-shim.rakutest"}
+          ]
+        },
+        "julia": {
+          "status": "complete",
+          "evidence": [
+            {"project": "llattice", "path": "bindings/julia/LLattice/src/LLattice.jl"},
+            {"project": "llattice", "path": "bindings/julia/LLattice/test/runtests.jl"}
+          ]
+        }
+      }
+    },
+    "lling-llang:src/bindings.rs:ScalarWfstProvider": {
+      "abiCapabilities": ["VtWfstVTable"],
+      "profiles": ["lling-scalar-wfst-hosts"],
+      "languages": {
+        "c": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"},
+            {"project": "lling-llang", "path": "src/bindings.rs"}
+          ]
+        },
+        "cpp": {
+          "status": "abi-available",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}
+          ]
+        }
+      }
+    },
+    "lling-llang:src/semiring/signed/signed_tropical.rs:FallibleStarSemiring": {
+      "abiCapabilities": ["VtSemiringStarVTable"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:DivisibleSemiring": {
+      "abiCapabilities": ["VtSemiringDivisionVTable"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:CommutativeTimesSemiring": {
+      "abiCapabilities": ["VT_SEMIRING_PROPERTY_COMMUTATIVE_TIMES"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:HashableSemiring": {
+      "abiCapabilities": ["VtSemiringVTable.stable_bytes", "VT_SEMIRING_PROPERTY_HASHABLE"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:IdempotentSemiring": {
+      "abiCapabilities": ["VT_SEMIRING_PROPERTY_IDEMPOTENT_PLUS"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:KClosedSemiring": {
+      "abiCapabilities": ["VtSemiringPropertiesVTable.closure_bound"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:NumericalWeight": {
+      "abiCapabilities": ["VtSemiringNumericVTable.numerical_value"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:NonnegativeSemiring": {
+      "abiCapabilities": ["VT_SEMIRING_PROPERTY_NONNEGATIVE"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:QuantizableSemiring": {
+      "abiCapabilities": ["VtSemiringNumericVTable.quantize"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:Semiring": {
+      "abiCapabilities": ["VtSemiringVTable"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"},
+            {"project": "lling-llang", "path": "src/bindings.rs"}
+          ]
+        },
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:StarSemiring": {
+      "abiCapabilities": ["VtSemiringStarVTable"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:StochasticSemiring": {
+      "abiCapabilities": ["VtSemiringNumericVTable.to_probability"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:TotallyOrderedSemiring": {
+      "abiCapabilities": ["VtSemiringVTable.natural_order", "VT_SEMIRING_PROPERTY_TOTALLY_ORDERED"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:WeaklyLeftDivisibleSemiring": {
+      "abiCapabilities": ["VtSemiringDivisionVTable.left_divide"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/semiring/traits.rs:ZeroSumFreeSemiring": {
+      "abiCapabilities": ["VT_SEMIRING_PROPERTY_ZERO_SUM_FREE"],
+      "profiles": ["lling-semiring-hosts"],
+      "languages": {
+        "c": {"status": "complete", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/wfst/lazy.rs:StateSource": {
+      "abiCapabilities": ["VtWfstVTable.state_info", "VtWfstVTable.state_arcs"],
+      "profiles": ["lling-generic-wfst-hosts"],
+      "languages": {
+        "c": {"status": "partial", "scope": "scalar-double-weight-specialization-only", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "scope": "raw-c-abi-and-scalar-double-weight-specialization-only", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/wfst/traits.rs:LazyWfst": {
+      "abiCapabilities": ["VtWfstVTable", "VT_WFST_FLAG_LAZY"],
+      "profiles": ["lling-generic-wfst-hosts"],
+      "languages": {
+        "c": {"status": "partial", "scope": "scalar-double-weight-specialization-only", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "scope": "raw-c-abi-and-scalar-double-weight-specialization-only", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    },
+    "lling-llang:src/wfst/traits.rs:Wfst": {
+      "abiCapabilities": ["VtWfstVTable"],
+      "profiles": ["lling-generic-wfst-hosts"],
+      "languages": {
+        "c": {"status": "partial", "scope": "scalar-double-weight-specialization-only", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]},
+        "cpp": {"status": "abi-available", "scope": "raw-c-abi-and-scalar-double-weight-specialization-only", "evidence": [{"project": "vinary-tree-interop", "path": "include/vinary_tree_interop.h"}]}
+      }
+    }
+  }
+}

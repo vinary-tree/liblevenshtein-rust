@@ -105,6 +105,15 @@ subprocess.run(
     cwd=ROOT,
     check=True,
 )
+subprocess.run(
+    [
+        sys.executable,
+        str(ROOT / "scripts" / "generate-extension-provider-matrix.py"),
+        "--check",
+    ],
+    cwd=ROOT,
+    check=True,
+)
 
 organization = MODEL["organization"]
 interop = MODEL["interop"]
