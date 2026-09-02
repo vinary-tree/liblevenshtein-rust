@@ -12,6 +12,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_MODEL = json.loads((ROOT / "release/version.json").read_text(encoding="utf-8"))
+DESCRIPTION_MODEL_PATH = ROOT / "release/package-descriptions.json"
+DESCRIPTION_MODEL = json.loads(DESCRIPTION_MODEL_PATH.read_text(encoding="utf-8"))
 EXPECTED = str(ROOT_MODEL.get("canonical", ""))
 VERSION_MATCH = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)-rc\.(\d+)", EXPECTED)
 if VERSION_MATCH is None:
@@ -39,6 +41,7 @@ COMPONENTS = {
         "LIBLEVENSHTEIN_NPM_ROOT", "liblevenshtein-npm"
     ),
 }
+LLATTICE_ROOT = sibling("LLATTICE_ROOT", "llattice")
 
 REGISTRY_SPELLINGS = {
     "cargo": EXPECTED,
@@ -105,6 +108,49 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
+def load_descriptions() -> dict[str, dict[str, str]]:
+    if DESCRIPTION_MODEL.get("schemaVersion") != 1:
+        fail("package description manifest has an unsupported schema")
+    maximum = DESCRIPTION_MODEL.get("summaryMaximumCharacters")
+    if not isinstance(maximum, int) or maximum < 40:
+        fail("package description summary limit must be an integer of at least 40")
+    raw = DESCRIPTION_MODEL.get("components")
+    if not isinstance(raw, dict):
+        fail("package description manifest has no components object")
+    expected_components = set(COMPONENTS) | {"liblevenshtein-macros", "llattice"}
+    if set(raw) != expected_components:
+        missing = sorted(expected_components - set(raw))
+        unexpected = sorted(set(raw) - expected_components)
+        fail(
+            "package description component set differs: "
+            f"missing={missing}, unexpected={unexpected}"
+        )
+    descriptions: dict[str, dict[str, str]] = {}
+    for component, metadata in raw.items():
+        if not isinstance(metadata, dict):
+            fail(f"{component}: package description entry is not an object")
+        summary = metadata.get("summary")
+        description = metadata.get("description")
+        if not isinstance(summary, str) or not summary.strip():
+            fail(f"{component}: canonical package summary is empty")
+        if len(summary) > maximum:
+            fail(
+                f"{component}: canonical package summary has {len(summary)} characters; "
+                f"the limit is {maximum}"
+            )
+        if summary.endswith("."):
+            fail(f"{component}: canonical package summary must not end in a period")
+        if not isinstance(description, str) or not description.strip():
+            fail(f"{component}: canonical package description is empty")
+        if not description.endswith("."):
+            fail(f"{component}: canonical package description must end in a period")
+        descriptions[component] = {
+            "summary": summary,
+            "description": description,
+        }
+    return descriptions
+
+
 def load(component: str, root: Path) -> dict:
     path = root / "release/version.json"
     if not path.is_file():
@@ -161,7 +207,15 @@ def reject_deprecated_coordinates(component: str, root: Path) -> None:
                 fail(f"{component}: deprecated npm coordinate remains in {relative}")
 
 
+descriptions = load_descriptions()
 manifests = {name: load(name, root) for name, root in COMPONENTS.items()}
+
+for component, manifest in manifests.items():
+    if manifest.get("metadata") != descriptions[component]:
+        fail(
+            f"{component}: release metadata differs from "
+            f"{DESCRIPTION_MODEL_PATH.relative_to(ROOT)}"
+        )
 
 for component, component_root in COMPONENTS.items():
     reject_deprecated_coordinates(component, component_root)
@@ -213,6 +267,18 @@ for component, manifest in manifests.items():
 
     registries = manifest.get("registries")
     if registries is not None:
+        required_package_registries = set()
+        component_root = COMPONENTS[component]
+        if any(component_root.glob("bindings/julia/*/Project.toml")):
+            required_package_registries.add("julia")
+        if (component_root / "bindings/raku/META6.json").is_file():
+            required_package_registries.add("zef")
+        missing_registries = required_package_registries - set(registries)
+        if missing_registries:
+            fail(
+                f"{component}: release model omits supported registries "
+                f"{sorted(missing_registries)}"
+            )
         for registry, version in registries.items():
             expected = (
                 f"{BASE}rc{CANDIDATE}-{lua_rocks_revision}"
@@ -251,6 +317,8 @@ for component, manifest in manifests.items():
         fail(f"{component}: npm package name is {package.get('name')!r}")
     if package.get("version") != EXPECTED:
         fail(f"{component}: npm package version is {package.get('version')!r}")
+    if package.get("description") != descriptions[component]["description"]:
+        fail(f"{component}: npm description differs from canonical metadata")
     publish_config = package.get("publishConfig", {})
     if publish_config.get("access") != "public":
         fail(f"{component}: npm package must publish with public access")
@@ -288,8 +356,31 @@ for component in ("lling-llang", "duallity"):
     if dependencies.get("vinary-tree-interop") != EXPECTED:
         fail(f"{component}: standalone interop dependency is not exact")
 
+macro_manifest = (ROOT / "liblevenshtein-macros/Cargo.toml").read_text(encoding="utf-8")
+macro_description = re.search(
+    r'^description = "([^"]+)"$', macro_manifest, flags=re.MULTILINE
+)
+if (macro_description.group(1) if macro_description else None) != descriptions[
+    "liblevenshtein-macros"
+]["description"]:
+    fail("liblevenshtein-macros: Cargo description differs from canonical metadata")
+
+llattice_manifest = (LLATTICE_ROOT / "Cargo.toml").read_text(encoding="utf-8")
+llattice_description = re.search(
+    r'^description = "([^"]+)"$', llattice_manifest, flags=re.MULTILINE
+)
+if (llattice_description.group(1) if llattice_description else None) != descriptions[
+    "llattice"
+]["description"]:
+    fail("llattice: Cargo description differs from canonical metadata")
+llattice_raku = json.loads(
+    (LLATTICE_ROOT / "bindings/raku/META6.json").read_text(encoding="utf-8")
+)
+if llattice_raku.get("description") != descriptions["llattice"]["description"]:
+    fail("llattice: Raku description differs from canonical metadata")
+
 print(
     f"release train is coherent: 7 standalone owners, exact {EXPECTED} edges, "
-    "all local version surfaces valid, npm next, Hackage/fpm embargoed, "
-    "legacy latest protected"
+    "all local version surfaces valid, canonical descriptions aligned, npm next, "
+    "Hackage/fpm embargoed, legacy latest protected"
 )

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "summaryMaximumCharacters": 80,
+  "components": {
+    "liblevenshtein": {
+      "summary": "Fast spelling correction and fuzzy search with Levenshtein automata",
+      "description": "A high-performance library for spelling correction, fuzzy dictionary search, and phonetic matching using Levenshtein and related finite-state automata."
+    },
+    "liblevenshtein-macros": {
+      "summary": "Compile regular expressions into liblevenshtein automata at build time",
+      "description": "Compile regular expressions into liblevenshtein NFAs at build time, with generated transitions and diagnostics checked before runtime."
+    },
+    "libdictenstein": {
+      "summary": "High-performance dictionaries and trie-maps for approximate string matching",
+      "description": "High-performance dictionaries and trie-maps for approximate string matching."
+    },
+    "lling-llang": {
+      "summary": "Build and compose weighted automata for speech, text, and language processing",
+      "description": "Build, compose, optimize, and run semiring-generic weighted automata for speech recognition, text processing, and constrained generation."
+    },
+    "duallity": {
+      "summary": "Compose fuzzy dictionary search with phonetics, grammars, and language models",
+      "description": "Turn fuzzy dictionary queries into lazy weighted transducers that compose with phonetic rewrites, grammars, language models, and custom lling-llang pipelines."
+    },
+    "vinary-tree-interop": {
+      "summary": "Share live dictionaries and weighted automata safely across languages",
+      "description": "A stable, dependency-free resource ABI for sharing live dictionaries, weighted automata, and host-defined algebra safely across Vinary Tree libraries and languages."
+    },
+    "llattice": {
+      "summary": "Lawful lattice algebra for composable native and host-language systems",
+      "description": "A dependency-free Rust lattice trait with lawful built-ins and host-language provider adapters for shared join and meet semantics."
+    },
+    "javascript-runtime": {
+      "summary": "One runtime for Vinary Tree dictionaries and automata on Node, WASM, and WASI",
+      "description": "A single-instance native, WebAssembly, and WASI runtime that lets Vinary Tree JavaScript packages safely share live dictionaries and weighted automata."
+    },
+    "liblevenshtein-npm-compatibility": {
+      "summary": "Fast Rust-powered spelling correction and fuzzy search for JavaScript",
+      "description": "The Rust-powered liblevenshtein JavaScript facade for fast spelling correction and fuzzy search across Node, WebAssembly, and WASI."
+    }
+  }
+}

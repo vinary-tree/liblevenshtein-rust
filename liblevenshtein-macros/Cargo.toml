@@ -6,7 +6,7 @@ rust-version = "1.70"
 authors = ["Dylon Edwards <dylon.devo@gmail.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/vinary-tree/liblevenshtein-rust"
-description = "Compile-time regex NFA generation macros for liblevenshtein"
+description = "Compile regular expressions into liblevenshtein NFAs at build time, with generated transitions and diagnostics checked before runtime."
 keywords = ["levenshtein", "regex", "nfa", "compile-time", "proc-macro"]
 categories = ["development-tools::procedural-macro-helpers"]
 
