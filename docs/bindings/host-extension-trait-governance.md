@@ -107,10 +107,12 @@ The shared interop header currently supplies three relevant foundations:
 The current WFST table carries `double` arc weights. It completely represents
 the deliberately scalar `ScalarWfstProvider`, but only a scalar-weight
 specialization of the generic Rust `Wfst`, `LazyWfst`, and `StateSource`
-traits. Their C, Julia, and Raku rows are consequently `partial`, not
-`complete`; C++ remains `abi-available` because it additionally lacks an
-idiomatic provider facade. General semiring-valued WFSTs require a future
-weight-domain capability rather than an inflated claim about the scalar table.
+traits. Their C, C++, Julia, and Raku rows are consequently `partial`, not
+`complete`. C++ does have an idiomatic C++20 provider facade for that scalar
+WFST specialization as well as the generic semiring capability; small
+semiring values use allocation-free inline tokens, and resource ownership is
+mutex-free. General semiring-valued WFSTs still require a future weight-domain
+capability rather than an inflated claim about the scalar table.
 
 ![The consumer queries an exact interface identity, validates its version and size, and either admits the capability or releases the retained resource.](../diagrams/bindings/interface-negotiation-activity.svg)
 

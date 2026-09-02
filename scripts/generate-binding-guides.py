@@ -755,11 +755,12 @@ def render_interop_root() -> tuple[Path, str]:
     end = "<!-- END GENERATED INTEROP LANGUAGE INDEX -->"
     prefix = existing.split(marker, 1)[0].rstrip()
     rows = [
-        "| C/C++ | Native header and CMake/pkg-config package | This README and `docs/abi-reference.md` |",
+        "| C | Native header and CMake/pkg-config package | This README and `docs/abi-reference.md` |",
+        "| C++20+ | Header-only native facade and CMake/pkg-config package | [`bindings/cpp/README.md`](bindings/cpp/README.md) |",
     ]
     for key, guide in INTEROP_GUIDES.items():
         rows.append(
-            f"| {guide.languages} | `{guide.package}` | [`bindings/{key}/README.md`](bindings/{key}/README.md) |"
+            f"| {guide.languages} | {guide.package} | [`bindings/{key}/README.md`](bindings/{key}/README.md) |"
         )
     block = "\n".join(
         [
