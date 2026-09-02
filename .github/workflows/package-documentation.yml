@@ -43,11 +43,15 @@ jobs:
           package-manager-cache: false
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
-      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32  # v3.0.2
+          python-version: "3.14.7"
+      # setup-julia v3.0.2
+      - uses: >-
+          julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32
         with:
-          version: "1.12"
-      - uses: Raku/setup-raku@b8b1a4ebe85ef112edfc65e9edc8c57735367e3f  # v1
+          version: "1.12.7"
+      # setup-raku v1
+      - uses: >-
+          Raku/setup-raku@b8b1a4ebe85ef112edfc65e9edc8c57735367e3f
       # setup-uv v7.6.0
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:
@@ -63,6 +67,7 @@ jobs:
           set -euo pipefail
           uv sync \
             --project bindings/python \
+            --python 3.14.7 \
             --group documentation \
             --frozen \
             --no-install-project
@@ -70,11 +75,20 @@ jobs:
           echo "$GITHUB_WORKSPACE/bindings/python/.venv/bin" >> "$GITHUB_PATH"
       - name: Build the exact native library
         run: cargo build --locked --features native-bindings-full
+      - name: Verify documentation model and archive contracts
+        run: |
+          python3 scripts/check-package-documentation.py
+          python3 -m unittest discover \
+            -s scripts/tests \
+            -p 'test_*package_documentation*.py'
       - name: Build and verify all generated references
         env:
           LIBLEVENSHTEIN_LIBRARY: >-
             ${{ github.workspace }}/target/debug/libliblevenshtein.so
-        run: python3 scripts/build-package-documentation.py --surface all
+        run: >-
+          python3 scripts/build-package-documentation.py
+          --surface all
+          --verify-reproducible
       - name: Create the deterministic version archive
         run: python3 scripts/package-documentation-site.py build
       - uses: actions/upload-artifact@v7

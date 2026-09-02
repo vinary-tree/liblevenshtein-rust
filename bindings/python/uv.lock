@@ -138,9 +138,10 @@ wheels = [
 
 [[package]]
 name = "liblevenshtein"
-version = "4.0.0rc5"
+version = "4.0.0rc6"
 source = { editable = "." }
 dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "vinary-tree-interop" },
 ]
 
@@ -159,7 +160,8 @@ documentation = [
 requires-dist = [
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
-    { name = "vinary-tree-interop", specifier = "==4.0.0rc5" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'", specifier = ">=4.4" },
+    { name = "vinary-tree-interop", directory = "../../../vinary-tree-interop/bindings/python" },
 ]
 provides-extras = ["test"]
 
@@ -394,9 +396,5 @@ wheels = [
 
 [[package]]
 name = "vinary-tree-interop"
-version = "4.0.0rc5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2a/94/60b65d16f6ed80d12ac5fbf7d003bef3623e72cf47275fbc45c462d8a8e9/vinary_tree_interop-4.0.0rc5.tar.gz", hash = "sha256:e767a46c98d2a8b3f59345d3578a013aae79fb6da1fd800cccd44322f483a826", size = 8114, upload-time = "2026-08-28T02:54:59.23Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/47/cbe49db0eccabfa85be7810864e655ccf115a47d1cabe69f464cd02a2a38/vinary_tree_interop-4.0.0rc5-py3-none-any.whl", hash = "sha256:4ade74232102a53549998a621ac6622625c14da4c0873e86eb979af1188259a1", size = 8723, upload-time = "2026-08-28T02:54:58.194Z" },
-]
+version = "4.0.0rc6"
+source = { directory = "../../../vinary-tree-interop/bindings/python" }

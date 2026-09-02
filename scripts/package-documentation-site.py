@@ -16,6 +16,13 @@ import sys
 import tarfile
 from pathlib import Path, PurePosixPath
 
+try:
+    from scripts.package_documentation_surfaces import GENERATED_SURFACE_LAYOUT
+except ModuleNotFoundError as error:
+    if error.name != "scripts":
+        raise
+    from package_documentation_surfaces import GENERATED_SURFACE_LAYOUT
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERATED_ROOT = ROOT / "target" / "package-documentation"
@@ -24,9 +31,8 @@ ARTIFACT_ROOT = ROOT / "target" / "package-documentation-artifacts"
 SITE_ROOT = ROOT / "target" / "package-documentation-site"
 RELEASE_PATH = ROOT / "release" / "version.json"
 SURFACES = {
-    "native": (GENERATED_ROOT / "native" / "html", "index.html"),
-    "python": (GENERATED_ROOT / "python", "liblevenshtein.html"),
-    "javascript": (GENERATED_ROOT / "javascript", "index.html"),
+    surface: (GENERATED_ROOT / relative, entry_point)
+    for surface, (relative, entry_point) in GENERATED_SURFACE_LAYOUT.items()
 }
 SEMVER_RE = re.compile(
     r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\."
@@ -74,8 +80,7 @@ def require_source_identity(source_ref: str) -> None:
             ],
             cwd=ROOT,
             check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
         if result.returncode != 0:

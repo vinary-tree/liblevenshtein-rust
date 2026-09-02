@@ -6,6 +6,7 @@ makedocs(
     modules=[Liblevenshtein],
     build=get(ENV, "VINARY_TREE_DOC_OUTPUT", "build"),
     format=Documenter.HTML(
+        edit_link=get(ENV, "VINARY_TREE_DOC_SOURCE_REF", "master"),
         repolink="https://github.com/vinary-tree/liblevenshtein-rust",
     ),
     pages=["API and usage" => "index.md"],

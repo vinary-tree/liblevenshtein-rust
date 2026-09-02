@@ -135,14 +135,21 @@ the manifest truthfully contains released `missing` or `build-only` entries.
 
 ## Reproducible references and immutable version history
 
-Three generators feed one versioned site. Doxygen reads the public C and C++
+Five generators feed one versioned site. Doxygen reads the public C and C++
 headers and emits both Hypertext Markup Language (HTML) and Extensible Markup
 Language (XML); the XML inventory proves that every modeled C function and
 public native type appears. pdoc renders the Python facade only after an
 Abstract Syntax Tree (AST) check proves that every exported class and public
 method has explanatory text. TypeDoc renders the JavaScript and TypeScript
-declaration surface. All three receive the canonical version and immutable
-source tag from [`release/version.json`](../../release/version.json).
+declaration surface. Documenter.jl checks and renders every exported Julia
+declaration from a checked-in `Manifest.toml`; the build fails if Julia mutates
+that locked environment. Its wall-clock site metadata is normalized to the
+source revision's `SOURCE_DATE_EPOCH`. Rakudo compiles the package's Pod API
+reference. All five receive the canonical version and immutable source tag from
+[`release/version.json`](../../release/version.json). Their output/archive
+layout is centralized in
+[`scripts/package_documentation_surfaces.py`](../../scripts/package_documentation_surfaces.py),
+and both the builder and archive assembler fail if their inventories diverge.
 
 The local construction uses repository storage under `target/`; it does not
 consume memory-backed system temporary storage:
@@ -150,6 +157,7 @@ consume memory-backed system temporary storage:
 ```sh
 uv sync \
   --project bindings/python \
+  --python 3.14.7 \
   --group documentation \
   --frozen \
   --no-install-project
@@ -157,7 +165,9 @@ npm ci --prefix bindings/javascript --ignore-scripts
 cargo build --locked --features native-bindings-full
 PATH="$PWD/bindings/python/.venv/bin:$PATH" \
 LIBLEVENSHTEIN_LIBRARY="$PWD/target/debug/libliblevenshtein.so" \
-  python3 scripts/build-package-documentation.py --surface all
+  python3 scripts/build-package-documentation.py \
+    --surface all \
+    --verify-reproducible
 python3 scripts/package-documentation-site.py build
 python3 scripts/package-documentation-site.py assemble \
   --archives target/package-documentation-artifacts
@@ -176,7 +186,7 @@ The protected workflow implements the preservation algorithm literally:
 ```text
 procedure PublishVersionedReferences(exact_tag T, archive A):
     assert T equals release.version.publication.sourceTag
-    build native, Python, and JavaScript references from T
+    build native, Python, JavaScript, Julia, and Raku references from T
     assert A is reproducible and every public declaration is represented
 
     if release(T) already contains an asset named like A:
@@ -192,12 +202,14 @@ end procedure
 ```
 
 This design never uses the current branch as evidence for an older tag and
-never replaces a historical version directory with a newer build. The RC5
-manifest consequently remains `missing` for native Doxygen and Python pdoc:
-the exact `v4.0.0-rc.6` source does not contain this later automation, and an
-unpublished local build cannot retroactively satisfy public evidence.
+never replaces a historical version directory with a newer build. The current
+RC6 candidate records Doxygen, pdoc, TypeDoc, Documenter, and Pod as
+`build-only`: source validation exists, while public evidence remains absent
+until the reviewed immutable `v4.0.0-rc.6` tag exists and the protected
+workflow deploys its byte-reproducible archive. An unpublished local build
+cannot satisfy public evidence.
 
-## RC5 evidence and confirmed gaps
+## Prior RC5 evidence and confirmed publication gaps
 
 The 2026-08-29 unauthenticated audit proves the Rust, Java, Clojure, and Go API
 services and the versioned source guides named as `verified` in the manifest.

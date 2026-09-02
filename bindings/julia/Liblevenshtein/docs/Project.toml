@@ -1,7 +1,14 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Liblevenshtein = "e9326fdd-6246-4d39-8cad-1afab836aa7b"
+VinaryTreeInterop = "8d6503e5-4d65-4bd8-a8ee-293a0149584e"
+
+[sources]
+Liblevenshtein = {path = ".."}
+VinaryTreeInterop = {path = "../../../../../vinary-tree-interop/bindings/julia/VinaryTreeInterop"}
 
 [compat]
 Documenter = "1"
+Liblevenshtein = "4"
+VinaryTreeInterop = "4"
 julia = "1.10"

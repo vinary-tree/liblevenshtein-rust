@@ -92,7 +92,9 @@ def release_summary(model: dict[str, object]) -> str:
     if len(summary) > 80:
         raise ValueError("release/version.json metadata.summary must fit 80 characters")
     if summary.endswith("."):
-        raise ValueError("release/version.json metadata.summary must not end with a period")
+        raise ValueError(
+            "release/version.json metadata.summary must not end with a period"
+        )
     return summary
 
 
@@ -120,6 +122,46 @@ def rewrite_cargo_lock(expected: dict[str, str], path: str = "Cargo.lock") -> No
         if count != 1:
             raise ValueError(
                 f"{path}: expected one {package} package entry, found {count}"
+            )
+    target.write_text(source, encoding="utf-8")
+
+
+def rewrite_uv_lock(expected: dict[str, str]) -> None:
+    """Keep the checked-in Python resolver state on the same release train."""
+
+    target = ROOT / "bindings/python/uv.lock"
+    source = target.read_text(encoding="utf-8")
+    for package, version in expected.items():
+        pattern = rf'(\[\[package\]\]\nname = "{re.escape(package)}"\nversion = ")[^"]+'
+        source, count = re.subn(pattern, rf"\g<1>{version}", source)
+        if count != 1:
+            raise ValueError(
+                "bindings/python/uv.lock: expected one "
+                f"{package} package entry, found {count}"
+            )
+    target.write_text(source, encoding="utf-8")
+
+
+def rewrite_julia_docs_manifest(expected: dict[str, str]) -> None:
+    """Synchronize path-developed family packages in the locked docs environment."""
+
+    target = ROOT / "bindings/julia/Liblevenshtein/docs/Manifest.toml"
+    source = target.read_text(encoding="utf-8")
+    for package, version in expected.items():
+        pattern = (
+            rf"(\[\[deps\.{re.escape(package)}\]\]"
+            rf'(?:(?!\n\[\[deps\.).)*?\nversion = ")[^"]+'
+        )
+        source, count = re.subn(
+            pattern,
+            rf"\g<1>{version}",
+            source,
+            flags=re.DOTALL,
+        )
+        if count != 1:
+            raise ValueError(
+                "bindings/julia/Liblevenshtein/docs/Manifest.toml: expected one "
+                f"{package} dependency entry, found {count}"
             )
     target.write_text(source, encoding="utf-8")
 
@@ -273,7 +315,9 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
         value["sourceRef"] = model["publication"]["sourceTag"]
         packages = value.get("packages", [])
         if not isinstance(packages, list):
-            raise TypeError("release/package-documentation.json packages must be an array")
+            raise TypeError(
+                "release/package-documentation.json packages must be an array"
+            )
         seen: set[str] = set()
         for package in packages:
             if not isinstance(package, dict) or not isinstance(package.get("id"), str):
@@ -409,12 +453,44 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     replace(
         "bindings/python/pyproject.toml",
         r'vinary-tree-interop==[^"]+',
-        f'vinary-tree-interop=={versions["pypi"]}',
+        "vinary-tree-interop=="
+        + derived(str(dependencies["vinary-tree-interop"]))["pypi"],
+    )
+    rewrite_uv_lock(
+        {
+            "liblevenshtein": versions["pypi"],
+            "vinary-tree-interop": derived(str(dependencies["vinary-tree-interop"]))[
+                "pypi"
+            ],
+        }
     )
     replace(
         "bindings/julia/Liblevenshtein/Project.toml",
         r'^version = "[^"]+"$',
         f'version = "{versions["julia"]}"',
+    )
+    julia_major = canonical.split(".", 1)[0]
+    interop_julia_major = str(dependencies["vinary-tree-interop"]).split(".", 1)[0]
+    replace(
+        "bindings/julia/Liblevenshtein/Project.toml",
+        r'^VinaryTreeInterop = "\d+"$',
+        f'VinaryTreeInterop = "{interop_julia_major}"',
+    )
+    replace(
+        "bindings/julia/Liblevenshtein/docs/Project.toml",
+        r'^Liblevenshtein = "\d+"$',
+        f'Liblevenshtein = "{julia_major}"',
+    )
+    replace(
+        "bindings/julia/Liblevenshtein/docs/Project.toml",
+        r'^VinaryTreeInterop = "\d+"$',
+        f'VinaryTreeInterop = "{interop_julia_major}"',
+    )
+    rewrite_julia_docs_manifest(
+        {
+            "Liblevenshtein": versions["julia"],
+            "VinaryTreeInterop": str(dependencies["vinary-tree-interop"]),
+        }
     )
 
     raku_dependency_version = canonical.replace("-rc.", ".rc.")
@@ -821,10 +897,30 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
             r'^version = "([^"]+)"$',
             versions["pypi"],
         ),
+        "Python interop": (
+            "bindings/python/pyproject.toml",
+            r'vinary-tree-interop==([^"]+)',
+            derived(str(dependencies["vinary-tree-interop"]))["pypi"],
+        ),
         "Julia": (
             "bindings/julia/Liblevenshtein/Project.toml",
             r'^version = "([^"]+)"$',
             versions["julia"],
+        ),
+        "Julia interop compatibility": (
+            "bindings/julia/Liblevenshtein/Project.toml",
+            r'^VinaryTreeInterop = "(\d+)"$',
+            str(dependencies["vinary-tree-interop"]).split(".", 1)[0],
+        ),
+        "Julia docs self compatibility": (
+            "bindings/julia/Liblevenshtein/docs/Project.toml",
+            r'^Liblevenshtein = "(\d+)"$',
+            canonical.split(".", 1)[0],
+        ),
+        "Julia docs interop compatibility": (
+            "bindings/julia/Liblevenshtein/docs/Project.toml",
+            r'^VinaryTreeInterop = "(\d+)"$',
+            str(dependencies["vinary-tree-interop"]).split(".", 1)[0],
         ),
         "Raku": (
             "bindings/raku/META6.json",
@@ -947,6 +1043,14 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
         actual = match.group(1) if match else None
         if actual != wanted:
             failures.append(f"{name}: expected {wanted}, got {actual}")
+    python_source = (
+        "vinary-tree-interop = { path = "
+        '"../../../vinary-tree-interop/bindings/python" }'
+    )
+    if python_source not in read("bindings/python/pyproject.toml"):
+        failures.append(
+            "Python uv source must resolve the exact checked-out interop sibling"
+        )
     lua_rockspec = read(f"bindings/lua/liblevenshtein-{versions['luaRocks']}.rockspec")
     lua_source = re.search(
         r'^source = \{ url = "[^"]+", tag = "([^"]+)" \}$',
@@ -990,6 +1094,37 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
                 failures.append(
                     f"{path} {package}: expected {expected[package]}, got {actual}"
                 )
+    python_lock_expected = {
+        "liblevenshtein": versions["pypi"],
+        "vinary-tree-interop": derived(str(dependencies["vinary-tree-interop"]))[
+            "pypi"
+        ],
+    }
+    for package, actual in cargo_lock_versions(
+        python_lock_expected, "bindings/python/uv.lock"
+    ).items():
+        if actual != python_lock_expected[package]:
+            failures.append(
+                "bindings/python/uv.lock "
+                f"{package}: expected {python_lock_expected[package]}, got {actual}"
+            )
+    julia_manifest_expected = {
+        "Liblevenshtein": versions["julia"],
+        "VinaryTreeInterop": str(dependencies["vinary-tree-interop"]),
+    }
+    for package, expected in julia_manifest_expected.items():
+        block = re.search(
+            rf"\[\[deps\.{re.escape(package)}\]\]"
+            rf'(?:(?!\n\[\[deps\.).)*?\nversion = "([^"]+)"',
+            read("bindings/julia/Liblevenshtein/docs/Manifest.toml"),
+            flags=re.DOTALL,
+        )
+        actual = block.group(1) if block else None
+        if actual != expected:
+            failures.append(
+                "bindings/julia/Liblevenshtein/docs/Manifest.toml "
+                f"{package}: expected {expected}, got {actual}"
+            )
     api = json.loads(read("bindings/api.json"))
     if (
         api.get("packageVersion") != canonical

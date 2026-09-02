@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 
@@ -48,6 +49,15 @@ ALLOWED_OVERRIDE_KEYS = {
     "evidence",
     "freshConsumer",
     "state",
+}
+PROJECT_ROOT_ENVIRONMENTS = {
+    "vinary-tree-interop": "VINARY_TREE_INTEROP_ROOT",
+    "llattice": "LLATTICE_ROOT",
+    "libdictenstein": "LIBDICTENSTEIN_ROOT",
+    "lling-llang": "LLING_LLANG_ROOT",
+    "duallity": "DUALLITY_ROOT",
+    "javascript-runtime": "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT",
+    "liblevenshtein-npm": "LIBLEVENSHTEIN_NPM_ROOT",
 }
 
 
@@ -231,8 +241,12 @@ def main() -> int:
             fail(f"duplicate project {project_id}")
         seen_projects.add(project_id)
         role = clean(project.get("role"), f"{project_id}.role")
+        modeled_root = clean(project.get("root"), f"{project_id}.root")
+        environment = PROJECT_ROOT_ENVIRONMENTS.get(project_id)
+        configured_root = os.environ.get(environment) if environment else None
+        modeled_project_root = (ROOT / modeled_root).resolve()
         project_root = (
-            ROOT / clean(project.get("root"), f"{project_id}.root")
+            Path(configured_root) if configured_root else ROOT / modeled_root
         ).resolve()
         if not project_root.is_dir():
             fail(f"project root does not exist: {project_root}")
@@ -284,7 +298,9 @@ def main() -> int:
                 if language_id in evidence:
                     default_state = "audit-required"
                     default_evidence = str(
-                        (project_root / evidence[language_id]).relative_to(ROOT.parent)
+                        (modeled_project_root / evidence[language_id]).relative_to(
+                            ROOT.parent
+                        )
                     )
                 elif language_id in reviews:
                     default_state = "review-required"

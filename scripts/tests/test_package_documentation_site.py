@@ -10,7 +10,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 SPEC = importlib.util.spec_from_file_location(
     "package_documentation_site",
     Path(__file__).parents[1] / "package-documentation-site.py",
@@ -44,6 +43,14 @@ class PackageDocumentationSiteTests(unittest.TestCase):
             ],
         )
 
+    def test_julia_and_raku_references_are_mandatory_archive_surfaces(self) -> None:
+        self.assertEqual(
+            set(SITE.SURFACES),
+            {"native", "python", "javascript", "julia", "raku"},
+        )
+        self.assertEqual(SITE.SURFACES["julia"][1], "index.html")
+        self.assertEqual(SITE.SURFACES["raku"][1], "index.html")
+
     def test_archive_bytes_are_reproducible(self) -> None:
         with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:
             root = Path(temporary)
@@ -61,6 +68,61 @@ class PackageDocumentationSiteTests(unittest.TestCase):
                 hashlib.sha256(second.read_bytes()).digest(),
             )
 
+    def test_release_archive_preserves_every_generated_surface(self) -> None:
+        with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:
+            root = Path(temporary)
+            generated = root / "generated"
+            surfaces = {
+                surface: (generated / relative, entry_point)
+                for surface, (
+                    relative,
+                    entry_point,
+                ) in SITE.GENERATED_SURFACE_LAYOUT.items()
+            }
+            for surface, (source, entry_point) in surfaces.items():
+                entry = source / entry_point
+                entry.parent.mkdir(parents=True, exist_ok=True)
+                entry.write_text(f"{surface} API\n", encoding="utf-8")
+
+            originals = (
+                SITE.RELEASE_ROOT,
+                SITE.ARTIFACT_ROOT,
+                SITE.SURFACES,
+                SITE.release_authority,
+                SITE.require_source_identity,
+            )
+            SITE.RELEASE_ROOT = root / "release"
+            SITE.ARTIFACT_ROOT = root / "artifacts"
+            SITE.SURFACES = surfaces
+            SITE.release_authority = lambda: ("4.0.0-rc.6", "v4.0.0-rc.6")
+            SITE.require_source_identity = lambda _source_ref: None
+            try:
+                archive = SITE.build_archive()
+                with tarfile.open(archive, mode="r:gz") as contents:
+                    names = {member.name for member in contents.getmembers()}
+                    manifest_member = contents.extractfile(
+                        "4.0.0-rc.6/documentation-manifest.json"
+                    )
+                    self.assertIsNotNone(manifest_member)
+                    manifest = json.load(manifest_member)
+                self.assertEqual(
+                    manifest["surfaces"],
+                    list(SITE.GENERATED_SURFACE_LAYOUT),
+                )
+                for surface, (_, entry_point) in surfaces.items():
+                    self.assertIn(
+                        f"4.0.0-rc.6/{surface}/{entry_point}",
+                        names,
+                    )
+            finally:
+                (
+                    SITE.RELEASE_ROOT,
+                    SITE.ARTIFACT_ROOT,
+                    SITE.SURFACES,
+                    SITE.release_authority,
+                    SITE.require_source_identity,
+                ) = originals
+
     def test_archive_reader_rejects_parent_traversal(self) -> None:
         contents = io.BytesIO()
         with tarfile.open(fileobj=contents, mode="w") as archive:
@@ -68,9 +130,11 @@ class PackageDocumentationSiteTests(unittest.TestCase):
             info.size = 1
             archive.addfile(info, io.BytesIO(b"x"))
         contents.seek(0)
-        with tarfile.open(fileobj=contents, mode="r:") as archive:
-            with self.assertRaisesRegex(SystemExit, "unsafe or unversioned"):
-                SITE.safe_archive_members(archive)
+        with (
+            tarfile.open(fileobj=contents, mode="r:") as archive,
+            self.assertRaisesRegex(SystemExit, "unsafe or unversioned"),
+        ):
+            SITE.safe_archive_members(archive)
 
     def test_archive_reader_rejects_duplicate_members(self) -> None:
         contents = io.BytesIO()
@@ -80,9 +144,11 @@ class PackageDocumentationSiteTests(unittest.TestCase):
                 info.size = len(payload)
                 archive.addfile(info, io.BytesIO(payload))
         contents.seek(0)
-        with tarfile.open(fileobj=contents, mode="r:") as archive:
-            with self.assertRaisesRegex(SystemExit, "duplicate archive member"):
-                SITE.safe_archive_members(archive)
+        with (
+            tarfile.open(fileobj=contents, mode="r:") as archive,
+            self.assertRaisesRegex(SystemExit, "duplicate archive member"),
+        ):
+            SITE.safe_archive_members(archive)
 
     def test_manifest_requires_every_documentation_surface(self) -> None:
         with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:

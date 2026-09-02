@@ -75,8 +75,14 @@
         {
           "kind": "api-reference",
           "service": "versioned Doxygen",
-          "state": "missing",
-          "reason": "No public versioned Doxygen deployment exists for the released C and C++ headers."
+          "state": "build-only",
+          "reason": "Doxygen HTML and XML are generated with exhaustive modeled-symbol coverage; public deployment requires the later reviewed release tag.",
+          "buildEvidence": [
+            "docs/api/doxygen/Doxyfile",
+            "docs/api/doxygen/mainpage.md.in",
+            "scripts/build-package-documentation.py",
+            ".github/workflows/package-documentation.yml"
+          ]
         }
       ],
       "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
@@ -110,8 +116,13 @@
         {
           "kind": "api-reference",
           "service": "versioned pdoc",
-          "state": "missing",
-          "reason": "No public versioned pdoc deployment exists for the released Python facade."
+          "state": "build-only",
+          "reason": "pdoc is generated after exhaustive exported-class and public-method documentation checks; public deployment requires the later reviewed release tag.",
+          "buildEvidence": [
+            "bindings/python/pyproject.toml",
+            "scripts/build-package-documentation.py",
+            ".github/workflows/package-documentation.yml"
+          ]
         }
       ],
       "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
@@ -265,8 +276,8 @@
           "buildEvidence": [
             "bindings/javascript/typedoc.json",
             "bindings/javascript/package.json",
-            ".github/workflows/ci.yml",
-            ".github/workflows/release.yml"
+            "scripts/build-package-documentation.py",
+            ".github/workflows/package-documentation.yml"
           ]
         }
       ],
@@ -564,8 +575,12 @@
           "state": "build-only",
           "reason": "Documenter builds with strict exported-symbol coverage in CI; deployment requires the later reviewed release tag.",
           "buildEvidence": [
+            "bindings/julia/Liblevenshtein/docs/Project.toml",
+            "bindings/julia/Liblevenshtein/docs/Manifest.toml",
             "bindings/julia/Liblevenshtein/docs/make.jl",
-            "bindings/julia/Liblevenshtein/docs/src/index.md"
+            "bindings/julia/Liblevenshtein/docs/src/index.md",
+            "scripts/build-package-documentation.py",
+            ".github/workflows/package-documentation.yml"
           ]
         }
       ]
@@ -602,7 +617,9 @@
           "state": "build-only",
           "reason": "The package Pod is compiled and staged in CI; public deployment requires the later reviewed release tag.",
           "buildEvidence": [
-            "bindings/raku/docs/Liblevenshtein.rakudoc"
+            "bindings/raku/docs/Liblevenshtein.rakudoc",
+            "scripts/build-package-documentation.py",
+            ".github/workflows/package-documentation.yml"
           ]
         }
       ]

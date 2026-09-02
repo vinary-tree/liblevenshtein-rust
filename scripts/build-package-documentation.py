@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
 import json
 import os
 import shutil
@@ -12,8 +13,16 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
+from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
+
+try:
+    from scripts.package_documentation_surfaces import GENERATED_SURFACE_LAYOUT
+except ModuleNotFoundError as error:
+    if error.name != "scripts":
+        raise
+    from package_documentation_surfaces import GENERATED_SURFACE_LAYOUT
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,6 +66,73 @@ def require_markers(path: Path, markers: tuple[str, ...]) -> None:
     for marker in markers:
         if marker not in body:
             fail(f"{path.relative_to(ROOT)} is missing marker {marker!r}")
+
+
+def source_date_epoch() -> int:
+    configured = os.environ.get("SOURCE_DATE_EPOCH")
+    if configured is not None:
+        try:
+            epoch = int(configured)
+        except ValueError:
+            fail("SOURCE_DATE_EPOCH must be an integer Unix timestamp")
+        if epoch < 0:
+            fail("SOURCE_DATE_EPOCH cannot be negative")
+        return epoch
+    completed = subprocess.run(
+        [
+            "git",
+            "-c",
+            "core.fsmonitor=false",
+            "show",
+            "-s",
+            "--format=%ct",
+            "HEAD",
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    value = completed.stdout.strip()
+    if completed.returncode != 0 or not value.isdecimal():
+        fail("cannot derive SOURCE_DATE_EPOCH from the source revision")
+    return int(value)
+
+
+def normalize_documenter_siteinfo(path: Path, epoch: int) -> None:
+    if not path.is_file():
+        fail("Documenter did not produce .documenter-siteinfo.json")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    documenter = value.get("documenter") if isinstance(value, dict) else None
+    if not isinstance(documenter, dict):
+        fail("Documenter site information lacks its metadata object")
+    for field in ("documenter_version", "julia_version", "generation_timestamp"):
+        if not isinstance(documenter.get(field), str):
+            fail(f"Documenter site information lacks {field}")
+    documenter["generation_timestamp"] = datetime.fromtimestamp(
+        epoch, tz=timezone.utc
+    ).strftime("%Y-%m-%dT%H:%M:%S")
+    path.write_text(
+        json.dumps(value, separators=(",", ":"), sort_keys=True),
+        encoding="utf-8",
+    )
+
+
+def generated_digests(surfaces: list[str]) -> dict[str, str]:
+    digests: dict[str, str] = {}
+    for surface in surfaces:
+        root = OUTPUT_ROOT / surface
+        if not root.is_dir():
+            fail(f"generated surface is absent: {surface}")
+        for path in sorted(root.rglob("*")):
+            if path.is_symlink() or not (path.is_dir() or path.is_file()):
+                fail(f"unsupported generated documentation entry: {path}")
+            if path.is_file():
+                relative = f"{surface}/{path.relative_to(root).as_posix()}"
+                digests[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not digests:
+        fail("documentation generators produced no files")
+    return digests
 
 
 def require_doxygen_symbols(xml_root: Path) -> None:
@@ -207,9 +283,11 @@ def build_python(version: str, source_ref: str) -> None:
             "--footer-text",
             f"liblevenshtein {version}",
             "--edit-url",
-            "liblevenshtein="
-            "https://github.com/vinary-tree/liblevenshtein-rust/blob/"
-            f"{source_ref}/bindings/python/src/liblevenshtein/",
+            (
+                "liblevenshtein="
+                "https://github.com/vinary-tree/liblevenshtein-rust/blob/"
+                f"{source_ref}/bindings/python/src/liblevenshtein/"
+            ),
             "liblevenshtein",
         ],
         env=environment,
@@ -230,40 +308,47 @@ def build_javascript(version: str, _source_ref: str) -> None:
     )
 
 
-def build_julia(version: str, _source_ref: str) -> None:
+def build_julia(version: str, source_ref: str) -> None:
     output = OUTPUT_ROOT / "julia"
     clean_output(output)
     docs = ROOT / "bindings" / "julia" / "Liblevenshtein" / "docs"
-    environment_root = ROOT / "target" / "package-documentation-julia-environment"
-    shutil.rmtree(environment_root, ignore_errors=True)
+    environment_files = (docs / "Project.toml", docs / "Manifest.toml")
+    missing_environment = [path for path in environment_files if not path.is_file()]
+    if missing_environment:
+        fail(
+            "Julia documentation environment is incomplete: "
+            + ", ".join(str(path.relative_to(ROOT)) for path in missing_environment)
+        )
+    locked_environment = {path: path.read_bytes() for path in environment_files}
     environment = dict(os.environ)
     environment["LIBLEVENSHTEIN_DOCS_DEPLOY"] = "0"
     environment["VINARY_TREE_DOC_OUTPUT"] = str(output)
+    environment["VINARY_TREE_DOC_SOURCE_REF"] = source_ref
+    epoch = source_date_epoch()
+    environment["SOURCE_DATE_EPOCH"] = str(epoch)
+    environment["JULIA_DEPOT_PATH"] = str(
+        ROOT / "target" / "package-documentation-julia-depot"
+    )
     expression = "\n".join(
         (
             "using Pkg",
-            f"Pkg.activate({json.dumps(str(environment_root))})",
-            "Pkg.develop([",
-            "  PackageSpec(path="
-            + json.dumps(
-                str(
-                    ROOT.parent
-                    / "vinary-tree-interop"
-                    / "bindings"
-                    / "julia"
-                    / "VinaryTreeInterop"
-                )
-            )
-            + "),",
-            "  PackageSpec(path="
-            + json.dumps(str(ROOT / "bindings" / "julia" / "Liblevenshtein"))
-            + "),",
-            "])",
-            'Pkg.add(PackageSpec(name="Documenter", version="1"))',
+            f"Pkg.activate({json.dumps(str(docs))})",
+            "Pkg.instantiate()",
             f"include({json.dumps(str(docs / 'make.jl'))})",
         )
     )
     run([executable("julia"), "--startup-file=no", "-e", expression], env=environment)
+    changed_environment = [
+        path.relative_to(ROOT)
+        for path, original in locked_environment.items()
+        if path.read_bytes() != original
+    ]
+    if changed_environment:
+        fail(
+            "Julia changed its locked documentation environment: "
+            + ", ".join(map(str, changed_environment))
+        )
+    normalize_documenter_siteinfo(output / ".documenter-siteinfo.json", epoch)
     require_markers(output / "index.html", ("Liblevenshtein.jl", "Transducer"))
 
 
@@ -277,8 +362,7 @@ def build_raku(version: str, _source_ref: str) -> None:
         cwd=ROOT,
         env=dict(os.environ),
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
     rendered = completed.stdout
@@ -307,6 +391,12 @@ BUILDERS: dict[str, Callable[[str, str], None]] = {
     "raku": build_raku,
 }
 
+if BUILDERS.keys() != GENERATED_SURFACE_LAYOUT.keys():
+    fail(
+        "builder/archive surface inventories disagree: "
+        f"builders={list(BUILDERS)}, archive={list(GENERATED_SURFACE_LAYOUT)}"
+    )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -316,6 +406,11 @@ def main() -> int:
         choices=[*BUILDERS, "all"],
         default=[],
         help="surface to build; repeat as needed (default: all)",
+    )
+    parser.add_argument(
+        "--verify-reproducible",
+        action="store_true",
+        help="build each selected surface twice and require byte-identical files",
     )
     args = parser.parse_args()
 
@@ -333,6 +428,24 @@ def main() -> int:
     surfaces = list(BUILDERS) if selected == ["all"] else selected
     for surface in surfaces:
         BUILDERS[surface](version, source_ref)
+    if args.verify_reproducible:
+        first = generated_digests(surfaces)
+        for surface in surfaces:
+            BUILDERS[surface](version, source_ref)
+        second = generated_digests(surfaces)
+        changed = sorted(
+            path
+            for path in first.keys() | second.keys()
+            if first.get(path) != second.get(path)
+        )
+        if changed:
+            preview = ", ".join(changed[:20])
+            suffix = "" if len(changed) <= 20 else f" (+{len(changed) - 20} more)"
+            fail(f"generated documentation is not reproducible: {preview}{suffix}")
+        print(
+            "package-documentation-build: verified byte-reproducible output for "
+            + ", ".join(surfaces)
+        )
     print(f"package-documentation-build: built {', '.join(surfaces)} for {version}")
     return 0
 

@@ -44,6 +44,26 @@ parser.add_argument(
     help="verify the committed completeness matrix instead of rewriting it",
 )
 ARGS = parser.parse_args()
+GENERATED_TREE_PARTS = frozenset(
+    {
+        ".build",
+        ".cpcache",
+        ".gradle",
+        ".pytest_cache",
+        ".swiftpm",
+        ".venv",
+        "__pycache__",
+        "_build",
+        "bin",
+        "build",
+        "dist-newstyle",
+        "node_modules",
+        "obj",
+        "target",
+        "venv",
+    }
+)
+PUBLISHABLE_EXCLUDED_PARTS = GENERATED_TREE_PARTS | {"smoke", "test", "tests"}
 
 
 def require(condition: bool, message: str) -> None:
@@ -285,27 +305,7 @@ for root in publishable_roots:
     elif root.is_dir():
         publishable_files.extend(path for path in root.rglob("*") if path.is_file())
 for path in publishable_files:
-    if any(
-        part
-        in {
-            ".build",
-            ".cpcache",
-            ".gradle",
-            ".pytest_cache",
-            ".swiftpm",
-            "__pycache__",
-            "bin",
-            "build",
-            "dist-newstyle",
-            "node_modules",
-            "obj",
-            "target",
-            "test",
-            "tests",
-            "smoke",
-        }
-        for part in path.parts
-    ):
+    if PUBLISHABLE_EXCLUDED_PARTS.intersection(path.parts):
         continue
     source = path.read_text(encoding="utf-8", errors="ignore")
     for forbidden in (
@@ -331,24 +331,7 @@ for language in ("dotnet", "go", "swift", "ruby", "fortran", "ocaml", "haskell",
     for path in root.rglob("*"):
         if not path.is_file() or path.suffix.lower() in {".md", ".txt", ""}:
             continue
-        if any(
-            part
-            in {
-                ".build",
-                ".cpcache",
-                ".gradle",
-                ".pytest_cache",
-                ".swiftpm",
-                "__pycache__",
-                "bin",
-                "build",
-                "dist-newstyle",
-                "node_modules",
-                "obj",
-                "target",
-            }
-            for part in path.parts
-        ):
+        if GENERATED_TREE_PARTS.intersection(path.parts):
             continue
         source = path.read_text(encoding="utf-8", errors="ignore")
         require(
@@ -397,25 +380,7 @@ for root in identity_roots:
     for path in root.rglob("*"):
         if not path.is_file() or path.suffix not in identity_suffixes:
             continue
-        if any(
-            part
-            in {
-                ".build",
-                "_build",
-                ".cpcache",
-                ".gradle",
-                ".pytest_cache",
-                ".swiftpm",
-                "__pycache__",
-                "bin",
-                "build",
-                "dist-newstyle",
-                "node_modules",
-                "obj",
-                "target",
-            }
-            for part in path.parts
-        ):
+        if GENERATED_TREE_PARTS.intersection(path.parts):
             continue
         source = path.read_text(encoding="utf-8", errors="ignore").lower()
         forbidden_identities = ["f1r3fly", "universal-automata", "universal_automata"]

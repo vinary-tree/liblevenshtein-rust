@@ -37,6 +37,9 @@ test = ["pytest>=8", "hypothesis>=6"]
 [dependency-groups]
 documentation = ["pdoc==16.0.0"]
 
+[tool.uv.sources]
+vinary-tree-interop = { path = "../../../vinary-tree-interop/bindings/python" }
+
 [project.urls]
 Homepage = "https://github.com/vinary-tree/liblevenshtein-rust"
 Documentation = "https://github.com/vinary-tree/liblevenshtein-rust/tree/master/bindings/python"
