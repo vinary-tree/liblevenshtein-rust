@@ -117,6 +117,13 @@ states that limitation, and pgmcp item
 `wire-universalautomaton-substitution-policies-into-characteristic-vector-matching-ba95ee`
 tracks the required policy-aware implementation and semantic tests.
 
+**Follow-up, 2026-09-02:** The tracked defect is now repaired. The automaton
+retains its policy, the unit-generic characteristic-vector encoder applies the
+directional dictionary-to-query relation, and byte, Unicode, `u64`, online,
+property, and singleton-transducer differential tests pass. Performance
+protocol and confidence intervals are recorded in
+[universal-policy-aware-encoding-2026-09-02.md](universal-policy-aware-encoding-2026-09-02.md).
+
 The generalized-alignment batch demonstrated why examples execute rather than
 merely compile. The comprehensive English phonetic preset originally placed
 both double-to-single and single-to-double restriction pairs in one operation

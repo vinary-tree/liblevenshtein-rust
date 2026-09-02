@@ -90,9 +90,11 @@ crossing, subsumption, and complete-word acceptance. It also corrected the
 published characteristic vectors for `banana`, replaced invalid position
 fixtures, re-exported variant-state types from the natural module root, and
 classified one private-helper fragment as `text`. That review exposed a real
-functional limitation: `UniversalAutomaton::with_policy` currently discards its
-policy value, so its documentation now states the limitation and the repair is
-tracked separately instead of claiming unsupported semantics. The generalized
+functional limitation: at the time of that audit,
+`UniversalAutomaton::with_policy` discarded its policy value. The 2026-09-02
+repair now retains the policy and applies directional byte, Unicode, and
+unit-generic equivalences during characteristic-vector construction; its
+examples execute both positive and negative semantics. The generalized
 alignment batch restored eight examples for runtime operation sets, exact
 weighted acceptance, positions, and subsumption. Its end-to-end phonetic
 example exposed and fixed an invalid built-in preset: double-consonant

@@ -4,6 +4,11 @@
 **Status**: ✅ **COMPLETE**
 **Time**: ~10 minutes
 
+> This document records the original generic-parameter phase. The policy field
+> is no longer unused: the 2026-09-02 implementation applies it in the
+> unit-generic universal characteristic-vector encoder. See
+> [POLICY_IMPLEMENTATION_STATUS.md](POLICY_IMPLEMENTATION_STATUS.md).
+
 ## Executive Summary
 
 Successfully added `SubstitutionPolicy` parameter to the eager (universal) Levenshtein automaton with **zero breaking changes** and **zero performance regression**. This completes the infrastructure needed for future restricted substitution support in both lazy and eager implementations.
@@ -139,9 +144,11 @@ $ cargo build
 ```
 
 **Warnings**:
-- `field 'policy' is never read` in `UniversalAutomaton` - **Expected**: Policy logic not yet implemented
-- `field 'policy' is never read` in `Transducer` - **Expected** (from Phase 3)
-- `unused variable: 'policy'` in `transition.rs` - **Expected** (from Phase 3)
+- At this checkpoint, `policy` was unread in `UniversalAutomaton` because its
+  execution logic had not yet landed; current code consumes it.
+- At this checkpoint, `policy` was unread in `Transducer` (from Phase 3).
+- At this checkpoint, the `transition.rs` policy argument was threaded but not
+  yet consumed (from Phase 3).
 - Unrelated deprecation and unused import warnings
 
 ### Tests

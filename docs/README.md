@@ -21,7 +21,7 @@ index maps everything else.
 ### Document conventions
 
 - **Math** is written as **MathJax LaTeX**, never as Unicode literals. Inline math uses
-  dollar delimiters around a backtick-delimited expression — `` $`\mathcal{O}(\lvert W\rvert)`$ ``
+  dollar delimiters around a backtick-delimited expression — $`\mathcal{O}(\lvert W\rvert)`$
   renders as $`\mathcal{O}(\lvert W\rvert)`$ — and display math is a fenced block whose
   info-string is `math`. We never use *bare* dollar-delimited math (dollars without the
   enclosing backticks): GitHub's CommonMark pass strips backslash escapes before MathJax

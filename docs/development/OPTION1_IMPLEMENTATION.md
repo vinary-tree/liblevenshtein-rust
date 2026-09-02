@@ -4,6 +4,10 @@
 **Status**: ✅ **COMPLETE**
 **Time**: ~15 minutes (as predicted!)
 
+> This is the historical generic-API implementation record. The policy is now
+> consumed by all applicable transition paths, including unit-generic universal
+> encoding; see [POLICY_IMPLEMENTATION_STATUS.md](POLICY_IMPLEMENTATION_STATUS.md).
+
 ## Executive Summary
 
 Successfully implemented **Option 1** from the API design analysis - making `Transducer` generic with a default policy parameter. The implementation achieved:
@@ -143,8 +147,10 @@ $ cargo build
 ```
 
 **Warnings**:
-- `field 'policy' is never read` - **Expected**: Policy logic not yet implemented
-- `unused variable: 'policy'` in `transition.rs` - **Expected**: Policy parameter threaded but not used yet
+- At this checkpoint, the `policy` field was unread because policy execution
+  logic had not yet landed; current code consumes it.
+- At this checkpoint, the `transition.rs` argument was threaded but not yet
+  consumed.
 - Unrelated deprecation and unused import warnings
 
 ### Tests

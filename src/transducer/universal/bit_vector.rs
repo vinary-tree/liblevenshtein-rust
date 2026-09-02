@@ -70,6 +70,10 @@
 use smallvec::SmallVec;
 use std::fmt;
 
+use libdictenstein::CharUnit;
+
+use crate::transducer::{SubstitutionPolicy, SubstitutionPolicyFor};
+
 /// Characteristic vector β(x, w) representing which positions in w match character x.
 ///
 /// # Theory (Definition 9, page 17)
@@ -135,14 +139,74 @@ impl CharacteristicVector {
         Self { bits }
     }
 
-    /// Build a universal window without materializing its padded subword.
+    /// Build a characteristic vector over arbitrary dictionary units while
+    /// treating policy-approved substitutions as zero-cost matches.
     ///
-    /// Padding symbols are outside the input alphabet and therefore always
-    /// contribute `false`, even when the concrete input character is `$`.
-    pub(crate) fn from_padded_chars(character: char, false_prefix: usize, word: &[char]) -> Self {
+    /// The arguments follow the library-wide substitution direction: `word`
+    /// contains dictionary units, while `query_unit` comes from the query. An
+    /// exact unit match always sets the corresponding bit. A distinct pair sets
+    /// the bit only when `policy.is_allowed_for(dict_unit, query_unit)` returns
+    /// `true`.
+    ///
+    /// [`SubstitutionPolicy::MAY_MATCH_DISTINCT_UNITS`] is a compile-time
+    /// capability. The default [`crate::transducer::Unrestricted`] policy sets
+    /// it to `false`, so monomorphization removes both the policy branch and all
+    /// policy calls from the exact-match path.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::CharacteristicVector;
+    /// use liblevenshtein::transducer::{
+    ///     RestrictedChar, SubstitutionSetChar,
+    /// };
+    ///
+    /// let mut substitutions = SubstitutionSetChar::new();
+    /// substitutions.allow('é', 'e');
+    /// let policy = RestrictedChar::new(&substitutions);
+    /// let word = ['c', 'a', 'f', 'é'];
+    ///
+    /// let vector = CharacteristicVector::from_units_with_policy('e', &word, &policy);
+    /// assert_eq!(vector.to_string(), "0001");
+    /// ```
+    #[inline]
+    pub fn from_units_with_policy<U, P>(query_unit: U, word: &[U], policy: &P) -> Self
+    where
+        U: CharUnit,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
+        Self::from_padded_units_with_policy(query_unit, 0, word, policy)
+    }
+
+    /// Build a policy-aware universal window without materializing its padded
+    /// subword. Padding is outside the unit alphabet and can never be matched by
+    /// a policy.
+    #[inline(always)]
+    pub(crate) fn from_padded_units_with_policy<U, P>(
+        query_unit: U,
+        false_prefix: usize,
+        word: &[U],
+        policy: &P,
+    ) -> Self
+    where
+        U: CharUnit,
+        P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    {
         let mut bits = SmallVec::with_capacity(false_prefix.saturating_add(word.len()));
         bits.resize(false_prefix, false);
-        bits.extend(word.iter().map(|&candidate| candidate == character));
+
+        if P::MAY_MATCH_DISTINCT_UNITS {
+            bits.extend(word.iter().copied().map(|dict_unit| {
+                dict_unit == query_unit || policy.is_allowed_for(dict_unit, query_unit)
+            }));
+        } else {
+            bits.extend(
+                word.iter()
+                    .copied()
+                    .map(|dict_unit| dict_unit == query_unit),
+            );
+        }
+
         Self { bits }
     }
 
@@ -455,12 +519,68 @@ pub fn encode_word_pair(
 mod tests {
     use super::*;
 
+    #[derive(Clone)]
+    struct ExactOnlyPolicy;
+
+    impl SubstitutionPolicy for ExactOnlyPolicy {
+        const MAY_MATCH_DISTINCT_UNITS: bool = false;
+
+        fn is_allowed(&self, _dict_char: u8, _query_char: u8) -> bool {
+            panic!("the exact-only encoder must compile out policy calls")
+        }
+    }
+
+    impl SubstitutionPolicyFor<u8> for ExactOnlyPolicy {
+        fn is_allowed_for(&self, _dict_unit: u8, _query_unit: u8) -> bool {
+            panic!("the exact-only encoder must compile out policy calls")
+        }
+    }
+
+    #[derive(Clone)]
+    struct EveryConcretePair;
+
+    impl SubstitutionPolicy for EveryConcretePair {
+        fn is_allowed(&self, _dict_char: u8, _query_char: u8) -> bool {
+            true
+        }
+    }
+
+    impl SubstitutionPolicyFor<char> for EveryConcretePair {
+        fn is_allowed_for(&self, _dict_unit: char, _query_unit: char) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn exact_only_capability_bypasses_policy_dispatch() {
+        let vector =
+            CharacteristicVector::from_units_with_policy(b'a', b"banana", &ExactOnlyPolicy);
+        assert_eq!(vector.to_string(), "010101");
+    }
+
+    #[test]
+    fn policy_aware_vector_uses_dictionary_to_query_direction() {
+        let mut substitutions = crate::transducer::SubstitutionSet::new();
+        substitutions.allow_byte(b'k', b'c');
+        let policy = crate::transducer::Restricted::new(&substitutions);
+
+        let forward = CharacteristicVector::from_units_with_policy(b'c', b"kit", &policy);
+        let reverse = CharacteristicVector::from_units_with_policy(b'k', b"cit", &policy);
+        assert_eq!(forward.to_string(), "100");
+        assert_eq!(reverse.to_string(), "000");
+    }
+
     #[test]
     fn universal_padding_never_matches_a_concrete_dollar_scalar() {
-        let vector = CharacteristicVector::from_padded_chars('$', 3, &['$', 'a']);
+        let vector = CharacteristicVector::from_padded_units_with_policy(
+            '$',
+            3,
+            &['$', 'a'],
+            &EveryConcretePair,
+        );
         assert_eq!(
             vector.iter().collect::<Vec<_>>(),
-            vec![false, false, false, true, false]
+            vec![false, false, false, true, true]
         );
     }
 

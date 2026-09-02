@@ -1,0 +1,50 @@
+@startuml policy-aware-universal-encoding
+' Policy-aware, unit-generic universal characteristic-vector construction.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam component {
+  BorderColor #455A64
+  FontColor #102027
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Policy-aware universal matching — one encoder, specialized at compile time
+
+component "fixed dictionary units\nVec<U>" as Word #BBDEFB
+component "next query unit\nU" as Query #B2EBF2
+component "policy P\nSubstitutionPolicyFor<U>" as Policy #D1C4E9
+
+package "Characteristic-vector encoder" #E8F5E9 {
+  component "virtual padding\nalways false" as Padding #ECEFF1
+  component "compile-time capability\nP may match distinct units?" as Capability #FFF3E0
+  component "exact comparison\ndict == query" as Exact #C8E6C9
+  component "exact OR\npolicy(dict, query)" as Equivalent #DCEDC8
+  component "Boolean window" as Vector #A5D6A7
+}
+
+component "UniversalState<V>\ntransition" as Transition #FFE0B2
+component "next canonical\nantichain" as State #FFCC80
+
+Word -[#1565C0,thickness=3]-> Capability
+Query -[#1565C0,thickness=3]-> Capability
+Policy -[#5E35B1]-> Capability
+Capability -[#2E7D32]-> Exact : no — compile-time Unrestricted path
+Capability -[#6A1B9A]-> Equivalent : yes — configured equivalences
+Padding -[#78909C]-> Vector
+Exact -[#2E7D32]-> Vector
+Equivalent -[#6A1B9A]-> Vector
+Vector -[#EF6C00,thickness=3]-> Transition
+Transition -[#EF6C00,thickness=3]-> State
+
+note bottom of Exact #E8F5E9
+  Unrestricted is a zero-sized policy and sets the capability to false.
+  Monomorphization removes the policy branch and lookup.
+end note
+
+note bottom of Equivalent #F3E5F5
+  Direction is significant:
+  dictionary/source unit first, query/target unit second.
+end note
+@enduml

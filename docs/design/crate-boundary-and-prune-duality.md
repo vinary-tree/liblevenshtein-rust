@@ -15,8 +15,8 @@ This is a semantic boundary, not a preference about module names.
 
 ## Why min-plus distance prunes locally
 
-`CostMonoid` fixes alternative selection to minimum. Let `` $`c`$ `` be the
-cost accumulated at a dictionary prefix and `` $`w`$ `` a lawful non-negative
+`CostMonoid` fixes alternative selection to minimum. Let $`c`$ be the
+cost accumulated at a dictionary prefix and $`w`$ a lawful non-negative
 extension. The positive-order and monotonicity laws give
 
 ```math
@@ -24,12 +24,12 @@ c \le c \otimes w.
 ```
 
 Every descendant costs at least its prefix lower bound. If a query budget is
-`` $`\tau`$ ``, rejecting a subtree when `` $`c>\tau`$ `` is sound without a
+$`\tau`$, rejecting a subtree when $`c>\tau`$ is sound without a
 measure-specific heuristic. Unit edit distance, scaled affine-gap distance,
 and the elastic lower-bound walkers all use this direction.
 
 The `CostMonoid` interface deliberately does not expose a configurable
-`` $`\oplus`$ ``, Kleene star, or division. Those operations are not needed for
+$`\oplus`$, Kleene star, or division. Those operations are not needed for
 bounded distance dynamic programming and would blur the proof boundary.
 
 ## Why sign-flipping fzf does not repair the law
@@ -44,7 +44,7 @@ alignments choose their maximum score. The natural algebra is
 
 Negating a score changes max-plus to min-plus, but it also turns rewards into
 negative costs. A negative extension can improve a path, so the inflation law
-`` $`c\le c\otimes w`$ `` fails. Changing the sign changes notation, not the
+$`c\le c\otimes w`$ fails. Changing the sign changes notation, not the
 proof obligation.
 
 The standard WFST framework separates a graph from its weight algebra
@@ -55,22 +55,22 @@ liblevenshtein owns only the generic balanced structural DFS.
 ## The local-alignment correction
 
 Claude's original plan proposed an fzf prefix bound of the form
-`` $`S+(m-j)\beta`$ ``. That formula describes extensions of one active
+$`S+(m-j)\beta`$. That formula describes extensions of one active
 alignment. fzf is a local matcher, so a descendant may skip the complete
 current prefix and start a different alignment later. An active-only formula
 can therefore be smaller than a descendant's exact score.
 
-Let `` $`U_0`$ `` be the best score of an alignment that has not started, and
-let `` $`U_i`$ `` bound extensions of the live cell that has matched through
-query index `` $`i`$ ``. A sound bound is
+Let $`U_0`$ be the best score of an alignment that has not started, and
+let $`U_i`$ bound extensions of the live cell that has matched through
+query index $`i`$. A sound bound is
 
 ```math
 U(p)=\max\!\left(U_0,\ \max_i U_i\right).
 ```
 
 Every descendant alignment is in exactly one of those families. If the current
-top-`` $`k`$ `` cutoff is `` $`\tau_k`$ ``, pruning requires
-`` $`U(p)<\tau_k`$ ``. The strict comparison preserves candidates tied at the
+top-$`k`$ cutoff is $`\tau_k`$, pruning requires
+$`U(p)<\tau_k`$. The strict comparison preserves candidates tied at the
 cutoff for the caller's deterministic tie policy.
 
 The unstarted term exposes a real trade-off: without subtree metadata it is the
@@ -140,7 +140,7 @@ Verus, SMT, and TLA+ all encode the balance or no-false-negative invariants.
 
 - `src/transducer/subsequence_query.rs`: balanced explicit-stack DFS;
 - `duallity/src/fzf_support.rs`: shared exact recurrence and corrected bound;
-- `duallity/src/fzf_scorer.rs`: top-`` $`k`$ `` visitor;
+- `duallity/src/fzf_scorer.rs`: top-$`k`$ visitor;
 - `duallity/src/fzf_state_source.rs`: path-sensitive state and telescoping arcs;
 - `lling-llang/src/semiring/basic/arctic.rs`: max-plus weight algebra;
 - `docs/verification/core/theories/Conformance/FzfUpperBound.v`: core theorem;

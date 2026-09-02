@@ -30,10 +30,14 @@ The existing `UniversalAutomaton` uses compile-time specialization via `Position
 ```rust
 pub struct UniversalAutomaton<V: PositionVariant, P: SubstitutionPolicy> {
     max_distance: u8,
-    policy: P,  // Unused
+    policy: P,
     _phantom: PhantomData<V>,
 }
 ```
+
+The policy is now consumed by the universal characteristic-vector encoder.
+This historical comparison remains about compile-time edit-operation variants
+versus runtime `OperationSet` selection, not about policy availability.
 
 **Problems:**
 1. Operations are **hardcoded** at compile-time (Standard, Transposition, MergeAndSplit)

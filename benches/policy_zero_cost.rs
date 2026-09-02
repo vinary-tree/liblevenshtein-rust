@@ -1,6 +1,9 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use liblevenshtein::prelude::*;
-use liblevenshtein::transducer::{Restricted, SubstitutionSet};
+use liblevenshtein::transducer::universal::{Standard as UniversalStandard, UniversalAutomaton};
+use liblevenshtein::transducer::{
+    Restricted, RestrictedChar, SubstitutionSet, SubstitutionSetChar, Unrestricted,
+};
 use std::hint::black_box;
 
 fn benchmark_unrestricted_policy(c: &mut Criterion) {
@@ -44,9 +47,59 @@ fn benchmark_restricted_policy(c: &mut Criterion) {
     });
 }
 
+fn benchmark_universal_policy_encoding(c: &mut Criterion) {
+    let mut group = c.benchmark_group("universal_policy_encoding");
+    let word = "encyclopædia-café-characteristic-vector";
+    let exact_query = "encyclopædia-café-characteristic-vector";
+    let equivalent_query = "encyclopædia-cafe-characteristic-vector";
+    group.throughput(Throughput::Elements(word.chars().count() as u64));
+
+    let default_automaton = UniversalAutomaton::<UniversalStandard>::new(2);
+    group.bench_with_input(
+        BenchmarkId::new("unrestricted_default", "exact"),
+        &exact_query,
+        |b, query| {
+            b.iter(|| {
+                black_box(default_automaton.accepts(black_box(word), black_box(query)));
+            });
+        },
+    );
+
+    let explicit_unrestricted =
+        UniversalAutomaton::<UniversalStandard, _>::with_policy(2, Unrestricted);
+    group.bench_with_input(
+        BenchmarkId::new("unrestricted_explicit", "exact"),
+        &exact_query,
+        |b, query| {
+            b.iter(|| {
+                black_box(explicit_unrestricted.accepts(black_box(word), black_box(query)));
+            });
+        },
+    );
+
+    let mut substitutions = SubstitutionSetChar::new();
+    substitutions.allow('é', 'e');
+    let restricted = UniversalAutomaton::<UniversalStandard, _>::with_policy(
+        2,
+        RestrictedChar::new(&substitutions),
+    );
+    group.bench_with_input(
+        BenchmarkId::new("restricted_unicode", "equivalence_hit"),
+        &equivalent_query,
+        |b, query| {
+            b.iter(|| {
+                black_box(restricted.accepts(black_box(word), black_box(query)));
+            });
+        },
+    );
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     benchmark_unrestricted_policy,
-    benchmark_restricted_policy
+    benchmark_restricted_policy,
+    benchmark_universal_policy_encoding
 );
 criterion_main!(benches);

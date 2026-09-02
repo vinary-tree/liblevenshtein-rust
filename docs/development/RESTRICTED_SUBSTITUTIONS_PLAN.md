@@ -1,9 +1,17 @@
 # Implementation Plan: Restricted Substitutions with Lazy/Eager Cross-Validation
 
-**Status**: In Progress (Phase 2)
+**Status**: Historical initial plan; native implementation completed and
+revalidated through 2026-09-02
 **Start Date**: 2025-11-11
 **Estimated Completion**: 2025-12-11 (30 days)
 **Latest Update**: 2025-11-11
+
+> The phase labels below preserve the original preregistered plan and are not
+> current task statuses. The native engines now provide byte, Unicode-scalar,
+> owned/borrowed, unit-generic, and universal policy semantics. Current design,
+> tests, and benchmark evidence are recorded in
+> [POLICY_IMPLEMENTATION_STATUS.md](POLICY_IMPLEMENTATION_STATUS.md) and the
+> [2026-09-02 scientific ledger](../scientific-ledger/universal-policy-aware-encoding-2026-09-02.md).
 
 ---
 

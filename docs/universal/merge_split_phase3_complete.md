@@ -33,8 +33,8 @@ both, so the combined relation agrees with this universal variant even though
 the individual names are reversed by orientation. Numeric arities are the
 unambiguous comparison key.
 
-Let `$`k`$` be the number of target scalars already streamed, `$`i`$` the
-absolute source position, and `$`\delta`$` the stored universal offset:
+Let $`k`$ be the number of target scalars already streamed, $`i`$ the
+absolute source position, and $`\delta`$ the stored universal offset:
 
 ```math
 i=\delta+k.
@@ -50,14 +50,14 @@ Both I-type and M-type positions dispatch through the same variant policy.
 
 ## 2. Offset derivation
 
-The offset updates follow from the invariant `$`i=\delta+k`$`; they are not
+The offset updates follow from the invariant $`i=\delta+k`$; they are not
 independent heuristics.
 
 ### 2.1 Direct merge
 
 A merge consumes two source scalars while the streaming machine consumes one
-target scalar. From source position `$`i`$`, the destination is `$`i+2`$` at
-stream position `$`k+1`$`. Therefore:
+target scalar. From source position $`i`$, the destination is $`i+2`$ at
+stream position $`k+1`$. Therefore:
 
 ```math
 \delta' + (k+1)
@@ -67,15 +67,15 @@ stream position `$`k+1`$`. Therefore:
 \delta'=\delta+1.
 ```
 
-The implementation emits a usual-state successor with offset `$`\delta+1`$`
+The implementation emits a usual-state successor with offset $`\delta+1`$
 and one additional error when the next relevant source position matches the
 streamed target scalar.
 
 ### 2.2 Split entry
 
 A split maps one source scalar to two streamed target scalars. After the first
-target scalar, the source position remains `$`i`$` while the stream position
-becomes `$`k+1`$`:
+target scalar, the source position remains $`i`$ while the stream position
+becomes $`k+1`$:
 
 ```math
 \delta' + (k+1)
@@ -85,14 +85,14 @@ becomes `$`k+1`$`:
 \delta'=\delta-1.
 ```
 
-The successor enters `Splitting` with offset `$`\delta-1`$`. The transient
+The successor enters `Splitting` with offset $`\delta-1`$. The transient
 state records that the one-cost operation has started; it prevents this first
 half from being mistaken for an independently accepting edit.
 
 ### 2.3 Split completion
 
 When the second target scalar completes the split, the source advances from
-`$`i`$` to `$`i+1`$` while the stream again advances by one:
+$`i`$ to $`i+1`$ while the stream again advances by one:
 
 ```math
 \delta' + (k+1)

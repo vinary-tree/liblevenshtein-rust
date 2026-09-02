@@ -4,6 +4,10 @@
 **Session**: Post-implementation cleanup
 **Status**: ✅ COMPLETE
 
+> Historical warning state only: `UniversalAutomaton::policy` is now an active
+> field used by policy-aware characteristic-vector construction. See
+> [POLICY_IMPLEMENTATION_STATUS.md](POLICY_IMPLEMENTATION_STATUS.md).
+
 ## Overview
 
 After completing the restricted substitutions feature implementation, performed final cleanup to address compiler warnings and verify stability.
@@ -42,10 +46,10 @@ After completing the restricted substitutions feature implementation, performed 
    - **Status**: Pre-existing, not introduced by our work
    - **Action**: No change (out of scope for this feature)
 
-4. **Unused field `policy` in `UniversalAutomaton`**
+4. **Historical unused field `policy` in `UniversalAutomaton`**
    - **File**: `src/transducer/universal/automaton.rs:71`
-   - **Status**: Intentional - field exists for future Universal Levenshtein policy integration
-   - **Action**: Keep as-is (will be used when Universal variant adds policy support)
+   - **Status at this checkpoint**: Intentional; the field existed for later Universal Levenshtein policy integration
+   - **Current status**: Integrated into policy-aware characteristic-vector construction
 
 ### 2. Test Verification
 

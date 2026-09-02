@@ -4,6 +4,12 @@
 **Status**: ✅ **COMPLETE**
 **Time**: 3.5 hours total
 
+> This is a historical Phase 3 completion record. The deferred Universal
+> policy integration is now complete. See
+> [POLICY_IMPLEMENTATION_STATUS.md](POLICY_IMPLEMENTATION_STATUS.md) and the
+> [policy-aware Universal scientific ledger](../scientific-ledger/universal-policy-aware-encoding-2026-09-02.md)
+> for current behavior and evidence.
+
 ## Executive Summary
 
 Successfully integrated `SubstitutionPolicy` parameter into the lazy
@@ -67,7 +73,7 @@ matching as a measured, policy-specific feature.
 
 **Rationale**:
 - ✅ Zero breaking changes
-- ✅ Policy exists but not yet used in logic
+- ✅ At this checkpoint, the policy existed but was not yet used in Universal logic
 - ✅ Can add `query_with_policy()` methods later
 - ✅ Aligns with Rust API guidelines (convenience over generics)
 

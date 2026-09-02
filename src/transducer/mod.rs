@@ -148,8 +148,8 @@ pub use state::State;
 pub use state_f64::StateF64;
 pub use subsequence_query::{SubsequenceMatch, SubsequenceQueryIterator, SubsequenceQueryStats};
 pub use substitution_policy::{
-    OwnedRestricted, Restricted, RestrictedChar, SubstitutionPolicy, SubstitutionPolicyChar,
-    SubstitutionPolicyFor, Unrestricted,
+    OwnedRestricted, OwnedRestrictedChar, Restricted, RestrictedChar, SubstitutionPolicy,
+    SubstitutionPolicyChar, SubstitutionPolicyFor, Unrestricted,
 };
 pub use substitution_set::{
     SubstitutionPair, SubstitutionSet, MAX_SUBSTITUTION_PAIRS, MAX_SUBSTITUTION_TEXT_BYTES,

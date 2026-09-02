@@ -8,6 +8,8 @@ preserved verbatim as the project's experimental record.
 
 ## Records
 
+- [universal-policy-aware-encoding-2026-09-02.md](universal-policy-aware-encoding-2026-09-02.md) —
+  directional byte/Unicode/unit-generic universal policy semantics and pinned-core zero-cost validation (2026-09-02)
 - [metric-automata-architecture-audit-2026-08-30.md](metric-automata-architecture-audit-2026-08-30.md) —
   independent source, SCC, retention, stack-safety, and metric-boundary audit of lazy products and online automata (2026-08-30)
 - [operation-set-binary-persistence-2026-08-02.md](operation-set-binary-persistence-2026-08-02.md) —

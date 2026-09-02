@@ -1,8 +1,14 @@
 # Restricted Substitutions Implementation: Progress Summary
 
 **Date**: 2025-11-12
-**Status**: Infrastructure Complete (Phases 1-4)
-**Progress**: 4/9 phases complete (~40% of 30-day plan)
+**Status**: Historical 2025 infrastructure checkpoint; superseded by the
+2026-09-02 native completion audit
+**Progress**: Original phase accounting preserved below for historical context
+
+> For current policy semantics, ownership forms, unit-domain coverage, tests,
+> and performance evidence, use
+> [POLICY_IMPLEMENTATION_STATUS.md](POLICY_IMPLEMENTATION_STATUS.md) and the
+> [2026-09-02 scientific ledger](../scientific-ledger/universal-policy-aware-encoding-2026-09-02.md).
 
 ## Executive Summary
 
@@ -224,9 +230,11 @@ if automaton.accepts("cat", "kat") {
 - Performance tuning if needed
 - Release notes preparation
 
-## Current Status: Policy Logic Not Yet Implemented
+## Historical status at the 2025-11-12 checkpoint
 
-**Important**: While the infrastructure is complete, **the actual policy checks are not yet implemented in the transition logic**. This means:
+The following statements describe the state at that checkpoint. They are not
+the current implementation status; policy checks are now implemented in both
+dictionary transition and universal characteristic-vector paths.
 
 ✅ **What Works**:
 - Generic API with policy parameters

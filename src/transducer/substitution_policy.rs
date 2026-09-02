@@ -37,7 +37,8 @@ use std::sync::Arc;
 /// is allowed during fuzzy matching. The trait is designed to enable
 /// zero-cost abstraction through monomorphization:
 ///
-/// - [`Unrestricted`]: Allows all substitutions (zero-sized type, no overhead)
+/// - [`Unrestricted`]: Standard Levenshtein matching with no distinct
+///   zero-cost substitutions (zero-sized type, no overhead)
 /// - [`Restricted`]: Allows only explicitly configured substitutions
 ///
 /// ## Performance
@@ -170,7 +171,7 @@ pub trait SubstitutionPolicyFor<U: CharUnit>: SubstitutionPolicy {
     fn is_allowed_for(&self, dict_unit: U, query_unit: U) -> bool;
 }
 
-/// Unrestricted substitution policy: all substitutions are allowed.
+/// Standard Levenshtein substitution policy with no distinct zero-cost pairs.
 ///
 /// This is the default policy and implements zero-cost abstraction through
 /// being a zero-sized type (ZST). The compiler completely eliminates any
@@ -368,7 +369,7 @@ impl SubstitutionPolicyFor<u8> for OwnedRestricted {
 ///
 /// Like `SubstitutionPolicy`, the `Unrestricted` case is zero-cost. The
 /// `RestrictedChar` case adds HashSet lookup overhead only on mismatches.
-pub trait SubstitutionPolicyChar: Copy + Clone {
+pub trait SubstitutionPolicyChar: Clone {
     /// Check if substituting `dict_char` with `query_char` is allowed as a zero-cost operation.
     ///
     /// # Parameters
@@ -484,6 +485,75 @@ impl<'a> SubstitutionPolicyFor<char> for RestrictedChar<'a> {
     fn is_allowed_for(&self, dict_unit: char, query_unit: char) -> bool {
         // Check if explicitly allowed substitution or exact match
         dict_unit == query_unit || self.set.contains(dict_unit, query_unit)
+    }
+}
+
+/// Owned Unicode-scalar restricted substitution policy.
+///
+/// This is the owned counterpart to [`RestrictedChar`]. It keeps the
+/// [`SubstitutionSetChar`] in an [`Arc`], so an automaton or another long-lived
+/// query object can retain Unicode substitution semantics without borrowing
+/// caller-owned configuration. Cloning the policy clones only the `Arc`.
+///
+/// # Example
+///
+/// ```rust
+/// use liblevenshtein::transducer::{
+///     OwnedRestrictedChar, SubstitutionPolicyChar, SubstitutionSetChar,
+/// };
+///
+/// let mut substitutions = SubstitutionSetChar::new();
+/// substitutions.allow('é', 'e');
+/// let policy = OwnedRestrictedChar::new(substitutions);
+///
+/// assert!(policy.is_allowed('é', 'e'));
+/// assert!(!policy.is_allowed('e', 'é')); // Direction is significant.
+/// ```
+#[derive(Clone, Debug)]
+pub struct OwnedRestrictedChar {
+    set: Arc<SubstitutionSetChar>,
+}
+
+impl OwnedRestrictedChar {
+    /// Create an owned Unicode policy from a substitution set.
+    #[inline]
+    pub fn new(set: SubstitutionSetChar) -> Self {
+        Self { set: Arc::new(set) }
+    }
+
+    /// Create an owned Unicode policy from a shared substitution set.
+    #[inline]
+    pub fn from_arc(set: Arc<SubstitutionSetChar>) -> Self {
+        Self { set }
+    }
+
+    /// Get the underlying Unicode substitution set.
+    #[inline]
+    pub fn set(&self) -> &SubstitutionSetChar {
+        &self.set
+    }
+}
+
+impl SubstitutionPolicy for OwnedRestrictedChar {
+    #[inline(always)]
+    fn is_allowed(&self, dict_char: u8, query_char: u8) -> bool {
+        // The base trait is the legacy byte surface; Unicode callers are
+        // statically routed through SubstitutionPolicyFor<char> below.
+        dict_char == query_char
+    }
+}
+
+impl SubstitutionPolicyFor<char> for OwnedRestrictedChar {
+    #[inline(always)]
+    fn is_allowed_for(&self, dict_unit: char, query_unit: char) -> bool {
+        dict_unit == query_unit || self.set.contains(dict_unit, query_unit)
+    }
+}
+
+impl SubstitutionPolicyChar for OwnedRestrictedChar {
+    #[inline(always)]
+    fn is_allowed(&self, dict_char: char, query_char: char) -> bool {
+        dict_char == query_char || self.set.contains(dict_char, query_char)
     }
 }
 
@@ -659,6 +729,18 @@ mod tests {
 
         assert!(SubstitutionPolicy::is_allowed(&policy, b'a', b'a'));
         assert!(!SubstitutionPolicy::is_allowed(&policy, b'e', b'a'));
+    }
+
+    #[test]
+    fn owned_restricted_char_retains_shared_unicode_policy() {
+        let mut substitutions = SubstitutionSetChar::new();
+        substitutions.allow('é', 'e');
+        let policy = OwnedRestrictedChar::new(substitutions);
+        let cloned = policy.clone();
+
+        assert!(policy.is_allowed_for('é', 'e'));
+        assert!(!policy.is_allowed_for('e', 'é'));
+        assert!(std::ptr::eq(policy.set(), cloned.set()));
     }
 
     #[test]

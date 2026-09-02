@@ -6,7 +6,57 @@
 /// The universal automaton should accept/reject the same word/input pairs as the
 /// parameterized version, just without needing to be constructed for each specific word.
 use liblevenshtein::prelude::*;
-use liblevenshtein::transducer::universal::{Standard as UniversalStandard, UniversalAutomaton};
+use liblevenshtein::transducer::universal::{
+    MergeAndSplit as UniversalMergeAndSplit, Standard as UniversalStandard,
+    Transposition as UniversalTransposition, UniversalAutomaton,
+};
+use liblevenshtein::transducer::{Algorithm, Restricted, SubstitutionSet};
+
+fn parameterized_accepts_with_policy(
+    word: &str,
+    input: &str,
+    max_distance: usize,
+    algorithm: Algorithm,
+    substitutions: &SubstitutionSet,
+) -> bool {
+    let dictionary: DynamicDawg<()> = DynamicDawg::default();
+    dictionary.insert(word);
+    let transducer = Transducer::with_policy(dictionary, algorithm, Restricted::new(substitutions));
+    transducer
+        .query(input, max_distance)
+        .any(|candidate| candidate == word)
+}
+
+#[test]
+fn policy_aware_universal_variants_match_singleton_dictionary_transducers() {
+    let mut substitutions = SubstitutionSet::new();
+    substitutions.allow_byte(b'k', b'c');
+    let policy = Restricted::new(&substitutions);
+
+    let standard = UniversalAutomaton::<UniversalStandard, _>::with_policy(0, policy);
+    assert_eq!(
+        standard.accepts_bytes(b"kit", b"cit"),
+        parameterized_accepts_with_policy("kit", "cit", 0, Algorithm::Standard, &substitutions,)
+    );
+
+    let transposition = UniversalAutomaton::<UniversalTransposition, _>::with_policy(1, policy);
+    assert_eq!(
+        transposition.accepts_bytes(b"abk", b"bac"),
+        parameterized_accepts_with_policy(
+            "abk",
+            "bac",
+            1,
+            Algorithm::Transposition,
+            &substitutions,
+        )
+    );
+
+    let merge_and_split = UniversalAutomaton::<UniversalMergeAndSplit, _>::with_policy(1, policy);
+    assert_eq!(
+        merge_and_split.accepts_bytes(b"ak", b"abc"),
+        parameterized_accepts_with_policy("ak", "abc", 1, Algorithm::MergeAndSplit, &substitutions,)
+    );
+}
 
 #[test]
 fn test_substitution_test_to_text() {

@@ -1,7 +1,15 @@
 # Phase 2d Analysis: Multi-Character Operations
 
 **Date**: 2025-11-13
-**Status**: PLANNING
+**Status**: Historical planning record; superseded
+
+> This document preserves the state observed during Phase 2d. Universal
+> transposition and merge-and-split execution are implemented and validated in
+> the current tree. See
+> [Universal automata documentation](../universal/README.md) and
+> [Universal policy-aware characteristic-vector encoding](../scientific-ledger/universal-policy-aware-encoding-2026-09-02.md)
+> for the current implementation and evidence. Statements below about missing
+> Universal operations describe the 2025 checkpoint, not the present API.
 
 ## Discovery: Universal Automaton Transposition Status
 
@@ -11,13 +19,13 @@ After examining the Universal automaton codebase, I discovered:
    - `Transposition` enum with `Usual` and `TranspositionState` variants
    - Implements `PositionVariant` trait
 
-2. **But transposition successor generation is NOT implemented**:
+2. **At this checkpoint, transposition successor generation was not implemented**:
    - `UniversalPosition<V>::successors()` only handles Standard operations
    - No separate `successors_i_type_transposition()` or `successors_m_type_transposition()` methods
    - No transposition-specific logic in state transitions
 
-3. **This means**:
-   - Transposition support is **planned but not yet implemented** in Universal automaton
+3. **At this checkpoint, this meant**:
+   - Transposition support was **planned but not yet implemented** in Universal automaton
    - We cannot cross-validate GeneralizedAutomaton against UniversalAutomaton<Transposition>
    - We need to implement transposition from first principles using Mitankin's thesis
 

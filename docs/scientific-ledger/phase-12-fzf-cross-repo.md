@@ -13,7 +13,7 @@ Rust-like paths with deliberately shared directory and module prefixes.
 The primary work measure is the number of dynamic-programming columns. Timing
 is secondary because it includes dictionary traversal, allocation, and host
 noise. The implementation must first pass score-for-score differential tests
-and top-`` $`k`$ `` set equality; a faster wrong scorer is rejected.
+and top-$`k`$ set equality; a faster wrong scorer is rejected.
 
 ## Pre-registered hypotheses
 
@@ -27,7 +27,7 @@ and top-`` $`k`$ `` set equality; a faster wrong scorer is rejected.
 ## Correctness gate
 
 Before timing, all of the following must pass: upstream score fixtures,
-example tests, generated descendant-bound tests, generated trie/flat top-`` $`k`$ ``
+example tests, generated descendant-bound tests, generated trie/flat top-$`k`$
 equality, integration through the liblevenshtein DFS visitor, Arctic transition
 telescoping, and the Rocq, Verus, Dafny, SMT, and TLA+ artifacts registered in
 the formal-verification manifest.

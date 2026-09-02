@@ -34,7 +34,8 @@
 use crate::transducer::universal::{
     CharacteristicVector, PositionVariant, UniversalPosition, UniversalState,
 };
-use crate::transducer::{SubstitutionPolicy, Unrestricted};
+use crate::transducer::{SubstitutionPolicy, SubstitutionPolicyFor, Unrestricted};
+use libdictenstein::CharUnit;
 
 /// Universal Levenshtein Automaton A^∀,χ_n
 ///
@@ -44,18 +45,14 @@ use crate::transducer::{SubstitutionPolicy, Unrestricted};
 /// # Type Parameters
 ///
 /// - `V`: Position variant (Standard, Transposition, or MergeAndSplit)
-/// - `P`: Reserved substitution-policy marker (defaults to [`Unrestricted`])
+/// - `P`: Zero-cost substitution policy (defaults to [`Unrestricted`])
 ///
 /// The default [`Unrestricted`] policy is a zero-sized type, so there is
 /// zero memory or performance overhead for the default case.
 ///
-/// # Substitution-policy limitation
-///
-/// The universal encoder currently derives characteristic vectors from exact
-/// character equality. Although [`UniversalAutomaton::with_policy`] preserves a
-/// policy type in the API, it does not yet apply non-exact, zero-cost
-/// substitutions during matching. Use [`Unrestricted`] when acceptance
-/// semantics matter; policy-aware universal encoding is tracked separately.
+/// A configured policy participates in characteristic-vector construction for
+/// every online transition. Policy direction is dictionary unit first, query
+/// unit second, consistently with the other transducer engines.
 ///
 /// # Examples
 ///
@@ -75,8 +72,10 @@ use crate::transducer::{SubstitutionPolicy, Unrestricted};
 pub struct UniversalAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrestricted> {
     /// Maximum edit distance n
     max_distance: u8,
-    /// Phantom data for position variant and substitution policy
-    _phantom: std::marker::PhantomData<(V, P)>,
+    /// Substitution equivalence used by policy-aware characteristic vectors.
+    policy: P,
+    /// Position behavior is selected through monomorphization.
+    _variant: std::marker::PhantomData<V>,
 }
 
 /// Stable online execution state for one fixed dictionary word.
@@ -86,18 +85,27 @@ pub struct UniversalAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrest
 /// position counter. Retained memory is independent of the consumed input
 /// prefix and no recursion is used.
 #[derive(Debug, Clone)]
-pub struct UniversalOnlineAutomaton<V: PositionVariant, P: SubstitutionPolicy = Unrestricted> {
+pub struct UniversalOnlineAutomaton<
+    V: PositionVariant,
+    P: SubstitutionPolicy = Unrestricted,
+    U: CharUnit = char,
+> {
     max_distance: u8,
-    word: Vec<char>,
+    word: Vec<U>,
     state: Option<UniversalState<V>>,
     input_length: usize,
-    _policy: std::marker::PhantomData<P>,
+    policy: P,
 }
 
-impl<V: PositionVariant, P: SubstitutionPolicy> UniversalOnlineAutomaton<V, P> {
-    /// Consume one input scalar. `false` means the exact universal frontier is
+impl<V, P, U> UniversalOnlineAutomaton<V, P, U>
+where
+    V: PositionVariant,
+    P: SubstitutionPolicy + SubstitutionPolicyFor<U>,
+    U: CharUnit,
+{
+    /// Consume one input unit. `false` means the exact universal frontier is
     /// dead; subsequent calls remain dead and allocate nothing.
-    pub fn advance(&mut self, input: char) -> bool {
+    pub fn advance(&mut self, input: U) -> bool {
         let Some(position) = self.input_length.checked_add(1) else {
             self.state = None;
             return false;
@@ -118,7 +126,12 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalOnlineAutomaton<V, P> {
         };
         let (false_prefix, relevant) =
             relevant_word_window(&self.word, position, self.max_distance);
-        let characteristic = CharacteristicVector::from_padded_chars(input, false_prefix, relevant);
+        let characteristic = CharacteristicVector::from_padded_units_with_policy(
+            input,
+            false_prefix,
+            relevant,
+            &self.policy,
+        );
         self.state = source.transition(&characteristic, position);
         self.state.is_some()
     }
@@ -149,9 +162,18 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalOnlineAutomaton<V, P> {
     pub fn state(&self) -> Option<&UniversalState<V>> {
         self.state.as_ref()
     }
+
+    /// Substitution policy retained by this online machine.
+    pub fn policy(&self) -> &P {
+        &self.policy
+    }
 }
 
-fn relevant_word_window(word: &[char], position: usize, max_distance: u8) -> (usize, &[char]) {
+fn relevant_word_window<U: CharUnit>(
+    word: &[U],
+    position: usize,
+    max_distance: u8,
+) -> (usize, &[U]) {
     let distance = usize::from(max_distance);
     let false_prefix = distance.saturating_add(1).saturating_sub(position);
     let start = position.saturating_sub(distance).max(1);
@@ -216,27 +238,21 @@ impl<V: PositionVariant> UniversalAutomaton<V, Unrestricted> {
     pub fn new(max_distance: u8) -> Self {
         Self {
             max_distance,
-            _phantom: std::marker::PhantomData,
+            policy: Unrestricted,
+            _variant: std::marker::PhantomData,
         }
     }
 }
 
 // Generic methods (work with any policy)
 impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
-    /// Construct a Universal Levenshtein Automaton with a substitution-policy marker.
-    ///
-    /// # Current limitation
-    ///
-    /// The policy value is not yet consulted by universal characteristic-vector
-    /// encoding. Consequently, this constructor currently has the same matching
-    /// semantics as [`UniversalAutomaton::new`]. It exists to preserve the typed
-    /// API while policy-aware encoding is implemented; callers requiring custom
-    /// zero-cost substitutions should not rely on it yet.
+    /// Construct a Universal Levenshtein Automaton with a zero-cost
+    /// substitution policy.
     ///
     /// # Arguments
     ///
     /// - `max_distance`: Maximum edit distance n (typically 1, 2, or 3)
-    /// - `policy`: Policy value whose type is retained as a marker
+    /// - `policy`: Policy applied to dictionary/query unit pairs
     ///
     /// # Returns
     ///
@@ -245,20 +261,22 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     /// # Examples
     ///
     /// ```rust
-    /// use liblevenshtein::transducer::substitution_policy::Restricted;
+    /// use liblevenshtein::transducer::substitution_policy::RestrictedChar;
     /// use liblevenshtein::transducer::universal::{Standard, UniversalAutomaton};
-    /// use liblevenshtein::transducer::SubstitutionSet;
+    /// use liblevenshtein::transducer::SubstitutionSetChar;
     ///
-    /// let policy_set = SubstitutionSet::phonetic_basic();
-    /// let policy = Restricted::new(&policy_set);
-    /// let automaton = UniversalAutomaton::<Standard, _>::with_policy(2, policy);
-    /// assert_eq!(automaton.max_distance(), 2);
+    /// let mut policy_set = SubstitutionSetChar::new();
+    /// policy_set.allow('é', 'e');
+    /// let policy = RestrictedChar::new(&policy_set);
+    /// let automaton = UniversalAutomaton::<Standard, _>::with_policy(0, policy);
+    /// assert!(automaton.accepts("café", "cafe"));
     /// ```
     #[must_use]
-    pub fn with_policy(max_distance: u8, _policy: P) -> Self {
+    pub fn with_policy(max_distance: u8, policy: P) -> Self {
         Self {
             max_distance,
-            _phantom: std::marker::PhantomData,
+            policy,
+            _variant: std::marker::PhantomData,
         }
     }
 
@@ -266,6 +284,12 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     #[must_use]
     pub fn max_distance(&self) -> u8 {
         self.max_distance
+    }
+
+    /// Substitution policy used by policy-aware characteristic vectors.
+    #[must_use]
+    pub fn policy(&self) -> &P {
+        &self.policy
     }
 
     /// Create the initial state I^∀,χ = {I#0}
@@ -292,14 +316,60 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
 
     /// Bind this parameter-free automaton to one fixed word for stable online
     /// input processing.
-    pub fn online(&self, word: &str) -> UniversalOnlineAutomaton<V, P> {
+    pub fn online(&self, word: &str) -> UniversalOnlineAutomaton<V, P>
+    where
+        P: SubstitutionPolicyFor<char>,
+    {
+        self.online_owned_units(word.chars().collect())
+    }
+
+    /// Bind this automaton to an arbitrary fixed unit sequence for stable
+    /// online processing.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalAutomaton};
+    ///
+    /// let automaton = UniversalAutomaton::<Standard>::new(1);
+    /// let mut online = automaton.online_units(&[10_u64, 20, 30]);
+    /// for unit in [10_u64, 25, 30] {
+    ///     assert!(online.advance(unit));
+    /// }
+    /// assert!(online.is_accepting());
+    /// ```
+    pub fn online_units<U>(&self, word: &[U]) -> UniversalOnlineAutomaton<V, P, U>
+    where
+        U: CharUnit,
+        P: SubstitutionPolicyFor<U>,
+    {
+        self.online_owned_units(word.to_vec())
+    }
+
+    #[inline]
+    fn online_owned_units<U>(&self, word: Vec<U>) -> UniversalOnlineAutomaton<V, P, U>
+    where
+        U: CharUnit,
+        P: SubstitutionPolicyFor<U>,
+    {
         UniversalOnlineAutomaton {
             max_distance: self.max_distance,
-            word: word.chars().collect(),
+            word,
             state: Some(self.initial_state()),
             input_length: 0,
-            _policy: std::marker::PhantomData,
+            policy: self.policy.clone(),
         }
+    }
+
+    /// Bind this automaton to one fixed byte sequence for stable online
+    /// processing.
+    ///
+    /// Unlike [`online`](Self::online), this method does not require UTF-8.
+    pub fn online_bytes(&self, word: &[u8]) -> UniversalOnlineAutomaton<V, P, u8>
+    where
+        P: SubstitutionPolicyFor<u8>,
+    {
+        self.online_units(word)
     }
 
     /// Check if word w accepts input x within the maximum distance
@@ -341,7 +411,10 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
     /// // Distance 3: too far
     /// assert!(!automaton.accepts("test", "hello"));
     /// ```
-    pub fn accepts(&self, word: &str, input: &str) -> bool {
+    pub fn accepts(&self, word: &str, input: &str) -> bool
+    where
+        P: SubstitutionPolicyFor<char>,
+    {
         let mut online = self.online(word);
         for input_char in input.chars() {
             if !online.advance(input_char) {
@@ -349,6 +422,42 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
             }
         }
         online.is_accepting()
+    }
+
+    /// Check whether two arbitrary unit sequences are within the configured
+    /// distance under this substitution policy.
+    ///
+    /// This is the unit-generic counterpart to [`accepts`](Self::accepts).
+    pub fn accepts_units<U>(&self, word: &[U], input: &[U]) -> bool
+    where
+        U: CharUnit,
+        P: SubstitutionPolicyFor<U>,
+    {
+        let mut online = self.online_units(word);
+        for input_unit in input.iter().copied() {
+            if !online.advance(input_unit) {
+                return false;
+            }
+        }
+        online.is_accepting()
+    }
+
+    /// Check whether two byte sequences are within the configured distance
+    /// under this substitution policy.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use liblevenshtein::transducer::universal::{Standard, UniversalAutomaton};
+    ///
+    /// let automaton = UniversalAutomaton::<Standard>::new(1);
+    /// assert!(automaton.accepts_bytes(&[0xff, 0x00], &[0xfe, 0x00]));
+    /// ```
+    pub fn accepts_bytes(&self, word: &[u8], input: &[u8]) -> bool
+    where
+        P: SubstitutionPolicyFor<u8>,
+    {
+        self.accepts_units(word, input)
     }
 
     /// Compute relevant subword s_n(w, i)
@@ -422,7 +531,189 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transducer::universal::Standard;
+    use crate::transducer::universal::{MergeAndSplit, Standard, Transposition};
+    use crate::transducer::{
+        OwnedRestricted, OwnedRestrictedChar, Restricted, RestrictedChar, SubstitutionSet,
+        SubstitutionSetChar,
+    };
+    use proptest::prelude::*;
+
+    fn zero_cost_levenshtein<U, F>(word: &[U], input: &[U], mut is_equivalent: F) -> usize
+    where
+        U: Copy + Eq,
+        F: FnMut(U, U) -> bool,
+    {
+        let mut previous: Vec<usize> = (0..=input.len()).collect();
+        let mut current = vec![0; input.len().saturating_add(1)];
+
+        for (word_index, dict_unit) in word.iter().copied().enumerate() {
+            current[0] = word_index.saturating_add(1);
+            for (input_index, query_unit) in input.iter().copied().enumerate() {
+                let substitution_cost = usize::from(!is_equivalent(dict_unit, query_unit));
+                current[input_index.saturating_add(1)] = previous[input_index]
+                    .saturating_add(substitution_cost)
+                    .min(previous[input_index.saturating_add(1)].saturating_add(1))
+                    .min(current[input_index].saturating_add(1));
+            }
+            std::mem::swap(&mut previous, &mut current);
+        }
+
+        previous[input.len()]
+    }
+
+    fn assert_unicode_policy_semantics<V: PositionVariant>() {
+        let mut substitutions = SubstitutionSetChar::new();
+        substitutions.allow('é', 'e');
+        let automaton =
+            UniversalAutomaton::<V, _>::with_policy(0, RestrictedChar::new(&substitutions));
+
+        assert!(automaton.accepts("café", "cafe"));
+        assert!(automaton.accepts("café", "café"));
+        assert!(!automaton.accepts("cafe", "café"));
+        assert!(!automaton.accepts("café", "cafx"));
+
+        let mut online = automaton.online("café");
+        for query_unit in "cafe".chars() {
+            assert!(online.advance(query_unit));
+        }
+        assert!(online.is_accepting());
+        assert_eq!(online.word_length(), 4);
+        assert_eq!(online.input_length(), 4);
+    }
+
+    #[test]
+    fn unicode_policy_is_directional_for_every_universal_variant() {
+        assert_unicode_policy_semantics::<Standard>();
+        assert_unicode_policy_semantics::<Transposition>();
+        assert_unicode_policy_semantics::<MergeAndSplit>();
+    }
+
+    #[test]
+    fn byte_policy_drives_batch_and_online_universal_matching() {
+        let mut substitutions = SubstitutionSet::new();
+        substitutions.allow_byte(b'k', b'c');
+        let automaton =
+            UniversalAutomaton::<Standard, _>::with_policy(0, Restricted::new(&substitutions));
+
+        assert!(automaton.accepts_bytes(b"kit", b"cit"));
+        assert!(automaton.accepts_units(b"kit", b"cit"));
+        assert!(!automaton.accepts_bytes(b"cit", b"kit"));
+        assert!(!automaton.accepts_bytes(b"kit", b"sit"));
+
+        let mut online = automaton.online_bytes(b"kit");
+        for query_unit in b"cit" {
+            assert!(online.advance(*query_unit));
+        }
+        assert!(online.is_accepting());
+        assert!(std::ptr::eq(online.policy().set(), &substitutions));
+    }
+
+    #[test]
+    fn owned_byte_and_unicode_policies_survive_constructor_scope() {
+        let byte_automaton = {
+            let mut substitutions = SubstitutionSet::new();
+            substitutions.allow_byte(0xff, 0xfe);
+            UniversalAutomaton::<Standard, _>::with_policy(0, OwnedRestricted::new(substitutions))
+        };
+        assert!(byte_automaton.accepts_bytes(&[0xff], &[0xfe]));
+        assert!(!byte_automaton.accepts_bytes(&[0xfe], &[0xff]));
+
+        let unicode_automaton = {
+            let mut substitutions = SubstitutionSetChar::new();
+            substitutions.allow('Ω', 'ω');
+            UniversalAutomaton::<Standard, _>::with_policy(
+                0,
+                OwnedRestrictedChar::new(substitutions),
+            )
+        };
+        assert!(unicode_automaton.accepts("Ω", "ω"));
+        assert!(!unicode_automaton.accepts("ω", "Ω"));
+    }
+
+    #[derive(Clone)]
+    struct TokenEquivalence;
+
+    impl SubstitutionPolicy for TokenEquivalence {
+        fn is_allowed(&self, _dict_char: u8, _query_char: u8) -> bool {
+            false
+        }
+    }
+
+    impl SubstitutionPolicyFor<u64> for TokenEquivalence {
+        fn is_allowed_for(&self, dict_unit: u64, query_unit: u64) -> bool {
+            dict_unit == 22 && query_unit == 99
+        }
+    }
+
+    #[test]
+    fn custom_u64_policy_uses_the_same_unit_generic_encoder() {
+        let automaton = UniversalAutomaton::<Standard, _>::with_policy(0, TokenEquivalence);
+        assert!(automaton.accepts_units(&[11_u64, 22, 33], &[11, 99, 33]));
+        assert!(!automaton.accepts_units(&[11_u64, 99, 33], &[11, 22, 33]));
+    }
+
+    #[test]
+    fn policy_equivalence_composes_with_ordinary_edits() {
+        let mut substitutions = SubstitutionSetChar::new();
+        substitutions.allow('é', 'e');
+        let automaton =
+            UniversalAutomaton::<Standard, _>::with_policy(1, RestrictedChar::new(&substitutions));
+
+        assert!(automaton.accepts("café", "xcafe"));
+        assert!(automaton.accepts("xcafé", "cafe"));
+        assert!(!automaton.accepts("café", "xxcafe"));
+    }
+
+    #[test]
+    fn unrestricted_unit_api_covers_u64_tokens_without_policy_overhead() {
+        let automaton = UniversalAutomaton::<Standard>::new(0);
+        assert!(automaton.accepts_units(&[11_u64, 22, 33], &[11, 22, 33]));
+        assert!(!automaton.accepts_units(&[11_u64, 22, 33], &[11, 99, 33]));
+    }
+
+    proptest! {
+        #[test]
+        fn unicode_policy_matches_directional_dynamic_programming_oracle(
+            word in prop::collection::vec(prop_oneof![Just('a'), Just('c'), Just('e'), Just('é'), Just('x')], 0..9),
+            input in prop::collection::vec(prop_oneof![Just('a'), Just('c'), Just('e'), Just('é'), Just('x')], 0..9),
+            max_distance in 0_u8..=3,
+        ) {
+            let mut substitutions = SubstitutionSetChar::new();
+            substitutions.allow('é', 'e');
+            substitutions.allow('c', 'x');
+            let policy = RestrictedChar::new(&substitutions);
+            let automaton = UniversalAutomaton::<Standard, _>::with_policy(max_distance, policy);
+            let expected_distance = zero_cost_levenshtein(&word, &input, |dict_unit, query_unit| {
+                dict_unit == query_unit || substitutions.contains(dict_unit, query_unit)
+            });
+
+            prop_assert_eq!(
+                automaton.accepts_units(&word, &input),
+                expected_distance <= usize::from(max_distance)
+            );
+        }
+
+        #[test]
+        fn byte_policy_matches_directional_dynamic_programming_oracle(
+            word in prop::collection::vec(prop_oneof![Just(b'a'), Just(b'c'), Just(b'k'), Just(b'x')], 0..9),
+            input in prop::collection::vec(prop_oneof![Just(b'a'), Just(b'c'), Just(b'k'), Just(b'x')], 0..9),
+            max_distance in 0_u8..=3,
+        ) {
+            let mut substitutions = SubstitutionSet::new();
+            substitutions.allow_byte(b'k', b'c');
+            substitutions.allow_byte(b'x', b'a');
+            let policy = Restricted::new(&substitutions);
+            let automaton = UniversalAutomaton::<Standard, _>::with_policy(max_distance, policy);
+            let expected_distance = zero_cost_levenshtein(&word, &input, |dict_unit, query_unit| {
+                dict_unit == query_unit || substitutions.contains(dict_unit, query_unit)
+            });
+
+            prop_assert_eq!(
+                automaton.accepts_units(&word, &input),
+                expected_distance <= usize::from(max_distance)
+            );
+        }
+    }
 
     #[test]
     fn online_universal_state_is_prefix_independent_and_batch_equivalent() {

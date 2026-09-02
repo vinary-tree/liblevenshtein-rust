@@ -4,6 +4,12 @@
 **Status**: ✅ **IMPLEMENTED** (Option 1)
 **Scope**: Transducer API for substitution policy support
 
+> **Current update (2026-09-02):** Policy-based matching is implemented in the
+> parameterized and universal engines. Sections phrased as preparation or a
+> future API preserve the state when this decision was made; current entry
+> points and validation are documented in
+> [POLICY_IMPLEMENTATION_STATUS.md](POLICY_IMPLEMENTATION_STATUS.md).
+
 ## Implementation Update (2025-11-12)
 
 After thorough analysis in `OPTION1_ANALYSIS.md`, we **implemented Option 1** with excellent results:

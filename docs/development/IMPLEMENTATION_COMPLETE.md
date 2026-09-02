@@ -4,6 +4,11 @@
 **Feature**: Zero-cost character substitution policies for approximate string matching
 **Status**: **PRODUCTION READY**
 
+> The current implementation extends this 2025 byte-policy milestone with
+> Unicode, owned Unicode configuration, arbitrary `CharUnit` universal input,
+> and policy-aware online execution. See
+> [POLICY_IMPLEMENTATION_STATUS.md](POLICY_IMPLEMENTATION_STATUS.md).
+
 ---
 
 ## Executive Summary
