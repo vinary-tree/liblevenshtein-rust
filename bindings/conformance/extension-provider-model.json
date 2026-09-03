@@ -112,7 +112,9 @@
         "status": "complete",
         "evidence": [
           {"project": "vinary-tree-interop", "path": "bindings/python/src/vinary_tree_interop/__init__.py"},
-          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"}
+          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"},
+          {"project": "lling-llang", "path": "bindings/python/src/lling_llang/_algebra.py"},
+          {"project": "lling-llang", "path": "bindings/python/tests/test_api.py"}
         ]
       },
       "java": {
@@ -184,7 +186,9 @@
         "status": "complete",
         "evidence": [
           {"project": "vinary-tree-interop", "path": "bindings/python/src/vinary_tree_interop/__init__.py"},
-          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"}
+          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"},
+          {"project": "lling-llang", "path": "bindings/python/src/lling_llang/_wfst.py"},
+          {"project": "lling-llang", "path": "bindings/python/tests/test_api.py"}
         ]
       },
       "java": {
@@ -258,7 +262,9 @@
         "scope": "scalar-double-weight-specialization-only",
         "evidence": [
           {"project": "vinary-tree-interop", "path": "bindings/python/src/vinary_tree_interop/__init__.py"},
-          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"}
+          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"},
+          {"project": "lling-llang", "path": "bindings/python/src/lling_llang/_wfst.py"},
+          {"project": "lling-llang", "path": "bindings/python/tests/test_api.py"}
         ]
       },
       "java": {
@@ -348,7 +354,9 @@
           "status": "complete",
           "evidence": [
             {"project": "vinary-tree-interop", "path": "bindings/python/src/vinary_tree_interop/__init__.py"},
-            {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"}
+            {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"},
+            {"project": "lling-llang", "path": "bindings/python/src/lling_llang/_algebra.py"},
+            {"project": "lling-llang", "path": "bindings/python/tests/test_api.py"}
           ]
         },
         "java": {
