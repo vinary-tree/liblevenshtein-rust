@@ -159,6 +159,13 @@
           {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.FSharpProviders/Program.fs"}
         ]
       },
+      "go": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/go/semiring.go"},
+          {"project": "vinary-tree-interop", "path": "bindings/go/provider_test.go"}
+        ]
+      },
       "raku": {
         "status": "complete",
         "evidence": [
@@ -231,6 +238,13 @@
         "evidence": [
           {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/ScalarWfstProviders.cs"},
           {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.FSharpProviders/Program.fs"}
+        ]
+      },
+      "go": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/go/wfst.go"},
+          {"project": "vinary-tree-interop", "path": "bindings/go/provider_test.go"}
         ]
       },
       "raku": {
@@ -313,6 +327,14 @@
         "evidence": [
           {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/ScalarWfstProviders.cs"},
           {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.FSharpProviders/Program.fs"}
+        ]
+      },
+      "go": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/go/wfst.go"},
+          {"project": "vinary-tree-interop", "path": "bindings/go/provider_test.go"}
         ]
       },
       "raku": {
@@ -399,6 +421,13 @@
           "evidence": [
             {"project": "vinary-tree-interop", "path": "bindings/dotnet/src/VinaryTree.Interop/LatticeProviders.cs"},
             {"project": "vinary-tree-interop", "path": "bindings/dotnet/tests/VinaryTree.Interop.FSharpProviders/Program.fs"}
+          ]
+        },
+        "go": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/go/lattice.go"},
+            {"project": "vinary-tree-interop", "path": "bindings/go/provider_test.go"}
           ]
         },
         "raku": {
