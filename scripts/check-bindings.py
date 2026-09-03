@@ -595,21 +595,37 @@ for name in generated_raku_exports:
         is not None,
         f"Raku facade does not re-export generated ABI name {name}",
     )
-python_interop = tomllib.loads(
-    text(INTEROP_ROOT / "bindings" / "python" / "pyproject.toml")
+python_binding_roots = (
+    ROOT / "bindings" / "python",
+    INTEROP_ROOT / "bindings" / "python",
+    LIBDICT_ROOT / "bindings" / "python",
 )
+python_manifests = {
+    binding_root: tomllib.loads(text(binding_root / "pyproject.toml"))
+    for binding_root in python_binding_roots
+}
+python_interop = python_manifests[INTEROP_ROOT / "bindings" / "python"]
 require(
     python_interop["project"]["name"] == "vinary-tree-interop",
     "wrong interop PyPI package",
 )
-for setup_path in (
-    ROOT / "bindings" / "python" / "setup.py",
-    INTEROP_ROOT / "bindings" / "python" / "setup.py",
-    LIBDICT_ROOT / "bindings" / "python" / "setup.py",
-):
+for binding_root, manifest in python_manifests.items():
+    setup_path = binding_root / "setup.py"
+    if setup_path.is_file():
+        require(
+            '"LICENSE"' in text(setup_path),
+            f"Python native-wheel hook does not stage its license: {setup_path}",
+        )
+        continue
+
+    license_files = manifest["project"].get("license-files", [])
     require(
-        '"LICENSE"' in text(setup_path),
-        f"Python wheel does not stage its license: {setup_path}",
+        isinstance(license_files, list) and "LICENSE" in license_files,
+        f"declarative Python package does not declare LICENSE: {binding_root / 'pyproject.toml'}",
+    )
+    require(
+        (binding_root / "LICENSE").is_file(),
+        f"declarative Python package license is missing: {binding_root / 'LICENSE'}",
     )
 go_interop = text(INTEROP_ROOT / "bindings" / "go" / "go.mod")
 go_project = text(ROOT / "bindings" / "go" / "go.mod")

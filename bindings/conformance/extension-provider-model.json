@@ -108,6 +108,41 @@
           {"project": "vinary-tree-interop", "path": "tests/cpp/providers.cpp"}
         ]
       },
+      "python": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/python/src/vinary_tree_interop/__init__.py"},
+          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"}
+        ]
+      },
+      "java": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/SemiringProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/java/io/vinarytree/interop/ProviderAbiSmoke.java"}
+        ]
+      },
+      "kotlin": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/SemiringProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/kotlin/io/vinarytree/interop/KotlinProviderSmoke.kt"}
+        ]
+      },
+      "scala": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/SemiringProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/scala/io/vinarytree/interop/ScalaProviderSmoke.scala"}
+        ]
+      },
+      "clojure": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/SemiringProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/clojure/io/vinarytree/interop/provider_smoke.clj"}
+        ]
+      },
       "csharp": {
         "status": "complete",
         "evidence": [
@@ -143,6 +178,41 @@
         "evidence": [
           {"project": "vinary-tree-interop", "path": "include/vinary_tree/interop.hpp"},
           {"project": "vinary-tree-interop", "path": "tests/cpp/providers.cpp"}
+        ]
+      },
+      "python": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/python/src/vinary_tree_interop/__init__.py"},
+          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"}
+        ]
+      },
+      "java": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/ScalarWfstProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/java/io/vinarytree/interop/ProviderAbiSmoke.java"}
+        ]
+      },
+      "kotlin": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/ScalarWfstProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/kotlin/io/vinarytree/interop/KotlinProviderSmoke.kt"}
+        ]
+      },
+      "scala": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/ScalarWfstProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/scala/io/vinarytree/interop/ScalaProviderSmoke.scala"}
+        ]
+      },
+      "clojure": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/ScalarWfstProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/clojure/io/vinarytree/interop/provider_smoke.clj"}
         ]
       },
       "csharp": {
@@ -181,6 +251,46 @@
         "evidence": [
           {"project": "vinary-tree-interop", "path": "include/vinary_tree/interop.hpp"},
           {"project": "vinary-tree-interop", "path": "tests/cpp/providers.cpp"}
+        ]
+      },
+      "python": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/python/src/vinary_tree_interop/__init__.py"},
+          {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"}
+        ]
+      },
+      "java": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/ScalarWfstProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/java/io/vinarytree/interop/ProviderAbiSmoke.java"}
+        ]
+      },
+      "kotlin": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/ScalarWfstProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/kotlin/io/vinarytree/interop/KotlinProviderSmoke.kt"}
+        ]
+      },
+      "scala": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/ScalarWfstProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/scala/io/vinarytree/interop/ScalaProviderSmoke.scala"}
+        ]
+      },
+      "clojure": {
+        "status": "partial",
+        "scope": "scalar-double-weight-specialization-only",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/ScalarWfstProvider.java"},
+          {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/clojure/io/vinarytree/interop/provider_smoke.clj"}
         ]
       },
       "csharp": {
@@ -232,6 +342,41 @@
           "evidence": [
             {"project": "vinary-tree-interop", "path": "include/vinary_tree/interop.hpp"},
             {"project": "vinary-tree-interop", "path": "tests/cpp/providers.cpp"}
+          ]
+        },
+        "python": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/python/src/vinary_tree_interop/__init__.py"},
+            {"project": "vinary-tree-interop", "path": "bindings/python/tests/test_providers.py"}
+          ]
+        },
+        "java": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/LatticeProvider.java"},
+            {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/java/io/vinarytree/interop/ProviderAbiSmoke.java"}
+          ]
+        },
+        "kotlin": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/LatticeProvider.java"},
+            {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/kotlin/io/vinarytree/interop/KotlinProviderSmoke.kt"}
+          ]
+        },
+        "scala": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/LatticeProvider.java"},
+            {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/scala/io/vinarytree/interop/ScalaProviderSmoke.scala"}
+          ]
+        },
+        "clojure": {
+          "status": "complete",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/jvm/src/main/java/io/vinarytree/interop/LatticeProvider.java"},
+            {"project": "vinary-tree-interop", "path": "bindings/jvm/src/test/clojure/io/vinarytree/interop/provider_smoke.clj"}
           ]
         },
         "csharp": {
