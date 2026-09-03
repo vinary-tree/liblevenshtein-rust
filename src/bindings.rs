@@ -874,6 +874,22 @@ impl Provider {
         Ok(snapshot)
     }
 
+    fn len(&self) -> Result<Option<usize>, BindingError> {
+        let Some(callback) = self.vtable().len else {
+            return Ok(None);
+        };
+        let mut len = 0;
+        let mut known = 0;
+        self.call(|| status(unsafe { callback(self.resource.context, &mut len, &mut known) }))?;
+        match known {
+            0 => Ok(None),
+            1 => Ok(Some(len)),
+            _ => Err(BindingError::InvalidProviderOutput(
+                "dictionary length presence was not zero or one",
+            )),
+        }
+    }
+
     fn root(self: &Arc<Self>) -> Result<u64, BindingError> {
         let callback = self
             .vtable()
@@ -2041,6 +2057,12 @@ impl ForeignDictionary {
             Self::U64(provider) => Ok(Self::U64(immutable_or_snapshot(provider)?)),
         }
     }
+
+    fn len(&self) -> Result<Option<usize>, BindingError> {
+        match self {
+            Self::Byte(provider) | Self::Unicode(provider) | Self::U64(provider) => provider.len(),
+        }
+    }
 }
 
 /// Result ordering for a lazy query cursor.
@@ -2869,6 +2891,34 @@ impl ResourceTransducer {
     /// Unit domain required by this transducer's query entry point.
     pub fn unit_domain(&self) -> VtUnitDomain {
         self.dictionary.unit_domain()
+    }
+
+    /// Return the configured edit-distance algorithm.
+    pub fn algorithm(&self) -> Algorithm {
+        self.algorithm
+    }
+
+    /// Rebind this retained dictionary resource to another algorithm.
+    ///
+    /// The returned transducer shares the same provider owner, node cache, and
+    /// captured graph when the resource is already a snapshot. It neither
+    /// invokes a provider callback nor acquires a new provider retain; only the
+    /// immutable algorithm value changes.
+    pub fn with_algorithm(&self, algorithm: Algorithm) -> Self {
+        Self {
+            dictionary: self.dictionary.clone(),
+            algorithm,
+        }
+    }
+
+    /// Return the stored-term count when the provider can supply it cheaply.
+    ///
+    /// `Ok(None)` means the optional ABI callback is absent or the provider
+    /// deliberately reported an unknown count. A live provider may report a
+    /// later revision on each call; call [`snapshot`](Self::snapshot) first
+    /// when a stable count must be paired with subsequent queries.
+    pub fn len(&self) -> Result<Option<usize>, BindingError> {
+        self.dictionary.len()
     }
 
     /// Capture one immutable dictionary revision for reuse across queries.

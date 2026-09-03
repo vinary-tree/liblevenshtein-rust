@@ -154,6 +154,69 @@ fn pinned_transducer_reuses_one_revision_while_live_transducer_advances() {
 }
 
 #[test]
+fn pinned_length_and_algorithm_rebinding_share_one_revision() {
+    let dictionary = TestDictionary::new([
+        ("ab".to_owned(), Some(1)),
+        ("cat".to_owned(), Some(2)),
+        ("cot".to_owned(), Some(3)),
+    ]);
+    let live = unsafe {
+        ResourceTransducer::from_resource(dictionary.resource(), Algorithm::Standard).unwrap()
+    };
+    let pinned = live.snapshot().expect("capture dictionary revision");
+
+    assert_eq!(live.algorithm(), Algorithm::Standard);
+    assert_eq!(pinned.len().unwrap(), Some(3));
+    dictionary.remove("cot");
+    dictionary.insert("cut", Some(4));
+    dictionary.insert("dog", Some(5));
+    assert_eq!(pinned.len().unwrap(), Some(3));
+    assert_eq!(live.len().unwrap(), Some(4));
+
+    let transposition = pinned.with_algorithm(Algorithm::Transposition);
+    assert_eq!(transposition.algorithm(), Algorithm::Transposition);
+    assert_eq!(pinned.algorithm(), Algorithm::Standard);
+    assert_eq!(transposition.len().unwrap(), Some(3));
+
+    let standard_matches = drain(
+        &mut pinned
+            .query_utf8("ba", 1, QueryOrder::Traversal)
+            .expect("standard query"),
+    );
+    let transposition_matches = drain(
+        &mut transposition
+            .query_utf8("ba", 1, QueryOrder::Traversal)
+            .expect("transposition query"),
+    );
+    assert!(standard_matches.is_empty());
+    assert_eq!(transposition_matches, utf8_matches(&[("ab", 1, Some(1))]));
+}
+
+#[test]
+fn optional_length_preserves_unknown_and_rejects_malformed_presence() {
+    let unknown = TestDictionary::with_len_presence(
+        [("cat".to_owned(), Some(1)), ("cot".to_owned(), Some(2))],
+        0,
+    );
+    let unknown_transducer = unsafe {
+        ResourceTransducer::from_resource(unknown.resource(), Algorithm::Standard).unwrap()
+    };
+    assert_eq!(unknown_transducer.len().unwrap(), None);
+    assert_eq!(unknown_transducer.snapshot().unwrap().len().unwrap(), None);
+
+    let malformed = TestDictionary::with_len_presence([("cat".to_owned(), Some(1))], 2);
+    let malformed_transducer = unsafe {
+        ResourceTransducer::from_resource(malformed.resource(), Algorithm::Standard).unwrap()
+    };
+    assert_eq!(
+        malformed_transducer.len(),
+        Err(BindingError::InvalidProviderOutput(
+            "dictionary length presence was not zero or one"
+        ))
+    );
+}
+
+#[test]
 fn clear_after_partial_consumption_does_not_change_the_old_cursor() {
     let dictionary = TestDictionary::new(
         ["alpha", "alpine", "aleph", "beta"]

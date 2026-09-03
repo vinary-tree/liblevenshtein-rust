@@ -145,6 +145,9 @@ struct Context {
     // Which capability set query_interface hands out: false = serialized
     // (CallGate::Serial on the consumer side), true = PARALLEL_REENTRANT.
     reentrant: bool,
+    // Raw presence byte returned by the optional length callback. Tests use
+    // zero for an unknown count and values above one for hostile output.
+    len_presence: u8,
 }
 
 impl Drop for Context {
@@ -262,6 +265,7 @@ unsafe fn snapshot_status(raw: *mut c_void, out: *mut VtResource) -> VtStatus {
             metrics: Arc::clone(source.metrics()),
         },
         reentrant: source.reentrant,
+        len_presence: source.len_presence,
     }));
     VtStatus::Ok
 }
@@ -286,8 +290,9 @@ unsafe fn len_status(raw: *mut c_void, out_len: *mut usize, out_known: *mut u8) 
     if out_len.is_null() || out_known.is_null() {
         return VtStatus::NullPointer;
     }
-    out_len.write(context(raw).revision().len);
-    out_known.write(1);
+    let source = context(raw);
+    out_len.write(source.revision().len);
+    out_known.write(source.len_presence);
     VtStatus::Ok
 }
 
@@ -494,6 +499,21 @@ impl TestDictionary {
         entries: impl IntoIterator<Item = (String, Option<u64>)>,
         reentrant: bool,
     ) -> Self {
+        Self::with_options(entries, reentrant, 1)
+    }
+
+    pub fn with_len_presence(
+        entries: impl IntoIterator<Item = (String, Option<u64>)>,
+        len_presence: u8,
+    ) -> Self {
+        Self::with_options(entries, false, len_presence)
+    }
+
+    fn with_options(
+        entries: impl IntoIterator<Item = (String, Option<u64>)>,
+        reentrant: bool,
+        len_presence: u8,
+    ) -> Self {
         let mut revision = Revision::default();
         for (term, value) in entries {
             revision.insert(&term, value);
@@ -505,6 +525,7 @@ impl TestDictionary {
         let resource = resource(Context {
             kind: ContextKind::Mutable(Arc::clone(&store)),
             reentrant,
+            len_presence,
         });
         Self { store, resource }
     }

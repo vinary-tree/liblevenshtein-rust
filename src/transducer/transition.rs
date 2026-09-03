@@ -11,7 +11,7 @@ use super::{
     Algorithm, Position, PositionKind, State, StatePool, SubstitutionPolicy, SubstitutionPolicyFor,
 };
 use libdictenstein::CharUnit;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use std::ptr::NonNull;
 use std::sync::Arc;
@@ -2014,11 +2014,21 @@ impl<U: CharUnit> CharacteristicCache<U> {
 
         let mut dense = [miss; 256];
         let mut sparse = SmallVec::<[(U, u32); 16]>::new();
+        let mut seen_sparse = FxHashSet::default();
         for &query_unit in query {
+            let dense_index = query_unit.to_dense_index().map(usize::from);
+            let is_new = dense_index.map_or_else(
+                || seen_sparse.insert(query_unit),
+                |index| dense[index] == miss,
+            );
+            if !is_new {
+                continue;
+            }
+
             let class =
                 Self::build_pattern(classes, class_patterns, padding, policy, query_unit, query);
-            if let Some(index) = query_unit.to_dense_index() {
-                dense[usize::from(index)] = class;
+            if let Some(index) = dense_index {
+                dense[index] = class;
             } else {
                 sparse.push((query_unit, class));
             }
