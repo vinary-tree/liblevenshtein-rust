@@ -44,7 +44,9 @@ class PackageDocumentationBuildTests(unittest.TestCase):
         )
 
     def test_documenter_timestamp_is_normalized_to_source_epoch(self) -> None:
-        with tempfile.TemporaryDirectory(dir=BUILDER.ROOT / "target") as temporary:
+        target = BUILDER.ROOT / "target"
+        target.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=target) as temporary:
             siteinfo = Path(temporary) / ".documenter-siteinfo.json"
             siteinfo.write_text(
                 json.dumps(
