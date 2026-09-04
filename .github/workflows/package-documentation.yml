@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.14.7"
       # setup-julia v3.0.2
