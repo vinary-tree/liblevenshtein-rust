@@ -14,6 +14,10 @@
     "vinary-tree-interop": {
       "root": "../vinary-tree-interop",
       "rootEnvironment": "VINARY_TREE_INTEROP_ROOT"
+    },
+    "javascript-runtime": {
+      "root": "../javascript-runtime",
+      "rootEnvironment": "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT"
     }
   },
   "classifications": {
@@ -166,6 +170,22 @@
           {"project": "vinary-tree-interop", "path": "bindings/go/provider_test.go"}
         ]
       },
+      "javascript": {
+        "status": "partial",
+        "scope": "runtime-neutral-provider-contract-without-host-trampolines",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/javascript/index.mjs"},
+          {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"}
+        ]
+      },
+      "typescript": {
+        "status": "partial",
+        "scope": "runtime-neutral-provider-contract-without-host-trampolines",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/javascript/index.d.ts"},
+          {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"}
+        ]
+      },
       "raku": {
         "status": "complete",
         "evidence": [
@@ -245,6 +265,28 @@
         "evidence": [
           {"project": "vinary-tree-interop", "path": "bindings/go/wfst.go"},
           {"project": "vinary-tree-interop", "path": "bindings/go/provider_test.go"}
+        ]
+      },
+      "javascript": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/javascript/index.mjs"},
+          {"project": "javascript-runtime", "path": "native/src/addon.cc"},
+          {"project": "javascript-runtime", "path": "rust/src/browser.rs"},
+          {"project": "javascript-runtime", "path": "wasi-runtime.mjs"},
+          {"project": "javascript-runtime", "path": "test/native.test.mjs"},
+          {"project": "javascript-runtime", "path": "test/browser-wasm.test.mjs"},
+          {"project": "javascript-runtime", "path": "test/wasi.test.mjs"}
+        ]
+      },
+      "typescript": {
+        "status": "complete",
+        "evidence": [
+          {"project": "vinary-tree-interop", "path": "bindings/javascript/index.d.ts"},
+          {"project": "javascript-runtime", "path": "index.d.ts"},
+          {"project": "javascript-runtime", "path": "test/native.test.mjs"},
+          {"project": "javascript-runtime", "path": "test/browser-wasm.test.mjs"},
+          {"project": "javascript-runtime", "path": "test/wasi.test.mjs"}
         ]
       },
       "raku": {
@@ -428,6 +470,22 @@
           "evidence": [
             {"project": "vinary-tree-interop", "path": "bindings/go/lattice.go"},
             {"project": "vinary-tree-interop", "path": "bindings/go/provider_test.go"}
+          ]
+        },
+        "javascript": {
+          "status": "partial",
+          "scope": "runtime-neutral-provider-contract-without-host-trampolines",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/javascript/index.mjs"},
+            {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"}
+          ]
+        },
+        "typescript": {
+          "status": "partial",
+          "scope": "runtime-neutral-provider-contract-without-host-trampolines",
+          "evidence": [
+            {"project": "vinary-tree-interop", "path": "bindings/javascript/index.d.ts"},
+            {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"}
           ]
         },
         "raku": {
