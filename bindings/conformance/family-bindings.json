@@ -108,7 +108,7 @@
       "unitDomains": ["unicode-scalar", "vocabulary-id", "not-unit-bearing"],
       "capabilities": ["semiring", "wfst", "composition", "lattice", "algorithms", "cfg", "differentiable", "pushdown", "symbolic", "acoustic-asr-ctc", "correction-layers", "llm-decoder", "custom-provider"],
       "declaredLanguageEvidence": {
-        "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "javascript": "bindings/javascript",
+        "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "python": "bindings/python", "javascript": "bindings/javascript",
         "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs",
         "raku": "bindings/raku", "julia": "bindings/julia/LlingLlang"
       }

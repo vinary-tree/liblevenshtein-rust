@@ -112,6 +112,14 @@ canonical documentation-topic sequence, derives the aggregate documentation
 state from those topic states, and emits the TSV in a deterministic
 project/capability/language order.
 
+The generator also discovers conventional binding directories. A Python,
+JVM, .NET, JavaScript/TypeScript, ClojureScript, Julia, Raku, or other recognized
+binding tree may not exist outside `declaredLanguageEvidence`: that mismatch is
+a stale family model and fails generation. Discovery does not upgrade a cell to
+`complete`; it only prevents implemented packages from being misreported as
+`missing`. Capability-level evidence must still satisfy all five independent
+gates.
+
 ```sh
 # Regenerate after reviewing a model or evidence change.
 python3 scripts/generate-family-completeness-matrix.py

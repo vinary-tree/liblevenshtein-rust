@@ -59,6 +59,24 @@ PROJECT_ROOT_ENVIRONMENTS = {
     "javascript-runtime": "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT",
     "liblevenshtein-npm": "LIBLEVENSHTEIN_NPM_ROOT",
 }
+DISCOVERABLE_BINDING_DIRECTORIES = {
+    "c": {"c"},
+    "cpp": {"cpp"},
+    "python": {"python"},
+    "jvm": {"java", "kotlin", "scala"},
+    "clojure": {"clojure"},
+    "dotnet": {"csharp", "fsharp"},
+    "go": {"go"},
+    "javascript": {"javascript", "typescript"},
+    "swift": {"swift"},
+    "ruby": {"ruby"},
+    "fortran": {"fortran"},
+    "ocaml": {"ocaml"},
+    "haskell": {"haskell"},
+    "lua": {"lua"},
+    "raku": {"raku"},
+    "julia": {"julia"},
+}
 
 
 def fail(message: str) -> None:
@@ -93,6 +111,21 @@ def aggregate_documentation(states: list[str]) -> str:
         if state in states:
             return state
     fail("documentation topic states could not be aggregated")
+
+
+def discover_binding_languages(project_root: Path) -> set[str]:
+    """Return language claims made visible by conventional binding directories."""
+    bindings_root = project_root / "bindings"
+    if not bindings_root.is_dir():
+        return set()
+
+    discovered: set[str] = set()
+    for directory, languages in DISCOVERABLE_BINDING_DIRECTORIES.items():
+        if (bindings_root / directory).is_dir():
+            discovered.update(languages)
+    if (bindings_root / "javascript" / "cljs").is_dir():
+        discovered.add("clojurescript")
+    return discovered
 
 
 def documentation_topic(
@@ -274,6 +307,12 @@ def main() -> int:
             relative = clean(relative, f"{project_id}.{language_id}.evidence")
             if not (project_root / relative).exists():
                 fail(f"declared evidence is missing: {project_root / relative}")
+        undeclared_bindings = discover_binding_languages(project_root) - set(evidence)
+        if undeclared_bindings:
+            fail(
+                f"{project_id} has binding directories omitted from "
+                "declaredLanguageEvidence: " + ", ".join(sorted(undeclared_bindings))
+            )
 
         seen_capabilities: set[str] = set()
         for capability_value in capabilities:
