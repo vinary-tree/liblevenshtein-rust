@@ -136,8 +136,13 @@ runs:
                     f"workspace table at line(s) {workspace_headers}"
                 )
         PY
-        # Rewriting only path locations does not change any package identity in
-        # the committed lockfile. Keep that reviewed resolution intact: a fresh
-        # lockfile can select a newer transitive release whose no_std support is
-        # incompatible with the Tier-3 BSD build-std jobs.
-        cargo metadata --locked --format-version 1 --no-deps >/dev/null
+        # Removing the nested workspace sentinels makes these path dependencies
+        # members of the portable workspace. Cargo records their development
+        # dependencies in that topology, while the normal sibling layout does
+        # not, so the two layouts cannot share one lockfile. Install the
+        # separately reviewed portable resolution and validate its complete
+        # graph. Never regenerate it here: a fresh resolution can select a
+        # transitive release whose no_std support is incompatible with the
+        # Tier-3 BSD build-std jobs.
+        cp .github/locks/Cargo.portable.lock Cargo.lock
+        cargo metadata --locked --format-version 1 >/dev/null

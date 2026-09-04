@@ -1092,8 +1092,16 @@ portable_checkout = text(
     ROOT / ".github" / "actions" / "checkout-portable-siblings" / "action.yml"
 ).lower()
 require(
-    "cargo metadata --locked --format-version 1 --no-deps" in portable_checkout,
-    "portable sibling checkout must validate the committed dependency resolution",
+    "cargo metadata --locked --format-version 1 >/dev/null" in portable_checkout,
+    "portable sibling checkout must validate its complete dependency resolution",
+)
+require(
+    "cp .github/locks/cargo.portable.lock cargo.lock" in portable_checkout,
+    "portable sibling checkout must install its reviewed topology-specific lock",
+)
+require(
+    "cargo metadata --locked --format-version 1 --no-deps" not in portable_checkout,
+    "portable sibling checkout must not hide dependency-graph lock drift",
 )
 require(
     "cargo generate-lockfile" not in portable_checkout,
