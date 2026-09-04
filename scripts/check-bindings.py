@@ -1088,6 +1088,17 @@ for project, package_name in (
             f"{project} release workflow does not cover {marker}",
         )
 ci = text(ROOT / ".github" / "workflows" / "ci.yml").lower()
+portable_checkout = text(
+    ROOT / ".github" / "actions" / "checkout-portable-siblings" / "action.yml"
+).lower()
+require(
+    "cargo metadata --locked --format-version 1 --no-deps" in portable_checkout,
+    "portable sibling checkout must validate the committed dependency resolution",
+)
+require(
+    "cargo generate-lockfile" not in portable_checkout,
+    "portable sibling checkout must not replace the committed dependency resolution",
+)
 for marker in (
     "x86_64-unknown-linux-gnu",
     "aarch64-unknown-linux-gnu",

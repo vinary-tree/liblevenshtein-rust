@@ -136,4 +136,8 @@ runs:
                     f"workspace table at line(s) {workspace_headers}"
                 )
         PY
-        cargo generate-lockfile
+        # Rewriting only path locations does not change any package identity in
+        # the committed lockfile. Keep that reviewed resolution intact: a fresh
+        # lockfile can select a newer transitive release whose no_std support is
+        # incompatible with the Tier-3 BSD build-std jobs.
+        cargo metadata --locked --format-version 1 --no-deps >/dev/null
