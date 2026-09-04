@@ -474,18 +474,25 @@
         },
         "javascript": {
           "status": "partial",
-          "scope": "runtime-neutral-provider-contract-without-host-trampolines",
+          "scope": "native-node-provider-trampoline-with-browser-wasi-pending",
           "evidence": [
             {"project": "vinary-tree-interop", "path": "bindings/javascript/index.mjs"},
-            {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"}
+            {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"},
+            {"project": "javascript-runtime", "path": "native/src/lattice_provider.inc"},
+            {"project": "javascript-runtime", "path": "native.mjs"},
+            {"project": "javascript-runtime", "path": "test/native.test.mjs"},
+            {"project": "javascript-runtime", "path": "test/native.leak.test.mjs"}
           ]
         },
         "typescript": {
           "status": "partial",
-          "scope": "runtime-neutral-provider-contract-without-host-trampolines",
+          "scope": "native-node-provider-trampoline-with-browser-wasi-pending",
           "evidence": [
             {"project": "vinary-tree-interop", "path": "bindings/javascript/index.d.ts"},
-            {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"}
+            {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"},
+            {"project": "javascript-runtime", "path": "index.d.ts"},
+            {"project": "javascript-runtime", "path": "native.mjs"},
+            {"project": "javascript-runtime", "path": "test/native.test.mjs"}
           ]
         },
         "raku": {
