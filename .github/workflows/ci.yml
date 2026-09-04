@@ -59,6 +59,8 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-mutants@27.1.0
+      - name: Fetch the reviewed mutation-test dependency graph
+        run: cargo fetch --locked
       - name: Kill the pinned bounded temporal mutants
         env:
           TEMPORAL_MUTANTS_OUTPUT: ${{ runner.temp }}/liblevenshtein-temporal-mutants

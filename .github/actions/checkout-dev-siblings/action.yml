@@ -34,7 +34,7 @@ inputs:
   llattice-ref:
     description: Exact llattice ref; defaults to `ref`.
     required: false
-    default: "v0.1.0"
+    default: ""
   libdictenstein-ref:
     description: Exact libdictenstein ref; defaults to `ref`.
     required: false
