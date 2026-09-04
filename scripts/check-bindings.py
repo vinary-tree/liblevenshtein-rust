@@ -1088,6 +1088,16 @@ for project, package_name in (
             f"{project} release workflow does not cover {marker}",
         )
 ci = text(ROOT / ".github" / "workflows" / "ci.yml").lower()
+wasm_job = ci.split("\n  wasm:\n", 1)[1].split("\n  binding-contract:\n", 1)[0]
+for marker in (
+    "dtolnay/rust-toolchain@master",
+    'toolchain: "1.95.0"',
+    "targets: wasm32-unknown-unknown",
+):
+    require(
+        marker in wasm_job,
+        f"WASM build must install its target on the pinned active toolchain: {marker}",
+    )
 portable_checkout = text(
     ROOT / ".github" / "actions" / "checkout-portable-siblings" / "action.yml"
 ).lower()

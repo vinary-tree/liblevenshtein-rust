@@ -156,8 +156,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-dev-siblings
-      - uses: dtolnay/rust-toolchain@stable
+      # rust-toolchain.toml pins 1.95.0, so install the target for that exact
+      # active toolchain. Installing it on the moving `stable` alias leaves the
+      # pinned compiler unable to find libcore.
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: "1.95.0"
           targets: wasm32-unknown-unknown
       - run: cargo check --locked --target wasm32-unknown-unknown --features wasm
 
