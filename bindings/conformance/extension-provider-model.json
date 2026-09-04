@@ -473,26 +473,34 @@
           ]
         },
         "javascript": {
-          "status": "partial",
-          "scope": "native-node-provider-trampoline-with-browser-wasi-pending",
+          "status": "complete",
           "evidence": [
             {"project": "vinary-tree-interop", "path": "bindings/javascript/index.mjs"},
             {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"},
             {"project": "javascript-runtime", "path": "native/src/lattice_provider.inc"},
+            {"project": "javascript-runtime", "path": "rust/src/browser/browser_lattice.rs"},
+            {"project": "javascript-runtime", "path": "rust/src/wasi/wasi_lattice.rs"},
+            {"project": "javascript-runtime", "path": "runtime-factory.mjs"},
+            {"project": "javascript-runtime", "path": "wasi-runtime.mjs"},
             {"project": "javascript-runtime", "path": "native.mjs"},
             {"project": "javascript-runtime", "path": "test/native.test.mjs"},
-            {"project": "javascript-runtime", "path": "test/native.leak.test.mjs"}
+            {"project": "javascript-runtime", "path": "test/native.leak.test.mjs"},
+            {"project": "javascript-runtime", "path": "test/browser-wasm.test.mjs"},
+            {"project": "javascript-runtime", "path": "test/wasi.test.mjs"}
           ]
         },
         "typescript": {
-          "status": "partial",
-          "scope": "native-node-provider-trampoline-with-browser-wasi-pending",
+          "status": "complete",
           "evidence": [
             {"project": "vinary-tree-interop", "path": "bindings/javascript/index.d.ts"},
             {"project": "vinary-tree-interop", "path": "bindings/javascript/test.mjs"},
             {"project": "javascript-runtime", "path": "index.d.ts"},
+            {"project": "javascript-runtime", "path": "runtime-factory.mjs"},
+            {"project": "javascript-runtime", "path": "wasi-runtime.mjs"},
             {"project": "javascript-runtime", "path": "native.mjs"},
-            {"project": "javascript-runtime", "path": "test/native.test.mjs"}
+            {"project": "javascript-runtime", "path": "test/native.test.mjs"},
+            {"project": "javascript-runtime", "path": "test/browser-wasm.test.mjs"},
+            {"project": "javascript-runtime", "path": "test/wasi.test.mjs"}
           ]
         },
         "raku": {
