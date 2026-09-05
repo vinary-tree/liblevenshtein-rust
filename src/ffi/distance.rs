@@ -3,9 +3,95 @@
 use std::ffi::c_char;
 
 use crate::distance::{
-    damerau_levenshtein_distance, damerau_levenshtein_distance_bounded, standard_distance,
-    standard_distance_bounded, transposition_distance, transposition_distance_bounded,
+    damerau_levenshtein_distance, damerau_levenshtein_distance_bounded,
+    damerau_levenshtein_distance_units, damerau_levenshtein_distance_units_bounded,
+    merge_and_split_distance_bounded, merge_and_split_distance_units,
+    merge_and_split_distance_units_bounded, myers::myers_distance_bytes,
+    myers::myers_distance_bytes_bounded, standard_distance, standard_distance_bounded,
+    standard_distance_units, standard_distance_units_bounded, transposition_distance,
+    transposition_distance_bounded, transposition_distance_units,
+    transposition_distance_units_bounded,
 };
+
+const INVALID_INPUT: usize = usize::MAX;
+const ABOVE_THRESHOLD: usize = usize::MAX - 1;
+
+#[inline]
+unsafe fn input_slice<'a, U>(data: *const U, len: usize) -> Option<&'a [U]> {
+    if len == 0 {
+        return Some(&[]);
+    }
+    if data.is_null() || !(data as usize).is_multiple_of(std::mem::align_of::<U>()) {
+        return None;
+    }
+    Some(std::slice::from_raw_parts(data, len))
+}
+
+macro_rules! raw_unit_distance_functions {
+    (
+        $exact_name:ident,
+        $bounded_name:ident,
+        $unit:ty,
+        $domain:literal,
+        $family:literal,
+        $exact:path,
+        $bounded:path
+    ) => {
+        #[doc = concat!("Compute exact ", $family, " distance over ", $domain, ".")]
+        ///
+        /// # Safety
+        ///
+        /// Each non-empty input must address its declared number of aligned
+        /// units. A zero-length input may use a null pointer. Invalid pointers
+        /// or alignment return `usize::MAX`.
+        #[no_mangle]
+        pub unsafe extern "C" fn $exact_name(
+            source: *const $unit,
+            source_len: usize,
+            target: *const $unit,
+            target_len: usize,
+        ) -> usize {
+            let Some(source) = input_slice(source, source_len) else {
+                return INVALID_INPUT;
+            };
+            let Some(target) = input_slice(target, target_len) else {
+                return INVALID_INPUT;
+            };
+            $exact(source, target)
+        }
+
+        #[doc = concat!(
+                                                    "Compute thresholded ",
+                                                    $family,
+                                                    " distance over ",
+                                                    $domain,
+                                                    "."
+                                                )]
+        ///
+        /// # Safety
+        ///
+        /// Each non-empty input must address its declared number of aligned
+        /// units. A zero-length input may use a null pointer. Invalid pointers
+        /// or alignment return `usize::MAX`; a result above `threshold` returns
+        /// `usize::MAX - 1`.
+        #[no_mangle]
+        pub unsafe extern "C" fn $bounded_name(
+            source: *const $unit,
+            source_len: usize,
+            target: *const $unit,
+            target_len: usize,
+            threshold: usize,
+        ) -> usize {
+            let Some(source) = input_slice(source, source_len) else {
+                return INVALID_INPUT;
+            };
+            let Some(target) = input_slice(target, target_len) else {
+                return INVALID_INPUT;
+            };
+            $bounded(source, target, threshold).unwrap_or(ABOVE_THRESHOLD)
+        }
+    };
+}
 
 /// Calculate Levenshtein distance between two strings.
 ///
@@ -163,6 +249,133 @@ pub unsafe extern "C" fn llev_true_damerau_distance_threshold(
     };
     damerau_levenshtein_distance_bounded(source, target, threshold).unwrap_or(usize::MAX - 1)
 }
+
+/// Calculate Unicode-scalar merge-and-split distance between two strings.
+///
+/// # Safety
+///
+/// - Both buffers must be non-null and valid UTF-8 for their supplied lengths.
+/// - A zero-length buffer may use a null pointer.
+/// - Returns `usize::MAX` for a null or invalid UTF-8 buffer.
+#[no_mangle]
+pub unsafe extern "C" fn llev_merge_and_split_distance(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+) -> usize {
+    let source = match super::cbuf_to_str(source, source_len) {
+        Some(source) => source,
+        None => return INVALID_INPUT,
+    };
+    let target = match super::cbuf_to_str(target, target_len) {
+        Some(target) => target,
+        None => return INVALID_INPUT,
+    };
+    let source: smallvec::SmallVec<[char; 32]> = source.chars().collect();
+    let target: smallvec::SmallVec<[char; 32]> = target.chars().collect();
+    merge_and_split_distance_units(&source, &target)
+}
+
+/// Calculate Unicode-scalar merge-and-split distance within a threshold.
+///
+/// # Safety
+///
+/// - Both buffers must be non-null and valid UTF-8 for their supplied lengths.
+/// - A zero-length buffer may use a null pointer.
+/// - Returns `usize::MAX` for invalid input and `usize::MAX - 1` when the exact
+///   distance exceeds `threshold`.
+#[no_mangle]
+pub unsafe extern "C" fn llev_merge_and_split_distance_threshold(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+    threshold: usize,
+) -> usize {
+    let source = match super::cbuf_to_str(source, source_len) {
+        Some(source) => source,
+        None => return INVALID_INPUT,
+    };
+    let target = match super::cbuf_to_str(target, target_len) {
+        Some(target) => target,
+        None => return INVALID_INPUT,
+    };
+    merge_and_split_distance_bounded(source, target, threshold).unwrap_or(ABOVE_THRESHOLD)
+}
+
+raw_unit_distance_functions!(
+    llev_distance_bytes,
+    llev_distance_bytes_threshold,
+    u8,
+    "arbitrary bytes",
+    "Levenshtein",
+    myers_distance_bytes,
+    myers_distance_bytes_bounded
+);
+raw_unit_distance_functions!(
+    llev_distance_u64,
+    llev_distance_u64_threshold,
+    u64,
+    "unsigned 64-bit tokens",
+    "Levenshtein",
+    standard_distance_units,
+    standard_distance_units_bounded
+);
+raw_unit_distance_functions!(
+    llev_damerau_distance_bytes,
+    llev_damerau_distance_bytes_threshold,
+    u8,
+    "arbitrary bytes",
+    "optimal-string-alignment",
+    transposition_distance_units,
+    transposition_distance_units_bounded
+);
+raw_unit_distance_functions!(
+    llev_damerau_distance_u64,
+    llev_damerau_distance_u64_threshold,
+    u64,
+    "unsigned 64-bit tokens",
+    "optimal-string-alignment",
+    transposition_distance_units,
+    transposition_distance_units_bounded
+);
+raw_unit_distance_functions!(
+    llev_true_damerau_distance_bytes,
+    llev_true_damerau_distance_bytes_threshold,
+    u8,
+    "arbitrary bytes",
+    "unrestricted Damerau--Levenshtein",
+    damerau_levenshtein_distance_units,
+    damerau_levenshtein_distance_units_bounded
+);
+raw_unit_distance_functions!(
+    llev_true_damerau_distance_u64,
+    llev_true_damerau_distance_u64_threshold,
+    u64,
+    "unsigned 64-bit tokens",
+    "unrestricted Damerau--Levenshtein",
+    damerau_levenshtein_distance_units,
+    damerau_levenshtein_distance_units_bounded
+);
+raw_unit_distance_functions!(
+    llev_merge_and_split_distance_bytes,
+    llev_merge_and_split_distance_bytes_threshold,
+    u8,
+    "arbitrary bytes",
+    "merge-and-split",
+    merge_and_split_distance_units,
+    merge_and_split_distance_units_bounded
+);
+raw_unit_distance_functions!(
+    llev_merge_and_split_distance_u64,
+    llev_merge_and_split_distance_u64_threshold,
+    u64,
+    "unsigned 64-bit tokens",
+    "merge-and-split",
+    merge_and_split_distance_units,
+    merge_and_split_distance_units_bounded
+);
 
 #[cfg(test)]
 mod tests {
@@ -351,6 +564,215 @@ mod tests {
                     1,
                 ),
                 usize::MAX - 1
+            );
+        }
+    }
+
+    fn generated_sequences<U: Copy + Eq>(alphabet: &[U], maximum_len: usize) -> Vec<Vec<U>> {
+        let mut sequences = vec![Vec::new()];
+        for _ in 0..maximum_len {
+            let previous = sequences.clone();
+            for prefix in previous {
+                for unit in alphabet {
+                    let mut sequence = prefix.clone();
+                    sequence.push(*unit);
+                    sequences.push(sequence);
+                }
+            }
+        }
+        sequences.sort_by_key(Vec::len);
+        sequences.dedup();
+        sequences
+    }
+
+    #[test]
+    fn raw_domain_ffi_matches_generic_native_kernels() {
+        let byte_sequences = generated_sequences(&[0_u8, 0x7f, 0xff], 3);
+        for source in &byte_sequences {
+            for target in &byte_sequences {
+                let source_ptr = source.as_ptr();
+                let target_ptr = target.as_ptr();
+                unsafe {
+                    assert_eq!(
+                        llev_distance_bytes(source_ptr, source.len(), target_ptr, target.len()),
+                        standard_distance_units(source, target)
+                    );
+                    assert_eq!(
+                        llev_damerau_distance_bytes(
+                            source_ptr,
+                            source.len(),
+                            target_ptr,
+                            target.len()
+                        ),
+                        transposition_distance_units(source, target)
+                    );
+                    assert_eq!(
+                        llev_true_damerau_distance_bytes(
+                            source_ptr,
+                            source.len(),
+                            target_ptr,
+                            target.len()
+                        ),
+                        damerau_levenshtein_distance_units(source, target)
+                    );
+                    assert_eq!(
+                        llev_merge_and_split_distance_bytes(
+                            source_ptr,
+                            source.len(),
+                            target_ptr,
+                            target.len()
+                        ),
+                        merge_and_split_distance_units(source, target)
+                    );
+                    for threshold in 0..=3 {
+                        let sentinel = |value: Option<usize>| value.unwrap_or(ABOVE_THRESHOLD);
+                        assert_eq!(
+                            llev_distance_bytes_threshold(
+                                source_ptr,
+                                source.len(),
+                                target_ptr,
+                                target.len(),
+                                threshold
+                            ),
+                            sentinel(standard_distance_units_bounded(source, target, threshold))
+                        );
+                        assert_eq!(
+                            llev_damerau_distance_bytes_threshold(
+                                source_ptr,
+                                source.len(),
+                                target_ptr,
+                                target.len(),
+                                threshold
+                            ),
+                            sentinel(transposition_distance_units_bounded(
+                                source, target, threshold
+                            ))
+                        );
+                        assert_eq!(
+                            llev_true_damerau_distance_bytes_threshold(
+                                source_ptr,
+                                source.len(),
+                                target_ptr,
+                                target.len(),
+                                threshold
+                            ),
+                            sentinel(damerau_levenshtein_distance_units_bounded(
+                                source, target, threshold
+                            ))
+                        );
+                        assert_eq!(
+                            llev_merge_and_split_distance_bytes_threshold(
+                                source_ptr,
+                                source.len(),
+                                target_ptr,
+                                target.len(),
+                                threshold
+                            ),
+                            sentinel(merge_and_split_distance_units_bounded(
+                                source, target, threshold
+                            ))
+                        );
+                    }
+                }
+            }
+        }
+
+        let token_sequences = generated_sequences(&[0_u64, 7, u64::MAX], 3);
+        for source in &token_sequences {
+            for target in &token_sequences {
+                unsafe {
+                    assert_eq!(
+                        llev_distance_u64(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len()
+                        ),
+                        standard_distance_units(source, target)
+                    );
+                    assert_eq!(
+                        llev_damerau_distance_u64(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len()
+                        ),
+                        transposition_distance_units(source, target)
+                    );
+                    assert_eq!(
+                        llev_true_damerau_distance_u64(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len()
+                        ),
+                        damerau_levenshtein_distance_units(source, target)
+                    );
+                    assert_eq!(
+                        llev_merge_and_split_distance_u64(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len()
+                        ),
+                        merge_and_split_distance_units(source, target)
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn raw_domains_preserve_binary_values_and_validate_alignment() {
+        unsafe {
+            assert_eq!(
+                llev_distance_bytes([0xff].as_ptr(), 1, [0x00].as_ptr(), 1),
+                1
+            );
+            assert_eq!(
+                llev_distance([0xff].as_ptr().cast(), 1, [0x00].as_ptr().cast(), 1),
+                INVALID_INPUT
+            );
+            assert_eq!(
+                llev_distance_u64(std::ptr::null(), 0, std::ptr::null(), 0),
+                0
+            );
+
+            let storage = [0_u64; 2];
+            let misaligned = storage.as_ptr().cast::<u8>().add(1).cast::<u64>();
+            assert_eq!(
+                llev_distance_u64(misaligned, 1, std::ptr::null(), 0),
+                INVALID_INPUT
+            );
+        }
+    }
+
+    #[test]
+    fn unicode_merge_split_is_exact_and_thresholded() {
+        unsafe {
+            assert_eq!(
+                llev_merge_and_split_distance("m".as_ptr().cast(), 1, "rn".as_ptr().cast(), 2),
+                1
+            );
+            assert_eq!(
+                llev_merge_and_split_distance_threshold(
+                    "prézΩ".as_ptr().cast(),
+                    "prézΩ".len(),
+                    "préxyΩ".as_ptr().cast(),
+                    "préxyΩ".len(),
+                    1
+                ),
+                1
+            );
+            assert_eq!(
+                llev_merge_and_split_distance_threshold(
+                    "a".as_ptr().cast(),
+                    1,
+                    "abcd".as_ptr().cast(),
+                    4,
+                    1
+                ),
+                ABOVE_THRESHOLD
             );
         }
     }

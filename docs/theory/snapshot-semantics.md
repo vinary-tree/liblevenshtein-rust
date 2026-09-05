@@ -258,7 +258,7 @@ canon's citation.
 
 ---
 
-*See also:* [C-ABI reference § 7](../bindings/c-abi-reference.md#7-transducer-and-cursor-10)
+*See also:* [C-ABI reference § 7](../bindings/c-abi-reference.md#7-transducer-and-cursor-11)
 — the lease protocol these laws ride under ·
 [resource-consumer](../bindings/resource-consumer.md) — where capture and
 validation happen in code ·

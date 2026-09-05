@@ -3,7 +3,7 @@
 /// Stable liblevenshtein native ABI version.
 pub const LLEV_ABI_VERSION: u32 = 1;
 /// Additive API revision within this ABI version.
-pub const LLEV_API_REVISION: u32 = 3;
+pub const LLEV_API_REVISION: u32 = 4;
 
 /// Compiled binding feature: core.
 pub const LLEV_BUILD_FEATURE_CORE: u64 = 1;

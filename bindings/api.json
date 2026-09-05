@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 3,
+  "apiRevision": 4,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -489,6 +489,78 @@
     },
     {
       "name": "llev_true_damerau_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_merge_and_split_distance",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_merge_and_split_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_distance_bytes",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_distance_bytes_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_distance_u64",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_distance_u64_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_damerau_distance_bytes",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_damerau_distance_bytes_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_damerau_distance_u64",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_damerau_distance_u64_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_true_damerau_distance_bytes",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_true_damerau_distance_bytes_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_true_damerau_distance_u64",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_true_damerau_distance_u64_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_merge_and_split_distance_bytes",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_merge_and_split_distance_bytes_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_merge_and_split_distance_u64",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_merge_and_split_distance_u64_threshold",
       "rustModule": "distance"
     },
     {

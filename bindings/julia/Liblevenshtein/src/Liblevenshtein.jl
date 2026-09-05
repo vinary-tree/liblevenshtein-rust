@@ -30,8 +30,10 @@ export ABI_VERSION,
     api_revision,
     build_features,
     distance,
+    optimal_string_alignment_distance,
     damerau_distance,
     true_damerau_distance,
+    merge_and_split_distance,
     snapshot,
     unit_domain,
     query,
@@ -202,6 +204,30 @@ function text_bytes(value::AbstractString)
     Vector{UInt8}(codeunits(String(value)))
 end
 
+function checked_threshold(threshold::Integer)::Csize_t
+    threshold >= 0 || throw(ArgumentError("threshold must be nonnegative"))
+    threshold <= typemax(Csize_t) || throw(OverflowError("threshold exceeds Csize_t"))
+    Csize_t(threshold)
+end
+
+ffi_units(value::Vector{U}) where {U} = value
+ffi_units(value::AbstractVector{U}) where {U} = collect(U, value)
+
+function decode_distance_result(result::Csize_t, symbol::Symbol)::Int
+    result == typemax(Csize_t) &&
+        throw(NativeError(Int32(STATUS_INVALID_ARGUMENT), symbol,
+            "native distance rejected an input buffer"))
+    Int(result)
+end
+
+function decode_threshold_result(result::Csize_t, symbol::Symbol)::Union{Nothing,Int}
+    result == typemax(Csize_t) &&
+        throw(NativeError(Int32(STATUS_INVALID_ARGUMENT), symbol,
+            "native distance rejected an input buffer"))
+    result == typemax(Csize_t) - 1 && return nothing
+    Int(result)
+end
+
 function exact_distance_call(symbol::Symbol, source::AbstractString,
     target::AbstractString)::Int
     left = text_bytes(source)
@@ -213,13 +239,14 @@ function exact_distance_call(symbol::Symbol, source::AbstractString,
             isempty(right) ? C_NULL : pointer(right), length(right))
     end
     result == typemax(Csize_t) &&
-        throw(NativeError(Int32(STATUS_INVALID_UTF8), symbol, last_error_message()))
-    Int(result)
+        throw(NativeError(Int32(STATUS_INVALID_UTF8), symbol,
+            "native distance rejected malformed UTF-8"))
+    decode_distance_result(result, symbol)
 end
 
 function threshold_distance_call(symbol::Symbol, source::AbstractString,
     target::AbstractString, threshold::Integer)::Union{Nothing,Int}
-    threshold >= 0 || throw(ArgumentError("threshold must be nonnegative"))
+    threshold = checked_threshold(threshold)
     left = text_bytes(source)
     right = text_bytes(target)
     result = GC.@preserve left right ccall(native(symbol), Csize_t,
@@ -227,35 +254,98 @@ function threshold_distance_call(symbol::Symbol, source::AbstractString,
         isempty(left) ? C_NULL : pointer(left), length(left),
         isempty(right) ? C_NULL : pointer(right), length(right), threshold)
     result == typemax(Csize_t) &&
-        throw(NativeError(Int32(STATUS_INVALID_UTF8), symbol, last_error_message()))
-    result == typemax(Csize_t) - 1 && return nothing
-    Int(result)
+        throw(NativeError(Int32(STATUS_INVALID_UTF8), symbol,
+            "native distance rejected malformed UTF-8"))
+    decode_threshold_result(result, symbol)
 end
 
-_distance(source, target, ::Nothing) =
-    exact_distance_call(:llev_distance, source, target)
-_distance(source, target, threshold::Integer) =
-    threshold_distance_call(:llev_distance_threshold, source, target, threshold)
-_damerau_distance(source, target, ::Nothing) =
-    exact_distance_call(:llev_damerau_distance, source, target)
-_damerau_distance(source, target, threshold::Integer) =
-    threshold_distance_call(:llev_damerau_distance_threshold, source, target, threshold)
-_true_damerau_distance(source, target, ::Nothing) =
-    exact_distance_call(:llev_true_damerau_distance, source, target)
-_true_damerau_distance(source, target, threshold::Integer) =
-    threshold_distance_call(:llev_true_damerau_distance_threshold, source, target, threshold)
+function exact_units_distance_call(symbol::Symbol, source::AbstractVector{U},
+    target::AbstractVector{U})::Int where {U}
+    left = ffi_units(source)
+    right = ffi_units(target)
+    result = GC.@preserve left right ccall(native(symbol), Csize_t,
+        (Ptr{U}, Csize_t, Ptr{U}, Csize_t),
+        isempty(left) ? C_NULL : pointer(left), length(left),
+        isempty(right) ? C_NULL : pointer(right), length(right))
+    decode_distance_result(result, symbol)
+end
 
-"""Compute Unicode-scalar Levenshtein distance, or `nothing` above `threshold`."""
+function threshold_units_distance_call(symbol::Symbol, source::AbstractVector{U},
+    target::AbstractVector{U}, threshold::Integer)::Union{Nothing,Int} where {U}
+    threshold = checked_threshold(threshold)
+    left = ffi_units(source)
+    right = ffi_units(target)
+    result = GC.@preserve left right ccall(native(symbol), Csize_t,
+        (Ptr{U}, Csize_t, Ptr{U}, Csize_t, Csize_t),
+        isempty(left) ? C_NULL : pointer(left), length(left),
+        isempty(right) ? C_NULL : pointer(right), length(right), threshold)
+    decode_threshold_result(result, symbol)
+end
+
+text_family(exact::Symbol, bounded::Symbol, source::AbstractString,
+    target::AbstractString, ::Nothing) = exact_distance_call(exact, source, target)
+text_family(exact::Symbol, bounded::Symbol, source::AbstractString,
+    target::AbstractString, threshold::Integer) =
+    threshold_distance_call(bounded, source, target, threshold)
+unit_family(exact::Symbol, bounded::Symbol, source::AbstractVector{U},
+    target::AbstractVector{U}, ::Nothing) where {U} =
+    exact_units_distance_call(exact, source, target)
+unit_family(exact::Symbol, bounded::Symbol, source::AbstractVector{U},
+    target::AbstractVector{U}, threshold::Integer) where {U} =
+    threshold_units_distance_call(bounded, source, target, threshold)
+
+"""Compute Levenshtein distance, or `nothing` when it exceeds `threshold`.
+
+Strings are compared as Unicode scalars. `Vector{UInt8}` inputs are arbitrary
+bytes, while `Vector{UInt64}` inputs are application-defined tokens. Dense
+vectors cross the native boundary without a copy; other abstract vectors are
+materialized into contiguous storage for the duration of the call.
+"""
 distance(source::AbstractString, target::AbstractString; threshold=nothing) =
-    _distance(source, target, threshold)
+    text_family(:llev_distance, :llev_distance_threshold, source, target, threshold)
+distance(source::AbstractVector{UInt8}, target::AbstractVector{UInt8}; threshold=nothing) =
+    unit_family(:llev_distance_bytes, :llev_distance_bytes_threshold, source, target, threshold)
+distance(source::AbstractVector{UInt64}, target::AbstractVector{UInt64}; threshold=nothing) =
+    unit_family(:llev_distance_u64, :llev_distance_u64_threshold, source, target, threshold)
 
-"""Compute optimal-string-alignment distance, or `nothing` above `threshold`."""
-damerau_distance(source::AbstractString, target::AbstractString; threshold=nothing) =
-    _damerau_distance(source, target, threshold)
+"""Compute adjacent-transposition (optimal-string-alignment) distance."""
+optimal_string_alignment_distance(source::AbstractString, target::AbstractString;
+    threshold=nothing) = text_family(:llev_damerau_distance,
+    :llev_damerau_distance_threshold, source, target, threshold)
+optimal_string_alignment_distance(source::AbstractVector{UInt8},
+    target::AbstractVector{UInt8}; threshold=nothing) = unit_family(
+    :llev_damerau_distance_bytes, :llev_damerau_distance_bytes_threshold,
+    source, target, threshold)
+optimal_string_alignment_distance(source::AbstractVector{UInt64},
+    target::AbstractVector{UInt64}; threshold=nothing) = unit_family(
+    :llev_damerau_distance_u64, :llev_damerau_distance_u64_threshold,
+    source, target, threshold)
 
-"""Compute unrestricted Damerau-Levenshtein distance, or `nothing` above `threshold`."""
+"""Compatibility spelling for [`optimal_string_alignment_distance`](@ref)."""
+damerau_distance(source, target; threshold=nothing) =
+    optimal_string_alignment_distance(source, target; threshold=threshold)
+
+"""Compute unrestricted Damerau-Levenshtein distance."""
 true_damerau_distance(source::AbstractString, target::AbstractString; threshold=nothing) =
-    _true_damerau_distance(source, target, threshold)
+    text_family(:llev_true_damerau_distance, :llev_true_damerau_distance_threshold,
+        source, target, threshold)
+true_damerau_distance(source::AbstractVector{UInt8}, target::AbstractVector{UInt8};
+    threshold=nothing) = unit_family(:llev_true_damerau_distance_bytes,
+    :llev_true_damerau_distance_bytes_threshold, source, target, threshold)
+true_damerau_distance(source::AbstractVector{UInt64}, target::AbstractVector{UInt64};
+    threshold=nothing) = unit_family(:llev_true_damerau_distance_u64,
+    :llev_true_damerau_distance_u64_threshold, source, target, threshold)
+
+"""Compute distance with unit-cost one-to-two split and two-to-one merge edits."""
+merge_and_split_distance(source::AbstractString, target::AbstractString; threshold=nothing) =
+    text_family(:llev_merge_and_split_distance, :llev_merge_and_split_distance_threshold,
+        source, target, threshold)
+merge_and_split_distance(source::AbstractVector{UInt8}, target::AbstractVector{UInt8};
+    threshold=nothing) = unit_family(:llev_merge_and_split_distance_bytes,
+    :llev_merge_and_split_distance_bytes_threshold, source, target, threshold)
+merge_and_split_distance(source::AbstractVector{UInt64}, target::AbstractVector{UInt64};
+    threshold=nothing) = unit_family(:llev_merge_and_split_distance_u64,
+    :llev_merge_and_split_distance_u64_threshold, source, target, threshold)
 
 function materialize(value::RawMatch)
     domain = VTI.UnitDomain(value.unit_domain)

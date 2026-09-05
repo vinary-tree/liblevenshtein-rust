@@ -1,7 +1,7 @@
 # The `llev_*` C ABI, function by function
 
 This is the normative reference for liblevenshtein's project-owned C surface:
-all **44 exported `llev_*` functions**, each with its exact header signature,
+all **62 exported `llev_*` functions**, each with its exact header signature,
 preconditions, the complete set of statuses it can return (read from the
 implementation, not aspirationally), ownership rules, thread-safety truth, and
 cost. It is the **project layer above the family canon**: everything about the
@@ -53,13 +53,13 @@ specified by their interface.
 
 ![Class diagram of the vinary-tree-interop ABI: VtResource and its base vtable negotiate dictionary, visit, graph, snapshot-identity, and scalar-WFST capability vtables plus their borrowed value types.](../diagrams/bindings/vt-structs-class.svg)
 
-The 44 functions divide into six groups:
+The 62 functions divide into six groups:
 
 | Group | Count | Functions |
 |---|---|---|
 | [Introspection](#4-introspection-4) | 4 | `llev_abi_version` · `llev_api_revision` · `llev_build_features` · `llev_last_error_message` |
 | [Strings (legacy)](#5-string-helpers-3-legacy) | 3 | `llev_string_free` · `llev_string_array_free` · `llev_string_dup` |
-| [Distances](#6-distance-functions-6) | 6 | `llev_distance` · `llev_distance_threshold` · `llev_damerau_distance` · `llev_damerau_distance_threshold` · `llev_true_damerau_distance` · `llev_true_damerau_distance_threshold` |
+| [Distances](#6-distance-functions-24) | 24 | Four families × Unicode-scalar, byte, and u64-token domains × exact and thresholded calls |
 | [Transducer + cursor](#7-transducer-and-cursor-11) | 11 | `llev_transducer_new` · `llev_transducer_snapshot` · `llev_transducer_free` · `llev_transducer_unit_domain` · `llev_transducer_query_utf8` · `llev_transducer_query_bytes` · `llev_transducer_query_u64` · `llev_query_cursor_next_batch` · `llev_query_cursor_release_batch` · `llev_query_cursor_reduce` · `llev_query_cursor_free` |
 | [Bounded query cache](#7a-bounded-query-cache-8) | 8 | `llev_query_cache_new` · `llev_query_cache_clear` · `llev_query_cache_reset_stats` · `llev_query_cache_stats` · `llev_query_cache_free` · `llev_query_cache_query_utf8` · `llev_query_cache_query_bytes` · `llev_query_cache_query_u64` |
 | [Phonetic](#8-phonetic-surface-12) | 12 | `llev_owned_string_free` · `llev_phonetic_pattern_compile_regex` · `llev_phonetic_pattern_compile_llre` · `llev_phonetic_pattern_free` · `llev_phonetic_pattern_size` · `llev_phonetic_pattern_matches` · `llev_transducer_query_pattern` · `llev_phonetic_rules_parse` · `llev_phonetic_rules_builtin` · `llev_phonetic_rules_free` · `llev_phonetic_rules_len` · `llev_phonetic_rules_apply` |
@@ -228,7 +228,7 @@ $`\mathcal{O}(\lvert s \rvert)`$.
 
 ---
 
-## 6. Distance functions (6)
+## 6. Distance functions (24)
 
 ```c
 size_t llev_distance(const char* source, size_t source_len,
@@ -248,16 +248,96 @@ size_t llev_true_damerau_distance_threshold(const char* source,
                                             const char* target,
                                             size_t target_len,
                                             size_t threshold);
+size_t llev_merge_and_split_distance(const char* source, size_t source_len,
+                                     const char* target, size_t target_len);
+size_t llev_merge_and_split_distance_threshold(const char* source,
+                                               size_t source_len,
+                                               const char* target,
+                                               size_t target_len,
+                                               size_t threshold);
+
+size_t llev_distance_bytes(const uint8_t* source, size_t source_len,
+                           const uint8_t* target, size_t target_len);
+size_t llev_distance_bytes_threshold(const uint8_t* source,
+                                     size_t source_len,
+                                     const uint8_t* target,
+                                     size_t target_len,
+                                     size_t threshold);
+size_t llev_distance_u64(const uint64_t* source, size_t source_len,
+                         const uint64_t* target, size_t target_len);
+size_t llev_distance_u64_threshold(const uint64_t* source,
+                                   size_t source_len,
+                                   const uint64_t* target,
+                                   size_t target_len,
+                                   size_t threshold);
+
+size_t llev_damerau_distance_bytes(const uint8_t* source,
+                                   size_t source_len,
+                                   const uint8_t* target,
+                                   size_t target_len);
+size_t llev_damerau_distance_bytes_threshold(const uint8_t* source,
+                                             size_t source_len,
+                                             const uint8_t* target,
+                                             size_t target_len,
+                                             size_t threshold);
+size_t llev_damerau_distance_u64(const uint64_t* source,
+                                 size_t source_len,
+                                 const uint64_t* target,
+                                 size_t target_len);
+size_t llev_damerau_distance_u64_threshold(const uint64_t* source,
+                                           size_t source_len,
+                                           const uint64_t* target,
+                                           size_t target_len,
+                                           size_t threshold);
+
+size_t llev_true_damerau_distance_bytes(const uint8_t* source,
+                                        size_t source_len,
+                                        const uint8_t* target,
+                                        size_t target_len);
+size_t llev_true_damerau_distance_bytes_threshold(const uint8_t* source,
+                                                  size_t source_len,
+                                                  const uint8_t* target,
+                                                  size_t target_len,
+                                                  size_t threshold);
+size_t llev_true_damerau_distance_u64(const uint64_t* source,
+                                      size_t source_len,
+                                      const uint64_t* target,
+                                      size_t target_len);
+size_t llev_true_damerau_distance_u64_threshold(const uint64_t* source,
+                                                size_t source_len,
+                                                const uint64_t* target,
+                                                size_t target_len,
+                                                size_t threshold);
+
+size_t llev_merge_and_split_distance_bytes(const uint8_t* source,
+                                           size_t source_len,
+                                           const uint8_t* target,
+                                           size_t target_len);
+size_t llev_merge_and_split_distance_bytes_threshold(const uint8_t* source,
+                                                     size_t source_len,
+                                                     const uint8_t* target,
+                                                     size_t target_len,
+                                                     size_t threshold);
+size_t llev_merge_and_split_distance_u64(const uint64_t* source,
+                                         size_t source_len,
+                                         const uint64_t* target,
+                                         size_t target_len);
+size_t llev_merge_and_split_distance_u64_threshold(const uint64_t* source,
+                                                   size_t source_len,
+                                                   const uint64_t* target,
+                                                   size_t target_len,
+                                                   size_t threshold);
 ```
 
-Pure functions over two length-bearing UTF-8 buffers (not NUL-terminated;
-embedded NUL bytes are legal text). Distances are measured in **Unicode
-scalar values**, not bytes. They do not use `LlevStatus`; failure is
-sentinel-coded so the hot path stays a single integer return:
+These are pure functions over two length-bearing buffers. Unsuffixed functions
+decode valid UTF-8 and count **Unicode scalar values**, not bytes. `_bytes`
+functions accept arbitrary binary data. `_u64` functions compare aligned
+`uint64_t` application tokens by value. They do not use `LlevStatus`; failure
+is sentinel-coded so the hot path stays a single integer return:
 
 | Sentinel | Meaning |
 |---|---|
-| `SIZE_MAX` | a NULL pointer (with nonzero length) or invalid UTF-8 in either buffer |
+| `SIZE_MAX` | a NULL pointer with nonzero length, invalid UTF-8 in an unsuffixed call, or a misaligned u64 buffer |
 | `SIZE_MAX - 1` | (threshold variants only) the exact distance exceeds `threshold` |
 
 Both sentinels exceed any real distance
@@ -269,17 +349,26 @@ Both sentinels exceed any real distance
 | `llev_distance`(`_threshold`) | Levenshtein | insert · delete · substitute |
 | `llev_damerau_distance`(`_threshold`) | **OSA** (optimal string alignment, "restricted Damerau") | adds adjacent transposition, but no substring may be edited twice — kept under its legacy name for ABI stability |
 | `llev_true_damerau_distance`(`_threshold`) | unrestricted Damerau–Levenshtein | true metric with transposition; e.g. for `CA` → `ABC`: OSA gives 3, true Damerau gives 2 |
+| `llev_merge_and_split_distance`(`_threshold`) | merge-and-split Levenshtein | adds symmetric one-to-two split and two-to-one merge operations at unit cost |
 
-*Preconditions:* each buffer valid for its byte length when nonzero.
+Every row also has `_bytes`, `_bytes_threshold`, `_u64`, and
+`_u64_threshold` forms. `_threshold` is always the final suffix. API revision 4
+added the 18 domain/family combinations absent from revision 3; all original
+Unicode symbols remain unchanged. The complete recurrence and binding mapping
+are in the [domain-preserving distance design](distance-domains.md).
+
+*Preconditions:* each buffer is valid for its unit count when nonzero; u64
+buffers are naturally aligned.
 *Thread safety:* fully thread-safe and lock-free (no shared state; these do
 not touch the error slot). *Complexity:* worst case
 $`\mathcal{O}(\lvert s \rvert \cdot \lvert t \rvert)`$; the unbounded
-Levenshtein path dispatches to Myers' bit-parallel algorithm for short ASCII
-inputs ($`\le 64`$ bytes) and SIMD lanes elsewhere; the threshold variants
-strip common affixes and run a banded dynamic program touching
+Unicode Levenshtein path dispatches to Myers' bit-parallel algorithm for short
+ASCII inputs ($`\le 64`$ bytes) and SIMD lanes elsewhere; byte Levenshtein also
+uses Myers when its shorter operand fits one word. Standard, OSA, and
+merge/split threshold variants run a banded dynamic program touching
 $`\mathcal{O}\bigl((2k+1) \cdot \min(\lvert s \rvert, \lvert t \rvert)\bigr)`$
-cells for threshold $`k`$, with early bail-out when a full band exceeds
-$`k`$.
+cells for threshold $`k`$. Unrestricted Damerau retains its full historical
+matrix after its constant-time length lower-bound rejection.
 
 ---
 

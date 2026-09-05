@@ -280,6 +280,7 @@ worked examples — are the
   [security model](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/security-model.md).
 - **Project corpus**: [binding hub](bindings/README.md) ·
   [`llev_*` C-ABI reference](bindings/c-abi-reference.md) ·
+  [domain-preserving distances](bindings/distance-domains.md) ·
   [resource consumer](bindings/resource-consumer.md) ·
   [WASM topology](bindings/wasm-topology.md) ·
   [snapshot semantics](theory/snapshot-semantics.md) ·

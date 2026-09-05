@@ -12,8 +12,25 @@ using Liblevenshtein
 
 distance("kitten", "sitting")
 distance("kitten", "sitting"; threshold=2)
-damerau_distance("ab", "ba")
+optimal_string_alignment_distance("ab", "ba")
+true_damerau_distance("CA", "ABC")
+merge_and_split_distance("m", "rn")
+distance(UInt8[0xff, 0x00], UInt8[0xff, 0x01])
+distance(UInt64[10, 20], UInt64[20, 10])
 ```
+
+All four distance families use the same multiple-dispatch contract. Strings
+count Unicode scalar values, `AbstractVector{UInt8}` values are arbitrary
+binary data, and `AbstractVector{UInt64}` values are application tokens.
+Supplying `threshold=k` returns the exact result when it is at most `k` and
+`nothing` otherwise. Dense vectors cross the native boundary without a copy;
+non-dense abstract vectors are materialized temporarily to satisfy C's
+contiguous-buffer contract.
+
+The repository's
+[domain-preserving distance design](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/docs/bindings/distance-domains.md)
+explains the shared recurrences, ABI names, threshold sentinels, and generated
+differential tests.
 
 ## Resource-backed search
 

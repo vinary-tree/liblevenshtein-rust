@@ -92,10 +92,11 @@ variants, protocols, or methods.
 | `cache_stats` | `llev_query_cache_stats` | project ABI operation |
 | `clear!` | `llev_query_cache_clear` | project ABI operation |
 | `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting |
-| `damerau_distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
-| `distance` | `llev_distance`, `llev_distance_threshold` | standalone exact or thresholded distance |
+| `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
+| `merge_and_split_distance` | `llev_merge_and_split_distance`, `llev_merge_and_split_distance_threshold`, `llev_merge_and_split_distance_bytes`, `llev_merge_and_split_distance_bytes_threshold`, `llev_merge_and_split_distance_u64`, `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
 | `NativeError` | `llev_last_error_message` | typed failure diagnostics |
 | `next_batch!` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `optimal_string_alignment_distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold`, `llev_damerau_distance_bytes`, `llev_damerau_distance_bytes_threshold`, `llev_damerau_distance_u64`, `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
 | `PhoneticPattern` | `llev_phonetic_pattern_compile_regex`, `llev_phonetic_pattern_compile_llre`, `llev_phonetic_pattern_size`, `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticRuleSet` | `llev_owned_string_free`, `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin`, `llev_phonetic_rules_len`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
 | `query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; project ABI operation; phonetic-pattern dictionary query |
@@ -104,7 +105,7 @@ variants, protocols, or methods.
 | `reset_stats!` | `llev_query_cache_reset_stats` | project ABI operation |
 | `snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
-| `true_damerau_distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
+| `true_damerau_distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold`, `llev_true_damerau_distance_bytes`, `llev_true_damerau_distance_bytes_threshold`, `llev_true_damerau_distance_u64`, `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
 | `unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
 
 ### Public types and traversal protocols

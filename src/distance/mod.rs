@@ -30,10 +30,17 @@ mod affine;
 mod hamming;
 mod indel;
 pub mod myers;
+mod units;
 
 pub use affine::{affine_gap_distance, affine_gap_distance_units};
 pub use hamming::{hamming_distance, hamming_distance_units};
 pub use indel::{indel_distance, indel_distance_bounded};
+pub use units::{
+    damerau_levenshtein_distance_units, damerau_levenshtein_distance_units_bounded,
+    merge_and_split_distance_units, merge_and_split_distance_units_bounded,
+    standard_distance_units, standard_distance_units_bounded, transposition_distance_units,
+    transposition_distance_units_bounded,
+};
 
 /// A symmetric pair of strings for use as cache keys.
 ///
@@ -88,23 +95,6 @@ fn split_first_char(s: &str) -> Option<(char, &str)> {
         .next()
         .map_or("", |(byte_idx, _)| &s[byte_idx..]);
     Some((first, tail))
-}
-
-#[inline(always)]
-fn tail_after_chars(s: &str, count: usize) -> Option<&str> {
-    if count == 0 {
-        return Some(s);
-    }
-
-    let mut char_indices = s.char_indices();
-    for _ in 0..count {
-        char_indices.next()?;
-    }
-    Some(
-        char_indices
-            .next()
-            .map_or("", |(byte_idx, _)| &s[byte_idx..]),
-    )
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -312,47 +302,7 @@ pub fn standard_distance(source: &str, target: &str) -> usize {
 pub fn standard_distance_impl(source: &str, target: &str) -> usize {
     let source_chars: SmallVec<[char; 32]> = source.chars().collect();
     let target_chars: SmallVec<[char; 32]> = target.chars().collect();
-
-    let m = source_chars.len();
-    let n = target_chars.len();
-
-    // Handle edge cases
-    if m == 0 {
-        return n;
-    }
-    if n == 0 {
-        return m;
-    }
-
-    // Use space-optimized version (two rows instead of full matrix)
-    let mut prev_row = vec![0; n + 1];
-    let mut curr_row = vec![0; n + 1];
-
-    // Initialize first row
-    for (j, item) in prev_row.iter_mut().enumerate().take(n + 1) {
-        *item = j;
-    }
-
-    // Fill the matrix
-    for i in 1..=m {
-        curr_row[0] = i;
-
-        for j in 1..=n {
-            let cost = if source_chars[i - 1] == target_chars[j - 1] {
-                0
-            } else {
-                1
-            };
-
-            curr_row[j] = (prev_row[j] + 1) // deletion
-                .min(curr_row[j - 1] + 1) // insertion
-                .min(prev_row[j - 1] + cost); // substitution
-        }
-
-        std::mem::swap(&mut prev_row, &mut curr_row);
-    }
-
-    prev_row[n]
+    standard_distance_units(&source_chars, &target_chars)
 }
 
 /// Compute standard Levenshtein distance up to a maximum threshold.
@@ -384,71 +334,7 @@ pub fn standard_distance_bounded(source: &str, target: &str, max_distance: usize
 
     let source_chars: SmallVec<[char; 32]> = affixes.source_core.chars().collect();
     let target_chars: SmallVec<[char; 32]> = affixes.target_core.chars().collect();
-    bounded_levenshtein_chars(&source_chars, &target_chars, max_distance)
-}
-
-fn bounded_levenshtein_chars(
-    source: &[char],
-    target: &[char],
-    max_distance: usize,
-) -> Option<usize> {
-    let (rows, cols) = if source.len() >= target.len() {
-        (source, target)
-    } else {
-        (target, source)
-    };
-
-    let m = rows.len();
-    let n = cols.len();
-    let cap = max_distance + 1;
-    let mut prev_row = vec![cap; n + 1];
-    let mut curr_row = vec![cap; n + 1];
-
-    for (j, cell) in prev_row
-        .iter_mut()
-        .take(n.min(max_distance) + 1)
-        .enumerate()
-    {
-        *cell = j;
-    }
-
-    for i in 1..=m {
-        let start = i.saturating_sub(max_distance).max(1);
-        let end = n.min(i.saturating_add(max_distance));
-
-        if start > end {
-            return None;
-        }
-
-        let clear_start = start.saturating_sub(1);
-        let clear_end = n.min(end.saturating_add(1));
-        for cell in &mut curr_row[clear_start..=clear_end] {
-            *cell = cap;
-        }
-
-        curr_row[0] = if i <= max_distance { i } else { cap };
-
-        let mut row_min = curr_row[0];
-        for j in start..=end {
-            let cost = usize::from(rows[i - 1] != cols[j - 1]);
-            let best = prev_row[j]
-                .saturating_add(1)
-                .min(cap)
-                .min(curr_row[j - 1].saturating_add(1).min(cap))
-                .min(prev_row[j - 1].saturating_add(cost).min(cap));
-
-            curr_row[j] = best;
-            row_min = row_min.min(best);
-        }
-
-        if row_min > max_distance {
-            return None;
-        }
-
-        std::mem::swap(&mut prev_row, &mut curr_row);
-    }
-
-    (prev_row[n] <= max_distance).then_some(prev_row[n])
+    standard_distance_units_bounded(&source_chars, &target_chars, max_distance)
 }
 
 /// Compute optimal string alignment (OSA) distance.
@@ -470,58 +356,7 @@ fn bounded_levenshtein_chars(
 pub fn transposition_distance(source: &str, target: &str) -> usize {
     let source_chars: SmallVec<[char; 32]> = source.chars().collect();
     let target_chars: SmallVec<[char; 32]> = target.chars().collect();
-
-    let m = source_chars.len();
-    let n = target_chars.len();
-
-    if m == 0 {
-        return n;
-    }
-    if n == 0 {
-        return m;
-    }
-
-    // Need three rows for transposition
-    let mut two_ago = vec![0; n + 1];
-    let mut prev_row = vec![0; n + 1];
-    let mut curr_row = vec![0; n + 1];
-
-    // Initialize first row
-    for (j, item) in prev_row.iter_mut().enumerate().take(n + 1) {
-        *item = j;
-    }
-
-    // Fill the matrix
-    for i in 1..=m {
-        curr_row[0] = i;
-
-        for j in 1..=n {
-            let cost = if source_chars[i - 1] == target_chars[j - 1] {
-                0
-            } else {
-                1
-            };
-
-            curr_row[j] = (prev_row[j] + 1) // deletion
-                .min(curr_row[j - 1] + 1) // insertion
-                .min(prev_row[j - 1] + cost); // substitution
-
-            // Check for transposition
-            if i > 1
-                && j > 1
-                && source_chars[i - 1] == target_chars[j - 2]
-                && source_chars[i - 2] == target_chars[j - 1]
-            {
-                curr_row[j] = curr_row[j].min(two_ago[j - 2] + 1);
-            }
-        }
-
-        // Rotate rows
-        std::mem::swap(&mut two_ago, &mut prev_row);
-        std::mem::swap(&mut prev_row, &mut curr_row);
-    }
-
-    prev_row[n]
+    transposition_distance_units(&source_chars, &target_chars)
 }
 
 /// Compute unrestricted Damerau–Levenshtein distance.
@@ -543,56 +378,7 @@ pub fn transposition_distance(source: &str, target: &str) -> usize {
 pub fn damerau_levenshtein_distance(source: &str, target: &str) -> usize {
     let source: SmallVec<[char; 32]> = source.chars().collect();
     let target: SmallVec<[char; 32]> = target.chars().collect();
-    let source_len = source.len();
-    let target_len = target.len();
-
-    if source_len == 0 {
-        return target_len;
-    }
-    if target_len == 0 {
-        return source_len;
-    }
-
-    let sentinel = source_len.saturating_add(target_len);
-    let rows = source_len.saturating_add(2);
-    let columns = target_len.saturating_add(2);
-    let mut matrix = vec![vec![0usize; columns]; rows];
-
-    matrix[0][0] = sentinel;
-    for i in 0..=source_len {
-        matrix[i + 1][0] = sentinel;
-        matrix[i + 1][1] = i;
-    }
-    for j in 0..=target_len {
-        matrix[0][j + 1] = sentinel;
-        matrix[1][j + 1] = j;
-    }
-
-    let mut last_row = std::collections::HashMap::<char, usize>::new();
-    for i in 1..=source_len {
-        let mut last_match_column = 0usize;
-        for j in 1..=target_len {
-            let transposition_row = last_row.get(&target[j - 1]).copied().unwrap_or(0);
-            let transposition_column = last_match_column;
-            let substitution_cost = usize::from(source[i - 1] != target[j - 1]);
-            if substitution_cost == 0 {
-                last_match_column = j;
-            }
-
-            let substitution = matrix[i][j].saturating_add(substitution_cost);
-            let insertion = matrix[i + 1][j].saturating_add(1);
-            let deletion = matrix[i][j + 1].saturating_add(1);
-            let transposition = matrix[transposition_row][transposition_column]
-                .saturating_add(i - transposition_row - 1)
-                .saturating_add(1)
-                .saturating_add(j - transposition_column - 1);
-
-            matrix[i + 1][j + 1] = substitution.min(insertion).min(deletion).min(transposition);
-        }
-        last_row.insert(source[i - 1], i);
-    }
-
-    matrix[source_len + 1][target_len + 1]
+    damerau_levenshtein_distance_units(&source, &target)
 }
 
 /// Compute unrestricted Damerau–Levenshtein distance up to a threshold.
@@ -605,11 +391,9 @@ pub fn damerau_levenshtein_distance_bounded(
     target: &str,
     max_distance: usize,
 ) -> Option<usize> {
-    if source.chars().count().abs_diff(target.chars().count()) > max_distance {
-        return None;
-    }
-    let distance = damerau_levenshtein_distance(source, target);
-    (distance <= max_distance).then_some(distance)
+    let source: SmallVec<[char; 32]> = source.chars().collect();
+    let target: SmallVec<[char; 32]> = target.chars().collect();
+    damerau_levenshtein_distance_units_bounded(&source, &target, max_distance)
 }
 
 /// Compute optimal string alignment distance up to a maximum threshold.
@@ -648,77 +432,7 @@ pub fn transposition_distance_bounded(
 
     let source_chars: SmallVec<[char; 32]> = affixes.source_core.chars().collect();
     let target_chars: SmallVec<[char; 32]> = affixes.target_core.chars().collect();
-    bounded_transposition_chars(&source_chars, &target_chars, max_distance)
-}
-
-fn bounded_transposition_chars(
-    source: &[char],
-    target: &[char],
-    max_distance: usize,
-) -> Option<usize> {
-    let (rows, cols) = if source.len() >= target.len() {
-        (source, target)
-    } else {
-        (target, source)
-    };
-
-    let m = rows.len();
-    let n = cols.len();
-    let cap = max_distance + 1;
-    let mut two_ago = vec![cap; n + 1];
-    let mut prev_row = vec![cap; n + 1];
-    let mut curr_row = vec![cap; n + 1];
-
-    for (j, cell) in prev_row
-        .iter_mut()
-        .take(n.min(max_distance) + 1)
-        .enumerate()
-    {
-        *cell = j;
-    }
-
-    for i in 1..=m {
-        let start = i.saturating_sub(max_distance).max(1);
-        let end = n.min(i.saturating_add(max_distance));
-
-        if start > end {
-            return None;
-        }
-
-        let clear_start = start.saturating_sub(1);
-        let clear_end = n.min(end.saturating_add(1));
-        for cell in &mut curr_row[clear_start..=clear_end] {
-            *cell = cap;
-        }
-
-        curr_row[0] = if i <= max_distance { i } else { cap };
-
-        let mut row_min = curr_row[0];
-        for j in start..=end {
-            let cost = usize::from(rows[i - 1] != cols[j - 1]);
-            let mut best = prev_row[j]
-                .saturating_add(1)
-                .min(cap)
-                .min(curr_row[j - 1].saturating_add(1).min(cap))
-                .min(prev_row[j - 1].saturating_add(cost).min(cap));
-
-            if i > 1 && j > 1 && rows[i - 1] == cols[j - 2] && rows[i - 2] == cols[j - 1] {
-                best = best.min(two_ago[j - 2].saturating_add(1).min(cap));
-            }
-
-            curr_row[j] = best;
-            row_min = row_min.min(best);
-        }
-
-        if row_min > max_distance {
-            return None;
-        }
-
-        std::mem::swap(&mut two_ago, &mut prev_row);
-        std::mem::swap(&mut prev_row, &mut curr_row);
-    }
-
-    (prev_row[n] <= max_distance).then_some(prev_row[n])
+    transposition_distance_units_bounded(&source_chars, &target_chars, max_distance)
 }
 
 // ============================================================================
@@ -945,7 +659,7 @@ pub fn transposition_distance_recursive(source: &str, target: &str, cache: &Memo
     distance
 }
 
-/// Recursive merge-and-split distance with memoization.
+/// Iterative, stack-safe merge-and-split distance with memoization.
 ///
 /// Supports merge (two query chars → one dict char) and split
 /// (one query char → two dict chars) operations, in addition to
@@ -966,104 +680,29 @@ pub fn transposition_distance_recursive(source: &str, target: &str, cache: &Memo
 /// assert_eq!(merge_and_split_distance("rn", "m", &cache), 1);
 /// ```
 pub fn merge_and_split_distance(source: &str, target: &str, cache: &MemoCache) -> usize {
-    // Check cache first
     let cache_key = SymmetricPair::new(source, target);
     if let Some(distance) = cache.get(&cache_key) {
         return distance;
     }
-
-    // Handle base cases
-    if source.is_empty() {
-        return target.chars().count();
-    }
-    if target.is_empty() {
-        return source.chars().count();
-    }
-
-    // Strip common prefix and suffix (major optimization)
-    let affixes = strip_common_affix_slices(source, target);
-
-    // If strings are identical after stripping, distance is 0
-    if affixes.source_len == 0 && affixes.target_len == 0 {
-        cache.insert(cache_key, 0);
-        return 0;
-    }
-
-    // If one string is fully consumed, distance is remaining chars in other
-    if affixes.source_len == 0 {
-        let result = affixes.target_len;
-        cache.insert(cache_key, result);
-        return result;
-    }
-    if affixes.target_len == 0 {
-        let result = affixes.source_len;
-        cache.insert(cache_key, result);
-        return result;
-    }
-
-    let s_remaining = affixes.source_core;
-    let t_remaining = affixes.target_core;
-    let Some((a, s)) = split_first_char(s_remaining) else {
-        let result = affixes.target_len;
-        cache.insert(cache_key, result);
-        return result;
-    };
-    let Some((b, t)) = split_first_char(t_remaining) else {
-        let result = affixes.source_len;
-        cache.insert(cache_key, result);
-        return result;
-    };
-
-    let mut distance;
-
-    if a == b {
-        distance = merge_and_split_distance(s, t, cache);
-
-        if distance == 0 {
-            cache.insert(cache_key, distance);
-            return distance;
-        }
-    } else {
-        // Standard operations
-        distance = merge_and_split_distance(s, t_remaining, cache);
-
-        if distance == 0 {
-            cache.insert(cache_key, 1);
-            return 1;
-        }
-
-        let ins_dist = merge_and_split_distance(s_remaining, t, cache);
-        distance = distance.min(ins_dist);
-
-        if distance == 0 {
-            cache.insert(cache_key, 1);
-            return 1;
-        }
-
-        let sub_dist = merge_and_split_distance(s, t, cache);
-        distance = distance.min(sub_dist);
-
-        // Split operation: one source char → two target chars
-        // Skip 2 chars in target (f(w, 1) in C++)
-        // Check against t_remaining (w in C++), not t
-        if let Some(tt) = tail_after_chars(t_remaining, 2) {
-            let split_dist = merge_and_split_distance(s, tt, cache);
-            distance = distance.min(split_dist);
-        }
-
-        // Merge operation: two source chars → one target char
-        // Skip 2 chars in source (f(v, 1) in C++)
-        // Check against s_remaining (v in C++), not s
-        if let Some(ss) = tail_after_chars(s_remaining, 2) {
-            let merge_dist = merge_and_split_distance(ss, t, cache);
-            distance = distance.min(merge_dist);
-        }
-
-        distance += 1;
-    }
-
+    let source_units: SmallVec<[char; 32]> = source.chars().collect();
+    let target_units: SmallVec<[char; 32]> = target.chars().collect();
+    let distance = merge_and_split_distance_units(&source_units, &target_units);
     cache.insert(cache_key, distance);
     distance
+}
+
+/// Compute Unicode-scalar merge-and-split distance within an inclusive bound.
+///
+/// This stack-safe, banded implementation does not consult a memo cache. It
+/// returns `None` when the exact distance is greater than `max_distance`.
+pub fn merge_and_split_distance_bounded(
+    source: &str,
+    target: &str,
+    max_distance: usize,
+) -> Option<usize> {
+    let source_units: SmallVec<[char; 32]> = source.chars().collect();
+    let target_units: SmallVec<[char; 32]> = target.chars().collect();
+    merge_and_split_distance_units_bounded(&source_units, &target_units, max_distance)
 }
 
 /// Create a new memoization cache for recursive distance functions.
@@ -1323,14 +962,10 @@ mod tests {
     }
 
     #[test]
-    fn test_recursive_tail_helpers_preserve_utf8_boundaries() {
+    fn test_recursive_split_helper_preserves_utf8_boundaries() {
         assert_eq!(split_first_char("éclair"), Some(('é', "clair")));
         assert_eq!(split_first_char("Ω"), Some(('Ω', "")));
         assert_eq!(split_first_char(""), None);
-
-        assert_eq!(tail_after_chars("éΩab", 2), Some("ab"));
-        assert_eq!(tail_after_chars("éΩ", 2), Some(""));
-        assert_eq!(tail_after_chars("é", 2), None);
     }
 
     #[test]

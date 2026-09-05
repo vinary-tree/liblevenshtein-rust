@@ -296,6 +296,7 @@ docs/language-bindings.md
 docs/releasing-language-bindings.md
 docs/bindings/README.md
 docs/bindings/c-abi-reference.md
+docs/bindings/distance-domains.md
 docs/bindings/package-documentation-publication.md
 docs/bindings/resource-consumer.md
 docs/bindings/wasm-topology.md

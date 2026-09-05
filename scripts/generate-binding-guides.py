@@ -330,6 +330,8 @@ def operation_role(name: str) -> str:
         return "typed failure diagnostics"
     if name.startswith("llev_true_damerau_distance"):
         return "standalone true-Damerau distance"
+    if name.startswith("llev_merge_and_split_distance"):
+        return "standalone merge-and-split distance"
     if name.startswith(("llev_distance", "llev_damerau_distance")):
         return "standalone exact or thresholded distance"
     if name in {"llev_string_free", "llev_string_array_free", "llev_string_dup"}:

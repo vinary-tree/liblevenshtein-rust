@@ -7,7 +7,7 @@ const LL = Liblevenshtein
 
 @testset "ABI identity and layouts" begin
     @test LL.abi_version() == LL.ABI_VERSION == 1
-    @test LL.api_revision() >= LL.API_REVISION == 3
+    @test LL.api_revision() >= LL.API_REVISION == 4
     @test LL.build_features() & LL.BUILD_FEATURE_CORE != 0
     @test LL.STATUS_OK isa LL.Status
     @test LL.ALGORITHM_STANDARD isa LL.Algorithm
@@ -126,9 +126,60 @@ end
     @test LL.distance("kitten", "sitting"; threshold=2) === nothing
     @test LL.distance("kitten", "sitting"; threshold=3) == 3
     @test LL.damerau_distance("ab", "ba") == 1
+    @test LL.optimal_string_alignment_distance("ab", "ba") == 1
     @test LL.true_damerau_distance("CA", "ABC") == 2
+    @test LL.merge_and_split_distance("m", "rn") == 1
     @test_throws ArgumentError LL.distance("a", "b"; threshold=-1)
+    @test_throws OverflowError LL.distance("a", "b"; threshold=big(typemax(UInt128)))
+    malformed = String(UInt8[0xff])
+    malformed_error = try
+        LL.distance(malformed, "")
+        nothing
+    catch error
+        error
+    end
+    @test malformed_error isa LL.NativeError
+    @test malformed_error.status == Int32(LL.STATUS_INVALID_UTF8)
+    @test occursin("malformed UTF-8", malformed_error.message)
     @test @inferred(LL.distance("abc", "axc")) == 1
+    @test @inferred(LL.distance(UInt8[1, 2], UInt8[1, 3])) == 1
+    @test @inferred(LL.distance(UInt64[1, 2], UInt64[2, 1])) == 2
+
+    sequences = [Int[]]
+    for _ in 1:3
+        prefixes = copy(sequences)
+        append!(sequences, [vcat(prefix, unit) for prefix in prefixes for unit in 0:2])
+        unique!(sequences)
+    end
+    families = (
+        LL.distance,
+        LL.optimal_string_alignment_distance,
+        LL.true_damerau_distance,
+        LL.merge_and_split_distance,
+    )
+    for source in sequences, target in sequences, family in families
+        text_source = String(Char.('a' .+ source))
+        text_target = String(Char.('a' .+ target))
+        byte_source = UInt8.(source)
+        byte_target = UInt8.(target)
+        token_source = UInt64.(source)
+        token_target = UInt64.(target)
+        exact = family(text_source, text_target)
+        @test family(byte_source, byte_target) == exact
+        @test family(token_source, token_target) == exact
+        for threshold in 0:3
+            expected = exact <= threshold ? exact : nothing
+            @test family(text_source, text_target; threshold=threshold) === expected
+            @test family(byte_source, byte_target; threshold=threshold) === expected
+            @test family(token_source, token_target; threshold=threshold) === expected
+        end
+    end
+
+    binary = UInt8[0xff, 0x00, 0x80]
+    @test LL.distance(binary, reverse(binary)) == 2
+    view_source = @view binary[1:2]
+    @test LL.distance(view_source, UInt8[0xff, 0x01]) == 1
+    @test_throws MethodError LL.distance([1, 2], [1, 3])
 end
 
 if LL.build_features() & LL.BUILD_FEATURE_PHONETIC != 0

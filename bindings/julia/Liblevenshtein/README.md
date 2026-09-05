@@ -26,7 +26,13 @@ using Liblevenshtein
 
 distance("kitten", "sitting")                         # 3
 distance("kitten", "sitting"; threshold=2)            # nothing
-damerau_distance("ab", "ba")                         # 1
+optimal_string_alignment_distance("ab", "ba")         # 1
+true_damerau_distance("CA", "ABC")                    # 2
+merge_and_split_distance("m", "rn")                   # 1
+
+# The same functions preserve binary and token domains through dispatch.
+distance(UInt8[0xff, 0x00], UInt8[0xff, 0x01])         # 1
+distance(UInt64[10, 20], UInt64[20, 10])               # 2
 ```
 
 For dictionary search, create or receive a `VinaryTreeInterop.Dictionary`, then
@@ -63,9 +69,12 @@ domains, batching, and snapshot behavior are otherwise identical.
 
 ## Common and intended usage
 
-- Use `distance`, `damerau_distance`, and `true_damerau_distance` for pairwise
-  Unicode-scalar metrics. A thresholded call returns `nothing` when the exact
-  value exceeds the inclusive threshold.
+- Use `distance`, `optimal_string_alignment_distance`,
+  `true_damerau_distance`, and `merge_and_split_distance` for pairwise work.
+  Each accepts `AbstractString`, `AbstractVector{UInt8}`, or
+  `AbstractVector{UInt64}` pairs. A thresholded call returns `nothing` when the
+  exact value exceeds the inclusive threshold. `damerau_distance` remains a
+  compatibility spelling for optimal string alignment.
 - Reuse a `Transducer` for repeated queries with the same dictionary and
   algorithm. Use `snapshot(transducer)` when several queries must observe the
   same revision even while the live dictionary changes.
@@ -82,9 +91,11 @@ domains, batching, and snapshot behavior are otherwise identical.
 
 | API | Contract |
 |---|---|
-| `distance(a, b; threshold=nothing)` | Standard Unicode Levenshtein distance. |
-| `damerau_distance(a, b; threshold=nothing)` | Optimal-string-alignment distance. |
+| `distance(a, b; threshold=nothing)` | Standard Levenshtein distance over matching string, byte-vector, or u64-token-vector domains. |
+| `optimal_string_alignment_distance(a, b; threshold=nothing)` | Restricted Damerau distance with adjacent transposition. |
+| `damerau_distance(a, b; threshold=nothing)` | Compatibility spelling for `optimal_string_alignment_distance`. |
 | `true_damerau_distance(a, b; threshold=nothing)` | Unrestricted Damerau-Levenshtein distance. |
+| `merge_and_split_distance(a, b; threshold=nothing)` | Standard edits plus one-to-two split and two-to-one merge at unit cost. |
 | `Transducer(resource, algorithm)` | Retains a `VinaryTreeInterop.Resource` or `.Dictionary`. |
 | `snapshot(transducer)` | Owned immutable transducer revision. |
 | `unit_domain(transducer)` | `BYTE`, `UNICODE_SCALAR`, or `U64`. |
@@ -104,6 +115,10 @@ domains, batching, and snapshot behavior are otherwise identical.
 `Match.term` is a `String`, `Vector{UInt8}`, or `Vector{UInt64}` according to
 `Match.unit_domain`; `Match.id` is `nothing` or `UInt64`. Enum values and ABI
 constants are generated from `bindings/api.json`.
+
+The [domain-preserving distance design](../../../docs/bindings/distance-domains.md)
+defines the shared recurrence, native naming convention, threshold sentinels,
+allocation behavior, and cross-domain differential tests.
 
 ## Ownership, snapshots, and batching
 

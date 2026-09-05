@@ -116,6 +116,100 @@ LLEV_API size_t llev_true_damerau_distance_threshold(const char* source,
                                                      size_t target_len,
                                                      size_t threshold);
 
+/** Compute Unicode-scalar merge-and-split distance.
+ *
+ * Merge and split each cost one: a merge consumes two source scalars and one
+ * target scalar, while a split consumes one source scalar and two target
+ * scalars. Insert, delete, and substitute remain available at unit cost.
+ * @return exact distance, or SIZE_MAX for a NULL/invalid-UTF-8 input
+ */
+LLEV_API size_t llev_merge_and_split_distance(const char* source,
+                                              size_t source_len,
+                                              const char* target,
+                                              size_t target_len);
+/** Compute thresholded Unicode-scalar merge-and-split distance.
+ * @return exact distance, SIZE_MAX for invalid input, or SIZE_MAX-1 above the bound
+ */
+LLEV_API size_t llev_merge_and_split_distance_threshold(const char* source,
+                                                        size_t source_len,
+                                                        const char* target,
+                                                        size_t target_len,
+                                                        size_t threshold);
+
+/** @name Domain-explicit standalone distance functions
+ *
+ * Byte functions accept arbitrary binary data and never interpret UTF-8.
+ * Token functions compare aligned uint64_t application tokens by value.
+ * For every function, NULL is permitted only when the corresponding length is
+ * zero. Exact functions return SIZE_MAX for invalid input. Thresholded
+ * functions additionally return SIZE_MAX-1 when the exact distance exceeds
+ * the inclusive threshold.
+ * @{ */
+LLEV_API size_t llev_distance_bytes(const uint8_t* source, size_t source_len,
+                                    const uint8_t* target, size_t target_len);
+LLEV_API size_t llev_distance_bytes_threshold(const uint8_t* source,
+                                              size_t source_len,
+                                              const uint8_t* target,
+                                              size_t target_len,
+                                              size_t threshold);
+LLEV_API size_t llev_distance_u64(const uint64_t* source, size_t source_len,
+                                  const uint64_t* target, size_t target_len);
+LLEV_API size_t llev_distance_u64_threshold(const uint64_t* source,
+                                            size_t source_len,
+                                            const uint64_t* target,
+                                            size_t target_len,
+                                            size_t threshold);
+
+LLEV_API size_t llev_damerau_distance_bytes(const uint8_t* source,
+                                            size_t source_len,
+                                            const uint8_t* target,
+                                            size_t target_len);
+LLEV_API size_t llev_damerau_distance_bytes_threshold(const uint8_t* source,
+                                                      size_t source_len,
+                                                      const uint8_t* target,
+                                                      size_t target_len,
+                                                      size_t threshold);
+LLEV_API size_t llev_damerau_distance_u64(const uint64_t* source,
+                                          size_t source_len,
+                                          const uint64_t* target,
+                                          size_t target_len);
+LLEV_API size_t llev_damerau_distance_u64_threshold(const uint64_t* source,
+                                                    size_t source_len,
+                                                    const uint64_t* target,
+                                                    size_t target_len,
+                                                    size_t threshold);
+
+LLEV_API size_t llev_true_damerau_distance_bytes(const uint8_t* source,
+                                                 size_t source_len,
+                                                 const uint8_t* target,
+                                                 size_t target_len);
+LLEV_API size_t llev_true_damerau_distance_bytes_threshold(
+    const uint8_t* source, size_t source_len, const uint8_t* target,
+    size_t target_len, size_t threshold);
+LLEV_API size_t llev_true_damerau_distance_u64(const uint64_t* source,
+                                               size_t source_len,
+                                               const uint64_t* target,
+                                               size_t target_len);
+LLEV_API size_t llev_true_damerau_distance_u64_threshold(
+    const uint64_t* source, size_t source_len, const uint64_t* target,
+    size_t target_len, size_t threshold);
+
+LLEV_API size_t llev_merge_and_split_distance_bytes(const uint8_t* source,
+                                                    size_t source_len,
+                                                    const uint8_t* target,
+                                                    size_t target_len);
+LLEV_API size_t llev_merge_and_split_distance_bytes_threshold(
+    const uint8_t* source, size_t source_len, const uint8_t* target,
+    size_t target_len, size_t threshold);
+LLEV_API size_t llev_merge_and_split_distance_u64(const uint64_t* source,
+                                                  size_t source_len,
+                                                  const uint64_t* target,
+                                                  size_t target_len);
+LLEV_API size_t llev_merge_and_split_distance_u64_threshold(
+    const uint64_t* source, size_t source_len, const uint64_t* target,
+    size_t target_len, size_t threshold);
+/** @} */
+
 /** Release a NUL-terminated string allocated by llev_string_dup.
  * @param value owned string to consume; NULL is a no-op
  */

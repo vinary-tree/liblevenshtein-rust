@@ -4,7 +4,7 @@ package io.vinarytree.liblevenshtein;
 final class GeneratedAbi {
     private GeneratedAbi() {}
     static final int ABI_VERSION = 1;
-    static final int API_REVISION = 3;
+    static final int API_REVISION = 4;
     static final int DEFAULT_MATCH_BATCH = 256;
     static final int STATUS_OK = 0;
     static final int STATUS_END = 1;

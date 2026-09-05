@@ -162,7 +162,7 @@ it cannot police its neighbor's stores), no confidentiality inside the
 process, no liveness against a stalled callback, isolation only by
 deployment choice. The one llev-specific addition: the distance functions
 and string helpers are pure and stateless, so their entire threat surface
-is argument validation (sentinel-coded, [C-ABI reference § 6](../bindings/c-abi-reference.md#6-distance-functions-6)).
+is argument validation (sentinel-coded, [C-ABI reference § 6](../bindings/c-abi-reference.md#6-distance-functions-24)).
 
 ---
 

@@ -15,7 +15,7 @@
 /** Binary ABI generation implemented by this header and library. */
 #define LLEV_ABI_VERSION 1u
 /** Additive API revision within LLEV_ABI_VERSION. */
-#define LLEV_API_REVISION 3u
+#define LLEV_API_REVISION 4u
 /** Default maximum descriptors borrowed by one cursor batch. */
 #define LLEV_DEFAULT_MATCH_BATCH 256u
 
