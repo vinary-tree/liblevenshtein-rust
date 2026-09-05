@@ -87,5 +87,64 @@ class DocumentationTopicTests(unittest.TestCase):
             )
 
 
+class KnownMissingCapabilityTests(unittest.TestCase):
+    def test_normalizes_reviewed_gap_with_existing_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "review.md").write_text("# Review\n", encoding="utf-8")
+
+            self.assertEqual(
+                MODULE.normalize_known_missing(
+                    "project",
+                    {
+                        "julia": {
+                            "capabilities": ["feature"],
+                            "evidence": "review.md#finding",
+                        }
+                    },
+                    {"feature"},
+                    {"julia"},
+                    {"julia"},
+                    root,
+                ),
+                {"julia": ({"feature"}, "review.md#finding")},
+            )
+
+    def test_rejects_unknown_capability(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "review.md").write_text("# Review\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(SystemExit, "unknown capabilities"):
+                MODULE.normalize_known_missing(
+                    "project",
+                    {
+                        "julia": {
+                            "capabilities": ["omitted-feature"],
+                            "evidence": "review.md",
+                        }
+                    },
+                    {"feature"},
+                    {"julia"},
+                    {"julia"},
+                    root,
+                )
+
+    def test_rejects_gap_without_declared_facade(self) -> None:
+        with self.assertRaisesRegex(SystemExit, "requires declared facade evidence"):
+            MODULE.normalize_known_missing(
+                "project",
+                {
+                    "julia": {
+                        "capabilities": ["feature"],
+                        "evidence": "review.md",
+                    }
+                },
+                {"feature"},
+                {"julia"},
+                set(),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -128,6 +128,72 @@ def discover_binding_languages(project_root: Path) -> set[str]:
     return discovered
 
 
+def normalize_known_missing(
+    project_id: str,
+    raw_records: object,
+    capability_ids: set[str],
+    language_ids: set[str],
+    declared_languages: set[str],
+    evidence_root: Path = ROOT,
+) -> dict[str, tuple[set[str], str]]:
+    """Validate reviewed facade gaps and return their normalized lookup."""
+    if not isinstance(raw_records, dict):
+        fail(f"{project_id}.knownMissingCapabilities must be an object")
+
+    normalized: dict[str, tuple[set[str], str]] = {}
+    for language_id, gap_record in raw_records.items():
+        if language_id not in language_ids:
+            fail(
+                f"{project_id}.knownMissingCapabilities names unknown "
+                f"language {language_id}"
+            )
+        if language_id not in declared_languages:
+            fail(
+                f"{project_id}.knownMissingCapabilities.{language_id} requires "
+                "declared facade evidence"
+            )
+        if not isinstance(gap_record, dict):
+            fail(
+                f"{project_id}.knownMissingCapabilities.{language_id} must be an object"
+            )
+        gap_capabilities = gap_record.get("capabilities")
+        if not isinstance(gap_capabilities, list) or not gap_capabilities:
+            fail(
+                f"{project_id}.knownMissingCapabilities.{language_id} must "
+                "declare capabilities"
+            )
+        normalized_capabilities = [
+            clean(
+                value,
+                f"{project_id}.knownMissingCapabilities.{language_id}.capability",
+            )
+            for value in gap_capabilities
+        ]
+        if len(normalized_capabilities) != len(set(normalized_capabilities)):
+            fail(
+                f"{project_id}.knownMissingCapabilities.{language_id} "
+                "contains duplicate capabilities"
+            )
+        unknown_capabilities = set(normalized_capabilities) - capability_ids
+        if unknown_capabilities:
+            fail(
+                f"{project_id}.knownMissingCapabilities.{language_id} names "
+                f"unknown capabilities: {sorted(unknown_capabilities)}"
+            )
+        gap_evidence = clean(
+            gap_record.get("evidence"),
+            f"{project_id}.knownMissingCapabilities.{language_id}.evidence",
+        )
+        gap_evidence_path = (evidence_root / gap_evidence.split("#", 1)[0]).resolve()
+        if not gap_evidence_path.is_file():
+            fail(
+                f"{project_id}.knownMissingCapabilities.{language_id} evidence "
+                f"is missing: {gap_evidence_path}"
+            )
+        normalized[language_id] = (set(normalized_capabilities), gap_evidence)
+    return normalized
+
+
 def documentation_topic(
     topic_id: str,
     state: str,
@@ -214,7 +280,7 @@ def main() -> int:
     args = parser.parse_args()
 
     model = json.loads(MODEL_PATH.read_text(encoding="utf-8"))
-    if model.get("schemaVersion") != 2:
+    if model.get("schemaVersion") != 3:
         fail("unsupported schemaVersion")
     languages = model.get("languages")
     projects = model.get("projects")
@@ -292,11 +358,16 @@ def main() -> int:
         unit_domains = project.get("unitDomains")
         evidence = project.get("declaredLanguageEvidence")
         reviews = project.get("reviewRequiredLanguages", [])
+        known_missing = project.get("knownMissingCapabilities", {})
         if not isinstance(capabilities, list) or not capabilities:
             fail(f"{project_id} must declare capabilities")
         if not isinstance(unit_domains, list) or not unit_domains:
             fail(f"{project_id} must declare unitDomains")
-        if not isinstance(evidence, dict) or not isinstance(reviews, list):
+        if (
+            not isinstance(evidence, dict)
+            or not isinstance(reviews, list)
+            or not isinstance(known_missing, dict)
+        ):
             fail(f"{project_id} has malformed language evidence/review lists")
         if len(reviews) != len(set(reviews)):
             fail(f"{project_id} has duplicate review-required languages")
@@ -318,6 +389,17 @@ def main() -> int:
                 f"{project_id} has binding directories omitted from "
                 "declaredLanguageEvidence: " + ", ".join(sorted(undeclared_bindings))
             )
+
+        capability_ids = {
+            clean(value, f"{project_id}.capability") for value in capabilities
+        }
+        normalized_missing = normalize_known_missing(
+            project_id,
+            known_missing,
+            capability_ids,
+            set(language_by_id),
+            set(evidence),
+        )
 
         seen_capabilities: set[str] = set()
         for capability_value in capabilities:
@@ -352,6 +434,15 @@ def main() -> int:
                 else:
                     default_state = "missing"
                     default_evidence = "-"
+                language_missing = normalized_missing.get(language_id)
+                if language_missing and capability in language_missing[0]:
+                    if cell_id in overrides:
+                        fail(
+                            f"{cell_id} is both a known missing capability and an "
+                            "explicit cell override"
+                        )
+                    default_state = "missing"
+                    default_evidence = language_missing[1]
                 state = clean(override.get("state", default_state), f"{cell_id}.state")
                 if state not in VALID_CELL_STATES:
                     fail(f"{cell_id} has invalid state {state}")

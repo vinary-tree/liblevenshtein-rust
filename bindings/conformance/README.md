@@ -41,8 +41,8 @@ One matrix row has the stable identity
 $`(p, l, c) \in P \times L \times C_p`$, where $`P`$ is the project set,
 $`L`$ is the language set, and $`C_p`$ is project $`p`$'s public capability
 catalog. The inventory contains 8 projects, 22 languages—including native
-Rust, Raku, and Julia—and 65 project-owned capabilities, producing
-$`22 \sum_{p \in P} |C_p| = 1{,}430`$ explicit cells.
+Rust, Raku, and Julia—and 287 project-owned capabilities, producing
+$`22 \sum_{p \in P} |C_p| = 6{,}314`$ explicit cells.
 
 Each row also records:
 
@@ -118,6 +118,14 @@ canonical documentation-topic sequence, derives the aggregate documentation
 state from those topic states, and emits the TSV in a deterministic
 project/capability/language order.
 
+Each project's `knownMissingCapabilities` map records reviewed absences inside
+an otherwise existing facade. Its capability identifiers must belong to that
+project, its language must have declared facade evidence, and its review ledger
+must exist. The generator rejects an explicit cell override for the same tuple,
+so a known absence cannot be silently promoted by contradictory metadata. To
+advance such a cell, remove it from the known-missing list and add the exact
+implementation and qualification evidence to `cellOverrides`.
+
 The generator also discovers conventional binding directories. A Python,
 JVM, .NET, JavaScript/TypeScript, ClojureScript, Julia, Raku, or other recognized
 binding tree may not exist outside `declaredLanguageEvidence`: that mismatch is
@@ -151,9 +159,12 @@ The literate generation algorithm is:
 ```text
 for each project p in the reviewed family model:
     validate that p's root and every declared evidence path exist
+    validate each reviewed missing capability against p's catalog and audit ledger
     for each public capability c owned by p:
         for each required language l:
             emit exactly one cell (p, l, c)
+            if (l, c) is a reviewed missing capability:
+                preserve missing even when l has a binding directory
             if an override says inapplicable:
                 require a reviewed proof file
             for each required documentation topic d:

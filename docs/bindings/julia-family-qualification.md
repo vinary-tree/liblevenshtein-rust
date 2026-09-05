@@ -54,10 +54,10 @@ this qualification.
 | Owner | Evidence-backed Julia surface | Remaining parity work |
 |---|---|---|
 | Vinary Tree Interop | retained resources; dictionary snapshots, visits, compact graphs, entries, and snapshot identity; scalar weighted finite-state transducers (WFSTs); lattice values | generate the complete ABI from the C header; qualify all value and unit-domain branches; add representative boundary benchmarks; complete topic-level docs, fresh-consumer installation, and registry staging |
-| llattice | host-implementable lattice interface; maximum/minimum, Boolean, optional, finite-set, and vector-content lattices | strengthen hostile-callback and concurrent lifecycle tests; compare pairwise and batched boundaries with native controls and budgets; complete package, documentation, and registry gates |
-| libdictenstein | Julia `AbstractDict`; dynamic DAWG, double-array trie, SCDawg, persistent ARTrie, and persistent vocabulary; snapshots; eager algebra; retained dictionary-resource handoff | sorted-minimal DAWG, suffix automaton, and PathMap backends; lazy zipper algebra and bounded collection operations; customer-implementable providers; generated ABI; full conformance, benchmarks, self-contained native artifacts, docs, and registry gates |
-| liblevenshtein | exact distance functions; standard, adjacent-transposition, full Damerau-Levenshtein, and merge-and-split automata over byte, Unicode-scalar, and unsigned-64-bit domains; bounded cursors/reducers; snapshots; a bounded TinyLFU/SIEVE result cache; a limited phonetic surface | generalized, universal, FZF, and WallBreaker automata; complete phonetic families; ranked/contextual and specialized traversal; serialization; configurable cache policies and eviction strategies; complete cross-domain conformance, performance, artifact, documentation, and registry gates |
-| lling-llang | eager scalar-WFST construction, immutable resource import, lazy composition, lattice consumption, and customer-implementable scalar-WFST and semiring providers | core WFST algorithms and path search; generic vocabulary and weight domains; CFG/parsing; differentiable, pushdown/WPDS, symbolic, acoustic/ASR/CTC, correction, and language-model decoder surfaces; remaining host-implementable interfaces; performance, artifact, documentation, and registry gates |
+| llattice | host-implementable lattice interface; maximum/minimum, Boolean, optional, and finite-set lattices | add the native vector-content lattice; strengthen hostile-callback and concurrent lifecycle tests; compare pairwise and batched boundaries with native controls and budgets; complete package, documentation, and registry gates |
+| libdictenstein | Julia `AbstractDict`; dynamic DAWG, double-array trie, SCDawg, persistent ARTrie, and persistent vocabulary; snapshots; eager materialized algebra; retained dictionary-resource handoff | sorted-minimal DAWG, suffix automaton, and PathMap backends; persistent suffix structures and recovery controls; lazy zipper traversal and algebra; bidirectional traversal; Bloom filters and serialization; customer-implementable providers; generated ABI; full conformance, benchmarks, self-contained native artifacts, docs, and registry gates |
+| liblevenshtein | exact and bounded Levenshtein functions; standard, adjacent-transposition, full Damerau-Levenshtein, and merge-and-split automata over byte, Unicode-scalar, and unsigned-64-bit domains; bounded cursors/reducers; snapshots; a bounded TinyLFU/SIEVE result cache; parsed LLev/LLRE and compiled phonetic-pattern surfaces | additional scalar distance kernels; affine, generalized, universal, FZF, and WallBreaker automata; complete cost, phonetic, filtering, temporal, ranked/contextual, and specialized traversal families; serialization; configurable cache policies and eviction strategies; complete cross-domain conformance, performance, artifact, documentation, and registry gates |
+| lling-llang | typed ABI validation and cancellation; eager scalar-WFST construction; immutable resource import; lazy composition; dynamic lattice and semiring consumption; semiring division, closure, numeric projections, and laws; customer-implementable scalar-WFST and semiring providers | built-in semiring domains; mutable, rational, synchronized, and generic-vocabulary WFSTs; core algorithms and path search; native lattice data and iteration; CFG/parsing; differentiable, pushdown/WPDS, symbolic, acoustic/ASR/CTC, correction, text-normalization, neural-transducer, and language-model decoder surfaces; remaining host-implementable interfaces; performance, artifact, documentation, and registry gates |
 | duallity | dictionary-resource bridge; four edit algorithms; Levenshtein plus basic universal, generalized, phonetic, and FZF selector-based WFST construction; product composition through lling-llang | WallBreaker; full phonetic rewrite/NFA pipeline; FZF configuration, statistics, scoring, and cache controls; detailed generalized/universal construction policies; representative benchmarks, self-contained artifacts, complete docs, and registry gates |
 
 Passing tests establish the implemented slice; they do not prove the absent
@@ -65,6 +65,30 @@ slice. In particular, the lling-llang extension-provider matrix already records
 37 missing Julia translations and three partial generic WFST translations.
 Likewise, a duallity enum selector is not a substitute for the public Rust
 configuration, statistics, scorer, rewrite, or cache APIs behind that selector.
+
+## Capability granularity and source audit
+
+The earlier catalog had 65 rows, including catch-all entries such as
+`distance`, `algorithms`, `phonetic`, and `custom-provider`. Those entries could
+hide a missing native family behind one implemented method. The reconciled
+catalog contains 287 independently auditable capabilities and expands to 6,314
+project/language/capability cells. The Julia slice contains 95 existing but
+still unqualified surfaces, 186 reviewed missing surfaces, and the six reviewed
+distribution-only inapplicabilities below.
+
+| Owner | Capability count | Authoritative native surfaces reviewed |
+|---|---:|---|
+| Vinary Tree Interop | 22 | the retained-resource, dictionary traversal/visit/graph/entry, snapshot-identity, scalar-WFST, lattice, and five semiring vtables in `include/vinary_tree_interop.h`, including domains, batching, and callback lifecycle flags |
+| llattice | 8 | `Lattice`, its host-implementable provider boundary, and integral, floating-point, Boolean, optional, set, and vector-content implementations in `src/lib.rs` and the versioned lattice ABI |
+| libdictenstein | 36 | public traits and collection iterators in `src/lib.rs`; in-memory and persistent backends; snapshot and substring traversal; all union/intersection/difference/prefix/value zipper modules; factory, recovery, Bloom-filter, serialization, and resource-provider surfaces |
+| liblevenshtein | 75 | scalar distance kernels; edit automata, costs, substitution policies, product traversals, suggestions, and operation sets; the LLev, LLRE, phonetic, filtering, temporal-metric, cache-policy, serialization, and resource-consumer modules |
+| lling-llang | 125 | semiring families; mutable, vector, lazy, rational, synchronized, and host-provided WFSTs; composition and individual algorithms; path, lattice, CFG, pushdown, symbolic, multitape, subsequential, tree, differentiable, training, acoustic, ASR, CTC, correction, multilingual, text-normalization, neural-transducer, programming, GPU, and backend modules; and every applicable provider or derived-adapter trait in the 61-trait extension ledger |
+| duallity | 15 | dictionary and state-source adapters; Levenshtein, universal, generalized, phonetic, WallBreaker, and FZF WFST families; product composition, scorer/configuration/cache controls, and resource handoff |
+| JavaScript distribution owners | 6 | native N-API, browser WebAssembly, WASI, shared resource-table/runtime identity, and the unscoped legacy package bridge |
+
+`knownMissingCapabilities` in the source model records the 186 Julia absences
+against this audit. An existing package directory therefore continues to mean
+only “inspect this surface”; it cannot overwrite a reviewed missing result.
 
 ## Packaging, performance, and documentation findings
 
