@@ -59,5 +59,33 @@ class DiscoverBindingLanguagesTests(unittest.TestCase):
             self.assertEqual(MODULE.discover_binding_languages(Path(directory)), set())
 
 
+class DocumentationTopicTests(unittest.TestCase):
+    def test_inherited_complete_state_requires_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(
+                SystemExit, "is complete without documentation evidence"
+            ):
+                MODULE.documentation_topic(
+                    "overview",
+                    "complete",
+                    None,
+                    "project|julia|capability",
+                    Path(directory),
+                )
+
+    def test_inherited_inapplicable_state_remains_inapplicable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(
+                MODULE.documentation_topic(
+                    "overview",
+                    "inapplicable",
+                    None,
+                    "project|julia|capability",
+                    Path(directory),
+                ),
+                ("inapplicable", "-"),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

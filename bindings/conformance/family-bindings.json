@@ -144,5 +144,132 @@
       "reviewRequiredLanguages": ["rust", "c", "cpp", "python", "java", "kotlin", "scala", "clojure", "csharp", "fsharp", "go", "swift", "ruby", "fortran", "ocaml", "haskell", "lua", "raku", "julia"]
     }
   ],
-  "cellOverrides": {}
+  "cellOverrides": {
+    "duallity|julia|fzf-wfst": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "duallity|julia|phonetic-wfst": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "duallity|julia|wallbreaker-wfst": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "javascript-runtime|julia|browser-wasm-runtime": {
+      "state": "inapplicable",
+      "applicabilityProof": "docs/bindings/julia-family-qualification.md#distribution-only-repositories",
+      "evidence": "docs/bindings/wasm-topology.md#2-why-an-umbrella-at-all"
+    },
+    "javascript-runtime|julia|native-napi-runtime": {
+      "state": "inapplicable",
+      "applicabilityProof": "docs/bindings/julia-family-qualification.md#distribution-only-repositories",
+      "evidence": "docs/bindings/wasm-topology.md#2-why-an-umbrella-at-all"
+    },
+    "javascript-runtime|julia|resource-table": {
+      "state": "inapplicable",
+      "applicabilityProof": "docs/bindings/julia-family-qualification.md#distribution-only-repositories",
+      "evidence": "docs/bindings/wasm-topology.md#4-the-runtime-identity-guard"
+    },
+    "javascript-runtime|julia|runtime-identity": {
+      "state": "inapplicable",
+      "applicabilityProof": "docs/bindings/julia-family-qualification.md#distribution-only-repositories",
+      "evidence": "docs/bindings/wasm-topology.md#4-the-runtime-identity-guard"
+    },
+    "javascript-runtime|julia|wasi-runtime": {
+      "state": "inapplicable",
+      "applicabilityProof": "docs/bindings/julia-family-qualification.md#distribution-only-repositories",
+      "evidence": "docs/bindings/wasm-topology.md#5-wasi-capability-policy"
+    },
+    "libdictenstein|julia|pathmap-backend": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "libdictenstein|julia|sorted-minimal-dawg": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "libdictenstein|julia|suffix-automaton": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein|julia|fzf": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein|julia|generalized-edit": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein|julia|phonetic": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein|julia|query-traversal": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein|julia|ranked-contextual": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein|julia|serialization": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein|julia|universal": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein|julia|wallbreaker": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "liblevenshtein-npm|julia|unscoped-package-bridge": {
+      "state": "inapplicable",
+      "applicabilityProof": "docs/bindings/julia-family-qualification.md#distribution-only-repositories",
+      "evidence": "docs/bindings/julia-family-qualification.md#distribution-only-repositories"
+    },
+    "lling-llang|julia|acoustic-asr-ctc": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|algorithms": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|cfg": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|correction-layers": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|custom-provider": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|differentiable": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|llm-decoder": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|pushdown": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|symbolic": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    },
+    "lling-llang|julia|wfst": {
+      "state": "missing",
+      "evidence": "docs/bindings/julia-family-qualification.md#capability-findings"
+    }
+  }
 }

@@ -138,6 +138,11 @@ def documentation_topic(
     """Validate one topic's state and the evidence needed to advance it."""
     default = "missing" if state == "missing" else state
     if override is None:
+        if default == "complete":
+            fail(
+                f"{cell_id}.documentationTopics.{topic_id} is complete "
+                "without documentation evidence"
+            )
         return default, "-"
     if not isinstance(override, dict):
         fail(f"{cell_id}.documentationTopics.{topic_id} must be an object")

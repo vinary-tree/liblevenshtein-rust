@@ -41,8 +41,8 @@ One matrix row has the stable identity
 $`(p, l, c) \in P \times L \times C_p`$, where $`P`$ is the project set,
 $`L`$ is the language set, and $`C_p`$ is project $`p`$'s public capability
 catalog. The inventory contains 8 projects, 22 languages—including native
-Rust, Raku, and Julia—and 64 project-owned capabilities, producing
-$`22 \sum_{p \in P} |C_p| = 1{,}408`$ explicit cells.
+Rust, Raku, and Julia—and 65 project-owned capabilities, producing
+$`22 \sum_{p \in P} |C_p| = 1{,}430`$ explicit cells.
 
 Each row also records:
 
@@ -101,6 +101,12 @@ The strict completion gate accepts only `complete` and proved `inapplicable`
 cells. The ordinary generator is intentionally usable during the campaign: it
 requires the Cartesian inventory to remain exhaustive while preserving every
 unfinished state as visible work.
+
+The [Julia family qualification](../../docs/bindings/julia-family-qualification.md)
+records the evidence behind Julia's current capability classifications. It
+also proves why the two JavaScript-only distribution repositories do not own a
+second Julia facade; this is the only reviewed Julia inapplicability in the
+current family model.
 
 ## Generation and verification
 
