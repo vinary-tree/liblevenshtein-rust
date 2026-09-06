@@ -1,5 +1,5 @@
 @startuml ordered-cost-theory-layers
-' Conceptual layers of the generalized lazy ordered-cost product theory.
+' Ordered Residual Calculus and its lazy product specialization.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "DejaVu Sans"
@@ -11,27 +11,29 @@ skinparam rectangle {
 skinparam ArrowColor #37474F
 skinparam ArrowThickness 2
 
-title Lazy ordered-cost product automata — semantic and qualification layers
+title Ordered Residual Calculus — semantics, realization, and execution
 
-rectangle "Ordered path algebra\nchoice, extension, order" as Algebra #FFE0B2
-rectangle "Query-specialized weighted residual\ncanonical frontier + finite context" as Residual #BBDEFB
-rectangle "Simulation preorder\nproved antichain normalization" as Simulation #D1C4E9
+rectangle "Measure specification\nquery, domain, output observation" as Measure #E3F2FD
+rectangle "Residual behavior\nexists for every measure" as Residual #BBDEFB
+rectangle "Ordered cost transformations\nminimum + composition" as Algebra #FFE0B2
+rectangle "Certified executable realization\nfinite states, registers, or history" as Realization #D1C4E9
+rectangle "Executable simulation preorder\nproved frontier normalization" as Simulation #D1C4E9
 rectangle "Observed-transition machine\nexact interning + compact StateId" as Machine #B2EBF2
 rectangle "Reachable synchronized product\ndictionary cursor × StateId" as Product #C8E6C9
 rectangle "Abstract interval product\ncandidate superset" as Abstract #FFF9C4
 rectangle "Exact original verification\nauthoritative membership and cost" as Verify #F8BBD0
 rectangle "Metric-qualified instance\ndomain/quotient axioms" as Metric #DCEDC8
-rectangle "Nonmetric ordered-cost instance\nfor example banded DTW" as Nonmetric #FFCDD2
 
-Algebra --> Residual : recurrence semantics
-Residual --> Simulation : continuation behavior
+Measure --> Residual : input derivatives
+Measure --> Metric : separate geometric proof
+Residual --> Realization : effective representation proof
+Algebra --> Realization : recurrence instances
+Realization --> Simulation : minimum-frontier specialization
 Simulation --> Machine : canonical live state
 Machine --> Product : edge-demanded transition
-Product --> Verify : exact labels
+Product --> Verify : exact result contract
 Product --> Abstract : interval labels
 Abstract --> Verify : verify every collision member
-Verify --> Metric : separate proof gate
-Verify --> Nonmetric : architecture still applies
 
 note right of Product #E8F5E9
   Product names the operational construction.
@@ -39,9 +41,16 @@ note right of Product #E8F5E9
   when both components are exact acceptors.
 end note
 
-note bottom of Metric #E3F2FD
-  Category theory organizes the layers;
-  weighted residuals, simulations, and
-  abstract interpretation prove them.
+note bottom of Realization #E3F2FD
+  Exact morphisms compose realizations.
+  Lower simulations compose bounds.
+  Backward budgets derive safe pruning.
+  Bounded registers need separate bit bounds.
+end note
+
+note bottom of Metric #FFF9C4
+  Metricity does not imply finite state.
+  Rounded outputs need a numerical proof
+  before triangle-based pruning applies.
 end note
 @enduml

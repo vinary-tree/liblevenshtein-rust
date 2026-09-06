@@ -58,11 +58,12 @@ index maps everything else.
 
 - [Lazy vs. Eager Automata](concepts/LAZY_VS_EAGER_AUTOMATA.md) — the central idea: a query *lazily simulates* a parameterized Levenshtein automaton, it is **not** a precompiled universal DFA.
 - [Levenshtein-automata theory](research/levenshtein-automata/README.md) — the Schulz–Mihov method, glossary, and code-to-paper mapping (theory home; also cross-linked from the glossary).
-- [Lazy ordered-cost product automata](theory/lazy-ordered-cost-product-automata.md) — the general theory of weighted residuals, simulation antichains, abstract interval products, stable online state, and separately qualified metric instances.
+- [Ordered Residual Calculus](theory/ordered-residual-calculus.md) — deriving automata from measures, with algebras, calculi, categories, and certified optimization rules.
+- [Lazy ordered-cost product automata](theory/lazy-ordered-cost-product-automata.md) — the operational architecture of weighted residuals, simulation antichains, abstract interval products, stable online state, and separately qualified metric instances.
 - [Algorithm layer 02 — Levenshtein automata](algorithms/02-levenshtein-automata/README.md) — the position/subsumption model, with diagrams.
 - [Edit-distance classification](theory/edit-distance-classification.md) — the alignment/script boundary, four implementation classes, metricity-versus-pruning distinction, and placement checklist for future measures.
 - [Snapshot semantics](theory/snapshot-semantics.md) — the cursor laws S1-S6 as display math, the $`\mathcal{O}(1)`$-capture argument from path-copied revisions, the partial-persistence classification (Driscoll; Okasaki), and the law ↔ formal-model ↔ test correspondence table.
-- [Theory](theory/) — disk-trie and SCDAWG theory pointers (backend internals now live in `libdictenstein`).
+- [Theory](theory/) — automata foundations, metric qualification, and snapshot semantics; dictionary backend internals live in `libdictenstein`.
 - Specialized theory: [universal automata](research/universal-levenshtein/README.md) · [weighted automata](research/weighted-levenshtein-automata/README.md) · [bimachines](research/bimachines/README.md).
 
 ## 3 · Architecture

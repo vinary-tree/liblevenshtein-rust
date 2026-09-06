@@ -302,6 +302,8 @@ docs/bindings/resource-consumer.md
 docs/bindings/wasm-topology.md
 docs/theory/snapshot-semantics.md
 docs/theory/lazy-ordered-cost-product-automata.md
+docs/theory/ordered-residual-calculus.md
+docs/theory/README.md
 docs/design/lazy-online-products.md
 docs/design/approximate-msm-evidence.md
 docs/security/binding-trust-model.md

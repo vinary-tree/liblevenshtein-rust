@@ -2,8 +2,11 @@
 
 Mathematical foundations for the library's exact and bounded automata.
 
+- [Ordered Residual Calculus](ordered-residual-calculus.md) — the mathematical
+  framework for deriving automata from measures, with realization theorems,
+  algebras, calculi, categories, worked derivations, and certified optimization.
 - [Lazy ordered-cost product automata](lazy-ordered-cost-product-automata.md) —
-  the general theory behind query-specialized residual states, proved
+  the operational architecture behind query-specialized residual states, proved
   antichains, synchronized dictionary products, stable online transitions,
   and the separate metric-qualification layer.
 - [Edit-distance classification](edit-distance-classification.md) — where a

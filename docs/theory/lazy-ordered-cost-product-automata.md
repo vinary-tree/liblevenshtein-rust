@@ -13,13 +13,16 @@ states lazily; normalize them into exact antichain frontiers; intern them behind
 compact IDs; and explore their synchronized product with a dictionary only
 where real dictionary edges demand a transition.
 
-The best working name for this family is **lazy ordered-cost product
-automata**. A **metric automaton** is a separately certified member of that
-family. This distinction is intentional: banded DTW can use the product and
-online architecture although it is nonmetric, while an arbitrary metric need
-not have any finite or bounded-memory residual representation.
+The mathematical framework is **[Ordered Residual Calculus
+(ORC)](ordered-residual-calculus.md)**. Its companion manuscript supplies
+realization theorems, algebras, forward and backward calculi, categories,
+worked measure-to-machine derivations, and a certified optimizer design.
+**Lazy ordered-cost product automata** names the operational family developed
+here. A **metric automaton** is a separately qualified instance. General DTW
+can use this architecture without being a metric; an arbitrary metric need not
+have an effective finite or bounded-memory residual representation.
 
-![The theory is layered: ordered costs support residual machines; simulations normalize their frontiers; dictionary products evaluate only observed transitions; abstractions admit candidates; exact verification authorizes results; metric laws qualify selected instances.](../diagrams/architectures/ordered-cost-theory-layers.svg)
+![Every measure has residual behavior; representation proofs supply executable machines. Ordered transformations and simulations support frontier optimization, dictionary products explore observed transitions, and abstractions require exact verification. Metric qualification is a separate branch from the original measure.](../diagrams/architectures/ordered-cost-theory-layers.svg)
 
 ## 1. Which mathematics is load-bearing?
 
@@ -33,17 +36,18 @@ No single subject is sufficient. The smallest useful synthesis is:
 | automata theory | define the reachable synchronized product and its language-intersection semantics | essential |
 | abstract interpretation | prove interval or box labels are admissible lower simulations of concrete labels | essential for quantized temporal retrieval |
 | symbolic and register automata | describe real-valued labels and bounded continuation data without falsely claiming a finite alphabet or finite state set | essential vocabulary for temporal machines |
-| coalgebra | specify stepwise observation, chunk equivalence, transactional transitions, and resumption | valuable |
+| coalgebra | define residual realization, exact machine morphisms, chunk equivalence, and resumption | essential semantic structure |
 | metric geometry | certify nonnegativity, symmetry, identity on a domain or quotient, and triangle inequality | required only for metric-qualified instances |
-| Lawvere-enriched category theory | organize path composition and generalized metrics at a high level | useful explanatory layer, not the implementation proof base |
+| category theory and Lawvere geometry | compose exact realizations and lower simulations; quantify directed residual error and nonexpansive derivatives | constructive proof tools; ORC Sections 7–9 |
 | set theory and discrete mathematics | provide ambient language for relations, orders, graphs, and finite combinatorics | foundational but too general by themselves |
-| calculus | differentiate smooth objectives such as Soft-DTW | outside exact lazy pruning except for analysis-only gradient surfaces |
+| algebraic and backward calculus | derive residual transitions, propagate acceptable budgets, and calculate recursive zipper contexts | constructive synthesis and optimization tools |
+| differential calculus on real parameters | differentiate smooth objectives such as Soft-DTW | separate gradient semantics; no idempotent pruning assumption |
 
-Weighted-automata theory is the primary semantic base; order theory and
-simulation are the primary pruning base; abstract interpretation is the
-primary quantization base. Category theory is useful because it reveals common
-structure, but forcing the hot implementation through categorical abstractions
-would neither prove its recurrence nor make it faster.
+Residual behavior is the primary semantic base; weighted automata realize an
+important subclass. Order and simulation justify pruning; abstract
+interpretation justifies quantization. The categories in ORC prove that these
+constructions compose. Their equations can be discharged when specializing a
+machine, with no runtime categorical dispatch.
 
 ## 2. Ordered path costs
 
@@ -55,7 +59,8 @@ identity $`e`$, and total comparison $`\leq`$:
 (C,\oplus,\otimes,\top,e,\leq).
 ```
 
-The generic proofs require only the laws they use:
+An exact scalar path algebra has the following laws. Each optimization must
+name the subset it needs; residual realization itself needs none of them:
 
 1. $`\oplus`$ is associative, commutative, and idempotent;
 2. $`\top`$ is the identity for alternative choice;
@@ -81,17 +86,27 @@ a\oplus b=\min(a,b),\qquad
 a\otimes b=\max(a,b),\qquad e=0,\qquad\top=\infty.
 ```
 
-The crate's `CostMonoid` deliberately exposes the path-extension portion and
-keeps minimum selection fixed. A general public semiring or quantale would
-promise laws and operations that the acyclic bounded algorithms do not need.
-Quantales become relevant only if a future design gives genuine infinite paths
-limit semantics.
+The crate's `CostMonoid` exposes path extension and keeps minimum selection
+fixed. This API does not by itself certify these scalar laws for every
+numerical implementation. ORC C1 instead uses monotone, top-preserving **cost
+transformations**: pointwise minimum is choice and function composition is
+extension. Composition stays associative even when a scalar floating-point
+addition is rounded at every edge. Path evaluation order remains explicit.
+
+A public quantale API is unnecessary for the present acyclic recurrences.
+Quantales are nevertheless relevant already: the extended nonnegative reals
+with reversed order support Lawvere geometry, and complete lattices organize
+abstract interpretation. Their relevance is not restricted to infinite paths.
 
 Floating-point costs are not quotient values under numerical tolerance. The
 canonical carrier rejects NaN and invalid infinities, normalizes negative zero,
 uses exact structural equality for identity, and uses total ordering for
 canonical sort. Epsilon equality is forbidden for interning, dominance, and
 cutoff membership.
+
+Canonical equality does not make floating-point addition associative, or
+transfer an exact-real triangle theorem to rounded outputs. ORC Sections 3.3
+and 12.3 give explicit counterexamples and separate numerical contracts.
 
 For cutoff $`\tau`$, define the saturation map:
 
@@ -161,17 +176,21 @@ $`F`$. This is not a minimality claim for weighted NFAs or arbitrary linear
 semiring representations, and exact structural interning does not claim it has
 discovered the complete residual quotient.
 
-The architecture therefore has a precise applicability criterion:
+Every measure has this residual semantics, including noncomputable measures.
+Execution and compactness are additional theorems. An effective scorer supplies
+an exact history-retaining realization; a proved finite residual quotient
+supplies a finite Moore machine; a sufficient finite recurrence context can
+supply a bounded-register machine. Metric axioms alone imply none of these
+representation bounds. ORC R4 constructs a strict metric with a nonregular
+radius-one ball.
 
-> A score is applicable when each fixed-query, bounded-cutoff residual has an
-> effective exact or admissibly abstract representation whose retained size is
-> independent of the consumed target-prefix length.
-
-This criterion is stricter than metricity and weaker than being a traditional
-finite-state automaton. Strings under a fixed integer edit bound can have a
-finite symbolic quotient. Real-valued series commonly require a symbolic
-weighted machine with finitely many registers or bounded rolling rows; its
-concrete state set may be infinite even though its retained memory is stable.
+For the bounded online profile, the exact residual must factor through a
+representation with a prefix-independent number of retained cells and bounded
+continuation context. A sound abstract filter is a distinct realization level:
+the constant-zero filter works for every nonnegative measure, but proves
+nothing about compact **exact** scoring. Its exact verifier needs a separate
+cost and storage contract. Real-valued registers may have infinitely many
+values; growing counters need growing bit length even with fixed register count.
 
 ## 4. Canonical frontiers and proved subsumption
 
@@ -203,16 +222,22 @@ The classical Levenshtein position/error formula is one such theorem; it is
 not a generic rule for MSM, ERP, TWED, or Fréchet. If a kernel has no stronger
 simulation proof, it may merge exact duplicates and nothing more.
 
-Let $`P_{q,\tau}`$ be the reachable live position preorder. Define its maximum
-antichain width:
+Let $`E`$ be the **executable** reflexive, transitive dominance relation, proved
+sound for $`\preceq`$. Let $`P_{q,\tau,E}/{\sim_E}`$ quotient reachable live
+positions by mutual $`E`$-dominance. Define its maximum antichain width:
 
 ```math
-W(q,\tau)=\sup\{|C|\mid C\subseteq P_{q,\tau}
+W_E(q,\tau)=\sup\{|C|\mid C\subseteq P_{q,\tau,E}/{\sim_E}
 \text{ and }C\text{ is an antichain}\}.
 ```
 
 **Theorem schema AW-1 (frontier-width bound).** Every normalized reachable
-frontier contains at most $`W(q,\tau)`$ positions. This bounds one frontier,
+frontier that removes every strict $`E`$-dominated atom and keeps one
+representative per remaining equivalence class contains at most
+$`W_E(q,\tau)`$ positions. An incomplete simulation cannot claim the smaller
+width of the full semantic order. ORC F2–F3 prove this normal-form theorem and
+give a two-atom counterexample. The bound counts atoms, not context bytes or
+cost bit lengths. This bounds one frontier,
 not the total number of distinct canonical states interned during a branching
 dictionary search. Kernel-specific order structure may permit a tighter
 linear or ordered normalization; no such complexity improvement is inherited
@@ -245,6 +270,7 @@ $`\hat a`$ has concretization $`\gamma(\hat a)`$, the abstract transition must
 lower-simulate every concrete member:
 
 ```math
+S^{\#}\;R\;S\ \Longrightarrow
 \forall a\in\gamma(\hat a),\qquad
 \operatorname{step}^{\#}(S^{\#},\hat a)
 \;R\;
@@ -252,17 +278,22 @@ lower-simulate every concrete member:
 ```
 
 where $`R`$ guarantees the abstract cost never exceeds the corresponding
-concrete cost. Singleton abstraction is exact:
+concrete cost. For an exact-state embedding $`\eta`$, singleton abstraction
+is exact only under the additional obligation:
 
 ```math
-\operatorname{step}^{\#}(S^{\#},[a,a])
-\equiv \operatorname{step}(S,a).
+\operatorname{step}^{\#}(\eta(S),[a,a])
+\equiv \eta(\operatorname{step}(S,a)).
 ```
 
 This is abstract interpretation: intervals or boxes form an abstract domain,
 and transition soundness is a lower simulation. A Galois connection is useful
 for structuring the proof, but the executable obligation is the quantified
 lower-bound inequality.
+
+A point label does not recover precision already lost in a non-singleton
+abstract history. Lower simulation alone also does not imply singleton
+exactness; the embedding equation is a separate proof.
 
 An interval product recognizes a candidate superset, not the exact metric
 ball. Exact scoring of every full-precision member of every quantization-
@@ -318,8 +349,10 @@ The defining laziness property is:
 > edge of a reachable dictionary-product state. No pair is created merely
 > because it could exist.
 
-This gives the architecture its output-sensitive character. Prefix sharing
-avoids rescoring descendants from scratch, subsumption reduces live width,
+This makes construction demand-driven. It is not an output-size complexity
+bound: an empty result can still require inspecting a large dictionary.
+Section 11 accounts for visited edges and constructed transitions. Prefix
+sharing avoids rescoring descendants from scratch, subsumption reduces live width,
 exact interning shares repeated residual representations, and observation
 caching shares repeated transitions. None of those optimizations changes the
 score recurrence.
@@ -405,12 +438,13 @@ These specialize the snapshot laws in
 snapshot capture, immutable structural sharing, cheap focus copies, and
 continuations that outlive the original dictionary handle.
 
-There is a genuine connection to calculus, but it is **algebraic data-type
-differentiation**, not differential calculus on metric costs. For a polynomial
-data type functor $`F`$, the formal derivative $`F'`$ describes one-hole
-contexts; a focused value has the conceptual shape $`F\times F'`$. This
-explains Huet-style zippers and their compositional navigation. It does not
-derive MSM/TWED/Fréchet recurrences or license numeric pruning.
+**Algebraic data-type differentiation** describes zipper contexts. For a
+regular recursive tree $`T\cong F(T)`$ built from a polynomial functor,
+$`F'(T)`$ describes one parent frame. An arbitrary-depth subtree zipper has
+shape $`T\times\operatorname{List}(F'(T))`$: a focus and its stack of
+frames. A one-layer derivative alone does not encode all ancestors. This
+calculus explains navigation; ORC's residual and backward budget calculi
+separately derive query transitions and pruning conditions.
 
 ### 7.2 The query-operation algebra
 
@@ -551,16 +585,21 @@ This is a coalgebraic transition system of the form:
 \operatorname{Outcome}(O\times S).
 ```
 
-For query length $`m`$, maximum target lookback $`r`$, and maximum live
-frontier width $`w(q,\tau)`$, retained state obeys:
+For query length $`m`$, maximum target lookback $`r`$, maximum cells per
+retained generation $`w(q,\tau)`$, and continuation context $`\kappa`$,
+the rolling-recurrence construction in ORC S1 bounds **retained cells** by:
 
 ```math
-M(t)\leq M_{\mathrm{query}}(m)+\mathcal{O}(w(q,\tau))+\mathcal{O}(r)
+M_{\mathrm{cells}}(t)\leq M_{\mathrm{query}}(m)
++\mathcal{O}((r+1)w(q,\tau)+r+|\kappa|)
 ```
 
-for every consumed prefix length $`t`$. Dense rolling recurrences have
-$`w=\mathcal{O}(m)`$; sparse frontiers may be smaller. No universal
-cutoff-only width is claimed for kernels with zero-cost paths.
+for every consumed prefix length $`t`$ when this context is sufficient.
+Dense rolling recurrences have $`w=\mathcal{O}(m)`$; sparse frontiers may
+be smaller. A byte bound also requires bounded encodings of all cells,
+labels, counters, and scratch. Exact unbounded counters require
+$`\Theta(\log(t+1))`$ bits; fixed-width counters require checked overflow.
+No universal cutoff-only width is claimed for kernels with zero-cost paths.
 
 There are two deliberately different resource profiles:
 
@@ -575,9 +614,11 @@ the prior state observable and unchanged. Chunking a stream cannot change the
 result, and resuming a paused dictionary search must equal uninterrupted
 execution over the same immutable snapshot.
 
-All closures and traversals are iterative. Zero-input operations use a
-well-founded rank or an explicitly bounded worklist. Dictionary DFS uses a
-bounded heap stack rather than the process call stack. Its memory can still
+All closures and traversals are iterative. Exact zero-input closure requires
+a termination argument, such as a finite acyclic dependency rank, or a proved
+terminating fixed-point algorithm. A bounded worklist guarantees a resource
+limit, not completion: exhaustion returns an explicit incomplete outcome.
+Dictionary DFS uses a bounded heap stack rather than the process call stack. Its memory can still
 grow with live dictionary depth, so stack safety is not mislabeled as constant
 heap memory.
 
@@ -588,9 +629,9 @@ separate windowed or infinite-path semantics.
 
 ## 9. Metric qualification is a separate theorem
 
-The generic engine is an `OrderedCostAutomaton`, not inherently a metric
-automaton. A sealed audited metric marker requires proofs, on the exact
-documented domain or quotient, of:
+The conceptual engine is an **ordered-cost automaton**; this phrase does not
+name a currently exported universal Rust trait. A sealed audited metric marker
+requires proofs, on the exact documented domain or quotient, of:
 
 ```math
 d(x,y)\geq0,
@@ -604,40 +645,53 @@ relation for ERP or discrete Fréchet. These laws are necessary for algorithms
 whose correctness uses metric geometry. They are not required for synchronized
 trie traversal, an admissible interval lower bound, or exact leaf verification.
 
+Qualification belongs to the untruncated mathematical measure. Rounded
+machine outputs and cutoff-saturated costs need their own numerical theorem
+before triangle-based consumers may use them; exact recurrence correspondence
+alone supplies no such theorem. ORC Section 12.3 gives both failure controls.
+
 The separation produces two important controls:
 
-- banded DTW may pass product, online, resource, and recurrence-correspondence
-  gates but can never satisfy the metric marker;
+- the general banded-DTW family may pass product, online, resource, and
+  recurrence-correspondence gates but has no blanket metric qualification;
+  a restricted instance, such as zero-width alignment on a fixed-length
+  domain with a metric ground cost, can have a separate metric proof;
 - raw ERP and raw Fréchet remain pseudometrics, while their gap-value and
   consecutive-stutter quotients may receive a metric-qualified wrapper.
 
-Fixed positive multichannel composition is a theorem above the scalar metric
-instances:
+Fixed multichannel composition pulls component metrics back along fixed maps:
 
 ```math
 D(X,Y)=\sum_{c=1}^{C}w_c\,d_c(S_cX_c,S_cY_c),
-\qquad w_c>0.
+\qquad w_c\geq0.
 ```
 
 Fold-local transforms $`S_c`$, channel identities, and weights are fixed for
-every compared pair. Zero weights produce a quotient; pair-dependent missing-
-channel renormalization is not covered and remains a counterexample control.
+every compared pair, with zero-weight terms omitted. This always gives a
+pseudometric. It is a strict metric exactly when the positive-weight maps
+jointly separate inputs modulo each component's zero-distance relation.
+Positive weights cannot repair noninjective joint transforms; a zero weight
+need not break a metric if the remaining channels still separate inputs.
+Pair-dependent missing-channel renormalization is not covered. ORC M2–M3
+prove the sum, maximum, and zero-quotient constructions.
 
 ## 10. Applicability matrix
 
 | Family | Ordered algebra | Residual representation | Required context | Qualification |
 |---|---|---|---|---|
 | standard Levenshtein | min-plus integers | positional error antichain | edit variant | metric |
-| weighted strings | min-plus canonical cost | weighted positional frontier | operation/continuation kind | conditional on lawful symmetric positive costs |
+| weighted strings | min-plus exact costs; ordered transformations for rounded execution | weighted positional frontier | operation/continuation kind | shortest-script closure, reversible equal costs, and separation; restricted alignments need an independent triangle proof |
 | MSM | min-plus real | sparse query-row frontier | preceding target point or interval | metric for lawful positive split/merge cost |
 | ERP | min-plus real | sparse query-row frontier | gap configuration | metric on the gap-value quotient |
 | unit-grid TWED | min-plus real | query-row frontier | preceding target point and depth | metric under lawful positive stiffness on uniform grids |
-| timestamped TWED | min-plus real | timestamp-aware frontier | preceding value/time and typed units | metric on finite strictly monotone canonical-unit inputs |
+| timestamped TWED | min-plus real | timestamp-aware frontier | preceding value/time and typed units | cumulative-boundary metric transfer requires first time strictly after the origin; ORC 11.5 gives the existing broader domain's zero-distance counterexample |
 | scalar/vector discrete Fréchet | min-max | bottleneck row frontier | current point/interval | metric on the consecutive-stutter quotient when the ground metric is certified |
-| banded DTW | min-plus real | band-restricted row frontier | band/depth and current label | explicitly nonmetric |
+| banded DTW | min-plus real | band-restricted row frontier | band/depth and current label | general family nonmetric; separately proved restrictions possible |
 | Soft-DTW | smooth log-sum-exp recurrence | rolling dense score rows | bounded DP history | analysis-only; idempotent antichain elimination does not apply |
 
-Metricity is neither necessary nor sufficient. A new score enters the generic
+The metric column concerns ideal arithmetic on the stated domains; it does not
+certify rounded triangle inequalities. Metricity is neither necessary nor
+sufficient for compact realization. A new score enters the generic
 architecture only after its residual, transition, cutoff, context, and resource
 contracts are defined and proved.
 
@@ -645,6 +699,12 @@ contracts are defined and proved.
 
 The theory is intentionally constructive: each semantic equivalence or order
 law identifies a concrete optimization and its correctness condition.
+
+ORC Section 13 gives sixteen explicit rewrite rules and a terminating
+certificate-producing optimizer design. Section 10 specifies the input
+measure interface, realization levels, intermediate representation, derivation
+algorithm, and local certificate checker. These are mathematical and compiler
+contracts, not a claim that a generic production compiler is already exported.
 
 | Theorem or law | Optimization | Required control |
 |---|---|---|
@@ -654,7 +714,8 @@ law identifies a concrete optimization and its correctness condition.
 | observation congruence | characteristic-class transition cache | equal classes induce exactly equal successors |
 | cutoff monotonicity | dead-state and subtree pruning | no lawful completion can lower the bound beneath cutoff |
 | abstract lower simulation | interval/box traversal | exact verification covers every concrete collision member |
-| point-abstraction exactness | specialized point transitions | point and abstract paths are observationally equal |
+| point-abstraction exactness | specialized point transitions | exact-state embedding and singleton labels commute with transitions |
+| dictionary-relative dominance | stronger local normalization | compare only suffixes accepted at this focus; include snapshot and focus in scoped cache keys |
 | product reachability | on-demand construction | transitions arise only from inspected reachable edges |
 | zipper navigation laws | opaque native focus, projection-before-child, shared parent arena | snapshot/path/finality observations remain equal |
 | sibling independence | prepared rows and batched child labels | scratch is reset transactionally between labels |
@@ -664,25 +725,35 @@ law identifies a concrete optimization and its correctness condition.
 
 Let $`E_R`$ be the number of inspected edges in the reachable live product,
 $`S_R`$ the number of distinct canonical query states, $`C_R`$ the number of
-distinct observed state/class transitions, $`W`$ the maximum frontier width,
+distinct observed state/class transitions, $`W`$ the maximum cells per live generation,
 $`H`$ the maximum live DFS depth, and $`V`$ the number of full-precision
 candidates verified. A useful implementation-sensitive accounting is:
 
 ```math
 T=\mathcal{O}\!\left(
-E_R\,c_{\mathrm{lookup}}
-+C_R\,c_{\mathrm{generate}}(W)
+E_R\,c_{\mathrm{inspect}}
++C_R\,c_{\mathrm{step}}(W,r,|\kappa|)
 +V\,c_{\mathrm{exact}}
++T_{\mathrm{results}}
 \right),
 ```
 
 ```math
 M_{\mathrm{search}}=
-\mathcal{O}(S_R W+C_R+Q+H+R+\Omega),
+M_{\mathrm{query}}+\mathcal{O}\!\left(
+S_R((r+1)W+r+|\kappa|)+C_R c_{\mathrm{entry}}+Q+H+R+\Omega
+\right),
 ```
 
-where $`Q`$ is pending scheduler storage, $`R`$ retained results, and
-$`\Omega`$ bounded witness/continuation storage. This is not a claim of
+where inspection includes dictionary navigation, observation construction,
+cache lookup/comparison, and scheduler maintenance; step cost includes
+generation, closure, normalization, hashing, and exact arena comparisons.
+The result term accounts for materialization and required sorting.
+$`c_{\mathrm{entry}}`$ includes the observation key and cached successor.
+$`Q`$ is pending scheduler storage, $`R`$ retained results, and
+$`\Omega`$ bounded witness/continuation storage. The memory expression counts
+cells; convert all variable-sized encodings to bytes for an allocation claim.
+This is not a claim of
 dictionary-size independence: a query with weak pruning may inspect the whole
 dictionary. It is an accounting that reveals whether time is spent generating
 new residuals, revisiting known observations, verifying quantization
@@ -692,11 +763,13 @@ For a stream machine the stronger retained-memory equation is:
 
 ```math
 M_{\mathrm{stream}}=
-M_{\mathrm{query}}+\mathcal{O}(W+r+\mathrm{scratch}+C_{\mathrm{bounded}}),
+M_{\mathrm{query}}+\mathcal{O}((r+1)W+r+|\kappa|
++\mathrm{scratch}+C_{\mathrm{bounded}}),
 ```
 
-independent of consumed prefix length. Search arenas and their $`S_R`$ term do
-not belong in this profile.
+as a cell count independent of consumed prefix length under the hypotheses of
+Section 8. Byte bounds additionally depend on encodings. Search arenas and
+their $`S_R`$ term do not belong in this profile.
 
 Optimization work should therefore measure more than wall time:
 
@@ -735,17 +808,17 @@ is authoritative for current proof status.
 | SP-1 | semantic dominance permits atom elimination | suffix-quantified continuation proof |
 | SP-2 | executable forward simulation implies semantic dominance | kernel/variant-specific simulation |
 | AN-1..3 | normalization preserves behavior, is idempotent, and is permutation-independent | formal canonicalization plus randomized predecessor order |
-| AW-1 | normalized frontier width is bounded by reachable-poset width | order-theoretic instance analysis |
+| AW-1 | complete normalization under the executable preorder is bounded by its quotient width | ORC F2–F3 and instance analysis; semantic width needs a complete semantic-order normalizer |
 | OC-1 | transition-congruent observation quotient preserves behavior | label-class correspondence |
 | CC-1 | exact observed-transition cache refines recomputation | exact state decode, complete cache key, pure transition |
 | CC-2 | eviction of complete cache entries is behaviorally transparent | recomputation equivalence |
 | AI-1 | abstract transitions lower-simulate all concrete paths | interval/box transformer induction |
 | AI-2 | an over-cutoff abstract bound safely rejects a subtree | AI-1 plus cutoff-safe extension |
-| AI-3 | singleton/point abstractions reproduce exact transitions | point correspondence and mutant |
+| AI-3 | singleton labels reproduce transitions from exactly embedded states | commuting embedding equation and mutant for previously lost precision |
 | AP-1 | greater abstract precision cannot lose completed exact results | precision monotonicity plus complete execution |
 | EV-1 | candidate product plus collision retention and verification equals brute force | product completeness and exact verifier |
 | MQ-1 | exact distance realization recognizes the cutoff ball | RM-1 and exact finality |
-| MQ-2 | fixed positive channel sums preserve metric laws | qualified component metrics and fixed domains |
+| MQ-2 | fixed nonnegative channel sums and maxima preserve pseudometrics; joint separation gives a metric | ORC M2–M3, fixed domains/maps/weights, and a separate numerical contract |
 | ZP-1..7 | zipper snapshot, path, child, finality, clone, and continuation laws | backend conformance and product-focus model |
 | GR-1..3 | bounded-lookback reclamation, prefix-independent retention, and generation-tag safety | recurrence dependency and ring-buffer refinement |
 | ST-1 | arbitrary stream chunking equals one uninterrupted run | coalgebraic composition plus executable property |
@@ -756,31 +829,34 @@ is authoritative for current proof status.
 
 ### 12.2 Proof dependency
 
-The main semantic dependency is:
+The dependencies form several branches, not one chain requiring every
+optimization. The main exact branch is:
 
 ```math
-\text{cost algebra}
-\to\text{residual correspondence}
-\to\text{simulation dominance}
-\to\text{canonical antichains}
-\to\text{observation quotient/cache}
-\to\text{abstract lower simulation}
-\to\text{lazy product}
-\to\text{exact verification}
+\text{measure semantics}\to\text{residual correspondence}
+\to\text{exact dictionary product}
 \to\text{bounded resumption}.
 ```
+
+An ordered transformation algebra plus recurrence correspondence supports
+simulation and cutoff proofs. A proved executable simulation supports frontier
+normalization. Exact observation congruence supports caching independently of
+stronger subsumption. Abstract lower simulation, complete collision retention,
+and exact verification support an alternative candidate-product branch. ORC
+K1–K2 and H1–H2 prove how exact morphisms and lower simulations compose.
 
 Metric qualification and streaming stability are parallel branches:
 
 ```math
-\text{exact recurrence}+\text{domain/quotient laws}
+\text{untruncated measure}+\text{domain/quotient laws}
 \to\text{metric marker}
 \to\text{triangle-dependent consumers},
 ```
 
 ```math
 \text{bounded lookback}+\text{generation tags}+\text{transactional limits}
-\to\text{prefix-independent retention}.
+\to\text{bounded retained cells}
+\xrightarrow{\text{encoding bounds}}\text{bounded bytes}.
 ```
 
 This structure prevents one local inequality, recurrence lemma, or metric proof
@@ -788,8 +864,8 @@ from being reported as verification of the entire query implementation.
 
 The proof program proceeds in dependency order:
 
-1. prove ordered-algebra choice, extension monotonicity, dead absorption, and
-   kernel recurrence correspondence;
+1. specify the measure and observation, prove kernel recurrence correspondence,
+   and discharge the algebra laws actually used by its transformations;
 2. prove the seed represents the empty prefix and one transition preserves the
    residual-representation relation;
 3. prove exact duplicate merging and every stronger dominance rule preserve
@@ -881,9 +957,13 @@ The suite must permanently reject:
 - substituting unit-grid indices for explicit physical timestamps;
 - an unbounded continuous-observation cache in streaming mode;
 - deduplicating a DAWG product pair while losing a distinct path/value;
-- allowing DTW to implement the metric marker; and
-- zero-weight or pair-renormalized channel composition to pass the positive-
-  sum theorem.
+- allowing an unrestricted DTW family to inherit a metric marker;
+- claiming strict separation after noninjective joint channel transforms;
+- applying the fixed-composition theorem to pair-renormalized channels;
+- using full semantic width for a duplicate-only normalizer;
+- treating a point label as a repair for an already abstracted history;
+- treating rounded or cutoff-saturated outputs as metrics without a proof; and
+- claiming a compact exact scorer from a constant-zero candidate filter.
 
 ## 14. Causal benchmark protocol
 
@@ -941,14 +1021,18 @@ allocation counts because allocator page retention can hide the true slope.
 
 ## 15. Incremental research program
 
-The theory remains living work. Development proceeds without a big-bang
-generic rewrite:
+The mathematical development and implementation program have separate status.
+ORC supplies proofs of the generic realization, transformation, calculus,
+normalization, categorical, contextual-product, geometry, synthesis, and metric
+composition results. Its worked derivations and optimizer specification are
+available now. The program below describes adoption and mechanization in
+production kernels, whose actual status remains in the verification manifest:
 
 1. **Definitions and traceability.** Stabilize vocabulary; inventory every
    automaton, operation, zipper, and scheduler; map each optimization to a
    theorem, property, mutant, and benchmark.
-2. **Residual core.** Formalize deterministic cost-output residual machines,
-   RM-1/RM-2, and closed Standard Levenshtein plus minimal temporal instances.
+2. **Residual core.** Mechanize ORC R1–R4 and instantiate its Standard
+   Levenshtein and temporal derivations against the production interfaces.
 3. **Simulation and antichains.** Prove SP-1/SP-2, AN-1..3, and instance width
    bounds; retain duplicate-only fallback everywhere else.
 4. **Observation congruence.** Prove characteristic-vector factorization,
@@ -969,11 +1053,12 @@ generic rewrite:
    caches, packed IDs, sparse scheduling, adaptive sparse/dense transitions,
    refined abstractions, SIMD normalization, replayable witnesses, and
    scheduler specialization one at a time.
-10. **Advanced theory.** Investigate synthesis of simulation relations,
-    behavioral weighted-residual minimization, symbolic decision diagrams,
-    precision refinement driven by candidate amplification, deterministic
-    parallel scheduling, proof-carrying witnesses, persistent canonical-state
-    snapshots, resumable-session coalgebras, and a Lawvere-enriched summary.
+10. **Certified synthesis and optimization.** Implement the ORC Section 10
+    derivation interface and Section 13 certificate-checking optimizer,
+    using exact morphisms, lower simulations, and the directed residual
+    discrepancy to validate each accepted transformation. Kernel-specific
+    simulation discovery and decidable symbolic quotients require their
+    own instance proofs.
 
 Every migration retains a slower formal-model-aligned or independent matrix
 oracle until correspondence, mutation, resource, stack, and causal performance
@@ -1000,7 +1085,8 @@ clarity and optimization freedom.
 
 ## 17. Explicit nonclaims
 
-- Not every metric admits this architecture.
+- Every measure admits residual semantics; effective compact execution
+  requires further evidence and does not follow from metric axioms.
 - A symbolic real-valued temporal machine need not be finite-state in the
   strict automata-theory sense.
 - A quantized interval product is not exact language intersection until every
@@ -1009,6 +1095,11 @@ clarity and optimization freedom.
 - Stack-safe traversal can still need bounded heap memory proportional to live
   dictionary depth.
 - Stable fixed-query prefix processing is not an infinite-sequence distance.
+- Fixed register count does not imply fixed bit space for exact arithmetic.
+- A one-state lower filter does not prove a bounded-memory exact verifier.
+- A TWED metric theorem with one boundary convention cannot silently certify
+  another; strict timestamp order within a series does not exclude a zero-cost
+  first sample at the sentinel origin.
 - A budget-exceeded, invalid, overflowed, or approximate result is never a
   complete empty result.
 - Soft-DTW does not inherit the idempotent minimum-antichain theory.
