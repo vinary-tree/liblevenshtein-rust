@@ -229,7 +229,7 @@ def validate(model: dict) -> None:
     }
     if model.get("interop") != expected_interop:
         raise SystemExit("binding model changed the shared interop identity")
-    if model.get("abiVersion") != 1 or model.get("apiRevision") != 4:
+    if model.get("abiVersion") != 1 or model.get("apiRevision") != 5:
         raise SystemExit("unexpected ABI/API revision")
     if model.get("defaultMatchBatch") != 256:
         raise SystemExit("default match batch must remain 256 in ABI v1")
@@ -302,6 +302,70 @@ def render_c(model: dict) -> str:
             "typedef struct LlevPhoneticPattern LlevPhoneticPattern;",
             "/** Opaque, immutable compiled phonetic rewrite-rule set. */",
             "typedef struct LlevPhoneticRuleSet LlevPhoneticRuleSet;",
+            "/** Opaque, immutable runtime-configured generalized automaton. */",
+            "typedef struct LlevGeneralizedAutomaton LlevGeneralizedAutomaton;",
+            "/** Opaque, exclusive generalized online prefix state. */",
+            "typedef struct LlevGeneralizedOnlineAutomaton LlevGeneralizedOnlineAutomaton;",
+            "/** Opaque, immutable universal automaton and substitution policy. */",
+            "typedef struct LlevUniversalAutomaton LlevUniversalAutomaton;",
+            "/** Opaque, exclusive universal online prefix state. */",
+            "typedef struct LlevUniversalOnlineAutomaton LlevUniversalOnlineAutomaton;",
+            "",
+            "/** Hard ceilings for standalone online and complete evaluation. */",
+            "typedef struct LlevAutomatonLimits {",
+            "    size_t max_source_units; /**< Maximum source units. */",
+            "    size_t max_target_units; /**< Maximum committed target units. */",
+            "    size_t max_retained_cells; /**< Generalized row-ring and scratch ceiling. */",
+            "    size_t max_step_work_units; /**< Generalized relaxations per target unit. */",
+            "} LlevAutomatonLimits;",
+            "",
+            "/** One borrowed directional source/target restriction for a listed operation. */",
+            "typedef struct LlevGeneralizedRestriction {",
+            "    const char* source_data; /**< Borrowed UTF-8 source bytes. */",
+            "    size_t source_len; /**< Source byte length. */",
+            "    const char* target_data; /**< Borrowed UTF-8 target bytes. */",
+            "    size_t target_len; /**< Target byte length. */",
+            "} LlevGeneralizedRestriction;",
+            "",
+            "/** One borrowed runtime generalized edit operation. */",
+            "typedef struct LlevGeneralizedOperation {",
+            "    size_t consume_source; /**< Unicode source scalars consumed. */",
+            "    size_t consume_target; /**< Unicode target scalars consumed. */",
+            "    double weight; /**< Non-negative finite decimal cost. */",
+            "    const char* name_data; /**< Borrowed non-empty UTF-8 diagnostic name. */",
+            "    size_t name_len; /**< Name byte length. */",
+            "    uint32_t applicability; /**< One LlevOperationApplicability value. */",
+            "    uint32_t reserved; /**< Must be zero. */",
+            "    const LlevGeneralizedRestriction* restrictions; /**< LISTED pairs. */",
+            "    size_t restriction_count; /**< Number of restriction descriptors. */",
+            "} LlevGeneralizedOperation;",
+            "",
+            "/** One directional zero-cost universal source/target substitution pair. */",
+            "typedef struct LlevUniversalEquivalence {",
+            "    uint64_t source; /**< Dictionary/source unit. */",
+            "    uint64_t target; /**< Query/target unit. */",
+            "} LlevUniversalEquivalence;",
+            "",
+            "/** Exact observation of a generalized target prefix. */",
+            "typedef struct LlevGeneralizedObservation {",
+            "    size_t consumed_target_len; /**< Committed Unicode target scalars. */",
+            "    size_t active_positions; /**< In-budget cells in the current generation. */",
+            "    size_t scaled_distance; /**< Fixed-point numerator when present. */",
+            "    uint32_t scale_denominator; /**< Shared exact decimal denominator. */",
+            "    uint8_t current_row_nonempty; /**< Not a permanent-death signal. */",
+            "    uint8_t accepting; /**< Complete source is currently in budget. */",
+            "    uint8_t has_distance; /**< scaled_distance is present. */",
+            "    uint8_t reserved; /**< Must be ignored; fixed to zero. */",
+            "} LlevGeneralizedObservation;",
+            "",
+            "/** Exact observation of a universal target prefix. */",
+            "typedef struct LlevUniversalObservation {",
+            "    size_t consumed_target_len; /**< Committed target units. */",
+            "    size_t source_len; /**< Bound source units. */",
+            "    uint8_t alive; /**< Universal frontier is non-empty. */",
+            "    uint8_t accepting; /**< Current prefix is accepted. */",
+            "    uint8_t reserved[6]; /**< Must be ignored; fixed to zero. */",
+            "} LlevUniversalObservation;",
             "",
             "/** One borrowed match descriptor inside a live cursor batch lease. */",
             "typedef struct LlevMatch {",
@@ -362,6 +426,8 @@ RUST_DOCS = {
     "algorithm": "Edit-distance algorithm.",
     "queryOrder": "Lazy result order.",
     "phoneticRuleSetKind": "Built-in phonetic rewrite-rule set.",
+    "operationApplicability": "Runtime generalized-operation applicability predicate.",
+    "universalVariant": "Universal edit-automaton variant.",
 }
 
 PUBLIC_ENUM_NAMES = {
@@ -369,6 +435,8 @@ PUBLIC_ENUM_NAMES = {
     "algorithm": "Algorithm",
     "queryOrder": "QueryOrder",
     "phoneticRuleSetKind": "PhoneticRuleSetKind",
+    "operationApplicability": "OperationApplicability",
+    "universalVariant": "UniversalVariant",
 }
 
 JAVA_ENUM_DOCS = {
@@ -376,6 +444,8 @@ JAVA_ENUM_DOCS = {
     "algorithm": "Edit-distance algorithm.",
     "queryOrder": "Lazy result ordering.",
     "phoneticRuleSetKind": "Built-in phonetic rewrite-rule set.",
+    "operationApplicability": "Runtime generalized-operation applicability predicate.",
+    "universalVariant": "Universal edit-automaton variant.",
 }
 
 JAVA_VALUE_DOCS = {
@@ -408,6 +478,17 @@ JAVA_VALUE_DOCS = {
         "ENGLISH_ORTHOGRAPHY": "English orthography normalization.",
         "ENGLISH_PHONETIC": "English phonetic transformation.",
     },
+    "operationApplicability": {
+        "ANY": "Apply without inspecting consumed units.",
+        "EQUAL": "Apply only when the consumed source and target slices are equal.",
+        "ADJACENT_TRANSPOSE": "Apply only to an adjacent two-unit transposition.",
+        "LISTED": "Apply only to a configured directional source/target pair.",
+    },
+    "universalVariant": {
+        "STANDARD": "Standard insert/delete/substitute universal automaton.",
+        "TRANSPOSITION": "Universal automaton with adjacent transposition.",
+        "MERGE_AND_SPLIT": "Universal automaton with merge-and-split edits.",
+    },
 }
 
 GO_VALUE_NAMES = {
@@ -439,6 +520,17 @@ GO_VALUE_NAMES = {
     "phoneticRuleSetKind": {
         "ENGLISH_ORTHOGRAPHY": "EnglishOrthography",
         "ENGLISH_PHONETIC": "EnglishPhonetic",
+    },
+    "operationApplicability": {
+        "ANY": "ApplicabilityAny",
+        "EQUAL": "ApplicabilityEqual",
+        "ADJACENT_TRANSPOSE": "ApplicabilityAdjacentTranspose",
+        "LISTED": "ApplicabilityListed",
+    },
+    "universalVariant": {
+        "STANDARD": "UniversalStandard",
+        "TRANSPOSITION": "UniversalTransposition",
+        "MERGE_AND_SPLIT": "UniversalMergeAndSplit",
     },
 }
 
@@ -526,12 +618,16 @@ def render_julia(model: dict) -> str:
         "algorithm": "Algorithm",
         "queryOrder": "QueryOrder",
         "phoneticRuleSetKind": "PhoneticRuleSetKind",
+        "operationApplicability": "OperationApplicability",
+        "universalVariant": "UniversalVariant",
     }
     prefixes = {
         "status": "STATUS_",
         "algorithm": "ALGORITHM_",
         "queryOrder": "ORDER_",
         "phoneticRuleSetKind": "RULES_",
+        "operationApplicability": "APPLICABILITY_",
+        "universalVariant": "UNIVERSAL_",
     }
     lines = [
         "# Code generated by scripts/generate-bindings.py from bindings/api.json; DO NOT EDIT.",
@@ -564,6 +660,8 @@ def render_raku(model: dict) -> str:
         "algorithm": "Algorithm",
         "queryOrder": "QueryOrder",
         "phoneticRuleSetKind": "PhoneticRuleSetKind",
+        "operationApplicability": "OperationApplicability",
+        "universalVariant": "UniversalVariant",
     }
     renamed = {
         ("status", "INVALID_ARGUMENT"): "INVALID-ARGUMENT",
@@ -579,6 +677,13 @@ def render_raku(model: dict) -> str:
         ("queryOrder", "DISTANCE_THEN_TERM"): "DISTANCE-THEN-TERM",
         ("phoneticRuleSetKind", "ENGLISH_ORTHOGRAPHY"): "ENGLISH-ORTHOGRAPHY",
         ("phoneticRuleSetKind", "ENGLISH_PHONETIC"): "ENGLISH-PHONETIC",
+        ("operationApplicability", "ANY"): "APPLICABILITY-ANY",
+        ("operationApplicability", "EQUAL"): "APPLICABILITY-EQUAL",
+        ("operationApplicability", "ADJACENT_TRANSPOSE"): "APPLICABILITY-ADJACENT-TRANSPOSE",
+        ("operationApplicability", "LISTED"): "APPLICABILITY-LISTED",
+        ("universalVariant", "STANDARD"): "UNIVERSAL-STANDARD",
+        ("universalVariant", "TRANSPOSITION"): "UNIVERSAL-TRANSPOSITION",
+        ("universalVariant", "MERGE_AND_SPLIT"): "UNIVERSAL-MERGE-AND-SPLIT",
     }
     lines = [
         "unit module Liblevenshtein::GeneratedAbi;",
@@ -957,6 +1062,12 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
         java_source_root / "QueryOrder.java": render_java_enum(model, "queryOrder"),
         java_source_root / "PhoneticRuleSetKind.java": render_java_enum(
             model, "phoneticRuleSetKind"
+        ),
+        java_source_root / "OperationApplicability.java": render_java_enum(
+            model, "operationApplicability"
+        ),
+        java_source_root / "UniversalVariant.java": render_java_enum(
+            model, "universalVariant"
         ),
         ROOT
         / "bindings"

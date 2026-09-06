@@ -189,6 +189,8 @@ variants, protocols, or methods.
 | Model value | Idiomatic treatment |
 |---|---|
 | `status` | the delegated NativeException.status returns the generated JVM Status enum and statusCode preserves unknown raw values; the deliberately thin facade does not duplicate them as Clojure keywords |
+| `operationApplicability` | the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter |
+| `universalVariant` | the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter |
 
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every

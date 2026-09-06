@@ -27,8 +27,9 @@ surface, the resource consumer, the cursor laws, and the JS/WASM topology.
 
 | Document | What it specifies |
 |---|---|
-| [c-abi-reference.md](c-abi-reference.md) | All 62 `llev_*` functions: signatures, preconditions, exact returnable status sets, ownership, thread safety, complexity; the 13-value status table and its `VtStatus` mapping; the bounded query cache; the lease protocol with literate batch-loop and reducer pseudocode; a compile-checked complete C consumer. |
+| [c-abi-reference.md](c-abi-reference.md) | All 76 `llev_*` functions: signatures, preconditions, exact returnable status sets, ownership, thread safety, complexity; the 13-value status table and its `VtStatus` mapping; standalone automata; the bounded query cache; the lease protocol with literate batch-loop and reducer pseudocode; a compile-checked complete C consumer. |
 | [distance-domains.md](distance-domains.md) | Domain-preserving standalone distance semantics: four edit families over Unicode scalars, arbitrary bytes, and u64 application tokens; recurrences, threshold behavior, allocation strategy, ABI naming, Julia dispatch, citations, and generated differential verification. |
+| [standalone-automata.md](standalone-automata.md) | API-revision-5 generalized and universal automata: runtime operations, exact scaled costs, directional substitution policies, three unit domains, online observations, non-monotone generalized liveness, hard limits, lifecycle, performance, and verification. |
 | [resource-consumer.md](resource-consumer.md) | The safe-Rust layer under the C ABI: intake (retain-validate-else-release), `ForeignNode` domains, the `CallGate` (VT-GATE-1..3), the status wire rule and fault latch, the total `BindingError` map, and the two-pass arena fixup. |
 | [query-cache.md](query-cache.md) | The shared bounded repeated-query layer: exact revision identity, binary keys, TinyLFU admission, SIEVE eviction, lock-free-by-ownership concurrency, Rust/C/Julia/Raku APIs, security, and measurement guidance. |
 | [julia-family-qualification.md](julia-family-qualification.md) | Evidence-led qualification of the six Julia packages, including exact commits and CI, implemented and missing capability groups, package/release status, and the reviewed distribution-only inapplicability proof. |
@@ -44,7 +45,7 @@ surface, the resource consumer, the cursor laws, and the JS/WASM topology.
 
 | Artifact | Role |
 |---|---|
-| [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order enums, the 44 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical query snapshot fixture, and entries-v1 identity/status/flag/operation/layout pins. `scripts/generate-bindings.py` emits the headers, constants, and fixtures; `--check` pins them in CI. |
+| [`bindings/api.json`](../../bindings/api.json) | The single source of truth: versions, status/algorithm/order/automata enums, the 76 modeled `cFunctions`, marshalling and snapshot law strings, forbidden owned objects, the canonical query snapshot fixture, and entries-v1 identity/status/flag/operation/layout pins. `scripts/generate-bindings.py` emits the headers, constants, and fixtures; `--check` pins them in CI. |
 | [`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) | The per-facade completeness model driving the coverage matrix. |
 | [`bindings/conformance/`](../../bindings/conformance) | Generated conformance fixtures: the query-start snapshot oracle, entries-v1 constants and LP64/ARM32 layouts, and the facade completeness matrix. |
 | [`bindings/conformance/public-api-traceability.tsv`](../../bindings/conformance/public-api-traceability.tsv) | One row per modeled facade function, enum, or traversal protocol, with source, guide, executable-test, and canonical-example evidence plus explicit direct-reference gaps. |

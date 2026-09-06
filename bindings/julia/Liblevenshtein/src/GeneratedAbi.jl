@@ -2,7 +2,7 @@
 """Stable liblevenshtein native ABI generation."""
 const ABI_VERSION = UInt32(1)
 """Minimum additive native API revision required by this facade."""
-const API_REVISION = UInt32(4)
+const API_REVISION = UInt32(5)
 """Default maximum number of match descriptors per native batch."""
 const DEFAULT_MATCH_BATCH = 256
 """Compiled native feature bit: core."""
@@ -45,4 +45,19 @@ end
 @enum PhoneticRuleSetKind::UInt32 begin
     RULES_ENGLISH_ORTHOGRAPHY = 0
     RULES_ENGLISH_PHONETIC = 1
+end
+
+"""Runtime generalized-operation applicability predicate."""
+@enum OperationApplicability::UInt32 begin
+    APPLICABILITY_ANY = 0
+    APPLICABILITY_EQUAL = 1
+    APPLICABILITY_ADJACENT_TRANSPOSE = 2
+    APPLICABILITY_LISTED = 3
+end
+
+"""Universal edit-automaton variant."""
+@enum UniversalVariant::UInt32 begin
+    UNIVERSAL_STANDARD = 0
+    UNIVERSAL_TRANSPOSITION = 1
+    UNIVERSAL_MERGE_AND_SPLIT = 2
 end

@@ -130,6 +130,8 @@ variants, protocols, or methods.
 | `Algorithm` | Edit-distance algorithm selection | STANDARD/TRANSPOSITION/MERGE_AND_SPLIT/DAMERAU_LEVENSHTEIN constants; Transducer aliases remain compatible |
 | `QueryOrder` | Result traversal ordering | TRAVERSAL/DISTANCE_THEN_TERM constants |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants; PhoneticRuleSet aliases remain compatible |
+| `OperationApplicability` | Generalized-operation applicability selection | Public facade type |
+| `UniversalVariant` | Universal edit-automaton variant selection | Public facade type |
 | `Query#each` | One-shot owned-result iteration | Public facade protocol |
 
 ### Facade-encapsulated model values

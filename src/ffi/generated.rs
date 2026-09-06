@@ -3,7 +3,7 @@
 /// Stable liblevenshtein native ABI version.
 pub const LLEV_ABI_VERSION: u32 = 1;
 /// Additive API revision within this ABI version.
-pub const LLEV_API_REVISION: u32 = 4;
+pub const LLEV_API_REVISION: u32 = 5;
 
 /// Compiled binding feature: core.
 pub const LLEV_BUILD_FEATURE_CORE: u64 = 1;
@@ -132,6 +132,59 @@ impl TryFrom<u32> for LlevPhoneticRuleSetKind {
         match value {
             0 => Ok(Self::EnglishOrthography),
             1 => Ok(Self::EnglishPhonetic),
+            _ => Err(()),
+        }
+    }
+}
+
+/// Runtime generalized-operation applicability predicate.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LlevOperationApplicability {
+    /// any.
+    Any = 0,
+    /// equal.
+    Equal = 1,
+    /// adjacent transpose.
+    AdjacentTranspose = 2,
+    /// listed.
+    Listed = 3,
+}
+
+impl TryFrom<u32> for LlevOperationApplicability {
+    type Error = ();
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Any),
+            1 => Ok(Self::Equal),
+            2 => Ok(Self::AdjacentTranspose),
+            3 => Ok(Self::Listed),
+            _ => Err(()),
+        }
+    }
+}
+
+/// Universal edit-automaton variant.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LlevUniversalVariant {
+    /// standard.
+    Standard = 0,
+    /// transposition.
+    Transposition = 1,
+    /// merge and split.
+    MergeAndSplit = 2,
+}
+
+impl TryFrom<u32> for LlevUniversalVariant {
+    type Error = ();
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Standard),
+            1 => Ok(Self::Transposition),
+            2 => Ok(Self::MergeAndSplit),
             _ => Err(()),
         }
     }

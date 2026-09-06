@@ -350,6 +350,10 @@ def operation_role(name: str) -> str:
         return "compiled phonetic-pattern lifecycle and matching"
     if name.startswith("llev_phonetic_rules"):
         return "phonetic rule-set lifecycle and rewriting"
+    if name.startswith("llev_generalized"):
+        return "runtime generalized-automaton lifecycle and prefix evaluation"
+    if name.startswith("llev_universal"):
+        return "universal-automaton lifecycle, policies, and prefix evaluation"
     return "project ABI operation"
 
 
@@ -383,6 +387,8 @@ def facade_surface(key: str) -> str:
         "algorithm": "Edit-distance algorithm selection",
         "queryOrder": "Result traversal ordering",
         "phoneticRuleSetKind": "Built-in phonetic rule-set selection",
+        "operationApplicability": "Generalized-operation applicability selection",
+        "universalVariant": "Universal edit-automaton variant selection",
     }
     for name, mapping in facade["enums"].items():
         symbol = mapping.get("symbol")

@@ -1,7 +1,7 @@
 # The `llev_*` C ABI, function by function
 
 This is the normative reference for liblevenshtein's project-owned C surface:
-all **62 exported `llev_*` functions**, each with its exact header signature,
+all **76 exported `llev_*` functions**, each with its exact header signature,
 preconditions, the complete set of statuses it can return (read from the
 implementation, not aspirationally), ownership rules, thread-safety truth, and
 cost. It is the **project layer above the family canon**: everything about the
@@ -35,6 +35,9 @@ The project-level terms this document adds:
 | arena | Cursor-owned contiguous storage (`byte` and `u64` arenas) holding every term of the current batch back-to-back; descriptors point into it. Cleared-but-retained between batches, so steady-state batches allocate nothing. |
 | reducer | A caller-supplied `LlevBatchReducer` callback invoked once per batch with borrowed descriptors — the allocation-minimizing expert path for managed languages. |
 | unit domain | Which value space the dictionary's labels inhabit: bytes, Unicode scalars, or opaque `u64` tokens (`VtUnitDomain`, canon [§ 6.1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md#61-vtunitdomain-and-vtvaluedomain)). |
+| generalized automaton | An immutable runtime operation set with exact decimal cost scaling. Its online state retains a bounded finite-lookback row ring for one Unicode source. |
+| universal automaton | An immutable standard, transposition, or merge-and-split specialization with an optional owned directional substitution policy. |
+| online automaton | An exclusive state handle bound to one source and advanced by one domain-native target unit per call. It is independent of dictionary cursors. |
 
 Throughout, $`n`$ is the number of matches a query yields, $`B`$ the batch
 capacity, $`q`$ the query, $`k`$ the maximum edit distance, and
@@ -53,7 +56,7 @@ specified by their interface.
 
 ![Class diagram of the vinary-tree-interop ABI: VtResource and its base vtable negotiate dictionary, visit, graph, snapshot-identity, and scalar-WFST capability vtables plus their borrowed value types.](../diagrams/bindings/vt-structs-class.svg)
 
-The 62 functions divide into six groups:
+The 76 functions divide into seven groups:
 
 | Group | Count | Functions |
 |---|---|---|
@@ -62,6 +65,7 @@ The 62 functions divide into six groups:
 | [Distances](#6-distance-functions-24) | 24 | Four families × Unicode-scalar, byte, and u64-token domains × exact and thresholded calls |
 | [Transducer + cursor](#7-transducer-and-cursor-11) | 11 | `llev_transducer_new` · `llev_transducer_snapshot` · `llev_transducer_free` · `llev_transducer_unit_domain` · `llev_transducer_query_utf8` · `llev_transducer_query_bytes` · `llev_transducer_query_u64` · `llev_query_cursor_next_batch` · `llev_query_cursor_release_batch` · `llev_query_cursor_reduce` · `llev_query_cursor_free` |
 | [Bounded query cache](#7a-bounded-query-cache-8) | 8 | `llev_query_cache_new` · `llev_query_cache_clear` · `llev_query_cache_reset_stats` · `llev_query_cache_stats` · `llev_query_cache_free` · `llev_query_cache_query_utf8` · `llev_query_cache_query_bytes` · `llev_query_cache_query_u64` |
+| [Standalone automata](#7b-standalone-automata-14) | 14 | Generalized and universal configuration, complete evaluation, online construction, advance, observation, and free functions |
 | [Phonetic](#8-phonetic-surface-12) | 12 | `llev_owned_string_free` · `llev_phonetic_pattern_compile_regex` · `llev_phonetic_pattern_compile_llre` · `llev_phonetic_pattern_free` · `llev_phonetic_pattern_size` · `llev_phonetic_pattern_matches` · `llev_transducer_query_pattern` · `llev_phonetic_rules_parse` · `llev_phonetic_rules_builtin` · `llev_phonetic_rules_free` · `llev_phonetic_rules_len` · `llev_phonetic_rules_apply` |
 
 Headers: [`include/liblevenshtein.h`](../../include/liblevenshtein.h)
@@ -104,17 +108,17 @@ the interop `VtStatus`. All 13 values, pinned in
 |---|---|---|---|
 | 0 | `LLEV_STATUS_OK` | Success; every advertised output was written. | Any fallible function. |
 | 1 | `LLEV_STATUS_END` | A stream finished. **A success value**, not an error: `boundary()` clears the error slot for it exactly as for `Ok`. | `llev_query_cursor_next_batch` on exhaustion; a reducer callback returns it to stop early. |
-| 2 | `LLEV_STATUS_INVALID_ARGUMENT` | An argument was outside its domain. | Unknown algorithm/order/kind values; a zero `max_matches`; a release with a stale, zero, or absent lease generation; pattern/rule-set parse failures. |
+| 2 | `LLEV_STATUS_INVALID_ARGUMENT` | An argument was outside its domain. | Unknown algorithm/order/kind/variant values; malformed generalized operations; invalid scalars or policy units; a zero `max_matches`; a release with a stale, zero, or absent lease generation; pattern/rule-set parse failures. |
 | 3 | `LLEV_STATUS_INVALID_UTF8` | A length-bearing text buffer was not valid UTF-8. | `utf8()` validation in every text-accepting entry point. |
 | 4 | `LLEV_STATUS_NULL_POINTER` | A required pointer was NULL. | Argument preflight in every entry point; also mapped from a provider's `VtStatus` `NullPointer`. |
 | 5 | `LLEV_STATUS_PANIC` | A Rust panic was caught at the boundary. The panic message is in the thread-local error slot. | Only from `boundary()`'s `catch_unwind` arm — no other code path constructs it. |
 | 6 | `LLEV_STATUS_UNSUPPORTED` | The operation is not available in this build or from this provider. | Phonetic entry points without the `bindings-phonetic` feature; ordered streaming on byte/u64 domains; a `Bytes` value-domain provider; cached queries when snapshot identity is absent; mapped from provider `Unsupported`. |
 | 7 | `LLEV_STATUS_IO_ERROR` | A storage-backed provider failed on I/O. | Mapped verbatim from provider `IoError`. |
 | 8 | `LLEV_STATUS_CLOSED` | The provider reports its resource already torn down. | Mapped verbatim from provider `Closed`. |
-| 9 | `LLEV_STATUS_LIMIT_EXCEEDED` | A provider resource limit was hit. | Mapped verbatim from provider `LimitExceeded`. |
+| 9 | `LLEV_STATUS_LIMIT_EXCEEDED` | A provider or standalone-automaton resource limit was hit. | Mapped verbatim from provider `LimitExceeded`; source, target, retained-cell, step-work, operation, restriction, scaling, or allocation ceilings. |
 | 10 | `LLEV_STATUS_PROVIDER_ERROR` | The dictionary provider misbehaved: an error status with no better mapping, malformed output despite `Ok`, a missing/incompatible interface, or an illegal `End` from an interface callback. | The consumer's whole-class response to invalid provider output (see the [trust model](../security/binding-trust-model.md)). |
 | 11 | `LLEV_STATUS_BATCH_IN_USE` | A live lease blocks the requested state change. The refused object is **unchanged and still owned by the caller**. | `next_batch`/`reduce`/`free` on a leased cursor. |
-| 12 | `LLEV_STATUS_DOMAIN_MISMATCH` | The query entry point does not match the dictionary's unit domain. | `query_utf8` on a byte/u64 dictionary, `query_bytes` on a Unicode one, and so on. |
+| 12 | `LLEV_STATUS_DOMAIN_MISMATCH` | An entry point does not match its resource or policy unit domain. | `query_utf8` on a byte/u64 dictionary, or universal evaluation in a domain different from its owned substitution policy. |
 
 ### 3.1 Mapping from the interop `VtStatus`
 
@@ -193,7 +197,7 @@ const char* llev_last_error_message(void);
 | Function | Returns | Contract |
 |---|---|---|
 | `llev_abi_version` | `LLEV_ABI_VERSION` = 1 | The project ABI generation. A facade built for generation $`g`$ must refuse a library reporting a different generation. |
-| `llev_api_revision` | `LLEV_API_REVISION` = 2 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. |
+| `llev_api_revision` | `LLEV_API_REVISION` = 5 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. Revision 5 adds the standalone generalized/universal surface. |
 | `llev_build_features` | bitset | `LLEV_BUILD_FEATURE_CORE` (1) is always set; `LLEV_BUILD_FEATURE_PHONETIC` (2) is set exactly when the library was compiled with `bindings-phonetic`. Probe it instead of trial-calling the phonetic surface. |
 | `llev_last_error_message` | borrowed `const char*` | § 3.2. Never NULL; empty string when the last call on this thread succeeded. |
 
@@ -776,8 +780,89 @@ this wave). Details with the Rust types:
 |---|---|
 | `LlevTransducer` | Shareable: concurrent `query_*`/`unit_domain` calls are safe. Callbacks to a non-reentrant provider serialize on that provider's gate (VT-GATE-1..3). |
 | `LlevQueryCursor` | **Exclusive**: one thread at a time. The lease/generation state is deliberately unsynchronized single-owner state; interleave calls from two threads and the refusals in § 7.5 are no longer meaningful. Different cursors are fully independent, even over one dictionary. |
+| `LlevGeneralizedAutomaton` / `LlevUniversalAutomaton` | Immutable configurations: shareable for concurrent construction of independent online states and complete evaluations. |
+| generalized/universal online handles | **Exclusive**: one thread at a time. Advance mutates the committed prefix state; observation requires no mutation but must not race an advance. |
 | `LlevPhoneticPattern` / `LlevPhoneticRuleSet` | Immutable after construction: shared concurrent reads (`matches`, `apply`, `size`, `len`) are safe. |
 | error messages | Per-thread by construction (§ 3.2). |
+
+---
+
+## 7B. Standalone automata (14)
+
+API revision 5 adds two dictionary-independent native machines. The
+generalized family copies a runtime `LlevGeneralizedOperation` array and
+evaluates exact fixed-point costs over Unicode scalars. The universal family
+selects a standard, adjacent-transposition, or merge-and-split specialization
+over bytes, Unicode scalars, or u64 tokens, with an optional owned directional
+zero-cost substitution policy.
+
+```c
+LlevStatus llev_generalized_automaton_new(
+    uint8_t max_distance, const LlevGeneralizedOperation* operations,
+    size_t operation_count, LlevGeneralizedAutomaton** out_automaton);
+void llev_generalized_automaton_free(LlevGeneralizedAutomaton* automaton);
+LlevStatus llev_generalized_automaton_evaluate_utf8(
+    const LlevGeneralizedAutomaton* automaton,
+    const char* source, size_t source_len,
+    const char* target, size_t target_len,
+    const LlevAutomatonLimits* limits,
+    LlevGeneralizedObservation* out_observation);
+LlevStatus llev_generalized_online_new_utf8(
+    const LlevGeneralizedAutomaton* automaton,
+    const char* source, size_t source_len,
+    const LlevAutomatonLimits* limits,
+    LlevGeneralizedOnlineAutomaton** out_online);
+LlevStatus llev_generalized_online_advance(
+    LlevGeneralizedOnlineAutomaton* online, uint32_t scalar,
+    LlevGeneralizedObservation* out_observation);
+LlevStatus llev_generalized_online_observation(
+    const LlevGeneralizedOnlineAutomaton* online,
+    LlevGeneralizedObservation* out_observation);
+void llev_generalized_online_free(LlevGeneralizedOnlineAutomaton* online);
+
+LlevStatus llev_universal_automaton_new(
+    uint8_t max_distance, uint32_t variant, uint32_t policy_unit_domain,
+    const LlevUniversalEquivalence* equivalences, size_t equivalence_count,
+    LlevUniversalAutomaton** out_automaton);
+void llev_universal_automaton_free(LlevUniversalAutomaton* automaton);
+LlevStatus llev_universal_automaton_evaluate(
+    const LlevUniversalAutomaton* automaton, uint32_t unit_domain,
+    const void* source_data, size_t source_len,
+    const void* target_data, size_t target_len,
+    const LlevAutomatonLimits* limits,
+    LlevUniversalObservation* out_observation);
+LlevStatus llev_universal_online_new(
+    const LlevUniversalAutomaton* automaton, uint32_t unit_domain,
+    const void* source_data, size_t source_len,
+    const LlevAutomatonLimits* limits,
+    LlevUniversalOnlineAutomaton** out_online);
+LlevStatus llev_universal_online_advance(
+    LlevUniversalOnlineAutomaton* online, uint64_t unit,
+    LlevUniversalObservation* out_observation);
+LlevStatus llev_universal_online_observation(
+    const LlevUniversalOnlineAutomaton* online,
+    LlevUniversalObservation* out_observation);
+void llev_universal_online_free(LlevUniversalOnlineAutomaton* online);
+```
+
+Constructors copy borrowed configuration data and publish an output handle
+only on `OK`. Null limits select the native defaults; explicit ceilings are
+honored without clamping. Advance validates the next scalar or byte and target
+limit before mutation. Generalized `current_row_nonempty == 0` is an exact
+current-generation observation, not a permanent-death signal: retained older
+rows can revive through a multi-target operation. Universal `alive == 0` is
+permanent.
+
+Generalized constructors return `INVALID_ARGUMENT` for malformed operations or
+inexact/invalid weights and `LIMIT_EXCEEDED` for aggregate or arithmetic
+ceilings. Universal constructors return `INVALID_ARGUMENT` for an unknown
+variant, policy domain, invalid byte/Unicode value, or inconsistent empty
+policy; evaluation adds `DOMAIN_MISMATCH` when an owned policy and input differ.
+All fallible functions may return `NULL_POINTER` or `PANIC`; UTF-8 entry points
+may return `INVALID_UTF8`; evaluation and advance may return
+`LIMIT_EXCEEDED`. The exact data model, ownership pattern, liveness caveat,
+complexities, and verification evidence are specified in the
+[standalone-automata guide](standalone-automata.md).
 
 ---
 

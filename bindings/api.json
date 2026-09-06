@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 4,
+  "apiRevision": 5,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -334,6 +334,25 @@
       "values": {
         "ENGLISH_ORTHOGRAPHY": 0,
         "ENGLISH_PHONETIC": 1
+      }
+    },
+    "operationApplicability": {
+      "cType": "LlevOperationApplicability",
+      "cPrefix": "LLEV_OPERATION_APPLICABILITY_",
+      "values": {
+        "ANY": 0,
+        "EQUAL": 1,
+        "ADJACENT_TRANSPOSE": 2,
+        "LISTED": 3
+      }
+    },
+    "universalVariant": {
+      "cType": "LlevUniversalVariant",
+      "cPrefix": "LLEV_UNIVERSAL_",
+      "values": {
+        "STANDARD": 0,
+        "TRANSPOSITION": 1,
+        "MERGE_AND_SPLIT": 2
       }
     }
   },
@@ -426,6 +445,52 @@
         "release_batch",
         "reduce",
         "cancel",
+        "close"
+      ]
+    },
+    "GeneralizedAutomaton": {
+      "ownership": "immutable-owned-runtime-operation-set",
+      "unitDomain": "UNICODE_SCALAR",
+      "costs": "exact-decimal-fixed-point",
+      "methods": [
+        "evaluate_utf8",
+        "online_utf8",
+        "close"
+      ]
+    },
+    "GeneralizedOnlineAutomaton": {
+      "ownership": "exclusive-bounded-prefix-state",
+      "liveness": "current-row-nonempty-is-not-permanent-death",
+      "methods": [
+        "advance",
+        "observation",
+        "close"
+      ]
+    },
+    "UniversalAutomaton": {
+      "ownership": "immutable-owned-variant-and-directional-policy",
+      "unitDomains": [
+        "BYTE",
+        "UNICODE_SCALAR",
+        "U64"
+      ],
+      "variants": [
+        "STANDARD",
+        "TRANSPOSITION",
+        "MERGE_AND_SPLIT"
+      ],
+      "methods": [
+        "evaluate",
+        "online",
+        "close"
+      ]
+    },
+    "UniversalOnlineAutomaton": {
+      "ownership": "exclusive-bounded-prefix-state",
+      "liveness": "dead-frontier-is-permanent",
+      "methods": [
+        "advance",
+        "observation",
         "close"
       ]
     }
@@ -686,6 +751,62 @@
     {
       "name": "llev_phonetic_rules_apply",
       "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_generalized_automaton_new",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_generalized_automaton_free",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_generalized_automaton_evaluate_utf8",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_generalized_online_new_utf8",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_generalized_online_advance",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_generalized_online_observation",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_generalized_online_free",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_universal_automaton_new",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_universal_automaton_free",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_universal_automaton_evaluate",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_universal_online_new",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_universal_online_advance",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_universal_online_observation",
+      "rustModule": "automata"
+    },
+    {
+      "name": "llev_universal_online_free",
+      "rustModule": "automata"
     }
   ],
   "documentation": {
@@ -706,6 +827,7 @@
       "docs/bindings/c-abi-reference.md",
       "docs/bindings/package-documentation-publication.md",
       "docs/bindings/resource-consumer.md",
+      "docs/bindings/standalone-automata.md",
       "docs/bindings/wasm-topology.md",
       "docs/releasing-language-bindings.md"
     ],

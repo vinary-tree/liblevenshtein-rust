@@ -461,6 +461,122 @@ LLEV_API LlevStatus llev_query_cursor_reduce(
  */
 LLEV_API LlevStatus llev_query_cursor_free(LlevQueryCursor* cursor);
 
+/** @name Standalone generalized and universal automata
+ *
+ * These handles execute the native online automata without a dictionary.
+ * Constructors copy all operation and substitution-policy data; borrowed
+ * descriptors need remain valid only for the constructor call. A NULL limits
+ * pointer selects the documented native defaults. Complete evaluation and
+ * online advancement use the same native transition kernels.
+ * @{ */
+
+/** Construct a generalized Unicode automaton from runtime edit operations.
+ * @param max_distance inclusive integral cost budget before fixed-point scaling
+ * @param operations non-empty borrowed operation descriptors
+ * @param operation_count number of descriptors, subject to native hard limits
+ * @param out_automaton receives a caller-owned immutable handle
+ * @return OK, NULL_POINTER, INVALID_UTF8, INVALID_ARGUMENT, LIMIT_EXCEEDED, or PANIC
+ */
+LLEV_API LlevStatus llev_generalized_automaton_new(
+    uint8_t max_distance,
+    const LlevGeneralizedOperation* operations,
+    size_t operation_count,
+    LlevGeneralizedAutomaton** out_automaton);
+/** Release a generalized automaton; NULL is a no-op. */
+LLEV_API void llev_generalized_automaton_free(LlevGeneralizedAutomaton* automaton);
+/** Evaluate one complete UTF-8 source/target pair with exact scaled costs.
+ * @param configured_limits optional hard ceilings; NULL selects defaults
+ * @param out_observation receives the committed final observation
+ * @return OK or the corresponding pointer/UTF-8/configuration/limit failure
+ */
+LLEV_API LlevStatus llev_generalized_automaton_evaluate_utf8(
+    const LlevGeneralizedAutomaton* automaton,
+    const char* source,
+    size_t source_len,
+    const char* target,
+    size_t target_len,
+    const LlevAutomatonLimits* configured_limits,
+    LlevGeneralizedObservation* out_observation);
+/** Bind a generalized automaton to one UTF-8 source for prefix processing. */
+LLEV_API LlevStatus llev_generalized_online_new_utf8(
+    const LlevGeneralizedAutomaton* automaton,
+    const char* source,
+    size_t source_len,
+    const LlevAutomatonLimits* configured_limits,
+    LlevGeneralizedOnlineAutomaton** out_online);
+/** Commit one Unicode scalar to a generalized online state transactionally.
+ *
+ * `current_row_nonempty == 0` is not permanent death: a multi-target-unit
+ * operation may connect an older retained row to a later generation.
+ */
+LLEV_API LlevStatus llev_generalized_online_advance(
+    LlevGeneralizedOnlineAutomaton* online,
+    uint32_t scalar,
+    LlevGeneralizedObservation* out_observation);
+/** Observe a generalized online state without advancing it. */
+LLEV_API LlevStatus llev_generalized_online_observation(
+    const LlevGeneralizedOnlineAutomaton* online,
+    LlevGeneralizedObservation* out_observation);
+/** Release a generalized online state; NULL is a no-op. */
+LLEV_API void llev_generalized_online_free(LlevGeneralizedOnlineAutomaton* online);
+
+/** Construct a universal automaton with an optional directional zero-cost policy.
+ *
+ * Set policy_unit_domain to zero and equivalence_count to zero for the
+ * specialized unrestricted policy. Otherwise it must be one VtUnitDomain and
+ * every pair is interpreted as dictionary/source to query/target. The policy's
+ * domain subsequently fixes the domain accepted by evaluate and online_new.
+ * @return OK, NULL_POINTER, INVALID_ARGUMENT, LIMIT_EXCEEDED, or PANIC
+ */
+LLEV_API LlevStatus llev_universal_automaton_new(
+    uint8_t max_distance,
+    uint32_t variant,
+    uint32_t policy_unit_domain,
+    const LlevUniversalEquivalence* equivalences,
+    size_t equivalence_count,
+    LlevUniversalAutomaton** out_automaton);
+/** Release a universal automaton; NULL is a no-op. */
+LLEV_API void llev_universal_automaton_free(LlevUniversalAutomaton* automaton);
+/** Evaluate one complete pair in the selected byte, Unicode, or u64 domain.
+ *
+ * Unicode buffers use UTF-8 byte lengths; byte buffers use byte lengths; u64
+ * buffers must be aligned and lengths count tokens.
+ */
+LLEV_API LlevStatus llev_universal_automaton_evaluate(
+    const LlevUniversalAutomaton* automaton,
+    uint32_t unit_domain,
+    const void* source_data,
+    size_t source_len,
+    const void* target_data,
+    size_t target_len,
+    const LlevAutomatonLimits* configured_limits,
+    LlevUniversalObservation* out_observation);
+/** Bind a universal automaton to one source for domain-native prefix processing. */
+LLEV_API LlevStatus llev_universal_online_new(
+    const LlevUniversalAutomaton* automaton,
+    uint32_t unit_domain,
+    const void* source_data,
+    size_t source_len,
+    const LlevAutomatonLimits* configured_limits,
+    LlevUniversalOnlineAutomaton** out_online);
+/** Commit one scalar, byte, or u64 token to a universal online state.
+ *
+ * Unicode scalars and bytes are range-checked before mutation. Once `alive`
+ * becomes zero, the universal frontier is permanently dead.
+ */
+LLEV_API LlevStatus llev_universal_online_advance(
+    LlevUniversalOnlineAutomaton* online,
+    uint64_t unit,
+    LlevUniversalObservation* out_observation);
+/** Observe a universal online state without advancing it. */
+LLEV_API LlevStatus llev_universal_online_observation(
+    const LlevUniversalOnlineAutomaton* online,
+    LlevUniversalObservation* out_observation);
+/** Release a universal online state; NULL is a no-op. */
+LLEV_API void llev_universal_online_free(LlevUniversalOnlineAutomaton* online);
+
+/** @} */
+
 /** Compile an import-free Unicode phonetic regular expression.
  * @param source UTF-8 expression bytes
  * @param source_len expression byte length

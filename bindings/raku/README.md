@@ -125,6 +125,8 @@ variants, protocols, or methods.
 | `Algorithm` | Edit-distance algorithm selection | Public facade type |
 | `QueryOrder` | Result traversal ordering | Public facade type |
 | `PhoneticRuleSetKind` | Built-in phonetic rule-set selection | Public facade type |
+| `OperationApplicability` | Generalized-operation applicability selection | Public facade type |
+| `UniversalVariant` | Universal edit-automaton variant selection | Public facade type |
 | `QueryCursor` | One-shot owned-result iteration | Public facade protocol |
 | `reduce-batches` | Bounded batch/reducer traversal | Public facade protocol |
 

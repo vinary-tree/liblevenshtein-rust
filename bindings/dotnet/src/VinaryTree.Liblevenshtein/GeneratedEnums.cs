@@ -72,3 +72,31 @@ public enum PhoneticRuleSetKind : uint
     /// <summary>English phonetic transformation.</summary>
     EnglishPhonetic = 1,
 }
+
+/// <summary>
+/// Runtime generalized-operation applicability predicate.
+/// </summary>
+public enum OperationApplicability : uint
+{
+    /// <summary>Apply without inspecting consumed units.</summary>
+    Any = 0,
+    /// <summary>Apply only when the consumed source and target slices are equal.</summary>
+    Equal = 1,
+    /// <summary>Apply only to an adjacent two-unit transposition.</summary>
+    AdjacentTranspose = 2,
+    /// <summary>Apply only to a configured directional source/target pair.</summary>
+    Listed = 3,
+}
+
+/// <summary>
+/// Universal edit-automaton variant.
+/// </summary>
+public enum UniversalVariant : uint
+{
+    /// <summary>Standard insert/delete/substitute universal automaton.</summary>
+    Standard = 0,
+    /// <summary>Universal automaton with adjacent transposition.</summary>
+    Transposition = 1,
+    /// <summary>Universal automaton with merge-and-split edits.</summary>
+    MergeAndSplit = 2,
+}

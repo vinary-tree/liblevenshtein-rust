@@ -73,12 +73,14 @@
 //! }
 //! ```
 
+mod automata;
 mod distance;
 mod generated;
 mod index;
 mod phonetic;
 mod string;
 
+pub use automata::*;
 pub use distance::*;
 pub use generated::*;
 pub use index::*;

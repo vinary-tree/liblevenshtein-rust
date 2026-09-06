@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 44 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against the facade sources and regenerates bindings/conformance/completeness-matrix.tsv from this file. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 76 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -27,6 +27,14 @@
         },
         "phoneticRuleSetKind": {
           "symbol": "LlevPhoneticRuleSetKind",
+          "definedIn": "include/liblevenshtein_abi.h"
+        },
+        "operationApplicability": {
+          "symbol": "LlevOperationApplicability",
+          "definedIn": "include/liblevenshtein_abi.h"
+        },
+        "universalVariant": {
+          "symbol": "LlevUniversalVariant",
           "definedIn": "include/liblevenshtein_abi.h"
         }
       },
@@ -76,6 +84,60 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": "llev_true_damerau_distance_threshold"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": "llev_merge_and_split_distance"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": "llev_merge_and_split_distance_threshold"
+        },
+        "llev_distance_bytes": {
+          "symbol": "llev_distance_bytes"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": "llev_distance_bytes_threshold"
+        },
+        "llev_distance_u64": {
+          "symbol": "llev_distance_u64"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": "llev_distance_u64_threshold"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": "llev_damerau_distance_bytes"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": "llev_damerau_distance_bytes_threshold"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": "llev_damerau_distance_u64"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": "llev_damerau_distance_u64_threshold"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": "llev_true_damerau_distance_bytes"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": "llev_true_damerau_distance_bytes_threshold"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": "llev_true_damerau_distance_u64"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": "llev_true_damerau_distance_u64_threshold"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": "llev_merge_and_split_distance_bytes"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": "llev_merge_and_split_distance_bytes_threshold"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": "llev_merge_and_split_distance_u64"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": "llev_merge_and_split_distance_u64_threshold"
         },
         "llev_transducer_new": {
           "symbol": "llev_transducer_new"
@@ -177,6 +239,48 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "llev_phonetic_rules_apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": "llev_generalized_automaton_new"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": "llev_generalized_automaton_free"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": "llev_generalized_automaton_evaluate_utf8"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": "llev_generalized_online_new_utf8"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": "llev_generalized_online_advance"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": "llev_generalized_online_observation"
+        },
+        "llev_generalized_online_free": {
+          "symbol": "llev_generalized_online_free"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": "llev_universal_automaton_new"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": "llev_universal_automaton_free"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": "llev_universal_automaton_evaluate"
+        },
+        "llev_universal_online_new": {
+          "symbol": "llev_universal_online_new"
+        },
+        "llev_universal_online_advance": {
+          "symbol": "llev_universal_online_advance"
+        },
+        "llev_universal_online_observation": {
+          "symbol": "llev_universal_online_observation"
+        },
+        "llev_universal_online_free": {
+          "symbol": "llev_universal_online_free"
         }
       }
     },
@@ -209,6 +313,14 @@
           "symbol": "phonetic-rules",
           "definedIn": "bindings/clojure/src/vinary_tree/liblevenshtein.clj",
           "note": "keyword selectors :english-orthography/:english-phonetic"
+        },
+        "operationApplicability": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
+        },
+        "universalVariant": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
         }
       },
       "iterator": {
@@ -270,6 +382,78 @@
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
           "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -388,6 +572,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "rewrite"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -417,6 +657,16 @@
         },
         "phoneticRuleSetKind": {
           "symbol": "LlevPhoneticRuleSetKind",
+          "definedIn": "include/liblevenshtein_abi.h",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "operationApplicability": {
+          "symbol": "LlevOperationApplicability",
+          "definedIn": "include/liblevenshtein_abi.h",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "universalVariant": {
+          "symbol": "LlevUniversalVariant",
           "definedIn": "include/liblevenshtein_abi.h",
           "note": "C API passthrough via the included liblevenshtein.h"
         }
@@ -480,6 +730,78 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": "llev_true_damerau_distance_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": "llev_merge_and_split_distance",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": "llev_merge_and_split_distance_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_distance_bytes": {
+          "symbol": "llev_distance_bytes",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": "llev_distance_bytes_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_distance_u64": {
+          "symbol": "llev_distance_u64",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": "llev_distance_u64_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": "llev_damerau_distance_bytes",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": "llev_damerau_distance_bytes_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": "llev_damerau_distance_u64",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": "llev_damerau_distance_u64_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": "llev_true_damerau_distance_bytes",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": "llev_true_damerau_distance_bytes_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": "llev_true_damerau_distance_u64",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": "llev_true_damerau_distance_u64_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": "llev_merge_and_split_distance_bytes",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": "llev_merge_and_split_distance_bytes_threshold",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": "llev_merge_and_split_distance_u64",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": "llev_merge_and_split_distance_u64_threshold",
           "note": "C API passthrough via the included liblevenshtein.h"
         },
         "llev_transducer_new": {
@@ -597,6 +919,62 @@
         "llev_phonetic_rules_apply": {
           "symbol": "llev_phonetic_rules_apply",
           "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": "llev_generalized_automaton_new",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": "llev_generalized_automaton_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": "llev_generalized_automaton_evaluate_utf8",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": "llev_generalized_online_new_utf8",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": "llev_generalized_online_advance",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": "llev_generalized_online_observation",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_generalized_online_free": {
+          "symbol": "llev_generalized_online_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": "llev_universal_automaton_new",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": "llev_universal_automaton_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": "llev_universal_automaton_evaluate",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_universal_online_new": {
+          "symbol": "llev_universal_online_new",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_universal_online_advance": {
+          "symbol": "llev_universal_online_advance",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_universal_online_observation": {
+          "symbol": "llev_universal_online_observation",
+          "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_universal_online_free": {
+          "symbol": "llev_universal_online_free",
+          "note": "C API passthrough via the included liblevenshtein.h"
         }
       }
     },
@@ -631,6 +1009,14 @@
         },
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
+        },
+        "operationApplicability": {
+          "symbol": "OperationApplicability",
+          "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
+        },
+        "universalVariant": {
+          "symbol": "UniversalVariant",
           "definedIn": "bindings/dotnet/src/VinaryTree.Liblevenshtein/GeneratedEnums.cs"
         }
       },
@@ -695,6 +1081,78 @@
         "llev_true_damerau_distance_threshold": {
           "symbol": "Distance.TrueDamerau",
           "note": "threshold overload"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "Transducer"
@@ -800,6 +1258,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.Apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -835,6 +1349,14 @@
           "symbol": "llev_english_orthography",
           "definedIn": "bindings/fortran/src/vinary_tree_liblevenshtein.f90",
           "note": "llev_english_orthography/llev_english_phonetic"
+        },
+        "operationApplicability": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
+        },
+        "universalVariant": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
         }
       },
       "iterator": {
@@ -891,6 +1413,78 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": "true_damerau_distance_threshold"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "new_transducer"
@@ -996,6 +1590,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "phonetic_rule_set%apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -1026,6 +1676,14 @@
         },
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/go/generated_enums.go"
+        },
+        "operationApplicability": {
+          "symbol": "OperationApplicability",
+          "definedIn": "bindings/go/generated_enums.go"
+        },
+        "universalVariant": {
+          "symbol": "UniversalVariant",
           "definedIn": "bindings/go/generated_enums.go"
         }
       },
@@ -1086,6 +1744,78 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": "TrueDamerauDistanceThreshold"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "NewTransducer"
@@ -1191,6 +1921,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.Apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -1220,6 +2006,14 @@
           "symbol": "phoneticRules",
           "definedIn": "bindings/haskell/src/VinaryTree/Liblevenshtein.hsc",
           "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+        },
+        "operationApplicability": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
+        },
+        "universalVariant": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
         }
       },
       "iterator": {
@@ -1275,6 +2069,78 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": "trueDamerauDistanceThreshold"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -1384,6 +2250,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "applyRules"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -1420,6 +2342,14 @@
           "symbol": "phoneticRules",
           "definedIn": "bindings/javascript/index.d.ts",
           "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+        },
+        "operationApplicability": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
+        },
+        "universalVariant": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
         }
       },
       "iterator": {
@@ -1481,6 +2411,78 @@
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
           "_reason": "delegated to the shared JavaScript runtime namespace and reachable through the untyped default-export spread (liblevenshtein.levenshteinDistance et al.); the typed project facade deliberately re-declares only the transducer/phonetic surface"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -1590,6 +2592,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -1626,6 +2684,14 @@
           "symbol": "liblevenshtein.phoneticRules",
           "definedIn": "../javascript-runtime/index.d.ts",
           "note": "string selectors \"english-orthography\"/\"english-phonetic\" dispatched in addon.cc"
+        },
+        "operationApplicability": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
+        },
+        "universalVariant": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
         }
       },
       "iterator": {
@@ -1684,6 +2750,78 @@
         "llev_true_damerau_distance_threshold": {
           "symbol": "liblevenshtein.trueDamerauDistanceThreshold",
           "note": "number within the maximum, undefined on early exit; bound in native/src/addon.cc and mirrored by the browser-wasm path"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "liblevenshtein.transducer"
@@ -1793,6 +2931,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -1817,7 +3011,9 @@
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/NativeLibraryLoader.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/GeneratedAbi.java",
         "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/QueryCache.java",
-        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/QueryCacheStats.java"
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/QueryCacheStats.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/OperationApplicability.java",
+        "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/UniversalVariant.java"
       ],
       "readme": "bindings/jvm/README.md",
       "tests": [
@@ -1842,6 +3038,14 @@
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
           "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/PhoneticRuleSetKind.java"
+        },
+        "operationApplicability": {
+          "symbol": "OperationApplicability",
+          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/OperationApplicability.java"
+        },
+        "universalVariant": {
+          "symbol": "UniversalVariant",
+          "definedIn": "bindings/jvm/src/main/java/io/vinarytree/liblevenshtein/UniversalVariant.java"
         }
       },
       "iterator": {
@@ -1908,6 +3112,78 @@
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
           "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "Transducer"
@@ -2018,6 +3294,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -2050,6 +3382,14 @@
           "symbol": "phonetic_rule_set_kind",
           "definedIn": "bindings/lua/src/liblevenshtein_lua.c",
           "note": "named string selectors \"english-orthography\"/\"english-phonetic\""
+        },
+        "operationApplicability": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
+        },
+        "universalVariant": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
         }
       },
       "iterator": {
@@ -2105,6 +3445,78 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": "true_damerau_distance_threshold"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -2216,6 +3628,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "rules:apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -2247,6 +3715,14 @@
           "symbol": "phonetic_rules",
           "definedIn": "bindings/ocaml/vinary_tree_liblevenshtein.mli",
           "note": "string selectors \"english-orthography\"/\"english-phonetic\""
+        },
+        "operationApplicability": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
+        },
+        "universalVariant": {
+          "symbol": null,
+          "_reason": "the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter"
         }
       },
       "iterator": {
@@ -2302,6 +3778,78 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": "true_damerau_distance_threshold"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "transducer"
@@ -2415,6 +3963,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "apply_rules"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -2445,6 +4049,14 @@
         },
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
+          "definedIn": "bindings/python/src/liblevenshtein/_generated.py"
+        },
+        "operationApplicability": {
+          "symbol": "OperationApplicability",
+          "definedIn": "bindings/python/src/liblevenshtein/_generated.py"
+        },
+        "universalVariant": {
+          "symbol": "UniversalVariant",
           "definedIn": "bindings/python/src/liblevenshtein/_generated.py"
         }
       },
@@ -2507,6 +4119,78 @@
         "llev_true_damerau_distance_threshold": {
           "symbol": null,
           "_reason": "not part of the Tier-1 managed facade surface; python, jvm, clojure, and the typed javascript facade uniformly omit standalone distance helpers (the JavaScript shared JavaScript runtime carries them for JS callers)"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "Transducer.__init__"
@@ -2614,6 +4298,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -2652,6 +4392,14 @@
           "symbol": "PhoneticRuleSetKind",
           "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb",
           "note": "ENGLISH_ORTHOGRAPHY/ENGLISH_PHONETIC constants; PhoneticRuleSet aliases remain compatible"
+        },
+        "operationApplicability": {
+          "symbol": "OperationApplicability",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb"
+        },
+        "universalVariant": {
+          "symbol": "UniversalVariant",
+          "definedIn": "bindings/ruby/lib/vinary_tree/liblevenshtein/generated_enums.rb"
         }
       },
       "iterator": {
@@ -2711,6 +4459,78 @@
         },
         "llev_true_damerau_distance_threshold": {
           "symbol": "Liblevenshtein.true_damerau_distance_threshold"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "Transducer.new"
@@ -2816,6 +4636,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet#apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -2849,6 +4725,14 @@
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
           "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.swift"
+        },
+        "operationApplicability": {
+          "symbol": "OperationApplicability",
+          "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/GeneratedEnums.swift"
+        },
+        "universalVariant": {
+          "symbol": "UniversalVariant",
+          "definedIn": "bindings/swift/liblevenshtein/Sources/Liblevenshtein/GeneratedEnums.swift"
         }
       },
       "iterator": {
@@ -2910,6 +4794,78 @@
         "llev_true_damerau_distance_threshold": {
           "symbol": "EditDistance.damerauLevenshtein",
           "note": "threshold overload"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
         },
         "llev_transducer_new": {
           "symbol": "Transducer.init"
@@ -3018,6 +4974,62 @@
         },
         "llev_phonetic_rules_apply": {
           "symbol": "PhoneticRuleSet.apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
         }
       }
     },
@@ -3047,6 +5059,14 @@
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
           "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        },
+        "operationApplicability": {
+          "symbol": "OperationApplicability",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
+        },
+        "universalVariant": {
+          "symbol": "UniversalVariant",
+          "definedIn": "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl"
         }
       },
       "iterator": {
@@ -3057,9 +5077,15 @@
       },
       "phoneticGating": "build_features",
       "functions": {
-        "llev_abi_version": {"symbol": "abi_version"},
-        "llev_api_revision": {"symbol": "api_revision"},
-        "llev_build_features": {"symbol": "build_features"},
+        "llev_abi_version": {
+          "symbol": "abi_version"
+        },
+        "llev_api_revision": {
+          "symbol": "api_revision"
+        },
+        "llev_build_features": {
+          "symbol": "build_features"
+        },
         "llev_last_error_message": {
           "symbol": "NativeError",
           "note": "checked copies the native diagnostic into every thrown NativeError"
@@ -3076,34 +5102,90 @@
           "symbol": null,
           "_reason": "legacy independent C string ABI; Julia-owned strings cross as borrowed pointer-plus-length values"
         },
-        "llev_distance": {"symbol": "distance"},
-        "llev_distance_threshold": {"symbol": "distance"},
-        "llev_distance_bytes": {"symbol": "distance"},
-        "llev_distance_bytes_threshold": {"symbol": "distance"},
-        "llev_distance_u64": {"symbol": "distance"},
-        "llev_distance_u64_threshold": {"symbol": "distance"},
-        "llev_damerau_distance": {"symbol": "optimal_string_alignment_distance"},
-        "llev_damerau_distance_threshold": {"symbol": "optimal_string_alignment_distance"},
-        "llev_damerau_distance_bytes": {"symbol": "optimal_string_alignment_distance"},
-        "llev_damerau_distance_bytes_threshold": {"symbol": "optimal_string_alignment_distance"},
-        "llev_damerau_distance_u64": {"symbol": "optimal_string_alignment_distance"},
-        "llev_damerau_distance_u64_threshold": {"symbol": "optimal_string_alignment_distance"},
-        "llev_true_damerau_distance": {"symbol": "true_damerau_distance"},
-        "llev_true_damerau_distance_threshold": {"symbol": "true_damerau_distance"},
-        "llev_true_damerau_distance_bytes": {"symbol": "true_damerau_distance"},
-        "llev_true_damerau_distance_bytes_threshold": {"symbol": "true_damerau_distance"},
-        "llev_true_damerau_distance_u64": {"symbol": "true_damerau_distance"},
-        "llev_true_damerau_distance_u64_threshold": {"symbol": "true_damerau_distance"},
-        "llev_merge_and_split_distance": {"symbol": "merge_and_split_distance"},
-        "llev_merge_and_split_distance_threshold": {"symbol": "merge_and_split_distance"},
-        "llev_merge_and_split_distance_bytes": {"symbol": "merge_and_split_distance"},
-        "llev_merge_and_split_distance_bytes_threshold": {"symbol": "merge_and_split_distance"},
-        "llev_merge_and_split_distance_u64": {"symbol": "merge_and_split_distance"},
-        "llev_merge_and_split_distance_u64_threshold": {"symbol": "merge_and_split_distance"},
-        "llev_transducer_new": {"symbol": "Transducer"},
-        "llev_transducer_snapshot": {"symbol": "snapshot"},
-        "llev_transducer_free": {"symbol": "close!"},
-        "llev_transducer_unit_domain": {"symbol": "unit_domain"},
+        "llev_distance": {
+          "symbol": "distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "distance"
+        },
+        "llev_damerau_distance": {
+          "symbol": "optimal_string_alignment_distance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "optimal_string_alignment_distance"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": "merge_and_split_distance"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": "merge_and_split_distance"
+        },
+        "llev_distance_bytes": {
+          "symbol": "distance"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": "distance"
+        },
+        "llev_distance_u64": {
+          "symbol": "distance"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": "distance"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": "optimal_string_alignment_distance"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": "optimal_string_alignment_distance"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": "optimal_string_alignment_distance"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": "optimal_string_alignment_distance"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": "true_damerau_distance"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": "merge_and_split_distance"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": "merge_and_split_distance"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": "merge_and_split_distance"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": "merge_and_split_distance"
+        },
+        "llev_transducer_new": {
+          "symbol": "Transducer"
+        },
+        "llev_transducer_snapshot": {
+          "symbol": "snapshot"
+        },
+        "llev_transducer_free": {
+          "symbol": "close!"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": "unit_domain"
+        },
         "llev_query_cache_new": {
           "symbol": "QueryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -3124,9 +5206,15 @@
           "symbol": "close!",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
-        "llev_transducer_query_utf8": {"symbol": "query"},
-        "llev_transducer_query_bytes": {"symbol": "query"},
-        "llev_transducer_query_u64": {"symbol": "query"},
+        "llev_transducer_query_utf8": {
+          "symbol": "query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "query"
+        },
         "llev_query_cache_query_utf8": {
           "symbol": "query",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -3139,28 +5227,112 @@
           "symbol": "query",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
-        "llev_query_cursor_next_batch": {"symbol": "next_batch!"},
+        "llev_query_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
         "llev_query_cursor_release_batch": {
           "symbol": "next_batch!",
           "note": "the exact batch generation is settled after owned materialization"
         },
-        "llev_query_cursor_reduce": {"symbol": "reduce_batches!"},
-        "llev_query_cursor_free": {"symbol": "close!"},
+        "llev_query_cursor_reduce": {
+          "symbol": "reduce_batches!"
+        },
+        "llev_query_cursor_free": {
+          "symbol": "close!"
+        },
         "llev_owned_string_free": {
           "symbol": "PhoneticRuleSet",
           "note": "rule application frees its LlevOwnedString after copying"
         },
-        "llev_phonetic_pattern_compile_regex": {"symbol": "PhoneticPattern"},
-        "llev_phonetic_pattern_compile_llre": {"symbol": "PhoneticPattern"},
-        "llev_phonetic_pattern_free": {"symbol": "close!"},
-        "llev_phonetic_pattern_size": {"symbol": "PhoneticPattern"},
-        "llev_phonetic_pattern_matches": {"symbol": "PhoneticPattern"},
-        "llev_transducer_query_pattern": {"symbol": "query"},
-        "llev_phonetic_rules_parse": {"symbol": "PhoneticRuleSet"},
-        "llev_phonetic_rules_builtin": {"symbol": "PhoneticRuleSet"},
-        "llev_phonetic_rules_free": {"symbol": "close!"},
-        "llev_phonetic_rules_len": {"symbol": "PhoneticRuleSet"},
-        "llev_phonetic_rules_apply": {"symbol": "PhoneticRuleSet"}
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "PhoneticPattern"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "PhoneticPattern"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "close!"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "PhoneticPattern"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "query"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "PhoneticRuleSet"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "PhoneticRuleSet"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "close!"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "PhoneticRuleSet"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        }
       }
     },
     "raku": {
@@ -3189,6 +5361,14 @@
         "phoneticRuleSetKind": {
           "symbol": "PhoneticRuleSetKind",
           "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        },
+        "operationApplicability": {
+          "symbol": "OperationApplicability",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
+        },
+        "universalVariant": {
+          "symbol": "UniversalVariant",
+          "definedIn": "bindings/raku/lib/Liblevenshtein/GeneratedAbi.rakumod"
         }
       },
       "iterator": {
@@ -3199,9 +5379,15 @@
       },
       "phoneticGating": "build-features",
       "functions": {
-        "llev_abi_version": {"symbol": "abi-version"},
-        "llev_api_revision": {"symbol": "api-revision"},
-        "llev_build_features": {"symbol": "build-features"},
+        "llev_abi_version": {
+          "symbol": "abi-version"
+        },
+        "llev_api_revision": {
+          "symbol": "api-revision"
+        },
+        "llev_build_features": {
+          "symbol": "build-features"
+        },
         "llev_last_error_message": {
           "symbol": "X::Liblevenshtein",
           "note": "check-status copies the native diagnostic into every thrown exception"
@@ -3218,16 +5404,108 @@
           "symbol": null,
           "_reason": "legacy independent C string ABI; Raku-owned strings cross as borrowed pointer-plus-length values"
         },
-        "llev_distance": {"symbol": "distance"},
-        "llev_distance_threshold": {"symbol": "distance"},
-        "llev_damerau_distance": {"symbol": "damerau-distance"},
-        "llev_damerau_distance_threshold": {"symbol": "damerau-distance"},
-        "llev_true_damerau_distance": {"symbol": "true-damerau-distance"},
-        "llev_true_damerau_distance_threshold": {"symbol": "true-damerau-distance"},
-        "llev_transducer_new": {"symbol": "Transducer.new"},
-        "llev_transducer_snapshot": {"symbol": "Transducer.snapshot"},
-        "llev_transducer_free": {"symbol": "Transducer.close"},
-        "llev_transducer_unit_domain": {"symbol": "Transducer.unit-domain"},
+        "llev_distance": {
+          "symbol": "distance"
+        },
+        "llev_distance_threshold": {
+          "symbol": "distance"
+        },
+        "llev_damerau_distance": {
+          "symbol": "damerau-distance"
+        },
+        "llev_damerau_distance_threshold": {
+          "symbol": "damerau-distance"
+        },
+        "llev_true_damerau_distance": {
+          "symbol": "true-damerau-distance"
+        },
+        "llev_true_damerau_distance_threshold": {
+          "symbol": "true-damerau-distance"
+        },
+        "llev_merge_and_split_distance": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_true_damerau_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_bytes_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_merge_and_split_distance_u64_threshold": {
+          "symbol": null,
+          "_reason": "FINDING: the API-revision-4 domain-complete standalone distance adapter is absent from this facade and remains owned by its language-family distance parity task"
+        },
+        "llev_transducer_new": {
+          "symbol": "Transducer.new"
+        },
+        "llev_transducer_snapshot": {
+          "symbol": "Transducer.snapshot"
+        },
+        "llev_transducer_free": {
+          "symbol": "Transducer.close"
+        },
+        "llev_transducer_unit_domain": {
+          "symbol": "Transducer.unit-domain"
+        },
         "llev_query_cache_new": {
           "symbol": "QueryCache.new",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -3248,9 +5526,15 @@
           "symbol": "QueryCache.close",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
-        "llev_transducer_query_utf8": {"symbol": "Transducer.query"},
-        "llev_transducer_query_bytes": {"symbol": "Transducer.query"},
-        "llev_transducer_query_u64": {"symbol": "Transducer.query"},
+        "llev_transducer_query_utf8": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_bytes": {
+          "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_u64": {
+          "symbol": "Transducer.query"
+        },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.query",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -3263,7 +5547,9 @@
           "symbol": "QueryCache.query",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
-        "llev_query_cursor_next_batch": {"symbol": "QueryCursor.next-batch"},
+        "llev_query_cursor_next_batch": {
+          "symbol": "QueryCursor.next-batch"
+        },
         "llev_query_cursor_release_batch": {
           "symbol": "QueryCursor.next-batch",
           "note": "the exact batch generation is settled after owned materialization"
@@ -3272,22 +5558,102 @@
           "symbol": null,
           "_reason": "the facade's bounded reduce-batches operation is built over next-batch/release-batch because NativeCall callbacks would add a slower runtime trampoline without improving ownership or allocation semantics"
         },
-        "llev_query_cursor_free": {"symbol": "QueryCursor.close"},
+        "llev_query_cursor_free": {
+          "symbol": "QueryCursor.close"
+        },
         "llev_owned_string_free": {
           "symbol": "PhoneticRuleSet.apply",
           "note": "rule application frees its LlevOwnedString after copying"
         },
-        "llev_phonetic_pattern_compile_regex": {"symbol": "PhoneticPattern.new"},
-        "llev_phonetic_pattern_compile_llre": {"symbol": "PhoneticPattern.new"},
-        "llev_phonetic_pattern_free": {"symbol": "PhoneticPattern.close"},
-        "llev_phonetic_pattern_size": {"symbol": "PhoneticPattern.size"},
-        "llev_phonetic_pattern_matches": {"symbol": "PhoneticPattern.accepts"},
-        "llev_transducer_query_pattern": {"symbol": "Transducer.query"},
-        "llev_phonetic_rules_parse": {"symbol": "PhoneticRuleSet.new"},
-        "llev_phonetic_rules_builtin": {"symbol": "PhoneticRuleSet.new"},
-        "llev_phonetic_rules_free": {"symbol": "PhoneticRuleSet.close"},
-        "llev_phonetic_rules_len": {"symbol": "PhoneticRuleSet.elems"},
-        "llev_phonetic_rules_apply": {"symbol": "PhoneticRuleSet.apply"}
+        "llev_phonetic_pattern_compile_regex": {
+          "symbol": "PhoneticPattern.new"
+        },
+        "llev_phonetic_pattern_compile_llre": {
+          "symbol": "PhoneticPattern.new"
+        },
+        "llev_phonetic_pattern_free": {
+          "symbol": "PhoneticPattern.close"
+        },
+        "llev_phonetic_pattern_size": {
+          "symbol": "PhoneticPattern.size"
+        },
+        "llev_phonetic_pattern_matches": {
+          "symbol": "PhoneticPattern.accepts"
+        },
+        "llev_transducer_query_pattern": {
+          "symbol": "Transducer.query"
+        },
+        "llev_phonetic_rules_parse": {
+          "symbol": "PhoneticRuleSet.new"
+        },
+        "llev_phonetic_rules_builtin": {
+          "symbol": "PhoneticRuleSet.new"
+        },
+        "llev_phonetic_rules_free": {
+          "symbol": "PhoneticRuleSet.close"
+        },
+        "llev_phonetic_rules_len": {
+          "symbol": "PhoneticRuleSet.elems"
+        },
+        "llev_phonetic_rules_apply": {
+          "symbol": "PhoneticRuleSet.apply"
+        },
+        "llev_generalized_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_automaton_evaluate_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_new_utf8": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_generalized_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_automaton_evaluate": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_new": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_advance": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_observation": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_universal_online_free": {
+          "symbol": null,
+          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        }
       }
     }
   }

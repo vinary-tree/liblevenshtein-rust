@@ -33,6 +33,16 @@ _Static_assert(LLEV_PHONETIC_RULE_SET_ENGLISH_ORTHOGRAPHY == 0,
                "LlevPhoneticRuleSetKind ENGLISH_ORTHOGRAPHY moved");
 _Static_assert(LLEV_PHONETIC_RULE_SET_ENGLISH_PHONETIC == 1,
                "LlevPhoneticRuleSetKind ENGLISH_PHONETIC moved");
+_Static_assert(LLEV_API_REVISION >= 5,
+               "standalone automata require liblevenshtein API revision 5");
+_Static_assert(LLEV_OPERATION_APPLICABILITY_ANY == 0,
+               "LlevOperationApplicability ANY moved");
+_Static_assert(LLEV_OPERATION_APPLICABILITY_LISTED == 3,
+               "LlevOperationApplicability LISTED moved");
+_Static_assert(LLEV_UNIVERSAL_STANDARD == 0,
+               "LlevUniversalVariant STANDARD moved");
+_Static_assert(LLEV_UNIVERSAL_MERGE_AND_SPLIT == 2,
+               "LlevUniversalVariant MERGE_AND_SPLIT moved");
 _Static_assert(VT_STATUS_OK == 0, "VtStatus OK discriminant moved");
 _Static_assert(VT_UNIT_DOMAIN_UNICODE_SCALAR == 2, "VtUnitDomain scalar moved");
 _Static_assert(offsetof(LlevMatch, term_data) == 0, "LlevMatch.term_data must lead");
@@ -44,6 +54,12 @@ _Static_assert(offsetof(LlevMatchBatchView, len) == sizeof(const LlevMatch*),
                "LlevMatchBatchView.len must follow the match pointer");
 _Static_assert(sizeof(VtResource) == 2 * sizeof(void*),
                "VtResource must remain a two-word handle");
+_Static_assert(offsetof(LlevAutomatonLimits, max_source_units) == 0,
+               "LlevAutomatonLimits source limit must lead");
+_Static_assert(offsetof(LlevGeneralizedOperation, weight) == 2 * sizeof(size_t),
+               "LlevGeneralizedOperation weight layout moved");
+_Static_assert(sizeof(LlevUniversalEquivalence) == 2 * sizeof(uint64_t),
+               "LlevUniversalEquivalence must contain exactly two u64 values");
 
 typedef struct Seen {
     bool cat;
@@ -135,6 +151,70 @@ static void assert_legacy_string_api(void) {
      * revisions. Current APIs return LlevOwnedString instead; NULL is its only
      * locally constructible, allocator-correct compatibility case. */
     llev_string_array_free(NULL, 0);
+}
+
+static void assert_standalone_automata_api(void) {
+    static const char match_name[] = "match";
+    static const char substitute_name[] = "substitute";
+    static const char insert_name[] = "insert";
+    static const char delete_name[] = "delete";
+    const LlevGeneralizedOperation operations[] = {
+        {1, 1, 0.0, match_name, sizeof(match_name) - 1,
+         LLEV_OPERATION_APPLICABILITY_EQUAL, 0, NULL, 0},
+        {1, 1, 1.0, substitute_name, sizeof(substitute_name) - 1,
+         LLEV_OPERATION_APPLICABILITY_ANY, 0, NULL, 0},
+        {0, 1, 1.0, insert_name, sizeof(insert_name) - 1,
+         LLEV_OPERATION_APPLICABILITY_ANY, 0, NULL, 0},
+        {1, 0, 1.0, delete_name, sizeof(delete_name) - 1,
+         LLEV_OPERATION_APPLICABILITY_ANY, 0, NULL, 0},
+    };
+    LlevGeneralizedAutomaton* generalized = NULL;
+    assert(llev_generalized_automaton_new(
+               1, operations, sizeof(operations) / sizeof(operations[0]),
+               &generalized) == LLEV_STATUS_OK);
+    LlevGeneralizedObservation generalized_observation = {0};
+    assert(llev_generalized_automaton_evaluate_utf8(
+               generalized, "cat", 3, "cut", 3, NULL,
+               &generalized_observation) == LLEV_STATUS_OK);
+    assert(generalized_observation.scale_denominator == 1);
+    assert(generalized_observation.has_distance == 1);
+    assert(generalized_observation.scaled_distance == 1);
+    assert(generalized_observation.accepting == 1);
+
+    LlevGeneralizedOnlineAutomaton* generalized_online = NULL;
+    assert(llev_generalized_online_new_utf8(
+               generalized, "cat", 3, NULL, &generalized_online) ==
+           LLEV_STATUS_OK);
+    assert(llev_generalized_online_advance(
+               generalized_online, 'c', &generalized_observation) ==
+           LLEV_STATUS_OK);
+    assert(llev_generalized_online_advance(
+               generalized_online, 'u', &generalized_observation) ==
+           LLEV_STATUS_OK);
+    assert(llev_generalized_online_advance(
+               generalized_online, 't', &generalized_observation) ==
+           LLEV_STATUS_OK);
+    assert(generalized_observation.accepting == 1);
+    llev_generalized_online_free(generalized_online);
+    llev_generalized_automaton_free(generalized);
+
+    const LlevUniversalEquivalence equivalence = {0x00e9, 0x0065};
+    LlevUniversalAutomaton* universal = NULL;
+    assert(llev_universal_automaton_new(
+               0, LLEV_UNIVERSAL_STANDARD, VT_UNIT_DOMAIN_UNICODE_SCALAR,
+               &equivalence, 1, &universal) == LLEV_STATUS_OK);
+    LlevUniversalObservation universal_observation = {0};
+    assert(llev_universal_automaton_evaluate(
+               universal, VT_UNIT_DOMAIN_UNICODE_SCALAR,
+               "caf\xC3\xA9", 5, "cafe", 4, NULL,
+               &universal_observation) == LLEV_STATUS_OK);
+    assert(universal_observation.accepting == 1);
+    assert(llev_universal_automaton_evaluate(
+               universal, VT_UNIT_DOMAIN_UNICODE_SCALAR,
+               "cafe", 4, "caf\xC3\xA9", 5, NULL,
+               &universal_observation) == LLEV_STATUS_OK);
+    assert(universal_observation.accepting == 0);
+    llev_universal_automaton_free(universal);
 }
 
 typedef struct Reduction {
@@ -411,6 +491,7 @@ static void assert_non_text_domains(void) {
 int main(void) {
     assert_distance_api();
     assert_legacy_string_api();
+    assert_standalone_automata_api();
     assert_algorithm_and_order_api();
     assert_non_text_domains();
 

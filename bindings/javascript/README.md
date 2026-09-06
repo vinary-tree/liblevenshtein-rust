@@ -139,6 +139,8 @@ variants, protocols, or methods.
 | Model value | Idiomatic treatment |
 |---|---|
 | `status` | thrown runtime Error values carry the native message; the numeric status is not re-exposed |
+| `operationApplicability` | the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter |
+| `universalVariant` | the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter |
 
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every

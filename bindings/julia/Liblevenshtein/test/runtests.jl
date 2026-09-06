@@ -7,7 +7,7 @@ const LL = Liblevenshtein
 
 @testset "ABI identity and layouts" begin
     @test LL.abi_version() == LL.ABI_VERSION == 1
-    @test LL.api_revision() >= LL.API_REVISION == 4
+    @test LL.api_revision() >= LL.API_REVISION == 5
     @test LL.build_features() & LL.BUILD_FEATURE_CORE != 0
     @test LL.STATUS_OK isa LL.Status
     @test LL.ALGORITHM_STANDARD isa LL.Algorithm

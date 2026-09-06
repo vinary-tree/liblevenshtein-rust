@@ -309,3 +309,4 @@ docs/bindings/PERFORMANCE_EXPERIMENTS.md
 docs/bindings/host-extension-trait-governance.md
 docs/bindings/query-cache.md
 docs/bindings/julia-family-qualification.md
+docs/bindings/standalone-automata.md
