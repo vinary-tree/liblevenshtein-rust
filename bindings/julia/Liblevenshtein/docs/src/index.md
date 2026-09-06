@@ -53,6 +53,57 @@ Use `reduce_batches!` when matches do not need to escape the callback. Each
 `BorrowedMatch` expires when its callback returns; call `materialize` inside
 the callback when an independently owned value is required.
 
+## Runtime edit grammars and standalone automata
+
+`GeneralizedAutomaton` executes an immutable runtime operation set. The native
+engine converts accepted decimal weights to one exact scale, and Julia exposes
+an accepted cost as `Rational{Int}`:
+
+```julia
+operations = GeneralizedOperationSet(
+    GeneralizedOperation(0, 1, 1, :insert),
+    GeneralizedOperation(1, 0, 1, :delete),
+    GeneralizedOperation(1, 1, 0, :equal;
+        applicability=APPLICABILITY_EQUAL),
+    GeneralizedOperation(1, 1, 0.5, :substitute),
+)
+
+automaton = GeneralizedAutomaton(2, operations)
+try
+    @assert evaluate(automaton, "cat", "cut").distance == 1 // 2
+finally
+    close(automaton)
+end
+```
+
+`UniversalAutomaton` selects the standard, adjacent-transposition, or
+merge-and-split specialization. Input types select byte, Unicode-scalar, or
+u64-token semantics. A `UniversalPolicy` owns typed directional zero-cost
+equivalences; the default `UNRESTRICTED_POLICY` avoids policy allocation and
+lookup.
+
+```julia
+policy = UniversalPolicy('p' => 'f')
+automaton = UniversalAutomaton(0, policy)
+try
+    @assert accepts(automaton, "p", "f")
+    @assert !accepts(automaton, "f", "p")
+finally
+    close(automaton)
+end
+```
+
+Call `online` plus `advance!` for a long-lived prefix state, or use the
+closeable `prefix_observations` iterator for a finite target. Its do-block form
+closes on early return as well as ordinary exhaustion. `AutomatonLimits`
+supplies explicit native source, target, retained-cell, and per-step work
+ceilings; a failed advance leaves the prior observation committed.
+
+Generalized current-row emptiness is not a pruning certificate: a multi-target
+operation can revive from an older retained row. Universal `alive == false`,
+by contrast, is permanent. Standalone automata compare one source/target pair;
+dictionary-product traversal remains a distinct bounded native capability.
+
 ## Bounded repeated-query caching
 
 `QueryCache` is an opt-in complete-result memo for repeated workloads. It uses

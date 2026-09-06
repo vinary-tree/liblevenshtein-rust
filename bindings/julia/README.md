@@ -87,15 +87,20 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `abi_version` | `llev_abi_version` | ABI compatibility and feature discovery |
+| `advance!` | `llev_generalized_online_advance`, `llev_universal_online_advance` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `build_features` | `llev_build_features` | ABI compatibility and feature discovery |
 | `cache_stats` | `llev_query_cache_stats` | project ABI operation |
 | `clear!` | `llev_query_cache_clear` | project ABI operation |
-| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting |
+| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
+| `evaluate` | `llev_generalized_automaton_evaluate_utf8`, `llev_universal_automaton_evaluate` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `GeneralizedAutomaton` | `llev_generalized_automaton_new` | runtime generalized-automaton lifecycle and prefix evaluation |
 | `merge_and_split_distance` | `llev_merge_and_split_distance`, `llev_merge_and_split_distance_threshold`, `llev_merge_and_split_distance_bytes`, `llev_merge_and_split_distance_bytes_threshold`, `llev_merge_and_split_distance_u64`, `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
 | `NativeError` | `llev_last_error_message` | typed failure diagnostics |
 | `next_batch!` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `observation` | `llev_generalized_online_observation`, `llev_universal_online_observation` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `online` | `llev_generalized_online_new_utf8`, `llev_universal_online_new` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `optimal_string_alignment_distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold`, `llev_damerau_distance_bytes`, `llev_damerau_distance_bytes_threshold`, `llev_damerau_distance_u64`, `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
 | `PhoneticPattern` | `llev_phonetic_pattern_compile_regex`, `llev_phonetic_pattern_compile_llre`, `llev_phonetic_pattern_size`, `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticRuleSet` | `llev_owned_string_free`, `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin`, `llev_phonetic_rules_len`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
@@ -107,6 +112,7 @@ variants, protocols, or methods.
 | `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `true_damerau_distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold`, `llev_true_damerau_distance_bytes`, `llev_true_damerau_distance_bytes_threshold`, `llev_true_damerau_distance_u64`, `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
 | `unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
+| `UniversalAutomaton` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |
 
 ### Public types and traversal protocols
 

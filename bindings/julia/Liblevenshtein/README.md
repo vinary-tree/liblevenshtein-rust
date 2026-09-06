@@ -67,6 +67,88 @@ histories: the former assigns distance 3 from `CA` to `ABC`, while the latter
 assigns distance 2. Choose the algorithm when constructing `Transducer`; query
 domains, batching, and snapshot behavior are otherwise identical.
 
+## Standalone generalized and universal automata
+
+Use `GeneralizedAutomaton` when the edit grammar itself is runtime data. The
+operation set below charges one half for substitution and one for insertion or
+deletion. Native observations return the exact Julia `Rational`, so the result
+does not depend on floating-point comparison in application code:
+
+```julia
+operations = GeneralizedOperationSet(
+    GeneralizedOperation(0, 1, 1, :insert),
+    GeneralizedOperation(1, 0, 1, :delete),
+    GeneralizedOperation(1, 1, 0, :equal;
+        applicability=APPLICABILITY_EQUAL),
+    GeneralizedOperation(1, 1, 0.5, :substitute),
+)
+
+automaton = GeneralizedAutomaton(2, operations)
+try
+    result = evaluate(automaton, "cat", "cut")
+    @assert result.accepting && result.distance == 1 // 2
+finally
+    close(automaton)
+end
+```
+
+Listed restrictions are directional. This operation permits source `"ph"` to
+target `"f"`, but it does not implicitly permit the reverse rewrite:
+
+```julia
+GeneralizedOperation(2, 1, 0.5, :phoneme;
+    restrictions=("ph" => "f",))
+```
+
+Use `UniversalAutomaton` for the native unit-cost universal specializations.
+It supports byte, Unicode-scalar, and u64-token inputs through dispatch. An
+explicit `UniversalPolicy` is a typed, non-empty set of directional zero-cost
+equivalences; omit it to select the allocation-free unrestricted policy:
+
+```julia
+policy = UniversalPolicy('p' => 'f')
+automaton = UniversalAutomaton(0, policy;
+    variant=UNIVERSAL_TRANSPOSITION)
+try
+    @assert accepts(automaton, "p", "f")
+    @assert !accepts(automaton, "f", "p")
+finally
+    close(automaton)
+end
+```
+
+For incremental input, `online(automaton, source)` owns an exclusive native
+prefix state. `advance!` commits exactly one `Char`, `UInt8`, or u64 integer,
+as selected by the source type. `prefix_observations` supplies a finite stream
+and closes it automatically on exhaustion, failure, or return from its do
+block:
+
+```julia
+automaton = UniversalAutomaton(1;
+    variant=UNIVERSAL_TRANSPOSITION)
+try
+    prefix_observations(automaton, "ab", "ba") do prefixes
+        @assert last(collect(prefixes)).accepting
+    end
+finally
+    close(automaton)
+end
+```
+
+`AutomatonLimits` places explicit hard ceilings on source units, committed
+target units, generalized retained cells, and generalized work per step.
+Failed advancement is transactional: `observation(online)` still describes
+the last committed prefix. A generalized observation's
+`current_row_nonempty == false` is not permanent death because an operation
+that consumes several target units can reconnect an older retained row. A
+universal observation with `alive == false` is permanently dead.
+
+These standalone calls compare one source with one target. They do not walk a
+dictionary or materialize and filter dictionary entries. The
+[standalone automata design](../../../docs/bindings/standalone-automata.md)
+defines the exact operation validation, scaling, liveness, ownership, and
+complexity contracts.
+
 ## Common and intended usage
 
 - Use `distance`, `optimal_string_alignment_distance`,
@@ -96,6 +178,15 @@ domains, batching, and snapshot behavior are otherwise identical.
 | `damerau_distance(a, b; threshold=nothing)` | Compatibility spelling for `optimal_string_alignment_distance`. |
 | `true_damerau_distance(a, b; threshold=nothing)` | Unrestricted Damerau-Levenshtein distance. |
 | `merge_and_split_distance(a, b; threshold=nothing)` | Standard edits plus one-to-two split and two-to-one merge at unit cost. |
+| `GeneralizedOperation`, `GeneralizedOperationSet` | Immutable runtime edit grammar with typed applicability and directional listed restrictions. |
+| `UniversalPolicy`, `UNRESTRICTED_POLICY` | Typed directional zero-cost equivalences or the allocation-free unrestricted policy. |
+| `GeneralizedAutomaton(k, operations)` | Owned immutable Unicode generalized automaton with inclusive integral budget `k`. |
+| `UniversalAutomaton(k, policy; variant=...)` | Owned immutable universal specialization for strings, bytes, or u64 tokens. |
+| `evaluate(automaton, source, target; limits=nothing)` | Complete native evaluation returning an exact typed observation. |
+| `accepts(automaton, source, target; limits=nothing)` | Boolean convenience over complete evaluation. |
+| `online(automaton, source; limits=nothing)` | Exclusive source-bound native prefix state. |
+| `advance!(online, unit)`, `observation(online)` | Transactional one-unit advancement and non-mutating observation. |
+| `prefix_observations(automaton, source, target; limits=nothing)` | Finite closeable prefix stream; its do-block form guarantees early-return cleanup. |
 | `Transducer(resource, algorithm)` | Retains a `VinaryTreeInterop.Resource` or `.Dictionary`. |
 | `snapshot(transducer)` | Owned immutable transducer revision. |
 | `unit_domain(transducer)` | `BYTE`, `UNICODE_SCALAR`, or `U64`. |
@@ -132,10 +223,10 @@ exception is rethrown only after native traversal has returned and the cursor
 has closed.
 
 Close long-lived values deterministically with `close` in `finally`. Finalizers
-are leak containment, not a scheduling guarantee. A cursor is exclusive and
-single-consumer. Independent cursors and immutable transducers may be queried
-from separate tasks; do not race `close` against another operation on the same
-wrapper.
+are leak containment, not a scheduling guarantee. Query cursors and online
+automata are exclusive and single-consumer. Immutable transducers and
+standalone configuration handles may be used by independently synchronized
+tasks; do not race `close` against another operation on the same wrapper.
 
 `QueryCache` is also exclusive and intentionally contains no lock. For
 parallel workloads, allocate one cache per task or worker; each shard retains

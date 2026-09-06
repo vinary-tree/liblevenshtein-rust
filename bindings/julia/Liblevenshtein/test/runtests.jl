@@ -13,10 +13,18 @@ const LL = Liblevenshtein
     @test LL.ALGORITHM_STANDARD isa LL.Algorithm
     @test LL.ORDER_TRAVERSAL isa LL.QueryOrder
     @test LL.RULES_ENGLISH_ORTHOGRAPHY isa LL.PhoneticRuleSetKind
+    @test LL.APPLICABILITY_ANY isa LL.OperationApplicability
+    @test LL.UNIVERSAL_STANDARD isa LL.UniversalVariant
     @test sizeof(LL.RawMatch) == 48
     @test sizeof(LL.RawBatch) == 24
     @test sizeof(LL.RawQueryCacheStats) == 64
     @test sizeof(LL.OwnedString) == 16
+    @test sizeof(LL.RawAutomatonLimits) == 32
+    @test sizeof(LL.RawGeneralizedRestriction) == 32
+    @test sizeof(LL.RawGeneralizedOperation) == 64
+    @test sizeof(LL.RawGeneralizedObservation) == 32
+    @test sizeof(LL.RawUniversalEquivalence) == 16
+    @test sizeof(LL.RawUniversalObservation) == 24
 end
 
 @testset "bounded TinyLFU/SIEVE query cache" begin
@@ -49,6 +57,175 @@ end
         close(dictionary)
     end
     @test !isopen(cache)
+end
+
+@testset "standalone generalized automata" begin
+    operations = LL.GeneralizedOperationSet(
+        LL.GeneralizedOperation(0, 1, 1, :insert),
+        LL.GeneralizedOperation(1, 0, 1, :delete),
+        LL.GeneralizedOperation(1, 1, 0, :equal;
+            applicability=LL.APPLICABILITY_EQUAL),
+        LL.GeneralizedOperation(1, 1, 0.5, :substitute),
+    )
+    automaton = LL.GeneralizedAutomaton(2, operations)
+    try
+        result = @inferred LL.evaluate(automaton, "cat", "cut")
+        @test result.accepting
+        @test result.distance == 1 // 2
+        @test result.scaled_distance == 1
+        @test result.scale_denominator == 2
+        @test LL.accepts(automaton, "cat", "cut")
+
+        online = LL.online(automaton, "a";
+            limits=LL.AutomatonLimits(max_target_units=1))
+        try
+            @test LL.advance!(online, 'a').accepting
+            failure = try
+                LL.advance!(online, 'b')
+                nothing
+            catch error
+                error
+            end
+            @test failure isa LL.NativeError
+            @test failure.status == Int32(LL.STATUS_LIMIT_EXCEEDED)
+            @test LL.observation(online).consumed_target_length == 1
+        finally
+            LL.close!(online)
+        end
+    finally
+        LL.close!(automaton)
+    end
+
+    listed = LL.GeneralizedAutomaton(1, (
+        LL.GeneralizedOperation(2, 1, 0.5, :phoneme;
+            restrictions=("ph" => "f",)),
+    ))
+    try
+        @test LL.evaluate(listed, "ph", "f").distance == 1 // 2
+        @test !LL.accepts(listed, "f", "ph")
+    finally
+        close(listed)
+    end
+
+    bridge = LL.GeneralizedAutomaton(0, (
+        LL.GeneralizedOperation(2, 2, 0, :pair;
+            applicability=LL.APPLICABILITY_EQUAL),
+    ))
+    try
+        prefixes = LL.prefix_observations(bridge, "ab", "ab")
+        values = collect(prefixes)
+        @test !values[1].current_row_nonempty
+        @test !values[1].accepting
+        @test values[2].accepting
+        @test values[2].distance == 0 // 1
+        @test !isopen(prefixes)
+    finally
+        close(bridge)
+    end
+
+    invalid = LL.GeneralizedOperation(0, 0, 1, :invalid)
+    error = try
+        LL.GeneralizedAutomaton(1, (invalid,))
+        nothing
+    catch value
+        value
+    end
+    @test error isa LL.NativeError
+    @test error.status == Int32(LL.STATUS_INVALID_ARGUMENT)
+end
+
+@testset "standalone universal automata" begin
+    standard = LL.UniversalAutomaton(1; variant=LL.UNIVERSAL_STANDARD)
+    transposition = LL.UniversalAutomaton(1; variant=LL.UNIVERSAL_TRANSPOSITION)
+    merge_split = LL.UniversalAutomaton(1; variant=LL.UNIVERSAL_MERGE_AND_SPLIT)
+    try
+        @test !LL.accepts(standard, "ab", "ba")
+        @test LL.accepts(transposition, "ab", "ba")
+        @test LL.accepts(merge_split, "a", "ab")
+        @test LL.evaluate(standard, UInt8[0xff], UInt8[0xff]).accepting
+        @test LL.evaluate(standard, UInt64[typemax(UInt64)],
+            UInt64[typemax(UInt64)]).accepting
+
+        prefixes = LL.prefix_observations(transposition, "ab", "ba")
+        values = collect(prefixes)
+        @test length(values) == 2
+        @test values[end].accepting
+        @test !isopen(prefixes)
+    finally
+        close(standard)
+        close(transposition)
+        close(merge_split)
+    end
+
+    policy = LL.UniversalPolicy('p' => 'f')
+    directional = LL.UniversalAutomaton(0, policy)
+    try
+        @test LL.accepts(directional, "p", "f")
+        @test !LL.accepts(directional, "f", "p")
+        mismatch = try
+            LL.evaluate(directional, UInt8['p'], UInt8['f'])
+            nothing
+        catch error
+            error
+        end
+        @test mismatch isa LL.NativeError
+        @test mismatch.status == Int32(LL.STATUS_DOMAIN_MISMATCH)
+
+        state = LL.online(directional, "p")
+        close(directional)
+        try
+            @test LL.advance!(state, 'f').accepting
+        finally
+            close(state)
+        end
+    finally
+        isopen(directional) && close(directional)
+    end
+
+    byte_directional = LL.UniversalAutomaton(0,
+        LL.UniversalPolicy(0x70 => 0x66))
+    token_directional = LL.UniversalAutomaton(0,
+        LL.UniversalPolicy(UInt64(7) => UInt64(9)))
+    try
+        @test LL.accepts(byte_directional, UInt8[0x70], UInt8[0x66])
+        @test !LL.accepts(byte_directional, UInt8[0x66], UInt8[0x70])
+        @test LL.accepts(token_directional, UInt64[7], UInt64[9])
+        @test !LL.accepts(token_directional, UInt64[9], UInt64[7])
+    finally
+        close(byte_directional)
+        close(token_directional)
+    end
+
+    @test_throws ArgumentError LL.UniversalPolicy(())
+    @test_throws ArgumentError LL.UniversalPolicy('a' => 'b', 1 => 2)
+    @test_throws ArgumentError LL.AutomatonLimits(max_target_units=-1)
+
+    bounded = LL.UniversalAutomaton(2)
+    try
+        state = LL.online(bounded, "a";
+            limits=LL.AutomatonLimits(max_target_units=1))
+        try
+            @test LL.advance!(state, 'a').accepting
+            @test_throws LL.NativeError LL.advance!(state, 'b')
+            @test LL.observation(state).consumed_target_length == 1
+        finally
+            close(state)
+        end
+    finally
+        close(bounded)
+    end
+
+    scoped_open = Ref(false)
+    scoped = LL.UniversalAutomaton(0)
+    try
+        LL.prefix_observations(scoped, "x", "x") do prefixes
+            scoped_open[] = isopen(prefixes)
+            @test only(prefixes).accepting
+        end
+    finally
+        close(scoped)
+    end
+    @test scoped_open[]
 end
 
 @testset "resource-backed snapshots, iteration, and reduction" begin
