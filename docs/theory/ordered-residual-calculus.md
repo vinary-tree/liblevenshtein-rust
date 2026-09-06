@@ -656,11 +656,11 @@ snapshot, and an incomplete traversal must never report complete empty.
 For behaviors into $`[0,\infty]`$ on a common domain, define
 
 ```math
-a\mathbin{\dotminus}b=\inf\{r\in[0,\infty]:a\le b+r\},\qquad
-\Delta(F,G)=\sup_w\bigl(F(w)\mathbin{\dotminus}G(w)\bigr).
+a\mathbin{\dot{\smash{-}}}b=\inf\{r\in[0,\infty]:a\le b+r\},\qquad
+\Delta(F,G)=\sup_w\bigl(F(w)\mathbin{\dot{\smash{-}}}G(w)\bigr).
 ```
 
-In particular $`\infty\dotminus\infty=0`$; a finite right operand and
+In particular $`\infty\dot{\smash{-}}\infty=0`$; a finite right operand and
 infinite left operand give infinity. This avoids undefined subtraction of
 infinities. Equivalently, $`\Delta(F,G)`$ is the least uniform additive
 slack making $`F\le G+r`$; such a least extended slack exists here.
