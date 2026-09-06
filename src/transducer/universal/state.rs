@@ -279,9 +279,51 @@ impl<V: PositionVariant> UniversalState<V> {
     /// ```
     pub fn is_final(&self) -> bool {
         self.positions.iter().any(|pos| match pos {
-            UniversalPosition::MFinal { offset, .. } => *offset <= 0,
+            UniversalPosition::MFinal {
+                offset,
+                variant_state,
+                ..
+            } => *offset <= 0 && !V::is_pending(variant_state),
             _ => false,
         })
+    }
+
+    /// Return the exact minimum terminal edit cost represented by this state.
+    ///
+    /// `fixed_word_len` is the number of units in the fixed dictionary/query
+    /// word used to construct characteristic vectors; `processed_input_len` is
+    /// the number of streamed units consumed so far. Pending transposition and
+    /// split microstates are excluded because their macro-operation is not yet
+    /// complete.
+    pub fn accepting_distance(
+        &self,
+        fixed_word_len: usize,
+        processed_input_len: usize,
+    ) -> Option<usize> {
+        let fixed_word_len = i128::try_from(fixed_word_len).ok()?;
+        let processed_input_len = i128::try_from(processed_input_len).ok()?;
+        let maximum = i128::from(self.max_distance);
+
+        self.positions
+            .iter()
+            .filter(|position| !V::is_pending(position.variant_state()))
+            .filter_map(|position| {
+                let errors = i128::from(position.errors());
+                let total = if position.is_m_type() {
+                    (position.offset() <= 0).then_some(errors)?
+                } else {
+                    let fixed_position =
+                        processed_input_len.checked_add(i128::from(position.offset()))?;
+                    let remaining = fixed_word_len.checked_sub(fixed_position)?;
+                    (fixed_position >= 0 && remaining >= 0)
+                        .then_some(errors.checked_add(remaining)?)?
+                };
+
+                (total <= maximum)
+                    .then_some(total)
+                    .and_then(|total| usize::try_from(total).ok())
+            })
+            .min()
     }
 
     /// Get maximum distance
@@ -561,18 +603,30 @@ fn convert_position_with_length_diff<V: PositionVariant>(
     let n = max_distance as i32;
 
     match pos {
-        UniversalPosition::INonFinal { .. } => {
+        UniversalPosition::INonFinal { variant_state, .. } => {
             // I-type → M-type: Adjust offset based on how far we've crossed
             // The formula accounts for the crossing amount: (n + 1 - length_diff)
             let crossing_adjustment = n + 1 - length_diff;
             let new_offset = offset + crossing_adjustment;
-            UniversalPosition::new_m(new_offset, errors, max_distance).ok()
+            UniversalPosition::new_m_with_state(
+                new_offset,
+                errors,
+                max_distance,
+                variant_state.clone(),
+            )
+            .ok()
         }
-        UniversalPosition::MFinal { .. } => {
+        UniversalPosition::MFinal { variant_state, .. } => {
             // M-type → I-type: Reverse adjustment
             let crossing_adjustment = n + 1 + length_diff;
             let new_offset = offset - crossing_adjustment;
-            UniversalPosition::new_i(new_offset, errors, max_distance).ok()
+            UniversalPosition::new_i_with_state(
+                new_offset,
+                errors,
+                max_distance,
+                variant_state.clone(),
+            )
+            .ok()
         }
     }
 }
@@ -595,10 +649,48 @@ impl<V: PositionVariant> fmt::Display for UniversalState<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transducer::universal::position::Standard;
+    use crate::transducer::universal::position::{
+        MergeAndSplit, MergeSplitState, Standard, Transposition, TranspositionState,
+    };
 
     // =========================================================================
     // Basic State Tests
+
+    #[test]
+    fn pending_multi_unit_operations_are_not_terminal() {
+        let mut transposition = UniversalState::<Transposition>::new(1);
+        transposition.add_position(
+            UniversalPosition::new_m_with_state(0, 1, 1, TranspositionState::Transposing)
+                .expect("pending transposition is structurally valid"),
+        );
+        assert!(!transposition.is_final());
+        assert_eq!(transposition.accepting_distance(1, 1), None);
+
+        let mut split = UniversalState::<MergeAndSplit>::new(1);
+        split.add_position(
+            UniversalPosition::new_m_with_state(0, 1, 1, MergeSplitState::Splitting)
+                .expect("pending split is structurally valid"),
+        );
+        assert!(!split.is_final());
+        assert_eq!(split.accepting_distance(1, 1), None);
+    }
+
+    #[test]
+    fn canonical_state_identity_keeps_distinct_operation_phases() {
+        let mut state = UniversalState::<Transposition>::new(1);
+        let usual = UniversalPosition::new_i_with_state(-1, 1, 1, TranspositionState::Usual)
+            .expect("ordinary phase is structurally valid");
+        let pending =
+            UniversalPosition::new_i_with_state(-1, 1, 1, TranspositionState::Transposing)
+                .expect("pending phase is structurally valid");
+
+        assert_ne!(usual.cmp(&pending), std::cmp::Ordering::Equal);
+        state.add_position(usual.clone());
+        state.add_position(pending.clone());
+        assert_eq!(state.len(), 2);
+        assert!(state.contains(&usual));
+        assert!(state.contains(&pending));
+    }
     // =========================================================================
 
     #[test]

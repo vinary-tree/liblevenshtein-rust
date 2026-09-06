@@ -193,25 +193,9 @@ fn universal_state_is_accepting<V: PositionVariant>(
     state: &UniversalState<V>,
     word_len: usize,
     input_len: usize,
-    max_distance: u8,
+    _max_distance: u8,
 ) -> bool {
-    let distance = i128::from(max_distance);
-    let word_len = word_len as i128;
-    let input_len = input_len as i128;
-
-    state.positions().any(|position| {
-        if position.is_m_type() {
-            position.offset() <= 0 && position.errors() <= max_distance
-        } else {
-            let current_word_pos = input_len + i128::from(position.offset());
-            if current_word_pos < 0 {
-                return false;
-            }
-            let remaining_chars = word_len - current_word_pos;
-            let remaining_errors = distance - i128::from(position.errors());
-            remaining_chars >= 0 && remaining_chars <= remaining_errors
-        }
-    })
+    state.accepting_distance(word_len, input_len).is_some()
 }
 
 // Backward-compatible constructors for Unrestricted policy
@@ -531,6 +515,9 @@ impl<V: PositionVariant, P: SubstitutionPolicy> UniversalAutomaton<V, P> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::distance::{
+        merge_and_split_distance_units, standard_distance_units, transposition_distance_units,
+    };
     use crate::transducer::universal::{MergeAndSplit, Standard, Transposition};
     use crate::transducer::{
         OwnedRestricted, OwnedRestrictedChar, Restricted, RestrictedChar, SubstitutionSet,
@@ -579,6 +566,100 @@ mod tests {
         assert!(online.is_accepting());
         assert_eq!(online.word_length(), 4);
         assert_eq!(online.input_length(), 4);
+    }
+
+    fn universal_distance<V: PositionVariant>(
+        word: &[u8],
+        input: &[u8],
+        maximum: u8,
+    ) -> Option<usize> {
+        let automaton = UniversalAutomaton::<V>::new(maximum);
+        let mut online = automaton.online_units(word);
+        for unit in input {
+            if !online.advance(*unit) {
+                return None;
+            }
+        }
+        online
+            .state()
+            .and_then(|state| state.accepting_distance(word.len(), input.len()))
+    }
+
+    fn batch_universal_distance<V: PositionVariant>(
+        word: &[u8],
+        input: &[u8],
+        maximum: u8,
+    ) -> Option<usize> {
+        let word: String = word.iter().map(|unit| char::from(b'a' + unit)).collect();
+        let input: String = input.iter().map(|unit| char::from(b'a' + unit)).collect();
+        let encoding = crate::transducer::universal::encode_word_pair(&word, &input, maximum)?;
+        UniversalAutomaton::<V>::new(maximum)
+            .process(&encoding)
+            .and_then(|state| state.accepting_distance(word.chars().count(), input.chars().count()))
+    }
+
+    fn binary_words(maximum_len: usize) -> Vec<Vec<u8>> {
+        let mut words = vec![Vec::new()];
+        let mut frontier = vec![Vec::new()];
+        for _ in 0..maximum_len {
+            let mut next = Vec::with_capacity(frontier.len().saturating_mul(2));
+            for prefix in frontier {
+                for unit in 0_u8..=1 {
+                    let mut word = prefix.clone();
+                    word.push(unit);
+                    next.push(word);
+                }
+            }
+            words.extend(next.iter().cloned());
+            frontier = next;
+        }
+        words
+    }
+
+    #[test]
+    fn every_small_universal_language_and_weight_matches_dynamic_programming() {
+        let words = binary_words(4);
+        for word in &words {
+            for input in &words {
+                let standard = standard_distance_units(word, input);
+                let transposition = transposition_distance_units(word, input);
+                let merge_and_split = merge_and_split_distance_units(word, input);
+                for maximum in 0_u8..=3 {
+                    let within =
+                        |distance: usize| (distance <= usize::from(maximum)).then_some(distance);
+                    assert_eq!(
+                        universal_distance::<Standard>(word, input, maximum),
+                        within(standard),
+                        "Standard word={word:?} input={input:?} maximum={maximum}"
+                    );
+                    assert_eq!(
+                        universal_distance::<Transposition>(word, input, maximum),
+                        within(transposition),
+                        "Transposition word={word:?} input={input:?} maximum={maximum}"
+                    );
+                    assert_eq!(
+                        universal_distance::<MergeAndSplit>(word, input, maximum),
+                        within(merge_and_split),
+                        "MergeAndSplit word={word:?} input={input:?} maximum={maximum}"
+                    );
+                    assert_eq!(
+                        batch_universal_distance::<Standard>(word, input, maximum),
+                        within(standard),
+                        "batch Standard word={word:?} input={input:?} maximum={maximum}"
+                    );
+                    assert_eq!(
+                        batch_universal_distance::<Transposition>(word, input, maximum),
+                        within(transposition),
+                        "batch Transposition word={word:?} input={input:?} maximum={maximum}"
+                    );
+                    assert_eq!(
+                        batch_universal_distance::<MergeAndSplit>(word, input, maximum),
+                        within(merge_and_split),
+                        "batch MergeAndSplit word={word:?} input={input:?} maximum={maximum}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]
@@ -672,6 +753,41 @@ mod tests {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig::with_cases(256))]
+
+        #[test]
+        fn standard_universal_distance_matches_dynamic_programming(
+            word in prop::collection::vec(0_u8..=2, 0..=5),
+            input in prop::collection::vec(0_u8..=2, 0..=5),
+            maximum in 0_u8..=3,
+        ) {
+            let expected = standard_distance_units(&word, &input);
+            let expected = (expected <= usize::from(maximum)).then_some(expected);
+            prop_assert_eq!(universal_distance::<Standard>(&word, &input, maximum), expected);
+        }
+
+        #[test]
+        fn transposition_universal_distance_matches_dynamic_programming(
+            word in prop::collection::vec(0_u8..=2, 0..=5),
+            input in prop::collection::vec(0_u8..=2, 0..=5),
+            maximum in 0_u8..=3,
+        ) {
+            let expected = transposition_distance_units(&word, &input);
+            let expected = (expected <= usize::from(maximum)).then_some(expected);
+            prop_assert_eq!(universal_distance::<Transposition>(&word, &input, maximum), expected);
+        }
+
+        #[test]
+        fn merge_and_split_universal_distance_matches_dynamic_programming(
+            word in prop::collection::vec(0_u8..=2, 0..=5),
+            input in prop::collection::vec(0_u8..=2, 0..=5),
+            maximum in 0_u8..=3,
+        ) {
+            let expected = merge_and_split_distance_units(&word, &input);
+            let expected = (expected <= usize::from(maximum)).then_some(expected);
+            prop_assert_eq!(universal_distance::<MergeAndSplit>(&word, &input, maximum), expected);
+        }
+
         #[test]
         fn unicode_policy_matches_directional_dynamic_programming_oracle(
             word in prop::collection::vec(prop_oneof![Just('a'), Just('c'), Just('e'), Just('é'), Just('x')], 0..9),
