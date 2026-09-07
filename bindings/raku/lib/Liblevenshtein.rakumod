@@ -55,6 +55,26 @@ our constant ENGLISH-ORTHOGRAPHY is export =
 our constant ENGLISH-PHONETIC is export =
     Liblevenshtein::GeneratedAbi::ENGLISH-PHONETIC;
 
+our constant OperationApplicability is export =
+    Liblevenshtein::GeneratedAbi::OperationApplicability;
+our constant APPLICABILITY-ANY is export =
+    Liblevenshtein::GeneratedAbi::APPLICABILITY-ANY;
+our constant APPLICABILITY-EQUAL is export =
+    Liblevenshtein::GeneratedAbi::APPLICABILITY-EQUAL;
+our constant APPLICABILITY-ADJACENT-TRANSPOSE is export =
+    Liblevenshtein::GeneratedAbi::APPLICABILITY-ADJACENT-TRANSPOSE;
+our constant APPLICABILITY-LISTED is export =
+    Liblevenshtein::GeneratedAbi::APPLICABILITY-LISTED;
+
+our constant UniversalVariant is export =
+    Liblevenshtein::GeneratedAbi::UniversalVariant;
+our constant UNIVERSAL-STANDARD is export =
+    Liblevenshtein::GeneratedAbi::UNIVERSAL-STANDARD;
+our constant UNIVERSAL-TRANSPOSITION is export =
+    Liblevenshtein::GeneratedAbi::UNIVERSAL-TRANSPOSITION;
+our constant UNIVERSAL-MERGE-AND-SPLIT is export =
+    Liblevenshtein::GeneratedAbi::UNIVERSAL-MERGE-AND-SPLIT;
+
 module InteropAccess {
     use Vinary::Tree::Interop;
 

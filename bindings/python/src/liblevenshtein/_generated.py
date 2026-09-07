@@ -2,7 +2,7 @@
 from enum import IntEnum
 
 ABI_VERSION = 1
-API_REVISION = 4
+API_REVISION = 5
 DEFAULT_MATCH_BATCH = 256
 
 class Status(IntEnum):
@@ -58,3 +58,23 @@ class PhoneticRuleSetKind(IntEnum):
     """English orthography normalization."""
     ENGLISH_PHONETIC = 1
     """English phonetic transformation."""
+
+class OperationApplicability(IntEnum):
+    """Runtime generalized-operation applicability predicate."""
+    ANY = 0
+    """Apply without inspecting consumed units."""
+    EQUAL = 1
+    """Apply only when the consumed source and target slices are equal."""
+    ADJACENT_TRANSPOSE = 2
+    """Apply only to an adjacent two-unit transposition."""
+    LISTED = 3
+    """Apply only to a configured directional source/target pair."""
+
+class UniversalVariant(IntEnum):
+    """Universal edit-automaton variant."""
+    STANDARD = 0
+    """Standard insert/delete/substitute universal automaton."""
+    TRANSPOSITION = 1
+    """Universal automaton with adjacent transposition."""
+    MERGE_AND_SPLIT = 2
+    """Universal automaton with merge-and-split edits."""

@@ -1,6 +1,6 @@
 /** Generated from bindings/api.json; do not edit numeric values manually. */
 export const ABI_VERSION: 1;
-export const API_REVISION: 4;
+export const API_REVISION: 5;
 export const DEFAULT_MATCH_BATCH: 256;
 export enum Status {
   Ok = 0,
@@ -30,4 +30,15 @@ export enum Queryorder {
 export enum Phoneticrulesetkind {
   EnglishOrthography = 0,
   EnglishPhonetic = 1,
+}
+export enum Operationapplicability {
+  Any = 0,
+  Equal = 1,
+  AdjacentTranspose = 2,
+  Listed = 3,
+}
+export enum Universalvariant {
+  Standard = 0,
+  Transposition = 1,
+  MergeAndSplit = 2,
 }

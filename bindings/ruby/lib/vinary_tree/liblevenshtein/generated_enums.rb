@@ -36,5 +36,18 @@ module VinaryTree
       ENGLISH_PHONETIC = 1
     end
 
+    module OperationApplicability
+      ANY = 0
+      EQUAL = 1
+      ADJACENT_TRANSPOSE = 2
+      LISTED = 3
+    end
+
+    module UniversalVariant
+      STANDARD = 0
+      TRANSPOSITION = 1
+      MERGE_AND_SPLIT = 2
+    end
+
   end
 end

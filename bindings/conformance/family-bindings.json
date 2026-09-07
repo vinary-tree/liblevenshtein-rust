@@ -193,6 +193,7 @@
       "id": "liblevenshtein",
       "role": "core-library",
       "root": ".",
+      "evidenceRoot": "liblevenshtein-rust",
       "unitDomains": ["byte", "unicode-scalar", "u64"],
       "capabilities": [
         "levenshtein-distance",

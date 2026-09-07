@@ -145,6 +145,13 @@ variants, protocols, or methods.
 | `cursor:next` | One-shot owned-result iteration | Public facade protocol |
 | `cursor:reduce_batches` | Bounded batch/reducer traversal | Public facade protocol |
 
+### Facade-encapsulated model values
+
+| Model value | Idiomatic treatment |
+|---|---|
+| `operationApplicability` | the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter |
+| `universalVariant` | the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter |
+
 Native operations omitted from the public-symbol table are deliberately
 encapsulated by the facade. The generated completeness matrix records every
 such operation with its reviewed rationale; an unreasoned absence fails CI.

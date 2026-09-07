@@ -24,6 +24,21 @@ export ABI_VERSION,
     QueryCache,
     QueryCacheStats,
     QueryCursor,
+    AutomatonLimits,
+    GeneralizedRestriction,
+    GeneralizedOperation,
+    GeneralizedOperationSet,
+    GeneralizedObservation,
+    GeneralizedAutomaton,
+    GeneralizedOnlineAutomaton,
+    UniversalEquivalence,
+    UniversalPolicy,
+    UnrestrictedPolicy,
+    UNRESTRICTED_POLICY,
+    UniversalObservation,
+    UniversalAutomaton,
+    UniversalOnlineAutomaton,
+    PrefixObservations,
     PhoneticPattern,
     PhoneticRuleSet,
     abi_version,
@@ -34,6 +49,12 @@ export ABI_VERSION,
     damerau_distance,
     true_damerau_distance,
     merge_and_split_distance,
+    evaluate,
+    accepts,
+    online,
+    observation,
+    advance!,
+    prefix_observations,
     snapshot,
     unit_domain,
     query,
@@ -51,7 +72,16 @@ export ABI_VERSION,
     ORDER_TRAVERSAL,
     ORDER_DISTANCE_THEN_TERM,
     RULES_ENGLISH_ORTHOGRAPHY,
-    RULES_ENGLISH_PHONETIC
+    RULES_ENGLISH_PHONETIC,
+    OperationApplicability,
+    UniversalVariant,
+    APPLICABILITY_ANY,
+    APPLICABILITY_EQUAL,
+    APPLICABILITY_ADJACENT_TRANSPOSE,
+    APPLICABILITY_LISTED,
+    UNIVERSAL_STANDARD,
+    UNIVERSAL_TRANSPOSITION,
+    UNIVERSAL_MERGE_AND_SPLIT
 
 """A copied native failure with its stable status, operation, and diagnostic."""
 struct NativeError <: Exception
@@ -346,6 +376,8 @@ merge_and_split_distance(source::AbstractVector{UInt8}, target::AbstractVector{U
 merge_and_split_distance(source::AbstractVector{UInt64}, target::AbstractVector{UInt64};
     threshold=nothing) = unit_family(:llev_merge_and_split_distance_u64,
     :llev_merge_and_split_distance_u64_threshold, source, target, threshold)
+
+include("Automata.jl")
 
 function materialize(value::RawMatch)
     domain = VTI.UnitDomain(value.unit_domain)

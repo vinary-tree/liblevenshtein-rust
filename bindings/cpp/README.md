@@ -104,9 +104,30 @@ variants, protocols, or methods.
 | `llev_api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `llev_build_features` | `llev_build_features` | ABI compatibility and feature discovery |
 | `llev_damerau_distance` | `llev_damerau_distance` | standalone exact or thresholded distance |
+| `llev_damerau_distance_bytes` | `llev_damerau_distance_bytes` | standalone exact or thresholded distance |
+| `llev_damerau_distance_bytes_threshold` | `llev_damerau_distance_bytes_threshold` | standalone exact or thresholded distance |
 | `llev_damerau_distance_threshold` | `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
+| `llev_damerau_distance_u64` | `llev_damerau_distance_u64` | standalone exact or thresholded distance |
+| `llev_damerau_distance_u64_threshold` | `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
 | `llev_distance` | `llev_distance` | standalone exact or thresholded distance |
+| `llev_distance_bytes` | `llev_distance_bytes` | standalone exact or thresholded distance |
+| `llev_distance_bytes_threshold` | `llev_distance_bytes_threshold` | standalone exact or thresholded distance |
 | `llev_distance_threshold` | `llev_distance_threshold` | standalone exact or thresholded distance |
+| `llev_distance_u64` | `llev_distance_u64` | standalone exact or thresholded distance |
+| `llev_distance_u64_threshold` | `llev_distance_u64_threshold` | standalone exact or thresholded distance |
+| `llev_generalized_automaton_evaluate_utf8` | `llev_generalized_automaton_evaluate_utf8` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `llev_generalized_automaton_free` | `llev_generalized_automaton_free` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `llev_generalized_automaton_new` | `llev_generalized_automaton_new` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `llev_generalized_online_advance` | `llev_generalized_online_advance` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `llev_generalized_online_free` | `llev_generalized_online_free` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `llev_generalized_online_new_utf8` | `llev_generalized_online_new_utf8` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `llev_generalized_online_observation` | `llev_generalized_online_observation` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `llev_merge_and_split_distance` | `llev_merge_and_split_distance` | standalone merge-and-split distance |
+| `llev_merge_and_split_distance_bytes` | `llev_merge_and_split_distance_bytes` | standalone merge-and-split distance |
+| `llev_merge_and_split_distance_bytes_threshold` | `llev_merge_and_split_distance_bytes_threshold` | standalone merge-and-split distance |
+| `llev_merge_and_split_distance_threshold` | `llev_merge_and_split_distance_threshold` | standalone merge-and-split distance |
+| `llev_merge_and_split_distance_u64` | `llev_merge_and_split_distance_u64` | standalone merge-and-split distance |
+| `llev_merge_and_split_distance_u64_threshold` | `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
 | `llev_owned_string_free` | `llev_owned_string_free` | owned result-string release |
 | `llev_phonetic_pattern_compile_llre` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
 | `llev_phonetic_pattern_compile_regex` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
@@ -125,7 +146,18 @@ variants, protocols, or methods.
 | `llev_transducer_query_pattern` | `llev_transducer_query_pattern` | phonetic-pattern dictionary query |
 | `llev_transducer_unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_true_damerau_distance` | `llev_true_damerau_distance` | standalone true-Damerau distance |
+| `llev_true_damerau_distance_bytes` | `llev_true_damerau_distance_bytes` | standalone true-Damerau distance |
+| `llev_true_damerau_distance_bytes_threshold` | `llev_true_damerau_distance_bytes_threshold` | standalone true-Damerau distance |
 | `llev_true_damerau_distance_threshold` | `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
+| `llev_true_damerau_distance_u64` | `llev_true_damerau_distance_u64` | standalone true-Damerau distance |
+| `llev_true_damerau_distance_u64_threshold` | `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
+| `llev_universal_automaton_evaluate` | `llev_universal_automaton_evaluate` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_universal_automaton_free` | `llev_universal_automaton_free` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_universal_automaton_new` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_universal_online_advance` | `llev_universal_online_advance` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_universal_online_free` | `llev_universal_online_free` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_universal_online_new` | `llev_universal_online_new` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_universal_online_observation` | `llev_universal_online_observation` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `query_cache::clear` | `llev_query_cache_clear` | project ABI operation |
 | `query_cache::query` | `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64` | project ABI operation |
 | `query_cache::reset_stats` | `llev_query_cache_reset_stats` | project ABI operation |
@@ -148,6 +180,8 @@ variants, protocols, or methods.
 | `vinary_tree::liblevenshtein::algorithm` | Edit-distance algorithm selection | Public facade type |
 | `vinary_tree::liblevenshtein::query_order` | Result traversal ordering | Public facade type |
 | `LlevPhoneticRuleSetKind` | Built-in phonetic rule-set selection | C API passthrough via the included liblevenshtein.h |
+| `LlevOperationApplicability` | Generalized-operation applicability selection | C API passthrough via the included liblevenshtein.h |
+| `LlevUniversalVariant` | Universal edit-automaton variant selection | C API passthrough via the included liblevenshtein.h |
 | `vinary_tree::liblevenshtein::query_cursor::next_batch` | One-shot owned-result iteration | Public facade protocol |
 | `llev_query_cursor_reduce` | Bounded batch/reducer traversal | C API passthrough via the included liblevenshtein.h |
 

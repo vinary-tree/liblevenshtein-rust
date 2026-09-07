@@ -83,3 +83,25 @@ public enum PhoneticRuleSetKind: UInt32, Sendable {
     /// English phonetic transformation.
     case englishPhonetic = 1
 }
+
+/// Runtime generalized-operation applicability predicate.
+public enum OperationApplicability: UInt32, Sendable {
+    /// Apply without inspecting consumed units.
+    case any = 0
+    /// Apply only when the consumed source and target slices are equal.
+    case equal = 1
+    /// Apply only to an adjacent two-unit transposition.
+    case adjacentTranspose = 2
+    /// Apply only to a configured directional source/target pair.
+    case listed = 3
+}
+
+/// Universal edit-automaton variant.
+public enum UniversalVariant: UInt32, Sendable {
+    /// Standard insert/delete/substitute universal automaton.
+    case standard = 0
+    /// Universal automaton with adjacent transposition.
+    case transposition = 1
+    /// Universal automaton with merge-and-split edits.
+    case mergeAndSplit = 2
+}

@@ -346,6 +346,9 @@ def main() -> int:
         seen_projects.add(project_id)
         role = clean(project.get("role"), f"{project_id}.role")
         modeled_root = clean(project.get("root"), f"{project_id}.root")
+        evidence_root = project.get("evidenceRoot")
+        if evidence_root is not None:
+            evidence_root = clean(evidence_root, f"{project_id}.evidenceRoot")
         environment = PROJECT_ROOT_ENVIRONMENTS.get(project_id)
         configured_root = os.environ.get(environment) if environment else None
         modeled_project_root = (ROOT / modeled_root).resolve()
@@ -423,11 +426,14 @@ def main() -> int:
                     )
                 if language_id in evidence:
                     default_state = "audit-required"
-                    default_evidence = str(
-                        (modeled_project_root / evidence[language_id]).relative_to(
-                            ROOT.parent
+                    if evidence_root is None:
+                        default_evidence = str(
+                            (modeled_project_root / evidence[language_id]).relative_to(
+                                ROOT.parent
+                            )
                         )
-                    )
+                    else:
+                        default_evidence = str(Path(evidence_root) / evidence[language_id])
                 elif language_id in reviews:
                     default_state = "review-required"
                     default_evidence = "-"

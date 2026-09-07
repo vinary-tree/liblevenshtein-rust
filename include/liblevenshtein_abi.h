@@ -15,7 +15,7 @@
 /** Binary ABI generation implemented by this header and library. */
 #define LLEV_ABI_VERSION 1u
 /** Additive API revision within LLEV_ABI_VERSION. */
-#define LLEV_API_REVISION 4u
+#define LLEV_API_REVISION 5u
 /** Default maximum descriptors borrowed by one cursor batch. */
 #define LLEV_DEFAULT_MATCH_BATCH 256u
 
@@ -61,6 +61,21 @@ typedef enum LlevPhoneticRuleSetKind {
     LLEV_PHONETIC_RULE_SET_ENGLISH_PHONETIC = 1 /**< English phonetic transformation. */
 } LlevPhoneticRuleSetKind;
 
+/** Runtime generalized-operation applicability predicate. */
+typedef enum LlevOperationApplicability {
+    LLEV_OPERATION_APPLICABILITY_ANY = 0, /**< Apply without inspecting consumed units. */
+    LLEV_OPERATION_APPLICABILITY_EQUAL = 1, /**< Apply only when the consumed source and target slices are equal. */
+    LLEV_OPERATION_APPLICABILITY_ADJACENT_TRANSPOSE = 2, /**< Apply only to an adjacent two-unit transposition. */
+    LLEV_OPERATION_APPLICABILITY_LISTED = 3 /**< Apply only to a configured directional source/target pair. */
+} LlevOperationApplicability;
+
+/** Universal edit-automaton variant. */
+typedef enum LlevUniversalVariant {
+    LLEV_UNIVERSAL_STANDARD = 0, /**< Standard insert/delete/substitute universal automaton. */
+    LLEV_UNIVERSAL_TRANSPOSITION = 1, /**< Universal automaton with adjacent transposition. */
+    LLEV_UNIVERSAL_MERGE_AND_SPLIT = 2 /**< Universal automaton with merge-and-split edits. */
+} LlevUniversalVariant;
+
 /** Opaque, shareable automaton configuration retaining a dictionary resource. */
 typedef struct LlevTransducer LlevTransducer;
 /** Opaque, exclusive lazy traversal over one immutable query-start snapshot. */
@@ -71,6 +86,70 @@ typedef struct LlevQueryCache LlevQueryCache;
 typedef struct LlevPhoneticPattern LlevPhoneticPattern;
 /** Opaque, immutable compiled phonetic rewrite-rule set. */
 typedef struct LlevPhoneticRuleSet LlevPhoneticRuleSet;
+/** Opaque, immutable runtime-configured generalized automaton. */
+typedef struct LlevGeneralizedAutomaton LlevGeneralizedAutomaton;
+/** Opaque, exclusive generalized online prefix state. */
+typedef struct LlevGeneralizedOnlineAutomaton LlevGeneralizedOnlineAutomaton;
+/** Opaque, immutable universal automaton and substitution policy. */
+typedef struct LlevUniversalAutomaton LlevUniversalAutomaton;
+/** Opaque, exclusive universal online prefix state. */
+typedef struct LlevUniversalOnlineAutomaton LlevUniversalOnlineAutomaton;
+
+/** Hard ceilings for standalone online and complete evaluation. */
+typedef struct LlevAutomatonLimits {
+    size_t max_source_units; /**< Maximum source units. */
+    size_t max_target_units; /**< Maximum committed target units. */
+    size_t max_retained_cells; /**< Generalized row-ring and scratch ceiling. */
+    size_t max_step_work_units; /**< Generalized relaxations per target unit. */
+} LlevAutomatonLimits;
+
+/** One borrowed directional source/target restriction for a listed operation. */
+typedef struct LlevGeneralizedRestriction {
+    const char* source_data; /**< Borrowed UTF-8 source bytes. */
+    size_t source_len; /**< Source byte length. */
+    const char* target_data; /**< Borrowed UTF-8 target bytes. */
+    size_t target_len; /**< Target byte length. */
+} LlevGeneralizedRestriction;
+
+/** One borrowed runtime generalized edit operation. */
+typedef struct LlevGeneralizedOperation {
+    size_t consume_source; /**< Unicode source scalars consumed. */
+    size_t consume_target; /**< Unicode target scalars consumed. */
+    double weight; /**< Non-negative finite decimal cost. */
+    const char* name_data; /**< Borrowed non-empty UTF-8 diagnostic name. */
+    size_t name_len; /**< Name byte length. */
+    uint32_t applicability; /**< One LlevOperationApplicability value. */
+    uint32_t reserved; /**< Must be zero. */
+    const LlevGeneralizedRestriction* restrictions; /**< LISTED pairs. */
+    size_t restriction_count; /**< Number of restriction descriptors. */
+} LlevGeneralizedOperation;
+
+/** One directional zero-cost universal source/target substitution pair. */
+typedef struct LlevUniversalEquivalence {
+    uint64_t source; /**< Dictionary/source unit. */
+    uint64_t target; /**< Query/target unit. */
+} LlevUniversalEquivalence;
+
+/** Exact observation of a generalized target prefix. */
+typedef struct LlevGeneralizedObservation {
+    size_t consumed_target_len; /**< Committed Unicode target scalars. */
+    size_t active_positions; /**< In-budget cells in the current generation. */
+    size_t scaled_distance; /**< Fixed-point numerator when present. */
+    uint32_t scale_denominator; /**< Shared exact decimal denominator. */
+    uint8_t current_row_nonempty; /**< Not a permanent-death signal. */
+    uint8_t accepting; /**< Complete source is currently in budget. */
+    uint8_t has_distance; /**< scaled_distance is present. */
+    uint8_t reserved; /**< Must be ignored; fixed to zero. */
+} LlevGeneralizedObservation;
+
+/** Exact observation of a universal target prefix. */
+typedef struct LlevUniversalObservation {
+    size_t consumed_target_len; /**< Committed target units. */
+    size_t source_len; /**< Bound source units. */
+    uint8_t alive; /**< Universal frontier is non-empty. */
+    uint8_t accepting; /**< Current prefix is accepted. */
+    uint8_t reserved[6]; /**< Must be ignored; fixed to zero. */
+} LlevUniversalObservation;
 
 /** One borrowed match descriptor inside a live cursor batch lease. */
 typedef struct LlevMatch {

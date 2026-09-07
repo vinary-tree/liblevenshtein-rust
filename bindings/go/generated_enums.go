@@ -67,3 +67,29 @@ const (
 	// EnglishPhonetic indicates english phonetic transformation.
 	EnglishPhonetic PhoneticRuleSetKind = 1
 )
+
+// OperationApplicability is the runtime generalized-operation applicability predicate.
+type OperationApplicability uint32
+
+const (
+	// ApplicabilityAny indicates apply without inspecting consumed units.
+	ApplicabilityAny OperationApplicability = 0
+	// ApplicabilityEqual indicates apply only when the consumed source and target slices are equal.
+	ApplicabilityEqual OperationApplicability = 1
+	// ApplicabilityAdjacentTranspose indicates apply only to an adjacent two-unit transposition.
+	ApplicabilityAdjacentTranspose OperationApplicability = 2
+	// ApplicabilityListed indicates apply only to a configured directional source/target pair.
+	ApplicabilityListed OperationApplicability = 3
+)
+
+// UniversalVariant is the universal edit-automaton variant.
+type UniversalVariant uint32
+
+const (
+	// UniversalStandard indicates standard insert/delete/substitute universal automaton.
+	UniversalStandard UniversalVariant = 0
+	// UniversalTransposition indicates universal automaton with adjacent transposition.
+	UniversalTransposition UniversalVariant = 1
+	// UniversalMergeAndSplit indicates universal automaton with merge-and-split edits.
+	UniversalMergeAndSplit UniversalVariant = 2
+)

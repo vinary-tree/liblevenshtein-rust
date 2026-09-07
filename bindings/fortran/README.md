@@ -130,6 +130,8 @@ variants, protocols, or methods.
 
 | Model value | Idiomatic treatment |
 |---|---|
+| `operationApplicability` | the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter |
+| `universalVariant` | the API-revision-5 selection is not yet projected into this idiomatic facade; its language-family automata parity task owns that adapter |
 | `reducer` | no public batch-reduction entry point; the safe iterator leases and materializes one bounded native batch at a time internally |
 
 Native operations omitted from the public-symbol table are deliberately
