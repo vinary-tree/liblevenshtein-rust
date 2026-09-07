@@ -19,12 +19,21 @@
 //!
 //! ## Success Criteria
 //!
-//! | Corpus | Metric | Target | Distance | Achieved |
-//! |--------|--------|--------|----------|----------|
-//! | Holbrook | Recall | >85% | ≤2 | 86.6% ✓ |
-//! | Holbrook | Recall | 100% | ≤3 | 100% ✓ |
-//! | Aspell | Coverage | >85% | ≤2 | 100% ✓ |
-//! | Wikipedia | Coverage | >90% | ≤2 | 100% ✓ |
+//! Eligible error pairs have reference distance at most three; each is queried
+//! at that reference distance. Recall through a distance is the fraction of
+//! **all eligible pairs** found at that distance or below, not the fraction of
+//! only pairs within that smaller bound. Frequencies do not weight the count.
+//! The following observations were reproduced on 6 September 2026 against the
+//! repository's corpus files. The distance-three row is a reported diagnostic,
+//! not an additional assertion in the test.
+//! Here $`d`$ is the unit-cost reference Levenshtein distance for the pair.
+//!
+//! | Corpus | Metric | Asserted minimum | Distance | Observed |
+//! |--------|--------|------------------|----------|----------|
+//! | Holbrook | Recall | 85% | $`d \le 2`$ | 86.6% |
+//! | Holbrook | Recall | Diagnostic only | $`d \le 3`$ | 100% |
+//! | Aspell | Recall | 85% | $`d \le 2`$ | 87.3% |
+//! | Wikipedia | Recall | 90% | $`d \le 2`$ | 97.6% |
 
 use libdictenstein::double_array_trie::DoubleArrayTrie;
 use liblevenshtein::corpus::MittonCorpus;
