@@ -203,15 +203,27 @@ pub fn convert_position<V: PositionVariant>(
     let k = k as i32;
 
     match pos {
-        UniversalPosition::INonFinal { .. } => {
+        UniversalPosition::INonFinal { variant_state, .. } => {
             // I-type → M-type: M + (i + n + 1 - k)#e
             let new_offset = offset + n + 1 - k;
-            UniversalPosition::new_m(new_offset, errors, max_distance).ok()
+            UniversalPosition::new_m_with_state(
+                new_offset,
+                errors,
+                max_distance,
+                variant_state.clone(),
+            )
+            .ok()
         }
-        UniversalPosition::MFinal { .. } => {
+        UniversalPosition::MFinal { variant_state, .. } => {
             // M-type → I-type: I + (i - n - 1 + k)#e
             let new_offset = offset - n - 1 + k;
-            UniversalPosition::new_i(new_offset, errors, max_distance).ok()
+            UniversalPosition::new_i_with_state(
+                new_offset,
+                errors,
+                max_distance,
+                variant_state.clone(),
+            )
+            .ok()
         }
     }
 }
@@ -219,7 +231,7 @@ pub fn convert_position<V: PositionVariant>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transducer::universal::position::Standard;
+    use crate::transducer::universal::position::{Standard, Transposition, TranspositionState};
 
     // =========================================================================
     // Right-Most Function Tests
@@ -407,6 +419,22 @@ mod tests {
         let i_pos = convert_position(&m_pos, 3, 2)
             .expect("doc/test fixture: convert_position with valid args");
         assert_eq!(i_pos.errors(), 2);
+    }
+
+    #[test]
+    fn conversion_preserves_pending_operation_phase() {
+        let pending = UniversalPosition::<Transposition>::new_i_with_state(
+            -1,
+            1,
+            1,
+            TranspositionState::Transposing,
+        )
+        .expect("pending transposition is structurally valid");
+        let converted = convert_position(&pending, 1, 1).expect("conversion is in range");
+
+        assert!(converted.is_m_type());
+        assert_eq!(converted.errors(), 1);
+        assert_eq!(converted.variant_state(), &TranspositionState::Transposing);
     }
 
     #[test]

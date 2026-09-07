@@ -101,6 +101,10 @@ use crate::transducer::{SubstitutionPolicy, SubstitutionPolicyFor};
 pub struct CharacteristicVector {
     /// Bit vector: `bits[i] = true` if the character matches at position `i`.
     bits: SmallVec<[bool; 16]>,
+    /// First index backed by a real fixed-word unit rather than left padding.
+    word_start: usize,
+    /// Exclusive end of the real fixed-word units in `bits`.
+    word_end: usize,
 }
 
 impl CharacteristicVector {
@@ -135,8 +139,31 @@ impl CharacteristicVector {
     /// //                            positions: b a n a n a
     /// ```
     pub fn new(character: char, word: &str) -> Self {
-        let bits = word.chars().map(|c| c == character).collect();
-        Self { bits }
+        let bits: SmallVec<[bool; 16]> = word.chars().map(|c| c == character).collect();
+        let word_end = bits.len();
+        Self {
+            bits,
+            word_start: 0,
+            word_end,
+        }
+    }
+
+    /// Build a characteristic vector over arbitrary fixed-word units with
+    /// nonmatching left padding.
+    ///
+    /// Padding is structural and cannot collide with any value in `U`, unlike
+    /// materializing a sentinel character inside the word.
+    #[inline]
+    pub fn from_padded_units<U: CharUnit>(input_unit: U, false_prefix: usize, word: &[U]) -> Self {
+        let mut bits = SmallVec::with_capacity(false_prefix.saturating_add(word.len()));
+        bits.resize(false_prefix, false);
+        bits.extend(word.iter().map(|word_unit| *word_unit == input_unit));
+        let word_end = false_prefix.saturating_add(word.len());
+        Self {
+            bits,
+            word_start: false_prefix,
+            word_end,
+        }
     }
 
     /// Build a characteristic vector over arbitrary dictionary units while
@@ -182,7 +209,7 @@ impl CharacteristicVector {
     /// subword. Padding is outside the unit alphabet and can never be matched by
     /// a policy.
     #[inline(always)]
-    pub(crate) fn from_padded_units_with_policy<U, P>(
+    pub fn from_padded_units_with_policy<U, P>(
         query_unit: U,
         false_prefix: usize,
         word: &[U],
@@ -207,7 +234,12 @@ impl CharacteristicVector {
             );
         }
 
-        Self { bits }
+        let word_end = false_prefix.saturating_add(word.len());
+        Self {
+            bits,
+            word_start: false_prefix,
+            word_end,
+        }
     }
 
     /// Returns the length of the characteristic vector (number of bits).
@@ -241,6 +273,17 @@ impl CharacteristicVector {
     #[inline]
     pub fn is_match(&self, position: usize) -> bool {
         self.bits[position]
+    }
+
+    /// Whether `position` denotes a real fixed-word unit.
+    ///
+    /// Universal windows contain false-valued left padding and may be
+    /// truncated at the right edge. Generic merge/split transitions use this
+    /// structural predicate to distinguish an actual mismatch from the
+    /// absence of a unit.
+    #[inline]
+    pub fn has_word_unit(&self, position: usize) -> bool {
+        self.word_start <= position && position < self.word_end
     }
 
     /// Returns an iterator over the bits in the characteristic vector.
@@ -291,6 +334,8 @@ impl CharacteristicVector {
     pub fn suffix(&self, start: usize) -> Self {
         Self {
             bits: self.bits[start..].iter().copied().collect(),
+            word_start: self.word_start.saturating_sub(start),
+            word_end: self.word_end.saturating_sub(start),
         }
     }
 
@@ -371,6 +416,7 @@ pub fn characteristic_vector(character: char, word: &str) -> CharacteristicVecto
 /// Special padding character used in word-pair encoding.
 ///
 /// From Definition 16 (page 50): $ ∉ Σ is used to pad the beginning of word w.
+#[cfg(test)]
 const PADDING_CHAR: char = '$';
 
 /// Computes the relevant subword sₙ(w, i) for position i.
@@ -406,7 +452,20 @@ const PADDING_CHAR: char = '$';
 /// let subword = relevant_subword_from_chars(&['a', 'b', 'c'], 1, 2);
 /// assert_eq!(subword, "$$abc");
 /// ```
+#[cfg(test)]
 fn relevant_subword_from_chars(word_chars: &[char], position: usize, max_distance: u8) -> String {
+    let (pad_count, word_units) = relevant_subword_parts(word_chars, position, max_distance);
+    let mut result = String::with_capacity(pad_count.saturating_add(word_units.len()));
+    result.extend(std::iter::repeat_n(PADDING_CHAR, pad_count));
+    result.extend(word_units.iter().copied());
+    result
+}
+
+fn relevant_subword_parts(
+    word_chars: &[char],
+    position: usize,
+    max_distance: u8,
+) -> (usize, &[char]) {
     let n = max_distance as usize;
     let word_len = word_chars.len();
 
@@ -417,16 +476,12 @@ fn relevant_subword_from_chars(word_chars: &[char], position: usize, max_distanc
     // End index: min(|w|, i + n).
     // Note: Thesis page 51 says i+n+1, but testing shows i+n gives correct results.
     let end = position.saturating_add(n).min(word_len);
-    let word_char_count = if start <= end { end - start + 1 } else { 0 };
-
-    let mut result = String::with_capacity(pad_count.saturating_add(word_char_count));
-    result.extend(std::iter::repeat_n(PADDING_CHAR, pad_count));
-
-    if start <= end {
-        result.extend(word_chars[start - 1..end].iter().copied());
-    }
-
-    result
+    let word_units = if start <= end {
+        &word_chars[start - 1..end]
+    } else {
+        &[]
+    };
+    (pad_count, word_units)
 }
 
 #[cfg(test)]
@@ -503,11 +558,9 @@ pub fn encode_word_pair(
     for (i, &character) in input_chars.iter().enumerate() {
         let position = i.saturating_add(1);
 
-        // Get the relevant subword sₙ(w, i)
-        let subword = relevant_subword_from_chars(&word_chars, position, max_distance);
-
-        // Compute β(xᵢ, sₙ(w, i))
-        let cv = characteristic_vector(character, &subword);
+        let (false_prefix, word_units) =
+            relevant_subword_parts(&word_chars, position, max_distance);
+        let cv = CharacteristicVector::from_padded_units(character, false_prefix, word_units);
 
         encoding.push(cv);
     }
@@ -582,6 +635,20 @@ mod tests {
             vector.iter().collect::<Vec<_>>(),
             vec![false, false, false, true, true]
         );
+        assert!(!vector.has_word_unit(0));
+        assert!(!vector.has_word_unit(2));
+        assert!(vector.has_word_unit(3));
+        assert!(vector.has_word_unit(4));
+        assert!(!vector.has_word_unit(5));
+    }
+
+    #[test]
+    fn word_pair_encoding_keeps_padding_outside_the_character_alphabet() {
+        let encoding = encode_word_pair("$a", "$a", 1).expect("bounded input is encodable");
+        assert_eq!(encoding[0].to_string(), "010");
+        assert!(!encoding[0].has_word_unit(0));
+        assert!(encoding[0].has_word_unit(1));
+        assert!(encoding[0].has_word_unit(2));
     }
 
     // ==================== CharacteristicVector Tests ====================

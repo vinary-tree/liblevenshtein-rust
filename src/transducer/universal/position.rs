@@ -129,10 +129,18 @@ pub trait PositionVariant: Clone + fmt::Debug + PartialEq + Eq + std::hash::Hash
     /// - Standard: `()` (zero-sized, no state needed)
     /// - Transposition: `TranspositionState` (Usual or Transposing)
     /// - MergeAndSplit: `MergeSplitState` (Usual or Splitting)
-    type State: Clone + fmt::Debug + PartialEq + Eq + std::hash::Hash + Default;
+    type State: Clone + fmt::Debug + PartialEq + Eq + Ord + std::hash::Hash + Default;
 
     /// Human-readable variant name
     fn variant_name() -> &'static str;
+
+    /// Whether a variant state is an unfinished multi-character operation.
+    /// Pending states are never accepting because their second input unit has
+    /// not yet been consumed.
+    #[inline]
+    fn is_pending(_state: &Self::State) -> bool {
+        false
+    }
 
     /// Compute successors for I-type positions with this variant
     ///
@@ -220,7 +228,7 @@ impl PositionVariant for Standard {
 /// From Mitankin's thesis (Definition 7, Page 16):
 /// - **Usual**: Regular position i#e
 /// - **Transposing**: Transposition state i#e_t (waiting to complete swap)
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum TranspositionState {
     /// Regular position (usual type)
     #[default]
@@ -244,6 +252,11 @@ impl PositionVariant for Transposition {
 
     fn variant_name() -> &'static str {
         "Transposition"
+    }
+
+    #[inline]
+    fn is_pending(state: &Self::State) -> bool {
+        matches!(state, TranspositionState::Transposing)
     }
 
     fn compute_i_successors(
@@ -285,23 +298,20 @@ impl PositionVariant for Transposition {
                 successors
             }
             TranspositionState::Transposing => {
-                // In transposition state: δ^D,t_e(i#e_t, b) = {(i+2)#(e-1)} if b[0] = 1, else ∅
-                // Cross-validated with lazy automaton: checks cv[0] and creates (i+2)#e
-                let Some(completed_errors) = errors.checked_sub(1) else {
-                    return vec![];
-                };
-
+                // The pending state already includes the transposition's unit
+                // cost. Completion consumes the second input character while
+                // preserving that error count: i#e_t -> (i+2)#e.
                 if bounded_bit_index(max_distance, offset, 0, bit_vector.len())
                     .is_some_and(|idx| bit_vector.is_match(idx))
                 {
-                    // Complete transposition: i#(e+1)_t → (i+2)#e
+                    // Complete transposition: i#e_t → (i+2)#e
                     // At input k: current word position i = offset + k
-                    // Lazy creates: (i+2)#(e-1) (absolute position i+2)
+                    // Lazy creates: (i+2)#e (absolute position i+2)
                     // At next input k+1: need offset' such that offset' + (k+1) = i+2 = (offset+k)+2
                     // Therefore: offset' = (offset+k+2) - (k+1) = offset + 1
                     if let Ok(succ) = UniversalPosition::new_i_with_state(
                         offset + 1,
-                        completed_errors,
+                        errors,
                         max_distance,
                         TranspositionState::Usual,
                     ) {
@@ -355,12 +365,8 @@ impl PositionVariant for Transposition {
                 successors
             }
             TranspositionState::Transposing => {
-                // In transposition state: δ^D,t_e(i#e_t, b) = {(i+2)#(e-1)} if b[0] = 1, else ∅
-                // Cross-validated with lazy automaton: checks cv[0] and creates (i+2)#e
-                let Some(completed_errors) = errors.checked_sub(1) else {
-                    return vec![];
-                };
-
+                // The pending state already includes the transposition's unit
+                // cost, which completion preserves.
                 if bounded_bit_index(max_distance, offset, 0, bit_vector.len())
                     .is_some_and(|idx| bit_vector.is_match(idx))
                 {
@@ -371,7 +377,7 @@ impl PositionVariant for Transposition {
                     // Therefore: offset' = (offset+k+2) - (k+1) = offset + 1
                     if let Ok(succ) = UniversalPosition::new_m_with_state(
                         offset + 1,
-                        completed_errors,
+                        errors,
                         max_distance,
                         TranspositionState::Usual,
                     ) {
@@ -411,7 +417,7 @@ impl PositionVariant for Transposition {
 /// From Mitankin's thesis (Definition 7, Page 16):
 /// - **Usual**: Regular position i#e
 /// - **Splitting**: Split state i#e_s (waiting to emit second character)
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum MergeSplitState {
     /// Regular position (usual type)
     #[default]
@@ -435,6 +441,11 @@ impl PositionVariant for MergeAndSplit {
         "MergeAndSplit"
     }
 
+    #[inline]
+    fn is_pending(state: &Self::State) -> bool {
+        matches!(state, MergeSplitState::Splitting)
+    }
+
     fn compute_i_successors(
         offset: i32,
         errors: u8,
@@ -444,37 +455,38 @@ impl PositionVariant for MergeAndSplit {
     ) -> Vec<UniversalPosition<Self>> {
         let is_splitting = matches!(variant_state, MergeSplitState::Splitting);
 
-        // Start with standard operations (always included - merge/split is ADDITIVE)
-        let mut successors = UniversalPosition::<Self>::successors_i_type_standard(
-            offset,
-            errors,
-            bit_vector,
-            max_distance,
-        );
+        // A pending split has exactly one legal completion microstep. Ordinary
+        // positions retain all standard operations because merge/split is
+        // additive to the standard metric.
+        let mut successors = if is_splitting {
+            Vec::new()
+        } else {
+            UniversalPosition::<Self>::successors_i_type_standard(
+                offset,
+                errors,
+                bit_vector,
+                max_distance,
+            )
+        };
 
-        // Bit vector indices
-        let match_index = bounded_bit_index(max_distance, offset, 0, bit_vector.len());
-        let next_match_index = bounded_bit_index(max_distance, offset, 1, bit_vector.len());
+        let current_word_index = bounded_bit_index(max_distance, offset, 0, bit_vector.len());
+        let next_word_index = bounded_bit_index(max_distance, offset, 1, bit_vector.len());
 
         if is_splitting {
-            // Split Completion: i#(e+1)_s → (i+1)#e
+            // Split Completion: i#e_s → (i+1)#e. The pending state already
+            // includes the split's unit cost, and the generic operation does
+            // not constrain the second input character.
             // At input k: current word position i = offset + k
             // Lazy creates: (i+1)#e (absolute position i+1)
             // At next input k+1: need offset' such that offset' + (k+1) = i+1 = (offset+k)+1
             // Therefore: offset' = (offset+k+1) - (k+1) = offset + 0
-            if let Some(completed_errors) = errors.checked_sub(1).filter(|_| {
-                match_index
-                    .as_ref()
-                    .is_some_and(|&idx| bit_vector.is_match(idx))
-            }) {
-                if let Ok(succ) = UniversalPosition::new_i_with_state(
-                    offset,           // offset + 0
-                    completed_errors, // Complete split: decrement error back
-                    max_distance,
-                    MergeSplitState::Usual,
-                ) {
-                    successors.push(succ);
-                }
+            if let Ok(succ) = UniversalPosition::new_i_with_state(
+                offset,
+                errors,
+                max_distance,
+                MergeSplitState::Usual,
+            ) {
+                successors.push(succ);
             }
         } else {
             // Not splitting - can enter merge or split
@@ -486,9 +498,8 @@ impl PositionVariant for MergeAndSplit {
             // At next input k+1: need offset' such that offset' + (k+1) = i+2 = (offset+k)+2
             // Therefore: offset' = (offset+k+2) - (k+1) = offset + 1
             if errors < max_distance
-                && next_match_index
-                    .as_ref()
-                    .is_some_and(|&idx| bit_vector.is_match(idx))
+                && current_word_index.is_some_and(|index| bit_vector.has_word_unit(index))
+                && next_word_index.is_some_and(|index| bit_vector.has_word_unit(index))
             {
                 if let Ok(merge) = UniversalPosition::new_i_with_state(
                     offset + 1,
@@ -507,9 +518,7 @@ impl PositionVariant for MergeAndSplit {
             // At next input k+1: need offset' such that offset' + (k+1) = i = offset+k
             // Therefore: offset' = (offset+k) - (k+1) = offset - 1
             if errors < max_distance
-                && match_index
-                    .as_ref()
-                    .is_some_and(|&idx| bit_vector.is_match(idx))
+                && current_word_index.is_some_and(|index| bit_vector.has_word_unit(index))
             {
                 if let Ok(split) = UniversalPosition::new_i_with_state(
                     offset - 1,
@@ -534,34 +543,30 @@ impl PositionVariant for MergeAndSplit {
     ) -> Vec<UniversalPosition<Self>> {
         let is_splitting = matches!(variant_state, MergeSplitState::Splitting);
 
-        // Start with standard operations (always included - merge/split is ADDITIVE)
-        let mut successors = UniversalPosition::<Self>::successors_m_type_standard(
-            offset,
-            errors,
-            bit_vector,
-            max_distance,
-        );
+        let mut successors = if is_splitting {
+            Vec::new()
+        } else {
+            UniversalPosition::<Self>::successors_m_type_standard(
+                offset,
+                errors,
+                bit_vector,
+                max_distance,
+            )
+        };
 
-        // Bit vector indices
-        let match_index = bounded_bit_index(max_distance, offset, 0, bit_vector.len());
-        let next_match_index = bounded_bit_index(max_distance, offset, 1, bit_vector.len());
+        let current_word_index = bounded_bit_index(max_distance, offset, 0, bit_vector.len());
+        let next_word_index = bounded_bit_index(max_distance, offset, 1, bit_vector.len());
 
         if is_splitting {
-            // Split Completion: i#(e+1)_s → (i+1)#e
-            // Same offset calculation as I-type
-            if let Some(completed_errors) = errors.checked_sub(1).filter(|_| {
-                match_index
-                    .as_ref()
-                    .is_some_and(|&idx| bit_vector.is_match(idx))
-            }) {
-                if let Ok(succ) = UniversalPosition::new_m_with_state(
-                    offset,           // offset + 0
-                    completed_errors, // Complete split: decrement error back
-                    max_distance,
-                    MergeSplitState::Usual,
-                ) {
-                    successors.push(succ);
-                }
+            // Split completion preserves the cost charged by entry and is
+            // independent of the second input character.
+            if let Ok(succ) = UniversalPosition::new_m_with_state(
+                offset,
+                errors,
+                max_distance,
+                MergeSplitState::Usual,
+            ) {
+                successors.push(succ);
             }
         } else {
             // Not splitting - can enter merge or split
@@ -569,9 +574,8 @@ impl PositionVariant for MergeAndSplit {
             // Merge Operation: i#e → (i+2)#(e+1)
             // Same offset calculation as I-type
             if errors < max_distance
-                && next_match_index
-                    .as_ref()
-                    .is_some_and(|&idx| bit_vector.is_match(idx))
+                && current_word_index.is_some_and(|index| bit_vector.has_word_unit(index))
+                && next_word_index.is_some_and(|index| bit_vector.has_word_unit(index))
             {
                 if let Ok(merge) = UniversalPosition::new_m_with_state(
                     offset + 1,
@@ -586,9 +590,7 @@ impl PositionVariant for MergeAndSplit {
             // Split Entry: i#e → i#(e+1)_s
             // Same offset calculation as I-type
             if errors < max_distance
-                && match_index
-                    .as_ref()
-                    .is_some_and(|&idx| bit_vector.is_match(idx))
+                && current_word_index.is_some_and(|index| bit_vector.has_word_unit(index))
             {
                 if let Ok(split) = UniversalPosition::new_m_with_state(
                     offset - 1,
@@ -695,29 +697,26 @@ impl<V: PositionVariant> Ord for UniversalPosition<V> {
                 INonFinal {
                     errors: e1,
                     offset: o1,
-                    ..
+                    variant_state: v1,
                 },
                 INonFinal {
                     errors: e2,
                     offset: o2,
-                    ..
+                    variant_state: v2,
                 },
             )
             | (
                 MFinal {
                     errors: e1,
                     offset: o1,
-                    ..
+                    variant_state: v1,
                 },
                 MFinal {
                     errors: e2,
                     offset: o2,
-                    ..
+                    variant_state: v2,
                 },
-            ) => match e1.cmp(e2) {
-                Ordering::Equal => o1.cmp(o2),
-                other => other,
-            },
+            ) => e1.cmp(e2).then_with(|| o1.cmp(o2)).then_with(|| v1.cmp(v2)),
             // I-type comes before M-type
             (INonFinal { .. }, MFinal { .. }) => Ordering::Less,
             (MFinal { .. }, INonFinal { .. }) => Ordering::Greater,
@@ -839,7 +838,9 @@ impl<V: PositionVariant> UniversalPosition<V> {
         max_distance: u8,
         variant_state: V::State,
     ) -> Result<Self, PositionError> {
-        if i_invariant_violated(offset, errors, max_distance) {
+        if i_invariant_violated(offset, errors, max_distance)
+            || (V::is_pending(&variant_state) && errors == 0)
+        {
             return Err(PositionError::InvalidIPosition {
                 offset,
                 errors,
@@ -868,7 +869,9 @@ impl<V: PositionVariant> UniversalPosition<V> {
         max_distance: u8,
         variant_state: V::State,
     ) -> Result<Self, PositionError> {
-        if m_invariant_violated(offset, errors, max_distance) {
+        if m_invariant_violated(offset, errors, max_distance)
+            || (V::is_pending(&variant_state) && errors == 0)
+        {
             return Err(PositionError::InvalidMPosition {
                 offset,
                 errors,
@@ -1488,37 +1491,25 @@ mod tests {
     use crate::transducer::universal::CharacteristicVector;
 
     #[test]
-    fn test_transposition_completion_zero_errors_returns_empty() {
+    fn pending_transposition_requires_its_prepaid_error() {
         let pos = UniversalPosition::<Transposition>::new_i_with_state(
             0,
             0,
             2,
             TranspositionState::Transposing,
-        )
-        .expect("test fixture: UniversalPosition::new_i_with_state with valid args");
-        let bv = CharacteristicVector::new('a', "$$a");
-
-        assert!(pos.successors(&bv, 2).is_empty());
+        );
+        assert!(matches!(pos, Err(PositionError::InvalidIPosition { .. })));
     }
 
     #[test]
-    fn test_split_completion_zero_errors_does_not_underflow() {
+    fn pending_split_requires_its_prepaid_error() {
         let pos = UniversalPosition::<MergeAndSplit>::new_i_with_state(
             0,
             0,
             2,
             MergeSplitState::Splitting,
-        )
-        .expect("test fixture: UniversalPosition::new_i_with_state with valid args");
-        let bv = CharacteristicVector::new('a', "$$a");
-
-        let succs = pos.successors(&bv, 2);
-
-        assert_eq!(
-            succs,
-            vec![UniversalPosition::<MergeAndSplit>::new_i(0, 0, 2)
-                .expect("test fixture: UniversalPosition::new_i with valid args")]
         );
+        assert!(matches!(pos, Err(PositionError::InvalidIPosition { .. })));
     }
 
     #[test]
