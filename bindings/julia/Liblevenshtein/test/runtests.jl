@@ -228,6 +228,71 @@ end
     @test scoped_open[]
 end
 
+@testset "universal variants agree with independent distance kernels" begin
+    families = (
+        (LL.UNIVERSAL_STANDARD, LL.distance),
+        (LL.UNIVERSAL_TRANSPOSITION, LL.optimal_string_alignment_distance),
+        (LL.UNIVERSAL_MERGE_AND_SPLIT, LL.merge_and_split_distance),
+    )
+    words = [String(Char[iszero(bits & (1 << index)) ? 'a' : 'b'
+        for index in 0:(width - 1)])
+        for width in 0:4 for bits in 0:((1 << width) - 1)]
+    @test length(words) == 31
+    @test LL.optimal_string_alignment_distance("CA", "ABC") == 3
+    @test LL.true_damerau_distance("CA", "ABC") == 2
+
+    function check_batch_and_online(automaton, family, source, target, threshold)
+        expected = family(source, target) <= threshold
+        @test LL.accepts(automaton, source, target) == expected
+        state = LL.online(automaton, source)
+        try
+            for unit in target
+                LL.advance!(state, unit)
+            end
+            observed = LL.observation(state)
+            @test observed.accepting == expected
+            @test observed.consumed_target_length == length(target)
+        finally
+            close(state)
+        end
+    end
+
+    # The native distance kernels use dynamic programming, independently of the
+    # universal position-state machine. Sweep bounds to catch refunded edit
+    # costs and unfinished operations, not only successful one-edit examples.
+    for (variant, family) in families, threshold in 0:3
+        @testset "variant=$variant threshold=$threshold" begin
+            automaton = LL.UniversalAutomaton(threshold; variant=variant)
+            try
+                for source in words, target in words
+                    check_batch_and_online(automaton, family, source, target, threshold)
+                end
+                for (source, target) in (
+                    ("ab", "ba"), ("abc", "bad"), ("CA", "ABC"),
+                    ("ab", "x"), ("x", "ab"),
+                    ("", ""), ("", "\0"), ("\0", ""), ("\0a", "a\0"),
+                    ("\$a", "a\$"), ("éλ", "λé"),
+                )
+                    check_batch_and_online(automaton, family, source, target, threshold)
+                    check_batch_and_online(automaton, family,
+                        collect(codeunits(source)), collect(codeunits(target)), threshold)
+                    check_batch_and_online(automaton, family,
+                        UInt64.(collect(source)), UInt64.(collect(target)), threshold)
+                end
+                # Full-width tokens and non-UTF-8 bytes are data, not padding.
+                for (source, target) in (
+                    (UInt8[0, 0xff], UInt8[0xff, 0]),
+                    (UInt64[0, typemax(UInt64)], UInt64[typemax(UInt64), 0]),
+                )
+                    check_batch_and_online(automaton, family, source, target, threshold)
+                end
+            finally
+                close(automaton)
+            end
+        end
+    end
+end
+
 @testset "resource-backed snapshots, iteration, and reduction" begin
     dictionary = Libdictenstein.DynamicDawg()
     dictionary["cat"] = 7

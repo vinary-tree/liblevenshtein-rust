@@ -149,6 +149,20 @@ dictionary or materialize and filter dictionary entries. The
 defines the exact operation validation, scaling, liveness, ownership, and
 complexity contracts.
 
+### Semantic regression coverage
+
+The [package tests](test/runtests.jl) compare universal batch acceptance and
+completed online acceptance with the independent dynamic-programming distance
+kernels. They cover every pair of binary-alphabet words through length four,
+all three variants, and inclusive thresholds zero through three. Targeted
+Unicode, byte, and u64-token cases additionally check empty input, NUL, literal
+dollar signs, full-width tokens, transposition plus a second edit, and unequal-
+symbol merges and splits. Online observations must report the exact number of
+consumed target units. These are bounded differential tests, not a proof for
+arbitrary input lengths or custom equivalence policies.
+The adjacent-transposition variant is checked against optimal string alignment
+(OSA), not unrestricted Damerau distance; `CA` versus `ABC` distinguishes them.
+
 ## Common and intended usage
 
 - Use `distance`, `optimal_string_alignment_distance`,
