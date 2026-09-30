@@ -211,11 +211,13 @@ pub trait ElasticKernel: Clone + Debug + Send + Sync + 'static {
 
     /// Whether `cutoff` belongs to the kernel's lawful nonnegative cost domain.
     ///
-    /// The default accepts values ordered between the monoid identity and top.
-    /// Floating-point monoids order NaN outside that closed interval.
+    /// The default accepts values between the monoid identity and top.
+    /// It uses the inclusive budget relation at zero so floating-point
+    /// negative zero is admitted as the same semantic cutoff as positive zero.
+    /// NaN is outside that relation.
     #[inline]
     fn cutoff_is_valid(&self, cutoff: Cost<Self>) -> bool {
-        Self::Monoid::compare(cutoff, Self::Monoid::ZERO) != std::cmp::Ordering::Less
+        Self::Monoid::within(Self::Monoid::ZERO, cutoff)
             && Self::Monoid::compare(cutoff, Self::Monoid::TOP) != std::cmp::Ordering::Greater
     }
 

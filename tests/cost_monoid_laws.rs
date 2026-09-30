@@ -149,4 +149,8 @@ fn floating_cost_membership_is_exactly_inclusive() {
     assert!(!WeightedCost::within(immediately_above, cutoff));
     assert!(BottleneckCost::within(cutoff, cutoff));
     assert!(!BottleneckCost::within(immediately_above, cutoff));
+    assert!(WeightedCost::within(0.0, -0.0));
+    assert!(WeightedCost::within(-0.0, 0.0));
+    assert!(BottleneckCost::within(0.0, -0.0));
+    assert!(BottleneckCost::within(-0.0, 0.0));
 }

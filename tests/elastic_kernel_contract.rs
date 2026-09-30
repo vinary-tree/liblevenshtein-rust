@@ -17,6 +17,13 @@ use liblevenshtein::time_series::{
 };
 use proptest::prelude::*;
 
+#[test]
+fn floating_kernels_admit_negative_zero_as_an_inclusive_zero_cutoff() {
+    assert!(ErpConfig::new(0.0).cutoff_is_valid(-0.0));
+    assert!(FrechetConfig::new().cutoff_is_valid(-0.0));
+    assert!(!ErpConfig::new(0.0).cutoff_is_valid(f64::NAN));
+}
+
 /// Pointwise L1 distance restricted to equal-length series.
 #[derive(Clone, Copy, Debug, Default)]
 struct PointwiseL1;

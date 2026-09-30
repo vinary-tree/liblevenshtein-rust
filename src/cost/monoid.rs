@@ -51,7 +51,7 @@ pub trait CostMonoid: 'static {
     /// envelope used by analytical laws and differential assertions. This
     /// value must never expand an inclusive budget, establish canonical state
     /// equality, or justify product-state subsumption; [`Self::within`] remains
-    /// exact under [`Self::compare`].
+    /// an exact inclusive comparison, with the two signed zeros equal.
     const EPSILON: Self::Cost;
 
     /// Append `step` to `accumulated`.
@@ -61,6 +61,8 @@ pub trait CostMonoid: 'static {
     fn compare(a: Self::Cost, b: Self::Cost) -> Ordering;
 
     /// Return whether `cost` is within the inclusive `threshold`.
+    /// Floating implementations use the numeric order so signed zeros are
+    /// equal at this boundary; NaN is never within a cutoff.
     fn within(cost: Self::Cost, threshold: Self::Cost) -> bool;
 
     /// Exact canonical key for a cost retained in a lazy product state.

@@ -41,10 +41,7 @@ impl CostMonoid for WeightedCost {
 
     #[inline(always)]
     fn within(cost: Self::Cost, threshold: Self::Cost) -> bool {
-        if cost.is_nan() || threshold.is_nan() {
-            return false;
-        }
-        Self::compare(cost, threshold) != Ordering::Greater
+        cost <= threshold
     }
 
     #[inline]
