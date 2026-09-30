@@ -61,17 +61,16 @@ class DiscoverBindingLanguagesTests(unittest.TestCase):
 
 class DocumentationTopicTests(unittest.TestCase):
     def test_inherited_complete_state_requires_evidence(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(
-                SystemExit, "is complete without documentation evidence"
-            ):
-                MODULE.documentation_topic(
-                    "overview",
-                    "complete",
-                    None,
-                    "project|julia|capability",
-                    Path(directory),
-                )
+        with tempfile.TemporaryDirectory() as directory, self.assertRaisesRegex(
+            SystemExit, "is complete without documentation evidence"
+        ):
+            MODULE.documentation_topic(
+                "overview",
+                "complete",
+                None,
+                "project|julia|capability",
+                Path(directory),
+            )
 
     def test_inherited_inapplicable_state_remains_inapplicable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -144,6 +143,93 @@ class KnownMissingCapabilityTests(unittest.TestCase):
                 {"julia"},
                 set(),
             )
+
+
+class RakuCapabilityEvidenceTests(unittest.TestCase):
+    def test_directory_with_unmapped_capability_stays_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "bindings/raku/lib/Example.rakumod"
+            source.parent.mkdir(parents=True)
+            source.write_text("sub snapshot() is export { }\n", encoding="utf-8")
+            evidence = MODULE.normalize_raku_capability_evidence(
+                "example",
+                {
+                    "source": "bindings/raku/lib/Example.rakumod",
+                    "symbols": {"snapshot": "sub snapshot()"},
+                },
+                {"snapshot", "visit"},
+                root,
+                ROOT / "../example",
+            )
+            self.assertEqual(
+                MODULE.raku_cell_default("visit", evidence),
+                ("missing", "bindings/conformance/raku-family-capability-audit.md"),
+            )
+            self.assertEqual(
+                MODULE.raku_cell_default("snapshot", evidence),
+                ("audit-required", evidence["snapshot"]),
+            )
+
+    def test_source_symbol_is_required_for_each_positive_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "bindings/raku/lib/Example.rakumod"
+            source.parent.mkdir(parents=True)
+            source.write_text("sub snapshot() is export { }\n", encoding="utf-8")
+            self.assertEqual(
+                MODULE.normalize_raku_capability_evidence(
+                    "example",
+                    {
+                        "source": "bindings/raku/lib/Example.rakumod",
+                        "symbols": {"snapshot": "sub snapshot()"},
+                    },
+                    {"snapshot", "visit"},
+                    root,
+                    ROOT / "../example",
+                ),
+                {
+                    "snapshot": "example/bindings/raku/lib/Example.rakumod::sub snapshot()"
+                },
+            )
+
+    def test_directory_presence_and_wrong_symbol_cannot_claim_capability(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "bindings/raku/lib/Example.rakumod"
+            source.parent.mkdir(parents=True)
+            source.write_text("sub snapshot() is export { }\n", encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "Raku symbol is missing"):
+                MODULE.normalize_raku_capability_evidence(
+                    "example",
+                    {
+                        "source": "bindings/raku/lib/Example.rakumod",
+                        "symbols": {"visit": "sub visit()"},
+                    },
+                    {"snapshot", "visit"},
+                    root,
+                    ROOT / "../example",
+                )
+            with self.assertRaisesRegex(SystemExit, "needs source and symbols"):
+                MODULE.normalize_raku_capability_evidence(
+                    "example",
+                    {"visit": "bindings/raku"},
+                    {"visit"},
+                    root,
+                    ROOT / "../example",
+                )
+
+    def test_rejects_source_outside_raku_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(SystemExit, "inside bindings/raku"):
+                MODULE.normalize_raku_capability_evidence(
+                    "example",
+                    {"source": "../secret.rakumod", "symbols": {"visit": "visit"}},
+                    {"visit"},
+                    root,
+                    ROOT / "../example",
+                )
 
 
 if __name__ == "__main__":

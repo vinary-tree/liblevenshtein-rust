@@ -52,6 +52,7 @@ one of these implementation strategies:
 | `high-level-operation-interface` | Coarse operations with owned inputs/results and explicit error translation. | Acoustic models, parsers, correction layers, decoders, and symbolic theories. |
 | `declared-law-marker` | Capability bits plus executable law validation; a bit is never inferred merely from the presence of base operations. | Idempotence, hash coherence, zero-sum freedom, commutativity, and nonnegativity. |
 | `derived-adapter` | A facade exposes the prerequisite capabilities; the library derives the extension operation without another callback table. | Iterator helpers, algebra bridges, and blanket operation traits. |
+| `native-scalar-conversion-proof` | Rust supplies exact compile-time scalar conversion; foreign hosts use versioned runtime scalar WFST vtables instead of claiming a Rust monomorphization. | `AbiScalarLabel` and `AbiScalarWeight`; direct foreign inapplicability requires a proof. |
 | `reviewed-rust-only-proof` | A reviewed proof explains why a sound foreign form is impossible or meaningless. | Exceptional cases only; implementation absence is not proof. |
 
 The classification describes the intended stable shape, not current delivery.
@@ -69,10 +70,14 @@ use that shape when implemented; it does not make the row complete.
 | `review-required` | The surface was discovered, but its design or evidence has not yet been classified sufficiently. The strict generator does not permit this state for the trait classification itself. |
 | `inapplicable` | A reviewed architectural proof establishes that the provider concept does not apply. The absence of implementation, tooling, or time is never enough. |
 
-Native Rust rows are complete because the authoritative public trait is itself
-the implementation surface. This does not imply dynamic dispatch or foreign
-callbacks on the native path: monomorphized algorithms retain their existing
-zero-cost route.
+Native Rust rows are complete when the authoritative public trait is a usable
+native implementation surface. Sealed library-owned markers are the exception:
+external Rust code cannot implement them, so their rows are inapplicable too.
+Native scalar conversion traits remain complete in Rust and inapplicable only
+for direct foreign translation. This does not imply dynamic dispatch or
+foreign callbacks on the native path: monomorphized algorithms retain their
+existing zero-cost route. These extension-provider rows do not promote any
+family completeness cell; that matrix has additional evidence gates.
 
 ### Sealed dynamic adapter markers
 
@@ -91,6 +96,29 @@ lattice or semiring provider through its negotiated resource vtable; the
 adapter chooses the access marker after validation. Exposing the markers as
 host callbacks would erase the safety distinction and permit a thread-bound
 runtime object to masquerade as parallel-reentrant.
+
+### Scalar ABI conversion traits
+
+`AbiScalarLabel` and `AbiScalarWeight` are public Rust traits in
+`lling-llang/src/algorithm_bridge.rs`, re-exported by
+`lling-llang/src/bindings.rs`. They are compile-time conversion constraints for
+the library's scalar-WFST bridge, not customer callback interfaces. The label
+trait fixes a scalar unit-domain constant and exact `u64` encoding/decoding;
+the weight trait fixes a scalar weight-domain constant and exact `f64`
+encoding/decoding. Their implementations cover the supported native scalar
+label and weight types. Exactness checks reject out-of-domain labels and
+unrepresentable weights rather than silently narrowing them.
+
+A foreign runtime cannot supply a new Rust monomorphization of these traits
+through the C ABI. Letting a host claim one of their associated constants via
+an unchecked callback would also bypass the exact-domain checks on which the
+bridge relies. A foreign language's corresponding **user capability** is not
+absent: it uses a versioned scalar WFST resource/vtable with declared unit and
+weight domains, validated arcs, and explicit ownership. Thus direct
+translation of these compile-time traits is `inapplicable` in foreign rows,
+while WFST provider and scalar-domain capabilities remain separately audited
+and may be `partial`, `missing`, or `complete` on their own evidence. This proof
+does not exempt any host from implementing those runtime surfaces.
 
 ## Existing shared capabilities
 

@@ -21,6 +21,7 @@ VALID_CLASSIFICATIONS = {
     "derived-adapter",
     "direct-capability-vtable",
     "high-level-operation-interface",
+    "native-scalar-conversion-proof",
     "resource-cursor-protocol",
     "reviewed-rust-only-proof",
 }
@@ -273,7 +274,8 @@ def render() -> tuple[str, Counter[str], int]:
     rust_only_traits = {
         key
         for key, classification in classified.items()
-        if classification == "reviewed-rust-only-proof"
+        if classification
+        in {"reviewed-rust-only-proof", "native-scalar-conversion-proof"}
     }
     if set(rust_only_proofs) != rust_only_traits:
         fail(
@@ -392,7 +394,11 @@ def render() -> tuple[str, Counter[str], int]:
             )
         if "rust" in merged_support:
             fail(f"implementation {key} must not override native Rust support")
-        if classification == "reviewed-rust-only-proof" and raw_implementation:
+        if (
+            classification
+            in {"reviewed-rust-only-proof", "native-scalar-conversion-proof"}
+            and raw_implementation
+        ):
             fail(f"Rust-only trait {key} cannot declare a foreign implementation")
 
         evidence_corpus: list[str] = []
@@ -447,7 +453,20 @@ def render() -> tuple[str, Counter[str], int]:
                 )
 
         for language, host_idioms in languages.items():
-            if classification == "reviewed-rust-only-proof":
+            if (
+                classification == "native-scalar-conversion-proof"
+                and language == "rust"
+            ):
+                status = "complete"
+                scope = "full-native-trait-surface"
+                evidence = [f"{project}:{source}"]
+                next_work = "-"
+            elif classification == "native-scalar-conversion-proof":
+                status = "inapplicable"
+                scope = "runtime-scalar-vtable-instead-of-rust-monomorphization"
+                evidence = [f"proof:{validated_proofs[key]}"]
+                next_work = "-"
+            elif classification == "reviewed-rust-only-proof":
                 status = "inapplicable"
                 scope = "library-owned-type-level-access-marker"
                 evidence = [f"proof:{validated_proofs[key]}"]
