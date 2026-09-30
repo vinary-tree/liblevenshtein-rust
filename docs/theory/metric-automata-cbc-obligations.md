@@ -21,6 +21,9 @@ for the current source surfaces.
 The [observation profile](../verification/CBC_OBSERVATION_PROFILES.md) records
 validation, error, pause/resume, and resource-trace obligations for those
 surfaces.
+The [resource event contract](../verification/CBC_RESOURCE_EVENT_CONTRACT.md)
+defines primitive work and storage accounting separately from public budget
+charges.
 
 ## Claim levels and evidence rule
 

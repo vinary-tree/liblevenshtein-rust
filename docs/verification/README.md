@@ -29,6 +29,9 @@ identity, tie order, multiplicity, partial results, and witness promises to
 each search surface.
 The [observation profile](CBC_OBSERVATION_PROFILES.md) maps validation order,
 failure tags, page boundaries, and resource-sensitive trace requirements.
+The [resource event contract](CBC_RESOURCE_EVENT_CONTRACT.md) separates
+executed, reserved, and charged work from live and peak storage, with an
+ownership map for temporal and dictionary-product operations.
 The [lexicographic kNN model report](CBC_LEXICOGRAPHIC_MODEL_REPORT.md)
 records the clean finite check and the checked-in equality-cost mutant.
 
