@@ -250,6 +250,37 @@ relation, continuation
 denotation, and event accounting must be proved for each concrete operation.
 The full checker, session refinement, and Rust correspondence are later gates.
 
+### 3.2c Scoped finite rewrite replay
+
+[CertificateChecking.v](../verification/temporal_automata/theories/CertificateChecking.v)
+extends the exact-natural expression fragment with a typed, finite rewrite
+certificate. Each step records a named rule, source and target expressions,
+forward or backward orientation, the exact required-premise list, arithmetic
+profile, witness effect, and a scope containing the query, parameters, domain,
+cutoff, snapshot, dictionary revision, and label context. The checker compares
+every step scope with the requested scope, then recomputes the rule result and
+its premise list. It cannot accept an unknown rule identifier or a lower rule
+in the reverse direction. The only admitted witness effect is the score-only
+effect; a later witness-capable rule needs its own soundness theorem.
+
+`replay_step_identifies_exact_rule_and_premises` establishes that an accepted
+step names a supported rule, supplies precisely its required premises, and
+matches that rule's computed result. `replay_steps_iff_finite_replay` relates
+the executable checker to a finite inductive replay relation.
+`accepted_scoped_certificate_sound` proves that accepted exact chains preserve
+every natural-valued score, while accepted lower chains remain lower bounds.
+The generic rejection theorems cover unknown rules, wrong premise lists,
+reversed lower rules, and rounded-arithmetic steps; concrete controls also
+reject revision changes, unsupported witness effects, and lower certificates
+offered as exact equivalence. Premise names are audit labels: the checker
+derives their actual validity from the finite rule definitions and their
+kernel-checked soundness lemmas, rather than trusting a supplied name.
+
+This checks the declared expression fragment only. It does not replay all
+nodes of the ORC realization IR, prove floating-point rewrites, establish
+witness preservation, or connect the certificate to Rust execution. Those
+require additional checked rules and instance/correspondence proofs.
+
 ### 3.3 CBC-2: progress is a separate obligation
 
 A machine that silently switches dense to sparse and back forever can satisfy
