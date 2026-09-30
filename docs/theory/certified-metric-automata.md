@@ -534,18 +534,26 @@ models one candidate verification after the candidate takes exclusive private
 ownership. The abstract verifier has distinct `VerifiedWithin`,
 `VerifiedBeyond`, `VerifiedNoAlignment`, `NumericFailure`, and
 `ResourceFailure` tags. Its soundness premise binds a successful score to the
-captured query and original payload, checks the inclusive cutoff, binds the
+captured query and original payload, applies the supplied cutoff relation, binds the
 tie key to the snapshot, and validates the witness. Only that successful tag
 adds a rank to ghost history and an `AwaitingPublication` heap input. A
 rejection transfers ownership to a sound exclusion; either failure retains
 private ownership and adds no rank. The transition preserves the complete
 session abstraction and a separate ghost provenance list. Negative theorems
 reject a successful rank with no finite reference score and an
-`AboveCutoff` tag for a within-cutoff score. The failure status codes are
+`AboveCutoff` tag for a within-cutoff score. A finite-or-infinity control
+instantiates an inclusive natural cutoff and accepts genuine success,
+above-cutoff, and resource-failure tags while rejecting any attempt to turn
+the latter two into an exact infinity rank. The generic theorem neither
+requires an inclusive cutoff relation nor fixes a finite-score policy; each
+source instance must establish both. The failure status codes are
 abstract markers, not Rust error discriminants. The proof assumes verifier
 soundness, snapshot payload and tie interpretation, and a fixed cutoff. It
 does not prove the executed Rust verifier's result tags, rounded arithmetic,
-heap insertion, or failure continuation; those need source-specific proofs.
+heap insertion, or failure continuation. `run_verifier` consumes an existing
+decision and copies the ledger, so verification work and allocation charges
+need source-specific proofs. Witness and tie provenance are ghost-only; their
+runtime retention and reconstruction are also separate obligations.
 
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|

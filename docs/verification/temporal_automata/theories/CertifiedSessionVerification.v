@@ -1,14 +1,17 @@
 (** * Conditional verification transitions for a complete search session
 
-    The captured snapshot supplies each original payload and tie key. An
-    abstract exact verifier returns one of five disjoint tags. Its soundness
+    Supplied interpretations of the captured snapshot give each original
+    payload and tie key. An abstract verifier result has one of five disjoint
+    tags; [run_verifier] consumes that result rather than executing scoring.
+    Its soundness
     relation binds a successful score and witness to that payload and query;
     rejection tags justify exclusions; numeric and resource errors make no
     exact-score claim. This file does not assert that a Rust verifier meets
     that relation or that a particular binary64 operation graph is exact.
     Failed 1 and Failed 2 are distinct abstract status markers, not source
     error discriminants. Failure continuation and publication are separate
-    obligations. *)
+    obligations. The cutoff relation is a parameter; the finite control
+    below supplies one inclusive instance. *)
 
 From Stdlib Require Import Arith Lia List Permutation.
 From Liblevenshtein.TemporalAutomata Require Import CertifiedSearchSession.
@@ -425,3 +428,96 @@ Section Verification.
   Proof. intros; repeat split; reflexivity. Qed.
 
 End Verification.
+
+(** A finite natural cost or a symbolic infinity. The reference evaluator in
+    this control only returns finite costs. The inclusive cutoff accepts
+    finite costs at equality and never admits symbolic infinity as a score. *)
+Inductive control_score := FiniteCost : nat -> control_score | InfinityCost.
+
+Definition control_within (score cutoff : control_score) : Prop :=
+  match score, cutoff with
+  | FiniteCost value, FiniteCost limit => value <= limit
+  | FiniteCost _, InfinityCost => True
+  | InfinityCost, _ => False
+  end.
+
+Lemma control_cutoff_is_inclusive_for_finite_scores :
+  forall value limit,
+    control_within (FiniteCost value) (FiniteCost limit) <-> value <= limit.
+Proof. reflexivity. Qed.
+
+Definition control_identity : session_identity unit unit unit :=
+  {| session_contract := tt;
+     session_snapshot := tt;
+     session_query := tt;
+     session_revision := 0 |}.
+
+Definition control_payload (_ : unit) (original : nat) : nat := original.
+
+Definition control_exact (_ : unit) (payload : nat) : option control_score :=
+  match payload with
+  | 0 => Some (FiniteCost 7)
+  | _ => Some (FiniteCost 4)
+  end.
+
+Definition control_tie (_ : unit) (original : nat) : nat := original.
+
+Definition control_witness (_ : unit) (payload : nat)
+    (_ : control_score) (witness : nat) : Prop := witness = payload.
+
+Definition control_decision_sound (original : nat)
+    (decision : verifier_result control_score nat nat nat) : Prop :=
+  @decision_sound control_score unit unit unit nat nat nat nat
+    control_payload control_exact control_within control_tie control_witness
+    (FiniteCost 5) control_identity original decision.
+
+Example finite_control_accepts_exact_success :
+  control_decision_sound 1 (VerifiedWithin (FiniteCost 4) 1 1).
+Proof. simpl; repeat split; try reflexivity; lia. Qed.
+
+Example finite_control_accepts_genuine_above_cutoff :
+  control_decision_sound 0 VerifiedBeyond.
+Proof.
+  simpl. exists (FiniteCost 7).
+  split; [reflexivity |].
+  simpl; lia.
+Qed.
+
+Example finite_control_accepts_resource_failure_as_failure :
+  control_decision_sound 1 (ResourceFailure 9).
+Proof. exact I. Qed.
+
+Lemma control_exact_never_returns_infinity :
+  forall original, control_exact tt original <> Some InfinityCost.
+Proof. intros [|original]; discriminate. Qed.
+
+Theorem control_rejects_infinite_rank_coercion :
+  forall original tie witness,
+    ~ control_decision_sound original
+      (VerifiedWithin InfinityCost tie witness).
+Proof.
+  intros original tie witness Hsound.
+  unfold control_decision_sound, decision_sound,
+    authoritative_for, exact_for in Hsound.
+  destruct Hsound as [Hexact _].
+  simpl in Hexact.
+  now apply (control_exact_never_returns_infinity original).
+Qed.
+
+Example beyond_cutoff_cannot_be_coerced_to_exact_infinity :
+  control_decision_sound 0 VerifiedBeyond /\
+  ~ control_decision_sound 0 (VerifiedWithin InfinityCost 0 0).
+Proof.
+  split.
+  - apply finite_control_accepts_genuine_above_cutoff.
+  - apply control_rejects_infinite_rank_coercion.
+Qed.
+
+Example allocation_failure_cannot_be_coerced_to_exact_infinity :
+  control_decision_sound 1 (ResourceFailure 9) /\
+  ~ control_decision_sound 1 (VerifiedWithin InfinityCost 1 1).
+Proof.
+  split.
+  - apply finite_control_accepts_resource_failure_as_failure.
+  - apply control_rejects_infinite_rank_coercion.
+Qed.
