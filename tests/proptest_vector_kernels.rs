@@ -52,6 +52,36 @@ fn close(left: f64, right: f64) -> bool {
     (left - right).abs() <= 1.0e-9 * (1.0 + left.abs().max(right.abs()))
 }
 
+#[test]
+fn vector_erp_rejects_representatives_from_another_gap_quotient() {
+    let zero_gap = VectorErpMetric::try_new(metric(), sample([0, 0])).unwrap();
+    let other_gap = VectorErpMetric::try_new(metric(), sample([1, 0])).unwrap();
+    let from_other = other_gap
+        .try_series(vec![sample([0, 0])], ResourceLimits::default())
+        .unwrap();
+    let empty = zero_gap
+        .try_series(Vec::new(), ResourceLimits::default())
+        .unwrap();
+
+    assert_eq!(
+        zero_gap.distance_bounded(&from_other, &empty, 0.0, ResourceLimits::default()),
+        Err(VectorMetricError::ErpGapMismatch)
+    );
+    assert_eq!(
+        zero_gap.candidate_lower_bound(&from_other, &empty),
+        Err(VectorMetricError::ErpGapMismatch)
+    );
+
+    let same_gap_separate_config = VectorErpMetric::try_new(metric(), sample([0, 0])).unwrap();
+    let same_quotient = same_gap_separate_config
+        .try_series(vec![sample([0, 0])], ResourceLimits::default())
+        .unwrap();
+    assert_eq!(
+        zero_gap.distance_bounded(&same_quotient, &empty, 0.0, ResourceLimits::default()),
+        zero_gap.distance_bounded(&empty, &empty, 0.0, ResourceLimits::default())
+    );
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 

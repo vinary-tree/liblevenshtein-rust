@@ -8,6 +8,7 @@
 
 use std::collections::HashSet;
 use std::mem::size_of;
+use std::sync::Arc;
 use thiserror::Error;
 
 use super::automaton::{OnlineAutomatonLimits, OnlineStepOutcome};
@@ -634,6 +635,9 @@ pub enum VectorMetricError {
     /// A series or interval label used a different typed channel layout.
     #[error("typed channel layouts differ")]
     ChannelLayoutMismatch,
+    /// An ERP representative was canonicalized under another fixed gap.
+    #[error("vector ERP quotient representatives use different gap samples")]
+    ErpGapMismatch,
     /// One vector interval was nonfinite, empty, or reversed.
     #[error("vector interval coordinate {index} is not a finite closed interval")]
     InvalidVectorBox {
@@ -844,19 +848,22 @@ impl ChannelVectorSeries {
 /// Canonical ERP metric representative modulo insertion/deletion of the fixed
 /// vector gap sample.
 #[derive(Clone, Debug, PartialEq)]
-pub struct VectorErpSeries(ChannelVectorSeries);
+pub struct VectorErpSeries {
+    canonical: ChannelVectorSeries,
+    gap: Arc<VectorSample>,
+}
 
 impl VectorErpSeries {
     /// Borrow the canonical gap-free samples.
     #[inline]
     pub fn samples(&self) -> &[VectorSample] {
-        self.0.samples()
+        self.canonical.samples()
     }
 
     /// Borrow the exact typed channel layout.
     #[inline]
     pub fn channel_layout(&self) -> &ChannelLayout {
-        self.0.channel_layout()
+        self.canonical.channel_layout()
     }
 }
 
@@ -868,7 +875,7 @@ impl VectorErpSeries {
 #[derive(Clone, Debug, PartialEq)]
 pub struct VectorErpMetric {
     ground: FixedChannelMetric,
-    gap: VectorSample,
+    gap: Arc<VectorSample>,
 }
 
 impl VectorErpMetric {
@@ -878,7 +885,10 @@ impl VectorErpMetric {
         gap: VectorSample,
     ) -> Result<Self, VectorMetricError> {
         ground.validate_sample(&gap)?;
-        Ok(Self { ground, gap })
+        Ok(Self {
+            ground,
+            gap: Arc::new(gap),
+        })
     }
 
     /// Borrow the fixed ground metric.
@@ -901,11 +911,14 @@ impl VectorErpMetric {
     ) -> Result<VectorErpSeries, VectorMetricError> {
         let raw = ChannelVectorSeries::try_new(self.ground.layout.try_clone()?, samples, limits)?;
         let mut canonical = raw.samples;
-        canonical.retain(|sample| sample != &self.gap);
-        Ok(VectorErpSeries(ChannelVectorSeries {
-            layout: raw.layout,
-            samples: canonical,
-        }))
+        canonical.retain(|sample| sample != self.gap.as_ref());
+        Ok(VectorErpSeries {
+            canonical: ChannelVectorSeries {
+                layout: raw.layout,
+                samples: canonical,
+            },
+            gap: Arc::clone(&self.gap),
+        })
     }
 
     /// K1 local match lower bound for a vector dictionary box.
@@ -994,7 +1007,11 @@ impl VectorErpMetric {
     }
 
     fn validate_series(&self, series: &VectorErpSeries) -> Result<(), VectorMetricError> {
-        self.ground.validate_layout(series.channel_layout())
+        self.ground.validate_layout(series.channel_layout())?;
+        if !Arc::ptr_eq(&self.gap, &series.gap) && self.gap != series.gap {
+            return Err(VectorMetricError::ErpGapMismatch);
+        }
+        Ok(())
     }
 }
 
