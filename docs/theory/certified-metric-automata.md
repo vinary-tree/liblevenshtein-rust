@@ -618,11 +618,11 @@ $`(5,0)`$; a cost-only equality cut would lose the better region candidate.
 
 The certificate also carries an exact scope identity. The generic scope
 must be instantiated with the full query, parameters, snapshot/revision,
-region occurrence, arithmetic profile, and observation contract. The checked
-action accepts only exact scope equality and a semantic bound proof at that
-scope; matching a hash or cache key alone is insufficient. A changed-revision
-control rejects the old bound even when the underlying unscoped decision
-would return true.
+region occurrence, arithmetic profile, and observation contract. The decision
+checks exact scope equality; its soundness and action theorems additionally
+require a semantic bound proof at that scope. Matching a hash or cache key
+alone is insufficient. A changed-revision control rejects the old bound even
+when the underlying unscoped decision would return true.
 
 `scoped_prune_action_preserves_ownership_and_exclusions` moves the complete
 region from unresolved to excluded ownership and establishes that no member
