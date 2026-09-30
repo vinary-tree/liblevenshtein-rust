@@ -189,16 +189,22 @@ Definition private_ghost : session_ghost nat unit :=
 Example omitting_exclusive_private_loses_an_original :
   let owned := ownership_projection (fun _ _ => [])
     private_runtime private_ghost in
+  ownership_step (fun _ => True) (initial_session [0]) owned /\
   exact_ownership [0] owned /\
   public_only_originals owned = [] /\
   ~ Permutation (public_only_originals owned) [0].
 Proof.
   simpl.
   split.
+  - change (ownership_step (fun _ => True) (initial_session [0])
+      (begin_private (initial_session [0]) [] [] 0)).
+    apply ownership_begin with (prefix := []) (suffix := [])
+      (original := 0). reflexivity.
   - split.
-    + repeat constructor; simpl; intuition discriminate.
-    + apply Permutation_refl.
-  - split; [reflexivity |].
-    intro Hperm.
-    apply Permutation_length in Hperm; simpl in Hperm; discriminate.
+    + split.
+      * repeat constructor; simpl; intuition discriminate.
+      * apply Permutation_refl.
+    + split; [reflexivity |].
+      intro Hperm.
+      apply Permutation_length in Hperm; simpl in Hperm; discriminate.
 Qed.

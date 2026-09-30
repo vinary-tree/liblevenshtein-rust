@@ -507,10 +507,12 @@ empty best-$`k`$ store, provided the root's snapshot-relative region is exactly
 the duplicate-free universe and its arena and reconstruction interpretations
 are valid. Two checked controls keep separate originals at a shared node and
 at different slots of one collision bucket; coalescing by node loses an
-original. A third control advances a candidate into the complete session's
-exclusive private phase and shows that omitting this phase loses the original.
-These are finite model obligations: the Rust root enumeration, bucket cursor,
-and continuation fields still need source correspondence proofs.
+original. A third control takes an explicit [ownership-quotient step](../verification/temporal_automata/theories/CertifiedSearchSession.v)
+from the public initial state into the complete state projection with one
+exclusive private candidate, then shows that omitting private ownership loses
+that original. This is a finite model execution, not a Rust cursor step: the
+Rust root enumeration, bucket cursor, and continuation fields still need
+source correspondence proofs.
 
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
