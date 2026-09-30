@@ -365,10 +365,107 @@ deduplication requires a backend-specific suffix-congruence theorem and a
 correct multiplicity/reconstruction mechanism; otherwise each pending product
 item retains a compact path identity even though query transitions are shared.
 
-**Theorem schema BF-1 (best-first kNN stopping).** Once $`k`$ exact results
-exist, an admissible-bound heap may stop when its smallest queued bound is
-strictly greater than the canonical $`k`$th exact cost. Equality is insufficient
-when an unseen equal-cost result may win the deterministic stable-ID tie order.
+**Theorem BF-1 (ordered best-first kNN stopping).** Fix one immutable index
+revision $`\sigma`$, a query $`q`$, and the operation's declared, injective tie
+key $`t_\sigma(x)`$ for each live candidate $`x`$. Rank a finite exact result by
+$`R(x)=(d(q,x),t_\sigma(x))`$ in lexicographic order, using the same exact cost
+comparator as the public result API. The tie key is a result-order attribute;
+it is not a component of the path-cost monoid.
+
+Let $`F`$ cover every unverified candidate. A queued region $`Q\in F`$ carries
+an admissible cost bound $`L(Q)\le d(q,x)`$ and a tie floor
+$`M(Q)\le t_\sigma(x)`$ for every $`x\in Q`$. The exact minimum tie key is the
+strongest such floor, but a smaller certified floor remains sound. If $`k`$
+distinct exact results have been verified and their worst rank is
+$`W=(c_k,t_k)`$, then $`Q`$ may be discarded when
+
+```math
+(L(Q),M(Q))\ge_{\mathrm{lex}} W,
+\quad\text{equivalently}\quad
+L(Q)>c_k\ \lor\ (L(Q)=c_k\ \land\ M(Q)\ge t_k).
+```
+
+If the smallest queued lower pair meets this condition, the entire queue may
+be discarded. This includes equality at $`c_k`$ only because the tie floor
+rules out an earlier equal-cost candidate. An unknown floor is represented by
+a value below every real tie key and cannot justify equality pruning. An empty
+region is discarded independently. With fewer than $`k`$ exact results there
+is no kth rank and this stopping rule does not apply.
+
+**Proof.** For every unverified $`x\in Q`$, coordinatewise admissibility gives
+$`(L(Q),M(Q))\le_{\mathrm{lex}}R(x)`$: if the cost inequality is strict the tie
+coordinate is irrelevant, and at equal cost the tie inequality applies. If
+some unverified $`x`$ improved the current kth result, then
+$`(L(Q),M(Q))\le_{\mathrm{lex}}R(x)<_{\mathrm{lex}}W`$, contradicting the
+discard condition. Candidate identity is unique, so another candidate cannot
+have exactly the same pair as the already verified kth result. Keeping the
+best $`k`$ verified pairs therefore yields the same ordered top $`k`$ as a
+complete scan. The proof needs neither metricity nor a consistent heuristic:
+admissibility and frontier coverage suffice, even when child bounds are not
+monotone along dictionary edges. As the best-result heap improves, $`W`$ can
+only decrease, so a discarded region never needs reopening.
+
+For a concrete candidate with tie key $`t`$, the maximum of its region bound
+and any admissible candidate-specific bound is again a cost lower bound.
+Comparing that bound paired with $`t`$ can avoid exact verification. An exact
+verifier that is still needed must accept the kth cost inclusively: an earlier
+tie at equal cost may replace the current worst result.
+
+The tie key is **operation-specific**. General elastic bounded kNN scans
+collision buckets in $`(\text{bucket ID},\text{slot})`$ order; replacement or
+removal can change slots. Timestamped TWED bounded kNN orders equal distances
+by stable episode ID. The legacy elastic best-first convenience API uses
+encounter sequence, which is a different ordering contract. In particular, a
+best-first bounded result heap must compare its declared tie keys rather than
+reuse an encounter-sequence comparator. No ordering on caller values is needed.
+
+For the current mapped dictionaries, a nonempty elastic terminal bucket has
+tie floor $`(\text{bucket ID},0)`$, and a timestamped terminal bucket has its
+smallest episode ID. A region's floor is the minimum of its live terminal
+floor and its children's floors. Empty buckets contribute nothing, and an
+entirely empty region has a separate `Empty` tag. A partially inspected
+region's observed minimum is an **upper** bound on its true minimum and must
+not be cached as a floor. A query-local, revision-bound structural traversal
+may memoize complete floors by physical node identity only when terminal
+payloads determine the same tie-key set at every path to that node. Otherwise
+the path belongs in the memo key or the floor stays unknown. DAWG state
+sharing alone never licenses deduplication of candidate paths.
+
+The bound comparison uses exact machine ordering, not an epsilon. Its
+numerical premise is that the implemented abstract bound is no greater than
+the implemented exact score under that ordering; an ideal-real inequality
+alone does not establish this for rounded binary64 recurrences. The completed
+result theorem does not assert that different schedules produce identical
+resource usage or incomplete partial pages. Structural work and retained
+summary memory must be charged before use; if an optional summary cannot be
+completed within its budget, ordinary cost-only traversal remains sound.
+
+Three short counterexamples fix the boundary of the rule. With $`k=1`$, a
+verified rank $`(5,2)`$ and an unvisited rank $`(5,1)`$ refute stopping merely
+because the cost bound equals five. A region bound $`(4,100)`$ cannot be
+discarded against $`(5,1)`$: its candidate might have cost four. Finally, a
+cached floor of ten becomes unsafe if a later revision inserts tie key one
+into the region; node summaries must be revision-bound or conservatively
+weakened. A stale **smaller** floor loses pruning opportunities but remains
+safe.
+
+The [Rocq order kernel](../verification/temporal_automata/theories/LazyProductOperations.v)
+proves componentwise-to-lex lower bounds, local and whole-frontier stopping,
+top-$`k`$ selection preservation, complete/unknown/empty tie-floor
+composition, a sound executable prune predicate for all three summary tags,
+sound elastic terminal bucket and timestamped episode-ID floors,
+sound combination of region and candidate-specific cost bounds, floor safety
+after candidate removal, and monotonicity after the kth rank improves. The
+[finite TLA+ scheduling model](../verification/tla/LexicographicKnn.tla)
+checks coverage and ordered completion across nondeterministic region splits,
+summary resolution, empty regions, verification, and pruning. Its known floors
+are exact for the finite corpus; unknown floors cannot authorize equality
+pruning. Neither result alone discharges a Rust kernel's machine-bound or
+heap-correspondence proof. The checked-in
+[cost-only equality mutant](../verification/tla/LexicographicKnnCostOnlyEquality.cfg)
+replaces the rank-aware pruning action and makes TLC violate `NoLostTopK`;
+the [model report](../verification/CBC_LEXICOGRAPHIC_MODEL_REPORT.md) records
+its concrete discarded top-two candidate and reproduction command.
 
 ## 7. Operations, cursors, and product zippers
 
@@ -684,7 +781,7 @@ prove the sum, maximum, and zero-quotient constructions.
 | MSM | min-plus real | sparse query-row frontier | preceding target point or interval | metric for lawful positive split/merge cost |
 | ERP | min-plus real | sparse query-row frontier | gap configuration | metric on the gap-value quotient |
 | unit-grid TWED | min-plus real | query-row frontier | preceding target point and depth | metric under lawful positive stiffness on uniform grids |
-| timestamped TWED | min-plus real | timestamp-aware frontier | preceding value/time and typed units | cumulative-boundary metric transfer requires first time strictly after the origin; ORC 11.5 gives the existing broader domain's zero-distance counterexample |
+| timestamped TWED | min-plus real | timestamp-aware frontier | preceding value/time and typed units | cumulative-boundary metric transfer requires first time strictly after the origin; the additive strict-origin wrapper enforces this domain, while ORC 11.5 gives the raw domain's zero-distance counterexample |
 | scalar/vector discrete Fréchet | min-max | bottleneck row frontier | current point/interval | metric on the consecutive-stutter quotient when the ground metric is certified |
 | banded DTW | min-plus real | band-restricted row frontier | band/depth and current label | general family nonmetric; separately proved restrictions possible |
 | Soft-DTW | smooth log-sum-exp recurrence | rolling dense score rows | bounded DP history | analysis-only; idempotent antichain elimination does not apply |
@@ -717,11 +814,80 @@ contracts, not a claim that a generic production compiler is already exported.
 | point-abstraction exactness | specialized point transitions | exact-state embedding and singleton labels commute with transitions |
 | dictionary-relative dominance | stronger local normalization | compare only suffixes accepted at this focus; include snapshot and focus in scoped cache keys |
 | product reachability | on-demand construction | transitions arise only from inspected reachable edges |
+| ORC R2a | adaptive dense/sparse representation | every conversion preserves the reachable machine residual and promised witness |
 | zipper navigation laws | opaque native focus, projection-before-child, shared parent arena | snapshot/path/finality observations remain equal |
 | sibling independence | prepared rows and batched child labels | scratch is reset transactionally between labels |
 | coalgebraic state sufficiency | current/next generations and cache reclamation | chunk partitions and long prefixes are observationally equal |
 | scheduler refinement | select DFS, BFS, layers, or best-first by query | completeness, order, cutoff, and continuation obligations remain true |
 | witness congruence | compact parent operation IDs and delayed replay | canonical replay produces the promised exact cost and tie key |
+
+**Schema RS-1 (representation switching).** For a dense and sparse frontier
+that each satisfies residual correspondence, an adaptive scheduler may switch
+at a reachable prefix only through a conversion satisfying ORC R2a. This is a
+per-state obligation, including cutoff and finite-output tags. A density
+threshold chooses *when* to convert; it supplies no correctness evidence. A
+conversion that runs out of its declared storage must preserve the old
+committed state or return a tagged incomplete outcome. In the confirmation
+experiment, force switches at every possible prefix, at no prefix, and around
+each density threshold, then compare the entire machine output and any
+promised witness with an independent recurrence.
+The [Rocq adaptive-event theorem](../verification/temporal_automata/theories/OrderedTheoryRefinements.v)
+proves the generic claim for arbitrary switch schedules. A Rust converter is
+still an instance obligation because no optimization implementation has been
+introduced in this campaign.
+
+**Schema CL-1 (monotone sparse lookup).** Suppose a sparse source frontier has
+strictly ascending row indices and the rows evaluated by one transition are
+ascending. If each evaluated row $`r>0`$ requests source rows $`r-1`$ then
+$`r`$ (and row zero requests zero), the full lookup request stream is
+nondecreasing. A cursor that advances while its source row is smaller than the
+request therefore returns exactly the same present cost or infinity as binary
+search. Its total comparisons are bounded by a constant times the number of
+requests plus the source length. The scheduled-row builder and vertical-closure
+merge must establish the ascending-row premise, and the proof must include
+repeated requests, absent rows, row zero, and checked row conversion. This
+lemma applies to the timestamped TWED sparse transition's source lookups;
+it says nothing about the cost of constructing the schedule or closing rows.
+The same [Rocq file](../verification/temporal_automata/theories/OrderedTheoryRefinements.v)
+proves cursor answers equal independent lookups for sorted sources and
+nondecreasing requests, derives the request order from ascending evaluated
+rows, proves that a scheduled/vertical minimum advances past the prior row,
+and gives an amortized upper bound of source length plus request count on
+cursor comparisons. The executable scheduler must still establish its
+sorted-row and cursor-update correspondence with this model.
+
+**Schema RA-1 (bound-first accounting).** Let a concrete candidate bound be
+admissible for every original in its collision bucket. If the bound is strictly
+above an inclusive cutoff, skipping exact DP for that original preserves the
+set of completed exact results. Charge the bound's actual work before
+evaluation, and preflight each subsequently admitted DP step before executing
+or committing it. A failed preflight leaves candidate position, results, and
+continuation at the last committed boundary. The charged-work trace and tagged
+resource outcome may differ from a full-DP precharge policy at the same limit;
+the theorem promises equal ordered results **when both runs complete**, plus
+sound tagged incompleteness and resumability under the new policy. It does not
+claim budget-observational equivalence between the two policies. An uncharged
+bound or a bound that is merely correct on the bucket representative violates
+the premises.
+The [Rocq candidate model](../verification/temporal_automata/theories/OrderedTheoryRefinements.v)
+proves completed-result equality over lists of candidates, atomic rejection
+of an unaffordable phase, a paused exact phase's resumption without repeating
+the bound, and charged-work ceilings. Its finite-cost carrier
+does not prove the Rust binary64 lower-bound relation or whole-session ledger
+correspondence.
+
+**Schema RA-2 (private sparse-edge accounting).** Decompose one sparse
+transition into a finite ordered list of logical primitives, each with a
+declared work charge and deterministic state update. Charge before applying a
+primitive. Keep the partially computed successor private until every primitive
+finishes; a failed preflight leaves the private cursor and public predecessor
+unchanged. The [Rocq private-edge model](../verification/temporal_automata/theories/OrderedTheoryRefinements.v)
+proves that any sequence of affordable steps and budget pauses preserves a
+prefix-of-primitives invariant, never publishes a partial successor, and, once
+complete, publishes exactly the uninterrupted fold with precisely the sum of
+executed charges. The Rust instance must account for allocation, checked
+arithmetic, and every actual primitive; a model of abstract work units alone
+cannot establish those correspondences.
 
 Let $`E_R`$ be the number of inspected edges in the reachable live product,
 $`S_R`$ the number of distinct canonical query states, $`C_R`$ the number of
@@ -821,10 +987,14 @@ is authoritative for current proof status.
 | MQ-2 | fixed nonnegative channel sums and maxima preserve pseudometrics; joint separation gives a metric | ORC M2–M3, fixed domains/maps/weights, and a separate numerical contract |
 | ZP-1..7 | zipper snapshot, path, child, finality, clone, and continuation laws | backend conformance and product-focus model |
 | GR-1..3 | bounded-lookback reclamation, prefix-independent retention, and generation-tag safety | recurrence dependency and ring-buffer refinement |
+| RS-1 | adaptive dense/sparse switching preserves residual behavior | Rocq event-trace theorem; concrete conversion relation, machine outputs, and failure atomicity remain instance gates |
+| CL-1 | sorted sparse source lookups admit a monotone cursor | Rocq lookup equivalence and comparison bound; executable scheduled/vertical row order remains an instance gate |
+| RA-1 | bound-first charging preserves completed exact results and tagged resumability | Rocq candidate/result and preflight laws; per-original machine admissibility and whole-session ledger trace remain instance gates |
+| RA-2 | private sparse-edge steps publish only a fully charged successor | Rocq prefix/refinement invariant under arbitrary page limits; Rust primitive inventory, checked arithmetic, and allocation remain instance gates |
 | ST-1 | arbitrary stream chunking equals one uninterrupted run | coalgebraic composition plus executable property |
 | TX-1 | rejected transition preflight leaves committed state unchanged | resource refinement and fault injection |
 | PS-1..5 | reachability, completeness, soundness, scheduler independence, and lazy construction | product proof plus bounded lifecycle model |
-| BF-1 | admissible best-first kNN stopping is exact with tie discipline | lower-bound and ordering proof |
+| BF-1 | admissible cost/tie lower pairs certify ordered best-first kNN stopping | Rocq order kernel and finite TLA+ model, followed by machine-bound, coverage, and heap-correspondence instance proofs |
 | BO-1..2 | complete outcomes are fail-closed and resumption equals uninterrupted execution | TLA+ lifecycle plus executable pages |
 
 ### 12.2 Proof dependency
@@ -932,6 +1102,16 @@ resource failures.
 24. Delayed path materialization equals eager root-to-focus reconstruction.
 25. DFS, BFS, and best-first completed result multisets agree where their
     public ordering contracts permit comparison.
+26. Forced dense/sparse switches after every reachable prefix agree with the
+    machine recurrence, including exact output tags and promised witnesses.
+27. Monotone-cursor source lookups equal binary search for every sparse row
+    request, including absent, repeated, zero, and last-row requests.
+28. Bound-first charging records all bound work and all executed DP work;
+    budget exits preserve a resumable committed boundary and completed runs
+    retain exact candidate order.
+29. Every sparse-edge primitive is charged before private execution; a
+    rejected preflight keeps the public predecessor and private cursor, and
+    arbitrary page partitions publish the same completed successor.
 
 ### 13.2 Pinned mutants and negative controls
 
@@ -962,8 +1142,14 @@ The suite must permanently reject:
 - applying the fixed-composition theorem to pair-renormalized channels;
 - using full semantic width for a duplicate-only normalizer;
 - treating a point label as a repair for an already abstracted history;
-- treating rounded or cutoff-saturated outputs as metrics without a proof; and
-- claiming a compact exact scorer from a constant-zero candidate filter.
+- treating rounded or cutoff-saturated outputs as metrics without a proof;
+- claiming a compact exact scorer from a constant-zero candidate filter;
+- converting a dense frontier to a sparse frontier by density alone, without
+  preserving its continuation behavior;
+- advancing a sparse lookup cursor past a later smaller request; and
+- charging a candidate lower bound after evaluating it, or using a bound
+  proved only for the bucket representative; and
+- publishing a sparse successor after only a charged prefix of its primitives.
 
 ## 14. Causal benchmark protocol
 

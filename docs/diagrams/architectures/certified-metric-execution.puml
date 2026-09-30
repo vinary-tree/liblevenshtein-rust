@@ -1,0 +1,47 @@
+@startuml certified-metric-execution
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  BorderColor #37474F
+  FontColor #102027
+  RoundCorner 12
+}
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 2
+
+title Certified construction and optimization of metric automata
+
+rectangle "Observation contract\ndomain, arithmetic, snapshot, order, witnesses, limits" as Contract #BBDEFB
+rectangle "Reference semantics\nmeasure + residual + session trace" as Reference #E3F2FD
+rectangle "Candidate realizations\nspecialized recurrences, layouts, schedulers" as Candidates #D1C4E9
+rectangle "Local proof obligations\ntransitions, coverage, numeric bounds, progress" as Proofs #FFF9C4
+rectangle "Resource evidence\nwork potential, live bytes, conversion costs" as Resources #FFE0B2
+rectangle "Checked correspondence\nproof replay + exact artifact and scope" as Check #B2EBF2
+rectangle "Certified feasible portfolio\neach member preserves requested observations" as Portfolio #C8E6C9
+rectangle "Selection under declared objective\nmodel optimum / measured workload improvement" as Select #DCEDC8
+rectangle "Executable specialization\ntransactional publication and scoped certificates" as Execute #F8BBD0
+
+Contract --> Reference
+Contract --> Candidates
+Reference --> Proofs
+Candidates --> Proofs
+Candidates --> Resources
+Proofs --> Check
+Resources --> Check
+Check --> Portfolio : accept only established claims
+Portfolio --> Select
+Select --> Execute : retain correspondence evidence
+
+note right of Check #FFF9C4
+  A hash detects artifact drift.
+  A refinement or validated translation
+  establishes semantic correspondence.
+end note
+
+note bottom of Select #E8F5E9
+  State count, work, memory, and latency
+  are distinct optimization objectives.
+  Summary and conversion costs count.
+end note
+@enduml

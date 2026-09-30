@@ -267,6 +267,12 @@ docs/verification/phonetic/theories/README.md
 docs/verification/PROOF_INDEX.md
 docs/verification/README_FORMAL_GATES.md
 docs/verification/README.md
+docs/verification/CBC_CERTIFICATE_REPLAY_REPORT.md
+docs/verification/CBC_BASELINE_EVIDENCE.md
+docs/verification/CBC_DOMAIN_CAPABILITIES.md
+docs/verification/CBC_LEXICOGRAPHIC_MODEL_REPORT.md
+docs/verification/CBC_NUMERIC_AUTHORITY.md
+docs/verification/CBC_RANGE_CURSOR_MODEL_REPORT.md
 docs/verification/SUMMARY.md
 docs/verification/tla/README.md
 docs/design/elastic-kernels.md
@@ -302,6 +308,9 @@ docs/bindings/resource-consumer.md
 docs/bindings/wasm-topology.md
 docs/theory/snapshot-semantics.md
 docs/theory/lazy-ordered-cost-product-automata.md
+docs/theory/metric-automata-cbc-obligations.md
+docs/theory/twed-metric-source-contract.md
+docs/theory/certified-metric-automata.md
 docs/theory/ordered-residual-calculus.md
 docs/theory/README.md
 docs/design/lazy-online-products.md

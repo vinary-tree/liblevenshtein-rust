@@ -14,6 +14,19 @@ assumptions, stale contracts, and evidence links. Debug, legacy, and partial
 files are still audited, but they do not support library correctness claims
 until promoted in the manifest.
 
+The [CBC baseline evidence audit](CBC_BASELINE_EVIDENCE.md) records the
+metric-automata theory campaign's starting revision, claim-by-claim proof
+scope, source correspondence gaps, and draft-correction checklist. It does not
+promote a generic proof or finite model check to production certification.
+The [domain capability contract](CBC_DOMAIN_CAPABILITIES.md) maps each
+metric-labelled constructor to its admitted domain and ideal theorem boundary,
+including quotient and strict-origin negative controls.
+The [numeric authority contract](CBC_NUMERIC_AUTHORITY.md) maps exact integer,
+decimal rational, ideal real, binary64, enclosure, and soft-loss claims to
+the actual cutoff and verifier paths.
+The [lexicographic kNN model report](CBC_LEXICOGRAPHIC_MODEL_REPORT.md)
+records the clean finite check and the checked-in equality-cost mutant.
+
 ## Exact Dyck correction and binary-persistence proof island
 
 The multi-kind Dyck corrector is verified against the same four candidate
@@ -138,12 +151,18 @@ only bounded live generations rather than the search-session arena.
 | Tool | Artifact | Checked invariant |
 |---|---|---|
 | Rocq | `temporal_automata/theories/LazyWeightedFrontier.v` | exact canonical-state reuse, interval refinement, tagged completion, bounded generations, stable frame-to-arena references, frame-only pop, and transactional preflight |
-| Rocq | `temporal_automata/theories/LazyProductOperations.v` | observation congruence, exact cache refinement, immutable zipper descent, bounded iterative shared-spine release, query-first product construction, final cutoff admission, and scheduler membership |
+| Rocq | `temporal_automata/theories/LazyProductOperations.v` | observation congruence, exact cache refinement, immutable zipper descent, bounded iterative shared-spine release, query-first product construction, final cutoff admission, scheduler membership, ordered top-k selection under lexicographic stopping, executable Unknown/Empty/Known summary prune soundness, and sound composition of optional tie floors |
+| Rocq | `temporal_automata/theories/CertifiedContracts.v` | exact natural-cost, score-only expression rewrite checking and every-environment preservation, separately typed lower-bound checking, conservative cutoff binding, explicit rejection of rounded arithmetic and stronger result/witness profiles even when scope tags match; source/runtime correspondence remains open |
+| Rocq | `temporal_automata/theories/CertifiedSearchSession.v` | finite original-occurrence ownership and a cursor-shaped unseen/scoring/awaiting-result model; revision and ownership persist across logical pauses, and exhausted cursors have exact abstract range membership, with region splitting, ordered output, resources, and Rust correspondence still open |
+| Rocq | `temporal_automata/theories/CertifiedRegionPartition.v` | a complete checker for explicit finite parent/terminal/child original lists over any decidable identity, with path-and-slot shared-node controls; deriving those lists from a captured dictionary and using a compact hot-path certificate remain open |
+| Rocq | `temporal_automata/theories/CertifiedStructuralSplit.v` | a classifier-based constructor preserves the supplied original permutation, unique child labels, and acceptance by the explicit split checker; captured dictionary enumeration, Rust correspondence, and a compact hot-path certificate remain open |
+| Rocq | `temporal_automata/theories/CertifiedMetricExecution.v` | conditional finite execution simulation/composition, administrative-step rank bound, natural-rank equality-slice and pair algebra, potential telescoping, and finite-portfolio selection; concrete instance premises remain open |
+| Rocq | `temporal_automata/theories/OrderedTheoryRefinements.v` | arbitrary adaptive dense/sparse switch traces under behavior-preserving conversions; sorted monotone-cursor answers and linear comparison accounting; admissible bound-first completed results and atomic candidate preflight/resumption; private sparse-edge charge, pause, and completed paging refinement |
 | Rocq | `temporal_automata/theories/RangeCertificates.v` | exact query/cutoff/snapshot binding, canonical K1-K4 evidence replay, mutation rejection, logical resource ceilings, deterministic construction, and completion-only-after-exhaustion |
 | Rocq | `temporal_automata/theories/ExactWorkspaceResources.v` | exact plan/frontier retained and construction-peak algebra, preflight boundaries, retained-plus-later composition, candidate-reuse invariance, and the structural/finite/TOP-cutoff classification table |
 | Verus | `verus/temporal_lazy_frontier.rs`, `verus/lazy_product_operations.rs` | Rust-shaped arithmetic and state-lifecycle mirrors of the Rocq laws, including constant-call-stack zipper-spine release |
 | Z3 + cvc5 | `smt/temporal_lazy_frontier.smt2`, `smt/lazy_product_operations.smt2` | independent negated counterexample checks for arena IDs, cache equality, final admission, and bounded commit |
-| TLA+ TLC | `tla/TemporalLazyProduct.tla`, `tla/TemporalStreamingGenerations.tla`, `tla/TemporalDfsStackArena.tla` | bounded resumable search, prefix-independent streaming generations, iterative DFS, exact interning, and explicit incomplete states |
+| TLA+ TLC | `tla/TemporalLazyProduct.tla`, `tla/TemporalStreamingGenerations.tla`, `tla/TemporalDfsStackArena.tla`, `tla/LexicographicKnn.tla`, `tla/MetricCertificateReplay.tla`, `tla/RangeCursorOwnership.tla` | bounded resumable search, prefix-independent streaming generations, iterative DFS, exact interning, explicit incomplete states, finite ordered kNN completion, a 12-state certificate-rejection abstraction, and a 16-state cursor ownership model with private/collision/pending-finish mutants |
 | proptest | `tests/proptest_temporal_lazy_frontier_model.rs`, `tests/proptest_temporal_dictionary_product.rs`, `tests/proptest_exact_workspace_resources.rs`, `tests/time_series_msm_tests.rs` | independent recurrence oracle, arbitrary arena actions, exact workspace resource-boundary correspondence, paged/unpaged product correspondence, and cutoff mutation controls |
 
 Kernel-specific recurrence and metric statements remain separate proof
@@ -290,15 +309,25 @@ premises consumed by the already verified generic walker:
 | Tool | Artifact | Checked invariant |
 |---|---|---|
 | Rocq | `twed/theories/Metric/TwedProperties.v` | arbitrary-real interval match/delete admissibility and point exactness; explicit-time value/time-box AP composition and point exactness; additive recurrence monotonicity; arbitrary-script length bound; strict stiffness; zero-parameter witness; script-cost composition |
+| Rocq | `twed/theories/Metric/TimestampedMetricTransfer.v` | unique infinite-axis anchored grid equals cumulative-boundary grid; physical-time shift preserves delete/match charges; anchor injectivity and strict-time order; strict-wrapper guard enters the transfer domain; conditional metric pullback and origin-equal zero-cost script |
+| Rocq | `twed/theories/Metric/TwedSourceMetric.v` | ideal-real sample/time product metric for positive stiffness; this establishes the source theorem's ground-metric instance, while sequence-level TWED metricity remains open |
 | Rocq | `twed/theories/Metric/TimestampedProductIndex.v` | typed-token equality; canonical sparse-residual dense reconstruction; exact-bit collision-checked interning and vertical subsumption; lazy transition/cache laws; immutable DFS cursor/zipper paging; tagged exhaustion; explicit-ceiling memory scope |
 | Verus | `verus/twed_kernel.rs` | Rust-shaped interval, separability, recurrence, K4, metric-gate, degeneracy, interval-primitive point exactness, and physical-component composition obligations |
 | Z3 + cvc5 | `smt/twed_kernel.smt2` | independent negated integer-arithmetic obligations, including interval-primitive point exactness and explicit-time component composition, all required `UNSAT` in both solvers |
 | TLA+ | `tla/ElasticTrieSearch.tla` | unchanged generic carry-aware K1/K4 traversal, exact emission, root/full terminal completeness, and termination |
-| proptest | `src/time_series/kernels/twed.rs`, `tests/twed_transducer_tests.rs`, `tests/proptest_timestamped_twed_intervals.rs`, `tests/proptest_timestamped_twed_product.rs` | unit-grid kernel/reference/invariant/metric and public range/kNN cases; explicit-time interval laws; exact sparse product versus full-matrix oracle; collision reranking; bounded paging/resume; small-stack iterative traversal |
+| proptest | `src/time_series/kernels/twed.rs`, `tests/twed_transducer_tests.rs`, `tests/proptest_timestamped_twed_intervals.rs`, `tests/proptest_timestamped_twed_metric.rs`, `tests/proptest_timestamped_twed_product.rs` | unit-grid kernel/reference/invariant/metric and public range/kNN cases; explicit-time interval and strict-origin domain laws; exact sparse product versus full-matrix oracle; collision reranking; bounded paging/resume; small-stack iterative traversal |
 
 The Rocq file does not assume or admit the full Marteau metric theorem. It
 proves the local and arbitrary-script obligations represented in the kernel;
 generated Rust triples exercise the complete executable triangle recurrence.
+The timestamped transfer file uses the published source metric theorem as an
+explicit premise of a pullback theorem. It proves the changed-boundary
+reduction and strict-origin injection, but it does not claim a new proof of
+the source theorem or metricity of rounded binary64 outputs. The existing
+origin-equal constructor domain remains broader than that strict-metric proof.
+`StrictOriginTimestampedSeries` is an additive runtime gate for the theorem's
+domain, and `distance_bounded_strict` delegates to the existing scorer. The
+raw scorer remains available for the broader domain.
 The API independently makes the theorem's strict stiffness premise a type
 invariant: only `MetricTwedConfig` implements `MetricElasticKernel`.
 

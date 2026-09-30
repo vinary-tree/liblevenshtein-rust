@@ -117,6 +117,31 @@ finite-prefix output equals the specification. The same induction as R1 gives
 $`b(\delta_S^*(s_0,u))=\partial_uF`$. They are the central contract for
 deriving new automata.
 
+**R2a — adaptive representation switching.** Let two representations
+$`S_D,S_P`$ satisfy R2 for the same score and output carrier. For each
+permitted switch $`i\to j`$, a conversion $`c_{ij}`$ must preserve behavior
+on every reachable state at which that switch can occur:
+
+```math
+b_j(c_{ij}(s))=b_i(s).
+```
+
+Then an execution that interleaves ordinary transitions with any finite number
+of permitted conversions still represents the residual of its consumed word.
+Induct on execution events: a transition uses R2's derivative equation, and a
+conversion leaves the interpreted residual unchanged. No transition
+commutation or reverse conversion is needed for the chosen schedule. Conversion
+failure must leave the old state available or return a tagged incomplete
+outcome. A pair of correct seeds alone cannot certify a conversion: the
+intermediate states may have different encodings or finite-cutoff information.
+For binary64 kernels, $`b_i`$ denotes the specified **machine** outputs,
+including operation order, cutoff, invalidity, and tie/witness observation
+when promised; equality of ideal real recurrences is insufficient.
+The [Rocq event-trace proof](../verification/temporal_automata/theories/OrderedTheoryRefinements.v)
+allows arbitrary finite interleavings of consumption and conversions under
+these per-transition and per-conversion equations. A concrete converter still
+has to discharge the equations for its own machine carrier.
+
 ### 2.2 Minimality and effective construction
 
 **R3 — deterministic residual minimality.** Every reachable deterministic
@@ -1036,11 +1061,24 @@ The first target sample can be deleted at zero cost, then the remaining pair
 matches at zero cost. Both satisfy the constructor's internal strict-order
 check. Consequently its current metric label is too broad for strict identity;
 the certified restriction above is needed before applying this transfer
-theorem. This is an audit finding about
-[the current constructor and recurrence](../../src/time_series/timestamped_twed.rs),
-not an assertion that the runtime now enforces the restriction. The Wolfram
+theorem. The additive
+[`StrictOriginTimestampedSeries`](../../src/time_series/timestamped_twed.rs)
+wrapper checks that restriction and can be passed to
+`distance_bounded_strict`. The existing raw constructor and scorer remain
+available on the broader domain, so their outputs do not acquire a metric
+guarantee from this theorem. The Wolfram
 companion reproduces this failure and checks the anchored reduction on its
 finite corpus. See [reference 9](#15-related-work-and-naming) for the source theorem.
+The [Rocq transfer proof](../verification/twed/theories/Metric/TimestampedMetricTransfer.v)
+proves uniqueness of the anchored infinite-axis recurrence grid, equality of
+each shifted physical-time charge, injectivity of the anchor map, and the
+metric pullback conditional on the source theorem's metric axioms. It also
+constructs the distinct origin-equal pair and proves that its 1-by-2
+cumulative recurrence grid has final cost zero. A separate validator lemma
+shows that the strict wrapper's guard enters the transfer domain while the
+origin-equal counterexample passes the raw constructor's abstract guard. The
+published source metric theorem and a binary64-to-real correspondence are
+separate premises; neither is re-proved by the transfer file.
 
 **Branch audit, 2026-09-06.** After fetching all remote heads, review covered
 all twelve local branches and eighteen remote branch references, plus the
@@ -1308,14 +1346,30 @@ contract remains satisfied and its measured objective improves.
 | O6 | Equal observation implies equal complete transition | Cache by state/observation class | Score |
 | O7 | Exact payload equality and immutable arena entries | Intern repeated encodings | Score |
 | O8 | S1 and tagged generation invariant | Replace matrix/history storage by rolling generations | Score |
-| O9 | R2 in both representations | Choose dense, sparse, or packed layout | Score |
+| O9 | R2 in both representations and R2a at each permitted switch | Choose dense, sparse, or packed layout, including adaptive switching | Declared score and witness |
 | O10 | B1/B2 on a complete continuation graph or an admissible relaxation | Propagate remaining budgets backward | Membership/pruning |
 | O11 | H1, immutable suffix context | Apply dictionary-relative reduction | Context-restricted score |
 | O12 | K2 and H2 | Traverse a cheaper abstract product then verify | Completed exact results |
 | O13 | Pure synchronized transitions and zipper navigation laws | Reject query projection before allocating a child focus | Completed exact results |
 | O14 | G1/G2 plus an explicit slack certificate | Compose or compare approximations | Bounded discrepancy |
 | O15 | Exact additive homogeneity and output-offset reconstruction | Normalize common cost offsets | Score |
-| O16 | Admissible priorities and correct tie/continuation discipline | Choose DFS, BFS, or best-first scheduling | Declared completed-result order |
+| O16 | Admissible priorities, frontier coverage, and the operation's tie/continuation discipline | Choose DFS, BFS, or best-first scheduling, including certified lexicographic kNN pruning | Declared completed-result order |
+
+For O16's exact top-$`k`$ specialization, the result order is a **separate
+layer** over completed candidates. On one captured revision, give each
+candidate a unique tie key and rank it by the pair of its exact cost and that
+key. Give each queued region both an admissible lower cost and a lower tie
+key. Once $`k`$ exact results exist, a region can be removed when its lower
+pair is at least the worst exact pair in lexicographic order. In particular,
+equal cost bounds permit removal only if the region's tie floor cannot beat
+the current kth tie. The proof is by contradiction: a better unseen candidate
+would be covered by a region whose lower pair is no greater than that
+candidate's pair, and hence smaller than the kth pair. The floor may be
+weakened or unknown, in which case pruning decreases; a stale floor that is
+too high is unsound. This transformation never changes the cost monoid or
+the exact verifier's recurrence. It requires the machine implementation's
+cost comparison and lower-bound relation, not merely the ideal arithmetic
+versions. LOCPA BF-1 gives the full result-order and snapshot conditions.
 
 For O15, if an exact min-plus update satisfies
 $`T(v+b\mathbf1)=T(v)+b\mathbf1`$ and the output has the same property,
