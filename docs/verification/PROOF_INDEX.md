@@ -39,6 +39,9 @@ use `FORMAL_VERIFICATION_MANIFEST.tsv` and `README_FORMAL_GATES.md`.
 | `sparse_transition_storage_is_observation_bounded` | `temporal_automata/theories/LazyWeightedFrontier.v` | Sparse generated-target storage grows only with distinct transitions actually observed. |
 | `push_reused_state_preserves_valid_references` | `temporal_automata/theories/LazyWeightedFrontier.v` | Reusing an interned residual adds a valid frame identifier without allocating an arena state. |
 | `push_fresh_state_preserves_valid_references` | `temporal_automata/theories/LazyWeightedFrontier.v` | Appending a fresh residual before its frame preserves every existing and new arena reference. |
+| `append_fresh_state_preserves_old_referents` | `temporal_automata/theories/LazyWeightedFrontier.v` | Appending a fresh residual leaves every old in-bounds identifier bound to the same state. |
+| `append_fresh_state_binds_new_identifier` | `temporal_automata/theories/LazyWeightedFrontier.v` | The old arena length identifies exactly the newly appended residual. |
+| `push_fresh_state_preserves_frame_referents` | `temporal_automata/theories/LazyWeightedFrontier.v` | Every existing frame identifier retains its referent after a fresh append. |
 | `pop_frame_preserves_valid_references` | `temporal_automata/theories/LazyWeightedFrontier.v` | Frame-only DFS pop leaves every remaining append-only arena identifier valid. |
 | `interned_arena_retention_is_history_independent` | `temporal_automata/theories/LazyWeightedFrontier.v` | The configured state ceiling bounds the append-only arena independently of visited-node count; this is not a live-depth-only bound. |
 | `rejected_child_preflight_is_atomic` | `temporal_automata/theories/LazyWeightedFrontier.v` | A prospective child above the scratch ceiling leaves retained product state unchanged. |

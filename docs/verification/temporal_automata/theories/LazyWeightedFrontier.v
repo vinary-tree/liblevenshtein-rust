@@ -407,13 +407,58 @@ Qed.
 Theorem push_fresh_state_preserves_valid_references : forall
     B (state : B) states frames,
   arena_references_valid frames states ->
-  arena_references_valid (length states :: frames) (state :: states).
+  arena_references_valid (length states :: frames) (states ++ [state]).
 Proof.
   intros B state states frames Hvalid.
-  constructor; simpl; [lia |].
+  constructor; [rewrite length_app; simpl; lia |].
   induction Hvalid as [| state_id remaining Hid Hremaining IH].
   - constructor.
-  - constructor; [simpl; lia | exact IH].
+  - constructor; [rewrite length_app; simpl; lia | exact IH].
+Qed.
+
+(** Appending leaves every old identifier bound to the same state. The
+    in-bounds theorem alone would not prove this: prepending would keep all
+    identifiers in bounds while changing their referents. *)
+Theorem append_fresh_state_preserves_old_referents : forall
+    B (state : B) states state_id,
+  state_id < length states ->
+  nth_error (states ++ [state]) state_id = nth_error states state_id.
+Proof.
+  intros B state states.
+  induction states as [| old remaining IH]; intros state_id Hid.
+  - simpl in Hid; lia.
+  - destruct state_id as [| state_id]; simpl in *.
+    + reflexivity.
+    + apply IH; lia.
+Qed.
+
+Theorem append_fresh_state_binds_new_identifier : forall
+    B (state : B) states,
+  nth_error (states ++ [state]) (length states) = Some state.
+Proof.
+  intros B state states.
+  induction states as [| old remaining IH]; simpl.
+  - reflexivity.
+  - exact IH.
+Qed.
+
+Example prepending_changes_an_old_referent :
+  nth_error (20 :: [10]) 0 <> nth_error [10] 0.
+Proof. discriminate. Qed.
+
+Theorem push_fresh_state_preserves_frame_referents : forall
+    B (state : B) states frames state_id,
+  arena_references_valid frames states ->
+  In state_id frames ->
+  nth_error (states ++ [state]) state_id = nth_error states state_id.
+Proof.
+  intros B state states frames state_id Hvalid Hin.
+  induction Hvalid as [| old remaining Hold Hremaining IH].
+  - inversion Hin.
+  - simpl in Hin.
+    destruct Hin as [Heq | Hin].
+    + subst; now apply append_fresh_state_preserves_old_referents.
+    + now apply IH.
 Qed.
 
 (** Iterative DFS pop removes only the top frame. Every remaining identifier
