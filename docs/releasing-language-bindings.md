@@ -1243,7 +1243,9 @@ GitHub [release immutability](https://docs.github.com/en/code-security/concepts/
 for this repository before `validate-only`, and provide the protected
 `github-release` job a narrowly scoped `IMMUTABLE_RELEASES_READ_TOKEN` with
 repository Administration:read. The publisher itself uses only its job-scoped
-Contents:write `GITHUB_TOKEN`. Preflight rejects a disabled setting or an
+Contents:write `GITHUB_TOKEN`. The organization-level secret must grant this
+repository access. Rotate its one-year fine-grained token before expiration;
+never print or commit its value. Preflight rejects a disabled setting or an
 existing release. The release job builds the versioned documentation archive
 as part of its own validation graph, then uploads that archive with every
 other asset and `SHA256SUMS` to a draft. It checks exact asset names and API
