@@ -398,11 +398,13 @@ jobs:
           version: ${{ matrix.julia-version }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --locked --features native-bindings-full
+      - run: cargo build --locked --features native-bindings-full --example julia_automata_control
       - run: cargo build --locked --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - name: Test the fresh local package graph
         env:
           LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
           LIBDICTENSTEIN_LIBRARY: ${{ github.workspace }}/../libdictenstein/target/debug/liblibdictenstein.so
+          LIBLEVENSHTEIN_RUST_CONTROL: ${{ github.workspace }}/target/debug/examples/julia_automata_control
         shell: bash
         run: |
           set -euo pipefail
@@ -416,6 +418,11 @@ jobs:
             ])
             Pkg.test("Liblevenshtein")
           '
+      - name: Check standalone automata construction and matching budgets
+        env:
+          LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          LIBLEVENSHTEIN_RUST_CONTROL: ${{ github.workspace }}/target/debug/examples/julia_automata_control
+        run: julia --startup-file=no --project=target/julia-test bindings/julia/Liblevenshtein/benchmark/automata.jl
       - name: Build the strict Documenter API reference
         if: matrix.julia-version == '1.12'
         env:
