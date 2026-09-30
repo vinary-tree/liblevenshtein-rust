@@ -2,8 +2,10 @@
 
     A prepared action retains its complete predecessor and accumulates charged
     units and distinct executed-event identities.  It cannot mutate semantic
-    state before publication.  Every failure returns Incomplete with the
-    predecessor and its cumulative ledger.  A source correspondence proof must
+    state before publication.  Every failure at this action boundary returns
+    Incomplete with the predecessor and its cumulative ledger.  A successful
+    publication followed by a failing peak check is two actions, not a
+    rollback of that publication.  A source correspondence proof must
     show that each Rust fallible branch implements one of these actions;
     this file does not infer that fact from a successful model check. *)
 

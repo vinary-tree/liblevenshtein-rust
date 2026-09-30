@@ -590,17 +590,23 @@ and publication of a result from a failed action.
 | Source stage | Precedence and observable result | Accounting consequence |
 |---|---|---|
 | Public range validation | Unit mismatch, then origin-bit mismatch, then query-length limit, then invalid cutoff; first failing check returns an API validation error | No continuation or execution work starts; length validation uses an empty temporary ledger |
-| Continuation start | Product-state limit, checked width/scratch arithmetic and peak check, root recurrence, state intern, snapshot traversal, root-node charge, then fallible frame and DP-buffer reservations | A later failure returns `Incomplete` with the ledger reached at that stage; the root-node charge is not undone by a later allocation failure |
-| Active page | Page and session resource checks precede work or result publication at their respective branch points | A resumable limit returns `Incomplete` with the retained continuation and cumulative usage; a terminal failure returns `Incomplete` without an exhaustive-result claim |
+| Continuation start | Product-state limit, checked width/scratch arithmetic and peak check, root recurrence, state intern, snapshot traversal, root-node charge, then fallible frame and DP-buffer reservations, then a final state-peak observation | A later failure returns `Incomplete` with the committed ledger reached at that stage; the root-node charge is not undone by a later allocation failure, and a rejected peak is not recorded |
+| Active candidate | Candidate/page checks and `charge_many` precede exact scoring; result reservation and result charge precede `results.push`; a fallible state-peak observation follows that publication | Scoring failure retains committed charges. Peak failure after a result push returns terminal `Incomplete`; the already published result may appear in the exact partial value, without a continuation or a `Complete` claim |
+| Active transition | Edge charges are first applied to a copied ledger and installed only after edge extraction; child-node charge is copied and installed only after successful frame reservation/open; a fallible peak observation follows child-frame push | A rejected provisional charge does not enter the session ledger. A post-push peak failure is terminal `Incomplete`; no whole-iteration rollback is claimed |
 | Successful exhaustion | Only a successful exhaustive traversal enters the `Complete` branch | Final usage remains attached to the completed result |
 
 The table records branch order in the reviewed source, not a proof that every
-Rust edge implements the Rocq transaction. The model's `Incomplete` prefix
+Rust edge implements the Rocq transaction. The Rocq action boundary is one
+prepublication attempt: later peak checks are separate actions after a
+successful publication, so the model does not claim whole-loop rollback.
+The model's `Incomplete` prefix
 is a logical predecessor view; the public Rust partial value may contain only
 previously committed result rows. Its event identities and separate executed
 versus charged counters need an instance mapping to `ResourceLedger` and the
-actual primitive operations. Physical allocation capacities, cleanup, and
-fallible result finalization also require source-specific refinement.
+actual primitive operations. `ResourceLedger::observe_peak` leaves a rejected
+amount out of reported usage, so that counter is not an exact physical peak
+measurement. Physical allocation capacities, cleanup, and fallible result
+finalization also require source-specific refinement.
 
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
