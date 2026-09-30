@@ -471,6 +471,36 @@ the exact Rust `pending_match`/cursor correspondence, the correctness of a concr
 snapshot/resource observations, or Rust correspondence. Those are separate
 whole-session obligations.
 
+The same Rocq file now defines `CompleteState.session_runtime` and a separate
+`session_ghost`. The runtime type holds the captured contract, query, snapshot
+and revision; compact pending occurrences with cursors and a ghost region
+interpretation from the captured snapshot;
+private split, scoring, publication, and cache-building phases; range results
+or a bounded kNN store; emission position; arena and complete cache entries;
+resource ledger; reconstruction context; and active, suspended, completed, or
+failed status. The ghost type holds verification history, prior emitted
+results, and exclusions with evidence. `session_abstraction` projects these
+into the original-occurrence partition and requires exact coverage, live
+borrowed parents, scoped cache entries, authoritative retained/emitted scores,
+sound exclusions, arena and reconstruction validity, cache-entry semantic
+validity, basic ledger inequalities, and exhaustion on completion.
+The region interpretation is a proof parameter, not a list retained by each
+frame. The storage measure takes only the runtime type. A checked example has a
+best-one store with one retained result and two ghost verifications, so the
+model does not require the concrete heap to retain every verified rank.
+
+| Formal component | Source fields that motivate it | Still required for source refinement |
+|---|---|---|
+| Identity and pending occurrences | `RangeContinuation::{index, query, tau, mode}` and `BoundedRangeFrame::{state, final_bucket, next_candidate, edges}`; timestamped TWED's captured root and `ProductFrame` | Map each frame and scan cursor to its exact remaining originals in one immutable revision |
+| Private phase and selected results | `RangeContinuation::{pending_match, results}` and the exact kNN queue/result structures | Prove cursor transfer, borrowed-parent publication, rank admission, displacement, and result order |
+| Arena, cache, and reconstruction | `RangeSessionMode::Trie::{traversal, states, cache}` and the timestamped TWED state arena and transitions | Prove complete cache publication, scope, state IDs, path reconstruction, and failure atomicity |
+| Ledger, emission, and status | `ResourceLedger`, `OperationOutcome`, result-page state, `terminal`, and `Done` | Connect abstract executed/reserved/charged work and live/peak bytes to actual allocation and continuation observations |
+| Ghost history and exclusions | Proof-only verification/emission history and sound-exclusion witnesses | Prove each source transition preserves the abstraction; ghost history is erased from runtime storage accounting |
+
+The type and example establish the state vocabulary and an abstraction
+boundary. They do not yet prove that a Rust continuation satisfies that
+relation; the following operational tasks must discharge each source edge.
+
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
 | Split a region | Complete child and terminal enumeration on $`\sigma`$ | Partition unresolved originals among children and terminal verification work |
