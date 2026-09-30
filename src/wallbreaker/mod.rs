@@ -17,8 +17,14 @@
 //!
 //! 1. **Splitting** the query into pieces based on the pigeonhole principle
 //! 2. **Finding exact matches** for each piece using SCDAWG substring search
-//! 3. **Extending bidirectionally** from matches using Levenshtein filters
-//! 4. **Verifying** total distance and deduplicating results
+//! 3. **Verifying** each original complete member with bounded edit distance
+//! 4. **Deduplicating** and yielding only dictionary members
+//!
+//! The separate [`BidirectionalExtension`] helper remains public for native
+//! experimentation, but it is not used for qualified `WallBreakerQuery`
+//! results: reconstructing a complete term from suffix-graph labels can
+//! fabricate nonmembers. Short queries (including empty) use the dictionary's
+//! exact empty-substring enumeration because no nonempty piece is guaranteed.
 //!
 //! # Piece Count by Algorithm (Formally Verified)
 //!
@@ -79,7 +85,9 @@ use libdictenstein::Dictionary;
 /// WallBreaker approximate string matcher.
 ///
 /// Wraps a [`SubstringDictionary`] (typically an SCDAWG) and provides
-/// approximate matching using the WallBreaker algorithm.
+/// approximate matching using exact substring candidates and bounded distance
+/// verification. The bidirectional extension helper is not part of this
+/// qualified result path.
 ///
 /// # Algorithm Support
 ///
@@ -254,6 +262,7 @@ where
 mod tests {
     use super::*;
     use libdictenstein::scdawg::Scdawg;
+    use libdictenstein::scdawg::ScdawgChar;
 
     #[test]
     fn test_wallbreaker_basic() {
@@ -263,6 +272,195 @@ mod tests {
         let results: Vec<_> = wb.query("helo").collect();
         assert!(!results.is_empty());
         assert!(results.iter().any(|r| r.term == "hello"));
+    }
+
+    #[test]
+    fn unicode_wallbreaker_matches_independent_standard_distance_oracle() {
+        let terms = [
+            "", "a", "b", "café", "cafe", "préfixe", "suffixe", "αβγ", "αXγ",
+        ];
+        let dictionary = ScdawgChar::<()>::from_terms(terms);
+        let mut mismatches = Vec::new();
+        for query in ["", "a", "café", "cafe", "préfixe", "αβγ", "αβδ"] {
+            for bound in 0..=2 {
+                let matcher = WallBreaker::new(&dictionary, bound);
+                let mut observed: Vec<_> = matcher
+                    .query(query)
+                    .map(|result| (result.term, result.distance))
+                    .collect();
+                observed.sort();
+                let mut expected: Vec<_> = terms
+                    .iter()
+                    .filter_map(|term| {
+                        let distance = crate::distance::standard_distance(query, term);
+                        (distance <= bound).then(|| ((*term).to_owned(), distance))
+                    })
+                    .collect();
+                expected.sort();
+                if observed != expected {
+                    mismatches.push(format!("query={query:?}, bound={bound}: observed={observed:?}, expected={expected:?}"));
+                }
+            }
+        }
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+
+    #[test]
+    fn wallbreaker_matches_exhaustive_small_unicode_oracles_for_all_variants() {
+        let mut terms = vec![String::new()];
+        let alphabet = ['a', 'b', 'é'];
+        let mut generation = vec![String::new()];
+        for _ in 0..4 {
+            generation = generation
+                .iter()
+                .flat_map(|prefix| alphabet.iter().map(move |unit| format!("{prefix}{unit}")))
+                .collect();
+            terms.extend(generation.iter().cloned());
+        }
+        let dictionary = ScdawgChar::<()>::from_terms(terms.iter().map(String::as_str));
+        for query in &terms {
+            for algorithm in [
+                Algorithm::Standard,
+                Algorithm::Transposition,
+                Algorithm::MergeAndSplit,
+                Algorithm::DamerauLevenshtein,
+            ] {
+                for bound in 0..=2 {
+                    let mut observed: Vec<_> =
+                        WallBreaker::with_algorithm(&dictionary, bound, algorithm)
+                            .query(query)
+                            .map(|result| (result.term, result.distance))
+                            .collect();
+                    observed.sort();
+                    let mut expected: Vec<_> = terms
+                        .iter()
+                        .filter_map(|term| {
+                            let distance = match algorithm {
+                                Algorithm::Standard => {
+                                    crate::distance::standard_distance(query, term)
+                                }
+                                Algorithm::Transposition => {
+                                    crate::distance::transposition_distance(query, term)
+                                }
+                                Algorithm::MergeAndSplit => {
+                                    crate::distance::merge_and_split_distance(
+                                        query,
+                                        term,
+                                        &crate::distance::create_memo_cache(),
+                                    )
+                                }
+                                Algorithm::DamerauLevenshtein => {
+                                    crate::distance::damerau_levenshtein_distance(query, term)
+                                }
+                            };
+                            (distance <= bound).then(|| (term.clone(), distance))
+                        })
+                        .collect();
+                    expected.sort();
+                    assert_eq!(
+                        observed, expected,
+                        "query={query:?}, bound={bound}, algorithm={algorithm:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn wallbreaker_query_pins_revision_and_deduplicates_repeated_occurrences() {
+        let dictionary = ScdawgChar::<()>::from_terms(["banana", "bandana", "cabana"]);
+        let matcher = WallBreaker::new(&dictionary, 2);
+        let pending = matcher.query("banana");
+        let expected: Vec<_> = matcher.query("banana").collect();
+        dictionary.insert("bananas");
+        let observed: Vec<_> = pending.collect();
+        assert_eq!(observed, expected, "query-start root must stay pinned");
+        let mut distinct = std::collections::HashSet::new();
+        assert!(observed.iter().all(|result| distinct.insert(&result.term)));
+        assert!(matcher
+            .query("banana")
+            .any(|result| result.term == "bananas"));
+        assert_eq!(
+            matcher.query("banana").collect::<Vec<_>>(),
+            matcher.query("banana").collect::<Vec<_>>(),
+            "traversal order is deterministic"
+        );
+    }
+
+    #[test]
+    fn seeded_long_unicode_queries_match_randomized_distance_oracles() {
+        let alphabet = ['a', 'b', 'é', '猫'];
+        let mut seed = 0x4d65_7267_6544_6177_u64;
+        let mut terms = Vec::new();
+        for _ in 0..64 {
+            let mut term = String::new();
+            for _ in 0..8 {
+                seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+                term.push(alphabet[((seed >> 32) & 3) as usize]);
+            }
+            if !terms.contains(&term) {
+                terms.push(term);
+            }
+        }
+        let dictionary = ScdawgChar::<()>::from_terms(terms.iter().map(String::as_str));
+        for base in terms.iter().take(20) {
+            let mut changed: Vec<char> = base.chars().collect();
+            changed[2] = alphabet[(alphabet
+                .iter()
+                .position(|unit| *unit == changed[2])
+                .unwrap()
+                + 1)
+                % 4];
+            changed[5] = alphabet[(alphabet
+                .iter()
+                .position(|unit| *unit == changed[5])
+                .unwrap()
+                + 1)
+                % 4];
+            let query: String = changed.into_iter().collect();
+            for algorithm in [
+                Algorithm::Standard,
+                Algorithm::Transposition,
+                Algorithm::MergeAndSplit,
+            ] {
+                let mut observed: Vec<_> = WallBreaker::with_algorithm(&dictionary, 2, algorithm)
+                    .query(&query)
+                    .map(|result| (result.term, result.distance))
+                    .collect();
+                observed.sort();
+                let mut expected: Vec<_> = terms
+                    .iter()
+                    .filter_map(|term| {
+                        let distance = match algorithm {
+                            Algorithm::Standard => crate::distance::standard_distance(&query, term),
+                            Algorithm::Transposition => {
+                                crate::distance::transposition_distance(&query, term)
+                            }
+                            Algorithm::MergeAndSplit => crate::distance::merge_and_split_distance(
+                                &query,
+                                term,
+                                &crate::distance::create_memo_cache(),
+                            ),
+                            Algorithm::DamerauLevenshtein => unreachable!(),
+                        };
+                        (distance <= 2).then(|| (term.clone(), distance))
+                    })
+                    .collect();
+                expected.sort();
+                assert_eq!(
+                    observed, expected,
+                    "query={query:?}, algorithm={algorithm:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn long_exact_unicode_query_uses_bounded_stack() {
+        let term = "é".repeat(2048);
+        let dictionary = ScdawgChar::<()>::from_terms([term.as_str()]);
+        let observed: Vec<_> = WallBreaker::new(&dictionary, 0).query(&term).collect();
+        assert_eq!(observed, vec![WallBreakerResult::new(term, 0)]);
     }
 
     #[test]

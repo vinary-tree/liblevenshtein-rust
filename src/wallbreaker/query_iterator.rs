@@ -3,7 +3,7 @@
 //! The main query iterator that orchestrates:
 //! 1. Pattern splitting into pieces (algorithm-dependent count)
 //! 2. Finding exact substring matches for each piece
-//! 3. Bidirectional extension from matches
+//! 3. Exact full-term distance verification of each candidate
 //! 4. Deduplication of results
 
 use std::collections::VecDeque;
@@ -20,7 +20,6 @@ use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary
 use libdictenstein::Dictionary;
 use rustc_hash::FxHashSet;
 
-use super::extension::BidirectionalExtension;
 use super::pattern_splitter::{PatternPiece, PatternSplitter};
 
 type SeenTerms = FxHashSet<Box<str>>;
@@ -79,10 +78,10 @@ impl WallBreakerResult {
 /// # Algorithm
 ///
 /// 1. Split query into pieces (algorithm-dependent count)
-/// 2. For each piece, find exact substring matches in dictionary
-/// 3. Extend each match bidirectionally using Levenshtein filters
-/// 4. Verify distance using the correct algorithm-specific function
-/// 5. Deduplicate and yield results
+/// 2. For each piece, find exact substring matches in dictionary; if no
+///    nonempty piece is guaranteed, enumerate all terms with empty substring
+/// 3. Verify the complete matched dictionary term using the selected distance
+/// 4. Deduplicate and yield results
 ///
 /// The iterator owns one retained dictionary root captured by [`Self::new`].
 /// Every pattern piece is searched in that same immutable revision; later
@@ -144,7 +143,18 @@ where
         max_distance: usize,
         splitter: &PatternSplitter,
     ) -> Self {
-        let pieces = splitter.split(query);
+        // A short query can have every nonempty piece damaged by the allowed
+        // edits, so the pigeonhole filter has no completeness guarantee. The
+        // empty substring is present in every term and gives a finite full
+        // scan over the same captured revision. Full Damerau has no matching
+        // piece-count proof here, so it also uses the exact fallback.
+        let scan_all = query.chars().count() < splitter.num_pieces()
+            || splitter.algorithm() == Algorithm::DamerauLevenshtein;
+        let pieces = if scan_all {
+            vec![PatternPiece::new(String::new(), 0, 0, 0)]
+        } else {
+            splitter.split(query)
+        };
         let algorithm = splitter.algorithm();
 
         WallBreakerQuery {
@@ -172,43 +182,23 @@ where
             let piece = &self.pieces[self.current_piece_idx];
             self.current_piece_idx += 1;
 
-            // Skip empty pieces
-            if piece.is_empty() {
-                continue;
-            }
-
             // Find exact substring matches for this piece
             let substring_matches =
                 D::find_exact_substring_in_snapshot(&self.snapshot_root, &piece.content);
 
-            // Extend each match bidirectionally
-            for match_info in &substring_matches {
-                let extension = BidirectionalExtension::new(
-                    match_info,
-                    &self.query,
-                    piece.start_offset,
-                    piece.end_offset,
-                    self.max_distance,
-                );
-
-                let extensions = extension.extend();
-
-                for (term, _distance) in extensions {
-                    // Skip if already seen
-                    if self.seen_terms.contains(term.as_str()) {
-                        continue;
-                    }
-
-                    // Verify the distance is within bounds using the correct algorithm
-                    // The extension may have computed partial distances,
-                    // so we verify with actual distance computation
-                    if let Some(actual_distance) = self.compute_distance_within(&self.query, &term)
-                    {
-                        self.seen_terms
-                            .insert(term.as_str().to_owned().into_boxed_str());
-                        self.current_results
-                            .push_back(WallBreakerResult::new(term, actual_distance));
-                    }
+            // `SubstringMatch.term` is already the complete member. Rebuilding
+            // a term from extension labels can fabricate nonmembers on a
+            // shared suffix graph. Verify the original member directly.
+            for match_info in substring_matches {
+                let term = match_info.term;
+                if self.seen_terms.contains(term.as_str()) {
+                    continue;
+                }
+                if let Some(actual_distance) = self.compute_distance_within(&self.query, &term) {
+                    self.seen_terms
+                        .insert(term.as_str().to_owned().into_boxed_str());
+                    self.current_results
+                        .push_back(WallBreakerResult::new(term, actual_distance));
                 }
             }
 
