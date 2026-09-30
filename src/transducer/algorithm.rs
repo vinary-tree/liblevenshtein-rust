@@ -104,7 +104,8 @@ impl Algorithm {
         matches!(self, Algorithm::MergeAndSplit)
     }
 
-    /// Whether the distance is a metric and therefore satisfies the triangle inequality.
+    /// Whether this built-in unit-cost algorithm is metric on unrestricted
+    /// full-string inputs.
     ///
     /// [`Transposition`](Algorithm::Transposition) implements optimal string
     /// alignment (restricted Damerau distance). It is symmetric and separates
@@ -113,9 +114,12 @@ impl Algorithm {
     /// Standard Levenshtein and the generic, symmetric Merge-and-Split distance
     /// are metrics.
     ///
-    /// This classification concerns metric-tree pruning. Trie dynamic-programming
-    /// walkers may instead rely on an admissible lower bound and non-negative
-    /// step costs, which do not require a metric.
+    /// This selector does not inspect a custom substitution policy, weighted
+    /// costs, or substring observation. A directional policy can make even
+    /// [`Standard`](Algorithm::Standard) asymmetric, so metric-tree pruning
+    /// requires those additional configuration and domain proofs. Trie
+    /// dynamic-programming walkers may instead rely on an admissible lower
+    /// bound and non-negative step costs, which do not require a metric.
     pub const fn is_metric(&self) -> bool {
         matches!(
             self,

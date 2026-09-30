@@ -26,8 +26,10 @@
 //! | [`Algorithm::MergeAndSplit`] | generic symmetric merge/split metric | yes | yes |
 //! | [`Algorithm::DamerauLevenshtein`] | unrestricted Damerau–Levenshtein | yes | yes |
 //!
-//! Call [`Algorithm::is_metric`] when selecting an index whose correctness
-//! contract explicitly requires the triangle inequality.
+//! [`Algorithm::is_metric`] classifies the built-in unit-cost selector under
+//! unrestricted full-string semantics. A custom directional substitution
+//! policy, weighted costs, or substring observation needs a separate metric
+//! proof before an index may use triangle inequality for pruning.
 //!
 //! See [`universal`] module for eager (precomputed) automata.
 
