@@ -27,6 +27,8 @@ the actual cutoff and verifier paths.
 The [result and witness contract](CBC_RESULT_WITNESS_CONTRACT.md) maps original
 identity, tie order, multiplicity, partial results, and witness promises to
 each search surface.
+The [observation profile](CBC_OBSERVATION_PROFILES.md) maps validation order,
+failure tags, page boundaries, and resource-sensitive trace requirements.
 The [lexicographic kNN model report](CBC_LEXICOGRAPHIC_MODEL_REPORT.md)
 records the clean finite check and the checked-in equality-cost mutant.
 

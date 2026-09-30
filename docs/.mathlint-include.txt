@@ -272,6 +272,7 @@ docs/verification/CBC_BASELINE_EVIDENCE.md
 docs/verification/CBC_DOMAIN_CAPABILITIES.md
 docs/verification/CBC_LEXICOGRAPHIC_MODEL_REPORT.md
 docs/verification/CBC_NUMERIC_AUTHORITY.md
+docs/verification/CBC_OBSERVATION_PROFILES.md
 docs/verification/CBC_RESULT_WITNESS_CONTRACT.md
 docs/verification/CBC_RANGE_CURSOR_MODEL_REPORT.md
 docs/verification/SUMMARY.md

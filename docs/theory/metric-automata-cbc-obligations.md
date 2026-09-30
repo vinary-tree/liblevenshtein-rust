@@ -18,6 +18,9 @@ required for ideal-real bounds.
 The [result and witness contract](../verification/CBC_RESULT_WITNESS_CONTRACT.md)
 instantiates the identity, multiplicity, order, and witness components below
 for the current source surfaces.
+The [observation profile](../verification/CBC_OBSERVATION_PROFILES.md) records
+validation, error, pause/resume, and resource-trace obligations for those
+surfaces.
 
 ## Claim levels and evidence rule
 
