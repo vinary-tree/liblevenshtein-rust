@@ -41,8 +41,8 @@ One matrix row has the stable identity
 $`(p, l, c) \in P \times L \times C_p`$, where $`P`$ is the project set,
 $`L`$ is the language set, and $`C_p`$ is project $`p`$'s public capability
 catalog. The inventory contains 8 projects, 22 languages—including native
-Rust, Raku, and Julia—and 287 project-owned capabilities, producing
-$`22 \sum_{p \in P} |C_p| = 6{,}314`$ explicit cells.
+Rust, Raku, and Julia—and 301 project-owned capabilities, producing
+$`22 \sum_{p \in P} |C_p| = 6{,}622`$ explicit cells.
 
 Each row also records:
 
@@ -91,7 +91,7 @@ that project; remote evidence must use HTTPS.
 
 | State | Meaning |
 |---|---|
-| `missing` | No declared facade evidence exists. This is an implementation requirement, never an implicit exemption. |
+| `missing` | No declared facade evidence exists, or—for Raku—no capability-specific source symbol has been reviewed. This is an implementation requirement, never an implicit exemption. |
 | `audit-required` | A facade or native surface exists, but capability-level API, idiom, conformance, performance, documentation, and installed-package parity have not all been proved. |
 | `review-required` | A distribution-only repository may be redundant for this language, but the architectural proof has not yet been reviewed. |
 | `inapplicable` | A reviewed proof explains why direct exposure would be semantically wrong or duplicative; the generator rejects this state without a real proof file. |
@@ -132,7 +132,12 @@ binding tree may not exist outside `declaredLanguageEvidence`: that mismatch is
 a stale family model and fails generation. Discovery does not upgrade a cell to
 `complete`; it only prevents implemented packages from being misreported as
 `missing`. Capability-level evidence must still satisfy all five independent
-gates.
+gates. Raku has the additional [`rakuCapabilityEvidence`](family-bindings.json)
+index: each positive Raku cell must name a source symbol in the owning package.
+An unmapped capability remains `missing` even when the Raku directory exists;
+an evidenced symbol only advances it to `audit-required`, never `complete`.
+The [Raku capability audit](raku-family-capability-audit.md) records the
+remaining semantic and ABI gaps, including byte-valued dictionaries.
 
 ```sh
 # Regenerate after reviewing a model or evidence change.

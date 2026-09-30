@@ -90,6 +90,10 @@
       "lling-llang:src/multitape/traits.rs:MultiTapeWfstOps",
       "lling-llang:src/tree_transducers/transducer.rs:TreeTransducerOps"
     ],
+    "native-scalar-conversion-proof": [
+      "lling-llang:src/algorithm_bridge.rs:AbiScalarLabel",
+      "lling-llang:src/algorithm_bridge.rs:AbiScalarWeight"
+    ],
     "reviewed-rust-only-proof": [
       "lling-llang:src/dynamic_lattice.rs:LatticeAccess",
       "lling-llang:src/dynamic_lattice.rs:Sealed",
@@ -98,6 +102,8 @@
     ]
   },
   "rustOnlyProofs": {
+    "lling-llang:src/algorithm_bridge.rs:AbiScalarLabel": "docs/bindings/host-extension-trait-governance.md#scalar-abi-conversion-traits",
+    "lling-llang:src/algorithm_bridge.rs:AbiScalarWeight": "docs/bindings/host-extension-trait-governance.md#scalar-abi-conversion-traits",
     "lling-llang:src/dynamic_lattice.rs:LatticeAccess": "docs/bindings/host-extension-trait-governance.md#sealed-dynamic-adapter-markers",
     "lling-llang:src/dynamic_lattice.rs:Sealed": "docs/bindings/host-extension-trait-governance.md#sealed-dynamic-adapter-markers",
     "lling-llang:src/dynamic_semiring.rs:Sealed": "docs/bindings/host-extension-trait-governance.md#sealed-dynamic-adapter-markers",

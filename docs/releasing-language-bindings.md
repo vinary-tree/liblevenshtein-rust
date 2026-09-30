@@ -923,6 +923,35 @@ Hackage and fpm are absent from the upload rows for this RC: their numeric-only
 read-back commands, resolved digests, smoke outcomes, and run URLs in the
 versioned release ledger.
 
+### Immutable Go module tag
+
+The Go v4 coordinate is
+`github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4@v4.0.0-rc.6`.
+Its subdirectory tag `bindings/go/v4.0.0-rc.6` must be an annotated tag
+object that directly names the exact approved source-tag commit. Only an
+authorized maintainer may create this protected ref, after separate approval
+for that exact remote write:
+
+```bash
+export GITHUB_REPOSITORY=vinary-tree/liblevenshtein-rust
+version=$(jq -er '.registries.goTag' release/version.json)
+source_tag=$(jq -er '.publication.sourceTag' release/version.json)
+source_commit=$(git rev-parse "$source_tag^{commit}")
+bash scripts/test-go-module-release.sh
+# Only after explicit approval to create this exact protected remote ref:
+bash scripts/go-module-release.sh create bindings/go "$version" "$source_commit"
+bash scripts/go-module-release.sh verify bindings/go "$version" "$source_commit"
+```
+
+The helper never force-updates a tag. Repeated creation of a correct ref,
+including a concurrent winner, succeeds only after checking the remote object
+and its direct commit target. A lightweight, differently named, or wrong-target
+object fails. The `go-module` workflow is read-only and idempotent; it verifies
+the ref against its dispatched source commit and then checks public
+`proxy.golang.org` resolution in a fresh cache. Dispatching it does not
+create a tag or publish a package. Preserve the exact source-tag and proxy
+readback evidence in the release ledger.
+
 ## Credentials and protected environments
 
 | Destination | Authentication | Recommended GitHub environment |
@@ -969,7 +998,9 @@ environment when the workflow first references its name.
 
 Secretless environments are not redundant. `crates-io`, `pypi`, `npm`,
 `nuget`, and `rubygems` gate an OpenID Connect (OIDC) credential exchange;
-`go-module` and `github-release` gate a narrowly scoped repository mutation.
+`go-module` gates immutable-tag verification and public proxy readback;
+`github-release` gates a narrowly scoped repository mutation. The Go tag
+itself is created only by an explicitly authorized maintainer.
 Clojars, LuaRocks, and opam environments additionally constrain their
 repository-specific stored credentials.
 

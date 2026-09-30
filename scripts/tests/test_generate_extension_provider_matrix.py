@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,6 +21,30 @@ SPEC.loader.exec_module(GENERATOR)
 
 
 class ExtensionProviderMatrixTests(unittest.TestCase):
+    def test_scalar_conversion_traits_have_exact_native_only_proofs(self) -> None:
+        model = json.loads(
+            (ROOT / "bindings/conformance/extension-provider-model.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        lling_root = Path(
+            os.environ.get("LLING_LLANG_ROOT", ROOT.parent / "lling-llang")
+        )
+        discovered = GENERATOR.discover_traits("lling-llang", lling_root)
+        classified = GENERATOR.classification_index(model)
+        for trait in ("AbiScalarLabel", "AbiScalarWeight"):
+            key = f"lling-llang:src/algorithm_bridge.rs:{trait}"
+            self.assertIn(key, discovered)
+            self.assertEqual(classified[key], "native-scalar-conversion-proof")
+            self.assertEqual(
+                model["rustOnlyProofs"][key],
+                "docs/bindings/host-extension-trait-governance.md"
+                "#scalar-abi-conversion-traits",
+            )
+            without_key = dict(classified)
+            del without_key[key]
+            self.assertIn(key, set(discovered) - set(without_key))
+
     def temporary_workspace(self) -> tempfile.TemporaryDirectory[str]:
         target = ROOT / "target"
         target.mkdir(exist_ok=True)

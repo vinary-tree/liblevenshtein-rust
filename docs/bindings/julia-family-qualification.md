@@ -71,18 +71,18 @@ configuration, statistics, scorer, rewrite, or cache APIs behind that selector.
 The earlier catalog had 65 rows, including catch-all entries such as
 `distance`, `algorithms`, `phonetic`, and `custom-provider`. Those entries could
 hide a missing native family behind one implemented method. The reconciled
-catalog contains 287 independently auditable capabilities and expands to 6,314
-project/language/capability cells. The Julia slice contains 95 existing but
+catalog contains 301 independently auditable capabilities and expands to 6,622
+project/language/capability cells. The Julia slice contains 109 existing but
 still unqualified surfaces, 186 reviewed missing surfaces, and the six reviewed
 distribution-only inapplicabilities below.
 
 | Owner | Capability count | Authoritative native surfaces reviewed |
 |---|---:|---|
-| Vinary Tree Interop | 22 | the retained-resource, dictionary traversal/visit/graph/entry, snapshot-identity, scalar-WFST, lattice, and five semiring vtables in `include/vinary_tree_interop.h`, including domains, batching, and callback lifecycle flags |
+| Vinary Tree Interop | 35 | the retained-resource, dictionary traversal/visit/graph/entry, snapshot-identity, scalar-WFST, lattice, and five semiring vtables in `include/vinary_tree_interop.h`, including individually modeled unit, value, and scalar-weight domains, batching, and callback lifecycle flags; the declared byte-value domain remains a shared v1 dictionary ABI gap because it has no byte-value getter or batch representation |
 | llattice | 8 | `Lattice`, its host-implementable provider boundary, and integral, floating-point, Boolean, optional, set, and vector-content implementations in `src/lib.rs` and the versioned lattice ABI |
 | libdictenstein | 36 | public traits and collection iterators in `src/lib.rs`; in-memory and persistent backends; snapshot and substring traversal; all union/intersection/difference/prefix/value zipper modules; factory, recovery, Bloom-filter, serialization, and resource-provider surfaces |
 | liblevenshtein | 75 | scalar distance kernels; edit automata, costs, substitution policies, product traversals, suggestions, and operation sets; the LLev, LLRE, phonetic, filtering, temporal-metric, cache-policy, serialization, and resource-consumer modules |
-| lling-llang | 125 | semiring families; mutable, vector, lazy, rational, synchronized, and host-provided WFSTs; composition and individual algorithms; path, lattice, CFG, pushdown, symbolic, multitape, subsequential, tree, differentiable, training, acoustic, ASR, CTC, correction, multilingual, text-normalization, neural-transducer, programming, GPU, and backend modules; and every applicable provider or derived-adapter trait in the 61-trait extension ledger |
+| lling-llang | 126 | semiring families; mutable, vector, lazy, rational, synchronized, and host-provided WFSTs; composition and API-revision-11 weighted acceptor intersection from the committed integration branch; individual algorithms; path, lattice, CFG, pushdown, symbolic, multitape, subsequential, tree, differentiable, training, acoustic, ASR, CTC, correction, multilingual, text-normalization, neural-transducer, programming, GPU, and backend modules; and every applicable provider or derived-adapter trait in the 63-trait extension ledger |
 | duallity | 15 | dictionary and state-source adapters; Levenshtein, universal, generalized, phonetic, WallBreaker, and FZF WFST families; product composition, scorer/configuration/cache controls, and resource handoff |
 | JavaScript distribution owners | 6 | native N-API, browser WebAssembly, WASI, shared resource-table/runtime identity, and the unscoped legacy package bridge |
 
