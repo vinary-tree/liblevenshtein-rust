@@ -572,6 +572,38 @@ it. Streaming it as an irrevocable ranked result requires that additional
 certificate. Range operations with dictionary order need their own emission
 invariant.
 
+### Best-$`k`$ selection and heap boundary
+
+The [checked best-$`k`$ model](../verification/temporal_automata/theories/CertifiedKnnHeap.v)
+uses one distinct original identity and one distinct tie key per verified
+candidate. It orders exact natural costs lexicographically by cost and tie
+key. Its certificate partitions every verified candidate into a sorted
+retained sequence and a rejected sequence, bounds retained length by $`k`$,
+forbids rejection while underfull, and requires every retained rank to
+precede every rejected rank. The canonical answer is the first $`k`$
+entries of the verified candidates sorted by this same ordering; the Rocq
+theorem `certified_best_k_is_canonical` proves equality of the entire retained
+entry sequence, including original identities. Thus the certificate is an
+exact selection specification, rather than merely a plausible heap size.
+
+Admission fills an underfull selection. Once full, a strictly better rank
+replaces its worst entry; an equal or worse rank is rejected. The checked
+`best_k_step_preserves_certificate` theorem covers all four cases, including
+$`k=0`$. The `kth_rank_iff_full_best_k` theorem permits a pruning cutoff
+exactly when $`k>0`$ and at least $`k`$ candidates have been verified.
+`full_kth_rank_nonincreasing` proves that later full-heap cutoffs cannot
+increase. A concrete max-heap representation may permute selected entries;
+when its root dominates the rest, `heap_root_has_kth_rank` proves the root's
+cost and tie key equal the canonical kth rank. Equal-cost reversed-tie and
+premature-underfull-cutoff examples violate the certificate.
+
+These are exact-natural reference proofs. The source-specific obligations
+remain: bind each Rust candidate identity and tie rule to the model; prove
+that the binary64 comparison and TOP policy refine the declared rank; show
+that heap insertion, replacement, and root maintenance preserve the abstract
+step; and connect threshold use to the session's exclusion rule. The reference
+sort is a proof oracle and adds no sort or scan to the production hot path.
+
 The publication boundary covers arena IDs, cache entries, pending cursors,
 and witnesses together. Private work may accumulate charges while the public
 predecessor stays unchanged. An allocation failure after charged work must

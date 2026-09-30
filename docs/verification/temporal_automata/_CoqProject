@@ -13,3 +13,4 @@ theories/CertifiedSearchSession.v
 theories/CertifiedSessionOwnership.v
 theories/CertifiedSessionSplit.v
 theories/CertifiedSessionVerification.v
+theories/CertifiedKnnHeap.v
