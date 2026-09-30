@@ -190,6 +190,26 @@ dictionary ownership, witnesses, or resources. Its acceptance theorem is
 therefore one local certificate obligation, not executable CBC for the
 library.
 
+[CertificateScope.v](../verification/temporal_automata/theories/CertificateScope.v)
+refines reuse for this score-only, exact-natural fragment. It compares the
+authoritative request's domain, query, parameter token, gap, stiffness,
+snapshot, revision, arithmetic, observation, and label context before a
+cached chain can be replayed. A cache key is only a lookup hint; collisions
+cannot replace those comparisons. The accepted chain proves a score relation
+for every variable environment, so that particular relation can be reused
+across cutoffs while retaining the same stable request. A pruning decision
+must compare the certified lower expression against the **new** inclusive
+cutoff. A cached strict-prune decision can be carried to a lower cutoff, but
+an increased cutoff requires a fresh comparison. The same-scope gate requires
+exact cutoff equality where an operation may depend on the cutoff. Neither
+gate certifies whole range/kNN output. The explicit gap and stiffness values
+are exact-natural placeholders; floating-point representation and the binding
+of these request fields to actual Rust inputs remain separate proof duties.
+The cached-decision theorem uses the same exact score environment for both
+cutoffs; a source instance must establish that stability before using the
+rule. The proof checker replays old evidence here, so no runtime speedup is
+claimed by this formalization.
+
 For the first concrete source connection, use a direct refinement of a named
 standard integer Levenshtein transition path: the dispatch in
 `src/transducer/variants/standard.rs` delegates to
