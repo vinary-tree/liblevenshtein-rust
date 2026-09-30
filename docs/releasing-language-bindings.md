@@ -1197,6 +1197,22 @@ pass it in a remote URL. The workflow configures Git's credential helper from
 `GH_TOKEN`, never persists the token in a checkout, and fixes the fork identity
 rather than inferring it from the authenticating user.
 
+An `opam` dispatch must follow a `validate-only` dispatch for the same source
+tag. The protected GitHub-release job publishes the source `.tbz` and
+`SHA256SUMS`; the standalone staging job normalizes tar member order,
+timestamp, ownership, permissions, and locale. The opam submission gate then
+checks that the public tag resolves to its checkout commit, downloads the
+published archive and manifest, checks the release API SHA-256 and the unique
+manifest entry, and requires byte identity with the staged archive. It derives
+the opam checksum from the downloaded public bytes, so a stale or restaged
+checksum cannot reach the upstream pull request. Run
+`scripts/test-opam-archive-contract.sh target/opam-contract vinary-tree/liblevenshtein-rust v4.0.0-rc.6`
+on disk-backed scratch for cross-run and negative controls. GitHub's
+[immutable release option](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+is not yet required by this lane. Read-back establishes integrity at
+submission time, not future protection against replacement of a mutable
+release asset.
+
 The package-directory version is the opam spelling `4.0.0~rc6`, read from each
 owner's `release/version.json`; branch names use the canonical
 `4.0.0-rc.6` spelling because `~` is illegal in Git refs. Submit and obtain

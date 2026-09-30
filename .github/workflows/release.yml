@@ -615,6 +615,7 @@ jobs:
           scripts/stage-ocaml-package.sh "$RUNNER_TEMP/opam-package" "$GITHUB_REF_NAME"
           opam lint "$RUNNER_TEMP/opam-package/opam"
           tar -tjf "$RUNNER_TEMP/opam-package/liblevenshtein-4.0.0-rc.6.tbz"
+          scripts/test-opam-archive-contract.sh "$RUNNER_TEMP/opam-contract" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME"
       - uses: actions/upload-artifact@v7
         with:
           name: opam-package
@@ -793,6 +794,15 @@ jobs:
         with:
           name: opam-package
           path: dist
+      - name: Bind opam checksum to the published source asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.OPAM_GITHUB_TOKEN }}
+        run: |
+          canonical=$(python3 -c 'import json; print(json.load(open("release/version.json"))["canonical"])')
+          scripts/verify-opam-public-asset.sh "$GITHUB_REPOSITORY" \
+            "$GITHUB_REF_NAME" "liblevenshtein-$canonical" \
+            dist "$RUNNER_TEMP/opam-public"
       - name: Create the opam-repository pull request
         shell: bash
         env:
@@ -809,7 +819,7 @@ jobs:
           git -C opam-repository checkout -b "$branch" FETCH_HEAD
           package="opam-repository/packages/liblevenshtein/liblevenshtein.$version"
           mkdir -p "$package"
-          cp dist/opam "$package/opam"
+          cp "$RUNNER_TEMP/opam-public/opam" "$package/opam"
           git -C opam-repository config user.name "Vinary Tree release automation"
           git -C opam-repository config user.email "dylon.devo@gmail.com"
           git -C opam-repository add "packages/liblevenshtein/liblevenshtein.$version/opam"
