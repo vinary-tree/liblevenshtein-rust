@@ -106,12 +106,12 @@ jobs:
           retention-days: 7
 
   publish:
-    name: Preserve release archive and deploy Pages
+    name: Verify release archive and deploy Pages
     needs: build
     if: ${{ !inputs.archive_only }}
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: read
       pages: write
       id-token: write
     environment:
