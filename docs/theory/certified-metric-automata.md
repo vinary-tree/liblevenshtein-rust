@@ -650,6 +650,40 @@ retain or explicitly account for that work; rolling back semantic state does
 not erase resource use. A cached resource failure cannot replace a semantic
 dead transition.
 
+The [checked cache and arena model](../verification/temporal_automata/theories/CertifiedSessionCache.v)
+refines this boundary for one logical transition. A cache entry contains only
+a completed `Dead` or `Live(id)` answer. Cache lookup compares the complete
+operation scope, exact source-state identifier, and label before returning
+that answer. An absent entry is a miss; it is distinct from a cached `Dead`.
+`ResourceFailure` is a separate action result and cannot be stored as a dead
+entry. `cache_hit_is_semantically_complete` and
+`completed_action_refines_semantic_step` prove equality with the abstract
+successor, conditional on the complete-entry invariant and source state.
+Eviction retains the invariant and permits recomputation; it does not assert
+equal work, allocation counts, or latency. A checked example has the same
+semantic answer with different resource reports.
+
+The query-local interner indexes immutable canonical residuals by a
+fingerprint hint, then compares the full residual before reusing an ID.
+The invariant requires every arena state to have a fingerprint index entry
+and every entry to name the correct state. It also requires unique canonical
+residuals. A hit denotes exact equality even when two states have the same
+fingerprint; a miss proves the residual is new. Fresh publication appends the
+residual before its ID becomes visible, preserving old ID referents and all
+cache and publication evidence. `publication_action` accepts only a successor
+whose arena referent, source transition, cursor, and witness are valid.
+The checked premature-publication mutant violates the invariant when the ID
+has no arena referent; a changed-scope cache lookup misses even if its source
+ID and label match.
+
+The model reflects the complete-hit and append-only ordering in
+[`TimestampedTwedRangeContinuation::transition`](../../src/time_series/timestamped_twed_index.rs)
+and `ProductStateArena::intern_at_fingerprint`. A concrete refinement still
+must prove the binary64/canonical-bit residual equality, actual scope fields,
+source-token decode, allocation and reservation effects, ledger charges,
+and Rust publication sequence. The logical-state failure theorem does not
+claim unchanged physical capacity after a failed reserve.
+
 Coverage is also a **cut condition** on the recurrence dependency graph.
 Every unexamined accepting derivation must cross a represented live dependency.
 For multi-label operations, a single DP row may not form such a cut: an edge
