@@ -269,6 +269,7 @@ docs/verification/README_FORMAL_GATES.md
 docs/verification/README.md
 docs/verification/CBC_CERTIFICATE_REPLAY_REPORT.md
 docs/verification/CBC_BASELINE_EVIDENCE.md
+docs/verification/CBC_CLAIM_INSTANCE_MATRIX.md
 docs/verification/CBC_DOMAIN_CAPABILITIES.md
 docs/verification/CBC_LEXICOGRAPHIC_MODEL_REPORT.md
 docs/verification/CBC_NUMERIC_AUTHORITY.md

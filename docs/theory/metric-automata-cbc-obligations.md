@@ -24,6 +24,10 @@ surfaces.
 The [resource event contract](../verification/CBC_RESOURCE_EVENT_CONTRACT.md)
 defines primitive work and storage accounting separately from public budget
 charges.
+The [claim/instance matrix](../verification/CBC_CLAIM_INSTANCE_MATRIX.md)
+indexes every downstream epic task against its proof level, source family,
+external premises, and enforcement gate while the formal manifest remains the
+artifact-status authority.
 
 ## Claim levels and evidence rule
 

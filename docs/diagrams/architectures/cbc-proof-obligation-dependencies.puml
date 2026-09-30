@@ -1,0 +1,71 @@
+@startuml cbc-proof-obligation-dependencies
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam rectangle {
+  BorderColor #37474F
+  FontColor #102027
+  RoundCorner 12
+}
+skinparam ArrowColor #455A64
+skinparam ArrowThickness 2
+top to bottom direction
+
+title CBC proof obligations and evidence levels
+
+rectangle "M01: operation contracts\ndomain · numeric authority · originals\nobservations · resource events" as C #BBDEFB
+
+package "Mathematical and checked model" #E3F2FD {
+  rectangle "M02: typed certificates\nacceptance · scope · CBC-1" as Cert #B3E5FC
+  rectangle "M03: complete search session\nownership · split · heap · resume" as Session #C5CAE9
+  rectangle "M04: scoped rank algebra\nBF-2 · BF-3" as Rank #D1C4E9
+  rectangle "M05: information limit\nBF-4 · attainable evidence" as Info #E1BEE7
+  rectangle "M06: numeric source proof\ninteger · binary64 · TWED bounds" as Numeric #FFE0B2
+  rectangle "M06: metric/geometric branch\nTWED sequence law · NC-1" as Metric #FFCCBC
+  rectangle "M07: progress and resources\nCBC-2 · QO-1 · QO-2" as Resources #FFECB3
+}
+
+rectangle "Concrete kernel and operation instances\nrecurrence · bound · tie · snapshot" as Instance #C8E6C9
+rectangle "Accepted checker and scoped enforcement\nexact certificate · lower certificate · resources" as Enforced #B2DFDB
+rectangle "Executable correspondence\nsource transition · failure · result · work · bytes" as Rust #F8BBD0
+rectangle "M08: registry, review, adoption handoff\nformal manifest + performance gate" as Registry #CFD8DC
+
+C --> Cert
+C --> Session
+C --> Rank
+C --> Numeric
+C --> Metric
+C --> Info : lawful evidence language
+C --> Resources
+Cert --> Session : accepted local steps
+Cert --> Numeric : selected integer exemplar
+Session ..> Rank : integrate for ordered search
+Rank ..> Info : optimal stopping only
+Session ..> Resources : bounded/resource profile
+Numeric --> Instance : machine measure and bounds
+Metric ..> Instance : metric/geometric claim only
+Session --> Instance : complete result semantics
+Rank ..> Instance : ordered stopping only
+Resources ..> Instance : work and storage claim
+Cert --> Enforced : replay rules
+Info ..> Enforced : optimal-stopping certificate only
+Instance --> Enforced : checked premises
+Enforced --> Rust : explicit lowering or validated translation
+Instance --> Rust : source-specific simulation
+Rust --> Registry
+Resources ..> Registry : performance claim
+
+note bottom of Enforced #FFF9C4
+  File hashes and metric marker types establish
+  binding or admission only. They do not prove
+  semantic simulation or Rust correspondence.
+end note
+
+note bottom of Registry #E8F5E9
+  G: generic proof; I: concrete instance;
+  E: enforced checker; R: Rust correspondence.
+  Each stage has an independent evidence gate.
+  Dashed arrows are selected-claim obligations;
+  they are not prerequisites of every exact route.
+end note
+@enduml

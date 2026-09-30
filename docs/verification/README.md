@@ -32,6 +32,11 @@ failure tags, page boundaries, and resource-sensitive trace requirements.
 The [resource event contract](CBC_RESOURCE_EVENT_CONTRACT.md) separates
 executed, reserved, and charged work from live and peak storage, with an
 ownership map for temporal and dictionary-product operations.
+The [CBC claim/instance matrix](CBC_CLAIM_INSTANCE_MATRIX.md) maps every
+downstream epic task to its contracts, existing proof island, source family,
+external premises, and independent generic, concrete, enforcement, and Rust
+correspondence gates. The [dependency diagram](../diagrams/architectures/cbc-proof-obligation-dependencies.svg)
+shows how those gates meet; the formal manifest remains the artifact authority.
 The [lexicographic kNN model report](CBC_LEXICOGRAPHIC_MODEL_REPORT.md)
 records the clean finite check and the checked-in equality-cost mutant.
 
