@@ -555,6 +555,21 @@ decision and copies the ledger, so verification work and allocation charges
 need source-specific proofs. Witness and tie provenance are ghost-only; their
 runtime retention and reconstruction are also separate obligations.
 
+[CertifiedSessionResume.v](../verification/temporal_automata/theories/CertifiedSessionResume.v)
+models suspension as a status change on the entire retained runtime and ghost
+configuration. It proves that every active private phase can pause and resume
+with the same pending cursors, snapshot identity, selected results, arena,
+cache, reconstruction, emission cursor, ownership, and cumulative work ledger.
+It rules out a cursor reset during a pause and a ledger recharge during a
+resume. A paged execution erases to a productive logical execution, and two
+completed executions have the same retained and emitted results when the
+productive relation is deterministic and both erasures are terminal. This is
+a conditional result: the proof does not establish that a client supplies
+sufficient future pages, that an allocation succeeds, or that each Rust
+`resume` path implements the modeled step and ledger behavior. In particular,
+the source-specific `pending_match` publication, result-slot preflight, and
+private split cursor still need correspondence proofs.
+
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
 | Split a region | Complete child and terminal enumeration on $`\sigma`$ | Partition unresolved originals among children and terminal verification work |
