@@ -165,8 +165,9 @@ exact cutoff match. It accepts only the explicit `ExactNaturals` arithmetic
 profile and `ScoreOnly` observation profile; rounded arithmetic, ordered
 results, and canonical-witness claims require different checkers. Its theorem proves that an
 accepted exact certificate preserves expression value for *every* variable
-environment and therefore every finite list of score observations. A distinct lower-certificate type proves only that its result
-does not exceed the exact expression. The file checks stale-snapshot,
+environment and therefore every finite list of score observations. A distinct
+lower-certificate type proves only that its result does not exceed the exact
+expression. The file checks stale-snapshot,
 changed-query, changed-parameter, changed-arithmetic, changed-observation,
 missing-step, wrong-rule, broken-chain, fabricated-target, and valid-lower
 examples. An integer
@@ -192,6 +193,62 @@ also requires the session and finalization proofs. This route minimizes
 translation machinery while exposing the source-language and toolchain trust
 boundary. Source hashes detect drift after the proof but cannot establish the
 relation themselves.
+
+### 3.2b Typed operation contracts
+
+[CBCContractInterpretation.v](../verification/temporal_automata/theories/CBCContractInterpretation.v)
+defines profile-indexed request and payload types for online scores,
+completed range, completed kNN, canonical witnesses, resumable operations,
+and resource observations. Its `measure_specification` fixes a validated
+domain, quotient identity, parameters, numerical authority, reference
+measure, and ordered valid-cost carrier. Its `operation_contract` fixes a
+validated query, snapshot and distinct original identities, eligibility,
+separate range and kNN tie orders, inclusive range cutoff, requested $`k`$,
+budgets, and a nonempty set of selected profiles. The online request is a
+target input; the witness request is an original occurrence; search and
+resource requests use the fixed query and captured snapshot. Invalid-query
+validation and error precedence occur before this valid-query contract is
+constructed and remain source-instance obligations.
+
+`ideal_range_law` covers exactly the eligible originals within the inclusive
+cutoff in declared range order. `ideal_knn_law` covers all eligible originals
+in cost-and-tie order independently of that cutoff. A completed kNN result
+must equal the first $`k`$ of this independent order even when a range query
+would fail. Online observations must correspond one-for-one with a declared,
+nonempty attempted-prefix sequence; each prefix event must match its domain
+check or exact/above-cutoff reference cost. Only the final attempt may fail or
+stop incomplete, and either outcome leaves the preceding prefix committed.
+An incomplete range or kNN
+partial may contain only distinct, correctly ordered rows from its ideal
+universe. It cannot claim exhaustion or final top-$`k`$ status.
+
+A completed witness has a feasible path at the reference cost, no cheaper
+feasible path, and no earlier equal-cost witness under the declared tie rule;
+`Completed None` requires the original to be ineligible for the cutoff. A
+completed session has no private or remaining work and no continuation. A
+visible incomplete session partitions the captured originals, keeps published
+and excluded originals sound with respect to an explicit range/kNN session
+goal, and either
+denotes its private/remaining work by a continuation or satisfies an explicit
+terminal-incomplete predicate. Resource observations carry primitive events
+and reported counters; the contract requires an event-accounting relation,
+budget safety, and monotone cumulative charges and peaks. The concrete
+meaning, units, and disjointness of charged and reserved work remain instance
+premises.
+
+`lawful_reference` requires the ideal-list laws and every selected
+`observation_law`. `exact_realization` requires that lawful reference plus
+equality for each selected profile. A generic theorem transfers the relevant
+observation law to any exact realization. `lower_simulation`,
+`metric_geometry`, and `resource_refinement` remain distinct propositions.
+The file checks an inhabited one-original example where zero is a sound lower
+bound for exact cost one but cannot be an exact realization; it also rejects a
+foreign completed kNN row, omitted online prefix, unsound completed exclusion,
+and unjustified partial row. The numerical descriptor, tie keys, prefix
+sequence, request-specific failure and incomplete entitlement, witness
+relation, continuation
+denotation, and event accounting must be proved for each concrete operation.
+The full checker, session refinement, and Rust correspondence are later gates.
 
 ### 3.3 CBC-2: progress is a separate obligation
 

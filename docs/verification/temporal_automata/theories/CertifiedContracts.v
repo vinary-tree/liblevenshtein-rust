@@ -472,3 +472,7 @@ Example separate_lower_certificate_is_accepted :
     (InputVar 0)
     {| lower_scope := sample_scope; lower_rule_name := AdditionLeftBound |} = true.
 Proof. reflexivity. Qed.
+
+(** A lower certificate is not accepted at the exact checker boundary. *)
+Fail Check (fun (certificate : lower_certificate) =>
+  accept_exact sample_scope (InputVar 0) (InputVar 0) certificate).
