@@ -15,6 +15,9 @@ The [numeric authority contract](../verification/CBC_NUMERIC_AUTHORITY.md)
 maps every major lower-bound and exact-verifier path to its arithmetic profile,
 including signed-zero cutoff equality and the machine-transfer proof still
 required for ideal-real bounds.
+The [result and witness contract](../verification/CBC_RESULT_WITNESS_CONTRACT.md)
+instantiates the identity, multiplicity, order, and witness components below
+for the current source surfaces.
 
 ## Claim levels and evidence rule
 

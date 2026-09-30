@@ -24,6 +24,9 @@ including quotient and strict-origin negative controls.
 The [numeric authority contract](CBC_NUMERIC_AUTHORITY.md) maps exact integer,
 decimal rational, ideal real, binary64, enclosure, and soft-loss claims to
 the actual cutoff and verifier paths.
+The [result and witness contract](CBC_RESULT_WITNESS_CONTRACT.md) maps original
+identity, tie order, multiplicity, partial results, and witness promises to
+each search surface.
 The [lexicographic kNN model report](CBC_LEXICOGRAPHIC_MODEL_REPORT.md)
 records the clean finite check and the checked-in equality-cost mutant.
 
