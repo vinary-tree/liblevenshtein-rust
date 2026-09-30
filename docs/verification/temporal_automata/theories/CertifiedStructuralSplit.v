@@ -7,7 +7,7 @@
     captured dictionary traversal is a separate executable obligation. *)
 
 From Stdlib Require Import Arith List Permutation.
-Require Import CertifiedRegionPartition.
+From Liblevenshtein.TemporalAutomata Require Import CertifiedRegionPartition.
 Import ListNotations.
 
 Section StructuralSplit.

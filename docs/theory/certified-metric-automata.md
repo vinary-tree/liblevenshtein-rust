@@ -514,6 +514,21 @@ that original. This is a finite model execution, not a Rust cursor step: the
 Rust root enumeration, bucket cursor, and continuation fields still need
 source correspondence proofs.
 
+[CertifiedSessionSplit.v](../verification/temporal_automata/theories/CertifiedSessionSplit.v)
+connects the finite split checker to a complete runtime's borrowed-parent
+phase. Given a live parent at the specified pending position, the very child
+handles staged in that phase, and an accepted snapshot-relative terminal and
+child package, one atomic publication replaces the parent with those handles
+and clears the private phase. The proof preserves the exact multiplicity of
+original ownership, the exclusion record, and the captured session identity.
+A finite control publishes two distinct paths through one shared physical
+node; three rejected packages omit a terminal, omit a collision member, or
+duplicate an original. The proof assumes the region interpretation and
+terminal enumeration are accurate for the captured snapshot. It does not
+establish the other whole-session validity fields after publication, match a
+Rust split transition, or add a production checker. Those require the
+transition invariant and source refinement obligations below.
+
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
 | Split a region | Complete child and terminal enumeration on $`\sigma`$ | Partition unresolved originals among children and terminal verification work |
