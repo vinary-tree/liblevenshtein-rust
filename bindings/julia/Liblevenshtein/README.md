@@ -143,11 +143,77 @@ the last committed prefix. A generalized observation's
 that consumes several target units can reconnect an older retained row. A
 universal observation with `alive == false` is permanently dead.
 
+The online contract is exact at every committed prefix:
+
+- `observation(online)` initially describes the empty target prefix (length
+  zero), including acceptance of an empty complete target when applicable.
+- Each successful `advance!` consumes exactly one unit in the source's domain,
+  increments `consumed_target_length` by one, and returns the same observation
+  that a following non-mutating `observation` returns. For strings, a unit is a
+  Unicode scalar, not a UTF-8 byte or grapheme cluster. A failed domain,
+  scalar, resource-limit, or length check does not consume the unit.
+- `prefix_observations` yields the observation *after* each target unit. It
+  does not yield the initial observation; an empty target therefore yields an
+  empty stream. Its final value agrees with `evaluate` for a nonempty target;
+  for an empty target, compare `evaluate` with the initial `observation`.
+- Generalized `scaled_distance` is present only when the entire source is
+  reachable within the inclusive budget. Its exact cost is the numerator
+  divided by `scale_denominator`; `nothing` is not an infinite numeric cost.
+  `active_positions` counts in-budget positions in the *current* target row,
+  and `current_row_nonempty` reports whether this count is positive. A later
+  multi-target rule may resurrect an empty row.
+- Universal `source_length` is the fixed source's unit count. `alive` means
+  its canonical frontier is nonempty; once false it stays false even though
+  later successful advances still increment `consumed_target_length`.
+
+An online handle owns its bound native state independently of the parent
+configuration: closing the parent does not invalidate the online handle.
+Online states and prefix streams are exclusive, single-consumer values. Close
+them explicitly when stopping early; the do-block form closes on every exit,
+and iteration closes a stream on exhaustion or an advancement failure. No
+online operation is safe to race with `close` on the same wrapper.
+
 These standalone calls compare one source with one target. They do not walk a
 dictionary or materialize and filter dictionary entries. The
 [standalone automata design](../../../docs/bindings/standalone-automata.md)
 defines the exact operation validation, scaling, liveness, ownership, and
 complexity contracts.
+
+### Qualification and performance budgets
+
+`test/automata_qualification.jl` compares every initial, intermediate, and
+final observation with a separate executable built from the public Rust
+automata APIs. Its fixed-seed corpus covers 1,092 generalized cases (including
+randomized operation subsets and exhaustive short Unicode pairs) and 3,456
+universal cases (three variants, three domains, two policy modes, budgets zero
+through two, and boundary values). The Julia CI job builds that executable and
+requires the comparison. Invalid configurations, transactional rollback,
+ownership, and stream cleanup have additional direct tests.
+
+`benchmark/automata.jl` samples seven groups of 200 iterations after 100
+warmups and compares median nanoseconds per operation with the same public
+Rust control's benchmark mode. For each scenario the CI regression ceiling is
+$`T_{\mathrm{Julia}} \le 10 T_{\mathrm{Rust}} + A`$, where $`A`$ is 50,000 ns
+for a single construction, match, or 32-unit traversal, and 500,000 ns for a
+host-side batch of 32 complete matches. These allowances absorb FFI and CI
+scheduling noise but fail substantial algorithmic or marshalling regressions.
+The batch is deliberately bounded host repetition, not dictionary-product
+traversal; the latter is owned by a separate Julia query-capability task.
+
+On the 2026-09-30 local debug build (Julia 1.13.1), representative medians in
+nanoseconds were:
+
+| Scenario | Public Rust | Julia facade |
+|---|---:|---:|
+| Generalized construction | 2,179 | 8,921 |
+| Universal construction | 10 | 415 |
+| Generalized complete / early / late rejection | 156,066 / 120,237 / 154,274 | 159,951 / 121,675 / 156,790 |
+| Universal complete / early / late rejection | 26,053 / 5,642 / 26,400 | 31,259 / 7,431 / 31,334 |
+| Generalized / universal 32-unit traversal | 156,011 / 26,172 | 174,672 / 53,089 |
+| Generalized / universal batch of 32 | 4,463,982 / 508,826 | 4,509,264 / 617,118 |
+
+These figures are diagnostic, not portable speed guarantees; CI evaluates the
+budget against a native control measured on the same runner.
 
 ## Common and intended usage
 

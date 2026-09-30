@@ -228,6 +228,8 @@ end
     @test scoped_open[]
 end
 
+include("automata_qualification.jl")
+
 @testset "resource-backed snapshots, iteration, and reduction" begin
     dictionary = Libdictenstein.DynamicDawg()
     dictionary["cat"] = 7

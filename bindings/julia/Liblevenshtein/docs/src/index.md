@@ -99,10 +99,25 @@ closes on early return as well as ordinary exhaustion. `AutomatonLimits`
 supplies explicit native source, target, retained-cell, and per-step work
 ceilings; a failed advance leaves the prior observation committed.
 
+The initial `observation` describes the empty target. Each successful
+`advance!` commits one domain unit and yields the same value as a subsequent
+`observation`; `prefix_observations` yields only post-advance values, so an
+empty target yields no iterator items. A complete `evaluate` agrees with the
+last prefix value, or with the initial value for an empty target. Generalized
+`scaled_distance` is a within-budget numerator over `scale_denominator`, not
+an approximate float; absence means the full source is not within budget at
+that prefix. Closing a parent configuration does not invalidate its bound
+online state. Online states are exclusive and must be explicitly closed when
+stopping early.
+
 Generalized current-row emptiness is not a pruning certificate: a multi-target
 operation can revive from an older retained row. Universal `alive == false`,
 by contrast, is permanent. Standalone automata compare one source/target pair;
 dictionary-product traversal remains a distinct bounded native capability.
+The [Julia package guide](../../README.md#qualification-and-performance-budgets)
+records the independent public-Rust differential corpus, measured scenarios,
+and CI regression budgets. Dictionary-product traversal is owned by a
+separate Julia query-capability task, not by this standalone qualification.
 
 ## Bounded repeated-query caching
 
