@@ -70,11 +70,17 @@ The semantic cutoff $`\tau`$, the session-wide `ResourceLimits` ceilings, and `P
 | Scalar/vector discrete Fréchet | Nonempty paths on a fixed ground domain; consecutive stutter quotient identifies zero-distance sequences | Canonical `FrechetStutterClass` exists for scalar paths; vector metric qualification needs its own domain map |
 | MSM | Lawful positive move/split/merge configuration and admitted finite series | Reviewed metric marker and named lower-bound proofs exist; the partial MSM proof tree and source/numeric gaps prevent a library-wide closed CBC claim |
 | Unit-grid TWED | Positive stiffness and nonnegative gap penalty on a common uniform grid | Metric config and interval/recurrence proof islands exist; rounded metric laws and full executable correspondence remain open |
-| Physical-time TWED | Same unit and origin; finite scalar or typed vector values; strictly increasing timestamps; first timestamp strictly after origin for metric qualification | Scalar strict-origin wrapper and vector series guard enforce the domain. `TimestampedMetricTransfer.v` proves the origin-equal obstruction for any nonnegative reflexive point cost, but imports the full source metric theorem as a premise; machine metricity and Rust correspondence remain open |
+| Physical-time TWED | Same unit and origin; finite scalar or typed vector values; strictly increasing timestamps; first timestamp strictly after origin for metric qualification | The committed vector series guard enforces the origin restriction; the committed scalar raw API does not. `TimestampedMetricTransfer.v` proves the origin-equal obstruction for any nonnegative reflexive point cost, but imports the full source metric theorem as a premise; machine metricity and Rust correspondence remain open |
 | Banded/general DTW | Exact recurrence and separately certified admissible filters; general family is nonmetric | Keep as a capability control; no triangle-dependent pruning license |
 | Soft-DTW | Soft algebra/approximation profile, not ordinary exact metric rank without a separate theorem | Keep as a capability control |
 
-For timestamped TWED the raw constructor admits an initial timestamp equal to the origin. The already checked 1-by-2 counterexample gives distinct raw sequences at zero distance when the gap penalty is zero. The strict wrapper closes this domain admission issue. It does not close the external ideal metric theorem or binary64 separation/triangle laws.
+For timestamped TWED the committed scalar raw constructor admits an initial
+timestamp equal to the origin. The already checked 1-by-2 counterexample gives
+distinct raw sequences at zero distance when the gap penalty is zero. A scalar
+strict wrapper is present only in an uncommitted worktree overlay, so this
+domain admission issue remains open in committed source. Such a wrapper would
+still leave the external ideal metric theorem and binary64
+separation/triangle laws open.
 
 ### Candidate identity and rank inventory
 
@@ -93,7 +99,7 @@ For range results, specify whether promised order is score order, dictionary ord
 | CBC-2 finite internal rank | `CertifiedMetricExecution.v` implication from decreasing natural rank | Concrete rank, no-stuck-state proof, finite reference progress, conditional resumption |
 | QO-1 work potential | `CertifiedMetricExecution.v` telescoping inequality | Concrete primitive costs, independent credits, useful potentials, live/peak accounting |
 | QO-2 finite portfolio minimum | `CertifiedMetricExecution.v` finite natural objective selection | Certified feasibility, acquisition/selection/conversion cost, workload and objective scope |
-| Timestamped TWED metric transfer | `TimestampedMetricTransfer.v` recurrence/anchor transfer and strict wrapper admission | Local proof of the source theorem for full local closure; binary64 and source correspondence separately |
+| Timestamped TWED metric transfer | `TimestampedMetricTransfer.v` recurrence/anchor transfer and abstract strict-domain admission | Committed scalar strict-domain API, local proof of the source theorem for full local closure, binary64 and source correspondence separately |
 | Range certificates and snapshot | `RangeCertificates.v`, `ElasticSnapshot.v` | Integrate with whole-session ownership and selected Rust execution paths |
 | Original-occurrence ownership | `CertifiedSearchSession.v` proves pending/private/verified/excluded permutation, sound exclusion preservation, and conditional completed-winner retention | Region-level split, borrowed-parent publication, heap/rank, resource/error observations, and Rust correspondence |
 | Explicit region split | `CertifiedRegionPartition.v` checks exact permutation of a supplied parent original list into terminal and child lists, including collision/duplicate controls | Prove captured snapshot enumeration, compact structural split certificate, and Rust iterator correspondence without enumerating whole subtrees in the hot path |

@@ -1061,12 +1061,11 @@ The first target sample can be deleted at zero cost, then the remaining pair
 matches at zero cost. Both satisfy the constructor's internal strict-order
 check. Consequently its current metric label is too broad for strict identity;
 the certified restriction above is needed before applying this transfer
-theorem. The additive
-[`StrictOriginTimestampedSeries`](../../src/time_series/timestamped_twed.rs)
-wrapper checks that restriction and can be passed to
-`distance_bounded_strict`. The existing raw constructor and scorer remain
-available on the broader domain, so their outputs do not acquire a metric
-guarantee from this theorem. The Wolfram
+theorem. The committed scalar source has no strict-origin wrapper; a
+`StrictOriginTimestampedSeries` and `distance_bounded_strict` design exists
+only as an uncommitted worktree overlay. The committed raw constructor and
+scorer remain available on the broader domain, so their outputs do not
+acquire a metric guarantee from this theorem. The Wolfram
 companion reproduces this failure and checks the anchored reduction on its
 finite corpus. See [reference 9](#15-related-work-and-naming) for the source theorem.
 The [Rocq transfer proof](../verification/twed/theories/Metric/TimestampedMetricTransfer.v)
@@ -1075,7 +1074,7 @@ each shifted physical-time charge, injectivity of the anchor map, and the
 metric pullback conditional on the source theorem's metric axioms. It also
 constructs the distinct origin-equal pair and proves that its 1-by-2
 cumulative recurrence grid has final cost zero. A separate validator lemma
-shows that the strict wrapper's guard enters the transfer domain while the
+shows that the proposed strict guard enters the transfer domain while the
 origin-equal counterexample passes the raw constructor's abstract guard. The
 published source metric theorem and a binary64-to-real correspondence are
 separate premises; neither is re-proved by the transfer file.

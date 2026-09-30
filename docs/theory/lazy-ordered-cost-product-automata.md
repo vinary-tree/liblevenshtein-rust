@@ -781,7 +781,7 @@ prove the sum, maximum, and zero-quotient constructions.
 | MSM | min-plus real | sparse query-row frontier | preceding target point or interval | metric for lawful positive split/merge cost |
 | ERP | min-plus real | sparse query-row frontier | gap configuration | metric on the gap-value quotient |
 | unit-grid TWED | min-plus real | query-row frontier | preceding target point and depth | metric under lawful positive stiffness on uniform grids |
-| timestamped TWED | min-plus real | timestamp-aware frontier | preceding value/time and typed units | cumulative-boundary metric transfer requires first time strictly after the origin; the additive strict-origin wrapper enforces this domain, while ORC 11.5 gives the raw domain's zero-distance counterexample |
+| timestamped TWED | min-plus real | timestamp-aware frontier | preceding value/time and typed units | cumulative-boundary metric transfer requires first time strictly after the origin; the committed scalar raw API does not enforce that restriction, while ORC 11.5 gives its zero-distance counterexample |
 | scalar/vector discrete Fréchet | min-max | bottleneck row frontier | current point/interval | metric on the consecutive-stutter quotient when the ground metric is certified |
 | banded DTW | min-plus real | band-restricted row frontier | band/depth and current label | general family nonmetric; separately proved restrictions possible |
 | Soft-DTW | smooth log-sum-exp recurrence | rolling dense score rows | bounded DP history | analysis-only; idempotent antichain elimination does not apply |

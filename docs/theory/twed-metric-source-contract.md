@@ -49,7 +49,7 @@ The raw Rust constructor admits a first timestamp equal to the origin. With $`\l
 X=((1,1)),\qquad Y=((0,0),(1,1)),
 ```
 
-the cumulative recurrence assigns zero to unequal series. The first sample of $`Y`$ deletes at zero cost, and the remaining samples match at zero cost. The transfer proof checks distinctness and the 1-by-2 score. The [strict-origin wrapper](../../src/time_series/timestamped_twed.rs) excludes $`Y`$. It proves domain admission, not the source triangle inequality.
+the cumulative recurrence assigns zero to unequal series. The first sample of $`Y`$ deletes at zero cost, and the remaining samples match at zero cost. The transfer proof checks distinctness and the 1-by-2 score. The committed scalar [raw constructor](../../src/time_series/timestamped_twed.rs) admits $`Y`$; an uncommitted strict-origin wrapper would exclude it but is not yet an executable CBC gate. Even after that admission step, the source triangle inequality remains a separate obligation.
 
 ## Local proof obligations
 

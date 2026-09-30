@@ -325,9 +325,10 @@ explicit premise of a pullback theorem. It proves the changed-boundary
 reduction and strict-origin injection, but it does not claim a new proof of
 the source theorem or metricity of rounded binary64 outputs. The existing
 origin-equal constructor domain remains broader than that strict-metric proof.
-`StrictOriginTimestampedSeries` is an additive runtime gate for the theorem's
-domain, and `distance_bounded_strict` delegates to the existing scorer. The
-raw scorer remains available for the broader domain.
+`StrictOriginTimestampedSeries` and `distance_bounded_strict` exist only in an
+uncommitted worktree overlay. The committed scalar raw scorer remains
+available on the broader origin-equal domain; strict admission is still a
+source obligation, not a checked runtime gate in this revision.
 The API independently makes the theorem's strict stiffness premise a type
 invariant: only `MetricTwedConfig` implements `MetricElasticKernel`.
 
