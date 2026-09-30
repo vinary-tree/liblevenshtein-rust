@@ -710,13 +710,13 @@ jobs:
         run: gem push dist/*.gem
 
   go-module:
-    name: Publish Go module tag
+    name: Verify immutable Go module tag and public proxy
     needs: binding-contract
     if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'go-module'
     runs-on: ubuntu-24.04
     environment: go-module
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
         with:
@@ -725,24 +725,21 @@ jobs:
         with:
           go-version: "1.26.x"
           cache: false
-      - name: Validate module metadata and create its immutable subdirectory tag
+      - name: Exercise offline immutable Go tag state machine
+        run: bash scripts/test-go-module-release.sh
+      - name: Verify annotated module tag and public proxy readback
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GO_MODULE_READBACK_CACHE: ${{ github.workspace }}/.go-proxy-readback-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          grep -Fx 'module github.com/vinary-tree/liblevenshtein-rust/bindings/go/v4' bindings/go/go.mod
-          grep -F 'github.com/vinary-tree/vinary-tree-interop/bindings/go/v4 v4.0.0-rc.6' bindings/go/go.mod
-          GOWORK=off go -C bindings/go mod verify
-          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
-          module_tag="bindings/go/v$version"
-          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$module_tag" >/dev/null 2>&1; then
-            echo "tag already exists: $module_tag" >&2
-            exit 1
-          fi
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
-            --method POST \
-            -f "ref=refs/tags/$module_tag" \
-            -f "sha=$GITHUB_SHA"
+          set -euo pipefail
+          version=$(jq -er '.registries.goTag' release/version.json)
+          GOWORK=off go -C bindings/go mod edit -json |
+            jq -e --arg path 'github.com/vinary-tree/vinary-tree-interop/bindings/go/v4' \
+              --arg version "$version" 'any(.Require[]?; .Path == $path and .Version == $version)'
+          GOWORK=off GOPROXY=https://proxy.golang.org go -C bindings/go mod download
+          bash scripts/go-module-release.sh verify bindings/go "$version" "$GITHUB_SHA"
+          bash scripts/go-module-release.sh proxy bindings/go "$version" "$GITHUB_SHA"
 
   swiftpm:
     name: Verify SwiftPM tag publication
