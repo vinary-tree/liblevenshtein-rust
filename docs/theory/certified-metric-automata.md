@@ -555,6 +555,25 @@ decision and copies the ledger, so verification work and allocation charges
 need source-specific proofs. Witness and tie provenance are ghost-only; their
 runtime retention and reconstruction are also separate obligations.
 
+[CertifiedSessionResume.v](../verification/temporal_automata/theories/CertifiedSessionResume.v)
+models suspension as a status change on the entire retained runtime and ghost
+configuration. It proves that every active private phase can pause and resume
+with the same pending cursors, snapshot identity, selected results, arena,
+cache, reconstruction, emission cursor, ownership, and cumulative work ledger.
+It rules out a cursor reset during a pause and a ledger recharge during a
+resume. A counted paged execution erases to a productive logical execution
+with the same number of productive steps. Two completed executions have the
+same retained and emitted results, and the same productive-step count, when
+the productive relation is deterministic and both erasures are terminal. An
+inhabited already-scored control pauses before publication, then publishes
+once under arbitrary legal paging; it rejects cursor reset, ledger recharge,
+and a return to the scoring phase. This is
+a conditional result: the proof does not establish that a client supplies
+sufficient future pages, that an allocation succeeds, or that each Rust
+`resume` path implements the modeled step and ledger behavior. In particular,
+the source-specific `pending_match` publication, result-slot preflight, and
+private split cursor still need correspondence proofs.
+
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
 | Split a region | Complete child and terminal enumeration on $`\sigma`$ | Partition unresolved originals among children and terminal verification work |
@@ -649,6 +668,40 @@ predecessor stays unchanged. An allocation failure after charged work must
 retain or explicitly account for that work; rolling back semantic state does
 not erase resource use. A cached resource failure cannot replace a semantic
 dead transition.
+
+The [checked cache and arena model](../verification/temporal_automata/theories/CertifiedSessionCache.v)
+refines this boundary for one logical transition. A cache entry contains only
+a completed `Dead` or `Live(id)` answer. Cache lookup compares the complete
+operation scope, exact source-state identifier, and label before returning
+that answer. An absent entry is a miss; it is distinct from a cached `Dead`.
+`ResourceFailure` is a separate action result and cannot be stored as a dead
+entry. `cache_hit_is_semantically_complete` and
+`completed_action_refines_semantic_step` prove equality with the abstract
+successor, conditional on the complete-entry invariant and source state.
+Eviction retains the invariant and permits recomputation; it does not assert
+equal work, allocation counts, or latency. A checked example has the same
+semantic answer with different resource reports.
+
+The query-local interner indexes immutable canonical residuals by a
+fingerprint hint, then compares the full residual before reusing an ID.
+The invariant requires every arena state to have a fingerprint index entry
+and every entry to name the correct state. It also requires unique canonical
+residuals. A hit denotes exact equality even when two states have the same
+fingerprint; a miss proves the residual is new. Fresh publication appends the
+residual before its ID becomes visible, preserving old ID referents and all
+cache and publication evidence. `publication_action` accepts only a successor
+whose arena referent, source transition, cursor, and witness are valid.
+The checked premature-publication mutant violates the invariant when the ID
+has no arena referent; a changed-scope cache lookup misses even if its source
+ID and label match.
+
+The model reflects the complete-hit and append-only ordering in
+[`TimestampedTwedRangeContinuation::transition`](../../src/time_series/timestamped_twed_index.rs)
+and `ProductStateArena::intern_at_fingerprint`. A concrete refinement still
+must prove the binary64/canonical-bit residual equality, actual scope fields,
+source-token decode, allocation and reservation effects, ledger charges,
+and Rust publication sequence. The logical-state failure theorem does not
+claim unchanged physical capacity after a failed reserve.
 
 Coverage is also a **cut condition** on the recurrence dependency graph.
 Every unexamined accepting derivation must cross a represented live dependency.

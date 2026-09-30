@@ -615,6 +615,7 @@ jobs:
           scripts/stage-ocaml-package.sh "$RUNNER_TEMP/opam-package" "$GITHUB_REF_NAME"
           opam lint "$RUNNER_TEMP/opam-package/opam"
           tar -tjf "$RUNNER_TEMP/opam-package/liblevenshtein-4.0.0-rc.6.tbz"
+          scripts/test-opam-archive-contract.sh "$RUNNER_TEMP/opam-contract" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME"
       - uses: actions/upload-artifact@v7
         with:
           name: opam-package
@@ -795,6 +796,15 @@ jobs:
         with:
           name: opam-package
           path: dist
+      - name: Bind opam checksum to the published source asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.OPAM_GITHUB_TOKEN }}
+        run: |
+          canonical=$(python3 -c 'import json; print(json.load(open("release/version.json"))["canonical"])')
+          scripts/verify-opam-public-asset.sh "$GITHUB_REPOSITORY" \
+            "$GITHUB_REF_NAME" "liblevenshtein-$canonical" \
+            dist "$RUNNER_TEMP/opam-public"
       - name: Create the opam-repository pull request
         shell: bash
         env:
@@ -811,7 +821,7 @@ jobs:
           git -C opam-repository checkout -b "$branch" FETCH_HEAD
           package="opam-repository/packages/liblevenshtein/liblevenshtein.$version"
           mkdir -p "$package"
-          cp dist/opam "$package/opam"
+          cp "$RUNNER_TEMP/opam-public/opam" "$package/opam"
           git -C opam-repository config user.name "Vinary Tree release automation"
           git -C opam-repository config user.email "dylon.devo@gmail.com"
           git -C opam-repository add "packages/liblevenshtein/liblevenshtein.$version/opam"
@@ -1017,6 +1027,19 @@ jobs:
           CLOJARS_PASSWORD: ${{ secrets.CLOJARS_DEPLOY_TOKEN }}
         run: lein deploy clojars
 
+  package-documentation:
+    name: Stage all versioned package documentation before release publication
+    needs: binding-contract
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref_type == 'tag' &&
+      inputs.registry == 'validate-only'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/package-documentation.yml
+    with:
+      archive_only: true
+
   github-release:
     name: Publish GitHub release and checksums
     needs:
@@ -1030,6 +1053,7 @@ jobs:
       - hackage-package
       - luarocks-package
       - opam-package
+      - package-documentation
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.ref_type == 'tag' &&
@@ -1039,62 +1063,74 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Require immutable-release setting and unused source tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMMUTABLE_RELEASES_READ_TOKEN: ${{ secrets.IMMUTABLE_RELEASES_READ_TOKEN }}
+        run: scripts/publish-immutable-release.sh --preflight "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$(git rev-parse HEAD)"
+      - run: scripts/test-immutable-release-assets.sh "$RUNNER_TEMP/immutable-contract"
+      - run: bash scripts/test-flatten-release-assets.sh "$RUNNER_TEMP/flatten-assets-contract"
       - uses: actions/download-artifact@v7
         with:
           pattern: native-*
-          path: release-assets
-          merge-multiple: true
+          path: staged-assets/native
+          merge-multiple: false
       - uses: actions/download-artifact@v7
         with:
           pattern: python-wheel-*
-          path: release-assets
-          merge-multiple: true
+          path: staged-assets/python
+          merge-multiple: false
       - uses: actions/download-artifact@v7
         with:
           name: npm-package
-          path: release-assets
+          path: staged-assets/npm
       - uses: actions/download-artifact@v7
         with:
           name: maven-staging
-          path: maven-staging
+          path: staged-assets/maven
       - uses: actions/download-artifact@v7
         with:
           name: clojure-package
-          path: release-assets
+          path: staged-assets/clojure
       - uses: actions/download-artifact@v7
         with:
           name: nuget-package
-          path: release-assets
+          path: staged-assets/nuget
       - uses: actions/download-artifact@v7
         with:
           name: rubygems-package
-          path: release-assets
+          path: staged-assets/rubygems
       - uses: actions/download-artifact@v7
         with:
           name: hackage-package
-          path: release-assets
+          path: staged-assets/hackage
       - uses: actions/download-artifact@v7
         with:
           name: luarocks-package
-          path: release-assets
+          path: staged-assets/luarocks
       - uses: actions/download-artifact@v7
         with:
           name: opam-package
-          path: release-assets
-      - name: Add Maven artifacts and SHA-256 manifest
-        run: |
-          mkdir -p flattened-assets
-          find maven-staging/io/vinarytree/liblevenshtein -type f \
-            \( -name '*.jar' -o -name '*.pom' \) -exec cp {} flattened-assets/ \;
-          find release-assets -mindepth 2 -type f \
-            \( -name '*.jar' -o -name '*.pom' \) -exec cp {} flattened-assets/ \;
-          find flattened-assets -type f -exec cp {} release-assets/ \;
-          cd release-assets
-          find . -type f ! -name SHA256SUMS -print0 | sort -z | \
-            xargs -0 sha256sum > ../SHA256SUMS
-          mv ../SHA256SUMS SHA256SUMS
-      - uses: softprops/action-gh-release@v2
+          path: staged-assets/opam
+      - uses: actions/download-artifact@v7
+        with:
+          name: package-documentation-release
+          path: staged-assets/documentation
+      - name: Flatten release assets without basename collisions
+        run: bash scripts/flatten-release-assets.sh staged-assets release-assets clojure maven
+      - uses: softprops/action-gh-release@v3
         with:
           files: release-assets/*
+          draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
+      - name: Verify every draft asset, publish, and read back immutable bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/publish-immutable-release.sh --publish \
+            "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" release-assets \
+            "$(git rev-parse HEAD)" "$RUNNER_TEMP/immutable-readback"

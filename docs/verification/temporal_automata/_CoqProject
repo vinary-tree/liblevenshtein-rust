@@ -15,3 +15,5 @@ theories/CertifiedSessionSplit.v
 theories/CertifiedSessionVerification.v
 theories/CertifiedKnnHeap.v
 theories/CertifiedKnnPruning.v
+theories/CertifiedSessionCache.v
+theories/CertifiedSessionResume.v

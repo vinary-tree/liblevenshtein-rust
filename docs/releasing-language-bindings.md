@@ -1228,6 +1228,30 @@ pass it in a remote URL. The workflow configures Git's credential helper from
 `GH_TOKEN`, never persists the token in a checkout, and fixes the fork identity
 rather than inferring it from the authenticating user.
 
+An `opam` dispatch must follow a `validate-only` dispatch for the same source
+tag. The protected GitHub-release job publishes the source `.tbz` and
+`SHA256SUMS`; the standalone staging job normalizes tar member order,
+timestamp, ownership, permissions, and locale. The opam submission gate then
+checks that the public tag resolves to its checkout commit, downloads the
+published archive and manifest, checks the release API SHA-256 and the unique
+manifest entry, and requires byte identity with the staged archive. It derives
+the opam checksum from the downloaded public bytes, so a stale or restaged
+checksum cannot reach the upstream pull request. Run
+`scripts/test-opam-archive-contract.sh target/opam-contract vinary-tree/liblevenshtein-rust v4.0.0-rc.6`
+on disk-backed scratch for cross-run and negative controls. For RC.6, enable
+GitHub [release immutability](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+for this repository before `validate-only`, and provide the protected
+`github-release` job a narrowly scoped `IMMUTABLE_RELEASES_READ_TOKEN` with
+repository Administration:read. The publisher itself uses only its job-scoped
+Contents:write `GITHUB_TOKEN`. Preflight rejects a disabled setting or an
+existing release. The release job builds the versioned documentation archive
+as part of its own validation graph, then uploads that archive with every
+other asset and `SHA256SUMS` to a draft. It checks exact asset names and API
+digests, publishes the complete draft, and reads back every immutable public
+byte. The separate Pages workflow can only compare its reproducible archive
+with the public immutable asset; it may not upload a late asset. The opam job
+rejects any release whose API `immutable` field is not `true`.
+
 The package-directory version is the opam spelling `4.0.0~rc6`, read from each
 owner's `release/version.json`; branch names use the canonical
 `4.0.0-rc.6` spelling because `~` is illegal in Git refs. Submit and obtain
