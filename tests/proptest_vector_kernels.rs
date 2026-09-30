@@ -165,6 +165,41 @@ fn gap_insertion_is_canonicalized_before_erp_metric_identity_is_claimed() {
 }
 
 #[test]
+fn timestamped_vector_twed_rejects_an_origin_equal_first_sample() {
+    let twed = VectorTimestampedTwedMetric::try_new(metric(), sample([0, 0]), 1.0, 0.0).unwrap();
+    let origin_equal = twed.try_series(
+        vec![sample([0, 0]), sample([1, 1])],
+        &[0.0, 1.0],
+        TimestampUnit::Seconds,
+        0.0,
+        ResourceLimits::default(),
+    );
+    assert_eq!(
+        origin_equal,
+        Err(VectorMetricError::TimestampNotAfterOrigin)
+    );
+
+    let before_origin = twed.try_series(
+        vec![sample([0, 0])],
+        &[-1.0],
+        TimestampUnit::Seconds,
+        0.0,
+        ResourceLimits::default(),
+    );
+    assert_eq!(before_origin, Err(VectorMetricError::TimestampBeforeOrigin));
+
+    assert!(twed
+        .try_series(
+            vec![sample([1, 1])],
+            &[1.0],
+            TimestampUnit::Seconds,
+            0.0,
+            ResourceLimits::default(),
+        )
+        .is_ok());
+}
+
+#[test]
 fn missing_channel_pair_renormalization_is_a_pinned_nonmetric_control() {
     fn bad_pair_distance(left: &[Option<f64>; 3], right: &[Option<f64>; 3]) -> f64 {
         let mut sum = 0.0;

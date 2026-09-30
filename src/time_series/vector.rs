@@ -680,6 +680,9 @@ pub enum VectorMetricError {
     /// The first timestamp preceded the physical origin.
     #[error("first timestamp precedes the declared origin")]
     TimestampBeforeOrigin,
+    /// The first timestamp equalled the physical origin, outside the metric domain.
+    #[error("first timestamp must be strictly later than the declared origin")]
+    TimestampNotAfterOrigin,
     /// Timestamped operands used different canonical units.
     #[error("timestamp units differ")]
     MixedTimestampUnits,
@@ -1202,7 +1205,7 @@ impl VectorTimestampedTwedMetric {
     }
 
     /// Validate one nonempty vector/time series in this metric's channel
-    /// domain.
+    /// domain, with its first timestamp strictly after the origin.
     #[allow(clippy::too_many_arguments)]
     pub fn try_series(
         &self,
@@ -2463,11 +2466,13 @@ fn validate_vector_timestamps(timestamps: &[f64], origin: f64) -> Result<(), Vec
     {
         return Err(VectorMetricError::NonFiniteTimestamp { index: Some(index) });
     }
-    if timestamps
-        .first()
-        .is_some_and(|timestamp| *timestamp < origin)
-    {
-        return Err(VectorMetricError::TimestampBeforeOrigin);
+    if let Some(&first) = timestamps.first() {
+        if first < origin {
+            return Err(VectorMetricError::TimestampBeforeOrigin);
+        }
+        if first == origin {
+            return Err(VectorMetricError::TimestampNotAfterOrigin);
+        }
     }
     if let Some(index) = timestamps
         .windows(2)
