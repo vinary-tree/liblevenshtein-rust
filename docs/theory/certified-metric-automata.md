@@ -152,6 +152,14 @@ provides a primary example of trace-based simulation methodology.
 [CertifiedMetricExecution.v](../verification/temporal_automata/theories/CertifiedMetricExecution.v)
 mechanizes the finite execution and composition argument here. Instantiating
 the reference with the Rust library remains a separate proof.
+Its `two_local_certificates_preserve_completed_observation` theorem also makes
+the two initial relations, concatenated event segments, and both terminal
+observation relations explicit. It permits finite silent administrative steps
+through the local simulation premise. The coinductive
+`infinite_zero_conversions` control has a sound silent local refinement and an
+infinite conversion-only execution that never reaches its completion state.
+Thus this finite theorem supplies no total termination claim; the rank
+obligation in CBC-2 is separate.
 
 ### 3.2a A checked exact-integer certificate kernel
 

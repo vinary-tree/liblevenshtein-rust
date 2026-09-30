@@ -74,6 +74,109 @@ Section Traces.
   Qed.
 End Traces.
 
+Section CompletedTraceComposition.
+  Context {Event Observation : Type}.
+
+  Theorem two_local_certificates_preserve_completed_observation :
+    forall First Middle Last
+      (first_step : First -> list Event -> First -> Prop)
+      (middle_step : Middle -> list Event -> Middle -> Prop)
+      (last_step : Last -> list Event -> Last -> Prop)
+      (left : First -> Middle -> Prop)
+      (right : Middle -> Last -> Prop)
+      (terminal_first : First -> Prop)
+      (terminal_middle : Middle -> Prop)
+      (terminal_last : Last -> Prop)
+      (observe_first : First -> Observation)
+      (observe_middle : Middle -> Observation)
+      (observe_last : Last -> Observation)
+      initial_first initial_middle initial_last,
+      step_refinement first_step middle_step left ->
+      step_refinement middle_step last_step right ->
+      left initial_first initial_middle ->
+      right initial_middle initial_last ->
+      (forall first middle,
+        left first middle -> terminal_first first ->
+        terminal_middle middle /\
+        observe_first first = observe_middle middle) ->
+      (forall middle last,
+        right middle last -> terminal_middle middle ->
+        terminal_last last /\
+        observe_middle middle = observe_last last) ->
+      forall prefix suffix pause final_first,
+        execution first_step initial_first prefix pause ->
+        execution first_step pause suffix final_first ->
+        terminal_first final_first ->
+        exists final_last,
+          execution last_step initial_last (prefix ++ suffix) final_last /\
+          terminal_last final_last /\
+          observe_first final_first = observe_last final_last.
+  Proof.
+    intros First Middle Last first_step middle_step last_step left right
+      terminal_first terminal_middle terminal_last observe_first
+      observe_middle observe_last initial_first initial_middle initial_last
+      Hleft Hright Hinitial_left Hinitial_right Hterminal_left
+      Hterminal_right prefix suffix pause final_first Hprefix Hsuffix
+      Hcompleted.
+    pose proof (execution_append _ _ _ _ _ _ _ Hprefix Hsuffix) as Hrun.
+    destruct (local_certificates_lift_to_traces
+      _ _ _ _ _ Hleft _ _ _ Hrun _ Hinitial_left)
+      as [final_middle [Hmiddle_run Hrelated_left]].
+    destruct (local_certificates_lift_to_traces
+      _ _ _ _ _ Hright _ _ _ Hmiddle_run _ Hinitial_right)
+      as [final_last [Hlast_run Hrelated_right]].
+    destruct (Hterminal_left _ _ Hrelated_left Hcompleted)
+      as [Hmiddle_done Hleft_observation].
+    destruct (Hterminal_right _ _ Hrelated_right Hmiddle_done)
+      as [Hlast_done Hright_observation].
+    exists final_last; repeat split; try assumption.
+    now rewrite Hleft_observation, Hright_observation.
+  Qed.
+End CompletedTraceComposition.
+
+(** A finite-trace simulation does not imply progress. The concrete machine
+    below can convert forever while the reference performs zero steps. *)
+Inductive conversion_only_step : nat -> list unit -> nat -> Prop :=
+| conversion_only_loop : conversion_only_step 0 [] 0.
+
+CoInductive infinite_conversion_only : nat -> Prop :=
+| conversion_only_more : forall first next,
+    conversion_only_step first [] next ->
+    infinite_conversion_only next ->
+    infinite_conversion_only first.
+
+CoFixpoint infinite_zero_conversions : infinite_conversion_only 0 :=
+  conversion_only_more 0 0 conversion_only_loop infinite_zero_conversions.
+
+Theorem conversion_only_has_local_silent_refinement :
+  step_refinement conversion_only_step
+    (fun (_ : nat) (_ : list unit) (_ : nat) => False)
+    (fun concrete abstract => concrete = 0 /\ abstract = 0).
+Proof.
+  intros concrete events next abstract Hrelated Hstep.
+  inversion Hstep; subst.
+  exists abstract; split; [constructor | exact Hrelated].
+Qed.
+
+Lemma conversion_only_execution_stays_zero :
+  forall first events last,
+    execution conversion_only_step first events last ->
+    first = 0 -> last = 0.
+Proof.
+  intros first events last Hrun.
+  induction Hrun; intro Hzero; [exact Hzero |].
+  inversion H; subst. apply IHHrun; reflexivity.
+Qed.
+
+Theorem conversion_only_cannot_reach_completed_one :
+  forall events, ~ execution conversion_only_step 0 events 1.
+Proof.
+  intros events Hrun.
+  pose proof (conversion_only_execution_stays_zero _ _ _ Hrun eq_refl)
+    as Hfinal.
+  discriminate Hfinal.
+Qed.
+
 (** Finite trace preservation by itself allows an infinite silent loop.
     A natural-valued rank gives an explicit bound on consecutive internal steps. *)
 Section AdministrativeProgress.
