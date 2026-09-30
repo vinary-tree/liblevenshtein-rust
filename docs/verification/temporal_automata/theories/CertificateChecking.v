@@ -419,6 +419,30 @@ Proof.
     intro another_environment; unfold relation_holds; reflexivity.
 Qed.
 
+Corollary accepted_exact_chain_preserves_every_score :
+  forall requested origin target certificate,
+    accept_scoped requested origin target Equivalent certificate = true ->
+    forall environment,
+      evaluate environment target = evaluate environment origin.
+Proof.
+  intros requested origin target certificate Haccept environment.
+  destruct (accepted_scoped_certificate_sound
+    _ _ _ _ _ Haccept) as [_ Hsemantics].
+  exact (Hsemantics environment).
+Qed.
+
+Corollary accepted_lower_chain_is_admissible :
+  forall requested origin target certificate,
+    accept_scoped requested origin target LowerThanSource certificate = true ->
+    forall environment,
+      evaluate environment target <= evaluate environment origin.
+Proof.
+  intros requested origin target certificate Haccept environment.
+  destruct (accepted_scoped_certificate_sound
+    _ _ _ _ _ Haccept) as [_ Hsemantics].
+  exact (Hsemantics environment).
+Qed.
+
 Definition sample_realization_scope : realization_scope :=
   {| base_scope := sample_scope;
      scoped_revision := 11;
@@ -550,6 +574,39 @@ Example unsupported_rule_is_rejected :
          recorded_premises := [];
          recorded_direction := Forward;
          recorded_source := InputVar 0;
+         recorded_target := InputVar 0;
+         recorded_scope := sample_realization_scope;
+         recorded_arithmetic := ExactNaturals;
+         recorded_witness_effect := NoWitnessEffect |}) = false.
+Proof. reflexivity. Qed.
+
+Example incomplete_proof_chain_is_rejected :
+  accept_scoped sample_realization_scope
+    (Addition (Addition (InputVar 0) (Constant 0)) (Constant 0))
+    (InputVar 0) Equivalent
+    (singleton_certificate
+      {| recorded_rule := NamedExact AddZeroRight;
+         recorded_premises :=
+           [ExactNaturalArithmetic; ScoreOnlyObservation; ExactPattern];
+         recorded_direction := Forward;
+         recorded_source :=
+           Addition (Addition (InputVar 0) (Constant 0)) (Constant 0);
+         recorded_target := Addition (InputVar 0) (Constant 0);
+         recorded_scope := sample_realization_scope;
+         recorded_arithmetic := ExactNaturals;
+         recorded_witness_effect := NoWitnessEffect |}) = false.
+Proof. reflexivity. Qed.
+
+Example fabricated_rule_tag_is_rejected :
+  accept_scoped sample_realization_scope
+    (Addition (InputVar 0) (Constant 0)) (InputVar 0)
+    Equivalent
+    (singleton_certificate
+      {| recorded_rule := UnknownRule 41;
+         recorded_premises :=
+           [ExactNaturalArithmetic; ScoreOnlyObservation; ExactPattern];
+         recorded_direction := Forward;
+         recorded_source := Addition (InputVar 0) (Constant 0);
          recorded_target := InputVar 0;
          recorded_scope := sample_realization_scope;
          recorded_arithmetic := ExactNaturals;

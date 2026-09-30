@@ -272,7 +272,11 @@ every natural-valued score, while accepted lower chains remain lower bounds.
 The generic rejection theorems cover unknown rules, wrong premise lists,
 reversed lower rules, and rounded-arithmetic steps; concrete controls also
 reject revision changes, unsupported witness effects, and lower certificates
-offered as exact equivalence. Premise names are audit labels: the checker
+offered as exact equivalence. The acceptance corollaries state exact score
+equality and lower-bound admissibility separately for every variable
+environment. An omitted final rewrite and a fabricated rule tag fail even
+when the advertised source and target are related by a real rule. Premise
+names are audit labels: the checker
 derives their actual validity from the finite rule definitions and their
 kernel-checked soundness lemmas, rather than trusting a supplied name.
 The scope fields are opaque tokens. Exact token comparison does not establish
