@@ -99,6 +99,8 @@ confirm the committed TSV is fresh. When developing against separate
 lling-llang or duallity integration worktrees, point the generator's
 `LLING_LLANG_ROOT` and `DUALLITY_ROOT` at those checkouts for source-symbol
 validation, but commit only canonical repository-relative evidence paths.
+The generator takes those paths from each project's modeled sibling name or
+`evidenceRoot`, never from the current integration worktree's directory name.
 The lling-llang intersection inventory above was frozen against
 `0576989e23b2ff10ff59c23e1495f595e4c8cc9f` on its integration branch;
 the primary checkout had not yet incorporated that commit when this audit ran.

@@ -133,7 +133,7 @@ def normalize_raku_capability_evidence(
     records: object,
     capability_ids: set[str],
     project_root: Path,
-    modeled_project_root: Path,
+    canonical_source_root: str,
 ) -> dict[str, str]:
     """Accept only symbol-level Raku evidence, never a binding directory.
 
@@ -163,12 +163,12 @@ def normalize_raku_capability_evidence(
             f"{project_id}.rakuCapabilityEvidence names unknown capabilities: {sorted(unknown)}"
         )
     normalized: dict[str, str] = {}
-    canonical = (modeled_project_root / relative).resolve().relative_to(ROOT.parent)
+    canonical = Path(canonical_source_root) / relative
     for capability, symbol_value in symbols.items():
         symbol = clean(symbol_value, f"{project_id}.{capability}.symbol")
         if symbol not in source_text:
             fail(f"{project_id}.{capability} Raku symbol is missing: {symbol}")
-        normalized[capability] = f"{canonical}::{symbol}"
+        normalized[capability] = f"{canonical.as_posix()}::{symbol}"
     return normalized
 
 
@@ -400,6 +400,13 @@ def main() -> int:
         evidence_root = project.get("evidenceRoot")
         if evidence_root is not None:
             evidence_root = clean(evidence_root, f"{project_id}.evidenceRoot")
+        canonical_source_root = evidence_root or Path(modeled_root).name
+        if (
+            not canonical_source_root
+            or Path(canonical_source_root).is_absolute()
+            or ".." in Path(canonical_source_root).parts
+        ):
+            fail(f"{project_id} needs a stable canonical source root")
         environment = PROJECT_ROOT_ENVIRONMENTS.get(project_id)
         configured_root = os.environ.get(environment) if environment else None
         modeled_project_root = (ROOT / modeled_root).resolve()
@@ -462,7 +469,7 @@ def main() -> int:
                 project.get("rakuCapabilityEvidence", {}),
                 capability_ids,
                 project_root,
-                modeled_project_root,
+                canonical_source_root,
             )
             if "raku" in evidence
             else {}

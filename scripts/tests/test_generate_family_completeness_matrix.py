@@ -146,6 +146,33 @@ class KnownMissingCapabilityTests(unittest.TestCase):
 
 
 class RakuCapabilityEvidenceTests(unittest.TestCase):
+    def test_canonical_anchor_is_independent_of_worktree_name(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            anchors = []
+            for checkout in ("first-worktree", "second-worktree"):
+                root = Path(directory) / checkout
+                source = root / "bindings/raku/lib/Example.rakumod"
+                source.parent.mkdir(parents=True)
+                source.write_text("sub snapshot() is export { }\n", encoding="utf-8")
+                anchors.append(
+                    MODULE.normalize_raku_capability_evidence(
+                        "example",
+                        {
+                            "source": "bindings/raku/lib/Example.rakumod",
+                            "symbols": {"snapshot": "sub snapshot()"},
+                        },
+                        {"snapshot"},
+                        root,
+                        "liblevenshtein-rust",
+                    )["snapshot"]
+                )
+            self.assertEqual(anchors[0], anchors[1])
+            self.assertEqual(
+                anchors[0],
+                "liblevenshtein-rust/bindings/raku/lib/Example.rakumod"
+                "::sub snapshot()",
+            )
+
     def test_directory_with_unmapped_capability_stays_missing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -160,7 +187,7 @@ class RakuCapabilityEvidenceTests(unittest.TestCase):
                 },
                 {"snapshot", "visit"},
                 root,
-                ROOT / "../example",
+                "example",
             )
             self.assertEqual(
                 MODULE.raku_cell_default("visit", evidence),
@@ -186,7 +213,7 @@ class RakuCapabilityEvidenceTests(unittest.TestCase):
                     },
                     {"snapshot", "visit"},
                     root,
-                    ROOT / "../example",
+                    "example",
                 ),
                 {
                     "snapshot": "example/bindings/raku/lib/Example.rakumod::sub snapshot()"
@@ -208,7 +235,7 @@ class RakuCapabilityEvidenceTests(unittest.TestCase):
                     },
                     {"snapshot", "visit"},
                     root,
-                    ROOT / "../example",
+                    "example",
                 )
             with self.assertRaisesRegex(SystemExit, "needs source and symbols"):
                 MODULE.normalize_raku_capability_evidence(
@@ -216,7 +243,7 @@ class RakuCapabilityEvidenceTests(unittest.TestCase):
                     {"visit": "bindings/raku"},
                     {"visit"},
                     root,
-                    ROOT / "../example",
+                    "example",
                 )
 
     def test_rejects_source_outside_raku_package(self) -> None:
@@ -228,7 +255,7 @@ class RakuCapabilityEvidenceTests(unittest.TestCase):
                     {"source": "../secret.rakumod", "symbols": {"visit": "visit"}},
                     {"visit"},
                     root,
-                    ROOT / "../example",
+                    "example",
                 )
 
 
