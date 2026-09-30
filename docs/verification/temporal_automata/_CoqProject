@@ -7,3 +7,5 @@ theories/ApproximateMsmEvidence.v
 theories/ElasticSnapshot.v
 theories/ExactWorkspaceResources.v
 theories/RangeCertificates.v
+theories/CertifiedSearchSession.v
+theories/CertifiedSessionOwnership.v

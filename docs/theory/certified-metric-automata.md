@@ -501,6 +501,17 @@ The type and example establish the state vocabulary and an abstraction
 boundary. They do not yet prove that a Rust continuation satisfies that
 relation; the following operational tasks must discharge each source edge.
 
+[CertifiedSessionOwnership.v](../verification/temporal_automata/theories/CertifiedSessionOwnership.v)
+proves the initial whole-session abstraction for an empty range store or an
+empty best-$`k`$ store, provided the root's snapshot-relative region is exactly
+the duplicate-free universe and its arena and reconstruction interpretations
+are valid. Two checked controls keep separate originals at a shared node and
+at different slots of one collision bucket; coalescing by node loses an
+original. A third control advances a candidate into the complete session's
+exclusive private phase and shows that omitting this phase loses the original.
+These are finite model obligations: the Rust root enumeration, bucket cursor,
+and continuation fields still need source correspondence proofs.
+
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
 | Split a region | Complete child and terminal enumeration on $`\sigma`$ | Partition unresolved originals among children and terminal verification work |
