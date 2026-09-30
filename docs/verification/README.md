@@ -18,6 +18,9 @@ The [CBC baseline evidence audit](CBC_BASELINE_EVIDENCE.md) records the
 metric-automata theory campaign's starting revision, claim-by-claim proof
 scope, source correspondence gaps, and draft-correction checklist. It does not
 promote a generic proof or finite model check to production certification.
+The [first Standard source route](CBC_STANDARD_SOURCE_ROUTE.md) selects an
+executable positional Levenshtein path at cutoff 4 and lists each remaining
+source-refinement and trust-boundary obligation before a CBC claim.
 The [domain capability contract](CBC_DOMAIN_CAPABILITIES.md) maps each
 metric-labelled constructor to its admitted domain and ideal theorem boundary,
 including quotient and strict-origin negative controls.

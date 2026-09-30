@@ -276,6 +276,7 @@ docs/verification/CBC_NUMERIC_AUTHORITY.md
 docs/verification/CBC_OBSERVATION_PROFILES.md
 docs/verification/CBC_RESOURCE_EVENT_CONTRACT.md
 docs/verification/CBC_RESULT_WITNESS_CONTRACT.md
+docs/verification/CBC_STANDARD_SOURCE_ROUTE.md
 docs/verification/CBC_RANGE_CURSOR_MODEL_REPORT.md
 docs/verification/SUMMARY.md
 docs/verification/tla/README.md

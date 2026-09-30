@@ -170,6 +170,12 @@ compiler/runtime assumptions, and the actual binding of scope tokens to
 request/revision data. These are **open proof obligations**, not consequences
 of the four checked expression theorems.
 
+The [source-correspondence decision](../verification/CBC_STANDARD_SOURCE_ROUTE.md)
+specifies a first real executable path at cutoff 4 and names the exact
+dispatch, characteristic cache, transition, closure, generated-state cache,
+finality, and traversal edges that need source proofs. Its proof graph does
+not promote the current Rocq and Verus mirrors to a Rust refinement claim.
+
 The review decision is about (1) the contract and claim-level vocabulary,
 (2) the acceptance interface and its narrow demonstrated checker, and (3)
 the direct-refinement route and named trust boundary. It does not certify a

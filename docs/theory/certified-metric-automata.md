@@ -230,6 +230,13 @@ translation machinery while exposing the source-language and toolchain trust
 boundary. Source hashes detect drift after the proof but cannot establish the
 relation themselves.
 
+The [first source-correspondence route](../verification/CBC_STANDARD_SOURCE_ROUTE.md)
+selects the actual positional Standard path at cutoff 4, where packed
+dispatch is ineligible, and gives a proof graph from the public units-native
+query through transition, cache, finality, and original enumeration. Each
+unproved source edge remains open; the route document is an architecture
+decision rather than an executable CBC certificate.
+
 ### 3.2b Typed operation contracts
 
 [CBCContractInterpretation.v](../verification/temporal_automata/theories/CBCContractInterpretation.v)
