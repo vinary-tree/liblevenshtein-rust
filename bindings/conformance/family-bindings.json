@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "documentationTopics": [
     {"id": "overview", "description": "Purpose, scope, audience, and relationship to the rest of the Vinary Tree family."},
     {"id": "installation", "description": "Package-manager coordinates, supported platforms, prerequisites, and installation verification."},
@@ -56,7 +56,13 @@
         "retained-resource-lifecycle",
         "interface-discovery-versioning",
         "unit-domains",
+        "unit-domain-byte",
+        "unit-domain-unicode-scalar",
+        "unit-domain-u64",
         "value-domains",
+        "value-domain-unit",
+        "value-domain-optional-u64",
+        "value-domain-bytes",
         "dictionary-snapshot",
         "dictionary-node-traversal",
         "dictionary-fused-visit",
@@ -67,6 +73,13 @@
         "scalar-wfst",
         "lazy-wfst-expansion",
         "weight-domains",
+        "weight-domain-tropical-f64",
+        "weight-domain-log-f64",
+        "weight-domain-probability-f64",
+        "weight-domain-arctic-f64",
+        "weight-domain-signed-tropical-f64",
+        "weight-domain-count-f64",
+        "weight-domain-boolean-f64",
         "lattice-values",
         "lattice-batch-folds",
         "semiring-base",
@@ -82,6 +95,44 @@
         "csharp": "bindings/dotnet", "fsharp": "bindings/dotnet", "go": "bindings/go", "javascript": "bindings/javascript", "typescript": "bindings/javascript",
         "swift": "bindings/swift", "fortran": "bindings/fortran", "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
         "raku": "bindings/raku", "julia": "bindings/julia/VinaryTreeInterop"
+      },
+      "rakuCapabilityEvidence": {
+        "source": "bindings/raku/lib/Vinary/Tree/Interop.rakumod",
+        "symbols": {
+          "retained-resource-lifecycle": "class Resource is export",
+          "interface-discovery-versioning": "method query-interface(",
+          "unit-domains": "our enum UnitDomain is export",
+          "unit-domain-byte": "BYTE => 1",
+          "unit-domain-unicode-scalar": "UNICODE-SCALAR => 2",
+          "unit-domain-u64": "U64 => 3",
+          "value-domains": "method value-domain(",
+          "value-domain-unit": "UNIT => 0",
+          "value-domain-optional-u64": "method value(UInt:D $node",
+          "dictionary-snapshot": "method snapshot(--> Dictionary:D)",
+          "dictionary-node-traversal": "method edges(UInt:D $node",
+          "dictionary-fused-visit": "class DictionaryVisitVTable",
+          "dictionary-compact-graph": "class DictionaryGraphVTable",
+          "dictionary-entry-cursors": "class DictionaryEntries does Iterable",
+          "dictionary-bounded-batches-reducers": "method reduce(&operation",
+          "snapshot-identity": "class SnapshotIdentityVTable",
+          "scalar-wfst": "class Wfst is export",
+          "lazy-wfst-expansion": "method arcs(UInt:D $state",
+          "weight-domains": "our enum WeightDomain is export",
+          "weight-domain-tropical-f64": "TROPICAL-F64 => 1",
+          "weight-domain-log-f64": "LOG-F64 => 2",
+          "weight-domain-probability-f64": "PROBABILITY-F64 => 3",
+          "weight-domain-arctic-f64": "ARCTIC-F64 => 4",
+          "weight-domain-signed-tropical-f64": "SIGNED-TROPICAL-F64 => 5",
+          "weight-domain-count-f64": "COUNT-F64 => 6",
+          "weight-domain-boolean-f64": "BOOLEAN-F64 => 7",
+          "lattice-values": "class LatticeValue is export",
+          "lattice-batch-folds": "method join-many(*@others",
+          "semiring-base": "class SemiringVTable",
+          "semiring-division": "class SemiringDivisionVTable",
+          "semiring-star": "class SemiringStarVTable",
+          "semiring-numeric-projections": "class SemiringNumericVTable",
+          "semiring-properties": "class SemiringPropertiesVTable"
+        }
       }
     },
     {
@@ -101,6 +152,18 @@
       ],
       "declaredLanguageEvidence": {
         "rust": "src/lib.rs", "raku": "bindings/raku", "julia": "bindings/julia/LLattice"
+      },
+      "rakuCapabilityEvidence": {
+        "source": "bindings/raku/lib/LLattice.rakumod",
+        "symbols": {
+          "lattice-trait": "role Lattice is export",
+          "host-lattice-provider": "sub provider(",
+          "integral-lattices": "class MaxMin does Lattice",
+          "floating-point-lattices": "class MaxMin does Lattice",
+          "boolean-lattice": "class BooleanLattice does Lattice",
+          "option-lattice": "class OptionalLattice does Lattice",
+          "set-lattice": "class FiniteSetLattice does Lattice"
+        }
       },
       "knownMissingCapabilities": {
         "julia": {
@@ -159,6 +222,25 @@
         "clojurescript": "bindings/javascript/cljs", "swift": "bindings/swift", "ruby": "bindings/ruby", "fortran": "bindings/fortran",
         "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
         "raku": "bindings/raku", "julia": "bindings/julia/Libdictenstein"
+      },
+      "rakuCapabilityEvidence": {
+        "source": "bindings/raku/lib/Libdictenstein.rakumod",
+        "symbols": {
+          "dictionary-read-traits": "method AT-KEY(",
+          "dictionary-mutation-traits": "method ASSIGN-KEY(",
+          "mapped-valued-dictionaries": "class OptionalValue",
+          "bijective-vocabulary": "method vocabulary-term(",
+          "dictionary-collection-iterators": "class Dictionary does Associative does Iterable",
+          "dictionary-snapshot-iterators": "method snapshot(--> InteropAccess::DictionaryType",
+          "dynamic-dawg": "sub dynamic-dawg(",
+          "double-array-trie": "sub double-array-trie(",
+          "scdawg": "sub scdawg(",
+          "persistent-artrie": "sub persistent-artrie(",
+          "persistent-vocabulary": "sub persistent-vocabulary(",
+          "substring-search": "method contains-substring(",
+          "snapshot": "method snapshot(--> InteropAccess::DictionaryType",
+          "materialized-dictionary-algebra": "method algebra(Dictionary:D $right"
+        }
       },
       "knownMissingCapabilities": {
         "julia": {
@@ -280,6 +362,27 @@
         "ocaml": "bindings/ocaml", "haskell": "bindings/haskell", "lua": "bindings/lua",
         "raku": "bindings/raku", "julia": "bindings/julia/Liblevenshtein"
       },
+      "rakuCapabilityEvidence": {
+        "source": "bindings/raku/lib/Liblevenshtein.rakumod",
+        "symbols": {
+          "levenshtein-distance": "multi sub distance(Str:D $source",
+          "bounded-levenshtein-distance": "Int:D :$threshold!",
+          "standard-levenshtein-automaton": "class Transducer is export",
+          "adjacent-transposition-automaton": "our constant TRANSPOSITION is export",
+          "true-damerau-levenshtein-automaton": "our constant DAMERAU-LEVENSHTEIN is export",
+          "merge-and-split-automaton": "our constant MERGE-AND-SPLIT is export",
+          "dictionary-product-traversal": "Str:D $input, Int:D $maximum-distance",
+          "ranked-priority-query": "our constant DISTANCE-THEN-TERM is export",
+          "match-modes": "our constant QueryOrder is export",
+          "phonetic-rules": "class PhoneticRuleSet is export",
+          "phonetic-nfa-transducer": "PhoneticPattern:D $pattern, Int:D $maximum-distance",
+          "llev-rule-language": "multi method new(Str:D :$source!)",
+          "llre-pattern-language": "multi method new(Str:D :$llre!)",
+          "phonetic-streaming": "class QueryCursor does Iterable",
+          "phonetic-expansion": "method apply(Str:D $input",
+          "resource-consumer": "InteropAccess::ResourceType:D :$resource!"
+        }
+      },
       "knownMissingCapabilities": {
         "julia": {
           "capabilities": [
@@ -372,6 +475,7 @@
         "rational-wfst-operations",
         "wfst-synchronization",
         "composition",
+        "weighted-acceptor-intersection",
         "cfg-wfst-composition",
         "typed-abi-budgets-cancellation",
         "shortest-distance",
@@ -486,6 +590,30 @@
         "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "python": "bindings/python", "javascript": "bindings/javascript",
         "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs",
         "raku": "bindings/raku", "julia": "bindings/julia/LlingLlang"
+      },
+      "rakuCapabilityEvidence": {
+        "source": "bindings/raku/lib/Lling/Llang.rakumod",
+        "symbols": {
+          "semiring-trait": "role SemiringProvider is export",
+          "semiring-division": "method divide(SemiringWeight:D",
+          "semiring-star": "method star(SemiringWeight:D",
+          "semiring-numeric-properties": "method numerical-value(SemiringWeight:D",
+          "host-semiring-provider": "sub semiring-provider(",
+          "wfst-trait": "role WfstProvider is export",
+          "wfst-construction": "class WfstBuilder is export",
+          "lazy-wfst": "role WfstProvider is export",
+          "host-scalar-wfst-provider": "sub provider(",
+          "composition": "sub compose(Mu:D $first",
+          "typed-abi-budgets-cancellation": "class CancellationV2 is export",
+          "lattice-data-model": "class DynamicLatticeValue is export",
+          "fallible-star-semiring-provider": "method star(Mu:D --> Mu)",
+          "divisible-semiring-provider": "method divide(Mu:D, Mu:D --> Mu)",
+          "numerical-weight-provider": "method numerical-value(Mu:D --> Mu)",
+          "quantizable-semiring-provider": "method quantize(Mu:D, Real:D --> Mu)",
+          "star-semiring-provider": "method star(Mu:D --> Mu)",
+          "state-source-provider": "role WfstProvider is export",
+          "lazy-wfst-provider": "role WfstProvider is export"
+        }
       },
       "knownMissingCapabilities": {
         "julia": {
@@ -617,6 +745,19 @@
         "rust": "src/lib.rs", "c": "bindings/c", "cpp": "bindings/cpp", "python": "bindings/python", "javascript": "bindings/javascript",
         "typescript": "bindings/javascript", "clojurescript": "bindings/javascript/cljs",
         "raku": "bindings/raku", "julia": "bindings/julia/Duallity"
+      },
+      "rakuCapabilityEvidence": {
+        "source": "bindings/raku/lib/Duallity.rakumod",
+        "symbols": {
+          "dictionary-backend-adapter": "sub wfst(",
+          "lazy-state-source-lifecycle": "sub adopt-wfst(",
+          "levenshtein-wfst": "our constant LEVENSHTEIN is export",
+          "universal-wfst": "our constant UNIVERSAL-STANDARD is export",
+          "generalized-wfst": "our constant GENERALIZED-STANDARD is export",
+          "phonetic-feature-wfst": "our constant GENERALIZED-PHONETIC is export",
+          "fzf-wfst": "our constant FZF is export",
+          "resource-bridge": "sub adopt-wfst("
+        }
       },
       "knownMissingCapabilities": {
         "julia": {

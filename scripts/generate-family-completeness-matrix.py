@@ -128,6 +128,57 @@ def discover_binding_languages(project_root: Path) -> set[str]:
     return discovered
 
 
+def normalize_raku_capability_evidence(
+    project_id: str,
+    records: object,
+    capability_ids: set[str],
+    project_root: Path,
+    modeled_project_root: Path,
+) -> dict[str, str]:
+    """Accept only symbol-level Raku evidence, never a binding directory.
+
+    This is deliberately conservative: an omitted capability remains `missing`
+    even if some other API in the same Raku distribution is implemented.
+    """
+    if not isinstance(records, dict) or set(records) != {"source", "symbols"}:
+        fail(f"{project_id}.rakuCapabilityEvidence needs source and symbols")
+    source = clean(records["source"], f"{project_id}.rakuCapabilityEvidence.source")
+    relative = Path(source)
+    if (
+        relative.is_absolute()
+        or ".." in relative.parts
+        or relative.parts[:2] != ("bindings", "raku")
+    ):
+        fail(f"{project_id} Raku source must be inside bindings/raku")
+    source_path = (project_root / relative).resolve()
+    if not source_path.is_file() or not source_path.is_relative_to(project_root):
+        fail(f"{project_id} Raku source is missing: {source_path}")
+    source_text = source_path.read_text(encoding="utf-8")
+    symbols = records["symbols"]
+    if not isinstance(symbols, dict):
+        fail(f"{project_id}.rakuCapabilityEvidence.symbols must be an object")
+    unknown = set(symbols) - capability_ids
+    if unknown:
+        fail(
+            f"{project_id}.rakuCapabilityEvidence names unknown capabilities: {sorted(unknown)}"
+        )
+    normalized: dict[str, str] = {}
+    canonical = (modeled_project_root / relative).resolve().relative_to(ROOT.parent)
+    for capability, symbol_value in symbols.items():
+        symbol = clean(symbol_value, f"{project_id}.{capability}.symbol")
+        if symbol not in source_text:
+            fail(f"{project_id}.{capability} Raku symbol is missing: {symbol}")
+        normalized[capability] = f"{canonical}::{symbol}"
+    return normalized
+
+
+def raku_cell_default(capability: str, evidence: dict[str, str]) -> tuple[str, str]:
+    """Classify a Raku capability from its own source evidence, not directory presence."""
+    if capability in evidence:
+        return "audit-required", evidence[capability]
+    return "missing", "bindings/conformance/raku-family-capability-audit.md"
+
+
 def normalize_known_missing(
     project_id: str,
     raw_records: object,
@@ -280,7 +331,7 @@ def main() -> int:
     args = parser.parse_args()
 
     model = json.loads(MODEL_PATH.read_text(encoding="utf-8"))
-    if model.get("schemaVersion") != 3:
+    if model.get("schemaVersion") != 4:
         fail("unsupported schemaVersion")
     languages = model.get("languages")
     projects = model.get("projects")
@@ -403,6 +454,21 @@ def main() -> int:
             set(language_by_id),
             set(evidence),
         )
+        if "raku" in evidence and "rakuCapabilityEvidence" not in project:
+            fail(f"{project_id} must audit Raku capabilities individually")
+        raku_evidence = (
+            normalize_raku_capability_evidence(
+                project_id,
+                project.get("rakuCapabilityEvidence", {}),
+                capability_ids,
+                project_root,
+                modeled_project_root,
+            )
+            if "raku" in evidence
+            else {}
+        )
+        if "raku" not in evidence and project.get("rakuCapabilityEvidence"):
+            fail(f"{project_id} has Raku capability evidence but no Raku facade")
 
         seen_capabilities: set[str] = set()
         for capability_value in capabilities:
@@ -433,7 +499,13 @@ def main() -> int:
                             )
                         )
                     else:
-                        default_evidence = str(Path(evidence_root) / evidence[language_id])
+                        default_evidence = str(
+                            Path(evidence_root) / evidence[language_id]
+                        )
+                    if language_id == "raku":
+                        default_state, default_evidence = raku_cell_default(
+                            capability, raku_evidence
+                        )
                 elif language_id in reviews:
                     default_state = "review-required"
                     default_evidence = "-"
@@ -452,6 +524,14 @@ def main() -> int:
                 state = clean(override.get("state", default_state), f"{cell_id}.state")
                 if state not in VALID_CELL_STATES:
                     fail(f"{cell_id} has invalid state {state}")
+                if (
+                    language_id == "raku"
+                    and capability not in raku_evidence
+                    and state in {"audit-required", "complete"}
+                ):
+                    fail(
+                        f"{cell_id} claims a Raku capability without source-symbol evidence"
+                    )
                 proof = override.get("applicabilityProof", "-")
                 proof = clean(proof, f"{cell_id}.applicabilityProof")
                 if state == "inapplicable":
