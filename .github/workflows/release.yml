@@ -1025,6 +1025,19 @@ jobs:
           CLOJARS_PASSWORD: ${{ secrets.CLOJARS_DEPLOY_TOKEN }}
         run: lein deploy clojars
 
+  package-documentation:
+    name: Stage all versioned package documentation before release publication
+    needs: binding-contract
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref_type == 'tag' &&
+      inputs.registry == 'validate-only'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/package-documentation.yml
+    with:
+      archive_only: true
+
   github-release:
     name: Publish GitHub release and checksums
     needs:
@@ -1038,6 +1051,7 @@ jobs:
       - hackage-package
       - luarocks-package
       - opam-package
+      - package-documentation
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.ref_type == 'tag' &&
@@ -1047,6 +1061,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Require immutable-release setting and unused source tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMMUTABLE_RELEASES_READ_TOKEN: ${{ secrets.IMMUTABLE_RELEASES_READ_TOKEN }}
+        run: scripts/publish-immutable-release.sh --preflight "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$GITHUB_SHA"
+      - run: scripts/test-immutable-release-assets.sh "$RUNNER_TEMP/immutable-contract"
       - uses: actions/download-artifact@v7
         with:
           pattern: native-*
@@ -1089,6 +1112,10 @@ jobs:
         with:
           name: opam-package
           path: release-assets
+      - uses: actions/download-artifact@v7
+        with:
+          name: package-documentation-release
+          path: release-assets
       - name: Add Maven artifacts and SHA-256 manifest
         run: |
           mkdir -p flattened-assets
@@ -1101,8 +1128,16 @@ jobs:
           find . -type f ! -name SHA256SUMS -print0 | sort -z | \
             xargs -0 sha256sum > ../SHA256SUMS
           mv ../SHA256SUMS SHA256SUMS
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: release-assets/*
+          draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
+      - name: Verify every draft asset, publish, and read back immutable bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/publish-immutable-release.sh --publish \
+            "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" release-assets \
+            "$GITHUB_SHA" "$RUNNER_TEMP/immutable-readback"

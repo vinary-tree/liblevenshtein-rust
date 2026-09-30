@@ -2,6 +2,13 @@
 name: Publish versioned package documentation
 
 "on":
+  workflow_call:
+    inputs:
+      archive_only:
+        description: Build the release archive without deploying Pages.
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
 
 permissions:
@@ -101,6 +108,7 @@ jobs:
   publish:
     name: Preserve release archive and deploy Pages
     needs: build
+    if: ${{ !inputs.archive_only }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -117,7 +125,7 @@ jobs:
         with:
           name: package-documentation-release
           path: target/package-documentation-artifacts
-      - name: Preserve the immutable archive as a release asset
+      - name: Verify the published immutable documentation archive
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -133,20 +141,22 @@ jobs:
           archive+="liblevenshtein-package-documentation-$version.tar.gz"
           test -f "$archive"
           asset="$(basename "$archive")"
-          if gh release view "$GITHUB_REF_NAME" --json assets \
-               --jq '.assets[].name' | grep -Fqx "$asset"; then
-            mkdir -p target/existing-package-documentation
-            gh release download "$GITHUB_REF_NAME" \
-              --pattern "$asset" \
-              --dir target/existing-package-documentation
-            existing="target/existing-package-documentation/$asset"
-            cmp --silent "$archive" "$existing" || {
-              echo "::error::Immutable asset exists with different bytes." >&2
-              exit 1
-            }
-          else
-            gh release upload "$GITHUB_REF_NAME" "$archive"
-          fi
+          release=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME")
+          jq -e --arg tag "$GITHUB_REF_NAME" \
+            '.tag_name == $tag and .draft == false and .immutable == true' \
+            <<< "$release" >/dev/null
+          test "$(jq -r --arg name "$asset" \
+            '[.assets[] | select(.name == $name and .state == "uploaded")] | length' \
+            <<< "$release")" = 1
+          mkdir -p target/existing-package-documentation
+          gh release download "$GITHUB_REF_NAME" \
+            --pattern "$asset" \
+            --dir target/existing-package-documentation
+          existing="target/existing-package-documentation/$asset"
+          cmp --silent "$archive" "$existing" || {
+            echo "::error::Published documentation bytes differ from the reproducible archive." >&2
+            exit 1
+          }
       - name: Download every immutable version archive
         env:
           GH_TOKEN: ${{ github.token }}

@@ -66,11 +66,7 @@ release=$(gh api "repos/$repository/releases/tags/$tag")
 [[ $(jq -r '.tag_name' <<< "$release") == "$tag" &&
    $(jq -r '.draft' <<< "$release") == false ]] || die "release identity or publication state differs"
 immutable=$(jq -r '.immutable // false' <<< "$release")
-if [[ "${VINARY_REQUIRE_IMMUTABLE_RELEASE:-0}" == 1 ]]; then
-  [[ "$immutable" == true ]] || die "release immutability is required"
-elif [[ "$immutable" != true ]]; then
-  echo "warning: public release is mutable; digest/readback cannot prevent a later asset replacement" >&2
-fi
+[[ "$immutable" == true ]] || die "published release is not immutable"
 name="$package.tbz"
 [[ $(jq -r --arg name "$name" '[.assets[] | select(.name == $name and .state == "uploaded")] | length' <<< "$release") == 1 ]] ||
   die "expected exactly one uploaded source archive"

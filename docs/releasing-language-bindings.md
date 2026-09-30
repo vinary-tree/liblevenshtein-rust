@@ -1207,11 +1207,19 @@ manifest entry, and requires byte identity with the staged archive. It derives
 the opam checksum from the downloaded public bytes, so a stale or restaged
 checksum cannot reach the upstream pull request. Run
 `scripts/test-opam-archive-contract.sh target/opam-contract vinary-tree/liblevenshtein-rust v4.0.0-rc.6`
-on disk-backed scratch for cross-run and negative controls. GitHub's
-[immutable release option](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
-is not yet required by this lane. Read-back establishes integrity at
-submission time, not future protection against replacement of a mutable
-release asset.
+on disk-backed scratch for cross-run and negative controls. For RC.6, enable
+GitHub [release immutability](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+for this repository before `validate-only`, and provide the protected
+`github-release` job a narrowly scoped `IMMUTABLE_RELEASES_READ_TOKEN` with
+repository Administration:read. The publisher itself uses only its job-scoped
+Contents:write `GITHUB_TOKEN`. Preflight rejects a disabled setting or an
+existing release. The release job builds the versioned documentation archive
+as part of its own validation graph, then uploads that archive with every
+other asset and `SHA256SUMS` to a draft. It checks exact asset names and API
+digests, publishes the complete draft, and reads back every immutable public
+byte. The separate Pages workflow can only compare its reproducible archive
+with the public immutable asset; it may not upload a late asset. The opam job
+rejects any release whose API `immutable` field is not `true`.
 
 The package-directory version is the opam spelling `4.0.0~rc6`, read from each
 owner's `release/version.json`; branch names use the canonical
