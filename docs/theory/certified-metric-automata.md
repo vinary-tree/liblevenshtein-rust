@@ -574,6 +574,34 @@ sufficient future pages, that an allocation succeeds, or that each Rust
 the source-specific `pending_match` publication, result-slot preflight, and
 private split cursor still need correspondence proofs.
 
+[CertifiedSessionFailure.v](../verification/temporal_automata/theories/CertifiedSessionFailure.v)
+separates request rejection from admitted execution. For
+`TimestampedTwedIndex::search_range_bounded`, its executable validation
+model follows the public source order: unit, origin bit pattern, query
+length, then cutoff. A prepared action retains the complete predecessor,
+records distinct executed-event identities, and separately records work
+charged before execution. Every modeled allocation, budget, arithmetic,
+numeric, or stored-data failure returns `Incomplete` with the prior semantic
+contents and the accumulated ledger. A retained continuation carries that
+same ledger. Checked controls exercise failure before charge and after a
+charge and execution; they reject a false `Complete`, a rolled-back charge,
+and publication of a result from a failed action.
+
+| Source stage | Precedence and observable result | Accounting consequence |
+|---|---|---|
+| Public range validation | Unit mismatch, then origin-bit mismatch, then query-length limit, then invalid cutoff; first failing check returns an API validation error | No continuation or execution work starts; length validation uses an empty temporary ledger |
+| Continuation start | Product-state limit, checked width/scratch arithmetic and peak check, root recurrence, state intern, snapshot traversal, root-node charge, then fallible frame and DP-buffer reservations | A later failure returns `Incomplete` with the ledger reached at that stage; the root-node charge is not undone by a later allocation failure |
+| Active page | Page and session resource checks precede work or result publication at their respective branch points | A resumable limit returns `Incomplete` with the retained continuation and cumulative usage; a terminal failure returns `Incomplete` without an exhaustive-result claim |
+| Successful exhaustion | Only a successful exhaustive traversal enters the `Complete` branch | Final usage remains attached to the completed result |
+
+The table records branch order in the reviewed source, not a proof that every
+Rust edge implements the Rocq transaction. The model's `Incomplete` prefix
+is a logical predecessor view; the public Rust partial value may contain only
+previously committed result rows. Its event identities and separate executed
+versus charged counters need an instance mapping to `ResourceLedger` and the
+actual primitive operations. Physical allocation capacities, cleanup, and
+fallible result finalization also require source-specific refinement.
+
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
 | Split a region | Complete child and terminal enumeration on $`\sigma`$ | Partition unresolved originals among children and terminal verification work |

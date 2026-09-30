@@ -327,3 +327,4 @@ docs/bindings/host-extension-trait-governance.md
 docs/bindings/query-cache.md
 docs/bindings/julia-family-qualification.md
 docs/bindings/standalone-automata.md
+docs/bindings/wallbreaker-unicode.md
