@@ -572,6 +572,77 @@ it. Streaming it as an irrevocable ranked result requires that additional
 certificate. Range operations with dictionary order need their own emission
 invariant.
 
+### Best-$`k`$ selection and heap boundary
+
+The [checked best-$`k`$ model](../verification/temporal_automata/theories/CertifiedKnnHeap.v)
+uses one distinct original identity and one distinct tie key per verified
+candidate. It orders exact natural costs lexicographically by cost and tie
+key. Its certificate partitions every verified candidate into a sorted
+retained sequence and a rejected sequence, bounds retained length by $`k`$,
+forbids rejection while underfull, and requires every retained rank to
+precede every rejected rank. The canonical answer is the first $`k`$
+entries of the verified candidates sorted by this same ordering; the Rocq
+theorem `certified_best_k_is_canonical` proves equality of the entire retained
+entry sequence, including original identities. Thus the certificate is an
+exact selection specification, rather than merely a plausible heap size.
+
+Admission fills an underfull selection. Once full, a strictly better rank
+replaces its worst entry; an equal or worse rank is rejected. The checked
+`best_k_step_preserves_certificate` theorem covers all four cases, including
+$`k=0`$. The `kth_rank_iff_full_best_k` theorem permits a pruning cutoff
+exactly when $`k>0`$ and at least $`k`$ candidates have been verified.
+`full_kth_rank_nonincreasing` proves that later full-heap cutoffs cannot
+increase. A concrete max-heap representation may permute selected entries;
+when its root dominates the rest, `heap_root_has_kth_rank` proves the root's
+cost and tie key equal the canonical kth rank. Equal-cost reversed-tie and
+premature-underfull-cutoff examples violate the certificate.
+
+These are exact-natural reference proofs. The source-specific obligations
+remain: bind each Rust candidate identity and tie rule to the model; prove
+that the binary64 comparison and TOP policy refine the declared rank; show
+that heap insertion, replacement, and root maintenance preserve the abstract
+step; and connect threshold use to the session's exclusion rule. The reference
+sort is a proof oracle and adds no sort or scan to the production hot path.
+
+### Prune certificates and persistent exclusions
+
+The [checked pruning model](../verification/temporal_automata/theories/CertifiedKnnPruning.v)
+distinguishes `Unknown`, `Empty`, and `Known` rank-floor summaries.
+`Unknown` never authorizes pruning. `Empty` requires proof that the region
+contains no candidates and may be discarded before the heap fills. A `Known`
+floor must be at or below every candidate's exact rank. It authorizes pruning
+only when a full heap supplies a kth rank no greater than that floor. Thus
+equal cost alone is insufficient: the tie coordinate decides the equality
+slice. The negative control has a verified rank $`(5,1)`$ and a region rank
+$`(5,0)`$; a cost-only equality cut would lose the better region candidate.
+
+The certificate also carries an exact scope identity. The generic scope
+must be instantiated with the full query, parameters, snapshot/revision,
+region occurrence, arithmetic profile, and observation contract. The checked
+action accepts only exact scope equality and a semantic bound proof at that
+scope; matching a hash or cache key alone is insufficient. A changed-revision
+control rejects the old bound even when the underlying unscoped decision
+would return true.
+
+`scoped_prune_action_preserves_ownership_and_exclusions` moves the complete
+region from unresolved to excluded ownership and establishes that no member
+can beat the active kth rank. `pruned_region_cannot_change_best_k` proves a
+stronger reference property: even if all hidden exact ranks in the region
+were added to the oracle universe, the selected best-$`k`$ sequence would
+be unchanged, assuming distinct original identities and ties. This is a
+counterfactual correctness proof; runtime pruning does not evaluate those
+candidates. The `pruned_region_survives_best_k_step` and
+`pruned_summary_survives_best_k_step` theorems show that exclusions and
+reusable summary decisions persist after a full-heap insertion or replacement
+lowers the worst rank. An explicit threshold-increase control fails that
+persistence property, so a wider cutoff requires a new proof.
+
+The remaining instance obligations are to construct and validate region
+bounds from the actual automaton, prove that their scope matches the active
+operation, account for machine arithmetic and TOP, and connect Rust prune
+transitions and ownership storage to this model. The ghost oracle and its
+counterfactual sort add no production scan or allocation.
+
 The publication boundary covers arena IDs, cache entries, pending cursors,
 and witnesses together. Private work may accumulate charges while the public
 predecessor stays unchanged. An allocation failure after charged work must
