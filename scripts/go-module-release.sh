@@ -17,6 +17,7 @@ expected=$4
 [[ "$module_dir" =~ ^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*$ ]] || usage
 [[ "$version" =~ ^v([2-9][0-9]*)\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || usage
 major=${BASH_REMATCH[1]}
+[[ "$expected" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || usage
 [[ "${GITHUB_REPOSITORY:-}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || usage
 module="github.com/$GITHUB_REPOSITORY/$module_dir/v$major"
 tag="$module_dir/$version"
@@ -26,8 +27,10 @@ if [[ "$declared" != "$module" ]]; then
   echo "Go module path mismatch: expected $module, found $declared" >&2
   exit 1
 fi
-expected=$(git rev-parse --verify "$expected^{commit}")
-[[ $(git cat-file -t "$expected") == commit ]] || exit 1
+[[ $(git cat-file -t "$expected" 2>/dev/null) == commit ]] || {
+  echo "expected source must be a literal commit object ID" >&2
+  exit 1
+}
 
 # Return 2 only for an absent ref; transport failures are never absence.
 remote_ref() {

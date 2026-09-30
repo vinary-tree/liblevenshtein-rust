@@ -33,11 +33,15 @@ expect_failure() {
 }
 
 # Absent is distinguishable from a transport failure and can be created once.
-if check verify bindings/go v4.0.0-rc.6 >/dev/null 2>&1; then
+if absent_output=$(check verify bindings/go v4.0.0-rc.6 2>&1); then
   echo "absent ref unexpectedly verified" >&2
   exit 1
 else
-  [[ $? -eq 2 ]] || { echo "absent ref did not return status 2" >&2; exit 1; }
+  status=$?
+  [[ $status -eq 2 ]] || {
+    printf 'absent ref returned %s, expected 2: %s\n' "$status" "$absent_output" >&2
+    exit 1
+  }
 fi
 check create bindings/go v4.0.0-rc.6
 before=$(git -C "$fixture/client" ls-remote --refs origin refs/tags/bindings/go/v4.0.0-rc.6)
@@ -45,6 +49,17 @@ check verify bindings/go v4.0.0-rc.6
 check create bindings/go v4.0.0-rc.6
 after=$(git -C "$fixture/client" ls-remote --refs origin refs/tags/bindings/go/v4.0.0-rc.6)
 [[ "$before" == "$after" ]] || { echo "repeat create moved tag" >&2; exit 1; }
+
+# A moving ref name or the hash of a tag object is not a literal source commit.
+if (cd "$fixture/client" && bash "$helper" verify bindings/go v4.0.0-rc.6 HEAD) >/dev/null 2>&1; then
+  echo "moving source ref was accepted" >&2
+  exit 1
+fi
+tag_object=$(git -C "$fixture/client" rev-parse refs/tags/bindings/go/v4.0.0-rc.6)
+if (cd "$fixture/client" && bash "$helper" verify bindings/go v4.0.0-rc.6 "$tag_object") >/dev/null 2>&1; then
+  echo "tag object ID was accepted as source commit" >&2
+  exit 1
+fi
 
 # Reject a correctly named annotated tag that points to a different commit.
 git -C "$fixture/client" commit --allow-empty -qm other-source
