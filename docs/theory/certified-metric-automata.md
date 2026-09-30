@@ -561,9 +561,13 @@ configuration. It proves that every active private phase can pause and resume
 with the same pending cursors, snapshot identity, selected results, arena,
 cache, reconstruction, emission cursor, ownership, and cumulative work ledger.
 It rules out a cursor reset during a pause and a ledger recharge during a
-resume. A paged execution erases to a productive logical execution, and two
-completed executions have the same retained and emitted results when the
-productive relation is deterministic and both erasures are terminal. This is
+resume. A counted paged execution erases to a productive logical execution
+with the same number of productive steps. Two completed executions have the
+same retained and emitted results, and the same productive-step count, when
+the productive relation is deterministic and both erasures are terminal. An
+inhabited already-scored control pauses before publication, then publishes
+once under arbitrary legal paging; it rejects cursor reset, ledger recharge,
+and a return to the scoring phase. This is
 a conditional result: the proof does not establish that a client supplies
 sufficient future pages, that an allocation succeeds, or that each Rust
 `resume` path implements the modeled step and ledger behavior. In particular,
