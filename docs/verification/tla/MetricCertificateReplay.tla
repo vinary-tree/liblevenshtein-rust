@@ -1,108 +1,194 @@
 --------------------- MODULE MetricCertificateReplay ---------------------
 EXTENDS Sequences, FiniteSets
 
-\* Finite abstraction of the CBC certificate acceptance boundary. The
-\* expression and scope alphabets are deliberately small; universal replay
-\* soundness belongs to CertifiedContracts.v, not to TLC exploration.
+\* Finite abstraction of a future CBC certificate acceptance boundary.
+\* Strings stand for a two-rule expression fragment, not Rust terms or
+\* arithmetic. Universal rule soundness belongs to the Rocq proof kernel.
+\* The witness marker checks presence only, not witness correctness.
 CONSTANT BypassScopeCheck
 
-Requested == [query |-> "q", parameters |-> "p", arithmetic |-> "nat",
-              revision |-> "r1", observation |-> "score"]
+Requested == [domain |-> "d", query |-> "q", gap |-> "g",
+              stiffness |-> "s", arithmetic |-> "nat",
+              revision |-> "r1", cutoff |-> "c1",
+              observation |-> "score"]
+ChangedDomain == [Requested EXCEPT !.domain = "other"]
+ChangedQuery == [Requested EXCEPT !.query = "other"]
+ChangedGap == [Requested EXCEPT !.gap = "other"]
+ChangedStiffness == [Requested EXCEPT !.stiffness = "other"]
 ChangedRevision == [Requested EXCEPT !.revision = "r2"]
+ChangedCutoff == [Requested EXCEPT !.cutoff = "c2"]
 ChangedArithmetic == [Requested EXCEPT !.arithmetic = "rounded"]
 WitnessRequested == [Requested EXCEPT !.observation = "witness"]
 
-ValidStep == [rule |-> "add_zero_right", source |-> "x_plus_zero",
+OuterStep == [rule |-> "add_zero_outer",
+              source |-> "x_plus_zero_plus_zero",
+              target |-> "x_plus_zero", premise |-> TRUE]
+InnerStep == [rule |-> "add_zero_right", source |-> "x_plus_zero",
               target |-> "x", premise |-> TRUE]
-MissingPremiseStep == [ValidStep EXCEPT !.premise = FALSE]
-WrongSourceStep == [ValidStep EXCEPT !.source = "another_term"]
-FabricatedStep == [ValidStep EXCEPT !.target = "zero"]
-UnknownRuleStep == [ValidStep EXCEPT !.rule = "unsupported"]
+WrongSourceStep == [InnerStep EXCEPT !.source = "another_term"]
+FabricatedStep == [OuterStep EXCEPT !.target = "zero"]
+MissingPremiseStep == [InnerStep EXCEPT !.premise = FALSE]
+UnknownRuleStep == [InnerStep EXCEPT !.rule = "unsupported"]
 
 RuleTarget(step) ==
-    IF step.rule = "add_zero_right" /\ step.source = "x_plus_zero"
-       /\ step.premise
-    THEN "x"
-    ELSE "invalid"
+    IF step.rule = "add_zero_outer"
+       /\ step.source = "x_plus_zero_plus_zero"
+    THEN "x_plus_zero"
+    ELSE IF step.rule = "add_zero_right"
+            /\ step.source = "x_plus_zero"
+         THEN "x"
+         ELSE "invalid"
+
+ReplayFailure(reason) == [reason |-> reason, term |-> "invalid"]
 
 RECURSIVE Replay(_,_)
 Replay(source, chain) ==
-    IF Len(chain) = 0 THEN source
+    IF Len(chain) = 0 THEN [reason |-> "accepted", term |-> source]
     ELSE LET step == Head(chain)
-         IN IF source = step.source /\ RuleTarget(step) = step.target
-            THEN Replay(step.target, Tail(chain))
-            ELSE "invalid"
+         IN IF source # step.source
+            THEN ReplayFailure("step_source_mismatch")
+            ELSE IF step.rule \notin {"add_zero_outer", "add_zero_right"}
+                 THEN ReplayFailure("unsupported_rule")
+                 ELSE IF ~step.premise
+                      THEN ReplayFailure("missing_premise")
+                      ELSE IF RuleTarget(step) = "invalid"
+                           THEN ReplayFailure("rule_pattern_mismatch")
+                           ELSE IF RuleTarget(step) # step.target
+                                THEN ReplayFailure("rule_target_mismatch")
+                                ELSE Replay(step.target, Tail(chain))
 
 BaseExact == [kind |-> "exact", scope |-> Requested,
-              source |-> "x_plus_zero", target |-> "x",
-              steps |-> <<ValidStep>>, witness |-> FALSE]
+              source |-> "x_plus_zero_plus_zero", target |-> "x",
+              steps |-> <<OuterStep, InnerStep>>, witness |-> FALSE,
+              lowerRule |-> "none"]
 BaseLower == [kind |-> "lower", scope |-> Requested,
-              source |-> "x_plus_zero", target |-> "zero",
+              source |-> "x_plus_zero_plus_zero", target |-> "zero",
               steps |-> <<>>, witness |-> FALSE,
               lowerRule |-> "zero_floor"]
 
+\* Expected values name the intended rejection reason, not just a Boolean.
 GoodExact == [certificate |-> BaseExact, requested |-> Requested,
-              expected |-> TRUE]
+              expected |-> "accepted"]
 GoodLower == [certificate |-> BaseLower, requested |-> Requested,
-              expected |-> FALSE]
+              expected |-> "wrong_kind"]
 StaleRevision == [GoodExact EXCEPT !.certificate.scope = ChangedRevision,
-                                  !.expected = FALSE]
-WrongArithmetic == [GoodExact EXCEPT !.certificate.scope = ChangedArithmetic,
-                                    !.expected = FALSE]
-MissingWitness == [GoodExact EXCEPT !.requested = WitnessRequested,
-                                   !.expected = FALSE]
+                                  !.expected = "scope_mismatch"]
+WrongArithmetic == [GoodExact EXCEPT
+                       !.requested = ChangedArithmetic,
+                       !.certificate.scope = ChangedArithmetic,
+                       !.expected = "unsupported_arithmetic"]
+WrongRequestArithmetic == [GoodExact EXCEPT !.requested = ChangedArithmetic,
+                                           !.expected = "unsupported_arithmetic"]
 ValidWitness == [GoodExact EXCEPT !.requested = WitnessRequested,
                                  !.certificate.scope = WitnessRequested,
                                  !.certificate.witness = TRUE]
-WrongSource == [GoodExact EXCEPT !.certificate.steps = <<WrongSourceStep>>,
-                               !.expected = FALSE]
-WrongTarget == [GoodExact EXCEPT !.certificate.steps = <<FabricatedStep>>,
-                               !.expected = FALSE]
-MissingPremise == [GoodExact EXCEPT !.certificate.steps = <<MissingPremiseStep>>,
-                                  !.expected = FALSE]
-UnknownRule == [GoodExact EXCEPT !.certificate.steps = <<UnknownRuleStep>>,
-                               !.expected = FALSE]
-TruncatedChain == [GoodExact EXCEPT !.certificate.steps = <<>>,
-                                  !.expected = FALSE]
+MissingWitness == [ValidWitness EXCEPT !.certificate.witness = FALSE,
+                                       !.expected = "missing_witness"]
+WrongSource == [GoodExact EXCEPT
+                  !.certificate.steps = <<OuterStep, WrongSourceStep>>,
+                  !.expected = "step_source_mismatch"]
+WrongTarget == [GoodExact EXCEPT
+                  !.certificate.steps = <<FabricatedStep, InnerStep>>,
+                  !.expected = "rule_target_mismatch"]
+MissingPremise == [GoodExact EXCEPT
+                    !.certificate.steps = <<OuterStep, MissingPremiseStep>>,
+                    !.expected = "missing_premise"]
+UnknownRule == [GoodExact EXCEPT
+                 !.certificate.steps = <<OuterStep, UnknownRuleStep>>,
+                 !.expected = "unsupported_rule"]
+TruncatedChain == [GoodExact EXCEPT
+                     !.certificate.steps = <<OuterStep>>,
+                     !.expected = "final_target_mismatch"]
 ChangedClaim == [GoodExact EXCEPT !.certificate.target = "zero",
-                               !.expected = FALSE]
-ReversedLower == [BaseLower EXCEPT !.source = "zero",
-                                   !.target = "x_plus_zero"]
-UnsupportedLower == [BaseLower EXCEPT !.lowerRule = "fabricated"]
+                                  !.expected = "final_target_mismatch"]
+ChangedDomainCase == [GoodExact EXCEPT
+                        !.certificate.scope = ChangedDomain,
+                        !.expected = "scope_mismatch"]
+ChangedQueryCase == [GoodExact EXCEPT
+                       !.certificate.scope = ChangedQuery,
+                       !.expected = "scope_mismatch"]
+ChangedGapCase == [GoodExact EXCEPT !.certificate.scope = ChangedGap,
+                                     !.expected = "scope_mismatch"]
+ChangedStiffnessCase == [GoodExact EXCEPT
+                           !.certificate.scope = ChangedStiffness,
+                           !.expected = "scope_mismatch"]
+ChangedCutoffCase == [GoodExact EXCEPT !.certificate.scope = ChangedCutoff,
+                                        !.expected = "scope_mismatch"]
+FilterPretendingExact == [GoodExact EXCEPT
+                            !.certificate.steps = <<>>,
+                            !.certificate.target = "zero",
+                            !.expected = "final_target_mismatch"]
 
 Cases == {GoodExact, GoodLower, StaleRevision, WrongArithmetic,
-          MissingWitness, ValidWitness, WrongSource, WrongTarget,
-          MissingPremise, UnknownRule, TruncatedChain, ChangedClaim}
+          WrongRequestArithmetic, MissingWitness, ValidWitness,
+          WrongSource, WrongTarget, MissingPremise, UnknownRule,
+          TruncatedChain, ChangedClaim, ChangedDomainCase,
+          ChangedQueryCase, ChangedGapCase, ChangedStiffnessCase,
+          ChangedCutoffCase, FilterPretendingExact}
 
 ScopeAccepted(requested, certificate) ==
     BypassScopeCheck \/ requested = certificate.scope
 
-AcceptExact(scenario) ==
+CheckExact(scenario) ==
     LET cert == scenario.certificate
-    IN cert.kind = "exact"
-       /\ ScopeAccepted(scenario.requested, cert)
-       /\ (scenario.requested.observation # "witness" \/ cert.witness)
-       /\ Replay(cert.source, cert.steps) = cert.target
+        requested == scenario.requested
+    IN IF cert.kind # "exact" THEN "wrong_kind"
+       ELSE IF requested.arithmetic # "nat"
+               \/ cert.scope.arithmetic # "nat"
+            THEN "unsupported_arithmetic"
+            ELSE IF requested.observation = "witness" /\ ~cert.witness
+                 THEN "missing_witness"
+                 ELSE IF requested.observation \notin {"score", "witness"}
+                      THEN "unsupported_observation"
+                      ELSE IF ~ScopeAccepted(requested, cert)
+                           THEN "scope_mismatch"
+                           ELSE LET result == Replay(cert.source, cert.steps)
+                                IN IF result.reason # "accepted"
+                                   THEN result.reason
+                                   ELSE IF result.term # cert.target
+                                        THEN "final_target_mismatch"
+                                        ELSE "accepted"
 
-AcceptLower(certificate) ==
-    certificate.kind = "lower"
-    /\ ScopeAccepted(Requested, certificate)
-    /\ certificate.lowerRule = "zero_floor"
-    /\ certificate.target = "zero"
-    /\ certificate.source = "x_plus_zero"
+CheckLower(certificate) ==
+    IF certificate.kind # "lower" THEN "wrong_kind"
+    ELSE IF certificate.scope.arithmetic # "nat"
+         THEN "unsupported_arithmetic"
+         ELSE IF certificate.scope.observation # "score"
+              THEN "unsupported_observation"
+              ELSE IF ~ScopeAccepted(Requested, certificate)
+                   THEN "scope_mismatch"
+                   ELSE IF certificate.lowerRule # "zero_floor"
+                        THEN "unsupported_lower_rule"
+                        ELSE IF certificate.source # "x_plus_zero_plus_zero"
+                             \/ certificate.target # "zero"
+                             THEN "lower_direction_mismatch"
+                             ELSE "accepted"
+
+ReversedLower == [BaseLower EXCEPT !.source = "zero",
+                                   !.target = "x_plus_zero_plus_zero"]
+UnsupportedLower == [BaseLower EXCEPT !.lowerRule = "fabricated"]
+RoundedLower == [BaseLower EXCEPT !.scope = ChangedArithmetic]
+WitnessLower == [BaseLower EXCEPT !.scope = WitnessRequested]
 
 VARIABLE selected
 Init == selected \in Cases
 Next == UNCHANGED selected
 Spec == Init /\ [][Next]_selected
 
-CertificateClassification == AcceptExact(selected) = selected.expected
-ExactAndLowerAreDistinct == ~AcceptExact(GoodLower)
+ReasonClassification == CheckExact(selected) = selected.expected
+ExactAndLowerAreDistinct == CheckExact(GoodLower) = "wrong_kind"
 LowerRuleDirectionIsChecked ==
-    AcceptLower(BaseLower)
-    /\ ~AcceptLower(ReversedLower)
-    /\ ~AcceptLower(UnsupportedLower)
-ScopeMutationDetected == ~AcceptExact(StaleRevision)
-PositiveControlsAccepted == AcceptExact(GoodExact) /\ AcceptExact(ValidWitness)
+    CheckLower(BaseLower) = "accepted"
+    /\ CheckLower(ReversedLower) = "lower_direction_mismatch"
+    /\ CheckLower(UnsupportedLower) = "unsupported_lower_rule"
+LowerProfileIsChecked ==
+    CheckLower(RoundedLower) = "unsupported_arithmetic"
+    /\ CheckLower(WitnessLower) = "unsupported_observation"
+ScopeMutationDetected == CheckExact(StaleRevision) = "scope_mismatch"
+PositiveControlsAccepted ==
+    CheckExact(GoodExact) = "accepted"
+    /\ CheckExact(ValidWitness) = "accepted"
+    /\ CheckLower(BaseLower) = "accepted"
+FilterCannotClaimExact == CheckExact(FilterPretendingExact) # "accepted"
 
 =============================================================================

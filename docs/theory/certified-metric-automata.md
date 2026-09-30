@@ -210,6 +210,14 @@ cutoffs; a source instance must establish that stability before using the
 rule. The proof checker replays old evidence here, so no runtime speedup is
 claimed by this formalization.
 
+The finite [certificate rejection model](../verification/CBC_CERTIFICATE_REPLAY_REPORT.md)
+enumerates 19 acceptance and rejection scenarios. It checks the reason for
+each malformed certificate, including a truncated two-step chain and a lower
+result disguised as an exact claim. Disabling scope equality makes its
+stale-revision invariant fail. This bounded model tests the acceptance
+interface; it does not prove the expression rewrite rules, witness validity,
+or Rust correspondence.
+
 For the first concrete source connection, use a direct refinement of a named
 standard integer Levenshtein transition path: the dispatch in
 `src/transducer/variants/standard.rs` delegates to

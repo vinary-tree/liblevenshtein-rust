@@ -1,49 +1,102 @@
 # CBC certificate rejection model report
 
-The finite model [MetricCertificateReplay.tla](tla/MetricCertificateReplay.tla)
-abstracts a certificate to a kind, scope, source and target names, a short
-rewrite chain, and a witness-presence flag. It checks exact certificate
-acceptance under a fixed requested scope. It does not model the Rust verifier,
-the full ORC intermediate representation, or whether a supplied witness is
-correct. The universal natural-expression rewrite theorem is separately
-checked in [CertifiedContracts.v](temporal_automata/theories/CertifiedContracts.v).
+The finite [MetricCertificateReplay.tla](tla/MetricCertificateReplay.tla)
+model checks a small certificate acceptance interface. A certificate has a
+claim kind, full request scope, source and target names, a rewrite chain, and
+a witness-presence marker. The model returns a **rejection reason** from each
+check, so a malformed certificate cannot pass merely because a later,
+unrelated check happens to fail.
 
-## Reproduction
+This is a finite interface model. Its expression names and arithmetic labels
+are strings; they have no numerical semantics in TLC. Universal rewrite
+soundness for exact-natural, score-only expressions is proved in
+[CertifiedContracts.v](temporal_automata/theories/CertifiedContracts.v) and
+[CertificateChecking.v](temporal_automata/theories/CertificateChecking.v).
+[CertificateScope.v](temporal_automata/theories/CertificateScope.v) proves
+stable-request comparison and the separate cutoff rules for that expression
+fragment. None of these files yet proves correspondence to a Rust executable.
 
-From the repository root:
+## The acceptance path
+
+`CheckExact` first checks the claim kind, then rejects unsupported arithmetic,
+missing witness presence, unsupported observation profiles, and scope
+mismatch. `Replay` checks each step's source, rule identity, premise presence,
+rule pattern, and target before advancing. `CheckExact` finally compares the
+replayed expression name with the claimed target. `CheckLower` is a separate
+path with its own rule and direction checks. `ScopeAccepted` compares the
+entire **eight-field model record** (domain, query, gap, stiffness,
+arithmetic, revision, cutoff, observation); `BypassScopeCheck` exists only to
+test the negative control. Other fields in the wider CBC contract need their
+own model and source binding.
+
+The valid exact chain has two steps:
+
+```text
+x_plus_zero_plus_zero --add_zero_outer--> x_plus_zero
+x_plus_zero           --add_zero_right--> x
+```
+
+That chain makes truncation a real missing-step case: retaining only the first
+step ends at `x_plus_zero`, while the certificate still claims `x`.
+
+| Case | `CheckExact` result | Rejection point |
+|---|---|---|
+| Valid two-step exact chain | `accepted` | Both steps and final target agree |
+| Valid witness-marked chain | `accepted` | Abstract witness-presence interface |
+| Lawful lower certificate | `wrong_kind` | Exact and lower claims use separate paths |
+| Stale revision | `scope_mismatch` | Captured revision differs |
+| Changed domain, query, gap, stiffness, or cutoff | `scope_mismatch` | Full request record differs |
+| Matching rounded arithmetic in request and certificate, or a changed request arithmetic | `unsupported_arithmetic` | Only the natural arithmetic tag is supported, even when scope fields match |
+| Missing witness marker under an otherwise matching witness scope | `missing_witness` | A witness-profile request needs the marker |
+| Wrong second-step source | `step_source_mismatch` | Chain adjacency fails |
+| Fabricated first-step target | `rule_target_mismatch` | Named rule does not produce the claimed target |
+| Missing second-step premise | `missing_premise` | Required premise is absent |
+| Unsupported second-step rule | `unsupported_rule` | No rule case authorizes it |
+| Truncated chain or changed final claim | `final_target_mismatch` | Replayed endpoint differs from claim |
+| Lower/filter result disguised as exact | `final_target_mismatch` | An empty exact chain cannot prove the lower target |
+
+The lawful lower certificate is accepted by `CheckLower`. Reversing its
+source and target gives `lower_direction_mismatch`; replacing its rule gives
+`unsupported_lower_rule`. Rounded arithmetic and witness observation tags
+give `unsupported_arithmetic` and `unsupported_observation`, respectively,
+even before scope comparison. The table contains **19 distinct exact-check
+scenarios**. These are deliberately small and enumerated, not an exhaustive
+enumeration of all certificates.
+
+## Reproduction and observed results
+
+Run from the repository root with TLC 2.19:
 
 ```sh
 tlc -config docs/verification/tla/MetricCertificateReplay.cfg docs/verification/tla/MetricCertificateReplay.tla
 tlc -config docs/verification/tla/MetricCertificateReplayMutant.cfg docs/verification/tla/MetricCertificateReplay.tla
 ```
 
-On 2026-09-29, TLC 2.19 explored 12 distinct states with the clean
-configuration, found no invariant violation, and reported depth 1. The
-scope-bypass mutant exited with status 151 and reported
-`The invariant of ScopeMutationDetected is equal to FALSE`. This is the
-expected negative control: a certificate carrying an old revision is accepted
-if request/certificate scope equality is disabled.
+On 2026-09-30, the clean configuration generated 38 states, found 19 distinct
+states, had depth 1, and reported no invariant violation. Its checked
+invariants were `ReasonClassification`, `ExactAndLowerAreDistinct`,
+`LowerRuleDirectionIsChecked`, `LowerProfileIsChecked`, `ScopeMutationDetected`,
+`PositiveControlsAccepted`, and `FilterCannotClaimExact`.
 
-| Scenario | Expected exact acceptance | Reason |
-|---|---:|---|
-| Valid exact rewrite | Yes | Rule, source, target, and scope agree |
-| Valid witness-marked exact rewrite | Yes | Requested witness profile and marker agree |
-| Lower-bound certificate | No | Certificate kind is not exact; the separate lower checker accepts its lawful direction |
-| Stale revision or changed arithmetic | No | Scope equality fails |
-| Missing witness marker | No | Requested witness profile is stronger |
-| Wrong step source or target | No | Replay chain does not connect |
-| Missing premise or unknown rule | No | Rule application is unavailable |
-| Truncated chain or changed final claim | No | Replay result differs from target |
+The scope-bypass mutant exited with status **151** and reported
+`The invariant of ScopeMutationDetected is equal to FALSE`. With scope
+comparison disabled, the stale-revision certificate passes its otherwise
+valid exact chain. The mutant is required to fail; its failure is the model's
+negative control.
 
-The separate lower checker rejects reversed and unsupported lower rules in
-every reachable state. These cases are finite controls for the distinction
-between exact and lower evidence, not a proof that a Rust implementation
-cannot confuse the types.
+The exact command output was saved outside `target/` in
+`/tmp/cbc-rejection-clean.log` and `/tmp/cbc-rejection-mutant.log` for the
+review run. TLC's `Next` stutters, so the 19 initial scenarios are the whole
+reachable corpus; the depth-one result is expected. TLC checks each finite
+scenario's classification and the named control properties. It does not
+establish an unbounded theorem, the validity of a witness, or a result for a
+Rust implementation.
 
-The model's `Next` stutters; the 12 initial states are the entire finite
-scenario corpus. TLC checks every scenario, not an unbounded execution or a
-general theorem. Its arithmetic string is only a scope discriminator; the
-Rocq checker separately restricts its semantics to `ExactNaturals` and
-`ScoreOnly`. In particular, the model's positive witness-marker scenario
-illustrates a future acceptance interface and is not accepted by the current
-Rocq score checker.
+The positive witness-marker case describes a **future** witness-aware
+checker interface. The current Rocq expression checker accepts only
+`ScoreOnly`; it correctly rejects `CanonicalWitness` even if a marker is
+present. Before a witness-capable executable can use the model's positive
+case, it needs a checker and proof for witness content, canonical tie rules,
+and production correspondence. Similarly, this model's string arithmetic
+tag cannot certify binary64 semantics. The proof and model claims must remain
+separate until those obligations are discharged.

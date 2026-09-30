@@ -150,9 +150,10 @@ This closes the illustrative arithmetic and observation-tag loopholes: its
 natural-number cost proof cannot certify a rounded operation graph or a
 canonical witness. The finite
 [TLA+ acceptance model](../verification/tla/MetricCertificateReplay.tla)
-explores 12 scenarios; the clean configuration passes, while bypassing scope
-validation violates `ScopeMutationDetected`. Its witness field checks presence
-only, and no TLA state identifies an actual Rust certificate payload. The
+explores 19 reason-classified scenarios, including a two-step replay and
+separate exact/filter claims; the clean configuration passes, while bypassing
+scope validation violates `ScopeMutationDetected`. Its witness field checks
+presence only, and no TLA state identifies an actual Rust certificate payload. The
 [model report](../verification/CBC_CERTIFICATE_REPLAY_REPORT.md) gives the
 commands and exact limits.
 
