@@ -841,7 +841,7 @@ proof leaves the existing valid realization intact and produces an explicit
 unproved-obligation result. This is the total behavior of the synthesis
 interface, not a purported proof that the requested optimization is impossible.
 
-The first checked finite instance is
+One checked finite instance is
 [CertificateChecking.v](../verification/temporal_automata/theories/CertificateChecking.v).
 It replays named exact and lower rewrites over the exact-natural expression
 fragment, compares query/parameter/cutoff/snapshot/revision/label scope tokens, records
