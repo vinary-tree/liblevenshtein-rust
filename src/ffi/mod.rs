@@ -79,6 +79,7 @@ mod generated;
 mod index;
 mod phonetic;
 mod string;
+mod wallbreaker;
 
 pub use automata::*;
 pub use distance::*;
@@ -86,6 +87,7 @@ pub use generated::*;
 pub use index::*;
 pub use phonetic::*;
 pub use string::*;
+pub use wallbreaker::*;
 
 use std::{ffi::c_char, slice, str};
 

@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 5,
+  "apiRevision": 6,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -493,6 +493,15 @@
         "observation",
         "close"
       ]
+    },
+    "WallBreaker": {
+      "ownership": "owned-immutable-finite-unicode-scdawg",
+      "limits": "hard-construction-and-eager-query-logical-limits",
+      "methods": ["query_utf8", "close"]
+    },
+    "WallBreakerCursor": {
+      "ownership": "exclusive-eager-result-cursor-with-one-generation-lease",
+      "methods": ["next_batch", "release_batch", "cancel", "close"]
     }
   },
   "forbiddenOwnedObjects": [
@@ -807,7 +816,15 @@
     {
       "name": "llev_universal_online_free",
       "rustModule": "automata"
-    }
+    },
+    { "name": "llev_wallbreaker_new_utf8", "rustModule": "wallbreaker" },
+    { "name": "llev_wallbreaker_free", "rustModule": "wallbreaker" },
+    { "name": "llev_wallbreaker_query_utf8", "rustModule": "wallbreaker" },
+    { "name": "llev_wallbreaker_cursor_next_batch", "rustModule": "wallbreaker" },
+    { "name": "llev_wallbreaker_cursor_release_batch", "rustModule": "wallbreaker" },
+    { "name": "llev_wallbreaker_cursor_cancel", "rustModule": "wallbreaker" },
+    { "name": "llev_wallbreaker_cursor_free", "rustModule": "wallbreaker" },
+    { "name": "llev_wallbreaker_split_utf8", "rustModule": "wallbreaker" }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",

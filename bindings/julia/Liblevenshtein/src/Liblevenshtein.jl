@@ -38,6 +38,11 @@ export ABI_VERSION,
     UniversalObservation,
     UniversalAutomaton,
     UniversalOnlineAutomaton,
+    WallBreakerMatcher,
+    WallBreakerLimits,
+    WallBreakerCursor,
+    WallBreakerMatch,
+    WallBreakerPatternPiece,
     PrefixObservations,
     PhoneticPattern,
     PhoneticRuleSet,
@@ -55,6 +60,8 @@ export ABI_VERSION,
     observation,
     advance!,
     prefix_observations,
+    pattern_pieces,
+    cancel!,
     snapshot,
     unit_domain,
     query,
@@ -378,6 +385,7 @@ merge_and_split_distance(source::AbstractVector{UInt64}, target::AbstractVector{
     :llev_merge_and_split_distance_u64_threshold, source, target, threshold)
 
 include("Automata.jl")
+include("WallBreaker.jl")
 
 function materialize(value::RawMatch)
     domain = VTI.UnitDomain(value.unit_domain)

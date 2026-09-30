@@ -63,6 +63,12 @@ this qualification.
 Passing tests establish the implemented slice; they do not prove the absent
 slice. In particular, the lling-llang extension-provider matrix already records
 37 missing Julia translations and three partial generic WFST translations.
+
+Subsequent to this snapshot, the additive liblevenshtein API-revision-6
+[WallBreaker Unicode facade](wallbreaker-unicode.md) adds finite, owned
+Unicode SCDAWG construction, PatternSplitter projection, and bounded eager
+query cursors. It does not close byte/u64 or arbitrary dictionary-provider
+WallBreaker parity. FZF scoring remains owned by duallity.
 Likewise, a duallity enum selector is not a substitute for the public Rust
 configuration, statistics, scorer, rewrite, or cache APIs behind that selector.
 

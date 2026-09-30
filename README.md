@@ -272,7 +272,7 @@ assert!(!sa.match_positions("llo wo").is_empty());   // substring present
 assert!(sa.match_positions("xyz").is_empty());        // absent
 ```
 
-The **SCDAWG** (`Scdawg` / `ScdawgChar`) additionally supports *left and right* extension of a matched substring — the property the [WallBreaker](#wallbreaker-large-error-bounds) filter relies on — at the cost of a little extra space for the reverse links.
+The **SCDAWG** (`Scdawg` / `ScdawgChar`) additionally indexes exact substring occurrences and supports experimental left/right extension. Qualified [WallBreaker](#wallbreaker-large-error-bounds) queries use the complete member returned by exact-substring search; they do not reconstruct a member from extension labels.
 
 ### Prefix search (command completion)
 
@@ -702,19 +702,23 @@ and
 
 A plain Levenshtein automaton hits a **wall** at large $`k`$: the first $`k`$ steps must explore *every* prefix of length $`\le k`$, regardless of the data. At $`k = 16`$ that is ruinous. **WallBreaker** sidesteps it with the **pigeonhole principle**.
 
-![WallBreaker pigeonhole filtering: split the pattern into k+1 pieces, at least one is error-free, locate it exactly in the SCDAWG, then extend and verify.](docs/diagrams/automata/wallbreaker-pigeonhole.svg)
-
 ```text
 wallbreaker(P, k, scdawg):
   p ← pieces_for(algorithm, k)               # k+1 (Standard); 2k+1 (Transposition / MergeAndSplit)
   results ← ∅
   for piece in split(P, p):                  # disjoint, near-equal pieces
-    for (term, locus) in scdawg.exact_occurrences(piece):    # 𝒪(∣piece∣) — no wall
-      cand ← extend_bidirectionally(term, locus, P, k)        # grow ← and → within budget
-      if edit_distance(P, cand) ≤ k:
-        results ← results ∪ { (cand, edit_distance(P, cand)) }
+    for (term, locus) in scdawg.exact_occurrences(piece):
+      if edit_distance(P, term) ≤ k:          # verify the original complete member
+        results ← results ∪ { (term, edit_distance(P, term)) }
   return dedup(results)
 ```
+
+For a query shorter than the required piece count, or for unrestricted
+Damerau-Levenshtein, the qualified result path uses an exact full-term scan:
+no surviving nonempty piece is guaranteed. The separate native
+`BidirectionalExtension` helper is experimental and not used to publish
+WallBreaker matches; reconstructing a term from graph labels can invent
+nonmembers.
 
 **Why $`p`$ pieces?** Spread $`\le k`$ edits across $`p`$ disjoint pieces. A Standard edit corrupts at most **one** piece, so $`k + 1`$ pieces guarantee a survivor that matches exactly; a transposition or merge/split can straddle a boundary and corrupt **two**, needing $`2k + 1`$. These bounds are proved in Coq/Rocq (`WallBreakerPigeonhole.v`).
 
@@ -735,7 +739,12 @@ for result in wallbreaker.query("mispeled") {
 }
 ```
 
-For long patterns and large $`k`$ this turns the exponential wall into a handful of $`\mathcal{O}(\lvert piece\rvert)`$ substring lookups; the project's design analysis projects **~2,000–3,300×** over a plain transducer at $`k \approx 16`$ on a 750k-word lexicon ([decision matrix](docs/research/wallbreaker/decision-matrix.md)). Use the plain transducer for short queries and small $`k`$ ($`\le 3`$); reach for WallBreaker when $`k \ge 5`$ or patterns exceed ~50 characters.
+Substring lookup can avoid the prefix wall when a surviving piece is selective,
+but complete-term verification and short-query fallback still require work
+proportional to the candidate set. Prior speedup projections predate the
+correctness repair and are not current benchmark evidence. The
+[revision-6 Unicode binding](docs/bindings/wallbreaker-unicode.md) uses a
+finite owned corpus and explicitly bounded eager results.
 
 ---
 

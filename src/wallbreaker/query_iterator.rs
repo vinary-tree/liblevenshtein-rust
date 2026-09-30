@@ -6,7 +6,6 @@
 //! 3. Exact full-term distance verification of each candidate
 //! 4. Deduplication of results
 
-use std::collections::VecDeque;
 use std::marker::PhantomData;
 
 use crate::distance::{
@@ -16,7 +15,7 @@ use crate::distance::{
 #[cfg(test)]
 use crate::distance::{standard_distance, transposition_distance};
 use crate::transducer::Algorithm;
-use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
+use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary, SubstringMatch};
 use libdictenstein::Dictionary;
 use rustc_hash::FxHashSet;
 
@@ -113,8 +112,10 @@ where
     /// Current piece index being processed.
     current_piece_idx: usize,
 
-    /// Results from current piece (buffered).
-    current_results: VecDeque<WallBreakerResult>,
+    /// Candidate occurrences for one piece. Complete results are verified and
+    /// emitted one at a time, so a caller can enforce an output limit without
+    /// an unbounded per-piece accepted-result queue.
+    current_matches: std::vec::IntoIter<SubstringMatch<D::Node>>,
 
     /// Terms already seen (for deduplication).
     seen_terms: SeenTerms,
@@ -165,7 +166,7 @@ where
             algorithm,
             pieces,
             current_piece_idx: 0,
-            current_results: VecDeque::new(),
+            current_matches: Vec::new().into_iter(),
             seen_terms: SeenTerms::default(),
             exhausted: false,
         }
@@ -176,20 +177,11 @@ where
         compute_distance_within(self.algorithm, self.max_distance, s1, s2)
     }
 
-    /// Process the next piece and populate current_results.
-    fn process_next_piece(&mut self) -> bool {
-        while self.current_piece_idx < self.pieces.len() {
-            let piece = &self.pieces[self.current_piece_idx];
-            self.current_piece_idx += 1;
-
-            // Find exact substring matches for this piece
-            let substring_matches =
-                D::find_exact_substring_in_snapshot(&self.snapshot_root, &piece.content);
-
-            // `SubstringMatch.term` is already the complete member. Rebuilding
-            // a term from extension labels can fabricate nonmembers on a
-            // shared suffix graph. Verify the original member directly.
-            for match_info in substring_matches {
+    /// Verify one candidate at a time from the current or next pattern piece.
+    fn next_verified(&mut self) -> Option<WallBreakerResult> {
+        loop {
+            if let Some(match_info) = self.current_matches.next() {
+                // `SubstringMatch.term` is already the complete member.
                 let term = match_info.term;
                 if self.seen_terms.contains(term.as_str()) {
                     continue;
@@ -197,18 +189,20 @@ where
                 if let Some(actual_distance) = self.compute_distance_within(&self.query, &term) {
                     self.seen_terms
                         .insert(term.as_str().to_owned().into_boxed_str());
-                    self.current_results
-                        .push_back(WallBreakerResult::new(term, actual_distance));
+                    return Some(WallBreakerResult::new(term, actual_distance));
                 }
+                continue;
             }
 
-            // If we found results, return
-            if !self.current_results.is_empty() {
-                return true;
+            if self.current_piece_idx == self.pieces.len() {
+                return None;
             }
+            let piece = &self.pieces[self.current_piece_idx];
+            self.current_piece_idx += 1;
+            self.current_matches =
+                D::find_exact_substring_in_snapshot(&self.snapshot_root, &piece.content)
+                    .into_iter();
         }
-
-        false
     }
 }
 
@@ -233,17 +227,9 @@ where
             return None;
         }
 
-        loop {
-            // Try to get next result from current batch
-            if let Some(result) = self.current_results.pop_front() {
-                return Some(result);
-            }
-
-            if !self.process_next_piece() {
-                self.exhausted = true;
-                return None;
-            }
-        }
+        let result = self.next_verified();
+        self.exhausted = result.is_none();
+        result
     }
 }
 

@@ -7,7 +7,7 @@ const LL = Liblevenshtein
 
 @testset "ABI identity and layouts" begin
     @test LL.abi_version() == LL.ABI_VERSION == 1
-    @test LL.api_revision() >= LL.API_REVISION == 5
+    @test LL.api_revision() >= LL.API_REVISION == 6
     @test LL.build_features() & LL.BUILD_FEATURE_CORE != 0
     @test LL.STATUS_OK isa LL.Status
     @test LL.ALGORITHM_STANDARD isa LL.Algorithm
@@ -25,6 +25,54 @@ const LL = Liblevenshtein
     @test sizeof(LL.RawGeneralizedObservation) == 32
     @test sizeof(LL.RawUniversalEquivalence) == 16
     @test sizeof(LL.RawUniversalObservation) == 24
+    @test sizeof(LL.RawWallBreakerTerm) == 16
+    @test sizeof(LL.RawWallBreakerLimits) == 56
+    @test sizeof(LL.RawWallBreakerResult) == 24
+    @test sizeof(LL.RawWallBreakerBatch) == 24
+    @test sizeof(LL.RawPatternPiece) == 40
+end
+
+@testset "finite Unicode WallBreaker" begin
+    terms = ["", "a", "café", "cafe", "αβγ", "αXγ", "café"]
+    matcher = LL.WallBreakerMatcher(terms; max_distance=1)
+    try
+        expected = Set([LL.WallBreakerMatch("café", 0),
+            LL.WallBreakerMatch("cafe", 1)])
+        @test Set(collect(LL.query(matcher, "café"))) == expected
+        @test Set(collect(LL.query(matcher, ""))) ==
+            Set([LL.WallBreakerMatch("", 0), LL.WallBreakerMatch("a", 1)])
+        @test collect(LL.query(matcher, "absent")) == LL.WallBreakerMatch[]
+        cursor = LL.query(matcher, "café")
+        LL.close!(matcher)
+        try
+            @test Set(collect(cursor)) == expected
+        finally
+            LL.close!(cursor)
+        end
+    finally
+        LL.close!(matcher)
+    end
+    pieces = LL.pattern_pieces("éa", 1)
+    @test [piece.content for piece in pieces] == ["é", "a"]
+    @test [(piece.byte_offset, piece.byte_len, piece.start_scalar,
+        piece.end_scalar) for piece in pieces] == [(0, 2, 0, 1), (2, 1, 1, 2)]
+    @test_throws ArgumentError LL.WallBreakerLimits(max_terms=0)
+    @test_throws ArgumentError LL.WallBreakerMatcher(["x"]; max_distance=9)
+    matcher = LL.WallBreakerMatcher(["café"]; max_distance=0)
+    try
+        cursor = LL.query(matcher, "café")
+        try
+            @test_throws LL.NativeError LL.next_batch!(cursor, 1; max_bytes=1)
+            @test LL.next_batch!(cursor, 1; max_bytes=16) ==
+                [LL.WallBreakerMatch("café", 0)]
+            LL.cancel!(cursor)
+            @test_throws LL.NativeError LL.next_batch!(cursor)
+        finally
+            LL.close!(cursor)
+        end
+    finally
+        LL.close!(matcher)
+    end
 end
 
 @testset "bounded TinyLFU/SIEVE query cache" begin

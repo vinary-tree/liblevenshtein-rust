@@ -676,6 +676,93 @@ LLEV_API LlevStatus llev_phonetic_rules_apply(
  */
 LLEV_API void llev_owned_string_free(LlevOwnedString* value);
 
+/* Revision 6: finite-owned Unicode WallBreaker. This is not a dictionary
+ * resource adapter: vt.dictionary.v1 has no exact-substring capability. */
+typedef struct LlevWallBreaker LlevWallBreaker;
+typedef struct LlevWallBreakerCursor LlevWallBreakerCursor;
+
+typedef struct LlevWallBreakerTerm {
+    const char* data;
+    size_t byte_len;
+} LlevWallBreakerTerm;
+
+/** Logical limits for a matcher. Every field is positive. Implementation
+ * maxima, respectively: 4096 terms, 1 MiB total term bytes, 256 scalars per
+ * term/query, 16 MiB candidate-clone bound, 4096 results, 1 MiB result bytes.
+ * These are not process-RSS limits. Distance has a separate hard maximum 8.
+ * Construction preflights all limits before building the owned SCDAWG; a
+ * conservative candidate bound may reject an otherwise feasible query. */
+typedef struct LlevWallBreakerLimits {
+    size_t max_terms;
+    size_t max_total_term_bytes;
+    size_t max_term_scalars;
+    size_t max_query_scalars;
+    size_t max_candidate_clone_bytes;
+    size_t max_results;
+    size_t max_result_bytes;
+} LlevWallBreakerLimits;
+
+typedef struct LlevWallBreakerResultView {
+    const uint8_t* term_data;
+    size_t byte_len;
+    size_t distance;
+} LlevWallBreakerResultView;
+
+typedef struct LlevWallBreakerBatchView {
+    const LlevWallBreakerResultView* results;
+    size_t len;
+    uint64_t generation;
+} LlevWallBreakerBatchView;
+
+typedef struct LlevPatternPiece {
+    size_t byte_offset;
+    size_t byte_len;
+    size_t start_scalar;
+    size_t end_scalar;
+    size_t piece_index;
+} LlevPatternPiece;
+
+/** Copy caller-owned UTF-8 terms into a fixed immutable Unicode SCDAWG.
+ * Zero terms are allowed; (NULL,0) denotes an empty term. Valid algorithm
+ * values are LLEV_ALGORITHM_*. On error *out is NULL, except if out is NULL.
+ * Invalid UTF-8 reports INVALID_UTF8; null required pointers NULL_POINTER;
+ * malformed non-null inputs INVALID_ARGUMENT;
+ * exceeded term/distance/candidate limits LIMIT_EXCEEDED. */
+LLEV_API LlevStatus llev_wallbreaker_new_utf8(
+    const LlevWallBreakerTerm* terms, size_t term_count,
+    LlevWallBreakerLimits limits, uint32_t algorithm, size_t max_distance,
+    LlevWallBreaker** out);
+/** Free a matcher; any completed result cursor remains independent. */
+LLEV_API void llev_wallbreaker_free(LlevWallBreaker* matcher);
+/** Eagerly verify all candidates in one immutable matcher revision. A limit
+ * failure publishes no cursor or partial result; *out is NULL. Results are
+ * first-seen SCDAWG candidate order, deduplicated by complete term. */
+LLEV_API LlevStatus llev_wallbreaker_query_utf8(
+    const LlevWallBreaker* matcher, const char* query, size_t query_len,
+    LlevWallBreakerCursor** out);
+/** Publish one borrowed batch, or END with an empty output. At most one lease
+ * is active. If the next term alone exceeds max_bytes, LIMIT_EXCEEDED does
+ * not advance. All descriptors and term bytes live until release or free;
+ * cancelling during a lease preserves that lease until release/free. */
+LLEV_API LlevStatus llev_wallbreaker_cursor_next_batch(
+    LlevWallBreakerCursor* cursor, size_t max_entries, size_t max_bytes,
+    LlevWallBreakerBatchView* out);
+/** Release exactly the active generation; stale/double releases fail. */
+LLEV_API LlevStatus llev_wallbreaker_cursor_release_batch(
+    LlevWallBreakerCursor* cursor, uint64_t generation);
+/** Cancel further advances (CLOSED); an active lease remains releasable. */
+LLEV_API LlevStatus llev_wallbreaker_cursor_cancel(LlevWallBreakerCursor* cursor);
+/** Free an exclusive cursor and invalidate any active batch view. */
+LLEV_API void llev_wallbreaker_cursor_free(LlevWallBreakerCursor* cursor);
+/** Project native PatternSplitter pieces with Unicode scalar and UTF-8 byte
+ * coordinates. A capacity query uses pieces=NULL/capacity=0 and returns
+ * LIMIT_EXCEEDED with *out_required; insufficient capacity writes no pieces.
+ * The input is borrowed only for the call. */
+LLEV_API LlevStatus llev_wallbreaker_split_utf8(
+    const char* query, size_t query_len, uint32_t algorithm,
+    size_t max_distance, LlevPatternPiece* pieces, size_t capacity,
+    size_t* out_required);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 76 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 84 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -281,6 +281,30 @@
         },
         "llev_universal_online_free": {
           "symbol": "llev_universal_online_free"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": "llev_wallbreaker_new_utf8"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": "llev_wallbreaker_free"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": "llev_wallbreaker_query_utf8"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": "llev_wallbreaker_cursor_next_batch"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": "llev_wallbreaker_cursor_release_batch"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": "llev_wallbreaker_cursor_cancel"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": "llev_wallbreaker_cursor_free"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": "llev_wallbreaker_split_utf8"
         }
       }
     },
@@ -628,6 +652,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -975,6 +1031,38 @@
         "llev_universal_online_free": {
           "symbol": "llev_universal_online_free",
           "note": "C API passthrough via the included liblevenshtein.h"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": "llev_wallbreaker_new_utf8",
+          "note": "C API passthrough via included liblevenshtein.h"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": "llev_wallbreaker_free",
+          "note": "C API passthrough via included liblevenshtein.h"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": "llev_wallbreaker_query_utf8",
+          "note": "C API passthrough via included liblevenshtein.h"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": "llev_wallbreaker_cursor_next_batch",
+          "note": "C API passthrough via included liblevenshtein.h"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": "llev_wallbreaker_cursor_release_batch",
+          "note": "C API passthrough via included liblevenshtein.h"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": "llev_wallbreaker_cursor_cancel",
+          "note": "C API passthrough via included liblevenshtein.h"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": "llev_wallbreaker_cursor_free",
+          "note": "C API passthrough via included liblevenshtein.h"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": "llev_wallbreaker_split_utf8",
+          "note": "C API passthrough via included liblevenshtein.h"
         }
       }
     },
@@ -1314,6 +1402,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -1646,6 +1766,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -1977,6 +2129,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -2306,6 +2490,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -2648,6 +2864,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -2987,6 +3235,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -3350,6 +3630,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -3684,6 +3996,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -4019,6 +4363,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -4354,6 +4730,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -4692,6 +5100,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -5030,6 +5470,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     },
@@ -5038,7 +5510,8 @@
       "sourceFiles": [
         "bindings/julia/Liblevenshtein/src/Liblevenshtein.jl",
         "bindings/julia/Liblevenshtein/src/GeneratedAbi.jl",
-        "bindings/julia/Liblevenshtein/src/Automata.jl"
+        "bindings/julia/Liblevenshtein/src/Automata.jl",
+        "bindings/julia/Liblevenshtein/src/WallBreaker.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -5319,6 +5792,30 @@
         },
         "llev_universal_online_free": {
           "symbol": "close!"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": "WallBreakerMatcher"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": "close!"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": "query"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": "cancel!"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": "close!"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": "pattern_pieces"
         }
       }
     },
@@ -5640,6 +6137,38 @@
         "llev_universal_online_free": {
           "symbol": null,
           "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+        },
+        "llev_wallbreaker_new_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_query_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_cancel": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_cursor_free": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_wallbreaker_split_utf8": {
+          "symbol": null,
+          "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
         }
       }
     }

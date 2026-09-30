@@ -158,6 +158,14 @@ variants, protocols, or methods.
 | `llev_universal_online_free` | `llev_universal_online_free` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_new` | `llev_universal_online_new` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_observation` | `llev_universal_online_observation` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_wallbreaker_cursor_cancel` | `llev_wallbreaker_cursor_cancel` | project ABI operation |
+| `llev_wallbreaker_cursor_free` | `llev_wallbreaker_cursor_free` | project ABI operation |
+| `llev_wallbreaker_cursor_next_batch` | `llev_wallbreaker_cursor_next_batch` | project ABI operation |
+| `llev_wallbreaker_cursor_release_batch` | `llev_wallbreaker_cursor_release_batch` | project ABI operation |
+| `llev_wallbreaker_free` | `llev_wallbreaker_free` | project ABI operation |
+| `llev_wallbreaker_new_utf8` | `llev_wallbreaker_new_utf8` | project ABI operation |
+| `llev_wallbreaker_query_utf8` | `llev_wallbreaker_query_utf8` | project ABI operation |
+| `llev_wallbreaker_split_utf8` | `llev_wallbreaker_split_utf8` | project ABI operation |
 | `query_cache::clear` | `llev_query_cache_clear` | project ABI operation |
 | `query_cache::query` | `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64` | project ABI operation |
 | `query_cache::reset_stats` | `llev_query_cache_reset_stats` | project ABI operation |

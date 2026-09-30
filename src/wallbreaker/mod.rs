@@ -43,9 +43,11 @@
 //!
 //! # Performance
 //!
-//! For 100-character patterns with 16 errors in a 750K dictionary:
-//! - Traditional approach: ~500ms
-//! - WallBreaker: ~0.088ms (5600x speedup)
+//! Substring filtering can help when a surviving piece is selective. Short
+//! queries and unrestricted Damerau use an exact full-term scan, however,
+//! and complete-term verification is required in every path. Historical
+//! speedup projections predate the correctness repair and are not a current
+//! benchmark qualification.
 //!
 //! # Example
 //!
