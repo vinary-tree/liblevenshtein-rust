@@ -844,12 +844,13 @@ interface, not a purported proof that the requested optimization is impossible.
 The first checked finite instance is
 [CertificateChecking.v](../verification/temporal_automata/theories/CertificateChecking.v).
 It replays named exact and lower rewrites over the exact-natural expression
-fragment, binds query/parameter/cutoff/snapshot/revision/label scope, records
+fragment, compares query/parameter/cutoff/snapshot/revision/label scope tokens, records
 orientation and witness effect, and checks the complete rule-specific premise
 list. Its soundness theorem proves only score equality or a lower bound for
 that fragment. It supplies no acceptance case for the remaining realization
 nodes or for rounded arithmetic; extending the IR checker requires a semantic
 rule and proof for each new case.
+Concrete correspondence must bind those tokens to the actual runtime values.
 
 ### 10.4 Derivation algorithm
 

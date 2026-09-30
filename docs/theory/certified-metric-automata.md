@@ -275,6 +275,9 @@ reject revision changes, unsupported witness effects, and lower certificates
 offered as exact equivalence. Premise names are audit labels: the checker
 derives their actual validity from the finite rule definitions and their
 kernel-checked soundness lemmas, rather than trusting a supplied name.
+The scope fields are opaque tokens. Exact token comparison does not establish
+that a token names the executable's actual query, parameters, dictionary
+revision, or label interpretation; that binding is an instance obligation.
 
 This checks the declared expression fragment only. It does not replay all
 nodes of the ORC realization IR, prove floating-point rewrites, establish
