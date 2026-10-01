@@ -491,37 +491,6 @@ audit_contracts_tsv() {
               }
             }
 
-            # A field whose type is a bound Type parameter stores data, even
-            # when its name ends in _contract. Collect those parameters from
-            # the enclosing Record header before classifying field names.
-            if (out ~ /^[[:space:]]*Record[[:space:]]+/) {
-              for (parameter in bound_type_parameter) {
-                delete bound_type_parameter[parameter]
-              }
-              record_header = ""
-              in_record_header = 1
-              in_record_body = 0
-            }
-            if (in_record_header) {
-              record_header = record_header " " out
-              if (out ~ /:=[[:space:]]*\{/) {
-                header_rest = record_header
-                while (match(header_rest, /\([^)]*:[[:space:]]*Type[[:space:]]*\)/)) {
-                  binder = substr(header_rest, RSTART + 1, RLENGTH - 2)
-                  sub(/:[[:space:]]*Type[[:space:]]*$/, "", binder)
-                  count = split(binder, parameters, /[[:space:]]+/)
-                  for (j = 1; j <= count; j++) {
-                    if (parameters[j] ~ /^[A-Za-z_][A-Za-z0-9_]*$/) {
-                      bound_type_parameter[parameters[j]] = 1
-                    }
-                  }
-                  header_rest = substr(header_rest, RSTART + RLENGTH)
-                }
-                in_record_header = 0
-                in_record_body = 1
-              }
-            }
-
             if (out ~ /^[[:space:]]*Definition[[:space:]]+[A-Za-z0-9_]*_contract[[:space:]]+/) {
               symbol = out
               sub(/^[[:space:]]*Definition[[:space:]]+/, "", symbol)
@@ -536,12 +505,7 @@ audit_contracts_tsv() {
               symbol = out
               sub(/^[[:space:]]*/, "", symbol)
               sub(/[[:space:]:].*/, "", symbol)
-              field_type = out
-              sub(/^[^:]*:[[:space:]]*/, "", field_type)
-              gsub(/[[:space:];]/, "", field_type)
-              if (!(in_record_body && field_type in bound_type_parameter)) {
-                emit("Field", symbol, "contract field in proof-obligation record")
-              }
+              emit("Field", symbol, "contract field in proof-obligation record")
             } else if (out ~ /^[[:space:]]*[A-Za-z0-9_]+_ax[[:space:]]*:/) {
               symbol = out
               sub(/^[[:space:]]*/, "", symbol)
@@ -552,12 +516,6 @@ audit_contracts_tsv() {
               sub(/^[[:space:]]*(Lemma|Theorem|Corollary)[[:space:]]+/, "", symbol)
               sub(/[[:space:]:].*/, "", symbol)
               emit("NamedTheorem", symbol, "axiom-shaped theorem name")
-            }
-            if (in_record_body && out ~ /^[[:space:]]*\}[[:space:]]*\./) {
-              in_record_body = 0
-              for (parameter in bound_type_parameter) {
-                delete bound_type_parameter[parameter]
-              }
             }
           }
         ' "$file"

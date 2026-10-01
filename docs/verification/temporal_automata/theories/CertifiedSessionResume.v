@@ -407,7 +407,7 @@ Module PublicationControl.
   Definition Configuration := (Runtime * Ghost)%type.
 
   Definition identity : session_identity unit unit unit :=
-    {| session_contract := tt; session_snapshot := tt;
+    {| session_contract_value := tt; session_snapshot := tt;
        session_query := tt; session_revision := 3 |}.
 
   Definition frame (cursor : nat) : occurrence unit unit unit :=

@@ -647,7 +647,7 @@ Definition exclusively_private {Node Residual Path Score CacheKey}
   end.
 
 Record session_identity (Contract Snapshot Query : Type) := {
-  session_contract : Contract;
+  session_contract_value : Contract;
   session_snapshot : Snapshot;
   session_query : Query;
   session_revision : nat
@@ -922,7 +922,7 @@ Qed.
     original belongs to the ghost exclusion class. The example does not prove
     that any particular Rust heap comparison or exclusion is correct. *)
 Definition compact_identity : session_identity unit unit unit :=
-  {| session_contract := tt; session_snapshot := tt;
+  {| session_contract_value := tt; session_snapshot := tt;
      session_query := tt; session_revision := 0 |}.
 
 Definition empty_ledger : work_ledger :=

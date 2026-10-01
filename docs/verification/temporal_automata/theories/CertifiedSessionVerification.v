@@ -447,7 +447,7 @@ Lemma control_cutoff_is_inclusive_for_finite_scores :
 Proof. reflexivity. Qed.
 
 Definition control_identity : session_identity unit unit unit :=
-  {| session_contract := tt;
+  {| session_contract_value := tt;
      session_snapshot := tt;
      session_query := tt;
      session_revision := 0 |}.

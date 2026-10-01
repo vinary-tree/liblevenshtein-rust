@@ -121,7 +121,7 @@ Definition shared_region (_ : session_identity unit unit unit)
   if Nat.eqb (occurrence_cursor item) 0 then [0] else [1].
 
 Definition shared_identity : session_identity unit unit unit :=
-  {| session_contract := tt; session_snapshot := tt;
+  {| session_contract_value := tt; session_snapshot := tt;
      session_query := tt; session_revision := 0 |}.
 
 Example shared_node_has_two_originals :
