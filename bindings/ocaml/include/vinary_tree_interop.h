@@ -14,6 +14,8 @@ extern "C" {
 #define VT_DICTIONARY_VISIT_INTERFACE_VERSION 1u
 #define VT_DICTIONARY_GRAPH_INTERFACE_VERSION 1u
 #define VT_DICTIONARY_ENTRIES_INTERFACE_VERSION 1u
+#define VT_DICTIONARY_BYTES_INTERFACE_VERSION 2u
+#define VT_DICTIONARY_BYTE_ENTRIES_INTERFACE_VERSION 2u
 #define VT_SNAPSHOT_IDENTITY_INTERFACE_VERSION 1u
 #define VT_WFST_INTERFACE_VERSION 1u
 #define VT_LATTICE_INTERFACE_VERSION 1u
@@ -256,6 +258,83 @@ typedef struct VtDictionaryEntriesVTable {
     VtStatus (*close)(VtDictionaryEntriesCursor* cursor);
 } VtDictionaryEntriesVTable;
 
+/* Byte values are distinct from v1 optional-u64 values. has_value is
+ * independent of value_len: one plus zero length is present-empty. */
+typedef struct VtDictionaryByteEntry {
+    size_t unit_offset;
+    size_t unit_len;
+    size_t value_offset;
+    size_t value_len;
+    uint8_t has_value;
+    uint8_t reserved[7];
+} VtDictionaryByteEntry;
+
+typedef struct VtDictionaryByteBatchLimits {
+    size_t max_entries;
+    size_t max_units;
+    size_t max_value_bytes;
+    uint64_t reserved;
+} VtDictionaryByteBatchLimits;
+
+/* units has the alignment and element type selected by unit_domain;
+ * value_bytes is a raw byte arena. Both are leased, never transferred. */
+typedef struct VtDictionaryByteBatchView {
+    const VtDictionaryByteEntry* entries;
+    size_t entry_count;
+    const void* units;
+    size_t unit_count;
+    const uint8_t* value_bytes;
+    size_t value_byte_count;
+    uint64_t generation;
+    uint64_t reserved;
+} VtDictionaryByteBatchView;
+
+struct VtDictionaryByteEntriesVTable;
+typedef struct VtDictionaryByteEntriesCursor {
+    void* context;
+    const struct VtDictionaryByteEntriesVTable* vtable;
+} VtDictionaryByteEntriesCursor;
+
+typedef VtStatus (*VtDictionaryByteEntryReducer)(
+    void* reducer_context, const VtDictionaryByteBatchView* batch);
+
+/* Optional bounded copy of byte values on one retained snapshot.
+ * See docs/abi-reference.md for exact two-phase status rules. */
+typedef struct VtDictionaryBytesVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*node_value_bytes)(void* context, uint64_t node,
+                                 uint8_t* out_bytes, size_t capacity,
+                                 size_t* out_written, size_t* out_required,
+                                 uint8_t* out_has_value);
+    VtStatus (*graph_value_bytes)(void* context, uint64_t value_cursor,
+                                  uint8_t* out_bytes, size_t capacity,
+                                  size_t* out_written, size_t* out_required,
+                                  uint8_t* out_has_value);
+} VtDictionaryBytesVTable;
+
+/* Optional finite lexicographic entry stream with a hard byte-arena limit. */
+typedef struct VtDictionaryByteEntriesVTable {
+    size_t struct_size;
+    uint32_t interface_version;
+    uint32_t reserved;
+    VtStatus (*open)(void* resource_context,
+                     VtDictionaryByteEntriesCursor* out_cursor,
+                     VtDictionaryEntriesInfo* out_info);
+    VtStatus (*next_batch)(VtDictionaryByteEntriesCursor* cursor,
+                           const VtDictionaryByteBatchLimits* limits,
+                           VtDictionaryByteBatchView* out_batch);
+    VtStatus (*release_batch)(VtDictionaryByteEntriesCursor* cursor,
+                              uint64_t generation);
+    VtStatus (*reduce)(VtDictionaryByteEntriesCursor* cursor,
+                       const VtDictionaryByteBatchLimits* limits,
+                       VtDictionaryByteEntryReducer reducer,
+                       void* reducer_context, size_t* out_count);
+    VtStatus (*cancel)(VtDictionaryByteEntriesCursor* cursor);
+    VtStatus (*close)(VtDictionaryByteEntriesCursor* cursor);
+} VtDictionaryByteEntriesVTable;
+
 /* Scalar semirings with a portable f64 representation. */
 typedef enum VtWeightDomain {
     VT_WEIGHT_DOMAIN_TROPICAL_F64 = 1,
@@ -480,6 +559,14 @@ static const VtInterfaceId VT_DICTIONARY_ENTRIES_INTERFACE_ID = {
     { 'v','t','.','d','i','c','t','.','e','n','t','r','y','.','v','1' }
 };
 
+static const VtInterfaceId VT_DICTIONARY_BYTES_INTERFACE_ID = {
+    { 'v','t','.','d','i','c','t','.','b','y','t','e','s','.','v','2' }
+};
+
+static const VtInterfaceId VT_DICTIONARY_BYTE_ENTRIES_INTERFACE_ID = {
+    { 'v','t','.','d','i','c','t','.','e','n','t','r','y','.','v','2' }
+};
+
 static const VtInterfaceId VT_SNAPSHOT_IDENTITY_INTERFACE_ID = {
     { 'v','t','.','s','n','a','p','s','h','o','t','.','i','d','.','1' }
 };
@@ -521,6 +608,16 @@ static_assert(sizeof(VtResource) == 2 * sizeof(void*),
               "VtResource must remain a two-word handle");
 static_assert(sizeof(VtDictionaryEntriesCursor) == 2 * sizeof(void*),
               "VtDictionaryEntriesCursor must remain a two-word handle");
+static_assert(sizeof(VtDictionaryByteEntriesCursor) == 2 * sizeof(void*),
+              "VtDictionaryByteEntriesCursor must remain a two-word handle");
+static_assert(sizeof(VtDictionaryByteEntry) == 4 * sizeof(size_t) + 8,
+              "VtDictionaryByteEntry layout mismatch");
+static_assert(offsetof(VtDictionaryByteEntry, has_value) == 4 * sizeof(size_t),
+              "VtDictionaryByteEntry presence offset mismatch");
+static_assert(sizeof(VtDictionaryByteBatchView) == 6 * sizeof(size_t) + 16,
+              "VtDictionaryByteBatchView layout mismatch");
+static_assert(offsetof(VtDictionaryByteBatchView, generation) == 6 * sizeof(size_t),
+              "VtDictionaryByteBatchView generation offset mismatch");
 #endif
 
 #endif /* VINARY_TREE_INTEROP_H */
