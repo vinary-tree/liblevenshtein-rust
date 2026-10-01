@@ -131,6 +131,23 @@ estimate $`h(p)`$, the stronger guard $`c_p\otimes h(p)>\tau`$ is sound only
 after proving $`h(p)`$ no greater than every lawful completion from $`p`$.
 Negative rewards and negative cycles are immediate counterexamples.
 
+**DC-1 (complete dependency-cut pruning).** For a recurrence dependency
+graph, a live cut must intersect every unresolved accepting path. Expanding
+one live vertex preserves this property when its successor enumeration
+contains every semantic outgoing edge and an accepting vertex is marked
+resolved only after its exact endpoint obligation is proved. If the cost at
+each successor is no smaller than its predecessor, the minimum cost on a
+nonempty live cut lower-bounds every unresolved accepting completion. An
+inclusive cutoff $`\tau`$ therefore permits strict pruning only when every
+live cost is greater than $`\tau`$. The [Rocq proof and bypass
+control](../verification/temporal_automata/theories/CertifiedDependencyCut.v)
+show that a pending multi-label operation can jump over the current row: a
+row cost of six would falsely prune a cost-four answer at cutoff five if the
+pending operation were omitted. The proof uses a complete path context as its
+vertex; source recurrence enumeration, numerical monotonicity, and a concrete
+storage-to-cut correspondence remain instance obligations. Lexicographic
+kNN pruning also needs a certified tie-key floor.
+
 ## 3. Residuals are the generalized automaton states
 
 Fix a finite query $`q`$, lawful parameters $`\theta`$, and cutoff $`\tau`$.
@@ -968,6 +985,7 @@ is authoritative for current proof status.
 | ID | Schema | Required evidence |
 |---|---|---|
 | CA-1 | cutoff saturation preserves every at-or-below-cutoff output | ordered-algebra proof plus over-cutoff mutant |
+| DC-1 | a complete live dependency cut bounds every unresolved accepting path | checked finite-step cut theorem and bypass-row mutant; concrete successor completeness, endpoint verification, cost monotonicity, and storage correspondence remain instance gates |
 | FA-1 | finite finalizer output is emitted only when it remains within cutoff | exact finalization plus scheduler-boundary admission proof and mutant |
 | RM-1 | transitions realize weighted left residuals | kernel recurrence correspondence |
 | RM-2 | reachable deterministic residual quotient is minimal | generic Moore-machine proof; no NFA-minimality claim |

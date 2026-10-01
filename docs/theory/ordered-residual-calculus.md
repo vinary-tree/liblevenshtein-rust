@@ -948,6 +948,19 @@ minimum is not automatically a safe cut for this case: transitions can jump
 over that row. Pruning must cover all live retained generations and pending
 dependencies, or use the exact recurrence-level C2 saturation.
 
+The [checked dependency-cut theorem](../verification/temporal_automata/theories/CertifiedDependencyCut.v)
+states the missing pruning premise precisely. An operation step that removes a
+live dependency must enumerate every semantic successor, including any
+intermediate pending operation and edge that bypasses the current target
+generation. Its processed accepting endpoint must have an exact verification
+proof. Induction then shows every unresolved accepting derivation intersects
+the remaining live dependencies. Only when prefix cost is nondecreasing on
+every semantic edge does the minimum live cost lower-bound all unresolved
+completions. S1's bounded lookback proves which generations must be retained
+for evaluation; it does not by itself prove that a chosen pruning frontier is
+a complete dependency cut or that an instance's machine arithmetic is
+inflationary. These are separate source and numerical obligations.
+
 The cheapest cost at the same cell and identical continuation context suffices
 by monotonicity. Stronger cross-coordinate elimination needs a grammar-specific
 simulation. Exact scaling of all finite configured decimal weights gives the

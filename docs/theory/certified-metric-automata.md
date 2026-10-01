@@ -756,12 +756,55 @@ source-token decode, allocation and reservation effects, ledger charges,
 and Rust publication sequence. The logical-state failure theorem does not
 claim unchanged physical capacity after a failed reserve.
 
-Coverage is also a **cut condition** on the recurrence dependency graph.
-Every unexamined accepting derivation must cross a represented live dependency.
-For multi-label operations, a single DP row may not form such a cut: an edge
-can jump over it. Include all retained generations and pending operations
-needed for that proof. This connects ORC S1's dependency model to product
-pruning instead of assuming a current-row minimum is always sufficient.
+Coverage is also a **cut condition** on the recurrence dependency graph. A
+vertex denotes a complete continuation context and its authoritative prefix
+cost. The graph includes ordinary recurrence cells in retained generations
+and pending multi-label or macro operations; an edge represents one lawful
+dependency step. Let $`L`$ be the represented live vertices and $`D`$ the
+processed vertices, whose accepting members have been verified and recorded.
+For every accepting path
+$`p`$ from the root to endpoint $`e`$, the cut invariant is:
+
+```math
+e\in D\quad\lor\quad p\cap L\ne\varnothing.
+```
+
+[CertifiedDependencyCut.v](../verification/temporal_automata/theories/CertifiedDependencyCut.v)
+proves that this invariant holds initially and survives any finite sequence
+of expansions. An expansion of $`x\in L`$ removes $`x`$, inserts an enumerated
+successor set containing **every semantic edge** out of $`x`$, and adds $`x`$
+to $`D`$. If $`x`$ is accepting, that addition requires its exact endpoint
+obligation to have been proved. The successor-completeness premise is local
+to each expansion, so a kernel may enumerate different operation families at
+different vertices.
+If each semantic edge satisfies $`c(u)\le c(v)`$, any unresolved accepting
+path meets a live vertex whose cost does not exceed its endpoint cost. Thus a
+nonempty live cut has floor $`\min_{x\in L}c(x)`$ no greater than every
+unresolved completion, and strict cost pruning is sound when every live
+cost exceeds the inclusive cutoff. The theorem does not supply a
+lexicographic kNN tie floor; that needs the separate rank certificate.
+
+The checked negative control has two paths: a current-row vertex of cost six
+leading to an accepting cost seven, and a pending macro vertex of cost one
+that jumps across that row to an accepting cost four. At inclusive cutoff
+five, the current row alone appears prunable but would lose the second
+answer. The complete cut retains both vertices. An operation instance must
+prove its concrete recurrence edges are all enumerated, include bypasses and
+retained generations in its live-state interpretation, justify exact endpoint
+resolution, and establish cost monotonicity for its numerical authority.
+The abstract vertex must retain enough path context to make its prefix cost
+well defined; merging different costs requires a separate simulation proof.
+No Rust recurrence or floating-point instance is certified by this generic
+graph theorem alone. This connects ORC S1's dependency model to product
+pruning without assuming a current-row minimum is always sufficient.
+
+| Source operation | Required cut refinement |
+|---|---|
+| One-label recurrence step | Every source cell edge appears in the enumerated successor set; the live projection retains the needed current and prior generations |
+| Multi-label or macro step | Pending work or a direct bypass edge remains represented until its destination is live or its accepting endpoint is verified |
+| Dense/sparse conversion and cache reuse | The converted or reused state denotes the same live semantic dependencies; no bypass successor disappears |
+| Exact endpoint verification | An accepting vertex enters the processed set only with authoritative score, eligibility, and witness evidence for that endpoint |
+| Cost-based pruning | The instance proves nondecreasing cost on every semantic edge in the declared arithmetic profile; a stronger completion estimate needs its own bound proof |
 
 ## 5. Numerical certificates that authorize machine pruning
 

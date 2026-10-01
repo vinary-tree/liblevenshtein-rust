@@ -19,3 +19,4 @@ theories/CertifiedSessionCache.v
 theories/CertifiedSessionResume.v
 theories/CertifiedSessionFailure.v
 theories/CertifiedSessionSnapshot.v
+theories/CertifiedDependencyCut.v
