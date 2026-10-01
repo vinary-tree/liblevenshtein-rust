@@ -8,9 +8,11 @@
 
     The second section proves that shifting and prepending the common anchor
     is injective and preserves strict timestamp order. The metric-pullback
-    theorem is conditional on the separately published source metric theorem;
-    no metricity axiom is introduced for the library's broader origin-equal
-    domain or for rounded binary64 execution. *)
+    theorem is conditional on source metric laws on the common-anchor image
+    and on explicit equality between the chosen recurrence score and that
+    pullback. Neither source metricity nor this concrete score binding is
+    inferred from the published proposition. No metricity axiom is introduced
+    for the library's broader origin-equal domain or binary64 execution. *)
 
 From Stdlib Require Import Arith Lia List Reals Lra.
 Import ListNotations.
@@ -511,28 +513,81 @@ Proof.
     now apply shifted_strict_times.
 Qed.
 
-(** A source metric can be imported from the published infinite-axis theorem.
-    The recurrence theorem above discharges the changed-boundary transfer;
-    this result discharges injectivity and every metric axiom of the pullback. *)
+(** Source metric laws are needed only on this image. Empty physical input
+    maps to the nonempty anchor-only source series; the empty source series
+    is excluded, even though it satisfies [strict_times]. *)
+Definition anchored_source_domain (origin : R) (anchored : list sample) : Prop :=
+  exists physical,
+    strict_after_origin origin physical /\
+    anchored = anchor_series origin physical.
+
+Lemma anchor_series_enters_source_domain : forall origin physical,
+  strict_after_origin origin physical ->
+  anchored_source_domain origin (anchor_series origin physical).
+Proof.
+  intros origin physical Hdomain.
+  exists physical; split; [exact Hdomain | reflexivity].
+Qed.
+
+Lemma anchored_source_domain_is_nonempty : forall origin anchored,
+  anchored_source_domain origin anchored -> anchored <> [].
+Proof.
+  intros origin anchored [physical [Hdomain Hanchored]].
+  subst anchored; unfold anchor_series; discriminate.
+Qed.
+
+Lemma anchored_source_domain_has_strict_times : forall origin anchored,
+  anchored_source_domain origin anchored -> strict_times anchored.
+Proof.
+  intros origin anchored [physical [Hdomain Hanchored]].
+  subst anchored; now apply anchor_series_has_strict_times.
+Qed.
+
+Example empty_physical_input_admitted_but_empty_source_excluded : forall origin,
+  anchored_source_domain origin [(0, 1)] /\
+  strict_times ([] : list sample) /\
+  ~ anchored_source_domain origin [].
+Proof.
+  intro origin; split.
+  - change (anchored_source_domain origin (anchor_series origin [])).
+    apply anchor_series_enters_source_domain; exact I.
+  - split; [exact I |].
+    intro Hdomain.
+    apply (anchored_source_domain_is_nonempty origin [] Hdomain).
+    reflexivity.
+Qed.
+
+(** [source_distance] is a real-valued view of finite source scores on the
+    common-anchor image. Outside that image its values are unconstrained and
+    need not form a metric; in particular no finite real value is claimed to
+    represent the source's infinite empty-to-nonempty boundary.
+
+    Source metricity is an explicit premise. To qualify a recurrence score,
+    the final theorem additionally requires equality with this pullback.
+    Establishing that equality for a concrete recurrence must bind its source
+    scores to the option-valued grid and instantiate the recurrence theorem
+    above; merely naming a function a recurrence score does not do so. *)
 Section MetricPullback.
   Variable source_distance : list sample -> list sample -> R.
   Variable origin : R.
   Context (source_nonnegative : forall x y,
-    strict_times x -> strict_times y -> 0 <= source_distance x y).
+    anchored_source_domain origin x -> anchored_source_domain origin y ->
+    0 <= source_distance x y).
   Context (source_symmetric : forall x y,
-    strict_times x -> strict_times y ->
+    anchored_source_domain origin x -> anchored_source_domain origin y ->
     source_distance x y = source_distance y x).
   Context (source_identity : forall x y,
-    strict_times x -> strict_times y ->
+    anchored_source_domain origin x -> anchored_source_domain origin y ->
     source_distance x y = 0 <-> x = y).
   Context (source_triangle : forall x y z,
-    strict_times x -> strict_times y -> strict_times z ->
+    anchored_source_domain origin x -> anchored_source_domain origin y ->
+    anchored_source_domain origin z ->
     source_distance x z <= source_distance x y + source_distance y z).
 
   Definition cumulative_distance (x y : list sample) : R :=
     source_distance (anchor_series origin x) (anchor_series origin y).
 
-  Theorem strict_origin_pullback_is_metric : forall x y z,
+  Lemma anchored_source_pullback_is_metric : forall x y z,
     strict_after_origin origin x ->
     strict_after_origin origin y ->
     strict_after_origin origin z ->
@@ -544,9 +599,9 @@ Section MetricPullback.
   Proof.
     intros x y z Hx Hy Hz.
     unfold cumulative_distance.
-    pose proof (anchor_series_has_strict_times origin x Hx) as Hax.
-    pose proof (anchor_series_has_strict_times origin y Hy) as Hay.
-    pose proof (anchor_series_has_strict_times origin z Hz) as Haz.
+    pose proof (anchor_series_enters_source_domain origin x Hx) as Hax.
+    pose proof (anchor_series_enters_source_domain origin y Hy) as Hay.
+    pose proof (anchor_series_enters_source_domain origin z Hz) as Haz.
     split.
     - now apply source_nonnegative.
     - split.
@@ -559,5 +614,28 @@ Section MetricPullback.
           -- intro Hequal. subst.
              apply (proj2 (source_identity _ _ Hay Hay)); reflexivity.
         * now apply source_triangle.
+  Qed.
+
+  Variable cumulative_recurrence_score : list sample -> list sample -> R.
+  Context (source_recurrence_correspondence : forall x y,
+    strict_after_origin origin x -> strict_after_origin origin y ->
+    cumulative_recurrence_score x y = cumulative_distance x y).
+
+  Theorem strict_origin_pullback_is_metric : forall x y z,
+    strict_after_origin origin x ->
+    strict_after_origin origin y ->
+    strict_after_origin origin z ->
+    0 <= cumulative_recurrence_score x y /\
+    cumulative_recurrence_score x y = cumulative_recurrence_score y x /\
+    (cumulative_recurrence_score x y = 0 <-> x = y) /\
+    cumulative_recurrence_score x z <=
+      cumulative_recurrence_score x y + cumulative_recurrence_score y z.
+  Proof.
+    intros x y z Hx Hy Hz.
+    rewrite (source_recurrence_correspondence x y Hx Hy),
+      (source_recurrence_correspondence y x Hy Hx),
+      (source_recurrence_correspondence x z Hx Hz),
+      (source_recurrence_correspondence y z Hy Hz).
+    now apply anchored_source_pullback_is_metric.
   Qed.
 End MetricPullback.

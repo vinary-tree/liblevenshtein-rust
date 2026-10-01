@@ -254,6 +254,125 @@ Proof.
   now rewrite Hvalue, IH.
 Qed.
 
+(** A scope field is an opaque identity token. Equality of tokens alone does
+    not establish equality of the live data that they name. In particular,
+    [scope_snapshot] is a revision identifier, not a proof that all later
+    reads still use the captured view. This proof-level interpretation makes
+    the missing source-correspondence premises explicit without adding work
+    to the executable expression checker. Result order is bound here, but a
+    ScoreOnly rewrite does not certify an ordered-result observation. *)
+Record live_contract (Query Parameters Snapshot : Type) := {
+  live_scope : contract_scope;
+  live_admits : (nat -> nat) -> Prop;
+  live_query : Query;
+  live_parameters : Parameters;
+  live_snapshot : Snapshot;
+  live_rank_le : nat -> nat -> Prop;
+  live_numeric_authority : arithmetic_profile;
+  live_observation_profile : observation_profile
+}.
+
+Arguments live_scope {Query Parameters Snapshot} _.
+Arguments live_admits {Query Parameters Snapshot} _ _.
+Arguments live_query {Query Parameters Snapshot} _.
+Arguments live_parameters {Query Parameters Snapshot} _.
+Arguments live_snapshot {Query Parameters Snapshot} _.
+Arguments live_rank_le {Query Parameters Snapshot} _ _ _.
+Arguments live_numeric_authority {Query Parameters Snapshot} _.
+Arguments live_observation_profile {Query Parameters Snapshot} _.
+
+Definition live_profiles_agree {Query Parameters Snapshot}
+    (contract : live_contract Query Parameters Snapshot) : Prop :=
+  live_numeric_authority contract =
+    scope_arithmetic (live_scope contract) /\
+  live_observation_profile contract =
+    scope_observation (live_scope contract).
+
+Definition same_live_binding {Query Parameters Snapshot}
+    (requested captured : live_contract Query Parameters Snapshot) : Prop :=
+  live_scope requested = live_scope captured /\
+  live_query requested = live_query captured /\
+  live_parameters requested = live_parameters captured /\
+  live_snapshot requested = live_snapshot captured /\
+  (forall environment,
+      live_admits requested environment <->
+      live_admits captured environment) /\
+  (forall left right,
+      live_rank_le requested left right <->
+      live_rank_le captured left right).
+
+(** The caller must establish [same_live_binding] from the actual validated
+    query, parameters, captured view, and ordering implementation. The checker
+    supplies the expression equality only after that binding is available. *)
+Definition accept_live_exact {Query Parameters Snapshot}
+    (requested captured : live_contract Query Parameters Snapshot)
+    (source target : cost_expression) (certificate : exact_certificate) : Prop :=
+  live_profiles_agree requested /\
+  live_profiles_agree captured /\
+  same_live_binding requested captured /\
+  accept_exact (live_scope requested) source target certificate = true.
+
+Theorem accepted_live_exact_preserves_validated_scores :
+  forall Query Parameters Snapshot
+    (requested captured : live_contract Query Parameters Snapshot)
+    source target certificate,
+    accept_live_exact requested captured source target certificate ->
+    exact_scope certificate = live_scope captured /\
+    live_numeric_authority requested = ExactNaturals /\
+    live_observation_profile requested = ScoreOnly /\
+    live_numeric_authority captured = ExactNaturals /\
+    live_observation_profile captured = ScoreOnly /\
+    live_query requested = live_query captured /\
+    live_parameters requested = live_parameters captured /\
+    live_snapshot requested = live_snapshot captured /\
+    (forall environment,
+      live_admits requested environment <->
+      live_admits captured environment) /\
+    (forall left right,
+      live_rank_le requested left right <->
+      live_rank_le captured left right) /\
+    (forall environment,
+      live_admits requested environment ->
+      evaluate environment source = evaluate environment target).
+Proof.
+  intros Query Parameters Snapshot requested captured source target
+    certificate [Hprofiles_request [Hprofiles_captured [Hsame Haccept]]].
+  destruct Hprofiles_request as [Hnumeric Hobservation].
+  destruct Hprofiles_captured as [Hcaptured_numeric Hcaptured_observation].
+  destruct Hsame as [Hscope [Hquery [Hparameters [Hsnapshot
+    [Hdomain Horder]]]]].
+  destruct (accepted_exact_certificate_preserves_every_environment
+    _ _ _ _ Haccept) as [Hcertificate Hscores].
+  pose proof (accepted_exact_requires_exact_natural_arithmetic
+    _ _ _ _ Haccept) as Hnatural.
+  pose proof (accepted_exact_requires_score_only_observation
+    _ _ _ _ Haccept) as Hscore_only.
+  assert (Hrequested_numeric :
+    live_numeric_authority requested = ExactNaturals).
+  { now rewrite Hnumeric. }
+  assert (Hrequested_observation :
+    live_observation_profile requested = ScoreOnly).
+  { now rewrite Hobservation. }
+  assert (Hcaptured_numeric_exact :
+    live_numeric_authority captured = ExactNaturals).
+  { now rewrite Hcaptured_numeric, <- Hscope. }
+  assert (Hcaptured_observation_score :
+    live_observation_profile captured = ScoreOnly).
+  { now rewrite Hcaptured_observation, <- Hscope. }
+  split; [now rewrite <- Hscope |].
+  split; [exact Hrequested_numeric |].
+  split; [exact Hrequested_observation |].
+  split; [exact Hcaptured_numeric_exact |].
+  split; [exact Hcaptured_observation_score |].
+  split; [exact Hquery |].
+  split; [exact Hparameters |].
+  split; [exact Hsnapshot |].
+  split; [exact Hdomain |].
+  split; [exact Horder |].
+  intros environment Hadmits.
+  apply Hscores.
+Qed.
+
 (** A lower-bound certificate has a separate language and conclusion. It
     cannot be passed to accept_exact. Natural-number nonnegativity is an
     explicit property of this cost carrier. *)
@@ -472,6 +591,81 @@ Example separate_lower_certificate_is_accepted :
     (InputVar 0)
     {| lower_scope := sample_scope; lower_rule_name := AdditionLeftBound |} = true.
 Proof. reflexivity. Qed.
+
+Example accepted_lower_bound_can_be_strict :
+  accept_lower sample_scope (Constant 1) (Constant 0)
+    {| lower_scope := sample_scope; lower_rule_name := ZeroBound |} = true /\
+  forall environment,
+    evaluate environment (Constant 0) < evaluate environment (Constant 1).
+Proof. split; [reflexivity | intros; simpl; lia]. Qed.
+
+Theorem lower_acceptance_does_not_imply_exact_equivalence :
+  ~ (forall requested exact lower certificate,
+      accept_lower requested exact lower certificate = true ->
+      forall environment,
+        evaluate environment exact = evaluate environment lower).
+Proof.
+  intros Hfalse.
+  destruct accepted_lower_bound_can_be_strict as [Haccepted Hstrict].
+  specialize (Hfalse sample_scope (Constant 1) (Constant 0)
+    {| lower_scope := sample_scope; lower_rule_name := ZeroBound |}
+    Haccepted (fun _ => 0)).
+  specialize (Hstrict (fun _ => 0)).
+  simpl in *; lia.
+Qed.
+
+Example equal_scope_tokens_do_not_bind_a_live_query :
+  exists (requested captured : live_contract nat nat nat),
+    live_scope requested = live_scope captured /\
+    accept_exact (live_scope requested)
+      (Addition (InputVar 0) (Constant 0)) (InputVar 0)
+      sample_exact = true /\
+    live_query requested <> live_query captured /\
+    ~ same_live_binding requested captured.
+Proof.
+  exists {| live_scope := sample_scope;
+            live_admits := fun _ => True;
+            live_query := 1; live_parameters := 3; live_snapshot := 5;
+            live_rank_le := Nat.le;
+            live_numeric_authority := ExactNaturals;
+            live_observation_profile := ScoreOnly |}.
+  exists {| live_scope := sample_scope;
+            live_admits := fun _ => True;
+            live_query := 2; live_parameters := 3; live_snapshot := 5;
+            live_rank_le := Nat.le;
+            live_numeric_authority := ExactNaturals;
+            live_observation_profile := ScoreOnly |}.
+  simpl; split; [reflexivity |].
+  split; [reflexivity |].
+  split; [discriminate |].
+  intros [_ [Hquery _]].
+  discriminate Hquery.
+Qed.
+
+Example equal_revision_tokens_do_not_bind_a_live_snapshot :
+  exists (requested captured : live_contract nat nat nat),
+    scope_snapshot (live_scope requested) =
+      scope_snapshot (live_scope captured) /\
+    live_snapshot requested <> live_snapshot captured /\
+    ~ same_live_binding requested captured.
+Proof.
+  exists {| live_scope := sample_scope;
+            live_admits := fun _ => True;
+            live_query := 2; live_parameters := 3; live_snapshot := 5;
+            live_rank_le := Nat.le;
+            live_numeric_authority := ExactNaturals;
+            live_observation_profile := ScoreOnly |}.
+  exists {| live_scope := sample_scope;
+            live_admits := fun _ => True;
+            live_query := 2; live_parameters := 3; live_snapshot := 6;
+            live_rank_le := Nat.le;
+            live_numeric_authority := ExactNaturals;
+            live_observation_profile := ScoreOnly |}.
+  simpl; split; [reflexivity |].
+  split; [discriminate |].
+  intros [_ [_ [_ [Hsnapshot _]]]].
+  discriminate Hsnapshot.
+Qed.
 
 (** A lower certificate is not accepted at the exact checker boundary. *)
 Fail Check (fun (certificate : lower_certificate) =>

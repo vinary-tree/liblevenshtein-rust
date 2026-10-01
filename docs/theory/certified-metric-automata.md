@@ -57,6 +57,25 @@ newer index view must not retarget an active operation's reads. A snapshot need
 not be a full physical copy or an on-disk serialized snapshot: shared storage
 is valid when every retained referent continues to denote the captured view.
 
+The snapshot obligation applies to **indexed search operations**, not to every
+metric automaton. A standalone online automaton has a fixed owned query and
+configuration and consumes a target stream; it has no dictionary revision to
+capture (for example,
+[`TimestampedTwedOnlineAutomaton`](../../src/time_series/automaton/timestamped_twed.rs)).
+An indexed range or kNN session must keep its dictionary reads,
+original identities, summaries, and cache evidence tied to one logical view
+across every page and resume. The
+[elastic traversal](../../src/time_series/elastic/walker.rs) captures a root
+and its range continuation immutably borrows its index; the
+[timestamped TWED range continuation](../../src/time_series/timestamped_twed_index.rs)
+retains a captured root and term count. These are existing implementation
+mechanisms to audit against that obligation. They do not, by themselves,
+establish the full source-to-model proof. The portable, checksummed snapshot
+file format is a separate persistence mechanism. This logical contract does
+not prescribe copying the index or adding a snapshot allocation to each
+automaton transition. The [indexed session lifecycle diagram](../diagrams/architectures/cbc-indexed-session-lifecycle.svg)
+shows which private phases and retained state must remain bound to that view.
+
 The distance cutoff, cumulative resource ceilings, and a per-call page budget
 are different quantities. Changing one does not authorize changing the others.
 

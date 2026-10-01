@@ -2,3 +2,6 @@
 
 theories/Metric/TwedProperties.v
 theories/Metric/TimestampedProductIndex.v
+theories/Metric/TwedSourceMetric.v
+theories/Metric/TimestampedMetricTransfer.v
+theories/Metric/TwedPrintedBoundaryCounterexample.v

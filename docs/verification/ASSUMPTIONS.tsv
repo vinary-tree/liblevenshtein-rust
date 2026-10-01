@@ -8,8 +8,12 @@
 # disguised local correctness theorem. Keep this file small. Add broad or
 # implementation-specific facts as candidate until they are decomposed or proven.
 #
-# The verification runner treats an empty allowed set as "no trusted axioms".
-# Current trusted files are expected to be axiom-free.
+# The source scanner rejects unlisted project-local axioms. Kernel premise
+# audits also inspect imported library foundations: the TWED ideal-real
+# theorems below use exactly these Rocq Stdlib real-construction axioms.
+# Their presence is not a source-level TWED metric theorem or a Rust premise.
+allowed	rocq-stdlib-real	ClassicalDedekindReals.sig_forall_dec	docs/verification/twed/theories/Metric/TimestampedMetricTransfer.v	https://docs.rocq-prover.org/master/stdlib/Stdlib.Reals.ClassicalDedekindReals.html	Rocq Stdlib's classical Dedekind-real construction; Print Assumptions of the anchor-transfer and sample-product theorems exposes this foundational axiom, not a project-specific metric fact.
+allowed	rocq-stdlib-real	FunctionalExtensionality.functional_extensionality_dep	docs/verification/twed/theories/Metric/TimestampedMetricTransfer.v	https://docs.rocq-prover.org/v8.20/stdlib/Coq.Logic.FunctionalExtensionality.html	Rocq Stdlib's dependent functional extensionality used by the classical Dedekind-real construction; Print Assumptions exposes it, not an operation-specific proof premise.
 retired	core	levenshtein_triangle_standard	docs/verification/grammar/theories/Core/Edit.v	https://doi.org/10.1145/321796.321811	No active source-level assumption remains under this symbol; Levenshtein metric facts should continue to import the repo's proven modular theorem.
 retired	core	transition_state_positions_epsilon_closed	docs/verification/core/theories/Automaton/Completeness.v	https://doi.org/10.1007/s10032-002-0082-8	Removed stale transition evidence route; current completeness uses position_subsumed_from_run and does not expose the over-strong exact antichain epsilon-closure field.
 retired	core	automaton_run_nonempty_epsilon_closed	docs/verification/core/theories/Automaton/Completeness.v	https://doi.org/10.1007/s10032-002-0082-8	Removed stale wrapper with the transition evidence route; no active source-level assumption remains under this symbol.

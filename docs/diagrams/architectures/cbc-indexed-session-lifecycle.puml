@@ -1,0 +1,54 @@
+@startuml cbc-indexed-session-lifecycle
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam ArrowColor #455A64
+skinparam ArrowThickness 2
+skinparam state {
+  BorderColor #37474F
+  FontColor #102027
+  BackgroundColor #E3F2FD
+}
+left to right direction
+
+title Indexed search session and its captured logical view
+
+state "Search session" as Session #E3F2FD {
+  [*] --> Ready
+  Ready --> BorrowedSplit : borrow pending parent
+  BorrowedSplit --> Ready : publish children and terminals
+  Ready --> Scoring : take one original privately
+  Scoring --> AwaitingPublication : exact verification
+  AwaitingPublication --> Ready : publish rank / result
+  Ready --> BuildingCacheEntry : begin scoped cache entry
+  BuildingCacheEntry --> Ready : publish complete entry
+}
+
+note top of Session #E8F5E9
+  Captured indexed view: contract + query + revision
+  bind the root, original identities, buckets,
+  summaries, payloads, and scoped cache observations.
+  A newer published view does not retarget reads.
+end note
+
+state "Suspended" as Suspended #FFF9C4
+state "Completed" as Completed #B2DFDB
+state "Failed" as Failed #FFCDD2
+
+Session --> Suspended : page or resource boundary
+Suspended --> Session : resume same state and view
+Session --> Completed : pending and private work empty
+Session --> Failed : declared validation / failure result
+
+note bottom of Suspended #FFFDE7
+  Retain private phase, selected results,
+  emission cursor, and cumulative ledger.
+  Resumption does not reset or rescore them.
+end note
+
+note bottom of Session #E1F5FE
+  This is a proof model for indexed operations.
+  Standalone online automata have no indexed view.
+  A disk snapshot is a separate persistence format.
+end note
+@enduml
