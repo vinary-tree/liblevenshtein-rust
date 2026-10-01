@@ -20,7 +20,7 @@
 //! 3. **Verifying** each original complete member with bounded edit distance
 //! 4. **Deduplicating** and yielding only dictionary members
 //!
-//! The separate [`BidirectionalExtension`] helper remains public for native
+//! The separate [`BidirectionalExtension`](crate::wallbreaker::BidirectionalExtension) helper remains public for native
 //! experimentation, but it is not used for qualified `WallBreakerQuery`
 //! results: reconstructing a complete term from suffix-graph labels can
 //! fabricate nonmembers. Short queries (including empty) use the dictionary's

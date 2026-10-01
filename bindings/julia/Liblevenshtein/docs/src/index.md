@@ -114,7 +114,7 @@ Generalized current-row emptiness is not a pruning certificate: a multi-target
 operation can revive from an older retained row. Universal `alive == false`,
 by contrast, is permanent. Standalone automata compare one source/target pair;
 dictionary-product traversal remains a distinct bounded native capability.
-The [Julia package guide](../../README.md#qualification-and-performance-budgets)
+The [Julia package guide](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/bindings/julia/Liblevenshtein/README.md)
 records the independent public-Rust differential corpus, measured scenarios,
 and CI regression budgets. Dictionary-product traversal is owned by a
 separate Julia query-capability task, not by this standalone qualification.
