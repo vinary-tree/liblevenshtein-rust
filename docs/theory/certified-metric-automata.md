@@ -608,6 +608,25 @@ amount out of reported usage, so that counter is not an exact physical peak
 measurement. Physical allocation capacities, cleanup, and fallible result
 finalization also require source-specific refinement.
 
+[CertifiedSessionSnapshot.v](../verification/temporal_automata/theories/CertifiedSessionSnapshot.v)
+models an immutable captured image and a catalog of distinct revisions. An
+original occurrence is addressed by its dictionary path and bucket slot; the
+physical node identifier may be shared by different paths. Every accepted
+bucket, summary, cache, or payload observation must agree with the row at
+that path and slot in the captured image, including the original identity and
+revision. Finite-trace preservation proves that a session can keep reading
+its captured revision after a newer image is published. Concrete controls
+reject a new bucket combined with old summary/cache observations, and reject
+an attempt to relabel new data with the old revision. The pending-key update
+checks referential validity only; the ownership and split proofs must also
+establish coverage and multiplicity. This is a ghost/reference image, not a
+per-frame copy or production lookup requirement. The source refinement must
+prove that each Rust root, bucket, summary, cache, and payload read denotes
+this same captured image. The timestamped TWED continuation's immutable index
+borrow and captured root provide the intended route, but the proof does not
+yet connect those fields to the Rocq image or establish cross-revision storage
+semantics for other automata.
+
 | Action | Preconditions | Invariant-preserving effect |
 |---|---|---|
 | Split a region | Complete child and terminal enumeration on $`\sigma`$ | Partition unresolved originals among children and terminal verification work |
