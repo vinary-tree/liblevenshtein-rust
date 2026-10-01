@@ -170,12 +170,23 @@ require(
 modeled = {item["name"] for item in MODEL["cFunctions"]}
 exported: set[str] = set()
 for module in (ROOT / "src" / "ffi").glob("*.rs"):
+    source = module.read_text(encoding="utf-8")
     exported.update(
         re.findall(
             r'pub\s+(?:unsafe\s+)?extern\s+"C"\s+fn\s+(llev_[a-z0-9_]+)\s*\(',
-            module.read_text(encoding="utf-8"),
+            source,
         )
     )
+    # Macro-generated domain-specialized distance functions still emit exact
+    # no_mangle C symbols, but their identifiers occur at invocations rather
+    # than in a literal `extern "C" fn` declaration. Audit both output names
+    # from every invocation so the model gate remains exact after factoring
+    # their shared implementation.
+    for exact_name, bounded_name in re.findall(
+        r"raw_unit_distance_functions!\(\s*(llev_[a-z0-9_]+)\s*,\s*(llev_[a-z0-9_]+)\s*,",
+        source,
+    ):
+        exported.update((exact_name, bounded_name))
 require(
     exported == modeled,
     f"C symbol model mismatch: missing={sorted(modeled - exported)}, extra={sorted(exported - modeled)}",
