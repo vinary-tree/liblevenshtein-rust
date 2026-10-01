@@ -16,6 +16,7 @@ theories/CertifiedSessionVerification.v
 theories/CertifiedKnnHeap.v
 theories/CertifiedSessionHeapBridge.v
 theories/CertifiedKnnPruning.v
+theories/CertifiedConditionedTieFloor.v
 theories/CertifiedSessionCache.v
 theories/CertifiedSessionResume.v
 theories/CertifiedSessionFailure.v

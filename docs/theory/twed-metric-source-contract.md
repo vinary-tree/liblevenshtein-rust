@@ -101,9 +101,15 @@ Every nonempty series in this example satisfies the strict-origin condition. Thi
 
 The 2008 report gives a nine-case triangle argument, but its printed boundary differs and its positive-gap proposition has the counterexample above. [TwedPrintedBoundaryCounterexample.v](../verification/twed/theories/Metric/TwedPrintedBoundaryCounterexample.v) checks the stated 1-by-2 grid and triangle failure in exact natural arithmetic. The report is a proof guide only. A Rocq proof must reconstruct all cases for the 2007 anchored recurrence with predecessor indices and base cases. A prose statement that edits compose does not discharge this work.
 
+[TwedSourceAlignments.v](../verification/twed/theories/Metric/TwedSourceAlignments.v)
+now defines finite 2007-style paths in an exact-natural fragment. It checks
+the three last-step cases, existence for finite anchored inputs, the absence
+of positive-axis finite paths, and rejection of a missing predecessor.
+Path-to-DP cost equality and the ideal-real sequence metric laws remain open.
+
 ## Status
 
-- **Checked:** product sample metric, anchored recurrence uniqueness, translated charges, injective domain map, strict-wrapper admission, and raw-domain counterexample. The 2008 triangle counterexample is checked against the printed equations in exact natural arithmetic.
+- **Checked:** product sample metric, anchored recurrence uniqueness, translated charges, injective domain map, strict-wrapper admission, exact-natural finite alignment existence/decomposition, and raw-domain counterexample. The 2008 triangle counterexample is checked against the printed equations in exact natural arithmetic.
 - **Open for ideal metricity:** local source TWED metric theorem on the common-anchor image under matching boundary/domain/parameter conventions. Neither published Proposition 1 discharges it unchanged.
 - **Open for executable qualification:** machine-score and source-to-model correspondence for the named Rust operation.
 

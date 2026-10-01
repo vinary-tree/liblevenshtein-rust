@@ -927,8 +927,12 @@ d(q,x)=L\Longrightarrow M\le t_\sigma(x).
 **Proof.** When $`L<d(q,x)`$, lexicographic order holds regardless of the
 tie coordinate. When the costs are equal, it is precisely the displayed
 tie inequality. These are all cases under cost admissibility. Rocq checks
-this characterization for natural ranks; the argument uses only a total
-cost order.
+this characterization for natural ranks in
+[CertifiedConditionedTieFloor.v](../verification/temporal_automata/theories/CertifiedConditionedTieFloor.v),
+including an empty equality slice, the full verified kth-rank gate, and
+canonical best-k preservation under fresh identities and ties. The abstract
+argument uses only a total cost order; the checked instance uses natural
+costs.
 
 A global tie floor satisfies this condition but may be weaker. To derive a
 better floor without knowing exact scores, take a certified superset
