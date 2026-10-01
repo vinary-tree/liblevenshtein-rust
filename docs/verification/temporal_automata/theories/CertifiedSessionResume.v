@@ -273,17 +273,16 @@ Section Resume.
   Definition logical_terminal (state : Configuration) : Prop :=
     forall next, ~ productive state next.
 
-  Hypothesis productive_deterministic : forall first second third,
-    productive first second -> productive first third -> second = third.
-
   Lemma deterministic_terminal_result_unique :
+    (forall first second third,
+      productive first second -> productive first third -> second = third) ->
     forall start first last,
       finite_steps productive start first ->
       finite_steps productive start last ->
       logical_terminal first -> logical_terminal last ->
       first = last.
   Proof.
-    intros start first last Hfirst.
+    intros productive_deterministic start first last Hfirst.
     revert last.
     induction Hfirst as [state | start middle first Hstep Htail IH];
       intros last Hlast Hterminal_first Hterminal_last.
@@ -298,13 +297,16 @@ Section Resume.
   Qed.
 
   Lemma deterministic_terminal_count_unique :
+    (forall first second third,
+      productive first second -> productive first third -> second = third) ->
     forall start first last first_count last_count,
       counted_logical_steps start first first_count ->
       counted_logical_steps start last last_count ->
       logical_terminal first -> logical_terminal last ->
       first = last /\ first_count = last_count.
   Proof.
-    intros start first last first_count last_count Hfirst.
+    intros productive_deterministic start first last first_count last_count
+      Hfirst.
     revert last last_count.
     induction Hfirst as
       [state | start middle first count Hstep Htail IH];
@@ -323,6 +325,8 @@ Section Resume.
   Qed.
 
   Theorem completed_paging_adds_no_productive_steps :
+    (forall first second third,
+      productive first second -> productive first third -> second = third) ->
     forall initial paged_final unpaged_final paged_count unpaged_count,
       counted_paged_steps initial paged_final paged_count ->
       counted_logical_steps (logical_view initial)
@@ -333,11 +337,13 @@ Section Resume.
       logical_terminal (logical_view unpaged_final) ->
       paged_count = unpaged_count.
   Proof.
-    intros initial paged_final unpaged_final paged_count unpaged_count
+    intros productive_deterministic initial paged_final unpaged_final
+      paged_count unpaged_count
       Hpaged Hunpaged _ _ Hpaged_terminal Hunpaged_terminal.
     pose proof (counted_paged_execution_erases_without_rework Hpaged)
       as Herased.
-    destruct (deterministic_terminal_count_unique Herased Hunpaged
+    destruct (deterministic_terminal_count_unique productive_deterministic
+      Herased Hunpaged
       Hpaged_terminal Hunpaged_terminal) as [_ Hcount].
     exact Hcount.
   Qed.
@@ -347,6 +353,8 @@ Section Resume.
      ghost_emitted_results (snd configuration)).
 
   Theorem completed_paged_and_unpaged_results_agree :
+    (forall first second third,
+      productive first second -> productive first third -> second = third) ->
     forall initial paged_final unpaged_final,
       finite_steps paged_step initial paged_final ->
       finite_steps productive (logical_view initial)
@@ -357,11 +365,12 @@ Section Resume.
       logical_terminal (logical_view unpaged_final) ->
       completed_results paged_final = completed_results unpaged_final.
   Proof.
-    intros initial paged_final unpaged_final Hp Hu _ _ Hpt Hut.
+    intros productive_deterministic initial paged_final unpaged_final
+      Hp Hu _ _ Hpt Hut.
     pose proof (paged_execution_erases_to_logical_execution Hp)
       as Hprojected.
     pose proof (deterministic_terminal_result_unique
-      Hprojected Hu Hpt Hut) as Heq.
+      productive_deterministic Hprojected Hu Hpt Hut) as Heq.
     unfold completed_results in *.
     destruct paged_final as [paged_runtime paged_ghost].
     destruct unpaged_final as [unpaged_runtime unpaged_ghost].
