@@ -161,6 +161,23 @@ infinite conversion-only execution that never reaches its completion state.
 Thus this finite theorem supplies no total termination claim; the rank
 obligation in CBC-2 is separate.
 
+[CertifiedCertificateTrace.v](../verification/temporal_automata/theories/CertifiedCertificateTrace.v)
+instantiates CBC-1 for the checker below. A fixed program contains source and
+target score expressions with a scoped certificate for each instruction. An
+executable score step is admitted only when the certificate checker accepts
+an `Equivalent` exact-natural, score-only rewrite; it emits the target value.
+The reference step emits the source value. The checker theorem makes those
+values equal for every variable environment, so each executable step has a
+matching reference event. A silent administrative step increments a concrete
+counter and stutters in the reference. From related empty histories at cursor
+zero, the finite-trace theorem preserves the concatenated emitted score list;
+if the executable cursor reaches the program length, the reference reaches it
+with the same output history. A checked one-score program actually completes,
+while a coinductive infinite administrative run from that same unfinished
+program shows why finite refinement does not establish progress. This is a
+checker-to-model bridge for one expression fragment, not a correspondence for
+Rust evaluation, resource charges, witnesses, or the whole ORC realization.
+
 ### 3.2a A checked exact-integer certificate kernel
 
 [CertifiedContracts.v](../verification/temporal_automata/theories/CertifiedContracts.v)
