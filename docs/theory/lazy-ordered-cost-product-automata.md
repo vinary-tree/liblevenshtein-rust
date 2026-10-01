@@ -137,9 +137,10 @@ one live vertex preserves this property when its successor enumeration
 contains every semantic outgoing edge and an accepting vertex is marked
 resolved only after its exact endpoint obligation is proved. If the cost at
 each successor is no smaller than its predecessor, the minimum cost on a
-nonempty live cut lower-bounds every unresolved accepting completion. An
-inclusive cutoff $`\tau`$ therefore permits strict pruning only when every
-live cost is greater than $`\tau`$. The [Rocq proof and bypass
+nonempty live cut lower-bounds every unresolved accepting completion. For an
+inclusive cutoff $`\tau`$, the bare live-cost test permits strict pruning
+when every live cost is greater than $`\tau`$. A separately certified
+completion bound may justify more pruning. The [Rocq proof and bypass
 control](../verification/temporal_automata/theories/CertifiedDependencyCut.v)
 show that a pending multi-label operation can jump over the current row: a
 row cost of six would falsely prune a cost-four answer at cutoff five if the
