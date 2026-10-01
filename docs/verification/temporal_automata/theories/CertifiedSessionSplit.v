@@ -159,6 +159,81 @@ Section SplitPublication.
     unfold publish_split; simpl in *.
     exact Hsound.
   Qed.
+
+  (** The borrowed children already occur in the old abstraction's staged
+      handle list. Only freshly manufactured terminal handles need a new
+      arena and reconstruction validity witness. The accepted split package
+      supplies exact original coverage; it does not certify those handles. *)
+  Theorem split_publication_preserves_session_abstraction :
+    forall (region_of : session_identity Contract Snapshot Query ->
+        Occurrence -> list nat)
+      universe authoritative evidence_sound arena_valid cache_valid
+      reconstruction_valid (before : Runtime) (ghost : Ghost)
+      prefix parent suffix terminal children (package : split_package),
+      session_abstraction region_of universe authoritative evidence_sound
+        arena_valid cache_valid reconstruction_valid before ghost ->
+      runtime_pending before = prefix ++ parent :: suffix ->
+      runtime_private before = BorrowedSplit (length prefix) children ->
+      pending_region_ids (region_of (runtime_identity before)) terminal =
+        terminal_originals package ->
+      map (region_of (runtime_identity before)) children =
+        child_original_regions package ->
+      accept_split Nat.eq_dec
+        (region_of (runtime_identity before) parent) package = true ->
+      Forall (fun occurrence =>
+        arena_valid (runtime_arena before) (occurrence_residual occurrence) /\
+        Forall (reconstruction_valid (runtime_reconstruction before)
+          (occurrence_path occurrence))
+          (region_of (runtime_identity before) occurrence)) terminal ->
+      session_abstraction region_of universe authoritative evidence_sound
+        arena_valid cache_valid reconstruction_valid
+        (publish_split before prefix terminal children suffix) ghost.
+  Proof.
+    intros region_of universe authoritative evidence_sound arena_valid
+      cache_valid reconstruction_valid before ghost prefix parent suffix
+      terminal children package Habs Hpending Hprivate Hterminal Hchildren
+      Haccept Hterminal_valid.
+    unfold session_abstraction in Habs.
+    destruct Habs as
+      [Howned [Hborrow [Hcapacity [Hscope [Hhandles [Hcache
+      [Hselected [Hhistory [Hretained [Hexclusions [Hwork [Hbytes
+      [Hemission Hcompleted]]]]]]]]]]]]].
+    assert (runtime_status before <> Completed) as Hnot_completed.
+    { intro Hcompleted_status.
+      apply Hcompleted in Hcompleted_status as [Hempty _].
+      rewrite Hpending in Hempty.
+      apply app_eq_nil in Hempty as [_ Htail].
+      discriminate Htail. }
+    unfold session_abstraction; simpl.
+    split.
+    - eapply split_publication_preserves_exact_ownership; eauto.
+    - split; [exact I |].
+      split; [exact Hcapacity |].
+      split; [exact Hscope |].
+      split.
+      + rewrite Hprivate in Hhandles; simpl in Hhandles.
+        apply Forall_app in Hhandles as [Hpending_valid Hchildren_valid].
+        rewrite Hpending in Hpending_valid.
+        apply Forall_app in Hpending_valid as
+          [Hprefix_valid Hparent_suffix_valid].
+        inversion Hparent_suffix_valid as
+          [| first rest Hparent_valid Hsuffix_valid]; subst.
+        rewrite app_nil_r.
+        apply Forall_app; split; [exact Hprefix_valid |].
+        apply Forall_app; split; [exact Hterminal_valid |].
+        apply Forall_app; split; [exact Hchildren_valid |].
+        exact Hsuffix_valid.
+      + split; [exact Hcache |].
+        split; [exact Hselected |].
+        split; [exact Hhistory |].
+        split; [exact Hretained |].
+        split; [exact Hexclusions |].
+        split; [exact Hwork |].
+        split; [exact Hbytes |].
+        split; [exact Hemission |].
+        intro Hstatus; exfalso.
+        now apply Hnot_completed.
+  Qed.
 End SplitPublication.
 
 (** Both child handles can name the same physical node. Their paths remain
@@ -204,6 +279,29 @@ Proof.
     (package := {| terminal_originals := [];
                    child_original_regions := [[0]; [1]] |});
     reflexivity.
+Qed.
+
+(** Coverage validation says which originals a handle owns. It does not
+    establish that a newly built handle refers to a valid arena residual. *)
+Definition validity_control_parent : occurrence nat nat nat :=
+  {| occurrence_node := 7; occurrence_residual := 0;
+     occurrence_path := 0; occurrence_cursor := 0 |}.
+
+Definition validity_control_terminal : occurrence nat nat nat :=
+  {| occurrence_node := 7; occurrence_residual := 1;
+     occurrence_path := 0; occurrence_cursor := 0 |}.
+
+Example accepted_split_does_not_certify_new_terminal_validity :
+  accept_split Nat.eq_dec [0]
+    {| terminal_originals := [0]; child_original_regions := [] |} = true /\
+  Forall (fun handle => occurrence_residual handle = 0)
+    [validity_control_parent] /\
+  ~ Forall (fun handle => occurrence_residual handle = 0)
+    [validity_control_terminal].
+Proof.
+  repeat split; try reflexivity.
+  - now constructor; [reflexivity | constructor].
+  - intro Hvalid; inversion Hvalid; discriminate.
 Qed.
 
 (** The existing partition checker rejects each malformed package. These

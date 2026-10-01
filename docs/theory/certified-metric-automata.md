@@ -537,14 +537,17 @@ phase. Given a live parent at the specified pending position, the very child
 handles staged in that phase, and an accepted snapshot-relative terminal and
 child package, one atomic publication replaces the parent with those handles
 and clears the private phase. The proof preserves the exact multiplicity of
-original ownership, the exclusion record, and the captured session identity.
+original ownership, the exclusion record, the captured session identity, and
+the full session abstraction. Staged children already satisfy the old
+abstraction's arena and reconstruction conditions; newly built terminal
+handles must satisfy those conditions explicitly. An accepted region package
+alone cannot establish arena validity, as a checked counterexample shows.
 A finite control publishes two distinct paths through one shared physical
 node; three rejected packages omit a terminal, omit a collision member, or
 duplicate an original. The proof assumes the region interpretation and
-terminal enumeration are accurate for the captured snapshot. It does not
-establish the other whole-session validity fields after publication, match a
-Rust split transition, or add a production checker. Those require the
-transition invariant and source refinement obligations below.
+terminal enumeration are accurate for the captured snapshot. Matching a Rust
+split transition and checking the new terminal handles remain source
+refinement obligations below.
 
 [CertifiedSessionVerification.v](../verification/temporal_automata/theories/CertifiedSessionVerification.v)
 models one candidate verification after the candidate takes exclusive private
