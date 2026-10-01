@@ -48,6 +48,15 @@ $`\Gamma=(D,q,\theta,\mathcal N,\sigma,\tau,\prec,\mathcal W,\mathcal B)`$:
 - $`\mathcal W`$ specifies witness observations; and
 - $`\mathcal B`$ specifies work, storage, and paging limits and their units.
 
+A **search snapshot** is the immutable logical view of indexed data captured
+when an operation begins. It fixes the meanings of original identities,
+buckets, summaries, payloads, and any cache observations used by that
+operation. The revision $`\sigma`$ identifies the view; a revision number by
+itself does not prove that subsequent reads use the same data. Publishing a
+newer index view must not retarget an active operation's reads. A snapshot need
+not be a full physical copy or an on-disk serialized snapshot: shared storage
+is valid when every retained referent continues to denote the captured view.
+
 The distance cutoff, cumulative resource ceilings, and a per-call page budget
 are different quantities. Changing one does not authorize changing the others.
 
@@ -379,6 +388,13 @@ For adaptive layout choice, hysteresis can reduce switching but does not
 replace this rank or an equivalent termination proof.
 
 ## 4. A session invariant that covers the whole search
+
+One **search session** is a validated range or kNN operation from admission
+through a complete or incomplete outcome. It may pause at a page boundary and
+resume from retained work. Its runtime state stores the captured search
+snapshot and pending work; proof-only ghost state records facts needed to show
+that no original was lost, duplicated, or excluded without evidence. A pause
+retains the same logical operation and snapshot.
 
 Represent a session by $`(\Gamma,P,V,X,E,A,C,H,L,K)`$:
 
