@@ -15,7 +15,7 @@ use crate::distance::{
 #[cfg(test)]
 use crate::distance::{standard_distance, transposition_distance};
 use crate::transducer::Algorithm;
-use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary, SubstringMatch};
+use libdictenstein::substring::{SubstringDictionary, SubstringMatch};
 use libdictenstein::Dictionary;
 use rustc_hash::FxHashSet;
 
@@ -88,8 +88,6 @@ impl WallBreakerResult {
 pub struct WallBreakerQuery<'a, D>
 where
     D: Dictionary + SubstringDictionary,
-    D::Node: BidirectionalDictionaryNode,
-    <D::Node as crate::dictionary::DictionaryNode>::Unit: Into<u32>,
 {
     /// Root retaining the exact dictionary revision captured at query start.
     snapshot_root: D::Node,
@@ -136,8 +134,6 @@ where
 impl<'a, D> WallBreakerQuery<'a, D>
 where
     D: Dictionary + SubstringDictionary,
-    D::Node: BidirectionalDictionaryNode,
-    <D::Node as crate::dictionary::DictionaryNode>::Unit: Into<u32>,
 {
     /// Create a new WallBreaker query.
     ///
@@ -239,19 +235,14 @@ where
     }
 }
 
-impl<'a, D> std::iter::FusedIterator for WallBreakerQuery<'a, D>
-where
-    D: Dictionary + SubstringDictionary,
-    D::Node: BidirectionalDictionaryNode,
-    <D::Node as crate::dictionary::DictionaryNode>::Unit: Into<u32>,
+impl<'a, D> std::iter::FusedIterator for WallBreakerQuery<'a, D> where
+    D: Dictionary + SubstringDictionary
 {
 }
 
 impl<'a, D> Iterator for WallBreakerQuery<'a, D>
 where
     D: Dictionary + SubstringDictionary,
-    D::Node: BidirectionalDictionaryNode,
-    <D::Node as crate::dictionary::DictionaryNode>::Unit: Into<u32>,
 {
     type Item = WallBreakerResult;
 

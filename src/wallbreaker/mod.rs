@@ -84,7 +84,7 @@ pub use pattern_splitter::{PatternPiece, PatternSplitter};
 pub use query_iterator::{WallBreakerQuery, WallBreakerResult};
 
 use crate::transducer::Algorithm;
-use libdictenstein::substring::{BidirectionalDictionaryNode, SubstringDictionary};
+use libdictenstein::substring::SubstringDictionary;
 use libdictenstein::Dictionary;
 
 /// WallBreaker approximate string matcher.
@@ -128,8 +128,6 @@ use libdictenstein::Dictionary;
 pub struct WallBreaker<'a, D>
 where
     D: Dictionary + SubstringDictionary,
-    D::Node: BidirectionalDictionaryNode,
-    <D::Node as crate::dictionary::DictionaryNode>::Unit: Into<u32>,
 {
     dictionary: &'a D,
     max_distance: usize,
@@ -140,8 +138,6 @@ where
 impl<'a, D> WallBreaker<'a, D>
 where
     D: Dictionary + SubstringDictionary,
-    D::Node: BidirectionalDictionaryNode,
-    <D::Node as crate::dictionary::DictionaryNode>::Unit: Into<u32>,
 {
     /// Create a new WallBreaker with the given dictionary and max distance.
     ///
@@ -266,8 +262,90 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "persistent-artrie")]
+    use libdictenstein::persistent_artrie::scdawg::{PersistentScdawg, PersistentScdawgChar};
+    #[cfg(feature = "persistent-artrie")]
+    use libdictenstein::persistent_artrie::suffix_tree::{
+        PersistentSuffixTree, PersistentSuffixTreeChar,
+    };
     use libdictenstein::scdawg::Scdawg;
     use libdictenstein::scdawg::ScdawgChar;
+
+    fn assert_short_scan_matches_distance_oracle<D>(dictionary: &D)
+    where
+        D: Dictionary + SubstringDictionary,
+    {
+        let terms: Vec<_> = dictionary
+            .find_exact_substring("")
+            .into_iter()
+            .map(|matched| matched.term)
+            .collect();
+        for query in ["", "a", "é", "猫"] {
+            for algorithm in [
+                Algorithm::Standard,
+                Algorithm::Transposition,
+                Algorithm::MergeAndSplit,
+                Algorithm::DamerauLevenshtein,
+            ] {
+                for bound in 1..=2 {
+                    let mut observed: Vec<_> =
+                        WallBreaker::with_algorithm(dictionary, bound, algorithm)
+                            .query(query)
+                            .map(|result| (result.term, result.distance))
+                            .collect();
+                    observed.sort();
+                    let mut expected: Vec<_> = terms
+                        .iter()
+                        .filter_map(|term| {
+                            let distance = match algorithm {
+                                Algorithm::Standard => {
+                                    crate::distance::standard_distance(query, term)
+                                }
+                                Algorithm::Transposition => {
+                                    crate::distance::transposition_distance(query, term)
+                                }
+                                Algorithm::MergeAndSplit => {
+                                    crate::distance::merge_and_split_distance(
+                                        query,
+                                        term,
+                                        &crate::distance::create_memo_cache(),
+                                    )
+                                }
+                                Algorithm::DamerauLevenshtein => {
+                                    crate::distance::damerau_levenshtein_distance(query, term)
+                                }
+                            };
+                            (distance <= bound).then(|| (term.as_str().to_owned(), distance))
+                        })
+                        .collect();
+                    expected.sort();
+                    assert_eq!(
+                        observed, expected,
+                        "query={query:?}, bound={bound}, algorithm={algorithm:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn in_memory_byte_and_unicode_short_scans_match_all_distance_oracles() {
+        let terms = ["a", "é", "ab", "ba", "猫"];
+        assert_short_scan_matches_distance_oracle(&Scdawg::<()>::from_terms(terms));
+        assert_short_scan_matches_distance_oracle(&ScdawgChar::<()>::from_terms(terms));
+    }
+
+    #[cfg(feature = "persistent-artrie")]
+    #[test]
+    fn persistent_byte_and_unicode_short_scans_match_all_distance_oracles() {
+        let terms = ["a", "é", "ab", "ba", "猫"];
+        assert_short_scan_matches_distance_oracle(&PersistentScdawg::<()>::from_terms(terms));
+        assert_short_scan_matches_distance_oracle(&PersistentScdawgChar::<()>::from_terms(terms));
+        assert_short_scan_matches_distance_oracle(&PersistentSuffixTree::<()>::from_texts(terms));
+        assert_short_scan_matches_distance_oracle(&PersistentSuffixTreeChar::<()>::from_texts(
+            terms,
+        ));
+    }
 
     #[test]
     fn test_wallbreaker_basic() {
