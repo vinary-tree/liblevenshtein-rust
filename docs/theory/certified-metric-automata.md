@@ -1080,6 +1080,34 @@ six and five. Its global lower pair $`(5,1)`$ cannot prune. Its equality-slice
 certificate $`(5,9)`$ can: the earlier tie belongs to a candidate certified
 to cost more than five.
 
+[CertifiedThresholdCoverage.v](../verification/temporal_automata/theories/CertifiedThresholdCoverage.v)
+checks the covering-set argument for finite lists of originals with natural
+costs, lower bounds, and tie keys. An original carries a bucket and a slot;
+`search_candidates` retains each listed original with $`b(x)\le c`$.
+`every_eligible_original_is_searched` proves coverage of every listed original
+whose exact cost is at most the inclusive cutoff, assuming each original's
+bound is sound. The collision control puts two slots in bucket four, with
+exact costs eight and one and lower bounds zero. At cutoff two, keeping only
+the first slot as representative loses the eligible second slot and fails the
+complete-enumeration contract.
+
+The module separately computes the minimum tie in the **exact** equality
+slice $`\{x\in U_Q:d(q,x)=L\}`$. For a nonempty slice, this minimum is attained;
+given the universal region cost floor $`L`$, it denotes a sound
+`RankConditioned L M`. An empty exact slice together with that cost floor
+denotes `RankStrictCost L`; the region itself may still contain originals.
+This construction uses supplied exact scores. A cheaper producer based on
+$`S_Q(L)`$ must establish its coverage and tie floor without assuming access to
+those scores.
+
+The enumeration contract distinguishes `Unknown`, `Empty`, and a known list
+with the same membership as the full supplied list. Membership equivalence
+does not establish multiplicity or unique occurrence keys. Concrete snapshot
+enumeration, unique identity and tie binding, quantizer or other bound
+soundness, and summary-construction cost remain instance obligations. These
+natural-number results alone establish neither a binary64 bound producer nor
+Rust traversal correspondence.
+
 If $`S_Q(L)`$ is empty, every remaining original costs strictly more than
 $`L`$. This is useful even if no larger numeric lower bound is representable.
 An incomplete inspection is not an empty-set certificate.
@@ -1114,12 +1142,34 @@ A conditioned tie floor stays attached to its cost. Both $`(5,9)`$ and
 $`(6,1)`$ are valid lower certificates for candidate $`(6,1)`$. Their
 coordinatewise maximum $`(6,9)`$ is not. The safe lexicographic maximum is
 $`(6,1)`$. Rocq proves safe maximum composition and the counterexample for
-natural ranks. The generic min/max laws of Section 6.0 supply the order facts
-for other lawful carriers; region coverage and scope remain separate premises.
+natural ranks.
 
 Independent **global** cost and tie floors can still be combined
 coordinatewise from their separate universal bounds, as in BF-1.
 The certificate type must distinguish global floors from conditioned floors.
+
+[CertifiedRankRestriction.v](../verification/temporal_automata/theories/CertifiedRankRestriction.v)
+checks restriction and combination for arbitrary lawful cost and tie orders.
+`parent_rank_certificate_restricts_to_scoped_child` requires equal scope
+tokens and inclusion of every child rank in the parent region; it applies to
+all five certificate forms. For combination, each target rank must belong to
+**both** premise regions under the same scope.
+`compatible_rank_facts_combine_by_lexicographic_maximum` then uses a lawful
+rank comparator to select the stronger whole pair.
+
+`independent_global_facts_admit_coordinatewise_maximum` checks the separate
+global rule. Each chosen coordinate must be one of its two certified inputs
+and at least as large as both. Natural-number maxima instantiate these
+requirements: global floors $`(5,1)`$ and $`(6,0)`$ yield global floor
+$`(6,1)`$. The conditioned $`(5,9)`$/$`(6,1)`$ control above demonstrates why
+that rule requires independent universal coordinate bounds.
+
+The scope token is opaque, and the regions are predicates on ranks. Binding
+that token to a revision, query, and numerical authority, proving structural
+region inclusion, and retaining occurrence ownership are separate obligations.
+This module proves no full-heap gate, producer correctness, resource bound,
+or Rust refinement. The finite-union argument above remains a separate
+mathematical proof.
 
 A threshold summary's scope includes the revision, region occurrence, query,
 parameters, arithmetic, observation, and threshold. With fixed per-original
@@ -1271,18 +1321,55 @@ concern ordered identity answers in the declared evidence language. They do
 not establish an execution lower bound, a floating-point instance, or Rust
 correspondence.
 
+#### Checked attainable completions at equality
+
+[EvidenceAttainableCompletion.v](../verification/temporal_automata/theories/EvidenceAttainableCompletion.v)
+constructs an answer-changing completion when an eligible unresolved
+original's lower-endpoint rank precedes the worst member of a full verified
+best-k selection. Its `interval_evidence_admissible` premise requires valid
+identity structure, coherent recorded scores, ordered interval endpoints, and
+containment of every recorded score in its interval. Feasibility follows from
+these conditions: the explicit assignment uses a recorded score for each
+verified ID and the lower endpoint for every unresolved ID.
+
+`endpoint_refusal_constructs_answer_changing_model` proves that this
+assignment satisfies the evidence, attains the refusing original's lower
+endpoint, and invalidates the proposed completed selection. The theorem
+retains the full verified best-k and designated-worst premises. Its general
+conclusion refutes the current selection; a replacement selection is exhibited
+separately in the concrete control below. Costs use a lawful `certificate_order`
+and natural original IDs serve as injective tie keys.
+
+At equivalent costs, `equal_cost_refusal_iff_earlier_tie` reduces the strict
+rank comparison exactly to an earlier original ID. The checked controls use
+IDs zero and one, both with intervals $`[5,10]`$, and one verified score five:
+
+| Verified selection | Unresolved lower-endpoint rank | Capacity | Checked conclusion |
+|---|---|---|---|
+| `[1]`, rank $`(5,1)`$ | $`(5,0)`$ | 1 | The constructed completion gives both cost five; `[0]` is an exact best-1 answer and `[1]` fails |
+| `[0]`, rank $`(5,0)`$ | $`(5,1)`$ | 1 | The later tie cannot refuse; `[0]` is safe in every feasible completion |
+| `[0]`, rank $`(5,0)`$ | $`(5,1)`$ | 2 | The vacant slot prevents completion despite the later tie |
+
+`underfull_vacancy_constructs_answer_changing_model` proves the last principle
+generally: an eligible unresolved original refutes completion of an underfull
+best-verified selection, without a rank-improvement condition. The predicates
+are mathematical; a Boolean refusal test, heap producer, runtime evidence
+validator, and snapshot binding still need correspondence proofs.
+
 BF-4 characterizes which completed selections the available evidence permits.
-It does not show that BF-2 decides every safe case or establish minimum runtime.
-Under the same consistency and full-selection premises, completeness of a
-proposed stopping test requires an **attainable completion** lemma: whenever
-the test refuses to stop, a lawful assignment consistent with all evidence
-has an unresolved candidate that changes the selected result.
-Independent closed intervals with attainable endpoints permit a simple
-construction. Metric triangle constraints, shared recurrence structure, and
-relational group bounds can make an independently chosen assignment
+The attainable-completion theorem supplies the refusal witness for independent
+closed intervals; it does not establish minimum runtime or completeness of
+every BF-2 summary producer. Metric triangle constraints, shared recurrence
+structure, and relational group bounds can make the constructed assignment
 impossible; those evidence languages need their own construction theorem.
 Relational certificates can exclude assignments admitted by independent
 bounds. Faster acquisition of such evidence is a separate cost question.
+
+The [evidence acquisition cost model](../verification/CBC_EVIDENCE_ACQUISITION_COST.md)
+separates semantic stopping, completeness of a test, verification count,
+primitive work, and elapsed latency. It charges summary construction,
+reasoning, queue and cache work, conversion, certificate checking, and retained
+space; a stronger summary that saves verifications can still cost more overall.
 
 ## 7. Quantitative semantics and precise optimality claims
 
@@ -1462,7 +1549,12 @@ eligible-set coverage and pruning, BF-3 maximum composition, QO-1 telescoping,
 and QO-2 finite selection. Its rank arithmetic uses natural costs and tie keys.
 `CertifiedGenericRankOrder.v` and `CertifiedRankCertificateTypes.v` extend the
 checked order and certificate interpretation to arbitrary lawful carriers,
-with an exact rational strict-cut instance. `CertificateChecking.v` checks
+with an exact rational strict-cut instance. `CertifiedRankRestriction.v`
+checks scoped subset restriction, whole-pair maximum, and the independent
+global coordinatewise rule. `CertifiedThresholdCoverage.v` checks finite
+per-original threshold coverage and exact equality-slice floors or strict
+cuts, conditional on the supplied enumeration and natural scores.
+`CertificateChecking.v` checks
 source/target and request-scope binding for every accepted step of its finite
 exact-natural rule language. These extensions retain their stated premises
 and do not transfer the natural session proofs to arbitrary runtime scores.
@@ -1471,6 +1563,9 @@ exact observations, and independent closed intervals, including consistency,
 underfull exhaustion, and inhabited positive and negative controls.
 `EvidenceIndistinguishability.v` constructs incompatible inhabited answers
 and proves mandatory deferral for sound deterministic evidence-only decisions.
+`EvidenceAttainableCompletion.v` constructs a feasible completion from
+admissible interval evidence that invalidates a full selection on a
+lower-endpoint refusal, or an underfull selection with an unresolved identity.
 `CertifiedCertificateComposition.v` checks ordered finite-program score and
 completed-trace composition under accepted local certificates.
 `CertifiedGeometricEnclosure.v` checks NC-1's exact-rational center/radius

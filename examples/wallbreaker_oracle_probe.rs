@@ -14,8 +14,10 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Instant;
 
 use libdictenstein::scdawg::ScdawgChar;
+use libdictenstein::{Dictionary, SubstringDictionary};
 use liblevenshtein::distance::standard_distance_bounded;
 use liblevenshtein::wallbreaker::WallBreaker;
+use rustc_hash::FxHashSet;
 
 struct CountedSystem;
 
@@ -88,10 +90,36 @@ fn exhaustive(terms: &[String], query: &str, bound: usize) -> BTreeMap<String, u
         .collect()
 }
 
+/// Execute the pre-streaming empty-substring fallback as an in-binary control.
+///
+/// The eager snapshot call clones every complete term before bounded distance
+/// verification. Each accepted member is then copied into dedup storage just
+/// as the original WallBreaker iterator did; the callback owns its result.
+fn visit_eager_fallback(
+    dictionary: &ScdawgChar<()>,
+    query: &str,
+    bound: usize,
+    mut visit: impl FnMut(String, usize),
+) {
+    let root = dictionary.root();
+    let matches = ScdawgChar::find_exact_substring_in_snapshot(&root, "");
+    let mut seen = FxHashSet::<Box<str>>::default();
+    for matched in matches {
+        let term = matched.term;
+        if seen.contains(term.as_str()) {
+            continue;
+        }
+        if let Some(distance) = standard_distance_bounded(query, &term, bound) {
+            seen.insert(term.as_str().to_owned().into_boxed_str());
+            visit(term, distance);
+        }
+    }
+}
+
 fn main() {
     let mut arguments = std::env::args().skip(1);
-    let case = arguments.next().expect("case: selective|short");
-    let arm = arguments.next().expect("arm: wallbreaker|exhaustive");
+    let case = arguments.next().expect("case: selective|short|empty");
+    let arm = arguments.next().expect("arm: wallbreaker|exhaustive|eager");
     let seed: u64 = arguments.next().expect("seed").parse().expect("u64 seed");
     let iterations: u64 = arguments
         .next()
@@ -99,7 +127,10 @@ fn main() {
         .parse()
         .expect("positive iteration count");
     assert!(iterations > 0 && arguments.next().is_none());
-    assert!(matches!(arm.as_str(), "wallbreaker" | "exhaustive"));
+    assert!(matches!(
+        arm.as_str(),
+        "wallbreaker" | "exhaustive" | "eager"
+    ));
 
     let terms = corpus(seed);
     let dictionary = ScdawgChar::<()>::from_terms(terms.iter().map(String::as_str));
@@ -111,6 +142,7 @@ fn main() {
             (chars.into_iter().collect::<String>(), 2)
         }
         "short" => ("é".to_owned(), 2),
+        "empty" => (String::new(), 2),
         _ => panic!("unknown case"),
     };
     let matcher = WallBreaker::new(&dictionary, bound);
@@ -120,10 +152,29 @@ fn main() {
         .map(|result| (result.term, result.distance))
         .collect();
     assert_eq!(observed, expected, "candidate and oracle results differ");
+    if case != "selective" {
+        let mut eager_order = Vec::new();
+        visit_eager_fallback(&dictionary, &query, bound, |term, distance| {
+            eager_order.push((term, distance));
+        });
+        let streaming_order: Vec<_> = matcher
+            .query(&query)
+            .map(|result| (result.term, result.distance))
+            .collect();
+        assert_eq!(
+            streaming_order, eager_order,
+            "streaming changed result order"
+        );
+    }
 
     let run = || -> usize {
         match arm.as_str() {
             "wallbreaker" => matcher.query(black_box(&query)).count(),
+            "eager" => {
+                let mut count = 0;
+                visit_eager_fallback(&dictionary, black_box(&query), bound, |_, _| count += 1);
+                count
+            }
             "exhaustive" => terms
                 .iter()
                 .filter(|term| {
