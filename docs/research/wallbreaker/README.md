@@ -140,6 +140,40 @@ revisions. The benchmark driver and analysis are
 [`bench-wallbreaker-short-streaming.sh`](../../../scripts/bench-wallbreaker-short-streaming.sh)
 and [`analyze-wallbreaker-short-streaming.R`](../../../scripts/analyze-wallbreaker-short-streaming.R).
 
+### Integrated-source confirmation and timing-window sensitivity
+
+The subsequent integrated revision `f6c9561e` adds the conservative-splitter
+fallback and the FFI query-time limit correction. Its first matched-seed
+experiment, pgmcp `#389`, retained the same 32 seeds and 192 processes but
+timed only 500 operations per process. Short-query latency and allocation
+again improved, **but the selective no-regression gate failed**: the selective
+mean ratio was 1.0395 and its 90% whole-block interval extended to 1.0904,
+above the predeclared 1.05 ceiling. The complete failed record remains in
+pgmcp artifacts `#968` and `#969`; no outlying seed was removed. This result
+is evidence of timing-window sensitivity, not proof that scheduler noise
+alone caused the failure.
+
+Before further measurement, pgmcp experiment `#391` froze a longer paired
+protocol: 50,000 timed operations per process, the same 32 seeds and 16
+ABBA/BAAB blocks, CPU-2 pinning, exact ordered-result comparison in all 192
+processes, and no sample exclusions. The control was the unchanged
+`0367f6e2` binary; the treatment was the clean `f6c9561e` binary. The raw
+records, binary/source hashes, protocol metadata, and analysis are pgmcp
+artifacts `#971` and `#972`, with accepted primary decision `#409`.
+
+| Workload | Treatment/control mean latency | 90% whole-block interval | Gross allocated bytes/query |
+| --- | ---: | ---: | ---: |
+| Short fallback | 0.0890 | 0.0875–0.0907 | 314 vs 54,833.5 |
+| Selective Unicode | 1.0144 | 1.0043–1.0238 | 825.5 vs 825.5 |
+| Empty-query fallback | 0.0974 | 0.0951–0.0993 | 248 vs 54,719.5 |
+
+All frozen `#391` gates passed: the selective interval's upper bound is below
+1.05; short and empty means are below 0.15 with upper bounds below 0.18;
+short gross allocation is under 1% of control. The longer timing window
+supports no material selective regression on this fixture while leaving the
+failed short-window result visible. Neither experiment establishes a
+distribution-free guarantee for other inputs or host conditions.
+
 ## Verification and historical notes
 
 Native differential tests compare all four distance families against
