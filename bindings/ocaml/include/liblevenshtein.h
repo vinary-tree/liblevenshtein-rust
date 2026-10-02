@@ -690,8 +690,10 @@ typedef struct LlevWallBreakerTerm {
  * maxima, respectively: 4096 terms, 1 MiB total term bytes, 256 scalars per
  * term/query, 16 MiB candidate-clone bound, 4096 results, 1 MiB result bytes.
  * These are not process-RSS limits. Distance has a separate hard maximum 8.
- * Construction preflights all limits before building the owned SCDAWG; a
- * conservative candidate bound may reject an otherwise feasible query. */
+ * Construction preflights term, UTF-8, scalar and distance limits before
+ * building the owned SCDAWG. Selective queries enforce the conservative
+ * candidate-clone bound before materializing substring occurrences; complete-
+ * term streaming queries do not allocate those candidates. */
 typedef struct LlevWallBreakerLimits {
     size_t max_terms;
     size_t max_total_term_bytes;
@@ -727,16 +729,18 @@ typedef struct LlevPatternPiece {
  * values are LLEV_ALGORITHM_*. On error *out is NULL, except if out is NULL.
  * Invalid UTF-8 reports INVALID_UTF8; null required pointers NULL_POINTER;
  * malformed non-null inputs INVALID_ARGUMENT;
- * exceeded term/distance/candidate limits LIMIT_EXCEEDED. */
+ * exceeded term/distance limits LIMIT_EXCEEDED. */
 LLEV_API LlevStatus llev_wallbreaker_new_utf8(
     const LlevWallBreakerTerm* terms, size_t term_count,
     LlevWallBreakerLimits limits, uint32_t algorithm, size_t max_distance,
     LlevWallBreaker** out);
 /** Free a matcher; any completed result cursor remains independent. */
 LLEV_API void llev_wallbreaker_free(LlevWallBreaker* matcher);
-/** Eagerly verify all candidates in one immutable matcher revision. A limit
- * failure publishes no cursor or partial result; *out is NULL. Results are
- * first-seen SCDAWG candidate order, deduplicated by complete term. */
+/** Eagerly verify all results in one immutable matcher revision. Short or
+ * unrestricted-Damerau queries borrow complete terms one at a time; other
+ * queries materialize bounded substring candidates. A limit failure publishes
+ * no cursor or partial result; *out is NULL. Results preserve first-seen
+ * candidate order and are deduplicated by complete term. */
 LLEV_API LlevStatus llev_wallbreaker_query_utf8(
     const LlevWallBreaker* matcher, const char* query, size_t query_len,
     LlevWallBreakerCursor** out);

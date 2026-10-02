@@ -21,31 +21,44 @@ end
 
 `WallBreakerMatcher` copies all borrowed UTF-8 input terms during construction
 and owns one immutable SCDAWG. Duplicate terms have set semantics. A query
-captures that immutable revision, eagerly obtains native substring candidates,
-verifies the **complete original dictionary term** with the selected edit
-algorithm, deduplicates by term, and materializes all accepted results before
-publishing a cursor. Cursor iteration only pages those already verified
-results; it is not a lazy search. Result order is the SCDAWG's deterministic
-first-seen candidate order, not lexical or distance order. A completed cursor
-outlives its matcher. `cancel!` stops future advances; it does not invalidate
-an already published C batch lease. Freeing a cursor invalidates its lease.
-Julia's `next_batch!` copies each result before releasing the lease.
+captures that immutable revision, verifies the **complete original dictionary
+term** with the selected edit algorithm, deduplicates by term, and materializes
+all accepted results before publishing a cursor. Short, empty, and unrestricted
+Damerau queries borrow complete terms one at a time without cloning every
+substring candidate. Queries with a provably surviving nonempty piece still
+materialize one piece's substring candidates at a time. Cursor iteration only
+pages already verified results; it is not a lazy search. Result order is the
+SCDAWG's deterministic first-seen candidate order, not lexical or distance
+order. A completed cursor outlives its matcher. `cancel!` stops future
+advances; it does not invalidate an already published C batch lease. Freeing
+a cursor invalidates its lease. Julia's `next_batch!` copies each result before
+releasing the lease.
 
 All seven `LlevWallBreakerLimits` fields must be positive. Hard implementation
 ceilings are 4096 input descriptors, 1 MiB aggregate input UTF-8 bytes, 256
 Unicode scalars per term and per query, 16 MiB conservative candidate-clone
 bound, 4096 results, and 1 MiB aggregate result UTF-8 bytes. The maximum edit
-distance is 8. Callers may choose tighter limits; violating them returns
-`LIMIT_EXCEEDED`, with no matcher/cursor or partial result published. The
-candidate preflight sums, for each input term of scalar length $`n`$ and UTF-8
-byte length $`b`$, $`(n+1)\bigl(b + \operatorname{sizeof}
-(\mathrm{SubstringMatch}) + \operatorname{sizeof}((\mathrm{String},\mathrm{usize}))\bigr)`$.
+distance is 8. A configured ceiling of zero or above its hard maximum is
+`INVALID_ARGUMENT`. Input or query data exceeding a valid configured ceiling
+returns `LIMIT_EXCEEDED`, with no matcher/cursor or partial result published.
+For selective queries, the candidate preflight sums the following estimate
+for each input term with Unicode-scalar length $`n`$ and UTF-8 byte length
+$`b`$:
+
+```math
+(n+1)\left(b+\operatorname{sizeof}(\mathrm{SubstringMatch})+\operatorname{sizeof}((\mathrm{String},\mathrm{usize}))\right).
+```
+
 The $`n+1`$ factor bounds possible substring start positions (including an
 empty pattern); native SCDAWG exact-substring results clone one full term per
-occurrence. This is deliberately conservative: a feasible query may be
-rejected. It bounds logical candidate storage, **not** process RSS or the
-internal SCDAWG graph. The fixed corpus and scalar maxima also bound all
-native iteration and distance work, but no strict work-unit budget is claimed.
+occurrence. Construction validates the configured ceiling, but enforces the
+computed estimate only when a query actually takes the selective path. A
+complete-term streaming query is not rejected by this irrelevant estimate.
+The estimate is deliberately conservative for selective queries: a feasible
+query may be rejected. It bounds logical candidate storage, **not** process
+RSS or the internal SCDAWG graph. The fixed corpus and scalar maxima also
+bound all native iteration and distance work, but no strict work-unit budget
+is claimed.
 
 The C splitter has a two-phase contract: with insufficient capacity, it writes
 the required descriptor count and returns `LIMIT_EXCEEDED` without writing

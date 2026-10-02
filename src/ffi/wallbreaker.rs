@@ -64,7 +64,8 @@ pub struct LlevWallBreakerLimits {
     pub max_term_scalars: usize,
     /// Maximum Unicode scalar count of a query.
     pub max_query_scalars: usize,
-    /// Conservative upper bound on substring-candidate clone bytes.
+    /// Conservative upper bound on selective substring-candidate clone bytes.
+    /// Complete-term streaming queries do not materialize those candidates.
     pub max_candidate_clone_bytes: usize,
     /// Maximum complete verified query results.
     pub max_results: usize,
@@ -229,9 +230,6 @@ pub unsafe extern "C" fn llev_wallbreaker_new_utf8(
             candidate_clone_bound = candidate_clone_bound
                 .checked_add(bound)
                 .ok_or_else(|| limit("candidate bound overflow"))?;
-            if candidate_clone_bound > limits.max_candidate_clone_bytes {
-                return Err(limit("WallBreaker candidate clone bound exceeds limit"));
-            }
             owned.push(term.to_owned());
         }
         let matcher = LlevWallBreaker {
@@ -289,9 +287,6 @@ pub unsafe extern "C" fn llev_wallbreaker_query_utf8(
         if query.chars().count() > matcher.limits.max_query_scalars {
             return Err(limit("WallBreaker query scalar count exceeds limit"));
         }
-        if matcher.candidate_clone_bound > matcher.limits.max_candidate_clone_bytes {
-            return Err(limit("WallBreaker candidate bound exceeds limit"));
-        }
         let mut results = Vec::new();
         let mut result_bytes = 0usize;
         let search = WallBreaker::with_algorithm(
@@ -299,7 +294,13 @@ pub unsafe extern "C" fn llev_wallbreaker_query_utf8(
             matcher.max_distance,
             matcher.algorithm,
         );
-        for result in search.query(query) {
+        let candidates = search.query(query);
+        if !candidates.uses_complete_term_scan()
+            && matcher.candidate_clone_bound > matcher.limits.max_candidate_clone_bytes
+        {
+            return Err(limit("WallBreaker candidate bound exceeds limit"));
+        }
+        for result in candidates {
             if results.len() >= matcher.limits.max_results {
                 return Err(limit("WallBreaker result count exceeds limit"));
             }
@@ -632,17 +633,58 @@ mod tests {
                 LlevStatus::InvalidUtf8
             );
             assert!(output.is_null());
-            let terms = [LlevWallBreakerTerm {
-                data: "abcdefgh".as_ptr().cast(),
-                byte_len: 8,
-            }];
+            let terms = [
+                LlevWallBreakerTerm {
+                    data: "abcdefgh".as_ptr().cast(),
+                    byte_len: 8,
+                },
+                LlevWallBreakerTerm {
+                    data: "a".as_ptr().cast(),
+                    byte_len: 1,
+                },
+            ];
             let mut small = limits();
             small.max_candidate_clone_bytes = 100;
             assert_eq!(
-                llev_wallbreaker_new_utf8(terms.as_ptr(), 1, small, 0, 1, &mut output),
-                LlevStatus::LimitExceeded
+                llev_wallbreaker_new_utf8(terms.as_ptr(), 2, small, 0, 1, &mut output),
+                LlevStatus::Ok
             );
-            assert!(output.is_null());
+            let mut bounded_cursor = ptr::null_mut();
+            assert_eq!(
+                llev_wallbreaker_query_utf8(output, "a".as_ptr().cast(), 1, &mut bounded_cursor),
+                LlevStatus::Ok,
+                "short queries stream complete terms without a candidate-clone set"
+            );
+            let mut bounded_batch = LlevWallBreakerBatchView::default();
+            assert_eq!(
+                llev_wallbreaker_cursor_next_batch(bounded_cursor, 2, 16, &mut bounded_batch),
+                LlevStatus::Ok
+            );
+            assert_eq!(bounded_batch.len, 1);
+            let only = &*bounded_batch.results;
+            assert_eq!(only.distance, 0);
+            assert_eq!(
+                std::slice::from_raw_parts(only.term_data, only.byte_len),
+                b"a"
+            );
+            assert_eq!(
+                llev_wallbreaker_cursor_release_batch(bounded_cursor, bounded_batch.generation),
+                LlevStatus::Ok
+            );
+            llev_wallbreaker_cursor_free(bounded_cursor);
+            bounded_cursor = ptr::null_mut();
+            assert_eq!(
+                llev_wallbreaker_query_utf8(
+                    output,
+                    "abcdefgh".as_ptr().cast(),
+                    8,
+                    &mut bounded_cursor,
+                ),
+                LlevStatus::LimitExceeded,
+                "selective queries still enforce the candidate-clone budget"
+            );
+            assert!(bounded_cursor.is_null());
+            llev_wallbreaker_free(output);
             let first_matcher = matcher(&["a", "b"], limits());
             let mut cursor = ptr::null_mut();
             assert_eq!(
