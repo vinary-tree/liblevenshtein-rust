@@ -498,6 +498,21 @@ mod tests {
     }
 
     #[test]
+    fn undersized_splitter_bound_falls_back_to_exact_complete_term_scan() {
+        let dictionary = ScdawgChar::<()>::from_terms(["abc", "xyz"]);
+        let splitter = PatternSplitter::new(0, Algorithm::Standard);
+
+        assert_eq!(
+            WallBreakerQuery::new(&dictionary, "abc", 3, &splitter).collect::<Vec<_>>(),
+            vec![
+                WallBreakerResult::new("abc".to_owned(), 0),
+                WallBreakerResult::new("xyz".to_owned(), 3),
+            ],
+            "one exact piece at bound zero cannot filter a bound-three query"
+        );
+    }
+
+    #[test]
     fn seeded_long_unicode_queries_match_randomized_distance_oracles() {
         let alphabet = ['a', 'b', 'é', '猫'];
         let mut seed = 0x4d65_7267_6544_6177_u64;

@@ -141,8 +141,10 @@ where
     ///
     /// * `dictionary` - The dictionary to search
     /// * `query` - The query string
-    /// * `max_distance` - Maximum edit distance
-    /// * `splitter` - Pattern splitter to use (contains algorithm info)
+    /// * `max_distance` - Maximum edit distance used to accept results
+    /// * `splitter` - Pattern splitter to use (contains algorithm info). When
+    ///   its bound is smaller than `max_distance`, the query scans all terms:
+    ///   its pieces cannot guarantee completeness at the larger bound.
     pub fn new(
         dictionary: &'a D,
         query: &str,
@@ -156,6 +158,7 @@ where
         // piece-count proof here, so it also uses the exact fallback.
         let query_len = query.chars().count();
         let scan_all = query_len < splitter.num_pieces()
+            || splitter.max_distance() < max_distance
             || splitter.algorithm() == Algorithm::DamerauLevenshtein;
         let pieces = if scan_all {
             Vec::new()
