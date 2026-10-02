@@ -103,11 +103,20 @@ where
     /// Maximum edit distance.
     max_distance: usize,
 
+    /// Number of Unicode scalars in the query for the exact length bound.
+    query_len: usize,
+
     /// The edit distance algorithm to use for verification.
     algorithm: Algorithm,
 
     /// Pattern pieces from splitting.
     pieces: Vec<PatternPiece>,
+
+    /// Whether no nonempty piece is guaranteed to survive an allowed edit.
+    scan_all: bool,
+
+    /// Insertion-order position in the captured complete-term snapshot.
+    scan_cursor: usize,
 
     /// Current piece index being processed.
     current_piece_idx: usize,
@@ -149,10 +158,11 @@ where
         // empty substring is present in every term and gives a finite full
         // scan over the same captured revision. Full Damerau has no matching
         // piece-count proof here, so it also uses the exact fallback.
-        let scan_all = query.chars().count() < splitter.num_pieces()
+        let query_len = query.chars().count();
+        let scan_all = query_len < splitter.num_pieces()
             || splitter.algorithm() == Algorithm::DamerauLevenshtein;
         let pieces = if scan_all {
-            vec![PatternPiece::new(String::new(), 0, 0, 0)]
+            Vec::new()
         } else {
             splitter.split(query)
         };
@@ -163,8 +173,11 @@ where
             _dictionary: PhantomData,
             query: query.to_string(),
             max_distance,
+            query_len,
             algorithm,
             pieces,
+            scan_all,
+            scan_cursor: 0,
             current_piece_idx: 0,
             current_matches: Vec::new().into_iter(),
             seen_terms: SeenTerms::default(),
@@ -179,6 +192,26 @@ where
 
     /// Verify one candidate at a time from the current or next pattern piece.
     fn next_verified(&mut self) -> Option<WallBreakerResult> {
+        if self.scan_all {
+            // A complete-term cursor borrows one candidate from the captured
+            // revision at a time. Reject by length and distance before the
+            // accepted result is copied into owned output and dedup storage.
+            while let Some(term) =
+                D::next_complete_term_in_snapshot(&self.snapshot_root, &mut self.scan_cursor)
+            {
+                if self.query_len.abs_diff(term.chars().count()) > self.max_distance
+                    || self.seen_terms.contains(term)
+                {
+                    continue;
+                }
+                if let Some(distance) = self.compute_distance_within(&self.query, term) {
+                    self.seen_terms.insert(term.to_owned().into_boxed_str());
+                    return Some(WallBreakerResult::new(term.to_owned(), distance));
+                }
+            }
+            return None;
+        }
+
         loop {
             if let Some(match_info) = self.current_matches.next() {
                 // `SubstringMatch.term` is already the complete member.

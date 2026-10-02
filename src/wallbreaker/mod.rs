@@ -23,8 +23,10 @@
 //! The separate [`BidirectionalExtension`](crate::wallbreaker::BidirectionalExtension) helper remains public for native
 //! experimentation, but it is not used for qualified `WallBreakerQuery`
 //! results: reconstructing a complete term from suffix-graph labels can
-//! fabricate nonmembers. Short queries (including empty) use the dictionary's
-//! exact empty-substring enumeration because no nonempty piece is guaranteed.
+//! fabricate nonmembers. Short queries (including empty) borrow complete terms
+//! from one dictionary snapshot through a cursor because no nonempty piece is
+//! guaranteed. The cursor checks length and edit distance before cloning an
+//! accepted result, so it does not allocate a vector of all dictionary terms.
 //!
 //! # Piece Count by Algorithm (Formally Verified)
 //!
@@ -44,8 +46,9 @@
 //! # Performance
 //!
 //! Substring filtering can help when a surviving piece is selective. Short
-//! queries and unrestricted Damerau use an exact full-term scan, however,
-//! and complete-term verification is required in every path. Historical
+//! queries and unrestricted Damerau use an exact, length-pruned full-term
+//! cursor scan, however, and complete-term verification is required in every
+//! path. Historical
 //! speedup projections predate the correctness repair and are not a current
 //! benchmark qualification.
 //!
@@ -93,8 +96,8 @@ use libdictenstein::Dictionary;
 ///
 /// # Algorithm Support
 ///
-/// WallBreaker supports all three Levenshtein algorithm variants with
-/// algorithm-specific piece counts (formally verified in `WallBreakerPigeonhole.v`):
+/// WallBreaker supports three formally verified piece-count strategies plus
+/// unrestricted Damerau–Levenshtein through the exact complete-term scan:
 ///
 /// - **Standard**: `k+1` pieces (default)
 /// - **Transposition**: `2k+1` pieces
@@ -386,6 +389,33 @@ mod tests {
             matcher.query("banana").collect::<Vec<_>>(),
             matcher.query("banana").collect::<Vec<_>>(),
             "traversal order is deterministic"
+        );
+    }
+
+    #[test]
+    fn short_query_streams_complete_terms_in_snapshot_insertion_order() {
+        let dictionary = ScdawgChar::<()>::from_terms(["a", "zzzz", "ab", "c"]);
+        let matcher = WallBreaker::new(&dictionary, 1);
+        let pending = matcher.query("a");
+        dictionary.insert("ax");
+
+        assert_eq!(
+            pending.collect::<Vec<_>>(),
+            vec![
+                WallBreakerResult::new("a".to_owned(), 0),
+                WallBreakerResult::new("ab".to_owned(), 1),
+                WallBreakerResult::new("c".to_owned(), 1),
+            ],
+            "the captured revision must exclude later insertions and preserve order"
+        );
+        assert!(matcher.query("a").any(|result| result.term == "ax"));
+        assert_eq!(
+            matcher.query("").collect::<Vec<_>>(),
+            vec![
+                WallBreakerResult::new("a".to_owned(), 1),
+                WallBreakerResult::new("c".to_owned(), 1)
+            ],
+            "the empty query must use the same length-bounded scan"
         );
     }
 
