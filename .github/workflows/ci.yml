@@ -365,7 +365,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --locked --features python-bindings
-      - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
+      - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi,pathmap-backend
       - run: python -m pip install pytest hypothesis typing-extensions
       - name: Custom-provider and long-lived snapshot tests
         env:
@@ -378,7 +378,18 @@ jobs:
           LIBLEVENSHTEIN_LIBRARY: ${{ github.workspace }}/target/debug/libliblevenshtein.so
           PYTHONPATH: >-
             ${{ github.workspace }}/../libdictenstein/bindings/python/src:${{ github.workspace }}/bindings/python/src:${{ github.workspace }}/../vinary-tree-interop/bindings/python/src
-        run: python -m pytest -q ../libdictenstein/bindings/python/tests
+        run: >-
+          python -m pytest -q ../libdictenstein/bindings/python/tests
+          --ignore=../libdictenstein/bindings/python/tests/test_revision7_gate.py
+      - name: Gate libdictenstein optional backends against revision 7
+        env:
+          LIBDICTENSTEIN_LIBRARY: ${{ runner.temp }}/libdictenstein-revision7-probe.so
+          PYTHONPATH: >-
+            ${{ github.workspace }}/../libdictenstein/bindings/python/src:${{ github.workspace }}/../vinary-tree-interop/bindings/python/src
+        run: |
+          cc -std=c11 -shared -fPIC ../libdictenstein/tests/fixtures/revision7_probe.c \
+            -o "$LIBDICTENSTEIN_LIBRARY"
+          python -m pytest -q ../libdictenstein/bindings/python/tests/test_revision7_gate.py
 
   julia-bindings:
     name: Julia ${{ matrix.julia-version }} fuzzy-search facade
