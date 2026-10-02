@@ -1,148 +1,154 @@
-# WallBreaker Algorithm - Implementation Complete
+# WallBreaker: exact-seed search with full-term verification
 
-## Overview
+WallBreaker searches a dictionary for complete terms within an edit-distance
+bound. It can avoid examining every term when a query has a nonempty substring
+that must survive the allowed edits. The production query path is a
+**seed-and-verify** implementation inspired by [Gerdjikov, Mihov, Mitankin,
+and Schulz's WallBreaker paper](https://doi.org/10.1145/2457317.2457385).
+It does not claim to implement the paper's entire bidirectional extension
+algorithm: the separate `BidirectionalExtension` helper is not used to emit
+`WallBreakerQuery` results.
 
-**WallBreaker** is a similarity search algorithm that overcomes the "wall effect" in traditional left-to-right Levenshtein automata traversal. This algorithm has been **fully implemented** in liblevenshtein-rust using the Full SCDAWG approach.
+Here, a *term* is one complete dictionary member, a *query* is the text to
+match, and the *bound* is the greatest accepted edit distance. A *piece* is a
+contiguous nonempty part of the query. A *snapshot* is the dictionary root
+captured when an iterator is created. SCDAWG means Symmetric Compact Directed
+Acyclic Word Graph; it supplies exact-substring lookup and complete-term
+enumeration.
 
-### The Wall Effect Problem
-
-Traditional approximate string matching starts from the left edge of the pattern and must explore **all prefixes** up to error bound `b` before any filtering occurs. For example, with `max_distance = 16`, the algorithm must visit all dictionary prefixes of length 0-16, even though most lead to dead ends.
-
-### WallBreaker Solution
-
-Instead of left-to-right traversal:
-1. **Split** pattern P into b+1 pieces (pigeonhole principle)
-2. **Find** exact matches for pattern pieces using SCDAWG substring search
-3. **Extend** bidirectionally from exact matches using Levenshtein filters
-4. **Verify** total distance meets bound
-
-This avoids the wasteful initial exploration, dramatically improving performance for large error bounds.
-
-## Implementation Status: ✅ Complete
-
-**Status:** Implemented and Tested
-**Approach:** Option A - Full SCDAWG
-**Implementation Date:** 2025-12-26
-**Tests:** 35 new tests, all passing (982 total library tests)
-
-## Quick Start
+## Rust use
 
 ```rust
-use liblevenshtein::dictionary::scdawg::Scdawg;
+use libdictenstein::scdawg::ScdawgChar;
+use liblevenshtein::transducer::Algorithm;
 use liblevenshtein::wallbreaker::WallBreaker;
 
-// Build SCDAWG dictionary
-let dict = Scdawg::<()>::from_terms(vec!["cathedral", "category", "catering"]);
-
-// Create WallBreaker with max distance 2
-let wb = WallBreaker::new(&dict, 2);
-
-// Find approximate matches
-for result in wb.query("cathedrel") {
-    println!("{} (distance {})", result.term, result.distance);
-}
-// Output: cathedral (distance 1)
+let dictionary = ScdawgChar::<()>::from_terms(["café", "cafe", "αβγ"]);
+let search = WallBreaker::with_algorithm(&dictionary, 1, Algorithm::Standard);
+let results: Vec<_> = search.query("café").collect();
+assert!(results.iter().any(|result| result.term == "café" && result.distance == 0));
+assert!(results.iter().any(|result| result.term == "cafe" && result.distance == 1));
 ```
 
-## New Types and Modules
+`WallBreaker` and its iterator accept any backend implementing
+`SubstringDictionary`, not only byte and Unicode in-memory SCDAWGs. The
+current implementations are byte and Unicode in-memory SCDAWGs, byte and
+Unicode persistent SCDAWGs, and byte and Unicode persistent suffix trees.
+The persistent variants require the `persistent-artrie` feature. All six
+share the same query and complete-term cursor contracts; their storage and
+snapshot implementations differ.
 
-### Dictionary Types
-- **`Scdawg<V>`** - Byte-level (ASCII) SCDAWG dictionary
-- **`ScdawgChar<V>`** - Character-level (Unicode/UTF-8) SCDAWG dictionary
+## Why there are two candidate paths
 
-### Traits
-- **`SubstringDictionary`** - Trait for dictionaries supporting exact substring search
-- **`BidirectionalDictionaryNode`** - Trait for nodes supporting backward traversal
+The splitter uses $`k+1`$ pieces for Standard distance and $`2k+1`$ for
+optimal-string-alignment Transposition and MergeAndSplit, where $`k`$ is the
+bound. Under the corresponding pigeonhole proof, a matching term contains at
+least one exact piece. The implementation retrieves substring occurrences for
+each piece, verifies the **whole term** with the selected distance, and emits
+each accepted term once in first-seen order. A piece's occurrences are
+materialized before that piece is processed; accepted results are yielded one
+at a time. See the [formal pigeonhole development](../../verification/wallbreaker/)
+and [candidate-flow diagram](../../diagrams/automata/wallbreaker-scdawg-walk.svg).
 
-### WallBreaker Module
-- **`WallBreaker<D>`** - Main WallBreaker query builder
-- **`WallBreakerQuery<D>`** - Iterator over approximate matches
-- **`WallBreakerResult`** - Result containing matched term and distance
-- **`PatternSplitter`** - Splits queries using pigeonhole principle
-- **`PatternPiece`** - A piece of the split pattern
+When there are more required pieces than query characters, no nonempty piece
+is guaranteed to survive. Unrestricted Damerau–Levenshtein also has no
+qualified surviving-piece theorem in this implementation. A direct caller may
+also supply a splitter built for a smaller bound than the query accepts.
+Those cases take the complete-term path: one borrowed term from the captured
+snapshot at a time is length-pruned, distance-verified, and copied only if
+accepted. Neither path uses an unproven seed filter.
 
-## Original Paper
+The executable algorithm, expressed without storage-specific traversal, is:
 
-**Title:** "WallBreaker - overcoming the wall effect in similarity search"
-**Authors:** Stefan Gerdjikov, Stoyan Mihov, Petar Mitankin, Klaus U. Schulz
-**Published:** EDBT/ICDT 2013
+```text
+capture one immutable dictionary root
+if a nonempty surviving piece is not proved:
+    for each complete term borrowed from that root:
+        reject impossible Unicode-scalar lengths
+        verify exact selected distance against the whole term
+        copy and emit accepted terms
+else:
+    split the query under the proved piece-count rule
+    for each piece, in splitter order:
+        obtain exact-substring occurrences from that same root
+        verify the whole term and emit it only on first acceptance
+```
 
-**Key Result:** 0.088ms average query time for 100-character patterns with 16 errors in 750K word lexicon.
+The complete-term cursor walks an insertion-order term inventory. Persistent
+suffix trees skip deleted text IDs; a retained root therefore presents the
+pre-mutation revision. The cursor stores a position and borrows one `&str` at
+a time, rather than building an empty-substring result vector. This is a
+shared trait seam, so language facades use the same native algorithm instead
+of reimplementing it.
 
-## Documentation Index
+### Candidate-design decision
 
-### Analysis Documents
-- **[technical-analysis.md](./technical-analysis.md)** - Original analysis of codebase architecture
-- **[decision-matrix.md](./decision-matrix.md)** - Comparison of implementation approaches
+We considered generic node-edge depth-first search, backend-native term-ID
+streams, and reuse of fuzzy-transducer iterators. A node-edge walk would need
+to reconstruct complete terms and to reconcile each backend's deletion and
+revision semantics. Fuzzy transducers differ in supported distance families
+and ordering, so they cannot replace this query's verification contract.
+The existing backend term inventories already encode unique complete members
+and stable roots. A borrowed cursor over those inventories therefore gives
+the smallest common interface while retaining backend-specific traversal
+internals. The selective substring path remains separate because it can
+avoid scanning the entire dictionary when its seed proof applies.
 
-### Planning Documents
-- **[implementation-plan.md](./implementation-plan.md)** - Original phase-by-phase plan
-- **[architectural-sketches.md](./architectural-sketches.md)** - Code designs and integration points
-- **[benchmarking-plan.md](./benchmarking-plan.md)** - Performance validation strategy
+## Native and foreign-language limits
 
-### Tracking Documents
-- **[progress-tracker.md](./progress-tracker.md)** - Completed task breakdown and implementation summary
+The pure Rust iterator is lazy over accepted results. The revision-6 C ABI,
+and its Julia wrapper, intentionally collect all accepted results before
+publishing a cursor so result-count and byte limits never publish partial
+output. The C matcher owns an immutable Unicode SCDAWG; it does not accept an
+arbitrary foreign dictionary provider. Its seven configured limits must be
+positive and within the hard maxima documented in
+[`liblevenshtein.h`](../../../include/liblevenshtein.h).
 
-## Implementation Summary
+The candidate-clone estimate is computed from the input corpus, but checked
+at **query time only for the selective path**, which materializes substring
+occurrences. A complete-term streaming query does not allocate those
+candidates and therefore is not rejected by that estimate. Input-term,
+query-length, result-count, and result-byte limits continue to apply to both
+paths. The estimate bounds a logical candidate allocation, not process RSS.
+Cancellation stops future advances of an already published C result cursor;
+it cannot interrupt the eager query computation. See the
+[Unicode binding contract](../../bindings/wallbreaker-unicode.md) for exact
+error, lease, and lifetime semantics.
 
-### Files Created
+## Measured short-query effect
 
-| File | Lines | Description |
-|------|-------|-------------|
-| `src/dictionary/substring.rs` | ~120 | SubstringMatch, SubstringDictionary, BidirectionalDictionaryNode traits |
-| `src/dictionary/scdawg.rs` | ~1300 | Byte-level SCDAWG implementation (ASCII) |
-| `src/dictionary/scdawg_char.rs` | ~800 | Character-level SCDAWG (Unicode/UTF-8) |
-| `src/wallbreaker/mod.rs` | ~200 | WallBreaker struct and module exports |
-| `src/wallbreaker/pattern_splitter.rs` | ~275 | PatternSplitter using pigeonhole principle |
-| `src/wallbreaker/extension.rs` | ~460 | BidirectionalExtension for left/right traversal |
-| `src/wallbreaker/query_iterator.rs` | ~230 | WallBreakerQuery iterator with deduplication |
+The prospectively registered pgmcp experiment `#388` compared source commit
+`0367f6e2` with the initial streaming implementation `7d86c2d6`, both against
+libdictenstein `46ba112a`. It used 32 matched seeds, 16 ABBA/BAAB blocks,
+192 isolated process measurements, exact result-set checks, and whole-block
+bootstrap intervals. The recorded decision is `#408`; raw and analysis
+artifacts are `#962` and `#963` in pgmcp.
 
-### Key Features
-- **SCDAWG Backend**: Full Symmetric Compact DAWG with bidirectional traversal
-- **Pattern Splitting**: Pigeonhole principle (b+1 pieces for max_distance b)
-- **Bidirectional Extension**: Left and right traversal with Levenshtein filters
-- **Deduplication**: HashSet-based result deduplication
-- **Unicode Support**: Both ASCII (`Scdawg`) and UTF-8 (`ScdawgChar`) variants
+| Workload | Treatment/control mean latency | 90% interval | Gross allocated bytes/query |
+| --- | ---: | ---: | ---: |
+| Short fallback | 0.0899 | 0.0816–0.1007 | 314 vs 54,833.5 |
+| Selective Unicode | 0.9766 | Upper bound 1.0392 | See raw artifact |
 
-## Performance Expectations
+Thus the measured short fallback was about 11.1 times faster and allocated
+about 175 times fewer gross bytes on that declared fixture. The selective
+path passed the predeclared 5% no-regression gate. These are measurements of
+the named commits and workload, not a claim about all corpora or later source
+revisions. The benchmark driver and analysis are
+[`bench-wallbreaker-short-streaming.sh`](../../../scripts/bench-wallbreaker-short-streaming.sh)
+and [`analyze-wallbreaker-short-streaming.R`](../../../scripts/analyze-wallbreaker-short-streaming.R).
 
-### When WallBreaker Helps Most
-- **Large error bounds:** b ≥ 4
-- **Long patterns:** ≥ 50 characters
-- **Large dictionaries:** ≥ 100K terms
-- **Cases where wall effect dominates runtime**
+## Verification and historical notes
 
-### When Traditional May Be Better
-- **Small error bounds:** b ≤ 2
-- **Short patterns:** < 20 characters
-- **Small dictionaries:** < 10K terms
-- **Memory-constrained environments**
+Native differential tests compare all four distance families against
+independent whole-term oracles for empty, short, multibyte, seeded, and
+exhaustive corpora. The complete-term cursor is checked across all six
+backends, including persistent deletion and revision pinning. C ABI tests
+cover UTF-8, limits, batch leases, cancellation, and nonpartial failure;
+the Julia facade checks its public layout and behavior. Full CI receipts must
+refer to the exact source revision before any release claim.
 
-## Future Enhancements
-
-1. **Substring Search Optimization**: Replace naive O(n*m) substring search with proper SCDAWG suffix link traversal for O(|pattern| + occurrences) complexity
-2. **Benchmarks**: Add comprehensive benchmarks comparing WallBreaker vs traditional Levenshtein automata
-3. **Frequency-based Splitting**: Optimize pattern splitting based on character frequency
-4. **SIMD Optimization**: Apply SIMD acceleration to extension operations
-
-## Related Documentation
-
-### Library Documentation
-- [Levenshtein Automata](../../algorithms/02-levenshtein-automata/README.md) - Current automata implementation
-- [Dictionary Layer](../../algorithms/01-dictionary-layer/README.md) - Available dictionary backends
-
-### Code Locations
-- `/src/wallbreaker/` - WallBreaker implementation
-- `/src/dictionary/scdawg.rs` - SCDAWG dictionary backend
-- `/src/dictionary/scdawg_char.rs` - Unicode SCDAWG variant
-- `/src/dictionary/substring.rs` - Substring search traits
-
-## License
-
-Documentation follows the same Apache-2.0 license as the main library.
-
----
-
-**Last Updated:** 2025-12-26
-**Status:** ✅ Implemented and Tested
-**Approach:** Full SCDAWG (Option A)
+The older [technical analysis](./technical-analysis.md),
+[architectural sketches](./architectural-sketches.md), and
+[implementation plan](./implementation-plan.md) are historical design notes.
+In particular, their proposed bidirectional extension and old file paths
+must not be read as a description of the current production query path.

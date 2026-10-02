@@ -1,7 +1,6 @@
 @startuml wallbreaker-scdawg-walk
-' WallBreaker pipeline for large error bounds (k ≥ 5), complementing the
-' pigeonhole-split diagram: split the query into k+1 pieces, locate each exact
-' piece with the bidirectional SCDAWG, then extend & verify candidates.
+' Current WallBreaker candidate paths. The query does not run the separate
+' experimental BidirectionalExtension helper.
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam defaultFontName "DejaVu Sans"
@@ -13,19 +12,33 @@ skinparam sequence {
   ParticipantFontColor #102027
 }
 
-title WallBreaker — split → locate (SCDAWG) → verify   (large error bound <latex>k \ge 5</latex>)
+title WallBreaker — one snapshot, two exact candidate paths
 
-participant "WallBreakerQuery\nW · k" as Q #FFCCBC
+actor "Caller" as C #E3F2FD
+participant "WallBreakerQuery\nquery and bound" as Q #FFCCBC
 participant "PatternSplitter" as S #FBE9E7
-participant "SCDAWG\nbidirectional substring index" as D #C8E6C9
-participant "Verifier\nexact distance <latex>\le k</latex>" as V #E1BEE7
+participant "Snapshot dictionary\nsubstring + term cursor" as D #C8E6C9
+participant "Whole-term verifier\nexact distance <latex>\le k</latex>" as V #E1BEE7
 
-Q -> S : split W into k+1 pieces
-note over S #FBE9E7: pigeonhole principle —\nat least one piece is error-free
-loop each piece pᵢ
-  S -> D : locate exact occurrences of pᵢ
-  D --> V : candidate terms containing pᵢ
-  V -> V : extend left/right,\ncompute <latex>d(W, term)</latex>
+C -> Q : create query iterator
+Q -> D : capture one immutable root
+alt no nonempty surviving-piece proof
+  note over Q #FFF3E0: short/empty query, unrestricted Damerau,\nor undersized caller splitter
+  loop each complete term in captured revision
+    Q -> D : borrow next complete term
+    D --> Q : borrowed term
+    Q -> V : length prune; exact whole-term distance
+    V --> Q : accepted term and distance, if any
+  end
+else surviving-piece proof applies
+  Q -> S : split by algorithm and edit bound
+  note over S #FBE9E7: Standard: <latex>k+1</latex> pieces;\nTransposition/MergeAndSplit: <latex>2k+1</latex> pieces
+  loop each nonempty piece
+    Q -> D : exact substring matches in captured root
+    D --> Q : this piece's candidate occurrences
+    Q -> V : exact whole-term distance
+    V --> Q : accepted term and distance, if any
+  end
 end
-V --> Q : terms with <latex>d(W, term) \le k</latex>
+Q --> C : deduplicated accepted terms, first-seen order
 @enduml
