@@ -1081,28 +1081,102 @@ pairs require the lexicographic rule above.
 
 Let $`\mathcal I`$ denote all checked evidence. Let
 $`\mathcal M(\mathcal I)`$ be the complete score assignments consistent with
-that evidence, domain, snapshot identities, and verified scores. Require this
-set to be nonempty: inconsistent evidence is a certificate-validation failure,
-not a vacuous proof of safe stopping. Consider
-algorithms that return only exactly verified candidates.
+that evidence, domain, snapshot identities, and verified scores. Fix a finite
+eligible universe $`U`$, verified identities $`V\subseteq U`$, and a declared
+total cost order with injective tie keys. Safe stopping includes an explicit
+consistency requirement:
 
-**Theorem BF-4.** Returning the current best $`k`$ verified results is valid
-for every assignment in $`\mathcal M(\mathcal I)`$ exactly when no assignment
-has an unverified candidate ranking strictly before the worst selected rank.
+```math
+\operatorname{Safe}(\mathcal I,S,k)
+\iff \mathcal M(\mathcal I)\ne\varnothing
+\quad\land\quad
+\forall f\in\mathcal M(\mathcal I),\quad
+S\text{ is the completed ordered best-}k\text{ selection from }U\text{ under }f.
+```
+
+Inconsistent evidence must block certified stopping. A universal statement
+over an empty model set cannot supply this contract. Consider algorithms that
+return only exactly verified candidates.
+
+**Theorem BF-4.** Assume $`\mathcal M(\mathcal I)\ne\varnothing`$ and
+$`k>0`$. Let $`S`$ be an ordered, distinct, full selection of $`k`$ verified
+originals that is best among $`V`$ in every feasible assignment, and let
+$`w\in S`$ be its worst member in each such assignment. Then
+$`\operatorname{Safe}(\mathcal I,S,k)`$ holds exactly when no feasible
+assignment has an original in $`U\setminus V`$ ranking strictly before $`w`$.
 
 **Proof.** If no such candidate exists, the selected set precedes every
 unverified candidate in every assignment and is already the best verified
 set. Conversely, an assignment with an earlier unverified candidate makes
 that selected result incorrect: it displaces the worst selected member.
 Unique identities and injective tie keys resolve equality. This argument
-assumes a full $`k`$-element selection; smaller selections require exhaustion
-or certified ineligibility of unresolved candidates.
+uses the stated full-selection and local best-k premises. For an underfull
+best-verified selection, safety instead requires exhaustion of eligible
+unresolved identities. A high lower bound cannot fill a vacant result slot.
+Eligibility is already fixed by $`U`$; removing an identity as ineligible needs
+its own evidence. At $`k=0`$, the selected result is empty and no worst rank is
+used.
 
-This defines optimal use of available evidence. It does not compute
-$`\mathcal M(\mathcal I)`$ or show that BF-2 decides every safe case.
-Completeness of a proposed stopping test requires an **attainable completion**
-lemma: whenever the test refuses to stop, a lawful assignment consistent with
-all evidence has an unresolved candidate that changes the selected result.
+#### Checked evidence model and controls
+
+[EvidenceStopping.v](../verification/temporal_automata/theories/EvidenceStopping.v)
+checks BF-4 for a concrete evidence language. The universe is a finite,
+duplicate-free list of natural original IDs, and each ID is also its injective
+tie key. Costs use a supplied `certificate_order`, including its total-order
+and quotient-equality laws. Evidence contains exact verified observations and
+one closed interval $`[\ell_x,u_x]`$ per eligible identity. Repeated exact
+observations are permitted; they must agree up to the declared cost
+equivalence. A feasible completion assigns costs satisfying every observation
+and interval, with every verified ID belonging to the eligible universe.
+
+`coherent_bounded_evidence_has_a_completion` constructs a feasible assignment
+when the identity structure is valid, repeated observations agree, each
+interval satisfies $`\ell_x\le u_x`$, and every observed value lies in its
+interval. It chooses a recorded value for a verified identity and the lower
+endpoint otherwise. This supplies a sufficient consistency proof without a
+cost-decidability premise; only natural-ID membership and lookup are decided.
+The construction uses the independence of this evidence language and cannot
+be transferred unchanged to relational or metric constraints.
+
+`best_k_over` requires distinct, eligible, ordered selections, a capacity
+bound, and full capacity with rank domination whenever an eligible original
+is omitted. `best_k_has_required_cardinality` derives size
+$`\min(k,|U|)`$ for a duplicate-free universe.
+`bf4_full_safety_characterization` proves the displayed equivalence from a
+nonempty completion set and `full_verified_choice`.
+`feasible_completions_agree_on_verified_ranks` proves that all models agree on
+verified ranks up to equivalence. The proof that the chosen verified heap is
+best, and that its designated worst member dominates its selection, remains
+an explicit premise. `underfull_safety_requires_exhaustion` proves the
+underfull case separately.
+
+The checked controls fix the failure boundaries:
+
+- Conflicting observations of costs one and two for the same original, or an
+  interval $`[2,1]`$, leave no feasible completion despite valid identity
+  structure. `inconsistent_evidence_cannot_authorize_stopping` excludes a
+  successful stopping claim in either case.
+- With original zero verified at cost five and original one constrained to
+  $`[8,10]`$, a full $`k=1`$ selection of original zero is safe. The concrete
+  completion assigning eight to original one establishes nonemptiness.
+- The same evidence cannot justify stopping with only original zero when
+  $`k=2`$: original one is still eligible even though it cannot improve the
+  existing rank.
+- Allowing original one's cost in $`[0,10]`$ admits a completion assigning it
+  four. That inhabited completion refutes stopping with original zero at
+  $`k=1`$.
+
+These are checked semantic characterizations. The model does not compute all
+feasible assignments, validate runtime evidence, enforce captured-snapshot
+binding, or prove Rust correspondence. It supplies no cost of acquiring or
+checking evidence.
+
+BF-4 characterizes which completed selections the available evidence permits.
+It does not show that BF-2 decides every safe case or establish minimum runtime.
+Under the same consistency and full-selection premises, completeness of a
+proposed stopping test requires an **attainable completion** lemma: whenever
+the test refuses to stop, a lawful assignment consistent with all evidence
+has an unresolved candidate that changes the selected result.
 Independent closed intervals with attainable endpoints permit a simple
 construction. Metric triangle constraints, shared recurrence structure, and
 relational group bounds can make an independently chosen assignment
@@ -1287,7 +1361,10 @@ with an exact rational strict-cut instance. `CertificateChecking.v` checks
 source/target and request-scope binding for every accepted step of its finite
 exact-natural rule language. These extensions retain their stated premises
 and do not transfer the natural session proofs to arbitrary runtime scores.
-NC-1, BF-3's union rule, BF-4, and the acyclic planning argument have
+`EvidenceStopping.v` checks BF-4 for finite eligible IDs, generic lawful costs,
+exact observations, and independent closed intervals, including consistency,
+underfull exhaustion, and inhabited positive and negative controls.
+NC-1, BF-3's union rule, and the acyclic planning argument have
 mathematical proofs above; they are not claimed as machine-checked Rust
 theorems. The full session invariant and checker-to-executable connection
 are normative designs requiring instance evidence.

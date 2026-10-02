@@ -16,6 +16,8 @@ theories/CertifiedSessionVerification.v
 theories/CertifiedKnnHeap.v
 theories/CertifiedRankCertificateTypes.v
 theories/CertifiedGenericRankOrder.v
+theories/CertifiedOriginalRankInstances.v
+theories/EvidenceStopping.v
 theories/CertifiedSessionHeapBridge.v
 theories/CertifiedKnnPruning.v
 theories/CertifiedConditionedTieFloor.v
@@ -26,3 +28,5 @@ theories/CertifiedSessionSnapshot.v
 theories/CertifiedDependencyCut.v
 theories/CertifiedContracts.v
 theories/CertificateChecking.v
+theories/CertificateScope.v
+theories/CertifiedCertificateScopeReuse.v
