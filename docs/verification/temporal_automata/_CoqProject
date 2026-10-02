@@ -1,4 +1,4 @@
--Q theories Liblevenshtein.TemporalAutomata
+-R theories Liblevenshtein.TemporalAutomata
 
 theories/LazyWeightedFrontier.v
 theories/LazyProductOperations.v
@@ -14,6 +14,8 @@ theories/CertifiedSessionOwnership.v
 theories/CertifiedSessionSplit.v
 theories/CertifiedSessionVerification.v
 theories/CertifiedKnnHeap.v
+theories/CertifiedRankCertificateTypes.v
+theories/CertifiedGenericRankOrder.v
 theories/CertifiedSessionHeapBridge.v
 theories/CertifiedKnnPruning.v
 theories/CertifiedConditionedTieFloor.v
@@ -22,3 +24,5 @@ theories/CertifiedSessionResume.v
 theories/CertifiedSessionFailure.v
 theories/CertifiedSessionSnapshot.v
 theories/CertifiedDependencyCut.v
+theories/CertifiedContracts.v
+theories/CertificateChecking.v

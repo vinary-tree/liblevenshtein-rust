@@ -790,6 +790,14 @@ coq_compile_file() {
       local file="${rel#docs/verification/core/theories/}"
       run_capped "$profile" bash -lc "cd '$ROOT/docs/verification/core/theories' && coqc -Q . Liblevenshtein.Core '$file'"
       ;;
+    docs/verification/temporal_automata/theories/*)
+      local file="${rel#docs/verification/temporal_automata/theories/}"
+      run_capped "$profile" bash -lc "cd '$ROOT/docs/verification/temporal_automata/theories' && coqc -R . Liblevenshtein.TemporalAutomata '$file'"
+      ;;
+    docs/verification/twed/theories/*)
+      local file="${rel#docs/verification/twed/}"
+      run_capped "$profile" bash -lc "cd '$ROOT/docs/verification/twed' && coqc -Q theories Liblevenshtein.TWED '$file'"
+      ;;
     docs/verification/articulatory/theories/*)
       local file="${rel#docs/verification/articulatory/theories/}"
       run_capped "$profile" bash -lc "cd '$ROOT/docs/verification/articulatory/theories' && coqc -R . Liblevenshtein.Articulatory '$file'"

@@ -34,6 +34,7 @@ theories/Conformance/DownstreamQueries.v
 
 # DPMatrix lemmas
 theories/DPMatrix/SnocLemmas.v
+theories/Conformance/IntegerLevenshteinRecurrence.v
 theories/DPMatrix/MatrixOps.v
 theories/DPMatrix/Correctness.v
 

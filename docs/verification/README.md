@@ -154,6 +154,26 @@ branch. The [elastic-kernel design](../design/elastic-kernels.md) and
 [shared UCR protocol](../scientific-ledger/elastic-ucr-harness-2026-08-01.md)
 state the exact correspondence.
 
+## Exact-integer Standard recurrence proof island
+
+The Standard Levenshtein source route models a fixed query and an incoming
+target one label at a time. A row is a total function from a query-prefix
+index to an unbounded natural-number cost. The terminal cell is at the full
+query length. These artifacts check the recurrence and its reference score,
+not the production array layout.
+
+| Tool | Artifact | Checked invariant |
+|---|---|---|
+| Rocq | `core/theories/DPMatrix/SnocLemmas.v` | suffix recurrence for the independently head-recursive Levenshtein distance; the 3-by-3 minimum transpose used by the inductive proof has a compact algebraic proof |
+| Rocq | `core/theories/Conformance/IntegerLevenshteinRecurrence.v` | seed row, one-label transition, every streamed prefix cell, and terminal score refine the core distance; successful checked-natural cells equal the exact cell and fit a supplied maximum; substitution weight must be the unit equality cost; off-by-one terminal read and rejected overflowing candidate controls |
+
+The checked-natural transition rejects when **any** of its three candidate
+additions exceeds the supplied maximum, even if their mathematical minimum
+fits. Its completeness theorem therefore assumes all three fit. The query
+label carrier is the core ASCII `Char` model. Unicode decoding, Rust row
+storage and update order, concrete integer widths and overflow behavior, and
+the source-to-runtime refinement remain open.
+
 ## Lazy temporal-product proof island
 
 The temporal product campaign verifies the reusable operational seam, not an
@@ -175,6 +195,8 @@ only bounded live generations rather than the search-session arena.
 | Rocq | `temporal_automata/theories/CertificateScope.v` | complete stable-request comparison beyond cache-key equality, score-relation reuse across cutoffs, fresh strict-prune checks, decreasing-cutoff cached-decision reuse, and query/gap/stiffness/revision/arithmetic/cutoff negative controls; Rust input binding and whole-operation certification remain open |
 | Rocq | `temporal_automata/theories/CertifiedSearchSession.v` | finite original-occurrence ownership and a cursor-shaped unseen/scoring/awaiting-result model; a complete runtime/ghost state boundary adds snapshot-interpreted pending regions, private phases, selected results, cache/arena, ledger, reconstruction, and storage erasure, with a checked one-slot heap/two-verification control; source transition preservation, ordered output, physical byte bounds, and Rust correspondence remain open |
 | Rocq | `temporal_automata/theories/CertifiedKnnHeap.v` | lexicographic natural-rank best-k preservation and equality to the canonical sorted prefix, zero/underfull cutoff exclusion, nonincreasing full-heap kth rank, max-heap root rank abstraction, and equal-cost tie/early-prune controls; concrete binary64 ordering, Rust heap mutators, and end-to-end search correspondence remain open |
+| Rocq | `temporal_automata/theories/CertifiedRankCertificateTypes.v` | quotient-aware cost/tie order interface and distinct Unknown, Empty, global-floor, equality-conditioned-floor, and strict-cost-cut certificates; sound region interpretation, natural heap-order agreement, dense rational strict-cut witness, and equal-cost control; validation and runtime binding remain open |
+| Rocq | `temporal_automata/theories/CertifiedGenericRankOrder.v` | generic lexicographic rank and lawful comparator laws, input-retaining minimum/maximum, conditional identity through injective tie keys, natural comparator examples, and an unordered-NaN-order impossibility control; concrete binary64 comparator and Rust correspondence remain open |
 | Rocq | `temporal_automata/theories/CertifiedSessionHeapBridge.v` | phase-indexed correspondence from complete-session selected results and verified history to the natural-cost best-k certificate; guarded verification staging and rank publication, canonical completed selection, and premature-clear/duplicate/tie controls; ownership, emitted output, binary64 ranks, and Rust heap mutators remain open |
 | Rocq | `temporal_automata/theories/CertifiedKnnPruning.v` | conditional Unknown/Empty/Known rank-floor checking, exact scope matching, region ownership and exclusion transfer, persistence through full-heap improvement, counterfactual best-k result preservation, and equality/stale-scope/threshold-increase controls; source bound construction and Rust correspondence remain open |
 | Rocq | `temporal_automata/theories/CertifiedConditionedTieFloor.v` | exact-natural BF-2 characterization with no attainment premise, vacuous empty equality slice, full verified kth-rank pruning, canonical best-k preservation under fresh identities and ties, and global-versus-conditioned controls; source bound construction, snapshot scope, binary64 ordering, and Rust correspondence remain open |
@@ -345,6 +367,7 @@ premises consumed by the already verified generic walker:
 | Rocq | `twed/theories/Metric/TwedSourceMetric.v` | ideal-real sample/time product metric for positive stiffness; this establishes the source theorem's ground-metric instance, while sequence-level TWED metricity remains open |
 | Rocq | `twed/theories/Metric/TwedPrintedBoundaryCounterexample.v` | exact-natural 1-by-2 grid showing that the 2008 report's printed one-empty boundary and positive gap penalty violate triangle even for strict-origin series; this is distinct from the library's gap-charging boundary |
 | Rocq | `twed/theories/Metric/TwedSourceAlignments.v` | finite exact-natural 2007-style edit paths with predecessor-aware charges, last-branch decomposition/reconstruction, anchor-to-anchor finite-path existence, and rejection of a missing predecessor; no path/DP equality, ideal-real sequence metricity, or Rust correspondence claim |
+| Rocq | `twed/theories/Metric/TwedSourceDpPath.v` | exact-natural infinite-positive-axis DP origin and interior equations; every finite cell attains a lawful predecessor-aware path and is minimal among all such paths; a relaxed-anchor-boundary control changes a concrete score; ideal-real metricity, binary64 and Rust correspondence remain open |
 | Rocq | `twed/theories/Metric/TimestampedProductIndex.v` | typed-token equality; canonical sparse-residual dense reconstruction; exact-bit collision-checked interning and vertical subsumption; lazy transition/cache laws; immutable DFS cursor/zipper paging; tagged exhaustion; explicit-ceiling memory scope |
 | Verus | `verus/twed_kernel.rs` | Rust-shaped interval, separability, recurrence, K4, metric-gate, degeneracy, interval-primitive point exactness, and physical-component composition obligations |
 | Z3 + cvc5 | `smt/twed_kernel.smt2` | independent negated integer-arithmetic obligations, including interval-primitive point exactness and explicit-time component composition, all required `UNSAT` in both solvers |

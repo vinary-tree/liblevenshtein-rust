@@ -87,6 +87,33 @@ Qed.
 
 (** * min3 Arithmetic Lemmas *)
 
+Lemma min3_add_right : forall a b c k,
+  min3 a b c + k = min3 (a + k) (b + k) (c + k).
+Proof.
+  intros a b c k.
+  unfold min3.
+  rewrite Nat.add_min_distr_r.
+  rewrite Nat.add_min_distr_r.
+  reflexivity.
+Qed.
+
+(** Taking the minimum of a 3-by-3 matrix is independent of whether its
+    rows or columns are folded first. This proof exposes each of the nine
+    entries through the order laws, without splitting on minimum operands. *)
+Lemma min3_matrix_transpose :
+  forall a b c d e f g h i,
+    min3 (min3 a b c) (min3 d e f) (min3 g h i) =
+    min3 (min3 a d g) (min3 b e h) (min3 c f i).
+Proof.
+  intros a b c d e f g h i.
+  unfold min3.
+  apply Nat.le_antisymm.
+  - repeat apply Nat.min_glb.
+    all: repeat rewrite Nat.min_le_iff; auto 12 using Nat.le_refl.
+  - repeat apply Nat.min_glb.
+    all: repeat rewrite Nat.min_le_iff; auto 12 using Nat.le_refl.
+Qed.
+
 (** Key arithmetic lemma for the inductive case of lev_distance_snoc.
     Shows that the min3 structure rearranges correctly when we swap
     front-processing (d cost) and back-processing (e cost). *)
@@ -98,7 +125,12 @@ Lemma min3_snoc_key :
     = min3 (min3 (x1+1) (y1+1) (z1+e) + 1)
            (min3 (x2+1) (y2+1) (z2+e) + 1)
            (min3 (x3+1) (y3+1) (z3+e) + d).
-Proof. intros. unfold min3. lia. Qed.
+Proof.
+  intros.
+  repeat rewrite min3_add_right.
+  rewrite min3_matrix_transpose.
+  f_equal; f_equal; lia.
+Qed.
 
 (** * Suffix Version of lev_distance Recurrence *)
 

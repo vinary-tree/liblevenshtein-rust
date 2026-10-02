@@ -847,7 +847,14 @@ It replays named exact and lower rewrites over the exact-natural expression
 fragment, compares query/parameter/cutoff/snapshot/revision/label scope tokens, records
 orientation and witness effect, and checks the complete rule-specific premise
 list. Its soundness theorem proves only score equality or a lower bound for
-that fragment. It supplies no acceptance case for the remaining realization
+that fragment. Accepted replay binds each recorded source and target to the
+current and next expressions, and every intermediate step to the same request
+scope. Both the request and step must use exact-natural arithmetic; only the
+score-only profile and `NoWitnessEffect` are admitted. A checked positive
+control reverses $`x+0=x`$ to expand $`x`$; reversing the lower rule that
+drops a nonnegative summand is rejected. This is a sound checker for the
+enumerated rules, not a decision procedure for all expression equalities.
+It supplies no acceptance case for the remaining realization
 nodes or for rounded arithmetic; extending the IR checker requires a semantic
 rule and proof for each new case.
 Concrete correspondence must bind those tokens to the actual runtime values.
@@ -1382,8 +1389,8 @@ For O16's exact top-$`k`$ specialization, the result order is a **separate
 layer** over completed candidates. On one captured revision, give each
 candidate a unique tie key and rank it by the pair of its exact cost and that
 key. Give each queued region both an admissible lower cost and a lower tie
-key. Once $`k`$ exact results exist, a region can be removed when its lower
-pair is at least the worst exact pair in lexicographic order. In particular,
+key. Once $`k>0`$ exact results fill the verified selection, a region can be
+removed when its lower pair is at least the worst exact pair in lexicographic order. In particular,
 equal cost bounds permit removal only if the region's tie floor cannot beat
 the current kth tie. The proof is by contradiction: a better unseen candidate
 would be covered by a region whose lower pair is no greater than that
@@ -1393,6 +1400,22 @@ too high is unsound. This transformation never changes the cost monoid or
 the exact verifier's recurrence. It requires the machine implementation's
 cost comparison and lower-bound relation, not merely the ideal arithmetic
 versions. LOCPA BF-1 gives the full result-order and snapshot conditions.
+
+The [checked generic rank order](../verification/temporal_automata/theories/CertifiedGenericRankOrder.v)
+derives totality, transitivity, min/max laws, and original-identity consequences
+from explicit carrier-order, comparator, and tie-injectivity premises. The
+[rank-certificate interpretation](../verification/temporal_automata/theories/CertifiedRankCertificateTypes.v)
+separates unknown information, an empty region, independent global cost/tie
+floors, a cost-conditioned tie floor, and a strict cost cut. The conditioned
+form needs its tie inequality only at the lower cost. Thus a region consisting of
+$`(6,1)`$ and $`(5,9)`$ admits floor $`(5,9)`$, sufficient against a full
+selection whose worst rank is $`(5,7)`$; its global floor $`(5,1)`$ is weaker.
+A strict cut $`d>L`$ has its own tag: on rational costs no invented next value
+can replace it, and an ordinary pair at cost $`L`$ admits its own boundary
+point. The [CBC refinement](certified-metric-automata.md#60-lawful-orders-and-the-meanings-of-certificate-tags)
+states the five denotations and remaining scope, coverage, and full-heap
+obligations. None of these semantic tags validates a runtime bound producer
+or the machine comparator by construction.
 
 For O15, if an exact min-plus update satisfies
 $`T(v+b\mathbf1)=T(v)+b\mathbf1`$ and the output has the same property,

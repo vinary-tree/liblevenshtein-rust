@@ -405,8 +405,10 @@ L(Q)>c_k\ \lor\ (L(Q)=c_k\ \land\ M(Q)\ge t_k).
 
 If the smallest queued lower pair meets this condition, the entire queue may
 be discarded. This includes equality at $`c_k`$ only because the tie floor
-rules out an earlier equal-cost candidate. An unknown floor is represented by
-a value below every real tie key and cannot justify equality pruning. An empty
+rules out an earlier equal-cost candidate. An unknown tie floor cannot justify
+equality pruning; the separate scalar test $`L(Q)>c_k`$ remains usable. A
+sentinel below every tie key is an optional representation requiring its own
+order proof, not an assumed member of every tie carrier. An empty
 region is discarded independently. With fewer than $`k`$ exact results there
 is no kth rank and this stopping rule does not apply.
 
@@ -484,6 +486,35 @@ heap-correspondence proof. The checked-in
 replaces the rank-aware pruning action and makes TLC violate `NoLostTopK`;
 the [model report](../verification/CBC_LEXICOGRAPHIC_MODEL_REPORT.md) records
 its concrete discarded top-two candidate and reproduction command.
+
+The [generic rank order](../verification/temporal_automata/theories/CertifiedGenericRankOrder.v)
+now checks the order laws independently of natural costs: carrier equivalence,
+total weak order, compatible strict order, and a comparator that implements
+them are explicit premises. It proves min/max laws and original-identity
+consequences under injective ties; the natural instance agrees with the heap
+order. Its controls reject an always-equal comparator and ordinary unordered
+NaN semantics. They do not prove that a Rust comparator meets this contract.
+
+The [CBC refinement](certified-metric-automata.md#60-lawful-orders-and-the-meanings-of-certificate-tags)
+uses five checked certificate denotations: `RankUnknown`, `RankEmpty`,
+`RankGlobal`, `RankConditioned`, and `RankStrictCost`. Global floors establish
+both inequalities for all candidates. A conditioned floor $`(L,M)`$ requires
+the tie inequality only among candidates of exact cost $`L`$. For candidates
+$`(6,1),(5,9)`$, the conditioned floor $`(5,9)`$ can prune against a full
+heap's worst rank $`(5,7)`$; the global floor $`(5,1)`$ cannot. A strict
+cost cut $`d>L`$ excludes every candidate whose cost is at most $`L`$
+without inventing a next cost or greatest tie key. The checked rational
+example retains cost $`1/2`$ above a cut at zero, refuting replacement of
+that cut by lower cost one. In fact, a midpoint refutes every proposed next
+rational cost.
+
+`certificate_interpretation_sound` proves lower-rank consequences conditional
+on universal region soundness; constructing a tag alone supplies no such
+proof. `RankEmpty` is sound exactly for an empty region, while `RankUnknown`
+asserts no rank restriction. These generic results do not supply a heap-full
+gate, a structural summary producer, or a source correspondence theorem.
+BF-1's verified selection, complete ownership, and captured scope remain
+required for stopping.
 
 ## 7. Operations, cursors, and product zippers
 

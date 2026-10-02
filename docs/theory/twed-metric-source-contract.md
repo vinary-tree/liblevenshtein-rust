@@ -1,7 +1,7 @@
 # TWED source metric contract and anchored transfer
 
 **Epic:** `metric-automata-cbc-theory`, task `cbc-06-twed-source-contract`.
-**Status:** source, ideal-model, and implementation boundary contract. The sample-space product metric and anchor transfer are checked in Rocq; sequence-level metricity and binary64 correspondence remain open.
+**Status:** source, ideal-model, and implementation boundary contract. The sample-space product metric, anchor transfer, and a finite exact-natural 2007 path/DP equivalence are checked in Rocq; ideal-real sequence-level metricity and binary64 correspondence remain open.
 
 ## Primary sources and scope
 
@@ -41,13 +41,13 @@ D(i,j)&=\min\{D(i-1,j)+e_i,\;D(i,j-1)+f_j,\;D(i-1,j-1)+v_{ij}\}.
 \end{aligned}
 ```
 
-The [Rust scorer](../../src/time_series/timestamped_twed.rs) constructs both axes with `delete_cost`, which adds $`\lambda`$, and uses two rolling vectors for the interior. Its `match_cost` compares current **and** predecessor pairs. Binary64 operation order, overflow behavior, and cutoff tags require separate machine correspondence. [ORC §11.5](ordered-residual-calculus.md#115-twed-including-explicit-physical-timestamps) states the ideal recurrence and rolling-column state. The [unit-grid kernel](../../src/time_series/kernels/twed.rs) is a separate index-time specialization.
+The [Rust scorer](../../src/time_series/timestamped_twed.rs) constructs both axes with `delete_cost`, which adds $`\lambda`$, and uses two rolling vectors for the interior. Its `match_cost` compares current **and** predecessor pairs. Binary64 operation order, overflow behavior, and cutoff tags require separate machine correspondence. The [source operation map](twed-machine-operation-map.md) enumerates the scalar, online, indexed range, and full-scan kNN paths and their numeric proof obligations. [ORC §11.5](ordered-residual-calculus.md#115-twed-including-explicit-physical-timestamps) states the ideal recurrence and rolling-column state. The [unit-grid kernel](../../src/time_series/kernels/twed.rs) is a separate index-time specialization.
 
 Map each input time to $`1+t_i-t_0`$ and prepend a common anchor $`(0,1)`$ to both series. Empty input becomes the one-anchor series. The condition $`t_1>t_0`$ makes the mapped timestamps strictly increasing.
 
 The **2007** source's unavailable positive axes force the anchors to match at zero cost. Afterward, its deletion, insertion, and match charges equal the corresponding $`e_i`$, $`f_j`$, and $`v_{ij}`$: common shifts preserve time differences. The source grid at $`(i+1,j+1)`$ equals $`D(i,j)`$. In particular, comparing an anchor-only sequence with a longer anchored sequence produces the cumulative one-empty boundary **with** $`\lambda`$ per edit. [TimestampedMetricTransfer.v](../verification/twed/theories/Metric/TimestampedMetricTransfer.v) proves recurrence-grid correspondence, physical-charge equalities, strict timestamp admission, and anchor injectivity.
 
-The transfer represents source-infinite positive axes as absent `option` values. It proves the anchored grid is the unique grid satisfying those boundaries and the source recurrence. Its final metric-pullback theorem is **conditional** on four source-distance metric premises restricted to the common-anchor image and an explicit equality between the chosen cumulative recurrence score and the source-distance pullback. Empty physical input maps to the anchor-only source series; the empty source series is outside the premise domain, where the literal 2007 source has infinite distances. The source metric laws and the recurrence-score equality must still be mechanized and instantiated for the product metric and anchored sequences. The 2008 report's cumulative boundary cannot be substituted: it omits the gap penalty, while the library and anchored 2007 grid include it.
+The transfer represents source-infinite positive axes as absent `option` values. It proves the anchored grid is the unique grid satisfying those boundaries and the source recurrence. Its final metric-pullback theorem is **conditional** on four source-distance metric premises restricted to the common-anchor image and an explicit equality between the chosen cumulative recurrence score and the source-distance pullback. Empty physical input maps to the anchor-only source series; the empty source series is outside the premise domain, where the literal 2007 source has infinite distances. The finite exact-natural path/DP equality proved below does **not** instantiate this ideal-real source-distance premise: a real-valued lawful-path semantics, its relation to the chosen source distance, and source metric laws remain to be proved. The 2008 report's cumulative boundary cannot be substituted: it omits the gap penalty, while the library and anchored 2007 grid include it.
 
 | Correspondence | Source / implementation fact | Verification status |
 |---|---|---|
@@ -55,7 +55,7 @@ The transfer represents source-infinite positive axes as absent `option` values.
 | Fixed parameters | All three operands of a metric law use the same $`\nu>0`$ and $`\lambda\ge0`$. | Rust configuration validates finite binary64 inputs; real-to-machine refinement remains open. |
 | Timestamp domain | The mapped first time must follow the common anchor, then increase strictly. | `anchor_series_has_strict_times` checked. Raw Rust permits $`t_1=t_0`$; its strict wrapper in the current working tree excludes it. |
 | Unit and origin | Both operands use the same `TimestampUnit` and origin; no implicit seconds/milliseconds conversion. | Rust rejects mixed operands. A whole-container configuration invariant remains separate. |
-| Boundary and interior | Rust charges $`d_\nu+\lambda`$ for each one-empty edit and compares current and predecessor samples on matches. | Anchor-grid and charge-shift lemmas checked; recurrence-score/source-grid equality and source-to-Rust loop refinement remain open. |
+| Boundary and interior | Rust charges $`d_\nu+\lambda`$ for each one-empty edit and compares current and predecessor samples on matches. | Anchor-grid and charge-shift lemmas, plus finite exact-natural 2007 path/DP equivalence, checked. Ideal-real source-distance identification and source-to-Rust loop refinement remain open. |
 | Cutoff and numeric result | The ideal distance is finite on the anchored image; Rust uses binary64, `WeightedCost`, cutoffs, and complete/incomplete outcomes. | Exact-score refinement and fail-closed result theorem remain open. |
 
 ## Counterexamples to overbroad metric claims
@@ -90,8 +90,8 @@ Every nonempty series in this example satisfies the strict-origin condition. Thi
 | Obligation | Required construction | Failure to exclude |
 |---|---|---|
 | Product sample metric | Derive value/time laws from $`\rho`$ and $`\nu>0`$ | Rounded positive time cost confused with ideal zero |
-| Source alignment semantics | Define valid paths on the common-anchor image with predecessor context and 2007 infinite axes | Path using unavailable boundary; infinite distance to source empty |
-| Recurrence equivalence | Show path/DP equality both ways and minimum attainment | Altered anchor or missing predecessor term |
+| Source alignment semantics | Exact-natural finite paths with predecessor context and 2007 infinite axes are checked; extend to the required ideal-real source domain | Path using unavailable boundary; infinite distance to source empty |
+| Recurrence equivalence | Exact-natural path/DP equality both ways and finite minimum attainment are checked; relate the ideal-real recurrence to the selected source distance | Altered anchor or missing predecessor term |
 | Nonnegative and reflexive | Sum nonnegative local costs and use diagonal zero matches | Negative stiffness or gap |
 | Symmetry | Reverse every edit with correct context and boundaries | Directional penalty |
 | Separation | Strict timestamps after the anchor prohibit zero-cost insertion/deletion | Origin-equal zero-cost deletion |
@@ -105,18 +105,36 @@ The 2008 report gives a nine-case triangle argument, but its printed boundary di
 now defines finite 2007-style paths in an exact-natural fragment. It checks
 the three last-step cases, existence for finite anchored inputs, the absence
 of positive-axis finite paths, and rejection of a missing predecessor.
-Path-to-DP cost equality and the ideal-real sequence metric laws remain open.
+[TwedSourceDpPath.v](../verification/twed/theories/Metric/TwedSourceDpPath.v)
+defines the same fragment's `option nat` DP, with `None` on every positive
+one-empty axis. Its `finite_dp_cell_has_attaining_path` constructs a lawful
+path for every finite cell; `source_dp_dominates_every_path` bounds the DP by
+every lawful path; `finite_dp_path_equivalence` and
+`finite_source_minimum_is_attained` establish both directions and attainment.
+Here samples are pairs of natural values and natural timestamps, the point
+distance is the sum of their absolute coordinate differences (unit stiffness
+$`\nu=1`$), and the gap penalty is a natural number. This is an exact-natural recurrence/path theorem for that fixed point distance, with no source sequence
+metric, ideal-real transfer, or binary64/Rust correspondence claim.
+
+Its altered-axis control uses left input containing only the common anchor,
+right input containing the anchor followed by $`(0,2)`$, unit stiffness
+$`\nu=1`$, and gap penalty $`\lambda=3`$. The 2007 positive axes give the lawful score $`4`$: match
+anchors for zero, then insert the later point for $`1+3`$. A cumulative
+gap-free right axis permits an initial axis charge $`1`$ followed by a
+diagonal charge $`2`$ (one current-point and one predecessor-point time
+difference), yielding $`3`$. The checked theorem
+`relaxed_anchor_boundary_changes_score` records $`3\ne4`$.
 
 ## Status
 
-- **Checked:** product sample metric, anchored recurrence uniqueness, translated charges, injective domain map, strict-wrapper admission, exact-natural finite alignment existence/decomposition, and raw-domain counterexample. The 2008 triangle counterexample is checked against the printed equations in exact natural arithmetic.
-- **Open for ideal metricity:** local source TWED metric theorem on the common-anchor image under matching boundary/domain/parameter conventions. Neither published Proposition 1 discharges it unchanged.
+- **Checked:** product sample metric, anchored recurrence uniqueness, translated charges, injective domain map, strict-wrapper admission, exact-natural finite alignment existence/decomposition, exact-natural path/DP equality and minimum attainment, and raw-domain counterexample. The 2008 triangle counterexample and the 3-versus-4 altered-axis control are checked in exact natural arithmetic.
+- **Open for ideal metricity:** ideal-real source-distance identification and a local source TWED sequence-metric theorem on the common-anchor image under matching boundary/domain/parameter conventions. Neither published Proposition 1 discharges these unchanged.
 - **Open for executable qualification:** machine-score and source-to-model correspondence for the named Rust operation.
 
 `Print Assumptions` of the ideal-real transfer and product-metric theorems
 shows Rocq Stdlib's classical Dedekind-real and functional-extensionality
 axioms. They are recorded in the [assumption ledger](../verification/ASSUMPTIONS.tsv);
 no project-specific TWED metric proposition is an axiom. The exact-natural
-2008 boundary counterexample closes under the global context.
+path/DP theorem and boundary counterexamples close under the global context.
 
 The common anchor is a proof representation of the existing recurrence; it requires no per-automaton snapshot or additional runtime state.

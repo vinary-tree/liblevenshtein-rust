@@ -227,8 +227,9 @@ examples. An integer
 measure specification names the source expression; acceptance proves the
 named target expression implements that measure in every environment.
 
-This is a complete checker **for that expression language**. Its scope fields
-are opaque tokens: the caller still has to bind them to the actual query,
+This is a sound executable checker for its finite set of named rules; it is
+not a decision procedure for every equality in the expression language. Its
+scope fields are opaque tokens: the caller still has to bind them to the actual query,
 parameters, arithmetic, snapshot, and observation profile. The language does
 not encode the whole ORC realization IR, overflow, Rust control flow,
 dictionary ownership, witnesses, or resources. Its acceptance theorem is
@@ -355,6 +356,12 @@ effect; a later witness-capable rule needs its own soundness theorem.
 step names a supported rule, supplies precisely its required premises, and
 matches that rule's computed result. `replay_steps_iff_finite_replay` relates
 the executable checker to a finite inductive replay relation.
+`replay_step_binds_checked_fields` additionally identifies the recorded source
+with the current expression and the recorded target with the next expression.
+It proves that both the step and request use `ExactNaturals`, the request is
+`ScoreOnly`, and the step has `NoWitnessEffect`.
+`accepted_scoped_certificate_scopes_every_step` proves exact request-scope
+agreement throughout the accepted chain, including intermediate steps.
 `accepted_scoped_certificate_sound` proves that accepted exact chains preserve
 every natural-valued score, while accepted lower chains remain lower bounds.
 The generic rejection theorems cover unknown rules, wrong premise lists,
@@ -367,6 +374,12 @@ when the advertised source and target are related by a real rule. Premise
 names are audit labels: the checker
 derives their actual validity from the finite rule definitions and their
 kernel-checked soundness lemmas, rather than trusting a supplied name.
+For example, the checked backward exact rule expands $`x`$ to $`x+0`$.
+The lower rule that drops a nonnegative summand may reduce $`x+y`$ to $`x`$,
+but its reverse is rejected. Generic controls also reject a wrong current
+source, rounded requests, canonical-witness requests, and unsupported witness
+effects. These results expose what successful replay actually checks; they
+add no new arithmetic or observation profile.
 The scope fields are opaque tokens. Exact token comparison does not establish
 that a token names the executable's actual query, parameters, dictionary
 revision, or label interpretation; that binding is an instance obligation.
@@ -907,6 +920,54 @@ artifact.
 
 ## 6. Stronger ordered pruning with scoped rank certificates
 
+### 6.0 Lawful orders and the meanings of certificate tags
+
+[CertifiedGenericRankOrder.v](../verification/temporal_automata/theories/CertifiedGenericRankOrder.v)
+checks lexicographic order for arbitrary cost and tie carriers satisfying
+`certificate_order`. Each carrier supplies an equivalence relation, a total
+weak order antisymmetric up to that equivalence, and a compatible strict
+order. Equality can therefore mean rational equality rather than equality of
+representations. The derived rank order is total and transitive; strict ranks
+are irreflexive, asymmetric, and transitive. A `lawful_rank_comparator` must
+prove that every `Eq`, `Lt`, or `Gt` result agrees with those relations.
+The checked minimum and maximum select an actual input, satisfy their bound
+laws, and commute up to equivalence.
+
+Equivalent ranks identify an original only under a separate premise:
+equivalent tie keys identify originals within the admitted domain. A checked
+natural-number comparator agrees with the existing heap order. Negative
+controls show that an always-`Eq` comparator is unlawful, that lawful ordering
+alone permits colliding original identities, and that ordinary unordered NaN
+comparisons cannot satisfy reflexivity. A total order on floating-point bit
+patterns would require its own score semantics and instance proof.
+
+[CertifiedRankCertificateTypes.v](../verification/temporal_automata/theories/CertifiedRankCertificateTypes.v)
+distinguishes five forms. Let $`(c,t)`$ be a candidate rank. Soundness requires
+the stated property for **every** candidate in the region:
+
+| Constructor | Candidate property | Sufficient threshold condition for $`W=(c_k,t_k)`$ |
+|---|---|---|
+| `RankUnknown` | No information | None from this certificate |
+| `RankEmpty` | False; sound exactly when the region is empty | Region removal needs no kth result |
+| `RankGlobal L M` | $`L\le c`$ and $`M\le t`$ | $`W\le_{\rm lex}(L,M)`$ |
+| `RankConditioned L M` | $`L\le c`$ and $`c\equiv L\Rightarrow M\le t`$ | $`W\le_{\rm lex}(L,M)`$ |
+| `RankStrictCost L` | $`L<c`$ | $`c_k\le L`$, independently of $`t_k`$ |
+
+`conditioned_denotation_is_lex_floor` proves that the conditioned form means
+exactly a lexicographic lower pair. `certificate_interpretation_sound` proves
+that a sound certificate and its sufficient threshold condition place every
+region rank at or above that threshold. `empty_is_sound_iff_region_is_empty`
+and an inhabited-region control prevent treating incomplete information as
+emptiness. Regions are arbitrary predicates: neither finiteness nor attainment
+of a bound is assumed here.
+
+These are semantic types and conditional theorems. Constructing a tag does
+not prove its region claim, validate its scope, or supply a full verified heap.
+For nonempty-region kNN pruning, BF-1's full-heap, coverage, identity, and
+snapshot premises still apply. The natural-rank session proofs discharge
+parts of that composition; the generic carrier and rational examples do not
+establish a generic executable session or Rust correspondence.
+
 ### 6.1 BF-2: the equality slice is enough
 
 Use the exact rank $`R(x)=(d(q,x),t_\sigma(x))`$ and total lexicographic
@@ -931,8 +992,9 @@ this characterization for natural ranks in
 [CertifiedConditionedTieFloor.v](../verification/temporal_automata/theories/CertifiedConditionedTieFloor.v),
 including an empty equality slice, the full verified kth-rank gate, and
 canonical best-k preservation under fresh identities and ties. The abstract
-argument uses only a total cost order; the checked instance uses natural
-costs.
+argument uses only a total cost order. The generic conditioned-denotation
+theorem in Section 6.0 checks the order argument; the heap and canonical
+best-k instance here uses natural costs.
 
 A global tie floor satisfies this condition but may be weaker. To derive a
 better floor without knowing exact scores, take a certified superset
@@ -967,8 +1029,17 @@ If $`S_Q(L)`$ is empty, every remaining original costs strictly more than
 $`L`$. This is useful even if no larger numeric lower bound is representable.
 An incomplete inspection is not an empty-set certificate.
 The certificate algebra therefore needs a tagged strict cost cut
-$`d(q,x)>L`$; encoding it as an ordinary pair with an invented next cost or
-greatest tie key is unsound for general cost orders.
+$`d(q,x)>L`$. Advancing to an invented next cost can be unsound; using an
+ordinary pair at cost $`L`$ gives a sound consequence of the strict cut but
+does not, in general, express the same information.
+The dense rational instance in `CertifiedRankCertificateTypes.v` proves this
+boundary concretely. For every proposed next cost $`U>L`$, the midpoint
+$`(L+U)/2`$ satisfies the strict cut while refuting a lower pair with cost
+$`U`$. At $`L=0,U=1`$, cost $`1/2`$ is the counterexample. Conversely, an
+ordinary pair $`(L,M)`$ admits the candidate $`(L,M)`$ itself, so it cannot
+express the strict cut, even if $`M`$ were a greatest key in its carrier.
+Natural ties also have no greatest key. These checked controls concern exact
+rational costs; they supply no floating-point successor or enclosure theorem.
 
 ### 6.2 BF-3: combine whole rank certificates
 
@@ -987,7 +1058,9 @@ rank. All three statements require complete coverage and common scope.
 A conditioned tie floor stays attached to its cost. Both $`(5,9)`$ and
 $`(6,1)`$ are valid lower certificates for candidate $`(6,1)`$. Their
 coordinatewise maximum $`(6,9)`$ is not. The safe lexicographic maximum is
-$`(6,1)`$. Rocq proves safe maximum composition and the counterexample.
+$`(6,1)`$. Rocq proves safe maximum composition and the counterexample for
+natural ranks. The generic min/max laws of Section 6.0 supply the order facts
+for other lawful carriers; region coverage and scope remain separate premises.
 
 Independent **global** cost and tie floors can still be combined
 coordinatewise from their separate universal bounds, as in BF-1.
@@ -1208,6 +1281,12 @@ The [Rocq kernel](../verification/temporal_automata/theories/CertifiedMetricExec
 checks CBC-1 finite-trace composition, CBC-2's internal-rank bound, BF-2
 eligible-set coverage and pruning, BF-3 maximum composition, QO-1 telescoping,
 and QO-2 finite selection. Its rank arithmetic uses natural costs and tie keys.
+`CertifiedGenericRankOrder.v` and `CertifiedRankCertificateTypes.v` extend the
+checked order and certificate interpretation to arbitrary lawful carriers,
+with an exact rational strict-cut instance. `CertificateChecking.v` checks
+source/target and request-scope binding for every accepted step of its finite
+exact-natural rule language. These extensions retain their stated premises
+and do not transfer the natural session proofs to arbitrary runtime scores.
 NC-1, BF-3's union rule, BF-4, and the acyclic planning argument have
 mathematical proofs above; they are not claimed as machine-checked Rust
 theorems. The full session invariant and checker-to-executable connection

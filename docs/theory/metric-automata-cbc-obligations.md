@@ -77,13 +77,13 @@ The semantic cutoff $`\tau`$, the session-wide `ResourceLimits` ceilings, and `P
 
 | Family | Validated mathematical identity and law boundary | Current evidence and missing gate |
 |---|---|---|
-| Standard Levenshtein | Finite strings, ordinary equality, unit integer edit cost | Core metric proof exists; the chosen production automaton still needs its full session/certificate/source correspondence chain |
+| Standard Levenshtein | Finite strings, ordinary equality, unit integer edit cost | Core metric proof and a checked exact-natural streaming-row recurrence bridge exist; the chosen production automaton still needs its full session/certificate/source correspondence chain |
 | Weighted strings | Fixed lawful nonnegative operation costs; metricity requires the stated symmetry, separation, and triangle conditions | No blanket weighted metric grant from the generic ordered residual theory |
 | ERP | Raw gap-valued sequences form a pseudometric; `ErpQuotientSeries` removes all gap samples for a fixed finite gap | Quotient constructor and metric-labeled wrapper exist; concrete numeric and whole-search correspondence remain separate |
 | Scalar/vector discrete Fréchet | Nonempty paths on a fixed ground domain; consecutive stutter quotient identifies zero-distance sequences | Canonical `FrechetStutterClass` exists for scalar paths; vector metric qualification needs its own domain map |
 | MSM | Lawful positive move/split/merge configuration and admitted finite series | Reviewed metric marker and named lower-bound proofs exist; the partial MSM proof tree and source/numeric gaps prevent a library-wide closed CBC claim |
 | Unit-grid TWED | Positive stiffness and nonnegative gap penalty on a common uniform grid | Metric config and interval/recurrence proof islands exist; rounded metric laws and full executable correspondence remain open |
-| Physical-time TWED | Same unit and origin; finite scalar or typed vector values; strictly increasing timestamps; first timestamp strictly after origin for metric qualification | The committed vector series guard enforces the origin restriction; the committed scalar raw API does not. `TimestampedMetricTransfer.v` proves the origin-equal obstruction for any nonnegative reflexive point cost, but imports the full source metric theorem as a premise; machine metricity and Rust correspondence remain open |
+| Physical-time TWED | Same unit and origin; finite scalar or typed vector values; strictly increasing timestamps; first timestamp strictly after origin for metric qualification | The committed vector series guard enforces the origin restriction; the committed scalar raw API does not. An exact-natural 2007 alignment/DP minimum theorem is checked. `TimestampedMetricTransfer.v` proves the origin-equal obstruction for any nonnegative reflexive point cost, but still imports ideal-real source metricity and source-distance identification as premises; machine metricity and Rust correspondence remain open |
 | Banded/general DTW | Exact recurrence and separately certified admissible filters; general family is nonmetric | Keep as a capability control; no triangle-dependent pruning license |
 | Soft-DTW | Soft algebra/approximation profile, not ordinary exact metric rank without a separate theorem | Keep as a capability control |
 
@@ -112,12 +112,29 @@ For range results, specify whether promised order is score order, dictionary ord
 | CBC-2 finite internal rank | `CertifiedMetricExecution.v` implication from decreasing natural rank | Concrete rank, no-stuck-state proof, finite reference progress, conditional resumption |
 | QO-1 work potential | `CertifiedMetricExecution.v` telescoping inequality | Concrete primitive costs, independent credits, useful potentials, live/peak accounting |
 | QO-2 finite portfolio minimum | `CertifiedMetricExecution.v` finite natural objective selection | Certified feasibility, acquisition/selection/conversion cost, workload and objective scope |
-| Timestamped TWED metric transfer | `TimestampedMetricTransfer.v` recurrence/anchor transfer and abstract strict-domain admission | Committed scalar strict-domain API, local proof of the source theorem for full local closure, binary64 and source correspondence separately |
+| Standard integer edit recurrence | [IntegerLevenshteinRecurrence.v](../verification/core/theories/Conformance/IntegerLevenshteinRecurrence.v) proves seed, one-label transition, streamed terminal, and both empty cases against `Core.LevDistance`; checked-add and checked-cell lemmas bind a finite maximum | Unicode/Rust label extraction, characteristic-vector and positional-state transitions, allocation/error semantics, and full source/session correspondence |
+| Timestamped TWED finite source paths | [TwedSourceAlignments.v](../verification/twed/theories/Metric/TwedSourceAlignments.v) and [TwedSourceDpPath.v](../verification/twed/theories/Metric/TwedSourceDpPath.v) prove finite exact-natural paths on natural value/time pairs with unit-stiffness coordinate-sum distance and natural gap penalty, 2007 infinite axes, recurrence equivalence in both directions, and attained minimum; an altered λ-free axis yields 3 versus lawful 4 | Ideal-real source-distance and sequence-metric theorem, then binary64 operation graph, interval bound, index session, and Rust correspondence |
+| Timestamped TWED metric transfer | `TimestampedMetricTransfer.v` recurrence/anchor transfer and abstract strict-domain admission | Committed scalar strict-domain API, ideal-real source-distance identification and local source sequence-metric theorem, binary64 and source correspondence separately |
 | Range certificates and snapshot | `RangeCertificates.v`, `ElasticSnapshot.v` | Integrate with whole-session ownership and selected Rust execution paths |
 | Original-occurrence ownership | `CertifiedSearchSession.v` proves pending/private/verified/excluded permutation, sound exclusion preservation, and conditional completed-winner retention | Region-level split, borrowed-parent publication, heap/rank, resource/error observations, and Rust correspondence |
 | Explicit region split | `CertifiedRegionPartition.v` checks exact permutation of a supplied parent original list into terminal and child lists, including collision/duplicate controls | Prove captured snapshot enumeration, compact structural split certificate, and Rust iterator correspondence without enumerating whole subtrees in the hot path |
 | Constructed region split | `CertifiedStructuralSplit.v` classifies every supplied parent original into a terminal or uniquely labelled child bucket, preserves exact multiplicity, and produces a package accepted by the explicit checker | Prove classifier and parent enumeration against a captured dictionary snapshot, then derive a compact certificate and source correspondence without scanning full subtrees in production |
 | Exact workspace resources | `ExactWorkspaceResources.v` and `ResourceLedger` API | Model actual/reserved/charged work, vector capacity, private scratch, and allocation failure on all selected operations |
+
+The standard integer edit bridge represents rows as total functions over
+natural indices and uses the core ASCII `Char` model. Its cell-refinement
+theorem applies to query indices within the query length, assumes the
+predecessor row is reference-correct at those indices, and supplies the exact
+new row's preceding horizontal cell. It certifies the unit-substitution
+weight and the terminal coordinate, including an off-by-one control. Its
+`checked_transition` accepts a cell only when **all three** candidate sums
+fit the declared maximum. The checked overflow control uses arbitrary
+primitive operands $`3,1,0`$ with maximum $`2`$ to show that this conservative
+gate can reject when the exact minimum still fits; it does not exhibit a
+reachable Levenshtein DP row. This theorem therefore does not
+justify imposing that gate on a production scorer, nor does it prove a Rust
+integer-overflow policy. A faster, less restrictive machine rule needs its
+own soundness proof under the actual checked arithmetic and result tags.
 
 A complete search-session invariant must count originals held by private work or prove that their public parent retains ownership until atomic publication. In the bounded range continuation, advancing the candidate cursor removes an original from its pending region; a `pending_match` awaiting a result-page slot therefore requires exclusive private ownership. Uncommitted node splitting can still borrow its pending parent. Verification and emission *histories* are ghost state; the concrete best-k heap, result vector, and continuation remain separately accounted. Cache entries are reusable only when complete and scoped to the same query, arithmetic, parameters, and snapshot. A pure cache-hit successor may preserve completed results while changing page boundaries or resource status.
 

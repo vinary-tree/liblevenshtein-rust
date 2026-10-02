@@ -171,6 +171,78 @@ Proof.
     as [Hscope | Hscope]; [symmetry; exact Hscope | discriminate].
 Qed.
 
+(** Acceptance binds the entire replay edge, including the recorded source
+    and target, rather than merely the semantic relation between two freely
+    chosen expressions. [realization_scope] includes the domain, query,
+    parameters, snapshot, cutoff, revision, and label-context tokens. Those
+    tokens still require a separate binding to live operation data. *)
+Theorem replay_step_binds_checked_fields :
+  forall requested current old_kind step next new_kind,
+    replay_step requested current old_kind step = Some (next, new_kind) ->
+    recorded_scope step = requested /\
+    recorded_source step = current /\
+    recorded_target step = next /\
+    recorded_arithmetic step = ExactNaturals /\
+    scope_arithmetic (base_scope requested) = ExactNaturals /\
+    scope_observation (base_scope requested) = ScoreOnly /\
+    recorded_witness_effect step = NoWitnessEffect.
+Proof.
+  intros requested current old_kind step next new_kind Hstep.
+  unfold replay_step in Hstep.
+  destruct (realization_scope_eq_dec requested (recorded_scope step))
+    as [Hscope | Hscope]; [|discriminate].
+  destruct (arithmetic_profile_eq_dec (recorded_arithmetic step)
+    ExactNaturals) as [Harithmetic | Harithmetic]; [|discriminate].
+  destruct (arithmetic_profile_eq_dec
+    (scope_arithmetic (base_scope requested)) ExactNaturals)
+    as [Hrequest_arithmetic | Hrequest_arithmetic]; [|discriminate].
+  destruct (observation_profile_eq_dec
+    (scope_observation (base_scope requested)) ScoreOnly)
+    as [Hobservation | Hobservation]; [|discriminate].
+  destruct (recorded_witness_effect step) eqn:Hwitness;
+    try discriminate.
+  destruct (expression_eq_dec current (recorded_source step))
+    as [Hsource | Hsource]; [|discriminate].
+  destruct (required_premises (recorded_rule step))
+    as [required |] eqn:Hrequired; [|discriminate].
+  destruct (list_eq_dec premise_name_eq_dec required
+    (recorded_premises step)); [|discriminate].
+  destruct (rule_result (recorded_rule step) (recorded_direction step)
+    (recorded_source step) (recorded_target step))
+    as [effect |] eqn:Hrule; [|discriminate].
+  inversion Hstep; subst next new_kind.
+  split; [symmetry; exact Hscope |].
+  split; [symmetry; exact Hsource |].
+  split; [reflexivity |].
+  split; [exact Harithmetic |].
+  split; [exact Hrequest_arithmetic |].
+  split; [exact Hobservation |].
+  reflexivity.
+Qed.
+
+Theorem unsupported_witness_effect_never_replays :
+  forall requested current old_kind step next new_kind,
+    recorded_witness_effect step <> NoWitnessEffect ->
+    replay_step requested current old_kind step <> Some (next, new_kind).
+Proof.
+  intros requested current old_kind step next new_kind
+    Hunsupported Hreplay.
+  destruct (replay_step_binds_checked_fields
+    _ _ _ _ _ _ Hreplay) as [_ [_ [_ [_ [_ [_ Hwitness]]]]]].
+  exact (Hunsupported Hwitness).
+Qed.
+
+Theorem wrong_step_source_never_replays :
+  forall requested current old_kind step next new_kind,
+    recorded_source step <> current ->
+    replay_step requested current old_kind step <> Some (next, new_kind).
+Proof.
+  intros requested current old_kind step next new_kind Hwrong Hreplay.
+  destruct (replay_step_binds_checked_fields
+    _ _ _ _ _ _ Hreplay) as [_ [Hsource _]].
+  exact (Hwrong Hsource).
+Qed.
+
 Theorem replay_step_identifies_exact_rule_and_premises :
   forall requested current old_kind step next new_kind,
     replay_step requested current old_kind step = Some (next, new_kind) ->
@@ -261,6 +333,28 @@ Proof.
   rewrite Hrounded in Hexact; discriminate Hexact.
 Qed.
 
+Theorem rounded_request_never_replays :
+  forall requested current old_kind step next new_kind,
+    scope_arithmetic (base_scope requested) = RoundedBinary64 ->
+    replay_step requested current old_kind step <> Some (next, new_kind).
+Proof.
+  intros requested current old_kind step next new_kind Hrounded Hreplay.
+  destruct (replay_step_binds_checked_fields
+    _ _ _ _ _ _ Hreplay) as [_ [_ [_ [_ [Hexact _]]]]].
+  rewrite Hrounded in Hexact; discriminate Hexact.
+Qed.
+
+Theorem witness_request_never_replays :
+  forall requested current old_kind step next new_kind,
+    scope_observation (base_scope requested) = CanonicalWitness ->
+    replay_step requested current old_kind step <> Some (next, new_kind).
+Proof.
+  intros requested current old_kind step next new_kind Hwitness Hreplay.
+  destruct (replay_step_binds_checked_fields
+    _ _ _ _ _ _ Hreplay) as [_ [_ [_ [_ [_ [Hscore _]]]]]].
+  rewrite Hwitness in Hscore; discriminate Hscore.
+Qed.
+
 Definition relation_holds (origin current : cost_expression)
     (kind : relation_kind) (environment : nat -> nat) : Prop :=
   match kind with
@@ -348,6 +442,23 @@ Proof.
     now rewrite H, IHHrelation.
 Qed.
 
+Theorem replay_steps_scopes_every_step :
+  forall requested current kind steps target final_kind,
+    replay_steps requested current kind steps = Some (target, final_kind) ->
+    Forall (fun step => recorded_scope step = requested) steps.
+Proof.
+  intros requested current kind steps.
+  revert current kind.
+  induction steps as [|step remaining IH];
+    intros current kind target final_kind Hreplay; simpl in Hreplay.
+  - constructor.
+  - destruct (replay_step requested current kind step)
+      as [[next next_kind] |] eqn:Hstep; [|discriminate].
+    constructor.
+    + eapply replay_step_requires_exact_scope; exact Hstep.
+    + eapply IH; exact Hreplay.
+Qed.
+
 Theorem finite_replay_sound :
   forall requested steps origin source kind target final_kind,
     finite_replay requested source kind steps target final_kind ->
@@ -419,6 +530,28 @@ Proof.
     intro another_environment; unfold relation_holds; reflexivity.
 Qed.
 
+Theorem accepted_scoped_certificate_scopes_every_step :
+  forall requested origin target claimed_kind certificate,
+    accept_scoped requested origin target claimed_kind certificate = true ->
+    Forall (fun step => recorded_scope step = requested)
+      (certificate_steps certificate).
+Proof.
+  intros requested origin target claimed_kind certificate Haccept.
+  unfold accept_scoped in Haccept.
+  destruct (realization_scope_eq_dec requested
+    (certificate_scope certificate)); [|discriminate].
+  destruct (arithmetic_profile_eq_dec
+    (scope_arithmetic (base_scope requested)) ExactNaturals);
+    [|discriminate].
+  destruct (observation_profile_eq_dec
+    (scope_observation (base_scope requested)) ScoreOnly);
+    [|discriminate].
+  destruct (replay_steps requested origin Equivalent
+    (certificate_steps certificate)) as [[result result_kind] |]
+    eqn:Hreplay; [|discriminate].
+  eapply replay_steps_scopes_every_step; exact Hreplay.
+Qed.
+
 Corollary accepted_exact_chain_preserves_every_score :
   forall requested origin target certificate,
     accept_scoped requested origin target Equivalent certificate = true ->
@@ -471,6 +604,17 @@ Definition sample_lower_step : scoped_step :=
      recorded_arithmetic := ExactNaturals;
      recorded_witness_effect := NoWitnessEffect |}.
 
+Definition sample_backward_exact_step : scoped_step :=
+  {| recorded_rule := NamedExact AddZeroRight;
+     recorded_premises :=
+       [ExactNaturalArithmetic; ScoreOnlyObservation; ExactPattern];
+     recorded_direction := Backward;
+     recorded_source := InputVar 0;
+     recorded_target := Addition (InputVar 0) (Constant 0);
+     recorded_scope := sample_realization_scope;
+     recorded_arithmetic := ExactNaturals;
+     recorded_witness_effect := NoWitnessEffect |}.
+
 Definition singleton_certificate (step : scoped_step) : scoped_certificate :=
   {| certificate_scope := sample_realization_scope;
      certificate_steps := [step] |}.
@@ -485,6 +629,12 @@ Example valid_lower_replay_is_accepted :
   accept_scoped sample_realization_scope
     (Addition (InputVar 0) (InputVar 1)) (InputVar 0)
     LowerThanSource (singleton_certificate sample_lower_step) = true.
+Proof. reflexivity. Qed.
+
+Example valid_backward_exact_replay_is_accepted :
+  accept_scoped sample_realization_scope
+    (InputVar 0) (Addition (InputVar 0) (Constant 0))
+    Equivalent (singleton_certificate sample_backward_exact_step) = true.
 Proof. reflexivity. Qed.
 
 Example lower_replay_cannot_claim_equivalence :

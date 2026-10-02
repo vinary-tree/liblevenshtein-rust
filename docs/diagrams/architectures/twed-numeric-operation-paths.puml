@@ -1,0 +1,51 @@
+@startuml twed-numeric-operation-paths
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam ArrowColor #315678
+skinparam ArrowThickness 2
+skinparam rectangle {
+  BorderColor #315678
+  FontColor #102027
+  BackgroundColor #E3F2FD
+}
+left to right direction
+
+title Physical-time TWED numeric paths and result authority
+
+rectangle "Typed series and request\nunit, origin, parameters, cutoff, limits" as Admission #E8F5E9
+rectangle "Scalar bounded scorer\ndense rolling binary64 DP" as Scalar #E3F2FD
+rectangle "Online automaton\nowned query, transactional sparse prefix" as Online #E3F2FD
+rectangle "Indexed range\ncaptured dictionary view and decoded boxes" as Range #E1F5FE
+rectangle "Interval frontier\ncandidate lower bounds" as Bound #FFF3CD
+rectangle "Terminal verifier\nfull-precision score_exact" as Verify #E3F2FD
+rectangle "Conditional subtree prune\nrequires a machine inequality proof" as Prune #FFEBEE
+rectangle "Indexed kNN\nall-original scan and bounded heap" as Knn #E3F2FD
+rectangle "Public result\noperation-specific cutoff, failure, resource, completion" as Result #E8F5E9
+
+Admission --> Scalar : scalar
+Admission --> Online : online
+Admission --> Range : indexed range
+Admission --> Knn : indexed kNN
+Knn --> Verify : score each original
+Range --> Bound : each label
+Bound --> Verify : surviving terminal
+Bound --> Prune : empty frontier
+Scalar --> Result
+Online --> Result
+Verify --> Range : range: continue DFS
+Verify --> Knn : kNN: update heap
+Prune --> Range : continue DFS
+Range --> Result : exhausted, paused, or failed
+Knn --> Result : exhausted or failed
+
+note bottom of Bound #FFF9E5
+  Interval arithmetic is not yet proved to bound
+  every executed binary64 verifier score.
+end note
+
+note bottom of Prune #FFEBEE
+  A real-valued lower bound alone does not
+  authorize a machine-score subtree prune.
+end note
+@enduml
