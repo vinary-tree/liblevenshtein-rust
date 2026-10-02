@@ -1,0 +1,81 @@
+---
+name: Deploy Julia development documentation
+
+# Development guide only. No package-manager publication or tag deployment.
+"on":
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/julia-docs-dev.yml"
+      - "bindings/julia/Liblevenshtein/**"
+      - "src/ffi/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: julia-docs-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, deploy, and read back Julia development docs
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with: {persist-credentials: false}
+      - uses: ./.github/actions/checkout-dev-siblings
+        with:
+          coordinated-ref: ${{ github.head_ref || github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+      # yamllint disable-line rule:line-length
+      - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32  # v3.0.2
+        with: {version: "1.12"}
+      - name: Build the two native libraries used by the guide
+        run: |
+          cargo build --locked --features native-bindings-full
+          cargo build --locked --manifest-path ../libdictenstein/Cargo.toml \
+            --features ffi
+      - name: Build and deploy strict Julia documentation
+        env:
+          LIBLEVENSHTEIN_LIBRARY: >-
+            ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          LIBLEVENSHTEIN_DOCS_DEPLOY: "1"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sibling="$(realpath ../libdictenstein)"
+          native="$sibling/target/debug/liblibdictenstein.so"
+          export LIBDICTENSTEIN_LIBRARY="$native"
+          julia --startup-file=no -e '
+            using Pkg
+            Pkg.activate("target/julia-docs")
+            Pkg.develop([
+              PackageSpec(path="../vinary-tree-interop/bindings/julia/VinaryTreeInterop"),
+              PackageSpec(path="bindings/julia/Liblevenshtein"),
+            ])
+            Pkg.add(PackageSpec(name="Documenter", version="1"))
+            include("bindings/julia/Liblevenshtein/docs/make.jl")
+          '
+      - name: Verify deployed gh-pages tree
+        run: |
+          git fetch --depth=1 origin gh-pages
+          scratch="$PWD/target/julia-docs-readback"
+          mkdir -p "$scratch"
+          git show FETCH_HEAD:julia/dev/index.html > "$scratch/deployed.html"
+          grep -Fq 'Liblevenshtein.jl' "$scratch/deployed.html"
+      - name: Verify public Pages URL
+        run: |
+          scratch="$PWD/target/julia-docs-readback"
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error --location \
+              https://vinary-tree.github.io/liblevenshtein-rust/julia/dev/ \
+              -o "$scratch/public.html" && \
+              grep -Fq 'Liblevenshtein.jl' "$scratch/public.html"; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'Public Julia development docs were not readable' >&2
+          exit 1
