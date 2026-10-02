@@ -213,7 +213,7 @@ jobs:
           .release-deps/vinary-tree-interop
       - uses: dtolnay/rust-toolchain@1.95
       - uses: ./.github/actions/pin-siblings-cratesio
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
       - name: Build and test platform wheel
