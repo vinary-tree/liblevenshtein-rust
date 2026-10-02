@@ -1042,10 +1042,18 @@ for marker in (
     "vinarytree.interop",
     "hackage final-version candidate (never published for rc)",
     "fpm final-version candidate (never published for rc)",
-    'module_tag="bindings/go/v$version"',
+    "bash scripts/test-go-module-release.sh",
+    "bash scripts/go-module-release.sh verify bindings/go",
+    "bash scripts/go-module-release.sh proxy bindings/go",
     "opam-repository",
 ):
     require(marker in interop_release, f"shared interop release is missing {marker}")
+interop_go_release = text(INTEROP_ROOT / "scripts" / "go-module-release.sh").lower()
+require(
+    'tag="$module_dir/$version"' in interop_go_release
+    and 'ref="refs/tags/$tag"' in interop_go_release,
+    "shared interop Go release helper must derive the subdirectory module tag",
+)
 for name, workflow in (
     ("liblevenshtein", release),
     ("libdictenstein", libdictenstein_release),

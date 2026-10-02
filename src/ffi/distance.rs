@@ -60,13 +60,7 @@ macro_rules! raw_unit_distance_functions {
             $exact(source, target)
         }
 
-        #[doc = concat!(
-                                                    "Compute thresholded ",
-                                                    $family,
-                                                    " distance over ",
-                                                    $domain,
-                                                    "."
-                                                )]
+        #[doc = concat!("Compute thresholded ", $family, " distance over ", $domain, ".")]
         ///
         /// # Safety
         ///
