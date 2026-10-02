@@ -15,7 +15,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: liblevenshtein-package-documentation
+  # The Julia development guide also writes gh-pages. Serialize both writers.
+  group: liblevenshtein-pages-publish
   cancel-in-progress: false
 
 jobs:
@@ -111,16 +112,16 @@ jobs:
     if: ${{ !inputs.archive_only }}
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
-      pages: write
-      id-token: write
+      contents: write
     environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      # The protected release environment accepts only reviewed v* tags.
+      name: github-release
+      url: https://vinary-tree.github.io/liblevenshtein-rust/
     steps:
       - uses: actions/checkout@v6
         with:
-          persist-credentials: false
+          # This job writes only the reviewed documentation tree to gh-pages.
+          persist-credentials: true
       - uses: actions/download-artifact@v7
         with:
           name: package-documentation-release
@@ -141,20 +142,24 @@ jobs:
           archive+="liblevenshtein-package-documentation-$version.tar.gz"
           test -f "$archive"
           asset="$(basename "$archive")"
-          release=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME")
+          release="$(gh api \
+            "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME")"
           jq -e --arg tag "$GITHUB_REF_NAME" \
             '.tag_name == $tag and .draft == false and .immutable == true' \
             <<< "$release" >/dev/null
-          test "$(jq -r --arg name "$asset" \
-            '[.assets[] | select(.name == $name and .state == "uploaded")] | length' \
-            <<< "$release")" = 1
+          asset_count="$(jq -r --arg name "$asset" '
+            [.assets[] | select(.name == $name and .state == "uploaded")]
+            | length
+          ' <<< "$release")"
+          test "$asset_count" = 1
           mkdir -p target/existing-package-documentation
           gh release download "$GITHUB_REF_NAME" \
             --pattern "$asset" \
             --dir target/existing-package-documentation
           existing="target/existing-package-documentation/$asset"
           cmp --silent "$archive" "$existing" || {
-            echo "::error::Published documentation bytes differ from the reproducible archive." >&2
+            echo '::error::Published documentation bytes differ from' \
+              'the reproducible archive.' >&2
             exit 1
           }
       - name: Download every immutable version archive
@@ -189,16 +194,82 @@ jobs:
         run: >-
           python3 scripts/package-documentation-site.py assemble
           --archives target/all-package-documentation-archives
-      # configure-pages v5
-      - uses: >-
-          actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
-      # upload-pages-artifact v4
-      - uses: >-
-          actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
-        with:
-          path: target/package-documentation-site
-      - name: Deploy the versioned site
-        id: deployment
-        # deploy-pages v4
-        uses: >-
-          actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+      - name: Merge the immutable versions into the live gh-pages tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin gh-pages
+          branch="$PWD/target/package-docs-gh-pages"
+          git worktree add --detach "$branch" FETCH_HEAD
+          test -f "$branch/julia/dev/index.html"
+          cp -a target/package-documentation-site/. "$branch/"
+          test -f "$branch/julia/dev/index.html"
+          git -C "$branch" add --all
+          if git -C "$branch" diff --cached --quiet; then
+            echo 'The immutable documentation site is already current.'
+          else
+            version="$(jq -r '.canonical' release/version.json)"
+            bot_email='41898282+github-actions[bot]@users.noreply.github.com'
+            git -C "$branch" \
+              -c user.name='github-actions[bot]' \
+              -c user.email="$bot_email" \
+              commit -m "docs: publish immutable references for $version"
+            git -C "$branch" push origin HEAD:refs/heads/gh-pages
+          fi
+      - name: Read back the public versioned API and preserved Julia guide
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="$PWD/target/package-docs-gh-pages"
+          scratch="$PWD/target/package-docs-public-readback"
+          mkdir -p "$scratch"
+          python3 -c '
+          import json
+          from scripts.package_documentation_surfaces import (
+              GENERATED_SURFACE_LAYOUT,
+          )
+          with open("release/version.json", encoding="utf-8") as stream:
+              version = json.load(stream)["canonical"]
+          print("index.html")
+          print("versions.json")
+          print("julia/dev/index.html")
+          print(f"{version}/index.html")
+          print(f"{version}/documentation-manifest.json")
+          manifest_path = (
+              f"target/package-documentation-site/{version}/"
+              "documentation-manifest.json"
+          )
+          with open(manifest_path, encoding="utf-8") as stream:
+              files = json.load(stream)["sha256"]
+          for surface, (_, entry) in GENERATED_SURFACE_LAYOUT.items():
+              print(f"{version}/{surface}/{entry}")
+              for suffix in (".css", ".js"):
+                  assets = sorted(
+                      path for path in files
+                      if path.startswith(f"{surface}/")
+                      and path.endswith(suffix)
+                  )
+                  if assets:
+                      print(f"{version}/{assets[0]}")
+          ' > "$scratch/paths.txt"
+          mapfile -t paths < "$scratch/paths.txt"
+          test "${#paths[@]}" -ge 6
+          site='https://vinary-tree.github.io/liblevenshtein-rust'
+          for attempt in $(seq 1 36); do
+            ready=1
+            for path in "${paths[@]}"; do
+              if ! curl --fail --silent --location "$site/$path" \
+                --output "$scratch/public" || \
+                ! cmp --silent "$branch/$path" "$scratch/public"; then
+                ready=0
+                break
+              fi
+            done
+            if [ "$ready" -eq 1 ]; then
+              echo "Verified ${#paths[@]} public documentation files."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Public Pages readback differs at $path." >&2
+          exit 1

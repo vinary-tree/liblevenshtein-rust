@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: julia-docs-dev
+  group: liblevenshtein-pages-publish
   cancel-in-progress: false
 
 jobs:
