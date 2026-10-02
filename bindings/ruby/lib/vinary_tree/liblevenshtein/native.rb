@@ -3,7 +3,10 @@ require "rbconfig"
 
 module VinaryTree
   module Liblevenshtein
-    module Native
+    # Fiddle declarations and wire layouts used only by the public facade.
+    # Application code should use Liblevenshtein, Transducer, QueryCache, and
+    # the named enum modules instead of calling this ABI directly.
+    module Native # :nodoc:
       extend Fiddle::Importer
 
       def self.library_candidates

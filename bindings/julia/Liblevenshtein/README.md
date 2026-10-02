@@ -251,6 +251,10 @@ budget against a native control measured on the same runner.
 
 ## API reference
 
+The [live development API guide](https://vinary-tree.github.io/liblevenshtein-rust/julia/dev/)
+is generated from the current `master` source. It is not a published RC.6
+General-registry package or a versioned release reference.
+
 | API | Contract |
 |---|---|
 | `distance(a, b; threshold=nothing)` | Standard Levenshtein distance over matching string, byte-vector, or u64-token-vector domains. |
@@ -350,4 +354,5 @@ storage and exposes it through the same `QueryCursor` contract.
 The Julia package name is `Liblevenshtein`, without an organization prefix.
 Release publication is intentionally disabled for this RC6 candidate; a
 signed source tag and registry review remain required before General-registry
-registration and Documenter deployment.
+registration and versioned Documenter deployment. The development guide above
+can be read independently of that future package release.
