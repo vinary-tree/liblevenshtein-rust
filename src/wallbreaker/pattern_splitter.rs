@@ -215,7 +215,7 @@ impl PatternSplitter {
     #[inline]
     pub fn num_pieces(&self) -> usize {
         match self.algorithm {
-            Algorithm::Standard => self.max_distance + 1,
+            Algorithm::Standard => self.max_distance.saturating_add(1),
             Algorithm::Transposition | Algorithm::MergeAndSplit | Algorithm::DamerauLevenshtein => {
                 self.max_distance.saturating_mul(2).saturating_add(1)
             }
@@ -270,6 +270,13 @@ mod tests {
         assert_eq!(pieces[1].end_offset, 6);
         assert_eq!(pieces[2].start_offset, 6);
         assert_eq!(pieces[2].end_offset, 9);
+    }
+
+    #[test]
+    fn extreme_distance_piece_count_saturates_without_overflow() {
+        let splitter = PatternSplitter::standard(usize::MAX);
+        assert_eq!(splitter.num_pieces(), usize::MAX);
+        assert_eq!(splitter.split("a")[0].content, "a");
     }
 
     #[test]
