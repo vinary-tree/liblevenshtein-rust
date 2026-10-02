@@ -1132,6 +1132,12 @@ jobs:
           shell: sh
           memory: 6G
           cpu_count: 2
+      - name: Select DragonFly's official AUTO package repository
+        if: matrix.platform.os == 'dragonflybsd'
+        shell: cpa.sh {0}
+        run: |
+          sudo install -m 0644 .github/dragonfly-pkg-auto.conf \
+            /usr/local/etc/pkg/repos/df-latest.conf
       - name: Install platform toolchain prerequisites
         shell: cpa.sh {0}
         run: |
