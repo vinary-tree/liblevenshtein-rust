@@ -17,11 +17,13 @@ theories/CertifiedKnnHeap.v
 theories/CertifiedRankCertificateTypes.v
 theories/CertifiedGenericRankOrder.v
 theories/CertifiedRankRestriction.v
+theories/CertifiedRankUnion.v
 theories/CertifiedThresholdCoverage.v
 theories/CertifiedOriginalRankInstances.v
 theories/EvidenceStopping.v
 theories/EvidenceIndistinguishability.v
 theories/EvidenceAttainableCompletion.v
+theories/EvidenceIntervalStoppingCompleteness.v
 theories/CertifiedGeometricEnclosure.v
 theories/CertifiedSessionHeapBridge.v
 theories/CertifiedKnnPruning.v
@@ -38,3 +40,4 @@ theories/CertifiedCertificateTrace.v
 theories/CertifiedCertificateComposition.v
 theories/CertificateScope.v
 theories/CertifiedCertificateScopeReuse.v
+theories/CertifiedRankReuse.v

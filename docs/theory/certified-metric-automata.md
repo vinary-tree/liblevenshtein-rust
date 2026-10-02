@@ -1168,8 +1168,32 @@ The scope token is opaque, and the regions are predicates on ranks. Binding
 that token to a revision, query, and numerical authority, proving structural
 region inclusion, and retaining occurrence ownership are separate obligations.
 This module proves no full-heap gate, producer correctness, resource bound,
-or Rust refinement. The finite-union argument above remains a separate
-mathematical proof.
+or Rust refinement.
+
+[CertifiedRankUnion.v](../verification/temporal_automata/theories/CertifiedRankUnion.v)
+checks aggregation over a complete finite partition of owned originals into
+child regions, live terminals, and private work. `NoDup` on the owned list
+and a `Permutation` with the concatenated pieces express unique ownership
+and complete coverage. Every child has a corresponding scoped certificate;
+the live and private pieces each need one as well.
+`complete_partition_rank_floor_aggregation_sound` proves a proposed common
+rank floor when every piece's sound certificate supports that floor. A minimum
+of piece floors supplies this common consequence by the order laws above;
+the module itself accepts the common floor as an input.
+
+`complete_partition_strict_cut_aggregation_sound` preserves a strict cost cut
+when every piece supports it. A proved empty piece supports either consequence.
+A global or conditioned cost floor must lie strictly above the proposed cut;
+a strict-cost certificate may use a lower endpoint equal to it. `Unknown`
+supplies neither consequence. Even a partition with no children must account
+for its live terminals and private work before aggregation.
+
+The checked omission control has child rank $`(5,9)`$ and live terminal rank
+$`(5,1)`$. The child supports proposed floor $`(5,7)`$, but the live original
+refutes it. Its valid `Unknown` certificate blocks aggregation. The proof
+requires the complete partition and semantic piece certificates; concrete
+enumeration, scope binding, certificate production, and a full verified heap
+for subsequent kNN pruning remain instance obligations.
 
 A threshold summary's scope includes the revision, region occurrence, query,
 parameters, arithmetic, observation, and threshold. With fixed per-original
@@ -1177,6 +1201,35 @@ bounds, lowering $`c`$ shrinks $`S_Q(c)`$, so an old floor remains sound.
 Raising $`c`$ can admit an earlier tie and requires new evidence. Rocq checks
 subset monotonicity and the costs-five-and-six counterexample. If the bound
 function also changes, prove subset inclusion before reusing the floor.
+
+[CertifiedRankReuse.v](../verification/temporal_automata/theories/CertifiedRankReuse.v)
+checks these reuse rules for finite lists with natural costs and ties.
+`decreasing_cutoff_preserves_rank_floor` fixes the original list and bound
+function. `changed_bounds_reuse_requires_candidate_inclusion` instead requires
+every candidate under the new bound and cutoff to belong to the old candidate
+set. Soundness of both bound functions alone does not establish that inclusion.
+These are preservation theorems for an already proved floor; coverage of
+exactly eligible originals additionally needs per-original bound soundness.
+
+The scoped reuse theorem joins that rank premise to the finite score-proof
+reuse checker. Accepted reuse binds the stable request fields: domain, query,
+parameter token, gap, stiffness, snapshot, revision, arithmetic, observation,
+and label context. The captured cutoff must match the old rank claim, and the
+new cutoff must decrease or stay equal. The checker establishes stable scope
+and a score relation; semantic validity of the rank claim remains a separate
+premise. Runtime field binding and complete source enumeration are still open
+instance obligations.
+
+Its increased-threshold control has two slots in one bucket, both with exact
+cost five: the later tie nine has lower bound one, and the earlier tie one
+has lower bound two. At threshold one, $`(5,9)`$ bounds the candidate set.
+Raising the threshold to two admits $`(5,1)`$ and invalidates that floor.
+The control uses sound bounds for both originals.
+
+The [threshold-indexed tie staircase](../verification/CBC_THRESHOLD_TIE_STAIRCASE.md)
+specifies one complete finite representation, its build/lookup/storage costs,
+and a lazy compositional alternative. Its summary remains `Unknown` until
+coverage and scope have been certified.
 
 For scalar cost bounds alone, the maximum of parent and local bounds gives
 monotone child priorities whenever child regions are subsets. Conditioned
@@ -1353,8 +1406,56 @@ IDs zero and one, both with intervals $`[5,10]`$, and one verified score five:
 `underfull_vacancy_constructs_answer_changing_model` proves the last principle
 generally: an eligible unresolved original refutes completion of an underfull
 best-verified selection, without a rank-improvement condition. The predicates
-are mathematical; a Boolean refusal test, heap producer, runtime evidence
-validator, and snapshot binding still need correspondence proofs.
+are mathematical; an executable test needs its own equivalence proof, and
+runtime heap production, evidence validation, and snapshot binding need
+correspondence proofs.
+
+#### A finite Boolean test for independent natural-cost intervals
+
+[EvidenceIntervalStoppingCompleteness.v](../verification/temporal_automata/theories/EvidenceIntervalStoppingCompleteness.v)
+defines executable `interval_stopb` for natural costs and natural identity/tie
+keys. Its branches are explicit:
+
+- For a positive full selection, scan every eligible original. Verified IDs
+  pass; an unresolved ID passes exactly when its lower-endpoint rank is at
+  least the verified worst rank.
+- For an underfull selection, accept exactly when every eligible ID is
+  verified. The worst-rank argument is unused.
+- At $`k=0`$, accept exactly the empty selection. Reject an overfull selection.
+
+`interval_stopb_sound_and_complete` proves that the Boolean is true **if and
+only if** the supplied selection satisfies `universally_safe_to_stop`, under
+`interval_evidence_admissible` and `interval_selection_produced`. Admissibility
+provides the constructed feasible model. The producer premise supplies a full
+best-verified selection and valid worst member, an underfull best-verified
+selection, or the empty zero-capacity result. Thus the test's equivalence is
+conditional on evidence consistency and correct selection production; it
+does not prove either from runtime data.
+
+The loops recurse on a finite eligible list. `interval_finite_scan_terminates`
+and `interval_scan_evaluation_agrees_with_function` prove that an eager outer
+scan visits exactly the list's length and agrees with the Boolean function.
+This abstract visit count excludes membership searches and natural-number
+comparison costs. It establishes finite evaluation of the scan without a
+latency or Rust work claim.
+
+The equality controls above produce Boolean results `false`, `true`, and
+`false`, respectively: earlier tie refusal, later tie acceptance with a full
+selection, and refusal with a vacant slot. A separate control exposes the
+validation boundary: the raw function returns `true` for the empty result at
+capacity zero even with contradictory recorded scores. Such evidence violates
+admissibility and cannot satisfy the consistency-aware stopping contract.
+
+Completeness depends on the evidence language. The checked relational control
+has ID zero verified at five and both intervals $`[0,10]`$, then adds the
+cross-original constraint $`f(0)<f(1)`$. The model $`(f(0),f(1))=(5,8)`$
+inhabits this stronger language, and `[0]` is best-1 in every such model.
+The interval test still refuses because the unresolved lower endpoint is zero;
+the endpoint assignment $`(5,0)`$ violates the added relation. Admissibility and
+the full verified producer are proved for this control. It shows exactly why
+the interval test's completeness theorem cannot be transferred to relational
+evidence without another attainable-completion argument. No production
+stopping implementation or performance experiment follows from this result.
 
 BF-4 characterizes which completed selections the available evidence permits.
 The attainable-completion theorem supplies the refusal witness for independent
@@ -1554,6 +1655,10 @@ checks scoped subset restriction, whole-pair maximum, and the independent
 global coordinatewise rule. `CertifiedThresholdCoverage.v` checks finite
 per-original threshold coverage and exact equality-slice floors or strict
 cuts, conditional on the supplied enumeration and natural scores.
+`CertifiedRankUnion.v` checks common rank-floor and strict-cut aggregation
+across complete child, live, and private partitions. `CertifiedRankReuse.v`
+checks decreasing-threshold and candidate-inclusion reuse with separate
+stable-scope and semantic-rank premises.
 `CertificateChecking.v` checks
 source/target and request-scope binding for every accepted step of its finite
 exact-natural rule language. These extensions retain their stated premises
@@ -1566,13 +1671,16 @@ and proves mandatory deferral for sound deterministic evidence-only decisions.
 `EvidenceAttainableCompletion.v` constructs a feasible completion from
 admissible interval evidence that invalidates a full selection on a
 lower-endpoint refusal, or an underfull selection with an unresolved identity.
+`EvidenceIntervalStoppingCompleteness.v` checks a finite natural-cost Boolean
+test equivalent to safe stopping under admissibility and producer premises,
+with zero-capacity, underfull, equality, and relational-language controls.
 `CertifiedCertificateComposition.v` checks ordered finite-program score and
 completed-trace composition under accepted local certificates.
 `CertifiedGeometricEnclosure.v` checks NC-1's exact-rational center/radius
 instance and strict-cutoff consequence, with missing-membership and inward
-endpoint controls. General numerical transfer, BF-3's union rule, and the
-acyclic planning argument have mathematical proofs above; they are not
-claimed as machine-checked Rust theorems. The full session invariant and
+endpoint controls. General numerical transfer and the acyclic planning
+argument have mathematical proofs above. None of these results is a
+machine-checked Rust theorem. The full session invariant and
 checker-to-executable connection are normative designs requiring instance
 evidence.
 
