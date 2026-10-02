@@ -5,8 +5,8 @@
 //! algorithm: every operation delegates to the corresponding public Rust
 //! automaton.
 
-use super::LlevStatus;
 use super::index::{boundary, utf8};
+use super::LlevStatus;
 use crate::cost::ScaleError;
 use crate::transducer::generalized::{
     GeneralizedAutomaton, GeneralizedAutomatonError, GeneralizedOnlineAutomaton,
@@ -17,10 +17,10 @@ use crate::transducer::universal::{
     MergeAndSplit, Standard, Transposition, UniversalAutomaton, UniversalOnlineAutomaton,
 };
 use crate::transducer::{
-    MAX_OPERATION_SET_TOTAL_CONSUMPTION, MAX_SUBSTITUTION_PAIRS, MAX_SUBSTITUTION_TEXT_BYTES,
     OperationApplicability, OperationSet, OperationSetValidationError, OperationType,
     OwnedRestricted, OwnedRestrictedChar, SubstitutionPolicy, SubstitutionPolicyFor,
-    SubstitutionSet, SubstitutionSetChar, Unrestricted,
+    SubstitutionSet, SubstitutionSetChar, Unrestricted, MAX_OPERATION_SET_TOTAL_CONSUMPTION,
+    MAX_SUBSTITUTION_PAIRS, MAX_SUBSTITUTION_TEXT_BYTES,
 };
 use std::ffi::{c_char, c_void};
 use std::mem::align_of;
