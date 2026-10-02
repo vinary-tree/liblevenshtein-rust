@@ -5,6 +5,20 @@ if (length(args) != 1L) {
   stop("usage: analyze-wallbreaker-short-streaming.R <raw-output-dir>")
 }
 
+iterations_file <- file.path(args[[1]], "iterations.txt")
+if (file.exists(iterations_file)) {
+  iteration_lines <- readLines(iterations_file, warn = FALSE)
+  if (length(iteration_lines) != 1L ||
+      !grepl("^[1-9][0-9]*$", iteration_lines[[1]])) {
+    stop("invalid timed-iteration metadata")
+  }
+  expected_iterations <- as.integer(iteration_lines[[1]])
+  if (is.na(expected_iterations)) stop("timed-iteration count exceeds R integer range")
+} else {
+  # Archived experiment #388 predates the metadata file and used 500 exactly.
+  expected_iterations <- 500L
+}
+
 files <- list.files(
   args[[1]],
   pattern = "^(short|selective|empty)-(control|treatment)-[0-9]+\\.txt$",
@@ -46,11 +60,13 @@ parse_file <- function(file) {
 }
 
 raw <- do.call(rbind, lapply(files, parse_file))
-if (any(raw$iterations != 500L) || any(!is.finite(raw$latency_ns)) ||
+if (any(raw$iterations != expected_iterations) || any(!is.finite(raw$latency_ns)) ||
     any(raw$latency_ns <= 0) || any(raw$allocations < 0) ||
     any(raw$allocated_bytes < 0)) {
   stop("unexpected iteration count or invalid measurement")
 }
+
+cat(sprintf("timed_iterations_per_process=%d\n", expected_iterations))
 
 paired <- reshape(raw, idvar = c("case", "seed"), timevar = "arm", direction = "wide")
 paired <- paired[order(paired$case, paired$seed), ]

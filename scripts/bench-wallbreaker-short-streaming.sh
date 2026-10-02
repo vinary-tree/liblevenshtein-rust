@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# != 5 || ! -x "$1" || ! -x "$2" || -e "$5" ]]; then
-  echo "usage: $0 <baseline-probe> <streaming-probe> <baseline-git-ref> <streaming-git-ref> <new-disk-backed-output-dir>" >&2
+if [[ $# -lt 5 || $# -gt 6 || ! -x "$1" || ! -x "$2" || -e "$5" ]]; then
+  echo "usage: $0 <baseline-probe> <streaming-probe> <baseline-git-ref> <streaming-git-ref> <new-disk-backed-output-dir> [timed-iterations-per-process]" >&2
   exit 2
 fi
 
 baseline=$1 streaming=$2 baseline_ref=$3 streaming_ref=$4 output=$5
+iterations=${6:-500}
+if [[ ! $iterations =~ ^[1-9][0-9]{0,9}$ ]] || ((iterations > 2147483647)); then
+  echo "timed-iterations-per-process must be a positive 32-bit decimal integer" >&2
+  exit 2
+fi
 mkdir -p "$output"
+printf '%s\n' "$iterations" > "$output/iterations.txt"
 git rev-parse --verify "$baseline_ref^{commit}" > "$output/baseline-commit.txt"
 git rev-parse --verify "$streaming_ref^{commit}" > "$output/streaming-commit.txt"
 sha256sum "$baseline" "$streaming" > "$output/binaries.sha256"
@@ -19,7 +25,7 @@ lscpu > "$output/lscpu.txt"
 
 run_one() {
   local case=$1 arm=$2 seed=$3 binary=$4 command_arm=$5
-  taskset -c 2 "$binary" "$case" "$command_arm" "$seed" 500 \
+  taskset -c 2 "$binary" "$case" "$command_arm" "$seed" "$iterations" \
     > "$output/$case-$arm-$seed.txt"
 }
 

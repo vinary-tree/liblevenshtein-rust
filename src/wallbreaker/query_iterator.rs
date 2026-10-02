@@ -138,6 +138,7 @@ where
     /// Whether this query borrows complete terms instead of materializing
     /// substring-occurrence candidates. The FFI uses this exact mode decision
     /// to apply candidate-clone limits only where cloning can occur.
+    #[cfg(feature = "ffi")]
     pub(crate) fn uses_complete_term_scan(&self) -> bool {
         self.scan_all
     }
