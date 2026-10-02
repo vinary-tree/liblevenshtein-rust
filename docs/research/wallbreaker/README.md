@@ -55,8 +55,11 @@ is guaranteed to survive. Unrestricted Damerau–Levenshtein also has no
 qualified surviving-piece theorem in this implementation. A direct caller may
 also supply a splitter built for a smaller bound than the query accepts.
 Those cases take the complete-term path: one borrowed term from the captured
-snapshot at a time is length-pruned, distance-verified, and copied only if
-accepted. Neither path uses an unproven seed filter.
+snapshot at a time is length-pruned and distance-verified, then copied into
+result and deduplication storage only if accepted. Individual distance
+implementations may still allocate while verifying a rejected term; in
+particular, MergeAndSplit constructs a memoization key. Neither path uses an
+unproven seed filter.
 
 The executable algorithm, expressed without storage-specific traversal, is:
 
