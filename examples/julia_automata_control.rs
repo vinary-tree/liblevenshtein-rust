@@ -176,10 +176,10 @@ fn run_variant<V: PositionVariant>(variant: u8) {
         &[],
         &[0],
         &[0xff],
-        &[b'p'],
-        &[b'f'],
+        b"p",
+        b"f",
         &[0, 0xff],
-        &[b'p', b'f'],
+        b"pf",
         &[0xff, 0, b'p'],
     ];
     let tokens: &[&[u64]] = &[

@@ -206,6 +206,27 @@ program shows why finite refinement does not establish progress. This is a
 checker-to-model bridge for one expression fragment, not a correspondence for
 Rust evaluation, resource charges, witnesses, or the whole ORC realization.
 
+[CertifiedCertificateComposition.v](../verification/temporal_automata/theories/CertifiedCertificateComposition.v)
+makes composition across a finite program explicit. Each instruction must
+carry an accepted exact-natural, score-only certificate under the same
+requested scope. `accepted_local_certificates_preserve_program_score_order`
+proves equality of the ordered lists of target and source expression values
+for every variable environment. Given a finite execution from the declared
+initial state **and** a completed concrete state,
+`accepted_local_certificates_compose_completed_trace` constructs a completed
+reference execution with the same concatenated event list, related terminal
+states, and that event list as its reference history.
+
+The two-instruction control emits the distinct scores $`[7,3]`$, with one
+silent step between emissions and another after the second. It proves the
+completed reference history is also $`[7,3]`$; equality of sets alone would
+lose this order information. A second control starts after the first accepted
+emission and constructs an infinite administrative run without finalization.
+Thus accepted local transformations preserve an existing finite completed
+execution; they do not ensure that an execution completes. The modeled
+administrative counter also supplies no runtime resource or elapsed-time
+theorem. CBC-2 and the executable correspondence remain separate obligations.
+
 ### 3.2a A checked exact-integer certificate kernel
 
 [CertifiedContracts.v](../verification/temporal_automata/theories/CertifiedContracts.v)
@@ -912,11 +933,45 @@ Error estimates only on pivot distances do not cover rounding in the exact
 candidate verifier. A nonnegative machine score also permits clipping the
 resulting bound at zero.
 
+[CertifiedGeometricEnclosure.v](../verification/temporal_automata/theories/CertifiedGeometricEnclosure.v)
+checks an exact-rational center/radius instance of NC-1. A `rational_metric`
+supplies its metric laws. For a center $`c`$, nonnegative radius $`r`$, and
+member $`x`$, the instance must establish $`d(c,x)\le r`$. Then
+`nc1_exact_rational_enclosure` proves
+
+```math
+0\le\max(0,d(q,c)-r)\le d(q,x)\le d(q,c)+r.
+```
+
+The lower endpoint uses symmetry and the reverse triangle inequality; the
+upper endpoint uses the forward triangle inequality. Applying this result to
+a region requires the membership premise for every represented original.
+`nc1_strict_cutoff_prune_is_sound` proves that a lower endpoint **strictly**
+above an inclusive cutoff excludes the member. Equality alone supplies no
+such rejection or lexicographic tie floor.
+
+Three checked controls use a two-point metric whose nonzero distance is two:
+
+- With query and center at the same point and radius zero, the other point
+  has distance two, exceeding the claimed upper endpoint zero. Omitting the
+  membership premise therefore invalidates the enclosure.
+- With radius two and the query equal to the region member, the exact lower
+  endpoint is zero. Raising it to one exceeds the member's distance zero.
+- With query equal to the center and the other point as member, the exact
+  upper endpoint is two. Lowering it to one excludes the true distance two.
+
+The latter controls model inward endpoint changes with exact rationals; they
+do not simulate an IEEE rounding operation. The theorem assumes the supplied
+rational metric, exact center score, radius, and membership proof. It does not
+establish those properties for a library scorer or prove outward conversion
+to binary64. The general enclosure-to-machine-score transfer above still
+requires the declared verifier's error or refinement theorem.
+
 Primitive enclosure certificates compose through monotone expression nodes
 by induction on the evaluation DAG. Each node needs its own directed-rounding
-or error theorem, including valid intermediate ranges. NC-1 is proved here
-mathematically; a concrete binary64 enclosure implementation is an additional
-artifact.
+or error theorem, including valid intermediate ranges. The rational instance
+checks the stated geometric inequalities; a concrete binary64 enclosure
+implementation and its source correspondence are additional artifacts.
 
 ## 6. Stronger ordered pruning with scoped rank certificates
 
@@ -1171,6 +1226,51 @@ feasible assignments, validate runtime evidence, enforce captured-snapshot
 binding, or prove Rust correspondence. It supplies no cost of acquiring or
 checking evidence.
 
+#### Checked indistinguishability and mandatory deferral
+
+[EvidenceIndistinguishability.v](../verification/temporal_automata/theories/EvidenceIndistinguishability.v)
+constructs two feasible completions of the **same** evidence. The eligible
+IDs are zero and one, ID zero is verified at cost five, and both declared
+cost intervals are $`[0,10]`$:
+
+| Completion | Cost of ID zero | Cost of ID one | Unique ordered top-1 ID list |
+|---|---|---|---|
+| Lower unresolved cost | 5 | 4 | `[1]` |
+| Higher unresolved cost | 5 | 8 | `[0]` |
+
+Both completions satisfy the evidence and agree on every verified rank.
+`same_evidence_has_two_different_exact_top_one_answers` proves that each
+displayed answer satisfies the independent completed best-k contract. Separate
+uniqueness theorems show that no other list satisfies either contract, so
+`no_selected_list_is_correct_in_both_models` proves actual answer
+incompatibility rather than assuming it.
+
+The modeled deterministic decision is a function of the evidence and $`k`$
+whose output is either a completed ordered ID list or `None` for deferral.
+`ambiguous_models_force_deferral` proves that, when two feasible models admit
+no common correct list, every sound such decision must defer.
+`deterministic_evidence_only_decider_must_defer` instantiates that result with
+the two inhabited models above. An always-returning exact decision therefore
+cannot be correct for both. The decision may acquire more evidence before
+trying again; the theorem does not model or optimize that acquisition.
+
+`unverified_interval_reassignment_is_feasible` supplies the constructive
+step: changing one eligible, unverified original to any value within its
+closed interval preserves this evidence while leaving all other assignments
+fixed. This holds because the language has independent intervals and exact
+verified observations. Additional metric, recurrence, or group constraints
+would need their own preservation and attainable-completion proofs.
+
+The ambiguity persists despite a full verified $`k=1`$ heap containing ID
+zero. The module separately retains the underfull control: even evidence
+excluding every rank improvement cannot authorize a one-result completion
+for $`k=2`$ while another eligible original remains unresolved. Contradictory
+scores and impossible intervals force deferral under the consistency-aware
+contract, rather than authorizing a vacuous exact output. These results
+concern ordered identity answers in the declared evidence language. They do
+not establish an execution lower bound, a floating-point instance, or Rust
+correspondence.
+
 BF-4 characterizes which completed selections the available evidence permits.
 It does not show that BF-2 decides every safe case or establish minimum runtime.
 Under the same consistency and full-selection premises, completeness of a
@@ -1334,6 +1434,11 @@ but takes longer after summary construction; another is a compressed state
 layout that raises peak RSS through conversion scratch. Both fail an
 unqualified improvement claim.
 
+The [performance adoption gate](../verification/CBC_PERFORMANCE_ADOPTION_GATE.md)
+defines the preregistered workload matrix, paired measurements, simultaneous
+uncertainty bounds, and per-stratum time and space decision rule for a later
+production proposal. No optimization experiment is run by this theory campaign.
+
 ## 8. Study model, evidence, and enforcement
 
 ![The observation contract feeds reference semantics and local certificates. A checker validates executable correspondence and resource evidence before admitting realizations to an optimization portfolio.](../diagrams/architectures/certified-metric-execution.svg)
@@ -1364,10 +1469,17 @@ and do not transfer the natural session proofs to arbitrary runtime scores.
 `EvidenceStopping.v` checks BF-4 for finite eligible IDs, generic lawful costs,
 exact observations, and independent closed intervals, including consistency,
 underfull exhaustion, and inhabited positive and negative controls.
-NC-1, BF-3's union rule, and the acyclic planning argument have
-mathematical proofs above; they are not claimed as machine-checked Rust
-theorems. The full session invariant and checker-to-executable connection
-are normative designs requiring instance evidence.
+`EvidenceIndistinguishability.v` constructs incompatible inhabited answers
+and proves mandatory deferral for sound deterministic evidence-only decisions.
+`CertifiedCertificateComposition.v` checks ordered finite-program score and
+completed-trace composition under accepted local certificates.
+`CertifiedGeometricEnclosure.v` checks NC-1's exact-rational center/radius
+instance and strict-cutoff consequence, with missing-membership and inward
+endpoint controls. General numerical transfer, BF-3's union rule, and the
+acyclic planning argument have mathematical proofs above; they are not
+claimed as machine-checked Rust theorems. The full session invariant and
+checker-to-executable connection are normative designs requiring instance
+evidence.
 
 A production CBC gate binds each theorem to the exact source or generated
 artifact, kernel configuration, numeric profile, and observation profile.
