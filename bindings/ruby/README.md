@@ -5,14 +5,26 @@ are one-shot `Enumerable` objects backed by a native cursor; only a bounded
 batch is leased and each yielded `Match` owns its term. A query captures its
 dictionary revision at construction and can outlive the source dictionary.
 
-Any modular dictionary gem can implement `with_resource { |context, vtable| }
-to participate in O(1) retained-resource handoff. The libdictenstein gem does
+Any modular dictionary gem can implement `with_resource { |context, vtable| }`
+to participate in $`O(1)`$ retained-resource handoff. The libdictenstein gem does
 so without serialization or an object-format conversion.
 
 Set `LIBLEVENSHTEIN_LIBRARY` for a source-tree build. Release gems contain the
 platform shared library under
 `lib/vinary_tree/liblevenshtein/native/<platform>/`; a system installation
 remains a supported loader fallback.
+
+From a source checkout, render the complete Ruby API reference locally with:
+
+```sh
+rdoc --quiet --coverage-report --op target/ruby-rdoc \
+  --main bindings/ruby/README.md \
+  bindings/ruby/README.md bindings/ruby/lib/vinary_tree
+```
+
+The gem's versioned `documentation_uri` points to RubyDoc.info after that
+exact package version is published and indexed; a local RC.6 source build is
+not evidence that the public RC.6 reference already exists.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
