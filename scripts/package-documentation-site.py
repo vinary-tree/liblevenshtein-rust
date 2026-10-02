@@ -384,6 +384,52 @@ def assemble_site(archives_root: Path) -> None:
     )
 
 
+def version_tree(path: Path) -> dict[str, tuple[str, str]]:
+    """Describe every versioned entry without following links or special files."""
+    entries: dict[str, tuple[str, str]] = {}
+    for entry in sorted(path.rglob("*")):
+        relative = entry.relative_to(path).as_posix()
+        if entry.is_symlink():
+            fail(f"versioned documentation contains a symlink: {entry}")
+        if entry.is_dir():
+            entries[relative] = ("directory", "")
+        elif entry.is_file():
+            entries[relative] = ("file", digest(entry))
+        else:
+            fail(f"versioned documentation contains a special file: {entry}")
+    return entries
+
+
+def verify_existing_versions(assembled_root: Path, live_root: Path) -> None:
+    """Reject missing or changed historical versions before touching gh-pages."""
+    if live_root.is_symlink() or not live_root.is_dir():
+        fail(f"live Pages root is not a directory: {live_root}")
+    if assembled_root.is_symlink() or not assembled_root.is_dir():
+        fail(f"assembled Pages root is not a directory: {assembled_root}")
+    for old_version in sorted(live_root.iterdir()):
+        if SEMVER_RE.fullmatch(old_version.name) is None:
+            continue
+        if old_version.is_symlink() or not old_version.is_dir():
+            fail(f"historical version is not a directory: {old_version}")
+        assembled_version = assembled_root / old_version.name
+        if not assembled_version.is_dir() or assembled_version.is_symlink():
+            fail(
+                f"historical version is absent from release archives: {old_version.name}"
+            )
+        old_tree = version_tree(old_version)
+        new_tree = version_tree(assembled_version)
+        if old_tree != new_tree:
+            differences = sorted(
+                key
+                for key in old_tree.keys() | new_tree.keys()
+                if old_tree.get(key) != new_tree.get(key)
+            )
+            fail(
+                f"immutable historical version would change: {old_version.name}/"
+                f"{differences[0]}"
+            )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -397,11 +443,19 @@ def main() -> int:
         default=ARTIFACT_ROOT,
         help="directory containing package-documentation .tar.gz archives",
     )
+    verify = subparsers.add_parser(
+        "verify-overlay",
+        help="reject changes to already-published versioned Pages directories",
+    )
+    verify.add_argument("--live", type=Path, required=True)
+    verify.add_argument("--assembled", type=Path, default=SITE_ROOT)
     args = parser.parse_args()
     if args.command == "build":
         build_archive()
-    else:
+    elif args.command == "assemble":
         assemble_site(args.archives.resolve())
+    else:
+        verify_existing_versions(args.assembled.resolve(), args.live.resolve())
     return 0
 
 

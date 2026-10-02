@@ -170,6 +170,51 @@ class PackageDocumentationSiteTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "every required surface"):
                 SITE.verify_extracted_version(version)
 
+    def test_overlay_preserves_matching_historical_version(self) -> None:
+        with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:
+            root = Path(temporary)
+            live = root / "live"
+            assembled = root / "assembled"
+            for base in (live, assembled):
+                version = base / "4.0.0-rc.5" / "native"
+                version.mkdir(parents=True)
+                (version / "index.html").write_text("same\n", encoding="utf-8")
+            (assembled / "4.0.0-rc.6").mkdir()
+            SITE.verify_existing_versions(assembled, live)
+
+    def test_overlay_rejects_modified_historical_version(self) -> None:
+        with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:
+            root = Path(temporary)
+            live = root / "live"
+            assembled = root / "assembled"
+            for base, content in ((live, "original"), (assembled, "changed")):
+                version = base / "4.0.0-rc.5"
+                version.mkdir(parents=True)
+                (version / "index.html").write_text(content, encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "historical version would change"):
+                SITE.verify_existing_versions(assembled, live)
+
+    def test_overlay_rejects_omitted_historical_version(self) -> None:
+        with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:
+            root = Path(temporary)
+            live = root / "live"
+            assembled = root / "assembled"
+            (live / "4.0.0-rc.5").mkdir(parents=True)
+            assembled.mkdir()
+            with self.assertRaisesRegex(SystemExit, "absent from release archives"):
+                SITE.verify_existing_versions(assembled, live)
+
+    def test_overlay_rejects_historical_symlink(self) -> None:
+        with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:
+            root = Path(temporary)
+            live = root / "live"
+            assembled = root / "assembled"
+            for base in (live, assembled):
+                (base / "4.0.0-rc.5").mkdir(parents=True)
+            (live / "4.0.0-rc.5" / "index.html").symlink_to("elsewhere")
+            with self.assertRaisesRegex(SystemExit, "contains a symlink"):
+                SITE.verify_existing_versions(assembled, live)
+
     def test_release_archive_requires_exact_clean_tag(self) -> None:
         with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:
             repository = Path(temporary)

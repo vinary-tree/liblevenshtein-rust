@@ -202,6 +202,9 @@ jobs:
           branch="$PWD/target/package-docs-gh-pages"
           git worktree add --detach "$branch" FETCH_HEAD
           test -f "$branch/julia/dev/index.html"
+          python3 scripts/package-documentation-site.py verify-overlay \
+            --live "$branch" \
+            --assembled target/package-documentation-site
           cp -a target/package-documentation-site/. "$branch/"
           test -f "$branch/julia/dev/index.html"
           git -C "$branch" add --all
