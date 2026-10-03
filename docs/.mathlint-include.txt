@@ -332,3 +332,8 @@ docs/bindings/query-cache.md
 docs/bindings/julia-family-qualification.md
 docs/bindings/standalone-automata.md
 docs/bindings/wallbreaker-unicode.md
+bindings/dotnet/fsharp.md
+bindings/jvm/kotlin.md
+bindings/jvm/scala.md
+bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.docc/Liblevenshtein.md
+docs/api/dotnet/index.md
