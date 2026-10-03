@@ -5,6 +5,8 @@ use Liblevenshtein;
 module Producer {
     use Libdictenstein;
     our sub dictionary() { dynamic-dawg() }
+    our sub byte-dictionary() { dynamic-dawg(BYTE) }
+    our sub token-dictionary() { dynamic-dawg(U64) }
 }
 
 is abi-version(), ABI-VERSION, 'ABI generation matches';
@@ -28,6 +30,101 @@ is distance('kitten', 'sitting', :threshold(3)), 3,
 is damerau-distance('ab', 'ba'), 1, 'optimal-string-alignment distance';
 is true-damerau-distance('CA', 'ABC'), 2,
     'unrestricted Damerau-Levenshtein distance';
+is merge-and-split-distance('rn', 'm'), 1,
+    'merge-and-split is a distinct direct distance family';
+is hamming-distance('abc', 'bca'), 3,
+    'Hamming counts mismatched Unicode scalar positions';
+nok hamming-distance('é', 'ex').defined,
+    'Hamming is undefined, not zero, for unequal scalar counts';
+is indel-distance('a', 'b'), 2,
+    'indel replacement costs deletion plus insertion';
+my $affine = AffineGapCosts.new(
+    gap-open => 3, gap-extend => 2, substitution => 10,
+);
+is affine-gap-distance('a', 'abcd', $affine), 9,
+    'affine gap opening is paid once per run';
+nok affine-gap-distance('a', 'abcd', $affine, :threshold(8)).defined,
+    'affine threshold excludes an exact distance above the bound';
+is affine-gap-distance('a', 'abcd', $affine, :threshold(9)), 9,
+    'affine threshold retains the exact boundary';
+
+my $binary-left = Buf.new(0xff, 0x00);
+my $binary-right = Buf.new(0x00, 0x00);
+is distance($binary-left, $binary-right), 1,
+    'arbitrary bytes are compared without UTF-8 decoding';
+is hamming-distance($binary-left, $binary-right), 1,
+    'Hamming byte overload preserves non-UTF-8 data';
+is indel-distance($binary-left, $binary-right), 2,
+    'indel byte overload does not substitute';
+is affine-gap-distance($binary-left, $binary-right, $affine), 10,
+    'affine byte overload uses native bytes and configured costs';
+is distance([0, 2**64 - 1], [0, 2**64 - 2]), 1,
+    'u64 overload preserves the full unsigned token range';
+is hamming-distance([0, 2**64 - 1], [0, 2**64 - 2]), 1,
+    'Hamming u64 overload preserves full-width inequality';
+is indel-distance([0, 2**64 - 1], [0, 2**64 - 2]), 2,
+    'indel u64 overload does not substitute';
+dies-ok { distance([2**64], [0]) },
+    'out-of-range u64 tokens are rejected before native conversion';
+dies-ok { distance(Buf.new(0xff), 'a') },
+    'mixed byte and Unicode domains are not silently coerced';
+dies-ok {
+    affine-gap-distance('a', 'b', AffineGapCosts.new(
+        gap-open => 2**128, gap-extend => 1, substitution => 1,
+    ))
+}, 'unrepresentable affine cost is rejected before native conversion';
+dies-ok { indel-distance('a', 'b', :threshold(-1)) },
+    'negative thresholds are rejected before native conversion';
+
+for ^8 {
+    is distance('', ''), 0, 'repeated empty text arguments remain valid';
+    is distance('', 'A'), 1, 'nonempty text following empty arguments remains valid';
+    is distance(Buf.new(), Buf.new(0)), 1,
+        'nonempty byte argument following empty arguments remains valid';
+    is distance([], [0]), 1,
+        'nonempty u64 argument following empty arguments remains valid';
+}
+
+# Metamorphic differential check: ASCII symbols, byte values, and u64 tokens
+# represent the same equality pattern, so every native domain dispatcher must
+# return the same semantic distance and inclusive threshold result.
+my @sequences = ([], [0], [1], [0, 1], [1, 0], [0, 2, 1]);
+for @sequences -> $left {
+    for @sequences -> $right {
+        my $text-left = $left.map({ chr(65 + $_) }).join;
+        my $text-right = $right.map({ chr(65 + $_) }).join;
+        my $bytes-left = Buf.new($left.list);
+        my $bytes-right = Buf.new($right.list);
+        for &distance, &damerau-distance, &true-damerau-distance,
+            &merge-and-split-distance, &hamming-distance, &indel-distance
+            -> &family {
+            my $text = family($text-left, $text-right);
+            if $text.defined {
+                is family($bytes-left, $bytes-right), $text,
+                    'byte dispatcher agrees with Unicode scalar oracle';
+                is family($left, $right), $text,
+                    'u64 dispatcher agrees with Unicode scalar oracle';
+                is family($left, $right, :threshold($text)), $text,
+                    'inclusive u64 threshold retains the exact boundary';
+                if $text > 0 {
+                    nok family($bytes-left, $bytes-right,
+                        :threshold($text - 1)).defined,
+                        'byte threshold excludes the next smaller bound';
+                }
+            } else {
+                nok family($bytes-left, $bytes-right).defined,
+                    'byte dispatcher preserves an undefined Unicode score';
+                nok family($left, $right).defined,
+                    'u64 dispatcher preserves an undefined Unicode score';
+            }
+        }
+        my $text-affine = affine-gap-distance($text-left, $text-right, $affine);
+        is affine-gap-distance($bytes-left, $bytes-right, $affine), $text-affine,
+            'affine byte dispatcher agrees with Unicode scalar oracle';
+        is affine-gap-distance($left, $right, $affine), $text-affine,
+            'affine u64 dispatcher agrees with Unicode scalar oracle';
+    }
+}
 
 my $dictionary = Producer::dictionary();
 $dictionary<cat> = 7;
@@ -38,6 +135,12 @@ $dictionary<m> = 11;
 $dictionary<ABC> = 12;
 my $provider = $dictionary.snapshot;
 my $transducer = Transducer.new(:dictionary($provider));
+for ^3 {
+    is $transducer.query('', 1).map(*.term).List.elems, 1,
+        'empty Unicode query remains valid after repeated NativeCall';
+    is $transducer.query('cut', 1).map(*.term).List.elems, 2,
+        'nonempty Unicode query remains valid after an empty query';
+}
 throws-like { $transducer.query('cut', -1) }, X::AdHoc,
     'transducer rejects negative maximum distance before native conversion';
 is $transducer.unit-domain, (UNICODE-SCALAR),
@@ -70,6 +173,10 @@ is $cache.stats.requests, 0, 'counter reset preserves a live cache';
 is $cache.elems, 1, 'counter reset does not clear residency';
 $cache.clear;
 is $cache.elems, 0, 'clear drops resident results';
+is $cache.query('', 1).map(*.term).List.elems, 1,
+    'cache accepts an empty Unicode query through owned bytes';
+is $cache.query('cut', 1).map(*.term).List.elems, 2,
+    'cache accepts a nonempty Unicode query after an empty query';
 throws-like { $cache.query('cut', -1) }, X::AdHoc,
     'negative maximum distance is rejected before native conversion';
 $cache.close;
@@ -99,6 +206,30 @@ is $fixed.query('cut', 1).reduce-batches(
 $fixed.close;
 $provider.close;
 $dictionary.close;
+
+my $byte-dictionary = Producer::byte-dictionary();
+$byte-dictionary.ASSIGN-KEY(Buf.new(0), 1);
+my $byte-provider = $byte-dictionary.snapshot;
+my $byte-transducer = Transducer.new(:dictionary($byte-provider));
+is $byte-transducer.query(Buf.new(), 1).list.elems, 1,
+    'empty byte query crosses the stable owned-buffer boundary';
+is $byte-transducer.query(Buf.new(0), 1).list.elems, 1,
+    'nonempty byte query follows an empty byte query';
+$byte-transducer.close;
+$byte-provider.close;
+$byte-dictionary.close;
+
+my $token-dictionary = Producer::token-dictionary();
+$token-dictionary.ASSIGN-KEY([0], 1);
+my $token-provider = $token-dictionary.snapshot;
+my $token-transducer = Transducer.new(:dictionary($token-provider));
+is $token-transducer.query([], 1).list.elems, 1,
+    'empty u64 query uses a nonzero backing allocation';
+is $token-transducer.query([0], 1).list.elems, 1,
+    'nonempty u64 query follows an empty u64 query';
+$token-transducer.close;
+$token-provider.close;
+$token-dictionary.close;
 
 if build-features() +& (BUILD-FEATURE-PHONETIC) {
     my $pattern = PhoneticPattern.new(regex => 'cat');

@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 6,
+  "apiRevision": 7,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -571,6 +571,78 @@
     },
     {
       "name": "llev_merge_and_split_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_hamming_distance",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_hamming_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_indel_distance",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_indel_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_affine_gap_distance",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_affine_gap_distance_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_hamming_distance_bytes",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_hamming_distance_bytes_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_hamming_distance_u64",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_hamming_distance_u64_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_indel_distance_bytes",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_indel_distance_bytes_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_indel_distance_u64",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_indel_distance_u64_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_affine_gap_distance_bytes",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_affine_gap_distance_bytes_threshold",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_affine_gap_distance_u64",
+      "rustModule": "distance"
+    },
+    {
+      "name": "llev_affine_gap_distance_u64_threshold",
       "rustModule": "distance"
     },
     {

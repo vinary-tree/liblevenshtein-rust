@@ -15,6 +15,54 @@ shard one cache per worker. See the package Pod and the
 [query-cache design](../../docs/bindings/query-cache.md) for lifecycle,
 revision, and workload-selection guidance.
 
+## Standalone distance families
+
+Each function below accepts two values of the **same** domain: `Str` compares
+Unicode scalar values, `Blob` compares raw bytes (including invalid UTF-8), and
+`Positional` compares unsigned 64-bit tokens, including `2**64 - 1`. Mixed
+domains are rejected; no implicit encoding or truncation changes a score.
+
+| Function | Edit rule | Return when no `:threshold` is supplied |
+|---|---|---|
+| `distance` | Insert, delete, substitute | Exact nonnegative integer |
+| `damerau-distance` | Optimal-string-alignment adjacent swap | Exact nonnegative integer |
+| `true-damerau-distance` | Unrestricted Damerau-Levenshtein | Exact nonnegative integer |
+| `merge-and-split-distance` | Standard edits plus symmetric one/two-unit operations | Exact nonnegative integer |
+| `hamming-distance` | Substitution only; equal lengths required | Integer, or `Nil` for unequal lengths |
+| `indel-distance` | Insert and delete only | Exact nonnegative integer |
+| `affine-gap-distance` | Configurable substitution and gap-run costs | Integer, or `Nil` when no representable path exists |
+
+The optional `:threshold($bound)` is inclusive: a score above it returns
+`Nil`. Hamming's unequal-length case and affine's unrepresentable/overflow
+case also return `Nil` even without a threshold. At the C ABI these are
+distinguished as `SIZE_MAX - 2` (undefined) versus `SIZE_MAX - 1`
+(above bound); invalid native inputs are `SIZE_MAX` and become an exception
+in Raku. Inputs outside the unsigned token/cost range also throw before the
+native call. Affine costs are nonnegative integers; a gap of length `k` costs
+`gap-open + k * gap-extend`. The thresholded affine entry point currently
+computes the exact Gotoh result before comparing it to the bound, whereas
+thresholded indel uses a bounded native kernel.
+
+```raku
+use Liblevenshtein;
+
+say distance('kitten', 'sitting'); # 3
+say indel-distance(Buf.new(0xff), Buf.new(0x00)); # 2
+say hamming-distance([0, 2**64 - 1], [0, 0]); # 1
+
+my $costs = AffineGapCosts.new(
+    gap-open => 3, gap-extend => 2, substitution => 10,
+);
+say affine-gap-distance('a', 'abcd', $costs); # 9
+say affine-gap-distance('a', 'abcd', $costs, :threshold(8)).defined; # False
+```
+
+Standard `distance` already selects its native Myers/ASCII or runtime SIMD
+path when applicable. These kernels are implementation details, not distinct
+scoring rules or independently selectable Raku APIs. Performance and
+unsupported-path evidence are in
+[the distance-family benchmark](benchmark/README.md).
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract
@@ -89,10 +137,14 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `abi-version` | `llev_abi_version` | ABI compatibility and feature discovery |
+| `affine-gap-distance` | `llev_affine_gap_distance`, `llev_affine_gap_distance_threshold`, `llev_affine_gap_distance_bytes`, `llev_affine_gap_distance_bytes_threshold`, `llev_affine_gap_distance_u64`, `llev_affine_gap_distance_u64_threshold` | project ABI operation |
 | `api-revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `build-features` | `llev_build_features` | ABI compatibility and feature discovery |
-| `damerau-distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
-| `distance` | `llev_distance`, `llev_distance_threshold` | standalone exact or thresholded distance |
+| `damerau-distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold`, `llev_damerau_distance_bytes`, `llev_damerau_distance_bytes_threshold`, `llev_damerau_distance_u64`, `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
+| `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
+| `hamming-distance` | `llev_hamming_distance`, `llev_hamming_distance_threshold`, `llev_hamming_distance_bytes`, `llev_hamming_distance_bytes_threshold`, `llev_hamming_distance_u64`, `llev_hamming_distance_u64_threshold` | project ABI operation |
+| `indel-distance` | `llev_indel_distance`, `llev_indel_distance_threshold`, `llev_indel_distance_bytes`, `llev_indel_distance_bytes_threshold`, `llev_indel_distance_u64`, `llev_indel_distance_u64_threshold` | project ABI operation |
+| `merge-and-split-distance` | `llev_merge_and_split_distance`, `llev_merge_and_split_distance_threshold`, `llev_merge_and_split_distance_bytes`, `llev_merge_and_split_distance_bytes_threshold`, `llev_merge_and_split_distance_u64`, `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
 | `PhoneticPattern.accepts` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.new` | `llev_phonetic_pattern_compile_regex`, `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
@@ -114,7 +166,7 @@ variants, protocols, or methods.
 | `Transducer.query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; phonetic-pattern dictionary query |
 | `Transducer.snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.unit-domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
-| `true-damerau-distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
+| `true-damerau-distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold`, `llev_true_damerau_distance_bytes`, `llev_true_damerau_distance_bytes_threshold`, `llev_true_damerau_distance_u64`, `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
 | `X::Liblevenshtein` | `llev_last_error_message` | typed failure diagnostics |
 
 ### Public types and traversal protocols

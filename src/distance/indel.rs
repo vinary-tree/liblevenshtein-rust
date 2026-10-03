@@ -21,7 +21,11 @@ pub fn indel_distance(source: &str, target: &str) -> usize {
     indel_distance_units(&source, &target)
 }
 
-fn indel_distance_units<T: Eq>(source: &[T], target: &[T]) -> usize {
+/// Compute insertion/deletion distance over any equality-comparable units.
+///
+/// This preserves the caller's unit domain: bytes and unsigned tokens are
+/// never decoded or transcoded into Unicode scalar values.
+pub fn indel_distance_units<T: Eq>(source: &[T], target: &[T]) -> usize {
     let (rows, columns) = if source.len() >= target.len() {
         (source, target)
     } else {
@@ -57,12 +61,26 @@ pub fn indel_distance_bounded(source: &str, target: &str, max_distance: usize) -
     if source == target {
         return Some(0);
     }
-    if max_distance == usize::MAX {
-        return Some(indel_distance(source, target));
-    }
-
     let source: SmallVec<[char; 32]> = source.chars().collect();
     let target: SmallVec<[char; 32]> = target.chars().collect();
+    indel_distance_units_bounded(&source, &target, max_distance)
+}
+
+/// Compute insertion/deletion distance within a threshold over native units.
+///
+/// Returns `None` exactly when the result exceeds `max_distance`; the
+/// bounded recurrence visits only the affordable diagonal band.
+pub fn indel_distance_units_bounded<T: Eq>(
+    source: &[T],
+    target: &[T],
+    max_distance: usize,
+) -> Option<usize> {
+    if source == target {
+        return Some(0);
+    }
+    if max_distance == usize::MAX {
+        return Some(indel_distance_units(source, target));
+    }
     if source.is_empty() {
         return (target.len() <= max_distance).then_some(target.len());
     }
@@ -73,7 +91,7 @@ pub fn indel_distance_bounded(source: &str, target: &str, max_distance: usize) -
         return None;
     }
 
-    bounded_indel_units(&source, &target, max_distance)
+    bounded_indel_units(source, target, max_distance)
 }
 
 fn bounded_indel_units<T: Eq>(source: &[T], target: &[T], maximum: usize) -> Option<usize> {

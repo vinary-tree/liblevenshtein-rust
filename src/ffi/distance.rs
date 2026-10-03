@@ -2,9 +2,12 @@
 
 use std::ffi::c_char;
 
+use crate::cost::CostScale;
 use crate::distance::{
-    damerau_levenshtein_distance, damerau_levenshtein_distance_bounded,
-    damerau_levenshtein_distance_units, damerau_levenshtein_distance_units_bounded,
+    affine_gap_distance, affine_gap_distance_units, damerau_levenshtein_distance,
+    damerau_levenshtein_distance_bounded, damerau_levenshtein_distance_units,
+    damerau_levenshtein_distance_units_bounded, hamming_distance, hamming_distance_units,
+    indel_distance, indel_distance_bounded, indel_distance_units, indel_distance_units_bounded,
     merge_and_split_distance_bounded, merge_and_split_distance_units,
     merge_and_split_distance_units_bounded, myers::myers_distance_bytes,
     myers::myers_distance_bytes_bounded, standard_distance, standard_distance_bounded,
@@ -12,9 +15,28 @@ use crate::distance::{
     transposition_distance_bounded, transposition_distance_units,
     transposition_distance_units_bounded,
 };
+use crate::transducer::AffineGapParams;
 
 const INVALID_INPUT: usize = usize::MAX;
 const ABOVE_THRESHOLD: usize = usize::MAX - 1;
+const UNDEFINED_DISTANCE: usize = usize::MAX - 2;
+
+#[inline]
+fn affine_params(gap_open: usize, gap_extend: usize, substitution: usize) -> AffineGapParams {
+    AffineGapParams::from_scaled(
+        CostScale::new(1).expect("unit scale has a nonzero denominator"),
+        gap_open,
+        gap_extend,
+        substitution,
+    )
+}
+
+#[inline]
+fn encode_affine_result(distance: Option<usize>) -> usize {
+    distance
+        .filter(|value| *value < UNDEFINED_DISTANCE)
+        .unwrap_or(UNDEFINED_DISTANCE)
+}
 
 #[inline]
 unsafe fn input_slice<'a, U>(data: *const U, len: usize) -> Option<&'a [U]> {
@@ -25,6 +47,18 @@ unsafe fn input_slice<'a, U>(data: *const U, len: usize) -> Option<&'a [U]> {
         return None;
     }
     Some(std::slice::from_raw_parts(data, len))
+}
+
+#[inline]
+unsafe fn utf8_pair<'a>(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+) -> Option<(&'a str, &'a str)> {
+    let source = super::cbuf_to_str(source, source_len)?;
+    let target = super::cbuf_to_str(target, target_len)?;
+    Some((source, target))
 }
 
 macro_rules! raw_unit_distance_functions {
@@ -83,6 +117,119 @@ macro_rules! raw_unit_distance_functions {
                 return INVALID_INPUT;
             };
             $bounded(source, target, threshold).unwrap_or(ABOVE_THRESHOLD)
+        }
+    };
+}
+
+macro_rules! raw_optional_unit_distance_functions {
+    ($exact_name:ident, $bounded_name:ident, $unit:ty, $exact:path) => {
+        /// Compute Hamming distance; unequal lengths have no defined result.
+        ///
+        /// # Safety
+        ///
+        /// Non-empty inputs must point to their declared number of aligned
+        /// units. Null pointers are valid only for zero-length inputs.
+        #[no_mangle]
+        pub unsafe extern "C" fn $exact_name(
+            source: *const $unit,
+            source_len: usize,
+            target: *const $unit,
+            target_len: usize,
+        ) -> usize {
+            let Some(source) = input_slice(source, source_len) else {
+                return INVALID_INPUT;
+            };
+            let Some(target) = input_slice(target, target_len) else {
+                return INVALID_INPUT;
+            };
+            $exact(source, target).unwrap_or(UNDEFINED_DISTANCE)
+        }
+
+        /// Compute thresholded Hamming distance.
+        ///
+        /// # Safety
+        ///
+        /// Pointer and length requirements match the exact variant. The
+        /// undefined-length sentinel remains distinct from above-threshold.
+        #[no_mangle]
+        pub unsafe extern "C" fn $bounded_name(
+            source: *const $unit,
+            source_len: usize,
+            target: *const $unit,
+            target_len: usize,
+            threshold: usize,
+        ) -> usize {
+            match $exact_name(source, source_len, target, target_len) {
+                INVALID_INPUT => INVALID_INPUT,
+                UNDEFINED_DISTANCE => UNDEFINED_DISTANCE,
+                distance if distance > threshold => ABOVE_THRESHOLD,
+                distance => distance,
+            }
+        }
+    };
+}
+
+macro_rules! raw_affine_gap_distance_functions {
+    ($exact_name:ident, $bounded_name:ident, $unit:ty) => {
+        /// Compute exact affine-gap distance over native units.
+        ///
+        /// # Safety
+        ///
+        /// Non-empty inputs must point to their declared number of aligned
+        /// units. Null pointers are valid only for zero-length inputs.
+        #[no_mangle]
+        pub unsafe extern "C" fn $exact_name(
+            source: *const $unit,
+            source_len: usize,
+            target: *const $unit,
+            target_len: usize,
+            gap_open: usize,
+            gap_extend: usize,
+            substitution: usize,
+        ) -> usize {
+            let Some(source) = input_slice(source, source_len) else {
+                return INVALID_INPUT;
+            };
+            let Some(target) = input_slice(target, target_len) else {
+                return INVALID_INPUT;
+            };
+            encode_affine_result(affine_gap_distance_units(
+                source,
+                target,
+                affine_params(gap_open, gap_extend, substitution),
+            ))
+        }
+
+        /// Compute thresholded affine-gap distance over native units.
+        ///
+        /// # Safety
+        ///
+        /// Pointer and length requirements match the exact variant.
+        #[no_mangle]
+        pub unsafe extern "C" fn $bounded_name(
+            source: *const $unit,
+            source_len: usize,
+            target: *const $unit,
+            target_len: usize,
+            gap_open: usize,
+            gap_extend: usize,
+            substitution: usize,
+            threshold: usize,
+        ) -> usize {
+            match $exact_name(
+                source,
+                source_len,
+                target,
+                target_len,
+                gap_open,
+                gap_extend,
+                substitution,
+            ) {
+                INVALID_INPUT => INVALID_INPUT,
+                UNDEFINED_DISTANCE => UNDEFINED_DISTANCE,
+                distance if distance > threshold => ABOVE_THRESHOLD,
+                distance => distance,
+            }
         }
     };
 }
@@ -297,6 +444,189 @@ pub unsafe extern "C" fn llev_merge_and_split_distance_threshold(
     };
     merge_and_split_distance_bounded(source, target, threshold).unwrap_or(ABOVE_THRESHOLD)
 }
+
+/// Count mismatched Unicode scalar positions for equal-length strings.
+///
+/// # Safety
+///
+/// Non-empty inputs must point to valid UTF-8 for their declared byte lengths.
+/// Invalid input returns `SIZE_MAX`; unequal scalar counts return
+/// `SIZE_MAX - 2`.
+#[no_mangle]
+pub unsafe extern "C" fn llev_hamming_distance(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+) -> usize {
+    let Some((source, target)) = utf8_pair(source, source_len, target, target_len) else {
+        return INVALID_INPUT;
+    };
+    hamming_distance(source, target).unwrap_or(UNDEFINED_DISTANCE)
+}
+
+/// Count mismatched Unicode scalar positions within a threshold.
+///
+/// # Safety
+///
+/// Input requirements and unequal-length sentinel match the exact variant.
+/// A defined result above the threshold returns `SIZE_MAX - 1`.
+#[no_mangle]
+pub unsafe extern "C" fn llev_hamming_distance_threshold(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+    threshold: usize,
+) -> usize {
+    match llev_hamming_distance(source, source_len, target, target_len) {
+        INVALID_INPUT => INVALID_INPUT,
+        UNDEFINED_DISTANCE => UNDEFINED_DISTANCE,
+        distance if distance > threshold => ABOVE_THRESHOLD,
+        distance => distance,
+    }
+}
+
+/// Compute exact insertion/deletion distance over Unicode scalars.
+///
+/// # Safety
+///
+/// Non-empty inputs must point to valid UTF-8 for their declared byte lengths.
+#[no_mangle]
+pub unsafe extern "C" fn llev_indel_distance(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+) -> usize {
+    let Some((source, target)) = utf8_pair(source, source_len, target, target_len) else {
+        return INVALID_INPUT;
+    };
+    indel_distance(source, target)
+}
+
+/// Compute bounded insertion/deletion distance over Unicode scalars.
+///
+/// # Safety
+///
+/// Input requirements match the exact variant. Above-bound results return
+/// `SIZE_MAX - 1`.
+#[no_mangle]
+pub unsafe extern "C" fn llev_indel_distance_threshold(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+    threshold: usize,
+) -> usize {
+    let Some((source, target)) = utf8_pair(source, source_len, target, target_len) else {
+        return INVALID_INPUT;
+    };
+    indel_distance_bounded(source, target, threshold).unwrap_or(ABOVE_THRESHOLD)
+}
+
+/// Compute exact affine-gap distance with integer scaled costs.
+///
+/// A gap of length `k` costs `gap_open + k * gap_extend`. The result uses
+/// the same integer scale as all three supplied costs. Arithmetic overflow or
+/// an unrepresentable sentinel-range result returns `SIZE_MAX - 2`.
+///
+/// # Safety
+///
+/// Non-empty inputs must point to valid UTF-8 for their declared byte lengths.
+#[no_mangle]
+pub unsafe extern "C" fn llev_affine_gap_distance(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+    gap_open: usize,
+    gap_extend: usize,
+    substitution: usize,
+) -> usize {
+    let Some((source, target)) = utf8_pair(source, source_len, target, target_len) else {
+        return INVALID_INPUT;
+    };
+    encode_affine_result(affine_gap_distance(
+        source,
+        target,
+        affine_params(gap_open, gap_extend, substitution),
+    ))
+}
+
+/// Compute thresholded affine-gap distance with integer scaled costs.
+///
+/// # Safety
+///
+/// Input requirements match the exact variant. Above-bound results return
+/// `SIZE_MAX - 1`; overflow remains `SIZE_MAX - 2`.
+#[no_mangle]
+pub unsafe extern "C" fn llev_affine_gap_distance_threshold(
+    source: *const c_char,
+    source_len: usize,
+    target: *const c_char,
+    target_len: usize,
+    gap_open: usize,
+    gap_extend: usize,
+    substitution: usize,
+    threshold: usize,
+) -> usize {
+    match llev_affine_gap_distance(
+        source,
+        source_len,
+        target,
+        target_len,
+        gap_open,
+        gap_extend,
+        substitution,
+    ) {
+        INVALID_INPUT => INVALID_INPUT,
+        UNDEFINED_DISTANCE => UNDEFINED_DISTANCE,
+        distance if distance > threshold => ABOVE_THRESHOLD,
+        distance => distance,
+    }
+}
+
+raw_optional_unit_distance_functions!(
+    llev_hamming_distance_bytes,
+    llev_hamming_distance_bytes_threshold,
+    u8,
+    hamming_distance_units
+);
+raw_optional_unit_distance_functions!(
+    llev_hamming_distance_u64,
+    llev_hamming_distance_u64_threshold,
+    u64,
+    hamming_distance_units
+);
+raw_unit_distance_functions!(
+    llev_indel_distance_bytes,
+    llev_indel_distance_bytes_threshold,
+    u8,
+    "arbitrary bytes",
+    "insertion/deletion",
+    indel_distance_units,
+    indel_distance_units_bounded
+);
+raw_unit_distance_functions!(
+    llev_indel_distance_u64,
+    llev_indel_distance_u64_threshold,
+    u64,
+    "unsigned 64-bit tokens",
+    "insertion/deletion",
+    indel_distance_units,
+    indel_distance_units_bounded
+);
+raw_affine_gap_distance_functions!(
+    llev_affine_gap_distance_bytes,
+    llev_affine_gap_distance_bytes_threshold,
+    u8
+);
+raw_affine_gap_distance_functions!(
+    llev_affine_gap_distance_u64,
+    llev_affine_gap_distance_u64_threshold,
+    u64
+);
 
 raw_unit_distance_functions!(
     llev_distance_bytes,
@@ -737,6 +1067,313 @@ mod tests {
             assert_eq!(
                 llev_distance_u64(misaligned, 1, std::ptr::null(), 0),
                 INVALID_INPUT
+            );
+        }
+    }
+
+    #[test]
+    fn new_distance_families_match_rust_oracles_across_raw_domains() {
+        let costs = affine_params(2, 1, 3);
+        let expected_hamming = |source: &[u8], target: &[u8]| {
+            hamming_distance_units(source, target).unwrap_or(UNDEFINED_DISTANCE)
+        };
+        for source in generated_sequences(&[0_u8, 0xff], 3) {
+            for target in generated_sequences(&[0_u8, 0xff], 3) {
+                let hamming = expected_hamming(&source, &target);
+                let indel = indel_distance_units(&source, &target);
+                let affine =
+                    encode_affine_result(affine_gap_distance_units(&source, &target, costs));
+                unsafe {
+                    assert_eq!(
+                        llev_hamming_distance_bytes(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len()
+                        ),
+                        hamming
+                    );
+                    assert_eq!(
+                        llev_indel_distance_bytes(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len()
+                        ),
+                        indel
+                    );
+                    assert_eq!(
+                        llev_affine_gap_distance_bytes(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len(),
+                            2,
+                            1,
+                            3
+                        ),
+                        affine
+                    );
+                    for threshold in 0..=6 {
+                        assert_eq!(
+                            llev_hamming_distance_bytes_threshold(
+                                source.as_ptr(),
+                                source.len(),
+                                target.as_ptr(),
+                                target.len(),
+                                threshold
+                            ),
+                            if hamming == UNDEFINED_DISTANCE {
+                                hamming
+                            } else if hamming > threshold {
+                                ABOVE_THRESHOLD
+                            } else {
+                                hamming
+                            }
+                        );
+                        assert_eq!(
+                            llev_indel_distance_bytes_threshold(
+                                source.as_ptr(),
+                                source.len(),
+                                target.as_ptr(),
+                                target.len(),
+                                threshold
+                            ),
+                            indel_distance_units_bounded(&source, &target, threshold)
+                                .unwrap_or(ABOVE_THRESHOLD)
+                        );
+                        assert_eq!(
+                            llev_affine_gap_distance_bytes_threshold(
+                                source.as_ptr(),
+                                source.len(),
+                                target.as_ptr(),
+                                target.len(),
+                                2,
+                                1,
+                                3,
+                                threshold
+                            ),
+                            if affine == UNDEFINED_DISTANCE {
+                                affine
+                            } else if affine > threshold {
+                                ABOVE_THRESHOLD
+                            } else {
+                                affine
+                            }
+                        );
+                    }
+                }
+            }
+        }
+
+        for source in generated_sequences(&[0_u64, u64::MAX], 3) {
+            for target in generated_sequences(&[0_u64, u64::MAX], 3) {
+                let hamming =
+                    hamming_distance_units(&source, &target).unwrap_or(UNDEFINED_DISTANCE);
+                let indel = indel_distance_units(&source, &target);
+                let affine =
+                    encode_affine_result(affine_gap_distance_units(&source, &target, costs));
+                unsafe {
+                    assert_eq!(
+                        llev_hamming_distance_u64(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len()
+                        ),
+                        hamming
+                    );
+                    assert_eq!(
+                        llev_indel_distance_u64(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len()
+                        ),
+                        indel
+                    );
+                    assert_eq!(
+                        llev_affine_gap_distance_u64(
+                            source.as_ptr(),
+                            source.len(),
+                            target.as_ptr(),
+                            target.len(),
+                            2,
+                            1,
+                            3
+                        ),
+                        affine
+                    );
+                    for threshold in 0..=6 {
+                        assert_eq!(
+                            llev_hamming_distance_u64_threshold(
+                                source.as_ptr(),
+                                source.len(),
+                                target.as_ptr(),
+                                target.len(),
+                                threshold
+                            ),
+                            if hamming == UNDEFINED_DISTANCE {
+                                hamming
+                            } else if hamming > threshold {
+                                ABOVE_THRESHOLD
+                            } else {
+                                hamming
+                            }
+                        );
+                        assert_eq!(
+                            llev_indel_distance_u64_threshold(
+                                source.as_ptr(),
+                                source.len(),
+                                target.as_ptr(),
+                                target.len(),
+                                threshold
+                            ),
+                            indel_distance_units_bounded(&source, &target, threshold)
+                                .unwrap_or(ABOVE_THRESHOLD)
+                        );
+                        assert_eq!(
+                            llev_affine_gap_distance_u64_threshold(
+                                source.as_ptr(),
+                                source.len(),
+                                target.as_ptr(),
+                                target.len(),
+                                2,
+                                1,
+                                3,
+                                threshold
+                            ),
+                            if affine == UNDEFINED_DISTANCE {
+                                affine
+                            } else if affine > threshold {
+                                ABOVE_THRESHOLD
+                            } else {
+                                affine
+                            }
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn new_utf8_families_preserve_scalar_semantics_and_distinct_absences() {
+        let source = "pré";
+        let target = "prè";
+        let source_ptr = source.as_ptr().cast();
+        let target_ptr = target.as_ptr().cast();
+        unsafe {
+            assert_eq!(
+                llev_hamming_distance(source_ptr, source.len(), target_ptr, target.len()),
+                hamming_distance(source, target).unwrap()
+            );
+            assert_eq!(
+                llev_indel_distance(source_ptr, source.len(), target_ptr, target.len()),
+                indel_distance(source, target)
+            );
+            assert_eq!(
+                llev_affine_gap_distance(
+                    source_ptr,
+                    source.len(),
+                    target_ptr,
+                    target.len(),
+                    2,
+                    1,
+                    3
+                ),
+                affine_gap_distance(source, target, affine_params(2, 1, 3)).unwrap()
+            );
+            assert_eq!(
+                llev_hamming_distance(source_ptr, source.len(), "pr".as_ptr().cast(), 2),
+                UNDEFINED_DISTANCE
+            );
+            assert_eq!(
+                llev_hamming_distance_threshold(
+                    source_ptr,
+                    source.len(),
+                    "pr".as_ptr().cast(),
+                    2,
+                    0
+                ),
+                UNDEFINED_DISTANCE
+            );
+            assert_eq!(
+                llev_hamming_distance_threshold(
+                    source_ptr,
+                    source.len(),
+                    target_ptr,
+                    target.len(),
+                    0
+                ),
+                ABOVE_THRESHOLD
+            );
+            assert_eq!(
+                llev_indel_distance_threshold(
+                    source_ptr,
+                    source.len(),
+                    target_ptr,
+                    target.len(),
+                    0
+                ),
+                ABOVE_THRESHOLD
+            );
+            assert_eq!(
+                llev_affine_gap_distance_threshold(
+                    source_ptr,
+                    source.len(),
+                    target_ptr,
+                    target.len(),
+                    2,
+                    1,
+                    3,
+                    0
+                ),
+                ABOVE_THRESHOLD
+            );
+            assert_eq!(
+                llev_affine_gap_distance(
+                    "a".as_ptr().cast(),
+                    1,
+                    "b".as_ptr().cast(),
+                    1,
+                    usize::MAX,
+                    usize::MAX,
+                    usize::MAX
+                ),
+                UNDEFINED_DISTANCE
+            );
+            assert_eq!(
+                llev_hamming_distance(source_ptr, source.len() - 1, target_ptr, target.len()),
+                INVALID_INPUT
+            );
+            assert_eq!(
+                llev_indel_distance(source_ptr, source.len() - 1, target_ptr, target.len()),
+                INVALID_INPUT
+            );
+            assert_eq!(
+                llev_affine_gap_distance(
+                    source_ptr,
+                    source.len() - 1,
+                    target_ptr,
+                    target.len(),
+                    2,
+                    1,
+                    3
+                ),
+                INVALID_INPUT
+            );
+            assert_eq!(
+                llev_hamming_distance(std::ptr::null(), 0, std::ptr::null(), 0),
+                0
+            );
+            assert_eq!(
+                llev_indel_distance(std::ptr::null(), 0, std::ptr::null(), 0),
+                0
+            );
+            assert_eq!(
+                llev_affine_gap_distance(std::ptr::null(), 0, std::ptr::null(), 0, 2, 1, 3),
+                0
             );
         }
     }

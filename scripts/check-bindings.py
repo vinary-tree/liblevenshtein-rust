@@ -183,7 +183,8 @@ for module in (ROOT / "src" / "ffi").glob("*.rs"):
     # from every invocation so the model gate remains exact after factoring
     # their shared implementation.
     for exact_name, bounded_name in re.findall(
-        r"raw_unit_distance_functions!\(\s*(llev_[a-z0-9_]+)\s*,\s*(llev_[a-z0-9_]+)\s*,",
+        r"raw_(?:unit|optional_unit|affine_gap)_distance_functions!\(\s*"
+        r"(llev_[a-z0-9_]+)\s*,\s*(llev_[a-z0-9_]+)\s*,",
         source,
     ):
         exported.update((exact_name, bounded_name))

@@ -185,6 +185,98 @@ sub llev-true-damerau-distance(Pointer, size_t, Pointer, size_t --> size_t)
 sub llev-true-damerau-distance-threshold(
     Pointer, size_t, Pointer, size_t, size_t --> size_t
 ) is native(&native-library) is symbol('llev_true_damerau_distance_threshold') { * }
+sub llev-merge-and-split-distance(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_merge_and_split_distance') { * }
+sub llev-merge-and-split-distance-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_merge_and_split_distance_threshold') { * }
+sub llev-hamming-distance(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_hamming_distance') { * }
+sub llev-hamming-distance-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_hamming_distance_threshold') { * }
+sub llev-indel-distance(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_indel_distance') { * }
+sub llev-indel-distance-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_indel_distance_threshold') { * }
+sub llev-affine-gap-distance(
+    Pointer, size_t, Pointer, size_t, size_t, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_affine_gap_distance') { * }
+sub llev-affine-gap-distance-threshold(
+    Pointer, size_t, Pointer, size_t, size_t, size_t, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_affine_gap_distance_threshold') { * }
+
+sub llev-distance-bytes(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_distance_bytes') { * }
+sub llev-distance-bytes-threshold(Pointer, size_t, Pointer, size_t, size_t --> size_t)
+    is native(&native-library) is symbol('llev_distance_bytes_threshold') { * }
+sub llev-distance-u64(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_distance_u64') { * }
+sub llev-distance-u64-threshold(Pointer, size_t, Pointer, size_t, size_t --> size_t)
+    is native(&native-library) is symbol('llev_distance_u64_threshold') { * }
+sub llev-damerau-distance-bytes(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_damerau_distance_bytes') { * }
+sub llev-damerau-distance-bytes-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_damerau_distance_bytes_threshold') { * }
+sub llev-damerau-distance-u64(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_damerau_distance_u64') { * }
+sub llev-damerau-distance-u64-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_damerau_distance_u64_threshold') { * }
+sub llev-true-damerau-distance-bytes(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_true_damerau_distance_bytes') { * }
+sub llev-true-damerau-distance-bytes-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_true_damerau_distance_bytes_threshold') { * }
+sub llev-true-damerau-distance-u64(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_true_damerau_distance_u64') { * }
+sub llev-true-damerau-distance-u64-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_true_damerau_distance_u64_threshold') { * }
+sub llev-merge-and-split-distance-bytes(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_merge_and_split_distance_bytes') { * }
+sub llev-merge-and-split-distance-bytes-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_merge_and_split_distance_bytes_threshold') { * }
+sub llev-merge-and-split-distance-u64(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_merge_and_split_distance_u64') { * }
+sub llev-merge-and-split-distance-u64-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_merge_and_split_distance_u64_threshold') { * }
+sub llev-hamming-distance-bytes(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_hamming_distance_bytes') { * }
+sub llev-hamming-distance-bytes-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_hamming_distance_bytes_threshold') { * }
+sub llev-hamming-distance-u64(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_hamming_distance_u64') { * }
+sub llev-hamming-distance-u64-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_hamming_distance_u64_threshold') { * }
+sub llev-indel-distance-bytes(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_indel_distance_bytes') { * }
+sub llev-indel-distance-bytes-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_indel_distance_bytes_threshold') { * }
+sub llev-indel-distance-u64(Pointer, size_t, Pointer, size_t --> size_t)
+    is native(&native-library) is symbol('llev_indel_distance_u64') { * }
+sub llev-indel-distance-u64-threshold(
+    Pointer, size_t, Pointer, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_indel_distance_u64_threshold') { * }
+sub llev-affine-gap-distance-bytes(
+    Pointer, size_t, Pointer, size_t, size_t, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_affine_gap_distance_bytes') { * }
+sub llev-affine-gap-distance-bytes-threshold(
+    Pointer, size_t, Pointer, size_t, size_t, size_t, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_affine_gap_distance_bytes_threshold') { * }
+sub llev-affine-gap-distance-u64(
+    Pointer, size_t, Pointer, size_t, size_t, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_affine_gap_distance_u64') { * }
+sub llev-affine-gap-distance-u64-threshold(
+    Pointer, size_t, Pointer, size_t, size_t, size_t, size_t, size_t --> size_t
+) is native(&native-library) is symbol('llev_affine_gap_distance_u64_threshold') { * }
 sub llev-transducer-new(InteropAccess::RawResourceType, uint32, Pointer is rw --> int32)
     is native(&native-library) is symbol('llev_transducer_new') { * }
 sub llev-transducer-snapshot(Pointer, Pointer is rw --> int32)
@@ -267,8 +359,28 @@ sub check-status(Int:D $status, Str:D $operation, Bool :$allow-end = False --> B
     ).throw
 }
 
-sub raw-pointer(Blob:D $buffer --> Pointer:D) {
+sub raw-pointer(Blob:D $buffer --> Pointer) {
+    return Pointer unless $buffer.elems;
     nativecast(Pointer, $buffer)
+}
+
+class NativeByteArgument {
+    has CArray[uint8] $.storage is required;
+    has Int:D $.length is required;
+
+    method pointer(--> Pointer:D) { nativecast(Pointer, $!storage) }
+}
+
+sub byte-argument(Blob:D $buffer --> NativeByteArgument:D) {
+    # Repeated empty/nonempty Rakudo calls using a zero-sized CArray or null
+    # pointer produced invalid-input results or an allocator abort. Supply a
+    # stable owned non-null address while retaining logical length zero; the
+    # extra slot is never part of the C input slice.
+    my $units = CArray[uint8].allocate($buffer.elems max 1);
+    for $buffer.list.kv -> $index, $value {
+        $units[$index] = $value;
+    }
+    NativeByteArgument.new(storage => $units, length => $buffer.elems)
 }
 
 sub copy-cstruct(::T, Pointer:D $source --> T:D) {
@@ -278,48 +390,238 @@ sub copy-cstruct(::T, Pointer:D $source --> T:D) {
 }
 
 my constant SIZE-MAX = 2 ** (nativesizeof(size_t) * 8) - 1;
+my constant U64-MAX = 2**64 - 1;
 
-sub distance-call(Str:D $kind, Str:D $source, Str:D $target, Mu $threshold --> Mu) {
-    my $left = $source.encode('utf8');
-    my $right = $target.encode('utf8');
+class AffineGapCosts is export {
+    has UInt:D $.gap-open is required;
+    has UInt:D $.gap-extend is required;
+    has UInt:D $.substitution is required;
+}
+
+sub checked-native-cost(Int:D $cost, Str:D $name --> Int:D) {
+    die "$name must fit the native nonnegative distance range"
+        unless 0 <= $cost < SIZE-MAX - 2;
+    $cost
+}
+
+sub checked-threshold(Mu $threshold --> Mu) {
+    $threshold.defined
+        ?? checked-native-cost($threshold, 'threshold')
+        !! Nil
+}
+
+sub u64-tokens(Positional:D $input --> CArray[uint64]) {
+    # Rakudo's zero-element CArray can corrupt its allocator on repeated
+    # NativeCall. Keep one backing slot but pass the actual logical length.
+    my $tokens = CArray[uint64].allocate($input.elems max 1);
+    for $input.list.kv -> $index, $token {
+        die 'distance token is outside uint64'
+            unless $token ~~ Int && 0 <= $token <= U64-MAX;
+        $tokens[$index] = $token;
+    }
+    $tokens
+}
+
+sub distance-result(Mu $result, Str:D $operation --> Mu) {
+    if $result == SIZE-MAX || $result == -1 {
+        X::Liblevenshtein.new(
+            status => INVALID-ARGUMENT,
+            :$operation,
+            detail => 'native distance inputs were rejected',
+        ).throw;
+    }
+    # Above-threshold and mathematically undefined/unrepresentable results
+    # are distinct native sentinels but both are absent optional distances.
+    return Nil if $result == SIZE-MAX - 1 || $result == -2
+        || $result == SIZE-MAX - 2 || $result == -3;
+    $result.Int
+}
+
+sub retained-distance-result(Mu $result, Str:D $operation, $left-storage,
+    $right-storage --> Mu) {
+    # Keep both native allocations live until the NativeCall has returned.
+    die 'invalid distance backing storage'
+        unless $left-storage.defined && $right-storage.defined;
+    distance-result($result, $operation)
+}
+
+multi sub distance-call(Str:D $kind, Str:D $source, Str:D $target, Mu $threshold --> Mu) {
+    my $left-bytes = $source.encode('utf8');
+    my $right-bytes = $target.encode('utf8');
+    my $left-size = $left-bytes.elems;
+    my $right-size = $right-bytes.elems;
+    my $left = byte-argument($left-bytes);
+    my $right = byte-argument($right-bytes);
+    my $left-pointer = $left.pointer;
+    my $right-pointer = $right.pointer;
     my $result = do given $kind {
         when 'standard' {
             $threshold.defined
-                ?? llev-distance-threshold(raw-pointer($left), $left.elems,
-                    raw-pointer($right), $right.elems, $threshold)
-                !! llev-distance(raw-pointer($left), $left.elems,
-                    raw-pointer($right), $right.elems)
+                ?? llev-distance-threshold($left-pointer, $left-size,
+                    $right-pointer, $right-size, $threshold)
+                !! llev-distance($left-pointer, $left-size,
+                    $right-pointer, $right-size)
         }
         when 'osa' {
             $threshold.defined
-                ?? llev-damerau-distance-threshold(raw-pointer($left), $left.elems,
-                    raw-pointer($right), $right.elems, $threshold)
-                !! llev-damerau-distance(raw-pointer($left), $left.elems,
-                    raw-pointer($right), $right.elems)
+                ?? llev-damerau-distance-threshold($left-pointer, $left-size,
+                    $right-pointer, $right-size, $threshold)
+                !! llev-damerau-distance($left-pointer, $left-size,
+                    $right-pointer, $right-size)
         }
         when 'true' {
             $threshold.defined
-                ?? llev-true-damerau-distance-threshold(raw-pointer($left), $left.elems,
-                    raw-pointer($right), $right.elems, $threshold)
-                !! llev-true-damerau-distance(raw-pointer($left), $left.elems,
-                    raw-pointer($right), $right.elems)
+                ?? llev-true-damerau-distance-threshold($left-pointer, $left-size,
+                    $right-pointer, $right-size, $threshold)
+                !! llev-true-damerau-distance($left-pointer, $left-size,
+                    $right-pointer, $right-size)
+        }
+        when 'merge' {
+            $threshold.defined
+                ?? llev-merge-and-split-distance-threshold(
+                    $left-pointer, $left-size,
+                    $right-pointer, $right-size, $threshold)
+                !! llev-merge-and-split-distance(
+                    $left-pointer, $left-size,
+                    $right-pointer, $right-size)
+        }
+        when 'hamming' {
+            $threshold.defined
+                ?? llev-hamming-distance-threshold(
+                    $left-pointer, $left-size,
+                    $right-pointer, $right-size, $threshold)
+                !! llev-hamming-distance($left-pointer, $left-size,
+                    $right-pointer, $right-size)
+        }
+        when 'indel' {
+            $threshold.defined
+                ?? llev-indel-distance-threshold(
+                    $left-pointer, $left-size,
+                    $right-pointer, $right-size, $threshold)
+                !! llev-indel-distance($left-pointer, $left-size,
+                    $right-pointer, $right-size)
         }
     };
-    X::Liblevenshtein.new(
-        status => INVALID-UTF8,
-        operation => "{$kind}-distance",
-        detail => (try llev-last-error-message) // '',
-    ).throw if $result == SIZE-MAX || $result == -1;
-    return Nil if $result == SIZE-MAX - 1 || $result == -2;
-    $result.Int
+    retained-distance-result($result, "{$kind}-distance", $left, $right)
+}
+
+multi sub distance-call(
+    Str:D $kind, Blob:D $source, Blob:D $target, Mu $threshold --> Mu
+) {
+    my $left-storage = byte-argument($source);
+    my $right-storage = byte-argument($target);
+    my $left = $left-storage.pointer;
+    my $right = $right-storage.pointer;
+    my $result = do given $kind {
+        when 'standard' {
+            $threshold.defined
+                ?? llev-distance-bytes-threshold(
+                    $left, $source.elems, $right, $target.elems, $threshold)
+                !! llev-distance-bytes($left, $source.elems, $right, $target.elems)
+        }
+        when 'osa' {
+            $threshold.defined
+                ?? llev-damerau-distance-bytes-threshold(
+                    $left, $source.elems, $right, $target.elems, $threshold)
+                !! llev-damerau-distance-bytes($left, $source.elems, $right, $target.elems)
+        }
+        when 'true' {
+            $threshold.defined
+                ?? llev-true-damerau-distance-bytes-threshold(
+                    $left, $source.elems, $right, $target.elems, $threshold)
+                !! llev-true-damerau-distance-bytes(
+                    $left, $source.elems, $right, $target.elems)
+        }
+        when 'merge' {
+            $threshold.defined
+                ?? llev-merge-and-split-distance-bytes-threshold(
+                    $left, $source.elems, $right, $target.elems, $threshold)
+                !! llev-merge-and-split-distance-bytes(
+                    $left, $source.elems, $right, $target.elems)
+        }
+        when 'hamming' {
+            $threshold.defined
+                ?? llev-hamming-distance-bytes-threshold(
+                    $left, $source.elems, $right, $target.elems, $threshold)
+                !! llev-hamming-distance-bytes(
+                    $left, $source.elems, $right, $target.elems)
+        }
+        when 'indel' {
+            $threshold.defined
+                ?? llev-indel-distance-bytes-threshold(
+                    $left, $source.elems, $right, $target.elems, $threshold)
+                !! llev-indel-distance-bytes($left, $source.elems, $right, $target.elems)
+        }
+    };
+    retained-distance-result($result, "{$kind}-distance-bytes",
+        $left-storage, $right-storage)
+}
+
+multi sub distance-call(
+    Str:D $kind, Positional:D $source, Positional:D $target, Mu $threshold --> Mu
+) {
+    my $left = u64-tokens($source);
+    my $right = u64-tokens($target);
+    my $left-pointer = nativecast(Pointer, $left);
+    my $right-pointer = nativecast(Pointer, $right);
+    my $result = do given $kind {
+        when 'standard' {
+            $threshold.defined
+                ?? llev-distance-u64-threshold(
+                    $left-pointer, $source.elems,
+                    $right-pointer, $target.elems, $threshold)
+                !! llev-distance-u64(
+                    $left-pointer, $source.elems, $right-pointer, $target.elems)
+        }
+        when 'osa' {
+            $threshold.defined
+                ?? llev-damerau-distance-u64-threshold(
+                    $left-pointer, $source.elems,
+                    $right-pointer, $target.elems, $threshold)
+                !! llev-damerau-distance-u64(
+                    $left-pointer, $source.elems, $right-pointer, $target.elems)
+        }
+        when 'true' {
+            $threshold.defined
+                ?? llev-true-damerau-distance-u64-threshold(
+                    $left-pointer, $source.elems,
+                    $right-pointer, $target.elems, $threshold)
+                !! llev-true-damerau-distance-u64(
+                    $left-pointer, $source.elems, $right-pointer, $target.elems)
+        }
+        when 'merge' {
+            $threshold.defined
+                ?? llev-merge-and-split-distance-u64-threshold(
+                    $left-pointer, $source.elems,
+                    $right-pointer, $target.elems, $threshold)
+                !! llev-merge-and-split-distance-u64(
+                    $left-pointer, $source.elems, $right-pointer, $target.elems)
+        }
+        when 'hamming' {
+            $threshold.defined
+                ?? llev-hamming-distance-u64-threshold(
+                    $left-pointer, $source.elems,
+                    $right-pointer, $target.elems, $threshold)
+                !! llev-hamming-distance-u64(
+                    $left-pointer, $source.elems, $right-pointer, $target.elems)
+        }
+        when 'indel' {
+            $threshold.defined
+                ?? llev-indel-distance-u64-threshold(
+                    $left-pointer, $source.elems,
+                    $right-pointer, $target.elems, $threshold)
+                !! llev-indel-distance-u64(
+                    $left-pointer, $source.elems, $right-pointer, $target.elems)
+        }
+    };
+    retained-distance-result($result, "{$kind}-distance-u64", $left, $right)
 }
 
 multi sub distance(Str:D $source, Str:D $target --> Int:D) is export {
     distance-call('standard', $source, $target, Nil)
 }
 multi sub distance(Str:D $source, Str:D $target, Int:D :$threshold! --> Mu) is export {
-    die 'threshold must be nonnegative' if $threshold < 0;
-    distance-call('standard', $source, $target, $threshold)
+    distance-call('standard', $source, $target, checked-threshold($threshold))
 }
 multi sub damerau-distance(Str:D $source, Str:D $target --> Int:D) is export {
     distance-call('osa', $source, $target, Nil)
@@ -327,8 +629,7 @@ multi sub damerau-distance(Str:D $source, Str:D $target --> Int:D) is export {
 multi sub damerau-distance(
     Str:D $source, Str:D $target, Int:D :$threshold! --> Mu
 ) is export {
-    die 'threshold must be nonnegative' if $threshold < 0;
-    distance-call('osa', $source, $target, $threshold)
+    distance-call('osa', $source, $target, checked-threshold($threshold))
 }
 multi sub true-damerau-distance(Str:D $source, Str:D $target --> Int:D) is export {
     distance-call('true', $source, $target, Nil)
@@ -336,8 +637,168 @@ multi sub true-damerau-distance(Str:D $source, Str:D $target --> Int:D) is expor
 multi sub true-damerau-distance(
     Str:D $source, Str:D $target, Int:D :$threshold! --> Mu
 ) is export {
-    die 'threshold must be nonnegative' if $threshold < 0;
-    distance-call('true', $source, $target, $threshold)
+    distance-call('true', $source, $target, checked-threshold($threshold))
+}
+
+# Blob and u64-token overloads preserve the native unit domain. In particular,
+# arbitrary bytes are never decoded as UTF-8 and tokens are not narrowed.
+multi sub distance(Blob:D $source, Blob:D $target, Int :$threshold --> Mu) is export {
+    distance-call('standard', $source, $target, checked-threshold($threshold))
+}
+multi sub distance(
+    Positional:D $source, Positional:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('standard', $source, $target, checked-threshold($threshold))
+}
+multi sub damerau-distance(
+    Blob:D $source, Blob:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('osa', $source, $target, checked-threshold($threshold))
+}
+multi sub damerau-distance(
+    Positional:D $source, Positional:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('osa', $source, $target, checked-threshold($threshold))
+}
+multi sub true-damerau-distance(
+    Blob:D $source, Blob:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('true', $source, $target, checked-threshold($threshold))
+}
+multi sub true-damerau-distance(
+    Positional:D $source, Positional:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('true', $source, $target, checked-threshold($threshold))
+}
+
+multi sub merge-and-split-distance(
+    Str:D $source, Str:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('merge', $source, $target, checked-threshold($threshold))
+}
+multi sub merge-and-split-distance(
+    Blob:D $source, Blob:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('merge', $source, $target, checked-threshold($threshold))
+}
+multi sub merge-and-split-distance(
+    Positional:D $source, Positional:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('merge', $source, $target, checked-threshold($threshold))
+}
+multi sub hamming-distance(
+    Str:D $source, Str:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('hamming', $source, $target, checked-threshold($threshold))
+}
+multi sub hamming-distance(
+    Blob:D $source, Blob:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('hamming', $source, $target, checked-threshold($threshold))
+}
+multi sub hamming-distance(
+    Positional:D $source, Positional:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('hamming', $source, $target, checked-threshold($threshold))
+}
+multi sub indel-distance(
+    Str:D $source, Str:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('indel', $source, $target, checked-threshold($threshold))
+}
+multi sub indel-distance(
+    Blob:D $source, Blob:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('indel', $source, $target, checked-threshold($threshold))
+}
+multi sub indel-distance(
+    Positional:D $source, Positional:D $target, Int :$threshold --> Mu
+) is export {
+    distance-call('indel', $source, $target, checked-threshold($threshold))
+}
+
+multi sub affine-call(
+    Str:D $source, Str:D $target, AffineGapCosts:D $costs, Mu $threshold --> Mu
+) {
+    my $left-bytes = $source.encode('utf8');
+    my $right-bytes = $target.encode('utf8');
+    my $left-size = $left-bytes.elems;
+    my $right-size = $right-bytes.elems;
+    my $left = byte-argument($left-bytes);
+    my $right = byte-argument($right-bytes);
+    my $left-pointer = $left.pointer;
+    my $right-pointer = $right.pointer;
+    my $open = checked-native-cost($costs.gap-open, 'gap-open');
+    my $extend = checked-native-cost($costs.gap-extend, 'gap-extend');
+    my $substitute = checked-native-cost($costs.substitution, 'substitution');
+    my $result = $threshold.defined
+        ?? llev-affine-gap-distance-threshold(
+            $left-pointer, $left-size, $right-pointer, $right-size,
+            $open, $extend, $substitute, $threshold)
+        !! llev-affine-gap-distance(
+            $left-pointer, $left-size, $right-pointer, $right-size,
+            $open, $extend, $substitute);
+    retained-distance-result($result, 'affine-gap-distance', $left, $right)
+}
+
+multi sub affine-call(
+    Blob:D $source, Blob:D $target, AffineGapCosts:D $costs, Mu $threshold --> Mu
+) {
+    my $left = byte-argument($source);
+    my $right = byte-argument($target);
+    my $open = checked-native-cost($costs.gap-open, 'gap-open');
+    my $extend = checked-native-cost($costs.gap-extend, 'gap-extend');
+    my $substitute = checked-native-cost($costs.substitution, 'substitution');
+    my $result = $threshold.defined
+        ?? llev-affine-gap-distance-bytes-threshold(
+            $left.pointer, $source.elems,
+            $right.pointer, $target.elems,
+            $open, $extend, $substitute, $threshold)
+        !! llev-affine-gap-distance-bytes(
+            $left.pointer, $source.elems,
+            $right.pointer, $target.elems,
+            $open, $extend, $substitute);
+    retained-distance-result($result, 'affine-gap-distance-bytes', $left, $right)
+}
+
+multi sub affine-call(
+    Positional:D $source, Positional:D $target,
+    AffineGapCosts:D $costs, Mu $threshold --> Mu
+) {
+    my $left = u64-tokens($source);
+    my $right = u64-tokens($target);
+    my $open = checked-native-cost($costs.gap-open, 'gap-open');
+    my $extend = checked-native-cost($costs.gap-extend, 'gap-extend');
+    my $substitute = checked-native-cost($costs.substitution, 'substitution');
+    my $result = $threshold.defined
+        ?? llev-affine-gap-distance-u64-threshold(
+            nativecast(Pointer, $left), $source.elems,
+            nativecast(Pointer, $right), $target.elems,
+            $open, $extend, $substitute, $threshold)
+        !! llev-affine-gap-distance-u64(
+            nativecast(Pointer, $left), $source.elems,
+            nativecast(Pointer, $right), $target.elems,
+            $open, $extend, $substitute);
+    retained-distance-result($result, 'affine-gap-distance-u64', $left, $right)
+}
+
+multi sub affine-gap-distance(
+    Str:D $source, Str:D $target, AffineGapCosts:D $costs,
+    Int :$threshold --> Mu
+) is export {
+    affine-call($source, $target, $costs, checked-threshold($threshold))
+}
+multi sub affine-gap-distance(
+    Blob:D $source, Blob:D $target, AffineGapCosts:D $costs,
+    Int :$threshold --> Mu
+) is export {
+    affine-call($source, $target, $costs, checked-threshold($threshold))
+}
+multi sub affine-gap-distance(
+    Positional:D $source, Positional:D $target, AffineGapCosts:D $costs,
+    Int :$threshold --> Mu
+) is export {
+    affine-call($source, $target, $costs, checked-threshold($threshold))
 }
 
 sub materialize(RawMatch:D $raw --> Match:D) {
@@ -468,13 +929,13 @@ class PhoneticPattern is export {
     multi method new(Str:D :$llre!) { self!compile($llre, True) }
 
     method !compile(Str:D $source, Bool:D $llre --> PhoneticPattern:D) {
-        my $bytes = $source.encode('utf8');
+        my $bytes = byte-argument($source.encode('utf8'));
         my Pointer $output .= new;
         my $status = $llre
             ?? llev-phonetic-pattern-compile-llre(
-                raw-pointer($bytes), $bytes.elems, $output)
+                $bytes.pointer, $bytes.length, $output)
             !! llev-phonetic-pattern-compile-regex(
-                raw-pointer($bytes), $bytes.elems, $output);
+                $bytes.pointer, $bytes.length, $output);
         check-status($status, $llre ?? 'phonetic-pattern-llre' !!
             'phonetic-pattern-regex');
         self.bless(handle => $output)
@@ -499,10 +960,10 @@ class PhoneticPattern is export {
     }
 
     method accepts(Str:D $input --> Bool:D) {
-        my $bytes = $input.encode('utf8');
+        my $bytes = byte-argument($input.encode('utf8'));
         my uint8 $output = 0;
         check-status(llev-phonetic-pattern-matches(
-            self.native-handle, raw-pointer($bytes), $bytes.elems, $output,
+            self.native-handle, $bytes.pointer, $bytes.length, $output,
         ), 'phonetic-pattern-matches');
         so $output
     }
@@ -571,10 +1032,10 @@ class Transducer is export {
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
         die 'maximum distance must be nonnegative' if $maximum-distance < 0;
-        my $bytes = $input.encode('utf8');
+        my $bytes = byte-argument($input.encode('utf8'));
         my Pointer $output .= new;
         check-status(llev-transducer-query-utf8(
-            self!handle, raw-pointer($bytes), $bytes.elems, $maximum-distance,
+            self!handle, $bytes.pointer, $bytes.length, $maximum-distance,
             $order, $output,
         ), 'transducer-query-utf8');
         QueryCursor.new(handle => $output)
@@ -585,9 +1046,10 @@ class Transducer is export {
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
         die 'maximum distance must be nonnegative' if $maximum-distance < 0;
+        my $bytes = byte-argument($input);
         my Pointer $output .= new;
         check-status(llev-transducer-query-bytes(
-            self!handle, raw-pointer($input), $input.elems, $maximum-distance,
+            self!handle, $bytes.pointer, $bytes.length, $maximum-distance,
             $order, $output,
         ), 'transducer-query-bytes');
         QueryCursor.new(handle => $output)
@@ -598,12 +1060,7 @@ class Transducer is export {
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
         die 'maximum distance must be nonnegative' if $maximum-distance < 0;
-        my $tokens = CArray[uint64].allocate($input.elems);
-        for $input.list.kv -> $index, $token {
-            die 'query token is outside uint64'
-                unless $token ~~ Int && 0 <= $token <= 2**64 - 1;
-            $tokens[$index] = $token;
-        }
+        my $tokens = u64-tokens($input);
         my Pointer $output .= new;
         check-status(llev-transducer-query-u64(
             self!handle, nativecast(Pointer, $tokens), $input.elems,
@@ -699,10 +1156,10 @@ class QueryCache is export {
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
         die 'maximum distance must be nonnegative' if $maximum-distance < 0;
-        my $bytes = $input.encode('utf8');
+        my $bytes = byte-argument($input.encode('utf8'));
         my Pointer $output .= new;
         check-status(llev-query-cache-query-utf8(
-            self!handle, raw-pointer($bytes), $bytes.elems, $maximum-distance,
+            self!handle, $bytes.pointer, $bytes.length, $maximum-distance,
             $order, $output,
         ), 'query-cache-query-utf8');
         QueryCursor.new(handle => $output)
@@ -713,9 +1170,10 @@ class QueryCache is export {
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
         die 'maximum distance must be nonnegative' if $maximum-distance < 0;
+        my $bytes = byte-argument($input);
         my Pointer $output .= new;
         check-status(llev-query-cache-query-bytes(
-            self!handle, raw-pointer($input), $input.elems, $maximum-distance,
+            self!handle, $bytes.pointer, $bytes.length, $maximum-distance,
             $order, $output,
         ), 'query-cache-query-bytes');
         QueryCursor.new(handle => $output)
@@ -726,12 +1184,7 @@ class QueryCache is export {
         QueryOrder:D :$order = TRAVERSAL,
     --> QueryCursor:D) {
         die 'maximum distance must be nonnegative' if $maximum-distance < 0;
-        my $tokens = CArray[uint64].allocate($input.elems);
-        for $input.list.kv -> $index, $token {
-            die 'query token is outside uint64'
-                unless $token ~~ Int && 0 <= $token <= 2**64 - 1;
-            $tokens[$index] = $token;
-        }
+        my $tokens = u64-tokens($input);
         my Pointer $output .= new;
         check-status(llev-query-cache-query-u64(
             self!handle, nativecast(Pointer, $tokens), $input.elems,
@@ -758,10 +1211,10 @@ class PhoneticRuleSet is export {
     submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
 
     multi method new(Str:D :$source!) {
-        my $bytes = $source.encode('utf8');
+        my $bytes = byte-argument($source.encode('utf8'));
         my Pointer $output .= new;
         check-status(llev-phonetic-rules-parse(
-            raw-pointer($bytes), $bytes.elems, $output,
+            $bytes.pointer, $bytes.length, $output,
         ), 'phonetic-rules-parse');
         self.bless(handle => $output)
     }
@@ -790,10 +1243,10 @@ class PhoneticRuleSet is export {
     }
 
     method apply(Str:D $input --> Str:D) {
-        my $bytes = $input.encode('utf8');
+        my $bytes = byte-argument($input.encode('utf8'));
         my $output = OwnedString.new;
         check-status(llev-phonetic-rules-apply(
-            self!handle, raw-pointer($bytes), $bytes.elems, $output,
+            self!handle, $bytes.pointer, $bytes.length, $output,
         ), 'phonetic-rules-apply');
         LEAVE llev-owned-string-free($output);
         my $result = buf8.allocate($output.len);
