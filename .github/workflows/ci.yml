@@ -349,6 +349,8 @@ jobs:
       - name: Libdictenstein JVM CRUD, persistence, and cross-project snapshots
         shell: bash
         run: |
+          install -Dm644 ../libdictenstein/target/debug/liblibdictenstein.so \
+            ../libdictenstein/bindings/jvm/build/native-resources/META-INF/native/linux-x86_64/liblibdictenstein.so
           ../libdictenstein/bindings/jvm/gradlew --no-daemon \
             -p ../libdictenstein/bindings/jvm \
             -PnativePlatforms=linux-x86_64 \
