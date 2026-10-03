@@ -76,6 +76,12 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `llev_abi_version` | `llev_abi_version` | ABI compatibility and feature discovery |
+| `llev_affine_gap_distance` | `llev_affine_gap_distance` | project ABI operation |
+| `llev_affine_gap_distance_bytes` | `llev_affine_gap_distance_bytes` | project ABI operation |
+| `llev_affine_gap_distance_bytes_threshold` | `llev_affine_gap_distance_bytes_threshold` | project ABI operation |
+| `llev_affine_gap_distance_threshold` | `llev_affine_gap_distance_threshold` | project ABI operation |
+| `llev_affine_gap_distance_u64` | `llev_affine_gap_distance_u64` | project ABI operation |
+| `llev_affine_gap_distance_u64_threshold` | `llev_affine_gap_distance_u64_threshold` | project ABI operation |
 | `llev_api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `llev_build_features` | `llev_build_features` | ABI compatibility and feature discovery |
 | `llev_damerau_distance` | `llev_damerau_distance` | standalone exact or thresholded distance |
@@ -97,6 +103,18 @@ variants, protocols, or methods.
 | `llev_generalized_online_free` | `llev_generalized_online_free` | runtime generalized-automaton lifecycle and prefix evaluation |
 | `llev_generalized_online_new_utf8` | `llev_generalized_online_new_utf8` | runtime generalized-automaton lifecycle and prefix evaluation |
 | `llev_generalized_online_observation` | `llev_generalized_online_observation` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `llev_hamming_distance` | `llev_hamming_distance` | project ABI operation |
+| `llev_hamming_distance_bytes` | `llev_hamming_distance_bytes` | project ABI operation |
+| `llev_hamming_distance_bytes_threshold` | `llev_hamming_distance_bytes_threshold` | project ABI operation |
+| `llev_hamming_distance_threshold` | `llev_hamming_distance_threshold` | project ABI operation |
+| `llev_hamming_distance_u64` | `llev_hamming_distance_u64` | project ABI operation |
+| `llev_hamming_distance_u64_threshold` | `llev_hamming_distance_u64_threshold` | project ABI operation |
+| `llev_indel_distance` | `llev_indel_distance` | project ABI operation |
+| `llev_indel_distance_bytes` | `llev_indel_distance_bytes` | project ABI operation |
+| `llev_indel_distance_bytes_threshold` | `llev_indel_distance_bytes_threshold` | project ABI operation |
+| `llev_indel_distance_threshold` | `llev_indel_distance_threshold` | project ABI operation |
+| `llev_indel_distance_u64` | `llev_indel_distance_u64` | project ABI operation |
+| `llev_indel_distance_u64_threshold` | `llev_indel_distance_u64_threshold` | project ABI operation |
 | `llev_last_error_message` | `llev_last_error_message` | typed failure diagnostics |
 | `llev_merge_and_split_distance` | `llev_merge_and_split_distance` | standalone merge-and-split distance |
 | `llev_merge_and_split_distance_bytes` | `llev_merge_and_split_distance_bytes` | standalone merge-and-split distance |

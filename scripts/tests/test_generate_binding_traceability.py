@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -76,8 +77,9 @@ class BindingTraceabilityTests(unittest.TestCase):
         )
 
     def test_evidence_paths_cannot_leave_the_workspace(self) -> None:
+        escape = os.path.relpath("/etc/passwd", ROOT)
         with self.assertRaises(SystemExit) as raised:
-            GENERATOR.resolve("../../../etc/passwd", "test.evidence")
+            GENERATOR.resolve(escape, "test.evidence")
         self.assertIn("leaves the indexed workspace", str(raised.exception))
 
 

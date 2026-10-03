@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = Path(os.environ.get("VINARY_TREE_WORKSPACE_ROOT", ROOT.parent)).resolve()
 MODEL_PATH = ROOT / "bindings" / "conformance" / "family-bindings.json"
 MATRIX_PATH = ROOT / "bindings" / "conformance" / "family-completeness-matrix.tsv"
 VALID_CELL_STATES = {
@@ -502,7 +503,7 @@ def main() -> int:
                     if evidence_root is None:
                         default_evidence = str(
                             (modeled_project_root / evidence[language_id]).relative_to(
-                                ROOT.parent
+                                WORKSPACE_ROOT
                             )
                         )
                     else:

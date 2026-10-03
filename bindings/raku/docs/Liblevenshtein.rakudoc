@@ -48,10 +48,40 @@ independent cursors and immutable transducers may run concurrently.
 
 =head1 API
 
-=item C<distance>, C<damerau-distance>, C<true-damerau-distance>
+=item C<distance>, C<damerau-distance>, C<true-damerau-distance>, C<merge-and-split-distance>
 
-Compute Unicode-scalar metrics. The C<:threshold> form yields an undefined
-value when the exact distance is above the inclusive bound.
+Compute standalone distances over two C<Str> values (Unicode scalars), two
+C<Blob> values (raw bytes), or two C<Positional> values (full-range unsigned
+64-bit tokens). C<damerau-distance> is optimal string alignment, which is
+not a metric; C<true-damerau-distance> is unrestricted Damerau-Levenshtein.
+C<merge-and-split-distance> also admits symmetric one-to-two edits.
+
+=item C<hamming-distance>, C<indel-distance>
+
+Hamming counts unequal positions and returns C<Nil> for unequal lengths.
+Indel permits insertion/deletion but not substitution. Both support the same
+three unit domains as C<distance>.
+
+=item C<affine-gap-distance>, C<AffineGapCosts>
+
+Pass an C<AffineGapCosts> object with nonnegative C<gap-open>, C<gap-extend>,
+and C<substitution> integer costs. A gap of length C<k> costs
+C<gap-open + k * gap-extend>. The exact algorithm is the native Gotoh
+implementation; an unrepresentable/overflow result returns C<Nil>. The
+thresholded form computes the exact score then applies the inclusive bound.
+
+All distance functions accept C<:threshold($bound)>. A score above the
+inclusive bound returns C<Nil>; native undefined and above-bound cases have
+different sentinels, but the Raku optional result intentionally maps both to
+C<Nil>. Invalid inputs throw. Standard distance dispatches internally to
+the applicable Myers/ASCII or runtime SIMD kernel; there is no public kernel
+selection knob because those kernels preserve the same metric semantics.
+
+    my $costs = AffineGapCosts.new(
+        gap-open => 3, gap-extend => 2, substitution => 10,
+    );
+    say affine-gap-distance('a', 'abcd', $costs); # 9
+    say hamming-distance([0, 2**64 - 1], [0, 0]); # 1
 
 =item C<Transducer>, C<QueryCursor>, C<Match>
 

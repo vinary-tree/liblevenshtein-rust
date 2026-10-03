@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKSPACE = ROOT.parent
+WORKSPACE = Path(os.environ.get("VINARY_TREE_WORKSPACE_ROOT", ROOT.parent)).resolve()
 RUNTIME_ROOT = Path(
     os.environ.get(
         "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", WORKSPACE / "javascript-runtime"

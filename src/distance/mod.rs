@@ -34,7 +34,9 @@ mod units;
 
 pub use affine::{affine_gap_distance, affine_gap_distance_units};
 pub use hamming::{hamming_distance, hamming_distance_units};
-pub use indel::{indel_distance, indel_distance_bounded};
+pub use indel::{
+    indel_distance, indel_distance_bounded, indel_distance_units, indel_distance_units_bounded,
+};
 pub use units::{
     damerau_levenshtein_distance_units, damerau_levenshtein_distance_units_bounded,
     merge_and_split_distance_units, merge_and_split_distance_units_bounded,

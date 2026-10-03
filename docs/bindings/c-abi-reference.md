@@ -1,7 +1,8 @@
 # The `llev_*` C ABI, function by function
 
 This is the normative reference for liblevenshtein's project-owned C surface:
-all **76 exported `llev_*` functions**, each with its exact header signature,
+all **94 exported `llev_*` functions**, each with its header signature or
+signature family,
 preconditions, the complete set of statuses it can return (read from the
 implementation, not aspirationally), ownership rules, thread-safety truth, and
 cost. It is the **project layer above the family canon**: everything about the
@@ -56,20 +57,20 @@ specified by their interface.
 
 ![Class diagram of the vinary-tree-interop ABI: VtResource and its base vtable negotiate dictionary, visit, graph, snapshot-identity, and scalar-WFST capability vtables plus their borrowed value types.](../diagrams/bindings/vt-structs-class.svg)
 
-The 76 functions divide into seven groups:
+The 94 functions divide into seven groups:
 
 | Group | Count | Functions |
 |---|---|---|
 | [Introspection](#4-introspection-4) | 4 | `llev_abi_version` · `llev_api_revision` · `llev_build_features` · `llev_last_error_message` |
 | [Strings (legacy)](#5-string-helpers-3-legacy) | 3 | `llev_string_free` · `llev_string_array_free` · `llev_string_dup` |
-| [Distances](#6-distance-functions-24) | 24 | Four families × Unicode-scalar, byte, and u64-token domains × exact and thresholded calls |
+| [Distances](#6-distance-functions-42) | 42 | Seven families × Unicode-scalar, byte, and u64-token domains × exact and thresholded calls |
 | [Transducer + cursor](#7-transducer-and-cursor-11) | 11 | `llev_transducer_new` · `llev_transducer_snapshot` · `llev_transducer_free` · `llev_transducer_unit_domain` · `llev_transducer_query_utf8` · `llev_transducer_query_bytes` · `llev_transducer_query_u64` · `llev_query_cursor_next_batch` · `llev_query_cursor_release_batch` · `llev_query_cursor_reduce` · `llev_query_cursor_free` |
 | [Bounded query cache](#7a-bounded-query-cache-8) | 8 | `llev_query_cache_new` · `llev_query_cache_clear` · `llev_query_cache_reset_stats` · `llev_query_cache_stats` · `llev_query_cache_free` · `llev_query_cache_query_utf8` · `llev_query_cache_query_bytes` · `llev_query_cache_query_u64` |
 | [Standalone automata](#7b-standalone-automata-14) | 14 | Generalized and universal configuration, complete evaluation, online construction, advance, observation, and free functions |
 | [Phonetic](#8-phonetic-surface-12) | 12 | `llev_owned_string_free` · `llev_phonetic_pattern_compile_regex` · `llev_phonetic_pattern_compile_llre` · `llev_phonetic_pattern_free` · `llev_phonetic_pattern_size` · `llev_phonetic_pattern_matches` · `llev_transducer_query_pattern` · `llev_phonetic_rules_parse` · `llev_phonetic_rules_builtin` · `llev_phonetic_rules_free` · `llev_phonetic_rules_len` · `llev_phonetic_rules_apply` |
 
 Headers: [`include/liblevenshtein.h`](../../include/liblevenshtein.h)
-(prototypes, quoted verbatim below) over
+(normative prototypes; common signature shapes are abbreviated below) over
 [`include/liblevenshtein_abi.h`](../../include/liblevenshtein_abi.h)
 (generated constants, enums, and POD types — regenerate via
 `scripts/generate-bindings.py`, never edit numeric values by hand) over the
@@ -197,7 +198,7 @@ const char* llev_last_error_message(void);
 | Function | Returns | Contract |
 |---|---|---|
 | `llev_abi_version` | `LLEV_ABI_VERSION` = 1 | The project ABI generation. A facade built for generation $`g`$ must refuse a library reporting a different generation. |
-| `llev_api_revision` | `LLEV_API_REVISION` = 6 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. Revision 5 adds generalized/universal automata; revision 6 adds the [finite Unicode WallBreaker surface](wallbreaker-unicode.md). |
+| `llev_api_revision` | `LLEV_API_REVISION` = 7 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. Revision 5 adds generalized/universal automata; revision 6 adds the [finite Unicode WallBreaker surface](wallbreaker-unicode.md); revision 7 adds the Hamming, indel, and affine-gap standalone distance families. |
 | `llev_build_features` | bitset | `LLEV_BUILD_FEATURE_CORE` (1) is always set; `LLEV_BUILD_FEATURE_PHONETIC` (2) is set exactly when the library was compiled with `bindings-phonetic`. Probe it instead of trial-calling the phonetic surface. |
 | `llev_last_error_message` | borrowed `const char*` | § 3.2. Never NULL; empty string when the last call on this thread succeeded. |
 
@@ -232,7 +233,7 @@ $`\mathcal{O}(\lvert s \rvert)`$.
 
 ---
 
-## 6. Distance functions (24)
+## 6. Distance functions (42)
 
 ```c
 size_t llev_distance(const char* source, size_t source_len,
@@ -333,6 +334,25 @@ size_t llev_merge_and_split_distance_u64_threshold(const uint64_t* source,
                                                    size_t threshold);
 ```
 
+API revision 7 adds Hamming, indel, and affine-gap families in each domain,
+with exact and thresholded forms (18 functions). Their exact spelling and
+signatures are in the [public header](../../include/liblevenshtein.h):
+
+| Family | Unsuffixed Unicode forms | Raw-byte and u64-token forms | Extra arguments |
+|---|---|---|---|
+| Hamming | `llev_hamming_distance`, `llev_hamming_distance_threshold` | `llev_hamming_distance_bytes`, `llev_hamming_distance_bytes_threshold`, `llev_hamming_distance_u64`, `llev_hamming_distance_u64_threshold` | threshold only in bounded form |
+| Indel | `llev_indel_distance`, `llev_indel_distance_threshold` | `llev_indel_distance_bytes`, `llev_indel_distance_bytes_threshold`, `llev_indel_distance_u64`, `llev_indel_distance_u64_threshold` | threshold only in bounded form |
+| Affine gap | `llev_affine_gap_distance`, `llev_affine_gap_distance_threshold` | `llev_affine_gap_distance_bytes`, `llev_affine_gap_distance_bytes_threshold`, `llev_affine_gap_distance_u64`, `llev_affine_gap_distance_u64_threshold` | `gap_open`, `gap_extend`, `substitution`; bounded form adds `threshold` last |
+
+All 18 forms take the same four leading arguments as the corresponding
+domain's existing calls: source pointer/length and target pointer/length.
+Affine costs are nonnegative integers on one caller-chosen scale. A gap run of
+length $`k`$ costs $`gap\_open + k\cdot gap\_extend`$; a substitution costs
+`substitution`. Hamming is defined only for equal unit counts; indel allows
+insertions and deletions but no one-step substitution. The affine kernel is
+Gotoh dynamic programming; its bounded entry point currently evaluates the
+exact score before comparing with `threshold`. Indel uses a bounded band.
+
 These are pure functions over two length-bearing buffers. Unsuffixed functions
 decode valid UTF-8 and count **Unicode scalar values**, not bytes. `_bytes`
 functions accept arbitrary binary data. `_u64` functions compare aligned
@@ -343,10 +363,11 @@ is sentinel-coded so the hot path stays a single integer return:
 |---|---|
 | `SIZE_MAX` | a NULL pointer with nonzero length, invalid UTF-8 in an unsuffixed call, or a misaligned u64 buffer |
 | `SIZE_MAX - 1` | (threshold variants only) the exact distance exceeds `threshold` |
+| `SIZE_MAX - 2` | Hamming lengths differ, or affine has no representable finite result (including arithmetic overflow or collision with the sentinel range) |
 
-Both sentinels exceed any real distance
-($`d \le \max(\lvert s \rvert, \lvert t \rvert) < 2^{64}{-}2`$ scalars), so
-`result <= threshold` is always a correct acceptance test.
+All three sentinels are reserved and never represent a successful distance.
+Check for them before interpreting an exact result or comparing with a
+threshold; affine scores can exceed the unit counts when costs exceed one.
 
 | Function | Metric | Semantics |
 |---|---|---|
@@ -354,11 +375,15 @@ Both sentinels exceed any real distance
 | `llev_damerau_distance`(`_threshold`) | **OSA** (optimal string alignment, "restricted Damerau") | adds adjacent transposition, but no substring may be edited twice — kept under its legacy name for ABI stability |
 | `llev_true_damerau_distance`(`_threshold`) | unrestricted Damerau–Levenshtein | true metric with transposition; e.g. for `CA` → `ABC`: OSA gives 3, true Damerau gives 2 |
 | `llev_merge_and_split_distance`(`_threshold`) | merge-and-split Levenshtein | adds symmetric one-to-two split and two-to-one merge operations at unit cost |
+| `llev_hamming_distance`(`_threshold`) | Hamming on equal-length inputs | counts unequal unit positions; unequal lengths produce `SIZE_MAX - 2` |
+| `llev_indel_distance`(`_threshold`) | insertion/deletion distance | no substitution operation; one replacement costs two edits |
+| `llev_affine_gap_distance`(`_threshold`) | affine-gap weighted alignment | configurable substitution and gap-run costs; unrepresentable result produces `SIZE_MAX - 2` |
 
 Every row also has `_bytes`, `_bytes_threshold`, `_u64`, and
 `_u64_threshold` forms. `_threshold` is always the final suffix. API revision 4
-added the 18 domain/family combinations absent from revision 3; all original
-Unicode symbols remain unchanged. The complete recurrence and binding mapping
+added domain-explicit forms for the original four families; API revision 7
+added three more families without changing the original symbols. The complete
+recurrence and binding mapping
 are in the [domain-preserving distance design](distance-domains.md).
 
 *Preconditions:* each buffer is valid for its unit count when nonzero; u64
@@ -367,12 +392,13 @@ buffers are naturally aligned.
 not touch the error slot). *Complexity:* worst case
 $`\mathcal{O}(\lvert s \rvert \cdot \lvert t \rvert)`$; the unbounded
 Unicode Levenshtein path dispatches to Myers' bit-parallel algorithm for short
-ASCII inputs ($`\le 64`$ bytes) and SIMD lanes elsewhere; byte Levenshtein also
+ASCII inputs ($`\le 64`$ bytes) and runtime SIMD lanes when applicable; byte Levenshtein also
 uses Myers when its shorter operand fits one word. Standard, OSA, and
 merge/split threshold variants run a banded dynamic program touching
 $`\mathcal{O}\bigl((2k+1) \cdot \min(\lvert s \rvert, \lvert t \rvert)\bigr)`$
 cells for threshold $`k`$. Unrestricted Damerau retains its full historical
-matrix after its constant-time length lower-bound rejection.
+matrix after its constant-time length lower-bound rejection. Hamming is
+linear; affine-gap exact and bounded forms are quadratic in the worst case.
 
 ---
 

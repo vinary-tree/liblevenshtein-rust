@@ -136,6 +136,94 @@ LLEV_API size_t llev_merge_and_split_distance_threshold(const char* source,
                                                         size_t target_len,
                                                         size_t threshold);
 
+/** @name Hamming, insertion/deletion, and affine-gap distances
+ *
+ * UTF-8 entry points compare Unicode scalar values, without normalizing
+ * canonically equivalent spellings. Byte and uint64_t entry points compare
+ * their native units without transcoding. NULL is valid only with zero length.
+ *
+ * All variants return SIZE_MAX for invalid input. A thresholded defined
+ * distance above its inclusive bound returns SIZE_MAX-1. Hamming distance is
+ * undefined for unequal unit counts and returns SIZE_MAX-2 in either variant.
+ * Affine gap returns SIZE_MAX-2 when arithmetic overflows or the finite
+ * result enters the reserved sentinel range. These cases never become a
+ * fabricated finite distance.
+ *
+ * Affine costs are nonnegative integers sharing the same caller-selected
+ * scale. A gap of k units costs gap_open + k*gap_extend; substitutions cost
+ * substitution. The threshold uses that same scale. Bounded affine calls
+ * currently compute the exact Gotoh result before comparison, whereas bounded
+ * indel calls use an affordable diagonal band.
+ * @{ */
+LLEV_API size_t llev_hamming_distance(const char* source, size_t source_len,
+                                      const char* target, size_t target_len);
+LLEV_API size_t llev_hamming_distance_threshold(const char* source,
+                                                size_t source_len,
+                                                const char* target,
+                                                size_t target_len,
+                                                size_t threshold);
+LLEV_API size_t llev_indel_distance(const char* source, size_t source_len,
+                                    const char* target, size_t target_len);
+LLEV_API size_t llev_indel_distance_threshold(const char* source,
+                                              size_t source_len,
+                                              const char* target,
+                                              size_t target_len,
+                                              size_t threshold);
+LLEV_API size_t llev_affine_gap_distance(const char* source, size_t source_len,
+                                         const char* target, size_t target_len,
+                                         size_t gap_open, size_t gap_extend,
+                                         size_t substitution);
+LLEV_API size_t llev_affine_gap_distance_threshold(
+    const char* source, size_t source_len, const char* target,
+    size_t target_len, size_t gap_open, size_t gap_extend,
+    size_t substitution, size_t threshold);
+
+LLEV_API size_t llev_hamming_distance_bytes(const uint8_t* source,
+                                            size_t source_len,
+                                            const uint8_t* target,
+                                            size_t target_len);
+LLEV_API size_t llev_hamming_distance_bytes_threshold(
+    const uint8_t* source, size_t source_len, const uint8_t* target,
+    size_t target_len, size_t threshold);
+LLEV_API size_t llev_hamming_distance_u64(const uint64_t* source,
+                                          size_t source_len,
+                                          const uint64_t* target,
+                                          size_t target_len);
+LLEV_API size_t llev_hamming_distance_u64_threshold(
+    const uint64_t* source, size_t source_len, const uint64_t* target,
+    size_t target_len, size_t threshold);
+
+LLEV_API size_t llev_indel_distance_bytes(const uint8_t* source,
+                                          size_t source_len,
+                                          const uint8_t* target,
+                                          size_t target_len);
+LLEV_API size_t llev_indel_distance_bytes_threshold(
+    const uint8_t* source, size_t source_len, const uint8_t* target,
+    size_t target_len, size_t threshold);
+LLEV_API size_t llev_indel_distance_u64(const uint64_t* source,
+                                        size_t source_len,
+                                        const uint64_t* target,
+                                        size_t target_len);
+LLEV_API size_t llev_indel_distance_u64_threshold(
+    const uint64_t* source, size_t source_len, const uint64_t* target,
+    size_t target_len, size_t threshold);
+
+LLEV_API size_t llev_affine_gap_distance_bytes(
+    const uint8_t* source, size_t source_len, const uint8_t* target,
+    size_t target_len, size_t gap_open, size_t gap_extend, size_t substitution);
+LLEV_API size_t llev_affine_gap_distance_bytes_threshold(
+    const uint8_t* source, size_t source_len, const uint8_t* target,
+    size_t target_len, size_t gap_open, size_t gap_extend,
+    size_t substitution, size_t threshold);
+LLEV_API size_t llev_affine_gap_distance_u64(
+    const uint64_t* source, size_t source_len, const uint64_t* target,
+    size_t target_len, size_t gap_open, size_t gap_extend, size_t substitution);
+LLEV_API size_t llev_affine_gap_distance_u64_threshold(
+    const uint64_t* source, size_t source_len, const uint64_t* target,
+    size_t target_len, size_t gap_open, size_t gap_extend,
+    size_t substitution, size_t threshold);
+/** @} */
+
 /** @name Domain-explicit standalone distance functions
  *
  * Byte functions accept arbitrary binary data and never interpret UTF-8.
