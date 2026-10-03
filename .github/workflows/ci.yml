@@ -752,6 +752,10 @@ jobs:
             ../vinary-tree-interop/bindings/dotnet/src/VinaryTree.Interop
           dotnet pack --configuration Release -p:BuildInParallel=false \
             bindings/dotnet/src/VinaryTree.Liblevenshtein
+          fsharp=bindings/dotnet/tests/VinaryTree.Liblevenshtein.FSharpUsage/VinaryTree.Liblevenshtein.FSharpUsage.fsproj
+          dotnet restore "$fsharp" -p:NuGetAudit=false -m:1
+          dotnet build "$fsharp" --framework net8.0 --no-restore -m:1
+          dotnet build "$fsharp" --framework net10.0 --no-restore -m:1
       - name: Run libdictenstein CRUD and cross-project snapshots on both frameworks
         shell: bash
         env:
@@ -815,6 +819,27 @@ jobs:
           LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/debug:${{ github.workspace }}/../libdictenstein/target/debug
         run: swift run --package-path bindings/swift/Integration -c release
+      - name: Build the Swift Package Index DocC reference without publishing
+        env:
+          VINARY_TREE_INTEROP_ROOT: ${{ github.workspace }}/../vinary-tree-interop/bindings/swift/vinary-tree-interop
+        run: |
+          swift package \
+            --package-path bindings/swift/liblevenshtein \
+            --allow-writing-to-directory "$GITHUB_WORKSPACE/target/swift-docc" \
+            generate-documentation \
+            --target Liblevenshtein \
+            --disable-indexing \
+            --warnings-as-errors \
+            --transform-for-static-hosting \
+            --hosting-base-path liblevenshtein-rust \
+            --output-path "$GITHUB_WORKSPACE/target/swift-docc"
+          python3 scripts/check-swift-docc.py \
+            --complete-toolchain-assets target/swift-docc
+      - uses: actions/upload-artifact@v7
+        with:
+          name: swift-docc-reference
+          path: target/swift-docc
+          if-no-files-found: error
 
   ruby-bindings:
     name: Ruby ${{ matrix.ruby-version }}

@@ -5,6 +5,11 @@
 stable native ABI. `VinaryTree.Interop` contains the shared two-word retained
 resource contract used by independently packaged dictionary producers.
 
+F# callers use the same assembly through native `use` bindings; see the
+[F# usage guide](fsharp.md) and its compile-checked example. The
+[versioned DocFX source](../../docs/api/dotnet/index.md) is generated into a
+browsable API reference by the release documentation pipeline.
+
 The package targets .NET 8 (the oldest supported LTS) and uses the latest C#
 language standard. Query enumerators retain the query-start dictionary revision
 and lease only one native result batch at a time. Dispose transducers and

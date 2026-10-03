@@ -14,7 +14,13 @@ let package = Package(
     name: "liblevenshtein",
     platforms: [.macOS(.v13)],
     products: [.library(name: "Liblevenshtein", targets: ["Liblevenshtein"])],
-    dependencies: [interopDependency],
+    dependencies: [
+        interopDependency,
+        .package(
+            url: "https://github.com/swiftlang/swift-docc-plugin.git",
+            exact: "1.5.0"
+        ),
+    ],
     targets: [
         .systemLibrary(name: "CLiblevenshtein"),
         .target(

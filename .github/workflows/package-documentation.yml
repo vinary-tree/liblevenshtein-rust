@@ -49,6 +49,9 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.112
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14.7"
@@ -80,6 +83,7 @@ jobs:
             --frozen \
             --no-install-project
           npm ci --prefix bindings/javascript --ignore-scripts
+          dotnet tool restore
           echo "$GITHUB_WORKSPACE/bindings/python/.venv/bin" >> "$GITHUB_PATH"
       - name: Build the exact native library
         run: cargo build --locked --features native-bindings-full
@@ -93,6 +97,8 @@ jobs:
         env:
           LIBLEVENSHTEIN_LIBRARY: >-
             ${{ github.workspace }}/target/debug/libliblevenshtein.so
+          VinaryTreeInteropRoot: >-
+            ${{ github.workspace }}/../vinary-tree-interop
         run: >-
           python3 scripts/build-package-documentation.py
           --surface all

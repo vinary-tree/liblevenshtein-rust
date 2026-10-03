@@ -8,6 +8,7 @@ import ast
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -308,6 +309,52 @@ def build_javascript(version: str, _source_ref: str) -> None:
     )
 
 
+def build_dotnet(version: str, _source_ref: str) -> None:
+    output = OUTPUT_ROOT / "dotnet"
+    clean_output(output)
+    metadata = ROOT / "target" / "package-documentation-input" / "dotnet"
+    try:
+        metadata.resolve().relative_to((ROOT / "target").resolve())
+    except ValueError:
+        fail(".NET metadata path escapes the repository target")
+    shutil.rmtree(metadata, ignore_errors=True)
+    metadata.mkdir(parents=True)
+    override = os.environ.get("VINARY_TREE_DOCFX_EXECUTABLE")
+    command = (
+        [override] if override else [executable("dotnet"), "tool", "run", "docfx", "--"]
+    )
+    pinned = json.loads(
+        (ROOT / ".config" / "dotnet-tools.json").read_text(encoding="utf-8")
+    )
+    expected_version = pinned["tools"]["docfx"]["version"]
+    observed = subprocess.run(
+        [*command, "--version"], cwd=ROOT, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    if observed not in (expected_version,) and not observed.startswith(
+        expected_version + "+"
+    ):
+        fail(f"DocFX version {observed!r} differs from pinned {expected_version}")
+    run([*command, "docs/api/dotnet/docfx.json", "--warningsAsErrors"])
+    require_markers(output / "index.html", ("liblevenshtein .NET API", version))
+    source = ROOT / "bindings" / "dotnet" / "src" / "VinaryTree.Liblevenshtein"
+    public_types = set(
+        re.findall(
+            r"^public\s+(?:sealed\s+|static\s+)?(?:class|record|enum)\s+(\w+)",
+            "\n".join(
+                path.read_text(encoding="utf-8") for path in sorted(source.glob("*.cs"))
+            ),
+            flags=re.MULTILINE,
+        )
+    )
+    if not public_types:
+        fail(".NET source contains no public API types")
+    for public_type in sorted(public_types):
+        require_markers(
+            output / "api" / f"VinaryTree.Liblevenshtein.{public_type}.html",
+            (public_type,),
+        )
+
+
 def build_julia(version: str, source_ref: str) -> None:
     output = OUTPUT_ROOT / "julia"
     clean_output(output)
@@ -387,6 +434,7 @@ BUILDERS: dict[str, Callable[[str, str], None]] = {
     "native": build_native,
     "python": build_python,
     "javascript": build_javascript,
+    "dotnet": build_dotnet,
     "julia": build_julia,
     "raku": build_raku,
 }

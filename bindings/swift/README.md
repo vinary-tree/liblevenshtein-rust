@@ -8,6 +8,13 @@ The native CMake package may be linked dynamically or statically by the parent
 application; the Swift system-library target uses the installed shared library
 by default.
 
+The public symbols and ordinary search path are described in the
+[Swift DocC catalog](liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.docc/Liblevenshtein.md).
+The root [Swift Package Index configuration](../../.spi.yml) requests a
+versioned reference for the `Liblevenshtein` target. CI builds that reference
+without publishing it; the package index can host the reviewed release's
+documentation after the corresponding tag is available.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract

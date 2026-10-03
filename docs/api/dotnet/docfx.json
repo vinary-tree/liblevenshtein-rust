@@ -1,0 +1,31 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../../../bindings/dotnet/src/VinaryTree.Liblevenshtein",
+          "files": ["VinaryTree.Liblevenshtein.csproj"]
+        }
+      ],
+      "dest": "../../../target/package-documentation-input/dotnet/api"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "src": ".",
+        "files": ["index.md", "toc.yml"]
+      },
+      {
+        "src": "../../../target/package-documentation-input/dotnet",
+        "files": ["api/toc.yml", "api/**/*.yml"]
+      }
+    ],
+    "dest": "../../../target/package-documentation/dotnet",
+    "template": ["default"],
+    "globalMetadata": {
+      "_appTitle": "liblevenshtein .NET API",
+      "_disableContribution": true
+    }
+  }
+}

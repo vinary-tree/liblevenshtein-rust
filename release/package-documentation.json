@@ -179,24 +179,37 @@
       "releaseState": "candidate-only",
       "sourceEvidence": [
         "bindings/jvm/README.md",
+        "bindings/jvm/kotlin.md",
+        "bindings/jvm/scala.md",
         "bindings/jvm/src/main/java"
       ],
       "destinations": [
         {
           "kind": "package-guide",
-          "service": "immutable JVM guide",
+          "service": "immutable Kotlin and Scala usage guides",
           "state": "build-only",
           "reason": "This RC6 documentation surface is validated from source; public deployment is intentionally deferred until release approval.",
           "buildEvidence": [
             "bindings/jvm/README.md",
+            "bindings/jvm/kotlin.md",
+            "bindings/jvm/scala.md",
+            "bindings/jvm/src/test/kotlin/io/vinarytree/liblevenshtein/KotlinUsage.kt",
+            "bindings/jvm/src/test/scala/io/vinarytree/liblevenshtein/ScalaUsage.scala",
+            "bindings/jvm/build.gradle.kts",
             "bindings/jvm/src/main/java"
           ]
         },
         {
           "kind": "api-reference",
-          "service": "Dokka and Scaladoc",
-          "state": "missing",
-          "reason": "The released JVM artifact has Javadoc but no language-specific Dokka or Scaladoc deployment."
+          "service": "shared Java API Javadoc for Kotlin and Scala consumers",
+          "state": "build-only",
+          "reason": "The artifact publishes Java classes, not Kotlin or Scala facade declarations. Its exact public API is documented by Javadoc; compile-checked Kotlin and Scala guides show idiomatic consumption of those classes. A Dokka or Scaladoc site for unshipped wrappers would misrepresent the package.",
+          "buildEvidence": [
+            "bindings/jvm/build.gradle.kts",
+            "bindings/jvm/kotlin.md",
+            "bindings/jvm/scala.md",
+            "bindings/jvm/src/main/java"
+          ]
         }
       ],
       "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
@@ -295,7 +308,9 @@
       "releaseState": "candidate-only",
       "sourceEvidence": [
         "bindings/dotnet/src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj",
-        "bindings/dotnet/README.md"
+        "bindings/dotnet/README.md",
+        "bindings/dotnet/fsharp.md",
+        "bindings/dotnet/tests/VinaryTree.Liblevenshtein.FSharpUsage/Search.fs"
       ],
       "destinations": [
         {
@@ -311,8 +326,17 @@
         {
           "kind": "api-reference",
           "service": "versioned DocFX",
-          "state": "missing",
-          "reason": "The NuGet archive contains compiler XML documentation, but no public browsable DocFX deployment exists."
+          "state": "build-only",
+          "reason": "A versioned DocFX reference is generated from the exact RC6 .NET facade and staged in the immutable documentation archive; public deployment awaits the reviewed release tag.",
+          "buildEvidence": [
+            ".config/dotnet-tools.json",
+            "docs/api/dotnet/docfx.json",
+            "docs/api/dotnet/index.md",
+            "bindings/dotnet/fsharp.md",
+            "bindings/dotnet/tests/VinaryTree.Liblevenshtein.FSharpUsage/Search.fs",
+            "scripts/build-package-documentation.py",
+            ".github/workflows/package-documentation.yml"
+          ]
         }
       ],
       "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."
@@ -386,8 +410,16 @@
         {
           "kind": "api-reference",
           "service": "Swift Package Index DocC",
-          "state": "missing",
-          "reason": "The released SwiftPM tag is public, but the package has no verified Swift Package Index DocC page."
+          "state": "build-only",
+          "reason": "The RC6 Swift target now carries a DocC catalog and a root Swift Package Index manifest, and CI builds and verifies the reference without publishing it. Public package-index readback still requires the reviewed release tag.",
+          "buildEvidence": [
+            ".spi.yml",
+            "Package.swift",
+            "bindings/swift/liblevenshtein/Package.swift",
+            "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.docc/Liblevenshtein.md",
+            "scripts/check-swift-docc.py",
+            ".github/workflows/ci.yml"
+          ]
         }
       ],
       "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."

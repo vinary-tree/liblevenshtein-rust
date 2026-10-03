@@ -1,8 +1,14 @@
 import CLiblevenshtein
 import VinaryTreeInterop
 
+/// A native operation failure with a typed, forward-compatible status and copied diagnostic.
+///
+/// Inspect ``status`` for control flow. The message is human-readable context and may
+/// change across native library versions.
 public struct LiblevenshteinError: Error, CustomStringConvertible, Sendable {
+    /// The exact native status, including raw values unknown to this Swift release.
     public let status: Status
+    /// A diagnostic copied before another native call can replace it.
     public let description: String
 
     init(nativeStatus: LlevStatus, fallback: String) {
@@ -25,20 +31,38 @@ private func checked(_ status: LlevStatus) throws {
     }
 }
 
+/// A matched dictionary key in the same unit domain as the query.
+///
+/// Keeping the cases distinct avoids lossy transcoding of arbitrary bytes or
+/// unsigned 64-bit tokens into Unicode text.
 public enum MatchTerm: Sendable, Equatable {
+    /// A Unicode-text term.
     case text(String)
+    /// An exact byte sequence, including embedded zero bytes.
     case bytes([UInt8])
+    /// An exact unsigned 64-bit token sequence.
     case u64([UInt64])
 }
 
+/// An owned fuzzy match copied from a bounded native result batch.
+///
+/// The term, distance, and optional dictionary identifier remain valid after
+/// the cursor advances or closes.
 public struct Match: Sendable, Equatable {
+    /// The matched term in its original unit domain.
     public let term: MatchTerm
+    /// The selected edit distance between query and term.
     public let distance: Int
+    /// The dictionary's optional unsigned 64-bit identifier.
     public let id: UInt64?
 }
 
-/// One lazy query-start snapshot. Cursor lifetime is independent of both the
-/// source dictionary facade and transducer facade.
+/// A one-shot, lazy traversal of one query-start dictionary revision.
+///
+/// Cursor lifetime is independent of both the source dictionary facade and
+/// transducer facade. Use ``nextBatch(maximum:)`` when failures must be handled
+/// as thrown errors; `Sequence` iteration cannot throw and traps on a late
+/// native failure. Close a cursor explicitly after early termination.
 public final class QueryCursor: Sequence, IteratorProtocol, @unchecked Sendable {
     private var raw: OpaquePointer?
     private var batch: [Match] = []
@@ -52,8 +76,13 @@ public final class QueryCursor: Sequence, IteratorProtocol, @unchecked Sendable 
 
     deinit { close() }
 
+    /// Return this one-shot cursor as its iterator; this does not rewind it.
     public func makeIterator() -> QueryCursor { self }
 
+    /// Return the next owned match, or `nil` at the end of the stream.
+    ///
+    /// A late native failure traps because `IteratorProtocol.next()` cannot
+    /// throw. Use ``nextBatch(maximum:)`` for recoverable error handling.
     public func next() -> Match? {
         if index == batch.count {
             do { batch = try nextBatch(maximum: batchSize) }
@@ -65,6 +94,10 @@ public final class QueryCursor: Sequence, IteratorProtocol, @unchecked Sendable 
         return batch[index]
     }
 
+    /// Copy and return at most `maximum` matches from the next native batch.
+    ///
+    /// The native lease is released before this method returns. An empty array
+    /// means the cursor is exhausted; `maximum` must be strictly positive.
     public func nextBatch(maximum: Int) throws -> [Match] {
         guard maximum > 0 else {
             throw LiblevenshteinError(
@@ -107,6 +140,11 @@ public final class QueryCursor: Sequence, IteratorProtocol, @unchecked Sendable 
         }
     }
 
+    /// Fold bounded batches without materializing the complete result set.
+    ///
+    /// The reducer receives Swift-owned matches. A reducer error propagates;
+    /// a late native query error traps because this convenience API is
+    /// `rethrows`. Use ``nextBatch(maximum:)`` to handle both kinds of error.
     public func reduceBatches<Result>(
         _ initial: Result,
         batchSize: Int = Int(LLEV_DEFAULT_MATCH_BATCH),
@@ -122,6 +160,9 @@ public final class QueryCursor: Sequence, IteratorProtocol, @unchecked Sendable 
         }
     }
 
+    /// Release this cursor's native resource; repeated calls are harmless.
+    ///
+    /// Matches returned earlier remain owned Swift values.
     public func close() {
         if let raw {
             let status = llev_query_cursor_free(raw)
@@ -131,9 +172,18 @@ public final class QueryCursor: Sequence, IteratorProtocol, @unchecked Sendable 
     }
 }
 
+/// A reusable edit-distance automaton retaining a dictionary resource.
+///
+/// Each query captures the dictionary revision visible when that query begins.
+/// Construction retains the provider rather than copying its entries.
 public final class Transducer: @unchecked Sendable {
     private var raw: OpaquePointer?
 
+    /// Retain `dictionary` and select the edit algorithm for subsequent queries.
+    ///
+    /// - Parameters:
+    ///   - dictionary: A producer-provided resource such as a libdictenstein dictionary.
+    ///   - algorithm: Edit semantics shared by all queries on this transducer.
     public init(dictionary: some DictionaryResource, algorithm: Algorithm = .standard) throws {
         var output: OpaquePointer?
         try dictionary.withVtResource { resource in
@@ -151,6 +201,10 @@ public final class Transducer: @unchecked Sendable {
         return raw
     }
 
+    /// Start a Unicode-text query against the current dictionary revision.
+    ///
+    /// `maximumDistance` must be nonnegative. The caller owns and should close
+    /// the returned cursor, especially after early termination.
     public func query(
         _ text: String,
         maximumDistance: Int,
@@ -170,6 +224,10 @@ public final class Transducer: @unchecked Sendable {
         return QueryCursor(raw: output!)
     }
 
+    /// Start an exact-byte query without Unicode decoding.
+    ///
+    /// The dictionary must use the byte unit domain. Only traversal ordering
+    /// is supported for this domain by the current native ABI.
     public func query(
         _ bytes: [UInt8],
         maximumDistance: Int,
@@ -188,6 +246,10 @@ public final class Transducer: @unchecked Sendable {
         return QueryCursor(raw: output!)
     }
 
+    /// Start an unsigned 64-bit token query without narrowing token values.
+    ///
+    /// The dictionary must use the token unit domain. Only traversal ordering
+    /// is supported for this domain by the current native ABI.
     public func query(
         _ tokens: [UInt64],
         maximumDistance: Int,
@@ -206,6 +268,10 @@ public final class Transducer: @unchecked Sendable {
         return QueryCursor(raw: output!)
     }
 
+    /// Intersect this dictionary with a compiled phonetic pattern and a bound.
+    ///
+    /// The pattern and cursor retain their own native resources. Close both
+    /// when they are no longer needed.
     public func query(_ pattern: PhoneticPattern, maximumDistance: UInt8) throws -> QueryCursor {
         var output: OpaquePointer?
         try checked(llev_transducer_query_pattern(
@@ -214,6 +280,7 @@ public final class Transducer: @unchecked Sendable {
         return QueryCursor(raw: output!)
     }
 
+    /// Release this transducer; already-created cursors remain valid.
     public func close() {
         if let raw {
             llev_transducer_free(raw)
@@ -223,23 +290,38 @@ public final class Transducer: @unchecked Sendable {
 }
 
 /// Immutable TinyLFU/SIEVE counters and current bounded native residency.
+/// A snapshot of bounded query-cache activity and current residency.
 public struct QueryCacheStats: Sendable, Equatable {
+    /// Number of cache lookups.
     public let requests: UInt64
+    /// Number of resident complete-result hits.
     public let hits: UInt64
+    /// Number of lookups requiring native traversal.
     public let misses: UInt64
+    /// Number of complete results admitted to the cache.
     public let admissions: UInt64
+    /// Number of complete results rejected by the admission policy.
     public let rejections: UInt64
+    /// Number of resident results evicted to enforce a bound.
     public let evictions: UInt64
+    /// Current number of resident result entries.
     public let residentEntries: Int
+    /// Current aggregate resident weight in native accounting units.
     public let residentWeight: Int
 }
 
-/// Exclusive synchronization-free bounded memo for complete repeated queries.
+/// An exclusive, synchronization-free bounded memo for complete repeated queries.
+///
 /// Limits apply independently to traversal and distance-then-term result order.
-/// Create one instance per worker for parallel workloads.
+/// Create one instance per worker for parallel workloads; do not share a cache
+/// for concurrent mutation. The underlying transducer retains its dictionary.
 public final class QueryCache {
     private var raw: OpaquePointer?
 
+    /// Create a bounded cache over `transducer`.
+    ///
+    /// Both limits must be nonnegative. A zero limit disables residency while
+    /// preserving query correctness. The cache keeps its own transducer retain.
     public init(
         transducer: Transducer,
         maximumEntries: Int = 1024,
@@ -288,6 +370,10 @@ public final class QueryCache {
         return self
     }
 
+    /// Query Unicode text, using a resident complete result when available.
+    ///
+    /// The returned cursor is owned by the caller and retains its own
+    /// query-start dictionary revision.
     public func query(
         _ text: String,
         maximumDistance: Int,
@@ -307,6 +393,7 @@ public final class QueryCache {
         return QueryCursor(raw: output!)
     }
 
+    /// Query exact bytes through the bounded cache without Unicode conversion.
     public func query(
         _ bytes: [UInt8],
         maximumDistance: Int,
@@ -325,6 +412,7 @@ public final class QueryCache {
         return QueryCursor(raw: output!)
     }
 
+    /// Query unsigned 64-bit tokens through the bounded cache.
     public func query(
         _ tokens: [UInt64],
         maximumDistance: Int,
@@ -352,14 +440,20 @@ public final class QueryCache {
     }
 }
 
+/// A compiled, reusable phonetic language for matching or dictionary queries.
+///
+/// Pattern compilation is separate from traversal. A pattern is a native
+/// resource and should be closed explicitly after its final use.
 public final class PhoneticPattern: @unchecked Sendable {
     private var raw: OpaquePointer?
     private init(_ raw: OpaquePointer) { self.raw = raw }
     deinit { close() }
 
+    /// Compile the phonetic regular-expression syntax.
     public static func regex(_ source: String) throws -> PhoneticPattern {
         try compile(source, llev_phonetic_pattern_compile_regex)
     }
+    /// Compile an import-free LLRE pattern document.
     public static func llre(_ source: String) throws -> PhoneticPattern {
         try compile(source, llev_phonetic_pattern_compile_llre)
     }
@@ -379,6 +473,7 @@ public final class PhoneticPattern: @unchecked Sendable {
         }
         return raw
     }
+    /// Test whether the complete input string is accepted by this pattern.
     public func matches(_ input: String) throws -> Bool {
         var result: UInt8 = 0
         try input.withCString { pointer in
@@ -395,6 +490,7 @@ public final class PhoneticPattern: @unchecked Sendable {
         try checked(llev_phonetic_pattern_size(try handle(), &states, &transitions))
         return (states, transitions)
     }
+    /// Release this compiled pattern; repeated calls are harmless.
     public func close() {
         if let raw {
             llev_phonetic_pattern_free(raw)
@@ -403,7 +499,10 @@ public final class PhoneticPattern: @unchecked Sendable {
     }
 }
 
-/// Reusable Unicode phonetic rewrite-rule set.
+/// A reusable Unicode phonetic rewrite-rule set.
+///
+/// Parsing and validation are paid once; each `apply` result is independently
+/// owned Swift text.
 public final class PhoneticRuleSet: @unchecked Sendable {
     private var raw: OpaquePointer?
     private init(_ raw: OpaquePointer) { self.raw = raw }
@@ -446,6 +545,7 @@ public final class PhoneticRuleSet: @unchecked Sendable {
         let bytes = UnsafeRawBufferPointer(start: data, count: output.len)
         return String(decoding: bytes, as: UTF8.self)
     }
+    /// Release this rewrite-rule set; repeated calls are harmless.
     public func close() {
         if let raw {
             llev_phonetic_rules_free(raw)
@@ -454,7 +554,12 @@ public final class PhoneticRuleSet: @unchecked Sendable {
     }
 }
 
+/// Standalone Unicode edit-distance functions independent of a dictionary.
+///
+/// Use a ``Transducer`` when searching a dictionary rather than repeatedly
+/// comparing the query to every term yourself.
 public enum EditDistance {
+    /// Standard Levenshtein insertion, deletion, and substitution distance.
     public static func levenshtein(_ source: String, _ target: String) -> Int {
         source.withCString { sourcePointer in
             target.withCString { targetPointer in
@@ -462,6 +567,10 @@ public enum EditDistance {
             }
         }
     }
+    /// Optimal-string-alignment distance with adjacent transpositions.
+    ///
+    /// Unlike unrestricted Damerau–Levenshtein, a substring is not edited
+    /// more than once in an alignment.
     public static func damerauOSA(_ source: String, _ target: String) -> Int {
         source.withCString { sourcePointer in
             target.withCString { targetPointer in
@@ -469,6 +578,7 @@ public enum EditDistance {
             }
         }
     }
+    /// Unrestricted Damerau–Levenshtein distance with adjacent transpositions.
     public static func damerauLevenshtein(_ source: String, _ target: String) -> Int {
         source.withCString { sourcePointer in
             target.withCString { targetPointer in
