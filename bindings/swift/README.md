@@ -14,6 +14,10 @@ The root [Swift Package Index configuration](../../.spi.yml) requests a
 versioned reference for the `Liblevenshtein` target. CI builds that reference
 without publishing it; the package index can host the reviewed release's
 documentation after the corresponding tag is available.
+CI uploads a deterministic `liblevenshtein-swift-docc.tar.gz` and reads it back
+in a separate job. The archive preserves DocC's exact symbol filenames, even
+when they contain characters that the artifact transport rejects as loose
+files; extraction verifies every file digest and the public API inventory.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 

@@ -418,6 +418,7 @@
             "bindings/swift/liblevenshtein/Package.swift",
             "bindings/swift/liblevenshtein/Sources/Liblevenshtein/Liblevenshtein.docc/Liblevenshtein.md",
             "scripts/check-swift-docc.py",
+            "scripts/package-swift-docc.py",
             ".github/workflows/ci.yml"
           ]
         }
