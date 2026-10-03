@@ -13,9 +13,10 @@ and an API reference generated from the documented
 ## Build and verify package documentation
 
 With the exact `vinary-tree-interop` dependency installed in an opam switch,
-run `opam install odoc` and then
-`opam exec -- dune build --root bindings/ocaml @doc`. Dune writes the guide
-and module reference beneath `bindings/ocaml/_build/default/_doc/_html/`.
+run `opam install odoc`. From the full repository checkout, run
+`opam exec -- dune build --root bindings/ocaml @doc`; from the unpacked opam
+source archive, run `opam exec -- dune build @doc`. Dune writes the guide and
+module reference beneath that project's `_build/default/_doc/_html/`.
 The binding CI checks both generated entry points; the opam source-archive
 contract checks that the guide, Dune stanza, interface comments, and this
 package README survive deterministic staging.
