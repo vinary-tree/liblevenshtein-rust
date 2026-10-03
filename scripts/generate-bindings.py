@@ -1038,6 +1038,9 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
     lua_header = (INTEROP_ROOT / "bindings" / "lua" / "vinary_tree_lua.h").read_text(
         encoding="utf-8"
     )
+    lua_u64_header = (
+        INTEROP_ROOT / "bindings" / "lua" / "vinary_tree_lua_u64.h"
+    ).read_text(encoding="utf-8")
     java_source_root = ROOT / "bindings" / "jvm" / "src" / "main" / "java" / java_path
     generated = {
         ROOT / "include" / "liblevenshtein_abi.h": render_c(model),
@@ -1110,6 +1113,7 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
         / "include"
         / "vinary_tree_interop.h": interop_header,
         ROOT / "bindings" / "lua" / "include" / "vinary_tree_lua.h": lua_header,
+        ROOT / "bindings" / "lua" / "include" / "vinary_tree_lua_u64.h": lua_u64_header,
         ROOT / "bindings" / "lua" / "include" / "vinary_tree_interop.h": interop_header,
         ROOT
         / "bindings"
@@ -1139,6 +1143,11 @@ def outputs(model: dict, *, include_siblings: bool = False) -> dict[Path, str]:
                 / "lua"
                 / "include"
                 / "vinary_tree_lua.h": lua_header,
+                libdictenstein
+                / "bindings"
+                / "lua"
+                / "include"
+                / "vinary_tree_lua_u64.h": lua_u64_header,
                 libdictenstein
                 / "bindings"
                 / "ocaml"

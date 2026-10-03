@@ -6,6 +6,7 @@
 
 #include "liblevenshtein.h"
 #include "vinary_tree_lua.h"
+#include "vinary_tree_lua_u64.h"
 
 #define TRANSDUCER_MT "vinary-tree.liblevenshtein.transducer"
 #define QUERY_CACHE_MT "vinary-tree.liblevenshtein.query-cache"
