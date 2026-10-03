@@ -870,16 +870,20 @@ jobs:
           ruby ../libdictenstein/bindings/ruby/test/test_cross_project.rb
       - name: Build the RubyGems package from its package root
         working-directory: bindings/ruby
-        run: gem build liblevenshtein.gemspec
+        run: >-
+          gem build liblevenshtein.gemspec --strict
+          --output ../../target/liblevenshtein-ruby-doc-check.gem
       - name: Render and check the public Ruby API reference
         shell: bash
         run: |
           set -euo pipefail
-          rdoc --quiet --coverage-report --op target/ruby-rdoc \
-            --main bindings/ruby/README.md \
+          rdoc --coverage-report \
             bindings/ruby/README.md bindings/ruby/lib/vinary_tree \
             | tee target/ruby-rdoc-coverage.log
           grep -Fq '100.00% documented' target/ruby-rdoc-coverage.log
+          rdoc --quiet --op target/ruby-rdoc \
+            --main bindings/ruby/README.md \
+            bindings/ruby/README.md bindings/ruby/lib/vinary_tree
           test -f target/ruby-rdoc/VinaryTree/Liblevenshtein.html
           test -f target/ruby-rdoc/VinaryTree/Liblevenshtein/Query.html
           grep -Fq 'method-c-distance_threshold' \
@@ -888,11 +892,8 @@ jobs:
             target/ruby-rdoc/VinaryTree/Liblevenshtein/Query.html
           grep -Fq 'method-c-compile_regex' \
             target/ruby-rdoc/VinaryTree/Liblevenshtein/PhoneticPattern.html
-          ruby -e '
-            spec = Gem::Specification.load("bindings/ruby/liblevenshtein.gemspec")
-            expected = "https://www.rubydoc.info/gems/#{spec.name}/#{spec.version}"
-            abort "wrong versioned RubyDoc URI" unless spec.metadata.fetch("documentation_uri") == expected
-          '
+          ruby scripts/verify-rubygems-documentation.rb --package-only \
+            target/liblevenshtein-ruby-doc-check.gem
 
   fortran-bindings:
     name: Fortran 2018 / ${{ matrix.toolchain.compiler }}

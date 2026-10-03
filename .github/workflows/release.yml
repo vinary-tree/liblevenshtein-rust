@@ -495,6 +495,11 @@ jobs:
         working-directory: bindings/ruby
         run: |
           gem build liblevenshtein.gemspec
+          shopt -s nullglob
+          gems=(liblevenshtein-*.gem)
+          test "${#gems[@]}" -eq 1
+          ruby ../../scripts/verify-rubygems-documentation.rb --package-only \
+            "${gems[0]}"
           for platform in linux-x64 linux-arm64 darwin-arm64 windows-x64; do
             tar -tf liblevenshtein-*.gem >/dev/null
             test -f "lib/vinary_tree/liblevenshtein/native/$platform/$(case "$platform" in darwin-*) echo libliblevenshtein.dylib ;; windows-*) echo liblevenshtein.dll ;; *) echo libliblevenshtein.so ;; esac)"
@@ -695,11 +700,15 @@ jobs:
     needs: rubygems-package
     if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && inputs.registry == 'rubygems'
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     environment: rubygems
     permissions:
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.5"
@@ -711,6 +720,16 @@ jobs:
         uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
       - name: Push to RubyGems.org
         run: gem push dist/*.gem
+      - name: Read back exact RubyGems metadata and RubyDoc API pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          gems=(dist/*.gem)
+          test "${#gems[@]}" -eq 1
+          ruby scripts/verify-rubygems-documentation.rb "${gems[0]}" \
+            'VinaryTree/Liblevenshtein=VinaryTree::Liblevenshtein' \
+            'VinaryTree/Liblevenshtein/Transducer=VinaryTree::Liblevenshtein::Transducer'
 
   go-module:
     name: Verify immutable Go module tag and public proxy
