@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Search.fs" />
+    <ProjectReference Include="../../src/VinaryTree.Liblevenshtein/VinaryTree.Liblevenshtein.csproj" />
+  </ItemGroup>
+</Project>

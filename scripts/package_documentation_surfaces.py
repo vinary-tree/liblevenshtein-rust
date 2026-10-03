@@ -12,6 +12,7 @@ GENERATED_SURFACE_LAYOUT: Final[dict[str, tuple[str, str]]] = {
     "native": ("native/html", "index.html"),
     "python": ("python", "liblevenshtein.html"),
     "javascript": ("javascript", "index.html"),
+    "dotnet": ("dotnet", "index.html"),
     "julia": ("julia", "index.html"),
     "raku": ("raku", "index.html"),
     "lua": ("lua", "index.html"),

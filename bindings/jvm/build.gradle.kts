@@ -1,10 +1,15 @@
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.scala.ScalaCompile
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     `java-library`
     `maven-publish`
+    scala
+    kotlin("jvm") version "2.4.10"
 }
 
 group = "io.vinarytree"
@@ -49,11 +54,25 @@ repositories {
     mavenCentral()
 }
 
+scala {
+    scalaVersion = "3.8.4"
+}
+
 dependencies {
     api("io.vinarytree:vinary-tree-interop:4.0.0-rc.6")
+    testImplementation(kotlin("stdlib"))
+    testImplementation("org.scala-lang:scala3-library_3:3.8.4")
     testImplementation(platform("org.junit:junit-bom:6.1.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.withType<KotlinJvmCompile>().configureEach {
+    compilerOptions.jvmTarget = JvmTarget.JVM_22
+}
+
+tasks.withType<ScalaCompile>().configureEach {
+    scalaCompileOptions.additionalParameters = listOf("-release:22")
 }
 
 tasks.test {

@@ -12,6 +12,10 @@ let package = Package(
             url: "https://github.com/vinary-tree/vinary-tree-interop.git",
             exact: "4.0.0-rc.6"
         ),
+        .package(
+            url: "https://github.com/swiftlang/swift-docc-plugin.git",
+            exact: "1.5.0"
+        ),
     ],
     targets: [
         .systemLibrary(

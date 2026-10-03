@@ -7,6 +7,12 @@ Java API. Clojure users should normally depend on the idiomatic Clojars facade,
 `io.vinarytree/liblevenshtein-clojure`, which delegates to this
 artifact without introducing another native boundary.
 
+Kotlin and Scala have [Kotlin](kotlin.md) and [Scala 3](scala.md) usage guides
+whose examples are compiled by `testClasses`. Both languages call the shipped
+Java classes directly, so the artifact's
+[Javadoc](https://javadoc.io/doc/io.vinarytree/liblevenshtein/4.0.0-rc.6)
+is their shared API reference; no unshipped wrapper facade is implied.
+
 The published `io.vinarytree:liblevenshtein` JAR contains native libraries for
 Linux x86_64/aarch64, macOS aarch64, and Windows x86_64. They are extracted to
 a private temporary file and loaded automatically. Source-tree development may
