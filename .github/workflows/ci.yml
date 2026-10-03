@@ -340,15 +340,15 @@ jobs:
             io.vinarytree.liblevenshtein.ResourceSnapshotSmoke
       - name: JVM unit tests and strict Javadoc
         working-directory: bindings/jvm
-        run: >-
-          ./gradlew --no-daemon test propertyTest javadoc
-          -Pliblevenshtein.nativeDir=../../target/debug
+        run: |
+          install -Dm644 ../../target/debug/libliblevenshtein.so \
+            build/native-resources/META-INF/native/linux-x86_64/libliblevenshtein.so
+          ./gradlew --no-daemon test propertyTest javadoc \
+            -PnativePlatforms=linux-x86_64 \
+            -Pliblevenshtein.nativeDir=../../target/debug
       - name: Libdictenstein JVM CRUD, persistence, and cross-project snapshots
         shell: bash
         run: |
-          mkdir -p bindings/jvm/build/native-resources/META-INF/native/linux-x86_64
-          cp target/debug/libliblevenshtein.so \
-            bindings/jvm/build/native-resources/META-INF/native/linux-x86_64/
           ../libdictenstein/bindings/jvm/gradlew --no-daemon \
             -p ../libdictenstein/bindings/jvm \
             -PnativePlatforms=linux-x86_64 \
@@ -1221,6 +1221,12 @@ jobs:
         run: |
           sudo install -m 0644 .github/dragonfly-pkg-auto.conf \
             /usr/local/etc/pkg/repos/df-latest.conf
+          if ! sudo pkg update -f; then
+            echo 'DragonFly AUTO mirrorlist unavailable; selecting official Avalon repository' >&2
+            sudo install -m 0644 .github/dragonfly-pkg-avalon.conf \
+              /usr/local/etc/pkg/repos/df-latest.conf
+            sudo pkg update -f
+          fi
       - name: Install platform toolchain prerequisites
         shell: cpa.sh {0}
         run: |
