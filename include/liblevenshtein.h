@@ -7,6 +7,9 @@
  * The complete status, ownership, concurrency, and complexity contract is
  * available in the versioned package guide and is summarized per declaration
  * below.
+ * Opaque owning handles are valid only until a successful free consumes them.
+ * Reuse or double-free afterward is undefined behavior, not a status result;
+ * independently retained resources and snapshots keep their own lifetimes.
  */
 #ifndef LIBLEVENSHTEIN_H
 #define LIBLEVENSHTEIN_H

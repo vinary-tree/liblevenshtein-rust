@@ -39,6 +39,15 @@ The project-level terms this document adds:
 | universal automaton | An immutable standard, transposition, or merge-and-split specialization with an optional owned directional substitution policy. |
 | online automaton | An exclusive state handle bound to one source and advanced by one domain-native target unit per call. It is independent of dictionary cursors. |
 
+These opaque handles are owning C pointers, not generation-tagged identifiers.
+A successful `free` consumes a handle; the caller must not pass that pointer to
+another function or free it again. Such use after free is undefined behavior,
+not a recoverable `LlevStatus`, even if a later allocation reuses the address.
+This differs from a live cursor with an invalid or stale **batch lease
+generation**, which is checked and returns the documented status. It also
+differs from a retained resource or captured snapshot, whose independent
+lifetime can outlast the handle from which it was obtained.
+
 Throughout, $`n`$ is the number of matches a query yields, $`B`$ the batch
 capacity, $`q`$ the query, $`k`$ the maximum edit distance, and
 $`\deg(v)`$ a dictionary node's out-degree.
