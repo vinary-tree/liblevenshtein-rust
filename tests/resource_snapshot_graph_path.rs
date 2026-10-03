@@ -88,11 +88,29 @@ fn concurrent_cold_queries_import_one_graph_without_registry_locking() {
     assert_eq!(consumer.foreign_node_cache_misses, 0);
 
     let provider = causal_construction_stats();
-    assert_eq!(provider.resource_snapshots_created, 1);
+    // A cold snapshot initializer may be descheduled. The producer's bounded
+    // lock-free takeover can then construct a second same-revision snapshot;
+    // requiring exactly one construction would contradict that liveness law.
+    assert!(
+        (1..=THREADS as u64).contains(&provider.resource_snapshots_created),
+        "each contender creates at most one same-revision snapshot: {provider:?}"
+    );
     assert_eq!(provider.resource_graph_projections, 1);
     assert_eq!(provider.resource_graph_calls, 1);
     assert_eq!(provider.resource_edges_calls, 0);
     assert_eq!(provider.resource_is_final_calls, 0);
+
+    let warmed = drain(
+        &mut transducer
+            .query_utf8("term-0010", 1, QueryOrder::Traversal)
+            .expect("warm graph query"),
+    );
+    assert_eq!(Some(&warmed), reference.as_ref());
+    assert_eq!(
+        causal_construction_stats().resource_snapshots_created,
+        provider.resource_snapshots_created,
+        "a warm query must reuse the published revision after any takeover"
+    );
 }
 
 #[test]

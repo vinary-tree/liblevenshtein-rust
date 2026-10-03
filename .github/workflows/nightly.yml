@@ -9,7 +9,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-dev-siblings
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
@@ -19,9 +19,13 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/checkout-dev-siblings
       - uses: dtolnay/rust-toolchain@stable
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      # cargo-deny-action runs in a container that cannot see path dependencies
+      # checked out beside the host workspace. Install the CLI on the host.
+      - uses: taiki-e/install-action@6c6fd71fe4fb72c3697d269963d0e15df8adedad # v2.85.10
         with:
-          command: check
+          tool: cargo-deny@0.20.2
+          fallback: none
+      - run: cargo deny --locked check
