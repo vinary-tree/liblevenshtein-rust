@@ -18,6 +18,18 @@ archives=("$scratch/run1/"*.tbz)
 [[ ${#archives[@]} == 1 ]] || die "expected one source archive"
 name=${archives[0]##*/}
 package=${name%.tbz}
+tar -xOf "$scratch/run1/$name" "$package/doc/index.mld" |
+  grep -Fq 'First query' || die "source archive lacks the OCaml odoc guide"
+tar -xOf "$scratch/run1/$name" "$package/doc/dune" |
+  grep -Fq '(documentation' || die "source archive lacks the odoc Dune stanza"
+tar -xOf "$scratch/run1/$name" "$package/vinary_tree_liblevenshtein.mli" |
+  grep -Fq 'Snapshot-consistent fuzzy search' || die "source archive lacks documented API"
+tar -xOf "$scratch/run1/$name" "$package/README.md" |
+  grep -Fq 'OCaml binding' || die "source archive lacks the OCaml package guide"
+for source in snapshot property leak; do
+  tar -xOf "$scratch/run1/$name" "$package/test/$source.ml" >/dev/null ||
+    die "source archive lacks its declared $source test module"
+done
 cmp -s "$scratch/run1/$name" "$scratch/run2/$name" ||
   die "archive bytes differ across independent staging runs"
 cmp -s "$scratch/run1/opam" "$scratch/run2/opam" ||
