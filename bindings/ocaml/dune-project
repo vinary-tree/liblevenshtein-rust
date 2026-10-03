@@ -1,5 +1,6 @@
 (lang dune 3.20)
 (name liblevenshtein)
+(version 4.0.0~rc6)
 (generate_opam_files true)
 (source (github vinary-tree/liblevenshtein-rust))
 (authors "Dylon Edwards <dylon.devo@gmail.com>")

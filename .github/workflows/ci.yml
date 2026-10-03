@@ -938,7 +938,7 @@ jobs:
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
       - run: opam install dune.3.20.2 --yes
-      - run: opam install qcheck-core --yes
+      - run: opam install qcheck-core odoc --yes
       - run: cargo build --locked --features ocaml-bindings
       - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - name: Install modular OCaml dependencies and run snapshot suite
@@ -953,7 +953,11 @@ jobs:
           opam exec -- dune install --root ../vinary-tree-interop/bindings/ocaml
           opam exec -- dune build --root ../libdictenstein/bindings/ocaml @install
           opam exec -- dune install --root ../libdictenstein/bindings/ocaml
-          opam exec -- dune build --root bindings/ocaml @install @runtest
+          opam exec -- dune build --root bindings/ocaml @install @runtest @doc
+          test -f bindings/ocaml/_build/default/_doc/_html/index.html
+          grep -Fq 'First query' bindings/ocaml/_build/default/_doc/_html/liblevenshtein/index.html
+          test -f bindings/ocaml/_build/default/_doc/_html/liblevenshtein/Vinary_tree_liblevenshtein/index.html
+          grep -Fq 'Snapshot-consistent fuzzy search' bindings/ocaml/_build/default/_doc/_html/liblevenshtein/Vinary_tree_liblevenshtein/index.html
 
   haskell-bindings:
     name: GHC ${{ matrix.ghc }}

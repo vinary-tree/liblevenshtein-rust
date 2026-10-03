@@ -5,7 +5,28 @@ published by the separate `vinary_tree_libdictenstein` package. Native query
 cursors are lazy and snapshot-stable; `to_seq` pulls one match at a time and
 `fold_batches` crosses the FFI once per bounded batch.
 
-The opam package is `vinary_tree_liblevenshtein`.
+The opam package is `liblevenshtein`; its public module is
+`Vinary_tree_liblevenshtein`. The package includes an [odoc guide](doc/index.mld)
+and an API reference generated from the documented
+[`vinary_tree_liblevenshtein.mli`](vinary_tree_liblevenshtein.mli).
+
+## Build and verify package documentation
+
+With the exact `vinary-tree-interop` dependency installed in an opam switch,
+run `opam install odoc` and then
+`opam exec -- dune build --root bindings/ocaml @doc`. Dune writes the guide
+and module reference beneath `bindings/ocaml/_build/default/_doc/_html/`.
+The binding CI checks both generated entry points; the opam source-archive
+contract checks that the guide, Dune stanza, interface comments, and this
+package README survive deterministic staging.
+
+Only after the source release is immutable and the opam-repository pull
+request has merged, dispatch `OCaml package documentation readback` from the
+exact source tag. That read-only workflow checks the version-specific
+`ocaml.org` package page, odoc guide, and module API; a candidate-only source
+tree is not evidence of public documentation. The [OCaml documentation
+guide](https://ocaml.org/docs/generating-documentation) explains odoc's
+generation and package-page conventions.
 
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
@@ -18,19 +39,19 @@ The opam package is `vinary_tree_liblevenshtein`.
 | Support tier | Tier 3 |
 | Distribution | opam package `liblevenshtein` |
 | Native boundary | C stubs call the stable ABI and consume `Vinary_tree_interop.resource` values from independent producers. |
-| Canonical facade source | [`bindings/ocaml/vinary_tree_liblevenshtein.mli`](../../bindings/ocaml/vinary_tree_liblevenshtein.mli) |
+| Canonical facade source | [`bindings/ocaml/vinary_tree_liblevenshtein.mli`](vinary_tree_liblevenshtein.mli) |
 
 The support tier controls release gating, not semantic quality: every tier has
 the same snapshot, ownership, status, and ABI compatibility laws. Consult the
-[binding architecture](../../docs/language-bindings.md) before implementing a custom provider
-and the [family hub](../../docs/bindings/README.md) when combining independently packaged projects.
+[binding architecture](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/docs/language-bindings.md) before implementing a custom provider
+and the [family hub](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/docs/bindings/README.md) when combining independently packaged projects.
 
-![The host-language facade crosses one project ABI and retains a versioned family resource rather than sharing Rust object layouts.](../../docs/diagrams/bindings/three-layer-architecture.svg)
+![The host-language facade crosses one project ABI and retains a versioned family resource rather than sharing Rust object layouts.](https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/master/docs/diagrams/bindings/three-layer-architecture.svg)
 
 ## Executable example and verification
 
 The repository's canonical executable example is
-[`bindings/ocaml/test/snapshot.ml`](../../bindings/ocaml/test/snapshot.ml). It exercises the same public package a user
+[`bindings/ocaml/test/snapshot.ml`](test/snapshot.ml). It exercises the same public package a user
 installs and is run by the binding CI with:
 
 ```sh
@@ -50,7 +71,7 @@ The idiomatic facade groups the stable surface into these concepts:
 | Dictionary resource | A retained `vt.dictionary.v1` capability. Construction and mutation belong to a producer such as libdictenstein. |
 | Transducer | Immutable query configuration plus a retained dictionary provider; construction is constant-time with respect to dictionary size. |
 | Query cursor | A one-shot traversal over the immutable dictionary revision captured at query start. |
-| Match/batch | Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval. |
+| Match/batch | Matches and batches are copied into OCaml-owned values before their native lease is released. |
 
 ### Automaton selection
 
@@ -141,17 +162,17 @@ such operation with its reviewed rationale; an unreasoned absence fails CI.
 | Need | Use | Rationale |
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
-| Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
-| Maximum result throughput | The facade batch/reducer protocol | It amortizes the foreign boundary and keeps borrowed views inside one lexical lease. |
+| Ordinary streaming | `to_seq` within `Fun.protect` | It materializes bounded owned values and supports early termination with deterministic close. |
+| Maximum result throughput | `fold_batches` with bounded native pages | It amortizes the foreign boundary while returning bounded, host-owned arrays. |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
 
 For the exhaustive native function contract—including exact preconditions,
 returnable statuses, complexity, and thread-safety—use the
-[`llev_*` C ABI reference](../../docs/bindings/c-abi-reference.md). The facade
+[`llev_*` C ABI reference](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/docs/bindings/c-abi-reference.md). The facade
 source linked above is the authoritative idiomatic symbol inventory; its
-exhaustive coverage is governed by [`bindings/api-surface-map.json`](../../bindings/api-surface-map.json) and the [generated completeness matrix](../../bindings/conformance/completeness-matrix.tsv).
+exhaustive coverage is governed by [`bindings/api-surface-map.json`](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/bindings/api-surface-map.json) and the [generated completeness matrix](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/bindings/conformance/completeness-matrix.tsv).
 
 ## Ownership, snapshots, and resource handoff
 
@@ -163,22 +184,23 @@ mutations cannot invalidate that query. Acquisition either completes with one
 owned retain or fails with no ownership transfer. Teardown order is therefore
 free across dictionary, transducer, and completed query handles.
 
-Borrowed results are intentionally lexical. Copy data that must outlive the
-callback; retaining a raw address, slice, memory segment, or foreign pointer is
-an API violation even when the next operation happens to reuse the same arena.
+Every match and batch is copied into OCaml-owned values before return.
+The values remain valid after iteration advances or the cursor closes. The
+lazy sequence does not close its cursor; scope it with `Fun.protect`.
 
 ## Errors and failure containment
 
-C statuses become typed OCaml exceptions carrying the native diagnostic.
+C status failures raise OCaml `Failure` with a copied native diagnostic; this facade does not expose a typed status exception.
 
-Malformed utf-8, unsupported unit domains, incompatible resource versions, closed handles, invalid bounds, allocation failures, provider faults, and contained rust panics are distinct failures. Never parse diagnostic prose to
-branch on an error: inspect the typed status/exception first and treat the
-message as human context. Diagnostics must be copied before another native
-call on the same thread.
+Malformed UTF-8, unsupported domains, incompatible resources,
+closed handles, invalid bounds, allocation failures, provider faults, and
+contained Rust panics remain distinct native causes. This facade raises
+`Failure` with a copied diagnostic but does not expose the status code; do not
+parse the message as a stable protocol.
 
 ## Concurrency and reentrancy
 
-Independent handles are domain-safe according to the documented capability flags. A cursor remains single-consumer and borrowed batches cannot escape folds.
+Independent handles are domain-safe according to the documented capability flags. A cursor remains single-consumer; returned matches and batches are owned OCaml values.
 
 Snapshot capture is a linearization point, not a dictionary-wide query lock.
 First-party immutable snapshots can be walked concurrently. A foreign provider
@@ -188,15 +210,11 @@ the host language must not add a weaker promise.
 ## Performance and marshalling
 
 - Reuse transducers for repeated queries against the same resource.
-- Prefer streaming cursors to whole-result materialization.
-- Prefer batch/reducer APIs when per-match boundary crossings dominate.
+- Use `to_seq` for lazy results and close its cursor on all paths.
+- Use `fold_batches` when per-match foreign-boundary crossings dominate.
 - Keep Unicode, byte, and token domains explicit to avoid transcoding.
-- Measure native, WASM, and WASI paths independently; they have different
-  startup and marshalling costs but identical query semantics.
-
-No host wrapper should cache unbounded query results. Applications that add a
-memo use a revision key and a hard entry/weight bound; eviction may be
-approximate because all values remain derivable from the retained snapshot.
+- Use the built-in `query_cache` with hard entry and weight limits for repeated
+  queries; eviction changes performance, never snapshot-consistent results.
 
 ## Security model
 
@@ -204,7 +222,7 @@ Treat a foreign resource provider and all user-controlled queries as untrusted
 inputs. Validate lengths before allocation, preserve paging bounds, reject
 unknown enum values, contain callbacks/panics at the boundary, and never trust
 capability flags until interface negotiation succeeds. The normative duties
-are in the [binding trust model](../../docs/security/binding-trust-model.md).
+are in the [binding trust model](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/docs/security/binding-trust-model.md).
 
 ## Compatibility and troubleshooting
 
@@ -213,11 +231,11 @@ package version, and umbrella-runtime version are independent counters. Follow
 the [ABI evolution policy](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md); never infer compatibility from a
 package version alone.
 
-When loading fails, check—in order—the documented runtime/toolchain version,
-CPU/OS artifact, native-access permission, loader search path, dependent
-interop package pin, and process-wide JavaScript runtime identity. When a query
-fails after construction, report the typed status and copied diagnostic before
-reducing the case to the smallest dictionary/query pair.
+When loading fails, check the OCaml/opam
+version, native library and its dependent interop pin, C-stub linkage, and
+loader search path. When a query fails after construction, report the
+host-language error and copied diagnostic before reducing the case to the
+smallest dictionary/query pair.
 
 ## Maintainer checklist
 

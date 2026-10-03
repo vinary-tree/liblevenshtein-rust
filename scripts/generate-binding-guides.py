@@ -202,8 +202,8 @@ GUIDES: dict[str, Guide] = {
         "opam package `liblevenshtein`",
         "C stubs call the stable ABI and consume `Vinary_tree_interop.resource` values from independent producers.",
         "Use the explicit `close` functions or `Fun.protect`; GC finalizers are only a last-resort retain release.",
-        "C statuses become typed OCaml exceptions carrying the native diagnostic.",
-        "Independent handles are domain-safe according to the documented capability flags. A cursor remains single-consumer and borrowed batches cannot escape folds.",
+        "C status failures raise OCaml `Failure` with a copied native diagnostic; this facade does not expose a typed status exception.",
+        "Independent handles are domain-safe according to the documented capability flags. A cursor remains single-consumer; returned matches and batches are owned OCaml values.",
         "Strings carry UTF-8; bytes and int64 arrays select raw byte and packed-token domains.",
         "bindings/ocaml/vinary_tree_liblevenshtein.mli",
         "bindings/ocaml/test/snapshot.ml",
@@ -563,6 +563,7 @@ approximate because all values remain derivable from the retained snapshot."""
         maximum_throughput_use = (
             "Drain the facade iterator; no public reducer is exposed"
         )
+    ordinary_streaming_use = "The facade iterator protocol"
 
     if not interop and key == "raku":
         batch_rationale = (
@@ -575,6 +576,47 @@ pointer or lexical lease is exposed to application code."""
         error_guidance = f"""{failure_scope.capitalize()} are distinct failures. Inspect
 `X::Liblevenshtein.status` and `operation`, never diagnostic prose; the copied
 message is human context."""
+    elif not interop and key == "ocaml":
+        repository = "https://github.com/vinary-tree/liblevenshtein-rust/blob/master"
+        architecture = f"{repository}/docs/language-bindings.md"
+        family = f"{repository}/docs/bindings/README.md"
+        source = "vinary_tree_liblevenshtein.mli"
+        evidence = "test/snapshot.ml"
+        diagram = (
+            "https://raw.githubusercontent.com/vinary-tree/liblevenshtein-rust/"
+            "master/docs/diagrams/bindings/three-layer-architecture.svg"
+        )
+        api_reference = f"{repository}/docs/bindings/c-abi-reference.md"
+        security = f"{repository}/docs/security/binding-trust-model.md"
+        surface_contract = (
+            f"[`bindings/api-surface-map.json`]({repository}/bindings/api-surface-map.json) "
+            "and the [generated completeness matrix]"
+            f"({repository}/bindings/conformance/completeness-matrix.tsv)"
+        )
+        concepts = concepts.replace(
+            "Owned matches are stable host values; a borrowed batch is valid only inside its documented callback or lease interval.",
+            "Matches and batches are copied into OCaml-owned values before their native lease is released.",
+        )
+        ordinary_streaming_use = "`to_seq` within `Fun.protect`"
+        maximum_throughput_use = "`fold_batches` with bounded native pages"
+        performance = """- Reuse transducers for repeated queries against the same resource.
+- Use `to_seq` for lazy results and close its cursor on all paths.
+- Use `fold_batches` when per-match foreign-boundary crossings dominate.
+- Keep Unicode, byte, and token domains explicit to avoid transcoding.
+- Use the built-in `query_cache` with hard entry and weight limits for repeated
+  queries; eviction changes performance, never snapshot-consistent results."""
+        batch_rationale = (
+            "It amortizes the foreign boundary while returning bounded, "
+            "host-owned arrays."
+        )
+        result_lifetime = """Every match and batch is copied into OCaml-owned values before return.
+The values remain valid after iteration advances or the cursor closes. The
+lazy sequence does not close its cursor; scope it with `Fun.protect`."""
+        error_guidance = """Malformed UTF-8, unsupported domains, incompatible resources,
+closed handles, invalid bounds, allocation failures, provider faults, and
+contained Rust panics remain distinct native causes. This facade raises
+`Failure` with a copied diagnostic but does not expose the status code; do not
+parse the message as a stable protocol."""
     elif not interop and key == "javascript":
         batch_rationale = (
             "It amortizes the foreign boundary while returning bounded, "
@@ -613,6 +655,21 @@ branch on an error: inspect the typed status/exception first and treat the
 message as human context. Diagnostics must be copied before another native
 call on the same thread."""
 
+    troubleshooting_error = (
+        "host-language error" if key == "ocaml" else "typed status"
+    )
+    if key == "ocaml":
+        troubleshooting_guidance = """When loading fails, check the OCaml/opam
+version, native library and its dependent interop pin, C-stub linkage, and
+loader search path. When a query fails after construction, report the
+host-language error and copied diagnostic before reducing the case to the
+smallest dictionary/query pair."""
+    else:
+        troubleshooting_guidance = f"""When loading fails, check—in order—the documented runtime/toolchain version,
+CPU/OS artifact, native-access permission, loader search path, dependent
+interop package pin, and process-wide JavaScript runtime identity. When a query
+fails after construction, report the {troubleshooting_error} and copied diagnostic before
+reducing the case to the smallest dictionary/query pair."""
     return f"""{MARKER}
 
 ## Support and package contract
@@ -666,7 +723,7 @@ a sentinel value that removes a valid input from the domain.
 | Need | Use | Rationale |
 |---|---|---|
 | Repeated fuzzy queries | Reuse one transducer and create a fresh cursor per query | Construction retains a provider in constant time; each cursor captures its own immutable revision. |
-| Ordinary streaming | The facade iterator protocol | It materializes bounded owned values and supports early termination with deterministic close. |
+| Ordinary streaming | {ordinary_streaming_use} | It materializes bounded owned values and supports early termination with deterministic close. |
 | Maximum result throughput | {maximum_throughput_use} | {batch_rationale} |
 | Repeated phonetic matching | Compile a phonetic pattern once, then query or match repeatedly | Compilation is separated from traversal and the compiled handle is immutable. |
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
@@ -720,11 +777,7 @@ package version, and umbrella-runtime version are independent counters. Follow
 the [ABI evolution policy]({evolution}); never infer compatibility from a
 package version alone.
 
-When loading fails, check—in order—the documented runtime/toolchain version,
-CPU/OS artifact, native-access permission, loader search path, dependent
-interop package pin, and process-wide JavaScript runtime identity. When a query
-fails after construction, report the typed status and copied diagnostic before
-reducing the case to the smallest dictionary/query pair.
+{troubleshooting_guidance}
 
 ## Maintainer checklist
 

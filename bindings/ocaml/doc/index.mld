@@ -1,0 +1,65 @@
+{0 Liblevenshtein for OCaml}
+
+This package performs spelling correction and fuzzy dictionary search with
+Levenshtein-family automata. It consumes a dictionary resource produced by the
+independently packaged [libdictenstein] OCaml library. The public module is
+{!module:Vinary_tree_liblevenshtein}.
+
+{1 First query}
+
+The following code uses public modules only. Each owned native handle is
+released even if an operation raises an exception.
+
+{[
+module D = Vinary_tree_libdictenstein
+module L = Vinary_tree_liblevenshtein
+
+let matches () =
+  let dictionary = D.dynamic_dawg () in
+  Fun.protect ~finally:(fun () -> D.close dictionary) (fun () ->
+    ignore (D.put dictionary "cat" (Some 1L));
+    ignore (D.put dictionary "cot" None);
+    let transducer = L.transducer (D.resource dictionary) in
+    Fun.protect ~finally:(fun () -> L.close_transducer transducer) (fun () ->
+      let cursor = L.query transducer "cat" ~maximum_distance:1 in
+      Fun.protect ~finally:(fun () -> L.cursor_close cursor) (fun () ->
+        List.of_seq (L.to_seq cursor))))
+]}
+
+The query captures one immutable dictionary revision. Later inserts or
+removals do not change an existing cursor. A match's [id = None] means that
+the term is present without an associated value; it does not mean the term
+is absent.
+
+{1 Choosing a query domain and algorithm}
+
+For UTF-8 text, use {!Vinary_tree_liblevenshtein.query}. For arbitrary bytes,
+use a byte-domain dictionary and {!Vinary_tree_liblevenshtein.query_bytes};
+embedded zero bytes are ordinary data. For unsigned 64-bit token arrays, use
+an unsigned-64 dictionary and {!Vinary_tree_liblevenshtein.query_u64}; OCaml
+[int64] values preserve the underlying unsigned bit patterns.
+
+The default algorithm is standard Levenshtein distance. The transposition
+variant uses optimal string alignment, which is not a metric. The unrestricted
+Damerau-Levenshtein variant is distinct and can be used where metric laws
+matter. Select with [L.transducer ~algorithm:L.Damerau_levenshtein resource].
+Use [~order:L.Distance_then_term] to order matches by distance and term.
+
+{1 Streaming and bounded caching}
+
+The lazy {!Vinary_tree_liblevenshtein.to_seq} adapter does not close its cursor.
+Always scope it with [Fun.protect], including when consumption ends early.
+For fewer foreign-boundary crossings, use
+{!Vinary_tree_liblevenshtein.fold_batches}; its arrays contain owned OCaml
+matches. For repeated queries, [L.query_cache]
+places hard bounds on resident entry count and weight. A cache eviction
+changes performance only; results remain derivable from the captured revision.
+
+{1 Errors and further reading}
+
+Native failures raise OCaml [Failure] with a copied diagnostic. This facade
+does not expose the numeric status as a typed exception. Check the relevant
+operation and diagnostic; do not parse message text as a stable protocol.
+See the package README for supported backend combinations and the native ABI
+reference for status and threshold contracts:
+https://github.com/vinary-tree/liblevenshtein-rust/blob/master/docs/bindings/c-abi-reference.md

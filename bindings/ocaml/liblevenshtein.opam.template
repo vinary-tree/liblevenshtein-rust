@@ -13,6 +13,7 @@ depends: [
   "conf-pkg-config" {build}
   "vinary-tree-interop" {= "4.0.0~rc6"}
   "libdictenstein" {with-test & = "4.0.0~rc6"}
+  "qcheck-core" {with-test}
   "odoc" {with-doc}
 ]
 build: [

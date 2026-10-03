@@ -18,8 +18,11 @@ let scratch_directory =
   match Sys.getenv_opt "VINARY_TREE_TEST_TMPDIR" with
   | Some path -> path
   | None ->
-      invalid_arg
-        "VINARY_TREE_TEST_TMPDIR must name a writable non-tmpfs test directory"
+      (match Sys.getenv_opt "DUNE_SOURCEROOT" with
+       | Some root -> Filename.concat root "_build"
+       | None ->
+           invalid_arg
+             "set VINARY_TREE_TEST_TMPDIR or run the suite through Dune")
 
 let temporary_path suffix =
   let path = Filename.concat scratch_directory ("liblevenshtein-ocaml" ^ suffix) in

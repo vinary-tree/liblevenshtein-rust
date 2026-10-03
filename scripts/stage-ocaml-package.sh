@@ -16,16 +16,17 @@ version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
 source_tag=${2:-v$version}
 package="liblevenshtein-$version"
 source="$output/source/$package"
-mkdir -p "$source/include" "$source/test"
+mkdir -p "$source/include" "$source/test" "$source/doc"
 cp bindings/ocaml/dune bindings/ocaml/dune-project "$source/"
 cp bindings/ocaml/vinary_tree_liblevenshtein.ml "$source/"
 cp bindings/ocaml/vinary_tree_liblevenshtein.mli "$source/"
 cp bindings/ocaml/liblevenshtein_stubs.c "$source/"
 cp bindings/ocaml/README.md "$source/README.md"
+cp bindings/ocaml/doc/dune bindings/ocaml/doc/index.mld "$source/doc/"
 cp bindings/ocaml/liblevenshtein.opam.template \
   "$source/liblevenshtein.opam"
 cp bindings/ocaml/include/* "$source/include/"
-cp bindings/ocaml/test/dune bindings/ocaml/test/snapshot.ml "$source/test/"
+cp bindings/ocaml/test/dune bindings/ocaml/test/*.ml "$source/test/"
 cp LICENSE "$source/LICENSE"
 
 archive="$output/$package.tbz"

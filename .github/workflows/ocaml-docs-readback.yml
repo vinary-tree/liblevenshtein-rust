@@ -1,0 +1,30 @@
+name: OCaml package documentation readback
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readback:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Verify immutable source identity and public ocaml.org documentation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.IMMUTABLE_RELEASES_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN"
+          expected_tag=$(jq -r '.publication.sourceTag' release/version.json)
+          version=$(jq -r '.registries.opam' release/version.json)
+          test "$GITHUB_REF_NAME" = "$expected_tag"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$expected_tag" --jq '.immutable')" = true
+          bash scripts/verify-ocaml-public-docs.sh \
+            liblevenshtein "$version" Vinary_tree_liblevenshtein \
+            'First query' 'Snapshot-consistent fuzzy search'
