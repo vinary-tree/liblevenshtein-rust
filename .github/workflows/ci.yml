@@ -192,6 +192,9 @@ jobs:
           python3 -m unittest discover \
             -s scripts/tests \
             -p 'test_*package_documentation*.py'
+          python3 -m unittest \
+            scripts.tests.test_swift_docc \
+            scripts.tests.test_swift_docc_archive
       - run: cargo build --locked --features native-bindings-full
       - run: cargo build --manifest-path ../libdictenstein/Cargo.toml --features ffi
       - name: C17/C23 and C++23 headers
@@ -835,11 +838,30 @@ jobs:
             --output-path "$GITHUB_WORKSPACE/target/swift-docc"
           python3 scripts/check-swift-docc.py \
             --complete-toolchain-assets target/swift-docc
+          python3 scripts/package-swift-docc.py build
+          python3 scripts/package-swift-docc.py verify
+          python3 scripts/check-swift-docc.py target/swift-docc-readback
       - uses: actions/upload-artifact@v7
         with:
           name: swift-docc-reference
-          path: target/swift-docc
+          # DocC legitimately emits ':' in symbol names; the portable archive
+          # preserves those names without exposing them to the uploader.
+          path: target/swift-docc-artifacts/liblevenshtein-swift-docc.tar.gz
           if-no-files-found: error
+
+  swift-docc-artifact-readback:
+    name: Read back the complete Swift DocC artifact
+    needs: swift-bindings
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: swift-docc-reference
+          path: target/swift-docc-artifacts
+      - run: |
+          python3 scripts/package-swift-docc.py verify
+          python3 scripts/check-swift-docc.py target/swift-docc-readback
 
   ruby-bindings:
     name: Ruby ${{ matrix.ruby-version }}
