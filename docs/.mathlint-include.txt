@@ -306,6 +306,7 @@ bindings/julia/Liblevenshtein/README.md
 bindings/julia/Liblevenshtein/docs/src/index.md
 bindings/julia/README.md
 bindings/raku/README.md
+bindings/raku/benchmark/README.md
 bindings/conformance/raku-family-capability-audit.md
 docs/language-bindings.md
 docs/releasing-language-bindings.md
