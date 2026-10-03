@@ -1221,24 +1221,38 @@ jobs:
         run: |
           sudo install -m 0644 .github/dragonfly-pkg-auto.conf \
             /usr/local/etc/pkg/repos/df-latest.conf
-          if ! sudo pkg update -f; then
-            echo 'DragonFly AUTO mirrorlist unavailable; selecting official Avalon repository' >&2
-            sudo install -m 0644 .github/dragonfly-pkg-avalon.conf \
-              /usr/local/etc/pkg/repos/df-latest.conf
-            sudo pkg update -f
-          fi
       - name: Install platform toolchain prerequisites
         shell: cpa.sh {0}
         run: |
-          attempt=1
-          while [ "$attempt" -le 3 ]; do
-            if ${{ matrix.platform.install }}; then
+          install_with_retries() {
+            attempt=1
+            while [ "$attempt" -le 3 ]; do
+              if ${{ matrix.platform.install }}; then
+                return 0
+              fi
+              echo "package installation attempt $attempt failed" >&2
+              if [ "$attempt" -lt 3 ]; then
+                sleep "$((attempt * 10))"
+              fi
+              attempt="$((attempt + 1))"
+            done
+            return 1
+          }
+          if install_with_retries; then
+            exit 0
+          fi
+          if [ "${{ matrix.platform.os }}" = dragonflybsd ]; then
+            # The VM's own sample uses its matching official Avalon packagesite.
+            # Switching the hostname in a hand-written config instead can
+            # trigger pkg's "wrong packagesite" repository-identity error.
+            sudo install -m 0644 \
+              /usr/local/etc/pkg/repos/df-latest.conf.sample \
+              /usr/local/etc/pkg/repos/df-latest.conf
+            echo 'DragonFly AUTO unavailable; retrying with the image-provided Avalon repository' >&2
+            if install_with_retries; then
               exit 0
             fi
-            echo "package installation attempt $attempt failed; retrying" >&2
-            sleep "$((attempt * 5))"
-            attempt="$((attempt + 1))"
-          done
+          fi
           exit 1
       - name: Compile the native binding surface
         if: matrix.platform.native_rust_at_msrv != false
