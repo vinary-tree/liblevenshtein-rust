@@ -135,7 +135,7 @@ the manifest truthfully contains released `missing` or `build-only` entries.
 
 ## Reproducible references and immutable version history
 
-Five generators feed one versioned site. Doxygen reads the public C and C++
+Six generators feed one versioned site. Doxygen reads the public C and C++
 headers and emits both Hypertext Markup Language (HTML) and Extensible Markup
 Language (XML); the XML inventory proves that every modeled C function and
 public native type appears. pdoc renders the Python facade only after an
@@ -145,7 +145,10 @@ declaration surface. Documenter.jl checks and renders every exported Julia
 declaration from a checked-in `Manifest.toml`; the build fails if Julia mutates
 that locked environment. Its wall-clock site metadata is normalized to the
 source revision's `SOURCE_DATE_EPOCH`. Rakudo compiles the package's Pod API
-reference. All five receive the canonical version and immutable source tag from
+reference. The Lua renderer checks every exported C-module registration table,
+constant, and documented lifecycle protocol against its source before embedding
+a Lua 5.4 syntax-checked quickstart. All six receive the canonical version and
+immutable source tag from
 [`release/version.json`](../../release/version.json). Their output/archive
 layout is centralized in
 [`scripts/package_documentation_surfaces.py`](../../scripts/package_documentation_surfaces.py),
@@ -186,7 +189,7 @@ The protected workflow implements the preservation algorithm literally:
 ```text
 procedure PublishVersionedReferences(exact_tag T, archive A):
     assert T equals release.version.publication.sourceTag
-    build native, Python, JavaScript, Julia, and Raku references from T
+    build native, Python, JavaScript, Julia, Raku, and Lua references from T
     assert A is reproducible and every public declaration is represented
 
     if release(T) already contains an asset named like A:
@@ -203,7 +206,7 @@ end procedure
 
 This design never uses the current branch as evidence for an older tag and
 never replaces a historical version directory with a newer build. The current
-RC6 candidate records Doxygen, pdoc, TypeDoc, Documenter, and Pod as
+RC6 candidate records Doxygen, pdoc, TypeDoc, Documenter, Pod, and Lua as
 `build-only`: source validation exists, while public evidence remains absent
 until the reviewed immutable `v4.0.0-rc.6` tag exists and the protected
 workflow deploys its byte-reproducible archive. An unpublished local build
@@ -253,8 +256,11 @@ deployment; decorative snippets do not count as validation evidence.
 
 1. Generate the guide and API reference from the exact release source.
 2. Fail the build on undocumented public symbols and broken internal links.
-3. Publish the package through its protected registry environment.
-4. Publish or trigger the ecosystem documentation service.
+3. Publish or trigger the ecosystem documentation service. For LuaRocks,
+   require the exact versioned Lua API page before uploading its linked
+   rockspec; the upload job then reads back the exact public rockspec bytes
+   and its page link.
+4. Publish the package through its protected registry environment.
 5. Fetch the registry page, guide, API index, deep symbol links, assets, and
    source links without credentials.
 6. Exercise the documented quick start from a clean installed consumer.
