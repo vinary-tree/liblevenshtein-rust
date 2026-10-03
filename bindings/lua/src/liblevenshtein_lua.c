@@ -57,13 +57,14 @@ static const uint64_t* u64_sequence(lua_State* state, int index, size_t* out_len
     luaL_checktype(state, index, LUA_TTABLE);
     lua_Integer length = luaL_len(state, index);
     luaL_argcheck(state, length >= 0, index, "invalid token sequence length");
+    luaL_argcheck(state, (uint64_t)length <= SIZE_MAX / sizeof(uint64_t),
+                  index, "token sequence is too long");
     uint64_t* data = (uint64_t*)lua_newuserdatauv(
         state, (size_t)length * sizeof(uint64_t), 0);
     for (lua_Integer position = 1; position <= length; ++position) {
         lua_rawgeti(state, index, position);
-        lua_Integer token = luaL_checkinteger(state, -1);
-        luaL_argcheck(state, token >= 0, index, "tokens must be non-negative integers");
-        data[position - 1] = (uint64_t)token;
+        data[position - 1] = vt_lua_check_u64(
+            state, -1, "tokens must be non-negative integers or decimal strings");
         lua_pop(state, 1);
     }
     *out_length = (size_t)length;
@@ -209,7 +210,7 @@ static int query_cache_stats(lua_State* state) {
     if (status != LLEV_STATUS_OK) return fail(state, status);
     lua_createtable(state, 0, 8);
 #define CACHE_STAT(name) \
-    lua_pushinteger(state, (lua_Integer)value.name); lua_setfield(state, -2, #name)
+    vt_lua_push_u64(state, (uint64_t)value.name); lua_setfield(state, -2, #name)
     CACHE_STAT(requests);
     CACHE_STAT(hits);
     CACHE_STAT(misses);
@@ -297,7 +298,7 @@ static void push_match(lua_State* state, const LlevMatch* value) {
         const uint64_t* tokens = (const uint64_t*)value->term_data;
         lua_createtable(state, (int)value->term_len, 0);
         for (size_t index = 0; index < value->term_len; ++index) {
-            lua_pushinteger(state, (lua_Integer)tokens[index]);
+            vt_lua_push_u64(state, tokens[index]);
             lua_rawseti(state, -2, (lua_Integer)index + 1);
         }
     } else {
@@ -305,7 +306,7 @@ static void push_match(lua_State* state, const LlevMatch* value) {
     }
     lua_setfield(state, -2, "term");
     lua_pushinteger(state, (lua_Integer)value->distance); lua_setfield(state, -2, "distance");
-    if (value->has_id) { lua_pushinteger(state, (lua_Integer)value->id); lua_setfield(state, -2, "id"); }
+    if (value->has_id) { vt_lua_push_u64(state, value->id); lua_setfield(state, -2, "id"); }
 }
 
 static LlevStatus refill(LuaCursor* value, size_t maximum) {

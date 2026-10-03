@@ -110,6 +110,28 @@ local token_match = token_cursor:next()
 assert(token_match.distance == 1 and token_match.term[3] == 3 and token_match.id == 12)
 assert(tokens:remove_u64({1, 2, 3}))
 
+-- Lua integers are signed. Decimal strings preserve the entire u64 domain
+-- without rounding through a floating-point number or wrapping to negative.
+local wide_tokens <close> = dictionary.dynamic_dawg("u64")
+local wide_term = {0, math.maxinteger, "9223372036854775808", "18446744073709551615"}
+local wide_id = "18446744073709551615"
+assert(wide_tokens:put_u64(wide_term, wide_id))
+assert(wide_tokens:get_u64(wide_term).value == wide_id)
+local wide_automaton <close> = levenshtein.transducer(wide_tokens)
+local wide_cursor <close> = wide_automaton:query_u64(wide_term, 0)
+local wide_match = wide_cursor:next()
+assert(wide_match.distance == 0 and wide_match.id == wide_id)
+for index = 1, #wide_term do
+  assert(wide_match.term[index] == wide_term[index], "u64 token " .. index)
+end
+assert(wide_cursor:next() == nil)
+local wide_cache <close> = levenshtein.query_cache(wide_automaton, 4, 1024 * 1024)
+local cached_cursor <close> = wide_cache:query_u64(wide_term, 0)
+assert(cached_cursor:next().term[4] == wide_term[4])
+assert(not pcall(function() wide_automaton:query_u64({"18446744073709551616"}, 0) end))
+assert(not pcall(function() wide_automaton:query_u64({"-1"}, 0) end))
+assert(not pcall(function() wide_automaton:query_u64({""}, 0) end))
+
 local scratch = assert(os.getenv("VINARY_TREE_TEST_TMPDIR"),
   "VINARY_TREE_TEST_TMPDIR must name a writable non-tmpfs test directory")
 local separator = package.config:sub(1, 1)

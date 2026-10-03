@@ -9,8 +9,8 @@
 --   (b) query result set == {t in dict : lev(query,t) <= k} over a random
 --       libdictenstein DynamicDawg dictionary, with exact distances and value
 --       round-trips;
---   (c) u64 value round-trips as signed 64-bit bit patterns, with 0,
---       math.mininteger (2^63) and -1 (2^64-1) pinned.
+--   (c) u64 value round-trips with Lua integers through 2^63-1 and decimal
+--       strings for the upper half of the unsigned domain through 2^64-1.
 --
 -- The PRNG is seeded from a constant. An ASCII alphabet keeps byte == scalar so
 -- the oracle needs no UTF-8 decoding; scalar-vs-byte counting is pinned by the
@@ -97,8 +97,7 @@ for _ = 1, 150 do
     local term = generate(0, 6)
     if not seen[term] then
       seen[term] = true
-      -- Lua integers are signed 64-bit and the facade requires a non-negative
-      -- value, so the representable u64 value range is [0, 2^63-1].
+      -- Ordinary Lua integers cover [0, 2^63-1]; wide values are pinned below.
       local value = (math.random(4) == 1) and nil or math.random(0, math.maxinteger)
       entries[#entries + 1] = { term, value }
     end
@@ -125,10 +124,11 @@ for _ = 1, 150 do
   assert(got_count == expected_count, "result set size")
 end
 
--- (c) value round-trip: 0 and the representable upper boundary math.maxinteger
--- (2^63-1) are pinned. u64 values >= 2^63 are not representable as a Lua signed
--- integer and the facade rejects them, so 2^64-1 is out of range for this facade.
-for _, value in ipairs({ 0, 1, math.maxinteger }) do
+-- (c) Values above math.maxinteger use exact decimal strings in both the
+-- libdictenstein input and the liblevenshtein match output.
+for _, value in ipairs({
+  0, 1, math.maxinteger, "9223372036854775808", "18446744073709551615"
+}) do
   local got = run_query({ { "term", value } }, "term", 0)
   assert(got["term"] ~= nil and got["term"].id == value, "u64 round-trip " .. value)
 end
