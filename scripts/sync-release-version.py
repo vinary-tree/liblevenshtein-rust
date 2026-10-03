@@ -777,8 +777,21 @@ def write_versions(model: dict[str, object], versions: dict[str, str]) -> None:
     replace(lua_path, r'^version = "[^"]+"$', f'version = "{versions["luaRocks"]}"')
     replace(
         lua_path,
-        r'^(description = \{ summary = ")[^"]+(".*)$',
+        r'^(  summary = ")[^"]+(".*)$',
         rf"\g<1>{summary}\2",
+    )
+    replace(
+        lua_path,
+        r"https://vinary-tree\.github\.io/liblevenshtein-rust/"
+        r"[0-9A-Za-z.-]+/lua/",
+        f"https://vinary-tree.github.io/liblevenshtein-rust/{canonical}/lua/",
+        expected=2,
+    )
+    replace(
+        "bindings/lua/README.md",
+        r"https://vinary-tree\.github\.io/liblevenshtein-rust/"
+        r"[0-9A-Za-z.-]+/lua/",
+        f"https://vinary-tree.github.io/liblevenshtein-rust/{canonical}/lua/",
     )
     replace(
         lua_path,
@@ -1059,6 +1072,13 @@ def validate(model: dict[str, object], versions: dict[str, str]) -> list[str]:
     )
     if (lua_source.group(1) if lua_source else None) != source_tag:
         failures.append("LuaRocks source tag is stale")
+    lua_docs_url = f"https://vinary-tree.github.io/liblevenshtein-rust/{canonical}/lua/"
+    if lua_rockspec.count(lua_docs_url) != 2:
+        failures.append(
+            "LuaRocks detailed description and homepage must use the versioned Lua API reference"
+        )
+    if lua_docs_url not in read("bindings/lua/README.md"):
+        failures.append("Lua binding guide must link the versioned Lua API reference")
     jreleaser = read("bindings/jvm/jreleaser.yml")
     if re.search(r"^        active: RELEASE$", jreleaser, flags=re.MULTILINE):
         failures.append(

@@ -383,12 +383,34 @@ def build_raku(version: str, _source_ref: str) -> None:
     require_markers(output / "index.html", (version, "Transducer", "QueryCursor"))
 
 
+def build_lua(version: str, source_ref: str) -> None:
+    output = OUTPUT_ROOT / "lua"
+    clean_output(output)
+    run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "lua_api_reference.py"),
+            "--version",
+            version,
+            "--source-ref",
+            source_ref,
+            "--output",
+            str(output / "index.html"),
+        ]
+    )
+    require_markers(
+        output / "index.html",
+        (version, "levenshtein.transducer", "cache:stats", "Common usage"),
+    )
+
+
 BUILDERS: dict[str, Callable[[str, str], None]] = {
     "native": build_native,
     "python": build_python,
     "javascript": build_javascript,
     "julia": build_julia,
     "raku": build_raku,
+    "lua": build_lua,
 }
 
 if BUILDERS.keys() != GENERATED_SURFACE_LAYOUT.keys():
