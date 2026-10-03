@@ -271,7 +271,7 @@ mod tests {
     use libdictenstein::scdawg::Scdawg;
     use libdictenstein::scdawg::ScdawgChar;
 
-    fn assert_short_scan_matches_distance_oracle<D>(dictionary: &D)
+    fn assert_matches_distance_oracle<D>(dictionary: &D, queries: &[&str], bounds: &[usize])
     where
         D: Dictionary + SubstringDictionary,
     {
@@ -281,14 +281,14 @@ mod tests {
             .map(|matched| matched.term)
             .collect();
         let unique_terms: std::collections::BTreeSet<_> = terms.iter().collect();
-        for query in ["", "a", "é", "猫"] {
+        for &query in queries {
             for algorithm in [
                 Algorithm::Standard,
                 Algorithm::Transposition,
                 Algorithm::MergeAndSplit,
                 Algorithm::DamerauLevenshtein,
             ] {
-                for bound in 1..=2 {
+                for &bound in bounds {
                     let mut observed: Vec<_> =
                         WallBreaker::with_algorithm(dictionary, bound, algorithm)
                             .query(query)
@@ -329,11 +329,48 @@ mod tests {
         }
     }
 
+    fn assert_short_scan_matches_distance_oracle<D>(dictionary: &D)
+    where
+        D: Dictionary + SubstringDictionary,
+    {
+        assert_matches_distance_oracle(dictionary, &["", "a", "é", "猫"], &[1, 2]);
+    }
+
+    fn assert_seeded_selective_matches_distance_oracle<D>(dictionary: &D)
+    where
+        D: Dictionary + SubstringDictionary,
+    {
+        // Each query exceeds the largest proven piece count (2k+1) at both
+        // bounds, so Standard, Transposition, and MergeAndSplit take their
+        // nonempty-seed path. Unrestricted Damerau still takes the scan path.
+        assert_matches_distance_oracle(
+            dictionary,
+            &["cathedrel", "éclair", "猫咪朋友你好"],
+            &[1, 2],
+        );
+    }
+
     #[test]
     fn in_memory_byte_and_unicode_short_scans_match_all_distance_oracles() {
         let terms = ["a", "é", "ab", "ba", "猫"];
         assert_short_scan_matches_distance_oracle(&Scdawg::<()>::from_terms(terms));
         assert_short_scan_matches_distance_oracle(&ScdawgChar::<()>::from_terms(terms));
+    }
+
+    #[test]
+    fn in_memory_byte_and_unicode_selective_queries_match_all_distance_oracles() {
+        let terms = [
+            "cathedral",
+            "category",
+            "catering",
+            "cathedrel",
+            "éclair",
+            "éclaur",
+            "猫咪朋友你好",
+            "猫米朋友你好",
+        ];
+        assert_seeded_selective_matches_distance_oracle(&Scdawg::<()>::from_terms(terms));
+        assert_seeded_selective_matches_distance_oracle(&ScdawgChar::<()>::from_terms(terms));
     }
 
     #[cfg(feature = "persistent-artrie")]
@@ -352,6 +389,31 @@ mod tests {
         assert_short_scan_matches_distance_oracle(&PersistentSuffixTreeChar::<()>::from_texts([
             "a", "a", "é", "é", "猫",
         ]));
+    }
+
+    #[cfg(feature = "persistent-artrie")]
+    #[test]
+    fn persistent_byte_and_unicode_selective_queries_match_all_distance_oracles() {
+        let terms = [
+            "cathedral",
+            "category",
+            "catering",
+            "cathedrel",
+            "éclair",
+            "éclaur",
+            "猫咪朋友你好",
+            "猫米朋友你好",
+        ];
+        assert_seeded_selective_matches_distance_oracle(&PersistentScdawg::<()>::from_terms(terms));
+        assert_seeded_selective_matches_distance_oracle(&PersistentScdawgChar::<()>::from_terms(
+            terms,
+        ));
+        assert_seeded_selective_matches_distance_oracle(&PersistentSuffixTree::<()>::from_texts(
+            terms,
+        ));
+        assert_seeded_selective_matches_distance_oracle(
+            &PersistentSuffixTreeChar::<()>::from_texts(terms),
+        );
     }
 
     #[cfg(feature = "persistent-artrie")]
@@ -616,12 +678,71 @@ mod tests {
         }
     }
 
+    fn assert_long_unicode_term_uses_bounded_stack<D>(dictionary: &D, term: &str)
+    where
+        D: Dictionary + SubstringDictionary + Sync,
+    {
+        // Construct the dictionary outside the constrained thread so the
+        // bound tests query traversal rather than each backend's builder.
+        std::thread::scope(|scope| {
+            std::thread::Builder::new()
+                .stack_size(128 * 1024)
+                .spawn_scoped(scope, || {
+                    let observed: Vec<_> = WallBreaker::new(dictionary, 0).query(term).collect();
+                    assert_eq!(observed, vec![WallBreakerResult::new(term.to_owned(), 0)]);
+
+                    // Empty queries have no selective piece, so they must
+                    // walk complete terms without recursive descent.
+                    let observed: Vec<_> = WallBreaker::new(dictionary, term.chars().count())
+                        .query("")
+                        .collect();
+                    assert_eq!(
+                        observed,
+                        vec![WallBreakerResult::new(
+                            term.to_owned(),
+                            term.chars().count()
+                        )]
+                    );
+                })
+                .expect("spawn a constrained-stack WallBreaker query")
+                .join()
+                .expect("WallBreaker query must finish on a 128 KiB stack");
+        });
+    }
+
     #[test]
-    fn long_exact_unicode_query_uses_bounded_stack() {
-        let term = "é".repeat(2048);
-        let dictionary = ScdawgChar::<()>::from_terms([term.as_str()]);
-        let observed: Vec<_> = WallBreaker::new(&dictionary, 0).query(&term).collect();
-        assert_eq!(observed, vec![WallBreakerResult::new(term, 0)]);
+    fn long_unicode_term_uses_bounded_stack_on_in_memory_backends() {
+        let term = "é".repeat(8192);
+        assert_long_unicode_term_uses_bounded_stack(
+            &Scdawg::<()>::from_terms([term.as_str()]),
+            &term,
+        );
+        assert_long_unicode_term_uses_bounded_stack(
+            &ScdawgChar::<()>::from_terms([term.as_str()]),
+            &term,
+        );
+    }
+
+    #[cfg(feature = "persistent-artrie")]
+    #[test]
+    fn long_unicode_term_uses_bounded_stack_on_persistent_backends() {
+        let term = "é".repeat(8192);
+        assert_long_unicode_term_uses_bounded_stack(
+            &PersistentScdawg::<()>::from_terms([term.as_str()]),
+            &term,
+        );
+        assert_long_unicode_term_uses_bounded_stack(
+            &PersistentScdawgChar::<()>::from_terms([term.as_str()]),
+            &term,
+        );
+        assert_long_unicode_term_uses_bounded_stack(
+            &PersistentSuffixTree::<()>::from_texts([term.as_str()]),
+            &term,
+        );
+        assert_long_unicode_term_uses_bounded_stack(
+            &PersistentSuffixTreeChar::<()>::from_texts([term.as_str()]),
+            &term,
+        );
     }
 
     #[test]
