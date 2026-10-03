@@ -74,6 +74,7 @@ mutable struct WallBreakerCursor
     handle::Ptr{Cvoid}
     pending::Vector{WallBreakerMatch}
     offset::Int
+    cancelled::Bool
     closed::Bool
 end
 
@@ -121,7 +122,7 @@ function query(matcher::WallBreakerMatcher, source::AbstractString)
             matcher.handle, data_pointer(bytes), length(bytes), output),
             :llev_wallbreaker_query_utf8)
     end
-    cursor = WallBreakerCursor(output[], WallBreakerMatch[], 1, false)
+    cursor = WallBreakerCursor(output[], WallBreakerMatch[], 1, false, false)
     finalizer(close!, cursor)
     cursor
 end
@@ -155,7 +156,7 @@ function next_batch!(cursor::WallBreakerCursor, maximum::Integer=DEFAULT_MATCH_B
 end
 
 function Base.iterate(cursor::WallBreakerCursor, state=nothing)
-    cursor.closed && return nothing
+    (cursor.closed || cursor.cancelled) && return nothing
     if cursor.offset > length(cursor.pending)
         batch = next_batch!(cursor)
         if batch === nothing
@@ -170,10 +171,18 @@ function Base.iterate(cursor::WallBreakerCursor, state=nothing)
     (value, nothing)
 end
 
+"""Stop iteration and discard copied pending matches; later `next_batch!` raises `STATUS_CLOSED`.
+
+The native query has already completed when the cursor is created, so this
+does not interrupt matching work inside `query`.
+"""
 function cancel!(cursor::WallBreakerCursor)
-    cursor.closed && return nothing
+    (cursor.closed || cursor.cancelled) && return nothing
     checked(ccall(native(:llev_wallbreaker_cursor_cancel), Cint,
         (Ptr{Cvoid},), cursor.handle), :llev_wallbreaker_cursor_cancel)
+    cursor.cancelled = true
+    empty!(cursor.pending)
+    cursor.offset = 1
     nothing
 end
 
@@ -181,6 +190,8 @@ function close!(cursor::WallBreakerCursor)
     cursor.closed && return nothing
     ccall(native(:llev_wallbreaker_cursor_free), Cvoid, (Ptr{Cvoid},), cursor.handle)
     cursor.handle = C_NULL
+    empty!(cursor.pending)
+    cursor.offset = 1
     cursor.closed = true
     nothing
 end

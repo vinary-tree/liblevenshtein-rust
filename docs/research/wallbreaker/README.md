@@ -91,11 +91,14 @@ streams, and reuse of fuzzy-transducer iterators. A node-edge walk would need
 to reconstruct complete terms and to reconcile each backend's deletion and
 revision semantics. Fuzzy transducers differ in supported distance families
 and ordering, so they cannot replace this query's verification contract.
-The existing backend term inventories already encode unique complete members
-and stable roots. A borrowed cursor over those inventories therefore gives
-the smallest common interface while retaining backend-specific traversal
-internals. The selective substring path remains separate because it can
-avoid scanning the entire dictionary when its seed proof applies.
+The existing backend inventories retain stable roots, but persistent suffix
+trees also preserve repeated source texts as distinct records. The borrowed
+cursor follows source-record order without deduplicating those records;
+WallBreaker's accepted-result set emits each distinct text only once. This
+separation keeps the common cursor faithful to backend semantics while
+retaining backend-specific traversal internals. The selective substring path
+remains separate because it can avoid scanning the entire dictionary when its
+seed proof applies.
 
 ## Native and foreign-language limits
 

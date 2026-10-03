@@ -73,6 +73,23 @@ end
     finally
         LL.close!(matcher)
     end
+    matcher = LL.WallBreakerMatcher(["a", "b", "c"]; max_distance=1)
+    try
+        cursor = LL.query(matcher, "")
+        try
+            @test iterate(cursor) !== nothing
+            @test cursor.offset <= length(cursor.pending)
+            LL.cancel!(cursor)
+            @test iterate(cursor) === nothing
+            @test iterate(cursor) === nothing
+            @test_throws LL.NativeError LL.next_batch!(cursor)
+            LL.cancel!(cursor)
+        finally
+            LL.close!(cursor)
+        end
+    finally
+        LL.close!(matcher)
+    end
 end
 
 @testset "bounded TinyLFU/SIEVE query cache" begin

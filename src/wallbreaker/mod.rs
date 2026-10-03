@@ -280,6 +280,7 @@ mod tests {
             .into_iter()
             .map(|matched| matched.term)
             .collect();
+        let unique_terms: std::collections::BTreeSet<_> = terms.iter().collect();
         for query in ["", "a", "é", "猫"] {
             for algorithm in [
                 Algorithm::Standard,
@@ -294,7 +295,7 @@ mod tests {
                             .map(|result| (result.term, result.distance))
                             .collect();
                     observed.sort();
-                    let mut expected: Vec<_> = terms
+                    let mut expected: Vec<_> = unique_terms
                         .iter()
                         .filter_map(|term| {
                             let distance = match algorithm {
@@ -345,6 +346,41 @@ mod tests {
         assert_short_scan_matches_distance_oracle(&PersistentSuffixTreeChar::<()>::from_texts(
             terms,
         ));
+        assert_short_scan_matches_distance_oracle(&PersistentSuffixTree::<()>::from_texts([
+            "a", "a", "é", "é", "猫",
+        ]));
+        assert_short_scan_matches_distance_oracle(&PersistentSuffixTreeChar::<()>::from_texts([
+            "a", "a", "é", "é", "猫",
+        ]));
+    }
+
+    #[cfg(feature = "persistent-artrie")]
+    #[test]
+    fn persistent_suffix_duplicate_sources_emit_one_result_per_text_from_pinned_revision() {
+        fn assert_one_per_text<D>(dictionary: D)
+        where
+            D: Dictionary + SubstringDictionary + libdictenstein::MutableDictionary,
+        {
+            let matcher = WallBreaker::new(&dictionary, 1);
+            let pending = matcher.query("a");
+            assert!(dictionary.remove("a"));
+            assert!(dictionary.remove("a"));
+            assert_eq!(
+                pending.collect::<Vec<_>>(),
+                vec![
+                    WallBreakerResult::new("a".to_owned(), 0),
+                    WallBreakerResult::new("b".to_owned(), 1),
+                ],
+            );
+            assert_eq!(
+                matcher.query("a").collect::<Vec<_>>(),
+                vec![WallBreakerResult::new("b".to_owned(), 1)],
+                "a new query must observe both source-record removals",
+            );
+        }
+
+        assert_one_per_text(PersistentSuffixTree::<()>::from_texts(["a", "a", "b"]));
+        assert_one_per_text(PersistentSuffixTreeChar::<()>::from_texts(["a", "a", "b"]));
     }
 
     #[test]
