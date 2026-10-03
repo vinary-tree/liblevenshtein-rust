@@ -93,6 +93,23 @@ def clean(value: object, field: str) -> str:
     return value
 
 
+def canonical_declared_evidence(
+    project_id: str,
+    project_root: Path,
+    canonical_source_root: str,
+    relative_value: object,
+    language_id: str,
+) -> str:
+    """Validate local evidence but render a worktree-independent source path."""
+    relative = Path(clean(relative_value, f"{project_id}.{language_id}.evidence"))
+    if relative.is_absolute() or ".." in relative.parts:
+        fail(f"{project_id}.{language_id} evidence must stay inside its project")
+    source = (project_root / relative).resolve()
+    if not source.is_relative_to(project_root) or not source.exists():
+        fail(f"declared evidence is missing or outside its project: {source}")
+    return (Path(canonical_source_root) / relative).as_posix()
+
+
 def dimension_state(name: str, state: str, override: dict, cell_id: str) -> str:
     default = "missing" if state == "missing" else state
     value = clean(override.get(name, default), f"{cell_id}.{name}")
@@ -409,7 +426,6 @@ def main() -> int:
             fail(f"{project_id} needs a stable canonical source root")
         environment = PROJECT_ROOT_ENVIRONMENTS.get(project_id)
         configured_root = os.environ.get(environment) if environment else None
-        modeled_project_root = (ROOT / modeled_root).resolve()
         project_root = (
             Path(configured_root) if configured_root else ROOT / modeled_root
         ).resolve()
@@ -440,10 +456,16 @@ def main() -> int:
             fail(
                 f"{project_id} both declares and requests review for: {sorted(overlap)}"
             )
-        for language_id, relative in evidence.items():
-            relative = clean(relative, f"{project_id}.{language_id}.evidence")
-            if not (project_root / relative).exists():
-                fail(f"declared evidence is missing: {project_root / relative}")
+        canonical_evidence = {
+            language_id: canonical_declared_evidence(
+                project_id,
+                project_root,
+                canonical_source_root,
+                relative,
+                language_id,
+            )
+            for language_id, relative in evidence.items()
+        }
         undeclared_bindings = discover_binding_languages(project_root) - set(evidence)
         if undeclared_bindings:
             fail(
@@ -500,11 +522,7 @@ def main() -> int:
                 if language_id in evidence:
                     default_state = "audit-required"
                     if evidence_root is None:
-                        default_evidence = str(
-                            (modeled_project_root / evidence[language_id]).relative_to(
-                                ROOT.parent
-                            )
-                        )
+                        default_evidence = canonical_evidence[language_id]
                     else:
                         default_evidence = str(
                             Path(evidence_root) / evidence[language_id]

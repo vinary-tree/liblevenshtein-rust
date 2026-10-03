@@ -59,10 +59,46 @@ class DiscoverBindingLanguagesTests(unittest.TestCase):
             self.assertEqual(MODULE.discover_binding_languages(Path(directory)), set())
 
 
+class DeclaredEvidenceTests(unittest.TestCase):
+    def test_canonical_path_is_independent_of_nested_worktree_location(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            anchors = []
+            for checkout in ("primary", "nested/target/isolated"):
+                root = Path(directory) / checkout
+                evidence = root / "bindings/python/README.md"
+                evidence.parent.mkdir(parents=True)
+                evidence.write_text("# Python\n", encoding="utf-8")
+                anchors.append(
+                    MODULE.canonical_declared_evidence(
+                        "liblevenshtein-rust",
+                        root.resolve(),
+                        "liblevenshtein-rust",
+                        "bindings/python/README.md",
+                        "python",
+                    )
+                )
+            self.assertEqual(
+                anchors,
+                ["liblevenshtein-rust/bindings/python/README.md"] * 2,
+            )
+
+    def test_rejects_evidence_outside_the_project(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "project"
+            root.mkdir()
+            with self.assertRaisesRegex(SystemExit, "inside its project"):
+                MODULE.canonical_declared_evidence(
+                    "project", root, "project", "../outside.md", "python"
+                )
+
+
 class DocumentationTopicTests(unittest.TestCase):
     def test_inherited_complete_state_requires_evidence(self) -> None:
-        with tempfile.TemporaryDirectory() as directory, self.assertRaisesRegex(
-            SystemExit, "is complete without documentation evidence"
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            self.assertRaisesRegex(
+                SystemExit, "is complete without documentation evidence"
+            ),
         ):
             MODULE.documentation_topic(
                 "overview",
@@ -169,8 +205,7 @@ class RakuCapabilityEvidenceTests(unittest.TestCase):
             self.assertEqual(anchors[0], anchors[1])
             self.assertEqual(
                 anchors[0],
-                "liblevenshtein-rust/bindings/raku/lib/Example.rakumod"
-                "::sub snapshot()",
+                "liblevenshtein-rust/bindings/raku/lib/Example.rakumod::sub snapshot()",
             )
 
     def test_directory_with_unmapped_capability_stays_missing(self) -> None:

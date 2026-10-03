@@ -10,10 +10,9 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKSPACE = ROOT.parent
 RUNTIME_ROOT = Path(
     os.environ.get(
-        "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", WORKSPACE / "javascript-runtime"
+        "VINARY_TREE_JAVASCRIPT_RUNTIME_ROOT", ROOT.parent / "javascript-runtime"
     )
 ).resolve()
 API_PATH = ROOT / "bindings" / "api.json"
@@ -38,15 +37,15 @@ def clean(value: object, field: str) -> str:
 def resolve(relative: str, field: str) -> Path:
     cleaned = clean(relative, field)
     runtime_prefix = "../javascript-runtime/"
+    runtime_evidence = cleaned.startswith(runtime_prefix)
+    owning_root = RUNTIME_ROOT if runtime_evidence else ROOT
     path = (
         RUNTIME_ROOT / cleaned.removeprefix(runtime_prefix)
-        if cleaned.startswith(runtime_prefix)
+        if runtime_evidence
         else ROOT / cleaned
     ).resolve()
-    try:
-        path.relative_to(WORKSPACE)
-    except ValueError:
-        fail(f"{field} leaves the indexed workspace: {relative}")
+    if not path.is_relative_to(owning_root):
+        fail(f"{field} leaves its owning project root: {relative}")
     if not path.is_file():
         fail(f"{field} is missing: {path}")
     return path

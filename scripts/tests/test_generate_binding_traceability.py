@@ -75,10 +75,10 @@ class BindingTraceabilityTests(unittest.TestCase):
             "audit-required",
         )
 
-    def test_evidence_paths_cannot_leave_the_workspace(self) -> None:
+    def test_evidence_paths_cannot_leave_their_owning_project(self) -> None:
         with self.assertRaises(SystemExit) as raised:
             GENERATOR.resolve("../../../etc/passwd", "test.evidence")
-        self.assertIn("leaves the indexed workspace", str(raised.exception))
+        self.assertIn("leaves its owning project root", str(raised.exception))
 
 
 if __name__ == "__main__":
