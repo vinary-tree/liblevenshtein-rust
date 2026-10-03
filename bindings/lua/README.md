@@ -3,7 +3,17 @@
 The Lua 5.4+ module consumes `vinary-tree.dictionary.v1` userdata created by
 the separate libdictenstein rock. Cursors are callable generic-for iterators,
 use leased native batches, and implement `__close` plus `__gc`. The module is
-published as `liblevenshtein` on LuaRocks.
+distributed as `liblevenshtein` on LuaRocks. The
+[versioned Lua API reference](https://vinary-tree.github.io/liblevenshtein-rust/4.0.0-rc.6/lua/)
+documents every exported constructor, method, constant, and traversal protocol;
+the release documentation gate checks it against the C registration tables.
+
+The [executable quickstart](examples/quickstart.lua) constructs a dictionary,
+streams fuzzy matches, and reuses a bounded query cache:
+
+```sh
+lua5.4 bindings/lua/examples/quickstart.lua
+```
 
 ## Installation
 

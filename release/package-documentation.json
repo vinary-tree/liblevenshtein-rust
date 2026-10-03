@@ -434,20 +434,32 @@
       "sourceEvidence": [
         "bindings/lua/liblevenshtein-4.0.0rc6-1.rockspec",
         "bindings/lua/README.md",
-        "bindings/lua/src/liblevenshtein_lua.c"
+        "bindings/lua/src/liblevenshtein_lua.c",
+        "bindings/lua/api-reference.json",
+        "scripts/lua_api_reference.py"
       ],
       "destinations": [
         {
           "kind": "package-guide",
           "service": "LuaRocks module page",
-          "state": "missing",
-          "reason": "The public LuaRocks page exposes rock metadata but none of the binding guide's API symbols or examples."
+          "state": "build-only",
+          "reason": "The RC.6 rockspec now links the version-pinned guide and executable example, but the candidate has not been published to LuaRocks.",
+          "buildEvidence": [
+            "bindings/lua/liblevenshtein-4.0.0rc6-1.rockspec",
+            "bindings/lua/README.md",
+            "bindings/lua/examples/quickstart.lua"
+          ]
         },
         {
           "kind": "api-reference",
           "service": "versioned Lua API reference",
-          "state": "missing",
-          "reason": "No public generated Lua API reference exists."
+          "state": "build-only",
+          "reason": "A source-validated deterministic Lua API reference is required in the RC.6 documentation archive, but the user has not authorized an RC.6 release.",
+          "buildEvidence": [
+            "bindings/lua/api-reference.json",
+            "scripts/lua_api_reference.py",
+            "scripts/package_documentation_surfaces.py"
+          ]
         }
       ],
       "releaseProof": "The RC6 source and documentation are validated locally; the user explicitly prohibited publishing this candidate until the coordinated feature branches are reviewed."

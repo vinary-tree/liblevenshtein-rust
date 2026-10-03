@@ -593,6 +593,8 @@ jobs:
             LIBLEVENSHTEIN_LIBDIR="$package_root/lib"
           LUA_CPATH="$rock_tree/lib/lua/5.4/?.so;;" \
             lua5.4 bindings/lua/tests/snapshot.lua
+          LUA_CPATH="$rock_tree/lib/lua/5.4/?.so;;" \
+            lua5.4 bindings/lua/examples/quickstart.lua
       - uses: actions/upload-artifact@v7
         with:
           name: luarocks-package
@@ -768,6 +770,8 @@ jobs:
     runs-on: ubuntu-24.04
     environment: luarocks
     steps:
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
       - run: sudo apt-get update && sudo apt-get install -y luarocks
       - name: Install LuaRocks' JSON transport dependency
         run: sudo luarocks install dkjson
@@ -775,12 +779,51 @@ jobs:
         with:
           name: luarocks-package
           path: dist
+      - name: Require the version-pinned Lua guide before uploading metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(jq -r '.canonical' release/version.json)"
+          docs="https://vinary-tree.github.io/liblevenshtein-rust/$version/lua/"
+          expected="dist/liblevenshtein-$(jq -r '.registries.luaRocks' release/version.json).rockspec"
+          grep -Fq "$docs" "$expected"
+          scratch="$RUNNER_TEMP/luarocks-docs-preflight.html"
+          curl --fail --silent --show-error --location "$docs" --output "$scratch"
+          grep -Fq 'levenshtein.transducer' "$scratch"
+          grep -Fq 'Common usage' "$scratch"
+          grep -Fq 'cache:stats' "$scratch"
       - name: Upload signed-in metadata to LuaRocks.org
         env:
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: >-
-          luarocks upload dist/liblevenshtein-4.0.0rc6-1.rockspec
+          luarocks upload
+          "dist/liblevenshtein-$(jq -r '.registries.luaRocks' release/version.json).rockspec"
           --temp-key "$LUAROCKS_API_KEY"
+      - name: Read back the exact public rockspec and linked guide
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(jq -r '.canonical' release/version.json)"
+          rock_version="$(jq -r '.registries.luaRocks' release/version.json)"
+          expected="dist/liblevenshtein-$rock_version.rockspec"
+          registry="https://luarocks.org/manifests/dylon/liblevenshtein-$rock_version.rockspec"
+          page='https://luarocks.org/modules/dylon/liblevenshtein'
+          docs="https://vinary-tree.github.io/liblevenshtein-rust/$version/lua/"
+          public="$RUNNER_TEMP/liblevenshtein-public.rockspec"
+          html="$RUNNER_TEMP/liblevenshtein-luarocks.html"
+          for attempt in $(seq 1 36); do
+            if curl --fail --silent --location "$registry" --output "$public" && \
+              cmp --silent "$expected" "$public" && \
+              curl --fail --silent --location "$page" --output "$html" && \
+              grep -Fq "$rock_version" "$html" && \
+              grep -Fq "$docs" "$html"; then
+              echo 'Public LuaRocks metadata and versioned guide verified.'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::error::Public LuaRocks metadata or guide differs from the staged source.' >&2
+          exit 1
 
   opam:
     name: Submit package to opam-repository

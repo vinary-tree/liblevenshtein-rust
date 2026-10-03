@@ -1,0 +1,112 @@
+{
+  "title": "liblevenshtein Lua",
+  "repository": "https://github.com/vinary-tree/liblevenshtein-rust",
+  "summary": "Fuzzy dictionary search, spelling correction, exact edit distances, bounded query caching, and phonetic matching through Lua 5.4 userdata.",
+  "examples": [
+    {
+      "title": "Dictionary search and a bounded result cache",
+      "path": "bindings/lua/examples/quickstart.lua",
+      "description": "Construct a libdictenstein dictionary, stream distance-ordered fuzzy matches, preserve valueless membership, and reuse a bounded cache."
+    }
+  ],
+  "groups": [
+    {
+      "title": "Module functions",
+      "sourceArray": "functions",
+      "entries": [
+        {"name": "transducer", "signature": "levenshtein.transducer(dictionary[, algorithm])", "description": "Retain a libdictenstein dictionary resource. Algorithm defaults to standard; creation does not walk all terms.", "returns": "Transducer userdata; close deterministically."},
+        {"name": "query_cache", "signature": "levenshtein.query_cache(transducer[, max_entries[, max_weight]])", "description": "Create a bounded result cache (defaults: 1024 entries, 64 MiB weight). Limits must be nonnegative.", "returns": "QueryCache userdata; close deterministically."},
+        {"name": "phonetic_pattern", "signature": "levenshtein.phonetic_pattern(regex)", "description": "Compile a regular-expression phonetic pattern once for repeated matching and dictionary queries.", "returns": "Pattern userdata."},
+        {"name": "llre_pattern", "signature": "levenshtein.llre_pattern(llre_source)", "description": "Compile a named LLRE phonetic pattern.", "returns": "Pattern userdata."},
+        {"name": "phonetic_rules", "signature": "levenshtein.phonetic_rules(rule_source_or_builtin)", "description": "Parse user rules or select english-orthography or english-phonetic built-ins.", "returns": "Rules userdata."},
+        {"name": "distance", "signature": "levenshtein.distance(source, target)", "description": "Compute ordinary Levenshtein distance over Unicode scalar values.", "returns": "Nonnegative integer distance."},
+        {"name": "distance_threshold", "signature": "levenshtein.distance_threshold(source, target, maximum)", "description": "Compute Levenshtein distance up to nonnegative maximum.", "returns": "Distance if within bound; -2 when exceeded on this Lua integer ABI."},
+        {"name": "damerau_distance", "signature": "levenshtein.damerau_distance(source, target)", "description": "Compute optimal-string-alignment distance with adjacent swaps; unlike unrestricted Damerau, it is not a metric.", "returns": "Nonnegative integer distance."},
+        {"name": "damerau_distance_threshold", "signature": "levenshtein.damerau_distance_threshold(source, target, maximum)", "description": "Compute optimal-string-alignment distance up to nonnegative maximum.", "returns": "Distance if within bound; -2 when exceeded on this Lua integer ABI."},
+        {"name": "true_damerau_distance", "signature": "levenshtein.true_damerau_distance(source, target)", "description": "Compute unrestricted Damerau-Levenshtein distance with history-composable transpositions.", "returns": "Nonnegative integer distance."},
+        {"name": "true_damerau_distance_threshold", "signature": "levenshtein.true_damerau_distance_threshold(source, target, maximum)", "description": "Compute unrestricted Damerau-Levenshtein distance up to nonnegative maximum.", "returns": "Distance if within bound; -2 when exceeded on this Lua integer ABI."}
+      ]
+    },
+    {
+      "title": "Transducer methods",
+      "sourceArray": "transducer_methods",
+      "entries": [
+        {"name": "query", "signature": "search:query(utf8, maximum[, order])", "description": "Capture a query-start dictionary revision and search a Unicode-scalar dictionary. Order defaults to traversal.", "returns": "Cursor of owned Lua match tables."},
+        {"name": "query_bytes", "signature": "search:query_bytes(bytes, maximum[, order])", "description": "Search a byte-domain dictionary; Lua strings may contain NUL and arbitrary octets.", "returns": "Cursor of owned Lua match tables."},
+        {"name": "query_u64", "signature": "search:query_u64({token, ...}, maximum[, order])", "description": "Search a u64-domain dictionary. Pass nonnegative Lua integers through math.maxinteger or exact decimal strings through UINT64_MAX; out-of-range and malformed values are rejected.", "returns": "Cursor of owned Lua match tables."},
+        {"name": "query_pattern", "signature": "search:query_pattern(pattern, maximum)", "description": "Search the captured dictionary through a compiled phonetic pattern; maximum is an unsigned 8-bit distance.", "returns": "Cursor of owned Lua match tables."},
+        {"name": "domain", "signature": "search:domain()", "description": "Inspect the retained dictionary unit domain.", "returns": "byte, unicode, or u64 string."},
+        {"name": "close", "signature": "search:close()", "description": "Release the retained provider; repeated calls are harmless.", "returns": "No value."}
+      ]
+    },
+    {
+      "title": "Query cursor methods",
+      "sourceArray": "cursor_methods",
+      "entries": [
+        {"name": "next", "signature": "cursor:next()", "description": "Advance the one-shot cursor; refill a bounded native batch as needed. Terms are copied to Lua strings or token tables.", "returns": "Match {term, distance[, id]} or nil at end."},
+        {"name": "next_batch", "signature": "cursor:next_batch([maximum])", "description": "Copy at most maximum matches into a Lua array; maximum defaults to the native batch size and must be positive.", "returns": "Array of match tables, or nil at end."},
+        {"name": "reduce_batches", "signature": "cursor:reduce_batches(seed, function(accumulator, batch), [maximum])", "description": "Consume successive copied Lua batches with a reducer; the callback result becomes the next accumulator.", "returns": "Final accumulator."},
+        {"name": "close", "signature": "cursor:close()", "description": "Release any native batch lease and the cursor; also invoked by Lua 5.4 __close and __gc.", "returns": "No value."}
+      ]
+    },
+    {
+      "title": "Bounded query-cache methods",
+      "sourceArray": "query_cache_methods",
+      "entries": [
+        {"name": "query", "signature": "cache:query(utf8, maximum[, order])", "description": "Query Unicode scalars through the bounded, revision-aware cache.", "returns": "Cursor."},
+        {"name": "query_bytes", "signature": "cache:query_bytes(bytes, maximum[, order])", "description": "Query byte units through the bounded cache.", "returns": "Cursor."},
+        {"name": "query_u64", "signature": "cache:query_u64({token, ...}, maximum[, order])", "description": "Query u64 tokens through the bounded cache. Use nonnegative Lua integers through math.maxinteger and exact decimal strings for larger u64 values.", "returns": "Cursor."},
+        {"name": "stats", "signature": "cache:stats()", "description": "Read requests, hits, misses, admissions, rejections, evictions, resident_entries, and resident_weight.", "returns": "A Lua table with eight integer fields."},
+        {"name": "clear", "signature": "cache:clear()", "description": "Evict all resident entries while retaining the cache configuration.", "returns": "The same cache userdata."},
+        {"name": "reset_stats", "signature": "cache:reset_stats()", "description": "Reset counters without evicting resident entries.", "returns": "The same cache userdata."},
+        {"name": "close", "signature": "cache:close()", "description": "Release the native cache; repeated calls are harmless.", "returns": "No value."}
+      ]
+    },
+    {
+      "title": "Compiled-pattern methods",
+      "sourceArray": "pattern_methods",
+      "entries": [
+        {"name": "matches", "signature": "pattern:matches(utf8)", "description": "Test a UTF-8 string against the compiled phonetic pattern.", "returns": "Boolean."},
+        {"name": "size", "signature": "pattern:size()", "description": "Inspect the compiled automaton's state and transition counts.", "returns": "Two integers: states, transitions."},
+        {"name": "close", "signature": "pattern:close()", "description": "Release compiled pattern storage; repeated calls are harmless.", "returns": "No value."}
+      ]
+    },
+    {
+      "title": "Phonetic-rule methods",
+      "sourceArray": "rules_methods",
+      "entries": [
+        {"name": "apply", "signature": "rules:apply(utf8)", "description": "Apply the selected phonetic rewrite rules; the returned Lua string owns its bytes.", "returns": "Rewritten string."},
+        {"name": "len", "signature": "rules:len()", "description": "Count rules in the compiled set.", "returns": "Nonnegative integer."},
+        {"name": "close", "signature": "rules:close()", "description": "Release the rule set; repeated calls are harmless.", "returns": "No value."}
+      ]
+    }
+  ],
+  "constants": [
+    {"name": "standard", "description": "algorithm.standard: ordinary Levenshtein edits."},
+    {"name": "transposition", "description": "algorithm.transposition: optimal-string-alignment adjacent swaps."},
+    {"name": "merge_and_split", "description": "algorithm.merge_and_split: symmetric merge and split edits."},
+    {"name": "damerau_levenshtein", "description": "algorithm.damerau_levenshtein: unrestricted Damerau-Levenshtein edits."},
+    {"name": "traversal", "description": "order.traversal: producer traversal order."},
+    {"name": "distance_then_term", "description": "order.distance_then_term: ascending distance, then term."},
+    {"name": "english_orthography", "description": "phonetic_rule_set_kind.english_orthography built-in."},
+    {"name": "english_phonetic", "description": "phonetic_rule_set_kind.english_phonetic built-in."},
+    {"name": "ok", "description": "status.ok: successful operation (0)."},
+    {"name": "end_of_stream", "description": "status.end_of_stream: traversal exhausted (1)."},
+    {"name": "invalid_argument", "description": "status.invalid_argument: rejected argument."},
+    {"name": "invalid_utf8", "description": "status.invalid_utf8: invalid Unicode input."},
+    {"name": "null_pointer", "description": "status.null_pointer: invalid native pointer."},
+    {"name": "panic", "description": "status.panic: contained Rust panic."},
+    {"name": "unsupported", "description": "status.unsupported: unsupported domain or capability."},
+    {"name": "io_error", "description": "status.io_error: native I/O failure."},
+    {"name": "closed", "description": "status.closed: closed native handle."},
+    {"name": "limit_exceeded", "description": "status.limit_exceeded: configured bound exceeded."},
+    {"name": "provider_error", "description": "status.provider_error: dictionary-provider callback failed."},
+    {"name": "batch_in_use", "description": "status.batch_in_use: incompatible outstanding batch lease."},
+    {"name": "domain_mismatch", "description": "status.domain_mismatch: query and dictionary unit domains disagree."}
+  ],
+  "protocols": [
+    {"name": "for match in cursor do", "sourceMarker": "metatable(state, CURSOR_MT, cursor_close, cursor_methods, cursor_next)", "description": "The cursor is callable as a Lua generic-for iterator. Explicitly close after early break, or declare it <close>."},
+    {"name": "local resource <close> = ...", "sourceMarker": "lua_setfield(state, -2, \"__close\")", "description": "All owned userdata participate in Lua 5.4 lexical cleanup; __gc is only a fallback."},
+    {"name": "match.term / match.distance / match.id", "sourceMarker": "lua_setfield(state, -2, \"term\")", "description": "Each match is an owned Lua table; id is absent if the dictionary term is valueless. U64 terms and IDs use Lua integers in range and exact decimal strings above math.maxinteger."}
+  ]
+}

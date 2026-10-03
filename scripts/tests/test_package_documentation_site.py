@@ -43,13 +43,14 @@ class PackageDocumentationSiteTests(unittest.TestCase):
             ],
         )
 
-    def test_julia_and_raku_references_are_mandatory_archive_surfaces(self) -> None:
+    def test_julia_raku_and_lua_references_are_mandatory_archive_surfaces(self) -> None:
         self.assertEqual(
             set(SITE.SURFACES),
-            {"native", "python", "javascript", "julia", "raku"},
+            {"native", "python", "javascript", "julia", "raku", "lua"},
         )
         self.assertEqual(SITE.SURFACES["julia"][1], "index.html")
         self.assertEqual(SITE.SURFACES["raku"][1], "index.html")
+        self.assertEqual(SITE.SURFACES["lua"][1], "index.html")
 
     def test_archive_bytes_are_reproducible(self) -> None:
         with tempfile.TemporaryDirectory(dir=SITE.ROOT / "target") as temporary:

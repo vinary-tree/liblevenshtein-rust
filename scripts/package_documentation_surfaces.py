@@ -14,4 +14,5 @@ GENERATED_SURFACE_LAYOUT: Final[dict[str, tuple[str, str]]] = {
     "javascript": ("javascript", "index.html"),
     "julia": ("julia", "index.html"),
     "raku": ("raku", "index.html"),
+    "lua": ("lua", "index.html"),
 }
