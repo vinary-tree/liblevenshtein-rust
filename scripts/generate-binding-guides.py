@@ -660,7 +660,7 @@ call on the same thread."""
     )
     if key == "ocaml":
         troubleshooting_guidance = """When loading fails, check the OCaml/opam
-version, native library and its dependent interop pin, C adapter linkage, and
+version, native library and its dependent interop pin, C FFI linkage, and
 loader search path. When a query fails after construction, report the
 host-language error and copied diagnostic before reducing the case to the
 smallest dictionary/query pair."""
