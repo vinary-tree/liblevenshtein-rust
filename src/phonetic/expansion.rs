@@ -147,6 +147,141 @@ pub fn expand_phonetic_alternatives_char(input: &str, rules: &[RewriteRuleChar])
     format!("({})", final_patterns.join("|"))
 }
 
+/// Resource ceiling reached during exhaustive reverse-phonetic expansion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExpansionLimitError {
+    /// A zero ceiling is invalid.
+    InvalidLimit,
+    /// More intermediate parse-prefix nodes are required.
+    NodeLimit,
+    /// Materialized regex text would exceed the byte ceiling.
+    OutputLimit,
+}
+
+/// Expand all reverse-phonetic alternatives under explicit node/output bounds.
+///
+/// Successful output is byte-for-byte identical to
+/// [`expand_phonetic_alternatives_char`]. A failed expansion returns no partial
+/// regex. The node limit includes the root prefix; output-byte accounting is
+/// conservative before deduplication to avoid an unbounded intermediate set.
+pub fn expand_phonetic_alternatives_char_bounded(
+    input: &str,
+    rules: &[RewriteRuleChar],
+    max_nodes: usize,
+    max_output_bytes: usize,
+) -> Result<String, ExpansionLimitError> {
+    if max_nodes == 0 || max_output_bytes == 0 {
+        return Err(ExpansionLimitError::InvalidLimit);
+    }
+    let reverse_map = build_reverse_map(rules);
+    if reverse_map
+        .iter()
+        .any(|entry| entry.segment.len() > max_output_bytes)
+    {
+        return Err(ExpansionLimitError::OutputLimit);
+    }
+    let (chars, byte_indices) = chars_and_byte_indices(input);
+    let n = chars.len();
+    if n == 0 {
+        return Ok(String::new());
+    }
+    let dp_len = one_extra_capacity(n).ok_or(ExpansionLimitError::NodeLimit)?;
+    let mut nodes = vec![ExpansionNode::root()];
+    let mut dp: Vec<Vec<usize>> = vec![Vec::new(); dp_len];
+    dp[0].push(0);
+
+    for i in 0..n {
+        if dp[i].is_empty() {
+            continue;
+        }
+        let remaining = &input[byte_indices[i]..];
+        let mut has_single = false;
+        for entry in &reverse_map {
+            if remaining.starts_with(entry.replacement.as_str()) {
+                has_single |= entry.replacement_char_len == 1;
+                let next_pos = i + entry.replacement_char_len;
+                if next_pos <= n {
+                    push_segment_nodes_bounded(
+                        &mut dp,
+                        &mut nodes,
+                        i,
+                        next_pos,
+                        &entry.segment,
+                        max_nodes,
+                        max_output_bytes,
+                    )?;
+                }
+            }
+        }
+        if !has_single {
+            let single = regex_escape_char(chars[i]);
+            push_segment_nodes_bounded(
+                &mut dp,
+                &mut nodes,
+                i,
+                i + 1,
+                &single,
+                max_nodes,
+                max_output_bytes,
+            )?;
+        }
+    }
+
+    let mut intermediate_bytes = 0usize;
+    for &node in &dp[n] {
+        intermediate_bytes = intermediate_bytes
+            .checked_add(nodes[node].len)
+            .ok_or(ExpansionLimitError::OutputLimit)?;
+        if intermediate_bytes > max_output_bytes {
+            return Err(ExpansionLimitError::OutputLimit);
+        }
+    }
+    let mut patterns: Vec<String> = dp[n]
+        .iter()
+        .map(|&node| materialize_expansion(node, &nodes))
+        .collect();
+    patterns.sort();
+    patterns.dedup();
+    let result = match patterns.len() {
+        0 => regex_escape(input),
+        1 => patterns.pop().expect("single pattern"),
+        _ => format!("({})", patterns.join("|")),
+    };
+    if result.len() > max_output_bytes {
+        return Err(ExpansionLimitError::OutputLimit);
+    }
+    Ok(result)
+}
+
+fn push_segment_nodes_bounded(
+    dp: &mut [Vec<usize>],
+    nodes: &mut Vec<ExpansionNode>,
+    current_pos: usize,
+    next_pos: usize,
+    segment: &str,
+    max_nodes: usize,
+    max_output_bytes: usize,
+) -> Result<(), ExpansionLimitError> {
+    let prefixes = &dp[current_pos];
+    if nodes
+        .len()
+        .checked_add(prefixes.len())
+        .is_none_or(|count| count > max_nodes)
+    {
+        return Err(ExpansionLimitError::NodeLimit);
+    }
+    if prefixes.iter().any(|&parent| {
+        nodes[parent]
+            .len
+            .checked_add(segment.len())
+            .is_none_or(|len| len > max_output_bytes)
+    }) {
+        return Err(ExpansionLimitError::OutputLimit);
+    }
+    push_segment_nodes(dp, nodes, current_pos, next_pos, segment);
+    Ok(())
+}
+
 struct ReverseMapEntry {
     replacement: String,
     replacement_char_len: usize,

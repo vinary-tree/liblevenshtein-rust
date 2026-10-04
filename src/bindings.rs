@@ -3092,34 +3092,72 @@ fn phonetic_error(error: impl fmt::Display) -> PhoneticBindingError {
 #[derive(Clone, Debug)]
 pub struct PhoneticPattern {
     nfa: NFAChar,
+    #[cfg(feature = "serialization")]
+    llre_metadata: Option<PhoneticLlreAotMetadata>,
+}
+
+#[cfg(all(feature = "bindings-phonetic", feature = "serialization"))]
+#[derive(Clone, Debug)]
+struct PhoneticLlreAotMetadata {
+    multiline: bool,
+    dotall: bool,
+    case_insensitive: bool,
+    name: Option<String>,
+    version: Option<String>,
+}
+
+#[cfg(all(feature = "bindings-phonetic", feature = "serialization"))]
+impl PhoneticLlreAotMetadata {
+    fn from_compiled(compiled: &crate::phonetic::llre::CompiledNFA) -> Self {
+        Self {
+            multiline: compiled.multiline,
+            dotall: compiled.dotall,
+            case_insensitive: compiled.case_insensitive,
+            name: compiled.name.clone(),
+            version: compiled.version.clone(),
+        }
+    }
+}
+
+/// Reject phonetic expressions that would exceed the shared NFA state ceiling
+/// before any language-facing matcher allocates a product automaton.
+#[cfg(feature = "bindings-phonetic")]
+pub(crate) fn validate_phonetic_regex_size(pattern: &str) -> Result<(), PhoneticBindingError> {
+    use crate::transducer::language::LANGUAGE_PRODUCT_MAX_STATES;
+
+    let source_bound = pattern.chars().count().saturating_mul(2);
+    if source_bound > LANGUAGE_PRODUCT_MAX_STATES {
+        return Err(PhoneticBindingError {
+            message: format!(
+                "pattern requires at least {source_bound} states; maximum is {LANGUAGE_PRODUCT_MAX_STATES}"
+            ),
+        });
+    }
+    let regex = crate::phonetic::regex::parse(pattern).map_err(phonetic_error)?;
+    let estimated =
+        crate::phonetic::nfa::estimate_thompson_states(&regex).map_err(phonetic_error)?;
+    if estimated > LANGUAGE_PRODUCT_MAX_STATES {
+        return Err(PhoneticBindingError {
+            message: format!(
+                "pattern requires {estimated} states; maximum is {LANGUAGE_PRODUCT_MAX_STATES}"
+            ),
+        });
+    }
+    Ok(())
 }
 
 #[cfg(feature = "bindings-phonetic")]
 impl PhoneticPattern {
     /// Compile a phonetic regular expression under the public state ceiling.
     pub fn from_regex(pattern: &str) -> Result<Self, PhoneticBindingError> {
-        use crate::transducer::language::LANGUAGE_PRODUCT_MAX_STATES;
-
-        let source_bound = pattern.chars().count().saturating_mul(2);
-        if source_bound > LANGUAGE_PRODUCT_MAX_STATES {
-            return Err(PhoneticBindingError {
-                message: format!(
-                    "pattern requires at least {source_bound} states; maximum is {LANGUAGE_PRODUCT_MAX_STATES}"
-                ),
-            });
-        }
+        validate_phonetic_regex_size(pattern)?;
         let regex = crate::phonetic::regex::parse(pattern).map_err(phonetic_error)?;
-        let estimated =
-            crate::phonetic::nfa::estimate_thompson_states(&regex).map_err(phonetic_error)?;
-        if estimated > LANGUAGE_PRODUCT_MAX_STATES {
-            return Err(PhoneticBindingError {
-                message: format!(
-                    "pattern requires {estimated} states; maximum is {LANGUAGE_PRODUCT_MAX_STATES}"
-                ),
-            });
-        }
         let nfa = crate::phonetic::nfa::compile(&regex).map_err(phonetic_error)?;
-        Ok(Self { nfa })
+        Ok(Self {
+            nfa,
+            #[cfg(feature = "serialization")]
+            llre_metadata: None,
+        })
     }
 
     /// Parse and compile an import-free `.llre` document.
@@ -3142,7 +3180,74 @@ impl PhoneticPattern {
             },
         )
         .map_err(phonetic_error)?;
-        Ok(Self { nfa: compiled.nfa })
+        Ok(Self {
+            #[cfg(feature = "serialization")]
+            llre_metadata: Some(PhoneticLlreAotMetadata::from_compiled(&compiled)),
+            nfa: compiled.nfa,
+        })
+    }
+
+    /// Load and compile a `.llre` file with native import resolution.
+    pub fn from_llre_file(
+        path: &std::path::Path,
+        search_paths: &[std::path::PathBuf],
+    ) -> Result<Self, PhoneticBindingError> {
+        use crate::phonetic::llre::{
+            compile_with_options, load_file, load_file_with_config, CompileOptions, LoaderConfig,
+        };
+        use crate::transducer::language::LANGUAGE_PRODUCT_MAX_STATES;
+
+        let file = if search_paths.is_empty() {
+            load_file(path)
+        } else {
+            load_file_with_config(path, LoaderConfig::with_search_paths(search_paths.to_vec()))
+        }
+        .map_err(phonetic_error)?;
+        let compiled = compile_with_options(
+            &file,
+            &CompileOptions {
+                max_states: Some(LANGUAGE_PRODUCT_MAX_STATES),
+                use_trampolining: true,
+                optimize: true,
+            },
+        )
+        .map_err(phonetic_error)?;
+        Ok(Self {
+            #[cfg(feature = "serialization")]
+            llre_metadata: Some(PhoneticLlreAotMetadata::from_compiled(&compiled)),
+            nfa: compiled.nfa,
+        })
+    }
+
+    /// Restore a compiled `.llre` pattern from its versioned native format.
+    #[cfg(feature = "serialization")]
+    pub fn from_compiled_bytes(bytes: &[u8]) -> Result<Self, PhoneticBindingError> {
+        use crate::transducer::language::LANGUAGE_PRODUCT_MAX_STATES;
+        let compiled = crate::phonetic::llre::from_bytes(bytes).map_err(phonetic_error)?;
+        if compiled.nfa.num_states() > LANGUAGE_PRODUCT_MAX_STATES {
+            return Err(PhoneticBindingError {
+                message: "compiled LLRE exceeds the language-product state ceiling".into(),
+            });
+        }
+        Ok(Self {
+            llre_metadata: Some(PhoneticLlreAotMetadata::from_compiled(&compiled)),
+            nfa: compiled.nfa,
+        })
+    }
+
+    /// Serialize the exact compiled NFA and preserved `.llre` metadata.
+    #[cfg(feature = "serialization")]
+    pub fn to_compiled_bytes(&self) -> Result<Vec<u8>, PhoneticBindingError> {
+        let metadata = self.llre_metadata.as_ref();
+        let compiled = crate::phonetic::llre::CompiledNFA {
+            nfa: self.nfa.clone(),
+            multiline: metadata.is_some_and(|value| value.multiline),
+            dotall: metadata.is_some_and(|value| value.dotall),
+            case_insensitive: metadata.is_some_and(|value| value.case_insensitive),
+            name: metadata.and_then(|value| value.name.clone()),
+            version: metadata.and_then(|value| value.version.clone()),
+        };
+        crate::phonetic::llre::to_bytes(&compiled).map_err(phonetic_error)
     }
 
     /// Test complete-string acceptance.
@@ -3183,6 +3288,32 @@ impl PhoneticRuleSet {
             .map_err(phonetic_error)
     }
 
+    /// Load a `.llev` file with native include resolution.
+    pub fn from_file(
+        path: &std::path::Path,
+        include_paths: &[std::path::PathBuf],
+    ) -> Result<Self, PhoneticBindingError> {
+        let file = crate::phonetic::llev::load_file_with_includes(path, include_paths)
+            .map_err(phonetic_error)?;
+        crate::phonetic::llev::RuleSetChar::from_llev(&file)
+            .map(|inner| Self { inner })
+            .map_err(phonetic_error)
+    }
+
+    /// Restore a compiled Unicode `.llev` rule set from versioned native bytes.
+    #[cfg(feature = "serialization")]
+    pub fn from_compiled_bytes(bytes: &[u8]) -> Result<Self, PhoneticBindingError> {
+        crate::phonetic::llev::from_bytes_char(bytes)
+            .map(|inner| Self { inner })
+            .map_err(phonetic_error)
+    }
+
+    /// Serialize this Unicode rule set to versioned native bytes.
+    #[cfg(feature = "serialization")]
+    pub fn to_compiled_bytes(&self) -> Result<Vec<u8>, PhoneticBindingError> {
+        crate::phonetic::llev::to_bytes_char(&self.inner).map_err(phonetic_error)
+    }
+
     /// Built-in English orthography normalization rules.
     pub fn english_orthography() -> Self {
         Self {
@@ -3218,5 +3349,10 @@ impl PhoneticRuleSet {
     /// Return whether no rules are enabled.
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
+    }
+
+    /// Borrow the compiled Unicode rules for other native phonetic engines.
+    pub(crate) fn rules(&self) -> &[crate::phonetic::RewriteRuleChar] {
+        &self.inner.rules
     }
 }

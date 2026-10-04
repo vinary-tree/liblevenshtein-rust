@@ -2,7 +2,7 @@
 from enum import IntEnum
 
 ABI_VERSION = 1
-API_REVISION = 7
+API_REVISION = 9
 DEFAULT_MATCH_BATCH = 256
 
 class Status(IntEnum):

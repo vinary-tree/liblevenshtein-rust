@@ -14,6 +14,19 @@ assumptions, stale contracts, and evidence links. Debug, legacy, and partial
 files are still audited, but they do not support library correctness claims
 until promoted in the manifest.
 
+The Julia phonetic AOT boundary has a deliberately narrow finite ownership
+model in [`PhoneticAotBoundary.tla`](tla/PhoneticAotBoundary.tla). TLC checked
+all 16 reachable states (55 generated) for feature-gated availability,
+transactional rejection, decode provenance, and one-shot/idempotent byte
+release. The five `LLEV-PHON-AOT` registry laws are extracted into real C-ABI
+tests in `tests/ffi_phonetic_files_aot.rs`. The model does not prove binary
+format parsing or the phonetic algorithms; native parser corruption/version
+tests and Rust/Julia differential tests cover those separate obligations.
+The [Julia phonetic binding contract](PHONETIC_JULIA_BINDING_CONTRACT.md)
+inventories every new family against the relevant bounded-result, streaming,
+or AOT model and names the concrete C/Julia property test and any semantic
+proof obligation outside those protocol models.
+
 The [CBC baseline evidence audit](CBC_BASELINE_EVIDENCE.md) records the
 metric-automata theory campaign's starting revision, claim-by-claim proof
 scope, source correspondence gaps, and draft-correction checklist. It does not

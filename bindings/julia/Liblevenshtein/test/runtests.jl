@@ -30,6 +30,14 @@ const LL = Liblevenshtein
     @test sizeof(LL.RawWallBreakerResult) == 24
     @test sizeof(LL.RawWallBreakerBatch) == 24
     @test sizeof(LL.RawPatternPiece) == 40
+    @test sizeof(LL.PhoneticFeatureWeights) == 56
+    @test sizeof(LL.RawPhoneticGrepMatch) == 32
+    @test sizeof(LL.RawUtf8View) == 16
+    @test sizeof(LL.RawPhoneticCandidate) == 40
+    @test sizeof(LL.RawPhoneticOnlineMatch) == 72
+    @test sizeof(LL.RawPhoneticTokenDetail) == 64
+    @test sizeof(LL.RawPhoneticTokenMatch) == 56
+    @test sizeof(LL.PhoneticExpansionLimits) == 40
 end
 
 @testset "finite Unicode WallBreaker" begin
@@ -509,6 +517,379 @@ if LL.build_features() & LL.BUILD_FEATURE_PHONETIC != 0
             @test rules("KNIGHT") isa String
         finally
             LL.close!(rules)
+        end
+    end
+
+    @testset "native phonetic analysis" begin
+        @test LL.articulatory_distance('p', 'p') == 0.0
+        @test 0.0 < LL.articulatory_distance('p', 'b') <
+            LL.articulatory_distance('p', 'h')
+        weights = LL.PhoneticFeatureWeights(voicing=0.35)
+        @test LL.articulatory_distance('p', 'b'; weights=weights) >
+            LL.articulatory_distance('p', 'b')
+        for source in ("", "phone", "café", "🦀a"),
+            target in ("", "fone", "cafe", "🦀b")
+            @test LL.articulatory_edit_distance(source, target) >= 0.0
+            @test LL.articulatory_edit_distance(source, target) ==
+                LL.articulatory_edit_distance(target, source)
+            @test LL.articulatory_edit_distance(source, target;
+                weights=LL.PhoneticFeatureWeights()) ==
+                LL.articulatory_edit_distance(source, target)
+        end
+        @test LL.articulatory_edit_distance("p", "b") ==
+            LL.articulatory_distance('p', 'b')
+        @test LL.articulatory_edit_distance("p", "b"; weights=weights) ==
+            LL.articulatory_distance('p', 'b'; weights=weights)
+        @test LL.syllable_count("happy") == 2
+        @test LL.syllable_boundaries("happy") == [0, 3]
+        @test LL.syllable_count("ˈhæp.i"; ipa=true) == 2
+        @test LL.syllable_boundaries("ˈhæp.i"; ipa=true) == [0, 5]
+        @test isempty(LL.syllable_boundaries(""))
+        @test LL.syllable_count("") == 0
+        @test_throws ArgumentError LL.PhoneticFeatureWeights(voicing=-1)
+        @test_throws ArgumentError LL.PhoneticFeatureWeights(voicing=NaN)
+        @test_throws ArgumentError LL.articulatory_edit_distance("a", "b";
+            max_cells=0)
+        failure = try
+            LL.articulatory_edit_distance("abc", "def"; max_cells=8)
+            nothing
+        catch error
+            error
+        end
+        @test failure isa LL.NativeError
+        @test failure.status == Int32(LL.STATUS_LIMIT_EXCEEDED)
+        @test_throws LL.NativeError LL.syllable_count("happy";
+            max_input_scalars=4)
+    end
+
+    @testset "native phonetic grep" begin
+        grep = LL.PhoneticGrep("phone"; max_distance=1)
+        try
+            @test LL.distance_config(grep) == (effective=1, local_override=nothing)
+            @test LL.match_distance(grep, "phone") == 0
+            @test LL.match_distance(grep, "phon") == 1
+            @test LL.match_distance(grep, "tablet") === nothing
+            @test "phon" in grep
+            @test ! ("tablet" in grep)
+            line_matches = LL.scan_line(grep, "phone phon")
+            @test [(m.text, m.line_number, m.start_byte, m.end_byte, m.distance)
+                for m in line_matches] ==
+                [("phone", 1, 0, 5, 0), ("phon", 1, 6, 10, 1)]
+            text_matches = LL.scan_text(grep,
+                "exact phone\nnear phon\nunrelated tablet")
+            @test [(m.text, m.line_number, m.start_byte, m.end_byte, m.distance)
+                for m in text_matches] ==
+                [("phone", 1, 6, 11, 0), ("phon", 2, 5, 9, 1)]
+            @test_throws LL.NativeError LL.scan_line(grep, "phone phon";
+                max_matches=1)
+            @test_throws LL.NativeError LL.match_distance(grep, "phone";
+                max_candidate_bytes=4)
+        finally
+            LL.close!(grep)
+        end
+        @test !isopen(grep)
+        @test_throws LL.NativeError LL.match_distance(grep, "phone")
+
+        rules = LL.PhoneticRuleSet("ph -> f;")
+        normalized = LL.PhoneticGrep("fone"; rules, max_distance=0)
+        LL.close!(rules)
+        try
+            @test LL.match_distance(normalized, "phone") == 0
+            @test LL.match_distance(normalized, "fone") == 0
+            @test [m.text for m in LL.scan_line(normalized, "phone fone")] ==
+                ["phone", "fone"]
+        finally
+            LL.close!(normalized)
+        end
+
+        folded = LL.PhoneticGrep("hello"; case_insensitive=true)
+        try
+            @test LL.match_distance(folded, "HELLO") == 0
+        finally
+            close(folded)
+        end
+        transposed = LL.PhoneticGrep("phone"; max_distance=1,
+            algorithm=LL.ALGORITHM_TRANSPOSITION)
+        try
+            @test LL.match_distance(transposed, "phoen") == 1
+        finally
+            close(transposed)
+        end
+        @test_throws ArgumentError LL.PhoneticGrep("x"; max_distance=256)
+        @test_throws LL.NativeError LL.PhoneticGrep("(")
+    end
+
+    @testset "native phonetic-normalized dictionaries" begin
+        terms = ["phone", "fone", "bone", "café", "écho", "phone"]
+        for compact in (false, true)
+            dictionary = LL.PhoneticNormalizedDictionary(terms; compact)
+            try
+                candidates = LL.query(dictionary, "fone"; max_distance=0)
+                @test Set(candidate.term for candidate in candidates) ==
+                    Set(["phone", "fone"])
+                @test all(candidate -> candidate.distance == 0, candidates)
+                @test all(candidate -> candidate.normalized_form isa String, candidates)
+                @test all(candidate -> candidate.term isa String, candidates)
+                @test LL.query(dictionary, "🦀"; max_distance=0) == LL.PhoneticCandidate[]
+                @test_throws LL.NativeError LL.query(dictionary, "fone";
+                    max_results=1)
+                @test_throws LL.NativeError LL.query(dictionary, "fone";
+                    max_query_scalars=3)
+                if compact
+                    @test_throws LL.NativeError LL.insert!(dictionary, "phoen")
+                else
+                    @test LL.insert!(dictionary, "phoen")
+                    @test !LL.insert!(dictionary, "phoen")
+                    @test LL.remove!(dictionary, "phoen")
+                    @test !LL.remove!(dictionary, "phoen")
+                    @test push!(dictionary, "phoen") === dictionary
+                    @test delete!(dictionary, "phoen") === dictionary
+                end
+            finally
+                close(dictionary)
+            end
+            @test !isopen(dictionary)
+            @test_throws LL.NativeError LL.query(dictionary, "fone")
+        end
+        @test_throws ArgumentError LL.PhoneticNormalizedDictionary("phone")
+        @test_throws LL.NativeError LL.PhoneticNormalizedDictionary(["phone"];
+            max_total_bytes=4)
+        rules = LL.PhoneticRuleSet("ph -> f;")
+        dictionary = LL.PhoneticNormalizedDictionary(["phone", "fone"]; rules)
+        close(rules)
+        try
+            @test Set(candidate.term for candidate in LL.query(dictionary, "fone")) ==
+                Set(["phone", "fone"])
+        finally
+            close(dictionary)
+        end
+    end
+
+    @testset "native character-level phonetic grep and streaming" begin
+        grep = LL.PhoneticOnlineGrep("café")
+        try
+            @test LL.normalized_query(grep) == "café"
+            expected = LL.scan(grep, "🦀 café café")
+            @test [item.original_text for item in expected] == ["café", "café"]
+            @test [item.byte_range for item in expected] == [(5, 10), (11, 16)]
+            @test [item.char_range for item in expected] == [(2, 6), (7, 11)]
+            @test isempty(LL.scan(grep, "unrelated"))
+            stream = LL.streaming(grep; max_total_bytes=64)
+            close(grep)
+            try
+                @test LL.feed!(stream, "🦀 ca") === stream
+                LL.feed!(stream, "fé ca")
+                LL.feed!(stream, "fé")
+                @test [(item.original_text, item.byte_range, item.char_range)
+                    for item in LL.finish!(stream)] ==
+                    [(item.original_text, item.byte_range, item.char_range)
+                        for item in expected]
+                @test_throws ArgumentError LL.finish!(stream)
+                @test_throws ArgumentError LL.feed!(stream, "x")
+            finally
+                close(stream)
+            end
+        finally
+            close(grep)
+        end
+        rules = LL.PhoneticRuleSet("ph -> f;")
+        online = LL.PhoneticOnlineGrep("phone"; rules)
+        close(rules)
+        try
+            @test LL.normalized_query(online) == "fone"
+            @test Set(item.original_text for item in LL.scan(online, "fone phone")) ==
+                Set(["fone", "phone"])
+            @test_throws LL.NativeError LL.scan(online, "fone phone";
+                max_input_bytes=9)
+            @test_throws LL.NativeError LL.scan(online, "fone phone";
+                max_matches=1)
+        finally
+            close(online)
+        end
+    end
+    @testset "native token-query phonetic grep" begin
+        grep = LL.PhoneticTokenGrep("hello world"; default_distance=1)
+        try
+            matches = LL.scan(grep, "helo wrld and hello world")
+            @test length(matches) == 2
+            @test matches[1].matched_text == "helo wrld"
+            @test matches[1].total_distance == 2
+            @test matches[1].byte_range == (0, 9)
+            @test length(matches[1].details) == 2
+            @test [detail.original_text for detail in matches[1].details] ==
+                ["helo", "wrld"]
+            @test [detail.distance for detail in matches[1].details] == [1, 1]
+            @test matches[2].matched_text == "hello world"
+            @test_throws LL.NativeError LL.scan(grep, "helo wrld";
+                max_input_bytes=8)
+            @test_throws LL.NativeError LL.scan(grep, "helo wrld";
+                max_details=1)
+        finally
+            close(grep)
+        end
+        rules = LL.PhoneticRuleSet("ph -> f;")
+        normalized = LL.PhoneticTokenGrep("fone"; rules)
+        close(rules)
+        try
+            @test [match.matched_text for match in LL.scan(normalized, "phone")] ==
+                ["phone"]
+        finally
+            close(normalized)
+        end
+        @test_throws LL.NativeError LL.PhoneticTokenGrep("(")
+        @test_throws ArgumentError LL.PhoneticTokenGrep("a";
+            max_query_bytes=0)
+    end
+    @testset "native incremental phonetic rewriting" begin
+        rules = LL.PhoneticRuleSet("ph -> f;")
+        transducer = LL.PhoneticTransducer(; rules)
+        close(rules)
+        try
+            @test LL.normalize(transducer, "🦀 phone") == "🦀 fone"
+            parts = [LL.feed!(transducer, "🦀 p"),
+                LL.feed!(transducer, "hone"), LL.finish!(transducer)]
+            @test join(parts) == "🦀 fone"
+            @test_throws ArgumentError LL.feed!(transducer, "x")
+            @test LL.reset!(transducer) === transducer
+            @test LL.feed!(transducer, "phone") * LL.finish!(transducer) == "fone"
+            LL.reset!(transducer)
+            @test_throws LL.NativeError LL.feed!(transducer, "abcdefgh";
+                max_output_bytes=1)
+            @test LL.normalize(transducer, "phone") == "fone"
+        finally
+            close(transducer)
+        end
+        @test_throws LL.NativeError LL.normalize(transducer, "phone")
+    end
+    @testset "bounded reverse phonetic expansion" begin
+        rules = LL.PhoneticRuleSet("ph -> f;")
+        try
+            pattern = LL.expand_phonetic_alternatives("fone"; rules)
+            @test occursin("ph", pattern)
+            @test occursin("f", pattern)
+            @test LL.expand_phonetic_with_costs("fone"; rules).pattern isa String
+            @test LL.expand_phonetic_with_costs("fone"; rules).max_cost >= 0
+            @test LL.expand_phonetic_alternatives(""; rules) == ""
+            @test_throws LL.NativeError LL.expand_phonetic_alternatives("fone";
+                rules, limits=LL.PhoneticExpansionLimits(max_nodes=1))
+            @test_throws LL.NativeError LL.expand_phonetic_with_costs("fone";
+                rules, limits=LL.PhoneticExpansionLimits(max_output_bytes=2))
+        finally
+            close(rules)
+        end
+        @test_throws ArgumentError LL.PhoneticExpansionLimits(max_nodes=0)
+    end
+    @testset "native IPA feature classification" begin
+        @test :Voiced in LL.phonetic_features('b')
+        @test :Stop in LL.phonetic_features('p')
+        @test isempty(LL.phonetic_features('🦀'))
+        @test 'b' in LL.characters_with_features([:Voiced, :Stop])
+        @test 'p' in LL.characters_with_features([:Voiceless, :Stop])
+        @test 'p' in LL.similar_phonetic_chars('b')
+        @test 'p' ∉ LL.similar_phonetic_chars('p')
+        @test LL.voicing_pair('p') == 'b'
+        @test LL.are_phonetically_similar('p', 'b')
+        @test LL.is_free_phonetic_substitution('p', 'b')
+        @test !LL.is_free_phonetic_substitution('p', 'h')
+        @test LL.expand_feature_based('p') isa Vector{Char}
+        @test LL.feature_set_distance([:Voiced], [:Voiceless]) >= 0
+        @test_throws ArgumentError LL.characters_with_features([:Unknown])
+    end
+    @testset "native phonetic file loaders and versioned AOT" begin
+        fixtures = normpath(joinpath(@__DIR__, "..", "..", "..", "..",
+            "tests", "fixtures", "phonetic_binding"))
+        rules = LL.load_phonetic_rules(joinpath(fixtures, "rules.llev"))
+        pattern = LL.load_phonetic_pattern(joinpath(fixtures, "pattern.llre"))
+        try
+            @test rules("phone") == "fone"
+            @test "phone" in pattern
+            @test !("café" in pattern)
+            @test_throws LL.NativeError LL.load_phonetic_rules(
+                joinpath(fixtures, "missing.llev"))
+            @test_throws LL.NativeError LL.load_phonetic_rules(
+                joinpath(fixtures, "rules.llev"); max_total_path_bytes=2)
+            @test_throws ArgumentError LL.load_phonetic_rules(
+                joinpath(fixtures, "rules.llev"); search_paths=fill("x", 65))
+            if LL.build_features() & LL.BUILD_FEATURE_PHONETIC_AOT != 0
+                rule_bytes = LL.compiled_phonetic_bytes(rules)
+                pattern_bytes = LL.compiled_phonetic_bytes(pattern)
+                @test !isempty(rule_bytes)
+                @test !isempty(pattern_bytes)
+                restored_rules = LL.load_compiled_phonetic_rules(rule_bytes)
+                restored_pattern = LL.load_compiled_phonetic_pattern(pattern_bytes)
+                try
+                    @test restored_rules("phone") == rules("phone")
+                    @test ("phone" in restored_pattern) == ("phone" in pattern)
+                    @test !("café" in restored_pattern)
+                finally
+                    close(restored_rules)
+                    close(restored_pattern)
+                end
+                @test_throws LL.NativeError LL.compiled_phonetic_bytes(rules;
+                    max_output_bytes=1)
+                @test_throws LL.NativeError LL.load_compiled_phonetic_rules(
+                    rule_bytes; max_input_bytes=length(rule_bytes) - 1)
+                corrupted = copy(rule_bytes)
+                corrupted[1] = xor(corrupted[1], UInt8(0xff))
+                @test_throws LL.NativeError LL.load_compiled_phonetic_rules(corrupted)
+                wrong_version = copy(rule_bytes)
+                wrong_version[5] = xor(wrong_version[5], UInt8(0xff))
+                @test_throws LL.NativeError LL.load_compiled_phonetic_rules(wrong_version)
+                @test_throws LL.NativeError LL.load_compiled_phonetic_pattern(
+                    UInt8[0x00, 0x01])
+            else
+                @test_throws LL.NativeError LL.compiled_phonetic_bytes(rules)
+                @test_throws LL.NativeError LL.load_compiled_phonetic_rules(UInt8[])
+            end
+        finally
+            close(rules)
+            close(pattern)
+        end
+    end
+    @testset "finite phonetic cross-surface properties" begin
+        # Exhaust the 4^3 short spellings rather than relying on a random seed.
+        cases = [join(parts) for parts in Iterators.product(
+            ("", "p", "h", "f"), ("", "p", "h", "f"), ("", "p", "h", "f"))]
+        rules = LL.PhoneticRuleSet("ph -> f;")
+        mutable = LL.PhoneticNormalizedDictionary(cases; rules)
+        compact = LL.PhoneticNormalizedDictionary(cases; rules, compact=true)
+        rewrite = LL.PhoneticTransducer(; rules)
+        grep = LL.PhoneticOnlineGrep("f"; rules)
+        try
+            for word in cases
+                left = [(c.term, c.distance, c.normalized_form)
+                    for c in LL.query(mutable, word; max_distance=1)]
+                right = [(c.term, c.distance, c.normalized_form)
+                    for c in LL.query(compact, word; max_distance=1)]
+                @test left == right
+
+                expected = LL.normalize(rewrite, word)
+                LL.reset!(rewrite)
+                prefix = isempty(word) ? "" : string(first(word))
+                suffix = isempty(word) ? "" : word[nextind(word, firstindex(word)):end]
+                emitted = LL.feed!(rewrite, prefix) *
+                    LL.feed!(rewrite, suffix) * LL.finish!(rewrite)
+                @test emitted == expected
+                LL.reset!(rewrite)
+
+                baseline = [(m.original_text, m.byte_range, m.char_range, m.distance)
+                    for m in LL.scan(grep, word)]
+                stream = LL.streaming(grep; max_total_bytes=64)
+                try
+                    LL.feed!(stream, word)
+                    streamed = [(m.original_text, m.byte_range, m.char_range, m.distance)
+                        for m in LL.finish!(stream)]
+                    @test streamed == baseline
+                finally
+                    close(stream)
+                end
+            end
+        finally
+            close(grep)
+            close(rewrite)
+            close(compact)
+            close(mutable)
+            close(rules)
         end
     end
 end

@@ -2,7 +2,7 @@
 
 use super::{
     LlevAlgorithm, LlevQueryOrder, LlevStatus, LLEV_ABI_VERSION, LLEV_API_REVISION,
-    LLEV_BUILD_FEATURE_CORE, LLEV_BUILD_FEATURE_PHONETIC,
+    LLEV_BUILD_FEATURE_CORE, LLEV_BUILD_FEATURE_PHONETIC, LLEV_BUILD_FEATURE_PHONETIC_AOT,
 };
 use crate::bindings::{
     BindingError, MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceQueryCache,
@@ -262,7 +262,15 @@ pub extern "C" fn llev_build_features() -> u64 {
     } else {
         0
     };
-    LLEV_BUILD_FEATURE_CORE | phonetic
+    let aot = if cfg!(all(
+        feature = "bindings-phonetic",
+        feature = "serialization"
+    )) {
+        LLEV_BUILD_FEATURE_PHONETIC_AOT
+    } else {
+        0
+    };
+    LLEV_BUILD_FEATURE_CORE | phonetic | aot
 }
 
 /// Return a thread-local error message owned by the library.

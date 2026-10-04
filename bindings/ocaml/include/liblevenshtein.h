@@ -668,6 +668,18 @@ LLEV_API void llev_universal_online_free(LlevUniversalOnlineAutomaton* online);
 
 /** @} */
 
+/** Borrowed UTF-8 view; empty strings may use {NULL, 0}. */
+typedef struct LlevUtf8View {
+    const char* data;
+    size_t len;
+} LlevUtf8View;
+
+/** Owned arbitrary AOT bytes; not text and not NUL-terminated. */
+typedef struct LlevOwnedBytes {
+    uint8_t* data;
+    size_t len;
+} LlevOwnedBytes;
+
 /** Compile an import-free Unicode phonetic regular expression.
  * @param source UTF-8 expression bytes
  * @param source_len expression byte length
@@ -684,6 +696,14 @@ LLEV_API LlevStatus llev_phonetic_pattern_compile_regex(
  */
 LLEV_API LlevStatus llev_phonetic_pattern_compile_llre(
     const char* source, size_t source_len, LlevPhoneticPattern** out_pattern);
+/** Resolve .llre imports from a trusted local file, then compile under the
+ * same NFA state ceiling. Search paths are borrowed UTF-8 directory views;
+ * zero paths select native loader defaults. Path limits do not bound the
+ * contents of transitively imported files. */
+LLEV_API LlevStatus llev_phonetic_pattern_load_llre_file(
+    const char* path, size_t path_len,
+    const LlevUtf8View* search_paths, size_t search_path_count,
+    size_t max_total_path_bytes, LlevPhoneticPattern** out_pattern);
 /** Release a compiled pattern; cursors retain independent pattern products.
  * @param pattern owned pattern to consume; NULL is a no-op
  */
@@ -732,6 +752,14 @@ LLEV_API LlevStatus llev_transducer_query_pattern(
  */
 LLEV_API LlevStatus llev_phonetic_rules_parse(
     const char* source, size_t source_len, LlevPhoneticRuleSet** out_rules);
+/** Resolve .llev includes from a trusted local file. Search paths are
+ * borrowed UTF-8 directory views. Zero paths use native loader defaults;
+ * at most 64 paths and positive max_total_path_bytes are accepted. The path
+ * ceiling does not bound contents of files loaded transitively. */
+LLEV_API LlevStatus llev_phonetic_rules_load_file(
+    const char* path, size_t path_len,
+    const LlevUtf8View* search_paths, size_t search_path_count,
+    size_t max_total_path_bytes, LlevPhoneticRuleSet** out_rules);
 /** Construct one built-in phonetic rewrite-rule set.
  * @param kind one published LlevPhoneticRuleSetKind numeric value
  * @param out_rules receives a caller-owned immutable rule set
@@ -766,6 +794,371 @@ LLEV_API LlevStatus llev_phonetic_rules_apply(
  * @param value owned string structure; NULL and {NULL, 0} are no-ops
  */
 LLEV_API void llev_owned_string_free(LlevOwnedString* value);
+
+/** Native versioned phonetic AOT serialization. All operations require
+ * LLEV_BUILD_FEATURE_PHONETIC_AOT; otherwise they return UNSUPPORTED without
+ * touching outputs. Byte ceilings must be positive and at most 16 MiB.
+ * Deserializers reject invalid magic/version and oversized NFAs. The formats
+ * are native `.llev` / `.llre` formats, not a stable cross-version wire ABI. */
+LLEV_API LlevStatus llev_phonetic_rules_to_bytes(
+    const LlevPhoneticRuleSet* rules, size_t max_output_bytes,
+    LlevOwnedBytes* out_bytes);
+LLEV_API LlevStatus llev_phonetic_rules_from_bytes(
+    const uint8_t* data, size_t data_len, size_t max_input_bytes,
+    LlevPhoneticRuleSet** out_rules);
+LLEV_API LlevStatus llev_phonetic_pattern_to_bytes(
+    const LlevPhoneticPattern* pattern, size_t max_output_bytes,
+    LlevOwnedBytes* out_bytes);
+LLEV_API LlevStatus llev_phonetic_pattern_from_bytes(
+    const uint8_t* data, size_t data_len, size_t max_input_bytes,
+    LlevPhoneticPattern** out_pattern);
+/** Release and clear an exact owned AOT byte buffer. NULL is a no-op. */
+LLEV_API void llev_owned_bytes_free(LlevOwnedBytes* value);
+
+/** Dimension costs for native articulatory distance. Every field must be
+ * finite and nonnegative. NULL selects Rust's FeatureDistanceWeights::standard.
+ * The layout is seven consecutive IEEE-754 binary64 values. */
+typedef struct LlevPhoneticFeatureWeights {
+    double voicing;
+    double place_step;
+    double manner_default;
+    double manner_table_scale;
+    double vowel_height_step;
+    double vowel_backness_step;
+    double vowel_rounding;
+} LlevPhoneticFeatureWeights;
+
+/** Native IPA feature distance between two Unicode scalar values.
+ * Surrogate and out-of-range inputs are INVALID_ARGUMENT. The result is
+ * written only on success; a NULL weights pointer selects native defaults. */
+LLEV_API LlevStatus llev_phonetic_articulatory_distance(
+    uint32_t source, uint32_t target,
+    const LlevPhoneticFeatureWeights* weights, double* out_distance);
+
+/** Native weighted edit distance with insertion/deletion cost one and
+ * articulatory substitution cost. max_cells must be positive and bounds the
+ * source/target scalar product as well as either individual length. Exceeding
+ * it returns LIMIT_EXCEEDED before allocation; output is then unchanged. */
+LLEV_API LlevStatus llev_phonetic_articulatory_edit_distance(
+    const char* source, size_t source_len,
+    const char* target, size_t target_len,
+    const LlevPhoneticFeatureWeights* weights,
+    size_t max_cells, double* out_distance);
+
+/** Count syllables under the English-orthographic (ipa=0) or IPA (ipa=1)
+ * heuristic. max_input_scalars must be positive. Empty input
+ * has count zero. The result is unchanged on error. */
+LLEV_API LlevStatus llev_phonetic_syllable_count(
+    const char* input, size_t input_len, uint8_t ipa,
+    size_t max_input_scalars, size_t* out_count);
+
+/** Copy scalar-indexed syllable start positions. out_count receives the
+ * required number of positions even when capacity is insufficient. The
+ * (NULL, 0) sizing call is valid; no positions are written on failure.
+ * English and IPA may report a number of boundary starts distinct from the
+ * corresponding heuristic syllable count; both match their native Rust APIs. */
+LLEV_API LlevStatus llev_phonetic_syllable_boundaries(
+    const char* input, size_t input_len, uint8_t ipa,
+    size_t max_input_scalars, size_t* out_positions,
+    size_t capacity, size_t* out_count);
+
+/** Immutable, reusable word-boundary phonetic grep configuration. */
+typedef struct LlevPhoneticGrep LlevPhoneticGrep;
+
+/** One copied grep result. Byte offsets are zero-based, end-exclusive within
+ * the one-based logical line number. All reserved bytes are zero. */
+typedef struct LlevPhoneticGrepMatch {
+    size_t line_number;
+    size_t start_byte;
+    size_t end_byte;
+    uint8_t distance;
+    uint8_t reserved[7];
+} LlevPhoneticGrepMatch;
+
+/** Compile a bounded phonetic grep pattern. NULL rules mean no rewrite rules;
+ * a non-NULL rule set is cloned, so the matcher outlives its source rules.
+ * `algorithm` is one published LlevAlgorithm value and `case_insensitive` is
+ * zero or one. Pattern NFA states obey the shared language-product ceiling. */
+LLEV_API LlevStatus llev_phonetic_grep_new(
+    const char* pattern, size_t pattern_len,
+    const LlevPhoneticRuleSet* rules,
+    uint8_t max_distance, uint32_t algorithm, uint8_t case_insensitive,
+    LlevPhoneticGrep** out_grep);
+/** Consume an owned grep handle. NULL is a no-op. */
+LLEV_API void llev_phonetic_grep_free(LlevPhoneticGrep* grep);
+/** Report effective distance and optional inline `(?;N:...)` override. */
+LLEV_API LlevStatus llev_phonetic_grep_distance_config(
+    const LlevPhoneticGrep* grep,
+    uint8_t* out_effective, uint8_t* out_local, uint8_t* out_has_local);
+/** Return optional distance for one candidate. The caller sets a positive
+ * max_candidate_bytes work ceiling; both outputs change only on success. */
+LLEV_API LlevStatus llev_phonetic_grep_matches(
+    const LlevPhoneticGrep* grep,
+    const char* candidate, size_t candidate_len, size_t max_candidate_bytes,
+    uint8_t* out_distance, uint8_t* out_matches);
+/** Copy all word matches in one line. The caller sets a positive input ceiling
+ * and owns a descriptor array. (NULL,0) is valid for sizing. Insufficient
+ * capacity returns LIMIT_EXCEEDED, sets out_count, and writes no descriptors. */
+LLEV_API LlevStatus llev_phonetic_grep_scan_line(
+    const LlevPhoneticGrep* grep,
+    const char* line, size_t line_len, size_t max_input_bytes,
+    LlevPhoneticGrepMatch* out_matches, size_t capacity, size_t* out_count);
+/** Scan all lines using Rust's str::lines and preserve one-based line numbers;
+ * capacity and ownership follow llev_phonetic_grep_scan_line. */
+LLEV_API LlevStatus llev_phonetic_grep_scan_text(
+    const LlevPhoneticGrep* grep,
+    const char* document, size_t document_len, size_t max_input_bytes,
+    LlevPhoneticGrepMatch* out_matches, size_t capacity, size_t* out_count);
+
+/** One owned normalized-space candidate. Free only via candidates_free. */
+typedef struct LlevPhoneticCandidate {
+    LlevOwnedString term;
+    size_t distance;
+    LlevOwnedString normalized_form;
+} LlevPhoneticCandidate;
+/** Native phonetic-normalized dictionary; mode 0 mutable, mode 1 compact
+ * immutable term-ID payloads. */
+typedef struct LlevPhoneticDictionary LlevPhoneticDictionary;
+/** Build a native normalized dictionary from length-bearing UTF-8 terms.
+ * Optional rules are copied; NULL selects English Zompist rules. All terms
+ * are copied. Positive max_terms and max_total_bytes are strict ceilings.
+ * Algorithm must be a published LlevAlgorithm and mode must be 0 or 1. */
+LLEV_API LlevStatus llev_phonetic_dictionary_new(
+    const LlevUtf8View* terms, size_t term_count,
+    const LlevPhoneticRuleSet* rules, uint32_t algorithm, uint8_t mode,
+    size_t max_terms, size_t max_total_bytes,
+    LlevPhoneticDictionary** out_dictionary);
+/** Consume a dictionary; NULL is a no-op. */
+LLEV_API void llev_phonetic_dictionary_free(LlevPhoneticDictionary* dictionary);
+/** Query in native relevance order; max_query_scalars and max_results must be
+ * positive. An excessive result count returns LIMIT_EXCEEDED with both outputs
+ * unchanged. The successful returned array and its strings are caller-owned. */
+LLEV_API LlevStatus llev_phonetic_dictionary_query(
+    const LlevPhoneticDictionary* dictionary,
+    const char* query, size_t query_len, size_t max_distance,
+    size_t max_query_scalars, size_t max_results,
+    LlevPhoneticCandidate** out_candidates, size_t* out_count);
+/** Consume an exact array/count pair returned by dictionary_query. */
+LLEV_API void llev_phonetic_candidates_free(
+    LlevPhoneticCandidate* candidates, size_t count);
+/** Modify mode-0 dictionary. remove=0 inserts; remove=1 removes. Compact
+ * mode reports UNSUPPORTED. max_term_scalars must be positive. */
+LLEV_API LlevStatus llev_phonetic_dictionary_update(
+    LlevPhoneticDictionary* dictionary, const char* term, size_t term_len,
+    uint8_t remove, size_t max_term_scalars, uint8_t* out_changed);
+
+/** Character-level phonetic grep, distinct from word-boundary matching.
+ * All span offsets are zero-based, end-exclusive, and refer to the original
+ * UTF-8 document. Both strings are independently owned by the result array. */
+typedef struct LlevPhoneticOnlineMatch {
+    size_t byte_start;
+    size_t byte_end;
+    size_t char_start;
+    size_t char_end;
+    LlevOwnedString original_text;
+    LlevOwnedString normalized_text;
+    uint8_t distance;
+    uint8_t reserved[7];
+} LlevPhoneticOnlineMatch;
+typedef struct LlevPhoneticOnlineGrep LlevPhoneticOnlineGrep;
+typedef struct LlevPhoneticOnlineStream LlevPhoneticOnlineStream;
+/** Compile a reusable matcher. NULL rules mean no rewrite rules; otherwise
+ * rules are cloned. max_pattern_scalars must be positive, and
+ * case_insensitive must be 0 or 1. */
+LLEV_API LlevStatus llev_phonetic_online_new(
+    const char* pattern, size_t pattern_len,
+    const LlevPhoneticRuleSet* rules, uint8_t max_distance,
+    uint8_t case_insensitive, size_t max_pattern_scalars,
+    LlevPhoneticOnlineGrep** out_grep);
+LLEV_API void llev_phonetic_online_free(LlevPhoneticOnlineGrep* grep);
+/** Return a copied, owned normalized query; free with owned_string_free. */
+LLEV_API LlevStatus llev_phonetic_online_normalized_query(
+    const LlevPhoneticOnlineGrep* grep, LlevOwnedString* out_text);
+/** Scan a complete document. Positive byte/result ceilings are required;
+ * results and nested strings are owned and freed as one array. */
+LLEV_API LlevStatus llev_phonetic_online_scan(
+    const LlevPhoneticOnlineGrep* grep,
+    const char* document, size_t document_len,
+    size_t max_input_bytes, size_t max_matches,
+    LlevPhoneticOnlineMatch** out_matches, size_t* out_count);
+LLEV_API void llev_phonetic_online_matches_free(
+    LlevPhoneticOnlineMatch* matches, size_t count);
+/** Create a scanner whose input is buffered up to max_total_bytes. The
+ * matcher is cloned; both handles may be freed independently. */
+LLEV_API LlevStatus llev_phonetic_online_stream_new(
+    const LlevPhoneticOnlineGrep* grep, size_t max_total_bytes,
+    LlevPhoneticOnlineStream** out_stream);
+LLEV_API void llev_phonetic_online_stream_free(LlevPhoneticOnlineStream* stream);
+LLEV_API LlevStatus llev_phonetic_online_stream_feed(
+    LlevPhoneticOnlineStream* stream, const char* chunk, size_t chunk_len);
+/** Finish once. A LIMIT_EXCEEDED result still consumes stream state but
+ * leaves outputs untouched. A second finish/feed returns INVALID_ARGUMENT. */
+LLEV_API LlevStatus llev_phonetic_online_stream_finish(
+    LlevPhoneticOnlineStream* stream, size_t max_matches,
+    LlevPhoneticOnlineMatch** out_matches, size_t* out_count);
+
+/** Native token-query grep with full per-token phonetic/edit details. */
+typedef struct LlevPhoneticTokenGrep LlevPhoneticTokenGrep;
+typedef struct LlevPhoneticTokenDetail {
+    size_t token_index;
+    size_t byte_start;
+    size_t byte_end;
+    LlevOwnedString original_text;
+    LlevOwnedString normalized_text;
+    uint8_t distance;
+    uint8_t reserved[7];
+} LlevPhoneticTokenDetail;
+typedef struct LlevPhoneticTokenMatch {
+    size_t byte_start;
+    size_t byte_end;
+    uint8_t total_distance;
+    uint8_t reserved[7];
+    LlevOwnedString matched_text;
+    LlevPhoneticTokenDetail* details;
+    size_t detail_count;
+} LlevPhoneticTokenMatch;
+/** Compile native TokenGrep query syntax. Optional rules are cloned. */
+LLEV_API LlevStatus llev_phonetic_token_new(
+    const char* query, size_t query_len,
+    const LlevPhoneticRuleSet* rules, uint8_t default_distance,
+    size_t max_query_bytes, LlevPhoneticTokenGrep** out_grep);
+LLEV_API void llev_phonetic_token_free(LlevPhoneticTokenGrep* grep);
+/** Scan one UTF-8 document. Every ceiling must be positive; byte offsets
+ * refer to that document. The result and every nested string/detail array
+ * are owned together and freed by token_matches_free. */
+LLEV_API LlevStatus llev_phonetic_token_scan(
+    const LlevPhoneticTokenGrep* grep,
+    const char* document, size_t document_len,
+    size_t max_input_bytes, size_t max_matches, size_t max_details,
+    LlevPhoneticTokenMatch** out_matches, size_t* out_count);
+LLEV_API void llev_phonetic_token_matches_free(
+    LlevPhoneticTokenMatch* matches, size_t count);
+
+/** Incremental phonetic rewrite transducer, distinct from fixed-point rules_apply.
+ * Context-sensitive rules may delay emission until later input or finish. */
+typedef struct LlevPhoneticTransducer LlevPhoneticTransducer;
+/** Clone optional rules; NULL selects identity rewriting. */
+LLEV_API LlevStatus llev_phonetic_transducer_new(
+    const LlevPhoneticRuleSet* rules, LlevPhoneticTransducer** out_transducer);
+LLEV_API void llev_phonetic_transducer_free(LlevPhoneticTransducer* transducer);
+/** Feed UTF-8 text. An output ceiling failure resets the transducer, leaves
+ * out_text unchanged, and requires restarting the logical stream. */
+LLEV_API LlevStatus llev_phonetic_transducer_feed(
+    LlevPhoneticTransducer* transducer, const char* chunk, size_t chunk_len,
+    size_t max_input_scalars, size_t max_output_bytes, LlevOwnedString* out_text);
+/** Flush buffered context. A successful finish requires reset before reuse. */
+LLEV_API LlevStatus llev_phonetic_transducer_finish(
+    LlevPhoneticTransducer* transducer, size_t max_output_bytes,
+    LlevOwnedString* out_text);
+LLEV_API LlevStatus llev_phonetic_transducer_reset(LlevPhoneticTransducer* transducer);
+/** Normalize an independent UTF-8 string without changing incremental state. */
+LLEV_API LlevStatus llev_phonetic_transducer_normalize(
+    const LlevPhoneticTransducer* transducer,
+    const char* input, size_t input_len,
+    size_t max_input_scalars, size_t max_output_bytes,
+    LlevOwnedString* out_text);
+
+/** Exhaustive and cost-aware reverse-phonetic expansion work ceilings. All
+ * fields must be positive. max_rule_units sums pattern/replacement phone units.
+ * The exhaustive function accounts intermediate strings conservatively before
+ * deduplication, so a sufficient final-output ceiling may still reject. */
+typedef struct LlevPhoneticExpansionLimits {
+    size_t max_input_scalars;
+    size_t max_rules;
+    size_t max_rule_units;
+    size_t max_nodes;
+    size_t max_output_bytes;
+} LlevPhoneticExpansionLimits;
+/** Expand every reverse-phonetic segmentation to a regex pattern. NULL rules
+ * mean identity. The result is owned and freed with owned_string_free. */
+LLEV_API LlevStatus llev_phonetic_expand(
+    const char* input, size_t input_len, const LlevPhoneticRuleSet* rules,
+    const LlevPhoneticExpansionLimits* limits, LlevOwnedString* out_pattern);
+/** Greedy reverse expansion with native maximum-rule-cost accounting.
+ * Both outputs are transactional. This is not the exhaustive segmentation. */
+LLEV_API LlevStatus llev_phonetic_expand_with_costs(
+    const char* input, size_t input_len, const LlevPhoneticRuleSet* rules,
+    const LlevPhoneticExpansionLimits* limits,
+    LlevOwnedString* out_pattern, double* out_cost);
+
+/** Stable bit indices for the native IPA feature classification. These are
+ * independent of Rust enum discriminants and fixed for this API revision. */
+typedef enum LlevPhoneticFeatureIndex {
+    LLEV_FEATURE_VOICED = 0,
+    LLEV_FEATURE_VOICELESS = 1,
+    LLEV_FEATURE_STOP = 2,
+    LLEV_FEATURE_FRICATIVE = 3,
+    LLEV_FEATURE_AFFRICATE = 4,
+    LLEV_FEATURE_NASAL = 5,
+    LLEV_FEATURE_APPROXIMANT = 6,
+    LLEV_FEATURE_LATERAL = 7,
+    LLEV_FEATURE_RHOTIC = 8,
+    LLEV_FEATURE_BILABIAL = 9,
+    LLEV_FEATURE_LABIODENTAL = 10,
+    LLEV_FEATURE_DENTAL = 11,
+    LLEV_FEATURE_ALVEOLAR = 12,
+    LLEV_FEATURE_POST_ALVEOLAR = 13,
+    LLEV_FEATURE_PALATAL = 14,
+    LLEV_FEATURE_VELAR = 15,
+    LLEV_FEATURE_GLOTTAL = 16,
+    LLEV_FEATURE_VOWEL = 17,
+    LLEV_FEATURE_CONSONANT = 18,
+    LLEV_FEATURE_HIGH = 19,
+    LLEV_FEATURE_MID = 20,
+    LLEV_FEATURE_LOW = 21,
+    LLEV_FEATURE_FRONT = 22,
+    LLEV_FEATURE_CENTRAL = 23,
+    LLEV_FEATURE_BACK = 24,
+    LLEV_FEATURE_ROUNDED = 25,
+    LLEV_FEATURE_UNROUNDED = 26,
+    LLEV_FEATURE_SIBILANT = 27,
+    LLEV_FEATURE_ASPIRATED = 28,
+    LLEV_FEATURE_TENSE = 29,
+    LLEV_FEATURE_PHARYNGEALIZED = 30,
+    LLEV_FEATURE_LABIALIZED = 31,
+    LLEV_FEATURE_VELARIZED = 32,
+    LLEV_FEATURE_RETROFLEX = 33,
+    LLEV_FEATURE_UVULAR = 34,
+    LLEV_FEATURE_PHARYNGEAL = 35,
+    LLEV_FEATURE_EPIGLOTTAL = 36,
+    LLEV_FEATURE_TAP = 37,
+    LLEV_FEATURE_TRILL = 38,
+    LLEV_FEATURE_EJECTIVE = 39,
+    LLEV_FEATURE_IMPLOSIVE = 40,
+    LLEV_FEATURE_CLICK = 41
+} LlevPhoneticFeatureIndex;
+#define LLEV_PHONETIC_FEATURE_BIT(index) (UINT64_C(1) << (index))
+/** Return the low-42-bit native feature mask for one Unicode scalar. Unknown
+ * characters have zero features; invalid scalar values are INVALID_ARGUMENT. */
+LLEV_API LlevStatus llev_phonetic_features(uint32_t character, uint64_t* out_mask);
+/** Query the native table for characters with all (any=0) or any (any=1)
+ * selected features. Unknown bits are INVALID_ARGUMENT. Empty mask returns
+ * an empty result. Sizing calls use (NULL,0); insufficient capacity writes
+ * required out_count but no characters. Results are scalar-sorted. */
+LLEV_API LlevStatus llev_phonetic_chars_with_features(
+    uint64_t feature_mask, uint8_t any,
+    uint32_t* out_chars, size_t capacity, size_t* out_count);
+LLEV_API LlevStatus llev_phonetic_similar_chars(
+    uint32_t character, uint32_t* out_chars,
+    size_t capacity, size_t* out_count);
+/** Return an optional voicing counterpart. out_found controls whether
+ * out_character is meaningful; both outputs are set only on success. */
+LLEV_API LlevStatus llev_phonetic_voicing_pair(
+    uint32_t character, uint32_t* out_character, uint8_t* out_found);
+/** Test native shared-feature similarity (selector 0) or a native cost-zero
+ * substitution (selector 1). These are distinct predicates. */
+LLEV_API LlevStatus llev_phonetic_feature_relation(
+    uint32_t source, uint32_t target, uint8_t free_substitution,
+    uint8_t* out_matches);
+/** Copy native feature-based expansion in its own vector order. */
+LLEV_API LlevStatus llev_phonetic_expand_feature_based(
+    uint32_t character, uint32_t* out_chars,
+    size_t capacity, size_t* out_count);
+/** Native weighted distance between two feature sets; null weights select
+ * defaults. Invalid feature bits or costs are INVALID_ARGUMENT. */
+LLEV_API LlevStatus llev_phonetic_feature_set_distance(
+    uint64_t source_mask, uint64_t target_mask,
+    const LlevPhoneticFeatureWeights* weights, double* out_distance);
 
 /* Revision 6: finite-owned Unicode WallBreaker. This is not a dictionary
  * resource adapter: vt.dictionary.v1 has no exact-substring capability. */

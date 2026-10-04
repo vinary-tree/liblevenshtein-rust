@@ -2,13 +2,15 @@
 """Stable liblevenshtein native ABI generation."""
 const ABI_VERSION = UInt32(1)
 """Minimum additive native API revision required by this facade."""
-const API_REVISION = UInt32(7)
+const API_REVISION = UInt32(9)
 """Default maximum number of match descriptors per native batch."""
 const DEFAULT_MATCH_BATCH = 256
 """Compiled native feature bit: core."""
 const BUILD_FEATURE_CORE = UInt64(1)
 """Compiled native feature bit: phonetic."""
 const BUILD_FEATURE_PHONETIC = UInt64(2)
+"""Compiled native feature bit: phonetic_aot."""
+const BUILD_FEATURE_PHONETIC_AOT = UInt64(4)
 
 """Result of a fallible native operation."""
 @enum Status::Cint begin

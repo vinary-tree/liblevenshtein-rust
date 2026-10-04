@@ -18,7 +18,7 @@ makedocs(
         edit_link=get(ENV, "VINARY_TREE_DOC_SOURCE_REF", "master"),
         repolink="https://github.com/vinary-tree/liblevenshtein-rust",
     ),
-    pages=["API and usage" => "index.md"],
+    pages=["API and usage" => "index.md", "Phonetic matching" => "phonetic.md"],
     checkdocs=:exports,
     repo="https://github.com/vinary-tree/liblevenshtein-rust/blob/{commit}{path}#{line}",
     warnonly=false,

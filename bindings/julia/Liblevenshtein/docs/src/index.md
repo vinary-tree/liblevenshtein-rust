@@ -32,6 +32,9 @@ The repository's
 explains the shared recurrences, ABI names, threshold sentinels, and generated
 differential tests.
 
+For IPA feature scores, syllable heuristics, compiled rewrite rules, and
+dictionary-free word search, see [Phonetic matching and analysis](phonetic.md).
+
 ## Resource-backed search
 
 A `Transducer` accepts a `VinaryTreeInterop.Resource` or

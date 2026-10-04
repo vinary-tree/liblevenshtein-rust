@@ -15,7 +15,7 @@
 /** Binary ABI generation implemented by this header and library. */
 #define LLEV_ABI_VERSION 1u
 /** Additive API revision within LLEV_ABI_VERSION. */
-#define LLEV_API_REVISION 7u
+#define LLEV_API_REVISION 9u
 /** Default maximum descriptors borrowed by one cursor batch. */
 #define LLEV_DEFAULT_MATCH_BATCH 256u
 
@@ -23,6 +23,8 @@
 #define LLEV_BUILD_FEATURE_CORE UINT64_C(1)
 /** Build-feature bit: Compiled phonetic patterns and rewrite-rule sets. */
 #define LLEV_BUILD_FEATURE_PHONETIC UINT64_C(2)
+/** Build-feature bit: Versioned compiled phonetic rule and pattern bytes. */
+#define LLEV_BUILD_FEATURE_PHONETIC_AOT UINT64_C(4)
 
 /** Result of a fallible native operation. */
 typedef enum LlevStatus {

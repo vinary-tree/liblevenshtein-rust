@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 7,
+  "apiRevision": 9,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -358,7 +358,8 @@
   },
   "buildFeatures": {
     "CORE": 1,
-    "PHONETIC": 2
+    "PHONETIC": 2,
+    "PHONETIC_AOT": 4
   },
   "objects": {
     "ResourceTransducer": {
@@ -790,11 +791,35 @@
       "rustModule": "phonetic"
     },
     {
+      "name": "llev_owned_bytes_free",
+      "rustModule": "phonetic_aot"
+    },
+    {
+      "name": "llev_phonetic_rules_to_bytes",
+      "rustModule": "phonetic_aot"
+    },
+    {
+      "name": "llev_phonetic_rules_from_bytes",
+      "rustModule": "phonetic_aot"
+    },
+    {
+      "name": "llev_phonetic_pattern_to_bytes",
+      "rustModule": "phonetic_aot"
+    },
+    {
+      "name": "llev_phonetic_pattern_from_bytes",
+      "rustModule": "phonetic_aot"
+    },
+    {
       "name": "llev_phonetic_pattern_compile_regex",
       "rustModule": "phonetic"
     },
     {
       "name": "llev_phonetic_pattern_compile_llre",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_pattern_load_llre_file",
       "rustModule": "phonetic"
     },
     {
@@ -818,6 +843,10 @@
       "rustModule": "phonetic"
     },
     {
+      "name": "llev_phonetic_rules_load_file",
+      "rustModule": "phonetic"
+    },
+    {
       "name": "llev_phonetic_rules_builtin",
       "rustModule": "phonetic"
     },
@@ -832,6 +861,178 @@
     {
       "name": "llev_phonetic_rules_apply",
       "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_articulatory_distance",
+      "rustModule": "phonetic_analysis"
+    },
+    {
+      "name": "llev_phonetic_articulatory_edit_distance",
+      "rustModule": "phonetic_analysis"
+    },
+    {
+      "name": "llev_phonetic_syllable_count",
+      "rustModule": "phonetic_analysis"
+    },
+    {
+      "name": "llev_phonetic_syllable_boundaries",
+      "rustModule": "phonetic_analysis"
+    },
+    {
+      "name": "llev_phonetic_grep_new",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_grep_free",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_grep_distance_config",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_grep_matches",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_grep_scan_line",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_grep_scan_text",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_dictionary_new",
+      "rustModule": "phonetic_dictionary"
+    },
+    {
+      "name": "llev_phonetic_dictionary_free",
+      "rustModule": "phonetic_dictionary"
+    },
+    {
+      "name": "llev_phonetic_dictionary_query",
+      "rustModule": "phonetic_dictionary"
+    },
+    {
+      "name": "llev_phonetic_candidates_free",
+      "rustModule": "phonetic_dictionary"
+    },
+    {
+      "name": "llev_phonetic_dictionary_update",
+      "rustModule": "phonetic_dictionary"
+    },
+    {
+      "name": "llev_phonetic_online_new",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_online_free",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_online_normalized_query",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_online_scan",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_online_matches_free",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_online_stream_new",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_online_stream_free",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_online_stream_feed",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_online_stream_finish",
+      "rustModule": "phonetic_online"
+    },
+    {
+      "name": "llev_phonetic_token_new",
+      "rustModule": "phonetic_token"
+    },
+    {
+      "name": "llev_phonetic_token_free",
+      "rustModule": "phonetic_token"
+    },
+    {
+      "name": "llev_phonetic_token_scan",
+      "rustModule": "phonetic_token"
+    },
+    {
+      "name": "llev_phonetic_token_matches_free",
+      "rustModule": "phonetic_token"
+    },
+    {
+      "name": "llev_phonetic_transducer_new",
+      "rustModule": "phonetic_transducer"
+    },
+    {
+      "name": "llev_phonetic_transducer_free",
+      "rustModule": "phonetic_transducer"
+    },
+    {
+      "name": "llev_phonetic_transducer_feed",
+      "rustModule": "phonetic_transducer"
+    },
+    {
+      "name": "llev_phonetic_transducer_finish",
+      "rustModule": "phonetic_transducer"
+    },
+    {
+      "name": "llev_phonetic_transducer_reset",
+      "rustModule": "phonetic_transducer"
+    },
+    {
+      "name": "llev_phonetic_transducer_normalize",
+      "rustModule": "phonetic_transducer"
+    },
+    {
+      "name": "llev_phonetic_expand",
+      "rustModule": "phonetic_expansion"
+    },
+    {
+      "name": "llev_phonetic_expand_with_costs",
+      "rustModule": "phonetic_expansion"
+    },
+    {
+      "name": "llev_phonetic_features",
+      "rustModule": "phonetic_features"
+    },
+    {
+      "name": "llev_phonetic_chars_with_features",
+      "rustModule": "phonetic_features"
+    },
+    {
+      "name": "llev_phonetic_similar_chars",
+      "rustModule": "phonetic_features"
+    },
+    {
+      "name": "llev_phonetic_voicing_pair",
+      "rustModule": "phonetic_features"
+    },
+    {
+      "name": "llev_phonetic_feature_relation",
+      "rustModule": "phonetic_features"
+    },
+    {
+      "name": "llev_phonetic_expand_feature_based",
+      "rustModule": "phonetic_features"
+    },
+    {
+      "name": "llev_phonetic_feature_set_distance",
+      "rustModule": "phonetic_features"
     },
     {
       "name": "llev_generalized_automaton_new",

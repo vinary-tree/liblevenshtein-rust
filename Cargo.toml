@@ -510,6 +510,7 @@ wasm-ffi = ["wasm", "ffi"]
 native-bindings-full = [
     "ffi",
     "bindings-phonetic",
+    "serialization",
 ]
 # Test-only cross-project producer/consumer surface. This is deliberately not
 # included by a publishable language alias: liblevenshtein consumes the ABI and

@@ -12,6 +12,7 @@ export ABI_VERSION,
     DEFAULT_MATCH_BATCH,
     BUILD_FEATURE_CORE,
     BUILD_FEATURE_PHONETIC,
+    BUILD_FEATURE_PHONETIC_AOT,
     Status,
     Algorithm,
     QueryOrder,
@@ -46,6 +47,20 @@ export ABI_VERSION,
     PrefixObservations,
     PhoneticPattern,
     PhoneticRuleSet,
+    PhoneticFeatureWeights,
+    PhoneticGrep,
+    PhoneticGrepMatch,
+    PhoneticNormalizedDictionary,
+    PhoneticCandidate,
+    PhoneticOnlineGrep,
+    PhoneticOnlineStream,
+    PhoneticOnlineMatch,
+    PhoneticTokenGrep,
+    PhoneticTokenMatch,
+    PhoneticTokenDetail,
+    PhoneticTransducer,
+    PhoneticExpansionLimits,
+    PHONETIC_FEATURE_NAMES,
     abi_version,
     api_revision,
     build_features,
@@ -54,6 +69,38 @@ export ABI_VERSION,
     damerau_distance,
     true_damerau_distance,
     merge_and_split_distance,
+    articulatory_distance,
+    articulatory_edit_distance,
+    syllable_count,
+    syllable_boundaries,
+    match_distance,
+    distance_config,
+    scan_line,
+    scan_text,
+    scan,
+    streaming,
+    normalized_query,
+    feed!,
+    finish!,
+    reset!,
+    normalize,
+    expand_phonetic_alternatives,
+    expand_phonetic_with_costs,
+    phonetic_features,
+    characters_with_features,
+    similar_phonetic_chars,
+    voicing_pair,
+    are_phonetically_similar,
+    is_free_phonetic_substitution,
+    expand_feature_based,
+    feature_set_distance,
+    load_phonetic_rules,
+    load_phonetic_pattern,
+    compiled_phonetic_bytes,
+    load_compiled_phonetic_rules,
+    load_compiled_phonetic_pattern,
+    insert!,
+    remove!,
     evaluate,
     accepts,
     online,
@@ -884,6 +931,17 @@ end
 
 Base.close(rules::PhoneticRuleSet) = close!(rules)
 Base.isopen(rules::PhoneticRuleSet) = !rules.closed
+
+include("PhoneticAnalysis.jl")
+include("PhoneticGrep.jl")
+include("PhoneticDictionary.jl")
+include("PhoneticOnline.jl")
+include("PhoneticToken.jl")
+include("PhoneticTransducer.jl")
+include("PhoneticExpansion.jl")
+include("PhoneticFeatures.jl")
+include("PhoneticFiles.jl")
+include("PhoneticAot.jl")
 
 function __init__()
     REDUCER_CALLBACK[] = @cfunction(reducer_callback, Cint,

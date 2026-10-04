@@ -134,10 +134,6 @@ fn upsert_candidate_best_match<T>(
     T: AsRef<str> + Into<String>,
 {
     let term_ref = term.as_ref();
-    if term_ref.is_empty() {
-        return;
-    }
-
     if let Some(existing) = by_term.get_mut(term_ref) {
         existing.replace_if_better(distance, normalized_form);
         return;
@@ -1225,7 +1221,7 @@ where
                 continue;
             }
 
-            for term in originals.iter().filter(|term| !term.is_empty()) {
+            for term in originals.iter() {
                 if seen.contains(term.as_str()) {
                     continue;
                 }
@@ -1518,7 +1514,7 @@ where
         for matched in query {
             let normalized_form: String = matched.units.into_iter().collect();
             if let Some(originals) = matched.node.value() {
-                for term in originals.iter().filter(|term| !term.is_empty()) {
+                for term in originals.iter() {
                     results.push(PhoneticNormalizedCandidate {
                         term: term.clone(),
                         distance: usize::from(matched.distance),
@@ -1790,10 +1786,29 @@ mod tests {
         upsert_candidate_best_match(&mut by_term, "", 0, "");
 
         let candidates = best_matches_into_candidates(by_term);
-        assert_eq!(candidates.len(), 1);
-        assert_eq!(candidates[0].term, "phone");
-        assert_eq!(candidates[0].distance, 1);
-        assert_eq!(candidates[0].normalized_form, "phone");
+        assert_eq!(candidates.len(), 2);
+        assert!(candidates.iter().any(|candidate| candidate.term == "phone"
+            && candidate.distance == 1
+            && candidate.normalized_form == "phone"));
+        assert!(candidates.iter().any(|candidate| candidate.term.is_empty()
+            && candidate.distance == 0
+            && candidate.normalized_form.is_empty()));
+    }
+
+    #[test]
+    fn empty_original_is_preserved_across_mutable_and_compact_queries() {
+        let terms = ["", "phone", "fone"];
+        let mutable = PhoneticNormalizedDictionary::<()>::from_terms(terms);
+        let compact = PhoneticNormalizedTermIdDictionary::from_terms(terms);
+        for (query, bound) in [("", 0), ("", 1), ("f", 1)] {
+            assert_eq!(mutable.query(query, bound), compact.query(query, bound));
+        }
+        assert!(mutable.iter_terms().any(|(term, _)| term.is_empty()));
+        assert_eq!(mutable.query("", 0)[0].term, "");
+        assert!(mutable
+            .query("", 1)
+            .iter()
+            .any(|candidate| candidate.term.is_empty()));
     }
 
     #[test]

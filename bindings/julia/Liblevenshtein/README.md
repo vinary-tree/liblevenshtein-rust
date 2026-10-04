@@ -247,7 +247,13 @@ budget against a native control measured on the same runner.
   `reduce_batches!` for high-volume processing where callback-scoped native
   batches amortize the FFI boundary.
 - Compile reusable `PhoneticPattern` and `PhoneticRuleSet` values only when the
-  native `BUILD_FEATURE_PHONETIC` bit is present.
+  native `BUILD_FEATURE_PHONETIC` bit is present. Use
+  `articulatory_distance` and `articulatory_edit_distance` for IPA feature
+  scores, `syllable_count` and `syllable_boundaries` for orthographic or IPA
+  heuristics, and `PhoneticGrep` for reusable word-boundary search over text.
+  For normalized dictionaries, character-level and token-level grep,
+  incremental rewriting, expansion, IPA feature queries, trusted file
+  loaders, and versioned AOT bytes, see the [phonetic guide](docs/src/phonetic.md).
 
 ## API reference
 
@@ -285,6 +291,26 @@ General-registry package or a versioned release reference.
 | `input in pattern`, `size(pattern)` | Membership and structural size. |
 | `PhoneticRuleSet(source_or_kind)` | Parse rules or select a built-in rule set. |
 | `rules(input)`, `length(rules)` | Rewrite text and count enabled rules. |
+| `PhoneticFeatureWeights(; ...)` | Optional finite, nonnegative IPA feature costs. |
+| `articulatory_distance(a::Char, b::Char; weights=nothing)` | Compare native IPA feature sets for two Unicode scalars. |
+| `articulatory_edit_distance(a, b; weights=nothing, max_cells=4_000_000)` | Bounded native feature-weighted edit distance for strings. |
+| `syllable_count(text; ipa=false, max_input_scalars=1_000_000)` | English orthographic or IPA syllable-count heuristic. |
+| `syllable_boundaries(text; ipa=false, max_input_scalars=1_000_000)` | Zero-based Unicode-scalar starts, not Julia byte indices. |
+| `PhoneticGrep(pattern; rules=nothing, max_distance=0, algorithm=ALGORITHM_STANDARD, case_insensitive=false)` | Reusable dictionary-free phonetic word matcher. |
+| `match_distance(grep, candidate)`, `candidate in grep` | Bounded native candidate match, returning an edit cost or `nothing`. |
+| `scan_line(grep, line)`, `scan_text(grep, document)` | Owned word matches with one-based line and zero-based byte offsets. |
+| `distance_config(grep)` | Effective distance and optional pattern-local override. |
+| `PhoneticNormalizedDictionary(terms; rules=nothing, compact=false)` | Mutable or immutable compact native normalized index; copied, relevance-ordered candidate query results. |
+| `query(dictionary, text; max_distance=0)`, `insert!`, `remove!` | Normalized-space fuzzy candidates and mutation of the mutable index. |
+| `PhoneticOnlineGrep(pattern; rules=nothing)`, `scan(grep, document)` | Character-level substring matches with copied source byte/scalar spans. |
+| `streaming(grep)`, `feed!`, `finish!` | Bounded chunk-fed character-level scanning with single-use finish. |
+| `PhoneticTokenGrep(query; rules=nothing)`, `scan(grep, document)` | Token-query grammar and copied per-token distance evidence. |
+| `PhoneticTransducer(; rules=nothing)`, `feed!`, `finish!`, `reset!`, `normalize` | Context-aware incremental native rewriting and independent whole-input normalization. |
+| `expand_phonetic_alternatives`, `expand_phonetic_with_costs` | Distinct exhaustive and greedy reverse-rule expansions with `PhoneticExpansionLimits`. |
+| `phonetic_features`, `characters_with_features`, `feature_set_distance` | Stable IPA feature-set projection, native-table search, and weighted comparison. |
+| `similar_phonetic_chars`, `voicing_pair`, `are_phonetically_similar`, `is_free_phonetic_substitution`, `expand_feature_based` | Distinct native IPA relations and expansions. |
+| `load_phonetic_rules`, `load_phonetic_pattern` | Trusted local `.llev` include and `.llre` import resolution. |
+| `compiled_phonetic_bytes`, `load_compiled_phonetic_rules`, `load_compiled_phonetic_pattern` | Optional API-revision-9 binary AOT roundtrip, gated by `BUILD_FEATURE_PHONETIC_AOT`. |
 | `close`, `isopen` | Deterministic lifecycle for every native owner. |
 
 `Match.term` is a `String`, `Vector{UInt8}`, or `Vector{UInt64}` according to

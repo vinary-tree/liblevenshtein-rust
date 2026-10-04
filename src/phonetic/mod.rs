@@ -333,4 +333,7 @@ pub use token_grep::{
 };
 
 // Re-export phonetic pattern expansion for reverse matching
-pub use expansion::{expand_phonetic_alternatives_char, expand_with_costs};
+pub use expansion::{
+    expand_phonetic_alternatives_char, expand_phonetic_alternatives_char_bounded,
+    expand_with_costs, ExpansionLimitError,
+};
