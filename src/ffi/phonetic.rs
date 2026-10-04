@@ -7,7 +7,6 @@ use super::index::{utf8, write_cursor};
 use super::LlevAlgorithm;
 #[cfg(feature = "bindings-phonetic")]
 use super::LlevPhoneticRuleSetKind;
-#[cfg(feature = "bindings-phonetic")]
 use super::LlevUtf8View;
 use super::{LlevQueryCursor, LlevStatus, LlevTransducer};
 #[cfg(feature = "bindings-phonetic")]
