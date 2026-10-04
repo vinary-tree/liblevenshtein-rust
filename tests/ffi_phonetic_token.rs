@@ -126,13 +126,14 @@ proptest! {
     fn generated_token_capacity_rejection_is_atomic(separator in "[a-z]{1,6}") {
         let document = format!("cat dog {separator} cat dog");
         let grep = unsafe { new("cat dog", ptr::null(), 0) };
-        let mut output = 1usize as *mut LlevPhoneticTokenMatch;
+        let sentinel = ptr::dangling_mut::<LlevPhoneticTokenMatch>();
+        let mut output = sentinel;
         let mut count = 999;
         for (max_matches, max_details) in [(1, 100), (100, 1)] {
             prop_assert_eq!(unsafe { llev_phonetic_token_scan(grep,
                 document.as_ptr().cast(), document.len(), 100, max_matches, max_details,
                 &mut output, &mut count) }, LlevStatus::LimitExceeded);
-            prop_assert_eq!(output as usize, 1);
+            prop_assert_eq!(output, sentinel);
             prop_assert_eq!(count, 999);
         }
         unsafe { llev_phonetic_token_free(grep) };
@@ -151,7 +152,8 @@ fn token_rules_copy_and_limits_are_transactional() {
     unsafe {
         llev_phonetic_rules_free(rules);
     }
-    let mut output = 1usize as *mut LlevPhoneticTokenMatch;
+    let sentinel = ptr::dangling_mut::<LlevPhoneticTokenMatch>();
+    let mut output = sentinel;
     let mut count = 999;
     assert_eq!(
         unsafe {
@@ -168,7 +170,7 @@ fn token_rules_copy_and_limits_are_transactional() {
         },
         LlevStatus::LimitExceeded
     );
-    assert_eq!(output as usize, 1);
+    assert_eq!(output, sentinel);
     assert_eq!(count, 999);
     assert_eq!(
         unsafe {

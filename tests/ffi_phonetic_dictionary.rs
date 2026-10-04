@@ -139,12 +139,13 @@ proptest! {
                 compact.query(&input, bound)
             }).into_iter().map(|item| (item.term, item.distance, item.normalized_form)).collect();
             if expected.len() > 1 {
-                let mut pointer = 1usize as *mut LlevPhoneticCandidate;
+                let sentinel = ptr::dangling_mut::<LlevPhoneticCandidate>();
+                let mut pointer = sentinel;
                 let mut count = 999;
                 prop_assert_eq!(unsafe { llev_phonetic_dictionary_query(dictionary,
                     input.as_ptr().cast(), input.len(), bound, 100, expected.len() - 1,
                     &mut pointer, &mut count) }, LlevStatus::LimitExceeded);
-                prop_assert_eq!(pointer as usize, 1);
+                prop_assert_eq!(pointer, sentinel);
                 prop_assert_eq!(count, 999);
             }
             unsafe { llev_phonetic_dictionary_free(dictionary) };
@@ -219,7 +220,7 @@ fn construction_and_query_limits_are_transactional() {
         data: b"phone".as_ptr().cast(),
         len: 5,
     }];
-    let sentinel = 1usize as *mut LlevPhoneticDictionary;
+    let sentinel = ptr::dangling_mut::<LlevPhoneticDictionary>();
     let mut output = sentinel;
     assert_eq!(
         unsafe {
@@ -238,7 +239,8 @@ fn construction_and_query_limits_are_transactional() {
     );
     assert_eq!(output, sentinel);
     let dictionary = unsafe { new_dictionary(&["phone", "fone"], 0) };
-    let mut candidates = 1usize as *mut LlevPhoneticCandidate;
+    let candidate_sentinel = ptr::dangling_mut::<LlevPhoneticCandidate>();
+    let mut candidates = candidate_sentinel;
     let mut count = 999;
     assert_eq!(
         unsafe {
@@ -255,7 +257,7 @@ fn construction_and_query_limits_are_transactional() {
         },
         LlevStatus::LimitExceeded
     );
-    assert_eq!(candidates as usize, 1);
+    assert_eq!(candidates, candidate_sentinel);
     assert_eq!(count, 999);
     assert_eq!(
         unsafe {
@@ -272,7 +274,7 @@ fn construction_and_query_limits_are_transactional() {
         },
         LlevStatus::LimitExceeded
     );
-    assert_eq!(candidates as usize, 1);
+    assert_eq!(candidates, candidate_sentinel);
     assert_eq!(count, 999);
     unsafe {
         llev_phonetic_dictionary_free(dictionary);

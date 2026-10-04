@@ -143,7 +143,7 @@ proptest! {
         let mut transducer = ptr::null_mut();
         prop_assert_eq!(unsafe { llev_phonetic_transducer_new(ptr::null(),
             &mut transducer) }, LlevStatus::Ok);
-        let mut output = LlevOwnedString { data: 1usize as *mut _, len: 999 };
+        let mut output = LlevOwnedString { data: ptr::dangling_mut(), len: 999 };
         prop_assert_eq!(unsafe { llev_phonetic_transducer_feed(transducer,
             input.as_ptr().cast(), input.len(), 100, 1, &mut output) }, LlevStatus::LimitExceeded);
         prop_assert_eq!(output.data as usize, 1);
@@ -167,7 +167,7 @@ fn feed_limits_leave_outputs_unchanged_and_reset_on_output_overflow() {
         LlevStatus::Ok
     );
     let mut output = LlevOwnedString {
-        data: 1usize as *mut _,
+        data: ptr::dangling_mut(),
         len: 999,
     };
     assert_eq!(

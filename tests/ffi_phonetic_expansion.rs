@@ -33,7 +33,7 @@ proptest! {
                 max_output_bytes: expected.len() - 1,
                 ..limits()
             };
-            let mut sentinel = LlevOwnedString { data: 1usize as *mut _, len: 999 };
+            let mut sentinel = LlevOwnedString { data: std::ptr::dangling_mut(), len: 999 };
             prop_assert_eq!(unsafe { llev_phonetic_expand(input.as_ptr().cast(), input.len(),
                 rules, &too_small, &mut sentinel) }, LlevStatus::LimitExceeded);
             prop_assert_eq!(sentinel.data as usize, 1);
@@ -142,7 +142,7 @@ fn expansion_limits_reject_without_partial_output() {
         LlevStatus::Ok
     );
     let mut output = LlevOwnedString {
-        data: 1usize as *mut _,
+        data: std::ptr::dangling_mut(),
         len: 999,
     };
     let small = LlevPhoneticExpansionLimits {
