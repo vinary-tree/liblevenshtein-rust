@@ -1,0 +1,33 @@
+@startuml phonetic-grep-flow
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam activity {
+  BackgroundColor #E0F2FE
+  BorderColor #0369A1
+  DiamondBackgroundColor #FEF3C7
+  DiamondBorderColor #B45309
+  StartColor #166534
+  EndColor #166534
+}
+
+start
+:Compile pattern, edit algorithm,
+inclusive bound, optional rules;
+:Own reusable native grep matcher;
+:Receive UTF-8 text within byte ceiling;
+repeat
+  :Extract next word and original
+  line-local UTF-8 byte span;
+  :Normalize candidate according to
+  explicit flags and rewrite rules;
+  :Evaluate pattern × edit automaton;
+  if (Distance within effective bound?) then (yes)
+    :Copy original text, line, span,
+    and distance into result;
+  endif
+repeat while (More words?) is (yes)
+:Return complete owned result
+within max_matches ceiling;
+stop
+@enduml
