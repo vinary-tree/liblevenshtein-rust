@@ -1209,7 +1209,9 @@ jobs:
         # Healthy BSD starts in this matrix complete in under one minute. The
         # wider ceiling tolerates runner noise while bounding a stuck QEMU boot.
         timeout-minutes: 10
-        uses: cross-platform-actions/action@v1.3.0
+        # v1.4.0 masks AMX from older BSD guests and bounds failed QEMU boots:
+        # https://github.com/cross-platform-actions/action/issues/158
+        uses: cross-platform-actions/action@v1.4.0
         with:
           operating_system: ${{ matrix.platform.os }}
           architecture: x86-64
