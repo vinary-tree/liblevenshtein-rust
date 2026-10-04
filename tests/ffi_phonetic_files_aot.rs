@@ -379,12 +379,12 @@ proptest! {
             16 * 1024 * 1024, &mut bytes) }, LlevStatus::Ok);
         let mut corrupt = unsafe { std::slice::from_raw_parts(bytes.data, bytes.len) }.to_vec();
         corrupt[position] ^= delta;
-        let mut restored = ptr::null_mut();
+        let mut restored = 1usize as *mut LlevPhoneticRuleSet;
         let status = unsafe { llev_phonetic_rules_from_bytes(corrupt.as_ptr(),
             corrupt.len(), corrupt.len(), &mut restored) };
         unsafe { llev_owned_bytes_free(&mut bytes); llev_phonetic_rules_free(rules); }
         prop_assert_eq!(status, LlevStatus::InvalidArgument);
-        prop_assert!(restored.is_null());
+        prop_assert_eq!(restored as usize, 1);
     }
 }
 
@@ -404,4 +404,33 @@ fn aot_symbols_return_unsupported_without_serialization() {
         LlevStatus::Unsupported
     );
     assert!(rules.is_null());
+}
+
+#[cfg(not(feature = "serialization"))]
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(32))]
+    #[test]
+    fn generated_disabled_aot_never_publishes_bytes_or_handles(
+        input in proptest::collection::vec(any::<u8>(), 0..32),
+        max_bytes in 1usize..1024,
+    ) {
+        prop_assert_eq!(llev_build_features() & 4, 0);
+        let mut bytes = LlevOwnedBytes { data: 1usize as *mut u8, len: 999 };
+        prop_assert_eq!(unsafe { llev_phonetic_rules_to_bytes(ptr::null(),
+            max_bytes, &mut bytes) }, LlevStatus::Unsupported);
+        prop_assert_eq!(bytes.data as usize, 1);
+        prop_assert_eq!(bytes.len, 999);
+        prop_assert_eq!(unsafe { llev_phonetic_pattern_to_bytes(ptr::null(),
+            max_bytes, &mut bytes) }, LlevStatus::Unsupported);
+        prop_assert_eq!(bytes.data as usize, 1);
+        prop_assert_eq!(bytes.len, 999);
+        let mut rules = 1usize as *mut LlevPhoneticRuleSet;
+        prop_assert_eq!(unsafe { llev_phonetic_rules_from_bytes(input.as_ptr(),
+            input.len(), max_bytes, &mut rules) }, LlevStatus::Unsupported);
+        prop_assert_eq!(rules as usize, 1);
+        let mut pattern = 1usize as *mut LlevPhoneticPattern;
+        prop_assert_eq!(unsafe { llev_phonetic_pattern_from_bytes(input.as_ptr(),
+            input.len(), max_bytes, &mut pattern) }, LlevStatus::Unsupported);
+        prop_assert_eq!(pattern as usize, 1);
+    }
 }

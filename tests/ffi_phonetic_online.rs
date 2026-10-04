@@ -181,6 +181,29 @@ proptest! {
         prop_assert_eq!(unsafe { result(matches, count) }, native.scan(prefix));
         unsafe { llev_phonetic_online_stream_free(stream); llev_phonetic_online_free(ffi); }
     }
+
+    #[test]
+    fn generated_limited_finish_consumes_stream_without_publishing(separator in "[b-z]{1,5}") {
+        let document = format!("a {separator} a");
+        let ffi = unsafe { new("a", ptr::null()) };
+        prop_assert!(PhoneticGrepOnline::without_rules("a", 0).scan(&document).len() > 1);
+        let mut stream = ptr::null_mut();
+        prop_assert_eq!(unsafe { llev_phonetic_online_stream_new(ffi, document.len(),
+            &mut stream) }, LlevStatus::Ok);
+        prop_assert_eq!(unsafe { llev_phonetic_online_stream_feed(stream,
+            document.as_ptr().cast(), document.len()) }, LlevStatus::Ok);
+        let mut matches = 1usize as *mut LlevPhoneticOnlineMatch;
+        let mut count = 999;
+        prop_assert_eq!(unsafe { llev_phonetic_online_stream_finish(stream, 1,
+            &mut matches, &mut count) }, LlevStatus::LimitExceeded);
+        prop_assert_eq!(matches as usize, 1);
+        prop_assert_eq!(count, 999);
+        prop_assert_eq!(unsafe { llev_phonetic_online_stream_finish(stream, 100,
+            &mut matches, &mut count) }, LlevStatus::InvalidArgument);
+        prop_assert_eq!(matches as usize, 1);
+        prop_assert_eq!(count, 999);
+        unsafe { llev_phonetic_online_stream_free(stream); llev_phonetic_online_free(ffi); }
+    }
 }
 
 #[test]
