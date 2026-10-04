@@ -15,15 +15,15 @@
       "description": "High-performance dictionaries and trie-maps for approximate string matching."
     },
     "lling-llang": {
-      "summary": "Build and compose weighted automata for speech, text, and language processing",
+      "summary": "Weighted automata toolkit for speech, text, and language processing",
       "description": "Build, compose, optimize, and run semiring-generic weighted automata for speech recognition, text processing, and constrained generation."
     },
     "duallity": {
-      "summary": "Compose fuzzy dictionary search with phonetics, grammars, and language models",
+      "summary": "Fuzzy-search transducers for phonetics, grammars, and language models",
       "description": "Turn fuzzy dictionary queries into lazy weighted transducers that compose with phonetic rewrites, grammars, language models, and custom lling-llang pipelines."
     },
     "vinary-tree-interop": {
-      "summary": "Share live dictionaries and weighted automata safely across languages",
+      "summary": "Cross-language resource interfaces for dictionaries and weighted automata",
       "description": "A stable, dependency-free resource ABI for sharing live dictionaries, weighted automata, and host-defined algebra safely across Vinary Tree libraries and languages."
     },
     "llattice": {
