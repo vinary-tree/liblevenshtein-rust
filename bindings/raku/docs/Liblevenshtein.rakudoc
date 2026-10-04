@@ -42,9 +42,58 @@ serve stale matches.
 =head1 Ownership
 
 Call C<close> on transducers, query caches, cursors, phonetic patterns, and
-rewrite-rule sets. C<DESTROY> is a leak fallback. Each cache and cursor is
+rewrite-rule sets, and standalone automata and online states. C<DESTROY> is a leak fallback. Each cache and cursor is
 single-consumer, while
 independent cursors and immutable transducers may run concurrently.
+
+=head1 Standalone generalized and universal automata
+
+C<GeneralizedAutomaton.new($maximum-distance, $operation-set)> accepts a
+C<GeneralizedOperationSet> or positional collection of
+C<GeneralizedOperation> descriptors. Each descriptor names the source and
+target Unicode-scalar arity, cost, diagnostic name, and applicability. A
+C<GeneralizedRestriction> or C<source =E<gt> target> pair restricts a
+C<APPLICABILITY-LISTED> operation directionally. Native construction owns a
+validated copy. C<evaluate($source, $target)> returns a
+C<GeneralizedObservation> with a rational C<distance> when accepted, and
+C<Nil> otherwise. C<online($source)> returns an exclusive state with
+C<advance($scalar)> and C<observation>; an empty current row can recover via
+a later multi-unit operation.
+
+    my $rules = GeneralizedOperationSet.new(operations => [
+        GeneralizedOperation.new(
+            consume-source => 2, consume-target => 1, weight => 0.5,
+            name => 'ph to f', applicability => APPLICABILITY-LISTED,
+            restrictions => ['ph' => 'f'],
+        ),
+    ]);
+    my $generalized = GeneralizedAutomaton.new(1, $rules);
+    LEAVE $generalized.close;
+    say $generalized.evaluate('ph', 'f').distance; # 1/2
+
+C<UniversalAutomaton.new($maximum-distance, :variant(...))> selects standard,
+adjacent-transposition, or merge-and-split native position automata. With no
+policy it uses the unrestricted native specialization for C<Str>, C<Blob>,
+and unsigned-u64 C<Positional> inputs. C<UniversalPolicy.new(:domain(...),
+:equivalences([...]))> adds nonempty directional zero-cost substitution pairs
+and fixes the unit domain. Its C<UniversalObservation> reports consumed target
+units, source units, liveness, and acceptance. The frontier cannot recover
+after C<alive> becomes false. C<online($source)> advances one scalar string,
+byte integer, or u64 integer per call. Mixed domains and out-of-range units
+throw instead of coercing.
+
+    my $policy = UniversalPolicy.new(
+        domain => UNICODE-SCALAR, equivalences => ['p' => 'f'],
+    );
+    my $universal = UniversalAutomaton.new(0, :$policy);
+    LEAVE $universal.close;
+    say $universal.accepts('p', 'f'); # True
+    say $universal.accepts('f', 'p'); # False
+
+C<AutomatonLimits.new> configures source, target, retained-cell, and per-step
+work ceilings. Omit C<:limits> for the native defaults. A rejected online
+advance does not mutate the committed prefix; use C<observation> to inspect
+it. Online states own their native configuration after their parent closes.
 
 =head1 API
 

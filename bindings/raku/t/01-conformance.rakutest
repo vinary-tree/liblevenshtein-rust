@@ -126,6 +126,39 @@ for @sequences -> $left {
     }
 }
 
+# Standalone automata are independent of dictionary resources. This is the
+# canonical short executable example; the exhaustive differential/limit suite
+# lives in 02-standalone-automata.rakutest.
+my $generalized-example = GeneralizedAutomaton.new(0, [
+    GeneralizedOperation.new(
+        consume-source => 1, consume-target => 1, weight => 0,
+        name => 'equal', applicability => APPLICABILITY-EQUAL,
+    ),
+]);
+ok $generalized-example.evaluate('é', 'é').accepting,
+    'generalized complete-pair evaluation uses native Unicode scalars';
+my $generalized-online-example = $generalized-example.online('é');
+ok $generalized-online-example.advance('é').accepting,
+    'generalized online state advances one Unicode scalar';
+ok $generalized-online-example.observation.accepting,
+    'generalized online observation is stable without advancing';
+$generalized-online-example.close;
+$generalized-example.close;
+
+my $universal-example = UniversalAutomaton.new(
+    1, variant => UNIVERSAL-TRANSPOSITION,
+);
+ok $universal-example.evaluate('ab', 'ba').accepting,
+    'universal transposition variant evaluates a complete pair';
+my $universal-online-example = $universal-example.online('ab');
+$universal-online-example.advance('b');
+ok $universal-online-example.advance('a').accepting,
+    'universal online state preserves the variant';
+ok $universal-online-example.observation.accepting,
+    'universal online observation is stable without advancing';
+$universal-online-example.close;
+$universal-example.close;
+
 my $dictionary = Producer::dictionary();
 $dictionary<cat> = 7;
 $dictionary<cot> = Nil;
