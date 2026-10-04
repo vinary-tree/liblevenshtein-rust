@@ -156,6 +156,66 @@ class Match is export {
     has UnitDomain:D $.unit-domain is required;
 }
 
+# These layouts mirror liblevenshtein_abi.h; the public enum values above are
+# generated from api.json. Pointer slots use pointer-width size_t because
+# Rakudo cannot initialize a Pointer attribute in a CStruct constructor.
+# The exact owner of each address remains live until the native constructor
+# has copied the borrowed descriptor tree.
+class RawAutomatonLimits is repr('CStruct') is export {
+    has size_t $.max-source-units;
+    has size_t $.max-target-units;
+    has size_t $.max-retained-cells;
+    has size_t $.max-step-work-units;
+}
+
+class RawGeneralizedRestriction is repr('CStruct') is export {
+    has size_t $.source-data;
+    has size_t $.source-len;
+    has size_t $.target-data;
+    has size_t $.target-len;
+}
+
+class RawGeneralizedOperation is repr('CStruct') is export {
+    has size_t $.consume-source;
+    has size_t $.consume-target;
+    has num64 $.weight;
+    has size_t $.name-data;
+    has size_t $.name-len;
+    has uint32 $.applicability;
+    has uint32 $.reserved;
+    has size_t $.restrictions;
+    has size_t $.restriction-count;
+}
+
+class RawUniversalEquivalence is repr('CStruct') is export {
+    has uint64 $.source;
+    has uint64 $.target;
+}
+
+class RawGeneralizedObservation is repr('CStruct') is export {
+    has size_t $.consumed-target-len;
+    has size_t $.active-positions;
+    has size_t $.scaled-distance;
+    has uint32 $.scale-denominator;
+    has uint8 $.current-row-nonempty;
+    has uint8 $.accepting;
+    has uint8 $.has-distance;
+    has uint8 $.reserved;
+}
+
+class RawUniversalObservation is repr('CStruct') is export {
+    has size_t $.consumed-target-len;
+    has size_t $.source-len;
+    has uint8 $.alive;
+    has uint8 $.accepting;
+    has uint8 $.reserved0;
+    has uint8 $.reserved1;
+    has uint8 $.reserved2;
+    has uint8 $.reserved3;
+    has uint8 $.reserved4;
+    has uint8 $.reserved5;
+}
+
 sub native-library(--> Str:D) {
     return %*ENV<LIBLEVENSHTEIN_LIBRARY>
         if %*ENV<LIBLEVENSHTEIN_LIBRARY>:exists;
@@ -319,6 +379,45 @@ sub llev-query-cursor-release-batch(Pointer, uint64 --> int32)
     is native(&native-library) is symbol('llev_query_cursor_release_batch') { * }
 sub llev-query-cursor-free(Pointer --> int32)
     is native(&native-library) is symbol('llev_query_cursor_free') { * }
+sub llev-generalized-automaton-new(uint8, Pointer, size_t, Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_generalized_automaton_new') { * }
+sub llev-generalized-automaton-free(Pointer)
+    is native(&native-library) is symbol('llev_generalized_automaton_free') { * }
+sub llev-generalized-automaton-evaluate-utf8(
+    Pointer, Pointer, size_t, Pointer, size_t, RawAutomatonLimits,
+    RawGeneralizedObservation --> int32
+) is native(&native-library) is symbol('llev_generalized_automaton_evaluate_utf8') { * }
+sub llev-generalized-online-new-utf8(
+    Pointer, Pointer, size_t, RawAutomatonLimits, Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_generalized_online_new_utf8') { * }
+sub llev-generalized-online-advance(
+    Pointer, uint32, RawGeneralizedObservation --> int32
+) is native(&native-library) is symbol('llev_generalized_online_advance') { * }
+sub llev-generalized-online-observation(
+    Pointer, RawGeneralizedObservation --> int32
+) is native(&native-library) is symbol('llev_generalized_online_observation') { * }
+sub llev-generalized-online-free(Pointer)
+    is native(&native-library) is symbol('llev_generalized_online_free') { * }
+sub llev-universal-automaton-new(
+    uint8, uint32, uint32, Pointer, size_t, Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_universal_automaton_new') { * }
+sub llev-universal-automaton-free(Pointer)
+    is native(&native-library) is symbol('llev_universal_automaton_free') { * }
+sub llev-universal-automaton-evaluate(
+    Pointer, uint32, Pointer, size_t, Pointer, size_t, RawAutomatonLimits,
+    RawUniversalObservation --> int32
+) is native(&native-library) is symbol('llev_universal_automaton_evaluate') { * }
+sub llev-universal-online-new(
+    Pointer, uint32, Pointer, size_t, RawAutomatonLimits, Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_universal_online_new') { * }
+sub llev-universal-online-advance(
+    Pointer, uint64, RawUniversalObservation --> int32
+) is native(&native-library) is symbol('llev_universal_online_advance') { * }
+sub llev-universal-online-observation(
+    Pointer, RawUniversalObservation --> int32
+) is native(&native-library) is symbol('llev_universal_online_observation') { * }
+sub llev-universal-online-free(Pointer)
+    is native(&native-library) is symbol('llev_universal_online_free') { * }
 sub llev-phonetic-pattern-compile-regex(Pointer, size_t, Pointer is rw --> int32)
     is native(&native-library) is symbol('llev_phonetic_pattern_compile_regex') { * }
 sub llev-phonetic-pattern-compile-llre(Pointer, size_t, Pointer is rw --> int32)
@@ -1257,6 +1356,506 @@ class PhoneticRuleSet is export {
     method close(--> Nil) {
         return if $!closed;
         llev-phonetic-rules-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+# Standalone automata have no dictionary dependency. The native implementation
+# owns the validated operation set or substitution policy after construction.
+class AutomatonLimits is export {
+    has Int:D $.max-source-units = 1_000_000;
+    has Int:D $.max-target-units = 1_000_000;
+    has Int:D $.max-retained-cells = 1_000_000;
+    has Int:D $.max-step-work-units = 100_000_000;
+
+    method raw(--> RawAutomatonLimits:D) {
+        for ($!max-source-units, $!max-target-units,
+            $!max-retained-cells, $!max-step-work-units) -> $limit {
+            die 'automaton limits must fit nonnegative native size_t'
+                unless 0 <= $limit <= SIZE-MAX;
+        }
+        RawAutomatonLimits.new(
+            max-source-units => $!max-source-units,
+            max-target-units => $!max-target-units,
+            max-retained-cells => $!max-retained-cells,
+            max-step-work-units => $!max-step-work-units,
+        )
+    }
+}
+
+class GeneralizedRestriction is export {
+    has Str:D $.source is required;
+    has Str:D $.target is required;
+}
+
+class GeneralizedOperation is export {
+    has Int:D $.consume-source is required;
+    has Int:D $.consume-target is required;
+    has Real:D $.weight is required;
+    has Str:D $.name is required;
+    has OperationApplicability:D $.applicability = APPLICABILITY-ANY;
+    has Positional:D $.restrictions = [];
+}
+
+class GeneralizedOperationSet is export {
+    has Positional:D $.operations is required;
+    method elems(--> Int:D) { $!operations.elems }
+    method list(--> List:D) { $!operations.list }
+}
+
+class GeneralizedObservation is export {
+    has Int:D $.consumed-target-length is required;
+    has Int:D $.active-positions is required;
+    has Mu $.scaled-distance;
+    has Int:D $.scale-denominator is required;
+    has Mu $.distance;
+    has Bool:D $.current-row-nonempty is required;
+    has Bool:D $.accepting is required;
+}
+
+sub generalized-observation(RawGeneralizedObservation:D $raw
+    --> GeneralizedObservation:D) {
+    my $numerator = $raw.has-distance ?? $raw.scaled-distance.Int !! Nil;
+    my $denominator = $raw.scale-denominator.Int;
+    die 'native generalized observation has zero cost denominator'
+        if $numerator.defined && $denominator == 0;
+    GeneralizedObservation.new(
+        consumed-target-length => $raw.consumed-target-len.Int,
+        active-positions => $raw.active-positions.Int,
+        scaled-distance => $numerator,
+        scale-denominator => $denominator,
+        distance => $numerator.defined ?? $numerator / $denominator !! Nil,
+        current-row-nonempty => so $raw.current-row-nonempty,
+        accepting => so $raw.accepting,
+    )
+}
+
+sub checked-maximum-distance(Int:D $value --> Int:D) {
+    die 'maximum distance must fit uint8' unless 0 <= $value <= 255;
+    $value
+}
+
+sub scalar-value(Str:D $value --> Int:D) {
+    die 'a Unicode unit must contain exactly one scalar' unless $value.chars == 1;
+    $value.ord
+}
+
+sub contiguous-structs(Positional:D $values, Int:D $width --> CArray[uint8]) {
+    # NativeCall's CArray[CStruct] stores *pointers* to CStruct instances.
+    # The ABI expects structs inline, so copy their exact native layouts into
+    # one byte allocation. A single backing byte keeps an empty slice stable.
+    my $bytes = CArray[uint8].allocate(($values.elems * $width) max 1);
+    my $base = nativecast(Pointer, $bytes).Int;
+    for $values.list.kv -> $index, $value {
+        memcpy(Pointer.new($base + $index * $width),
+            nativecast(Pointer, $value), $width);
+    }
+    $bytes
+}
+
+sub marshal-generalized-operations(Positional:D $operations, @owners
+    --> CArray[uint8]) {
+    die 'generalized operations must be nonempty' unless $operations.elems;
+    my @raw;
+    for $operations.list.kv -> $index, $operation {
+        die 'each generalized operation must be a GeneralizedOperation'
+            unless $operation ~~ GeneralizedOperation;
+        for ($operation.consume-source, $operation.consume-target) -> $arity {
+            die 'operation arity must fit nonnegative native size_t'
+                unless 0 <= $arity <= SIZE-MAX;
+        }
+        my $name = byte-argument($operation.name.encode('utf8'));
+        @owners.push($name);
+        my @pairs = $operation.restrictions.list;
+        my @raw-pairs;
+        for @pairs.kv -> $pair-index, $restriction {
+            my $value = $restriction ~~ Pair
+                ?? GeneralizedRestriction.new(
+                    source => $restriction.key,
+                    target => $restriction.value,
+                ) !! $restriction;
+            die 'a listed restriction must be a source/target text pair'
+                unless $value ~~ GeneralizedRestriction;
+            my $source = byte-argument($value.source.encode('utf8'));
+            my $target = byte-argument($value.target.encode('utf8'));
+            @owners.append($source, $target);
+            @raw-pairs.push(RawGeneralizedRestriction.new(
+                source-data => $source.pointer.Int,
+                source-len => $source.length,
+                target-data => $target.pointer.Int,
+                target-len => $target.length,
+            ));
+        }
+        my $pairs = contiguous-structs(
+            @raw-pairs, nativesizeof(RawGeneralizedRestriction));
+        @owners.push($pairs);
+        @raw.push(RawGeneralizedOperation.new(
+            consume-source => $operation.consume-source,
+            consume-target => $operation.consume-target,
+            weight => $operation.weight.Num,
+            name-data => $name.pointer.Int,
+            name-len => $name.length,
+            applicability => $operation.applicability.Int,
+            reserved => 0,
+            restrictions => nativecast(Pointer, $pairs).Int,
+            restriction-count => @pairs.elems,
+        ));
+    }
+    contiguous-structs(@raw, nativesizeof(RawGeneralizedOperation))
+}
+
+class GeneralizedOnlineAutomaton is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'generalized-online', detail => 'online state is closed').throw
+            if $!closed;
+        $!handle
+    }
+
+    method observation(--> GeneralizedObservation:D) {
+        my $output = RawGeneralizedObservation.new;
+        check-status(llev-generalized-online-observation(self!handle, $output),
+            'generalized-online-observation');
+        generalized-observation($output)
+    }
+
+    method advance(Str:D $unit --> GeneralizedObservation:D) {
+        my $output = RawGeneralizedObservation.new;
+        check-status(llev-generalized-online-advance(
+            self!handle, scalar-value($unit), $output,
+        ), 'generalized-online-advance');
+        generalized-observation($output)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-generalized-online-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class GeneralizedAutomaton is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    multi method new(Int:D $maximum-distance, GeneralizedOperationSet:D $set) {
+        my @owners;
+        my $operations = marshal-generalized-operations($set.operations, @owners);
+        my Pointer $output .= new;
+        my $status = llev-generalized-automaton-new(
+            checked-maximum-distance($maximum-distance),
+            nativecast(Pointer, $operations), $set.elems, $output,
+        );
+        die 'generalized operation backing storage was lost' unless @owners.elems;
+        check-status($status, 'generalized-automaton-new');
+        self.bless(handle => $output)
+    }
+
+    multi method new(Int:D $maximum-distance, Positional:D $operations) {
+        self.new($maximum-distance,
+            GeneralizedOperationSet.new(operations => $operations))
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'generalized-automaton', detail => 'automaton is closed').throw
+            if $!closed;
+        $!handle
+    }
+
+    method evaluate(Str:D $source, Str:D $target,
+        AutomatonLimits :$limits --> GeneralizedObservation:D) {
+        my $left = byte-argument($source.encode('utf8'));
+        my $right = byte-argument($target.encode('utf8'));
+        my $raw-limits = $limits.defined ?? $limits.raw !! Nil;
+        my $limit-argument = $raw-limits.defined
+            ?? $raw-limits !! RawAutomatonLimits;
+        my $output = RawGeneralizedObservation.new;
+        my $retained = [$left, $right, $raw-limits];
+        my $status = llev-generalized-automaton-evaluate-utf8(
+            self!handle, $left.pointer, $left.length,
+            $right.pointer, $right.length, $limit-argument, $output,
+        );
+        die 'generalized evaluation backing storage was lost'
+            unless $retained.elems == 3;
+        check-status($status, 'generalized-automaton-evaluate-utf8');
+        generalized-observation($output)
+    }
+
+    method accepts(Str:D $source, Str:D $target,
+        AutomatonLimits :$limits --> Bool:D) {
+        self.evaluate($source, $target, :$limits).accepting
+    }
+
+    method online(Str:D $source,
+        AutomatonLimits :$limits --> GeneralizedOnlineAutomaton:D) {
+        my $bytes = byte-argument($source.encode('utf8'));
+        my $raw-limits = $limits.defined ?? $limits.raw !! Nil;
+        my $limit-argument = $raw-limits.defined
+            ?? $raw-limits !! RawAutomatonLimits;
+        my Pointer $output .= new;
+        my $retained = [$bytes, $raw-limits];
+        my $status = llev-generalized-online-new-utf8(
+            self!handle, $bytes.pointer, $bytes.length, $limit-argument, $output,
+        );
+        die 'generalized online backing storage was lost'
+            unless $retained.elems == 2;
+        check-status($status, 'generalized-online-new-utf8');
+        GeneralizedOnlineAutomaton.bless(handle => $output)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-generalized-automaton-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+# Omitting a policy selects the native unrestricted specialization. A policy
+# with directional pairs is domain-specific and must contain at least one pair.
+class UniversalEquivalence is export {
+    has Mu $.source is required;
+    has Mu $.target is required;
+}
+
+class UniversalPolicy is export {
+    has UnitDomain:D $.domain is required;
+    has Positional:D $.equivalences is required;
+    method elems(--> Int:D) { $!equivalences.elems }
+}
+
+class UniversalObservation is export {
+    has Int:D $.consumed-target-length is required;
+    has Int:D $.source-length is required;
+    has Bool:D $.alive is required;
+    has Bool:D $.accepting is required;
+}
+
+sub universal-observation(RawUniversalObservation:D $raw
+    --> UniversalObservation:D) {
+    UniversalObservation.new(
+        consumed-target-length => $raw.consumed-target-len.Int,
+        source-length => $raw.source-len.Int,
+        alive => so $raw.alive,
+        accepting => so $raw.accepting,
+    )
+}
+
+sub checked-universal-unit(Mu $value, UnitDomain:D $domain --> Int:D) {
+    if $domain == UNICODE-SCALAR {
+        return scalar-value($value) if $value ~~ Str;
+        die 'Unicode equivalence must be a scalar string or scalar number'
+            unless $value ~~ Int;
+        die 'Unicode scalar is outside the valid scalar range'
+            unless 0 <= $value <= 0x10ffff && !($value >= 0xd800 && $value <= 0xdfff);
+        return $value;
+    }
+    die 'byte/u64 equivalence must contain integer units' unless $value ~~ Int;
+    my $maximum = $domain == BYTE ?? 255 !! U64-MAX;
+    die 'universal-equivalence unit is outside its domain'
+        unless 0 <= $value <= $maximum;
+    $value
+}
+
+class NativeUniversalInput {
+    has UnitDomain:D $.domain is required;
+    has Pointer:D $.pointer is required;
+    has Int:D $.length is required;
+    has Mu $.owner is required;
+}
+
+multi sub universal-input(Str:D $source --> NativeUniversalInput:D) {
+    my $bytes = byte-argument($source.encode('utf8'));
+    NativeUniversalInput.new(
+        domain => UNICODE-SCALAR, pointer => $bytes.pointer,
+        length => $bytes.length, owner => $bytes,
+    )
+}
+
+multi sub universal-input(Blob:D $source --> NativeUniversalInput:D) {
+    my $bytes = byte-argument($source);
+    NativeUniversalInput.new(
+        domain => BYTE, pointer => $bytes.pointer,
+        length => $bytes.length, owner => $bytes,
+    )
+}
+
+multi sub universal-input(Positional:D $source --> NativeUniversalInput:D) {
+    my $tokens = u64-tokens($source);
+    NativeUniversalInput.new(
+        domain => U64, pointer => nativecast(Pointer, $tokens),
+        length => $source.elems, owner => $tokens,
+    )
+}
+
+class UniversalOnlineAutomaton is export {
+    has Pointer $!handle is required;
+    has UnitDomain:D $.unit-domain is required;
+    has Bool $!closed = False;
+    submethod BUILD(Pointer:D :$handle!, UnitDomain:D :$unit-domain!) {
+        $!handle = $handle;
+        $!unit-domain = $unit-domain;
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'universal-online', detail => 'online state is closed').throw
+            if $!closed;
+        $!handle
+    }
+
+    method observation(--> UniversalObservation:D) {
+        my $output = RawUniversalObservation.new;
+        check-status(llev-universal-online-observation(self!handle, $output),
+            'universal-online-observation');
+        universal-observation($output)
+    }
+
+    method advance(Mu $unit --> UniversalObservation:D) {
+        my $handle = self!handle;
+        die 'a Unicode prefix advances by one scalar string'
+            if $!unit-domain == UNICODE-SCALAR && $unit !~~ Str;
+        die 'a byte/u64 prefix advances by one integer'
+            if $!unit-domain != UNICODE-SCALAR && $unit !~~ Int;
+        my $value = checked-universal-unit($unit, $!unit-domain);
+        # Rakudo NativeCall cannot unbox a boxed Int above signed i64 for a
+        # by-value uint64 argument. Pass the equivalent signed two's-complement
+        # bit pattern; the ABI receives the exact unsigned 64-bit token.
+        my $native-unit = $value > 2**63 - 1 ?? $value - 2**64 !! $value;
+        my $output = RawUniversalObservation.new;
+        check-status(llev-universal-online-advance($handle, $native-unit, $output),
+            'universal-online-advance');
+        universal-observation($output)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-universal-online-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class UniversalAutomaton is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    multi method new(Int:D $maximum-distance,
+        UniversalVariant:D :$variant = UNIVERSAL-STANDARD,
+        UniversalPolicy :$policy) {
+        my $count = $policy.defined ?? $policy.elems !! 0;
+        die 'a directional universal policy must have at least one equivalence'
+            if $policy.defined && !$count;
+        my @raw-pairs;
+        if $policy.defined {
+            die 'universal policy domain must be BYTE, UNICODE-SCALAR, or U64'
+                unless $policy.domain == BYTE || $policy.domain == UNICODE-SCALAR
+                    || $policy.domain == U64;
+            for $policy.equivalences.list.kv -> $index, $equivalence {
+                my $value = $equivalence ~~ Pair
+                    ?? UniversalEquivalence.new(
+                        source => $equivalence.key,
+                        target => $equivalence.value,
+                    ) !! $equivalence;
+                die 'universal equivalence must be a directional pair'
+                    unless $value ~~ UniversalEquivalence;
+                @raw-pairs.push(RawUniversalEquivalence.new(
+                    source => checked-universal-unit($value.source, $policy.domain),
+                    target => checked-universal-unit($value.target, $policy.domain),
+                ));
+            }
+        }
+        my $pairs = contiguous-structs(
+            @raw-pairs, nativesizeof(RawUniversalEquivalence));
+        my Pointer $output .= new;
+        my $status = llev-universal-automaton-new(
+            checked-maximum-distance($maximum-distance), $variant.Int,
+            $policy.defined ?? $policy.domain.Int !! 0,
+            $count ?? nativecast(Pointer, $pairs) !! Pointer,
+            $count, $output,
+        );
+        die 'universal policy backing storage was lost' unless $pairs.defined;
+        check-status($status, 'universal-automaton-new');
+        self.bless(handle => $output)
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'universal-automaton', detail => 'automaton is closed').throw
+            if $!closed;
+        $!handle
+    }
+
+    method evaluate(Mu $source, Mu $target,
+        AutomatonLimits :$limits --> UniversalObservation:D) {
+        my $left = universal-input($source);
+        my $right = universal-input($target);
+        die 'universal source and target must share a unit domain'
+            unless $left.domain == $right.domain;
+        my $raw-limits = $limits.defined ?? $limits.raw !! Nil;
+        my $limit-argument = $raw-limits.defined
+            ?? $raw-limits !! RawAutomatonLimits;
+        my $output = RawUniversalObservation.new;
+        my $retained = [$left, $right, $raw-limits];
+        my $status = llev-universal-automaton-evaluate(
+            self!handle, $left.domain.Int, $left.pointer, $left.length,
+            $right.pointer, $right.length, $limit-argument, $output,
+        );
+        die 'universal evaluation backing storage was lost'
+            unless $retained.elems == 3;
+        check-status($status, 'universal-automaton-evaluate');
+        universal-observation($output)
+    }
+
+    method accepts(Mu $source, Mu $target,
+        AutomatonLimits :$limits --> Bool:D) {
+        self.evaluate($source, $target, :$limits).accepting
+    }
+
+    method online(Mu $source,
+        AutomatonLimits :$limits --> UniversalOnlineAutomaton:D) {
+        my $input = universal-input($source);
+        my $raw-limits = $limits.defined ?? $limits.raw !! Nil;
+        my $limit-argument = $raw-limits.defined
+            ?? $raw-limits !! RawAutomatonLimits;
+        my Pointer $output .= new;
+        my $retained = [$input, $raw-limits];
+        my $status = llev-universal-online-new(
+            self!handle, $input.domain.Int, $input.pointer, $input.length,
+            $limit-argument, $output,
+        );
+        die 'universal online backing storage was lost'
+            unless $retained.elems == 2;
+        check-status($status, 'universal-online-new');
+        UniversalOnlineAutomaton.bless(
+            handle => $output, unit-domain => $input.domain,
+        )
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-universal-automaton-free($!handle);
         $!handle = Pointer;
         $!closed = True;
     }

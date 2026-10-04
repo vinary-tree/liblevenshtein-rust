@@ -63,6 +63,83 @@ scoring rules or independently selectable Raku APIs. Performance and
 unsupported-path evidence are in
 [the distance-family benchmark](benchmark/README.md).
 
+## Standalone generalized and universal automata
+
+These automata evaluate complete source/target pairs and advance one target
+prefix at a time. They do **not** traverse a dictionary; a transducer query
+uses its separate, specialized dictionary-product traversal. Both constructors
+copy their configuration into immutable native handles. Call `.close` on each
+automaton and online state; `DESTROY` is only a leak-containment fallback.
+
+A `GeneralizedOperationSet` contains `GeneralizedOperation` values. Each
+operation declares how many Unicode scalars it consumes from the source and
+target, a nonnegative decimal weight, a diagnostic name, and applicability:
+`APPLICABILITY-ANY`, `APPLICABILITY-EQUAL`,
+`APPLICABILITY-ADJACENT-TRANSPOSE`, or `APPLICABILITY-LISTED`. Listed
+restrictions are directional source-to-target text pairs whose scalar lengths
+must match the operation arity. The native constructor validates the entire
+set, including its bounded operation and restriction counts. It computes one
+exact fixed-point scale; `GeneralizedObservation.distance` is a Raku rational
+when a complete source is within the budget, or `Nil` otherwise. The
+observation also exposes its scaled numerator and denominator. An empty
+`current-row-nonempty` is **not** permanent death: a multi-target-unit rule
+can rejoin a retained prior row on a later prefix.
+
+```raku
+use Liblevenshtein;
+
+my $edit = GeneralizedAutomaton.new(1, [
+    GeneralizedOperation.new(
+        consume-source => 2, consume-target => 1, weight => 0.5,
+        name => 'ph to f', applicability => APPLICABILITY-LISTED,
+        restrictions => ['ph' => 'f'],
+    ),
+]);
+LEAVE $edit.close;
+say $edit.evaluate('ph', 'f').distance; # 1/2
+say $edit.accepts('f', 'ph');         # False: restrictions are directional
+
+my $online = $edit.online('ph',
+    limits => AutomatonLimits.new(max-target-units => 1));
+LEAVE $online.close;
+say $online.advance('f').accepting;  # True
+```
+
+`UniversalAutomaton` has three native position-automaton variants:
+`UNIVERSAL-STANDARD`, `UNIVERSAL-TRANSPOSITION`, and
+`UNIVERSAL-MERGE-AND-SPLIT`. With no policy it selects the native unrestricted
+specialization and accepts `Str` (Unicode scalars), `Blob` (raw bytes), and
+`Positional` (full-width unsigned 64-bit tokens). A `UniversalPolicy` adds
+directional zero-cost source-to-target substitution pairs and fixes one of
+those unit domains; it must not be empty. Mixed domains and out-of-range
+policy or online units are rejected, never coerced. `UniversalObservation`
+reports the committed target length, bound source length, frontier liveness,
+and whether the current prefix is accepted. A universal frontier that is no
+longer alive cannot recover, unlike a generalized empty current row.
+
+```raku
+my $policy = UniversalPolicy.new(
+    domain => UNICODE-SCALAR, equivalences => ['p' => 'f'],
+);
+my $phonetic = UniversalAutomaton.new(0, :$policy);
+LEAVE $phonetic.close;
+say $phonetic.accepts('p', 'f'); # True
+say $phonetic.accepts('f', 'p'); # False
+
+my $swap = UniversalAutomaton.new(
+    1, variant => UNIVERSAL-TRANSPOSITION,
+);
+LEAVE $swap.close;
+say $swap.accepts('ab', 'ba'); # True
+```
+
+`AutomatonLimits` supplies explicit hard ceilings for source units, committed
+target units, generalized retained cells, and per-step generalized work.
+Omitting `:limits` selects the native defaults. Each failed online advance is
+transactional: `.observation` still describes the last committed prefix.
+Create one online handle per mutable traversal; an online handle remains valid
+if its immutable configuration closes first.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract
@@ -142,6 +219,13 @@ variants, protocols, or methods.
 | `build-features` | `llev_build_features` | ABI compatibility and feature discovery |
 | `damerau-distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold`, `llev_damerau_distance_bytes`, `llev_damerau_distance_bytes_threshold`, `llev_damerau_distance_u64`, `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
 | `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
+| `GeneralizedAutomaton.close` | `llev_generalized_automaton_free` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `GeneralizedAutomaton.evaluate` | `llev_generalized_automaton_evaluate_utf8` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `GeneralizedAutomaton.new` | `llev_generalized_automaton_new` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `GeneralizedAutomaton.online` | `llev_generalized_online_new_utf8` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `GeneralizedOnlineAutomaton.advance` | `llev_generalized_online_advance` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `GeneralizedOnlineAutomaton.close` | `llev_generalized_online_free` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `GeneralizedOnlineAutomaton.observation` | `llev_generalized_online_observation` | runtime generalized-automaton lifecycle and prefix evaluation |
 | `hamming-distance` | `llev_hamming_distance`, `llev_hamming_distance_threshold`, `llev_hamming_distance_bytes`, `llev_hamming_distance_bytes_threshold`, `llev_hamming_distance_u64`, `llev_hamming_distance_u64_threshold` | project ABI operation |
 | `indel-distance` | `llev_indel_distance`, `llev_indel_distance_threshold`, `llev_indel_distance_bytes`, `llev_indel_distance_bytes_threshold`, `llev_indel_distance_u64`, `llev_indel_distance_u64_threshold` | project ABI operation |
 | `merge-and-split-distance` | `llev_merge_and_split_distance`, `llev_merge_and_split_distance_threshold`, `llev_merge_and_split_distance_bytes`, `llev_merge_and_split_distance_bytes_threshold`, `llev_merge_and_split_distance_u64`, `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
@@ -167,6 +251,13 @@ variants, protocols, or methods.
 | `Transducer.snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.unit-domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
 | `true-damerau-distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold`, `llev_true_damerau_distance_bytes`, `llev_true_damerau_distance_bytes_threshold`, `llev_true_damerau_distance_u64`, `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
+| `UniversalAutomaton.close` | `llev_universal_automaton_free` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `UniversalAutomaton.evaluate` | `llev_universal_automaton_evaluate` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `UniversalAutomaton.new` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `UniversalAutomaton.online` | `llev_universal_online_new` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `UniversalOnlineAutomaton.advance` | `llev_universal_online_advance` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `UniversalOnlineAutomaton.close` | `llev_universal_online_free` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `UniversalOnlineAutomaton.observation` | `llev_universal_online_observation` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `X::Liblevenshtein` | `llev_last_error_message` | typed failure diagnostics |
 
 ### Public types and traversal protocols

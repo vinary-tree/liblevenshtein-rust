@@ -1,0 +1,237 @@
+use Test;
+use NativeCall;
+use Liblevenshtein;
+
+is nativesizeof(RawAutomatonLimits), 32, 'automaton limits match LP64 C';
+is nativesizeof(RawGeneralizedRestriction), 32, 'restriction layout matches LP64 C';
+is nativesizeof(RawGeneralizedOperation), 64, 'operation layout matches LP64 C';
+is nativesizeof(RawUniversalEquivalence), 16, 'equivalence layout matches LP64 C';
+is nativesizeof(RawGeneralizedObservation), 32, 'generalized observation matches LP64 C';
+is nativesizeof(RawUniversalObservation), 24, 'universal observation matches LP64 C';
+
+my $ordinary = GeneralizedOperationSet.new(operations => [
+    GeneralizedOperation.new(
+        consume-source => 0, consume-target => 1, weight => 1,
+        name => 'insert',
+    ),
+    GeneralizedOperation.new(
+        consume-source => 1, consume-target => 0, weight => 1,
+        name => 'delete',
+    ),
+    GeneralizedOperation.new(
+        consume-source => 1, consume-target => 1, weight => 0,
+        name => 'equal', applicability => APPLICABILITY-EQUAL,
+    ),
+    GeneralizedOperation.new(
+        consume-source => 1, consume-target => 1, weight => 0.5,
+        name => 'substitute',
+    ),
+]);
+my $generalized = GeneralizedAutomaton.new(2, $ordinary);
+my $score = $generalized.evaluate('cat', 'cut');
+ok $score.accepting, 'fractional generalized substitution is accepted';
+is $score.scaled-distance, 1, 'scaled cost is exact';
+is $score.scale-denominator, 2, 'decimal scale is exposed';
+is $score.distance, 1/2, 'host distance is an exact rational';
+ok $generalized.accepts('cat', 'cut'), 'complete-pair convenience retains semantics';
+
+my $generalized-state = $generalized.online('a',
+    limits => AutomatonLimits.new(max-target-units => 1));
+is $generalized-state.observation.consumed-target-length, 0,
+    'online generalized state begins at the empty target prefix';
+ok $generalized-state.advance('a').accepting,
+    'online generalized state processes one Unicode scalar';
+throws-like { $generalized-state.advance('b') }, X::Liblevenshtein,
+    status => LIMIT-EXCEEDED, 'target limit rejects excess advancement';
+is $generalized-state.observation.consumed-target-length, 1,
+    'a failed generalized step preserves the committed prefix';
+$generalized.close;
+ok $generalized-state.observation.accepting,
+    'the online state remains owned after its configuration closes';
+$generalized-state.close;
+nok $generalized-state.opened, 'generalized state closes deterministically';
+throws-like { $generalized-state.observation }, X::Liblevenshtein,
+    status => CLOSED, 'closed generalized state rejects observation';
+
+my $listed = GeneralizedAutomaton.new(1, [
+    GeneralizedOperation.new(
+        consume-source => 2, consume-target => 1, weight => 0.5,
+        name => 'ph to f', applicability => APPLICABILITY-LISTED,
+        restrictions => ['ph' => 'f'],
+    ),
+]);
+is $listed.evaluate('ph', 'f').distance, 1/2,
+    'listed restriction is directional and uses exact decimal scaling';
+nok $listed.accepts('f', 'ph'), 'listed restriction is not reversed';
+$listed.close;
+
+my $bridge = GeneralizedAutomaton.new(0, [
+    GeneralizedOperation.new(
+        consume-source => 2, consume-target => 2, weight => 0,
+        name => 'pair-equality', applicability => APPLICABILITY-EQUAL,
+    ),
+]);
+my $bridge-state = $bridge.online('ab');
+my $half = $bridge-state.advance('a');
+nok $half.current-row-nonempty,
+    'empty current row is not falsely treated as permanent death';
+nok $half.accepting, 'half of a two-target-unit operation is not accepted';
+ok $bridge-state.advance('b').accepting,
+    'older retained row reconnects at the next target generation';
+$bridge-state.close;
+$bridge.close;
+
+throws-like {
+    GeneralizedAutomaton.new(1, [GeneralizedOperation.new(
+        consume-source => 0, consume-target => 0, weight => 1,
+        name => 'invalid',
+    )])
+}, X::Liblevenshtein, status => INVALID-ARGUMENT,
+    'native operation-set validation rejects zero-consumption rules';
+throws-like {
+    GeneralizedAutomaton.new(1, [GeneralizedOperation.new(
+        consume-source => 1, consume-target => 1, weight => -1,
+        name => 'negative',
+    )])
+}, X::Liblevenshtein, status => INVALID-ARGUMENT,
+    'native operation validation rejects negative weights';
+dies-ok { GeneralizedAutomaton.new(256, $ordinary) },
+    'maximum distance is validated before uint8 conversion';
+throws-like {
+    GeneralizedAutomaton.new(1, [GeneralizedOperation.new(
+        consume-source => 2, consume-target => 1, weight => 0.5,
+        name => 'wrong arity', applicability => APPLICABILITY-LISTED,
+        restrictions => ['p' => 'f'],
+    )])
+}, X::Liblevenshtein, status => INVALID-ARGUMENT,
+    'native listed-operation validation checks source/target scalar arity';
+my $limited-generalized = GeneralizedAutomaton.new(1, [
+    GeneralizedOperation.new(
+        consume-source => 1, consume-target => 1, weight => 0,
+        name => 'equal', applicability => APPLICABILITY-EQUAL,
+    ),
+]);
+for (
+    AutomatonLimits.new(max-source-units => 0),
+    AutomatonLimits.new(max-target-units => 0),
+    AutomatonLimits.new(max-retained-cells => 0),
+    AutomatonLimits.new(max-step-work-units => 0),
+) -> $limits {
+    throws-like {
+        $limited-generalized.evaluate('a', 'a', :$limits)
+    }, X::Liblevenshtein, status => LIMIT-EXCEEDED,
+        'native generalized source, target, retained-cell, and work ceilings bind';
+}
+$limited-generalized.close;
+
+for UNIVERSAL-STANDARD, UNIVERSAL-TRANSPOSITION,
+    UNIVERSAL-MERGE-AND-SPLIT -> $variant {
+    for ^3 -> $bound {
+        my $automaton = UniversalAutomaton.new($bound, :$variant);
+        for ('', 'a', 'ab', 'ba', 'abc', 'a\0b', 'éλ') -> $source {
+            for ('', 'a', 'ab', 'ba', 'abc', 'a\0b', 'λé') -> $target {
+                my $reference = do given $variant {
+                    when UNIVERSAL-STANDARD { distance($source, $target) }
+                    when UNIVERSAL-TRANSPOSITION {
+                        damerau-distance($source, $target)
+                    }
+                    default { merge-and-split-distance($source, $target) }
+                };
+                my $expected = $reference <= $bound;
+                is $automaton.accepts($source, $target), $expected,
+                    'universal variant agrees with its independent Unicode DP kernel';
+                my $state = $automaton.online($source);
+                for $target.comb -> $unit { $state.advance($unit) }
+                is $state.observation.accepting, $expected,
+                    'online and complete universal evaluations agree';
+                is $state.observation.consumed-target-length, $target.chars,
+                    'online universal observation counts target units';
+                $state.close;
+            }
+        }
+        $automaton.close;
+    }
+}
+
+my $unrestricted = UniversalAutomaton.new(1);
+ok $unrestricted.accepts('', ''),
+    'unrestricted universal automaton preserves the empty pair';
+ok $unrestricted.accepts(Buf.new(0xff), Buf.new(0xff)),
+    'unrestricted native specialization accepts non-UTF8 bytes';
+ok $unrestricted.accepts([2**64 - 1], [2**64 - 1]),
+    'unrestricted native specialization accepts full-width u64 tokens';
+my $byte-state = $unrestricted.online(Buf.new(0xff));
+ok $byte-state.advance(0xff).accepting,
+    'byte-domain online state preserves invalid UTF-8';
+$byte-state.close;
+my $token-state = $unrestricted.online([2**64 - 1]);
+ok $token-state.advance(2**64 - 1).accepting,
+    'u64-domain online state preserves the largest token';
+$token-state.close;
+$unrestricted.close;
+my $full-width-policy = UniversalPolicy.new(
+    domain => U64, equivalences => [(2**64 - 1) => (2**64 - 2)],
+);
+my $full-width = UniversalAutomaton.new(0, policy => $full-width-policy);
+ok $full-width.accepts([2**64 - 1], [2**64 - 2]),
+    'directional u64 policy retains both full-width unsigned endpoints';
+$full-width.close;
+
+for (
+    [UNICODE-SCALAR, ['p' => 'f'], 'p', 'f', 'f', 'p'],
+    [BYTE, [112 => 102], Buf.new(112), Buf.new(102), Buf.new(102), Buf.new(112)],
+    [U64, [7 => 9], [7], [9], [9], [7]],
+) -> $case {
+    my ($domain, $pairs, $left, $right, $reverse-left, $reverse-right) = $case.list;
+    my $policy = UniversalPolicy.new(domain => $domain, equivalences => $pairs);
+    my $automaton = UniversalAutomaton.new(0, :$policy);
+    ok $automaton.accepts($left, $right),
+        'directional zero-cost substitution admits the configured pair';
+    nok $automaton.accepts($reverse-left, $reverse-right),
+        'directional substitution does not admit its reverse';
+    if $domain == UNICODE-SCALAR {
+        throws-like {
+            $automaton.evaluate(Buf.new(112), Buf.new(102))
+        }, X::Liblevenshtein, status => DOMAIN-MISMATCH,
+            'a configured Unicode policy rejects a byte-domain pair';
+    }
+    my $online = $automaton.online($left);
+    $automaton.close;
+    my $last = $domain == UNICODE-SCALAR ?? $right !! $domain == BYTE
+        ?? $right[0] !! $right[0];
+    ok $online.advance($last).accepting,
+        'online policy state owns its configuration after close';
+    $online.close;
+}
+
+my $bounded = UniversalAutomaton.new(2);
+my $bounded-state = $bounded.online('a',
+    limits => AutomatonLimits.new(max-target-units => 1));
+ok $bounded-state.advance('a').accepting, 'bounded universal first step';
+throws-like { $bounded-state.advance('b') }, X::Liblevenshtein,
+    status => LIMIT-EXCEEDED, 'bounded universal second step is rejected';
+is $bounded-state.observation.consumed-target-length, 1,
+    'a failed universal step preserves the committed prefix';
+dies-ok { $bounded-state.advance('ab') },
+    'universal Unicode advancement rejects more than one scalar';
+$bounded-state.close;
+$bounded.close;
+
+throws-like {
+    UniversalAutomaton.new(0, policy => UniversalPolicy.new(
+        domain => BYTE, equivalences => [256 => 0],
+    ))
+}, X::AdHoc, 'out-of-range policy unit is rejected without truncation';
+dies-ok { AutomatonLimits.new(max-target-units => -1).raw },
+    'negative explicit limits are rejected without wrapping';
+dies-ok { UniversalAutomaton.new(0,
+    policy => UniversalPolicy.new(domain => U64, equivalences => [])) },
+    'an empty policy is not silently promoted to unrestricted';
+{
+    my $mixed = UniversalAutomaton.new(0);
+    LEAVE $mixed.close;
+    dies-ok { $mixed.evaluate('a', Buf.new(97)) },
+        'mixed complete-pair domains are rejected before FFI coercion';
+}
+
+done-testing;

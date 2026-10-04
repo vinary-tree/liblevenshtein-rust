@@ -6961,7 +6961,8 @@
       ],
       "readme": "bindings/raku/README.md",
       "tests": [
-        "bindings/raku/t/01-conformance.rakutest"
+        "bindings/raku/t/01-conformance.rakutest",
+        "bindings/raku/t/02-standalone-automata.rakutest"
       ],
       "enums": {
         "status": {
@@ -7253,60 +7254,46 @@
           "symbol": "PhoneticRuleSet.apply"
         },
         "llev_generalized_automaton_new": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "GeneralizedAutomaton.new"
         },
         "llev_generalized_automaton_free": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "GeneralizedAutomaton.close"
         },
         "llev_generalized_automaton_evaluate_utf8": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "GeneralizedAutomaton.evaluate"
         },
         "llev_generalized_online_new_utf8": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "GeneralizedAutomaton.online"
         },
         "llev_generalized_online_advance": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "GeneralizedOnlineAutomaton.advance"
         },
         "llev_generalized_online_observation": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "GeneralizedOnlineAutomaton.observation"
         },
         "llev_generalized_online_free": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "GeneralizedOnlineAutomaton.close"
         },
         "llev_universal_automaton_new": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "UniversalAutomaton.new"
         },
         "llev_universal_automaton_free": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "UniversalAutomaton.close"
         },
         "llev_universal_automaton_evaluate": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "UniversalAutomaton.evaluate"
         },
         "llev_universal_online_new": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "UniversalAutomaton.online"
         },
         "llev_universal_online_advance": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "UniversalOnlineAutomaton.advance"
         },
         "llev_universal_online_observation": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "UniversalOnlineAutomaton.observation"
         },
         "llev_universal_online_free": {
-          "symbol": null,
-          "_reason": "standalone generalized/universal automata entered the shared C ABI at API revision 5; the idiomatic facade is owned by the dependent language-family automata parity task"
+          "symbol": "UniversalOnlineAutomaton.close"
         },
         "llev_wallbreaker_new_utf8": {
           "symbol": null,

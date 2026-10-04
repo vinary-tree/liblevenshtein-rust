@@ -371,6 +371,8 @@
           "adjacent-transposition-automaton": "our constant TRANSPOSITION is export",
           "true-damerau-levenshtein-automaton": "our constant DAMERAU-LEVENSHTEIN is export",
           "merge-and-split-automaton": "our constant MERGE-AND-SPLIT is export",
+          "generalized-edit-automaton": "class GeneralizedAutomaton is export",
+          "universal-levenshtein-automaton": "class UniversalAutomaton is export",
           "dictionary-product-traversal": "Str:D $input, Int:D $maximum-distance",
           "ranked-priority-query": "our constant DISTANCE-THEN-TERM is export",
           "match-modes": "our constant QueryOrder is export",
