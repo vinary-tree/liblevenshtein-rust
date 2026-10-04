@@ -233,7 +233,7 @@ the [ABI evolution policy](https://github.com/vinary-tree/vinary-tree-interop/bl
 package version alone.
 
 When loading fails, check the OCaml/opam
-version, native library and its dependent interop pin, C-stub linkage, and
+version, native library and its dependent interop pin, C FFI linkage, and
 loader search path. When a query fails after construction, report the
 host-language error and copied diagnostic before reducing the case to the
 smallest dictionary/query pair.
