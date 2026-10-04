@@ -122,17 +122,67 @@ variants, protocols, or methods.
 | `llev_merge_and_split_distance_threshold` | `llev_merge_and_split_distance_threshold` | standalone merge-and-split distance |
 | `llev_merge_and_split_distance_u64` | `llev_merge_and_split_distance_u64` | standalone merge-and-split distance |
 | `llev_merge_and_split_distance_u64_threshold` | `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
+| `llev_owned_bytes_free` | `llev_owned_bytes_free` | versioned compiled-byte ownership |
 | `llev_owned_string_free` | `llev_owned_string_free` | owned result-string release |
+| `llev_phonetic_articulatory_distance` | `llev_phonetic_articulatory_distance` | articulatory phonetic distance |
+| `llev_phonetic_articulatory_edit_distance` | `llev_phonetic_articulatory_edit_distance` | articulatory phonetic distance |
+| `llev_phonetic_candidates_free` | `llev_phonetic_candidates_free` | owned normalized-dictionary candidate release |
+| `llev_phonetic_chars_with_features` | `llev_phonetic_chars_with_features` | IPA feature classification and relations |
+| `llev_phonetic_dictionary_free` | `llev_phonetic_dictionary_free` | normalized phonetic dictionary construction, query, and updates |
+| `llev_phonetic_dictionary_new` | `llev_phonetic_dictionary_new` | normalized phonetic dictionary construction, query, and updates |
+| `llev_phonetic_dictionary_query` | `llev_phonetic_dictionary_query` | normalized phonetic dictionary construction, query, and updates |
+| `llev_phonetic_dictionary_update` | `llev_phonetic_dictionary_update` | normalized phonetic dictionary construction, query, and updates |
+| `llev_phonetic_expand` | `llev_phonetic_expand` | bounded reverse phonetic expansion |
+| `llev_phonetic_expand_feature_based` | `llev_phonetic_expand_feature_based` | IPA feature-driven expansion |
+| `llev_phonetic_expand_with_costs` | `llev_phonetic_expand_with_costs` | bounded reverse phonetic expansion |
+| `llev_phonetic_feature_relation` | `llev_phonetic_feature_relation` | IPA feature classification and relations |
+| `llev_phonetic_feature_set_distance` | `llev_phonetic_feature_set_distance` | IPA feature classification and relations |
+| `llev_phonetic_features` | `llev_phonetic_features` | IPA feature classification and relations |
+| `llev_phonetic_grep_distance_config` | `llev_phonetic_grep_distance_config` | word-boundary phonetic search and configuration |
+| `llev_phonetic_grep_free` | `llev_phonetic_grep_free` | word-boundary phonetic search and configuration |
+| `llev_phonetic_grep_matches` | `llev_phonetic_grep_matches` | word-boundary phonetic search and configuration |
+| `llev_phonetic_grep_new` | `llev_phonetic_grep_new` | word-boundary phonetic search and configuration |
+| `llev_phonetic_grep_scan_line` | `llev_phonetic_grep_scan_line` | word-boundary phonetic search and configuration |
+| `llev_phonetic_grep_scan_text` | `llev_phonetic_grep_scan_text` | word-boundary phonetic search and configuration |
+| `llev_phonetic_online_free` | `llev_phonetic_online_free` | character-level phonetic search and scanner lifecycle |
+| `llev_phonetic_online_matches_free` | `llev_phonetic_online_matches_free` | character-level phonetic search and scanner lifecycle |
+| `llev_phonetic_online_new` | `llev_phonetic_online_new` | character-level phonetic search and scanner lifecycle |
+| `llev_phonetic_online_normalized_query` | `llev_phonetic_online_normalized_query` | character-level phonetic search and scanner lifecycle |
+| `llev_phonetic_online_scan` | `llev_phonetic_online_scan` | character-level phonetic search and scanner lifecycle |
+| `llev_phonetic_online_stream_feed` | `llev_phonetic_online_stream_feed` | character-level phonetic search and scanner lifecycle |
+| `llev_phonetic_online_stream_finish` | `llev_phonetic_online_stream_finish` | character-level phonetic search and scanner lifecycle |
+| `llev_phonetic_online_stream_free` | `llev_phonetic_online_stream_free` | character-level phonetic search and scanner lifecycle |
+| `llev_phonetic_online_stream_new` | `llev_phonetic_online_stream_new` | character-level phonetic search and scanner lifecycle |
 | `llev_phonetic_pattern_compile_llre` | `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
 | `llev_phonetic_pattern_compile_regex` | `llev_phonetic_pattern_compile_regex` | compiled phonetic-pattern lifecycle and matching |
 | `llev_phonetic_pattern_free` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
+| `llev_phonetic_pattern_from_bytes` | `llev_phonetic_pattern_from_bytes` | versioned compiled phonetic-pattern bytes |
+| `llev_phonetic_pattern_load_llre_file` | `llev_phonetic_pattern_load_llre_file` | trusted .llre loading with native imports |
 | `llev_phonetic_pattern_matches` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
 | `llev_phonetic_pattern_size` | `llev_phonetic_pattern_size` | compiled phonetic-pattern lifecycle and matching |
+| `llev_phonetic_pattern_to_bytes` | `llev_phonetic_pattern_to_bytes` | versioned compiled phonetic-pattern bytes |
 | `llev_phonetic_rules_apply` | `llev_phonetic_rules_apply` | phonetic rule-set lifecycle and rewriting |
 | `llev_phonetic_rules_builtin` | `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
 | `llev_phonetic_rules_free` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
+| `llev_phonetic_rules_from_bytes` | `llev_phonetic_rules_from_bytes` | versioned compiled phonetic-rule bytes |
 | `llev_phonetic_rules_len` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
+| `llev_phonetic_rules_load_file` | `llev_phonetic_rules_load_file` | trusted .llev loading with native includes |
 | `llev_phonetic_rules_parse` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |
+| `llev_phonetic_rules_to_bytes` | `llev_phonetic_rules_to_bytes` | versioned compiled phonetic-rule bytes |
+| `llev_phonetic_similar_chars` | `llev_phonetic_similar_chars` | IPA feature classification and relations |
+| `llev_phonetic_syllable_boundaries` | `llev_phonetic_syllable_boundaries` | syllable count and boundary heuristics |
+| `llev_phonetic_syllable_count` | `llev_phonetic_syllable_count` | syllable count and boundary heuristics |
+| `llev_phonetic_token_free` | `llev_phonetic_token_free` | token-sequence phonetic matching and detail ownership |
+| `llev_phonetic_token_matches_free` | `llev_phonetic_token_matches_free` | token-sequence phonetic matching and detail ownership |
+| `llev_phonetic_token_new` | `llev_phonetic_token_new` | token-sequence phonetic matching and detail ownership |
+| `llev_phonetic_token_scan` | `llev_phonetic_token_scan` | token-sequence phonetic matching and detail ownership |
+| `llev_phonetic_transducer_feed` | `llev_phonetic_transducer_feed` | incremental phonetic rewriting and lifecycle |
+| `llev_phonetic_transducer_finish` | `llev_phonetic_transducer_finish` | incremental phonetic rewriting and lifecycle |
+| `llev_phonetic_transducer_free` | `llev_phonetic_transducer_free` | incremental phonetic rewriting and lifecycle |
+| `llev_phonetic_transducer_new` | `llev_phonetic_transducer_new` | incremental phonetic rewriting and lifecycle |
+| `llev_phonetic_transducer_normalize` | `llev_phonetic_transducer_normalize` | incremental phonetic rewriting and lifecycle |
+| `llev_phonetic_transducer_reset` | `llev_phonetic_transducer_reset` | incremental phonetic rewriting and lifecycle |
+| `llev_phonetic_voicing_pair` | `llev_phonetic_voicing_pair` | IPA feature classification and relations |
 | `llev_query_cache_clear` | `llev_query_cache_clear` | project ABI operation |
 | `llev_query_cache_free` | `llev_query_cache_free` | project ABI operation |
 | `llev_query_cache_new` | `llev_query_cache_new` | project ABI operation |

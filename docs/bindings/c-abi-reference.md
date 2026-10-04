@@ -1,11 +1,12 @@
-# The `llev_*` C ABI, function by function
+# The `llev_*` C ABI: functions, results, and lifetimes
 
 This is the normative reference for liblevenshtein's project-owned C surface:
-all **94 exported `llev_*` functions**, each with its header signature or
-signature family,
-preconditions, the complete set of statuses it can return (read from the
-implementation, not aspirationally), ownership rules, thread-safety truth, and
-cost. It is the **project layer above the family canon**: everything about the
+all **152 exported `llev_*` functions**, grouped by their header signature
+families, preconditions, status and ownership contracts, and concurrency
+rules. The [public header](../../include/liblevenshtein.h) gives each exact
+prototype and per-call return contract; this guide explains the shared
+protocols and the differences that matter to consumers. It is the **project
+layer above the family canon**: everything about the
 two-word `VtResource`, the base retain/release/`query_interface` protocol, and
 the `vt.dictionary.v1` interface this ABI consumes is specified once in the
 [interop ABI reference](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-reference.md) and
@@ -39,6 +40,10 @@ The project-level terms this document adds:
 | generalized automaton | An immutable runtime operation set with exact decimal cost scaling. Its online state retains a bounded finite-lookback row ring for one Unicode source. |
 | universal automaton | An immutable standard, transposition, or merge-and-split specialization with an optional owned directional substitution policy. |
 | online automaton | An exclusive state handle bound to one source and advanced by one domain-native target unit per call. It is independent of dictionary cursors. |
+| phonetic result array | One caller-owned C array whose nested strings and detail arrays are freed together by its matching family-specific `*_free` function; never free individual nested members. |
+| phonetic stream | An exclusive scanner or rewrite handle that buffers or delays input until `finish`; it is distinct from an immutable, reusable matcher configuration. |
+| AOT bytes | Length-bearing, owned compiled phonetic bytes produced only when the phonetic AOT build feature is enabled. They are a versioned native format, not a stable cross-version wire ABI. |
+| WallBreaker | An immutable, finite Unicode substring matcher with its own owned terms and result-cursor lease protocol; it is not a `vt.dictionary.v1` adapter. |
 
 These opaque handles are owning C pointers, not generation-tagged identifiers.
 A successful `free` consumes a handle; the caller must not pass that pointer to
@@ -66,7 +71,7 @@ specified by their interface.
 
 ![Class diagram of the vinary-tree-interop ABI: VtResource and its base vtable negotiate dictionary, visit, graph, snapshot-identity, and scalar-WFST capability vtables plus their borrowed value types.](../diagrams/bindings/vt-structs-class.svg)
 
-The 94 functions divide into seven groups:
+The 152 functions divide into eight groups:
 
 | Group | Count | Functions |
 |---|---|---|
@@ -76,7 +81,8 @@ The 94 functions divide into seven groups:
 | [Transducer + cursor](#7-transducer-and-cursor-11) | 11 | `llev_transducer_new` · `llev_transducer_snapshot` · `llev_transducer_free` · `llev_transducer_unit_domain` · `llev_transducer_query_utf8` · `llev_transducer_query_bytes` · `llev_transducer_query_u64` · `llev_query_cursor_next_batch` · `llev_query_cursor_release_batch` · `llev_query_cursor_reduce` · `llev_query_cursor_free` |
 | [Bounded query cache](#7a-bounded-query-cache-8) | 8 | `llev_query_cache_new` · `llev_query_cache_clear` · `llev_query_cache_reset_stats` · `llev_query_cache_stats` · `llev_query_cache_free` · `llev_query_cache_query_utf8` · `llev_query_cache_query_bytes` · `llev_query_cache_query_u64` |
 | [Standalone automata](#7b-standalone-automata-14) | 14 | Generalized and universal configuration, complete evaluation, online construction, advance, observation, and free functions |
-| [Phonetic](#8-phonetic-surface-12) | 12 | `llev_owned_string_free` · `llev_phonetic_pattern_compile_regex` · `llev_phonetic_pattern_compile_llre` · `llev_phonetic_pattern_free` · `llev_phonetic_pattern_size` · `llev_phonetic_pattern_matches` · `llev_transducer_query_pattern` · `llev_phonetic_rules_parse` · `llev_phonetic_rules_builtin` · `llev_phonetic_rules_free` · `llev_phonetic_rules_len` · `llev_phonetic_rules_apply` |
+| [WallBreaker](#7c-wallbreaker-8) | 8 | Owned matcher construction/query/free, leased cursor next/release/cancel/free, and Unicode-aware pattern splitting. |
+| [Phonetic](#8-phonetic-surface-62) | 62 | Pattern and rule compilation, trusted file loading, compiled bytes, distance and syllable analysis, word/character/token grep, normalized dictionaries, incremental rewriting, expansion, and IPA feature relations. See the [family inventory](#family-inventory-and-feature-gates). |
 
 Headers: [`include/liblevenshtein.h`](../../include/liblevenshtein.h)
 (normative prototypes; common signature shapes are abbreviated below) over
@@ -207,8 +213,8 @@ const char* llev_last_error_message(void);
 | Function | Returns | Contract |
 |---|---|---|
 | `llev_abi_version` | `LLEV_ABI_VERSION` = 1 | The project ABI generation. A facade built for generation $`g`$ must refuse a library reporting a different generation. |
-| `llev_api_revision` | `LLEV_API_REVISION` = 7 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. Revision 5 adds generalized/universal automata; revision 6 adds the [finite Unicode WallBreaker surface](wallbreaker-unicode.md); revision 7 adds the Hamming, indel, and affine-gap standalone distance families. |
-| `llev_build_features` | bitset | `LLEV_BUILD_FEATURE_CORE` (1) is always set; `LLEV_BUILD_FEATURE_PHONETIC` (2) is set exactly when the library was compiled with `bindings-phonetic`. Probe it instead of trial-calling the phonetic surface. |
+| `llev_api_revision` | `LLEV_API_REVISION` = 8 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. Revision 5 adds generalized/universal automata; revision 6 adds the [finite Unicode WallBreaker surface](wallbreaker-unicode.md); revision 7 adds the Hamming, indel, and affine-gap standalone distance families; revision 8 adds the expanded [phonetic surface](#8-phonetic-surface-62). |
+| `llev_build_features` | bitset | `LLEV_BUILD_FEATURE_CORE` (1) is always set. `LLEV_BUILD_FEATURE_PHONETIC` (2) reports `bindings-phonetic`; `LLEV_BUILD_FEATURE_PHONETIC_AOT` (4) reports the additional `serialization` capability. Probe these before using optional phonetic operations. The AOT bit is set only when both features are compiled in. |
 | `llev_last_error_message` | borrowed `const char*` | § 3.2. Never NULL; empty string when the last call on this thread succeeded. |
 
 *Preconditions:* none — these are total. *Thread safety:* fully
@@ -901,12 +907,69 @@ complexities, and verification evidence are specified in the
 
 ---
 
-## 8. Phonetic surface (12)
+## 7c. WallBreaker (8)
 
-Compiled only with the `bindings-phonetic` feature. **Every** function below
-(the two `void` frees excepted) returns `UNSUPPORTED` with an explanatory
-message when the feature is absent — probe `llev_build_features()` for
-`LLEV_BUILD_FEATURE_PHONETIC` first.
+WallBreaker owns a finite Unicode term set and its own immutable substring
+index. It cannot be synthesized from `vt.dictionary.v1`, whose traversal
+contract does not expose exact substring occurrence. The eight public calls
+are `llev_wallbreaker_new_utf8`, `llev_wallbreaker_free`,
+`llev_wallbreaker_query_utf8`, `llev_wallbreaker_cursor_next_batch`,
+`llev_wallbreaker_cursor_release_batch`, `llev_wallbreaker_cursor_cancel`,
+`llev_wallbreaker_cursor_free`, and `llev_wallbreaker_split_utf8`.
+
+Construction copies every length-bearing UTF-8 term; `(NULL, 0)` is the empty
+term. `LlevWallBreakerLimits` specifies positive ceilings for terms, term
+bytes, term/query scalars, candidate-clone bytes, result count, and result
+bytes; distance has a separate maximum of eight. A failed constructor leaves
+its output NULL. A successful query eagerly verifies complete results and
+returns an independently owned cursor, so freeing the matcher does not
+invalidate that cursor. Queries requiring substring materialization reject
+over-budget candidate cloning before publishing any partial cursor.
+
+The cursor publishes borrowed `LlevWallBreakerResultView` descriptors and
+term bytes in a `LlevWallBreakerBatchView`. At most one generation is leased
+at a time. Release that exact generation before advancing; a stale or double
+release fails. If the next complete term exceeds the caller's batch-byte
+ceiling, `LIMIT_EXCEEDED` does not advance the cursor. Cancellation forbids
+future advances but preserves an outstanding lease until release or cursor
+free. `llev_wallbreaker_split_utf8` projects native `PatternSplitter` pieces
+with both UTF-8 byte and Unicode-scalar coordinates; `(NULL, 0)` is a sizing
+call and reports required capacity without writing a partial array.
+
+The fallible calls distinguish `NULL_POINTER`, `INVALID_ARGUMENT`,
+`INVALID_UTF8`, `LIMIT_EXCEEDED`, and `PANIC` where their documented inputs
+permit those failures; the cursor also reports `END` and `CLOSED` according
+to its state. The [WallBreaker guide](wallbreaker-unicode.md) gives the
+complete algorithm/limit model, example use, and the owned-cursor lifecycle.
+
+---
+
+## 8. Phonetic surface (62)
+
+The phonetic algorithms are compiled with `bindings-phonetic`. Fallible
+phonetic calls return `UNSUPPORTED` without that feature; the AOT byte calls
+also require `serialization`. Probe `llev_build_features()` for
+`LLEV_BUILD_FEATURE_PHONETIC` and, for compiled bytes,
+`LLEV_BUILD_FEATURE_PHONETIC_AOT` before calling. Void release functions
+are safe null no-ops even when an optional feature is disabled. All other
+owned output handles and arrays must be released with the matching family
+function, not `free(3)` or another family's release function.
+
+### Family inventory and feature gates
+
+| Family | Public functions | Gate and result ownership |
+|---|---|---|
+| Compiled patterns and dictionary-language product | `llev_phonetic_pattern_compile_regex`, `llev_phonetic_pattern_compile_llre`, `llev_phonetic_pattern_load_llre_file`, `llev_phonetic_pattern_free`, `llev_phonetic_pattern_size`, `llev_phonetic_pattern_matches`, `llev_transducer_query_pattern` | Phonetic; pattern owns native automaton, query publishes a normal snapshot cursor. |
+| Rewrite rules | `llev_phonetic_rules_parse`, `llev_phonetic_rules_load_file`, `llev_phonetic_rules_builtin`, `llev_phonetic_rules_free`, `llev_phonetic_rules_len`, `llev_phonetic_rules_apply`, `llev_owned_string_free` | Phonetic; rules are immutable, rewritten text is an owned string. |
+| Compiled native bytes | `llev_phonetic_rules_to_bytes`, `llev_phonetic_rules_from_bytes`, `llev_phonetic_pattern_to_bytes`, `llev_phonetic_pattern_from_bytes`, `llev_owned_bytes_free` | Phonetic AOT; exact owned bytes, or a new owned rule/pattern handle. |
+| Articulation and syllables | `llev_phonetic_articulatory_distance`, `llev_phonetic_articulatory_edit_distance`, `llev_phonetic_syllable_count`, `llev_phonetic_syllable_boundaries` | Phonetic; scalar outputs or caller-owned boundary array. |
+| Word-boundary grep | `llev_phonetic_grep_new`, `llev_phonetic_grep_free`, `llev_phonetic_grep_distance_config`, `llev_phonetic_grep_matches`, `llev_phonetic_grep_scan_line`, `llev_phonetic_grep_scan_text` | Phonetic; reusable matcher and caller-owned result array. |
+| Normalized dictionary | `llev_phonetic_dictionary_new`, `llev_phonetic_dictionary_free`, `llev_phonetic_dictionary_query`, `llev_phonetic_candidates_free`, `llev_phonetic_dictionary_update` | Phonetic; mutable or compact native index, caller-owned nested candidate array. |
+| Character-level online grep | `llev_phonetic_online_new`, `llev_phonetic_online_free`, `llev_phonetic_online_normalized_query`, `llev_phonetic_online_scan`, `llev_phonetic_online_matches_free`, `llev_phonetic_online_stream_new`, `llev_phonetic_online_stream_free`, `llev_phonetic_online_stream_feed`, `llev_phonetic_online_stream_finish` | Phonetic; reusable matcher, exclusive stream, owned match array. |
+| Token-query grep | `llev_phonetic_token_new`, `llev_phonetic_token_free`, `llev_phonetic_token_scan`, `llev_phonetic_token_matches_free` | Phonetic; reusable query and one owned nested result graph. |
+| Incremental rewrite | `llev_phonetic_transducer_new`, `llev_phonetic_transducer_free`, `llev_phonetic_transducer_feed`, `llev_phonetic_transducer_finish`, `llev_phonetic_transducer_reset`, `llev_phonetic_transducer_normalize` | Phonetic; exclusive stream with independently owned output strings. |
+| Reverse expansion | `llev_phonetic_expand`, `llev_phonetic_expand_with_costs` | Phonetic; exhaustive and greedy cost-aware algorithms have distinct semantics. |
+| IPA feature table | `llev_phonetic_features`, `llev_phonetic_chars_with_features`, `llev_phonetic_similar_chars`, `llev_phonetic_voicing_pair`, `llev_phonetic_feature_relation`, `llev_phonetic_expand_feature_based`, `llev_phonetic_feature_set_distance` | Phonetic; borrowed input scalars and caller-owned fixed-capacity result buffers. |
 
 ### 8.1 Owned strings
 
@@ -987,6 +1050,171 @@ under the native fuel bound.
 | `rules_free` | none (void) | NULL no-op. |
 | `rules_len` | `OK` · `NULL_POINTER` · `UNSUPPORTED` · `PANIC` | Enabled-rule count. $`\mathcal{O}(1)`$. |
 | `rules_apply` | `OK` · `NULL_POINTER` · `INVALID_UTF8` · `UNSUPPORTED` · `PANIC` | On `OK`, `*out_text` is caller-owned — settle with `llev_owned_string_free`. An empty result is the `{NULL, 0}` value (also safe to free). |
+
+### 8.5 Trusted source files and compiled bytes
+
+`llev_phonetic_rules_load_file` resolves `.llev` includes, and
+`llev_phonetic_pattern_load_llre_file` resolves `.llre` imports from a trusted
+local path. Both accept borrowed `LlevUtf8View` search directories; zero
+directories select the native loader defaults. The caller sets a positive
+aggregate path-byte ceiling, not a ceiling on the contents of files reached
+transitively. Rules permit at most 64 search paths. Invalid UTF-8 paths,
+malformed documents, missing files, import/include failures, and bound
+violations return the corresponding `INVALID_UTF8`, `INVALID_ARGUMENT`,
+`IO_ERROR`, or `LIMIT_EXCEEDED` status without publishing a partial handle.
+These entry points are **not** a sandbox for adversarial filesystem paths.
+
+The four AOT calls `llev_phonetic_{rules,pattern}_{to,from}_bytes` require
+both the phonetic and serialization build features. `to_bytes` publishes one
+`LlevOwnedBytes`; call `llev_owned_bytes_free` on its address, which releases
+and clears it, making repeated release of that cleared *value* harmless.
+`from_bytes` reads borrowed bytes and publishes a new owned rule/pattern
+handle independent of those source bytes. Each input/output byte ceiling must
+be positive and at most 16 MiB. Invalid magic/version, oversized data, or
+malformed native payloads fail without a partial handle or owned byte buffer.
+The compiled format is versioned native data, **not** a stable interchange
+format across library versions. With serialization disabled, all four calls
+return `UNSUPPORTED` without touching output storage; ordinary phonetic
+matching and rewriting remain available. The
+[serialization verification contract](../verification/PHONETIC_JULIA_BINDING_CONTRACT.md)
+maps the output transaction and release laws to model-checked invariants and
+real-ABI property tests.
+
+### 8.6 Articulatory and syllable analysis
+
+`llev_phonetic_articulatory_distance` compares two valid Unicode scalar
+values using the native IPA feature table; an unknown but valid scalar has
+the table's normal fallback cost. The optional
+`LlevPhoneticFeatureWeights` contains seven finite, nonnegative `double`
+costs; NULL selects native standard weights. Invalid scalar values or costs
+return `INVALID_ARGUMENT` and leave the result unchanged.
+`llev_phonetic_articulatory_edit_distance` applies these substitution costs
+with unit insertion/deletion costs to two UTF-8 strings. Its positive
+`max_cells` bounds each scalar length and their product before allocation;
+exceeding it returns `LIMIT_EXCEEDED`, not a truncated distance.
+
+`llev_phonetic_syllable_count` and
+`llev_phonetic_syllable_boundaries` select English-orthographic (`ipa = 0`)
+or IPA (`ipa = 1`) heuristics under a positive scalar ceiling. Empty input
+has count zero. Boundaries are Unicode-scalar positions, not UTF-8 byte
+offsets, and need not equal the count from the separate heuristic. For the
+boundary call, `(out_positions = NULL, capacity = 0)` is a valid sizing call:
+`out_count` reports the required number even if `LIMIT_EXCEEDED` prevents
+publication. Other failures leave result outputs unchanged.
+
+### 8.7 Word-boundary grep
+
+`llev_phonetic_grep_new` compiles a reusable word matcher from UTF-8 source,
+an optional cloned rule set, a distance, one published `LlevAlgorithm`, and
+a zero-or-one case-insensitivity flag. The matcher may contain a local
+`(?;N:...)` distance override; `llev_phonetic_grep_distance_config`
+reports its effective and optional local values. The candidate membership
+call `llev_phonetic_grep_matches` requires a positive candidate-byte ceiling
+and returns both a match flag and a distance (zero when unmatched) on success.
+
+`llev_phonetic_grep_scan_line` and `llev_phonetic_grep_scan_text` copy
+`LlevPhoneticGrepMatch` descriptors into caller-provided storage. Their byte
+offsets are zero-based and end-exclusive; line numbers are one-based, using
+Rust's `str::lines` semantics for a complete document. A positive input-byte
+ceiling is required. The `(NULL, 0)` sizing call and an undersized array
+report the exact required count through `out_count` but write **no partial
+descriptors**. `llev_phonetic_grep_free` consumes the matcher; copied
+descriptors need no separate release.
+
+### 8.8 Mutable and compact normalized dictionaries
+
+`llev_phonetic_dictionary_new` copies every length-bearing UTF-8 term and
+clones optional rewrite rules. Mode zero creates a mutable normalized
+dictionary; mode one creates compact immutable term-ID payloads. NULL rules
+select the native English Zompist normalization. The algorithm, mode,
+positive term-count ceiling, and positive total-byte ceiling are validated
+before publishing a handle. The empty term is a valid term and remains
+queryable in **both** modes.
+
+`llev_phonetic_dictionary_query` searches normalized space with a distance
+bound and positive query-scalar/result-count ceilings. Successful candidates
+arrive in native relevance order; each carries a copied original term,
+distance, and normalized spelling. The entire result array and nested strings
+are one ownership unit: pass the exact pointer/count pair to
+`llev_phonetic_candidates_free`. A result ceiling failure leaves both output
+pointer and count unchanged rather than publishing a prefix. Mode-zero
+`llev_phonetic_dictionary_update` inserts or removes an owned term and
+reports whether the set changed; compact mode returns `UNSUPPORTED` without
+mutation. All dictionary handles are consumed by
+`llev_phonetic_dictionary_free`.
+
+### 8.9 Character-level and token-query grep
+
+Character-level `llev_phonetic_online_new` creates a reusable matcher with
+optional cloned rules, a positive pattern-scalar ceiling, and a Boolean
+case-insensitivity flag. `llev_phonetic_online_normalized_query` returns an
+owned string; `llev_phonetic_online_scan` returns an owned array of matches
+with original-byte and Unicode-scalar spans plus copied original/normalized
+text. Release the complete array with
+`llev_phonetic_online_matches_free`, not with individual string frees.
+
+For chunked input, `llev_phonetic_online_stream_new` clones the matcher into
+an independent exclusive stream with a positive total-byte ceiling. Feed
+each UTF-8 chunk through `llev_phonetic_online_stream_feed`, then call
+`llev_phonetic_online_stream_finish` once with a positive match ceiling.
+A rejected oversized feed does not change the accepted prefix. Even when
+finish returns `LIMIT_EXCEEDED`, it consumes the stream and leaves output
+pointer/count unchanged; a second feed or finish returns
+`INVALID_ARGUMENT`. Free either handle independently.
+
+Token-query `llev_phonetic_token_new` compiles native token-grep syntax under
+a positive query-byte ceiling. `llev_phonetic_token_scan` applies positive
+document-byte, match-count, and nested-detail ceilings. Returned
+`LlevPhoneticTokenMatch` values include document byte spans, copied matched
+text, total distance, and a nested array of token details with their own
+spans, strings, and distances. The entire graph belongs to one exact
+pointer/count pair; `llev_phonetic_token_matches_free` settles it. Limit or
+parse failures do not publish a partial graph.
+
+### 8.10 Incremental rewrite transducer
+
+`llev_phonetic_transducer_new` clones optional rules (NULL means identity
+rewriting) into an exclusive stream. Context-sensitive rules may delay
+emission until later input or finish. `llev_phonetic_transducer_feed`
+accepts UTF-8 chunks under positive input-scalar/output-byte ceilings and
+publishes an independently owned `LlevOwnedString` for each successful
+output. On output overflow it leaves that output untouched, resets buffered
+context, and requires restarting the logical stream. A successful
+`llev_phonetic_transducer_finish` flushes context and requires
+`llev_phonetic_transducer_reset` before reuse. The separate
+`llev_phonetic_transducer_normalize` call rewrites one complete string
+without changing incremental state. `llev_phonetic_transducer_free` consumes
+the handle; previously returned owned strings remain independent.
+
+### 8.11 Reverse expansion and IPA features
+
+`llev_phonetic_expand` exhaustively explores reverse-phonetic segmentations
+as a regex pattern, while `llev_phonetic_expand_with_costs` uses a distinct
+greedy maximum-rule-cost strategy and publishes both pattern and cost
+transactionally. They are not aliases. The five positive fields of
+`LlevPhoneticExpansionLimits` bound input scalars, rule count, total rule
+units, explored nodes, and output bytes. Exhaustive expansion may reject an
+intermediate-work bound even if the final deduplicated output would fit; it
+never silently truncates. NULL rules select identity expansion. Returned
+patterns are `LlevOwnedString` values freed with `llev_owned_string_free`.
+
+IPA classification exposes a stable 42-bit `LlevPhoneticFeatureIndex` mask,
+independent of Rust enum discriminants. `llev_phonetic_features` maps one
+valid scalar to its mask; an unknown scalar gets zero, while a surrogate or
+out-of-range scalar is `INVALID_ARGUMENT`.
+`llev_phonetic_chars_with_features` selects table characters with all or
+any requested bits; unknown bits are rejected. The related
+`llev_phonetic_similar_chars` and
+`llev_phonetic_expand_feature_based` copy native table results in their
+documented order. Each accepts `(NULL, 0)` for sizing, reports required
+capacity, and writes no partial array when too small.
+`llev_phonetic_voicing_pair` sets an explicit found flag, so callers do not
+mistake a missing counterpart for scalar zero.
+`llev_phonetic_feature_relation` selects shared-feature similarity or
+native zero-cost substitution; those are different predicates.
+`llev_phonetic_feature_set_distance` applies optional finite, nonnegative
+weights to two valid masks. The [Julia phonetic API guide](../../bindings/julia/Liblevenshtein/docs/src/phonetic.md)
+provides worked examples while using these same native functions.
 
 ---
 

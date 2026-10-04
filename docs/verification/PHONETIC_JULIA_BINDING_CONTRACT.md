@@ -1,6 +1,6 @@
 # Julia phonetic binding verification contract
 
-This document bounds the claims made for the additive revision-9 C/Julia
+This document bounds the claims made for the additive revision-8 C/Julia
 phonetic surface. The public Rust implementation remains the semantic oracle:
 the binding owns no duplicate matcher, normalizer, feature table, or ranking
 algorithm. An ABI handle is owned by exactly one Julia wrapper; supplied rules

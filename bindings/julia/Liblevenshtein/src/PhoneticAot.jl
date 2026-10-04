@@ -5,9 +5,9 @@ struct RawPhoneticBytes
 end
 
 function require_phonetic_aot()
-    api_revision() >= 9 && (build_features() & BUILD_FEATURE_PHONETIC_AOT) != 0 ||
+    api_revision() >= 8 && (build_features() & BUILD_FEATURE_PHONETIC_AOT) != 0 ||
         throw(NativeError(Int32(STATUS_UNSUPPORTED), :phonetic_aot,
-            "native phonetic AOT requires API revision 9 and the PHONETIC_AOT build feature"))
+            "native phonetic AOT requires API revision 8 and the PHONETIC_AOT build feature"))
     nothing
 end
 

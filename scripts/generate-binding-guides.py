@@ -338,6 +338,8 @@ def operation_role(name: str) -> str:
         return "legacy owned-string plumbing"
     if name == "llev_owned_string_free":
         return "owned result-string release"
+    if name == "llev_owned_bytes_free":
+        return "versioned compiled-byte ownership"
     if name.startswith("llev_transducer_query_pattern"):
         return "phonetic-pattern dictionary query"
     if name.startswith("llev_transducer_query"):
@@ -346,10 +348,42 @@ def operation_role(name: str) -> str:
         return "transducer lifecycle, snapshot, or domain metadata"
     if name.startswith("llev_query_cursor"):
         return "streaming result traversal and batch leases"
+    if name in {"llev_phonetic_pattern_to_bytes", "llev_phonetic_pattern_from_bytes"}:
+        return "versioned compiled phonetic-pattern bytes"
+    if name == "llev_phonetic_pattern_load_llre_file":
+        return "trusted .llre loading with native imports"
     if name.startswith("llev_phonetic_pattern"):
         return "compiled phonetic-pattern lifecycle and matching"
+    if name in {"llev_phonetic_rules_to_bytes", "llev_phonetic_rules_from_bytes"}:
+        return "versioned compiled phonetic-rule bytes"
+    if name == "llev_phonetic_rules_load_file":
+        return "trusted .llev loading with native includes"
     if name.startswith("llev_phonetic_rules"):
         return "phonetic rule-set lifecycle and rewriting"
+    if name.startswith("llev_phonetic_articulatory"):
+        return "articulatory phonetic distance"
+    if name.startswith("llev_phonetic_syllable"):
+        return "syllable count and boundary heuristics"
+    if name.startswith("llev_phonetic_grep"):
+        return "word-boundary phonetic search and configuration"
+    if name == "llev_phonetic_candidates_free":
+        return "owned normalized-dictionary candidate release"
+    if name.startswith("llev_phonetic_dictionary"):
+        return "normalized phonetic dictionary construction, query, and updates"
+    if name.startswith("llev_phonetic_online"):
+        return "character-level phonetic search and scanner lifecycle"
+    if name.startswith("llev_phonetic_token"):
+        return "token-sequence phonetic matching and detail ownership"
+    if name.startswith("llev_phonetic_transducer"):
+        return "incremental phonetic rewriting and lifecycle"
+    if name == "llev_phonetic_expand_feature_based":
+        return "IPA feature-driven expansion"
+    if name.startswith("llev_phonetic_expand"):
+        return "bounded reverse phonetic expansion"
+    if name.startswith(("llev_phonetic_features", "llev_phonetic_chars_with_features",
+                        "llev_phonetic_similar_chars", "llev_phonetic_voicing_pair",
+                        "llev_phonetic_feature_relation", "llev_phonetic_feature_set_distance")):
+        return "IPA feature classification and relations"
     if name.startswith("llev_generalized"):
         return "runtime generalized-automaton lifecycle and prefix evaluation"
     if name.startswith("llev_universal"):

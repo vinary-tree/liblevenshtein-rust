@@ -310,7 +310,7 @@ General-registry package or a versioned release reference.
 | `phonetic_features`, `characters_with_features`, `feature_set_distance` | Stable IPA feature-set projection, native-table search, and weighted comparison. |
 | `similar_phonetic_chars`, `voicing_pair`, `are_phonetically_similar`, `is_free_phonetic_substitution`, `expand_feature_based` | Distinct native IPA relations and expansions. |
 | `load_phonetic_rules`, `load_phonetic_pattern` | Trusted local `.llev` include and `.llre` import resolution. |
-| `compiled_phonetic_bytes`, `load_compiled_phonetic_rules`, `load_compiled_phonetic_pattern` | Optional API-revision-9 binary AOT roundtrip, gated by `BUILD_FEATURE_PHONETIC_AOT`. |
+| `compiled_phonetic_bytes`, `load_compiled_phonetic_rules`, `load_compiled_phonetic_pattern` | Optional API-revision-8 binary AOT roundtrip, gated by `BUILD_FEATURE_PHONETIC_AOT`. |
 | `close`, `isopen` | Deterministic lifecycle for every native owner. |
 
 `Match.term` is a `String`, `Vector{UInt8}`, or `Vector{UInt64}` according to

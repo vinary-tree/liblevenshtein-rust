@@ -1,6 +1,6 @@
 --------------------------- MODULE PhoneticAotBoundary ---------------------------
 (***************************************************************************)
-(* Finite ownership/transaction model for revision-9 phonetic AOT calls.  *)
+(* Finite ownership/transaction model for revision-8 phonetic AOT calls.  *)
 (* The model deliberately abstracts binary contents: Rust format parsers   *)
 (* remain authoritative for magic, version, and semantic decoding.        *)
 (* Rust correspondence: tests/ffi_phonetic_files_aot.rs.                  *)

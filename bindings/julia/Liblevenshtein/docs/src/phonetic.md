@@ -314,7 +314,7 @@ ceiling limits supplied path arguments, not file size, recursion, or access to
 other filesystem locations, and it is not a sandbox. Use inline constructors
 for untrusted text.
 
-With API revision 9 and `BUILD_FEATURE_PHONETIC_AOT`,
+With API revision 8 and `BUILD_FEATURE_PHONETIC_AOT`,
 `compiled_phonetic_bytes(rules_or_pattern)` produces versioned native binary
 bytes. `load_compiled_phonetic_rules(bytes)` and
 `load_compiled_phonetic_pattern(bytes)` decode independently owned handles.
