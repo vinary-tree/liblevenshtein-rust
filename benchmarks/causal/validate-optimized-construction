@@ -17,7 +17,7 @@ cleanup() {
 trap cleanup EXIT
 
 cd "$repo"
-cargo build --release --features perf-instrumentation --bin causal_query_profile \
+cargo build --locked --offline --release --features perf-instrumentation --bin causal_query_profile \
     >"$scratch/build.log" 2>&1
 profile_binary="${CARGO_TARGET_DIR:-target}/release/causal_query_profile"
 
