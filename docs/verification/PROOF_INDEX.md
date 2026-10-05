@@ -235,6 +235,8 @@ Rust correspondence remain explicit trust boundaries.
 | `osa_mixed_continuations_do_not_subsume` | `core/theories/Conformance/PositionKindVariant.v` | A normal OSA position cannot prune a pending adjacent-transposition continuation. |
 | `merge_split_requires_strictly_fewer_errors` | `core/theories/Conformance/PositionKindVariant.v` | Every successful merge/split dominance decision has strict accumulated-cost improvement. |
 | `standard_subsumption_never_reverses_error_order` | `core/theories/Conformance/PositionKindVariant.v` | Standard dominance cannot hold when the alleged dominator has greater accumulated cost. |
+| `full_range_pair_cannot_fit_one_word` | `core/theories/Conformance/PositionWidthBound.v` | A finite pigeonhole argument rules out an injective in-line encoding of two independent coordinates with `n` values each into an `n`-value word when `n > 1`. |
+| `no_lossless_eight_byte_pair_of_usize` | `core/theories/Conformance/PositionWidthBound.v` | Specializes that bound to two full-range 64-bit `usize` coordinates and an eight-byte result. |
 
 ### Unrestricted Damerau streaming refinement
 

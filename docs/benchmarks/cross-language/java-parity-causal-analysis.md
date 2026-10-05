@@ -619,6 +619,13 @@ simultaneously reduced measured queued-state copy calls, positions, and bytes
 to zero, invalidating H-O2's stated performance mechanism. This is a resolved
 negative feasibility result, not deferred implementation work.
 
+The [finite width proof](../../verification/core/theories/Conformance/PositionWidthBound.v)
+establishes the in-line encoding bound, and the
+[full-range constructor property](../../../tests/proptest_position_kind_variants.rs)
+checks the Rust side of that contract. The proof does not rule out indirect
+storage; it shows why the proposed in-line eight-byte representation cannot
+preserve the existing full-range coordinates.
+
 H-O18 and H-O19 applied the same causal method to the double-array trie (DAT)
 rather than forcing DAWG construction logic onto a different representation.
 A generic two-phase static DAT builder removed incremental collision relocation;
@@ -1087,6 +1094,21 @@ The machine-readable evidence is the
 the [`from_terms` construction analysis`](../../../benchmarks/causal/evidence/2026-08-19/direct-construction-from-terms/analysis.json),
 the [`from_sorted_terms` construction analysis`](../../../benchmarks/causal/evidence/2026-08-19/direct-construction-from-sorted-terms/analysis.json),
 and the [`structural construction matrix`](../../../benchmarks/causal/evidence/2026-08-19/construction-matrix-final/summary.json).
+The read-only
+[`verify_archived_parity.py`](../../../benchmarks/causal/verify_archived_parity.py)
+checker reopens all 153 accepted Rust/Java pairs, validates the raw-arm hashes
+and exact signatures, matches the archived dictionary, queries, and provenance
+manifest to the committed workload bytes, requires all 612 pre/post host-load
+admissions, reconstructs each sample table and median, and checks the
+51.2-microsecond query gate. Every archived Rust sample is faster than
+every corresponding Java-arm sample in each of the three paired campaigns.
+It also checks the 45-cell JVM matrix against all 90 JMH sample streams and
+their full-coverage correctness twins and matches their workload digests to
+the committed corpus. The recorded 4.882× geometric mean and
+45 Vinary wins are recomputed from the raw cells.
+This audit establishes internal consistency of the committed historical
+observations; it does not time the current binaries or authenticate how the
+original measurements were collected.
 
 ### 6.5 Definitive JVM breadth closure (2026-08-19)
 
