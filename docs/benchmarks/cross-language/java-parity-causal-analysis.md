@@ -1094,6 +1094,15 @@ The machine-readable evidence is the
 the [`from_terms` construction analysis`](../../../benchmarks/causal/evidence/2026-08-19/direct-construction-from-terms/analysis.json),
 the [`from_sorted_terms` construction analysis`](../../../benchmarks/causal/evidence/2026-08-19/direct-construction-from-sorted-terms/analysis.json),
 and the [`structural construction matrix`](../../../benchmarks/causal/evidence/2026-08-19/construction-matrix-final/summary.json).
+The read-only
+[`verify_archived_parity_pairs.py`](../../../benchmarks/causal/verify_archived_parity_pairs.py)
+checker reopens all 153 accepted Rust/Java pairs, validates the raw-arm hashes
+and exact signatures, reconstructs each sample table and median, and checks
+the 51.2-microsecond query gate. Every archived Rust sample is faster than
+every corresponding Java-arm sample in each of the three paired campaigns.
+This audit establishes internal consistency of the committed historical
+observations; it does not time the current binaries or authenticate how the
+original measurements were collected.
 
 ### 6.5 Definitive JVM breadth closure (2026-08-19)
 
