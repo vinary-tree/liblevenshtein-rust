@@ -16,6 +16,7 @@ import statistics
 from pathlib import Path
 
 EVIDENCE = Path(__file__).resolve().parent / "evidence" / "2026-08-19"
+WORKLOAD = Path(__file__).resolve().parents[1] / "cross-language" / "workload"
 CASES = (
     ("direct-standard-d1-hits", "query"),
     ("direct-construction-from-terms", "construct"),
@@ -64,7 +65,37 @@ def audit_case(name: str, expected_mode: str) -> dict:
         summary["run_config_sha256"] == digest(directory / "run-config.json"),
         f"{name}: run config digest",
     )
+    for key, expected_path in (
+        ("dictionary", WORKLOAD / "dictionary.txt"),
+        ("queries", WORKLOAD / "queries" / "hits.txt"),
+        ("manifest", WORKLOAD / "provenance.json"),
+    ):
+        require(
+            config[key].endswith(
+                f"/benchmarks/cross-language/workload/{expected_path.relative_to(WORKLOAD)}"
+            )
+            and config[f"{key}_sha256"] == digest(expected_path),
+            f"{name}: committed {key} identity",
+        )
     require(len(summary["pairs"]) == count, f"{name}: summary pair count")
+
+    with (directory / "host-load-admission.jsonl").open(encoding="utf-8") as source:
+        admissions = [json.loads(line) for line in source if line.strip()]
+    expected_labels = [
+        f"replicate-{replicate}-{arm}-{boundary}"
+        for replicate in range(1, count + 1)
+        for arm in ("rust", "java")
+        for boundary in ("pre", "post")
+    ]
+    require(
+        len(admissions) == len(expected_labels)
+        and {row["label"] for row in admissions} == set(expected_labels)
+        and all(
+            row["admitted"] is True and row["rejection_reasons"] == []
+            for row in admissions
+        ),
+        f"{name}: incomplete or rejected host-load admission",
+    )
 
     samples: dict[str, list[int]] = {"rust": [], "java": []}
     observed_rows: list[tuple[int, str, int, int, str]] = []
@@ -225,6 +256,14 @@ def audit_jvm_matrix() -> dict:
                 cell["dictionary"]["sha256"] == twin["dictionary"]["sha256"],
                 f"{cell_key}: dictionary identity",
             )
+            query_path = WORKLOAD / "queries" / f"{queryset}.txt"
+            require(
+                cell["workload"]["file"].endswith(f"/queries/{queryset}.txt")
+                and cell["workload"]["sha256"] == digest(query_path)
+                and cell["dictionary"]["file"].endswith("/dictionary.txt")
+                and cell["dictionary"]["sha256"] == digest(WORKLOAD / "dictionary.txt"),
+                f"{cell_key}: committed workload identity",
+            )
             signature = tuple(observed[field] for field in SIGNATURE_FIELDS)
             require(
                 signature
@@ -263,6 +302,16 @@ def audit_jvm_matrix() -> dict:
         "JVM matrix: algorithm coverage",
     )
     for algorithm in ("standard", "transposition", "merge_and_split"):
+        expected_querysets = (
+            {"hits", "oov", "tr-d1", "tr-d2", "tr-d3"}
+            if algorithm == "transposition"
+            else {"hits", "oov", "std-d1", "std-d2", "std-d3"}
+        )
+        require(
+            {queryset for a, _, queryset in seen if a == algorithm}
+            == expected_querysets,
+            f"JVM matrix: {algorithm} queryset coverage",
+        )
         require(
             len(
                 {

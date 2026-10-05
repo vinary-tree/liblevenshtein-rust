@@ -1097,11 +1097,14 @@ and the [`structural construction matrix`](../../../benchmarks/causal/evidence/2
 The read-only
 [`verify_archived_parity.py`](../../../benchmarks/causal/verify_archived_parity.py)
 checker reopens all 153 accepted Rust/Java pairs, validates the raw-arm hashes
-and exact signatures, reconstructs each sample table and median, and checks
-the 51.2-microsecond query gate. Every archived Rust sample is faster than
+and exact signatures, matches the archived dictionary, queries, and provenance
+manifest to the committed workload bytes, requires all 612 pre/post host-load
+admissions, reconstructs each sample table and median, and checks the
+51.2-microsecond query gate. Every archived Rust sample is faster than
 every corresponding Java-arm sample in each of the three paired campaigns.
 It also checks the 45-cell JVM matrix against all 90 JMH sample streams and
-their full-coverage correctness twins. The recorded 4.882× geometric mean and
+their full-coverage correctness twins and matches their workload digests to
+the committed corpus. The recorded 4.882× geometric mean and
 45 Vinary wins are recomputed from the raw cells.
 This audit establishes internal consistency of the committed historical
 observations; it does not time the current binaries or authenticate how the
