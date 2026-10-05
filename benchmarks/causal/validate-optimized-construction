@@ -19,6 +19,7 @@ trap cleanup EXIT
 cd "$repo"
 cargo build --release --features perf-instrumentation --bin causal_query_profile \
     >"$scratch/build.log" 2>&1
+profile_binary="${CARGO_TARGET_DIR:-target}/release/causal_query_profile"
 
 common=(
     --dictionary benchmarks/cross-language/workload/dictionary.txt
@@ -29,9 +30,9 @@ common=(
     --passes 1
 )
 
-target/release/causal_query_profile "${common[@]}" --constructor from_sorted_terms \
+"$profile_binary" "${common[@]}" --constructor from_sorted_terms \
     >"$scratch/sorted.json" 2>"$scratch/sorted.err"
-target/release/causal_query_profile "${common[@]}" --constructor from_terms \
+"$profile_binary" "${common[@]}" --constructor from_terms \
     >"$scratch/unordered.json" 2>"$scratch/unordered.err"
 
 python3 benchmarks/causal/validate_optimized_construction.py \
