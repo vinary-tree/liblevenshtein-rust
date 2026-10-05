@@ -619,6 +619,13 @@ simultaneously reduced measured queued-state copy calls, positions, and bytes
 to zero, invalidating H-O2's stated performance mechanism. This is a resolved
 negative feasibility result, not deferred implementation work.
 
+The [finite width proof](../../verification/core/theories/Conformance/PositionWidthBound.v)
+establishes the in-line encoding bound, and the
+[full-range constructor property](../../../tests/proptest_position_kind_variants.rs)
+checks the Rust side of that contract. The proof does not rule out indirect
+storage; it shows why the proposed in-line eight-byte representation cannot
+preserve the existing full-range coordinates.
+
 H-O18 and H-O19 applied the same causal method to the double-array trie (DAT)
 rather than forcing DAWG construction logic onto a different representation.
 A generic two-phase static DAT builder removed incremental collision relocation;

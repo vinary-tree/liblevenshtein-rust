@@ -147,12 +147,34 @@ proptest! {
         prop_assert_ne!(osa, split);
         prop_assert_eq!(normal.cmp(&split), split.cmp(&normal).reverse());
     }
+
+    #[test]
+    fn public_position_coordinates_preserve_the_full_usize_domain(
+        index in any::<usize>(),
+        errors in any::<usize>(),
+    ) {
+        for position in [
+            Position::new(index, errors),
+            Position::new_osa_transposing(index, errors),
+            Position::new_splitting(index, errors),
+        ] {
+            prop_assert_eq!(position.term_index, index);
+            prop_assert_eq!(position.num_errors, errors);
+        }
+    }
 }
 
 #[test]
 fn position_layout_and_public_accessors_are_stable() {
     #[cfg(target_pointer_width = "64")]
-    assert_eq!(std::mem::size_of::<Position>(), 24);
+    {
+        assert_eq!(std::mem::size_of::<Position>(), 24);
+        assert!(std::mem::size_of::<Position>() >= 2 * std::mem::size_of::<usize>());
+    }
+
+    let full_range = Position::new(usize::MAX, usize::MAX);
+    assert_eq!(full_range.term_index, usize::MAX);
+    assert_eq!(full_range.num_errors, usize::MAX);
 
     let normal = Position::new(4, 2);
     assert_eq!(normal.kind(), PositionKind::Normal);
