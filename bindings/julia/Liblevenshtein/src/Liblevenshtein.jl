@@ -5,6 +5,14 @@ import VinaryTreeInterop
 
 const VTI = VinaryTreeInterop
 
+"""Native edit-cost domain selected by Julia dispatch."""
+abstract type AbstractEditCostDomain end
+
+"""Unit-cost native edit domain; the transducer selects the edit repertoire."""
+struct UnitEditCosts <: AbstractEditCostDomain end
+
+const UNIT_EDIT_COSTS = UnitEditCosts()
+
 include("GeneratedAbi.jl")
 
 export ABI_VERSION,
@@ -33,6 +41,15 @@ export ABI_VERSION,
     PrefixVisitor,
     SpecializedMatch,
     SpecializedCursor,
+    AffineGapCosts,
+    AbstractEditCostDomain,
+    UnitEditCosts,
+    UNIT_EDIT_COSTS,
+    WeightedOperationCosts,
+    CostMatch,
+    CostCursor,
+    BorrowedCostBatch,
+    BorrowedCostMatch,
     FilteredCursor,
     BorrowedSpecializedBatch,
     BorrowedSpecializedMatch,
@@ -128,6 +145,9 @@ export ABI_VERSION,
     query_suggestions,
     query_contextual,
     query_pruned,
+    query_affine,
+    query_weighted,
+    query_cost,
     query_filtered,
     cache_stats,
     clear!,
@@ -952,6 +972,7 @@ Base.isopen(rules::PhoneticRuleSet) = !rules.closed
 include("PhoneticAnalysis.jl")
 include("RankedTraversals.jl")
 include("SpecializedTraversals.jl")
+include("CostAutomata.jl")
 include("FilteredTraversal.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")
@@ -972,6 +993,8 @@ function __init__()
         (Ptr{Cvoid}, UInt32, UInt32, UInt32, Csize_t, Ptr{UInt32}, Csize_t, Ptr{Cdouble}))
     SPECIALIZED_REDUCER_CALLBACK[] = @cfunction(specialized_reducer_callback, Cint,
         (Ptr{Cvoid}, Ptr{RawSpecializedMatch}, Csize_t))
+    COST_REDUCER_CALLBACK[] = @cfunction(cost_reducer_callback, Cint,
+        (Ptr{Cvoid}, Ptr{RawCostMatch}, Csize_t))
     VALUE_FILTER_CALLBACK[] = @cfunction(value_filter_callback, UInt8,
         (Ptr{Cvoid}, UInt8, UInt64))
     abi_version() == ABI_VERSION || error("liblevenshtein native ABI version mismatch")

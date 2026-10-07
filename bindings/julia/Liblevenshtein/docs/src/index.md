@@ -56,6 +56,79 @@ Use `reduce_batches!` when matches do not need to escape the callback. Each
 `BorrowedMatch` expires when its callback returns; call `materialize` inside
 the callback when an independently owned value is required.
 
+### Affine and weighted edit costs
+
+The native cost configuration selects the recurrence and its number domain.
+`query_cost(transducer, input, maximum, costs)` dispatches on a typed cost
+configuration:
+
+| Configuration | Native carrier | Edit kernel |
+|---|---|---|
+| `UNIT_EDIT_COSTS` | bounded integer addition | transducer's unit-cost algorithm |
+| `AffineGapCosts(...)` | exact scaled integer addition | affine gap |
+| `WeightedOperationCosts(...)` | floating addition | standard, adjacent transposition, or merge/split |
+| `ContextualCosts(...)` | floating callback costs | Unicode contextual traversal |
+
+The native `BottleneckCost` monoid belongs to time-series Fréchet kernels and
+does not define a Levenshtein edit recurrence. Julia's cost dispatch selects
+the concrete native automata above rather than emulating a Rust monoid trait.
+
+`AffineGapCosts` uses exact scaled integers for a three-layer gap automaton.
+For a nonempty gap of `k` units, its cost is $`g(k)=g_{\mathrm{open}}+k g_{\mathrm{extend}}`$.
+The constructor derives the least exact decimal denominator unless
+`scale_denominator` supplies a positive exact denominator. Both the configured
+weights and the query budget must be representable at that scale. Native
+results carry `scaled_cost` and `scale_denominator`; their ratio is the exact
+cost. `cost` is the corresponding `Float64` presentation value.
+
+`WeightedOperationCosts` uses native floating point operation weights. Its
+`:standard`, `:typo`, and `:ocr` presets come from the native library. The
+six-argument constructor configures substitution, insertion, deletion,
+transposition, split, and merge costs; `match_cost` must remain zero. All costs
+and the inclusive budget must be finite and nonnegative. The transducer's
+standard, adjacent-transposition, or merge-and-split algorithm selects the
+available edits. The unrestricted Damerau-Levenshtein algorithm has no native
+float-weighted kernel and returns a configuration error.
+
+```julia
+affine = AffineGapCosts(0.5, 0.25, 1.0)
+cursor = query_affine(transducer, "cat", 1.0, affine)
+try
+    for match in cursor
+        exact_cost = match.scaled_cost // match.scale_denominator
+        println(match.term, " ", exact_cost)
+    end
+finally
+    close(cursor)
+end
+
+weighted = WeightedOperationCosts(2.0, 1.0, 1.0, 0.5, 1.5, 1.5)
+cursor = query_weighted(transducer, "cat", 1.0, weighted)
+try
+    for match in cursor
+        println(match.term, " ", match.cost)
+    end
+finally
+    close(cursor)
+end
+```
+
+Both functions also accept `AbstractVector{UInt8}` for arbitrary bytes and
+`AbstractVector{UInt64}` for token identifiers. Results keep those unit types
+without text conversion. Cost results contain terms and costs, not provider
+value IDs, matching the native affine and weighted iterators. `CostCursor`
+captures one dictionary revision and
+can outlive its source transducer. `next_batch!` returns copied results;
+`reduce_batches!` supplies borrowed `BorrowedCostMatch` values that expire
+when the callback returns. Use `materialize` inside that callback to retain a
+result. The generalized operation-set automaton below remains the choice when
+the edit grammar itself must be configured as runtime data.
+
+The `benchmark/cost_boundary.jl` script checks six
+Unicode, byte, and token scenarios. It compares a direct native cursor count
+with Julia's owned result materialization and enforces the package's
+established tenfold native-work budget plus a 50 microsecond dispatch allowance.
+
 ### Ranked Unicode queries
 
 `query_ranked(transducer, text, distance)` returns the native distance-then-term

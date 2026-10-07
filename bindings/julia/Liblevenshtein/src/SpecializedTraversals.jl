@@ -5,7 +5,7 @@ Each callback runs synchronously on the thread advancing the native cursor.
 `minimum_nonzero_cost`, which must be finite and strictly positive. A false
 lower bound can cause native pruning to omit matches.
 """
-struct ContextualCosts
+struct ContextualCosts <: AbstractEditCostDomain
     substitution::Any
     insertion::Any
     deletion::Any

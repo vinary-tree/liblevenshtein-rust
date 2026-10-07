@@ -10,9 +10,11 @@ use crate::phonetic::nfa::NFAChar;
 #[cfg(feature = "bindings-phonetic")]
 use crate::transducer::language::{LanguageProduct, MappedLanguageQueryIterator};
 use crate::transducer::{
-    Algorithm, ContextualCost, ContextualQueryIterator, EditContext, PrefixPruner,
-    PrefixQueryIterator, QueryCacheLimits, QueryCacheStats, RankedValueQueryIterator, Suggestion,
-    Unrestricted, ValueFilteredQueryIterator, ValueYieldingQueryIterator, VersionedQueryCache,
+    AffineGapParams, Algorithm, ContextualCost, ContextualQueryIterator, EditContext,
+    OperationCostsF64, PrefixPruner, PrefixQueryIterator, QueryCacheLimits, QueryCacheStats,
+    QueryIterator, QueryIteratorF64, RankedValueQueryIterator, Suggestion, UnitCandidate,
+    UnitCandidateF64, Unrestricted, ValueFilteredQueryIterator, ValueYieldingQueryIterator,
+    VersionedQueryCache,
 };
 use arc_swap::ArcSwapOption;
 use libdictenstein::concurrent_slots::{AtomicOnceBox, AtomicTakeBox, HybridOnceBoxSlots};
@@ -2130,6 +2132,130 @@ pub struct Match {
     pub id: Option<u64>,
 }
 
+/// One native cost-domain result, preserving the exact affine numerator when
+/// the selected query uses fixed-point costs.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CostMatch {
+    /// Matched term in its original unit domain.
+    pub term: MatchTerm,
+    /// Presentation cost; exact for representable integer values.
+    pub cost: f64,
+    /// Exact fixed-point numerator for affine queries, absent for weighted f64.
+    pub scaled_cost: Option<usize>,
+    /// Affine denominator, or one for weighted f64 queries.
+    pub scale_denominator: u32,
+}
+
+type CharAffine = QueryIterator<ForeignNode<char>, UnitCandidate<char>>;
+type ByteAffine = QueryIterator<ForeignNode<u8>, UnitCandidate<u8>>;
+type U64Affine = QueryIterator<ForeignNode<u64>, UnitCandidate<u64>>;
+type CharWeighted = QueryIteratorF64<ForeignNode<char>, UnitCandidateF64<char>>;
+type ByteWeighted = QueryIteratorF64<ForeignNode<u8>, UnitCandidateF64<u8>>;
+type U64Weighted = QueryIteratorF64<ForeignNode<u64>, UnitCandidateF64<u64>>;
+
+enum CostCursorInner {
+    CharAffine(CharAffine, AffineGapParams),
+    ByteAffine(ByteAffine, AffineGapParams),
+    U64Affine(U64Affine, AffineGapParams),
+    CharWeighted(CharWeighted),
+    ByteWeighted(ByteWeighted),
+    U64Weighted(U64Weighted),
+}
+
+/// Lazy cost-domain query over one captured provider revision.
+pub struct CostQueryCursor {
+    // The iterator contains a borrowed provider view, so it drops first.
+    inner: CostCursorInner,
+    provider: Arc<Provider>,
+}
+
+impl CostQueryCursor {
+    /// Advance by at most `maximum` results into reusable caller storage.
+    pub fn next_batch(
+        &mut self,
+        output: &mut Vec<CostMatch>,
+        maximum: usize,
+    ) -> Result<usize, BindingError> {
+        if maximum == 0 {
+            return Err(BindingError::EmptyBatch);
+        }
+        output.clear();
+        while output.len() < maximum {
+            if let Some(error) = self.provider.take_fault() {
+                return Err(error);
+            }
+            let next = match &mut self.inner {
+                CostCursorInner::CharAffine(cursor, params) => {
+                    cursor.next().map(|item| CostMatch {
+                        term: MatchTerm::Utf8(item.term.into_iter().collect()),
+                        cost: params.unscale_cost(item.distance),
+                        scaled_cost: Some(item.distance),
+                        scale_denominator: params.scale().denominator(),
+                    })
+                }
+                CostCursorInner::ByteAffine(cursor, params) => {
+                    cursor.next().map(|item| CostMatch {
+                        term: MatchTerm::Bytes(item.term),
+                        cost: params.unscale_cost(item.distance),
+                        scaled_cost: Some(item.distance),
+                        scale_denominator: params.scale().denominator(),
+                    })
+                }
+                CostCursorInner::U64Affine(cursor, params) => cursor.next().map(|item| CostMatch {
+                    term: MatchTerm::U64(item.term),
+                    cost: params.unscale_cost(item.distance),
+                    scaled_cost: Some(item.distance),
+                    scale_denominator: params.scale().denominator(),
+                }),
+                CostCursorInner::CharWeighted(cursor) => cursor.next().map(|item| CostMatch {
+                    term: MatchTerm::Utf8(item.term.into_iter().collect()),
+                    cost: item.distance,
+                    scaled_cost: None,
+                    scale_denominator: 1,
+                }),
+                CostCursorInner::ByteWeighted(cursor) => cursor.next().map(|item| CostMatch {
+                    term: MatchTerm::Bytes(item.term),
+                    cost: item.distance,
+                    scaled_cost: None,
+                    scale_denominator: 1,
+                }),
+                CostCursorInner::U64Weighted(cursor) => cursor.next().map(|item| CostMatch {
+                    term: MatchTerm::U64(item.term),
+                    cost: item.distance,
+                    scaled_cost: None,
+                    scale_denominator: 1,
+                }),
+            };
+            if let Some(error) = self.provider.take_fault() {
+                return Err(error);
+            }
+            match next {
+                Some(item) => output.push(item),
+                None => break,
+            }
+        }
+        Ok(output.len())
+    }
+}
+
+fn validate_weighted_query(
+    maximum_cost: f64,
+    costs: OperationCostsF64,
+    algorithm: Algorithm,
+) -> Result<(), BindingError> {
+    if !maximum_cost.is_finite() || maximum_cost < 0.0 || !costs.is_valid() {
+        return Err(BindingError::InvalidTraversalConfiguration(
+            "weighted maximum and operation costs must be finite and nonnegative; match must be zero",
+        ));
+    }
+    if algorithm == Algorithm::DamerauLevenshtein {
+        return Err(BindingError::InvalidTraversalConfiguration(
+            "weighted costs are unsupported by the unrestricted Damerau-Levenshtein kernel",
+        ));
+    }
+    Ok(())
+}
+
 /// Reusable safe-Rust batch buffer.
 #[derive(Debug, Default)]
 pub struct MatchBatch {
@@ -3458,6 +3584,189 @@ impl ResourceTransducer {
                     self.algorithm,
                 ),
             ),
+            provider: owner,
+        })
+    }
+
+    /// Start an exact scaled affine query over one Unicode snapshot.
+    pub fn query_affine_utf8(
+        &self,
+        query: &str,
+        maximum_scaled: usize,
+        params: AffineGapParams,
+    ) -> Result<CostQueryCursor, BindingError> {
+        let ForeignDictionary::Unicode(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::UnicodeScalar,
+                actual: self.unit_domain(),
+            });
+        };
+        let owner = provider.snapshot()?.fork_query_owner();
+        let root = ForeignNode::<char>::traversal_root(&owner)?;
+        Ok(CostQueryCursor {
+            inner: CostCursorInner::CharAffine(
+                QueryIterator::with_affine_traversal_root_and_units(
+                    root,
+                    query.chars().collect(),
+                    maximum_scaled,
+                    params,
+                    Unrestricted,
+                    false,
+                ),
+                params,
+            ),
+            provider: owner,
+        })
+    }
+
+    /// Start an exact scaled affine query over one byte snapshot.
+    pub fn query_affine_bytes(
+        &self,
+        query: &[u8],
+        maximum_scaled: usize,
+        params: AffineGapParams,
+    ) -> Result<CostQueryCursor, BindingError> {
+        let ForeignDictionary::Byte(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::Byte,
+                actual: self.unit_domain(),
+            });
+        };
+        let owner = provider.snapshot()?.fork_query_owner();
+        let root = ForeignNode::<u8>::traversal_root(&owner)?;
+        Ok(CostQueryCursor {
+            inner: CostCursorInner::ByteAffine(
+                QueryIterator::with_affine_traversal_root_and_units(
+                    root,
+                    query.to_vec(),
+                    maximum_scaled,
+                    params,
+                    Unrestricted,
+                    false,
+                ),
+                params,
+            ),
+            provider: owner,
+        })
+    }
+
+    /// Start an exact scaled affine query over one u64-token snapshot.
+    pub fn query_affine_u64(
+        &self,
+        query: &[u64],
+        maximum_scaled: usize,
+        params: AffineGapParams,
+    ) -> Result<CostQueryCursor, BindingError> {
+        let ForeignDictionary::U64(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::U64,
+                actual: self.unit_domain(),
+            });
+        };
+        let owner = provider.snapshot()?.fork_query_owner();
+        let root = ForeignNode::<u64>::traversal_root(&owner)?;
+        Ok(CostQueryCursor {
+            inner: CostCursorInner::U64Affine(
+                QueryIterator::with_affine_traversal_root_and_units(
+                    root,
+                    query.to_vec(),
+                    maximum_scaled,
+                    params,
+                    Unrestricted,
+                    false,
+                ),
+                params,
+            ),
+            provider: owner,
+        })
+    }
+
+    /// Start a floating weighted query over one Unicode snapshot.
+    pub fn query_weighted_utf8(
+        &self,
+        query: &str,
+        maximum_cost: f64,
+        costs: OperationCostsF64,
+    ) -> Result<CostQueryCursor, BindingError> {
+        let ForeignDictionary::Unicode(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::UnicodeScalar,
+                actual: self.unit_domain(),
+            });
+        };
+        validate_weighted_query(maximum_cost, costs, self.algorithm)?;
+        let owner = provider.snapshot()?.fork_query_owner();
+        let root = ForeignNode::<char>::traversal_root(&owner)?;
+        Ok(CostQueryCursor {
+            inner: CostCursorInner::CharWeighted(QueryIteratorF64::with_traversal_root_and_units(
+                root,
+                query.chars().collect(),
+                maximum_cost,
+                self.algorithm,
+                costs,
+                Unrestricted,
+                false,
+            )),
+            provider: owner,
+        })
+    }
+
+    /// Start a floating weighted query over one byte snapshot.
+    pub fn query_weighted_bytes(
+        &self,
+        query: &[u8],
+        maximum_cost: f64,
+        costs: OperationCostsF64,
+    ) -> Result<CostQueryCursor, BindingError> {
+        let ForeignDictionary::Byte(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::Byte,
+                actual: self.unit_domain(),
+            });
+        };
+        validate_weighted_query(maximum_cost, costs, self.algorithm)?;
+        let owner = provider.snapshot()?.fork_query_owner();
+        let root = ForeignNode::<u8>::traversal_root(&owner)?;
+        Ok(CostQueryCursor {
+            inner: CostCursorInner::ByteWeighted(QueryIteratorF64::with_traversal_root_and_units(
+                root,
+                query.to_vec(),
+                maximum_cost,
+                self.algorithm,
+                costs,
+                Unrestricted,
+                false,
+            )),
+            provider: owner,
+        })
+    }
+
+    /// Start a floating weighted query over one u64-token snapshot.
+    pub fn query_weighted_u64(
+        &self,
+        query: &[u64],
+        maximum_cost: f64,
+        costs: OperationCostsF64,
+    ) -> Result<CostQueryCursor, BindingError> {
+        let ForeignDictionary::U64(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::U64,
+                actual: self.unit_domain(),
+            });
+        };
+        validate_weighted_query(maximum_cost, costs, self.algorithm)?;
+        let owner = provider.snapshot()?.fork_query_owner();
+        let root = ForeignNode::<u64>::traversal_root(&owner)?;
+        Ok(CostQueryCursor {
+            inner: CostCursorInner::U64Weighted(QueryIteratorF64::with_traversal_root_and_units(
+                root,
+                query.to_vec(),
+                maximum_cost,
+                self.algorithm,
+                costs,
+                Unrestricted,
+                false,
+            )),
             provider: owner,
         })
     }

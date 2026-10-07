@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 9,
+  "apiRevision": 10,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -370,6 +370,8 @@
         "query_utf8",
         "query_bytes",
         "query_u64",
+        "query_affine",
+        "query_weighted",
         "query_pattern"
       ]
     },
@@ -396,6 +398,12 @@
         "reduce",
         "close"
       ]
+    },
+    "CostCursor": {
+      "ownership": "retains-query-start-snapshot-with-one-live-batch-lease",
+      "costDomains": ["exact-scaled-affine", "float-weighted-operations"],
+      "unitDomains": ["BYTE", "UNICODE_SCALAR", "U64"],
+      "methods": ["next_batch", "release_batch", "reduce", "close"]
     },
     "PhoneticPattern": {
       "feature": "PHONETIC",
@@ -761,6 +769,42 @@
     {
       "name": "llev_transducer_query_u64",
       "rustModule": "index"
+    },
+    {
+      "name": "llev_affine_costs_validate",
+      "rustModule": "costs"
+    },
+    {
+      "name": "llev_operation_costs_preset",
+      "rustModule": "costs"
+    },
+    {
+      "name": "llev_operation_costs_validate",
+      "rustModule": "costs"
+    },
+    {
+      "name": "llev_transducer_query_affine",
+      "rustModule": "costs"
+    },
+    {
+      "name": "llev_transducer_query_weighted",
+      "rustModule": "costs"
+    },
+    {
+      "name": "llev_cost_cursor_next_batch",
+      "rustModule": "costs"
+    },
+    {
+      "name": "llev_cost_cursor_release_batch",
+      "rustModule": "costs"
+    },
+    {
+      "name": "llev_cost_cursor_reduce",
+      "rustModule": "costs"
+    },
+    {
+      "name": "llev_cost_cursor_free",
+      "rustModule": "costs"
     },
     {
       "name": "llev_transducer_query_contextual_utf8",

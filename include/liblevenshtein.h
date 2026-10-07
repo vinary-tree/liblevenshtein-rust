@@ -466,6 +466,52 @@ LLEV_API LlevStatus llev_transducer_query_u64(
     uint32_t order,
     LlevQueryCursor** out_cursor);
 
+/** Validate decimal affine costs and report the exact selected denominator.
+ * A zero scale_denominator derives the least exact decimal scale; a nonzero
+ * denominator must represent all three weights exactly.
+ */
+LLEV_API LlevStatus llev_affine_costs_validate(
+    const LlevAffineCosts* costs, uint32_t* out_denominator);
+
+/** Fetch native weighted-operation preset 0 standard, 1 typo, or 2 OCR. */
+LLEV_API LlevStatus llev_operation_costs_preset(
+    uint32_t preset, LlevOperationCostsF64* out_costs);
+/** Validate finite nonnegative costs with zero match cost. */
+LLEV_API LlevStatus llev_operation_costs_validate(
+    const LlevOperationCostsF64* costs);
+
+/** Capture one provider revision and query with exact affine-gap costs.
+ * `unit_domain` selects Unicode UTF-8, raw bytes, or aligned u64 tokens.
+ * `max_cost` must be exactly representable at the selected scale. Results
+ * expose both an f64 presentation cost and the exact scaled numerator.
+ */
+LLEV_API LlevStatus llev_transducer_query_affine(
+    const LlevTransducer* transducer, uint32_t unit_domain,
+    const void* query, size_t query_len, double max_cost,
+    const LlevAffineCosts* costs, LlevCostCursor** out_cursor);
+
+/** Capture one provider revision and query with weighted edit operations.
+ * The transducer's standard, transposition, or merge/split algorithm selects
+ * the native edit repertoire. Non-finite costs and negative budgets fail.
+ */
+LLEV_API LlevStatus llev_transducer_query_weighted(
+    const LlevTransducer* transducer, uint32_t unit_domain,
+    const void* query, size_t query_len, double max_cost,
+    const LlevOperationCostsF64* costs, LlevCostCursor** out_cursor);
+
+/** Borrow one bounded, generation-checked cost-result batch. */
+LLEV_API LlevStatus llev_cost_cursor_next_batch(
+    LlevCostCursor* cursor, size_t maximum, LlevCostBatchView* out_batch);
+/** Release exactly the live cost-result batch generation. */
+LLEV_API LlevStatus llev_cost_cursor_release_batch(
+    LlevCostCursor* cursor, uint64_t generation);
+/** Consume bounded cost-result batches on the caller thread. */
+LLEV_API LlevStatus llev_cost_cursor_reduce(
+    LlevCostCursor* cursor, size_t batch_size, LlevCostBatchReducer reducer,
+    void* context, size_t* out_count);
+/** Free a cost cursor; refuses a live batch lease. */
+LLEV_API LlevStatus llev_cost_cursor_free(LlevCostCursor* cursor);
+
 /** Capture a Unicode revision and run a lazy context-dependent edit query.
  * The callback and context remain borrowed until the cursor is freed. The
  * caller must keep them live and must not unwind across the C boundary.

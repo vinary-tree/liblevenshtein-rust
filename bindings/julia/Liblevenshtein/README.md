@@ -63,6 +63,14 @@ stream batches without collecting a full result set. See the
 [Julia package guide](docs/src/index.md#contextual-costs-and-prefix-pruning)
 for callback lifetimes and examples.
 
+For exact decimal affine gaps, construct `AffineGapCosts(gap_open, gap_extend,
+substitution)` and call `query_affine(transducer, query, maximum_cost, costs)`.
+For floating per-operation weights, use `WeightedOperationCosts(:standard)`,
+`:typo`, `:ocr`, or six custom weights with `query_weighted`. Both queries
+preserve Unicode, byte, and u64 key domains and stream `CostMatch` values.
+The [cost-domain guide](docs/src/index.md#affine-and-weighted-edit-costs)
+explains exact scaled costs, supported algorithms, and cursor lifetimes.
+
 ## Choose an automaton
 
 | Julia value | Semantics | Metric? |

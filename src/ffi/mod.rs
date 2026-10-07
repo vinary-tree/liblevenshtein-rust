@@ -74,6 +74,7 @@
 //! ```
 
 mod automata;
+mod costs;
 mod distance;
 mod generated;
 mod index;
@@ -91,6 +92,7 @@ mod string;
 mod wallbreaker;
 
 pub use automata::*;
+pub use costs::*;
 pub use distance::*;
 pub use generated::*;
 pub use index::*;

@@ -15,7 +15,7 @@
 /** Binary ABI generation implemented by this header and library. */
 #define LLEV_ABI_VERSION 1u
 /** Additive API revision within LLEV_ABI_VERSION. */
-#define LLEV_API_REVISION 9u
+#define LLEV_API_REVISION 10u
 /** Default maximum descriptors borrowed by one cursor batch. */
 #define LLEV_DEFAULT_MATCH_BATCH 256u
 
@@ -82,6 +82,8 @@ typedef enum LlevUniversalVariant {
 typedef struct LlevTransducer LlevTransducer;
 /** Opaque, exclusive lazy traversal over one immutable query-start snapshot. */
 typedef struct LlevQueryCursor LlevQueryCursor;
+/** Opaque cost-domain traversal over one immutable snapshot. */
+typedef struct LlevCostCursor LlevCostCursor;
 /** Opaque contextual-cost or prefix-pruned Unicode traversal. */
 typedef struct LlevSpecializedCursor LlevSpecializedCursor;
 /** Opaque, exclusive bounded complete-query cache. */
@@ -173,6 +175,50 @@ typedef struct LlevMatchBatchView {
     size_t len; /**< Number of initialized descriptors. */
     uint64_t generation; /**< Nonzero identity required by release_batch. */
 } LlevMatchBatchView;
+
+/** Exact decimal affine costs; zero denominator derives the least exact scale. */
+typedef struct LlevAffineCosts {
+    double gap_open; /**< Cost charged once per nonempty gap. */
+    double gap_extend; /**< Cost charged for each gap unit. */
+    double substitution; /**< Cost charged for a substitution. */
+    uint32_t scale_denominator; /**< Zero to derive or an exact positive scale. */
+    uint32_t reserved; /**< Must be zero. */
+} LlevAffineCosts;
+
+/** Float-weighted operation costs; match_cost must be zero. */
+typedef struct LlevOperationCostsF64 {
+    double match_cost; /**< Must be zero. */
+    double substitution; /**< Replacement cost. */
+    double insertion; /**< Query-side insertion cost. */
+    double deletion; /**< Dictionary-side deletion cost. */
+    double transposition; /**< Adjacent swap cost. */
+    double split; /**< One-to-two split cost. */
+    double merge; /**< Two-to-one merge cost. */
+} LlevOperationCostsF64;
+
+/** Borrowed cost-domain result; term_data follows unit_domain. */
+typedef struct LlevCostMatch {
+    const void* term_data; /**< UTF-8 bytes, raw bytes, or aligned u64 tokens. */
+    size_t term_len; /**< Logical unit count. */
+    size_t byte_len; /**< Addressable byte count. */
+    double cost; /**< Presentation cost. */
+    size_t scaled_cost; /**< Exact affine numerator if has_scaled_cost is one. */
+    uint32_t scale_denominator; /**< Exact affine denominator, or one. */
+    VtUnitDomain unit_domain; /**< Original dictionary unit domain. */
+    uint8_t has_scaled_cost; /**< One for affine; zero for float weighted. */
+    uint8_t reserved[7]; /**< Fixed to zero. */
+} LlevCostMatch;
+
+/** Generation-checked lease over cost-domain results. */
+typedef struct LlevCostBatchView {
+    const LlevCostMatch* matches; /**< Borrowed descriptors. */
+    size_t len; /**< Descriptor count. */
+    uint64_t generation; /**< Exact release token. */
+} LlevCostBatchView;
+
+/** Cost reducer callback; borrowed descriptors expire on return. */
+typedef LlevStatus (*LlevCostBatchReducer)(void* context,
+    const LlevCostMatch* matches, size_t len);
 
 /** Borrowed Unicode context passed only during a contextual-cost callback. */
 typedef struct LlevEditContextView {

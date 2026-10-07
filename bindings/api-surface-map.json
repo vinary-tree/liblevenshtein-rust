@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 152 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 168 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -237,6 +237,33 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "llev_transducer_query_u64"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": "llev_affine_costs_validate"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": "llev_operation_costs_preset"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": "llev_operation_costs_validate"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": "llev_transducer_query_affine"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": "llev_transducer_query_weighted"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": "llev_cost_cursor_next_batch"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": "llev_cost_cursor_release_batch"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": "llev_cost_cursor_reduce"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": "llev_cost_cursor_free"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": "llev_transducer_query_contextual_utf8"
@@ -825,6 +852,42 @@
         "llev_transducer_query_u64": {
           "symbol": "query",
           "note": "reflective JVM overload dispatch on long[] terms"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
@@ -1504,6 +1567,42 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "vinary_tree::liblevenshtein::transducer::query"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
@@ -2187,6 +2286,42 @@
         "llev_transducer_query_u64": {
           "symbol": "Transducer.Query"
         },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
           "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
@@ -2851,6 +2986,42 @@
         "llev_transducer_query_u64": {
           "symbol": "transducer%query_u64"
         },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
           "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
@@ -3514,6 +3685,42 @@
         "llev_transducer_query_u64": {
           "symbol": "Transducer.QueryU64"
         },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
           "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
@@ -4170,6 +4377,42 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "queryU64"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
@@ -4845,6 +5088,42 @@
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
         },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
           "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
@@ -5515,6 +5794,42 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
@@ -6209,6 +6524,42 @@
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
         },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
           "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
@@ -6873,6 +7224,42 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "transducer:query_u64"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
@@ -7539,6 +7926,42 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "query_u64"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
@@ -8213,6 +8636,42 @@
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
         },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
           "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
@@ -8885,6 +9344,42 @@
         "llev_transducer_query_u64": {
           "symbol": "Transducer#query_u64"
         },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
           "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
@@ -9552,6 +10047,42 @@
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
         },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,
           "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
@@ -9950,6 +10481,7 @@
         "bindings/julia/Liblevenshtein/src/PhoneticAot.jl",
         "bindings/julia/Liblevenshtein/src/RankedTraversals.jl",
         "bindings/julia/Liblevenshtein/src/SpecializedTraversals.jl",
+        "bindings/julia/Liblevenshtein/src/CostAutomata.jl",
         "bindings/julia/Liblevenshtein/src/FilteredTraversal.jl"
       ],
       "readme": "bindings/julia/README.md",
@@ -10202,6 +10734,33 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "query"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": "AffineGapCosts"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": "WeightedOperationCosts"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": "WeightedOperationCosts"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": "query_affine"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": "query_weighted"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": "reduce_batches!"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": "close!"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": "query_contextual"
@@ -10747,6 +11306,42 @@
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_affine_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_preset": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_operation_costs_validate": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_affine": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_weighted": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_cost_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-10 native cost-domain query ABI is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_transducer_query_contextual_utf8": {
           "symbol": null,

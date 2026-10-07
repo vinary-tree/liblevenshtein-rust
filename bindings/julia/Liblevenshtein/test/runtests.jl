@@ -367,6 +367,7 @@ end
 end
 
 include("automata_qualification.jl")
+include("cost_automata.jl")
 
 @testset "resource-backed snapshots, iteration, and reduction" begin
     dictionary = Libdictenstein.DynamicDawg()

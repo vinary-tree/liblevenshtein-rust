@@ -197,7 +197,7 @@ pub(crate) fn binding<T>(result: Result<T, BindingError>) -> Result<T, (LlevStat
     result.map_err(|error| (map_binding_error(&error), error.to_string()))
 }
 
-unsafe fn slice<'a, T>(
+pub(crate) unsafe fn slice<'a, T>(
     data: *const T,
     len: usize,
     name: &str,
@@ -207,6 +207,12 @@ unsafe fn slice<'a, T>(
     }
     if data.is_null() {
         return Err((LlevStatus::NullPointer, format!("{name} is null")));
+    }
+    if !(data as usize).is_multiple_of(std::mem::align_of::<T>()) {
+        return Err((
+            LlevStatus::InvalidArgument,
+            format!("{name} is not aligned"),
+        ));
     }
     Ok(std::slice::from_raw_parts(data, len))
 }

@@ -76,6 +76,7 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `llev_abi_version` | `llev_abi_version` | ABI compatibility and feature discovery |
+| `llev_affine_costs_validate` | `llev_affine_costs_validate` | project ABI operation |
 | `llev_affine_gap_distance` | `llev_affine_gap_distance` | project ABI operation |
 | `llev_affine_gap_distance_bytes` | `llev_affine_gap_distance_bytes` | project ABI operation |
 | `llev_affine_gap_distance_bytes_threshold` | `llev_affine_gap_distance_bytes_threshold` | project ABI operation |
@@ -84,6 +85,10 @@ variants, protocols, or methods.
 | `llev_affine_gap_distance_u64_threshold` | `llev_affine_gap_distance_u64_threshold` | project ABI operation |
 | `llev_api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `llev_build_features` | `llev_build_features` | ABI compatibility and feature discovery |
+| `llev_cost_cursor_free` | `llev_cost_cursor_free` | project ABI operation |
+| `llev_cost_cursor_next_batch` | `llev_cost_cursor_next_batch` | project ABI operation |
+| `llev_cost_cursor_reduce` | `llev_cost_cursor_reduce` | project ABI operation |
+| `llev_cost_cursor_release_batch` | `llev_cost_cursor_release_batch` | project ABI operation |
 | `llev_damerau_distance` | `llev_damerau_distance` | standalone exact or thresholded distance |
 | `llev_damerau_distance_bytes` | `llev_damerau_distance_bytes` | standalone exact or thresholded distance |
 | `llev_damerau_distance_bytes_threshold` | `llev_damerau_distance_bytes_threshold` | standalone exact or thresholded distance |
@@ -122,6 +127,8 @@ variants, protocols, or methods.
 | `llev_merge_and_split_distance_threshold` | `llev_merge_and_split_distance_threshold` | standalone merge-and-split distance |
 | `llev_merge_and_split_distance_u64` | `llev_merge_and_split_distance_u64` | standalone merge-and-split distance |
 | `llev_merge_and_split_distance_u64_threshold` | `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
+| `llev_operation_costs_preset` | `llev_operation_costs_preset` | project ABI operation |
+| `llev_operation_costs_validate` | `llev_operation_costs_validate` | project ABI operation |
 | `llev_owned_bytes_free` | `llev_owned_bytes_free` | versioned compiled-byte ownership |
 | `llev_owned_string_free` | `llev_owned_string_free` | owned result-string release |
 | `llev_phonetic_articulatory_distance` | `llev_phonetic_articulatory_distance` | articulatory phonetic distance |
@@ -204,6 +211,7 @@ variants, protocols, or methods.
 | `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
+| `llev_transducer_query_affine` | `llev_transducer_query_affine` | domain-preserving dictionary query |
 | `llev_transducer_query_bytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |
 | `llev_transducer_query_contextual_utf8` | `llev_transducer_query_contextual_utf8` | domain-preserving dictionary query |
 | `llev_transducer_query_filtered_utf8` | `llev_transducer_query_filtered_utf8` | domain-preserving dictionary query |
@@ -211,6 +219,7 @@ variants, protocols, or methods.
 | `llev_transducer_query_pruned_utf8` | `llev_transducer_query_pruned_utf8` | domain-preserving dictionary query |
 | `llev_transducer_query_u64` | `llev_transducer_query_u64` | domain-preserving dictionary query |
 | `llev_transducer_query_utf8` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
+| `llev_transducer_query_weighted` | `llev_transducer_query_weighted` | domain-preserving dictionary query |
 | `llev_transducer_snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_true_damerau_distance` | `llev_true_damerau_distance` | standalone true-Damerau distance |
