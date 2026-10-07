@@ -228,6 +228,26 @@ impl<'a> ParserByte<'a> {
             TokenByte::Dot => Ok(RegexByte::any()),
             TokenByte::Hash => Ok(RegexByte::word_boundary()),
             TokenByte::Byte(b) => Ok(RegexByte::byte(b)),
+            keyword @ (TokenByte::IfKeyword
+            | TokenByte::Monosyllable
+            | TokenByte::Polysyllable
+            | TokenByte::OpenSyllable
+            | TokenByte::ClosedSyllable
+            | TokenByte::FinalSyllable
+            | TokenByte::InitialSyllable) => {
+                let spelling: &[u8] = match keyword {
+                    TokenByte::IfKeyword => b"if",
+                    TokenByte::Monosyllable => b"monosyllable",
+                    TokenByte::Polysyllable => b"polysyllable",
+                    TokenByte::OpenSyllable => b"open_syllable",
+                    TokenByte::ClosedSyllable => b"closed_syllable",
+                    TokenByte::FinalSyllable => b"final_syllable",
+                    TokenByte::InitialSyllable => b"initial_syllable",
+                    _ => unreachable!(),
+                };
+                self.lexer.queue_literal_suffix(&spelling[1..]);
+                Ok(RegexByte::byte(spelling[0]))
+            }
             TokenByte::Eof => Err(ParseError::unexpected_eof(self.lexer.position())),
             _ => Err(ParseError::unexpected_char(
                 self.token_to_char(&token),
@@ -521,6 +541,13 @@ impl<'a> ParserByte<'a> {
                 | TokenByte::GroupStart
                 | TokenByte::Dot
                 | TokenByte::Hash
+                | TokenByte::IfKeyword
+                | TokenByte::Monosyllable
+                | TokenByte::Polysyllable
+                | TokenByte::OpenSyllable
+                | TokenByte::ClosedSyllable
+                | TokenByte::FinalSyllable
+                | TokenByte::InitialSyllable
         )
     }
 

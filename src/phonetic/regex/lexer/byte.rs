@@ -161,6 +161,13 @@ impl<'a> LexerByte<'a> {
         }
     }
 
+    /// Restore a keyword spelling as bytes for ordinary literal patterns.
+    pub(crate) fn queue_literal_suffix(&mut self, suffix: &[u8]) {
+        for &byte in suffix.iter().rev() {
+            self.peeked.push((TokenByte::Byte(byte), self.position));
+        }
+    }
+
     /// Advance to the next byte.
     fn advance(&mut self) -> Option<u8> {
         if self.pos < self.input.len() {

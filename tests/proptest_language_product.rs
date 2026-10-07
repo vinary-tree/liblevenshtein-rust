@@ -10,7 +10,11 @@ use liblevenshtein::phonetic::nfa::{
     compile, compile_bytes, ProductAutomaton, ProductAutomatonChar,
 };
 #[cfg(feature = "phonetic-rules")]
+use liblevenshtein::phonetic::regex::ast::{Regex, RegexByte};
+#[cfg(feature = "phonetic-rules")]
 use liblevenshtein::phonetic::regex::error::ParseErrorKind;
+#[cfg(feature = "phonetic-rules")]
+use liblevenshtein::phonetic::regex::parser::{parse_rule, parse_rule_bytes};
 #[cfg(feature = "phonetic-rules")]
 use liblevenshtein::phonetic::regex::{parse, parse_bytes};
 #[cfg(all(feature = "phonetic-rules", feature = "perf-instrumentation"))]
@@ -163,6 +167,55 @@ proptest! {
         let expected = (expected <= usize::from(budget)).then_some(expected as u8);
         prop_assert_eq!(generic.distance_to_language(input.bytes()), expected);
         prop_assert_eq!(compatibility.min_distance(input.as_bytes()), expected);
+    }
+}
+
+#[cfg(feature = "phonetic-rules")]
+#[test]
+fn phonetic_clause_keywords_are_literals_in_patterns_and_replacements() {
+    for word in [
+        "if",
+        "monosyllable",
+        "polysyllable",
+        "open_syllable",
+        "closed_syllable",
+        "final_syllable",
+        "initial_syllable",
+    ] {
+        let expected = word.chars().map(Regex::char).reduce(Regex::concat).unwrap();
+        let expected_bytes = word
+            .bytes()
+            .map(RegexByte::byte)
+            .reduce(RegexByte::concat)
+            .unwrap();
+        assert_eq!(parse(word).unwrap(), expected, "character pattern {word}");
+        assert_eq!(
+            parse_bytes(word.as_bytes()).unwrap(),
+            expected_bytes,
+            "byte pattern {word}"
+        );
+    }
+    assert_eq!(
+        parse("if*").unwrap(),
+        Regex::concat(Regex::char('i'), Regex::star(Regex::char('f'))),
+    );
+    assert!(parse_rule("if -> if / _ if monosyllable").is_ok());
+    assert!(parse_rule_bytes(b"if -> if / _ if monosyllable").is_ok());
+}
+
+#[cfg(feature = "phonetic-rules")]
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(256))]
+
+    #[test]
+    fn every_lowercase_literal_is_accepted_by_char_and_byte_regex_parsers(
+        pattern in prop::string::string_regex("[a-z]{1,16}").unwrap(),
+    ) {
+        let expected = pattern.chars().map(Regex::char).reduce(Regex::concat).unwrap();
+        let expected_bytes = pattern.bytes().map(RegexByte::byte)
+            .reduce(RegexByte::concat).unwrap();
+        prop_assert_eq!(parse(&pattern).unwrap(), expected);
+        prop_assert_eq!(parse_bytes(pattern.as_bytes()).unwrap(), expected_bytes);
     }
 }
 

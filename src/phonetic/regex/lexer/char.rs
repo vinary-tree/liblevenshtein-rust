@@ -327,6 +327,19 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Restore a keyword spelling as literal characters when the pattern
+    /// parser encounters it outside a syllable-condition clause.
+    pub(crate) fn queue_literal_suffix(&mut self, suffix: &str) {
+        for character in suffix.chars().rev() {
+            self.peeked.push((
+                Token::Char(character),
+                self.position,
+                self.in_char_class,
+                self.in_weight,
+            ));
+        }
+    }
+
     /// Consume the next token if it matches the expected token.
     pub fn expect(&mut self, expected: &Token) -> ParseResult<Token> {
         let token = self.next_token()?;

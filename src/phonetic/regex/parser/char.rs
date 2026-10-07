@@ -426,6 +426,28 @@ impl<'a> Parser<'a> {
             Token::Dot => Ok(Regex::any()),
             Token::Hash => Ok(Regex::word_boundary()),
             Token::Char(c) => Ok(Regex::char(c)),
+            keyword @ (Token::IfKeyword
+            | Token::Monosyllable
+            | Token::Polysyllable
+            | Token::OpenSyllable
+            | Token::ClosedSyllable
+            | Token::FinalSyllable
+            | Token::InitialSyllable) => {
+                let spelling = match keyword {
+                    Token::IfKeyword => "if",
+                    Token::Monosyllable => "monosyllable",
+                    Token::Polysyllable => "polysyllable",
+                    Token::OpenSyllable => "open_syllable",
+                    Token::ClosedSyllable => "closed_syllable",
+                    Token::FinalSyllable => "final_syllable",
+                    Token::InitialSyllable => "initial_syllable",
+                    _ => unreachable!(),
+                };
+                let mut characters = spelling.chars();
+                let first = characters.next().expect("keyword spelling is nonempty");
+                self.lexer.queue_literal_suffix(characters.as_str());
+                Ok(Regex::char(first))
+            }
             Token::SymbolRef(name) => self.expand_symbol_ref(&name),
             Token::PhoneticShortcut {
                 class_name,
@@ -1165,6 +1187,13 @@ impl<'a> Parser<'a> {
                 | Token::Hash
                 | Token::SymbolRef(_)
                 | Token::PhoneticShortcut { .. }
+                | Token::IfKeyword
+                | Token::Monosyllable
+                | Token::Polysyllable
+                | Token::OpenSyllable
+                | Token::ClosedSyllable
+                | Token::FinalSyllable
+                | Token::InitialSyllable
                 // Anchors
                 | Token::StartOfLine
                 | Token::EndOfLine
