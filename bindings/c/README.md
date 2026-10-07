@@ -195,13 +195,20 @@ variants, protocols, or methods.
 | `llev_query_cursor_next_batch` | `llev_query_cursor_next_batch` | streaming result traversal and batch leases |
 | `llev_query_cursor_reduce` | `llev_query_cursor_reduce` | streaming result traversal and batch leases |
 | `llev_query_cursor_release_batch` | `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `llev_specialized_cursor_free` | `llev_specialized_cursor_free` | project ABI operation |
+| `llev_specialized_cursor_next_batch` | `llev_specialized_cursor_next_batch` | project ABI operation |
+| `llev_specialized_cursor_reduce` | `llev_specialized_cursor_reduce` | project ABI operation |
+| `llev_specialized_cursor_release_batch` | `llev_specialized_cursor_release_batch` | project ABI operation |
 | `llev_string_array_free` | `llev_string_array_free` | legacy owned-string plumbing |
 | `llev_string_dup` | `llev_string_dup` | legacy owned-string plumbing |
 | `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_query_bytes` | `llev_transducer_query_bytes` | domain-preserving dictionary query |
+| `llev_transducer_query_contextual_utf8` | `llev_transducer_query_contextual_utf8` | domain-preserving dictionary query |
+| `llev_transducer_query_filtered_utf8` | `llev_transducer_query_filtered_utf8` | domain-preserving dictionary query |
 | `llev_transducer_query_pattern` | `llev_transducer_query_pattern` | phonetic-pattern dictionary query |
+| `llev_transducer_query_pruned_utf8` | `llev_transducer_query_pruned_utf8` | domain-preserving dictionary query |
 | `llev_transducer_query_u64` | `llev_transducer_query_u64` | domain-preserving dictionary query |
 | `llev_transducer_query_utf8` | `llev_transducer_query_utf8` | domain-preserving dictionary query |
 | `llev_transducer_snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |

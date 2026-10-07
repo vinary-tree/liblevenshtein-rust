@@ -213,7 +213,7 @@ const char* llev_last_error_message(void);
 | Function | Returns | Contract |
 |---|---|---|
 | `llev_abi_version` | `LLEV_ABI_VERSION` = 1 | The project ABI generation. A facade built for generation $`g`$ must refuse a library reporting a different generation. |
-| `llev_api_revision` | `LLEV_API_REVISION` = 8 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. Revision 5 adds generalized/universal automata; revision 6 adds the [finite Unicode WallBreaker surface](wallbreaker-unicode.md); revision 7 adds the Hamming, indel, and affine-gap standalone distance families; revision 8 adds the expanded [phonetic surface](#8-phonetic-surface-62). |
+| `llev_api_revision` | `LLEV_API_REVISION` = 9 | The additive revision within the ABI generation ([evolution policy § 1](https://github.com/vinary-tree/vinary-tree-interop/blob/master/docs/abi-evolution.md#1-the-four-version-counters)). A facade needing revision $`r`$ refuses a library reporting less than $`r`$. Revision 5 adds generalized/universal automata; revision 6 adds the [finite Unicode WallBreaker surface](wallbreaker-unicode.md); revision 7 adds the Hamming, indel, and affine-gap standalone distance families; revision 8 adds the expanded [phonetic surface](#8-phonetic-surface-62); revision 9 adds [specialized Unicode traversals](#7d-specialized-unicode-traversals-7). |
 | `llev_build_features` | bitset | `LLEV_BUILD_FEATURE_CORE` (1) is always set. `LLEV_BUILD_FEATURE_PHONETIC` (2) reports `bindings-phonetic`; `LLEV_BUILD_FEATURE_PHONETIC_AOT` (4) reports the additional `serialization` capability. Probe these before using optional phonetic operations. The AOT bit is set only when both features are compiled in. |
 | `llev_last_error_message` | borrowed `const char*` | § 3.2. Never NULL; empty string when the last call on this thread succeeded. |
 
@@ -941,6 +941,63 @@ The fallible calls distinguish `NULL_POINTER`, `INVALID_ARGUMENT`,
 permit those failures; the cursor also reports `END` and `CLOSED` according
 to its state. The [WallBreaker guide](wallbreaker-unicode.md) gives the
 complete algorithm/limit model, example use, and the owned-cursor lifecycle.
+
+---
+
+## 7d. Specialized Unicode traversals (7)
+
+API revision 9 adds three query constructors over the same query-start
+dictionary snapshot as § 7. `llev_transducer_query_filtered_utf8` returns the
+ordinary `LlevQueryCursor`: its `LlevValueFilterCallback` sees an optional u64
+value at each accepted final node *before* the term is constructed. Return
+zero to reject, one to admit, or two to abort with `INVALID_ARGUMENT`.
+Results remain in dictionary traversal order and retain their provider IDs.
+
+```c
+LlevStatus llev_transducer_query_filtered_utf8(
+    const LlevTransducer*, const char*, size_t, size_t,
+    LlevValueFilterCallback, void*, LlevQueryCursor**);
+LlevStatus llev_transducer_query_contextual_utf8(
+    const LlevTransducer*, const char*, size_t, double, double,
+    LlevContextualCostCallback, void*, LlevSpecializedCursor**);
+LlevStatus llev_transducer_query_pruned_utf8(
+    const LlevTransducer*, const char*, size_t, size_t,
+    LlevPrefixCallback, void*, LlevSpecializedCursor**);
+LlevStatus llev_specialized_cursor_next_batch(
+    LlevSpecializedCursor*, size_t, LlevSpecializedBatchView*);
+LlevStatus llev_specialized_cursor_release_batch(
+    LlevSpecializedCursor*, uint64_t);
+LlevStatus llev_specialized_cursor_reduce(
+    LlevSpecializedCursor*, size_t, LlevSpecializedBatchReducer, void*, size_t*);
+LlevStatus llev_specialized_cursor_free(LlevSpecializedCursor*);
+```
+
+Contextual callback operation codes are zero for substitution, one for
+insertion, and two for deletion. A borrowed `LlevEditContextView` provides the
+complete query, zero-based edit position, visited dictionary prefix, and
+current edge scalar when present. Scalars are u32 Unicode values; the arrays
+expire when the callback returns. NaN forbids an edit. A finite nonnegative
+cost is allowed, but every positive cost must meet the declared strictly
+positive `minimum_nonzero_cost`; violating it aborts with `INVALID_ARGUMENT`
+so pruning cannot silently omit a match. The cursor reports a floating point
+`cost`, with no prefix score.
+
+The prefix callback operation codes are zero for structural unit comparison,
+one for `enter`, two for `leave`, three for terminal membership, and four for
+optional score. Enter/leave are balanced, including rejected subtrees and
+early close. The returned cost is an integral edit distance represented as a
+double. Results follow dictionary DFS order. Both specialized constructors
+are Unicode-only; incompatible dictionary domains report `DOMAIN_MISMATCH`.
+
+`LlevSpecializedCursor` owns reusable UTF-8 term storage and lends at most the
+requested number of `LlevSpecializedMatch` descriptors per batch. A successful
+`next_batch` produces a nonzero generation that must be released exactly
+before advancing, reducing, or freeing; a live lease reports `BATCH_IN_USE`.
+The reducer receives borrowed descriptors only during each callback. Return
+`END` to stop successfully, or a published error status to abort. Foreign
+callbacks execute synchronously on the advancing thread and must not unwind
+across C. Their function and context pointers must remain valid until cursor
+free; freeing a prefix cursor may invoke final `leave` callbacks.
 
 ---
 

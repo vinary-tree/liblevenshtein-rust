@@ -112,7 +112,7 @@ where
         Self::try_from_traversal_root(DictionaryTraversalRoot::owned(root), query, max_cost, costs)
     }
 
-    fn try_from_traversal_root(
+    pub(crate) fn try_from_traversal_root(
         root: DictionaryTraversalRoot<N>,
         query: Vec<N::Unit>,
         max_cost: f64,

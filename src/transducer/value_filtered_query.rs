@@ -494,6 +494,19 @@ where
             inner: PathValueTraversal::new(root, query_units, max_distance, algorithm),
         }
     }
+
+    /// Advance the same pre-materialization value filter while retaining the
+    /// matched value for a binding that exposes dictionary IDs.
+    pub fn next_with_value(&mut self) -> Option<(String, usize, N::Value)>
+    where
+        N::Value: DictionaryValue,
+    {
+        let filter = &self.filter;
+        self.inner.advance(
+            |value| filter(value),
+            |units, distance, value| (N::Unit::to_string(&units), distance, value),
+        )
+    }
 }
 
 impl<N, F> Iterator for ValueFilteredQueryIterator<N, F>
@@ -506,14 +519,8 @@ where
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let filter = &self.filter;
-        self.inner.advance(
-            |value| filter(value),
-            |units, distance, _value| Candidate {
-                term: N::Unit::to_string(&units),
-                distance,
-            },
-        )
+        self.next_with_value()
+            .map(|(term, distance, _)| Candidate { term, distance })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

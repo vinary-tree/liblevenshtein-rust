@@ -6,7 +6,7 @@ use super::{
 };
 use crate::bindings::{
     BindingError, MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceQueryCache,
-    ResourceTransducer,
+    ResourceTransducer, ValueFilterCallback,
 };
 use crate::transducer::{QueryCacheLimits, QueryCacheStats};
 use std::cell::RefCell;
@@ -148,7 +148,9 @@ fn map_binding_error(error: &BindingError) -> LlevStatus {
         BindingError::UnsupportedValueDomain(_)
         | BindingError::UnsupportedOrdering(_)
         | BindingError::MissingSnapshotIdentity => LlevStatus::Unsupported,
-        BindingError::EmptyBatch => LlevStatus::InvalidArgument,
+        BindingError::EmptyBatch | BindingError::InvalidTraversalConfiguration(_) => {
+            LlevStatus::InvalidArgument
+        }
         BindingError::Provider(status) => match status {
             VtStatus::InvalidArgument => LlevStatus::InvalidArgument,
             VtStatus::NullPointer => LlevStatus::NullPointer,
@@ -191,7 +193,7 @@ pub(crate) fn boundary(
     }
 }
 
-fn binding<T>(result: Result<T, BindingError>) -> Result<T, (LlevStatus, String)> {
+pub(crate) fn binding<T>(result: Result<T, BindingError>) -> Result<T, (LlevStatus, String)> {
     result.map_err(|error| (map_binding_error(&error), error.to_string()))
 }
 
@@ -518,6 +520,47 @@ pub unsafe extern "C" fn llev_transducer_query_utf8(
             transducer
                 .inner
                 .query_utf8(utf8(query, query_len)?, max_distance, parse_order(order)?),
+            out_cursor,
+        )
+    })
+}
+
+/// Start a Unicode traversal with a value predicate evaluated before term
+/// materialization. Callback and context must outlive the cursor.
+///
+/// # Safety
+/// Pointers must be valid, query bytes must be UTF-8, and the callback must
+/// not unwind across the C boundary.
+#[no_mangle]
+pub unsafe extern "C" fn llev_transducer_query_filtered_utf8(
+    transducer: *const LlevTransducer,
+    query: *const c_char,
+    query_len: usize,
+    max_distance: usize,
+    callback: Option<ValueFilterCallback>,
+    context: *mut c_void,
+    out_cursor: *mut *mut LlevQueryCursor,
+) -> LlevStatus {
+    boundary(|| {
+        let transducer = transducer
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "transducer is null".into()))?;
+        let callback = callback.ok_or((
+            LlevStatus::NullPointer,
+            "value filter callback is null".into(),
+        ))?;
+        if out_cursor.is_null() {
+            return Err((LlevStatus::NullPointer, "out_cursor is null".into()));
+        }
+        write_cursor(
+            unsafe {
+                transducer.inner.query_filtered_utf8(
+                    utf8(query, query_len)?,
+                    max_distance,
+                    callback,
+                    context,
+                )
+            },
             out_cursor,
         )
     })

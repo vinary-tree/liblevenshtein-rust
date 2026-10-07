@@ -28,6 +28,14 @@ export ABI_VERSION,
     DistanceRangeCursor,
     ScoredMatch,
     ScoredCursor,
+    ContextualCosts,
+    ContextualEditContext,
+    PrefixVisitor,
+    SpecializedMatch,
+    SpecializedCursor,
+    FilteredCursor,
+    BorrowedSpecializedBatch,
+    BorrowedSpecializedMatch,
     AutomatonLimits,
     GeneralizedRestriction,
     GeneralizedOperation,
@@ -118,6 +126,9 @@ export ABI_VERSION,
     query_ranked,
     query_mode,
     query_suggestions,
+    query_contextual,
+    query_pruned,
+    query_filtered,
     cache_stats,
     clear!,
     reset_stats!,
@@ -940,6 +951,8 @@ Base.isopen(rules::PhoneticRuleSet) = !rules.closed
 
 include("PhoneticAnalysis.jl")
 include("RankedTraversals.jl")
+include("SpecializedTraversals.jl")
+include("FilteredTraversal.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")
 include("PhoneticOnline.jl")
@@ -953,6 +966,14 @@ include("PhoneticAot.jl")
 function __init__()
     REDUCER_CALLBACK[] = @cfunction(reducer_callback, Cint,
         (Ptr{Cvoid}, Ptr{RawMatch}, Csize_t))
+    CONTEXTUAL_COST_CALLBACK[] = @cfunction(contextual_cost_callback, Cdouble,
+        (Ptr{Cvoid}, UInt32, Ptr{RawEditContext}, UInt32, UInt32))
+    PREFIX_CALLBACK[] = @cfunction(prefix_callback, UInt8,
+        (Ptr{Cvoid}, UInt32, UInt32, UInt32, Csize_t, Ptr{UInt32}, Csize_t, Ptr{Cdouble}))
+    SPECIALIZED_REDUCER_CALLBACK[] = @cfunction(specialized_reducer_callback, Cint,
+        (Ptr{Cvoid}, Ptr{RawSpecializedMatch}, Csize_t))
+    VALUE_FILTER_CALLBACK[] = @cfunction(value_filter_callback, UInt8,
+        (Ptr{Cvoid}, UInt8, UInt64))
     abi_version() == ABI_VERSION || error("liblevenshtein native ABI version mismatch")
     api_revision() >= API_REVISION || error("liblevenshtein native API revision is too old")
 end

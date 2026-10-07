@@ -10,8 +10,9 @@ use crate::phonetic::nfa::NFAChar;
 #[cfg(feature = "bindings-phonetic")]
 use crate::transducer::language::{LanguageProduct, MappedLanguageQueryIterator};
 use crate::transducer::{
-    Algorithm, QueryCacheLimits, QueryCacheStats, RankedValueQueryIterator, Suggestion,
-    ValueYieldingQueryIterator, VersionedQueryCache,
+    Algorithm, ContextualCost, ContextualQueryIterator, EditContext, PrefixPruner,
+    PrefixQueryIterator, QueryCacheLimits, QueryCacheStats, RankedValueQueryIterator, Suggestion,
+    Unrestricted, ValueFilteredQueryIterator, ValueYieldingQueryIterator, VersionedQueryCache,
 };
 use arc_swap::ArcSwapOption;
 use libdictenstein::concurrent_slots::{AtomicOnceBox, AtomicTakeBox, HybridOnceBoxSlots};
@@ -27,7 +28,7 @@ use std::marker::PhantomData;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::ops::Deref;
 use std::ptr::NonNull;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 use vinary_tree_interop::{
     dictionary_flags, VtDictionaryEdge, VtDictionaryGraphVTable, VtDictionaryGraphView,
@@ -78,6 +79,8 @@ pub enum BindingError {
     EmptyBatch,
     /// Cross-query caching requires stable producer/revision identity.
     MissingSnapshotIdentity,
+    /// A specialized traversal received invalid cost or callback configuration.
+    InvalidTraversalConfiguration(&'static str),
 }
 
 impl fmt::Display for BindingError {
@@ -116,6 +119,7 @@ impl fmt::Display for BindingError {
             Self::EmptyBatch => formatter.write_str("batch size must be greater than zero"),
             Self::MissingSnapshotIdentity => formatter
                 .write_str("query caching requires the provider snapshot-identity capability"),
+            Self::InvalidTraversalConfiguration(message) => formatter.write_str(message),
         }
     }
 }
@@ -2153,11 +2157,328 @@ impl MatchBatch {
     }
 }
 
+/// Borrowed Unicode context supplied to one contextual-cost callback.
+/// The scalar arrays are valid only until the callback returns.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct EditContextView {
+    /// Complete Unicode query as borrowed scalar values.
+    pub query_units: *const u32,
+    /// Number of query scalars.
+    pub query_len: usize,
+    /// Zero-based query position for this edit.
+    pub query_index: usize,
+    /// Already traversed dictionary prefix as borrowed scalars.
+    pub dictionary_prefix: *const u32,
+    /// Number of prefix scalars.
+    pub prefix_len: usize,
+    /// Current dictionary edge scalar when present.
+    pub dictionary_unit: u32,
+    /// One if `dictionary_unit` is present.
+    pub has_dictionary_unit: u8,
+    /// Fixed to zero for this API revision.
+    pub reserved: [u8; 3],
+}
+
+/// Operation codes: zero substitution, one insertion, two deletion.
+pub type ContextualCostCallback = unsafe extern "C" fn(
+    context: *mut c_void,
+    operation: u32,
+    view: *const EditContextView,
+    query_unit: u32,
+    candidate_unit: u32,
+) -> f64;
+
+/// Callback configuration copied into a native contextual cursor. A NaN
+/// callback result forbids the edit. Other non-finite or negative results are
+/// rejected by the native contextual iterator.
+#[derive(Clone)]
+pub struct CallbackContextualCost {
+    /// Opaque caller context borrowed until cursor close.
+    pub context: *mut c_void,
+    /// Synchronous host cost callback.
+    pub callback: ContextualCostCallback,
+    /// Strict positive lower bound for every nonzero allowed edit.
+    pub minimum_nonzero_cost: f64,
+    lower_bound_violation: Arc<AtomicBool>,
+}
+
+impl ContextualCost<char> for CallbackContextualCost {
+    fn substitution_cost(
+        &self,
+        context: &EditContext<'_, char>,
+        query: char,
+        dictionary: char,
+    ) -> Option<f64> {
+        self.call(0, context, query as u32, dictionary as u32)
+    }
+
+    fn insertion_cost(&self, context: &EditContext<'_, char>, dictionary: char) -> Option<f64> {
+        self.call(1, context, 0, dictionary as u32)
+    }
+
+    fn deletion_cost(&self, context: &EditContext<'_, char>, query: char) -> Option<f64> {
+        self.call(2, context, query as u32, 0)
+    }
+
+    fn min_nonzero_cost(&self) -> f64 {
+        self.minimum_nonzero_cost
+    }
+}
+
+impl CallbackContextualCost {
+    /// Construct a host cost model with a checked pruning lower bound.
+    pub fn new(
+        context: *mut c_void,
+        callback: ContextualCostCallback,
+        minimum_nonzero_cost: f64,
+    ) -> Self {
+        Self {
+            context,
+            callback,
+            minimum_nonzero_cost,
+            lower_bound_violation: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    fn call(
+        &self,
+        operation: u32,
+        context: &EditContext<'_, char>,
+        query_unit: u32,
+        candidate_unit: u32,
+    ) -> Option<f64> {
+        let dictionary_unit = context.dictionary_unit();
+        let view = EditContextView {
+            query_units: context.query().as_ptr().cast(),
+            query_len: context.query().len(),
+            query_index: context.query_index(),
+            dictionary_prefix: context.dictionary_prefix().as_ptr().cast(),
+            prefix_len: context.dictionary_prefix().len(),
+            dictionary_unit: dictionary_unit.map_or(0, u32::from),
+            has_dictionary_unit: u8::from(dictionary_unit.is_some()),
+            reserved: [0; 3],
+        };
+        // SAFETY: the host callback is part of this cursor's constructor
+        // contract and executes synchronously while the Julia owner is rooted.
+        let cost =
+            unsafe { (self.callback)(self.context, operation, &view, query_unit, candidate_unit) };
+        if cost.is_finite() && cost > 0.0 && cost < self.minimum_nonzero_cost {
+            self.lower_bound_violation.store(true, Ordering::Relaxed);
+            None
+        } else if cost.is_nan() {
+            None
+        } else {
+            Some(cost)
+        }
+    }
+}
+
+/// Prefix callback operation codes: match, enter, leave, permits, score.
+pub type PrefixCallback = unsafe extern "C" fn(
+    context: *mut c_void,
+    operation: u32,
+    candidate_unit: u32,
+    query_unit: u32,
+    depth: usize,
+    prefix_units: *const u32,
+    prefix_len: usize,
+    out_score: *mut f64,
+) -> u8;
+
+/// One balanced DFS visitor retained by a native prefix-pruned cursor.
+#[derive(Clone, Copy)]
+pub struct CallbackPrefixPruner {
+    /// Opaque caller context borrowed until cursor close.
+    pub context: *mut c_void,
+    /// Balanced synchronous host prefix callback.
+    pub callback: PrefixCallback,
+}
+
+impl PrefixPruner<char> for CallbackPrefixPruner {
+    fn matches_query_unit(&self, candidate: char, query: char) -> bool {
+        // SAFETY: the host callback and its context remain live for this cursor.
+        unsafe {
+            (self.callback)(
+                self.context,
+                0,
+                candidate as u32,
+                query as u32,
+                0,
+                std::ptr::null(),
+                0,
+                std::ptr::null_mut(),
+            ) != 0
+        }
+    }
+
+    fn enter(&mut self, unit: char, depth: usize) -> bool {
+        // SAFETY: see `matches_query_unit`.
+        unsafe {
+            (self.callback)(
+                self.context,
+                1,
+                unit as u32,
+                0,
+                depth,
+                std::ptr::null(),
+                0,
+                std::ptr::null_mut(),
+            ) != 0
+        }
+    }
+
+    fn leave(&mut self, unit: char, depth: usize) {
+        // SAFETY: see `matches_query_unit`.
+        unsafe {
+            (self.callback)(
+                self.context,
+                2,
+                unit as u32,
+                0,
+                depth,
+                std::ptr::null(),
+                0,
+                std::ptr::null_mut(),
+            );
+        }
+    }
+
+    fn permits_accept(&mut self, prefix: &[char]) -> bool {
+        // SAFETY: prefix remains borrowed only for the synchronous callback.
+        unsafe {
+            (self.callback)(
+                self.context,
+                3,
+                0,
+                0,
+                0,
+                prefix.as_ptr().cast(),
+                prefix.len(),
+                std::ptr::null_mut(),
+            ) != 0
+        }
+    }
+
+    fn accept(&mut self, prefix: &[char]) -> Option<f64> {
+        let mut score = 0.0;
+        // SAFETY: prefix and score remain valid for the synchronous callback.
+        let has_score = unsafe {
+            (self.callback)(
+                self.context,
+                4,
+                0,
+                0,
+                0,
+                prefix.as_ptr().cast(),
+                prefix.len(),
+                &mut score,
+            ) != 0
+        };
+        has_score.then_some(score)
+    }
+}
+
+/// One owned Unicode match from a contextual or prefix-pruned traversal.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SpecializedMatch {
+    /// Owned Unicode dictionary term.
+    pub term: String,
+    /// Contextual cost or integral fuzzy distance represented as f64.
+    pub cost: f64,
+    /// Optional prefix visitor score.
+    pub score: Option<f64>,
+}
+
+type CharContextual = ContextualQueryIterator<ForeignNode<char>, CallbackContextualCost>;
+type CharPruned = PrefixQueryIterator<ForeignNode<char>, Unrestricted, CallbackPrefixPruner>;
+
+enum SpecializedCursorInner {
+    Contextual(Box<CharContextual>),
+    Prefix(Box<CharPruned>),
+}
+
+/// Lazy native specialized traversal over a retained immutable provider.
+pub struct SpecializedQueryCursor {
+    inner: SpecializedCursorInner,
+    provider: Arc<Provider>,
+    lower_bound_violation: Option<Arc<AtomicBool>>,
+}
+
+impl SpecializedQueryCursor {
+    /// Reuse `output` for at most `maximum` native matches from the captured
+    /// dictionary revision; zero is rejected.
+    pub fn next_batch(
+        &mut self,
+        output: &mut Vec<SpecializedMatch>,
+        maximum: usize,
+    ) -> Result<usize, BindingError> {
+        if maximum == 0 {
+            return Err(BindingError::EmptyBatch);
+        }
+        output.clear();
+        while output.len() < maximum {
+            if self
+                .lower_bound_violation
+                .as_ref()
+                .is_some_and(|fault| fault.load(Ordering::Relaxed))
+            {
+                return Err(BindingError::InvalidTraversalConfiguration(
+                    "contextual callback returned a positive cost below its declared lower bound",
+                ));
+            }
+            if let Some(error) = self.provider.take_fault() {
+                return Err(error);
+            }
+            let item = match &mut self.inner {
+                SpecializedCursorInner::Contextual(cursor) => {
+                    cursor.next().map(|match_| SpecializedMatch {
+                        term: match_.units.into_iter().collect(),
+                        cost: match_.distance,
+                        score: None,
+                    })
+                }
+                SpecializedCursorInner::Prefix(cursor) => {
+                    cursor.next().map(|match_| SpecializedMatch {
+                        term: match_.units.into_iter().collect(),
+                        cost: match_.distance as f64,
+                        score: match_.score,
+                    })
+                }
+            };
+            if let Some(error) = self.provider.take_fault() {
+                return Err(error);
+            }
+            if self
+                .lower_bound_violation
+                .as_ref()
+                .is_some_and(|fault| fault.load(Ordering::Relaxed))
+            {
+                return Err(BindingError::InvalidTraversalConfiguration(
+                    "contextual callback returned a positive cost below its declared lower bound",
+                ));
+            }
+            match item {
+                Some(match_) => output.push(match_),
+                None => break,
+            }
+        }
+        Ok(output.len())
+    }
+}
+
 type CharTraversal = ValueYieldingQueryIterator<ForeignNode<char>>;
 type ByteTraversal = ValueYieldingQueryIterator<ForeignNode<u8>, Vec<u8>>;
 type U64Traversal = ValueYieldingQueryIterator<ForeignNode<u64>, Vec<u64>>;
 type CharScorer = fn(&str, usize, &BindingValue) -> f64;
 type CharOrdered = RankedValueQueryIterator<ForeignNode<char>, CharScorer>;
+type CharFiltered =
+    ValueFilteredQueryIterator<ForeignNode<char>, Box<dyn Fn(&BindingValue) -> bool>>;
+
+/// Return one to admit a final value before term materialization, zero to
+/// reject it, or any value above one to abort the cursor.
+pub type ValueFilterCallback =
+    unsafe extern "C" fn(context: *mut c_void, has_id: u8, id: u64) -> u8;
 #[cfg(feature = "bindings-phonetic")]
 type CharLanguage = MappedLanguageQueryIterator<ForeignNode<char>, NFAChar>;
 
@@ -2174,6 +2495,10 @@ enum CursorInner {
     ByteTraversal(ByteTraversal),
     U64Traversal(U64Traversal),
     CharOrdered(CharOrdered),
+    CharFiltered {
+        cursor: CharFiltered,
+        callback_failed: Arc<AtomicBool>,
+    },
     #[cfg(feature = "bindings-phonetic")]
     CharLanguage(CharLanguage),
     Cached {
@@ -2266,6 +2591,29 @@ impl QueryCursor {
                     id: value.id,
                 },
             ),
+            CursorInner::CharFiltered {
+                cursor,
+                callback_failed,
+            } => {
+                if callback_failed.load(Ordering::Relaxed) {
+                    return Err(BindingError::InvalidTraversalConfiguration(
+                        "value filter callback aborted",
+                    ));
+                }
+                let next = cursor
+                    .next_with_value()
+                    .map(|(term, distance, value)| Match {
+                        term: MatchTerm::Utf8(term),
+                        distance,
+                        id: value.id,
+                    });
+                if callback_failed.load(Ordering::Relaxed) {
+                    return Err(BindingError::InvalidTraversalConfiguration(
+                        "value filter callback aborted",
+                    ));
+                }
+                next
+            }
             #[cfg(feature = "bindings-phonetic")]
             CursorInner::CharLanguage(cursor) => cursor.next().map(|item| Match {
                 term: MatchTerm::Utf8(item.units.into_iter().collect()),
@@ -2976,6 +3324,60 @@ impl ResourceTransducer {
         })
     }
 
+    /// Start a Unicode query whose optional-u64 value predicate runs at each
+    /// accepted final node before the result term is constructed. The callback
+    /// and context must remain live until the returned cursor is freed.
+    ///
+    /// # Safety
+    /// `context` and `callback` must remain valid for the returned cursor's
+    /// lifetime, and the callback must not unwind across the C ABI.
+    pub unsafe fn query_filtered_utf8(
+        &self,
+        query: &str,
+        max_distance: usize,
+        callback: ValueFilterCallback,
+        context: *mut c_void,
+    ) -> Result<QueryCursor, BindingError> {
+        let ForeignDictionary::Unicode(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::UnicodeScalar,
+                actual: self.unit_domain(),
+            });
+        };
+        let snapshot = provider.snapshot()?;
+        let owner = snapshot.fork_query_owner();
+        let callback_failed = Arc::new(AtomicBool::new(false));
+        let callback_failed_in_filter = callback_failed.clone();
+        let filter: Box<dyn Fn(&BindingValue) -> bool> = Box::new(move |value| {
+            // SAFETY: this synchronous callback's context remains live for
+            // the owning foreign cursor's complete lifetime.
+            let response = unsafe {
+                callback(
+                    context,
+                    u8::from(value.id.is_some()),
+                    value.id.unwrap_or_default(),
+                )
+            };
+            if response > 1 {
+                callback_failed_in_filter.store(true, Ordering::Relaxed);
+            }
+            response == 1
+        });
+        Ok(QueryCursor {
+            inner: CursorInner::CharFiltered {
+                cursor: ValueFilteredQueryIterator::with_traversal_root(
+                    ForeignNode::<char>::traversal_root(&owner)?,
+                    query.to_owned(),
+                    max_distance,
+                    self.algorithm,
+                    filter,
+                ),
+                callback_failed,
+            },
+            provider: owner,
+        })
+    }
+
     /// Start a lazy raw-byte query over the revision visible now.
     pub fn query_bytes(
         &self,
@@ -3035,6 +3437,94 @@ impl ResourceTransducer {
                 ),
             ),
             provider: owner,
+        })
+    }
+
+    /// Start a lazy Unicode contextual-cost query over one captured revision.
+    /// The callback is invoked synchronously on the advancing thread; its host
+    /// context must remain live until the cursor is freed.
+    ///
+    /// # Safety
+    /// The callback and its context must remain valid until cursor release and
+    /// the callback must not unwind across the C ABI.
+    pub unsafe fn query_contextual_utf8(
+        &self,
+        query: &str,
+        max_cost: f64,
+        costs: CallbackContextualCost,
+    ) -> Result<SpecializedQueryCursor, BindingError> {
+        let ForeignDictionary::Unicode(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::UnicodeScalar,
+                actual: self.unit_domain(),
+            });
+        };
+        if !max_cost.is_finite() || max_cost < 0.0 {
+            return Err(BindingError::InvalidTraversalConfiguration(
+                "contextual maximum cost must be finite and nonnegative",
+            ));
+        }
+        if !costs.minimum_nonzero_cost.is_finite() || costs.minimum_nonzero_cost <= 0.0 {
+            return Err(BindingError::InvalidTraversalConfiguration(
+                "contextual minimum nonzero cost must be finite and positive",
+            ));
+        }
+        let snapshot = provider.snapshot()?;
+        let owner = snapshot.fork_query_owner();
+        let lower_bound_violation = costs.lower_bound_violation.clone();
+        let inner = ContextualQueryIterator::try_from_traversal_root(
+            ForeignNode::<char>::traversal_root(&owner)?,
+            query.chars().collect(),
+            max_cost,
+            costs,
+        )
+        .map_err(|_| {
+            BindingError::InvalidTraversalConfiguration("invalid contextual query configuration")
+        })?;
+        if lower_bound_violation.load(Ordering::Relaxed) {
+            return Err(BindingError::InvalidTraversalConfiguration(
+                "contextual callback returned a positive cost below its declared lower bound",
+            ));
+        }
+        Ok(SpecializedQueryCursor {
+            inner: SpecializedCursorInner::Contextual(Box::new(inner)),
+            provider: owner,
+            lower_bound_violation: Some(lower_bound_violation),
+        })
+    }
+
+    /// Start a lazy Unicode DFS with a balanced host prefix visitor.
+    ///
+    /// # Safety
+    /// The visitor and its context must remain valid until cursor release and
+    /// the callback must not unwind across the C ABI.
+    pub unsafe fn query_pruned_utf8(
+        &self,
+        query: &str,
+        max_distance: usize,
+        pruner: CallbackPrefixPruner,
+    ) -> Result<SpecializedQueryCursor, BindingError> {
+        let ForeignDictionary::Unicode(provider) = &self.dictionary else {
+            return Err(BindingError::UnitDomainMismatch {
+                expected: VtUnitDomain::UnicodeScalar,
+                actual: self.unit_domain(),
+            });
+        };
+        let snapshot = provider.snapshot()?;
+        let owner = snapshot.fork_query_owner();
+        let inner = PrefixQueryIterator::with_traversal_root(
+            ForeignNode::<char>::traversal_root(&owner)?,
+            query.chars().collect(),
+            max_distance,
+            self.algorithm,
+            Unrestricted,
+            pruner,
+            false,
+        );
+        Ok(SpecializedQueryCursor {
+            inner: SpecializedCursorInner::Prefix(Box::new(inner)),
+            provider: owner,
+            lower_bound_violation: None,
         })
     }
 

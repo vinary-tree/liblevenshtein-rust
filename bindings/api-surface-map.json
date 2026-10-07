@@ -10,7 +10,8 @@
       ],
       "readme": "bindings/c/README.md",
       "tests": [
-        "bindings/c/tests/cross_project_snapshot.c"
+        "bindings/c/tests/cross_project_snapshot.c",
+        "tests/ffi_specialized_traversals.rs"
       ],
       "enums": {
         "status": {
@@ -228,11 +229,32 @@
         "llev_transducer_query_utf8": {
           "symbol": "llev_transducer_query_utf8"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": "llev_transducer_query_filtered_utf8"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "llev_transducer_query_bytes"
         },
         "llev_transducer_query_u64": {
           "symbol": "llev_transducer_query_u64"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": "llev_transducer_query_contextual_utf8"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": "llev_transducer_query_pruned_utf8"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": "llev_specialized_cursor_next_batch"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": "llev_specialized_cursor_release_batch"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": "llev_specialized_cursor_reduce"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": "llev_specialized_cursor_free"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "llev_query_cache_query_utf8",
@@ -792,6 +814,10 @@
         "llev_transducer_query_utf8": {
           "symbol": "query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "query",
           "note": "reflective JVM overload dispatch on byte[] terms"
@@ -799,6 +825,30 @@
         "llev_transducer_query_u64": {
           "symbol": "query",
           "note": "reflective JVM overload dispatch on long[] terms"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "query",
@@ -1445,11 +1495,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "vinary_tree::liblevenshtein::transducer::query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "vinary_tree::liblevenshtein::transducer::query"
         },
         "llev_transducer_query_u64": {
           "symbol": "vinary_tree::liblevenshtein::transducer::query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "query_cache::query",
@@ -2099,11 +2177,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.Query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer.Query"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.Query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.Query",
@@ -2735,11 +2841,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "transducer%query_text"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "transducer%query_bytes"
         },
         "llev_transducer_query_u64": {
           "symbol": "transducer%query_u64"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "query_cache%query_text",
@@ -3370,11 +3504,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.Query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer.QueryBytes"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.QueryU64"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.Query",
@@ -3999,11 +4161,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "queryText"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "queryBytes"
         },
         "llev_transducer_query_u64": {
           "symbol": "queryU64"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "cachedQueryText",
@@ -4645,11 +4835,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer.query"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.query",
@@ -5288,11 +5506,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer.query"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.query",
@@ -5953,11 +6199,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer.query"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.query",
@@ -6590,11 +6864,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "transducer:query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "transducer:query_bytes"
         },
         "llev_transducer_query_u64": {
           "symbol": "transducer:query_u64"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache:query",
@@ -7228,11 +7530,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "query_bytes"
         },
         "llev_transducer_query_u64": {
           "symbol": "query_u64"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "cached_query",
@@ -7873,11 +8203,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer.query"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.query",
@@ -8517,11 +8875,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer#query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer#query_bytes"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer#query_u64"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache#query",
@@ -9156,11 +9542,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer.query"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.query",
@@ -9533,7 +9947,10 @@
         "bindings/julia/Liblevenshtein/src/PhoneticExpansion.jl",
         "bindings/julia/Liblevenshtein/src/PhoneticFeatures.jl",
         "bindings/julia/Liblevenshtein/src/PhoneticFiles.jl",
-        "bindings/julia/Liblevenshtein/src/PhoneticAot.jl"
+        "bindings/julia/Liblevenshtein/src/PhoneticAot.jl",
+        "bindings/julia/Liblevenshtein/src/RankedTraversals.jl",
+        "bindings/julia/Liblevenshtein/src/SpecializedTraversals.jl",
+        "bindings/julia/Liblevenshtein/src/FilteredTraversal.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -9777,11 +10194,32 @@
         "llev_transducer_query_utf8": {
           "symbol": "query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": "query_filtered"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "query"
         },
         "llev_transducer_query_u64": {
           "symbol": "query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": "query_contextual"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": "query_pruned"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": "reduce_batches!"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": "close!"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "query",
@@ -10300,11 +10738,39 @@
         "llev_transducer_query_utf8": {
           "symbol": "Transducer.query"
         },
+        "llev_transducer_query_filtered_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
         "llev_transducer_query_bytes": {
           "symbol": "Transducer.query"
         },
         "llev_transducer_query_u64": {
           "symbol": "Transducer.query"
+        },
+        "llev_transducer_query_contextual_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_transducer_query_pruned_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_release_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_reduce": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
+        },
+        "llev_specialized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-9 specialized native traversal is not yet exposed by this language facade; binding parity is tracked separately"
         },
         "llev_query_cache_query_utf8": {
           "symbol": "QueryCache.query",

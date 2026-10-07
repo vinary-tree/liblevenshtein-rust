@@ -53,6 +53,16 @@ end
 implements `vt.dictionary.v1`; liblevenshtein does not depend on a concrete
 dictionary backend.
 
+For bounded ranking, use `query_ranked` or `query_mode`. For scores that order
+only one distance layer at a time, use `query_suggestions`. The native
+`query_contextual` cursor accepts Julia edit-cost callbacks, while
+`query_pruned` accepts a balanced `PrefixVisitor` for dictionary DFS, and
+`query_filtered` tests optional IDs before term construction. All these
+cursors capture one dictionary revision, support explicit close/cancel, and
+stream batches without collecting a full result set. See the
+[Julia package guide](docs/src/index.md#contextual-costs-and-prefix-pruning)
+for callback lifetimes and examples.
+
 ## Choose an automaton
 
 | Julia value | Semantics | Metric? |

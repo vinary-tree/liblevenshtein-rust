@@ -86,6 +86,7 @@ mod phonetic_features;
 mod phonetic_online;
 mod phonetic_token;
 mod phonetic_transducer;
+mod specialized;
 mod string;
 mod wallbreaker;
 
@@ -102,6 +103,7 @@ pub use phonetic_features::*;
 pub use phonetic_online::*;
 pub use phonetic_token::*;
 pub use phonetic_transducer::*;
+pub use specialized::*;
 pub use string::*;
 pub use wallbreaker::*;
 

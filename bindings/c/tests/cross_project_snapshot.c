@@ -60,6 +60,12 @@ _Static_assert(offsetof(LlevGeneralizedOperation, weight) == 2 * sizeof(size_t),
                "LlevGeneralizedOperation weight layout moved");
 _Static_assert(sizeof(LlevUniversalEquivalence) == 2 * sizeof(uint64_t),
                "LlevUniversalEquivalence must contain exactly two u64 values");
+_Static_assert(sizeof(LlevEditContextView) == 48,
+               "contextual callback view layout moved");
+_Static_assert(sizeof(LlevSpecializedMatch) == 40,
+               "specialized match layout moved");
+_Static_assert(sizeof(LlevSpecializedBatchView) == 24,
+               "specialized batch layout moved");
 
 typedef struct Seen {
     bool cat;
@@ -488,6 +494,103 @@ static void assert_non_text_domains(void) {
     ldict_dictionary_free(tokens);
 }
 
+static uint8_t admit_nonfirst_id(void* context, uint8_t has_id, uint64_t id) {
+    (void)context;
+    return (uint8_t)(has_id && id >= 2);
+}
+
+static double contextual_unit_cost(void* context, uint32_t operation,
+                                   const LlevEditContextView* view,
+                                   uint32_t query_unit, uint32_t candidate_unit) {
+    (void)context;
+    assert(view != NULL);
+    assert(view->query_len == 3);
+    assert(view->query_units != NULL);
+    return operation == 0 && query_unit == candidate_unit ? 0.0 : 1.0;
+}
+
+typedef struct PrefixBalance {
+    size_t enters;
+    size_t leaves;
+} PrefixBalance;
+
+static uint8_t accept_all_prefixes(void* context, uint32_t operation,
+                                   uint32_t candidate_unit, uint32_t query_unit,
+                                   size_t depth, const uint32_t* prefix,
+                                   size_t prefix_len, double* out_score) {
+    PrefixBalance* balance = (PrefixBalance*)context;
+    (void)candidate_unit;
+    (void)depth;
+    (void)prefix;
+    switch (operation) {
+        case 0: return (uint8_t)(candidate_unit == query_unit);
+        case 1: ++balance->enters; return 1;
+        case 2: ++balance->leaves; return 0;
+        case 3: return 1;
+        case 4: *out_score = (double)prefix_len; return 1;
+        default: abort();
+    }
+}
+
+static LlevStatus count_specialized_batch(void* context,
+                                          const LlevSpecializedMatch* matches,
+                                          size_t len) {
+    size_t* total = (size_t*)context;
+    for (size_t i = 0; i < len; ++i) {
+        assert(matches[i].term_data != NULL);
+        assert(matches[i].cost >= 0.0);
+    }
+    *total += len;
+    return LLEV_STATUS_OK;
+}
+
+static void assert_specialized_traversals(LlevTransducer* transducer) {
+    LlevQueryCursor* filtered = NULL;
+    assert(llev_transducer_query_filtered_utf8(transducer, "cut", 3, 1,
+        admit_nonfirst_id, NULL, &filtered) == LLEV_STATUS_OK);
+    size_t filtered_count = 0;
+    for (;;) {
+        LlevMatchBatchView batch = {0};
+        LlevStatus status = llev_query_cursor_next_batch(filtered, 1, &batch);
+        if (status == LLEV_STATUS_END) break;
+        assert(status == LLEV_STATUS_OK);
+        assert(batch.len == 1);
+        assert(batch.matches[0].has_id == 1);
+        assert(batch.matches[0].id >= 2);
+        ++filtered_count;
+        assert(llev_query_cursor_release_batch(filtered, batch.generation) ==
+               LLEV_STATUS_OK);
+    }
+    assert(filtered_count == 2);
+    assert(llev_query_cursor_free(filtered) == LLEV_STATUS_OK);
+
+    LlevSpecializedCursor* contextual = NULL;
+    assert(llev_transducer_query_contextual_utf8(transducer, "cut", 3, 1.0,
+        1.0, contextual_unit_cost, NULL, &contextual) == LLEV_STATUS_OK);
+    size_t contextual_count = 0;
+    size_t delivered = 0;
+    assert(llev_specialized_cursor_reduce(contextual, 1,
+        count_specialized_batch, &contextual_count, &delivered) ==
+        LLEV_STATUS_OK);
+    assert(contextual_count >= 2);
+    assert(delivered == contextual_count);
+    assert(llev_specialized_cursor_free(contextual) == LLEV_STATUS_OK);
+
+    PrefixBalance balance = {0};
+    LlevSpecializedCursor* pruned = NULL;
+    assert(llev_transducer_query_pruned_utf8(transducer, "cut", 3, 1,
+        accept_all_prefixes, &balance, &pruned) == LLEV_STATUS_OK);
+    LlevSpecializedBatchView batch = {0};
+    assert(llev_specialized_cursor_next_batch(pruned, 1, &batch) ==
+           LLEV_STATUS_OK);
+    assert(batch.len == 1);
+    assert(batch.matches[0].has_score == 1);
+    assert(llev_specialized_cursor_release_batch(pruned, batch.generation) ==
+           LLEV_STATUS_OK);
+    assert(llev_specialized_cursor_free(pruned) == LLEV_STATUS_OK);
+    assert(balance.enters == balance.leaves);
+}
+
 int main(void) {
     assert_distance_api();
     assert_legacy_string_api();
@@ -511,6 +614,7 @@ int main(void) {
 
     assert_reducer_api(transducer);
     assert_query_cache_api(transducer);
+    assert_specialized_traversals(transducer);
     assert_phonetic_api(transducer);
 
     LlevTransducer* frozen = NULL;

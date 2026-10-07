@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 8,
+  "apiRevision": 9,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -751,12 +751,40 @@
       "rustModule": "index"
     },
     {
+      "name": "llev_transducer_query_filtered_utf8",
+      "rustModule": "index"
+    },
+    {
       "name": "llev_transducer_query_bytes",
       "rustModule": "index"
     },
     {
       "name": "llev_transducer_query_u64",
       "rustModule": "index"
+    },
+    {
+      "name": "llev_transducer_query_contextual_utf8",
+      "rustModule": "specialized"
+    },
+    {
+      "name": "llev_transducer_query_pruned_utf8",
+      "rustModule": "specialized"
+    },
+    {
+      "name": "llev_specialized_cursor_next_batch",
+      "rustModule": "specialized"
+    },
+    {
+      "name": "llev_specialized_cursor_release_batch",
+      "rustModule": "specialized"
+    },
+    {
+      "name": "llev_specialized_cursor_reduce",
+      "rustModule": "specialized"
+    },
+    {
+      "name": "llev_specialized_cursor_free",
+      "rustModule": "specialized"
     },
     {
       "name": "llev_query_cache_query_utf8",

@@ -84,6 +84,75 @@ receive owned vectors, while the base `QueryCursor` reducer exposes borrowed
 native batches. Closing a transducer does not invalidate a cursor created from
 it, because each cursor retains its query-start dictionary snapshot.
 
+### Contextual costs and prefix pruning
+
+`query_contextual` runs the native contextual dynamic-programming traversal.
+Provide three Julia cost functions and a strictly positive lower bound for
+every nonzero allowed edit. A cost function may return `nothing` to forbid an
+operation. The query is fixed during traversal, so callback context contains
+the full query, its one-based edit position, the already visited dictionary
+prefix, and the current edge scalar. Right context of the dictionary edge is
+not available during trie descent.
+
+```julia
+costs = ContextualCosts(
+    (context, query_unit, dictionary_unit) ->
+        query_unit == dictionary_unit ? 0.0 : 1.0,
+    (context, dictionary_unit) -> 1.0,
+    (context, query_unit) -> 1.0;
+    minimum_nonzero_cost=1.0,
+)
+cursor = query_contextual(transducer, "speling", 2.0, costs)
+try
+    for match in cursor
+        println(match.term, " ", match.cost)
+    end
+finally
+    close(cursor)
+end
+```
+
+The declared lower bound is checked for each positive finite callback cost.
+An undersized bound may traverse extra prefixes; a cost below the declared
+bound raises an error instead of silently losing a match. Negative and
+non-finite costs are rejected as forbidden edits by the native iterator.
+The `ContextualEditContext` scalar views expire when the callback returns;
+copy data inside the callback if it must be retained.
+
+`query_pruned` runs a native depth-first fuzzy traversal with a balanced
+`PrefixVisitor`. `enter(unit, depth)` may reject a subtree, and its matching
+`leave(unit, depth)` is called even when it rejects. `permits(prefix)` decides
+whether an accepted final prefix is returned; `score(prefix)` may attach a
+numeric score. `matches(candidate, query)` customizes the structural unit
+comparison. Depth is one-based and result order follows dictionary DFS.
+
+`query_filtered(transducer, text, distance, predicate)` calls the Julia
+predicate with each final node's optional `UInt64` ID before the native
+traversal constructs its term. It returns the same `Match` type as `query`, in
+traversal order. This is useful when a scope or tenant ID rejects most fuzzy
+matches, because rejected term strings are never built.
+
+```julia
+visitor = PrefixVisitor(
+    (unit, depth) -> depth > 1 || unit == 's',
+    (unit, depth) -> nothing;
+    permits=prefix -> last(prefix) == 'g',
+)
+cursor = query_pruned(transducer, "speling", 2, visitor)
+try
+    reduce_batches!((count, batch) -> count + length(batch), 0, cursor)
+finally
+    close(cursor)
+end
+```
+
+Both specialized cursors capture one dictionary revision, lend bounded native
+batch leases to `reduce_batches!`, and release them before callback return.
+`materialize` copies a borrowed specialized match for use afterward. Callback
+functions run on the thread advancing or closing the cursor. Keep their state
+valid until `close` or `cancel!`; a prefix visitor may receive final `leave`
+calls during close.
+
 ## Runtime edit grammars and standalone automata
 
 `GeneralizedAutomaton` executes an immutable runtime operation set. The native

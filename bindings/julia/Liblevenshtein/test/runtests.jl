@@ -441,6 +441,11 @@ end
             ["coat", "cut", "bat"]
         @test !isopen(scored)
         @test LL.next_batch!(scored) === nothing
+        @test [m.term for m in LL.query_suggestions(transducer, "cat", 1,
+            (_, _, _) -> 0.0)] == [m.term for m in ranked]
+        @test [m.term for m in LL.query_suggestions(transducer, "cat", 1,
+            (term, _, _) -> term == "bat" ? NaN : 0.0)] ==
+            ["cat", "coat", "cot", "cut", "bat"]
 
         @test LL.reduce_batches!((n, batch) -> n + length(batch), 0,
             LL.query_mode(transducer, "cat";
@@ -465,6 +470,157 @@ end
         LL.close!(transducer)
         @test [match.term for match in pending] ==
             ["cat", "cot", "coat", "cut", "bat"]
+    finally
+        isopen(transducer) && LL.close!(transducer)
+        close(provider)
+        close(dictionary)
+    end
+end
+
+@testset "contextual and prefix-pruned native traversals" begin
+    @test sizeof(LL.RawEditContext) == 48
+    @test sizeof(LL.RawSpecializedMatch) == 40
+    @test sizeof(LL.RawSpecializedBatch) == 24
+    dictionary = Libdictenstein.DynamicDawg()
+    for (term, id) in (("ce", 1), ("se", 2), ("ci", 3),
+        ("cat", 4), ("sea", 5))
+        dictionary[term] = id
+    end
+    provider = Libdictenstein.snapshot(dictionary)
+    transducer = LL.Transducer(provider)
+    captured = Ref{Any}(nothing)
+    costs = LL.ContextualCosts(
+        (context, query_unit, candidate_unit) -> begin
+            captured[] = context.query
+            if query_unit == candidate_unit
+                0.0
+            elseif query_unit == 'c' && candidate_unit == 's' &&
+                context.query_index < length(context.query) &&
+                context.query[context.query_index + 1] == 'e'
+                0.25
+            else
+                1.0
+            end
+        end,
+        (_, _) -> 1.0,
+        (_, _) -> 1.0;
+        minimum_nonzero_cost=0.25)
+    try
+        @test_throws ArgumentError LL.ContextualCosts(
+            (_, _, _) -> 0.0, (_, _) -> 1.0, (_, _) -> 1.0;
+            minimum_nonzero_cost=0.0)
+        @test_throws ArgumentError LL.query_contextual(transducer, "ce", NaN, costs)
+        contextual = LL.query_contextual(transducer, "ce", 0.25, costs)
+        @test Set((m.term, m.cost) for m in contextual) ==
+            Set([("ce", 0.0), ("se", 0.25)])
+        @test_throws ArgumentError captured[][1]
+        @test Set(m.term for m in LL.query(transducer, "ce", 0)) == Set(["ce"])
+
+        @test LL.reduce_batches!((n, batch) -> begin
+            @test all(m -> LL.materialize(m).cost <= 0.25, batch)
+            n + length(batch)
+        end, 0, LL.query_contextual(transducer, "ce", 0.25, costs);
+            batch_size=1) == 2
+        escaped = Ref{Any}(nothing)
+        LL.reduce_batches!((n, batch) -> begin
+            escaped[] = batch[1]
+            n + length(batch)
+        end, 0, LL.query_contextual(transducer, "ce", 0.25, costs);
+            batch_size=1)
+        @test_throws ArgumentError LL.materialize(escaped[])
+
+        stack = Char[]
+        visitor = LL.PrefixVisitor(
+            (unit, depth) -> begin
+                @test depth == length(stack) + 1
+                push!(stack, unit)
+                depth > 1 || unit == 'c'
+            end,
+            (unit, depth) -> begin
+                @test depth == length(stack)
+                @test pop!(stack) == unit
+            end;
+            permits=prefix -> last(prefix) == 'e',
+            score=prefix -> Float64(length(prefix)))
+        pruned = LL.query_pruned(transducer, "ce", 2, visitor)
+        @test [(m.term, m.cost, m.score) for m in pruned] ==
+            [("ce", 0.0, 2.0)]
+        @test isempty(stack)
+
+        early = LL.query_pruned(transducer, "ce", 2,
+            LL.PrefixVisitor((unit, _) -> (push!(stack, unit); true),
+                (unit, _) -> (@test pop!(stack) == unit)))
+        @test LL.next_batch!(early, 1) !== nothing
+        LL.cancel!(early)
+        @test isempty(stack)
+        @test_throws LL.NativeError LL.next_batch!(early)
+
+        failure = LL.query_contextual(transducer, "ce", 1.0,
+            LL.ContextualCosts((_, _, _) -> error("callback failure"),
+                (_, _) -> 1.0, (_, _) -> 1.0;
+                minimum_nonzero_cost=1.0))
+        @test_throws ErrorException LL.next_batch!(failure)
+        @test !isopen(failure)
+
+        violated = LL.query_contextual(transducer, "ce", 1.0,
+            LL.ContextualCosts((_, q, x) -> q == x ? 0.0 : 0.1,
+                (_, _) -> 1.0, (_, _) -> 1.0;
+                minimum_nonzero_cost=1.0))
+        @test_throws LL.NativeError LL.next_batch!(violated)
+        LL.close!(violated)
+
+        failure_stack = Char[]
+        bad_visitor = LL.PrefixVisitor(
+            (unit, _) -> (push!(failure_stack, unit); true),
+            (unit, _) -> (@test pop!(failure_stack) == unit);
+            permits=_ -> error("prefix callback failure"))
+        failed_prefix = LL.query_pruned(transducer, "ce", 2, bad_visitor)
+        @test_throws ErrorException LL.next_batch!(failed_prefix)
+        @test !isopen(failed_prefix)
+        @test isempty(failure_stack)
+    finally
+        LL.close!(transducer)
+        close(provider)
+        close(dictionary)
+    end
+end
+
+@testset "pre-materialization value filtering" begin
+    dictionary = Libdictenstein.DynamicDawg()
+    for (term, id) in (("ce", 1), ("se", 2), ("ci", 3),
+        ("cat", 4), ("sea", 5))
+        dictionary[term] = id
+    end
+    provider = Libdictenstein.snapshot(dictionary)
+    transducer = LL.Transducer(provider)
+    try
+        expected = [m for m in LL.query(transducer, "ce", 2)
+            if m.id !== nothing && m.id >= 3]
+        observed = collect(LL.query_filtered(transducer, "ce", 2,
+            id -> id !== nothing && id >= 3))
+        @test [(m.term, m.distance, m.id) for m in observed] ==
+            [(m.term, m.distance, m.id) for m in expected]
+        @test LL.reduce_batches!((n, batch) -> n + length(batch), 0,
+            LL.query_filtered(transducer, "ce", 2,
+                id -> id !== nothing && id >= 3); batch_size=1) ==
+            length(expected)
+
+        stopped = LL.query_filtered(transducer, "ce", 2, _ -> true)
+        @test iterate(stopped) !== nothing
+        LL.cancel!(stopped)
+        @test !isopen(stopped)
+        @test_throws LL.NativeError LL.next_batch!(stopped)
+
+        failed = LL.query_filtered(transducer, "ce", 2,
+            _ -> error("value filter failure"))
+        @test_throws ErrorException LL.next_batch!(failed)
+        @test !isopen(failed)
+
+        pending = LL.query_filtered(transducer, "ce", 2,
+            id -> id !== nothing && id >= 3)
+        LL.close!(transducer)
+        @test [(m.term, m.id) for m in pending] ==
+            [(m.term, m.id) for m in expected]
     finally
         isopen(transducer) && LL.close!(transducer)
         close(provider)

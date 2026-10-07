@@ -415,6 +415,21 @@ LLEV_API LlevStatus llev_transducer_query_utf8(
     uint32_t order,
     LlevQueryCursor** out_cursor);
 
+/** Capture a Unicode revision and filter values before constructing terms.
+ * The callback and context remain borrowed until the cursor is freed. The
+ * callback executes synchronously on the thread advancing the cursor and
+ * must not unwind across the C boundary. Results retain traversal order and
+ * their optional provider IDs.
+ */
+LLEV_API LlevStatus llev_transducer_query_filtered_utf8(
+    const LlevTransducer* transducer,
+    const char* query,
+    size_t query_len,
+    size_t max_distance,
+    LlevValueFilterCallback callback,
+    void* context,
+    LlevQueryCursor** out_cursor);
+
 /** Capture the provider revision now and start a lazy raw-byte query.
  * @param transducer live configuration over a byte dictionary
  * @param query arbitrary bytes, or NULL only when query_len is zero
@@ -450,6 +465,61 @@ LLEV_API LlevStatus llev_transducer_query_u64(
     size_t max_distance,
     uint32_t order,
     LlevQueryCursor** out_cursor);
+
+/** Capture a Unicode revision and run a lazy context-dependent edit query.
+ * The callback and context remain borrowed until the cursor is freed. The
+ * caller must keep them live and must not unwind across the C boundary.
+ * `minimum_nonzero_cost` is a strictly positive finite lower bound for all
+ * nonzero costs returned by the callback; false bounds invalidate pruning.
+ * Callback operation codes are declared by LlevContextualCostCallback.
+ * @return OK, INVALID_ARGUMENT for invalid bounds, or a provider error
+ */
+LLEV_API LlevStatus llev_transducer_query_contextual_utf8(
+    const LlevTransducer* transducer,
+    const char* query,
+    size_t query_len,
+    double max_cost,
+    double minimum_nonzero_cost,
+    LlevContextualCostCallback callback,
+    void* context,
+    LlevSpecializedCursor** out_cursor);
+
+/** Capture a Unicode revision and run a lazy balanced prefix-pruned DFS.
+ * The callback and context remain borrowed until the cursor is freed. The
+ * caller must keep them live and must not unwind across the C boundary.
+ * Enter and leave calls are balanced, including rejected subtrees and an early
+ * cursor close. Result order is dictionary DFS order.
+ */
+LLEV_API LlevStatus llev_transducer_query_pruned_utf8(
+    const LlevTransducer* transducer,
+    const char* query,
+    size_t query_len,
+    size_t max_distance,
+    LlevPrefixCallback callback,
+    void* context,
+    LlevSpecializedCursor** out_cursor);
+
+/** Borrow a bounded generation-checked specialized match batch.
+ * @return OK, END, BATCH_IN_USE, INVALID_ARGUMENT, or a provider error
+ */
+LLEV_API LlevStatus llev_specialized_cursor_next_batch(
+    LlevSpecializedCursor* cursor,
+    size_t maximum,
+    LlevSpecializedBatchView* out_batch);
+/** Release the exact live specialized batch generation. */
+LLEV_API LlevStatus llev_specialized_cursor_release_batch(
+    LlevSpecializedCursor* cursor,
+    uint64_t generation);
+/** Reduce bounded borrowed specialized batches on the caller's thread. */
+LLEV_API LlevStatus llev_specialized_cursor_reduce(
+    LlevSpecializedCursor* cursor,
+    size_t batch_size,
+    LlevSpecializedBatchReducer reducer,
+    void* context,
+    size_t* out_count);
+/** Close a specialized cursor; refuses a live batch lease. */
+LLEV_API LlevStatus llev_specialized_cursor_free(
+    LlevSpecializedCursor* cursor);
 
 /** Query Unicode scalars through a bounded complete-result cache.
  *
