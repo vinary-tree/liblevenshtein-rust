@@ -25,6 +25,9 @@ export ABI_VERSION,
     QueryCache,
     QueryCacheStats,
     QueryCursor,
+    DistanceRangeCursor,
+    ScoredMatch,
+    ScoredCursor,
     AutomatonLimits,
     GeneralizedRestriction,
     GeneralizedOperation,
@@ -112,6 +115,9 @@ export ABI_VERSION,
     snapshot,
     unit_domain,
     query,
+    query_ranked,
+    query_mode,
+    query_suggestions,
     cache_stats,
     clear!,
     reset_stats!,
@@ -933,6 +939,7 @@ Base.close(rules::PhoneticRuleSet) = close!(rules)
 Base.isopen(rules::PhoneticRuleSet) = !rules.closed
 
 include("PhoneticAnalysis.jl")
+include("RankedTraversals.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")
 include("PhoneticOnline.jl")

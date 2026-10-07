@@ -412,6 +412,66 @@ include("automata_qualification.jl")
     end
 end
 
+@testset "ranked Unicode traversal adapters" begin
+    dictionary = Libdictenstein.DynamicDawg()
+    for (term, id) in (("cat", 1), ("bat", 2), ("cot", 20),
+        ("cut", 3), ("coat", 10), ("dog", 100))
+        dictionary[term] = id
+    end
+    provider = Libdictenstein.snapshot(dictionary)
+    transducer = LL.Transducer(provider)
+    try
+        ranked = collect(LL.query_ranked(transducer, "cat", 1))
+        @test [(match.term, match.distance) for match in ranked] ==
+            [("cat", 0), ("bat", 1), ("coat", 1), ("cot", 1), ("cut", 1)]
+        @test [match.term for match in LL.query_mode(transducer, "cat";
+            minimum_distance=1, maximum_distance=1)] ==
+            ["bat", "coat", "cot", "cut"]
+        @test_throws ArgumentError LL.query_mode(transducer, "cat";
+            minimum_distance=2, maximum_distance=1)
+        @test_throws ArgumentError LL.query_mode(transducer, "cat";
+            maximum_distance=-1)
+
+        scored = LL.query_suggestions(transducer, "cat", 1,
+            (_, _, id) -> Float64(id))
+        @test [(m.term, m.distance, m.id, m.confidence) for m in
+            LL.next_batch!(scored, 2)] ==
+            [("cat", 0, UInt64(1), 1.0), ("cot", 1, UInt64(20), 20.0)]
+        @test [match.term for match in collect(scored)] ==
+            ["coat", "cut", "bat"]
+        @test !isopen(scored)
+        @test LL.next_batch!(scored) === nothing
+
+        @test LL.reduce_batches!((n, batch) -> n + length(batch), 0,
+            LL.query_mode(transducer, "cat";
+                minimum_distance=1, maximum_distance=1); batch_size=2) == 4
+        @test LL.reduce_batches!((n, batch) -> n + length(batch), 0,
+            LL.query_suggestions(transducer, "cat", 1,
+                (_, _, _) -> 0.0); batch_size=2) == 5
+
+        cancelled = LL.query_suggestions(transducer, "cat", 1,
+            (_, _, _) -> 0.0)
+        @test iterate(cancelled) !== nothing
+        LL.cancel!(cancelled)
+        @test !isopen(cancelled)
+        @test iterate(cancelled) === nothing
+        failed = LL.query_suggestions(transducer, "cat", 1,
+            (_, _, _) -> error("scorer failure"))
+        @test_throws ErrorException iterate(failed)
+        @test !isopen(failed)
+
+        pending = LL.query_suggestions(transducer, "cat", 1,
+            (_, _, id) -> Float64(id))
+        LL.close!(transducer)
+        @test [match.term for match in pending] ==
+            ["cat", "cot", "coat", "cut", "bat"]
+    finally
+        isopen(transducer) && LL.close!(transducer)
+        close(provider)
+        close(dictionary)
+    end
+end
+
 @testset "all unit-cost automata" begin
     dictionary = Libdictenstein.DynamicDawg()
     for (term, id) in (("ba", 1), ("m", 2), ("ABC", 3))

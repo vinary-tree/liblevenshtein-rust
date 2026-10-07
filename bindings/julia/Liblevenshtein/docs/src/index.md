@@ -56,6 +56,34 @@ Use `reduce_batches!` when matches do not need to escape the callback. Each
 `BorrowedMatch` expires when its callback returns; call `materialize` inside
 the callback when an independently owned value is required.
 
+### Ranked Unicode queries
+
+`query_ranked(transducer, text, distance)` returns the native distance-then-term
+cursor. `query_mode` retains that order while selecting an inclusive distance
+interval from completed matches. The maximum bound is passed to the native
+automaton; the minimum is applied as each match arrives.
+
+```julia
+cursor = query_mode(transducer, "speling";
+    minimum_distance=1, maximum_distance=2)
+try
+    for match in cursor
+        println(match.term, " ", match.distance)
+    end
+finally
+    close(cursor)
+end
+```
+
+`query_suggestions(transducer, text, distance, scorer)` scores one native
+distance layer at a time. The scorer receives `(term, distance, id)` and returns
+a number. Results sort by increasing distance, decreasing finite score, then
+ascending term; non-finite scores rank last. Both adapters provide
+`next_batch!`, `reduce_batches!`, `close`, and `cancel!`. Adapter reducers
+receive owned vectors, while the base `QueryCursor` reducer exposes borrowed
+native batches. Closing a transducer does not invalidate a cursor created from
+it, because each cursor retains its query-start dictionary snapshot.
+
 ## Runtime edit grammars and standalone automata
 
 `GeneralizedAutomaton` executes an immutable runtime operation set. The native
