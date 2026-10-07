@@ -195,6 +195,8 @@ typedef double (*LlevContextualCostCallback)(void* context, uint32_t operation,
 
 /** Return one to admit a final-node value before term materialization,
  * zero to reject it, or two to abort the cursor as INVALID_ARGUMENT.
+ * The callback and context must remain valid while the cursor exists. If a
+ * cursor is moved to another thread, both must be safe to use on that thread.
  */
 typedef uint8_t (*LlevValueFilterCallback)(void* context,
     uint8_t has_id, uint64_t id);

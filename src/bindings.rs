@@ -2473,12 +2473,41 @@ type U64Traversal = ValueYieldingQueryIterator<ForeignNode<u64>, Vec<u64>>;
 type CharScorer = fn(&str, usize, &BindingValue) -> f64;
 type CharOrdered = RankedValueQueryIterator<ForeignNode<char>, CharScorer>;
 type CharFiltered =
-    ValueFilteredQueryIterator<ForeignNode<char>, Box<dyn Fn(&BindingValue) -> bool>>;
+    ValueFilteredQueryIterator<ForeignNode<char>, Box<dyn Fn(&BindingValue) -> bool + Send>>;
 
 /// Return one to admit a final value before term materialization, zero to
 /// reject it, or any value above one to abort the cursor.
 pub type ValueFilterCallback =
     unsafe extern "C" fn(context: *mut c_void, has_id: u8, id: u64) -> u8;
+
+struct ValueFilterThunk {
+    callback: ValueFilterCallback,
+    context: *mut c_void,
+    callback_failed: Arc<AtomicBool>,
+}
+
+// SAFETY: query_filtered_utf8 requires the caller to keep the callback and
+// context valid and safe to invoke from any thread to which it moves the
+// cursor. The callback is invoked only while that cursor is being advanced.
+unsafe impl Send for ValueFilterThunk {}
+
+impl ValueFilterThunk {
+    fn accepts(&self, value: &BindingValue) -> bool {
+        // SAFETY: upheld by query_filtered_utf8's caller for the cursor's
+        // complete lifetime and any thread on which it is advanced.
+        let response = unsafe {
+            (self.callback)(
+                self.context,
+                u8::from(value.id.is_some()),
+                value.id.unwrap_or_default(),
+            )
+        };
+        if response > 1 {
+            self.callback_failed.store(true, Ordering::Relaxed);
+        }
+        response == 1
+    }
+}
 #[cfg(feature = "bindings-phonetic")]
 type CharLanguage = MappedLanguageQueryIterator<ForeignNode<char>, NFAChar>;
 
@@ -3330,7 +3359,9 @@ impl ResourceTransducer {
     ///
     /// # Safety
     /// `context` and `callback` must remain valid for the returned cursor's
-    /// lifetime, and the callback must not unwind across the C ABI.
+    /// lifetime, and the callback must not unwind across the C ABI. If the
+    /// cursor moves to another thread, the callback and context must be safe
+    /// to invoke there.
     pub unsafe fn query_filtered_utf8(
         &self,
         query: &str,
@@ -3347,22 +3378,13 @@ impl ResourceTransducer {
         let snapshot = provider.snapshot()?;
         let owner = snapshot.fork_query_owner();
         let callback_failed = Arc::new(AtomicBool::new(false));
-        let callback_failed_in_filter = callback_failed.clone();
-        let filter: Box<dyn Fn(&BindingValue) -> bool> = Box::new(move |value| {
-            // SAFETY: this synchronous callback's context remains live for
-            // the owning foreign cursor's complete lifetime.
-            let response = unsafe {
-                callback(
-                    context,
-                    u8::from(value.id.is_some()),
-                    value.id.unwrap_or_default(),
-                )
-            };
-            if response > 1 {
-                callback_failed_in_filter.store(true, Ordering::Relaxed);
-            }
-            response == 1
-        });
+        let thunk = ValueFilterThunk {
+            callback,
+            context,
+            callback_failed: callback_failed.clone(),
+        };
+        let filter: Box<dyn Fn(&BindingValue) -> bool + Send> =
+            Box::new(move |value| thunk.accepts(value));
         Ok(QueryCursor {
             inner: CursorInner::CharFiltered {
                 cursor: ValueFilteredQueryIterator::with_traversal_root(

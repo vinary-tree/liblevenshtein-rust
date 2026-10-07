@@ -952,6 +952,9 @@ ordinary `LlevQueryCursor`: its `LlevValueFilterCallback` sees an optional u64
 value at each accepted final node *before* the term is constructed. Return
 zero to reject, one to admit, or two to abort with `INVALID_ARGUMENT`.
 Results remain in dictionary traversal order and retain their provider IDs.
+Keep the callback and its context valid until the cursor is freed. A caller
+that moves the cursor between threads must make both safe to invoke on each
+thread that advances it.
 
 ```c
 LlevStatus llev_transducer_query_filtered_utf8(

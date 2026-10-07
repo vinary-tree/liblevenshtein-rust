@@ -7,6 +7,12 @@ use std::ffi::c_void;
 use std::ptr;
 use support::interop_dictionary::TestDictionary;
 
+#[test]
+fn query_cursor_remains_send_for_shared_runtime_registries() {
+    fn assert_send<T: Send>() {}
+    assert_send::<liblevenshtein::bindings::QueryCursor>();
+}
+
 unsafe extern "C" fn soft_c_cost(
     _context: *mut c_void,
     operation: u32,
