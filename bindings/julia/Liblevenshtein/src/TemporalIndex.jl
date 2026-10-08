@@ -44,6 +44,14 @@ struct RawTemporalIndexMatch
     distance::Float64
 end
 
+function native_index_reason(code::UInt32)
+    reasons = (:unknown, :dp_cells, :work_units, :scratch_bytes,
+        :trie_nodes, :trie_edges, :candidates, :results, :queue_entries,
+        :continuation_bytes, :overflow, :invalid_stored_data,
+        :unsupported, :allocation, :page_work_units, :cancelled)
+    Int(code) + 1 <= length(reasons) ? reasons[Int(code) + 1] : :unknown
+end
+
 """Native quantized temporal index with a frozen snapshot after construction."""
 mutable struct TemporalIndex
     handle::Ptr{Cvoid}
@@ -165,15 +173,17 @@ function next_batch!(cursor::TemporalIndexCursor, maximum::Integer=DEFAULT_MATCH
     raw = Vector{RawTemporalIndexMatch}(undef, maximum)
     written = Ref{Csize_t}(0)
     done = Ref{UInt8}(0)
+    reason = Ref{UInt32}(0)
     try
         status = GC.@preserve raw ccall(
             native(:llev_temporal_index_cursor_next_batch), Cint,
             (Ptr{Cvoid}, Ptr{RawTemporalIndexMatch}, Csize_t, Csize_t,
-                Csize_t, Ref{Csize_t}, Ref{UInt8}),
+                Csize_t, Ref{Csize_t}, Ref{UInt8}, Ref{UInt32}),
             cursor.handle, pointer(raw), length(raw), cursor.page_work_units,
-            cursor.page_results, written, done)
+            cursor.page_results, written, done, reason)
         if status == Int32(STATUS_LIMIT_EXCEEDED)
-            throw(TemporalQueryIncomplete(:native_index, nothing, nothing))
+            throw(TemporalQueryIncomplete(:native_index, nothing,
+                native_index_reason(reason[])))
         end
         checked(status, :llev_temporal_index_cursor_next_batch)
         if written[] > 0

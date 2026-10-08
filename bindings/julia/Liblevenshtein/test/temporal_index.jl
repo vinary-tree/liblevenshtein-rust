@@ -46,7 +46,15 @@
         max_work_units=0, max_scratch_bytes=4 * 1024 * 1024)
     stopped = LL.query_index_range(index, query; cutoff=10.0,
         limits=restricted, page_work_units=1_000)
-    @test_throws LL.TemporalQueryIncomplete collect(stopped)
+    error = try
+        collect(stopped)
+        nothing
+    catch caught
+        caught
+    end
+    @test error isa LL.TemporalQueryIncomplete
+    @test error.reason === :native_index
+    @test error.detail === :work_units
     @test !isopen(stopped)
     close(index)
 end

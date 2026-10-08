@@ -93,6 +93,7 @@ fn collect(cursor: *mut LlevTemporalIndexCursor) -> (LlevStatus, Vec<LlevTempora
         let mut batch = [LlevTemporalIndexMatch::default(); 1];
         let mut len = usize::MAX;
         let mut done = u8::MAX;
+        let mut reason = u32::MAX;
         let status = unsafe {
             llev_temporal_index_cursor_next_batch(
                 cursor,
@@ -102,11 +103,14 @@ fn collect(cursor: *mut LlevTemporalIndexCursor) -> (LlevStatus, Vec<LlevTempora
                 1,
                 &mut len,
                 &mut done,
+                &mut reason,
             )
         };
         if status != LlevStatus::Ok {
+            assert_ne!(reason, 0);
             return (status, matches);
         }
+        assert_eq!(reason, 0);
         matches.extend_from_slice(&batch[..len]);
         if done != 0 {
             return (status, matches);
@@ -187,8 +191,26 @@ fn source_and_query_limits_fail_closed_without_losing_snapshot() {
     };
     let (status, cursor) = query(index, &[1.0, 2.0, 3.0], 10.0, &restricted);
     assert_eq!(status, LlevStatus::Ok);
-    let (status, _) = collect(cursor);
+    let mut batch = [LlevTemporalIndexMatch::default(); 1];
+    let mut len = usize::MAX;
+    let mut done = u8::MAX;
+    let mut reason = u32::MAX;
+    let status = unsafe {
+        llev_temporal_index_cursor_next_batch(
+            cursor,
+            batch.as_mut_ptr(),
+            1,
+            1_000,
+            1,
+            &mut len,
+            &mut done,
+            &mut reason,
+        )
+    };
     assert_eq!(status, LlevStatus::LimitExceeded);
+    assert_eq!(reason, 2);
+    assert_eq!(len, 0);
+    assert_eq!(done, 0);
     unsafe {
         llev_temporal_index_cursor_free(cursor);
         llev_temporal_index_free(index);

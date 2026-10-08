@@ -10,8 +10,8 @@ use crate::{
     time_series::{
         elastic::{ElasticKernel, ElasticTransducer, RangeContinuation},
         DtwConfig, ErpConfig, FrechetConfig, IncompleteReason, MsmConfig, MsmKernel,
-        OperationOutcome, PageBudget, QuantizationConfig, ResourceLimits, TemporalValidationError,
-        TwedConfig,
+        OperationOutcome, PageBudget, QuantizationConfig, ResourceKind, ResourceLimits,
+        TemporalValidationError, TwedConfig,
     },
 };
 use std::{
@@ -144,6 +144,29 @@ fn validation(error: TemporalValidationError) -> (LlevStatus, String) {
             (LlevStatus::LimitExceeded, error.to_string())
         }
         _ => invalid(error.to_string()),
+    }
+}
+
+fn incomplete_code(reason: IncompleteReason) -> u32 {
+    match reason {
+        IncompleteReason::BudgetExceeded { resource, .. }
+        | IncompleteReason::ArithmeticOverflow { resource } => match resource {
+            ResourceKind::DpCells => 1,
+            ResourceKind::WorkUnits => 2,
+            ResourceKind::ScratchBytes => 3,
+            ResourceKind::TrieNodes => 4,
+            ResourceKind::TrieEdges => 5,
+            ResourceKind::Candidates => 6,
+            ResourceKind::Results => 7,
+            ResourceKind::QueueEntries => 8,
+            ResourceKind::ContinuationBytes => 9,
+            _ => 10,
+        },
+        IncompleteReason::NumericOverflow => 10,
+        IncompleteReason::InvalidStoredData => 11,
+        IncompleteReason::Unsupported => 12,
+        IncompleteReason::AllocationFailed { .. } => 13,
+        IncompleteReason::Cancelled => 15,
     }
 }
 
@@ -464,11 +487,12 @@ where
         &mut self,
         out: &mut [LlevTemporalIndexMatch],
         page: PageBudget,
-    ) -> Result<(usize, bool), (LlevStatus, String)> {
+    ) -> Result<(usize, bool), (u32, String)> {
         if self.pending.is_empty() && !self.done && self.terminal.is_none() {
             if let Some(continuation) = self.continuation.take() {
                 let before = continuation.usage().work_units;
-                self.accept(continuation.resume(page))?;
+                self.accept(continuation.resume(page))
+                    .map_err(|(_, message)| (13, message))?;
                 if self.pending.is_empty()
                     && self
                         .continuation
@@ -476,7 +500,7 @@ where
                         .is_some_and(|value| value.usage().work_units == before)
                 {
                     return Err((
-                        LlevStatus::LimitExceeded,
+                        14,
                         "temporal page work budget cannot advance this query".into(),
                     ));
                 }
@@ -493,7 +517,7 @@ where
         if written == 0 {
             if let Some(reason) = self.terminal {
                 return Err((
-                    LlevStatus::LimitExceeded,
+                    incomplete_code(reason),
                     format!("temporal range incomplete: {reason:?}",),
                 ));
             }
@@ -596,6 +620,11 @@ pub unsafe extern "C" fn llev_temporal_index_query_range(
 
 /// Advance by at most one native page and copy up to `capacity` matches.
 /// A successful empty nonterminal page means the caller should advance again.
+/// `out_reason` is zero on success; incomplete reasons are 1 DP cells,
+/// 2 work, 3 scratch, 4 trie nodes, 5 trie edges, 6 candidates, 7 results,
+/// 8 queue, 9 continuation bytes, 10 overflow/other resources,
+/// 11 invalid stored data, 12 unsupported, 13 allocation, 14 page too small,
+/// or 15 cancellation.
 ///
 /// # Safety
 /// All pointers must be live and nonoverlapping. `out_matches` must address
@@ -609,6 +638,7 @@ pub unsafe extern "C" fn llev_temporal_index_cursor_next_batch(
     page_results: usize,
     out_len: *mut usize,
     out_done: *mut u8,
+    out_reason: *mut u32,
 ) -> LlevStatus {
     boundary(|| {
         let len = out_len.as_mut().ok_or((
@@ -618,8 +648,13 @@ pub unsafe extern "C" fn llev_temporal_index_cursor_next_batch(
         let done = out_done
             .as_mut()
             .ok_or((LlevStatus::NullPointer, "temporal done flag is null".into()))?;
+        let reason = out_reason.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "temporal reason output is null".into(),
+        ))?;
         *len = 0;
         *done = 0;
+        *reason = 0;
         if capacity == 0 || page_work_units == 0 || page_results == 0 {
             return Err(invalid("temporal page and batch limits must be positive"));
         }
@@ -637,13 +672,17 @@ pub unsafe extern "C" fn llev_temporal_index_cursor_next_batch(
             max_work_units: page_work_units,
             max_results: page_results,
         };
-        let (count, complete) = match &mut cursor.state {
-            CursorState::Msm(value) => value.next(output, page)?,
-            CursorState::Erp(value) => value.next(output, page)?,
-            CursorState::Twed(value) => value.next(output, page)?,
-            CursorState::Dtw(value) => value.next(output, page)?,
-            CursorState::Frechet(value) => value.next(output, page)?,
+        let result = match &mut cursor.state {
+            CursorState::Msm(value) => value.next(output, page),
+            CursorState::Erp(value) => value.next(output, page),
+            CursorState::Twed(value) => value.next(output, page),
+            CursorState::Dtw(value) => value.next(output, page),
+            CursorState::Frechet(value) => value.next(output, page),
         };
+        let (count, complete) = result.map_err(|(code, message)| {
+            *reason = code;
+            (LlevStatus::LimitExceeded, message)
+        })?;
         *len = count;
         *done = u8::from(complete);
         Ok(LlevStatus::Ok)

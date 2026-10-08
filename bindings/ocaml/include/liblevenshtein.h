@@ -1516,11 +1516,15 @@ LLEV_API LlevStatus llev_temporal_index_query_range(
 /** Advance at most one native page. Zero output with out_done=0 is a valid
  * paused page and must be retried. LIMIT_EXCEEDED means the exact subset
  * produced earlier is incomplete; it never proves absence. Caller owns the
- * output array and must provide positive capacity and page budgets. */
+ * output array and must provide positive capacity and page budgets.
+ * out_reason is zero on success; LIMIT_EXCEEDED uses 1 DP cells, 2 work,
+ * 3 scratch, 4 trie nodes, 5 trie edges, 6 candidates, 7 results, 8 queue,
+ * 9 continuation bytes, 10 overflow/other, 11 invalid stored data,
+ * 12 unsupported, 13 allocation, 14 page too small, or 15 cancellation. */
 LLEV_API LlevStatus llev_temporal_index_cursor_next_batch(
     LlevTemporalIndexCursor* cursor, LlevTemporalIndexMatch* out_matches,
     size_t capacity, size_t page_work_units, size_t page_results,
-    size_t* out_len, uint8_t* out_done);
+    size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
 LLEV_API void llev_temporal_index_cursor_free(LlevTemporalIndexCursor* cursor);
 
 #ifdef __cplusplus

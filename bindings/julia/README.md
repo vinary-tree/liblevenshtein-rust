@@ -51,7 +51,8 @@ performs at most one native page and returns owned matches. An empty batch
 means the page paused before finding a match; call it again. `reduce_batches!`
 closes the cursor on every exit path. A completed empty cursor proves no match.
 If a cumulative resource limit
-is reached, iteration raises `TemporalQueryIncomplete`; earlier matches are
+is reached, iteration raises `TemporalQueryIncomplete` with a `detail`
+identifying the exhausted resource; earlier matches are
 only an exact subset and do not prove that other matches are absent. Set finite
 source and query limits for the intended workload, and close a cursor when
 stopping early.
