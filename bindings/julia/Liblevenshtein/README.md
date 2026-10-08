@@ -109,6 +109,17 @@ likewise be negative. The
 [temporal guide](docs/src/index.md#bounded-scalar-time-series) gives the native
 parameter mapping and outcome contract.
 
+For a finite collection of series, `TemporalSeriesSource` copies IDs and
+samples into a bounded snapshot. `query_temporal_range` then compares one
+candidate at a time with the selected native kernel and streams `TemporalMatch`
+results through `next_batch!`, iteration, or `reduce_batches!`. Set
+`TemporalQueryLimits` to cap total candidates, results, and DP cells across
+the whole scan. Exhaustion raises `TemporalQueryIncomplete` with a reason,
+preserving the distinction between a complete empty result and a stopped
+query. This scan is intended for finite sources that fit its declared storage
+limit; the [temporal guide](docs/src/index.md#lazy-temporal-range-queries)
+shows its lifecycle.
+
 ## Choose an automaton
 
 | Julia value | Semantics | Metric? |

@@ -10663,13 +10663,15 @@
         "bindings/julia/Liblevenshtein/src/CostAutomata.jl",
         "bindings/julia/Liblevenshtein/src/FilteredTraversal.jl",
         "bindings/julia/Liblevenshtein/src/Temporal.jl",
-        "bindings/julia/Liblevenshtein/src/Filter.jl"
+        "bindings/julia/Liblevenshtein/src/Filter.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalQueries.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
         "bindings/julia/Liblevenshtein/test/runtests.jl",
         "bindings/julia/Liblevenshtein/test/temporal.jl",
-        "bindings/julia/Liblevenshtein/test/filter.jl"
+        "bindings/julia/Liblevenshtein/test/filter.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_queries.jl"
       ],
       "enums": {
         "status": {

@@ -6,6 +6,7 @@ import VinaryTreeInterop
 const LL = Liblevenshtein
 
 include("temporal.jl")
+include("temporal_queries.jl")
 include("filter.jl")
 
 @testset "ABI identity and layouts" begin

@@ -92,6 +92,34 @@ revision-11 symbol is checked before resolution so older libraries continue
 to serve the existing Julia surface. Invalid configuration or nonfinite
 samples raise a copied `NativeError`.
 
+### Lazy temporal range queries
+
+`TemporalSeriesSource` copies a finite iterable of `(UInt64 ID, finite real
+vector)` pairs. The constructor enforces entry count, per-series length, and
+total sample-storage limits. A `query_temporal_range` cursor borrows that
+snapshot and runs the chosen native scalar kernel only when the next result
+is requested. Results follow source order and carry exact native scores.
+
+```julia
+source = TemporalSeriesSource([10 => [1.0, 2.5], 20 => [2.0, 3.0]])
+budget = TemporalQueryLimits(max_candidates=100,
+    max_results=20, max_total_dp_cells=10_000)
+cursor = query_temporal_range(source, :dtw, [1.0, 2.0];
+    band=1, cutoff=1.0, query_limits=budget)
+try
+    reduce_batches!((ids, batch) ->
+        append!(ids, (match.id for match in batch)), UInt64[], cursor)
+finally
+    close(cursor)
+end
+```
+
+Per-comparison `TemporalLimits` and cumulative `TemporalQueryLimits` are both
+enforced. A limit or native incomplete outcome raises
+`TemporalQueryIncomplete` and closes the cursor. This is an exact bounded
+scan over a finite source; native trie indexes and online automata have
+different pruning and continuation behavior.
+
 For IPA feature scores, syllable heuristics, compiled rewrite rules, and
 dictionary-free word search, see [Phonetic matching and analysis](phonetic.md).
 

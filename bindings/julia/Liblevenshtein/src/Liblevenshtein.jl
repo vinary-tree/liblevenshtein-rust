@@ -162,6 +162,12 @@ export ABI_VERSION,
     hybrid_candidate,
     query_ngram,
     query_hybrid,
+    TemporalSeriesSource,
+    TemporalQueryLimits,
+    TemporalMatch,
+    TemporalQueryIncomplete,
+    TemporalRangeCursor,
+    query_temporal_range,
     temporal_distance,
     msm_distance,
     erp_distance,
@@ -995,6 +1001,7 @@ include("SpecializedTraversals.jl")
 include("CostAutomata.jl")
 include("FilteredTraversal.jl")
 include("Temporal.jl")
+include("TemporalQueries.jl")
 include("Filter.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")
