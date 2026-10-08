@@ -57,6 +57,33 @@ only an exact subset and do not prove that other matches are absent. Set finite
 source and query limits for the intended workload, and close a cursor when
 stopping early.
 
+## Rolling temporal windows
+
+`BoundedRollingWindow` consumes one finite sample at a time with fixed
+retained storage. Its first `RollingWindowSnapshot` appears after
+`window_len` samples; later snapshots appear every `stride` samples. Each
+snapshot owns chronological values and zero-based stream offsets. `advance!`
+returns a tagged `RollingWindowStep` with the snapshot, if emitted, and
+per-step usage. Invalid samples leave the machine unchanged.
+
+`rolling_windows` wraps any Julia input iterator as a one-shot lazy snapshot
+stream. `reduce_windows!` and `cancel!` close it; a thrown input or budget
+error closes it as well. Each snapshot can open a native
+`query_index_range` cursor against a frozen temporal index.
+
+```julia
+stream = rolling_windows(0.0:8.0, 3, 2)
+windows = collect(stream)
+@assert [(w.start_offset, w.values) for w in windows] ==
+    [(0, [0.0, 1.0, 2.0]), (2, [2.0, 3.0, 4.0]),
+     (4, [4.0, 5.0, 6.0]), (6, [6.0, 7.0, 8.0])]
+```
+
+Construction checks `max_series_len`, `max_scratch_bytes`, and
+`max_snapshot_bytes` before allocating the ring. The values property returns
+a copy, so a caller cannot change a previously emitted window by mutating
+that returned vector. The input iterator remains owned by its caller.
+
 ## Copied source filtering
 
 `SourceFilterSource` copies and deduplicates Unicode terms under explicit

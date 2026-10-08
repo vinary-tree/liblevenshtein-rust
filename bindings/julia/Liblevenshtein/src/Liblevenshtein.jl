@@ -232,6 +232,14 @@ export ABI_VERSION,
     sax_paa,
     sax_encode,
     sax_mindist,
+    BoundedRollingWindow,
+    RollingWindowSnapshot,
+    RollingWindowUsage,
+    RollingWindowStep,
+    RollingWindowIncomplete,
+    RollingWindowStream,
+    rolling_windows,
+    reduce_windows!,
     cache_stats,
     clear!,
     reset_stats!,
@@ -1065,6 +1073,7 @@ include("TemporalDeltaEncoding.jl")
 include("TemporalSaxEncoding.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
+include("TemporalRolling.jl")
 include("Filter.jl")
 include("SourceFilterQueries.jl")
 include("PhoneticGrep.jl")

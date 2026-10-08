@@ -263,7 +263,7 @@ The adjacent-transposition variant is checked against optimal string alignment
 ### Qualification and performance budgets
 
 `benchmark/temporal_filtering.jl` measures scalar DTW, reusable Keogh,
-quantization, SAX, a copied temporal scan, the frozen temporal index, and the
+quantization, SAX, rolling windows, a copied temporal scan, the frozen temporal index, and the
 n-gram and hybrid source filters. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
 result IDs agree, then samples five groups of 30 observable complete operations
@@ -283,14 +283,15 @@ were:
 
 | Scenario | Median ns/op |
 |---|---:|
-| Scalar DTW, 16 × 16 samples | 4,940 |
-| Reusable Keogh bound, 16 samples | 1,398 |
-| Quantization, 16 samples | 98 |
-| SAX, 16 samples to 4 symbols | 278 |
-| 32-entry temporal scan | 165,243 |
-| 32-entry temporal index | 3,018,828 |
-| 32-term n-gram filter | 317,899 |
-| 32-term hybrid filter | 387,961 |
+| Scalar DTW, 16 × 16 samples | 4,967 |
+| Reusable Keogh bound, 16 samples | 1,391 |
+| Quantization, 16 samples | 116 |
+| SAX, 16 samples to 4 symbols | 277 |
+| Rolling windows, 16 samples to width 4 | 4,638 |
+| 32-entry temporal scan | 163,100 |
+| 32-entry temporal index | 3,491,524 |
+| 32-term n-gram filter | 358,414 |
+| 32-term hybrid filter | 436,402 |
 
 The indexed query is much slower than the scan for this small, low-selectivity
 source. Use the scan for small sources; measure the index on the intended
@@ -343,6 +344,9 @@ budget against a native control measured on the same runner.
 - Use `encode_deltas_u8` when local differences have a useful bounded range.
   Use `sax_encode` for a symbolic word, and `sax_mindist` for its admissible
   lower bound. Both families use bounded input snapshots and lazy output.
+- Use `rolling_windows` to feed unknown-length finite-sample streams into
+  fixed-width snapshots, then pass a snapshot to `query_index_range` for
+  exact bounded lookup against a frozen temporal index.
 
 - Use `distance`, `optimal_string_alignment_distance`,
   `true_damerau_distance`, and `merge_and_split_distance` for pairwise work.

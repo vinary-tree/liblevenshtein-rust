@@ -62,6 +62,8 @@ try
         collect(LL.encode_u8(quantizer, query)))
     sample("SAX 16 samples to 4", () ->
         collect(LL.sax_encode(query, 4, 4)))
+    sample("rolling 16 to width 4", () ->
+        collect(LL.rolling_windows(query, 4, 2)))
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
     sample("32-term ngram filter", ngram)
