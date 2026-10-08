@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 11,
+  "apiRevision": 12,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1171,6 +1171,13 @@
     { "name": "llev_wallbreaker_cursor_free", "rustModule": "wallbreaker" },
     { "name": "llev_wallbreaker_split_utf8", "rustModule": "wallbreaker" },
     { "name": "llev_temporal_distance", "rustModule": "temporal" },
+    { "name": "llev_temporal_index_new", "rustModule": "temporal_index" },
+    { "name": "llev_temporal_index_insert", "rustModule": "temporal_index" },
+    { "name": "llev_temporal_index_freeze", "rustModule": "temporal_index" },
+    { "name": "llev_temporal_index_free", "rustModule": "temporal_index" },
+    { "name": "llev_temporal_index_query_range", "rustModule": "temporal_index" },
+    { "name": "llev_temporal_index_cursor_next_batch", "rustModule": "temporal_index" },
+    { "name": "llev_temporal_index_cursor_free", "rustModule": "temporal_index" },
     { "name": "llev_jaro_similarity_utf8", "rustModule": "filter" },
     { "name": "llev_source_filter_utf8", "rustModule": "filter" }
   ],

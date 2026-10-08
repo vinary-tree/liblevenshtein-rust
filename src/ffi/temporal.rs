@@ -149,7 +149,7 @@ fn limits_from_c(raw: LlevTemporalLimits) -> ResourceLimits {
     }
 }
 
-fn check_config(
+pub(crate) fn check_config(
     raw: LlevTemporalConfig,
     limits: ResourceLimits,
 ) -> Result<LlevTemporalAlgorithm, (LlevStatus, String)> {

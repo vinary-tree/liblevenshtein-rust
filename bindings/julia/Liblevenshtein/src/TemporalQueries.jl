@@ -161,6 +161,7 @@ function next_temporal_match!(cursor::TemporalRangeCursor)
 end
 
 function next_batch!(cursor::TemporalRangeCursor, maximum::Integer=DEFAULT_MATCH_BATCH)
+    cursor.closed && return nothing
     0 < maximum <= typemax(Int) ||
         throw(ArgumentError("batch maximum must be positive and fit Int"))
     batch = TemporalMatch[]

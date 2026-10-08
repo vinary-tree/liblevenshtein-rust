@@ -168,6 +168,11 @@ export ABI_VERSION,
     TemporalQueryIncomplete,
     TemporalRangeCursor,
     query_temporal_range,
+    TemporalIndex,
+    TemporalSearchLimits,
+    TemporalIndexCursor,
+    freeze!,
+    query_index_range,
     temporal_distance,
     msm_distance,
     erp_distance,
@@ -1002,6 +1007,7 @@ include("CostAutomata.jl")
 include("FilteredTraversal.jl")
 include("Temporal.jl")
 include("TemporalQueries.jl")
+include("TemporalIndex.jl")
 include("Filter.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")

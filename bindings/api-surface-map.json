@@ -564,6 +564,27 @@
         "llev_temporal_distance": {
           "symbol": "llev_temporal_distance"
         },
+        "llev_temporal_index_new": {
+          "symbol": "llev_temporal_index_new"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": "llev_temporal_index_insert"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": "llev_temporal_index_freeze"
+        },
+        "llev_temporal_index_free": {
+          "symbol": "llev_temporal_index_free"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": "llev_temporal_index_query_range"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": "llev_temporal_index_cursor_next_batch"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": "llev_temporal_index_cursor_free"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": "llev_jaro_similarity_utf8"
         },
@@ -1288,6 +1309,34 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -2016,6 +2065,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -2735,6 +2812,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -3447,6 +3552,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -4158,6 +4291,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -4866,6 +5027,34 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -5589,6 +5778,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -6307,6 +6524,34 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -7051,6 +7296,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -7764,6 +8037,34 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -8480,6 +8781,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -9194,6 +9523,34 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -9913,6 +10270,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -10631,6 +11016,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -10664,14 +11077,16 @@
         "bindings/julia/Liblevenshtein/src/FilteredTraversal.jl",
         "bindings/julia/Liblevenshtein/src/Temporal.jl",
         "bindings/julia/Liblevenshtein/src/Filter.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalQueries.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalQueries.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalIndex.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
         "bindings/julia/Liblevenshtein/test/runtests.jl",
         "bindings/julia/Liblevenshtein/test/temporal.jl",
         "bindings/julia/Liblevenshtein/test/filter.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_queries.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_queries.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_index.jl"
       ],
       "enums": {
         "status": {
@@ -11251,6 +11666,27 @@
         },
         "llev_temporal_distance": {
           "symbol": "temporal_distance"
+        },
+        "llev_temporal_index_new": {
+          "symbol": "TemporalIndex"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": "insert!"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": "freeze!"
+        },
+        "llev_temporal_index_free": {
+          "symbol": "close!"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": "query_index_range"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": "close!"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": "jaro_similarity"
@@ -11901,6 +12337,34 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_temporal_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,

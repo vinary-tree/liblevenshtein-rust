@@ -212,6 +212,13 @@ variants, protocols, or methods.
 | `llev_string_dup` | `llev_string_dup` | legacy owned-string plumbing |
 | `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |
 | `llev_temporal_distance` | `llev_temporal_distance` | project ABI operation |
+| `llev_temporal_index_cursor_free` | `llev_temporal_index_cursor_free` | project ABI operation |
+| `llev_temporal_index_cursor_next_batch` | `llev_temporal_index_cursor_next_batch` | project ABI operation |
+| `llev_temporal_index_free` | `llev_temporal_index_free` | project ABI operation |
+| `llev_temporal_index_freeze` | `llev_temporal_index_freeze` | project ABI operation |
+| `llev_temporal_index_insert` | `llev_temporal_index_insert` | project ABI operation |
+| `llev_temporal_index_new` | `llev_temporal_index_new` | project ABI operation |
+| `llev_temporal_index_query_range` | `llev_temporal_index_query_range` | project ABI operation |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_query_affine` | `llev_transducer_query_affine` | domain-preserving dictionary query |

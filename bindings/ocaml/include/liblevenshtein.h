@@ -1457,6 +1457,72 @@ LLEV_API LlevStatus llev_temporal_distance(
     const LlevTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+/** Bounded construction of a native quantized temporal index. The temporal
+ * cutoff must be positive infinity; Soft-DTW is unsupported because it has
+ * no elastic index. All three source limits are explicit. */
+typedef struct LlevTemporalIndexConfig {
+    LlevTemporalConfig temporal;
+    double quant_min;
+    double quant_max;
+    uint32_t quant_bins;
+    uint32_t reserved;
+    size_t max_entries;
+    size_t max_total_samples;
+    size_t max_series_len;
+} LlevTemporalIndexConfig;
+
+/** Cumulative hard ceilings of one indexed range search. */
+typedef struct LlevTemporalSearchLimits {
+    size_t max_series_len;
+    size_t max_dp_cells;
+    size_t max_work_units;
+    size_t max_scratch_bytes;
+    size_t max_trie_nodes;
+    size_t max_trie_edges;
+    size_t max_candidates;
+    size_t max_results;
+    size_t max_queue_entries;
+    size_t max_continuation_bytes;
+} LlevTemporalSearchLimits;
+
+/** One copied exact match; DTW uses root-distance units. */
+typedef struct LlevTemporalIndexMatch {
+    uint64_t id;
+    double distance;
+} LlevTemporalIndexMatch;
+
+typedef struct LlevTemporalIndex LlevTemporalIndex;
+typedef struct LlevTemporalIndexCursor LlevTemporalIndexCursor;
+
+/** Build, mutate, freeze, and release an index. Mutation requires exclusive
+ * access. A frozen index may start independent concurrent cursors. A cursor
+ * retains its immutable snapshot even after the index handle is freed. */
+LLEV_API LlevStatus llev_temporal_index_new(
+    const LlevTemporalIndexConfig* config, LlevTemporalIndex** out_index);
+LLEV_API LlevStatus llev_temporal_index_insert(
+    LlevTemporalIndex* index, uint64_t id,
+    const double* samples, size_t len);
+LLEV_API LlevStatus llev_temporal_index_freeze(LlevTemporalIndex* index);
+LLEV_API void llev_temporal_index_free(LlevTemporalIndex* index);
+
+/** Start a bounded exact range query. query is copied into cursor state;
+ * a null pointer is allowed only with zero query_len. cutoff is inclusive
+ * and nonnegative. Every limit field is a cumulative ceiling. */
+LLEV_API LlevStatus llev_temporal_index_query_range(
+    const LlevTemporalIndex* index, const double* query, size_t query_len,
+    double cutoff, const LlevTemporalSearchLimits* limits,
+    LlevTemporalIndexCursor** out_cursor);
+
+/** Advance at most one native page. Zero output with out_done=0 is a valid
+ * paused page and must be retried. LIMIT_EXCEEDED means the exact subset
+ * produced earlier is incomplete; it never proves absence. Caller owns the
+ * output array and must provide positive capacity and page budgets. */
+LLEV_API LlevStatus llev_temporal_index_cursor_next_batch(
+    LlevTemporalIndexCursor* cursor, LlevTemporalIndexMatch* out_matches,
+    size_t capacity, size_t page_work_units, size_t page_results,
+    size_t* out_len, uint8_t* out_done);
+LLEV_API void llev_temporal_index_cursor_free(LlevTemporalIndexCursor* cursor);
+
 #ifdef __cplusplus
 }
 #endif

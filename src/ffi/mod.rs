@@ -91,6 +91,7 @@ mod phonetic_transducer;
 mod specialized;
 mod string;
 mod temporal;
+mod temporal_index;
 mod wallbreaker;
 
 pub use automata::*;
@@ -111,6 +112,7 @@ pub use phonetic_transducer::*;
 pub use specialized::*;
 pub use string::*;
 pub use temporal::*;
+pub use temporal_index::*;
 pub use wallbreaker::*;
 
 use std::{ffi::c_char, slice, str};

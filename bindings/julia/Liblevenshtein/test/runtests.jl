@@ -7,6 +7,7 @@ const LL = Liblevenshtein
 
 include("temporal.jl")
 include("temporal_queries.jl")
+include("temporal_index.jl")
 include("filter.jl")
 
 @testset "ABI identity and layouts" begin
