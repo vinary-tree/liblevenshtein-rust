@@ -125,6 +125,28 @@ alignment, and incomplete arithmetic or budgets. Empty and nonfinite inputs
 retain each native bound's domain rules; a reusable Keogh plan requires a
 nonempty finite query.
 
+## Lossless temporal float encoding
+
+`encode_f32`, `decode_f32`, `encode_f64`, and `decode_f64` preserve exact IEEE
+bits, including signed zero and NaN payloads. `encode_f32_total_order` and
+`decode_f32_total_order` use the same reversible unsigned ordering transform
+as native Rust; `encode_f32_ordered` accepts nonnegative Float32 values only.
+Series methods copy no more than their declared `max_samples` or `max_words`
+before returning lazy encoded or decoded iterators. This snapshot stays stable
+if the caller later changes its input vector.
+
+```julia
+bits = collect(encode_f32_series(Float32[-1, 0, 1]; max_samples=3))
+@assert reinterpret.(UInt32, collect(decode_f32_series(bits))) == bits
+words = collect(encode_f64_series_as_u32_pairs([1.0, -0.0]))
+@assert reinterpret.(UInt64, collect(decode_u32_pairs_to_f64(words))) ==
+    reinterpret.(UInt64, [1.0, -0.0])
+```
+
+The pair decoder ignores an unmatched final word, matching the native Rust
+encoding contract. Rust and Julia tests use the same signed-zero, infinity,
+and NaN-payload bit fixtures.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract

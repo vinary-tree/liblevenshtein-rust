@@ -195,6 +195,17 @@ export ABI_VERSION,
     keogh_envelopes,
     bounds_at,
     lb_keogh_squared,
+    encode_f32,
+    decode_f32,
+    encode_f64,
+    decode_f64,
+    encode_f32_series,
+    decode_f32_series,
+    encode_f64_series_as_u32_pairs,
+    decode_u32_pairs_to_f64,
+    encode_f32_ordered,
+    encode_f32_total_order,
+    decode_f32_total_order,
     cache_stats,
     clear!,
     reset_stats!,
@@ -1022,6 +1033,7 @@ include("CostAutomata.jl")
 include("FilteredTraversal.jl")
 include("Temporal.jl")
 include("TemporalBounds.jl")
+include("TemporalEncoding.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
 include("Filter.jl")
