@@ -85,16 +85,16 @@ fn native_jaro_filter_rejects_limits_and_bad_utf8_before_scoring() {
     assert_eq!(value, 0.0);
 }
 
-fn source_filter(
-    query: &str,
-    candidate: &str,
+struct FilterArgs {
     mode: u32,
     ngram_size: usize,
     distance: usize,
     threshold: f64,
     max_bytes: usize,
     max_comparisons: usize,
-) -> (LlevStatus, u8) {
+}
+
+fn source_filter(query: &str, candidate: &str, args: FilterArgs) -> (LlevStatus, u8) {
     let mut accepted = 9;
     let status = unsafe {
         llev_source_filter_utf8(
@@ -102,12 +102,12 @@ fn source_filter(
             query.len(),
             candidate.as_ptr().cast::<c_char>(),
             candidate.len(),
-            mode,
-            ngram_size,
-            distance,
-            threshold,
-            max_bytes,
-            max_comparisons,
+            args.mode,
+            args.ngram_size,
+            args.distance,
+            args.threshold,
+            args.max_bytes,
+            args.max_comparisons,
             &mut accepted,
         )
     };
@@ -126,7 +126,18 @@ fn native_source_filters_match_single_candidate_indexes() {
         let mut ngram = NgramIndex::new(ngram_size);
         ngram.insert(candidate);
         let expected = ngram.find_candidates(query, distance).contains(&candidate);
-        let (status, actual) = source_filter(query, candidate, 1, ngram_size, distance, 0.0, 64, 0);
+        let (status, actual) = source_filter(
+            query,
+            candidate,
+            FilterArgs {
+                mode: 1,
+                ngram_size,
+                distance,
+                threshold: 0.0,
+                max_bytes: 64,
+                max_comparisons: 0,
+            },
+        );
         assert_eq!(status, LlevStatus::Ok);
         assert_eq!(actual != 0, expected);
 
@@ -135,8 +146,18 @@ fn native_source_filters_match_single_candidate_indexes() {
         let expected = hybrid
             .filter_candidates(query, distance)
             .contains(&candidate);
-        let (status, actual) =
-            source_filter(query, candidate, 2, ngram_size, distance, 0.7, 64, 4096);
+        let (status, actual) = source_filter(
+            query,
+            candidate,
+            FilterArgs {
+                mode: 2,
+                ngram_size,
+                distance,
+                threshold: 0.7,
+                max_bytes: 64,
+                max_comparisons: 4096,
+            },
+        );
         assert_eq!(status, LlevStatus::Ok);
         assert_eq!(actual != 0, expected);
     }
@@ -151,8 +172,18 @@ fn native_source_filters_reject_invalid_modes_and_budgets() {
         (1, 0.0, 2, 4096, LlevStatus::LimitExceeded),
         (2, 0.7, 64, 1, LlevStatus::LimitExceeded),
     ] {
-        let (status, accepted) =
-            source_filter("hello", "help", mode, 2, 1, threshold, bytes, comparisons);
+        let (status, accepted) = source_filter(
+            "hello",
+            "help",
+            FilterArgs {
+                mode,
+                ngram_size: 2,
+                distance: 1,
+                threshold,
+                max_bytes: bytes,
+                max_comparisons: comparisons,
+            },
+        );
         assert_eq!(status, expected);
         assert_eq!(accepted, 0);
     }

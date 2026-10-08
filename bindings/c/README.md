@@ -120,6 +120,7 @@ variants, protocols, or methods.
 | `llev_indel_distance_threshold` | `llev_indel_distance_threshold` | project ABI operation |
 | `llev_indel_distance_u64` | `llev_indel_distance_u64` | project ABI operation |
 | `llev_indel_distance_u64_threshold` | `llev_indel_distance_u64_threshold` | project ABI operation |
+| `llev_jaro_similarity_utf8` | `llev_jaro_similarity_utf8` | project ABI operation |
 | `llev_last_error_message` | `llev_last_error_message` | typed failure diagnostics |
 | `llev_merge_and_split_distance` | `llev_merge_and_split_distance` | standalone merge-and-split distance |
 | `llev_merge_and_split_distance_bytes` | `llev_merge_and_split_distance_bytes` | standalone merge-and-split distance |
@@ -202,6 +203,7 @@ variants, protocols, or methods.
 | `llev_query_cursor_next_batch` | `llev_query_cursor_next_batch` | streaming result traversal and batch leases |
 | `llev_query_cursor_reduce` | `llev_query_cursor_reduce` | streaming result traversal and batch leases |
 | `llev_query_cursor_release_batch` | `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `llev_source_filter_utf8` | `llev_source_filter_utf8` | project ABI operation |
 | `llev_specialized_cursor_free` | `llev_specialized_cursor_free` | project ABI operation |
 | `llev_specialized_cursor_next_batch` | `llev_specialized_cursor_next_batch` | project ABI operation |
 | `llev_specialized_cursor_reduce` | `llev_specialized_cursor_reduce` | project ABI operation |
@@ -209,6 +211,7 @@ variants, protocols, or methods.
 | `llev_string_array_free` | `llev_string_array_free` | legacy owned-string plumbing |
 | `llev_string_dup` | `llev_string_dup` | legacy owned-string plumbing |
 | `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |
+| `llev_temporal_distance` | `llev_temporal_distance` | project ABI operation |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_query_affine` | `llev_transducer_query_affine` | domain-preserving dictionary query |

@@ -112,6 +112,7 @@ variants, protocols, or methods.
 | `GeneralizedAutomaton` | `llev_generalized_automaton_new` | runtime generalized-automaton lifecycle and prefix evaluation |
 | `insert!` | `llev_phonetic_dictionary_update` | normalized phonetic dictionary construction, query, and updates |
 | `is_free_phonetic_substitution` | `llev_phonetic_feature_relation` | IPA feature classification and relations |
+| `jaro_similarity` | `llev_jaro_similarity_utf8` | project ABI operation |
 | `load_compiled_phonetic_pattern` | `llev_phonetic_pattern_from_bytes` | versioned compiled phonetic-pattern bytes |
 | `load_compiled_phonetic_rules` | `llev_phonetic_rules_from_bytes` | versioned compiled phonetic-rule bytes |
 | `load_phonetic_pattern` | `llev_phonetic_pattern_load_llre_file` | trusted .llre loading with native imports |
@@ -150,9 +151,11 @@ variants, protocols, or methods.
 | `scan_text` | `llev_phonetic_grep_scan_text` | word-boundary phonetic search and configuration |
 | `similar_phonetic_chars` | `llev_phonetic_similar_chars` | IPA feature classification and relations |
 | `snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
+| `source_candidate` | `llev_source_filter_utf8` | project ABI operation |
 | `streaming` | `llev_phonetic_online_stream_new` | character-level phonetic search and scanner lifecycle |
 | `syllable_boundaries` | `llev_phonetic_syllable_boundaries` | syllable count and boundary heuristics |
 | `syllable_count` | `llev_phonetic_syllable_count` | syllable count and boundary heuristics |
+| `temporal_distance` | `llev_temporal_distance` | project ABI operation |
 | `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `true_damerau_distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold`, `llev_true_damerau_distance_bytes`, `llev_true_damerau_distance_bytes_threshold`, `llev_true_damerau_distance_u64`, `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
 | `unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |

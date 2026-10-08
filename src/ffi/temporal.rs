@@ -320,9 +320,11 @@ pub unsafe extern "C" fn llev_temporal_distance(
             (ResourceKind::WorkUnits, cells),
             (ResourceKind::ScratchBytes, scratch),
         ]) {
-            let mut output = LlevTemporalDistanceResult::default();
-            output.kind = 3;
-            output.reason = reason_code(reason);
+            let output = LlevTemporalDistanceResult {
+                kind: 3,
+                reason: reason_code(reason),
+                ..LlevTemporalDistanceResult::default()
+            };
             out_result.write(output);
             return Err((
                 LlevStatus::LimitExceeded,
