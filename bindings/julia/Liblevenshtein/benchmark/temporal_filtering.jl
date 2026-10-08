@@ -44,6 +44,8 @@ scan() = collect(LL.query_temporal_range(source, :dtw, query;
     band=2, cutoff=0.5))
 indexed() = collect(LL.query_index_range(index, query;
     cutoff=0.5, page_work_units=100_000, page_results=32))
+online() = collect(LL.online_observations(:erp, query, candidate;
+    cutoff=100.0))
 ngram() = collect(LL.query_ngram(terms, "term-007", 1;
     page_candidates=32))
 hybrid() = collect(LL.query_hybrid(terms, "term-007", 1;
@@ -53,6 +55,12 @@ try
     expected = sort([match.id for match in scan()])
     actual = sort([match.id for match in indexed()])
     expected == actual || error("indexed and scanned result IDs differ")
+    online_result = online()
+    length(online_result) == length(candidate) ||
+        error("online result length differs from candidate length")
+    online_result[end].distance_within_cutoff ≈
+        LL.erp_distance(query, candidate).value ||
+        error("online ERP final score differs from scalar ERP")
     println("Julia ", VERSION, "; temporal entries=32 x 16 samples; ",
         "filter terms=32 x 8 bytes; result IDs=", length(actual))
     sample("scalar DTW 16 x 16", () ->
@@ -64,6 +72,7 @@ try
         collect(LL.sax_encode(query, 4, 4)))
     sample("rolling 16 to width 4", () ->
         collect(LL.rolling_windows(query, 4, 2)))
+    sample("online ERP 16 prefixes", online)
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
     sample("32-term ngram filter", ngram)

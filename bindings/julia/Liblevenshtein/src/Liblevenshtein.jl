@@ -240,6 +240,15 @@ export ABI_VERSION,
     RollingWindowStream,
     rolling_windows,
     reduce_windows!,
+    TemporalOnlineLimits,
+    TemporalOnlineAutomaton,
+    TemporalOnlineObservation,
+    TemporalOnlineStep,
+    TemporalOnlineIncomplete,
+    TemporalOnlineStream,
+    online_observations,
+    reduce_observations!,
+    scratch_bytes,
     cache_stats,
     clear!,
     reset_stats!,
@@ -1074,6 +1083,7 @@ include("TemporalSaxEncoding.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
 include("TemporalRolling.jl")
+include("TemporalOnline.jl")
 include("Filter.jl")
 include("SourceFilterQueries.jl")
 include("PhoneticGrep.jl")

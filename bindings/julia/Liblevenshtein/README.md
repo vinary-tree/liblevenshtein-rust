@@ -120,6 +120,33 @@ query. This scan is intended for finite sources that fit its declared storage
 limit; the [temporal guide](docs/src/index.md#lazy-temporal-range-queries)
 shows its lifecycle.
 
+`TemporalOnlineAutomaton` scores successive prefixes of a target stream
+against a copied fixed query for MSM, ERP, TWED, DTW, and discrete Fréchet.
+`observation(machine)` describes the empty target before the first sample;
+`advance!(machine, sample)` commits one finite sample and returns its exact
+prefix observation. A result outside the inclusive cutoff has
+`distance_within_cutoff === nothing`. Online DTW uses squared distance units
+for both scores and its cutoff, whereas `dtw_distance` returns root-distance
+units. Soft-DTW has no online automaton.
+
+```julia
+machine = TemporalOnlineAutomaton(:erp, [1.0, 2.0, 3.0]; cutoff=5.0)
+try
+    @assert observation(machine).consumed_target_len == 0
+    @assert advance!(machine, 1.0).kind === :advanced
+finally
+    close(machine)
+end
+```
+
+`TemporalOnlineLimits` caps copied query length, live frontier positions,
+per-sample work, and scratch bytes. A resource-incomplete step does not consume
+its sample and carries a `reason`. `online_observations` is a one-shot lazy
+stream over a caller-owned source iterator. `reduce_observations!`, normal
+exhaustion, and errors close it; `cancel!` closes it when stopping early. The
+[temporal binding guide](../../README.md#online-temporal-automata) documents
+the resource and lifecycle contract.
+
 ## Choose an automaton
 
 | Julia value | Semantics | Metric? |
@@ -263,7 +290,7 @@ The adjacent-transposition variant is checked against optimal string alignment
 ### Qualification and performance budgets
 
 `benchmark/temporal_filtering.jl` measures scalar DTW, reusable Keogh,
-quantization, SAX, rolling windows, a copied temporal scan, the frozen temporal index, and the
+quantization, SAX, rolling windows, online ERP prefixes, a copied temporal scan, the frozen temporal index, and the
 n-gram and hybrid source filters. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
 result IDs agree, then samples five groups of 30 observable complete operations
@@ -283,15 +310,16 @@ were:
 
 | Scenario | Median ns/op |
 |---|---:|
-| Scalar DTW, 16 × 16 samples | 4,967 |
-| Reusable Keogh bound, 16 samples | 1,391 |
-| Quantization, 16 samples | 116 |
-| SAX, 16 samples to 4 symbols | 277 |
-| Rolling windows, 16 samples to width 4 | 4,638 |
-| 32-entry temporal scan | 163,100 |
-| 32-entry temporal index | 3,491,524 |
-| 32-term n-gram filter | 358,414 |
-| 32-term hybrid filter | 436,402 |
+| Scalar DTW, 16 × 16 samples | 4,885 |
+| Reusable Keogh bound, 16 samples | 1,361 |
+| Quantization, 16 samples | 98 |
+| SAX, 16 samples to 4 symbols | 276 |
+| Rolling windows, 16 samples to width 4 | 5,110 |
+| Online ERP, 16 prefixes | 78,235 |
+| 32-entry temporal scan | 163,700 |
+| 32-entry temporal index | 3,085,995 |
+| 32-term n-gram filter | 324,606 |
+| 32-term hybrid filter | 398,178 |
 
 The indexed query is much slower than the scan for this small, low-selectivity
 source. Use the scan for small sources; measure the index on the intended

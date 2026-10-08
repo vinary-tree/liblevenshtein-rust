@@ -13,7 +13,8 @@
         "bindings/c/tests/cross_project_snapshot.c",
         "tests/ffi_specialized_traversals.rs",
         "tests/ffi_temporal.rs",
-        "tests/ffi_filter.rs"
+        "tests/ffi_filter.rs",
+        "tests/ffi_temporal_online.rs"
       ],
       "enums": {
         "status": {
@@ -602,6 +603,21 @@
         },
         "llev_temporal_index_cursor_free": {
           "symbol": "llev_temporal_index_cursor_free"
+        },
+        "llev_temporal_online_new": {
+          "symbol": "llev_temporal_online_new"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": "llev_temporal_online_observation"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": "llev_temporal_online_advance"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": "llev_temporal_online_scratch_bytes"
+        },
+        "llev_temporal_online_free": {
+          "symbol": "llev_temporal_online_free"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": "llev_jaro_similarity_utf8"
@@ -1379,6 +1395,26 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -2159,6 +2195,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -2930,6 +2986,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -3694,6 +3770,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -4457,6 +4553,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -5217,6 +5333,26 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -5992,6 +6128,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -6762,6 +6918,26 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -7558,6 +7734,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -8323,6 +8519,26 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -9091,6 +9307,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -9857,6 +10093,26 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
@@ -10628,6 +10884,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -11398,6 +11674,26 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
@@ -11434,7 +11730,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalQueries.jl",
         "bindings/julia/Liblevenshtein/src/TemporalIndex.jl",
         "bindings/julia/Liblevenshtein/src/SourceFilterQueries.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalBounds.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalBounds.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalOnline.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -11444,7 +11741,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_queries.jl",
         "bindings/julia/Liblevenshtein/test/temporal_index.jl",
         "bindings/julia/Liblevenshtein/test/source_filter_queries.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_bounds.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_bounds.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_online.jl"
       ],
       "enums": {
         "status": {
@@ -12072,6 +12370,21 @@
           "symbol": "next_batch!"
         },
         "llev_temporal_index_cursor_free": {
+          "symbol": "close!"
+        },
+        "llev_temporal_online_new": {
+          "symbol": "TemporalOnlineAutomaton"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": "observation"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": "advance!"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": "scratch_bytes"
+        },
+        "llev_temporal_online_free": {
           "symbol": "close!"
         },
         "llev_jaro_similarity_utf8": {
@@ -12780,6 +13093,26 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_jaro_similarity_utf8": {
           "symbol": null,

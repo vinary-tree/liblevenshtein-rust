@@ -147,7 +147,7 @@ fn validation(error: TemporalValidationError) -> (LlevStatus, String) {
     }
 }
 
-fn incomplete_code(reason: IncompleteReason) -> u32 {
+pub(crate) fn incomplete_code(reason: IncompleteReason) -> u32 {
     match reason {
         IncompleteReason::BudgetExceeded { resource, .. }
         | IncompleteReason::ArithmeticOverflow { resource } => match resource {

@@ -57,6 +57,38 @@ only an exact subset and do not prove that other matches are absent. Set finite
 source and query limits for the intended workload, and close a cursor when
 stopping early.
 
+## Online temporal automata
+
+`TemporalOnlineAutomaton` holds a copied fixed query and scores successive
+target prefixes with native MSM, ERP, TWED, banded DTW, or discrete Fréchet.
+The initial `observation` describes the empty target. Each `advance!` returns
+an exact observation after one committed finite sample. The returned
+`distance_within_cutoff` is `nothing` if the complete prefix score exceeds
+the inclusive cutoff; it does not imply that a later prefix cannot match.
+DTW online observations and their cutoff use **squared** distance units;
+`dtw_distance` uses root-distance units. Soft-DTW has no online machine.
+
+```julia
+machine = TemporalOnlineAutomaton(:erp, [1.0, 2.0, 3.0]; cutoff=5.0)
+try
+    @assert observation(machine).consumed_target_len == 0
+    step = advance!(machine, 1.0)
+    @assert step.kind === :advanced
+    @assert step.observation.consumed_target_len == 1
+finally
+    close(machine)
+end
+```
+
+`TemporalOnlineLimits` caps copied query length, live frontier positions,
+work per target sample, and retained scratch bytes. A resource-incomplete
+step has `kind === :incomplete`, names its limit in `reason`, and leaves the
+previous observation intact. The Julia handle serializes native calls and
+must be closed when no longer needed. `online_observations` wraps a source
+iterator as a one-shot lazy prefix stream; `reduce_observations!`, exhaustion,
+`cancel!`, and errors close it. An incomplete stream raises
+`TemporalOnlineIncomplete`.
+
 ## Rolling temporal windows
 
 `BoundedRollingWindow` consumes one finite sample at a time with fixed
@@ -286,7 +318,7 @@ variants, protocols, or methods.
 | Public symbol | Backing native operation(s) | Capability |
 |---|---|---|
 | `abi_version` | `llev_abi_version` | ABI compatibility and feature discovery |
-| `advance!` | `llev_generalized_online_advance`, `llev_universal_online_advance` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `advance!` | `llev_generalized_online_advance`, `llev_universal_online_advance`, `llev_temporal_online_advance` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation; project ABI operation |
 | `AffineGapCosts` | `llev_affine_costs_validate` | project ABI operation |
 | `api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `are_phonetically_similar` | `llev_phonetic_feature_relation` | IPA feature classification and relations |
@@ -298,7 +330,7 @@ variants, protocols, or methods.
 | `cancel!` | `llev_wallbreaker_cursor_cancel` | project ABI operation |
 | `characters_with_features` | `llev_phonetic_chars_with_features` | IPA feature classification and relations |
 | `clear!` | `llev_query_cache_clear` | project ABI operation |
-| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_temporal_index_cursor_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_temporal_index_cursor_free`, `llev_temporal_online_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `compiled_phonetic_bytes` | `llev_owned_bytes_free`, `llev_phonetic_rules_to_bytes`, `llev_phonetic_pattern_to_bytes` | versioned compiled-byte ownership; versioned compiled phonetic-rule bytes; versioned compiled phonetic-pattern bytes |
 | `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
 | `distance_config` | `llev_phonetic_grep_distance_config` | word-boundary phonetic search and configuration |
@@ -333,7 +365,7 @@ variants, protocols, or methods.
 | `ngram_candidate` | `llev_source_filter_utf8` | project ABI operation |
 | `normalize` | `llev_phonetic_transducer_normalize` | incremental phonetic rewriting and lifecycle |
 | `normalized_query` | `llev_phonetic_online_normalized_query` | character-level phonetic search and scanner lifecycle |
-| `observation` | `llev_generalized_online_observation`, `llev_universal_online_observation` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `observation` | `llev_generalized_online_observation`, `llev_universal_online_observation`, `llev_temporal_online_observation` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation; project ABI operation |
 | `online` | `llev_generalized_online_new_utf8`, `llev_universal_online_new` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `optimal_string_alignment_distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold`, `llev_damerau_distance_bytes`, `llev_damerau_distance_bytes_threshold`, `llev_damerau_distance_u64`, `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
 | `pattern_pieces` | `llev_wallbreaker_split_utf8` | project ABI operation |
@@ -362,6 +394,7 @@ variants, protocols, or methods.
 | `scan` | `llev_phonetic_online_scan`, `llev_phonetic_online_matches_free`, `llev_phonetic_token_scan`, `llev_phonetic_token_matches_free` | character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership |
 | `scan_line` | `llev_phonetic_grep_scan_line` | word-boundary phonetic search and configuration |
 | `scan_text` | `llev_phonetic_grep_scan_text` | word-boundary phonetic search and configuration |
+| `scratch_bytes` | `llev_temporal_online_scratch_bytes` | project ABI operation |
 | `similar_phonetic_chars` | `llev_phonetic_similar_chars` | IPA feature classification and relations |
 | `snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
 | `streaming` | `llev_phonetic_online_stream_new` | character-level phonetic search and scanner lifecycle |
@@ -370,6 +403,7 @@ variants, protocols, or methods.
 | `temporal_distance` | `llev_temporal_distance` | project ABI operation |
 | `temporal_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
 | `TemporalIndex` | `llev_temporal_index_new` | project ABI operation |
+| `TemporalOnlineAutomaton` | `llev_temporal_online_new` | project ABI operation |
 | `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `true_damerau_distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold`, `llev_true_damerau_distance_bytes`, `llev_true_damerau_distance_bytes_threshold`, `llev_true_damerau_distance_u64`, `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
 | `twed_length_lower_bound` | `llev_twed_length_lower_bound` | project ABI operation |

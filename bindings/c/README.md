@@ -224,6 +224,11 @@ variants, protocols, or methods.
 | `llev_temporal_index_new` | `llev_temporal_index_new` | project ABI operation |
 | `llev_temporal_index_query_range` | `llev_temporal_index_query_range` | project ABI operation |
 | `llev_temporal_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
+| `llev_temporal_online_advance` | `llev_temporal_online_advance` | project ABI operation |
+| `llev_temporal_online_free` | `llev_temporal_online_free` | project ABI operation |
+| `llev_temporal_online_new` | `llev_temporal_online_new` | project ABI operation |
+| `llev_temporal_online_observation` | `llev_temporal_online_observation` | project ABI operation |
+| `llev_temporal_online_scratch_bytes` | `llev_temporal_online_scratch_bytes` | project ABI operation |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_query_affine` | `llev_transducer_query_affine` | domain-preserving dictionary query |

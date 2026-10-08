@@ -93,6 +93,7 @@ mod string;
 mod temporal;
 mod temporal_bounds;
 mod temporal_index;
+mod temporal_online;
 mod wallbreaker;
 
 pub use automata::*;
@@ -115,6 +116,7 @@ pub use string::*;
 pub use temporal::*;
 pub use temporal_bounds::*;
 pub use temporal_index::*;
+pub use temporal_online::*;
 pub use wallbreaker::*;
 
 use std::{ffi::c_char, slice, str};

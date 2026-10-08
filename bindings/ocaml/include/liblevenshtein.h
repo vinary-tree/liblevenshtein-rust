@@ -1566,6 +1566,66 @@ LLEV_API LlevStatus llev_temporal_index_cursor_next_batch(
     size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
 LLEV_API void llev_temporal_index_cursor_free(LlevTemporalIndexCursor* cursor);
 
+/** Fixed-query online temporal automaton. It retains bounded query and
+ * frontier state independent of target stream length. MSM, ERP, unit-grid
+ * TWED, banded DTW, and scalar Fréchet are supported. Soft-DTW is not.
+ * Non-ERP kernels require a finite inclusive cutoff. DTW cutoff and scores
+ * are in squared-distance units, matching the native online kernel. */
+typedef struct LlevTemporalOnlineAutomaton LlevTemporalOnlineAutomaton;
+
+/** Hard query, frontier, per-sample work, and scratch ceilings. Defaults are
+ * 1,000,000; 1,000,001; 100,000,000; and 256 MiB, respectively. */
+typedef struct LlevTemporalOnlineLimits {
+    size_t max_query_len;
+    size_t max_frontier_positions;
+    size_t max_step_work_units;
+    size_t max_scratch_bytes;
+} LlevTemporalOnlineLimits;
+
+/** Exact observation for the committed target prefix. Optional scores are
+ * valid only when their corresponding has_* byte is one. */
+typedef struct LlevTemporalOnlineObservation {
+    size_t consumed_target_len;
+    size_t active_positions;
+    double distance_within_cutoff;
+    double minimum_active_cost;
+    uint8_t has_distance;
+    uint8_t has_minimum;
+    uint8_t reserved[6];
+} LlevTemporalOnlineObservation;
+
+/** kind=0 commits the sample and carries an exact observation. kind=1 is
+ * incomplete: the sample was not consumed and observation is zeroed. reason
+ * uses the indexed temporal codes 1-13 and 15; zero means complete. */
+typedef struct LlevTemporalOnlineStep {
+    LlevTemporalOnlineObservation observation;
+    uint32_t kind;
+    uint32_t reason;
+    size_t dp_cells;
+    size_t work_units;
+    size_t scratch_bytes;
+    size_t queue_entries;
+} LlevTemporalOnlineStep;
+
+/** Construction copies the finite query and preflights all configured
+ * ceilings. Each advance needs exclusive handle access. An incomplete step
+ * leaves the current observation unchanged; callers may read it separately.
+ * A null query pointer is allowed only for zero query_len. */
+LLEV_API LlevStatus llev_temporal_online_new(
+    const double* query, size_t query_len,
+    const LlevTemporalConfig* config,
+    const LlevTemporalOnlineLimits* limits,
+    LlevTemporalOnlineAutomaton** out_machine);
+LLEV_API LlevStatus llev_temporal_online_observation(
+    const LlevTemporalOnlineAutomaton* machine,
+    LlevTemporalOnlineObservation* out_observation);
+LLEV_API LlevStatus llev_temporal_online_advance(
+    LlevTemporalOnlineAutomaton* machine, double sample,
+    LlevTemporalOnlineStep* out_step);
+LLEV_API LlevStatus llev_temporal_online_scratch_bytes(
+    const LlevTemporalOnlineAutomaton* machine, size_t* out_bytes);
+LLEV_API void llev_temporal_online_free(LlevTemporalOnlineAutomaton* machine);
+
 #ifdef __cplusplus
 }
 #endif

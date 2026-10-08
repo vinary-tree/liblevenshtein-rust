@@ -21,6 +21,7 @@ include("temporal_sax_encoding.jl")
 include("temporal_queries.jl")
 include("temporal_index.jl")
 include("temporal_rolling.jl")
+include("temporal_online.jl")
 include("filter.jl")
 include("source_filter_queries.jl")
 
