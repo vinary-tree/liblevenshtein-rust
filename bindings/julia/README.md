@@ -56,6 +56,38 @@ only an exact subset and do not prove that other matches are absent. Set finite
 source and query limits for the intended workload, and close a cursor when
 stopping early.
 
+## Copied source filtering
+
+`SourceFilterSource` copies and deduplicates Unicode terms under explicit
+entry, term-byte, and source-byte limits. `query_ngram` and `query_hybrid`
+return `SourceFilterCursor` iterators over this snapshot. Each candidate is
+checked with the native n-gram or n-gram/Jaro-Winkler predicate as the cursor
+advances. `SourceFilterLimits` caps cumulative candidate inspections,
+accepted results, and hybrid Jaro comparisons. `next_batch!` examines at
+most `page_candidates` source terms, so an empty batch means the search
+paused before finding a candidate.
+
+```julia
+source = SourceFilterSource(["hello", "help", "world"];
+    max_terms=3, max_term_bytes=16, max_source_bytes=48)
+cursor = query_hybrid(source, "helo", 1; ngram_size=2,
+    jaro_threshold=0.7, page_candidates=2,
+    limits=SourceFilterLimits(max_candidates=3, max_results=3))
+try
+    for term in cursor
+        println(term)
+    end
+finally
+    close(cursor)
+end
+```
+
+Iteration returns exact native-filter candidates in source order. It does not
+claim that every candidate lies within the edit-distance cutoff; the n-gram
+filter is a conservative prefilter. A completed empty cursor proves no source
+term passed that predicate. Exhausted limits raise
+`SourceFilterIncomplete`, leaving only an exact subset of filter candidates.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract
@@ -154,6 +186,7 @@ variants, protocols, or methods.
 | `finish!` | `llev_phonetic_online_stream_finish`, `llev_phonetic_transducer_finish` | character-level phonetic search and scanner lifecycle; incremental phonetic rewriting and lifecycle |
 | `freeze!` | `llev_temporal_index_freeze` | project ABI operation |
 | `GeneralizedAutomaton` | `llev_generalized_automaton_new` | runtime generalized-automaton lifecycle and prefix evaluation |
+| `hybrid_candidate` | `llev_source_filter_utf8` | project ABI operation |
 | `insert!` | `llev_phonetic_dictionary_update`, `llev_temporal_index_insert` | normalized phonetic dictionary construction, query, and updates; project ABI operation |
 | `is_free_phonetic_substitution` | `llev_phonetic_feature_relation` | IPA feature classification and relations |
 | `jaro_similarity` | `llev_jaro_similarity_utf8` | project ABI operation |
@@ -165,6 +198,7 @@ variants, protocols, or methods.
 | `merge_and_split_distance` | `llev_merge_and_split_distance`, `llev_merge_and_split_distance_threshold`, `llev_merge_and_split_distance_bytes`, `llev_merge_and_split_distance_bytes_threshold`, `llev_merge_and_split_distance_u64`, `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
 | `NativeError` | `llev_last_error_message` | typed failure diagnostics |
 | `next_batch!` | `llev_cost_cursor_next_batch`, `llev_cost_cursor_release_batch`, `llev_specialized_cursor_next_batch`, `llev_specialized_cursor_release_batch`, `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch`, `llev_wallbreaker_cursor_next_batch`, `llev_wallbreaker_cursor_release_batch`, `llev_temporal_index_cursor_next_batch` | project ABI operation; streaming result traversal and batch leases |
+| `ngram_candidate` | `llev_source_filter_utf8` | project ABI operation |
 | `normalize` | `llev_phonetic_transducer_normalize` | incremental phonetic rewriting and lifecycle |
 | `normalized_query` | `llev_phonetic_online_normalized_query` | character-level phonetic search and scanner lifecycle |
 | `observation` | `llev_generalized_online_observation`, `llev_universal_online_observation` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
@@ -183,7 +217,9 @@ variants, protocols, or methods.
 | `query_affine` | `llev_transducer_query_affine` | domain-preserving dictionary query |
 | `query_contextual` | `llev_transducer_query_contextual_utf8` | domain-preserving dictionary query |
 | `query_filtered` | `llev_transducer_query_filtered_utf8` | domain-preserving dictionary query |
+| `query_hybrid` | `llev_source_filter_utf8` | project ABI operation |
 | `query_index_range` | `llev_temporal_index_query_range` | project ABI operation |
+| `query_ngram` | `llev_source_filter_utf8` | project ABI operation |
 | `query_pruned` | `llev_transducer_query_pruned_utf8` | domain-preserving dictionary query |
 | `query_weighted` | `llev_transducer_query_weighted` | domain-preserving dictionary query |
 | `QueryCache` | `llev_query_cache_new` | project ABI operation |
@@ -196,7 +232,6 @@ variants, protocols, or methods.
 | `scan_text` | `llev_phonetic_grep_scan_text` | word-boundary phonetic search and configuration |
 | `similar_phonetic_chars` | `llev_phonetic_similar_chars` | IPA feature classification and relations |
 | `snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
-| `source_candidate` | `llev_source_filter_utf8` | project ABI operation |
 | `streaming` | `llev_phonetic_online_stream_new` | character-level phonetic search and scanner lifecycle |
 | `syllable_boundaries` | `llev_phonetic_syllable_boundaries` | syllable count and boundary heuristics |
 | `syllable_count` | `llev_phonetic_syllable_count` | syllable count and boundary heuristics |

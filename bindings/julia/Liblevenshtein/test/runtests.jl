@@ -9,6 +9,30 @@ include("temporal.jl")
 include("temporal_queries.jl")
 include("temporal_index.jl")
 include("filter.jl")
+include("source_filter_queries.jl")
+
+@testset "canonical source and indexed temporal examples" begin
+    source = LL.SourceFilterSource(["hello", "help", "world"];
+        max_terms=3, max_term_bytes=16, max_source_bytes=48)
+    @test LL.ngram_candidate("helo", "hello", 1)
+    @test LL.hybrid_candidate("helo", "hello", 1)
+    @test "hello" in collect(LL.query_ngram(source, "helo", 1;
+        page_candidates=2))
+    @test "hello" in collect(LL.query_hybrid(source, "helo", 1;
+        page_candidates=2))
+
+    index = LL.TemporalIndex(:dtw; quant_min=0.0, quant_max=10.0,
+        band=2, max_entries=2, max_total_samples=6, max_series_len=3)
+    try
+        LL.insert!(index, 7, [1.0, 2.0, 3.0])
+        LL.freeze!(index)
+        cursor = LL.query_index_range(index, [1.0, 2.0, 3.0];
+            cutoff=0.0, page_work_units=1_000, page_results=1)
+        @test only(collect(cursor)).id == 7
+    finally
+        close(index)
+    end
+end
 
 @testset "ABI identity and layouts" begin
     @test LL.abi_version() == LL.ABI_VERSION == 1

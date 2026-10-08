@@ -162,6 +162,10 @@ export ABI_VERSION,
     hybrid_candidate,
     query_ngram,
     query_hybrid,
+    SourceFilterSource,
+    SourceFilterLimits,
+    SourceFilterIncomplete,
+    SourceFilterCursor,
     TemporalSeriesSource,
     TemporalQueryLimits,
     TemporalMatch,
@@ -1009,6 +1013,7 @@ include("Temporal.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
 include("Filter.jl")
+include("SourceFilterQueries.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")
 include("PhoneticOnline.jl")

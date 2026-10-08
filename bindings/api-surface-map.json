@@ -11078,7 +11078,8 @@
         "bindings/julia/Liblevenshtein/src/Temporal.jl",
         "bindings/julia/Liblevenshtein/src/Filter.jl",
         "bindings/julia/Liblevenshtein/src/TemporalQueries.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalIndex.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalIndex.jl",
+        "bindings/julia/Liblevenshtein/src/SourceFilterQueries.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -11086,7 +11087,8 @@
         "bindings/julia/Liblevenshtein/test/temporal.jl",
         "bindings/julia/Liblevenshtein/test/filter.jl",
         "bindings/julia/Liblevenshtein/test/temporal_queries.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_index.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_index.jl",
+        "bindings/julia/Liblevenshtein/test/source_filter_queries.jl"
       ],
       "enums": {
         "status": {
@@ -11692,7 +11694,12 @@
           "symbol": "jaro_similarity"
         },
         "llev_source_filter_utf8": {
-          "symbol": "source_candidate"
+          "symbol": [
+            "ngram_candidate",
+            "hybrid_candidate",
+            "query_ngram",
+            "query_hybrid"
+          ]
         }
       }
     },
