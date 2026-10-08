@@ -334,6 +334,9 @@ budget against a native control measured on the same runner.
   `encode_f64_series_as_u32_pairs`, and `decode_u32_pairs_to_f64` for exact
   Float32/Float64 trie words. They copy bounded input snapshots and produce
   lazy output; use `collect` only when storage of the full encoding is needed.
+- Use `QuantizationConfig` with `encode_u8` for byte-trie words or
+  `encode_u32` for wider alphabets. `bin_bounds` supplies the admissible
+  interval needed by temporal pruning after outlier clamping.
 
 - Use `distance`, `optimal_string_alignment_distance`,
   `true_damerau_distance`, and `merge_and_split_distance` for pairwise work.

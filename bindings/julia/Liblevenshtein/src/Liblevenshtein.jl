@@ -206,6 +206,23 @@ export ABI_VERSION,
     encode_f32_ordered,
     encode_f32_total_order,
     decode_f32_total_order,
+    QuantizationConfig,
+    try_uniform_quantizer,
+    quantizer_u8,
+    quantizer_u16,
+    quantizer_from_data,
+    bin_width,
+    max_error,
+    quantize,
+    quantize_u8,
+    quantize_u16,
+    dequantize,
+    bin_bounds,
+    value_diff_to_bins,
+    encode_u8,
+    encode_u32,
+    decode_u8,
+    decode_u32,
     cache_stats,
     clear!,
     reset_stats!,
@@ -1034,6 +1051,7 @@ include("FilteredTraversal.jl")
 include("Temporal.jl")
 include("TemporalBounds.jl")
 include("TemporalEncoding.jl")
+include("TemporalQuantization.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
 include("Filter.jl")

@@ -147,6 +147,22 @@ The pair decoder ignores an unmatched final word, matching the native Rust
 encoding contract. Rust and Julia tests use the same signed-zero, infinity,
 and NaN-payload bit fixtures.
 
+`QuantizationConfig` exposes Rust's uniform binning rules through
+`quantize`, `dequantize`, `bin_bounds`, and `value_diff_to_bins`.
+`try_uniform_quantizer` and `quantizer_from_data` return `nothing` when a
+valid bin width cannot be formed. The first and last `bin_bounds` intervals
+extend to negative and positive infinity because their bins absorb
+outliers. NaN maps to the first bin and positive infinity to the last.
+`encode_u8`, `encode_u32`, `decode_u8`, and `decode_u32` copy at most
+`max_samples` input values and produce lazy output.
+
+```julia
+config = quantizer_u8(0.0, 100.0)
+bins = collect(encode_u8(config, [0.0, 50.0, 100.0]))
+@assert bins == UInt8[0, 128, 255]
+@assert bin_bounds(config, 0)[1] == -Inf
+```
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract

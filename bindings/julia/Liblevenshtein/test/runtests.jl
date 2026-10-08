@@ -15,6 +15,7 @@ Base.getindex(::UntouchableLargeVector, ::Int) =
 include("temporal.jl")
 include("temporal_bounds.jl")
 include("temporal_encoding.jl")
+include("temporal_quantization.jl")
 include("temporal_queries.jl")
 include("temporal_index.jl")
 include("filter.jl")
