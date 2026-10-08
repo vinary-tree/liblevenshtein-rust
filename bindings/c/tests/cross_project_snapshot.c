@@ -592,6 +592,19 @@ static void assert_specialized_traversals(LlevTransducer* transducer) {
 }
 
 int main(void) {
+    const double temporal_left[] = {0.0, 1.0};
+    const double temporal_right[] = {0.5, 1.5};
+    double temporal_left_gradient[2] = {0};
+    double temporal_right_gradient[2] = {0};
+    const LlevTemporalLimits temporal_limits = {2, 4, 8, 512};
+    LlevTemporalDistanceResult temporal_result = {0};
+    assert(llev_soft_dtw_gradient(
+               temporal_left, 2, temporal_right, 2, 1.0,
+               &temporal_limits, temporal_left_gradient, 2,
+               temporal_right_gradient, 2, &temporal_result) == LLEV_STATUS_OK);
+    assert(temporal_result.kind == LLEV_TEMPORAL_FINITE);
+    assert(temporal_result.dp_cells == 4);
+
     assert_distance_api();
     assert_legacy_string_api();
     assert_standalone_automata_api();

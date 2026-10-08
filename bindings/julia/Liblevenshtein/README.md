@@ -109,6 +109,15 @@ likewise be negative. The
 [temporal guide](docs/src/index.md#bounded-scalar-time-series) gives the native
 parameter mapping and outcome contract.
 
+`soft_dtw_gradient(left, right; gamma, limits)` evaluates the complete
+Soft-DTW loss and both sample gradients. It requires nonempty finite series
+and a positive finite smoothing parameter. A `SoftDtwGradientOutcome` carries
+owned gradient vectors only when `kind === :finite`; an incomplete outcome
+identifies the exhausted resource and carries no partial derivative. This
+batch operation retains full forward and reverse matrices, so set explicit
+DP, work, and scratch limits for the intended operand sizes. Use
+`soft_dtw_loss` when only the score is needed.
+
 For a finite collection of series, `TemporalSeriesSource` copies IDs and
 samples into a bounded snapshot. `query_temporal_range` then compares one
 candidate at a time with the selected native kernel and streams `TemporalMatch`
@@ -289,7 +298,7 @@ The adjacent-transposition variant is checked against optimal string alignment
 
 ### Qualification and performance budgets
 
-`benchmark/temporal_filtering.jl` measures scalar DTW, reusable Keogh,
+`benchmark/temporal_filtering.jl` measures scalar DTW, Soft-DTW gradients, reusable Keogh,
 quantization, SAX, rolling windows, online ERP prefixes, a copied temporal scan, the frozen temporal index, and the
 n-gram and hybrid source filters. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
@@ -310,16 +319,17 @@ were:
 
 | Scenario | Median ns/op |
 |---|---:|
-| Scalar DTW, 16 × 16 samples | 4,885 |
-| Reusable Keogh bound, 16 samples | 1,361 |
-| Quantization, 16 samples | 98 |
-| SAX, 16 samples to 4 symbols | 276 |
-| Rolling windows, 16 samples to width 4 | 5,110 |
-| Online ERP, 16 prefixes | 78,235 |
-| 32-entry temporal scan | 163,700 |
-| 32-entry temporal index | 3,085,995 |
-| 32-term n-gram filter | 324,606 |
-| 32-term hybrid filter | 398,178 |
+| Scalar DTW, 16 × 16 samples | 5,033 |
+| Soft-DTW gradients, 16 × 16 samples | 47,769 |
+| Reusable Keogh bound, 16 samples | 1,341 |
+| Quantization, 16 samples | 100 |
+| SAX, 16 samples to 4 symbols | 271 |
+| Rolling windows, 16 samples to width 4 | 4,385 |
+| Online ERP, 16 prefixes | 76,801 |
+| 32-entry temporal scan | 167,150 |
+| 32-entry temporal index | 3,146,550 |
+| 32-term n-gram filter | 318,810 |
+| 32-term hybrid filter | 390,516 |
 
 The indexed query is much slower than the scan for this small, low-selectivity
 source. Use the scan for small sources; measure the index on the intended

@@ -1457,6 +1457,20 @@ LLEV_API LlevStatus llev_temporal_distance(
     const LlevTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+/** Complete Soft-DTW loss and gradients with respect to both nonempty finite
+ * operands. gamma must be finite and positive. Output buffers are caller
+ * owned and have capacities at least left_len and right_len respectively.
+ * No gradient element is written on invalid input or an incomplete result.
+ * The result uses kind=0 on completion or kind=3 plus a resource/overflow
+ * reason on LIMIT_EXCEEDED. All buffers must be valid and mutually disjoint. */
+LLEV_API LlevStatus llev_soft_dtw_gradient(
+    const double* left, size_t left_len,
+    const double* right, size_t right_len,
+    double gamma, const LlevTemporalLimits* limits,
+    double* left_gradient, size_t left_capacity,
+    double* right_gradient, size_t right_capacity,
+    LlevTemporalDistanceResult* out_result);
+
 /** Native temporal lower-bound selectors. */
 #define LLEV_TEMPORAL_BOUND_ERP_GAP_MASS 1u
 #define LLEV_TEMPORAL_BOUND_FRECHET_ENDPOINTS 2u

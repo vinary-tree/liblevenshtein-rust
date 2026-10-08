@@ -26,6 +26,12 @@ include("filter.jl")
 include("source_filter_queries.jl")
 
 @testset "canonical source and indexed temporal examples" begin
+    gradient = LL.soft_dtw_gradient([0.0, 1.0], [0.5, 1.5]; gamma=1.0,
+        limits=LL.TemporalLimits(max_series_len=2, max_dp_cells=4,
+            max_work_units=8, max_scratch_bytes=512))
+    @test gradient.kind === :finite
+    @test length(gradient.left_gradient) == 2
+
     source = LL.SourceFilterSource(["hello", "help", "world"];
         max_terms=3, max_term_bytes=16, max_source_bytes=48)
     @test LL.ngram_candidate("helo", "hello", 1)

@@ -57,6 +57,31 @@ only an exact subset and do not prove that other matches are absent. Set finite
 source and query limits for the intended workload, and close a cursor when
 stopping early.
 
+## Soft-DTW gradient analysis
+
+`soft_dtw_gradient(left, right; gamma, limits)` computes the complete
+Soft-DTW loss and derivatives with respect to both nonempty finite scalar
+series. It returns `SoftDtwGradientOutcome`. A finite outcome owns two Julia
+gradient vectors, one entry for each sample of the corresponding input. An
+incomplete outcome has no loss or gradients and identifies a DP, work,
+scratch, or numeric limit in `reason`. The native implementation bounds the
+full forward and reverse matrices before allocation; this batch analysis
+uses storage proportional to the product of the two series lengths.
+
+```julia
+analysis = soft_dtw_gradient([0.0, 1.0], [0.5, 1.5]; gamma=0.75,
+    limits=TemporalLimits(max_series_len=2, max_dp_cells=4,
+        max_work_units=8, max_scratch_bytes=256))
+@assert analysis.kind === :finite
+@assert length(analysis.left_gradient) == 2
+@assert length(analysis.right_gradient) == 2
+```
+
+Soft-DTW is a differentiable loss and may be negative. Its gradients are
+derivatives of that loss, not metric distances or search lower bounds.
+`soft_dtw_loss` evaluates the score alone with constant row storage when
+gradients are unnecessary.
+
 ## Online temporal automata
 
 `TemporalOnlineAutomaton` holds a copied fixed query and scores successive
@@ -397,6 +422,7 @@ variants, protocols, or methods.
 | `scratch_bytes` | `llev_temporal_online_scratch_bytes` | project ABI operation |
 | `similar_phonetic_chars` | `llev_phonetic_similar_chars` | IPA feature classification and relations |
 | `snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
+| `soft_dtw_gradient` | `llev_soft_dtw_gradient` | project ABI operation |
 | `streaming` | `llev_phonetic_online_stream_new` | character-level phonetic search and scanner lifecycle |
 | `syllable_boundaries` | `llev_phonetic_syllable_boundaries` | syllable count and boundary heuristics |
 | `syllable_count` | `llev_phonetic_syllable_count` | syllable count and boundary heuristics |

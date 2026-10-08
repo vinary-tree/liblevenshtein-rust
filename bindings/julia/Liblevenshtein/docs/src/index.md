@@ -92,6 +92,53 @@ revision-11 symbol is checked before resolution so older libraries continue
 to serve the existing Julia surface. Invalid configuration or nonfinite
 samples raise a copied `NativeError`.
 
+### Soft-DTW gradients
+
+`soft_dtw_gradient` evaluates the full differentiable Soft-DTW loss and
+derivatives with respect to each input sample. Both operands must be nonempty
+and finite, and `gamma` must be positive and finite. A finite
+`SoftDtwGradientOutcome` owns `left_gradient` and `right_gradient` vectors;
+each vector has the length of its corresponding input. An incomplete result
+has no value or gradients and records its exact resource or numeric reason.
+
+```julia
+analysis = soft_dtw_gradient([0.0, 1.0], [0.5, 1.5]; gamma=0.75,
+    limits=TemporalLimits(max_series_len=2, max_dp_cells=4,
+        max_work_units=8, max_scratch_bytes=512))
+@assert analysis.kind === :finite
+@assert length(analysis.left_gradient) == 2
+```
+
+The reverse sweep needs complete forward and adjoint matrices, so scratch
+storage grows with both operand lengths. `soft_dtw_loss` evaluates only the
+loss with two retained rows when gradients are unnecessary. Soft-DTW values
+and gradients are loss quantities; they do not provide metric lower bounds.
+
+### Online temporal prefixes
+
+`TemporalOnlineAutomaton` copies a fixed query and advances over finite
+target samples for MSM, ERP, unit-grid TWED, banded DTW, and discrete
+Fréchet. `observation` reports the empty target before the first advance.
+`advance!` returns an exact prefix observation after a committed sample; a
+resource-incomplete step leaves the prior observation unchanged. Online DTW
+cutoffs and scores are squared, while scalar `dtw_distance` returns root
+distance. Soft-DTW has no online automaton.
+
+```julia
+machine = TemporalOnlineAutomaton(:erp, [1.0, 2.0]; cutoff=5.0)
+try
+    @assert observation(machine).consumed_target_len == 0
+    @assert advance!(machine, 1.0).observation.consumed_target_len == 1
+finally
+    close(machine)
+end
+```
+
+`TemporalOnlineLimits` bounds query length, live frontier positions, work per
+target sample, and scratch storage. `online_observations` presents a one-shot
+lazy stream; `reduce_observations!`, normal exhaustion, cancellation, and
+errors close its native machine.
+
 ### Lazy temporal range queries
 
 `TemporalSeriesSource` copies a finite iterable of `(UInt64 ID, finite real

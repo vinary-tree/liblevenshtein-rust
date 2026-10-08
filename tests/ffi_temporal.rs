@@ -1,8 +1,8 @@
 #![cfg(feature = "ffi")]
 
 use liblevenshtein::ffi::{
-    llev_temporal_distance, LlevStatus, LlevTemporalAlgorithm, LlevTemporalConfig,
-    LlevTemporalDistanceResult, LlevTemporalLimits,
+    llev_soft_dtw_gradient, llev_temporal_distance, LlevStatus, LlevTemporalAlgorithm,
+    LlevTemporalConfig, LlevTemporalDistanceResult, LlevTemporalLimits,
 };
 use liblevenshtein::time_series::{
     DtwConfig, ErpConfig, FrechetConfig, MsmConfig, OperationOutcome, ResourceLimits,
@@ -24,6 +24,91 @@ fn config(
         band,
         cutoff,
     }
+}
+
+#[test]
+fn soft_dtw_gradient_bridge_matches_native_and_preserves_outputs_on_failure() {
+    let left = [0.0, 1.0, 2.0];
+    let right = [0.5, 1.5];
+    let limits = LlevTemporalLimits::default();
+    let native = match SoftDtwConfig::try_new(0.75)
+        .unwrap()
+        .analyze_with_gradient_bounded(&left, &right, ResourceLimits::default())
+        .unwrap()
+    {
+        OperationOutcome::Complete { value, .. } => value,
+        other => panic!("unexpected native gradient outcome: {other:?}"),
+    };
+    let mut gx = [f64::NAN; 3];
+    let mut gy = [f64::NAN; 2];
+    let mut result = LlevTemporalDistanceResult::default();
+    let status = unsafe {
+        llev_soft_dtw_gradient(
+            left.as_ptr(),
+            left.len(),
+            right.as_ptr(),
+            right.len(),
+            0.75,
+            &limits,
+            gx.as_mut_ptr(),
+            gx.len(),
+            gy.as_mut_ptr(),
+            gy.len(),
+            &mut result,
+        )
+    };
+    assert_eq!(status, LlevStatus::Ok);
+    assert_eq!(result.kind, 0);
+    assert_eq!(result.value, native.value);
+    assert_eq!(gx.as_slice(), native.left_gradient);
+    assert_eq!(gy.as_slice(), native.right_gradient);
+
+    let restricted = LlevTemporalLimits {
+        max_dp_cells: 1,
+        ..limits
+    };
+    gx.fill(41.0);
+    gy.fill(43.0);
+    let status = unsafe {
+        llev_soft_dtw_gradient(
+            left.as_ptr(),
+            left.len(),
+            right.as_ptr(),
+            right.len(),
+            0.75,
+            &restricted,
+            gx.as_mut_ptr(),
+            gx.len(),
+            gy.as_mut_ptr(),
+            gy.len(),
+            &mut result,
+        )
+    };
+    assert_eq!(status, LlevStatus::LimitExceeded);
+    assert_eq!(result.kind, 3);
+    assert_eq!(result.reason, 1);
+    assert_eq!(gx, [41.0; 3]);
+    assert_eq!(gy, [43.0; 2]);
+
+    let status = unsafe {
+        llev_soft_dtw_gradient(
+            left.as_ptr(),
+            left.len(),
+            right.as_ptr(),
+            right.len(),
+            0.75,
+            &limits,
+            gx.as_mut_ptr(),
+            gx.len() - 1,
+            gy.as_mut_ptr(),
+            gy.len(),
+            &mut result,
+        )
+    };
+    assert_eq!(status, LlevStatus::InvalidArgument);
+    assert_eq!(result.value, 0.0);
+    assert_eq!(gx, [41.0; 3]);
+    assert_eq!(gy, [43.0; 2]);
 }
 
 fn run(

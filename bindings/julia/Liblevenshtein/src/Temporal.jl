@@ -166,3 +166,64 @@ soft_dtw_loss(left::AbstractVector{<:Real}, right::AbstractVector{<:Real};
     limits::TemporalLimits=TemporalLimits()) =
     temporal_distance(:soft_dtw, left, right; parameter0=gamma,
         cutoff, limits)
+
+"""Complete Soft-DTW analysis with owned gradients or an exact stop reason.
+
+`kind` is `:finite` or `:incomplete`. Only finite outcomes carry a loss value
+and gradients. The gradients have one element per sample of the corresponding
+input. `dp_cells`, `work_units`, and `scratch_bytes` report native usage.
+"""
+struct SoftDtwGradientOutcome
+    kind::Symbol
+    value::Union{Nothing,Float64}
+    left_gradient::Union{Nothing,Vector{Float64}}
+    right_gradient::Union{Nothing,Vector{Float64}}
+    reason::Union{Nothing,Symbol}
+    dp_cells::Csize_t
+    work_units::Csize_t
+    scratch_bytes::Csize_t
+end
+
+"""Evaluate a complete bounded Soft-DTW loss and both sample gradients.
+
+Both input series must be finite and nonempty; `gamma` must be finite and
+positive. The output vectors are owned by Julia. An incomplete operation
+returns no value or gradients and reports the exhausted resource or overflow.
+"""
+function soft_dtw_gradient(left::AbstractVector{<:Real},
+    right::AbstractVector{<:Real}; gamma::Real=1.0,
+    limits::TemporalLimits=TemporalLimits())
+    api_revision() >= UInt32(15) ||
+        throw(NativeError(Int32(STATUS_UNSUPPORTED),
+            :llev_soft_dtw_gradient,
+            "Soft-DTW gradients require native API revision 15"))
+    length(left) <= limits.max_series_len ||
+        throw(ArgumentError("left series exceeds max_series_len"))
+    length(right) <= limits.max_series_len ||
+        throw(ArgumentError("right series exceeds max_series_len"))
+    isempty(left) && throw(ArgumentError("left series must be nonempty"))
+    isempty(right) && throw(ArgumentError("right series must be nonempty"))
+    x = left isa Vector{Float64} ? left : Vector{Float64}(left)
+    y = right isa Vector{Float64} ? right : Vector{Float64}(right)
+    gx = Vector{Float64}(undef, length(x))
+    gy = Vector{Float64}(undef, length(y))
+    output = Ref(RawTemporalDistanceResult(0.0, 0, 0, 0, 0, 0))
+    status = GC.@preserve x y gx gy ccall(native(:llev_soft_dtw_gradient),
+        Cint, (Ptr{Float64}, Csize_t, Ptr{Float64}, Csize_t,
+            Float64, Ref{TemporalLimits}, Ptr{Float64}, Csize_t,
+            Ptr{Float64}, Csize_t, Ref{RawTemporalDistanceResult}),
+        pointer(x), length(x), pointer(y), length(y), Float64(gamma),
+        Ref(limits), pointer(gx), length(gx), pointer(gy), length(gy), output)
+    raw = output[]
+    status == Int32(STATUS_OK) ||
+        (status == Int32(STATUS_LIMIT_EXCEEDED) && raw.kind == 3) ||
+        checked(status, :llev_soft_dtw_gradient)
+    score = temporal_outcome(raw)
+    score.kind in (:finite, :incomplete) ||
+        throw(ArgumentError("unexpected native Soft-DTW gradient outcome"))
+    finite = score.kind === :finite
+    SoftDtwGradientOutcome(score.kind, score.value,
+        finite ? gx : nothing, finite ? gy : nothing,
+        score.reason, score.dp_cells, score.work_units,
+        score.scratch_bytes)
+end

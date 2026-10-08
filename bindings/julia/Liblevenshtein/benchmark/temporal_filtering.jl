@@ -65,6 +65,8 @@ try
         "filter terms=32 x 8 bytes; result IDs=", length(actual))
     sample("scalar DTW 16 x 16", () ->
         LL.dtw_distance(query, candidate; band=2))
+    sample("Soft-DTW gradients 16 x 16", () ->
+        LL.soft_dtw_gradient(query, candidate; gamma=1.0))
     sample("reusable Keogh 16", () -> LL.lb_keogh(candidate, plan))
     sample("quantize 16 samples", () ->
         collect(LL.encode_u8(quantizer, query)))

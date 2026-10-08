@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 169 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 190 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -564,6 +564,9 @@
         },
         "llev_temporal_distance": {
           "symbol": "llev_temporal_distance"
+        },
+        "llev_soft_dtw_gradient": {
+          "symbol": "llev_soft_dtw_gradient"
         },
         "llev_temporal_lower_bound": {
           "symbol": "llev_temporal_lower_bound"
@@ -1343,6 +1346,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_temporal_lower_bound": {
           "symbol": null,
@@ -2143,6 +2150,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -2934,6 +2945,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -3718,6 +3733,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -4501,6 +4520,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -5281,6 +5304,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_temporal_lower_bound": {
           "symbol": null,
@@ -6076,6 +6103,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -6866,6 +6897,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_temporal_lower_bound": {
           "symbol": null,
@@ -7682,6 +7717,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -8467,6 +8506,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_temporal_lower_bound": {
           "symbol": null,
@@ -9255,6 +9298,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -10041,6 +10088,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_temporal_lower_bound": {
           "symbol": null,
@@ -10832,6 +10883,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -11622,6 +11677,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_temporal_lower_bound": {
           "symbol": null,
           "_reason": "FINDING: revision-13 native temporal lower bounds and Keogh plans are not yet projected into this language facade"
@@ -12322,6 +12381,9 @@
         },
         "llev_temporal_distance": {
           "symbol": "temporal_distance"
+        },
+        "llev_soft_dtw_gradient": {
+          "symbol": "soft_dtw_gradient"
         },
         "llev_temporal_lower_bound": {
           "symbol": [
@@ -13041,6 +13103,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_soft_dtw_gradient": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_temporal_lower_bound": {
           "symbol": null,

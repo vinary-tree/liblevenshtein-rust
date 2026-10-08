@@ -149,6 +149,106 @@ fn limits_from_c(raw: LlevTemporalLimits) -> ResourceLimits {
     }
 }
 
+/// Evaluate a complete Soft-DTW loss and both sample gradients. The caller
+/// owns output buffers of at least the corresponding operand length. Neither
+/// gradient buffer is written unless the operation completes. Incomplete
+/// outcomes use the same result tag and reason codes as scalar comparisons.
+///
+/// # Safety
+/// All nonempty buffers must be valid, aligned, and mutually disjoint. Inputs
+/// and outputs remain borrowed only for this call.
+#[no_mangle]
+pub unsafe extern "C" fn llev_soft_dtw_gradient(
+    left: *const f64,
+    left_len: usize,
+    right: *const f64,
+    right_len: usize,
+    gamma: f64,
+    raw_limits: *const LlevTemporalLimits,
+    left_gradient: *mut f64,
+    left_capacity: usize,
+    right_gradient: *mut f64,
+    right_capacity: usize,
+    out_result: *mut LlevTemporalDistanceResult,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_result.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "Soft-DTW gradient result output is null".into(),
+        ))?;
+        *output = LlevTemporalDistanceResult::default();
+        let raw_limits = *raw_limits.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "Soft-DTW gradient limits are null".into(),
+        ))?;
+        if left_len > raw_limits.max_series_len || right_len > raw_limits.max_series_len {
+            return Err((
+                LlevStatus::LimitExceeded,
+                "Soft-DTW series length limit".into(),
+            ));
+        }
+        if left_len == 0 || right_len == 0 {
+            return Err(invalid("Soft-DTW gradient requires two nonempty series"));
+        }
+        if left_capacity < left_len || right_capacity < right_len {
+            return Err(invalid("Soft-DTW gradient output capacity is too small"));
+        }
+        for (pointer, name) in [
+            (left_gradient, "left Soft-DTW gradient output"),
+            (right_gradient, "right Soft-DTW gradient output"),
+        ] {
+            if pointer.is_null() {
+                return Err((LlevStatus::NullPointer, format!("{name} is null")));
+            }
+            if !(pointer as usize).is_multiple_of(std::mem::align_of::<f64>()) {
+                return Err(invalid(format!("{name} is not aligned")));
+            }
+        }
+        let left = slice(left, left_len, "left Soft-DTW series")?;
+        let right = slice(right, right_len, "right Soft-DTW series")?;
+        let config = SoftDtwConfig::try_new(gamma).map_err(|error| invalid(error.to_string()))?;
+        match config
+            .analyze_with_gradient_bounded(left, right, limits_from_c(raw_limits))
+            .map_err(validation)?
+        {
+            OperationOutcome::Complete { value, usage } => {
+                std::ptr::copy_nonoverlapping(
+                    value.left_gradient.as_ptr(),
+                    left_gradient,
+                    left_len,
+                );
+                std::ptr::copy_nonoverlapping(
+                    value.right_gradient.as_ptr(),
+                    right_gradient,
+                    right_len,
+                );
+                *output = LlevTemporalDistanceResult {
+                    value: value.value,
+                    dp_cells: usage.dp_cells,
+                    work_units: usage.work_units,
+                    scratch_bytes: usage.scratch_bytes,
+                    ..LlevTemporalDistanceResult::default()
+                };
+                Ok(LlevStatus::Ok)
+            }
+            OperationOutcome::Incomplete { reason, usage, .. } => {
+                *output = LlevTemporalDistanceResult {
+                    kind: 3,
+                    reason: reason_code(reason),
+                    dp_cells: usage.dp_cells,
+                    work_units: usage.work_units,
+                    scratch_bytes: usage.scratch_bytes,
+                    ..LlevTemporalDistanceResult::default()
+                };
+                Err((
+                    LlevStatus::LimitExceeded,
+                    "Soft-DTW gradient incomplete".into(),
+                ))
+            }
+        }
+    })
+}
+
 pub(crate) fn check_config(
     raw: LlevTemporalConfig,
     limits: ResourceLimits,
