@@ -6,6 +6,7 @@ import VinaryTreeInterop
 const LL = Liblevenshtein
 
 include("temporal.jl")
+include("filter.jl")
 
 @testset "ABI identity and layouts" begin
     @test LL.abi_version() == LL.ABI_VERSION == 1

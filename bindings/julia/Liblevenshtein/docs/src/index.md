@@ -32,6 +32,32 @@ The repository's
 explains the shared recurrences, ABI names, threshold sentinels, and generated
 differential tests.
 
+## Native Jaro source filtering
+
+`jaro_similarity` uses the native Unicode Jaro scorer. A positive
+`prefix_scale` up to 0.25 selects scaled Jaro-Winkler;
+`jaro_winkler_similarity` uses the conventional 0.1 scale. Each call checks
+`max_input_bytes` for both strings and `max_comparisons` for the worst-case
+scalar pair count before scoring.
+
+`query_jaro` intersects a fuzzy traversal with a minimum Jaro-Winkler score.
+It evaluates each final borrowed source prefix as the native walk reaches it,
+keeps the query-start dictionary snapshot, and streams `SpecializedMatch`
+values. This filter applies to Unicode keys. Close or cancel an unfinished
+cursor to release its native traversal promptly.
+
+```julia
+cursor = query_jaro(transducer, "martha", 2;
+    minimum_similarity=0.85, max_comparisons=100_000)
+try
+    for match in cursor
+        println(match.term, ": ", match.cost)
+    end
+finally
+    close(cursor)
+end
+```
+
 ## Bounded scalar time series
 
 The six scalar temporal functions use the same native kernels as Rust. The

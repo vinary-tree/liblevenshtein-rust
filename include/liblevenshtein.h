@@ -1367,6 +1367,18 @@ LLEV_API LlevStatus llev_wallbreaker_split_utf8(
     size_t max_distance, LlevPatternPiece* pieces, size_t capacity,
     size_t* out_required);
 
+/** Compare two UTF-8 strings with native Jaro (prefix_scale=0) or scaled
+ * Jaro-Winkler (0<prefix_scale<=0.25). Input bytes are borrowed only during
+ * the call. The caller chooses a per-input byte ceiling and a worst-case
+ * scalar comparison ceiling; exceeding either returns LIMIT_EXCEEDED before
+ * scoring. out_score is initialized before validation and must be disjoint
+ * from both inputs. A zero-length input may use NULL. */
+LLEV_API LlevStatus llev_jaro_similarity_utf8(
+    const char* left, size_t left_len,
+    const char* right, size_t right_len,
+    double prefix_scale, size_t max_input_bytes,
+    size_t max_comparisons, double* out_score);
+
 /** Scalar temporal kernels. Every value is a stable wire constant. */
 #define LLEV_TEMPORAL_MSM 1u
 #define LLEV_TEMPORAL_ERP 2u

@@ -153,6 +153,11 @@ export ABI_VERSION,
     query_filtered,
     query_by_value,
     query_by_value_set,
+    jaro_similarity,
+    jaro_winkler_similarity,
+    jaro_winkler_similarity_scaled,
+    is_similar,
+    query_jaro,
     temporal_distance,
     msm_distance,
     erp_distance,
@@ -986,6 +991,7 @@ include("SpecializedTraversals.jl")
 include("CostAutomata.jl")
 include("FilteredTraversal.jl")
 include("Temporal.jl")
+include("Filter.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")
 include("PhoneticOnline.jl")

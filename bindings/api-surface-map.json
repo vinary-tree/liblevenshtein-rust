@@ -12,7 +12,8 @@
       "tests": [
         "bindings/c/tests/cross_project_snapshot.c",
         "tests/ffi_specialized_traversals.rs",
-        "tests/ffi_temporal.rs"
+        "tests/ffi_temporal.rs",
+        "tests/ffi_filter.rs"
       ],
       "enums": {
         "status": {
@@ -562,6 +563,9 @@
         },
         "llev_temporal_distance": {
           "symbol": "llev_temporal_distance"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": "llev_jaro_similarity_utf8"
         }
       }
     },
@@ -1281,6 +1285,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -2000,6 +2008,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -2711,6 +2723,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -3415,6 +3431,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -4118,6 +4138,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -4819,6 +4843,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -5533,6 +5561,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -6244,6 +6276,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -6979,6 +7015,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -7685,6 +7725,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -8392,6 +8436,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -9099,6 +9147,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -9809,6 +9861,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -10519,6 +10575,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     },
@@ -10543,11 +10603,14 @@
         "bindings/julia/Liblevenshtein/src/SpecializedTraversals.jl",
         "bindings/julia/Liblevenshtein/src/CostAutomata.jl",
         "bindings/julia/Liblevenshtein/src/FilteredTraversal.jl",
-        "bindings/julia/Liblevenshtein/src/Temporal.jl"
+        "bindings/julia/Liblevenshtein/src/Temporal.jl",
+        "bindings/julia/Liblevenshtein/src/Filter.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
-        "bindings/julia/Liblevenshtein/test/runtests.jl"
+        "bindings/julia/Liblevenshtein/test/runtests.jl",
+        "bindings/julia/Liblevenshtein/test/temporal.jl",
+        "bindings/julia/Liblevenshtein/test/filter.jl"
       ],
       "enums": {
         "status": {
@@ -11127,6 +11190,9 @@
         },
         "llev_temporal_distance": {
           "symbol": "temporal_distance"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": "jaro_similarity"
         }
       }
     },
@@ -11771,6 +11837,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_jaro_similarity_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
         }
       }
     }

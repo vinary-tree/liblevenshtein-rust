@@ -76,6 +76,7 @@
 mod automata;
 mod costs;
 mod distance;
+mod filter;
 mod generated;
 mod index;
 mod phonetic;
@@ -95,6 +96,7 @@ mod wallbreaker;
 pub use automata::*;
 pub use costs::*;
 pub use distance::*;
+pub use filter::*;
 pub use generated::*;
 pub use index::*;
 pub use phonetic::*;

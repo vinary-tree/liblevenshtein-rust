@@ -65,6 +65,13 @@ stream batches without collecting a full result set. See the
 [Julia package guide](docs/src/index.md#contextual-costs-and-prefix-pruning)
 for callback lifetimes and examples.
 
+`jaro_similarity` and `jaro_winkler_similarity` call the native Unicode
+scorers with caller-chosen byte and comparison limits. `query_jaro` intersects
+an ordinary fuzzy query with a Jaro-Winkler threshold at each final source
+prefix. It streams `SpecializedMatch` values from the same native snapshot;
+the [source-filter guide](docs/src/index.md#native-jaro-source-filtering)
+shows usage and limits.
+
 For exact decimal affine gaps, construct `AffineGapCosts(gap_open, gap_extend,
 substitution)` and call `query_affine(transducer, query, maximum_cost, costs)`.
 For floating per-operation weights, use `WeightedOperationCosts(:standard)`,
