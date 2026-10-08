@@ -262,11 +262,12 @@ The adjacent-transposition variant is checked against optimal string alignment
 
 ### Qualification and performance budgets
 
-`benchmark/temporal_filtering.jl` measures the scalar DTW and reusable Keogh
-facades, a copied temporal scan, the frozen temporal index, and the n-gram and
-hybrid source filters. Its fixed workload has 32 series of 16 samples and 32
-eight-byte terms. It first checks that the indexed and scanned result IDs
-agree, then samples five groups of 30 complete operations after 20 warmups.
+`benchmark/temporal_filtering.jl` measures scalar DTW, reusable Keogh,
+quantization, SAX, a copied temporal scan, the frozen temporal index, and the
+n-gram and hybrid source filters. Its fixed workload has 32 series of 16
+samples and 32 eight-byte terms. It first checks that the indexed and scanned
+result IDs agree, then samples five groups of 30 observable complete operations
+after 20 warmups.
 The workload and query budgets are finite. Run it after building the native
 library and preparing the Julia binding environment:
 
@@ -282,12 +283,14 @@ were:
 
 | Scenario | Median ns/op |
 |---|---:|
-| Scalar DTW, 16 × 16 samples | 4,938 |
-| Reusable Keogh bound, 16 samples | 1,342 |
-| 32-entry temporal scan | 161,355 |
-| 32-entry temporal index | 3,141,870 |
-| 32-term n-gram filter | 324,414 |
-| 32-term hybrid filter | 398,700 |
+| Scalar DTW, 16 × 16 samples | 4,940 |
+| Reusable Keogh bound, 16 samples | 1,398 |
+| Quantization, 16 samples | 98 |
+| SAX, 16 samples to 4 symbols | 278 |
+| 32-entry temporal scan | 165,243 |
+| 32-entry temporal index | 3,018,828 |
+| 32-term n-gram filter | 317,899 |
+| 32-term hybrid filter | 387,961 |
 
 The indexed query is much slower than the scan for this small, low-selectivity
 source. Use the scan for small sources; measure the index on the intended
@@ -337,6 +340,9 @@ budget against a native control measured on the same runner.
 - Use `QuantizationConfig` with `encode_u8` for byte-trie words or
   `encode_u32` for wider alphabets. `bin_bounds` supplies the admissible
   interval needed by temporal pruning after outlier clamping.
+- Use `encode_deltas_u8` when local differences have a useful bounded range.
+  Use `sax_encode` for a symbolic word, and `sax_mindist` for its admissible
+  lower bound. Both families use bounded input snapshots and lazy output.
 
 - Use `distance`, `optimal_string_alignment_distance`,
   `true_damerau_distance`, and `merge_and_split_distance` for pairwise work.

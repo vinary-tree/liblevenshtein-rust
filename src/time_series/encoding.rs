@@ -1391,11 +1391,7 @@ mod tests {
         let series = vec![1.0, 2.0, 3.0, 4.0, 5.0, 4.0, 3.0, 2.0];
         let sax_word = sax_encoding::encode(&series, 4, 4);
 
-        assert_eq!(sax_word.len(), 4);
-        // All symbols should be in range [0, 3]
-        for &symbol in &sax_word {
-            assert!(symbol < 4);
-        }
+        assert_eq!(sax_word, vec![0, 2, 3, 1]);
     }
 
     #[test]
@@ -1403,8 +1399,7 @@ mod tests {
         let series = vec![1.0, 2.0, 3.0];
         let sax_word = sax_encoding::encode(&series, 8, 4);
 
-        assert_eq!(sax_word.len(), 8);
-        assert!(sax_word.iter().all(|&symbol| symbol < 4));
+        assert_eq!(sax_word, vec![0, 0, 0, 2, 2, 2, 3, 3]);
     }
 
     #[test]
@@ -1423,6 +1418,13 @@ mod tests {
         assert!(approx_eq(
             sax_encoding::mindist(&word3, &word4, 100, 4),
             0.0
+        ));
+
+        let far_left = [0, 3];
+        let far_right = [3, 0];
+        assert!(approx_eq(
+            sax_encoding::mindist(&far_left, &far_right, 8, 4),
+            2.0 * 2.0f64.sqrt() * 1.34
         ));
     }
 

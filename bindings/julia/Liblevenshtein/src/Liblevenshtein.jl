@@ -223,6 +223,15 @@ export ABI_VERSION,
     encode_u32,
     decode_u8,
     decode_u32,
+    compute_deltas,
+    reconstruct_from_deltas,
+    encode_deltas_u8,
+    decode_deltas_u8,
+    sax_breakpoints,
+    sax_normalize,
+    sax_paa,
+    sax_encode,
+    sax_mindist,
     cache_stats,
     clear!,
     reset_stats!,
@@ -1052,6 +1061,8 @@ include("Temporal.jl")
 include("TemporalBounds.jl")
 include("TemporalEncoding.jl")
 include("TemporalQuantization.jl")
+include("TemporalDeltaEncoding.jl")
+include("TemporalSaxEncoding.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
 include("Filter.jl")

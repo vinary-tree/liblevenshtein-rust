@@ -163,6 +163,28 @@ bins = collect(encode_u8(config, [0.0, 50.0, 100.0]))
 @assert bin_bounds(config, 0)[1] == -Inf
 ```
 
+`compute_deltas` and `reconstruct_from_deltas` return lazy iterators over
+bounded snapshots. `encode_deltas_u8` returns the first sample and a lazy
+byte-bin iterator; `decode_deltas_u8` reconstructs from those bins using their
+quantized centers. The decoded series is approximate because quantization is
+lossy. Empty source encoding returns `(0.0, empty_iterator)`, matching Rust.
+
+`sax_breakpoints` provides the native breakpoint tables for alphabets of two
+through ten symbols. `sax_normalize`, `sax_paa`, and `sax_encode` preserve the
+native behavior for constant and short series, including repeated samples
+when the word has more segments than the source. Each operation copies at
+most `max_samples` values. Normalization emits at most `max_samples` values;
+PAA and encoding emit at most `max_segments` values.
+`sax_mindist` checks `max_word_len` before comparing two copied words and
+returns the native lower bound for equal, nonempty words.
+
+```julia
+word = collect(sax_encode([1.0, 2.0, 3.0], 8, 4;
+    max_samples=3, max_segments=8))
+@assert word == UInt8[0, 0, 0, 2, 2, 2, 3, 3]
+@assert sax_mindist(word, word, 3, 4) == 0.0
+```
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract

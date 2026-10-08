@@ -2,23 +2,25 @@ using Liblevenshtein
 using Statistics
 
 const LL = Liblevenshtein
+const BENCH_SINK = Ref{Any}(nothing)
 
 function sample(label, operation; warmup=20, iterations=30, rounds=5)
     for _ in 1:warmup
-        operation()
+        BENCH_SINK[] = operation()
     end
     GC.gc()
     elapsed = Float64[]
     for _ in 1:rounds
         started = time_ns()
         for _ in 1:iterations
-            operation()
+            BENCH_SINK[] = operation()
         end
         push!(elapsed, (time_ns() - started) / iterations)
     end
     println(rpad(label, 32), " median=", round(Int, median(elapsed)),
         " ns/op min=", round(Int, minimum(elapsed)),
         " max=", round(Int, maximum(elapsed)))
+    BENCH_SINK[] = nothing
 end
 
 query = [sin(i / 4) for i in 1:16]
@@ -36,6 +38,7 @@ terms = LL.SourceFilterSource(["term-" * lpad(string(i), 3, '0')
     for i in 1:32]; max_terms=32, max_term_bytes=8,
     max_source_bytes=256)
 plan = LL.keogh_envelopes(query, 2)
+quantizer = LL.quantizer_u8(-4.0, 4.0)
 
 scan() = collect(LL.query_temporal_range(source, :dtw, query;
     band=2, cutoff=0.5))
@@ -55,6 +58,10 @@ try
     sample("scalar DTW 16 x 16", () ->
         LL.dtw_distance(query, candidate; band=2))
     sample("reusable Keogh 16", () -> LL.lb_keogh(candidate, plan))
+    sample("quantize 16 samples", () ->
+        collect(LL.encode_u8(quantizer, query)))
+    sample("SAX 16 samples to 4", () ->
+        collect(LL.sax_encode(query, 4, 4)))
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
     sample("32-term ngram filter", ngram)
