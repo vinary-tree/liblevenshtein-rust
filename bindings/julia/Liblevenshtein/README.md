@@ -57,7 +57,9 @@ For bounded ranking, use `query_ranked` or `query_mode`. For scores that order
 only one distance layer at a time, use `query_suggestions`. The native
 `query_contextual` cursor accepts Julia edit-cost callbacks, while
 `query_pruned` accepts a balanced `PrefixVisitor` for dictionary DFS, and
-`query_filtered` tests optional IDs before term construction. All these
+`query_filtered` tests optional IDs before term construction. Its
+`query_by_value` and `query_by_value_set` adapters capture one ID or a copied
+set of IDs at query creation. All these
 cursors capture one dictionary revision, support explicit close/cancel, and
 stream batches without collecting a full result set. See the
 [Julia package guide](docs/src/index.md#contextual-costs-and-prefix-pruning)
@@ -70,6 +72,33 @@ For floating per-operation weights, use `WeightedOperationCosts(:standard)`,
 preserve Unicode, byte, and u64 key domains and stream `CostMatch` values.
 The [cost-domain guide](docs/src/index.md#affine-and-weighted-edit-costs)
 explains exact scaled costs, supported algorithms, and cursor lifetimes.
+
+## Scalar time series
+
+`msm_distance`, `erp_distance`, `twed_distance`, `dtw_distance`,
+`frechet_distance`, and `soft_dtw_loss` call their native scalar kernels through
+one revision-11 ABI. Inputs are finite real vectors. A dense `Vector{Float64}`
+is borrowed for the call; other vectors are converted once to contiguous
+double arrays. No native handle survives the comparison.
+
+```julia
+limits = TemporalLimits(max_series_len=4096, max_dp_cells=1_000_000,
+    max_work_units=1_000_000, max_scratch_bytes=1 << 20)
+result = dtw_distance([1.0, 2.0, 3.0], [1.0, 2.5, 3.0];
+    band=1, cutoff=2.0, limits)
+@assert result.kind == :finite && result.value == 0.5
+```
+
+All kernels reserve their complete dynamic-programming, work, and scratch
+budgets before computation. `kind` distinguishes `:finite`,
+`:above_cutoff`, `:no_alignment`, and `:incomplete`. Only a finite result has a
+`value`; an incomplete result carries a resource `reason`. Invalid samples or
+configuration raise `NativeError`. TWED's `stiffness` and `gap_penalty` are
+nonnegative. DTW requires an explicit band. Soft-DTW is a loss that may be
+negative, so it must not be used as a metric index distance. Its cutoff may
+likewise be negative. The
+[temporal guide](docs/src/index.md#bounded-scalar-time-series) gives the native
+parameter mapping and outcome contract.
 
 ## Choose an automaton
 

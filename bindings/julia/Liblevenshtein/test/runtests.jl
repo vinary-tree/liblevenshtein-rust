@@ -5,6 +5,8 @@ import VinaryTreeInterop
 
 const LL = Liblevenshtein
 
+include("temporal.jl")
+
 @testset "ABI identity and layouts" begin
     @test LL.abi_version() == LL.ABI_VERSION == 1
     @test LL.api_revision() >= LL.API_REVISION
@@ -605,6 +607,20 @@ end
             LL.query_filtered(transducer, "ce", 2,
                 id -> id !== nothing && id >= 3); batch_size=1) ==
             length(expected)
+
+        by_value = collect(LL.query_by_value(transducer, "ce", 2, 3))
+        @test all(m -> m.id == 3, by_value)
+        @test [(m.term, m.distance, m.id) for m in by_value] ==
+            [(m.term, m.distance, m.id) for m in LL.query(transducer, "ce", 2)
+                if m.id == 3]
+        ids = Set([2, 4])
+        set_cursor = LL.query_by_value_set(transducer, "ce", 2, ids)
+        push!(ids, 3)
+        by_set = collect(set_cursor)
+        @test [(m.term, m.distance, m.id) for m in by_set] ==
+            [(m.term, m.distance, m.id) for m in LL.query(transducer, "ce", 2)
+                if m.id in (2, 4)]
+        @test_throws ArgumentError LL.query_by_value(transducer, "ce", 2, -1)
 
         stopped = LL.query_filtered(transducer, "ce", 2, _ -> true)
         @test iterate(stopped) !== nothing

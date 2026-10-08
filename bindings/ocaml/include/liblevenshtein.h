@@ -1367,6 +1367,70 @@ LLEV_API LlevStatus llev_wallbreaker_split_utf8(
     size_t max_distance, LlevPatternPiece* pieces, size_t capacity,
     size_t* out_required);
 
+/** Scalar temporal kernels. Every value is a stable wire constant. */
+#define LLEV_TEMPORAL_MSM 1u
+#define LLEV_TEMPORAL_ERP 2u
+#define LLEV_TEMPORAL_TWED 3u
+#define LLEV_TEMPORAL_DTW 4u
+#define LLEV_TEMPORAL_FRECHET 5u
+#define LLEV_TEMPORAL_SOFT_DTW 6u
+
+/** Complete temporal result kinds. SOFT_DTW is a loss and can be negative. */
+#define LLEV_TEMPORAL_FINITE 0u
+#define LLEV_TEMPORAL_ABOVE_CUTOFF 1u
+#define LLEV_TEMPORAL_NO_ALIGNMENT 2u
+#define LLEV_TEMPORAL_INCOMPLETE 3u
+
+/** Scalar algorithm and inclusive cutoff. Positive infinity requests the
+ * unthresholded result. parameter0 is MSM cost, ERP gap, TWED stiffness, or
+ * Soft-DTW gamma. parameter1 is TWED gap penalty. band is DTW half-width.
+ * Unused fields and reserved must be zero. */
+typedef struct LlevTemporalConfig {
+    uint32_t algorithm;
+    uint32_t reserved;
+    double parameter0;
+    double parameter1;
+    size_t band;
+    double cutoff;
+} LlevTemporalConfig;
+
+/** Hard caller-chosen ceilings for one temporal comparison. The default
+ * values are 1,000,000 samples per input, 100,000,000 DP cells, 200,000,000
+ * work units, and 512 MiB temporary storage. */
+typedef struct LlevTemporalLimits {
+    size_t max_series_len;
+    size_t max_dp_cells;
+    size_t max_work_units;
+    size_t max_scratch_bytes;
+} LlevTemporalLimits;
+
+/** Finite score or exact non-score disposition. reason is 1 DP cells, 2 work
+ * units, 3 scratch bytes, or 4 arithmetic/numeric overflow when incomplete.
+ * Counters represent reserved whole-operation capacity, not elapsed time. */
+typedef struct LlevTemporalDistanceResult {
+    double value;
+    uint32_t kind;
+    uint32_t reason;
+    size_t dp_cells;
+    size_t work_units;
+    size_t scratch_bytes;
+} LlevTemporalDistanceResult;
+
+/** Evaluate one native temporal scalar kernel after validating both finite
+ * input series and reserving the complete DP/work/scratch budget. Both series
+ * are borrowed only during this call. A zero-length input may use NULL; all
+ * nonempty inputs must be aligned and readable for their declared lengths.
+ * config, limits, and out_result must be valid, with writable output storage
+ * disjoint from all inputs. Output is initialized before validation. Invalid
+ * requests return INVALID_ARGUMENT or NULL_POINTER; budget and numeric
+ * incompletion return LIMIT_EXCEEDED. No partial score is published. */
+LLEV_API LlevStatus llev_temporal_distance(
+    const double* left, size_t left_len,
+    const double* right, size_t right_len,
+    const LlevTemporalConfig* config,
+    const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
 #ifdef __cplusplus
 }
 #endif

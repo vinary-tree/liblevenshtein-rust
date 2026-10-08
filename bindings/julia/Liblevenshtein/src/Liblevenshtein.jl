@@ -51,6 +51,8 @@ export ABI_VERSION,
     BorrowedCostBatch,
     BorrowedCostMatch,
     FilteredCursor,
+    TemporalLimits,
+    TemporalDistanceOutcome,
     BorrowedSpecializedBatch,
     BorrowedSpecializedMatch,
     AutomatonLimits,
@@ -149,6 +151,15 @@ export ABI_VERSION,
     query_weighted,
     query_cost,
     query_filtered,
+    query_by_value,
+    query_by_value_set,
+    temporal_distance,
+    msm_distance,
+    erp_distance,
+    twed_distance,
+    dtw_distance,
+    frechet_distance,
+    soft_dtw_loss,
     cache_stats,
     clear!,
     reset_stats!,
@@ -974,6 +985,7 @@ include("RankedTraversals.jl")
 include("SpecializedTraversals.jl")
 include("CostAutomata.jl")
 include("FilteredTraversal.jl")
+include("Temporal.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")
 include("PhoneticOnline.jl")
@@ -998,7 +1010,7 @@ function __init__()
     VALUE_FILTER_CALLBACK[] = @cfunction(value_filter_callback, UInt8,
         (Ptr{Cvoid}, UInt8, UInt64))
     abi_version() == ABI_VERSION || error("liblevenshtein native ABI version mismatch")
-    api_revision() >= API_REVISION || error("liblevenshtein native API revision is too old")
+    api_revision() >= UInt32(10) || error("liblevenshtein native API revision is too old")
 end
 
 end

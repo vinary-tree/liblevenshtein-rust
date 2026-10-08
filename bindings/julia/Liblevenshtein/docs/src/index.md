@@ -32,6 +32,32 @@ The repository's
 explains the shared recurrences, ABI names, threshold sentinels, and generated
 differential tests.
 
+## Bounded scalar time series
+
+The six scalar temporal functions use the same native kernels as Rust. The
+Julia wrappers take finite real vectors and an explicit `TemporalLimits`
+budget, return `TemporalDistanceOutcome`, and borrow input memory only during
+the call. MSM uses `split_merge_cost`; ERP uses `gap`; unit-grid TWED uses
+`stiffness` and `gap_penalty`; DTW requires a Sakoe–Chiba `band`; discrete
+Fréchet has no parameters; Soft-DTW uses positive finite `gamma` and returns
+a loss rather than a metric distance.
+
+```julia
+limits = TemporalLimits(max_series_len=2048, max_dp_cells=250_000,
+    max_work_units=250_000, max_scratch_bytes=1 << 20)
+outcome = msm_distance([1.0, 2.0], [1.0, 2.5];
+    split_merge_cost=1.0, cutoff=0.5, limits)
+@assert outcome.kind == :finite && outcome.value == 0.5
+```
+
+`:above_cutoff` means an alignment exists but its exact score exceeds the
+inclusive cutoff. `:no_alignment` means the selected kernel has no finite
+path for the operand shapes or DTW band. `:incomplete` carries a checked
+resource or overflow reason and never carries a partial score. The native
+revision-11 symbol is checked before resolution so older libraries continue
+to serve the existing Julia surface. Invalid configuration or nonfinite
+samples raise a copied `NativeError`.
+
 For IPA feature scores, syllable heuristics, compiled rewrite rules, and
 dictionary-free word search, see [Phonetic matching and analysis](phonetic.md).
 
@@ -204,6 +230,10 @@ predicate with each final node's optional `UInt64` ID before the native
 traversal constructs its term. It returns the same `Match` type as `query`, in
 traversal order. This is useful when a scope or tenant ID rejects most fuzzy
 matches, because rejected term strings are never built.
+`query_by_value(transducer, text, distance, id)` applies one ID, while
+`query_by_value_set(transducer, text, distance, ids)` copies the allowed IDs
+when the query starts. Both use the same native filtering path and cursor
+lifecycle as `query_filtered`.
 
 ```julia
 visitor = PrefixVisitor(

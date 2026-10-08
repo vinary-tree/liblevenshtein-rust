@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 168 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 169 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -11,7 +11,8 @@
       "readme": "bindings/c/README.md",
       "tests": [
         "bindings/c/tests/cross_project_snapshot.c",
-        "tests/ffi_specialized_traversals.rs"
+        "tests/ffi_specialized_traversals.rs",
+        "tests/ffi_temporal.rs"
       ],
       "enums": {
         "status": {
@@ -558,6 +559,9 @@
         },
         "llev_wallbreaker_split_utf8": {
           "symbol": "llev_wallbreaker_split_utf8"
+        },
+        "llev_temporal_distance": {
+          "symbol": "llev_temporal_distance"
         }
       }
     },
@@ -1273,6 +1277,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -1988,6 +1996,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": "llev_wallbreaker_split_utf8",
           "note": "C API passthrough via included liblevenshtein.h"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -2695,6 +2707,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -3395,6 +3411,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -4094,6 +4114,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -4791,6 +4815,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -5501,6 +5529,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -6208,6 +6240,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -6939,6 +6975,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -7641,6 +7681,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -8344,6 +8388,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -9047,6 +9095,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -9753,6 +9805,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -10459,6 +10515,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     },
@@ -10482,7 +10542,8 @@
         "bindings/julia/Liblevenshtein/src/RankedTraversals.jl",
         "bindings/julia/Liblevenshtein/src/SpecializedTraversals.jl",
         "bindings/julia/Liblevenshtein/src/CostAutomata.jl",
-        "bindings/julia/Liblevenshtein/src/FilteredTraversal.jl"
+        "bindings/julia/Liblevenshtein/src/FilteredTraversal.jl",
+        "bindings/julia/Liblevenshtein/src/Temporal.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -11063,6 +11124,9 @@
         },
         "llev_wallbreaker_split_utf8": {
           "symbol": "pattern_pieces"
+        },
+        "llev_temporal_distance": {
+          "symbol": "temporal_distance"
         }
       }
     },
@@ -11703,6 +11767,10 @@
         "llev_wallbreaker_split_utf8": {
           "symbol": null,
           "_reason": "revision-6 finite-owned Unicode WallBreaker is not yet projected into this language facade; vt.dictionary.v1 does not provide substring search"
+        },
+        "llev_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         }
       }
     }
