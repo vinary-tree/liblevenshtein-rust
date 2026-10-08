@@ -1379,6 +1379,20 @@ LLEV_API LlevStatus llev_jaro_similarity_utf8(
     double prefix_scale, size_t max_input_bytes,
     size_t max_comparisons, double* out_score);
 
+/** Check a UTF-8 source against the native n-gram (mode=1) or hybrid
+ * n-gram/Jaro-Winkler (mode=2) filter. The candidate is indexed for this
+ * call; no native handle or source memory is retained. ngram_size=0 uses
+ * unigrams as in the native index. jaro_threshold must be zero for mode=1.
+ * The inputs are borrowed and capped per input by max_input_bytes. Hybrid
+ * Jaro work is additionally capped by max_comparisons. out_accept is set to
+ * zero before validation and must be disjoint from both inputs. */
+LLEV_API LlevStatus llev_source_filter_utf8(
+    const char* query, size_t query_len,
+    const char* candidate, size_t candidate_len,
+    uint32_t mode, size_t ngram_size, size_t max_distance,
+    double jaro_threshold, size_t max_input_bytes,
+    size_t max_comparisons, uint8_t* out_accept);
+
 /** Scalar temporal kernels. Every value is a stable wire constant. */
 #define LLEV_TEMPORAL_MSM 1u
 #define LLEV_TEMPORAL_ERP 2u

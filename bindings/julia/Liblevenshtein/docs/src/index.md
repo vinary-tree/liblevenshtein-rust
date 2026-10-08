@@ -32,7 +32,7 @@ The repository's
 explains the shared recurrences, ABI names, threshold sentinels, and generated
 differential tests.
 
-## Native Jaro source filtering
+## Native source filtering
 
 `jaro_similarity` uses the native Unicode Jaro scorer. A positive
 `prefix_scale` up to 0.25 selects scaled Jaro-Winkler;
@@ -45,6 +45,14 @@ It evaluates each final borrowed source prefix as the native walk reaches it,
 keeps the query-start dictionary snapshot, and streams `SpecializedMatch`
 values. This filter applies to Unicode keys. Close or cancel an unfinished
 cursor to release its native traversal promptly.
+
+`ngram_candidate` and `hybrid_candidate` call native single-source n-gram and
+hybrid filters. `query_ngram` and `query_hybrid` apply the same predicates at
+each final prefix of a fuzzy traversal. N-gram size zero follows the native
+index rule and means unigrams. The hybrid mode applies its native adaptive
+Jaro-Winkler threshold after n-gram admission. The per-input byte cap defaults
+to 4096, and hybrid Jaro work also has a comparison cap. Each source is
+indexed only for its call; no mutable index handle survives in Julia.
 
 ```julia
 cursor = query_jaro(transducer, "martha", 2;

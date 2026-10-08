@@ -66,10 +66,12 @@ stream batches without collecting a full result set. See the
 for callback lifetimes and examples.
 
 `jaro_similarity` and `jaro_winkler_similarity` call the native Unicode
-scorers with caller-chosen byte and comparison limits. `query_jaro` intersects
-an ordinary fuzzy query with a Jaro-Winkler threshold at each final source
-prefix. It streams `SpecializedMatch` values from the same native snapshot;
-the [source-filter guide](docs/src/index.md#native-jaro-source-filtering)
+scorers with caller-chosen byte and comparison limits. `ngram_candidate` and
+`hybrid_candidate` test one source against the corresponding native filter.
+`query_jaro`, `query_ngram`, and `query_hybrid` apply those tests at final
+source prefixes in a fuzzy traversal. They stream `SpecializedMatch` values
+from one native snapshot; the
+[source-filter guide](docs/src/index.md#native-source-filtering)
 shows usage and limits.
 
 For exact decimal affine gaps, construct `AffineGapCosts(gap_open, gap_extend,

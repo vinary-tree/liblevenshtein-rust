@@ -1,8 +1,9 @@
 #![cfg(feature = "ffi")]
 
-use liblevenshtein::ffi::{llev_jaro_similarity_utf8, LlevStatus};
+use liblevenshtein::ffi::{llev_jaro_similarity_utf8, llev_source_filter_utf8, LlevStatus};
 use liblevenshtein::filter::{
-    jaro_similarity, jaro_winkler_similarity, jaro_winkler_similarity_scaled,
+    jaro_similarity, jaro_winkler_similarity, jaro_winkler_similarity_scaled, HybridMatcher,
+    NgramIndex,
 };
 use std::ffi::c_char;
 
@@ -82,4 +83,77 @@ fn native_jaro_filter_rejects_limits_and_bad_utf8_before_scoring() {
     };
     assert_eq!(status, LlevStatus::InvalidUtf8);
     assert_eq!(value, 0.0);
+}
+
+fn source_filter(
+    query: &str,
+    candidate: &str,
+    mode: u32,
+    ngram_size: usize,
+    distance: usize,
+    threshold: f64,
+    max_bytes: usize,
+    max_comparisons: usize,
+) -> (LlevStatus, u8) {
+    let mut accepted = 9;
+    let status = unsafe {
+        llev_source_filter_utf8(
+            query.as_ptr().cast::<c_char>(),
+            query.len(),
+            candidate.as_ptr().cast::<c_char>(),
+            candidate.len(),
+            mode,
+            ngram_size,
+            distance,
+            threshold,
+            max_bytes,
+            max_comparisons,
+            &mut accepted,
+        )
+    };
+    (status, accepted)
+}
+
+#[test]
+fn native_source_filters_match_single_candidate_indexes() {
+    for (query, candidate, distance, ngram_size) in [
+        ("", "", 0, 2),
+        ("hello", "help", 1, 2),
+        ("hello", "world", 0, 2),
+        ("café", "cafe", 1, 2),
+        ("martha", "marhta", 2, 0),
+    ] {
+        let mut ngram = NgramIndex::new(ngram_size);
+        ngram.insert(candidate);
+        let expected = ngram.find_candidates(query, distance).contains(&candidate);
+        let (status, actual) = source_filter(query, candidate, 1, ngram_size, distance, 0.0, 64, 0);
+        assert_eq!(status, LlevStatus::Ok);
+        assert_eq!(actual != 0, expected);
+
+        let hybrid =
+            HybridMatcher::with_config(std::iter::once(candidate.to_owned()), ngram_size, 0.7);
+        let expected = hybrid
+            .filter_candidates(query, distance)
+            .contains(&candidate);
+        let (status, actual) =
+            source_filter(query, candidate, 2, ngram_size, distance, 0.7, 64, 4096);
+        assert_eq!(status, LlevStatus::Ok);
+        assert_eq!(actual != 0, expected);
+    }
+}
+
+#[test]
+fn native_source_filters_reject_invalid_modes_and_budgets() {
+    for (mode, threshold, bytes, comparisons, expected) in [
+        (0, 0.0, 64, 4096, LlevStatus::InvalidArgument),
+        (1, 0.7, 64, 4096, LlevStatus::InvalidArgument),
+        (2, f64::NAN, 64, 4096, LlevStatus::InvalidArgument),
+        (1, 0.0, 2, 4096, LlevStatus::LimitExceeded),
+        (2, 0.7, 64, 1, LlevStatus::LimitExceeded),
+    ] {
+        let (status, accepted) =
+            source_filter("hello", "help", mode, 2, 1, threshold, bytes, comparisons);
+        assert_eq!(status, expected);
+        assert_eq!(accepted, 0);
+    }
 }

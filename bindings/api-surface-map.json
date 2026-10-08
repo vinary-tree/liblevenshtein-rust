@@ -566,6 +566,9 @@
         },
         "llev_jaro_similarity_utf8": {
           "symbol": "llev_jaro_similarity_utf8"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": "llev_source_filter_utf8"
         }
       }
     },
@@ -1289,6 +1292,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -2012,6 +2019,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -2727,6 +2738,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -3435,6 +3450,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -4142,6 +4161,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -4847,6 +4870,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -5565,6 +5592,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -6280,6 +6311,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -7019,6 +7054,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -7729,6 +7768,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -8440,6 +8483,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -9151,6 +9198,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -9865,6 +9916,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -10579,6 +10634,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     },
@@ -11193,6 +11252,9 @@
         },
         "llev_jaro_similarity_utf8": {
           "symbol": "jaro_similarity"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": "source_candidate"
         }
       }
     },
@@ -11841,6 +11903,10 @@
         "llev_jaro_similarity_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native Jaro source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_utf8": {
+          "symbol": null,
+          "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
         }
       }
     }

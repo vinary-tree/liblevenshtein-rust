@@ -4,7 +4,7 @@ use super::{
     index::{boundary, utf8},
     LlevStatus,
 };
-use crate::filter::{jaro_similarity, jaro_winkler_similarity_scaled};
+use crate::filter::{jaro_similarity, jaro_winkler_similarity_scaled, HybridMatcher, NgramIndex};
 use std::ffi::c_char;
 
 /// Score two Unicode strings with native Jaro or scaled Jaro-Winkler.
@@ -67,6 +67,93 @@ pub unsafe extern "C" fn llev_jaro_similarity_utf8(
             jaro_winkler_similarity_scaled(left, right, prefix_scale)
         };
         out_score.write(score);
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Test one UTF-8 source candidate with the native n-gram or hybrid filter.
+///
+/// `mode` is 1 for n-gram only and 2 for n-gram plus Jaro-Winkler. The
+/// candidate is indexed only for this call, so no mutable index handle or
+/// borrowed source memory survives the boundary.
+///
+/// # Safety
+/// `query` and `candidate` must address readable UTF-8 bytes for their
+/// declared lengths. Null is allowed only with zero length. `out_accept`
+/// must address writable storage disjoint from both inputs.
+#[no_mangle]
+pub unsafe extern "C" fn llev_source_filter_utf8(
+    query: *const c_char,
+    query_len: usize,
+    candidate: *const c_char,
+    candidate_len: usize,
+    mode: u32,
+    ngram_size: usize,
+    max_distance: usize,
+    jaro_threshold: f64,
+    max_input_bytes: usize,
+    max_comparisons: usize,
+    out_accept: *mut u8,
+) -> LlevStatus {
+    boundary(|| {
+        if out_accept.is_null() {
+            return Err((
+                LlevStatus::NullPointer,
+                "source filter output is null".into(),
+            ));
+        }
+        out_accept.write(0);
+        if !matches!(mode, 1 | 2)
+            || !jaro_threshold.is_finite()
+            || !(0.0..=1.0).contains(&jaro_threshold)
+            || (mode == 1 && jaro_threshold != 0.0)
+        {
+            return Err((
+                LlevStatus::InvalidArgument,
+                "invalid source filter mode or Jaro threshold".into(),
+            ));
+        }
+        if query_len > max_input_bytes || candidate_len > max_input_bytes {
+            return Err((
+                LlevStatus::LimitExceeded,
+                "source filter input exceeds max_input_bytes".into(),
+            ));
+        }
+        let query = utf8(query, query_len)?;
+        let candidate = utf8(candidate, candidate_len)?;
+        if mode == 2 && jaro_threshold > 0.0 {
+            let comparisons = query
+                .chars()
+                .count()
+                .checked_mul(candidate.chars().count())
+                .ok_or((
+                    LlevStatus::LimitExceeded,
+                    "hybrid Jaro comparison count overflows".into(),
+                ))?;
+            if comparisons > max_comparisons {
+                return Err((
+                    LlevStatus::LimitExceeded,
+                    "hybrid Jaro comparison count exceeds max_comparisons".into(),
+                ));
+            }
+        }
+        let accepted = if mode == 1 {
+            let mut index = NgramIndex::new(ngram_size);
+            index.insert(candidate);
+            index
+                .find_candidates(query, max_distance)
+                .contains(&candidate)
+        } else {
+            let matcher = HybridMatcher::with_config(
+                std::iter::once(candidate.to_owned()),
+                ngram_size,
+                jaro_threshold,
+            );
+            matcher
+                .filter_candidates(query, max_distance)
+                .contains(&candidate)
+        };
+        out_accept.write(u8::from(accepted));
         Ok(LlevStatus::Ok)
     })
 }

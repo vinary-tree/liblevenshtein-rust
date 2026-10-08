@@ -1171,7 +1171,8 @@
     { "name": "llev_wallbreaker_cursor_free", "rustModule": "wallbreaker" },
     { "name": "llev_wallbreaker_split_utf8", "rustModule": "wallbreaker" },
     { "name": "llev_temporal_distance", "rustModule": "temporal" },
-    { "name": "llev_jaro_similarity_utf8", "rustModule": "filter" }
+    { "name": "llev_jaro_similarity_utf8", "rustModule": "filter" },
+    { "name": "llev_source_filter_utf8", "rustModule": "filter" }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",
