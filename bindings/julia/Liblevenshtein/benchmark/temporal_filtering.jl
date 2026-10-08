@@ -39,6 +39,7 @@ terms = LL.SourceFilterSource(["term-" * lpad(string(i), 3, '0')
     max_source_bytes=256)
 plan = LL.keogh_envelopes(query, 2)
 quantizer = LL.quantizer_u8(-4.0, 4.0)
+metric_config = LL.MetricErpConfig(0.0)
 
 scan() = collect(LL.query_temporal_range(source, :dtw, query;
     band=2, cutoff=0.5))
@@ -70,6 +71,8 @@ try
     sample("reusable Keogh 16", () -> LL.lb_keogh(candidate, plan))
     sample("quantize 16 samples", () ->
         collect(LL.encode_u8(quantizer, query)))
+    sample("canonical ERP 16 samples", () ->
+        LL.representative(metric_config, query))
     sample("SAX 16 samples to 4", () ->
         collect(LL.sax_encode(query, 4, 4)))
     sample("rolling 16 to width 4", () ->

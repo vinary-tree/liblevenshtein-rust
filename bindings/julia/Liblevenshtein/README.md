@@ -156,6 +156,23 @@ exhaustion, and errors close it; `cancel!` closes it when stopping early. The
 [temporal binding guide](../../README.md#online-temporal-automata) documents
 the resource and lifecycle contract.
 
+`MetricErpConfig` and `ErpQuotientSeries` remove gap samples before computing
+ERP scores or building an index. `FrechetStutterClass` collapses adjacent
+repetitions before discrete Fréchet scores or index insertion. These canonical
+representatives make the documented quotient spaces metric domains; raw ERP
+and Fréchet series can have zero distance while differing as arrays.
+`metric_erp_distance` and `metric_frechet_distance` retain the native bounded
+score outcome. `MetricErpIndex` and `MetricFrechetIndex` wrap frozen native
+range indexes; `query_metric_range` returns a lazy cursor that can outlive the
+index handle. See the [metric-domain guide](../../README.md#metric-temporal-domains)
+for construction and ownership examples.
+
+`MetricMsmConfig` validates a positive split/merge cost and a nonempty MSM
+domain. `MetricTwedConfig` validates positive stiffness and nonnegative gap
+penalty on the unit time grid. Their `metric_msm_distance` and
+`metric_twed_distance` methods, plus `MetricMsmIndex` and `MetricTwedIndex`,
+use the same native bounded distance and frozen range cursor contracts.
+
 ## Choose an automaton
 
 | Julia value | Semantics | Metric? |
@@ -299,7 +316,8 @@ The adjacent-transposition variant is checked against optimal string alignment
 ### Qualification and performance budgets
 
 `benchmark/temporal_filtering.jl` measures scalar DTW, Soft-DTW gradients, reusable Keogh,
-quantization, SAX, rolling windows, online ERP prefixes, a copied temporal scan, the frozen temporal index, and the
+quantization, ERP canonicalization, SAX, rolling windows, online ERP prefixes,
+a copied temporal scan, the frozen temporal index, and the
 n-gram and hybrid source filters. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
 result IDs agree, then samples five groups of 30 observable complete operations
@@ -319,17 +337,18 @@ were:
 
 | Scenario | Median ns/op |
 |---|---:|
-| Scalar DTW, 16 × 16 samples | 5,033 |
-| Soft-DTW gradients, 16 × 16 samples | 47,769 |
-| Reusable Keogh bound, 16 samples | 1,341 |
-| Quantization, 16 samples | 100 |
-| SAX, 16 samples to 4 symbols | 271 |
-| Rolling windows, 16 samples to width 4 | 4,385 |
-| Online ERP, 16 prefixes | 76,801 |
-| 32-entry temporal scan | 167,150 |
-| 32-entry temporal index | 3,146,550 |
-| 32-term n-gram filter | 318,810 |
-| 32-term hybrid filter | 390,516 |
+| Scalar DTW, 16 × 16 samples | 5,118 |
+| Soft-DTW gradients, 16 × 16 samples | 47,247 |
+| Reusable Keogh bound, 16 samples | 1,328 |
+| Quantization, 16 samples | 96 |
+| ERP canonicalization, 16 samples | 108 |
+| SAX, 16 samples to 4 symbols | 268 |
+| Rolling windows, 16 samples to width 4 | 4,960 |
+| Online ERP, 16 prefixes | 77,040 |
+| 32-entry temporal scan | 171,429 |
+| 32-entry temporal index | 2,995,830 |
+| 32-term n-gram filter | 315,187 |
+| 32-term hybrid filter | 387,257 |
 
 The indexed query is much slower than the scan for this small, low-selectivity
 source. Use the scan for small sources; measure the index on the intended

@@ -139,6 +139,35 @@ target sample, and scratch storage. `online_observations` presents a one-shot
 lazy stream; `reduce_observations!`, normal exhaustion, cancellation, and
 errors close its native machine.
 
+### Canonical metric temporal domains
+
+ERP identifies any sequence obtained by inserting or deleting its fixed gap
+value. Discrete Fréchet identifies paths that differ only by consecutive
+repetition. `MetricErpConfig` and `representative` remove gap samples;
+`FrechetStutterClass` collapses repetition and requires a nonempty path.
+`canonical_samples` returns a copy, preserving the representative after the
+caller changes its input or returned vector.
+
+```julia
+config = MetricErpConfig(0.0)
+left = representative(config, [1.0, 0.0, 2.0])
+right = representative(config, [1.0, 2.0])
+@assert metric_erp_distance(config, left, right).value == 0.0
+```
+
+`MetricErpIndex` and `MetricFrechetIndex` canonicalize before native
+quantization, then use the frozen temporal range cursor. After `freeze!`, a
+`query_metric_range` cursor retains its snapshot even if the index closes.
+The usual page and cumulative limits apply. ERP representatives must use the
+same gap bit pattern, including the sign of zero.
+
+For the other two metric parameter families, `MetricMsmConfig` validates a
+strictly positive split/merge cost and requires nonempty series;
+`MetricTwedConfig` validates positive stiffness and nonnegative gap penalty
+for unit-grid TWED. `metric_msm_distance`, `metric_twed_distance`,
+`MetricMsmIndex`, and `MetricTwedIndex` retain the native bounded score and
+lazy range cursor behavior under those validated configurations.
+
 ### Lazy temporal range queries
 
 `TemporalSeriesSource` copies a finite iterable of `(UInt64 ID, finite real

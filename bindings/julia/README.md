@@ -173,6 +173,52 @@ filter is a conservative prefilter. A completed empty cursor proves no source
 term passed that predicate. Exhausted limits raise
 `SourceFilterIncomplete`, leaving only an exact subset of filter candidates.
 
+## Metric temporal domains
+
+Raw ERP gives zero cost to inserting or deleting its gap value, and raw
+discrete Fréchet gives zero cost to repeated adjacent samples. Those raw
+sequences form pseudometric domains. `MetricErpConfig` defines one finite gap
+quotient; `representative(config, series)` removes every gap occurrence.
+`FrechetStutterClass` collapses each run of equal samples and requires a
+nonempty path. `canonical_samples` returns an owned copy. Construction checks
+`max_series_len` before reading input and rejects nonfinite samples.
+
+`metric_erp_distance` and `metric_frechet_distance` call the exact native
+scalar kernels on those canonical representatives. A mismatched ERP gap,
+including a different signed-zero bit pattern, is rejected. The result is a
+bounded `TemporalDistanceOutcome`, so exhausted DP, work, or scratch limits
+remain explicit.
+
+`MetricMsmConfig` requires a finite positive split/merge cost and restricts
+`metric_msm_distance` to nonempty series. `MetricTwedConfig` requires positive
+finite stiffness and a finite nonnegative gap penalty for unit-grid TWED.
+`metric_twed_distance` uses that validated configuration. These are the
+metric subdomains of the corresponding full native parameter families.
+
+`MetricErpIndex` and `MetricFrechetIndex` canonicalize before inserting into
+the native temporal index. Freeze them before calling `query_metric_range`;
+the result is a lazy `TemporalIndexCursor` with the same paging, cumulative
+limits, close, and snapshot retention as `query_index_range`.
+`MetricMsmIndex` and `MetricTwedIndex` use the corresponding validated
+configurations and the same cursor contract; the MSM wrapper rejects empty
+stored and query series. All four constructors seal the selected native
+kernel, so the public wrapper cannot be built around a different algorithm.
+
+```julia
+config = MetricErpConfig(0.0)
+index = MetricErpIndex(config; quant_min=-10.0, quant_max=10.0,
+    max_entries=2, max_total_samples=8, max_series_len=4)
+try
+    insert!(index, 7, [1.0, 0.0, 2.0])
+    insert!(index, 11, [1.0, 2.0])
+    freeze!(index)
+    cursor = query_metric_range(index, [1.0, 0.0, 2.0]; cutoff=0.0)
+    @assert sort([match.id for match in cursor]) == UInt64[7, 11]
+finally
+    close(index)
+end
+```
+
 ## Temporal lower bounds
 
 `temporal_lower_bound` selects the native ERP gap-mass, Fréchet endpoint,
