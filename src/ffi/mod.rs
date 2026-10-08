@@ -91,6 +91,7 @@ mod phonetic_transducer;
 mod specialized;
 mod string;
 mod temporal;
+mod temporal_bounds;
 mod temporal_index;
 mod wallbreaker;
 
@@ -112,6 +113,7 @@ pub use phonetic_transducer::*;
 pub use specialized::*;
 pub use string::*;
 pub use temporal::*;
+pub use temporal_bounds::*;
 pub use temporal_index::*;
 pub use wallbreaker::*;
 

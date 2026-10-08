@@ -6,6 +6,7 @@ import VinaryTreeInterop
 const LL = Liblevenshtein
 
 include("temporal.jl")
+include("temporal_bounds.jl")
 include("temporal_queries.jl")
 include("temporal_index.jl")
 include("filter.jl")
@@ -31,6 +32,25 @@ include("source_filter_queries.jl")
         @test only(collect(cursor)).id == 7
     finally
         close(index)
+    end
+
+    query = [1.0, 2.0, 3.0]
+    candidate = [1.0, 4.0, 3.0]
+    @test LL.temporal_lower_bound(:keogh, query, candidate;
+        band=1).kind === :finite
+    @test LL.erp_gap_mass_lower_bound(query, candidate, 0.0).kind === :finite
+    @test LL.frechet_endpoint_lower_bound(query, candidate).kind === :finite
+    @test LL.frechet_one_sided_hausdorff_lower_bound(
+        query, candidate).kind === :finite
+    @test LL.frechet_candidate_lower_bound(query, candidate).kind === :finite
+    @test LL.twed_length_lower_bound(3, 4, 0.5).value ≈ 0.5
+    plan = LL.keogh_envelopes(query, 1)
+    try
+        @test LL.bounds_at(plan, 2) == (1.0, 3.0)
+        @test LL.lb_keogh(candidate, plan).kind === :finite
+        @test LL.lb_keogh_squared(candidate, plan).kind === :finite
+    finally
+        close(plan)
     end
 end
 

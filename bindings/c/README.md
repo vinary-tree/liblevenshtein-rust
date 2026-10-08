@@ -121,6 +121,10 @@ variants, protocols, or methods.
 | `llev_indel_distance_u64` | `llev_indel_distance_u64` | project ABI operation |
 | `llev_indel_distance_u64_threshold` | `llev_indel_distance_u64_threshold` | project ABI operation |
 | `llev_jaro_similarity_utf8` | `llev_jaro_similarity_utf8` | project ABI operation |
+| `llev_keogh_plan_bounds_at` | `llev_keogh_plan_bounds_at` | project ABI operation |
+| `llev_keogh_plan_free` | `llev_keogh_plan_free` | project ABI operation |
+| `llev_keogh_plan_new` | `llev_keogh_plan_new` | project ABI operation |
+| `llev_keogh_plan_score` | `llev_keogh_plan_score` | project ABI operation |
 | `llev_last_error_message` | `llev_last_error_message` | typed failure diagnostics |
 | `llev_merge_and_split_distance` | `llev_merge_and_split_distance` | standalone merge-and-split distance |
 | `llev_merge_and_split_distance_bytes` | `llev_merge_and_split_distance_bytes` | standalone merge-and-split distance |
@@ -219,6 +223,7 @@ variants, protocols, or methods.
 | `llev_temporal_index_insert` | `llev_temporal_index_insert` | project ABI operation |
 | `llev_temporal_index_new` | `llev_temporal_index_new` | project ABI operation |
 | `llev_temporal_index_query_range` | `llev_temporal_index_query_range` | project ABI operation |
+| `llev_temporal_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_query_affine` | `llev_transducer_query_affine` | domain-preserving dictionary query |
@@ -238,6 +243,7 @@ variants, protocols, or methods.
 | `llev_true_damerau_distance_threshold` | `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
 | `llev_true_damerau_distance_u64` | `llev_true_damerau_distance_u64` | standalone true-Damerau distance |
 | `llev_true_damerau_distance_u64_threshold` | `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
+| `llev_twed_length_lower_bound` | `llev_twed_length_lower_bound` | project ABI operation |
 | `llev_universal_automaton_evaluate` | `llev_universal_automaton_evaluate` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_automaton_free` | `llev_universal_automaton_free` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_automaton_new` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |

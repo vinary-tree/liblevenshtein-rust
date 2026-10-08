@@ -1457,6 +1457,45 @@ LLEV_API LlevStatus llev_temporal_distance(
     const LlevTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+/** Native temporal lower-bound selectors. */
+#define LLEV_TEMPORAL_BOUND_ERP_GAP_MASS 1u
+#define LLEV_TEMPORAL_BOUND_FRECHET_ENDPOINTS 2u
+#define LLEV_TEMPORAL_BOUND_FRECHET_HAUSDORFF 3u
+#define LLEV_TEMPORAL_BOUND_FRECHET_CANDIDATE 4u
+#define LLEV_TEMPORAL_BOUND_KEOGH 5u
+
+/** Compute an admissible native lower bound under explicit work and scratch
+ * limits. parameter0 is the finite ERP gap; band applies only to Keogh.
+ * Reuses the scalar temporal finite/no-alignment/incomplete result tags. */
+LLEV_API LlevStatus llev_temporal_lower_bound(
+    const double* left, size_t left_len,
+    const double* right, size_t right_len,
+    uint32_t algorithm, double parameter0, size_t band,
+    const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
+/** Native TWED length-only bound under explicit limits. */
+LLEV_API LlevStatus llev_twed_length_lower_bound(
+    size_t left_len, size_t right_len, double gap_penalty,
+    const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
+/** Reusable native Keogh envelope; the constructor copies its finite query.
+ * A plan requires a nonempty query and preserves its construction band.
+ * out_has=0 denotes an unreachable target position. */
+typedef struct LlevKeoghPlan LlevKeoghPlan;
+LLEV_API LlevStatus llev_keogh_plan_new(
+    const double* query, size_t query_len, size_t band,
+    const LlevTemporalLimits* limits, LlevKeoghPlan** out_plan);
+LLEV_API LlevStatus llev_keogh_plan_bounds_at(
+    const LlevKeoghPlan* plan, size_t target_index,
+    uint8_t* out_has, double* out_low, double* out_high);
+LLEV_API LlevStatus llev_keogh_plan_score(
+    const LlevKeoghPlan* plan, const double* candidate, size_t candidate_len,
+    uint8_t squared, const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+LLEV_API void llev_keogh_plan_free(LlevKeoghPlan* plan);
+
 /** Bounded construction of a native quantized temporal index. The temporal
  * cutoff must be positive infinity; Soft-DTW is unsupported because it has
  * no elastic index. All three source limits are explicit. */

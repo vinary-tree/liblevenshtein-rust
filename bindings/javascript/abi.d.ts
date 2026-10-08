@@ -1,6 +1,6 @@
 /** Generated from bindings/api.json; do not edit numeric values manually. */
 export const ABI_VERSION: 1;
-export const API_REVISION: 12;
+export const API_REVISION: 13;
 export const DEFAULT_MATCH_BATCH: 256;
 export enum Status {
   Ok = 0,

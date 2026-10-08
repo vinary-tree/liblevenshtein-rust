@@ -184,6 +184,17 @@ export ABI_VERSION,
     dtw_distance,
     frechet_distance,
     soft_dtw_loss,
+    temporal_lower_bound,
+    erp_gap_mass_lower_bound,
+    frechet_endpoint_lower_bound,
+    frechet_one_sided_hausdorff_lower_bound,
+    frechet_candidate_lower_bound,
+    lb_keogh,
+    twed_length_lower_bound,
+    KeoghPlan,
+    keogh_envelopes,
+    bounds_at,
+    lb_keogh_squared,
     cache_stats,
     clear!,
     reset_stats!,
@@ -1010,6 +1021,7 @@ include("SpecializedTraversals.jl")
 include("CostAutomata.jl")
 include("FilteredTraversal.jl")
 include("Temporal.jl")
+include("TemporalBounds.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
 include("Filter.jl")
