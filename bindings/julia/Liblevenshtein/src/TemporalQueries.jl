@@ -118,9 +118,9 @@ function query_temporal_range(source::TemporalSeriesSource, kind::Symbol,
     parameter1::Real=0.0, band::Integer=0, cutoff::Real=Inf,
     limits::TemporalLimits=TemporalLimits(),
     query_limits::TemporalQueryLimits=TemporalQueryLimits())
-    q = Vector{Float64}(query)
-    length(q) <= limits.max_series_len ||
+    length(query) <= limits.max_series_len ||
         throw(ArgumentError("query exceeds max_series_len"))
+    q = Vector{Float64}(query)
     all(isfinite, q) ||
         throw(ArgumentError("query samples must be finite"))
     p0 = Float64(parameter0)

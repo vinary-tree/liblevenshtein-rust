@@ -33,8 +33,11 @@
         parameter0=1.0, max_entries=1, max_total_samples=3,
         max_series_len=3)
     LL.insert!(index, 1, query)
+    @test_throws ArgumentError LL.insert!(index, 2, UntouchableLargeVector(4))
     @test_throws LL.NativeError LL.insert!(index, 2, query)
     LL.freeze!(index)
+    @test_throws ArgumentError LL.query_index_range(index,
+        UntouchableLargeVector(4); limits)
     @test_throws ArgumentError LL.insert!(index, 1, query)
     cursor = LL.query_index_range(index, query; cutoff=0.0,
         limits, page_work_units=1_000, page_results=1)

@@ -262,6 +262,38 @@ The adjacent-transposition variant is checked against optimal string alignment
 
 ### Qualification and performance budgets
 
+`benchmark/temporal_filtering.jl` measures the scalar DTW and reusable Keogh
+facades, a copied temporal scan, the frozen temporal index, and the n-gram and
+hybrid source filters. Its fixed workload has 32 series of 16 samples and 32
+eight-byte terms. It first checks that the indexed and scanned result IDs
+agree, then samples five groups of 30 complete operations after 20 warmups.
+The workload and query budgets are finite. Run it after building the native
+library and preparing the Julia binding environment:
+
+```sh
+LIBLEVENSHTEIN_LIBRARY="$PWD/target/debug/libliblevenshtein.so" \
+  julia --startup-file=no --project=target/julia-test \
+  bindings/julia/Liblevenshtein/benchmark/temporal_filtering.jl
+```
+
+On the 2026-10-08 local debug build (Julia 1.13.1, Threadripper PRO 5975WX,
+one CPU quota, 2 GiB memory ceiling), median nanoseconds per complete call
+were:
+
+| Scenario | Median ns/op |
+|---|---:|
+| Scalar DTW, 16 × 16 samples | 4,938 |
+| Reusable Keogh bound, 16 samples | 1,342 |
+| 32-entry temporal scan | 161,355 |
+| 32-entry temporal index | 3,141,870 |
+| 32-term n-gram filter | 324,414 |
+| 32-term hybrid filter | 398,700 |
+
+The indexed query is much slower than the scan for this small, low-selectivity
+source. Use the scan for small sources; measure the index on the intended
+collection and cutoff before choosing it for speed. These local debug figures
+are diagnostic rather than a portable performance guarantee.
+
 `test/automata_qualification.jl` compares every initial, intermediate, and
 final observation with a separate executable built from the public Rust
 automata APIs. Its fixed-seed corpus covers 1,092 generalized cases (including

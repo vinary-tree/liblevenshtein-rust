@@ -55,6 +55,7 @@ end
 """Native quantized temporal index with a frozen snapshot after construction."""
 mutable struct TemporalIndex
     handle::Ptr{Cvoid}
+    max_series_len::Csize_t
     frozen::Bool
     closed::Bool
 end
@@ -85,7 +86,7 @@ function TemporalIndex(kind::Symbol; quant_min::Real, quant_max::Real,
     status = ccall(native(:llev_temporal_index_new), Cint,
         (Ref{RawTemporalIndexConfig}, Ref{Ptr{Cvoid}}), Ref(raw), output)
     checked(status, :llev_temporal_index_new)
-    index = TemporalIndex(output[], false, false)
+    index = TemporalIndex(output[], raw.max_series_len, false, false)
     finalizer(close!, index)
     index
 end
@@ -94,6 +95,8 @@ function insert!(index::TemporalIndex, id::Integer, samples::AbstractVector{<:Re
     index.closed && throw(ArgumentError("temporal index is closed"))
     index.frozen && throw(ArgumentError("temporal index is frozen"))
     0 <= id <= typemax(UInt64) || throw(ArgumentError("ID must fit UInt64"))
+    length(samples) <= index.max_series_len ||
+        throw(ArgumentError("temporal series exceeds max_series_len"))
     values = Vector{Float64}(samples)
     status = GC.@preserve values ccall(native(:llev_temporal_index_insert), Cint,
         (Ptr{Cvoid}, UInt64, Ptr{Float64}, Csize_t), index.handle, UInt64(id),
@@ -149,6 +152,8 @@ function query_index_range(index::TemporalIndex, query::AbstractVector{<:Real};
     page_work_units::Integer=100_000, page_results::Integer=256)
     index.closed && throw(ArgumentError("temporal index is closed"))
     index.frozen || throw(ArgumentError("temporal index must be frozen"))
+    length(query) <= limits.max_series_len ||
+        throw(ArgumentError("query exceeds max_series_len"))
     work = checked_threshold(page_work_units)
     results = checked_threshold(page_results)
     work > 0 && results > 0 ||

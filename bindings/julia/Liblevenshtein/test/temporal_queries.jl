@@ -74,4 +74,7 @@
     @test_throws ArgumentError LL.TemporalSeriesSource([1 => [1.0]];
         max_source_bytes=0)
     @test_throws ArgumentError LL.query_temporal_range(source, :erp, [NaN])
+    @test_throws ArgumentError LL.query_temporal_range(source, :erp,
+        UntouchableLargeVector(4);
+        limits=LL.TemporalLimits(max_series_len=3))
 end

@@ -5,6 +5,13 @@ import VinaryTreeInterop
 
 const LL = Liblevenshtein
 
+struct UntouchableLargeVector <: AbstractVector{Float64}
+    count::Int
+end
+Base.size(values::UntouchableLargeVector) = (values.count,)
+Base.getindex(::UntouchableLargeVector, ::Int) =
+    error("oversized input was read before its length was checked")
+
 include("temporal.jl")
 include("temporal_bounds.jl")
 include("temporal_queries.jl")
