@@ -1457,6 +1457,33 @@ LLEV_API LlevStatus llev_temporal_distance(
     const LlevTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+/** Borrowed nonempty scalar samples with strictly increasing physical
+ * timestamps. Unit is 1 seconds, 2 milliseconds, 3 microseconds, or
+ * 4 nanoseconds. Origin is finite and no later than the first timestamp.
+ * Reserved must be zero. The arrays are copied into bounded native series
+ * for this call and never retained afterward. */
+typedef struct LlevTimestampedSeriesView {
+    const double* values;
+    const double* timestamps;
+    size_t len;
+    uint32_t unit;
+    uint32_t reserved;
+    double origin;
+} LlevTimestampedSeriesView;
+
+/** Exact metric TWED over physical timestamps. Both series must use the same
+ * canonical unit and origin; stiffness must be finite and positive, and gap
+ * penalty finite and nonnegative. Cutoff is inclusive and nonnegative, or
+ * positive infinity for the full score. The output uses the scalar temporal
+ * result kinds and resource reason codes; invalid input publishes no score.
+ * All pointers must address valid, mutually disjoint storage. */
+LLEV_API LlevStatus llev_timestamped_twed_distance(
+    const LlevTimestampedSeriesView* left,
+    const LlevTimestampedSeriesView* right,
+    double stiffness, double gap_penalty, double cutoff,
+    const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
 /** Complete Soft-DTW loss and gradients with respect to both nonempty finite
  * operands. gamma must be finite and positive. Output buffers are caller
  * owned and have capacities at least left_len and right_len respectively.

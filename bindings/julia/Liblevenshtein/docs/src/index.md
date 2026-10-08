@@ -168,6 +168,18 @@ for unit-grid TWED. `metric_msm_distance`, `metric_twed_distance`,
 `MetricMsmIndex`, and `MetricTwedIndex` retain the native bounded score and
 lazy range cursor behavior under those validated configurations.
 
+### Physical-time TWED
+
+`TimestampedSeries` copies each nonempty finite value series and its strictly
+increasing finite physical timestamps. Its unit is one of `:seconds`,
+`:milliseconds`, `:microseconds`, or `:nanoseconds`; its finite origin is no
+later than the first timestamp. Returned value and timestamp arrays are
+copies. `MetricTimestampedTwedConfig` validates strictly positive stiffness
+and nonnegative gap penalty. `metric_timestamped_twed_distance` requires
+matching units and origins and returns a bounded native exact score,
+above-cutoff result, or explicit incomplete reason. This physical-time
+recurrence is distinct from the unit-grid TWED kernel.
+
 ### Lazy temporal range queries
 
 `TemporalSeriesSource` copies a finite iterable of `(UInt64 ID, finite real

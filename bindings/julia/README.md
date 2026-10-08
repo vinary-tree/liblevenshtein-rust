@@ -219,6 +219,31 @@ finally
 end
 ```
 
+### Physical-time TWED
+
+`TimestampedSeries` copies finite scalar values and finite, strictly
+increasing timestamps in one canonical unit: `:seconds`, `:milliseconds`,
+`:microseconds`, or `:nanoseconds`. It requires a nonempty series and a finite
+physical origin no later than its first timestamp. `values` and `timestamps`
+properties return copies. A `MetricTimestampedTwedConfig` requires finite
+positive stiffness and finite nonnegative gap penalty. Both operands must
+have the same unit and origin.
+
+`metric_timestamped_twed_distance` uses the native physical-time recurrence,
+an inclusive cutoff, and `TemporalLimits`. It returns the same finite,
+above-cutoff, and incomplete result tags as the scalar temporal metrics.
+The unit-grid `metric_twed_distance` is a distinct metric domain.
+
+```julia
+config = MetricTimestampedTwedConfig(0.5, 1.0)
+left = TimestampedSeries([1.0, 2.0], [10.0, 13.0];
+    unit=:milliseconds, origin=10.0)
+right = TimestampedSeries([1.0, 2.5], [10.0, 14.0];
+    unit=:milliseconds, origin=10.0)
+score = metric_timestamped_twed_distance(config, left, right)
+@assert score.kind == :finite
+```
+
 ## Temporal lower bounds
 
 `temporal_lower_bound` selects the native ERP gap-mass, Fréchet endpoint,
@@ -431,6 +456,7 @@ variants, protocols, or methods.
 | `load_phonetic_rules` | `llev_phonetic_rules_load_file` | trusted .llev loading with native includes |
 | `match_distance` | `llev_phonetic_grep_matches` | word-boundary phonetic search and configuration |
 | `merge_and_split_distance` | `llev_merge_and_split_distance`, `llev_merge_and_split_distance_threshold`, `llev_merge_and_split_distance_bytes`, `llev_merge_and_split_distance_bytes_threshold`, `llev_merge_and_split_distance_u64`, `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
+| `metric_timestamped_twed_distance` | `llev_timestamped_twed_distance` | project ABI operation |
 | `NativeError` | `llev_last_error_message` | typed failure diagnostics |
 | `next_batch!` | `llev_cost_cursor_next_batch`, `llev_cost_cursor_release_batch`, `llev_specialized_cursor_next_batch`, `llev_specialized_cursor_release_batch`, `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch`, `llev_wallbreaker_cursor_next_batch`, `llev_wallbreaker_cursor_release_batch`, `llev_temporal_index_cursor_next_batch` | project ABI operation; streaming result traversal and batch leases |
 | `ngram_candidate` | `llev_source_filter_utf8` | project ABI operation |

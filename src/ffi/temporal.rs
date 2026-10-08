@@ -9,9 +9,10 @@ use super::{
     LlevStatus,
 };
 use crate::time_series::{
-    DtwConfig, ErpConfig, ExactDecision, FrechetConfig, IncompleteReason, MsmConfig,
-    OperationOutcome, ResourceKind, ResourceLedger, ResourceLimits, SoftDtwAnalysis, SoftDtwConfig,
-    TemporalValidationError, TwedConfig,
+    DtwConfig, ErpConfig, ExactDecision, FrechetConfig, IncompleteReason,
+    MetricTimestampedTwedConfig, MsmConfig, OperationOutcome, ResourceKind, ResourceLedger,
+    ResourceLimits, SoftDtwAnalysis, SoftDtwConfig, TemporalValidationError, TimestampUnit,
+    TimestampedSeries, TimestampedTwedError, TwedConfig,
 };
 
 /// Scalar temporal kernel selected by `LlevTemporalConfig::algorithm`.
@@ -147,6 +148,194 @@ fn limits_from_c(raw: LlevTemporalLimits) -> ResourceLimits {
         max_scratch_bytes: raw.max_scratch_bytes,
         ..ResourceLimits::default()
     }
+}
+
+/// Borrowed scalar samples and physical timestamps in one canonical unit.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct LlevTimestampedSeriesView {
+    /// Scalar sample values.
+    pub values: *const f64,
+    /// Physical timestamps in the declared unit.
+    pub timestamps: *const f64,
+    /// Equal number of values and timestamps.
+    pub len: usize,
+    /// 1 seconds, 2 milliseconds, 3 microseconds, 4 nanoseconds.
+    pub unit: u32,
+    /// Must be zero.
+    pub reserved: u32,
+    /// Shared physical origin in the declared unit.
+    pub origin: f64,
+}
+
+fn timestamp_unit(code: u32) -> Result<TimestampUnit, (LlevStatus, String)> {
+    match code {
+        1 => Ok(TimestampUnit::Seconds),
+        2 => Ok(TimestampUnit::Milliseconds),
+        3 => Ok(TimestampUnit::Microseconds),
+        4 => Ok(TimestampUnit::Nanoseconds),
+        _ => Err(invalid("unknown timestamp unit")),
+    }
+}
+
+fn timestamp_error(error: TimestampedTwedError) -> (LlevStatus, String) {
+    match error {
+        TimestampedTwedError::InvalidSeries(error) => validation(error),
+        TimestampedTwedError::Resource(reason) => (
+            LlevStatus::LimitExceeded,
+            format!("timestamped series resource: {reason:?}"),
+        ),
+        _ => invalid(error.to_string()),
+    }
+}
+
+/// Compare explicit-timestamp TWED series under hard scalar resource limits.
+///
+/// # Safety
+/// Both views, limits, and output must address valid, mutually disjoint
+/// storage. Each nonempty value and timestamp buffer must be aligned and
+/// readable for its declared length. Buffers are borrowed only for this call.
+#[no_mangle]
+pub unsafe extern "C" fn llev_timestamped_twed_distance(
+    left: *const LlevTimestampedSeriesView,
+    right: *const LlevTimestampedSeriesView,
+    stiffness: f64,
+    gap_penalty: f64,
+    cutoff: f64,
+    raw_limits: *const LlevTemporalLimits,
+    out_result: *mut LlevTemporalDistanceResult,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_result.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "timestamped TWED output is null".into(),
+        ))?;
+        *output = LlevTemporalDistanceResult::default();
+        let left = *left.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "left timestamped series is null".into(),
+        ))?;
+        let right = *right.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "right timestamped series is null".into(),
+        ))?;
+        let raw_limits = *raw_limits.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "timestamped TWED limits are null".into(),
+        ))?;
+        if left.len > raw_limits.max_series_len || right.len > raw_limits.max_series_len {
+            return Err((
+                LlevStatus::LimitExceeded,
+                "timestamped series length limit".into(),
+            ));
+        }
+        if left.reserved != 0 || right.reserved != 0 {
+            return Err(invalid("timestamped series reserved field must be zero"));
+        }
+        let left_unit = timestamp_unit(left.unit)?;
+        let right_unit = timestamp_unit(right.unit)?;
+        let limits = limits_from_c(raw_limits);
+        let config = MetricTimestampedTwedConfig::try_new(stiffness, gap_penalty)
+            .map_err(timestamp_error)?;
+        // Both validated operands remain owned while the two-row recurrence
+        // runs. Charge their combined storage together with its DP rows.
+        let scratch_bytes = left
+            .len
+            .checked_add(right.len)
+            .and_then(|length| length.checked_add(left.len.min(right.len)))
+            .and_then(|length| length.checked_add(1))
+            .and_then(|slots| slots.checked_mul(2 * std::mem::size_of::<f64>()));
+        let Some(scratch_bytes) = scratch_bytes else {
+            output.kind = 3;
+            output.reason = 4;
+            return Err((
+                LlevStatus::LimitExceeded,
+                "timestamped scratch accounting overflow".into(),
+            ));
+        };
+        if scratch_bytes > raw_limits.max_scratch_bytes {
+            output.kind = 3;
+            output.reason = 3;
+            output.scratch_bytes = scratch_bytes;
+            return Err((
+                LlevStatus::LimitExceeded,
+                "timestamped scratch limit".into(),
+            ));
+        }
+        let left = match TimestampedSeries::try_new_with_origin(
+            slice(left.values, left.len, "left timestamped values")?,
+            slice(left.timestamps, left.len, "left timestamps")?,
+            left_unit,
+            left.origin,
+            limits,
+        ) {
+            Ok(series) => series,
+            Err(TimestampedTwedError::Resource(reason)) => {
+                output.kind = 3;
+                output.reason = reason_code(reason);
+                output.scratch_bytes = scratch_bytes;
+                return Err((
+                    LlevStatus::LimitExceeded,
+                    "left timestamped series incomplete".into(),
+                ));
+            }
+            Err(error) => return Err(timestamp_error(error)),
+        };
+        let right = match TimestampedSeries::try_new_with_origin(
+            slice(right.values, right.len, "right timestamped values")?,
+            slice(right.timestamps, right.len, "right timestamps")?,
+            right_unit,
+            right.origin,
+            limits,
+        ) {
+            Ok(series) => series,
+            Err(TimestampedTwedError::Resource(reason)) => {
+                output.kind = 3;
+                output.reason = reason_code(reason);
+                output.scratch_bytes = scratch_bytes;
+                return Err((
+                    LlevStatus::LimitExceeded,
+                    "right timestamped series incomplete".into(),
+                ));
+            }
+            Err(error) => return Err(timestamp_error(error)),
+        };
+        match config
+            .distance_bounded(&left, &right, cutoff, limits)
+            .map_err(timestamp_error)?
+        {
+            OperationOutcome::Complete { value, usage } => {
+                let (kind, distance) = match value {
+                    ExactDecision::WithinCutoff { distance, .. } => (0, distance),
+                    ExactDecision::AboveCutoff => (1, 0.0),
+                    ExactDecision::NoFiniteAlignment => (2, 0.0),
+                };
+                *output = LlevTemporalDistanceResult {
+                    value: distance,
+                    kind,
+                    dp_cells: usage.dp_cells,
+                    work_units: usage.work_units,
+                    scratch_bytes,
+                    ..LlevTemporalDistanceResult::default()
+                };
+                Ok(LlevStatus::Ok)
+            }
+            OperationOutcome::Incomplete { reason, usage, .. } => {
+                *output = LlevTemporalDistanceResult {
+                    kind: 3,
+                    reason: reason_code(reason),
+                    dp_cells: usage.dp_cells,
+                    work_units: usage.work_units,
+                    scratch_bytes,
+                    ..LlevTemporalDistanceResult::default()
+                };
+                Err((
+                    LlevStatus::LimitExceeded,
+                    "timestamped TWED incomplete".into(),
+                ))
+            }
+        }
+    })
 }
 
 /// Evaluate a complete Soft-DTW loss and both sample gradients. The caller

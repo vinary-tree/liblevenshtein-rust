@@ -179,6 +179,8 @@ export ABI_VERSION,
     MetricErpConfig,
     MetricMsmConfig,
     MetricTwedConfig,
+    MetricTimestampedTwedConfig,
+    TimestampedSeries,
     ErpQuotientSeries,
     FrechetStutterClass,
     MetricErpIndex,
@@ -191,6 +193,7 @@ export ABI_VERSION,
     metric_frechet_distance,
     metric_msm_distance,
     metric_twed_distance,
+    metric_timestamped_twed_distance,
     query_metric_range,
     freeze!,
     query_index_range,
@@ -1101,6 +1104,7 @@ include("TemporalSaxEncoding.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
 include("TemporalMetricDomains.jl")
+include("TemporalTimestamped.jl")
 include("TemporalRolling.jl")
 include("TemporalOnline.jl")
 include("Filter.jl")

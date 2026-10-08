@@ -173,6 +173,12 @@ penalty on the unit time grid. Their `metric_msm_distance` and
 `metric_twed_distance` methods, plus `MetricMsmIndex` and `MetricTwedIndex`,
 use the same native bounded distance and frozen range cursor contracts.
 
+`TimestampedSeries` owns finite values and strictly increasing physical
+timestamps in a canonical unit and shared origin. `MetricTimestampedTwedConfig`
+and `metric_timestamped_twed_distance` expose bounded native TWED on this
+explicit-time metric domain. The [physical-time guide](../../README.md#physical-time-twed)
+explains units, ownership, and result tags.
+
 ## Choose an automaton
 
 | Julia value | Semantics | Metric? |

@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 190 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 191 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -13,6 +13,7 @@
         "bindings/c/tests/cross_project_snapshot.c",
         "tests/ffi_specialized_traversals.rs",
         "tests/ffi_temporal.rs",
+        "tests/ffi_timestamped_twed.rs",
         "tests/ffi_filter.rs",
         "tests/ffi_temporal_online.rs"
       ],
@@ -564,6 +565,9 @@
         },
         "llev_temporal_distance": {
           "symbol": "llev_temporal_distance"
+        },
+        "llev_timestamped_twed_distance": {
+          "symbol": "llev_timestamped_twed_distance"
         },
         "llev_soft_dtw_gradient": {
           "symbol": "llev_soft_dtw_gradient"
@@ -1346,6 +1350,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -2150,6 +2158,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -2945,6 +2957,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -3733,6 +3749,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -4520,6 +4540,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -5304,6 +5328,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -6103,6 +6131,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -6897,6 +6929,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -7717,6 +7753,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -8506,6 +8546,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -9298,6 +9342,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -10088,6 +10136,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -10883,6 +10935,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -11677,6 +11733,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
         },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -11790,7 +11850,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalIndex.jl",
         "bindings/julia/Liblevenshtein/src/SourceFilterQueries.jl",
         "bindings/julia/Liblevenshtein/src/TemporalBounds.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalOnline.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalOnline.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalTimestamped.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -11801,7 +11862,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_index.jl",
         "bindings/julia/Liblevenshtein/test/source_filter_queries.jl",
         "bindings/julia/Liblevenshtein/test/temporal_bounds.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_online.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_online.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_timestamped.jl"
       ],
       "enums": {
         "status": {
@@ -12381,6 +12443,9 @@
         },
         "llev_temporal_distance": {
           "symbol": "temporal_distance"
+        },
+        "llev_timestamped_twed_distance": {
+          "symbol": "metric_timestamped_twed_distance"
         },
         "llev_soft_dtw_gradient": {
           "symbol": "soft_dtw_gradient"
@@ -13103,6 +13168,10 @@
         "llev_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: revision-11 scalar temporal kernel is not yet projected into this language facade"
+        },
+        "llev_timestamped_twed_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
