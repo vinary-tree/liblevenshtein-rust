@@ -478,14 +478,32 @@ end
 ## Temporal lower bounds
 
 `temporal_lower_bound` selects the native ERP gap-mass, Fréchet endpoint,
-one-sided Hausdorff, combined Fréchet candidate, or root-distance Keogh
-bound. The named Julia methods
+one-sided Hausdorff, combined Fréchet candidate, root-distance Keogh, or
+explicit MSM prefilter score. The named Julia methods
 `erp_gap_mass_lower_bound`, `frechet_endpoint_lower_bound`,
 `frechet_one_sided_hausdorff_lower_bound`,
 `frechet_candidate_lower_bound`, and `lb_keogh` expose the same
 operations directly. `twed_length_lower_bound` uses only two lengths and a
-nonnegative gap penalty. These values are admissible pruning bounds; they are
-not exact distances.
+nonnegative gap penalty. These ERP, Fréchet, Keogh, and TWED values are
+admissible pruning bounds; they are not exact distances.
+
+`msm_length_lower_bound(query, candidate, cost)` is also safe for exact MSM
+pruning: each extra sample requires a split or merge with at least the
+nonnegative `cost`. The native `msm_prefix_euclidean_heuristic`,
+`msm_prefix_l1_heuristic`, and `msm_combined_heuristic` preserve Rust's
+prefix-score definitions, but can exceed the true MSM distance. For example,
+MSM at cost 1 between `[0, 100]` and `[0, 0, 100]` is 1, while all three
+heuristics score 100. Use those heuristics only when approximate filtering
+and possible false negatives are intended. All four modes use the same
+bounded, tagged native result contract as the other temporal bounds.
+
+`query_msm_with_safe_bound(source, query; split_merge_cost, cutoff)` composes
+the native length bound with the lazy exact MSM source scan. It skips a
+candidate before dynamic programming only when its admissible bound exceeds
+the cutoff, keeps source order, and retains the source snapshot and cumulative
+query ceilings. `query_temporal_range` also accepts `prefilter=:msm_length`.
+Heuristic prefilters require `allow_false_negatives=true`; they can omit true
+matches and are unsuitable for an exact range query.
 
 ```julia
 query = [1.0, 2.0, 3.0]
@@ -692,6 +710,10 @@ variants, protocols, or methods.
 | `match_distance` | `llev_phonetic_grep_matches` | word-boundary phonetic search and configuration |
 | `merge_and_split_distance` | `llev_merge_and_split_distance`, `llev_merge_and_split_distance_threshold`, `llev_merge_and_split_distance_bytes`, `llev_merge_and_split_distance_bytes_threshold`, `llev_merge_and_split_distance_u64`, `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
 | `metric_timestamped_twed_distance` | `llev_timestamped_twed_distance` | project ABI operation |
+| `msm_combined_heuristic` | `llev_temporal_lower_bound` | project ABI operation |
+| `msm_length_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
+| `msm_prefix_euclidean_heuristic` | `llev_temporal_lower_bound` | project ABI operation |
+| `msm_prefix_l1_heuristic` | `llev_temporal_lower_bound` | project ABI operation |
 | `NativeError` | `llev_last_error_message` | typed failure diagnostics |
 | `NativeSourceFilterIndex` | `llev_source_filter_index_new`, `llev_source_filter_index_insert`, `llev_source_filter_index_freeze` | project ABI operation |
 | `next_batch!` | `llev_cost_cursor_next_batch`, `llev_cost_cursor_release_batch`, `llev_specialized_cursor_next_batch`, `llev_specialized_cursor_release_batch`, `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch`, `llev_wallbreaker_cursor_next_batch`, `llev_wallbreaker_cursor_release_batch`, `llev_timestamped_twed_cursor_next_batch`, `llev_temporal_index_cursor_next_batch` | project ABI operation; streaming result traversal and batch leases |
@@ -720,6 +742,7 @@ variants, protocols, or methods.
 | `query_index_range` | `llev_temporal_index_query_range` | project ABI operation |
 | `query_metric_knn` | `llev_timestamped_twed_index_query_knn` | project ABI operation |
 | `query_metric_range` | `llev_timestamped_twed_index_query_range` | project ABI operation |
+| `query_msm_with_safe_bound` | `llev_temporal_lower_bound` | project ABI operation |
 | `query_ngram` | `llev_source_filter_utf8` | project ABI operation |
 | `query_pruned` | `llev_transducer_query_pruned_utf8` | domain-preserving dictionary query |
 | `query_weighted` | `llev_transducer_query_weighted` | domain-preserving dictionary query |

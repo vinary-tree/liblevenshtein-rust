@@ -78,3 +78,35 @@
         UntouchableLargeVector(4);
         limits=LL.TemporalLimits(max_series_len=3))
 end
+
+@testset "lazy native MSM prefilter and exact query" begin
+    source = LL.TemporalSeriesSource([
+        3 => [0.0, 0.0, 0.0, 0.0, 0.0],
+        1 => [0.0, 100.0],
+        2 => [0.0, 0.0, 100.0],
+    ])
+    query = [0.0, 100.0]
+    baseline = collect(LL.query_temporal_range(source, :msm, query;
+        parameter0=1.0, cutoff=1.0))
+    @test [match.id for match in baseline] == UInt64[1, 2]
+    safe = LL.query_msm_with_safe_bound(source, query;
+        split_merge_cost=1.0, cutoff=1.0,
+        query_limits=LL.TemporalQueryLimits(max_total_dp_cells=10))
+    @test [(match.id, match.distance) for match in safe] ==
+        [(match.id, match.distance) for match in baseline]
+    @test !isopen(safe)
+    no_prefilter = LL.query_temporal_range(source, :msm, query;
+        parameter0=1.0, cutoff=1.0,
+        query_limits=LL.TemporalQueryLimits(max_total_dp_cells=10))
+    @test_throws LL.TemporalQueryIncomplete collect(no_prefilter)
+    @test_throws ArgumentError LL.query_temporal_range(source, :msm,
+        query; parameter0=1.0, cutoff=1.0,
+        prefilter=:msm_euclidean_heuristic)
+    approximate = LL.query_temporal_range(source, :msm, query;
+        parameter0=1.0, cutoff=1.0,
+        prefilter=:msm_euclidean_heuristic,
+        allow_false_negatives=true)
+    @test [match.id for match in approximate] == UInt64[1]
+    @test_throws ArgumentError LL.query_temporal_range(source, :erp,
+        query; prefilter=:msm_length)
+end

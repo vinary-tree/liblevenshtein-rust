@@ -1710,9 +1710,15 @@ LLEV_API LlevStatus llev_soft_dtw_gradient(
 #define LLEV_TEMPORAL_BOUND_FRECHET_HAUSDORFF 3u
 #define LLEV_TEMPORAL_BOUND_FRECHET_CANDIDATE 4u
 #define LLEV_TEMPORAL_BOUND_KEOGH 5u
+#define LLEV_TEMPORAL_BOUND_MSM_LENGTH 6u
+#define LLEV_TEMPORAL_HEURISTIC_MSM_EUCLIDEAN 7u
+#define LLEV_TEMPORAL_HEURISTIC_MSM_L1 8u
+#define LLEV_TEMPORAL_HEURISTIC_MSM_COMBINED 9u
 
-/** Compute an admissible native lower bound under explicit work and scratch
- * limits. parameter0 is the finite ERP gap; band applies only to Keogh.
+/** Compute a native temporal bound or explicitly selected heuristic under
+ * work and scratch limits. parameter0 is the finite ERP gap or nonnegative
+ * MSM split/merge cost; band applies only to Keogh. Only MSM length is safe
+ * for exact MSM pruning: the three MSM heuristic modes can exceed MSM.
  * Reuses the scalar temporal finite/no-alignment/incomplete result tags. */
 LLEV_API LlevStatus llev_temporal_lower_bound(
     const double* left, size_t left_len,

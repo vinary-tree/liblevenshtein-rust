@@ -95,6 +95,7 @@ mutable struct TemporalRangeCursor
     cutoff::Float64
     limits::TemporalLimits
     query_limits::TemporalQueryLimits
+    prefilter::Symbol
     next_index::Int
     visited::Csize_t
     emitted::Csize_t
@@ -112,12 +113,23 @@ Each candidate is compared only when the cursor advances. Per-comparison
 `TemporalLimits` and cumulative `TemporalQueryLimits` bound the operation.
 Results preserve source order. An exhausted budget raises
 `TemporalQueryIncomplete`; it never appears as an empty complete result.
+For MSM, `prefilter=:msm_length` applies the native admissible bound before
+exact scoring. The three native heuristic modes require explicit
+`allow_false_negatives=true` because they can reject exact matches.
 """
 function query_temporal_range(source::TemporalSeriesSource, kind::Symbol,
     query::AbstractVector{<:Real}; parameter0::Real=0.0,
     parameter1::Real=0.0, band::Integer=0, cutoff::Real=Inf,
     limits::TemporalLimits=TemporalLimits(),
-    query_limits::TemporalQueryLimits=TemporalQueryLimits())
+    query_limits::TemporalQueryLimits=TemporalQueryLimits(),
+    prefilter::Symbol=:none, allow_false_negatives::Bool=false)
+    prefilter in (:none, :msm_length, :msm_euclidean_heuristic,
+        :msm_l1_heuristic, :msm_combined_heuristic) ||
+        throw(ArgumentError("unknown temporal prefilter"))
+    prefilter === :none || kind === :msm ||
+        throw(ArgumentError("MSM prefilters require the MSM algorithm"))
+    prefilter in (:none, :msm_length) || allow_false_negatives ||
+        throw(ArgumentError("heuristic MSM pruning needs allow_false_negatives=true"))
     length(query) <= limits.max_series_len ||
         throw(ArgumentError("query exceeds max_series_len"))
     q = Vector{Float64}(query)
@@ -130,8 +142,14 @@ function query_temporal_range(source::TemporalSeriesSource, kind::Symbol,
     temporal_distance(kind, Float64[], Float64[];
         parameter0=p0, parameter1=p1, band=width, cutoff=tau, limits)
     TemporalRangeCursor(source, q, kind, p0, p1, width, tau, limits,
-        query_limits, 1, 0, 0, 0, false)
+        query_limits, prefilter, 1, 0, 0, 0, false)
 end
+
+"""Exact lazy MSM source scan with the native safe length prefilter."""
+query_msm_with_safe_bound(source::TemporalSeriesSource,
+    query::AbstractVector{<:Real}; split_merge_cost::Real=1.0,
+    kwargs...) = query_temporal_range(source, :msm, query;
+    parameter0=split_merge_cost, prefilter=:msm_length, kwargs...)
 
 function next_temporal_match!(cursor::TemporalRangeCursor)
     cursor.closed && throw(ArgumentError("temporal cursor is closed"))
@@ -139,6 +157,20 @@ function next_temporal_match!(cursor::TemporalRangeCursor)
         cursor.visited < cursor.query_limits.max_candidates ||
             throw(TemporalQueryIncomplete(:candidates, nothing, nothing))
         entry = cursor.source.entries[cursor.next_index]
+        if cursor.prefilter !== :none
+            cost = cursor.prefilter in (:msm_length,
+                :msm_combined_heuristic) ? cursor.parameter0 : 0.0
+            bound = temporal_lower_bound(cursor.prefilter, cursor.query,
+                entry.samples; parameter0=cost, limits=cursor.limits)
+            bound.kind === :incomplete &&
+                throw(TemporalQueryIncomplete(:prefilter, entry.id, bound.reason))
+            if bound.kind === :no_alignment ||
+                (bound.kind === :finite && bound.value > cursor.cutoff)
+                cursor.next_index += 1
+                cursor.visited += 1
+                continue
+            end
+        end
         cells = UInt(length(cursor.query)) * UInt(length(entry.samples))
         cells <= cursor.query_limits.max_total_dp_cells - cursor.dp_cells ||
             throw(TemporalQueryIncomplete(:dp_cells, entry.id, nothing))

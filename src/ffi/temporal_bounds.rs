@@ -6,10 +6,11 @@ use super::{
     LlevStatus,
 };
 use crate::time_series::{
-    erp_gap_mass_lower_bound, frechet_candidate_lower_bound, frechet_endpoint_lower_bound,
-    frechet_one_sided_hausdorff_lower_bound, kernels::try_keogh_envelopes, lb_keogh_squared,
-    twed_length_lower_bound, IncompleteReason, KeoghPlan, Operand, ResourceKind, ResourceLedger,
-    ResourceLimits, TemporalValidationError,
+    combined_lb, erp_gap_mass_lower_bound, euclidean_lb, frechet_candidate_lower_bound,
+    frechet_endpoint_lower_bound, frechet_one_sided_hausdorff_lower_bound,
+    kernels::try_keogh_envelopes, l1_lb, lb_keogh_squared, length_lb, twed_length_lower_bound,
+    IncompleteReason, KeoghPlan, Operand, ResourceKind, ResourceLedger, ResourceLimits,
+    TemporalValidationError,
 };
 
 /// Public temporal lower-bound selector.
@@ -26,6 +27,14 @@ pub enum LlevTemporalBoundAlgorithm {
     FrechetCandidate = 4,
     /// Root-distance Keogh bound.
     Keogh = 5,
+    /// Correctness-preserving MSM length bound.
+    MsmLength = 6,
+    /// Prefix Euclidean MSM heuristic, unsafe for exact pruning.
+    MsmEuclideanHeuristic = 7,
+    /// Prefix L1 MSM heuristic, unsafe for exact pruning.
+    MsmL1Heuristic = 8,
+    /// Maximum of length and prefix Euclidean MSM heuristics.
+    MsmCombinedHeuristic = 9,
 }
 
 impl TryFrom<u32> for LlevTemporalBoundAlgorithm {
@@ -38,6 +47,10 @@ impl TryFrom<u32> for LlevTemporalBoundAlgorithm {
             3 => Ok(Self::FrechetHausdorff),
             4 => Ok(Self::FrechetCandidate),
             5 => Ok(Self::Keogh),
+            6 => Ok(Self::MsmLength),
+            7 => Ok(Self::MsmEuclideanHeuristic),
+            8 => Ok(Self::MsmL1Heuristic),
+            9 => Ok(Self::MsmCombinedHeuristic),
             _ => Err(()),
         }
     }
@@ -145,10 +158,10 @@ fn validate_series<'a>(
     Ok(())
 }
 
-/// Evaluate one native temporal lower bound under explicit work and scratch
-/// ceilings. `parameter0` is the finite ERP gap; `band` belongs to Keogh;
-/// all unused parameters must be zero. The result uses finite/no-alignment/
-/// incomplete kinds from `LlevTemporalDistanceResult`.
+/// Evaluate one native temporal lower bound or explicitly selected heuristic
+/// under work and scratch ceilings. `parameter0` is the finite ERP gap or
+/// nonnegative MSM split/merge cost; `band` belongs to Keogh. MSM prefix
+/// Euclidean, L1, and combined scores are unsafe for exact pruning.
 ///
 /// # Safety
 /// Nonempty arrays must be readable and aligned; `limits` and `out_result`
@@ -176,8 +189,16 @@ pub unsafe extern "C" fn llev_temporal_lower_bound(
             .ok_or((LlevStatus::NullPointer, "temporal limits are null".into()))?;
         let algorithm = LlevTemporalBoundAlgorithm::try_from(algorithm)
             .map_err(|()| invalid("unknown temporal lower-bound algorithm"))?;
+        let cost_mode = matches!(
+            algorithm,
+            LlevTemporalBoundAlgorithm::MsmLength
+                | LlevTemporalBoundAlgorithm::MsmCombinedHeuristic
+        );
         if !parameter0.is_finite()
-            || (algorithm != LlevTemporalBoundAlgorithm::ErpGapMass && parameter0 != 0.0)
+            || (cost_mode && parameter0 < 0.0)
+            || (!cost_mode
+                && algorithm != LlevTemporalBoundAlgorithm::ErpGapMass
+                && parameter0 != 0.0)
             || (algorithm != LlevTemporalBoundAlgorithm::Keogh && band != 0)
         {
             return Err(invalid("invalid or unused temporal bound parameters"));
@@ -194,7 +215,11 @@ pub unsafe extern "C" fn llev_temporal_lower_bound(
             checked_work(left.len(), right.len()).map_err(|reason| incomplete(reason, output))?;
         let (work, scratch) = match algorithm {
             LlevTemporalBoundAlgorithm::ErpGapMass
-            | LlevTemporalBoundAlgorithm::FrechetEndpoints => (base, 0),
+            | LlevTemporalBoundAlgorithm::FrechetEndpoints
+            | LlevTemporalBoundAlgorithm::MsmEuclideanHeuristic
+            | LlevTemporalBoundAlgorithm::MsmL1Heuristic
+            | LlevTemporalBoundAlgorithm::MsmCombinedHeuristic => (base, 0),
+            LlevTemporalBoundAlgorithm::MsmLength => (1, 0),
             LlevTemporalBoundAlgorithm::FrechetHausdorff
             | LlevTemporalBoundAlgorithm::FrechetCandidate => {
                 let pair_work = left.len().checked_mul(right.len()).ok_or_else(|| {
@@ -268,6 +293,12 @@ pub unsafe extern "C" fn llev_temporal_lower_bound(
                 } else {
                     f64::INFINITY
                 }
+            }
+            LlevTemporalBoundAlgorithm::MsmLength => length_lb(left, right, parameter0),
+            LlevTemporalBoundAlgorithm::MsmEuclideanHeuristic => euclidean_lb(left, right),
+            LlevTemporalBoundAlgorithm::MsmL1Heuristic => l1_lb(left, right),
+            LlevTemporalBoundAlgorithm::MsmCombinedHeuristic => {
+                combined_lb(left, right, parameter0)
             }
         };
         let no_alignment = left.is_empty() != right.is_empty()

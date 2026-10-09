@@ -14624,7 +14624,12 @@
             "frechet_endpoint_lower_bound",
             "frechet_one_sided_hausdorff_lower_bound",
             "frechet_candidate_lower_bound",
-            "lb_keogh"
+            "lb_keogh",
+            "msm_length_lower_bound",
+            "msm_prefix_euclidean_heuristic",
+            "msm_prefix_l1_heuristic",
+            "msm_combined_heuristic",
+            "query_msm_with_safe_bound"
           ]
         },
         "llev_twed_length_lower_bound": {

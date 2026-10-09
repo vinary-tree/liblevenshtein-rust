@@ -46,3 +46,22 @@
         :keogh, left, right; band=1, limits=short)
     @test_throws ArgumentError LL.keogh_envelopes(left, 1; limits=short)
 end
+
+@testset "native MSM bounds and explicitly unsafe heuristics" begin
+    left = [0.0, 100.0]
+    right = [0.0, 0.0, 100.0]
+    exact = LL.msm_distance(left, right; split_merge_cost=1.0).value
+    @test exact == 1.0
+    @test LL.msm_length_lower_bound(left, right, 1.0).value == 1.0
+    @test LL.msm_prefix_euclidean_heuristic(left, right).value == 100.0
+    @test LL.msm_prefix_l1_heuristic(left, right).value == 100.0
+    @test LL.msm_combined_heuristic(left, right, 1.0).value == 100.0
+    @test LL.msm_length_lower_bound(left, right, 1.0).value <= exact
+    @test LL.msm_combined_heuristic(left, right, 1.0).value > exact
+    @test LL.msm_length_lower_bound(Float64[], right, 1.0).kind ===
+        :no_alignment
+    @test LL.msm_length_lower_bound(Float64[], Float64[], 1.0).value == 0.0
+    @test LL.msm_length_lower_bound(left, right, 1.0;
+        limits=LL.TemporalLimits(max_work_units=0)).kind === :incomplete
+    @test_throws LL.NativeError LL.msm_length_lower_bound(left, right, -1.0)
+end

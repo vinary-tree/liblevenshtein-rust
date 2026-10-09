@@ -6,9 +6,9 @@ use liblevenshtein::ffi::{
     LlevTemporalBoundAlgorithm, LlevTemporalDistanceResult, LlevTemporalLimits,
 };
 use liblevenshtein::time_series::{
-    erp_gap_mass_lower_bound, frechet_candidate_lower_bound, frechet_endpoint_lower_bound,
-    frechet_one_sided_hausdorff_lower_bound, keogh_envelopes, lb_keogh, lb_keogh_squared,
-    twed_length_lower_bound,
+    combined_lb, erp_gap_mass_lower_bound, euclidean_lb, frechet_candidate_lower_bound,
+    frechet_endpoint_lower_bound, frechet_one_sided_hausdorff_lower_bound, keogh_envelopes, l1_lb,
+    lb_keogh, lb_keogh_squared, length_lb, twed_length_lower_bound, MsmConfig,
 };
 use std::ptr;
 
@@ -35,6 +35,59 @@ fn run(
         )
     };
     (status, result)
+}
+
+#[test]
+fn msm_prefilters_match_native_and_distinguish_safe_pruning() {
+    let left = [0.0, 100.0];
+    let right = [0.0, 0.0, 100.0];
+    let limits = LlevTemporalLimits::default();
+    let actual_msm = MsmConfig::try_new(1.0).unwrap().distance(&left, &right);
+    assert_eq!(actual_msm, 1.0);
+    let cases = [
+        (
+            LlevTemporalBoundAlgorithm::MsmLength,
+            1.0,
+            length_lb(&left, &right, 1.0),
+            true,
+        ),
+        (
+            LlevTemporalBoundAlgorithm::MsmEuclideanHeuristic,
+            0.0,
+            euclidean_lb(&left, &right),
+            false,
+        ),
+        (
+            LlevTemporalBoundAlgorithm::MsmL1Heuristic,
+            0.0,
+            l1_lb(&left, &right),
+            false,
+        ),
+        (
+            LlevTemporalBoundAlgorithm::MsmCombinedHeuristic,
+            1.0,
+            combined_lb(&left, &right, 1.0),
+            false,
+        ),
+    ];
+    for (algorithm, parameter0, expected, safe) in cases {
+        let (status, result) = run(&left, &right, algorithm, parameter0, 0, &limits);
+        assert_eq!(status, LlevStatus::Ok, "{algorithm:?}");
+        assert_eq!(result.kind, 0, "{algorithm:?}");
+        assert_eq!(result.value, expected, "{algorithm:?}");
+        assert_eq!(result.value <= actual_msm, safe, "{algorithm:?}");
+    }
+
+    let (status, result) = run(
+        &left,
+        &right,
+        LlevTemporalBoundAlgorithm::MsmLength,
+        -1.0,
+        0,
+        &limits,
+    );
+    assert_eq!(status, LlevStatus::InvalidArgument);
+    assert_eq!(result.value, 0.0);
 }
 
 #[test]

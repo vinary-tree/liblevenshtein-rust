@@ -4,6 +4,10 @@ function temporal_bound_algorithm(kind::Symbol)::UInt32
     kind === :frechet_hausdorff && return 3
     kind === :frechet_candidate && return 4
     kind === :keogh && return 5
+    kind === :msm_length && return 6
+    kind === :msm_euclidean_heuristic && return 7
+    kind === :msm_l1_heuristic && return 8
+    kind === :msm_combined_heuristic && return 9
     throw(ArgumentError("unknown temporal lower bound $kind"))
 end
 
@@ -13,12 +17,14 @@ function require_temporal_bounds(operation::Symbol)
             "temporal lower bounds require native API revision 13"))
 end
 
-"""Evaluate an admissible native temporal lower bound with hard limits.
+"""Evaluate a native temporal bound or explicit heuristic with hard limits.
 
 `kind` is `:erp_gap_mass`, `:frechet_endpoints`,
-`:frechet_hausdorff`, `:frechet_candidate`, or `:keogh`. ERP uses
-`parameter0` as its finite gap; Keogh uses the explicit band. A finite
-result is a bound, not the exact temporal distance. No alignment and
+`:frechet_hausdorff`, `:frechet_candidate`, `:keogh`, or one of the
+`msm_*` modes. ERP uses `parameter0` as its finite gap; MSM length and
+combined use it as a nonnegative split/merge cost. Keogh uses the explicit
+band. MSM prefix Euclidean, L1, and combined scores are heuristics that can
+exceed true MSM distance and must not prune an exact query. No alignment and
 incomplete arithmetic remain distinct tagged outcomes.
 """
 function temporal_lower_bound(kind::Symbol, left::AbstractVector{<:Real},
@@ -26,6 +32,10 @@ function temporal_lower_bound(kind::Symbol, left::AbstractVector{<:Real},
     limits::TemporalLimits=TemporalLimits())
     require_temporal_bounds(:llev_temporal_lower_bound)
     algorithm = temporal_bound_algorithm(kind)
+    algorithm >= 6 && api_revision() < UInt32(25) &&
+        throw(NativeError(Int32(STATUS_UNSUPPORTED),
+            :llev_temporal_lower_bound,
+            "MSM prefilters require native API revision 25"))
     length(left) <= limits.max_series_len ||
         throw(ArgumentError("left series exceeds max_series_len"))
     length(right) <= limits.max_series_len ||
@@ -47,6 +57,32 @@ function temporal_lower_bound(kind::Symbol, left::AbstractVector{<:Real},
         checked(status, :llev_temporal_lower_bound)
     temporal_outcome(raw)
 end
+
+"""Correctness-preserving native MSM length bound."""
+msm_length_lower_bound(left::AbstractVector{<:Real},
+    right::AbstractVector{<:Real}, split_merge_cost::Real;
+    limits::TemporalLimits=TemporalLimits()) =
+    temporal_lower_bound(:msm_length, left, right;
+        parameter0=split_merge_cost, limits)
+
+"""Prefix Euclidean MSM heuristic; unsafe for exact pruning."""
+msm_prefix_euclidean_heuristic(left::AbstractVector{<:Real},
+    right::AbstractVector{<:Real};
+    limits::TemporalLimits=TemporalLimits()) =
+    temporal_lower_bound(:msm_euclidean_heuristic, left, right; limits)
+
+"""Prefix L1 MSM heuristic; unsafe for exact pruning."""
+msm_prefix_l1_heuristic(left::AbstractVector{<:Real},
+    right::AbstractVector{<:Real};
+    limits::TemporalLimits=TemporalLimits()) =
+    temporal_lower_bound(:msm_l1_heuristic, left, right; limits)
+
+"""Native maximum of MSM length and prefix Euclidean heuristics; unsafe for exact pruning."""
+msm_combined_heuristic(left::AbstractVector{<:Real},
+    right::AbstractVector{<:Real}, split_merge_cost::Real;
+    limits::TemporalLimits=TemporalLimits()) =
+    temporal_lower_bound(:msm_combined_heuristic, left, right;
+        parameter0=split_merge_cost, limits)
 
 """Native ERP lower bound from the difference in total gap mass."""
 erp_gap_mass_lower_bound(left::AbstractVector{<:Real},

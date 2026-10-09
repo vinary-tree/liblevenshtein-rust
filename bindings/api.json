@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 24,
+  "apiRevision": 25,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
