@@ -61,3 +61,60 @@
     @test !isopen(stopped)
     close(index)
 end
+
+@testset "native temporal index concurrent lifecycle" begin
+    query = [1.0, 2.0, 3.0]
+    for _ in 1:24
+        index = LL.TemporalIndex(:msm; quant_min=0.0,
+            quant_max=10.0, parameter0=1.0, max_entries=1,
+            max_total_samples=3, max_series_len=3)
+        LL.insert!(index, 1, query)
+        LL.freeze!(index)
+        gate = Channel{Nothing}(2)
+        search = Base.Threads.@spawn begin
+            take!(gate)
+            try
+                collect(LL.query_index_range(index, query; cutoff=0.0,
+                    page_work_units=10_000, page_results=1))
+            catch error
+                error
+            end
+        end
+        closing = Base.Threads.@spawn begin
+            take!(gate)
+            close(index)
+        end
+        put!(gate, nothing)
+        put!(gate, nothing)
+        result = fetch(search)
+        fetch(closing)
+        @test result isa ArgumentError ||
+            (result isa Vector{LL.TemporalMatch} &&
+                [entry.id for entry in result] == UInt64[1])
+        @test !isopen(index)
+    end
+
+    index = LL.TemporalIndex(:msm; quant_min=0.0,
+        quant_max=10.0, parameter0=1.0, max_entries=1,
+        max_total_samples=3, max_series_len=3)
+    LL.insert!(index, 1, query)
+    LL.freeze!(index)
+    cursor = LL.query_index_range(index, query; cutoff=0.0,
+        page_work_units=10_000, page_results=1)
+    close(index)
+    gate = Channel{Nothing}(2)
+    reading = Base.Threads.@spawn begin
+        take!(gate)
+        LL.next_batch!(cursor, 1)
+    end
+    closing = Base.Threads.@spawn begin
+        take!(gate)
+        close(cursor)
+    end
+    put!(gate, nothing)
+    put!(gate, nothing)
+    batch = fetch(reading)
+    fetch(closing)
+    @test batch === nothing || batch isa Vector{LL.TemporalMatch}
+    @test !isopen(cursor)
+end

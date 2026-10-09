@@ -58,6 +58,7 @@ mutable struct TemporalIndex
     max_series_len::Csize_t
     frozen::Bool
     closed::Bool
+    lock::ReentrantLock
 end
 
 """Build a bounded native temporal index for MSM, ERP, TWED, DTW, or Fréchet.
@@ -65,6 +66,7 @@ end
 The quantization interval must be finite and increasing, with 1–256 bins.
 Stored samples are checked and copied by native construction. Freeze the index
 before searching; active cursors keep its snapshot after the handle closes.
+Insert, freeze, query creation, and close serialize on the index handle.
 """
 function TemporalIndex(kind::Symbol; quant_min::Real, quant_max::Real,
     quant_bins::Integer=256, parameter0::Real=0.0, parameter1::Real=0.0,
@@ -86,47 +88,59 @@ function TemporalIndex(kind::Symbol; quant_min::Real, quant_max::Real,
     status = ccall(native(:llev_temporal_index_new), Cint,
         (Ref{RawTemporalIndexConfig}, Ref{Ptr{Cvoid}}), Ref(raw), output)
     checked(status, :llev_temporal_index_new)
-    index = TemporalIndex(output[], raw.max_series_len, false, false)
+    index = TemporalIndex(output[], raw.max_series_len, false, false,
+        ReentrantLock())
     finalizer(close!, index)
     index
 end
 
 function insert!(index::TemporalIndex, id::Integer, samples::AbstractVector{<:Real})
-    index.closed && throw(ArgumentError("temporal index is closed"))
-    index.frozen && throw(ArgumentError("temporal index is frozen"))
     0 <= id <= typemax(UInt64) || throw(ArgumentError("ID must fit UInt64"))
     length(samples) <= index.max_series_len ||
         throw(ArgumentError("temporal series exceeds max_series_len"))
     values = Vector{Float64}(samples)
-    status = GC.@preserve values ccall(native(:llev_temporal_index_insert), Cint,
-        (Ptr{Cvoid}, UInt64, Ptr{Float64}, Csize_t), index.handle, UInt64(id),
-        isempty(values) ? C_NULL : pointer(values), length(values))
+    status = lock(index.lock) do
+        index.closed && throw(ArgumentError("temporal index is closed"))
+        index.frozen && throw(ArgumentError("temporal index is frozen"))
+        GC.@preserve values ccall(native(:llev_temporal_index_insert), Cint,
+            (Ptr{Cvoid}, UInt64, Ptr{Float64}, Csize_t), index.handle,
+            UInt64(id), isempty(values) ? C_NULL : pointer(values),
+            length(values))
+    end
     checked(status, :llev_temporal_index_insert)
     index
 end
 
 """Finish construction; later mutations are rejected."""
 function freeze!(index::TemporalIndex)
-    index.closed && throw(ArgumentError("temporal index is closed"))
-    index.frozen && return index
-    status = ccall(native(:llev_temporal_index_freeze), Cint,
-        (Ptr{Cvoid},), index.handle)
-    checked(status, :llev_temporal_index_freeze)
-    index.frozen = true
-    index
+    lock(index.lock) do
+        index.closed && throw(ArgumentError("temporal index is closed"))
+        if !index.frozen
+            status = ccall(native(:llev_temporal_index_freeze), Cint,
+                (Ptr{Cvoid},), index.handle)
+            checked(status, :llev_temporal_index_freeze)
+            index.frozen = true
+        end
+        index
+    end
 end
 
 function close!(index::TemporalIndex)
-    index.closed && return nothing
-    handle = index.handle
-    index.handle = C_NULL
-    index.closed = true
-    handle == C_NULL ||
-        ccall(native(:llev_temporal_index_free), Cvoid, (Ptr{Cvoid},), handle)
-    nothing
+    lock(index.lock) do
+        if !index.closed
+            handle = index.handle
+            index.handle = C_NULL
+            index.closed = true
+            handle == C_NULL || ccall(native(:llev_temporal_index_free),
+                Cvoid, (Ptr{Cvoid},), handle)
+        end
+        nothing
+    end
 end
 Base.close(index::TemporalIndex) = close!(index)
-Base.isopen(index::TemporalIndex) = !index.closed
+Base.isopen(index::TemporalIndex) = lock(index.lock) do
+    !index.closed
+end
 
 """Lazy native page cursor over one frozen indexed temporal snapshot."""
 mutable struct TemporalIndexCursor
@@ -134,6 +148,7 @@ mutable struct TemporalIndexCursor
     page_work_units::Csize_t
     page_results::Csize_t
     closed::Bool
+    lock::ReentrantLock
 end
 
 Base.IteratorSize(::Type{TemporalIndexCursor}) = Base.SizeUnknown()
@@ -146,12 +161,11 @@ Each cursor page charges at most `page_work_units` work and accepts at most
 `page_results` new matches. Session limits remain cumulative. A complete
 empty result proves absence; exhausted cumulative limits raise
 `TemporalQueryIncomplete` when the cursor advances beyond its exact subset.
+Concurrent page reads and close serialize on the cursor handle.
 """
 function query_index_range(index::TemporalIndex, query::AbstractVector{<:Real};
     cutoff::Real=Inf, limits::TemporalSearchLimits=TemporalSearchLimits(),
     page_work_units::Integer=100_000, page_results::Integer=256)
-    index.closed && throw(ArgumentError("temporal index is closed"))
-    index.frozen || throw(ArgumentError("temporal index must be frozen"))
     length(query) <= limits.max_series_len ||
         throw(ArgumentError("query exceeds max_series_len"))
     work = checked_threshold(page_work_units)
@@ -160,56 +174,64 @@ function query_index_range(index::TemporalIndex, query::AbstractVector{<:Real};
         throw(ArgumentError("temporal page limits must be positive"))
     values = Vector{Float64}(query)
     output = Ref{Ptr{Cvoid}}(C_NULL)
-    status = GC.@preserve values ccall(native(:llev_temporal_index_query_range),
-        Cint, (Ptr{Cvoid}, Ptr{Float64}, Csize_t, Float64,
-            Ref{TemporalSearchLimits}, Ref{Ptr{Cvoid}}),
-        index.handle, isempty(values) ? C_NULL : pointer(values),
-        length(values), Float64(cutoff), Ref(limits), output)
+    status = lock(index.lock) do
+        index.closed && throw(ArgumentError("temporal index is closed"))
+        index.frozen || throw(ArgumentError("temporal index must be frozen"))
+        GC.@preserve values ccall(native(:llev_temporal_index_query_range),
+            Cint, (Ptr{Cvoid}, Ptr{Float64}, Csize_t, Float64,
+                Ref{TemporalSearchLimits}, Ref{Ptr{Cvoid}}),
+            index.handle, isempty(values) ? C_NULL : pointer(values),
+            length(values), Float64(cutoff), Ref(limits), output)
+    end
     checked(status, :llev_temporal_index_query_range)
-    cursor = TemporalIndexCursor(output[], work, results, false)
+    cursor = TemporalIndexCursor(output[], work, results, false,
+        ReentrantLock())
     finalizer(close!, cursor)
     cursor
 end
 
 function next_batch!(cursor::TemporalIndexCursor, maximum::Integer=DEFAULT_MATCH_BATCH)
-    cursor.closed && return nothing
-    0 < maximum <= 65_536 ||
-        throw(ArgumentError("batch maximum must be 1..65,536"))
-    raw = Vector{RawTemporalIndexMatch}(undef, maximum)
-    written = Ref{Csize_t}(0)
-    done = Ref{UInt8}(0)
-    reason = Ref{UInt32}(0)
-    try
-        status = GC.@preserve raw ccall(
-            native(:llev_temporal_index_cursor_next_batch), Cint,
-            (Ptr{Cvoid}, Ptr{RawTemporalIndexMatch}, Csize_t, Csize_t,
-                Csize_t, Ref{Csize_t}, Ref{UInt8}, Ref{UInt32}),
-            cursor.handle, pointer(raw), length(raw), cursor.page_work_units,
-            cursor.page_results, written, done, reason)
-        if status == Int32(STATUS_LIMIT_EXCEEDED)
-            throw(TemporalQueryIncomplete(:native_index, nothing,
-                native_index_reason(reason[])))
-        end
-        checked(status, :llev_temporal_index_cursor_next_batch)
-        if written[] > 0
-            batch = [TemporalMatch(raw[i].id, raw[i].distance)
-                for i in 1:Int(written[])]
-            done[] != 0 && close!(cursor)
-            return batch
-        end
-        if done[] != 0
+    lock(cursor.lock) do
+        cursor.closed && return nothing
+        0 < maximum <= 65_536 ||
+            throw(ArgumentError("batch maximum must be 1..65,536"))
+        raw = Vector{RawTemporalIndexMatch}(undef, maximum)
+        written = Ref{Csize_t}(0)
+        done = Ref{UInt8}(0)
+        reason = Ref{UInt32}(0)
+        try
+            status = GC.@preserve raw ccall(
+                native(:llev_temporal_index_cursor_next_batch), Cint,
+                (Ptr{Cvoid}, Ptr{RawTemporalIndexMatch}, Csize_t, Csize_t,
+                    Csize_t, Ref{Csize_t}, Ref{UInt8}, Ref{UInt32}),
+                cursor.handle, pointer(raw), length(raw),
+                cursor.page_work_units, cursor.page_results, written, done,
+                reason)
+            if status == Int32(STATUS_LIMIT_EXCEEDED)
+                throw(TemporalQueryIncomplete(:native_index, nothing,
+                    native_index_reason(reason[])))
+            end
+            checked(status, :llev_temporal_index_cursor_next_batch)
+            if written[] > 0
+                batch = [TemporalMatch(raw[i].id, raw[i].distance)
+                    for i in 1:Int(written[])]
+                done[] != 0 && close!(cursor)
+                return batch
+            end
+            if done[] != 0
+                close!(cursor)
+                return nothing
+            end
+            TemporalMatch[]
+        catch
             close!(cursor)
-            return nothing
+            rethrow()
         end
-        TemporalMatch[]
-    catch
-        close!(cursor)
-        rethrow()
     end
 end
 
 function Base.iterate(cursor::TemporalIndexCursor, state=nothing)
-    while !cursor.closed
+    while isopen(cursor)
         batch = next_batch!(cursor, 1)
         batch === nothing && return nothing
         isempty(batch) || return (batch[1], nothing)
@@ -232,14 +254,20 @@ function reduce_batches!(function_value, initial, cursor::TemporalIndexCursor;
 end
 
 function close!(cursor::TemporalIndexCursor)
-    cursor.closed && return nothing
-    handle = cursor.handle
-    cursor.handle = C_NULL
-    cursor.closed = true
-    handle == C_NULL || ccall(native(:llev_temporal_index_cursor_free),
-        Cvoid, (Ptr{Cvoid},), handle)
-    nothing
+    lock(cursor.lock) do
+        if !cursor.closed
+            handle = cursor.handle
+            cursor.handle = C_NULL
+            cursor.closed = true
+            handle == C_NULL ||
+                ccall(native(:llev_temporal_index_cursor_free),
+                    Cvoid, (Ptr{Cvoid},), handle)
+        end
+        nothing
+    end
 end
 Base.close(cursor::TemporalIndexCursor) = close!(cursor)
-Base.isopen(cursor::TemporalIndexCursor) = !cursor.closed
+Base.isopen(cursor::TemporalIndexCursor) = lock(cursor.lock) do
+    !cursor.closed
+end
 cancel!(cursor::TemporalIndexCursor) = close!(cursor)
