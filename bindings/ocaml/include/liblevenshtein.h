@@ -1612,6 +1612,63 @@ typedef struct LlevTemporalSearchLimits {
     size_t max_continuation_bytes;
 } LlevTemporalSearchLimits;
 
+/** Persistent PAA-ranked approximate MSM index. Feature selection is
+ * advisory unless every episode is exactly reranked. All inserted samples
+ * must be finite. The source and feature ceilings bound retained storage. */
+typedef struct LlevApproxMsmIndexConfig {
+    size_t segments;
+    size_t candidate_limit;
+    double split_merge_cost;
+    size_t max_entries;
+    size_t max_total_samples;
+    size_t max_series_len;
+    size_t max_total_features;
+} LlevApproxMsmIndexConfig;
+
+typedef struct LlevApproxMsmNeighbor {
+    uint64_t id;
+    size_t insertion_index;
+    double distance;
+} LlevApproxMsmNeighbor;
+
+/** Kind 1 is exhaustive and proves recall; kind 2 is advisory and makes no
+ * recall or absence claim; kind 3 is incomplete and may contain an exact
+ * partial neighbor list. The reason uses temporal incompletion codes.
+ * Coverage counts only exact MSM decisions, not PAA feature inspections. */
+typedef struct LlevApproxMsmOutcome {
+    uint32_t kind;
+    uint32_t reason;
+    size_t neighbor_count;
+    size_t indexed_entries;
+    size_t candidate_entries;
+    size_t exact_reranked;
+    size_t dp_cells;
+    size_t work_units;
+    size_t scratch_bytes;
+    size_t candidates;
+    size_t results;
+} LlevApproxMsmOutcome;
+
+typedef struct LlevApproxMsmIndex LlevApproxMsmIndex;
+
+/** Mutate before freeze; frozen indexes support independent concurrent
+ * queries. Query output storage is caller owned and must hold min(k, len)
+ * neighbors. Each emitted distance is exact MSM. Incomplete outcomes remain
+ * tagged, even when they contain an exact partial subset. */
+LLEV_API LlevStatus llev_approx_msm_index_new(
+    const LlevApproxMsmIndexConfig* config,
+    LlevApproxMsmIndex** out_index);
+LLEV_API LlevStatus llev_approx_msm_index_insert(
+    LlevApproxMsmIndex* index, uint64_t id,
+    const double* samples, size_t len, size_t* out_position);
+LLEV_API LlevStatus llev_approx_msm_index_freeze(LlevApproxMsmIndex* index);
+LLEV_API LlevStatus llev_approx_msm_index_query_knn(
+    const LlevApproxMsmIndex* index, const double* query,
+    size_t query_len, size_t k, const LlevTemporalSearchLimits* limits,
+    LlevApproxMsmNeighbor* out_neighbors, size_t capacity,
+    LlevApproxMsmOutcome* out_outcome);
+LLEV_API void llev_approx_msm_index_free(LlevApproxMsmIndex* index);
+
 /** Typed physical-time quantization, validated metric configuration, and
  * explicit bounded ingestion. Value and timestamp domains must be finite,
  * increasing, and the time minimum must follow the shared origin. Bin counts

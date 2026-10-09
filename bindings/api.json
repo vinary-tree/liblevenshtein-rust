@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 19,
+  "apiRevision": 20,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1205,7 +1205,12 @@
     { "name": "llev_source_filter_index_insert", "rustModule": "filter_index" },
     { "name": "llev_source_filter_index_freeze", "rustModule": "filter_index" },
     { "name": "llev_source_filter_index_query", "rustModule": "filter_index" },
-    { "name": "llev_source_filter_index_free", "rustModule": "filter_index" }
+    { "name": "llev_source_filter_index_free", "rustModule": "filter_index" },
+    { "name": "llev_approx_msm_index_new", "rustModule": "approx_msm" },
+    { "name": "llev_approx_msm_index_insert", "rustModule": "approx_msm" },
+    { "name": "llev_approx_msm_index_freeze", "rustModule": "approx_msm" },
+    { "name": "llev_approx_msm_index_query_knn", "rustModule": "approx_msm" },
+    { "name": "llev_approx_msm_index_free", "rustModule": "approx_msm" }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",

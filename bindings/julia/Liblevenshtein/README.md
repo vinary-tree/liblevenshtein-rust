@@ -192,6 +192,13 @@ order after a bounded complete native scan. It raises
 `TemporalQueryIncomplete` on resource exhaustion without exposing partial
 neighbors.
 
+`ApproxMsmIndex` copies finite episodes into a frozen PAA-ranked source and
+exactly reranks its bounded candidate pool with MSM. `query_approx_msm_knn`
+returns tagged `:exhaustive`, `:advisory`, or `:incomplete` evidence with
+coverage counts and exact neighbor distances. Only `proves_recall(result)`
+authorizes an exact top-k or absence claim. See the
+[approximate MSM guide](../../README.md#approximate-msm-nearest-neighbors).
+
 ## Choose an automaton
 
 | Julia value | Semantics | Metric? |
@@ -338,6 +345,7 @@ The adjacent-transposition variant is checked against optimal string alignment
 quantization, ERP canonicalization, SAX, rolling windows, online ERP prefixes,
 a copied temporal scan, the frozen temporal index, physical-time TWED range
 scan and index, exact physical-time nearest-neighbor scan and index,
+scalar, advisory, and exhaustive MSM nearest-neighbor searches,
 source-filter scans, persistent native n-gram and hybrid queries, and their
 construction. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
@@ -353,35 +361,41 @@ LIBLEVENSHTEIN_LIBRARY="$PWD/target/debug/libliblevenshtein.so" \
   bindings/julia/Liblevenshtein/benchmark/temporal_filtering.jl
 ```
 
-On the 2026-10-08 local debug build (Julia 1.13.1, Threadripper PRO 5975WX,
+On the 2026-10-09 local debug build (Julia 1.13.1, Threadripper PRO 5975WX,
 one CPU quota, 2 GiB memory ceiling), median nanoseconds per complete call
 were:
 
 | Scenario | Median ns/op |
 |---|---:|
-| Scalar DTW, 16 × 16 samples | 4,949 |
-| Soft-DTW gradients, 16 × 16 samples | 47,891 |
-| Reusable Keogh bound, 16 samples | 1,358 |
-| Quantization, 16 samples | 99 |
-| ERP canonicalization, 16 samples | 56 |
-| SAX, 16 samples to 4 symbols | 270 |
-| Rolling windows, 16 samples to width 4 | 4,454 |
-| Online ERP, 16 prefixes | 78,759 |
-| 32-entry temporal scan | 161,568 |
-| 32-entry temporal index | 3,086,026 |
-| 32-entry physical-time TWED range scan | 322,096 |
-| 32-entry physical-time TWED range index | 714,146 |
-| 32-entry physical-time TWED kNN scalar scan | 684,565 |
-| 32-entry physical-time TWED kNN native index | 312,037 |
-| 32-term n-gram source scan | 320,407 |
-| 32-term hybrid source scan | 384,808 |
-| 32-term native n-gram index query | 34,976 |
-| 32-term native hybrid index query | 72,384 |
-| 32-term native n-gram index build | 150,700 |
-| 32-term native hybrid index build | 153,235 |
+| Scalar DTW, 16 × 16 samples | 4,940 |
+| Soft-DTW gradients, 16 × 16 samples | 47,592 |
+| Reusable Keogh bound, 16 samples | 1,403 |
+| Quantization, 16 samples | 100 |
+| ERP canonicalization, 16 samples | 54 |
+| SAX, 16 samples to 4 symbols | 291 |
+| Rolling windows, 16 samples to width 4 | 4,802 |
+| Online ERP, 16 prefixes | 77,993 |
+| 32-entry temporal scan | 161,913 |
+| 32-entry temporal index | 3,082,520 |
+| 32-entry scalar MSM kNN | 600,637 |
+| 32-entry advisory MSM kNN | 57,004 |
+| 32-entry exhaustive MSM kNN | 272,512 |
+| 32-entry physical-time TWED range scan | 329,765 |
+| 32-entry physical-time TWED range index | 709,150 |
+| 32-entry physical-time TWED kNN scalar scan | 694,641 |
+| 32-entry physical-time TWED kNN native index | 314,458 |
+| 32-term n-gram source scan | 316,058 |
+| 32-term hybrid source scan | 381,111 |
+| 32-term native n-gram index query | 34,589 |
+| 32-term native hybrid index query | 72,392 |
+| 32-term native n-gram index build | 150,524 |
+| 32-term native hybrid index build | 151,320 |
 
 The range indexes are slower than their scans for this small, low-selectivity
 source, while the native kNN scan is faster than repeated Julia scalar calls.
+Advisory MSM is the fastest MSM search here because it reranks four of 32
+episodes; its result does not prove top-k recall. The exhaustive MSM run does
+prove recall and is faster than repeated scalar calls on this workload.
 Persistent native source-filter queries are faster than the source scans on
 this workload; the two build rows show their setup cost.
 Measure each operation on the intended collection and cutoff before choosing

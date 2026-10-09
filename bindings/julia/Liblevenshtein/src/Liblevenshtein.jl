@@ -179,6 +179,11 @@ export ABI_VERSION,
     TemporalIndex,
     TemporalSearchLimits,
     TemporalIndexCursor,
+    ApproxMsmIndex,
+    ApproxMsmNeighbor,
+    ApproxMsmResult,
+    query_approx_msm_knn,
+    proves_recall,
     MetricErpConfig,
     MetricMsmConfig,
     MetricTwedConfig,
@@ -1112,6 +1117,7 @@ include("TemporalDeltaEncoding.jl")
 include("TemporalSaxEncoding.jl")
 include("TemporalQueries.jl")
 include("TemporalIndex.jl")
+include("TemporalApproxMsm.jl")
 include("TemporalMetricDomains.jl")
 include("TemporalTimestamped.jl")
 include("TemporalTimestampedIndex.jl")

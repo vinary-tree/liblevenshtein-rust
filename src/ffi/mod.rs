@@ -73,6 +73,7 @@
 //! }
 //! ```
 
+mod approx_msm;
 mod automata;
 mod costs;
 mod distance;
@@ -98,6 +99,7 @@ mod temporal_online;
 mod timestamped_index;
 mod wallbreaker;
 
+pub use approx_msm::*;
 pub use automata::*;
 pub use costs::*;
 pub use distance::*;

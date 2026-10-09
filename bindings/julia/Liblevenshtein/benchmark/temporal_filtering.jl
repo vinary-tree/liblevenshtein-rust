@@ -34,6 +34,14 @@ for (id, samples) in pairs
     LL.insert!(index, id, samples)
 end
 LL.freeze!(index)
+approx_advisory_index = LL.ApproxMsmIndex(pairs;
+    segments=4, candidate_limit=4,
+    max_entries=32, max_total_samples=512,
+    max_series_len=16, max_total_features=128)
+approx_exhaustive_index = LL.ApproxMsmIndex(pairs;
+    segments=4, candidate_limit=32,
+    max_entries=32, max_total_samples=512,
+    max_series_len=16, max_total_features=128)
 terms = LL.SourceFilterSource(["term-" * lpad(string(i), 3, '0')
     for i in 1:32]; max_terms=32, max_term_bytes=8,
     max_source_bytes=256)
@@ -64,6 +72,14 @@ scan() = collect(LL.query_temporal_range(source, :dtw, query;
     band=2, cutoff=0.5))
 indexed() = collect(LL.query_index_range(index, query;
     cutoff=0.5, page_work_units=100_000, page_results=32))
+approx_advice() = LL.query_approx_msm_knn(approx_advisory_index,
+    query, 3)
+approx_full() = LL.query_approx_msm_knn(approx_exhaustive_index,
+    query, 3)
+msm_scan() = sort([(UInt(i - 1), id,
+    LL.msm_distance(query, samples).value)
+    for (i, (id, samples)) in enumerate(pairs)];
+    by=match -> (match[3], match[1]))[1:3]
 online() = collect(LL.online_observations(:erp, query, candidate;
     cutoff=100.0))
 ngram() = collect(LL.query_ngram(terms, "term-007", 1;
@@ -98,6 +114,13 @@ try
     expected = sort([match.id for match in scan()])
     actual = sort([match.id for match in indexed()])
     expected == actual || error("indexed and scanned result IDs differ")
+    LL.proves_recall(approx_full()) ||
+        error("exhaustive approximate MSM search did not prove recall")
+    !LL.proves_recall(approx_advice()) ||
+        error("advisory approximate MSM search claimed recall")
+    [(neighbor.insertion_index, neighbor.id, neighbor.distance)
+        for neighbor in approx_full()] == msm_scan() ||
+        error("exhaustive approximate MSM neighbors differ from scalar scan")
     timestamped_expected = sort(timestamped_scan())
     timestamped_actual = sort([match.id for match in timestamped()])
     timestamped_expected == timestamped_actual ||
@@ -133,6 +156,9 @@ try
     sample("online ERP 16 prefixes", online)
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
+    sample("32-entry scalar MSM kNN", msm_scan)
+    sample("32-entry advisory MSM kNN", approx_advice)
+    sample("32-entry exhaustive MSM kNN", approx_full)
     sample("32-entry timestamped scan", timestamped_scan)
     sample("32-entry timestamped index", timestamped)
     sample("32-entry timestamped kNN scan", timestamped_knn_scan)
@@ -146,6 +172,8 @@ try
 finally
     close(plan)
     close(index)
+    close(approx_advisory_index)
+    close(approx_exhaustive_index)
     close(timestamped_index)
     close(ngram_index)
     close(hybrid_index)

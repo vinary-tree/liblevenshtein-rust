@@ -202,6 +202,14 @@ resource exhaustion raises `TemporalQueryIncomplete` with no partial list.
 Results use distance then stable episode ID order, including when metadata
 IDs repeat.
 
+`ApproxMsmIndex` uses piecewise aggregate approximation (PAA) to select a
+candidate pool, then computes exact MSM for those candidates. Its strict
+`query_approx_msm_knn` result reports the number indexed, selected, and
+exactly reranked. Only `proves_recall(result)` means all indexed entries were
+decided. Advisory and incomplete results retain exact distances for emitted
+neighbors without claiming recall. A zero-neighbor advisory result is not
+evidence that no neighbor exists.
+
 ### Lazy temporal range queries
 
 `TemporalSeriesSource` copies a finite iterable of `(UInt64 ID, finite real

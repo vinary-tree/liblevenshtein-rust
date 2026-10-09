@@ -84,6 +84,11 @@ variants, protocols, or methods.
 | `llev_affine_gap_distance_u64` | `llev_affine_gap_distance_u64` | project ABI operation |
 | `llev_affine_gap_distance_u64_threshold` | `llev_affine_gap_distance_u64_threshold` | project ABI operation |
 | `llev_api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
+| `llev_approx_msm_index_free` | `llev_approx_msm_index_free` | project ABI operation |
+| `llev_approx_msm_index_freeze` | `llev_approx_msm_index_freeze` | project ABI operation |
+| `llev_approx_msm_index_insert` | `llev_approx_msm_index_insert` | project ABI operation |
+| `llev_approx_msm_index_new` | `llev_approx_msm_index_new` | project ABI operation |
+| `llev_approx_msm_index_query_knn` | `llev_approx_msm_index_query_knn` | project ABI operation |
 | `llev_build_features` | `llev_build_features` | ABI compatibility and feature discovery |
 | `llev_cost_cursor_free` | `llev_cost_cursor_free` | project ABI operation |
 | `llev_cost_cursor_next_batch` | `llev_cost_cursor_next_batch` | project ABI operation |
