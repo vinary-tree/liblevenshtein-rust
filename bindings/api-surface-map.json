@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 234 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 236 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -740,8 +740,14 @@
         "llev_vector_temporal_distance": {
           "symbol": "llev_vector_temporal_distance"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": "llev_vector_frechet_ground_distance"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": "llev_vector_frechet_online_new"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": "llev_vector_frechet_ground_online_new"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": "llev_vector_frechet_online_observation"
@@ -1710,9 +1716,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -2689,9 +2703,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -3660,9 +3682,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -4624,9 +4654,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -5587,9 +5625,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -6548,9 +6594,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -7522,9 +7576,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -8493,9 +8555,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -9488,9 +9558,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -10454,9 +10532,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -11421,9 +11507,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -12388,9 +12482,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -13358,9 +13460,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -14328,9 +14438,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,
@@ -15194,7 +15312,13 @@
         "llev_vector_temporal_distance": {
           "symbol": "vector_temporal_distance"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": "vector_frechet_ground_distance"
+        },
         "llev_vector_frechet_online_new": {
+          "symbol": "VectorFrechetOnlineAutomaton"
+        },
+        "llev_vector_frechet_ground_online_new": {
           "symbol": "VectorFrechetOnlineAutomaton"
         },
         "llev_vector_frechet_online_observation": {
@@ -16089,9 +16213,17 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_vector_frechet_ground_distance": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
+        },
         "llev_vector_frechet_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_ground_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-27 vector Fréchet ground metric is not yet projected into this language facade"
         },
         "llev_vector_frechet_online_observation": {
           "symbol": null,

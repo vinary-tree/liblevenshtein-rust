@@ -487,6 +487,17 @@ replay against the retained snapshot; a changed well-formed projection returns
 `false`. DTW accepts public root-distance cutoffs and exposes native squared
 cutoffs in `certificate_info`.
 
+For equal-dimensional vector paths in comparable coordinate units, use
+`vector_frechet_ground_distance(ground, query, target)` with `ground` set to
+`:l1`, `:l2`, or `:linf` to select the
+audited Manhattan, Euclidean, or Chebyshev point metric. The native path
+quotient removes consecutive equal points. Use
+`VectorFrechetOnlineAutomaton(:l2, query; cutoff=...)` or
+`vector_frechet_online_observations(:l2, query, points; cutoff=...)` to score
+successive whole-point prefixes with fixed retained storage. A
+`FixedChannelMetric` carries channel identity, physical units, fold-local
+scales, and weights for typed vector comparisons.
+
 - Use `distance`, `optimal_string_alignment_distance`,
   `true_damerau_distance`, and `merge_and_split_distance` for pairwise work.
   Each accepts `AbstractString`, `AbstractVector{UInt8}`, or

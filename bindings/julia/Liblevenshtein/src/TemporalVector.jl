@@ -222,6 +222,51 @@ function vector_temporal_distance(kind::Symbol, metric::FixedChannelMetric,
     temporal_outcome(raw)
 end
 
+function vector_frechet_ground_code(ground::Symbol)
+    ground === :l1 && return UInt32(1)
+    ground === :l2 && return UInt32(2)
+    ground === :linf && return UInt32(3)
+    throw(ArgumentError("Fréchet ground metric must be :l1, :l2, or :linf"))
+end
+
+"""Exact native discrete Fréchet with audited L1, L2, or L∞ point distance.
+
+The paths must have the same positive dimension and no timestamps. Native
+construction collapses consecutive equal points and charges the copied input
+and exact dynamic-programming work to `limits`.
+"""
+function vector_frechet_ground_distance(ground::Symbol,
+    left::VectorTemporalSeries, right::VectorTemporalSeries;
+    cutoff::Real=Inf, limits::VectorTemporalLimits=VectorTemporalLimits())
+    api_revision() >= UInt32(27) ||
+        throw(NativeError(Int32(STATUS_UNSUPPORTED),
+            :llev_vector_frechet_ground_distance,
+            "ground-metric vector Fréchet requires API revision 27"))
+    ground_code = vector_frechet_ground_code(ground)
+    left.timestamps === nothing && right.timestamps === nothing ||
+        throw(ArgumentError("vector Fréchet paths must have no timestamps"))
+    dimension = size(left.samples, 1)
+    dimension > 0 && dimension == size(right.samples, 1) ||
+        throw(ArgumentError("vector Fréchet dimensions must be positive and equal"))
+    dimension <= limits.max_dimension ||
+        throw(ArgumentError("vector Fréchet dimension exceeds max_dimension"))
+    size(left.samples, 2) <= limits.scalar.max_series_len &&
+        size(right.samples, 2) <= limits.scalar.max_series_len ||
+        throw(ArgumentError("vector Fréchet path exceeds max_series_len"))
+    output = Ref(RawTemporalDistanceResult(0.0, 0, 0, 0, 0, 0))
+    status = GC.@preserve left right ccall(
+        native(:llev_vector_frechet_ground_distance), Cint,
+        (UInt32, Ref{RawVectorSeriesView}, Ref{RawVectorSeriesView}, Float64,
+            Ref{VectorTemporalLimits}, Ref{RawTemporalDistanceResult}),
+        ground_code, Ref(raw_vector_series(left)), Ref(raw_vector_series(right)),
+        Float64(cutoff), Ref(limits), output)
+    raw = output[]
+    status == Int32(STATUS_OK) ||
+        (status == Int32(STATUS_LIMIT_EXCEEDED) && raw.kind == 3) ||
+        checked(status, :llev_vector_frechet_ground_distance)
+    temporal_outcome(raw)
+end
+
 vector_erp_distance(metric::FixedChannelMetric,
     left::VectorTemporalSeries, right::VectorTemporalSeries;
     gap::AbstractVector{<:Real}, kwargs...) =

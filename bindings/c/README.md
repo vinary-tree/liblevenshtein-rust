@@ -290,6 +290,8 @@ variants, protocols, or methods.
 | `llev_universal_online_new` | `llev_universal_online_new` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_observation` | `llev_universal_online_observation` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_vector_box_box_lower_bound` | `llev_vector_box_box_lower_bound` | project ABI operation |
+| `llev_vector_frechet_ground_distance` | `llev_vector_frechet_ground_distance` | project ABI operation |
+| `llev_vector_frechet_ground_online_new` | `llev_vector_frechet_ground_online_new` | project ABI operation |
 | `llev_vector_frechet_online_advance` | `llev_vector_frechet_online_advance` | project ABI operation |
 | `llev_vector_frechet_online_free` | `llev_vector_frechet_online_free` | project ABI operation |
 | `llev_vector_frechet_online_new` | `llev_vector_frechet_online_new` | project ABI operation |

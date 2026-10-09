@@ -42,6 +42,35 @@ function VectorFrechetOnlineAutomaton(metric::FixedChannelMetric,
     machine
 end
 
+"""Construct an online Fréchet machine with L1, L2, or L∞ point distance."""
+function VectorFrechetOnlineAutomaton(ground::Symbol,
+    query::VectorTemporalSeries; cutoff::Real,
+    limits::TemporalOnlineLimits=TemporalOnlineLimits())
+    api_revision() >= UInt32(27) ||
+        throw(NativeError(Int32(STATUS_UNSUPPORTED),
+            :llev_vector_frechet_ground_online_new,
+            "ground-metric vector Fréchet requires API revision 27"))
+    ground_code = vector_frechet_ground_code(ground)
+    query.timestamps === nothing ||
+        throw(ArgumentError("vector Fréchet query must have no timestamps"))
+    dimension = size(query.samples, 1)
+    dimension > 0 || throw(ArgumentError("vector query dimension must be positive"))
+    size(query.samples, 2) <= limits.max_query_len ||
+        throw(ArgumentError("vector query exceeds max_query_len"))
+    output = Ref{Ptr{Cvoid}}(C_NULL)
+    status = GC.@preserve query ccall(
+        native(:llev_vector_frechet_ground_online_new), Cint,
+        (UInt32, Ref{RawVectorSeriesView}, Float64,
+            Ref{TemporalOnlineLimits}, Ref{Ptr{Cvoid}}),
+        ground_code, Ref(raw_vector_series(query)), Float64(cutoff),
+        Ref(limits), output)
+    checked(status, :llev_vector_frechet_ground_online_new)
+    machine = VectorFrechetOnlineAutomaton(output[], dimension,
+        ReentrantLock(), false)
+    finalizer(close!, machine)
+    machine
+end
+
 """Read the exact already committed vector-target prefix observation."""
 function observation(machine::VectorFrechetOnlineAutomaton)
     lock(machine.lock) do
@@ -120,6 +149,12 @@ Base.eltype(::Type{VectorFrechetOnlineStream}) = TemporalOnlineObservation
 function vector_frechet_online_observations(metric::FixedChannelMetric,
     query::VectorTemporalSeries, source; kwargs...)
     machine = VectorFrechetOnlineAutomaton(metric, query; kwargs...)
+    VectorFrechetOnlineStream(source, machine, nothing, false, false)
+end
+
+function vector_frechet_online_observations(ground::Symbol,
+    query::VectorTemporalSeries, source; kwargs...)
+    machine = VectorFrechetOnlineAutomaton(ground, query; kwargs...)
     VectorFrechetOnlineStream(source, machine, nothing, false, false)
 end
 

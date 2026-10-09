@@ -1578,6 +1578,16 @@ LLEV_API LlevStatus llev_vector_temporal_distance(
     const LlevVectorTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+/** Exact vector discrete Fréchet using audited untyped point distance:
+ * ground=1 L1, 2 L2, 3 L-infinity. Both equal-dimensional untimestamped
+ * paths are copied within the common vector temporal limits and normalized
+ * modulo consecutive equal points. Result kinds match scalar temporal scores. */
+LLEV_API LlevStatus llev_vector_frechet_ground_distance(
+    uint32_t ground, const LlevVectorSeriesView* left,
+    const LlevVectorSeriesView* right, double cutoff,
+    const LlevVectorTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
 typedef struct LlevVectorFrechetOnline LlevVectorFrechetOnline;
 
 /** Borrowed nonempty scalar samples with strictly increasing physical
@@ -2119,6 +2129,14 @@ LLEV_API LlevStatus llev_vector_frechet_online_new(
     const LlevVectorMetric* metric,
     const LlevVectorSeriesView* query,
     double cutoff,
+    const LlevTemporalOnlineLimits* limits,
+    LlevVectorFrechetOnline** out_machine);
+
+/** Copy an untimestamped query into an online Fréchet machine using ground
+ * 1 L1, 2 L2, or 3 L-infinity. Use the common observation, advance, scratch,
+ * and free functions below; each machine requires exclusive access. */
+LLEV_API LlevStatus llev_vector_frechet_ground_online_new(
+    uint32_t ground, const LlevVectorSeriesView* query, double cutoff,
     const LlevTemporalOnlineLimits* limits,
     LlevVectorFrechetOnline** out_machine);
 

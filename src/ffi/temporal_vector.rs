@@ -10,11 +10,11 @@ use super::{
     LlevStatus,
 };
 use crate::time_series::{
-    ChannelIdentity, ExactDecision, FixedChannelMetric, FoldLocalScaleProvenance, MetricChannel,
-    OnlineAutomatonLimits, OnlineStepOutcome, OperationOutcome, ResourceLimits, ResourceUsage,
-    VectorBandedDtwScorer, VectorErpMetric, VectorFrechetMetric, VectorFrechetOnlineAutomaton,
-    VectorFrechetOnlineObservation, VectorFrechetPath, VectorMetricError, VectorSample,
-    VectorTimestampedTwedMetric,
+    ChannelIdentity, ExactDecision, FixedChannelMetric, FoldLocalScaleProvenance, L1GroundMetric,
+    L2GroundMetric, LinfGroundMetric, MetricChannel, OnlineAutomatonLimits, OnlineStepOutcome,
+    OperationOutcome, ResourceLimits, ResourceUsage, VectorBandedDtwScorer, VectorErpMetric,
+    VectorFrechetMetric, VectorFrechetOnlineAutomaton, VectorFrechetOnlineObservation,
+    VectorFrechetPath, VectorMetricError, VectorSample, VectorTimestampedTwedMetric,
 };
 
 /// Exact channel/unit identity and fixed fold-local scale/weight.
@@ -443,9 +443,148 @@ pub unsafe extern "C" fn llev_vector_temporal_distance(
     })
 }
 
+/// Exact discrete Fréchet on untyped equal-dimensional vector paths with
+/// audited L1 (1), L2 (2), or L-infinity (3) point distance. The input paths
+/// are copied and canonicalized by the native metric quotient.
+///
+/// # Safety
+/// The two series and limits must address their declared lengths throughout
+/// the call and be disjoint from the writable output.
+#[no_mangle]
+pub unsafe extern "C" fn llev_vector_frechet_ground_distance(
+    ground: u32,
+    left: *const LlevVectorSeriesView,
+    right: *const LlevVectorSeriesView,
+    cutoff: f64,
+    raw_limits: *const LlevVectorTemporalLimits,
+    out_result: *mut LlevTemporalDistanceResult,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_result.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "vector Fréchet output is null".into(),
+        ))?;
+        *output = LlevTemporalDistanceResult::default();
+        if !matches!(ground, 1..=3) {
+            return Err(invalid("unknown vector Fréchet ground metric"));
+        }
+        let left = *left
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "left vector series is null".into()))?;
+        let right = *right.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "right vector series is null".into(),
+        ))?;
+        let limits = limits_from_view(*raw_limits.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "vector Fréchet limits are null".into(),
+        ))?);
+        if left.dimension == 0 || left.dimension != right.dimension {
+            return Err(invalid(
+                "vector Fréchet dimensions must be positive and equal",
+            ));
+        }
+        if left.dimension > limits.max_dimension {
+            return Err((LlevStatus::LimitExceeded, "vector dimension limit".into()));
+        }
+        if !left.timestamps.is_null()
+            || !right.timestamps.is_null()
+            || left.timestamp_unit != 0
+            || right.timestamp_unit != 0
+            || left.origin != 0.0
+            || right.origin != 0.0
+        {
+            return Err(invalid("vector Fréchet paths must have no timestamps"));
+        }
+        let pair_bytes = left
+            .sample_count
+            .checked_add(right.sample_count)
+            .and_then(|count| {
+                left.dimension
+                    .checked_mul(std::mem::size_of::<f64>())
+                    .and_then(|coordinates| {
+                        coordinates.checked_add(std::mem::size_of::<VectorSample>())
+                    })
+                    .and_then(|point| count.checked_mul(point))
+            })
+            .ok_or((
+                LlevStatus::LimitExceeded,
+                "vector Fréchet input size overflow".into(),
+            ))?;
+        if pair_bytes > limits.max_scratch_bytes {
+            return Err((
+                LlevStatus::LimitExceeded,
+                "vector Fréchet pair storage limit".into(),
+            ));
+        }
+        let left = VectorFrechetPath::try_new(
+            samples(left, left.dimension, limits, "left vector path")?,
+            limits,
+        )
+        .map_err(vector_error)?;
+        let right = VectorFrechetPath::try_new(
+            samples(right, right.dimension, limits, "right vector path")?,
+            limits,
+        )
+        .map_err(vector_error)?;
+        let result = match ground {
+            1 => VectorFrechetMetric::new(L1GroundMetric)
+                .distance_bounded(&left, &right, cutoff, limits),
+            2 => VectorFrechetMetric::new(L2GroundMetric)
+                .distance_bounded(&left, &right, cutoff, limits),
+            3 => VectorFrechetMetric::new(LinfGroundMetric)
+                .distance_bounded(&left, &right, cutoff, limits),
+            _ => unreachable!(),
+        }
+        .map_err(vector_error)?;
+        publish(result, output);
+        Ok(LlevStatus::Ok)
+    })
+}
+
 /// Fixed-query online Fréchet automaton over whole vector points.
+enum VectorFrechetMachine {
+    Fixed(VectorFrechetOnlineAutomaton<FixedChannelMetric>),
+    L1(VectorFrechetOnlineAutomaton<L1GroundMetric>),
+    L2(VectorFrechetOnlineAutomaton<L2GroundMetric>),
+    Linf(VectorFrechetOnlineAutomaton<LinfGroundMetric>),
+}
+
+impl VectorFrechetMachine {
+    fn observation(&self) -> VectorFrechetOnlineObservation {
+        match self {
+            Self::Fixed(machine) => machine.observation(),
+            Self::L1(machine) => machine.observation(),
+            Self::L2(machine) => machine.observation(),
+            Self::Linf(machine) => machine.observation(),
+        }
+    }
+
+    fn advance(
+        &mut self,
+        point: &VectorSample,
+    ) -> Result<OnlineStepOutcome<VectorFrechetOnlineObservation>, VectorMetricError> {
+        match self {
+            Self::Fixed(machine) => machine.advance(point),
+            Self::L1(machine) => machine.advance(point),
+            Self::L2(machine) => machine.advance(point),
+            Self::Linf(machine) => machine.advance(point),
+        }
+    }
+
+    fn scratch_bytes(&self) -> usize {
+        match self {
+            Self::Fixed(machine) => machine.scratch_bytes(),
+            Self::L1(machine) => machine.scratch_bytes(),
+            Self::L2(machine) => machine.scratch_bytes(),
+            Self::Linf(machine) => machine.scratch_bytes(),
+        }
+    }
+}
+
+/// Fixed-query online Fréchet handle for a typed or audited ground metric.
 pub struct LlevVectorFrechetOnline {
-    machine: VectorFrechetOnlineAutomaton<FixedChannelMetric>,
+    machine: VectorFrechetMachine,
     dimension: usize,
     limits: ResourceLimits,
 }
@@ -532,6 +671,92 @@ pub unsafe extern "C" fn llev_vector_frechet_online_new(
             cutoff,
             OnlineAutomatonLimits::from(raw_limits),
         )
+        .map_err(vector_error)?;
+        *output = Box::into_raw(Box::new(LlevVectorFrechetOnline {
+            machine: VectorFrechetMachine::Fixed(machine),
+            dimension,
+            limits,
+        }));
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Construct one online Fréchet machine with untyped L1 (1), L2 (2), or
+/// L-infinity (3) ground distance. The returned handle uses the common
+/// observation, advance, scratch, and free functions.
+///
+/// # Safety
+/// The query and limits must address their declared lengths throughout the
+/// call and be disjoint from the writable output.
+#[no_mangle]
+pub unsafe extern "C" fn llev_vector_frechet_ground_online_new(
+    ground: u32,
+    query: *const LlevVectorSeriesView,
+    cutoff: f64,
+    raw_limits: *const LlevTemporalOnlineLimits,
+    out_machine: *mut *mut LlevVectorFrechetOnline,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_machine.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "vector ground online output is null".into(),
+        ))?;
+        *output = std::ptr::null_mut();
+        if !matches!(ground, 1..=3) {
+            return Err(invalid("unknown vector Fréchet ground metric"));
+        }
+        let query = *query.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "vector ground online query is null".into(),
+        ))?;
+        let raw_limits = *raw_limits.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "vector ground online limits are null".into(),
+        ))?;
+        if query.dimension == 0 || query.dimension > ResourceLimits::default().max_dimension {
+            return Err((LlevStatus::LimitExceeded, "vector dimension limit".into()));
+        }
+        if !query.timestamps.is_null() || query.timestamp_unit != 0 || query.origin != 0.0 {
+            return Err(invalid(
+                "vector Fréchet online query must have no timestamps",
+            ));
+        }
+        let limits = ResourceLimits {
+            max_series_len: raw_limits.max_query_len,
+            max_dimension: query.dimension,
+            max_scratch_bytes: raw_limits.max_scratch_bytes,
+            ..ResourceLimits::default()
+        };
+        let dimension = query.dimension;
+        let query = VectorFrechetPath::try_new(
+            samples(query, dimension, limits, "vector ground online query")?,
+            limits,
+        )
+        .map_err(vector_error)?;
+        let machine = match ground {
+            1 => VectorFrechetOnlineAutomaton::new(
+                query,
+                L1GroundMetric,
+                cutoff,
+                OnlineAutomatonLimits::from(raw_limits),
+            )
+            .map(VectorFrechetMachine::L1),
+            2 => VectorFrechetOnlineAutomaton::new(
+                query,
+                L2GroundMetric,
+                cutoff,
+                OnlineAutomatonLimits::from(raw_limits),
+            )
+            .map(VectorFrechetMachine::L2),
+            3 => VectorFrechetOnlineAutomaton::new(
+                query,
+                LinfGroundMetric,
+                cutoff,
+                OnlineAutomatonLimits::from(raw_limits),
+            )
+            .map(VectorFrechetMachine::Linf),
+            _ => unreachable!(),
+        }
         .map_err(vector_error)?;
         *output = Box::into_raw(Box::new(LlevVectorFrechetOnline {
             machine,
@@ -640,7 +865,8 @@ pub unsafe extern "C" fn llev_vector_frechet_online_scratch_bytes(
 ///
 /// # Safety
 /// The pointer must be null or a live handle returned by
-/// `llev_vector_frechet_online_new`.
+/// `llev_vector_frechet_online_new` or
+/// `llev_vector_frechet_ground_online_new`.
 #[no_mangle]
 pub unsafe extern "C" fn llev_vector_frechet_online_free(machine: *mut LlevVectorFrechetOnline) {
     if !machine.is_null() {

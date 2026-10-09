@@ -46,3 +46,41 @@
     @test !isopen(stream)
     close(stream_metric)
 end
+
+@testset "audited ground-metric online vector Fréchet" begin
+    query = VectorTemporalSeries([0.0 1.0; 0.0 1.0])
+    target = VectorTemporalSeries([0.0 2.0; 0.0 4.0])
+    for ground in (:l1, :l2, :linf)
+        expected = [vector_frechet_ground_distance(ground, query,
+            VectorTemporalSeries(target.samples[:, 1:count]);
+            cutoff=10.0).value for count in 1:2]
+        machine = VectorFrechetOnlineAutomaton(ground, query; cutoff=10.0)
+        retained = Liblevenshtein.scratch_bytes(machine)
+        try
+            for (count, point) in enumerate(eachcol(target.samples))
+                step = Liblevenshtein.advance!(machine, point)
+                @test step.kind == :advanced
+                @test step.observation.distance_within_cutoff == expected[count]
+                @test Liblevenshtein.scratch_bytes(machine) == retained
+            end
+        finally
+            close(machine)
+        end
+        stream = vector_frechet_online_observations(ground, query,
+            eachcol(target.samples); cutoff=10.0)
+        @test [observation.distance_within_cutoff for observation in stream] ==
+            expected
+        @test !isopen(stream)
+    end
+    @test_throws ArgumentError VectorFrechetOnlineAutomaton(:other,
+        query; cutoff=10.0)
+    limited = VectorFrechetOnlineAutomaton(:l1, query; cutoff=10.0,
+        limits=TemporalOnlineLimits(max_step_work_units=0))
+    try
+        @test Liblevenshtein.advance!(limited, [0.0, 0.0]).kind ==
+            :incomplete
+        @test Liblevenshtein.observation(limited).consumed_target_len == 0
+    finally
+        close(limited)
+    end
+end

@@ -60,3 +60,24 @@
     @test !isopen(metric)
     @test_throws ArgumentError vector_frechet_distance(metric, left, right)
 end
+
+@testset "audited L1 L2 Linf vector Fréchet" begin
+    query = VectorTemporalSeries([0.0 1.0; 0.0 1.0])
+    target = VectorTemporalSeries([0.0 2.0; 0.0 4.0])
+    for (ground, expected) in ((:l1, 4.0), (:l2, hypot(1.0, 3.0)),
+        (:linf, 3.0))
+        outcome = vector_frechet_ground_distance(ground, query, target;
+            cutoff=10.0)
+        @test outcome.kind == :finite
+        @test outcome.value == expected
+        @test outcome.work_units > 0
+        @test vector_frechet_ground_distance(ground, query, query).value == 0
+    end
+    @test vector_frechet_ground_distance(:l1, query, target;
+        limits=VectorTemporalLimits(
+            scalar=TemporalLimits(max_work_units=0))).kind == :incomplete
+    @test_throws ArgumentError vector_frechet_ground_distance(:other,
+        query, target)
+    @test_throws ArgumentError vector_frechet_ground_distance(:l1,
+        query, VectorTemporalSeries(reshape([1.0, 2.0], 1, 2)))
+end

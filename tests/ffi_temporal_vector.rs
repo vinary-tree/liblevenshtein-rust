@@ -1,6 +1,7 @@
 #![cfg(feature = "ffi")]
 
 use liblevenshtein::ffi::{
+    llev_vector_frechet_ground_distance, llev_vector_frechet_ground_online_new,
     llev_vector_frechet_online_advance, llev_vector_frechet_online_free,
     llev_vector_frechet_online_new, llev_vector_frechet_online_observation,
     llev_vector_frechet_online_scratch_bytes, llev_vector_metric_free, llev_vector_metric_new,
@@ -10,10 +11,158 @@ use liblevenshtein::ffi::{
     LlevVectorTemporalConfig, LlevVectorTemporalLimits,
 };
 use liblevenshtein::time_series::{
-    ChannelIdentity, ExactDecision, FixedChannelMetric, FoldLocalScaleProvenance, MetricChannel,
-    OperationOutcome, ResourceLimits, TimestampUnit, VectorBandedDtwScorer, VectorErpMetric,
-    VectorFrechetMetric, VectorFrechetPath, VectorSample, VectorTimestampedTwedMetric,
+    ChannelIdentity, ExactDecision, FixedChannelMetric, FoldLocalScaleProvenance, L1GroundMetric,
+    L2GroundMetric, LinfGroundMetric, MetricChannel, OperationOutcome, ResourceLimits,
+    TimestampUnit, VectorBandedDtwScorer, VectorErpMetric, VectorFrechetMetric, VectorFrechetPath,
+    VectorSample, VectorTimestampedTwedMetric,
 };
+
+fn untyped_view(coordinates: &[f64]) -> LlevVectorSeriesView {
+    LlevVectorSeriesView {
+        coordinates: coordinates.as_ptr(),
+        sample_count: coordinates.len() / 2,
+        dimension: 2,
+        timestamps: std::ptr::null(),
+        timestamp_unit: 0,
+        reserved: 0,
+        origin: 0.0,
+    }
+}
+
+fn native_frechet(ground: u32, query: &[f64], target: &[f64]) -> f64 {
+    let x = VectorFrechetPath::try_new(native_samples(query), ResourceLimits::default()).unwrap();
+    let y = VectorFrechetPath::try_new(native_samples(target), ResourceLimits::default()).unwrap();
+    let result = match ground {
+        1 => VectorFrechetMetric::new(L1GroundMetric).distance_bounded(
+            &x,
+            &y,
+            f64::INFINITY,
+            ResourceLimits::default(),
+        ),
+        2 => VectorFrechetMetric::new(L2GroundMetric).distance_bounded(
+            &x,
+            &y,
+            f64::INFINITY,
+            ResourceLimits::default(),
+        ),
+        3 => VectorFrechetMetric::new(LinfGroundMetric).distance_bounded(
+            &x,
+            &y,
+            f64::INFINITY,
+            ResourceLimits::default(),
+        ),
+        _ => unreachable!(),
+    }
+    .unwrap();
+    exact(result)
+}
+
+#[test]
+fn ground_frechet_scores_and_online_prefixes_match_all_three_native_metrics() {
+    let query = [0.0, 0.0, 1.0, 1.0];
+    let target = [0.0, 0.0, 2.0, 4.0];
+    let query_view = untyped_view(&query);
+    let target_view = untyped_view(&target);
+    let limits = LlevVectorTemporalLimits {
+        scalar: LlevTemporalLimits::default(),
+        max_dimension: 2,
+        max_band_width: 0,
+    };
+    let online_limits = LlevTemporalOnlineLimits {
+        max_query_len: 2,
+        max_frontier_positions: 2,
+        max_step_work_units: 100,
+        max_scratch_bytes: 1024,
+    };
+    for ground in 1..=3 {
+        let mut score = LlevTemporalDistanceResult::default();
+        assert_eq!(
+            unsafe {
+                llev_vector_frechet_ground_distance(
+                    ground,
+                    &query_view,
+                    &target_view,
+                    10.0,
+                    &limits,
+                    &mut score,
+                )
+            },
+            LlevStatus::Ok
+        );
+        assert_eq!(score.kind, 0);
+        assert_eq!(score.value, native_frechet(ground, &query, &target));
+        let mut machine = std::ptr::null_mut();
+        assert_eq!(
+            unsafe {
+                llev_vector_frechet_ground_online_new(
+                    ground,
+                    &query_view,
+                    10.0,
+                    &online_limits,
+                    &mut machine,
+                )
+            },
+            LlevStatus::Ok
+        );
+        for (index, point) in target.chunks_exact(2).enumerate() {
+            let mut step = LlevTemporalOnlineStep::default();
+            assert_eq!(
+                unsafe {
+                    llev_vector_frechet_online_advance(machine, point.as_ptr(), 2, &mut step)
+                },
+                LlevStatus::Ok
+            );
+            assert_eq!(step.kind, 0);
+            assert_eq!(step.observation.has_distance, 1);
+            assert_eq!(
+                step.observation.distance_within_cutoff,
+                native_frechet(ground, &query, &target[..(index + 1) * 2])
+            );
+        }
+        unsafe { llev_vector_frechet_online_free(machine) };
+    }
+}
+
+#[test]
+fn ground_frechet_rejects_invalid_selector_and_hard_limits() {
+    let query = [0.0, 0.0, 1.0, 1.0];
+    let view = untyped_view(&query);
+    let limits = LlevVectorTemporalLimits {
+        scalar: LlevTemporalLimits::default(),
+        max_dimension: 2,
+        max_band_width: 0,
+    };
+    let mut result = LlevTemporalDistanceResult::default();
+    assert_eq!(
+        unsafe { llev_vector_frechet_ground_distance(0, &view, &view, 1.0, &limits, &mut result) },
+        LlevStatus::InvalidArgument
+    );
+    let short = LlevVectorTemporalLimits {
+        scalar: LlevTemporalLimits {
+            max_scratch_bytes: 0,
+            ..LlevTemporalLimits::default()
+        },
+        ..limits
+    };
+    assert_eq!(
+        unsafe { llev_vector_frechet_ground_distance(1, &view, &view, 1.0, &short, &mut result) },
+        LlevStatus::LimitExceeded
+    );
+    let online_limits = LlevTemporalOnlineLimits {
+        max_query_len: 2,
+        max_frontier_positions: 2,
+        max_step_work_units: 100,
+        max_scratch_bytes: 1024,
+    };
+    let mut machine = std::ptr::null_mut();
+    assert_eq!(
+        unsafe {
+            llev_vector_frechet_ground_online_new(0, &view, 1.0, &online_limits, &mut machine)
+        },
+        LlevStatus::InvalidArgument
+    );
+    assert!(machine.is_null());
+}
 
 fn metric() -> FixedChannelMetric {
     FixedChannelMetric::try_new(

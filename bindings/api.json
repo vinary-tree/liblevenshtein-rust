@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 26,
+  "apiRevision": 27,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1227,7 +1227,9 @@
     { "name": "llev_vector_metric_new", "rustModule": "temporal_vector" },
     { "name": "llev_vector_metric_free", "rustModule": "temporal_vector" },
     { "name": "llev_vector_temporal_distance", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_frechet_ground_distance", "rustModule": "temporal_vector" },
     { "name": "llev_vector_frechet_online_new", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_frechet_ground_online_new", "rustModule": "temporal_vector" },
     { "name": "llev_vector_frechet_online_observation", "rustModule": "temporal_vector" },
     { "name": "llev_vector_frechet_online_advance", "rustModule": "temporal_vector" },
     { "name": "llev_vector_frechet_online_scratch_bytes", "rustModule": "temporal_vector" },

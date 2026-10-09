@@ -791,10 +791,11 @@ variants, protocols, or methods.
 | `UniversalAutomaton` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `vector_box_box_lower_bound` | `llev_vector_box_box_lower_bound` | project ABI operation |
 | `vector_candidate_lower_bound` | `llev_vector_temporal_candidate_lower_bound` | project ABI operation |
+| `vector_frechet_ground_distance` | `llev_vector_frechet_ground_distance` | project ABI operation |
 | `vector_point_box_lower_bound` | `llev_vector_point_box_lower_bound` | project ABI operation |
 | `vector_temporal_distance` | `llev_vector_temporal_distance` | project ABI operation |
 | `vector_twed_interval_delete_lower_bound` | `llev_vector_twed_interval_lower_bound` | project ABI operation |
-| `VectorFrechetOnlineAutomaton` | `llev_vector_frechet_online_new` | project ABI operation |
+| `VectorFrechetOnlineAutomaton` | `llev_vector_frechet_online_new`, `llev_vector_frechet_ground_online_new` | project ABI operation |
 | `verify_certificate` | `llev_temporal_certificate_verify` | project ABI operation |
 | `voicing_pair` | `llev_phonetic_voicing_pair` | IPA feature classification and relations |
 | `WallBreakerMatcher` | `llev_wallbreaker_new_utf8` | project ABI operation |

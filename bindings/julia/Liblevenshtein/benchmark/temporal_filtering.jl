@@ -147,6 +147,8 @@ vector_erp() = LL.vector_erp_distance(vector_metric,
     vector_query, vector_candidate; gap=[0.0, 0.0])
 vector_frechet() = LL.vector_frechet_distance(vector_metric,
     vector_query, vector_candidate)
+vector_frechet_l2() = LL.vector_frechet_ground_distance(:l2,
+    vector_query, vector_candidate)
 vector_frechet_config = Ref(LL.RawVectorTemporalConfig(5, 0, C_NULL,
     0.0, 0.0, 0, Inf))
 vector_frechet_limits = Ref(LL.VectorTemporalLimits())
@@ -165,9 +167,23 @@ function vector_frechet_native_c()
     status == 0 || error("native vector Fréchet control failed")
     output[].value
 end
+function vector_frechet_l2_native_c()
+    output = Ref(LL.RawTemporalDistanceResult(0.0, 0, 0, 0, 0, 0))
+    status = GC.@preserve vector_query vector_candidate ccall(
+        LL.native(:llev_vector_frechet_ground_distance), Cint,
+        (UInt32, Ref{LL.RawVectorSeriesView}, Ref{LL.RawVectorSeriesView},
+            Float64, Ref{LL.VectorTemporalLimits},
+            Ref{LL.RawTemporalDistanceResult}),
+        UInt32(2), vector_query_view, vector_candidate_view, Inf,
+        vector_frechet_limits, output)
+    status == 0 || error("native L2 vector Fréchet control failed")
+    output[].value
+end
 vector_online() = collect(LL.vector_frechet_online_observations(
     vector_metric, vector_query, eachcol(vector_candidate.samples);
     cutoff=100.0))
+vector_l2_online() = collect(LL.vector_frechet_online_observations(
+    :l2, vector_query, eachcol(vector_candidate.samples); cutoff=100.0))
 
 try
     expected = sort([match.id for match in scan()])
@@ -205,6 +221,11 @@ try
         error("online vector Fréchet differs from its native exact score")
     vector_frechet_native_c() == vector_frechet().value ||
         error("Julia vector Fréchet differs from the direct C control")
+    vector_frechet_l2_native_c() == vector_frechet_l2().value ||
+        error("Julia L2 vector Fréchet differs from the direct C control")
+    vector_l2_online()[end].distance_within_cutoff ==
+        vector_frechet_l2().value ||
+        error("online L2 vector Fréchet differs from its native exact score")
     [(entry.id, entry.score) for entry in msm_prefilter()] ==
         [(entry.id, entry.score) for entry in msm_prefilter_native_c()] ||
         error("Julia MSM prefilter differs from the direct C control")
@@ -228,6 +249,9 @@ try
     sample("vector Frechet 16 x 16", vector_frechet)
     sample("vector Frechet direct C", vector_frechet_native_c)
     sample("vector online 16 prefixes", vector_online)
+    sample("vector Frechet L2 16 x 16", vector_frechet_l2)
+    sample("vector Frechet L2 direct C", vector_frechet_l2_native_c)
+    sample("vector L2 online 16 prefixes", vector_l2_online)
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
     sample("32-entry scalar MSM kNN", msm_scan)
