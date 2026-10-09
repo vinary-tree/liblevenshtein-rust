@@ -168,7 +168,7 @@ pub struct LlevTimestampedSeriesView {
     pub origin: f64,
 }
 
-fn timestamp_unit(code: u32) -> Result<TimestampUnit, (LlevStatus, String)> {
+pub(crate) fn timestamp_unit(code: u32) -> Result<TimestampUnit, (LlevStatus, String)> {
     match code {
         1 => Ok(TimestampUnit::Seconds),
         2 => Ok(TimestampUnit::Milliseconds),
@@ -178,7 +178,7 @@ fn timestamp_unit(code: u32) -> Result<TimestampUnit, (LlevStatus, String)> {
     }
 }
 
-fn timestamp_error(error: TimestampedTwedError) -> (LlevStatus, String) {
+pub(crate) fn timestamp_error(error: TimestampedTwedError) -> (LlevStatus, String) {
     match error {
         TimestampedTwedError::InvalidSeries(error) => validation(error),
         TimestampedTwedError::Resource(reason) => (

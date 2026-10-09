@@ -180,6 +180,15 @@ matching units and origins and returns a bounded native exact score,
 above-cutoff result, or explicit incomplete reason. This physical-time
 recurrence is distinct from the unit-grid TWED kernel.
 
+`TimestampedTwedIndex` copies full-precision episodes into a typed value/time
+quantized dictionary. Freeze it before search. `insert_episode!` returns a
+stable insertion ID, so repeated caller IDs remain distinguishable.
+`query_metric_range` yields exact native matches lazily from one captured
+revision; its cursor survives closing the index and reports cumulative
+resource exhaustion through `TemporalQueryIncomplete`. The index uses
+quantization for pruning only and verifies every surviving collision against
+the retained physical timestamps.
+
 ### Lazy temporal range queries
 
 `TemporalSeriesSource` copies a finite iterable of `(UInt64 ID, finite real

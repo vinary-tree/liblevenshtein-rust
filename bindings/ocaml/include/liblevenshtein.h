@@ -1484,6 +1484,7 @@ LLEV_API LlevStatus llev_timestamped_twed_distance(
     const LlevTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+
 /** Complete Soft-DTW loss and gradients with respect to both nonempty finite
  * operands. gamma must be finite and positive. Output buffers are caller
  * owned and have capacities at least left_len and right_len respectively.
@@ -1564,6 +1565,84 @@ typedef struct LlevTemporalSearchLimits {
     size_t max_queue_entries;
     size_t max_continuation_bytes;
 } LlevTemporalSearchLimits;
+
+/** Typed physical-time quantization, validated metric configuration, and
+ * explicit bounded ingestion. Value and timestamp domains must be finite,
+ * increasing, and the time minimum must follow the shared origin. Bin counts
+ * are in [1, 2^31]. Quantization only prunes: exact scores use retained full
+ * precision episodes. */
+typedef struct LlevTimestampedTwedIndexConfig {
+    uint32_t unit;
+    uint32_t reserved;
+    double origin;
+    double value_min;
+    double value_max;
+    double time_min;
+    double time_max;
+    uint32_t value_bins;
+    uint32_t time_bins;
+    double stiffness;
+    double gap_penalty;
+    size_t max_entries;
+    size_t max_total_samples;
+    size_t max_series_len;
+} LlevTimestampedTwedIndexConfig;
+
+/** Common cumulative search limits plus bounded product-state arenas. Query
+ * copy bytes are charged against scratch and continuation ceilings before
+ * native search starts. */
+typedef struct LlevTimestampedTwedSearchLimits {
+    LlevTemporalSearchLimits common;
+    size_t max_product_states;
+    size_t max_product_positions;
+    size_t max_transition_cache_entries;
+} LlevTimestampedTwedSearchLimits;
+
+/** Full-precision exact match: caller metadata, stable insertion position,
+ * and physical-time TWED distance. Duplicate metadata IDs remain distinct
+ * episodes. */
+typedef struct LlevTimestampedTwedMatch {
+    uint64_t id;
+    uint64_t episode_id;
+    double distance;
+} LlevTimestampedTwedMatch;
+
+typedef struct LlevTimestampedTwedIndex LlevTimestampedTwedIndex;
+typedef struct LlevTimestampedTwedCursor LlevTimestampedTwedCursor;
+
+/** Build, insert, freeze, and free one native timestamped index. Insertion
+ * copies finite values and timestamps; `out_episode_id` identifies the new
+ * episode even when caller metadata duplicates another episode. Mutation
+ * requires exclusive access. Freezing is idempotent; frozen indexes reject
+ * insertion. Cursors retain the frozen revision after index free. */
+LLEV_API LlevStatus llev_timestamped_twed_index_new(
+    const LlevTimestampedTwedIndexConfig* config,
+    LlevTimestampedTwedIndex** out_index);
+LLEV_API LlevStatus llev_timestamped_twed_index_insert(
+    LlevTimestampedTwedIndex* index, uint64_t id,
+    const LlevTimestampedSeriesView* series, uint64_t* out_episode_id);
+LLEV_API LlevStatus llev_timestamped_twed_index_freeze(
+    LlevTimestampedTwedIndex* index);
+LLEV_API void llev_timestamped_twed_index_free(LlevTimestampedTwedIndex* index);
+
+/** Start a bounded exact range query. The query is copied; its unit and
+ * bitwise origin must match the index. A cursor retains the frozen index
+ * revision and can outlive the index handle. Cutoff is inclusive. */
+LLEV_API LlevStatus llev_timestamped_twed_index_query_range(
+    const LlevTimestampedTwedIndex* index,
+    const LlevTimestampedSeriesView* query, double cutoff,
+    const LlevTimestampedTwedSearchLimits* limits,
+    LlevTimestampedTwedCursor** out_cursor);
+
+/** Advance at most one bounded page. Zero matches with out_done=0 means
+ * paused. LIMIT_EXCEEDED leaves previous matches an exact incomplete subset;
+ * out_reason uses the temporal index reason codes, including 14 for a page
+ * too small to advance. Output storage is caller owned. */
+LLEV_API LlevStatus llev_timestamped_twed_cursor_next_batch(
+    LlevTimestampedTwedCursor* cursor, LlevTimestampedTwedMatch* out_matches,
+    size_t capacity, size_t page_work_units, size_t page_results,
+    size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
+LLEV_API void llev_timestamped_twed_cursor_free(LlevTimestampedTwedCursor* cursor);
 
 /** One copied exact match; DTW uses root-distance units. */
 typedef struct LlevTemporalIndexMatch {

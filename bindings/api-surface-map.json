@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 191 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 198 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -15,7 +15,8 @@
         "tests/ffi_temporal.rs",
         "tests/ffi_timestamped_twed.rs",
         "tests/ffi_filter.rs",
-        "tests/ffi_temporal_online.rs"
+        "tests/ffi_temporal_online.rs",
+        "tests/ffi_timestamped_index.rs"
       ],
       "enums": {
         "status": {
@@ -568,6 +569,27 @@
         },
         "llev_timestamped_twed_distance": {
           "symbol": "llev_timestamped_twed_distance"
+        },
+        "llev_timestamped_twed_index_new": {
+          "symbol": "llev_timestamped_twed_index_new"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": "llev_timestamped_twed_index_insert"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": "llev_timestamped_twed_index_freeze"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": "llev_timestamped_twed_index_free"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": "llev_timestamped_twed_index_query_range"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": "llev_timestamped_twed_cursor_next_batch"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": "llev_timestamped_twed_cursor_free"
         },
         "llev_soft_dtw_gradient": {
           "symbol": "llev_soft_dtw_gradient"
@@ -1354,6 +1376,34 @@
         "llev_timestamped_twed_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -2162,6 +2212,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -2961,6 +3039,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -3753,6 +3859,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -4544,6 +4678,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -5332,6 +5494,34 @@
         "llev_timestamped_twed_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -6135,6 +6325,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -6933,6 +7151,34 @@
         "llev_timestamped_twed_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -7757,6 +8003,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -8550,6 +8824,34 @@
         "llev_timestamped_twed_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -9346,6 +9648,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -10140,6 +10470,34 @@
         "llev_timestamped_twed_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,
@@ -10939,6 +11297,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -11737,6 +12123,34 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_soft_dtw_gradient": {
           "symbol": null,
           "_reason": "FINDING: additive revision-15 native Soft-DTW gradients are not yet projected into this language facade; binding parity is tracked separately"
@@ -11851,7 +12265,8 @@
         "bindings/julia/Liblevenshtein/src/SourceFilterQueries.jl",
         "bindings/julia/Liblevenshtein/src/TemporalBounds.jl",
         "bindings/julia/Liblevenshtein/src/TemporalOnline.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalTimestamped.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalTimestamped.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalTimestampedIndex.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -11863,7 +12278,8 @@
         "bindings/julia/Liblevenshtein/test/source_filter_queries.jl",
         "bindings/julia/Liblevenshtein/test/temporal_bounds.jl",
         "bindings/julia/Liblevenshtein/test/temporal_online.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_timestamped.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_timestamped.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_timestamped_index.jl"
       ],
       "enums": {
         "status": {
@@ -12446,6 +12862,27 @@
         },
         "llev_timestamped_twed_distance": {
           "symbol": "metric_timestamped_twed_distance"
+        },
+        "llev_timestamped_twed_index_new": {
+          "symbol": "TimestampedTwedIndex"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": "insert_episode!"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": "freeze!"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": "close!"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": "query_metric_range"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": "close!"
         },
         "llev_soft_dtw_gradient": {
           "symbol": "soft_dtw_gradient"
@@ -13172,6 +13609,34 @@
         "llev_timestamped_twed_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-16 native physical-time TWED is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_soft_dtw_gradient": {
           "symbol": null,

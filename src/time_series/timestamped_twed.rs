@@ -358,7 +358,10 @@ impl MetricTimestampedTwedConfig {
         if !query_current_time.is_finite() || !query_previous_time.is_finite() {
             return Err(TimestampedTwedError::NonFiniteTimestamp { index: None });
         }
-        if query_current_time <= query_previous_time {
+        // The first real sample may coincide with the synthetic predecessor
+        // at the declared origin; subsequent series samples are validated as
+        // strictly increasing when their TimestampedSeries is constructed.
+        if query_current_time < query_previous_time {
             return Err(TimestampedTwedError::NonMonotoneTimestamp { index: 1 });
         }
         let value = WeightedCost::combine(

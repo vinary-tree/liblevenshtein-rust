@@ -181,6 +181,11 @@ export ABI_VERSION,
     MetricTwedConfig,
     MetricTimestampedTwedConfig,
     TimestampedSeries,
+    TimestampedTwedIndex,
+    TimestampedTwedSearchLimits,
+    TimestampedTwedIndexCursor,
+    TimestampedTwedMatch,
+    insert_episode!,
     ErpQuotientSeries,
     FrechetStutterClass,
     MetricErpIndex,
@@ -1105,6 +1110,7 @@ include("TemporalQueries.jl")
 include("TemporalIndex.jl")
 include("TemporalMetricDomains.jl")
 include("TemporalTimestamped.jl")
+include("TemporalTimestampedIndex.jl")
 include("TemporalRolling.jl")
 include("TemporalOnline.jl")
 include("Filter.jl")

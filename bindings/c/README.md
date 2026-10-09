@@ -230,7 +230,14 @@ variants, protocols, or methods.
 | `llev_temporal_online_new` | `llev_temporal_online_new` | project ABI operation |
 | `llev_temporal_online_observation` | `llev_temporal_online_observation` | project ABI operation |
 | `llev_temporal_online_scratch_bytes` | `llev_temporal_online_scratch_bytes` | project ABI operation |
+| `llev_timestamped_twed_cursor_free` | `llev_timestamped_twed_cursor_free` | project ABI operation |
+| `llev_timestamped_twed_cursor_next_batch` | `llev_timestamped_twed_cursor_next_batch` | project ABI operation |
 | `llev_timestamped_twed_distance` | `llev_timestamped_twed_distance` | project ABI operation |
+| `llev_timestamped_twed_index_free` | `llev_timestamped_twed_index_free` | project ABI operation |
+| `llev_timestamped_twed_index_freeze` | `llev_timestamped_twed_index_freeze` | project ABI operation |
+| `llev_timestamped_twed_index_insert` | `llev_timestamped_twed_index_insert` | project ABI operation |
+| `llev_timestamped_twed_index_new` | `llev_timestamped_twed_index_new` | project ABI operation |
+| `llev_timestamped_twed_index_query_range` | `llev_timestamped_twed_index_query_range` | project ABI operation |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_query_affine` | `llev_transducer_query_affine` | domain-preserving dictionary query |

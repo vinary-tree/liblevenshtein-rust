@@ -24,6 +24,7 @@ include("temporal_rolling.jl")
 include("temporal_online.jl")
 include("temporal_metric_domains.jl")
 include("temporal_timestamped.jl")
+include("temporal_timestamped_index.jl")
 include("filter.jl")
 include("source_filter_queries.jl")
 

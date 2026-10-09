@@ -178,6 +178,10 @@ timestamps in a canonical unit and shared origin. `MetricTimestampedTwedConfig`
 and `metric_timestamped_twed_distance` expose bounded native TWED on this
 explicit-time metric domain. The [physical-time guide](../../README.md#physical-time-twed)
 explains units, ownership, and result tags.
+`TimestampedTwedIndex` inserts owned episodes, freezes one native revision,
+and exposes lazy exact `query_metric_range` cursors with full-precision
+collision verification and cumulative product limits. Duplicate caller IDs
+receive distinct stable episode IDs.
 
 ## Choose an automaton
 
@@ -323,7 +327,8 @@ The adjacent-transposition variant is checked against optimal string alignment
 
 `benchmark/temporal_filtering.jl` measures scalar DTW, Soft-DTW gradients, reusable Keogh,
 quantization, ERP canonicalization, SAX, rolling windows, online ERP prefixes,
-a copied temporal scan, the frozen temporal index, and the
+a copied temporal scan, the frozen temporal index, physical-time TWED scan and
+index, and the
 n-gram and hybrid source filters. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
 result IDs agree, then samples five groups of 30 observable complete operations
@@ -343,22 +348,24 @@ were:
 
 | Scenario | Median ns/op |
 |---|---:|
-| Scalar DTW, 16 × 16 samples | 5,118 |
-| Soft-DTW gradients, 16 × 16 samples | 47,247 |
-| Reusable Keogh bound, 16 samples | 1,328 |
-| Quantization, 16 samples | 96 |
-| ERP canonicalization, 16 samples | 108 |
-| SAX, 16 samples to 4 symbols | 268 |
-| Rolling windows, 16 samples to width 4 | 4,960 |
-| Online ERP, 16 prefixes | 77,040 |
-| 32-entry temporal scan | 171,429 |
-| 32-entry temporal index | 2,995,830 |
-| 32-term n-gram filter | 315,187 |
-| 32-term hybrid filter | 387,257 |
+| Scalar DTW, 16 × 16 samples | 4,923 |
+| Soft-DTW gradients, 16 × 16 samples | 47,447 |
+| Reusable Keogh bound, 16 samples | 1,368 |
+| Quantization, 16 samples | 98 |
+| ERP canonicalization, 16 samples | 53 |
+| SAX, 16 samples to 4 symbols | 275 |
+| Rolling windows, 16 samples to width 4 | 4,755 |
+| Online ERP, 16 prefixes | 77,520 |
+| 32-entry temporal scan | 159,933 |
+| 32-entry temporal index | 2,945,653 |
+| 32-entry physical-time TWED scan | 320,779 |
+| 32-entry physical-time TWED index | 698,789 |
+| 32-term n-gram filter | 315,281 |
+| 32-term hybrid filter | 380,824 |
 
-The indexed query is much slower than the scan for this small, low-selectivity
-source. Use the scan for small sources; measure the index on the intended
-collection and cutoff before choosing it for speed. These local debug figures
+Both indexed queries are slower than their scans for this small,
+low-selectivity source. Use the scan for small sources; measure an index on the
+intended collection and cutoff before choosing it for speed. These local debug figures
 are diagnostic rather than a portable performance guarantee.
 
 `test/automata_qualification.jl` compares every initial, intermediate, and

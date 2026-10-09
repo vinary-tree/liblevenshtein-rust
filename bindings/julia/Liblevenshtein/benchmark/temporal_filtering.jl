@@ -40,6 +40,19 @@ terms = LL.SourceFilterSource(["term-" * lpad(string(i), 3, '0')
 plan = LL.keogh_envelopes(query, 2)
 quantizer = LL.quantizer_u8(-4.0, 4.0)
 metric_config = LL.MetricErpConfig(0.0)
+timestamped_config = LL.MetricTimestampedTwedConfig(0.5, 1.0)
+timestamps = collect(1.0:16.0)
+timestamped_query = LL.TimestampedSeries(query, timestamps)
+timestamped_pairs = [(id, LL.TimestampedSeries(samples, timestamps))
+    for (id, samples) in pairs]
+timestamped_index = LL.TimestampedTwedIndex(timestamped_config;
+    value_min=-4.0, value_max=4.0, time_min=0.0, time_max=17.0,
+    value_bins=16, time_bins=16,
+    max_entries=32, max_total_samples=512, max_series_len=16)
+for (id, series) in timestamped_pairs
+    LL.insert!(timestamped_index, id, series)
+end
+LL.freeze!(timestamped_index)
 
 scan() = collect(LL.query_temporal_range(source, :dtw, query;
     band=2, cutoff=0.5))
@@ -51,11 +64,21 @@ ngram() = collect(LL.query_ngram(terms, "term-007", 1;
     page_candidates=32))
 hybrid() = collect(LL.query_hybrid(terms, "term-007", 1;
     page_candidates=32))
+timestamped() = collect(LL.query_metric_range(timestamped_index,
+    timestamped_query; cutoff=0.5, page_work_units=100_000,
+    page_results=32))
+timestamped_scan() = [id for (id, series) in timestamped_pairs if
+    LL.metric_timestamped_twed_distance(timestamped_config,
+        timestamped_query, series; cutoff=0.5).kind === :finite]
 
 try
     expected = sort([match.id for match in scan()])
     actual = sort([match.id for match in indexed()])
     expected == actual || error("indexed and scanned result IDs differ")
+    timestamped_expected = sort(timestamped_scan())
+    timestamped_actual = sort([match.id for match in timestamped()])
+    timestamped_expected == timestamped_actual ||
+        error("timestamped indexed and scalar result IDs differ")
     online_result = online()
     length(online_result) == length(candidate) ||
         error("online result length differs from candidate length")
@@ -80,9 +103,12 @@ try
     sample("online ERP 16 prefixes", online)
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
+    sample("32-entry timestamped scan", timestamped_scan)
+    sample("32-entry timestamped index", timestamped)
     sample("32-term ngram filter", ngram)
     sample("32-term hybrid filter", hybrid)
 finally
     close(plan)
     close(index)
+    close(timestamped_index)
 end
