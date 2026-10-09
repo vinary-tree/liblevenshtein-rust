@@ -27,6 +27,7 @@ include("temporal_timestamped.jl")
 include("temporal_timestamped_index.jl")
 include("filter.jl")
 include("source_filter_queries.jl")
+include("source_filter_index.jl")
 
 @testset "canonical source and indexed temporal examples" begin
     gradient = LL.soft_dtw_gradient([0.0, 1.0], [0.5, 1.5]; gamma=1.0,

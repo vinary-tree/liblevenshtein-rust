@@ -208,6 +208,11 @@ variants, protocols, or methods.
 | `llev_query_cursor_reduce` | `llev_query_cursor_reduce` | streaming result traversal and batch leases |
 | `llev_query_cursor_release_batch` | `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
 | `llev_soft_dtw_gradient` | `llev_soft_dtw_gradient` | project ABI operation |
+| `llev_source_filter_index_free` | `llev_source_filter_index_free` | project ABI operation |
+| `llev_source_filter_index_freeze` | `llev_source_filter_index_freeze` | project ABI operation |
+| `llev_source_filter_index_insert` | `llev_source_filter_index_insert` | project ABI operation |
+| `llev_source_filter_index_new` | `llev_source_filter_index_new` | project ABI operation |
+| `llev_source_filter_index_query` | `llev_source_filter_index_query` | project ABI operation |
 | `llev_source_filter_utf8` | `llev_source_filter_utf8` | project ABI operation |
 | `llev_specialized_cursor_free` | `llev_specialized_cursor_free` | project ABI operation |
 | `llev_specialized_cursor_next_batch` | `llev_specialized_cursor_next_batch` | project ABI operation |

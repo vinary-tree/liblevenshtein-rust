@@ -37,6 +37,12 @@ LL.freeze!(index)
 terms = LL.SourceFilterSource(["term-" * lpad(string(i), 3, '0')
     for i in 1:32]; max_terms=32, max_term_bytes=8,
     max_source_bytes=256)
+ngram_index = LL.NativeSourceFilterIndex(terms;
+    mode=:ngram, ngram_size=2, max_terms=32,
+    max_term_bytes=8, max_source_bytes=256)
+hybrid_index = LL.NativeSourceFilterIndex(terms;
+    mode=:hybrid, ngram_size=2, jaro_threshold=0.7,
+    max_terms=32, max_term_bytes=8, max_source_bytes=256)
 plan = LL.keogh_envelopes(query, 2)
 quantizer = LL.quantizer_u8(-4.0, 4.0)
 metric_config = LL.MetricErpConfig(0.0)
@@ -64,6 +70,16 @@ ngram() = collect(LL.query_ngram(terms, "term-007", 1;
     page_candidates=32))
 hybrid() = collect(LL.query_hybrid(terms, "term-007", 1;
     page_candidates=32))
+indexed_ngram() = collect(LL.query_ngram(ngram_index, "term-007", 1;
+    page_results=32))
+indexed_hybrid() = collect(LL.query_hybrid(hybrid_index, "term-007", 1;
+    page_results=32))
+build_ngram() = close(LL.NativeSourceFilterIndex(terms;
+    mode=:ngram, ngram_size=2, max_terms=32,
+    max_term_bytes=8, max_source_bytes=256))
+build_hybrid() = close(LL.NativeSourceFilterIndex(terms;
+    mode=:hybrid, ngram_size=2, jaro_threshold=0.7,
+    max_terms=32, max_term_bytes=8, max_source_bytes=256))
 timestamped() = collect(LL.query_metric_range(timestamped_index,
     timestamped_query; cutoff=0.5, page_work_units=100_000,
     page_results=32))
@@ -86,6 +102,10 @@ try
     timestamped_actual = sort([match.id for match in timestamped()])
     timestamped_expected == timestamped_actual ||
         error("timestamped indexed and scalar result IDs differ")
+    indexed_ngram() == ngram() ||
+        error("persistent n-gram candidates differ from source filter")
+    indexed_hybrid() == hybrid() ||
+        error("persistent hybrid candidates differ from source filter")
     [(match.episode_id, match.id, match.distance)
         for match in timestamped_knn()] == timestamped_knn_scan() ||
         error("timestamped nearest neighbors differ from exact scalar scan")
@@ -119,8 +139,14 @@ try
     sample("32-entry timestamped kNN index", timestamped_knn)
     sample("32-term ngram filter", ngram)
     sample("32-term hybrid filter", hybrid)
+    sample("32-term native ngram index", indexed_ngram)
+    sample("32-term native hybrid index", indexed_hybrid)
+    sample("32-term native ngram build", build_ngram)
+    sample("32-term native hybrid build", build_hybrid)
 finally
     close(plan)
     close(index)
     close(timestamped_index)
+    close(ngram_index)
+    close(hybrid_index)
 end

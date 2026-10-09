@@ -167,6 +167,9 @@ export ABI_VERSION,
     SourceFilterLimits,
     SourceFilterIncomplete,
     SourceFilterCursor,
+    NativeSourceFilterIndex,
+    NativeSourceFilterCursor,
+    query_filter_index,
     TemporalSeriesSource,
     TemporalQueryLimits,
     TemporalMatch,
@@ -1116,6 +1119,7 @@ include("TemporalRolling.jl")
 include("TemporalOnline.jl")
 include("Filter.jl")
 include("SourceFilterQueries.jl")
+include("SourceFilterIndex.jl")
 include("PhoneticGrep.jl")
 include("PhoneticDictionary.jl")
 include("PhoneticOnline.jl")

@@ -52,7 +52,15 @@ each final prefix of a fuzzy traversal. N-gram size zero follows the native
 index rule and means unigrams. The hybrid mode applies its native adaptive
 Jaro-Winkler threshold after n-gram admission. The per-input byte cap defaults
 to 4096, and hybrid Jaro work also has a comparison cap. Each source is
-indexed only for its call; no mutable index handle survives in Julia.
+indexed only for its call.
+
+`NativeSourceFilterIndex` copies a Unicode source into a frozen native n-gram
+postings index. Hybrid mode adds the native adaptive Jaro-Winkler stage.
+`query_ngram` and `query_hybrid` on this index compute a complete bounded
+candidate-ID snapshot, then lazily yield terms in source order. The iterator
+retains the copied IDs and terms after the index handle closes. A source
+cardinality, result, or hybrid comparison ceiling raises
+`SourceFilterIncomplete` before any candidate is exposed.
 
 ```julia
 cursor = query_jaro(transducer, "martha", 2;

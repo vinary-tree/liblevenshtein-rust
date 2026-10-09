@@ -1393,6 +1393,52 @@ LLEV_API LlevStatus llev_source_filter_utf8(
     double jaro_threshold, size_t max_input_bytes,
     size_t max_comparisons, uint8_t* out_accept);
 
+/** Persistent native source filter. Mode 1 uses an n-gram postings index;
+ * mode 2 additionally applies Jaro-Winkler. ngram_size must be positive,
+ * reserved must be zero, and threshold must be finite in [0,1] (zero for
+ * mode 1). Insertion copies UTF-8 terms and deduplicates them. */
+typedef struct LlevSourceFilterIndexConfig {
+    uint32_t mode;
+    uint32_t reserved;
+    size_t ngram_size;
+    double jaro_threshold;
+    size_t max_terms;
+    size_t max_term_bytes;
+    size_t max_source_bytes;
+    size_t max_query_bytes;
+} LlevSourceFilterIndexConfig;
+
+/** Fail-closed query ceilings. max_candidates bounds source cardinality;
+ * max_results bounds the complete result; max_comparisons bounds a
+ * conservative query-character x source-byte hybrid comparison count. */
+typedef struct LlevSourceFilterIndexLimits {
+    size_t max_candidates;
+    size_t max_results;
+    size_t max_comparisons;
+} LlevSourceFilterIndexLimits;
+
+typedef struct LlevSourceFilterIndex LlevSourceFilterIndex;
+
+/** Freeze is idempotent. Queries require a frozen index and copy zero-based
+ * insertion IDs into caller storage in source order. Duplicate terms retain
+ * their original ID. The query publishes no partial output on failure;
+ * out_reason=1 means source cardinality, 2 means result count, 3 means output
+ * capacity, and 4 means hybrid comparisons. On success out_reason is zero.
+ * The copied IDs remain valid after index free. */
+LLEV_API LlevStatus llev_source_filter_index_new(
+    const LlevSourceFilterIndexConfig* config,
+    LlevSourceFilterIndex** out_index);
+LLEV_API LlevStatus llev_source_filter_index_insert(
+    LlevSourceFilterIndex* index, const char* term, size_t term_len,
+    size_t* out_id);
+LLEV_API LlevStatus llev_source_filter_index_freeze(
+    LlevSourceFilterIndex* index);
+LLEV_API LlevStatus llev_source_filter_index_query(
+    const LlevSourceFilterIndex* index, const char* query, size_t query_len,
+    size_t max_distance, const LlevSourceFilterIndexLimits* limits,
+    size_t* out_ids, size_t capacity, size_t* out_len, uint32_t* out_reason);
+LLEV_API void llev_source_filter_index_free(LlevSourceFilterIndex* index);
+
 /** Scalar temporal kernels. Every value is a stable wire constant. */
 #define LLEV_TEMPORAL_MSM 1u
 #define LLEV_TEMPORAL_ERP 2u

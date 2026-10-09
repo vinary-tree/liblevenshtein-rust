@@ -143,6 +143,12 @@ impl NgramIndex {
         self.term_to_id.len()
     }
 
+    /// Return the stable insertion ID of a live term, if present.
+    #[inline]
+    pub fn term_id(&self, term: &str) -> Option<usize> {
+        self.term_to_id.get(term).copied()
+    }
+
     /// Check if the index is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {

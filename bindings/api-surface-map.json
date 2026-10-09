@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 199 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 204 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -16,7 +16,8 @@
         "tests/ffi_timestamped_twed.rs",
         "tests/ffi_filter.rs",
         "tests/ffi_temporal_online.rs",
-        "tests/ffi_timestamped_index.rs"
+        "tests/ffi_timestamped_index.rs",
+        "tests/ffi_filter_index.rs"
       ],
       "enums": {
         "status": {
@@ -656,6 +657,21 @@
         },
         "llev_source_filter_utf8": {
           "symbol": "llev_source_filter_utf8"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": "llev_source_filter_index_new"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": "llev_source_filter_index_insert"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": "llev_source_filter_index_freeze"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": "llev_source_filter_index_query"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": "llev_source_filter_index_free"
         }
       }
     },
@@ -1495,6 +1511,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -2334,6 +2370,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -3165,6 +3221,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -3989,6 +4065,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -4812,6 +4908,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -5633,6 +5749,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -6467,6 +6603,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -7298,6 +7454,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -8153,6 +8329,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -8979,6 +9175,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -9806,6 +10022,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -10633,6 +10869,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -11463,6 +11719,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -12293,6 +12569,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -12325,7 +12621,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalBounds.jl",
         "bindings/julia/Liblevenshtein/src/TemporalOnline.jl",
         "bindings/julia/Liblevenshtein/src/TemporalTimestamped.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalTimestampedIndex.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalTimestampedIndex.jl",
+        "bindings/julia/Liblevenshtein/src/SourceFilterIndex.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -12338,7 +12635,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_bounds.jl",
         "bindings/julia/Liblevenshtein/test/temporal_online.jl",
         "bindings/julia/Liblevenshtein/test/temporal_timestamped.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_timestamped_index.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_timestamped_index.jl",
+        "bindings/julia/Liblevenshtein/test/source_filter_index.jl"
       ],
       "enums": {
         "status": {
@@ -13023,6 +13321,21 @@
             "query_ngram",
             "query_hybrid"
           ]
+        },
+        "llev_source_filter_index_new": {
+          "symbol": "NativeSourceFilterIndex"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": "NativeSourceFilterIndex"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": "NativeSourceFilterIndex"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": "query_filter_index"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": "close!"
         }
       }
     },
@@ -13787,6 +14100,26 @@
         "llev_source_filter_utf8": {
           "symbol": null,
           "_reason": "FINDING: revision-11 native n-gram/hybrid source filter is not yet projected into this language facade"
+        },
+        "llev_source_filter_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_source_filter_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-19 native persistent source-filter index is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     }

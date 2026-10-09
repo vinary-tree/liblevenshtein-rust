@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 18,
+  "apiRevision": 19,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1200,7 +1200,12 @@
     { "name": "llev_temporal_online_scratch_bytes", "rustModule": "temporal_online" },
     { "name": "llev_temporal_online_free", "rustModule": "temporal_online" },
     { "name": "llev_jaro_similarity_utf8", "rustModule": "filter" },
-    { "name": "llev_source_filter_utf8", "rustModule": "filter" }
+    { "name": "llev_source_filter_utf8", "rustModule": "filter" },
+    { "name": "llev_source_filter_index_new", "rustModule": "filter_index" },
+    { "name": "llev_source_filter_index_insert", "rustModule": "filter_index" },
+    { "name": "llev_source_filter_index_freeze", "rustModule": "filter_index" },
+    { "name": "llev_source_filter_index_query", "rustModule": "filter_index" },
+    { "name": "llev_source_filter_index_free", "rustModule": "filter_index" }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",
