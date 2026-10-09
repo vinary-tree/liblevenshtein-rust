@@ -1966,6 +1966,92 @@ LLEV_API LlevStatus llev_temporal_index_cursor_next_batch(
     size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
 LLEV_API void llev_temporal_index_cursor_free(LlevTemporalIndexCursor* cursor);
 
+/** All ceilings apply to one complete exact range certificate. The search
+ * ceilings include query, traversal, and result resources; witness bytes,
+ * record count, path bytes, and certificate work are cumulative. */
+typedef struct LlevTemporalCertificateLimits {
+    LlevTemporalSearchLimits search;
+    size_t max_witness_bytes;
+    size_t max_records;
+    size_t max_path_bytes;
+    size_t max_work_units;
+} LlevTemporalCertificateLimits;
+
+/** Exact native certificate shape and charged resources. DTW cutoff is in
+ * squared-distance units, even though public matches use root distance. */
+typedef struct LlevTemporalCertificateInfo {
+    size_t query_len;
+    size_t evidence_len;
+    size_t result_len;
+    double cutoff_native;
+    size_t work_units;
+    size_t path_bytes;
+    size_t witness_bytes;
+    uint8_t snapshot_present;
+    uint8_t reserved[7];
+    uint8_t snapshot_identity[32];
+} LlevTemporalCertificateInfo;
+
+/** Ordered K1--K4 evidence. Kinds 1,2,3,4,5 denote prefix, subtree,
+ * terminal, candidate prune, and exact candidate respectively. */
+typedef struct LlevTemporalCertificateEvidenceHeader {
+    uint32_t kind;
+    uint32_t reserved;
+    size_t path_len;
+    uint64_t stable_id;
+    double lower_bound;
+    double exact;
+    uint8_t has_exact;
+    uint8_t survived;
+    uint8_t reserved_tail[6];
+} LlevTemporalCertificateEvidenceHeader;
+
+/** Caller-owned projection for exact replay. Each path is path_len bytes. */
+typedef struct LlevTemporalCertificateEvidenceView {
+    LlevTemporalCertificateEvidenceHeader header;
+    const uint8_t* path;
+} LlevTemporalCertificateEvidenceView;
+
+typedef struct LlevTemporalCertificateView {
+    LlevTemporalCertificateInfo info;
+    const uint64_t* query_bits;
+    const LlevTemporalCertificateEvidenceView* evidence;
+    const LlevTemporalIndexMatch* results;
+} LlevTemporalCertificateView;
+
+typedef struct LlevTemporalRangeCertificate LlevTemporalRangeCertificate;
+
+/** Produce complete exact range evidence from a frozen scalar index. The
+ * certificate owns its snapshot and remains valid after index free. No
+ * certificate is returned on any limit or validation failure. */
+LLEV_API LlevStatus llev_temporal_index_query_certified(
+    const LlevTemporalIndex* index, const double* query, size_t query_len,
+    double cutoff, const LlevTemporalCertificateLimits* limits,
+    LlevTemporalRangeCertificate** out_certificate);
+LLEV_API LlevStatus llev_temporal_certificate_info(
+    const LlevTemporalRangeCertificate* certificate,
+    LlevTemporalCertificateInfo* out_info);
+/** Copy at most capacity elements starting at start; out_written is exact. */
+LLEV_API LlevStatus llev_temporal_certificate_query_bits(
+    const LlevTemporalRangeCertificate* certificate, size_t start,
+    uint64_t* out_words, size_t capacity, size_t* out_written);
+LLEV_API LlevStatus llev_temporal_certificate_matches(
+    const LlevTemporalRangeCertificate* certificate, size_t start,
+    LlevTemporalIndexMatch* out_matches, size_t capacity, size_t* out_written);
+/** Read one decision; null out_path and zero capacity query path_len only.
+ * Short nonzero buffers fail with LIMIT_EXCEEDED. */
+LLEV_API LlevStatus llev_temporal_certificate_evidence_at(
+    const LlevTemporalRangeCertificate* certificate, size_t index,
+    LlevTemporalCertificateEvidenceHeader* out_header, uint8_t* out_path,
+    size_t path_capacity, size_t* out_path_written);
+/** Verify caller-supplied complete evidence and results against the retained
+ * snapshot. An altered well-formed view returns OK with out_valid=0. */
+LLEV_API LlevStatus llev_temporal_certificate_verify(
+    const LlevTemporalRangeCertificate* certificate,
+    const LlevTemporalCertificateView* view, uint8_t* out_valid);
+LLEV_API void llev_temporal_certificate_free(
+    LlevTemporalRangeCertificate* certificate);
+
 /** Fixed-query online temporal automaton. It retains bounded query and
  * frontier state independent of target stream length. MSM, ERP, unit-grid
  * TWED, banded DTW, and scalar Fréchet are supported. Soft-DTW is not.

@@ -684,9 +684,13 @@ variants, protocols, or methods.
 | `build_features` | `llev_build_features` | ABI compatibility and feature discovery |
 | `cache_stats` | `llev_query_cache_stats` | project ABI operation |
 | `cancel!` | `llev_wallbreaker_cursor_cancel` | project ABI operation |
+| `certificate_evidence_at` | `llev_temporal_certificate_evidence_at` | project ABI operation |
+| `certificate_info` | `llev_temporal_certificate_info` | project ABI operation |
+| `certificate_match_page` | `llev_temporal_certificate_matches` | project ABI operation |
+| `certificate_query_bits` | `llev_temporal_certificate_query_bits` | project ABI operation |
 | `characters_with_features` | `llev_phonetic_chars_with_features` | IPA feature classification and relations |
 | `clear!` | `llev_query_cache_clear` | project ABI operation |
-| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_timestamped_twed_index_free`, `llev_timestamped_twed_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_temporal_index_cursor_free`, `llev_temporal_online_free`, `llev_source_filter_index_free`, `llev_approx_msm_index_free`, `llev_temporal_alignment_free`, `llev_vector_metric_free`, `llev_vector_frechet_online_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_timestamped_twed_index_free`, `llev_timestamped_twed_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_temporal_index_cursor_free`, `llev_temporal_certificate_free`, `llev_temporal_online_free`, `llev_source_filter_index_free`, `llev_approx_msm_index_free`, `llev_temporal_alignment_free`, `llev_vector_metric_free`, `llev_vector_frechet_online_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `compiled_phonetic_bytes` | `llev_owned_bytes_free`, `llev_phonetic_rules_to_bytes`, `llev_phonetic_pattern_to_bytes` | versioned compiled-byte ownership; versioned compiled phonetic-rule bytes; versioned compiled phonetic-pattern bytes |
 | `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
 | `distance_config` | `llev_phonetic_grep_distance_config` | word-boundary phonetic search and configuration |
@@ -749,6 +753,7 @@ variants, protocols, or methods.
 | `query_filter_index` | `llev_source_filter_index_query` | project ABI operation |
 | `query_filtered` | `llev_transducer_query_filtered_utf8` | domain-preserving dictionary query |
 | `query_hybrid` | `llev_source_filter_utf8` | project ABI operation |
+| `query_index_certified` | `llev_temporal_index_query_certified` | project ABI operation |
 | `query_index_range` | `llev_temporal_index_query_range` | project ABI operation |
 | `query_metric_knn` | `llev_timestamped_twed_index_query_knn` | project ABI operation |
 | `query_metric_range` | `llev_timestamped_twed_index_query_range` | project ABI operation |
@@ -790,6 +795,7 @@ variants, protocols, or methods.
 | `vector_temporal_distance` | `llev_vector_temporal_distance` | project ABI operation |
 | `vector_twed_interval_delete_lower_bound` | `llev_vector_twed_interval_lower_bound` | project ABI operation |
 | `VectorFrechetOnlineAutomaton` | `llev_vector_frechet_online_new` | project ABI operation |
+| `verify_certificate` | `llev_temporal_certificate_verify` | project ABI operation |
 | `voicing_pair` | `llev_phonetic_voicing_pair` | IPA feature classification and relations |
 | `WallBreakerMatcher` | `llev_wallbreaker_new_utf8` | project ABI operation |
 | `WeightedOperationCosts` | `llev_operation_costs_preset`, `llev_operation_costs_validate` | project ABI operation |

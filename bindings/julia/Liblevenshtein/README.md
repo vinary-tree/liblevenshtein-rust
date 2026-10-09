@@ -457,6 +457,35 @@ budget against a native control measured on the same runner.
 - Use `rolling_windows` to feed unknown-length finite-sample streams into
   fixed-width snapshots, then pass a snapshot to `query_index_range` for
   exact bounded lookup against a frozen temporal index.
+- Use `query_index_certified` when an exact indexed range result needs
+  replayable K1–K4 evidence. Set `TemporalCertificateLimits` for cumulative
+  traversal, witness, path, record, work, and result ceilings. Iterate
+  `certificate_matches` and `certificate_evidence` without copying the whole
+  certificate into Julia; `certificate_match_page` copies a bounded batch.
+  The certificate retains the frozen snapshot after the index closes.
+
+```julia
+index = TemporalIndex(:dtw; quant_min=0, quant_max=10,
+    band=2, max_entries=2, max_total_samples=6, max_series_len=3)
+insert!(index, 7, [1.0, 2.0, 3.0])
+freeze!(index)
+certificate = query_index_certified(index, [1.0, 2.0, 3.0]; cutoff=0.0)
+close(index)
+try
+    @assert only(collect(certificate_matches(certificate))).id == 7
+    projection = read_certificate(certificate)
+    @assert verify_certificate(certificate, projection)
+finally
+    close(certificate)
+end
+```
+
+`read_certificate` explicitly materializes a complete caller-owned projection
+within the configured ceilings. `verify_certificate` compares every supplied
+query word, result, evidence field, path, and accounting value before native
+replay against the retained snapshot; a changed well-formed projection returns
+`false`. DTW accepts public root-distance cutoffs and exposes native squared
+cutoffs in `certificate_info`.
 
 - Use `distance`, `optimal_string_alignment_distance`,
   `true_damerau_distance`, and `merge_and_split_distance` for pairwise work.

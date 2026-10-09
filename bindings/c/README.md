@@ -230,6 +230,12 @@ variants, protocols, or methods.
 | `llev_temporal_alignment_new` | `llev_temporal_alignment_new` | project ABI operation |
 | `llev_temporal_alignment_page` | `llev_temporal_alignment_page` | project ABI operation |
 | `llev_temporal_alignment_replay` | `llev_temporal_alignment_replay` | project ABI operation |
+| `llev_temporal_certificate_evidence_at` | `llev_temporal_certificate_evidence_at` | project ABI operation |
+| `llev_temporal_certificate_free` | `llev_temporal_certificate_free` | project ABI operation |
+| `llev_temporal_certificate_info` | `llev_temporal_certificate_info` | project ABI operation |
+| `llev_temporal_certificate_matches` | `llev_temporal_certificate_matches` | project ABI operation |
+| `llev_temporal_certificate_query_bits` | `llev_temporal_certificate_query_bits` | project ABI operation |
+| `llev_temporal_certificate_verify` | `llev_temporal_certificate_verify` | project ABI operation |
 | `llev_temporal_distance` | `llev_temporal_distance` | project ABI operation |
 | `llev_temporal_index_cursor_free` | `llev_temporal_index_cursor_free` | project ABI operation |
 | `llev_temporal_index_cursor_next_batch` | `llev_temporal_index_cursor_next_batch` | project ABI operation |
@@ -237,6 +243,7 @@ variants, protocols, or methods.
 | `llev_temporal_index_freeze` | `llev_temporal_index_freeze` | project ABI operation |
 | `llev_temporal_index_insert` | `llev_temporal_index_insert` | project ABI operation |
 | `llev_temporal_index_new` | `llev_temporal_index_new` | project ABI operation |
+| `llev_temporal_index_query_certified` | `llev_temporal_index_query_certified` | project ABI operation |
 | `llev_temporal_index_query_range` | `llev_temporal_index_query_range` | project ABI operation |
 | `llev_temporal_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
 | `llev_temporal_online_advance` | `llev_temporal_online_advance` | project ABI operation |

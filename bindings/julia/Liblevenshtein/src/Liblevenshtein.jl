@@ -184,6 +184,21 @@ export ABI_VERSION,
     TemporalIndex,
     TemporalSearchLimits,
     TemporalIndexCursor,
+    TemporalCertificateLimits,
+    TemporalCertificateInfo,
+    TemporalCertificateEvidence,
+    TemporalCertificateProjection,
+    TemporalCertificate,
+    query_index_certified,
+    certificate_info,
+    certificate_query_bits,
+    certificate_match_page,
+    certificate_evidence_at,
+    certificate_matches,
+    certificate_evidence,
+    reduce_certificate_evidence,
+    read_certificate,
+    verify_certificate,
     ApproxMsmIndex,
     ApproxMsmNeighbor,
     ApproxMsmResult,
@@ -1164,6 +1179,7 @@ include("TemporalSaxEncoding.jl")
 include("TemporalQueries.jl")
 include("TemporalMsmPrefilter.jl")
 include("TemporalIndex.jl")
+include("TemporalCertificate.jl")
 include("TemporalApproxMsm.jl")
 include("TemporalMetricDomains.jl")
 include("TemporalTimestamped.jl")

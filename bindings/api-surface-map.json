@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 227 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 234 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -20,7 +20,8 @@
         "tests/ffi_filter_index.rs",
         "tests/ffi_approx_msm.rs",
         "tests/ffi_temporal_vector.rs",
-        "tests/ffi_temporal_vector_bounds.rs"
+        "tests/ffi_temporal_vector_bounds.rs",
+        "tests/ffi_temporal_certificate.rs"
       ],
       "enums": {
         "status": {
@@ -639,6 +640,27 @@
         },
         "llev_temporal_index_cursor_free": {
           "symbol": "llev_temporal_index_cursor_free"
+        },
+        "llev_temporal_index_query_certified": {
+          "symbol": "llev_temporal_index_query_certified"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": "llev_temporal_certificate_info"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": "llev_temporal_certificate_query_bits"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": "llev_temporal_certificate_matches"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": "llev_temporal_certificate_evidence_at"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": "llev_temporal_certificate_verify"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": "llev_temporal_certificate_free"
         },
         "llev_temporal_online_new": {
           "symbol": "llev_temporal_online_new"
@@ -1555,6 +1577,34 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
         },
         "llev_temporal_online_new": {
           "symbol": null,
@@ -2507,6 +2557,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -3450,6 +3528,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -4386,6 +4492,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -5321,6 +5455,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -6253,6 +6415,34 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
         },
         "llev_temporal_online_new": {
           "symbol": null,
@@ -7200,6 +7390,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -8142,6 +8360,34 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
         },
         "llev_temporal_online_new": {
           "symbol": null,
@@ -9110,6 +9356,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -10047,6 +10321,34 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
         },
         "llev_temporal_online_new": {
           "symbol": null,
@@ -10987,6 +11289,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -11925,6 +12255,34 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
         },
         "llev_temporal_online_new": {
           "symbol": null,
@@ -12868,6 +13226,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -13810,6 +14196,34 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
         "llev_temporal_online_new": {
           "symbol": null,
           "_reason": "FINDING: additive revision-14 native temporal online automata are not yet projected into this language facade; binding parity is tracked separately"
@@ -13988,7 +14402,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalAlignment.jl",
         "bindings/julia/Liblevenshtein/src/TemporalVector.jl",
         "bindings/julia/Liblevenshtein/src/TemporalVectorOnline.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalVectorBounds.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalVectorBounds.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalCertificate.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -14008,7 +14423,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_alignment.jl",
         "bindings/julia/Liblevenshtein/test/temporal_vector.jl",
         "bindings/julia/Liblevenshtein/test/temporal_vector_online.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_vector_bounds.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_vector_bounds.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_certificate.jl"
       ],
       "enums": {
         "status": {
@@ -14672,6 +15088,27 @@
           "symbol": "next_batch!"
         },
         "llev_temporal_index_cursor_free": {
+          "symbol": "close!"
+        },
+        "llev_temporal_index_query_certified": {
+          "symbol": "query_index_certified"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": "certificate_info"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": "certificate_query_bits"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": "certificate_match_page"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": "certificate_evidence_at"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": "verify_certificate"
+        },
+        "llev_temporal_certificate_free": {
           "symbol": "close!"
         },
         "llev_temporal_online_new": {
@@ -15519,6 +15956,34 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_certified": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_info": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_query_bits": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_matches": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_evidence_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_verify": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
+        },
+        "llev_temporal_certificate_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
         },
         "llev_temporal_online_new": {
           "symbol": null,

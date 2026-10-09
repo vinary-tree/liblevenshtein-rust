@@ -19,13 +19,13 @@ use std::{
     sync::Arc,
 };
 
-type MsmIndex = ElasticTransducer<MsmKernel, u64>;
-type ErpIndex = ElasticTransducer<ErpConfig, u64>;
-type TwedIndex = ElasticTransducer<TwedConfig, u64>;
-type DtwIndex = ElasticTransducer<DtwConfig, u64>;
-type FrechetIndex = ElasticTransducer<FrechetConfig, u64>;
+pub(super) type MsmIndex = ElasticTransducer<MsmKernel, u64>;
+pub(super) type ErpIndex = ElasticTransducer<ErpConfig, u64>;
+pub(super) type TwedIndex = ElasticTransducer<TwedConfig, u64>;
+pub(super) type DtwIndex = ElasticTransducer<DtwConfig, u64>;
+pub(super) type FrechetIndex = ElasticTransducer<FrechetConfig, u64>;
 
-enum Building {
+pub(super) enum Building {
     Msm(MsmIndex),
     Erp(ErpIndex),
     Twed(TwedIndex),
@@ -33,7 +33,8 @@ enum Building {
     Frechet(FrechetIndex),
 }
 
-enum Frozen {
+#[derive(Clone)]
+pub(super) enum Frozen {
     Msm(Arc<MsmIndex>),
     Erp(Arc<ErpIndex>),
     Twed(Arc<TwedIndex>),
@@ -41,7 +42,7 @@ enum Frozen {
     Frechet(Arc<FrechetIndex>),
 }
 
-enum IndexState {
+pub(super) enum IndexState {
     Empty,
     Building(Building),
     Frozen(Frozen),
@@ -50,7 +51,7 @@ enum IndexState {
 /// Opaque temporal index handle. Mutation requires exclusive access; frozen
 /// handles may start independent concurrent range cursors.
 pub struct LlevTemporalIndex {
-    state: IndexState,
+    pub(super) state: IndexState,
     max_entries: usize,
     max_total_samples: usize,
     max_series_len: usize,
