@@ -30,10 +30,14 @@ source = LL.TemporalSeriesSource(pairs;
     max_entries=32, max_series_len=16, max_source_bytes=4096)
 index = LL.TemporalIndex(:dtw; quant_min=-4, quant_max=4,
     band=2, max_entries=32, max_total_samples=512, max_series_len=16)
+erp_index = LL.TemporalIndex(:erp; quant_min=-4, quant_max=4,
+    max_entries=32, max_total_samples=512, max_series_len=16)
 for (id, samples) in pairs
     LL.insert!(index, id, samples)
+    LL.insert!(erp_index, id, samples)
 end
 LL.freeze!(index)
+LL.freeze!(erp_index)
 approx_advisory_index = LL.ApproxMsmIndex(pairs;
     segments=4, candidate_limit=4,
     max_entries=32, max_total_samples=512,
@@ -85,6 +89,52 @@ scan() = collect(LL.query_temporal_range(source, :dtw, query;
     band=2, cutoff=0.5))
 indexed() = collect(LL.query_index_range(index, query;
     cutoff=0.5, page_work_units=100_000, page_results=32))
+erp_indexed() = collect(LL.query_index_range(erp_index, query;
+    cutoff=0.5, page_work_units=100_000, page_results=32))
+erp_automaton() = collect(LL.query_index_erp_automaton_range(
+    erp_index, query; cutoff=0.5, page_work_units=100_000,
+    page_results=32))
+function erp_scalar_scan()
+    matches = Tuple{UInt64, Float64}[]
+    for (id, samples) in pairs
+        result = LL.erp_distance(query, samples; gap=0.0, cutoff=0.5)
+        result.kind === :finite && push!(matches, (id, result.value))
+    end
+    sort!(matches)
+end
+function erp_automaton_native_c()
+    cursor = Ref{Ptr{Cvoid}}(C_NULL)
+    reason = Ref{UInt32}(0)
+    limits = Ref(LL.TemporalSearchLimits())
+    status = GC.@preserve query ccall(
+        LL.native(:llev_temporal_index_query_erp_automaton_range), Cint,
+        (Ptr{Cvoid}, Ptr{Float64}, Csize_t, Float64,
+            Ref{LL.TemporalSearchLimits}, Ref{Ptr{Cvoid}}, Ref{UInt32}),
+        erp_index.handle, pointer(query), length(query), 0.5,
+        limits, cursor, reason)
+    status == 0 || error("direct C ERP automaton construction failed")
+    matches = Tuple{UInt64, Float64}[]
+    try
+        done = Ref{UInt8}(0)
+        while done[] == 0
+            batch = Vector{LL.RawTemporalIndexMatch}(undef, 32)
+            written = Ref{Csize_t}(0)
+            status = GC.@preserve batch ccall(
+                LL.native(:llev_temporal_index_cursor_next_batch), Cint,
+                (Ptr{Cvoid}, Ptr{LL.RawTemporalIndexMatch}, Csize_t,
+                    Csize_t, Csize_t, Ref{Csize_t}, Ref{UInt8}, Ref{UInt32}),
+                cursor[], pointer(batch), length(batch),
+                100_000, 32, written, done, reason)
+            status == 0 || error("direct C ERP automaton page failed")
+            append!(matches, ((batch[i].id, batch[i].distance)
+                for i in 1:Int(written[])))
+        end
+        matches
+    finally
+        ccall(LL.native(:llev_temporal_index_cursor_free), Cvoid,
+            (Ptr{Cvoid},), cursor[])
+    end
+end
 indexed_knn() = collect(LL.query_index_knn(index, query, 3;
     page_results=3))
 indexed_knn_scan() = sort([(UInt64(i - 1), id,
@@ -195,6 +245,13 @@ try
     expected = sort([match.id for match in scan()])
     actual = sort([match.id for match in indexed()])
     expected == actual || error("indexed and scanned result IDs differ")
+    erp_expected = erp_scalar_scan()
+    sort([(match.id, match.distance) for match in erp_indexed()]) ==
+        erp_expected || error("generic indexed ERP differs from scalar scan")
+    sort([(match.id, match.distance) for match in erp_automaton()]) ==
+        erp_expected || error("ERP automaton differs from scalar scan")
+    sort(erp_automaton_native_c()) == erp_expected ||
+        error("ERP automaton Julia facade differs from direct C control")
     [(match.id, match.distance) for match in indexed_knn()] ==
         [(item[2], item[3]) for item in indexed_knn_scan()] ||
         error("indexed exact kNN differs from scalar DTW scan")
@@ -263,6 +320,10 @@ try
     sample("vector L2 online 16 prefixes", vector_l2_online)
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
+    sample("32-entry ERP scalar scan", erp_scalar_scan)
+    sample("32-entry ERP generic index", erp_indexed)
+    sample("32-entry ERP automaton", erp_automaton)
+    sample("32-entry ERP automaton C", erp_automaton_native_c)
     sample("32-entry exact DTW kNN", indexed_knn)
     sample("32-entry scalar DTW kNN", indexed_knn_scan)
     sample("32-entry scalar MSM kNN", msm_scan)
@@ -283,6 +344,7 @@ try
 finally
     close(plan)
     close(index)
+    close(erp_index)
     close(approx_advisory_index)
     close(approx_exhaustive_index)
     close(timestamped_index)
