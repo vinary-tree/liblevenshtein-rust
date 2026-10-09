@@ -70,6 +70,13 @@ timestamped() = collect(LL.query_metric_range(timestamped_index,
 timestamped_scan() = [id for (id, series) in timestamped_pairs if
     LL.metric_timestamped_twed_distance(timestamped_config,
         timestamped_query, series; cutoff=0.5).kind === :finite]
+timestamped_knn() = LL.query_metric_knn(timestamped_index,
+    timestamped_query, 3)
+timestamped_knn_scan() = sort([(UInt64(i - 1), id,
+    LL.metric_timestamped_twed_distance(timestamped_config,
+        timestamped_query, series).value)
+    for (i, (id, series)) in enumerate(timestamped_pairs)];
+    by=match -> (match[3], match[1]))[1:3]
 
 try
     expected = sort([match.id for match in scan()])
@@ -79,6 +86,9 @@ try
     timestamped_actual = sort([match.id for match in timestamped()])
     timestamped_expected == timestamped_actual ||
         error("timestamped indexed and scalar result IDs differ")
+    [(match.episode_id, match.id, match.distance)
+        for match in timestamped_knn()] == timestamped_knn_scan() ||
+        error("timestamped nearest neighbors differ from exact scalar scan")
     online_result = online()
     length(online_result) == length(candidate) ||
         error("online result length differs from candidate length")
@@ -105,6 +115,8 @@ try
     sample("32-entry temporal index", indexed)
     sample("32-entry timestamped scan", timestamped_scan)
     sample("32-entry timestamped index", timestamped)
+    sample("32-entry timestamped kNN scan", timestamped_knn_scan)
+    sample("32-entry timestamped kNN index", timestamped_knn)
     sample("32-term ngram filter", ngram)
     sample("32-term hybrid filter", hybrid)
 finally

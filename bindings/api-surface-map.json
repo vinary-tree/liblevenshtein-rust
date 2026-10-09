@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 198 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 199 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -584,6 +584,9 @@
         },
         "llev_timestamped_twed_index_query_range": {
           "symbol": "llev_timestamped_twed_index_query_range"
+        },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": "llev_timestamped_twed_index_query_knn"
         },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": "llev_timestamped_twed_cursor_next_batch"
@@ -1396,6 +1399,10 @@
         "llev_timestamped_twed_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
@@ -2232,6 +2239,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -3059,6 +3070,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -3879,6 +3894,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -4698,6 +4717,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -5514,6 +5537,10 @@
         "llev_timestamped_twed_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
@@ -6345,6 +6372,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -7171,6 +7202,10 @@
         "llev_timestamped_twed_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
@@ -8023,6 +8058,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -8844,6 +8883,10 @@
         "llev_timestamped_twed_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
@@ -9668,6 +9711,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -10490,6 +10537,10 @@
         "llev_timestamped_twed_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
@@ -11317,6 +11368,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -12143,6 +12198,10 @@
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
         },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
+        },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
@@ -12877,6 +12936,9 @@
         },
         "llev_timestamped_twed_index_query_range": {
           "symbol": "query_metric_range"
+        },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": "query_metric_knn"
         },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": "next_batch!"
@@ -13629,6 +13691,10 @@
         "llev_timestamped_twed_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: additive revision-17 native timestamped TWED index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-18 native timestamped TWED kNN is not yet projected into this language facade; binding parity is tracked separately"
         },
         "llev_timestamped_twed_cursor_next_batch": {
           "symbol": null,

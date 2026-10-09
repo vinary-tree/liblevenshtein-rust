@@ -182,6 +182,10 @@ explains units, ownership, and result tags.
 and exposes lazy exact `query_metric_range` cursors with full-precision
 collision verification and cumulative product limits. Duplicate caller IDs
 receive distinct stable episode IDs.
+`query_metric_knn` returns exact nearest episodes in distance and episode
+order after a bounded complete native scan. It raises
+`TemporalQueryIncomplete` on resource exhaustion without exposing partial
+neighbors.
 
 ## Choose an automaton
 
@@ -327,11 +331,11 @@ The adjacent-transposition variant is checked against optimal string alignment
 
 `benchmark/temporal_filtering.jl` measures scalar DTW, Soft-DTW gradients, reusable Keogh,
 quantization, ERP canonicalization, SAX, rolling windows, online ERP prefixes,
-a copied temporal scan, the frozen temporal index, physical-time TWED scan and
-index, and the
+a copied temporal scan, the frozen temporal index, physical-time TWED range
+scan and index, exact physical-time nearest-neighbor scan and index, and the
 n-gram and hybrid source filters. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
-result IDs agree, then samples five groups of 30 observable complete operations
+result IDs and nearest-neighbor distances agree, then samples five groups of 30 observable complete operations
 after 20 warmups.
 The workload and query budgets are finite. Run it after building the native
 library and preparing the Julia binding environment:
@@ -348,25 +352,28 @@ were:
 
 | Scenario | Median ns/op |
 |---|---:|
-| Scalar DTW, 16 × 16 samples | 4,923 |
-| Soft-DTW gradients, 16 × 16 samples | 47,447 |
-| Reusable Keogh bound, 16 samples | 1,368 |
-| Quantization, 16 samples | 98 |
-| ERP canonicalization, 16 samples | 53 |
-| SAX, 16 samples to 4 symbols | 275 |
-| Rolling windows, 16 samples to width 4 | 4,755 |
-| Online ERP, 16 prefixes | 77,520 |
-| 32-entry temporal scan | 159,933 |
-| 32-entry temporal index | 2,945,653 |
-| 32-entry physical-time TWED scan | 320,779 |
-| 32-entry physical-time TWED index | 698,789 |
-| 32-term n-gram filter | 315,281 |
-| 32-term hybrid filter | 380,824 |
+| Scalar DTW, 16 × 16 samples | 4,963 |
+| Soft-DTW gradients, 16 × 16 samples | 48,966 |
+| Reusable Keogh bound, 16 samples | 1,515 |
+| Quantization, 16 samples | 101 |
+| ERP canonicalization, 16 samples | 93 |
+| SAX, 16 samples to 4 symbols | 280 |
+| Rolling windows, 16 samples to width 4 | 4,917 |
+| Online ERP, 16 prefixes | 80,845 |
+| 32-entry temporal scan | 167,670 |
+| 32-entry temporal index | 3,712,492 |
+| 32-entry physical-time TWED range scan | 339,827 |
+| 32-entry physical-time TWED range index | 812,611 |
+| 32-entry physical-time TWED kNN scalar scan | 708,857 |
+| 32-entry physical-time TWED kNN native index | 351,141 |
+| 32-term n-gram filter | 331,856 |
+| 32-term hybrid filter | 394,705 |
 
-Both indexed queries are slower than their scans for this small,
-low-selectivity source. Use the scan for small sources; measure an index on the
-intended collection and cutoff before choosing it for speed. These local debug figures
-are diagnostic rather than a portable performance guarantee.
+The range indexes are slower than their scans for this small, low-selectivity
+source, while the native kNN scan is faster than repeated Julia scalar calls.
+Measure each operation on the intended collection and cutoff before choosing
+an index for speed. These local debug figures are diagnostic rather than a
+portable performance guarantee.
 
 `test/automata_qualification.jl` compares every initial, intermediate, and
 final observation with a separate executable built from the public Rust

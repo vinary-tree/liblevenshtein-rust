@@ -257,6 +257,14 @@ matches while paused; exhaustion raises `TemporalQueryIncomplete` when the
 cursor advances. `next_batch!`, iteration, `reduce_batches!`, close, and
 `cancel!` follow the other temporal cursor contracts.
 
+`query_metric_knn(index, query, k; limits=TemporalSearchLimits())` returns
+the exact nearest episodes ordered by distance and stable episode ID. An
+exact top-`k` claim requires examining every stored episode, so this bounded
+operation completes before returning its vector. Candidate, recurrence-cell,
+work, scratch, and result limits fail closed with `TemporalQueryIncomplete`;
+no partial neighbor list is exposed. The query copy counts against the
+scratch ceiling. The frozen index can serve independent concurrent queries.
+
 ```julia
 index = TimestampedTwedIndex(config;
     unit=:milliseconds, origin=10.0,
@@ -269,6 +277,8 @@ try
     freeze!(index)
     cursor = query_metric_range(index, left; cutoff=0.0)
     @assert sort([match.episode_id for match in cursor]) == UInt64[0, 1]
+    @assert [match.episode_id for match in query_metric_knn(index, left, 2)] ==
+        UInt64[0, 1]
 finally
     close(index)
 end
@@ -511,6 +521,7 @@ variants, protocols, or methods.
 | `query_filtered` | `llev_transducer_query_filtered_utf8` | domain-preserving dictionary query |
 | `query_hybrid` | `llev_source_filter_utf8` | project ABI operation |
 | `query_index_range` | `llev_temporal_index_query_range` | project ABI operation |
+| `query_metric_knn` | `llev_timestamped_twed_index_query_knn` | project ABI operation |
 | `query_metric_range` | `llev_timestamped_twed_index_query_range` | project ABI operation |
 | `query_ngram` | `llev_source_filter_utf8` | project ABI operation |
 | `query_pruned` | `llev_transducer_query_pruned_utf8` | domain-preserving dictionary query |

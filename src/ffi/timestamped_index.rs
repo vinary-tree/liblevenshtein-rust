@@ -534,6 +534,129 @@ pub unsafe extern "C" fn llev_timestamped_twed_index_query_range(
     })
 }
 
+/// Compute an exact, bounded k-nearest-neighbor result over a frozen revision.
+/// Results are sorted by distance, then stable episode ID. On incompletion no
+/// result is published, and `out_reason` identifies the exhausted resource.
+///
+/// # Safety
+/// All pointers must be valid and disjoint. The index must not be freed or
+/// mutated during the call. `out_matches` has `capacity` writable elements
+/// when capacity is nonzero; query buffers are borrowed only for this call.
+#[no_mangle]
+pub unsafe extern "C" fn llev_timestamped_twed_index_query_knn(
+    index: *const LlevTimestampedTwedIndex,
+    query: *const LlevTimestampedSeriesView,
+    k: usize,
+    raw_limits: *const LlevTemporalSearchLimits,
+    out_matches: *mut LlevTimestampedTwedMatch,
+    capacity: usize,
+    out_len: *mut usize,
+    out_reason: *mut u32,
+) -> LlevStatus {
+    boundary(|| {
+        let written = out_len.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "timestamped kNN length output is null".into(),
+        ))?;
+        let reason = out_reason.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "timestamped kNN reason output is null".into(),
+        ))?;
+        *written = 0;
+        *reason = 0;
+        let handle = index
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "timestamped index is null".into()))?;
+        let raw_query = *query
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "timestamped query is null".into()))?;
+        let raw_limits = *raw_limits.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "timestamped kNN limits are null".into(),
+        ))?;
+        if raw_query.unit != handle.unit || raw_query.origin.to_bits() != handle.origin.to_bits() {
+            return Err((
+                LlevStatus::DomainMismatch,
+                "timestamped index domain mismatch".into(),
+            ));
+        }
+        let frozen = match &handle.state {
+            IndexState::Frozen(index) => index,
+            _ => return Err(invalid("timestamped index must be frozen before querying")),
+        };
+        let needed = k.min(frozen.len());
+        if capacity < needed {
+            return Err((
+                LlevStatus::LimitExceeded,
+                "timestamped kNN output capacity is smaller than k".into(),
+            ));
+        }
+        if capacity != 0 {
+            if out_matches.is_null() {
+                return Err((
+                    LlevStatus::NullPointer,
+                    "timestamped kNN output is null".into(),
+                ));
+            }
+            if !(out_matches as usize)
+                .is_multiple_of(std::mem::align_of::<LlevTimestampedTwedMatch>())
+            {
+                return Err(invalid("timestamped kNN output is not aligned"));
+            }
+        }
+        let mut limits = ResourceLimits::from(raw_limits);
+        let query_bytes = raw_query
+            .len
+            .checked_mul(2 * std::mem::size_of::<f64>())
+            .ok_or((
+                LlevStatus::LimitExceeded,
+                "timestamped query byte count overflow".into(),
+            ))?;
+        if query_bytes > limits.max_scratch_bytes {
+            return Err((
+                LlevStatus::LimitExceeded,
+                "timestamped kNN query copy limit".into(),
+            ));
+        }
+        let query = read_series(raw_query, limits.max_series_len, limits)?;
+        limits.max_scratch_bytes -= query_bytes;
+        match frozen
+            .search_knn_bounded(&query, k, limits)
+            .map_err(index_error)?
+        {
+            OperationOutcome::Complete { value, .. } => {
+                if value.len() > capacity {
+                    return Err((
+                        LlevStatus::LimitExceeded,
+                        "timestamped kNN output capacity exceeded".into(),
+                    ));
+                }
+                let out = if capacity == 0 {
+                    &mut []
+                } else {
+                    std::slice::from_raw_parts_mut(out_matches, capacity)
+                };
+                for (slot, matched) in out.iter_mut().zip(value.iter()) {
+                    *slot = LlevTimestampedTwedMatch {
+                        id: *matched.value,
+                        episode_id: matched.episode_id,
+                        distance: matched.distance,
+                    };
+                }
+                *written = value.len();
+                Ok(LlevStatus::Ok)
+            }
+            OperationOutcome::Incomplete { reason: why, .. } => {
+                *reason = incomplete_code(why);
+                Err((
+                    LlevStatus::LimitExceeded,
+                    format!("timestamped kNN incomplete: {why:?}"),
+                ))
+            }
+        }
+    })
+}
+
 /// Advance one bounded page. A zero-length page with out_done=0 is paused.
 ///
 /// # Safety

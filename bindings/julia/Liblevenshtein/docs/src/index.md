@@ -188,6 +188,11 @@ revision; its cursor survives closing the index and reports cumulative
 resource exhaustion through `TemporalQueryIncomplete`. The index uses
 quantization for pruning only and verifies every surviving collision against
 the retained physical timestamps.
+`query_metric_knn` computes an exact nearest-neighbor vector over the same
+frozen revision. Its bounded full scan must complete before it returns; any
+resource exhaustion raises `TemporalQueryIncomplete` with no partial list.
+Results use distance then stable episode ID order, including when metadata
+IDs repeat.
 
 ### Lazy temporal range queries
 

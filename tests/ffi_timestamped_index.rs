@@ -4,9 +4,10 @@ use liblevenshtein::ffi::{
     llev_timestamped_twed_cursor_free, llev_timestamped_twed_cursor_next_batch,
     llev_timestamped_twed_index_free, llev_timestamped_twed_index_freeze,
     llev_timestamped_twed_index_insert, llev_timestamped_twed_index_new,
-    llev_timestamped_twed_index_query_range, LlevStatus, LlevTemporalSearchLimits,
-    LlevTimestampedSeriesView, LlevTimestampedTwedCursor, LlevTimestampedTwedIndex,
-    LlevTimestampedTwedIndexConfig, LlevTimestampedTwedMatch, LlevTimestampedTwedSearchLimits,
+    llev_timestamped_twed_index_query_knn, llev_timestamped_twed_index_query_range, LlevStatus,
+    LlevTemporalSearchLimits, LlevTimestampedSeriesView, LlevTimestampedTwedCursor,
+    LlevTimestampedTwedIndex, LlevTimestampedTwedIndexConfig, LlevTimestampedTwedMatch,
+    LlevTimestampedTwedSearchLimits,
 };
 use liblevenshtein::time_series::{
     MetricTimestampedTwedConfig, OperationOutcome, PageBudget, ResourceLimits, TimestampUnit,
@@ -175,6 +176,96 @@ fn frozen_timestamped_range_cursor_retains_full_precision_episodes() {
         [0, 1]
     );
     assert!(found.iter().all(|matched| matched.distance == 0.0));
+}
+
+#[test]
+fn exact_knn_is_sorted_and_fails_closed_on_resource_exhaustion() {
+    let mut index: *mut LlevTimestampedTwedIndex = std::ptr::null_mut();
+    assert_eq!(
+        unsafe { llev_timestamped_twed_index_new(&config(), &mut index) },
+        LlevStatus::Ok
+    );
+    let times = [10.0, 13.0];
+    let mut episode = u64::MAX;
+    for (id, values) in [(7, [1.0, 2.0]), (7, [1.0, 2.0]), (11, [3.0, 4.0])] {
+        assert_eq!(
+            unsafe {
+                llev_timestamped_twed_index_insert(index, id, &view(&values, &times), &mut episode)
+            },
+            LlevStatus::Ok
+        );
+    }
+    assert_eq!(
+        unsafe { llev_timestamped_twed_index_freeze(index) },
+        LlevStatus::Ok
+    );
+    let query_values = [1.0, 2.0];
+    let query = view(&query_values, &times);
+    let mut out = [LlevTimestampedTwedMatch::default(); 2];
+    let mut len = usize::MAX;
+    let mut reason = u32::MAX;
+    assert_eq!(
+        unsafe {
+            llev_timestamped_twed_index_query_knn(
+                index,
+                &query,
+                2,
+                &limits().common,
+                out.as_mut_ptr(),
+                out.len(),
+                &mut len,
+                &mut reason,
+            )
+        },
+        LlevStatus::Ok
+    );
+    assert_eq!(len, 2);
+    assert_eq!(reason, 0);
+    assert_eq!(out.map(|matched| matched.id), [7, 7]);
+    assert_eq!(out.map(|matched| matched.episode_id), [0, 1]);
+    assert_eq!(out.map(|matched| matched.distance), [0.0, 0.0]);
+
+    let mut restricted = limits().common;
+    restricted.max_work_units = 0;
+    let previous = out;
+    assert_eq!(
+        unsafe {
+            llev_timestamped_twed_index_query_knn(
+                index,
+                &query,
+                2,
+                &restricted,
+                out.as_mut_ptr(),
+                out.len(),
+                &mut len,
+                &mut reason,
+            )
+        },
+        LlevStatus::LimitExceeded
+    );
+    assert_eq!(len, 0);
+    assert_ne!(reason, 0);
+    assert_eq!(
+        out.map(|matched| matched.episode_id),
+        previous.map(|matched| matched.episode_id)
+    );
+    assert_eq!(
+        unsafe {
+            llev_timestamped_twed_index_query_knn(
+                index,
+                &query,
+                2,
+                &limits().common,
+                out.as_mut_ptr(),
+                1,
+                &mut len,
+                &mut reason,
+            )
+        },
+        LlevStatus::LimitExceeded
+    );
+    assert_eq!(len, 0);
+    unsafe { llev_timestamped_twed_index_free(index) };
 }
 
 #[test]

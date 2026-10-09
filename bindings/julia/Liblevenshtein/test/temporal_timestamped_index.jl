@@ -34,6 +34,21 @@
         expected = [(UInt64(0), UInt64(7), 0.0),
             (UInt64(1), UInt64(7), 0.0)]
         @test all(task -> fetch(task) == expected, tasks)
+        neighbors = LL.query_metric_knn(index, exact, 3)
+        @test [(match.episode_id, match.id) for match in neighbors] ==
+            [(UInt64(0), UInt64(7)), (UInt64(1), UInt64(7)),
+                (UInt64(2), UInt64(11))]
+        @test [match.distance for match in neighbors[1:2]] == [0.0, 0.0]
+        @test neighbors[3].distance > 0.0
+        @test length(LL.query_metric_knn(index, exact, 20)) == 3
+        @test isempty(LL.query_metric_knn(index, exact, 0))
+        @test_throws LL.TemporalQueryIncomplete LL.query_metric_knn(
+            index, exact, 2;
+            limits=LL.TemporalSearchLimits(max_work_units=0))
+        @test_throws LL.TemporalQueryIncomplete LL.query_metric_knn(
+            index, exact, 2;
+            limits=LL.TemporalSearchLimits(max_results=1))
+        @test_throws ArgumentError LL.query_metric_knn(index, exact, -1)
         @test_throws ArgumentError LL.query_metric_range(index,
             LL.TimestampedSeries([1.0], [11.0];
                 unit=:milliseconds, origin=11.0);

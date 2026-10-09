@@ -1634,6 +1634,18 @@ LLEV_API LlevStatus llev_timestamped_twed_index_query_range(
     const LlevTimestampedTwedSearchLimits* limits,
     LlevTimestampedTwedCursor** out_cursor);
 
+/** Exact k-nearest neighbors from a frozen revision, sorted by distance then
+ * stable episode ID. This strict full scan returns no partial results on
+ * LIMIT_EXCEEDED; out_reason uses the temporal index reason codes. The query
+ * copy counts against scratch bytes. Caller storage must hold min(k, len)
+ * matches, or the call fails before scanning. */
+LLEV_API LlevStatus llev_timestamped_twed_index_query_knn(
+    const LlevTimestampedTwedIndex* index,
+    const LlevTimestampedSeriesView* query, size_t k,
+    const LlevTemporalSearchLimits* limits,
+    LlevTimestampedTwedMatch* out_matches, size_t capacity,
+    size_t* out_len, uint32_t* out_reason);
+
 /** Advance at most one bounded page. Zero matches with out_done=0 means
  * paused. LIMIT_EXCEEDED leaves previous matches an exact incomplete subset;
  * out_reason uses the temporal index reason codes, including 14 for a page

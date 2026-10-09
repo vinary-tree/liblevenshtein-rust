@@ -52,6 +52,7 @@ mutable struct TimestampedTwedIndex
     unit::Symbol
     origin::Float64
     max_series_len::Csize_t
+    entries::Csize_t
     frozen::Bool
     closed::Bool
 end
@@ -84,7 +85,7 @@ function TimestampedTwedIndex(config::MetricTimestampedTwedConfig;
         Ref(raw), output)
     checked(status, :llev_timestamped_twed_index_new)
     index = TimestampedTwedIndex(output[], unit, raw.origin,
-        raw.max_series_len, false, false)
+        raw.max_series_len, 0, false, false)
     finalizer(close!, index)
     index
 end
@@ -118,7 +119,52 @@ function insert_episode!(index::TimestampedTwedIndex, id::Integer,
         (Ptr{Cvoid}, UInt64, Ref{RawTimestampedSeriesView}, Ref{UInt64}),
         index.handle, UInt64(id), Ref(view), episode)
     checked(status, :llev_timestamped_twed_index_insert)
+    index.entries += 1
     episode[]
+end
+
+"""Exact bounded k-nearest neighbors, ordered by distance then episode ID.
+
+The native search must scan every episode to certify the answer. It returns
+the complete result or an explicit incomplete error, never a partial top-k.
+"""
+function query_metric_knn(index::TimestampedTwedIndex,
+    series::TimestampedSeries, k::Integer;
+    limits::TemporalSearchLimits=TemporalSearchLimits())
+    api_revision() >= UInt32(18) ||
+        throw(NativeError(Int32(STATUS_UNSUPPORTED),
+            :llev_timestamped_twed_index_query_knn,
+            "timestamped TWED kNN requires native API revision 18"))
+    index.closed && throw(ArgumentError("timestamped index is closed"))
+    index.frozen || throw(ArgumentError("timestamped index must be frozen"))
+    timestamped_index_identity(index, series)
+    length(getfield(series, :_values)) <= limits.max_series_len ||
+        throw(ArgumentError("timestamped query exceeds max_series_len"))
+    count = checked_threshold(k)
+    capacity = min(count, index.entries)
+    capacity <= limits.max_results ||
+        throw(TemporalQueryIncomplete(:timestamped_twed_knn, nothing, :results))
+    raw = Vector{RawTimestampedTwedMatch}(undef, capacity)
+    values = getfield(series, :_values)
+    times = getfield(series, :_timestamps)
+    view = RawTimestampedSeriesView(pointer(values), pointer(times),
+        length(values), timestamp_unit_code(series.unit), 0, series.origin)
+    written = Ref{Csize_t}(0)
+    reason = Ref{UInt32}(0)
+    output = isempty(raw) ? Ptr{RawTimestampedTwedMatch}(C_NULL) : pointer(raw)
+    status = GC.@preserve values times raw ccall(
+        native(:llev_timestamped_twed_index_query_knn), Cint,
+        (Ptr{Cvoid}, Ref{RawTimestampedSeriesView}, Csize_t,
+            Ref{TemporalSearchLimits}, Ptr{RawTimestampedTwedMatch},
+            Csize_t, Ref{Csize_t}, Ref{UInt32}),
+        index.handle, Ref(view), count, Ref(limits), output,
+        capacity, written, reason)
+    status == Int32(STATUS_LIMIT_EXCEEDED) &&
+        throw(TemporalQueryIncomplete(:timestamped_twed_knn, nothing,
+            native_index_reason(reason[])))
+    checked(status, :llev_timestamped_twed_index_query_knn)
+    [TimestampedTwedMatch(raw[i].id, raw[i].episode_id, raw[i].distance)
+        for i in 1:Int(written[])]
 end
 
 function insert!(index::TimestampedTwedIndex, id::Integer,

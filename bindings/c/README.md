@@ -237,6 +237,7 @@ variants, protocols, or methods.
 | `llev_timestamped_twed_index_freeze` | `llev_timestamped_twed_index_freeze` | project ABI operation |
 | `llev_timestamped_twed_index_insert` | `llev_timestamped_twed_index_insert` | project ABI operation |
 | `llev_timestamped_twed_index_new` | `llev_timestamped_twed_index_new` | project ABI operation |
+| `llev_timestamped_twed_index_query_knn` | `llev_timestamped_twed_index_query_knn` | project ABI operation |
 | `llev_timestamped_twed_index_query_range` | `llev_timestamped_twed_index_query_range` | project ABI operation |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |

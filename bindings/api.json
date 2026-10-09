@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 17,
+  "apiRevision": 18,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1177,6 +1177,7 @@
     { "name": "llev_timestamped_twed_index_freeze", "rustModule": "timestamped_index" },
     { "name": "llev_timestamped_twed_index_free", "rustModule": "timestamped_index" },
     { "name": "llev_timestamped_twed_index_query_range", "rustModule": "timestamped_index" },
+    { "name": "llev_timestamped_twed_index_query_knn", "rustModule": "timestamped_index" },
     { "name": "llev_timestamped_twed_cursor_next_batch", "rustModule": "timestamped_index" },
     { "name": "llev_timestamped_twed_cursor_free", "rustModule": "timestamped_index" },
     { "name": "llev_soft_dtw_gradient", "rustModule": "temporal" },
