@@ -457,6 +457,12 @@ budget against a native control measured on the same runner.
 - Use `rolling_windows` to feed unknown-length finite-sample streams into
   fixed-width snapshots, then pass a snapshot to `query_index_range` for
   exact bounded lookup against a frozen temporal index.
+- Use `query_index_knn(index, query, k)` for exact nearest neighbors on a
+  frozen MSM, ERP, TWED, DTW, or Fréchet index. Native search scans the whole
+  snapshot under `TemporalSearchLimits` before returning a closeable result
+  cursor. Iterate it or use `reduce_batches!` for bounded result copies. Limit
+  exhaustion raises `TemporalQueryIncomplete` and yields no partial top-k.
+  DTW neighbors carry public root-distance scores.
 - Use `query_index_certified` when an exact indexed range result needs
   replayable K1–K4 evidence. Set `TemporalCertificateLimits` for cumulative
   traversal, witness, path, record, work, and result ceilings. Iterate

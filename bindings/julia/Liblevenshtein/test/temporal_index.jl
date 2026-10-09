@@ -62,6 +62,62 @@
     close(index)
 end
 
+@testset "exact bounded temporal index kNN" begin
+    query = [1.0, 2.0, 3.0]
+    candidates = [(UInt64(7), [1.0, 2.0, 3.0]),
+        (UInt64(8), [1.0, 2.5, 3.0])]
+    for (kind, options) in ((:msm, (; parameter0=1.0)),
+        (:erp, (; parameter0=0.0)), (:twed, (; parameter0=0.0)),
+        (:dtw, (; band=2)), (:frechet, (;)))
+        index = LL.TemporalIndex(kind; quant_min=-10.0, quant_max=10.0,
+            quant_bins=32, max_entries=2, max_total_samples=6,
+            max_series_len=3, options...)
+        try
+            for (id, values) in candidates
+                LL.insert!(index, id, values)
+            end
+            LL.freeze!(index)
+            @test isempty(collect(LL.query_index_knn(index, query, 0)))
+            restricted = LL.TemporalSearchLimits(max_candidates=0)
+            failure = try
+                LL.query_index_knn(index, query, 2; limits=restricted)
+                nothing
+            catch error
+                error
+            end
+            @test failure isa LL.TemporalQueryIncomplete
+            @test failure.detail === :candidates
+            cursor = LL.query_index_knn(index, query, 2; page_results=1)
+            close(index)
+            neighbors = collect(cursor)
+            @test [match.id for match in neighbors] == UInt64[7, 8]
+            for (match, (_, values)) in zip(neighbors, candidates)
+                expected = LL.temporal_distance(kind, query, values;
+                    options...)
+                @test expected.kind === :finite
+                @test match.distance ≈ expected.value
+            end
+            @test !isopen(cursor)
+        finally
+            close(index)
+        end
+    end
+    index = LL.TemporalIndex(:erp; quant_min=-10.0,
+        quant_max=10.0, max_entries=1, max_total_samples=3,
+        max_series_len=3)
+    try
+        LL.insert!(index, 7, query)
+        LL.freeze!(index)
+        @test LL.reduce_batches!((count, batch) -> count + length(batch),
+            0, LL.query_index_knn(index, query, 1); batch_size=1) == 1
+        @test_throws ArgumentError LL.query_index_knn(index,
+            UntouchableLargeVector(4), 1;
+            limits=LL.TemporalSearchLimits(max_series_len=3))
+    finally
+        close(index)
+    end
+end
+
 @testset "native temporal index concurrent lifecycle" begin
     query = [1.0, 2.0, 3.0]
     for _ in 1:24

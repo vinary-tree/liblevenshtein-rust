@@ -3,9 +3,10 @@
 use liblevenshtein::ffi::{
     llev_temporal_index_cursor_free, llev_temporal_index_cursor_next_batch,
     llev_temporal_index_free, llev_temporal_index_freeze, llev_temporal_index_insert,
-    llev_temporal_index_new, llev_temporal_index_query_range, LlevStatus, LlevTemporalAlgorithm,
-    LlevTemporalConfig, LlevTemporalIndex, LlevTemporalIndexConfig, LlevTemporalIndexCursor,
-    LlevTemporalIndexMatch, LlevTemporalSearchLimits,
+    llev_temporal_index_new, llev_temporal_index_query_knn, llev_temporal_index_query_range,
+    llev_temporal_knn_cursor_free, llev_temporal_knn_cursor_next_batch, LlevStatus,
+    LlevTemporalAlgorithm, LlevTemporalConfig, LlevTemporalIndex, LlevTemporalIndexConfig,
+    LlevTemporalIndexCursor, LlevTemporalIndexMatch, LlevTemporalSearchLimits,
 };
 use liblevenshtein::time_series::{DtwConfig, ErpConfig, FrechetConfig, MsmConfig, TwedConfig};
 use std::ptr;
@@ -127,6 +128,84 @@ fn scalar(algorithm: LlevTemporalAlgorithm, query: &[f64], candidate: &[f64]) ->
         LlevTemporalAlgorithm::Dtw => DtwConfig::new(2).distance(query, candidate),
         LlevTemporalAlgorithm::Frechet => FrechetConfig::new().distance(query, candidate),
         LlevTemporalAlgorithm::SoftDtw => unreachable!(),
+    }
+}
+
+#[test]
+fn exact_knn_pages_all_five_kernels_after_index_close_and_fails_closed() {
+    let query = [1.0, 2.0, 3.0];
+    let candidates = [(7, [1.0, 2.0, 3.0]), (8, [1.0, 2.5, 3.0])];
+    for algorithm in [
+        LlevTemporalAlgorithm::Msm,
+        LlevTemporalAlgorithm::Erp,
+        LlevTemporalAlgorithm::Twed,
+        LlevTemporalAlgorithm::Dtw,
+        LlevTemporalAlgorithm::Frechet,
+    ] {
+        let index = create(&config(algorithm));
+        for (id, values) in candidates {
+            assert_eq!(insert(index, id, &values), LlevStatus::Ok);
+        }
+        assert_eq!(unsafe { llev_temporal_index_freeze(index) }, LlevStatus::Ok);
+        let mut restricted = limits();
+        restricted.max_candidates = 0;
+        let mut cursor = ptr::null_mut();
+        let mut reason = u32::MAX;
+        assert_eq!(
+            unsafe {
+                llev_temporal_index_query_knn(
+                    index,
+                    query.as_ptr(),
+                    query.len(),
+                    2,
+                    &restricted,
+                    &mut cursor,
+                    &mut reason,
+                )
+            },
+            LlevStatus::LimitExceeded
+        );
+        assert_eq!(reason, 6);
+        assert!(cursor.is_null());
+        assert_eq!(
+            unsafe {
+                llev_temporal_index_query_knn(
+                    index,
+                    query.as_ptr(),
+                    query.len(),
+                    2,
+                    &limits(),
+                    &mut cursor,
+                    &mut reason,
+                )
+            },
+            LlevStatus::Ok
+        );
+        assert_eq!(reason, 0);
+        assert!(!cursor.is_null());
+        unsafe { llev_temporal_index_free(index) };
+        for (id, values) in candidates {
+            let mut output = [LlevTemporalIndexMatch::default(); 1];
+            let mut written = usize::MAX;
+            let mut done = u8::MAX;
+            assert_eq!(
+                unsafe {
+                    llev_temporal_knn_cursor_next_batch(
+                        cursor,
+                        output.as_mut_ptr(),
+                        1,
+                        &mut written,
+                        &mut done,
+                    )
+                },
+                LlevStatus::Ok
+            );
+            assert_eq!(written, 1);
+            assert_eq!(output[0].id, id);
+            assert_eq!(output[0].distance, scalar(algorithm, &query, &values));
+            assert_eq!(done, u8::from(id == 8));
+        }
+        unsafe { llev_temporal_knn_cursor_free(cursor) };
     }
 }
 

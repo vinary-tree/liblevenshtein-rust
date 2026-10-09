@@ -85,6 +85,12 @@ scan() = collect(LL.query_temporal_range(source, :dtw, query;
     band=2, cutoff=0.5))
 indexed() = collect(LL.query_index_range(index, query;
     cutoff=0.5, page_work_units=100_000, page_results=32))
+indexed_knn() = collect(LL.query_index_knn(index, query, 3;
+    page_results=3))
+indexed_knn_scan() = sort([(UInt64(i - 1), id,
+    LL.dtw_distance(query, samples; band=2).value)
+    for (i, (id, samples)) in enumerate(pairs)];
+    by=match -> (match[3], match[1]))[1:3]
 approx_advice() = LL.query_approx_msm_knn(approx_advisory_index,
     query, 3)
 approx_full() = LL.query_approx_msm_knn(approx_exhaustive_index,
@@ -189,6 +195,9 @@ try
     expected = sort([match.id for match in scan()])
     actual = sort([match.id for match in indexed()])
     expected == actual || error("indexed and scanned result IDs differ")
+    [(match.id, match.distance) for match in indexed_knn()] ==
+        [(item[2], item[3]) for item in indexed_knn_scan()] ||
+        error("indexed exact kNN differs from scalar DTW scan")
     LL.proves_recall(approx_full()) ||
         error("exhaustive approximate MSM search did not prove recall")
     !LL.proves_recall(approx_advice()) ||
@@ -254,6 +263,8 @@ try
     sample("vector L2 online 16 prefixes", vector_l2_online)
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
+    sample("32-entry exact DTW kNN", indexed_knn)
+    sample("32-entry scalar DTW kNN", indexed_knn_scan)
     sample("32-entry scalar MSM kNN", msm_scan)
     sample("32-entry MSM prefilter", msm_prefilter)
     sample("32-entry MSM direct C", msm_prefilter_native_c)

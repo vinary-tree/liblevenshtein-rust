@@ -700,3 +700,190 @@ pub unsafe extern "C" fn llev_temporal_index_cursor_free(cursor: *mut LlevTempor
         drop(Box::from_raw(cursor));
     }
 }
+
+/// Complete exact top-k results from one frozen index, copied in bounded pages.
+pub struct LlevTemporalKnnCursor {
+    matches: Vec<(u64, f64)>,
+    position: usize,
+    squared_dtw: bool,
+}
+
+fn complete_knn<K>(
+    index: &ElasticTransducer<K, u64>,
+    query: &[f64],
+    k: usize,
+    limits: ResourceLimits,
+) -> Result<Vec<(u64, f64)>, (LlevStatus, String, u32)>
+where
+    K: ElasticKernel,
+    K::Monoid: CostMonoid<Cost = f64>,
+{
+    match index
+        .search_knn_bounded(query, k, limits)
+        .map_err(|error| {
+            let (status, message) = validation(error);
+            (status, message, 0)
+        })? {
+        OperationOutcome::Complete { value, .. } => Ok(value),
+        OperationOutcome::Incomplete { reason, .. } => Err((
+            LlevStatus::LimitExceeded,
+            format!("temporal kNN incomplete: {reason:?}"),
+            incomplete_code(reason),
+        )),
+    }
+}
+
+/// Execute an exact full scan and retain only its complete top-k result.
+/// No cursor is returned on any resource or validation failure. The result
+/// cursor remains valid after index free and pages matches in native order.
+///
+/// # Safety
+/// All pointers must be valid and disjoint. The index must not be freed
+/// concurrently with the call; the query is borrowed only during this call.
+#[no_mangle]
+pub unsafe extern "C" fn llev_temporal_index_query_knn(
+    index: *const LlevTemporalIndex,
+    query: *const f64,
+    query_len: usize,
+    k: usize,
+    raw_limits: *const LlevTemporalSearchLimits,
+    out_cursor: *mut *mut LlevTemporalKnnCursor,
+    out_reason: *mut u32,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_cursor.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "temporal kNN cursor output is null".into(),
+        ))?;
+        let reason = out_reason.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "temporal kNN reason output is null".into(),
+        ))?;
+        *output = std::ptr::null_mut();
+        *reason = 0;
+        let index = index
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "temporal index is null".into()))?;
+        let query = slice(query, query_len, "temporal kNN query")?;
+        let raw = *raw_limits.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "temporal kNN limits are null".into(),
+        ))?;
+        let mut limits = ResourceLimits::from(raw);
+        if query_len > limits.max_series_len {
+            *reason = 10;
+            return Err((
+                LlevStatus::LimitExceeded,
+                "temporal kNN query length limit".into(),
+            ));
+        }
+        let Some(query_bytes) = query_len.checked_mul(std::mem::size_of::<f64>()) else {
+            *reason = 10;
+            return Err((
+                LlevStatus::LimitExceeded,
+                "temporal kNN query byte count overflow".into(),
+            ));
+        };
+        if query_bytes > limits.max_scratch_bytes {
+            *reason = 3;
+            return Err((
+                LlevStatus::LimitExceeded,
+                "temporal kNN query copy limit".into(),
+            ));
+        }
+        limits.max_scratch_bytes -= query_bytes;
+        let frozen = match &index.state {
+            IndexState::Frozen(value) => value,
+            _ => return Err(invalid("temporal index must be frozen before kNN")),
+        };
+        let (matches, squared_dtw) = match frozen {
+            Frozen::Msm(value) => (complete_knn(value, query, k, limits), false),
+            Frozen::Erp(value) => (complete_knn(value, query, k, limits), false),
+            Frozen::Twed(value) => (complete_knn(value, query, k, limits), false),
+            Frozen::Dtw(value) => (complete_knn(value, query, k, limits), true),
+            Frozen::Frechet(value) => (complete_knn(value, query, k, limits), false),
+        };
+        let matches = matches.map_err(|(status, message, code)| {
+            *reason = code;
+            (status, message)
+        })?;
+        *output = Box::into_raw(Box::new(LlevTemporalKnnCursor {
+            matches,
+            position: 0,
+            squared_dtw,
+        }));
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Copy the next bounded page of complete exact neighbors. Empty with
+/// out_done=1 is the only end state; the cursor never publishes partial kNN.
+///
+/// # Safety
+/// The cursor requires exclusive access. All pointers must address their
+/// declared lengths and be disjoint from the outputs and each other.
+#[no_mangle]
+pub unsafe extern "C" fn llev_temporal_knn_cursor_next_batch(
+    cursor: *mut LlevTemporalKnnCursor,
+    out_matches: *mut LlevTemporalIndexMatch,
+    capacity: usize,
+    out_len: *mut usize,
+    out_done: *mut u8,
+) -> LlevStatus {
+    boundary(|| {
+        let written = out_len.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "temporal kNN count output is null".into(),
+        ))?;
+        let done = out_done.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "temporal kNN done output is null".into(),
+        ))?;
+        *written = 0;
+        *done = 0;
+        let cursor = cursor.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "temporal kNN cursor is null".into(),
+        ))?;
+        if capacity == 0 {
+            return Err(invalid("temporal kNN page capacity must be positive"));
+        }
+        if out_matches.is_null() {
+            return Err((
+                LlevStatus::NullPointer,
+                "temporal kNN page output is null".into(),
+            ));
+        }
+        if !(out_matches as usize).is_multiple_of(std::mem::align_of::<LlevTemporalIndexMatch>()) {
+            return Err(invalid("temporal kNN page output is not aligned"));
+        }
+        let count = (cursor.matches.len() - cursor.position).min(capacity);
+        for offset in 0..count {
+            let (id, distance) = cursor.matches[cursor.position + offset];
+            out_matches.add(offset).write(LlevTemporalIndexMatch {
+                id,
+                distance: if cursor.squared_dtw {
+                    distance.sqrt()
+                } else {
+                    distance
+                },
+            });
+        }
+        cursor.position += count;
+        *written = count;
+        *done = u8::from(cursor.position == cursor.matches.len());
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Release a complete temporal kNN result cursor.
+///
+/// # Safety
+/// The pointer must be null or a live cursor returned by
+/// `llev_temporal_index_query_knn`, and must be freed exactly once.
+#[no_mangle]
+pub unsafe extern "C" fn llev_temporal_knn_cursor_free(cursor: *mut LlevTemporalKnnCursor) {
+    if !cursor.is_null() {
+        drop(Box::from_raw(cursor));
+    }
+}

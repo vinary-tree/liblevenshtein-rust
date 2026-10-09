@@ -1976,6 +1976,24 @@ LLEV_API LlevStatus llev_temporal_index_cursor_next_batch(
     size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
 LLEV_API void llev_temporal_index_cursor_free(LlevTemporalIndexCursor* cursor);
 
+/** Exact, fail-closed top-k query from a frozen scalar index. Native search
+ * scans every stored candidate under cumulative limits before returning a
+ * cursor over the complete result, ordered by score and stable index order.
+ * DTW matches use public root-distance units. On LIMIT_EXCEEDED no cursor is
+ * returned and out_reason uses the temporal reason codes above. A successful
+ * cursor remains valid after index free. */
+typedef struct LlevTemporalKnnCursor LlevTemporalKnnCursor;
+LLEV_API LlevStatus llev_temporal_index_query_knn(
+    const LlevTemporalIndex* index, const double* query, size_t query_len,
+    size_t k, const LlevTemporalSearchLimits* limits,
+    LlevTemporalKnnCursor** out_cursor, uint32_t* out_reason);
+/** Copy one page of complete top-k results in native order. Capacity must
+ * be positive. out_done=1 means all results were copied. */
+LLEV_API LlevStatus llev_temporal_knn_cursor_next_batch(
+    LlevTemporalKnnCursor* cursor, LlevTemporalIndexMatch* out_matches,
+    size_t capacity, size_t* out_len, uint8_t* out_done);
+LLEV_API void llev_temporal_knn_cursor_free(LlevTemporalKnnCursor* cursor);
+
 /** All ceilings apply to one complete exact range certificate. The search
  * ceilings include query, traversal, and result resources; witness bytes,
  * record count, path bytes, and certificate work are cumulative. */

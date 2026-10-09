@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 236 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 239 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -640,6 +640,15 @@
         },
         "llev_temporal_index_cursor_free": {
           "symbol": "llev_temporal_index_cursor_free"
+        },
+        "llev_temporal_index_query_knn": {
+          "symbol": "llev_temporal_index_query_knn"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": "llev_temporal_knn_cursor_next_batch"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": "llev_temporal_knn_cursor_free"
         },
         "llev_temporal_index_query_certified": {
           "symbol": "llev_temporal_index_query_certified"
@@ -1583,6 +1592,18 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
         },
         "llev_temporal_index_query_certified": {
           "symbol": null,
@@ -2571,6 +2592,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -3550,6 +3583,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -4522,6 +4567,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -5493,6 +5550,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -6461,6 +6530,18 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
         },
         "llev_temporal_index_query_certified": {
           "symbol": null,
@@ -7444,6 +7525,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -8422,6 +8515,18 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
         },
         "llev_temporal_index_query_certified": {
           "symbol": null,
@@ -9426,6 +9531,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -10399,6 +10516,18 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
         },
         "llev_temporal_index_query_certified": {
           "symbol": null,
@@ -11375,6 +11504,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -12349,6 +12490,18 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
         },
         "llev_temporal_index_query_certified": {
           "symbol": null,
@@ -13328,6 +13481,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -14306,6 +14471,18 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": null,
           "_reason": "FINDING: revision-26 native temporal certificate is not yet projected into this language facade"
@@ -15208,6 +15385,15 @@
         "llev_temporal_index_cursor_free": {
           "symbol": "close!"
         },
+        "llev_temporal_index_query_knn": {
+          "symbol": "query_index_knn"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": "close!"
+        },
         "llev_temporal_index_query_certified": {
           "symbol": "query_index_certified"
         },
@@ -16080,6 +16266,18 @@
         "llev_temporal_index_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
+        },
+        "llev_temporal_knn_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-28 native exact temporal kNN is not yet projected into this language facade"
         },
         "llev_temporal_index_query_certified": {
           "symbol": null,

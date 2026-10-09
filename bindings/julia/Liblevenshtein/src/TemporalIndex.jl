@@ -271,3 +271,124 @@ Base.isopen(cursor::TemporalIndexCursor) = lock(cursor.lock) do
     !cursor.closed
 end
 cancel!(cursor::TemporalIndexCursor) = close!(cursor)
+
+"""One complete exact top-k result, copied in bounded pages after native scan."""
+mutable struct TemporalKnnCursor
+    handle::Ptr{Cvoid}
+    page_results::Csize_t
+    closed::Bool
+    lock::ReentrantLock
+end
+
+Base.IteratorSize(::Type{TemporalKnnCursor}) = Base.SizeUnknown()
+Base.IteratorEltype(::Type{TemporalKnnCursor}) = Base.HasEltype()
+Base.eltype(::Type{TemporalKnnCursor}) = TemporalMatch
+
+"""Search a frozen scalar index for exact k nearest neighbors.
+
+Native search scans the full frozen source under cumulative limits before
+returning a cursor. Incomplete work raises `TemporalQueryIncomplete` without
+publishing a partial top-k. Result pages remain valid after the index closes.
+"""
+function query_index_knn(index::TemporalIndex,
+    query::AbstractVector{<:Real}, k::Integer;
+    limits::TemporalSearchLimits=TemporalSearchLimits(),
+    page_results::Integer=DEFAULT_MATCH_BATCH)
+    api_revision() >= UInt32(28) ||
+        throw(NativeError(Int32(STATUS_UNSUPPORTED),
+            :llev_temporal_index_query_knn,
+            "native temporal kNN requires API revision 28"))
+    length(query) <= limits.max_series_len ||
+        throw(ArgumentError("query exceeds max_series_len"))
+    count = checked_threshold(k)
+    page = checked_threshold(page_results)
+    0 < page <= 65_536 ||
+        throw(ArgumentError("kNN page results must be 1..65,536"))
+    values = Vector{Float64}(query)
+    output = Ref{Ptr{Cvoid}}(C_NULL)
+    reason = Ref{UInt32}(0)
+    status = lock(index.lock) do
+        index.closed && throw(ArgumentError("temporal index is closed"))
+        index.frozen || throw(ArgumentError("temporal index must be frozen"))
+        GC.@preserve values ccall(native(:llev_temporal_index_query_knn),
+            Cint, (Ptr{Cvoid}, Ptr{Float64}, Csize_t, Csize_t,
+                Ref{TemporalSearchLimits}, Ref{Ptr{Cvoid}}, Ref{UInt32}),
+            index.handle, isempty(values) ? C_NULL : pointer(values),
+            length(values), count, Ref(limits), output, reason)
+    end
+    status == Int32(STATUS_LIMIT_EXCEEDED) &&
+        throw(TemporalQueryIncomplete(:native_index_knn, nothing,
+            native_index_reason(reason[])))
+    checked(status, :llev_temporal_index_query_knn)
+    cursor = TemporalKnnCursor(output[], page, false, ReentrantLock())
+    finalizer(close!, cursor)
+    cursor
+end
+
+function next_batch!(cursor::TemporalKnnCursor,
+    maximum::Integer=DEFAULT_MATCH_BATCH)
+    lock(cursor.lock) do
+        cursor.closed && return nothing
+        0 < maximum <= 65_536 ||
+            throw(ArgumentError("batch maximum must be 1..65,536"))
+        capacity = min(maximum, cursor.page_results)
+        raw = Vector{RawTemporalIndexMatch}(undef, capacity)
+        written = Ref{Csize_t}(0)
+        done = Ref{UInt8}(0)
+        try
+            status = GC.@preserve raw ccall(
+                native(:llev_temporal_knn_cursor_next_batch), Cint,
+                (Ptr{Cvoid}, Ptr{RawTemporalIndexMatch}, Csize_t,
+                    Ref{Csize_t}, Ref{UInt8}),
+                cursor.handle, pointer(raw), length(raw), written, done)
+            checked(status, :llev_temporal_knn_cursor_next_batch)
+            if written[] > 0
+                batch = [TemporalMatch(raw[i].id, raw[i].distance)
+                    for i in 1:Int(written[])]
+                done[] != 0 && close!(cursor)
+                return batch
+            end
+            done[] != 0 && (close!(cursor); return nothing)
+            error("native kNN cursor made no progress")
+        catch
+            close!(cursor)
+            rethrow()
+        end
+    end
+end
+
+function Base.iterate(cursor::TemporalKnnCursor, state=nothing)
+    batch = next_batch!(cursor, 1)
+    batch === nothing ? nothing : (batch[1], nothing)
+end
+
+function reduce_batches!(function_value, initial, cursor::TemporalKnnCursor;
+    batch_size::Integer=DEFAULT_MATCH_BATCH)
+    accumulator = initial
+    try
+        while (batch = next_batch!(cursor, batch_size)) !== nothing
+            accumulator = function_value(accumulator, batch)
+        end
+        accumulator
+    finally
+        close!(cursor)
+    end
+end
+
+function close!(cursor::TemporalKnnCursor)
+    lock(cursor.lock) do
+        if !cursor.closed
+            handle = cursor.handle
+            cursor.handle = C_NULL
+            cursor.closed = true
+            handle == C_NULL || ccall(native(:llev_temporal_knn_cursor_free),
+                Cvoid, (Ptr{Cvoid},), handle)
+        end
+        nothing
+    end
+end
+Base.close(cursor::TemporalKnnCursor) = close!(cursor)
+Base.isopen(cursor::TemporalKnnCursor) = lock(cursor.lock) do
+    !cursor.closed
+end
+cancel!(cursor::TemporalKnnCursor) = close!(cursor)
