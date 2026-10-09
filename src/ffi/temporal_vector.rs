@@ -109,14 +109,14 @@ pub struct LlevVectorTemporalLimits {
 
 /// Reusable, immutable native metric. Concurrent distance calls may share it.
 pub struct LlevVectorMetric {
-    metric: FixedChannelMetric,
+    pub(super) metric: FixedChannelMetric,
 }
 
 fn invalid(message: impl Into<String>) -> (LlevStatus, String) {
     (LlevStatus::InvalidArgument, message.into())
 }
 
-fn vector_error(error: VectorMetricError) -> (LlevStatus, String) {
+pub(super) fn vector_error(error: VectorMetricError) -> (LlevStatus, String) {
     match error {
         VectorMetricError::Resource(_) => (LlevStatus::LimitExceeded, error.to_string()),
         _ => invalid(error.to_string()),
@@ -200,7 +200,7 @@ pub unsafe extern "C" fn llev_vector_metric_free(metric: *mut LlevVectorMetric) 
     }
 }
 
-fn limits_from_view(view: LlevVectorTemporalLimits) -> ResourceLimits {
+pub(super) fn limits_from_view(view: LlevVectorTemporalLimits) -> ResourceLimits {
     ResourceLimits {
         max_series_len: view.scalar.max_series_len,
         max_dimension: view.max_dimension,
@@ -212,7 +212,7 @@ fn limits_from_view(view: LlevVectorTemporalLimits) -> ResourceLimits {
     }
 }
 
-unsafe fn samples(
+pub(super) unsafe fn samples(
     view: LlevVectorSeriesView,
     expected_dimension: usize,
     limits: ResourceLimits,

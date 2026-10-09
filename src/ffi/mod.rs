@@ -98,6 +98,7 @@ mod temporal_bounds;
 mod temporal_index;
 mod temporal_online;
 mod temporal_vector;
+mod temporal_vector_bounds;
 mod timestamped_index;
 mod wallbreaker;
 
@@ -126,6 +127,7 @@ pub use temporal_bounds::*;
 pub use temporal_index::*;
 pub use temporal_online::*;
 pub use temporal_vector::*;
+pub use temporal_vector_bounds::*;
 pub use timestamped_index::*;
 pub use wallbreaker::*;
 

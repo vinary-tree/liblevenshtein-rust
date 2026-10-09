@@ -2048,6 +2048,62 @@ LLEV_API LlevStatus llev_vector_frechet_online_scratch_bytes(
 LLEV_API void llev_vector_frechet_online_free(
     LlevVectorFrechetOnline* machine);
 
+/** Closed coordinate interval in one fixed-channel vector box. */
+typedef struct LlevVectorInterval {
+    double low;
+    double high;
+} LlevVectorInterval;
+
+/** Typed vector box with a physical-time interval. Unit codes match scalar
+ * timestamped TWED: 1 seconds, 2 milliseconds, 3 microseconds, 4 nanoseconds.
+ * Reserved must be zero. */
+typedef struct LlevTimestampedVectorBoxView {
+    const LlevVectorInterval* coordinates;
+    size_t dimension;
+    double time_low;
+    double time_high;
+    uint32_t unit;
+    uint32_t reserved;
+} LlevTimestampedVectorBoxView;
+
+/** Native fixed-channel K1 bounds. Limits cap constructed interval storage. */
+LLEV_API LlevStatus llev_vector_point_box_lower_bound(
+    const LlevVectorMetric* metric,
+    const double* coordinates, size_t dimension,
+    const LlevVectorInterval* intervals, size_t interval_count,
+    const LlevVectorTemporalLimits* limits, double* out_bound);
+LLEV_API LlevStatus llev_vector_box_box_lower_bound(
+    const LlevVectorMetric* metric,
+    const LlevVectorInterval* left, size_t left_len,
+    const LlevVectorInterval* right, size_t right_len,
+    const LlevVectorTemporalLimits* limits, double* out_bound);
+
+/** Native K4 bound for ERP, banded DTW, Fréchet, or timestamped TWED.
+ * Config uses the corresponding vector score algorithm and positive infinity
+ * cutoff. Input copies are bounded by limits. */
+LLEV_API LlevStatus llev_vector_temporal_candidate_lower_bound(
+    const LlevVectorMetric* metric,
+    const LlevVectorSeriesView* left,
+    const LlevVectorSeriesView* right,
+    const LlevVectorTemporalConfig* config,
+    const LlevVectorTemporalLimits* limits,
+    double* out_bound);
+
+/** Native timestamped vector TWED K1 interval bound. Mode 1 deletes two
+ * consecutive candidate boxes and requires null query points and zero query
+ * dimension; mode 2 matches two exact query points to the boxes. Config uses
+ * algorithm 7, positive infinity cutoff, sentinel, stiffness, and gap cost. */
+LLEV_API LlevStatus llev_vector_twed_interval_lower_bound(
+    const LlevVectorMetric* metric, uint32_t mode,
+    const double* query_current, const double* query_previous,
+    size_t query_dimension,
+    double query_current_time, double query_previous_time,
+    const LlevTimestampedVectorBoxView* candidate_current,
+    const LlevTimestampedVectorBoxView* candidate_previous,
+    const LlevVectorTemporalConfig* config,
+    const LlevVectorTemporalLimits* limits,
+    double* out_bound);
+
 #ifdef __cplusplus
 }
 #endif

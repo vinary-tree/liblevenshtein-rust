@@ -282,6 +282,7 @@ variants, protocols, or methods.
 | `llev_universal_online_free` | `llev_universal_online_free` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_new` | `llev_universal_online_new` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_observation` | `llev_universal_online_observation` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_vector_box_box_lower_bound` | `llev_vector_box_box_lower_bound` | project ABI operation |
 | `llev_vector_frechet_online_advance` | `llev_vector_frechet_online_advance` | project ABI operation |
 | `llev_vector_frechet_online_free` | `llev_vector_frechet_online_free` | project ABI operation |
 | `llev_vector_frechet_online_new` | `llev_vector_frechet_online_new` | project ABI operation |
@@ -289,7 +290,10 @@ variants, protocols, or methods.
 | `llev_vector_frechet_online_scratch_bytes` | `llev_vector_frechet_online_scratch_bytes` | project ABI operation |
 | `llev_vector_metric_free` | `llev_vector_metric_free` | project ABI operation |
 | `llev_vector_metric_new` | `llev_vector_metric_new` | project ABI operation |
+| `llev_vector_point_box_lower_bound` | `llev_vector_point_box_lower_bound` | project ABI operation |
+| `llev_vector_temporal_candidate_lower_bound` | `llev_vector_temporal_candidate_lower_bound` | project ABI operation |
 | `llev_vector_temporal_distance` | `llev_vector_temporal_distance` | project ABI operation |
+| `llev_vector_twed_interval_lower_bound` | `llev_vector_twed_interval_lower_bound` | project ABI operation |
 | `llev_wallbreaker_cursor_cancel` | `llev_wallbreaker_cursor_cancel` | project ABI operation |
 | `llev_wallbreaker_cursor_free` | `llev_wallbreaker_cursor_free` | project ABI operation |
 | `llev_wallbreaker_cursor_next_batch` | `llev_wallbreaker_cursor_next_batch` | project ABI operation |

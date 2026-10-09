@@ -420,6 +420,33 @@ programming cells, work, and scratch storage. The result uses the same
 `:finite`, `:above_cutoff`, `:no_alignment`, and `:incomplete` kinds as
 scalar temporal scores.
 
+For interval pruning, `VectorIntervalBox(metric, bounds)` copies one finite
+closed interval per channel and retains the metric's exact channel/unit
+layout. `vector_point_box_lower_bound` and
+`vector_box_box_lower_bound` call the native fixed-channel K1 bounds.
+`vector_erp_interval_match_lower_bound`,
+`vector_erp_interval_gap_lower_bound`, and
+`vector_frechet_interval_link_lower_bound` use the same native point-to-box
+bound; `vector_dtw_interval_local_lower_bound_squared` uses its squared local
+cost. `vector_candidate_lower_bound` invokes each native K4 family method:
+ERP gap mass, Fréchet endpoints, and the currently coherent zero bound for
+DTW and timestamped TWED. `TimestampedVectorIntervalBox` adds an exact
+physical-time unit and interval for native TWED deletion and match bounds.
+All native bound calls accept `VectorTemporalLimits` and reject a mismatched
+channel layout.
+
+```julia
+metric = FixedChannelMetric([
+    VectorChannel("x", "metre"), VectorChannel("y", "metre"),
+]; training_fold="train-1", estimator_revision="scales-v1")
+box = VectorIntervalBox(metric, [(-1.0, 1.0), (2.0, 3.0)])
+try
+    @assert vector_point_box_lower_bound(metric, [0.0, 0.0], box) == 2.0
+finally
+    close(metric)
+end
+```
+
 `VectorFrechetOnlineAutomaton` compares one fixed vector query with a target
 stream one point at a time. Each `advance!` yields an exact committed-prefix
 observation or an incomplete step that leaves the previous prefix intact.
@@ -724,7 +751,11 @@ variants, protocols, or methods.
 | `twed_length_lower_bound` | `llev_twed_length_lower_bound` | project ABI operation |
 | `unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
 | `UniversalAutomaton` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `vector_box_box_lower_bound` | `llev_vector_box_box_lower_bound` | project ABI operation |
+| `vector_candidate_lower_bound` | `llev_vector_temporal_candidate_lower_bound` | project ABI operation |
+| `vector_point_box_lower_bound` | `llev_vector_point_box_lower_bound` | project ABI operation |
 | `vector_temporal_distance` | `llev_vector_temporal_distance` | project ABI operation |
+| `vector_twed_interval_delete_lower_bound` | `llev_vector_twed_interval_lower_bound` | project ABI operation |
 | `VectorFrechetOnlineAutomaton` | `llev_vector_frechet_online_new` | project ABI operation |
 | `voicing_pair` | `llev_phonetic_voicing_pair` | IPA feature classification and relations |
 | `WallBreakerMatcher` | `llev_wallbreaker_new_utf8` | project ABI operation |

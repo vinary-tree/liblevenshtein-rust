@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 223 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 227 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -19,7 +19,8 @@
         "tests/ffi_timestamped_index.rs",
         "tests/ffi_filter_index.rs",
         "tests/ffi_approx_msm.rs",
-        "tests/ffi_temporal_vector.rs"
+        "tests/ffi_temporal_vector.rs",
+        "tests/ffi_temporal_vector_bounds.rs"
       ],
       "enums": {
         "status": {
@@ -731,6 +732,18 @@
         },
         "llev_vector_frechet_online_free": {
           "symbol": "llev_vector_frechet_online_free"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": "llev_vector_point_box_lower_bound"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": "llev_vector_box_box_lower_bound"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": "llev_vector_temporal_candidate_lower_bound"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": "llev_vector_twed_interval_lower_bound"
         }
       }
     },
@@ -1666,6 +1679,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -2601,6 +2630,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -3528,6 +3573,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -4448,6 +4509,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -5367,6 +5444,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -6284,6 +6377,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -7214,6 +7323,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -8141,6 +8266,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -9092,6 +9233,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -10014,6 +10171,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -10937,6 +11110,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -11860,6 +12049,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -12786,6 +12991,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -13712,6 +13933,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -13749,7 +13986,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalApproxMsm.jl",
         "bindings/julia/Liblevenshtein/src/TemporalAlignment.jl",
         "bindings/julia/Liblevenshtein/src/TemporalVector.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalVectorOnline.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalVectorOnline.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalVectorBounds.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -13767,7 +14005,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_approx_msm.jl",
         "bindings/julia/Liblevenshtein/test/temporal_alignment.jl",
         "bindings/julia/Liblevenshtein/test/temporal_vector.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_vector_online.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_vector_online.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_vector_bounds.jl"
       ],
       "enums": {
         "status": {
@@ -14524,6 +14763,18 @@
         },
         "llev_vector_frechet_online_free": {
           "symbol": "close!"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": "vector_point_box_lower_bound"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": "vector_box_box_lower_bound"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": "vector_candidate_lower_bound"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": "vector_twed_interval_delete_lower_bound"
         }
       }
     },
@@ -15384,6 +15635,22 @@
         "llev_vector_frechet_online_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_point_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_box_box_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_candidate_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_twed_interval_lower_bound": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-24 typed vector temporal bounds are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     }

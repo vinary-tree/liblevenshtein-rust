@@ -221,6 +221,24 @@ export ABI_VERSION,
     vector_dtw_distance,
     vector_frechet_distance,
     vector_timestamped_twed_distance,
+    VectorInterval,
+    VectorIntervalBox,
+    TimestampedVectorIntervalBox,
+    vector_box_refines,
+    timestamped_vector_box_refines,
+    vector_point_box_lower_bound,
+    vector_box_box_lower_bound,
+    vector_erp_interval_match_lower_bound,
+    vector_erp_interval_gap_lower_bound,
+    vector_dtw_interval_local_lower_bound_squared,
+    vector_frechet_interval_link_lower_bound,
+    vector_candidate_lower_bound,
+    vector_erp_candidate_lower_bound,
+    vector_dtw_candidate_lower_bound,
+    vector_frechet_candidate_lower_bound,
+    vector_timestamped_twed_candidate_lower_bound,
+    vector_twed_interval_delete_lower_bound,
+    vector_twed_interval_match_lower_bound,
     VectorFrechetOnlineAutomaton,
     VectorFrechetOnlineStream,
     vector_frechet_online_observations,
@@ -1140,6 +1158,7 @@ include("TemporalApproxMsm.jl")
 include("TemporalMetricDomains.jl")
 include("TemporalTimestamped.jl")
 include("TemporalVector.jl")
+include("TemporalVectorBounds.jl")
 include("TemporalAlignment.jl")
 include("TemporalTimestampedIndex.jl")
 include("TemporalRolling.jl")

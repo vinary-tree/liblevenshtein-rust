@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 23,
+  "apiRevision": 24,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1224,7 +1224,11 @@
     { "name": "llev_vector_frechet_online_observation", "rustModule": "temporal_vector" },
     { "name": "llev_vector_frechet_online_advance", "rustModule": "temporal_vector" },
     { "name": "llev_vector_frechet_online_scratch_bytes", "rustModule": "temporal_vector" },
-    { "name": "llev_vector_frechet_online_free", "rustModule": "temporal_vector" }
+    { "name": "llev_vector_frechet_online_free", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_point_box_lower_bound", "rustModule": "temporal_vector_bounds" },
+    { "name": "llev_vector_box_box_lower_bound", "rustModule": "temporal_vector_bounds" },
+    { "name": "llev_vector_temporal_candidate_lower_bound", "rustModule": "temporal_vector_bounds" },
+    { "name": "llev_vector_twed_interval_lower_bound", "rustModule": "temporal_vector_bounds" }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",

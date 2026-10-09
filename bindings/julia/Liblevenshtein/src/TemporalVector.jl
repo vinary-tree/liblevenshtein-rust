@@ -32,6 +32,7 @@ end
 mutable struct FixedChannelMetric
     handle::Ptr{Cvoid}
     dimension::Int
+    layout::Tuple
     lock::ReentrantLock
     closed::Bool
 end
@@ -60,7 +61,9 @@ function FixedChannelMetric(channels::AbstractVector{VectorChannel};
             length(fold), pointer(revision), length(revision))),
         maximum, output)
     checked(status, :llev_vector_metric_new)
-    metric = FixedChannelMetric(output[], length(channels), ReentrantLock(), false)
+    layout = Tuple((channel.name, channel.unit) for channel in channels)
+    metric = FixedChannelMetric(output[], length(channels), layout,
+        ReentrantLock(), false)
     finalizer(close!, metric)
     metric
 end
