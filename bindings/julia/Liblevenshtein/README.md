@@ -172,6 +172,9 @@ range indexes; `query_metric_range` returns a lazy cursor that can outlive the
 index handle. `query_metric_knn(index, query, k)` returns an exact bounded
 result cursor over the same canonical domain; the full native scan completes
 before results become visible, and the cursor survives closing the index.
+For ERP, `query_metric_erp_automaton_range` instead traverses reachable
+canonical antichain states in bounded pages and checks every full-precision
+candidate. It accepts the same quotient representatives and gap identity.
 See the [metric-domain guide](../../README.md#metric-temporal-domains)
 for construction and ownership examples.
 
@@ -467,6 +470,9 @@ budget against a native control measured on the same runner.
   cursor. Iterate it or use `reduce_batches!` for bounded result copies. Limit
   exhaustion raises `TemporalQueryIncomplete` and yields no partial top-k.
   DTW neighbors carry public root-distance scores.
+- Use `query_index_erp_automaton_range` on a frozen ERP index when the
+  canonical automaton product is desired. It retains the same snapshot and
+  cumulative limits as `query_index_range`, with bounded lazy result pages.
 - Use `query_index_certified` when an exact indexed range result needs
   replayable K1–K4 evidence. Set `TemporalCertificateLimits` for cumulative
   traversal, witness, path, record, work, and result ceilings. Iterate

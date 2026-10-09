@@ -1962,6 +1962,16 @@ LLEV_API LlevStatus llev_temporal_index_query_range(
     double cutoff, const LlevTemporalSearchLimits* limits,
     LlevTemporalIndexCursor** out_cursor);
 
+/** Start the specialized canonical ERP automaton product over a frozen ERP
+ * index. It builds only reachable antichain states and verifies every
+ * full-precision collision before emission. The ordinary range cursor page
+ * and free functions apply. On LIMIT_EXCEEDED during construction no cursor
+ * is returned and out_reason uses the temporal reason codes below. */
+LLEV_API LlevStatus llev_temporal_index_query_erp_automaton_range(
+    const LlevTemporalIndex* index, const double* query, size_t query_len,
+    double cutoff, const LlevTemporalSearchLimits* limits,
+    LlevTemporalIndexCursor** out_cursor, uint32_t* out_reason);
+
 /** Advance at most one native page. Zero output with out_done=0 is a valid
  * paused page and must be retried. LIMIT_EXCEEDED means the exact subset
  * produced earlier is incomplete; it never proves absence. Caller owns the

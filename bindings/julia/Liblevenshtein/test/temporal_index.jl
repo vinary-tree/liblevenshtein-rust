@@ -118,6 +118,46 @@ end
     end
 end
 
+@testset "canonical ERP automaton index range" begin
+    query = [1.0, 2.0, 3.0]
+    index = LL.TemporalIndex(:erp; quant_min=-10.0,
+        quant_max=10.0, max_entries=2, max_total_samples=6,
+        max_series_len=3)
+    try
+        LL.insert!(index, 7, query)
+        LL.insert!(index, 8, [1.0, 2.5, 3.0])
+        @test_throws ArgumentError LL.query_index_erp_automaton_range(
+            index, query; cutoff=1.0)
+        LL.freeze!(index)
+        @test_throws LL.TemporalQueryIncomplete LL.query_index_erp_automaton_range(
+            index, query; cutoff=1.0,
+            limits=LL.TemporalSearchLimits(max_scratch_bytes=0))
+        cursor = LL.query_index_erp_automaton_range(index, query;
+            cutoff=1.0, page_work_units=1_000, page_results=1)
+        ordinary = LL.query_index_range(index, query; cutoff=1.0)
+        close(index)
+        automaton_matches = sort([(match.id, match.distance)
+            for match in cursor])
+        @test automaton_matches == sort([(match.id, match.distance)
+            for match in ordinary])
+        @test automaton_matches == [(UInt64(7), 0.0),
+            (UInt64(8), LL.erp_distance(query,
+                [1.0, 2.5, 3.0]; gap=0.0).value)]
+        @test !isopen(cursor)
+    finally
+        close(index)
+    end
+    other = LL.TemporalIndex(:msm; quant_min=0.0,
+        quant_max=5.0, parameter0=1.0, max_entries=1)
+    try
+        LL.freeze!(other)
+        @test_throws LL.NativeError LL.query_index_erp_automaton_range(
+            other, query; cutoff=1.0)
+    finally
+        close(other)
+    end
+end
+
 @testset "native temporal index concurrent lifecycle" begin
     query = [1.0, 2.0, 3.0]
     for _ in 1:24

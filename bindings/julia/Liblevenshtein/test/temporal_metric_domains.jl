@@ -57,8 +57,15 @@
         @test_throws LL.TemporalQueryIncomplete LL.query_metric_knn(
             erp_index, right, 1;
             limits=LL.TemporalSearchLimits(max_candidates=0))
+        automaton = LL.query_metric_erp_automaton_range(erp_index,
+            [1.0, 0.0, 2.0]; cutoff=0.0, page_results=1)
+        @test_throws ArgumentError LL.query_metric_erp_automaton_range(
+            erp_index, LL.ErpQuotientSeries([1.0, 2.0], -0.0);
+            cutoff=0.0)
         close(erp_index)
         @test !isopen(erp_index)
+        @test sort([(match.id, match.distance) for match in automaton]) ==
+            [(UInt64(7), 0.0), (UInt64(11), 0.0)]
         @test [(match.id, match.distance) for match in nearest] ==
             [(UInt64(7), 0.0), (UInt64(11), 0.0)]
         @test sort([(match.id, match.distance) for match in cursor]) ==

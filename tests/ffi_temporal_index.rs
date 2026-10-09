@@ -3,10 +3,11 @@
 use liblevenshtein::ffi::{
     llev_temporal_index_cursor_free, llev_temporal_index_cursor_next_batch,
     llev_temporal_index_free, llev_temporal_index_freeze, llev_temporal_index_insert,
-    llev_temporal_index_new, llev_temporal_index_query_knn, llev_temporal_index_query_range,
-    llev_temporal_knn_cursor_free, llev_temporal_knn_cursor_next_batch, LlevStatus,
-    LlevTemporalAlgorithm, LlevTemporalConfig, LlevTemporalIndex, LlevTemporalIndexConfig,
-    LlevTemporalIndexCursor, LlevTemporalIndexMatch, LlevTemporalSearchLimits,
+    llev_temporal_index_new, llev_temporal_index_query_erp_automaton_range,
+    llev_temporal_index_query_knn, llev_temporal_index_query_range, llev_temporal_knn_cursor_free,
+    llev_temporal_knn_cursor_next_batch, LlevStatus, LlevTemporalAlgorithm, LlevTemporalConfig,
+    LlevTemporalIndex, LlevTemporalIndexConfig, LlevTemporalIndexCursor, LlevTemporalIndexMatch,
+    LlevTemporalSearchLimits,
 };
 use liblevenshtein::time_series::{DtwConfig, ErpConfig, FrechetConfig, MsmConfig, TwedConfig};
 use std::ptr;
@@ -88,6 +89,28 @@ fn query(
     (status, cursor)
 }
 
+fn query_erp_automaton(
+    index: *const LlevTemporalIndex,
+    values: &[f64],
+    cutoff: f64,
+    limits: &LlevTemporalSearchLimits,
+) -> (LlevStatus, *mut LlevTemporalIndexCursor, u32) {
+    let mut cursor = ptr::null_mut();
+    let mut reason = u32::MAX;
+    let status = unsafe {
+        llev_temporal_index_query_erp_automaton_range(
+            index,
+            values.as_ptr(),
+            values.len(),
+            cutoff,
+            limits,
+            &mut cursor,
+            &mut reason,
+        )
+    };
+    (status, cursor, reason)
+}
+
 fn collect(cursor: *mut LlevTemporalIndexCursor) -> (LlevStatus, Vec<LlevTemporalIndexMatch>) {
     let mut matches = Vec::new();
     for _ in 0..10_000 {
@@ -129,6 +152,71 @@ fn scalar(algorithm: LlevTemporalAlgorithm, query: &[f64], candidate: &[f64]) ->
         LlevTemporalAlgorithm::Frechet => FrechetConfig::new().distance(query, candidate),
         LlevTemporalAlgorithm::SoftDtw => unreachable!(),
     }
+}
+
+#[test]
+fn erp_automaton_pages_match_scalar_and_generic_range_after_index_close() {
+    let index = create(&config(LlevTemporalAlgorithm::Erp));
+    let query_values = [1.0, 2.0, 3.0];
+    let candidates = [(7, [1.0, 2.0, 3.0]), (8, [1.0, 2.5, 3.0])];
+    for (id, values) in candidates {
+        assert_eq!(insert(index, id, &values), LlevStatus::Ok);
+    }
+    assert_eq!(unsafe { llev_temporal_index_freeze(index) }, LlevStatus::Ok);
+    let (status, automaton, reason) = query_erp_automaton(index, &query_values, 1.0, &limits());
+    assert_eq!(status, LlevStatus::Ok);
+    assert_eq!(reason, 0);
+    let (status, generic) = query(index, &query_values, 1.0, &limits());
+    assert_eq!(status, LlevStatus::Ok);
+    unsafe { llev_temporal_index_free(index) };
+    let (status, mut observed) = collect(automaton);
+    assert_eq!(status, LlevStatus::Ok);
+    let (status, mut expected) = collect(generic);
+    assert_eq!(status, LlevStatus::Ok);
+    unsafe {
+        llev_temporal_index_cursor_free(automaton);
+        llev_temporal_index_cursor_free(generic);
+    }
+    observed.sort_by_key(|value| value.id);
+    expected.sort_by_key(|value| value.id);
+    assert_eq!(observed.len(), expected.len());
+    for (actual, reference) in observed.iter().zip(expected.iter()) {
+        assert_eq!(actual.id, reference.id);
+        assert_eq!(actual.distance, reference.distance);
+        let candidate = candidates.iter().find(|(id, _)| *id == actual.id).unwrap();
+        assert_eq!(
+            actual.distance,
+            scalar(LlevTemporalAlgorithm::Erp, &query_values, &candidate.1)
+        );
+    }
+}
+
+#[test]
+fn erp_automaton_rejects_wrong_domain_and_fails_closed_on_limits() {
+    let other = create(&config(LlevTemporalAlgorithm::Msm));
+    assert_eq!(unsafe { llev_temporal_index_freeze(other) }, LlevStatus::Ok);
+    let (status, cursor, _) = query_erp_automaton(other, &[1.0], 1.0, &limits());
+    assert_eq!(status, LlevStatus::Unsupported);
+    assert!(cursor.is_null());
+    unsafe { llev_temporal_index_free(other) };
+
+    let index = create(&config(LlevTemporalAlgorithm::Erp));
+    assert_eq!(insert(index, 7, &[1.0, 2.0, 3.0]), LlevStatus::Ok);
+    let (status, cursor, _) = query_erp_automaton(index, &[1.0], 1.0, &limits());
+    assert_eq!(status, LlevStatus::InvalidArgument);
+    assert!(cursor.is_null());
+    assert_eq!(unsafe { llev_temporal_index_freeze(index) }, LlevStatus::Ok);
+
+    let mut restricted = limits();
+    restricted.max_scratch_bytes = 0;
+    let (status, cursor, reason) = query_erp_automaton(index, &[1.0], 1.0, &restricted);
+    assert_eq!(status, LlevStatus::LimitExceeded);
+    assert_eq!(reason, 3);
+    assert!(cursor.is_null());
+    let (status, cursor, _) = query_erp_automaton(index, &[f64::NAN], 1.0, &limits());
+    assert_eq!(status, LlevStatus::InvalidArgument);
+    assert!(cursor.is_null());
+    unsafe { llev_temporal_index_free(index) };
 }
 
 #[test]

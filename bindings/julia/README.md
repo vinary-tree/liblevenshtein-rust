@@ -754,6 +754,7 @@ variants, protocols, or methods.
 | `query_filtered` | `llev_transducer_query_filtered_utf8` | domain-preserving dictionary query |
 | `query_hybrid` | `llev_source_filter_utf8` | project ABI operation |
 | `query_index_certified` | `llev_temporal_index_query_certified` | project ABI operation |
+| `query_index_erp_automaton_range` | `llev_temporal_index_query_erp_automaton_range` | project ABI operation |
 | `query_index_knn` | `llev_temporal_index_query_knn` | project ABI operation |
 | `query_index_range` | `llev_temporal_index_query_range` | project ABI operation |
 | `query_metric_knn` | `llev_timestamped_twed_index_query_knn` | project ABI operation |

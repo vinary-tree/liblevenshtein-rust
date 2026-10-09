@@ -635,6 +635,9 @@
         "llev_temporal_index_query_range": {
           "symbol": "llev_temporal_index_query_range"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": "llev_temporal_index_query_erp_automaton_range"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": "llev_temporal_index_cursor_next_batch"
         },
@@ -1584,6 +1587,10 @@
         "llev_temporal_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -2584,6 +2591,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -3575,6 +3586,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -4559,6 +4574,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -5542,6 +5561,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -6522,6 +6545,10 @@
         "llev_temporal_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -7517,6 +7544,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -8507,6 +8538,10 @@
         "llev_temporal_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -9523,6 +9558,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -10508,6 +10547,10 @@
         "llev_temporal_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -11496,6 +11539,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -12482,6 +12529,10 @@
         "llev_temporal_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -13473,6 +13524,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -14463,6 +14518,10 @@
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -15379,6 +15438,9 @@
         "llev_temporal_index_query_range": {
           "symbol": "query_index_range"
         },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": "query_index_erp_automaton_range"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": "next_batch!"
         },
@@ -16258,6 +16320,10 @@
         "llev_temporal_index_query_range": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
+        },
+        "llev_temporal_index_query_erp_automaton_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,

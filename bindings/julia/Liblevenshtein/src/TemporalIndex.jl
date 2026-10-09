@@ -190,6 +190,49 @@ function query_index_range(index::TemporalIndex, query::AbstractVector{<:Real};
     cursor
 end
 
+"""Open the bounded canonical ERP automaton product on a frozen ERP index.
+
+This uses reachable antichain states and verifies full-precision candidates.
+The returned cursor has the same cumulative limits, page behavior, and
+snapshot lifetime as `query_index_range`. A non-ERP index is rejected.
+"""
+function query_index_erp_automaton_range(index::TemporalIndex,
+    query::AbstractVector{<:Real}; cutoff::Real=Inf,
+    limits::TemporalSearchLimits=TemporalSearchLimits(),
+    page_work_units::Integer=100_000, page_results::Integer=256)
+    api_revision() >= UInt32(29) ||
+        throw(NativeError(Int32(STATUS_UNSUPPORTED),
+            :llev_temporal_index_query_erp_automaton_range,
+            "native ERP automaton range requires API revision 29"))
+    length(query) <= limits.max_series_len ||
+        throw(ArgumentError("query exceeds max_series_len"))
+    work = checked_threshold(page_work_units)
+    results = checked_threshold(page_results)
+    work > 0 && results > 0 ||
+        throw(ArgumentError("temporal page limits must be positive"))
+    values = Vector{Float64}(query)
+    output = Ref{Ptr{Cvoid}}(C_NULL)
+    reason = Ref{UInt32}(0)
+    status = lock(index.lock) do
+        index.closed && throw(ArgumentError("temporal index is closed"))
+        index.frozen || throw(ArgumentError("temporal index must be frozen"))
+        GC.@preserve values ccall(
+            native(:llev_temporal_index_query_erp_automaton_range), Cint,
+            (Ptr{Cvoid}, Ptr{Float64}, Csize_t, Float64,
+                Ref{TemporalSearchLimits}, Ref{Ptr{Cvoid}}, Ref{UInt32}),
+            index.handle, isempty(values) ? C_NULL : pointer(values),
+            length(values), Float64(cutoff), Ref(limits), output, reason)
+    end
+    status == Int32(STATUS_LIMIT_EXCEEDED) &&
+        throw(TemporalQueryIncomplete(:native_erp_automaton, nothing,
+            native_index_reason(reason[])))
+    checked(status, :llev_temporal_index_query_erp_automaton_range)
+    cursor = TemporalIndexCursor(output[], work, results, false,
+        ReentrantLock())
+    finalizer(close!, cursor)
+    cursor
+end
+
 function next_batch!(cursor::TemporalIndexCursor, maximum::Integer=DEFAULT_MATCH_BATCH)
     lock(cursor.lock) do
         cursor.closed && return nothing

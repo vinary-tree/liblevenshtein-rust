@@ -173,6 +173,10 @@ domains and returns a bounded exact result cursor ordered by distance and ID.
 The native scan finishes before the cursor is returned; exhausting a limit
 raises `TemporalQueryIncomplete` without publishing a partial top-k. Result
 pages remain available after the index closes.
+For ERP range queries, `query_metric_erp_automaton_range` uses the native
+canonical automaton product. It keeps reachable antichain states, verifies
+full-precision collisions, and returns bounded lazy pages on the captured
+snapshot. The raw ERP index exposes `query_index_erp_automaton_range`.
 
 For the other two metric parameter families, `MetricMsmConfig` validates a
 strictly positive split/merge cost and requires nonempty series;

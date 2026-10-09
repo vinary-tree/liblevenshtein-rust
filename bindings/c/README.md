@@ -244,6 +244,7 @@ variants, protocols, or methods.
 | `llev_temporal_index_insert` | `llev_temporal_index_insert` | project ABI operation |
 | `llev_temporal_index_new` | `llev_temporal_index_new` | project ABI operation |
 | `llev_temporal_index_query_certified` | `llev_temporal_index_query_certified` | project ABI operation |
+| `llev_temporal_index_query_erp_automaton_range` | `llev_temporal_index_query_erp_automaton_range` | project ABI operation |
 | `llev_temporal_index_query_knn` | `llev_temporal_index_query_knn` | project ABI operation |
 | `llev_temporal_index_query_range` | `llev_temporal_index_query_range` | project ABI operation |
 | `llev_temporal_knn_cursor_free` | `llev_temporal_knn_cursor_free` | project ABI operation |

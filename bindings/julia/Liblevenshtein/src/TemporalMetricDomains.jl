@@ -197,6 +197,27 @@ function query_metric_range(index::MetricErpIndex,
         page_work_units, page_results)
 end
 
+"""Bounded canonical ERP automaton range over one gap quotient."""
+function query_metric_erp_automaton_range(index::MetricErpIndex,
+    query::ErpQuotientSeries; kwargs...)
+    metric_erp_gap_matches(index.config, query)
+    query_index_erp_automaton_range(getfield(index, :_index),
+        getfield(query, :_samples); kwargs...)
+end
+
+function query_metric_erp_automaton_range(index::MetricErpIndex,
+    raw::AbstractVector{<:Real};
+    cutoff::Real=Inf, limits::TemporalSearchLimits=TemporalSearchLimits(),
+    page_work_units::Integer=100_000, page_results::Integer=256)
+    inner = getfield(index, :_index)
+    inner.closed && throw(ArgumentError("metric ERP index is closed"))
+    inner.frozen || throw(ArgumentError("metric ERP index must be frozen"))
+    query = representative(index.config, raw;
+        max_series_len=limits.max_series_len)
+    query_metric_erp_automaton_range(index, query; cutoff, limits,
+        page_work_units, page_results)
+end
+
 """Exact bounded kNN on the ERP gap quotient, ordered by distance and ID."""
 function query_metric_knn(index::MetricErpIndex,
     query::ErpQuotientSeries, k::Integer; kwargs...)

@@ -8,10 +8,12 @@ use super::{
 use crate::{
     cost::CostMonoid,
     time_series::{
-        elastic::{ElasticKernel, ElasticTransducer, RangeContinuation},
+        elastic::{
+            ElasticKernel, ElasticTransducer, ErpAutomatonRangeContinuation, RangeContinuation,
+        },
         DtwConfig, ErpConfig, FrechetConfig, IncompleteReason, MsmConfig, MsmKernel,
         OperationOutcome, PageBudget, QuantizationConfig, ResourceKind, ResourceLimits,
-        TemporalValidationError, TwedConfig,
+        TemporalAutomatonError, TemporalValidationError, TwedConfig,
     },
 };
 use std::{
@@ -358,14 +360,57 @@ pub unsafe extern "C" fn llev_temporal_index_free(index: *mut LlevTemporalIndex)
     }
 }
 
-struct NativeCursor<K>
+trait NativeRangeContinuation: Sized {
+    fn exact_partial(&self) -> &[(u64, f64)];
+    fn work_units(&self) -> usize;
+    fn resume_page(self, page: PageBudget) -> OperationOutcome<Vec<(u64, f64)>, Self>;
+}
+
+impl<K> NativeRangeContinuation for RangeContinuation<'static, K, u64>
 where
     K: ElasticKernel,
     K::Monoid: CostMonoid<Cost = f64>,
 {
+    fn exact_partial(&self) -> &[(u64, f64)] {
+        self.exact_partial()
+    }
+
+    fn work_units(&self) -> usize {
+        self.usage().work_units
+    }
+
+    fn resume_page(self, page: PageBudget) -> OperationOutcome<Vec<(u64, f64)>, Self> {
+        self.resume(page)
+    }
+}
+
+impl NativeRangeContinuation for ErpAutomatonRangeContinuation<'static, u64> {
+    fn exact_partial(&self) -> &[(u64, f64)] {
+        self.exact_partial()
+    }
+
+    fn work_units(&self) -> usize {
+        self.usage().work_units
+    }
+
+    fn resume_page(self, page: PageBudget) -> OperationOutcome<Vec<(u64, f64)>, Self> {
+        self.resume(page)
+    }
+}
+
+type NativeRangeCursor<K> = NativeCursor<K, RangeContinuation<'static, K, u64>>;
+type NativeErpAutomatonCursor =
+    NativeCursor<ErpConfig, ErpAutomatonRangeContinuation<'static, u64>>;
+
+struct NativeCursor<K, C>
+where
+    K: ElasticKernel,
+    K::Monoid: CostMonoid<Cost = f64>,
+    C: NativeRangeContinuation,
+{
     // This field must be dropped before _index. Every continuation borrows
     // the immutable Arc allocation held by _index for exactly this lifetime.
-    continuation: Option<RangeContinuation<'static, K, u64>>,
+    continuation: Option<C>,
     _index: Arc<ElasticTransducer<K, u64>>,
     pending: VecDeque<LlevTemporalIndexMatch>,
     seen: HashSet<u64>,
@@ -374,17 +419,18 @@ where
     squared_dtw: bool,
 }
 
-impl<K> Drop for NativeCursor<K>
+impl<K, C> Drop for NativeCursor<K, C>
 where
     K: ElasticKernel,
     K::Monoid: CostMonoid<Cost = f64>,
+    C: NativeRangeContinuation,
 {
     fn drop(&mut self) {
         self.continuation.take();
     }
 }
 
-impl<K> NativeCursor<K>
+impl<K> NativeRangeCursor<K>
 where
     K: ElasticKernel,
     K::Monoid: CostMonoid<Cost = f64>,
@@ -424,7 +470,61 @@ where
         cursor.accept(outcome)?;
         Ok(cursor)
     }
+}
 
+impl NativeErpAutomatonCursor {
+    fn new_automaton(
+        index: Arc<ErpIndex>,
+        query: &[f64],
+        cutoff: f64,
+        limits: ResourceLimits,
+    ) -> Result<Self, (LlevStatus, String, u32)> {
+        // SAFETY: the retained Arc keeps this immutable index alive until the
+        // continuation is dropped first by NativeCursor::drop.
+        let borrowed: &'static ErpIndex = unsafe { &*Arc::as_ptr(&index) };
+        let outcome = borrowed
+            .search_range_automaton_bounded(
+                query,
+                cutoff,
+                limits,
+                PageBudget {
+                    max_work_units: 1,
+                    max_results: 1,
+                },
+            )
+            .map_err(|error| match error {
+                TemporalAutomatonError::Validation(error) => {
+                    let (status, message) = validation(error);
+                    (status, message, 0)
+                }
+                TemporalAutomatonError::Resource(reason) => (
+                    LlevStatus::LimitExceeded,
+                    format!("ERP automaton construction incomplete: {reason:?}"),
+                    incomplete_code(reason),
+                ),
+            })?;
+        let mut cursor = Self {
+            continuation: None,
+            _index: index,
+            pending: VecDeque::new(),
+            seen: HashSet::new(),
+            done: false,
+            terminal: None,
+            squared_dtw: false,
+        };
+        cursor
+            .accept(outcome)
+            .map_err(|(status, message)| (status, message, 13))?;
+        Ok(cursor)
+    }
+}
+
+impl<K, C> NativeCursor<K, C>
+where
+    K: ElasticKernel,
+    K::Monoid: CostMonoid<Cost = f64>,
+    C: NativeRangeContinuation,
+{
     fn add(&mut self, matches: &[(u64, f64)]) -> Result<(), (LlevStatus, String)> {
         for &(id, distance) in matches {
             if self.seen.contains(&id) {
@@ -457,7 +557,7 @@ where
 
     fn accept(
         &mut self,
-        outcome: OperationOutcome<Vec<(u64, f64)>, RangeContinuation<'static, K, u64>>,
+        outcome: OperationOutcome<Vec<(u64, f64)>, C>,
     ) -> Result<(), (LlevStatus, String)> {
         match outcome {
             OperationOutcome::Complete { value, .. } => {
@@ -491,14 +591,14 @@ where
     ) -> Result<(usize, bool), (u32, String)> {
         if self.pending.is_empty() && !self.done && self.terminal.is_none() {
             if let Some(continuation) = self.continuation.take() {
-                let before = continuation.usage().work_units;
-                self.accept(continuation.resume(page))
+                let before = continuation.work_units();
+                self.accept(continuation.resume_page(page))
                     .map_err(|(_, message)| (13, message))?;
                 if self.pending.is_empty()
                     && self
                         .continuation
                         .as_ref()
-                        .is_some_and(|value| value.usage().work_units == before)
+                        .is_some_and(|value| value.work_units() == before)
                 {
                     return Err((
                         14,
@@ -528,11 +628,12 @@ where
 }
 
 enum CursorState {
-    Msm(NativeCursor<MsmKernel>),
-    Erp(NativeCursor<ErpConfig>),
-    Twed(NativeCursor<TwedConfig>),
-    Dtw(NativeCursor<DtwConfig>),
-    Frechet(NativeCursor<FrechetConfig>),
+    Msm(NativeRangeCursor<MsmKernel>),
+    Erp(NativeRangeCursor<ErpConfig>),
+    ErpAutomaton(NativeErpAutomatonCursor),
+    Twed(NativeRangeCursor<TwedConfig>),
+    Dtw(NativeRangeCursor<DtwConfig>),
+    Frechet(NativeRangeCursor<FrechetConfig>),
 }
 
 /// Opaque closeable range cursor.
@@ -619,6 +720,69 @@ pub unsafe extern "C" fn llev_temporal_index_query_range(
     })
 }
 
+/// Start the specialized canonical ERP automaton product over one frozen
+/// snapshot. The returned cursor uses the ordinary bounded range page ABI.
+///
+/// # Safety
+/// The index, limits, cursor output, and reason output pointers must be valid.
+/// The query is borrowed only for this call. The index may be freed after the
+/// call, but not concurrently with it.
+#[no_mangle]
+pub unsafe extern "C" fn llev_temporal_index_query_erp_automaton_range(
+    index: *const LlevTemporalIndex,
+    query: *const f64,
+    query_len: usize,
+    cutoff: f64,
+    limits: *const LlevTemporalSearchLimits,
+    out_cursor: *mut *mut LlevTemporalIndexCursor,
+    out_reason: *mut u32,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_cursor.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "ERP automaton cursor output is null".into(),
+        ))?;
+        let reason = out_reason.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "ERP automaton reason output is null".into(),
+        ))?;
+        *output = std::ptr::null_mut();
+        *reason = 0;
+        let handle = index
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "temporal index is null".into()))?;
+        let query = slice(query, query_len, "ERP automaton query")?;
+        let raw = *limits.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "temporal search limits are null".into(),
+        ))?;
+        if cutoff.is_nan() || cutoff < 0.0 {
+            return Err(invalid("ERP automaton cutoff must be nonnegative"));
+        }
+        let index = match &handle.state {
+            IndexState::Frozen(Frozen::Erp(value)) => Arc::clone(value),
+            IndexState::Frozen(_) => {
+                return Err((LlevStatus::Unsupported, "ERP index required".into()));
+            }
+            _ => return Err(invalid("temporal index must be frozen before querying")),
+        };
+        let cursor = NativeErpAutomatonCursor::new_automaton(
+            index,
+            query,
+            cutoff,
+            ResourceLimits::from(raw),
+        )
+        .map_err(|(status, message, code)| {
+            *reason = code;
+            (status, message)
+        })?;
+        *output = Box::into_raw(Box::new(LlevTemporalIndexCursor {
+            state: CursorState::ErpAutomaton(cursor),
+        }));
+        Ok(LlevStatus::Ok)
+    })
+}
+
 /// Advance by at most one native page and copy up to `capacity` matches.
 /// A successful empty nonterminal page means the caller should advance again.
 /// `out_reason` is zero on success; incomplete reasons are 1 DP cells,
@@ -676,6 +840,7 @@ pub unsafe extern "C" fn llev_temporal_index_cursor_next_batch(
         let result = match &mut cursor.state {
             CursorState::Msm(value) => value.next(output, page),
             CursorState::Erp(value) => value.next(output, page),
+            CursorState::ErpAutomaton(value) => value.next(output, page),
             CursorState::Twed(value) => value.next(output, page),
             CursorState::Dtw(value) => value.next(output, page),
             CursorState::Frechet(value) => value.next(output, page),
