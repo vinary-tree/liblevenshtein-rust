@@ -1,9 +1,13 @@
 #![cfg(feature = "ffi")]
 
 use liblevenshtein::ffi::{
-    llev_vector_metric_free, llev_vector_metric_new, llev_vector_temporal_distance, LlevStatus,
-    LlevTemporalDistanceResult, LlevTemporalLimits, LlevVectorChannelView, LlevVectorMetricView,
-    LlevVectorSeriesView, LlevVectorTemporalConfig, LlevVectorTemporalLimits,
+    llev_vector_frechet_online_advance, llev_vector_frechet_online_free,
+    llev_vector_frechet_online_new, llev_vector_frechet_online_observation,
+    llev_vector_frechet_online_scratch_bytes, llev_vector_metric_free, llev_vector_metric_new,
+    llev_vector_temporal_distance, LlevStatus, LlevTemporalDistanceResult, LlevTemporalLimits,
+    LlevTemporalOnlineLimits, LlevTemporalOnlineObservation, LlevTemporalOnlineStep,
+    LlevVectorChannelView, LlevVectorMetric, LlevVectorMetricView, LlevVectorSeriesView,
+    LlevVectorTemporalConfig, LlevVectorTemporalLimits,
 };
 use liblevenshtein::time_series::{
     ChannelIdentity, ExactDecision, FixedChannelMetric, FoldLocalScaleProvenance, MetricChannel,
@@ -51,6 +55,41 @@ fn view<'a>(coordinates: &'a [f64], timestamps: &'a [f64]) -> LlevVectorSeriesVi
         reserved: 0,
         origin: 0.0,
     }
+}
+
+fn ffi_metric() -> *mut LlevVectorMetric {
+    let channels = [
+        LlevVectorChannelView {
+            channel: b"x".as_ptr(),
+            channel_len: 1,
+            unit: b"metre".as_ptr(),
+            unit_len: 5,
+            scale: 2.0,
+            weight: 3.0,
+        },
+        LlevVectorChannelView {
+            channel: b"y".as_ptr(),
+            channel_len: 1,
+            unit: b"metre".as_ptr(),
+            unit_len: 5,
+            scale: 4.0,
+            weight: 5.0,
+        },
+    ];
+    let view = LlevVectorMetricView {
+        channels: channels.as_ptr(),
+        channel_count: 2,
+        training_fold: b"fold-1".as_ptr(),
+        training_fold_len: 6,
+        estimator_revision: b"scale-v1".as_ptr(),
+        estimator_revision_len: 8,
+    };
+    let mut metric = std::ptr::null_mut();
+    assert_eq!(
+        unsafe { llev_vector_metric_new(&view, 2, &mut metric) },
+        LlevStatus::Ok
+    );
+    metric
 }
 
 #[test]
@@ -286,4 +325,121 @@ fn vector_boundary_rejects_malformed_metric_and_series() {
     );
     assert_eq!(output.value, 0.0);
     unsafe { llev_vector_metric_free(handle) };
+}
+
+#[test]
+fn vector_online_prefixes_match_native_metric_and_rollback_on_limits() {
+    let metric_handle = ffi_metric();
+    let query_data = [0.0, 0.0, 1.0, 1.0];
+    let query = LlevVectorSeriesView {
+        coordinates: query_data.as_ptr(),
+        sample_count: 2,
+        dimension: 2,
+        timestamps: std::ptr::null(),
+        timestamp_unit: 0,
+        reserved: 0,
+        origin: 0.0,
+    };
+    let limits = LlevTemporalOnlineLimits {
+        max_query_len: 2,
+        max_frontier_positions: 2,
+        max_step_work_units: 100,
+        max_scratch_bytes: 1024,
+    };
+    let mut machine = std::ptr::null_mut();
+    assert_eq!(
+        unsafe {
+            llev_vector_frechet_online_new(metric_handle, &query, 10.0, &limits, &mut machine)
+        },
+        LlevStatus::Ok
+    );
+    let mut limited = std::ptr::null_mut();
+    let stopped_limits = LlevTemporalOnlineLimits {
+        max_step_work_units: 0,
+        ..limits
+    };
+    assert_eq!(
+        unsafe {
+            llev_vector_frechet_online_new(
+                metric_handle,
+                &query,
+                10.0,
+                &stopped_limits,
+                &mut limited,
+            )
+        },
+        LlevStatus::Ok
+    );
+    unsafe { llev_vector_metric_free(metric_handle) };
+    let mut retained = 0;
+    assert_eq!(
+        unsafe { llev_vector_frechet_online_scratch_bytes(machine, &mut retained) },
+        LlevStatus::Ok
+    );
+    assert!(retained > 0);
+    let mut observed = LlevTemporalOnlineObservation::default();
+    assert_eq!(
+        unsafe { llev_vector_frechet_online_observation(machine, &mut observed) },
+        LlevStatus::Ok
+    );
+    assert_eq!(observed.consumed_target_len, 0);
+
+    let target = [[0.0, 0.0], [1.0, 1.0]];
+    let rust_metric = VectorFrechetMetric::new(metric());
+    let rust_query =
+        VectorFrechetPath::try_new(native_samples(&query_data), ResourceLimits::default()).unwrap();
+    let mut prefix = Vec::new();
+    for (index, point) in target.iter().enumerate() {
+        let mut step = LlevTemporalOnlineStep::default();
+        assert_eq!(
+            unsafe {
+                llev_vector_frechet_online_advance(machine, point.as_ptr(), point.len(), &mut step)
+            },
+            LlevStatus::Ok
+        );
+        assert_eq!(step.kind, 0);
+        assert_eq!(step.observation.consumed_target_len, index + 1);
+        prefix.extend_from_slice(point);
+        let rust_prefix =
+            VectorFrechetPath::try_new(native_samples(&prefix), ResourceLimits::default()).unwrap();
+        let expected = exact(
+            rust_metric
+                .distance_bounded(&rust_query, &rust_prefix, 10.0, ResourceLimits::default())
+                .unwrap(),
+        );
+        assert_eq!(step.observation.has_distance, 1);
+        assert_eq!(step.observation.distance_within_cutoff, expected);
+        let mut current = 0;
+        assert_eq!(
+            unsafe { llev_vector_frechet_online_scratch_bytes(machine, &mut current) },
+            LlevStatus::Ok
+        );
+        assert_eq!(current, retained);
+    }
+
+    let mut step = LlevTemporalOnlineStep::default();
+    assert_eq!(
+        unsafe { llev_vector_frechet_online_advance(limited, target[0].as_ptr(), 2, &mut step) },
+        LlevStatus::Ok
+    );
+    assert_eq!(step.kind, 1);
+    assert_eq!(step.reason, 2);
+    assert_eq!(
+        unsafe { llev_vector_frechet_online_observation(limited, &mut observed) },
+        LlevStatus::Ok
+    );
+    assert_eq!(observed.consumed_target_len, 0);
+    assert_eq!(
+        unsafe { llev_vector_frechet_online_advance(machine, target[0].as_ptr(), 1, &mut step) },
+        LlevStatus::InvalidArgument
+    );
+    assert_eq!(
+        unsafe { llev_vector_frechet_online_observation(machine, &mut observed) },
+        LlevStatus::Ok
+    );
+    assert_eq!(observed.consumed_target_len, 2);
+    unsafe {
+        llev_vector_frechet_online_free(machine);
+        llev_vector_frechet_online_free(limited);
+    }
 }

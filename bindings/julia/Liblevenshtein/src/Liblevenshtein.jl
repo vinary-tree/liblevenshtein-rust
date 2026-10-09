@@ -221,6 +221,9 @@ export ABI_VERSION,
     vector_dtw_distance,
     vector_frechet_distance,
     vector_timestamped_twed_distance,
+    VectorFrechetOnlineAutomaton,
+    VectorFrechetOnlineStream,
+    vector_frechet_online_observations,
     TemporalAlignmentStep,
     TemporalAlignmentWitness,
     TemporalAlignmentOutcome,
@@ -1141,6 +1144,7 @@ include("TemporalAlignment.jl")
 include("TemporalTimestampedIndex.jl")
 include("TemporalRolling.jl")
 include("TemporalOnline.jl")
+include("TemporalVectorOnline.jl")
 include("Filter.jl")
 include("SourceFilterQueries.jl")
 include("SourceFilterIndex.jl")

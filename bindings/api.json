@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 22,
+  "apiRevision": 23,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1219,7 +1219,12 @@
     { "name": "llev_temporal_alignment_free", "rustModule": "temporal_alignment" },
     { "name": "llev_vector_metric_new", "rustModule": "temporal_vector" },
     { "name": "llev_vector_metric_free", "rustModule": "temporal_vector" },
-    { "name": "llev_vector_temporal_distance", "rustModule": "temporal_vector" }
+    { "name": "llev_vector_temporal_distance", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_frechet_online_new", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_frechet_online_observation", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_frechet_online_advance", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_frechet_online_scratch_bytes", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_frechet_online_free", "rustModule": "temporal_vector" }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",

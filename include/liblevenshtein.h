@@ -1578,6 +1578,8 @@ LLEV_API LlevStatus llev_vector_temporal_distance(
     const LlevVectorTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+typedef struct LlevVectorFrechetOnline LlevVectorFrechetOnline;
+
 /** Borrowed nonempty scalar samples with strictly increasing physical
  * timestamps. Unit is 1 seconds, 2 milliseconds, 3 microseconds, or
  * 4 nanoseconds. Origin is finite and no later than the first timestamp.
@@ -2017,6 +2019,34 @@ LLEV_API LlevStatus llev_temporal_online_advance(
 LLEV_API LlevStatus llev_temporal_online_scratch_bytes(
     const LlevTemporalOnlineAutomaton* machine, size_t* out_bytes);
 LLEV_API void llev_temporal_online_free(LlevTemporalOnlineAutomaton* machine);
+
+/** Copy a typed, untimestamped query into a bounded online vector Fréchet
+ * machine. The machine owns a metric copy and can outlive its metric handle.
+ * Subsequent operations on one machine require exclusive access. */
+LLEV_API LlevStatus llev_vector_frechet_online_new(
+    const LlevVectorMetric* metric,
+    const LlevVectorSeriesView* query,
+    double cutoff,
+    const LlevTemporalOnlineLimits* limits,
+    LlevVectorFrechetOnline** out_machine);
+
+/** Observe a committed vector-target prefix without advancing. */
+LLEV_API LlevStatus llev_vector_frechet_online_observation(
+    const LlevVectorFrechetOnline* machine,
+    LlevTemporalOnlineObservation* out_observation);
+
+/** Advance by one whole vector point. A resource-incomplete step does not
+ * consume the point; LlevTemporalOnlineStep carries its exact stop reason. */
+LLEV_API LlevStatus llev_vector_frechet_online_advance(
+    LlevVectorFrechetOnline* machine,
+    const double* point, size_t point_len,
+    LlevTemporalOnlineStep* out_step);
+
+/** Query fixed retained logical bytes and release the machine. */
+LLEV_API LlevStatus llev_vector_frechet_online_scratch_bytes(
+    const LlevVectorFrechetOnline* machine, size_t* out_bytes);
+LLEV_API void llev_vector_frechet_online_free(
+    LlevVectorFrechetOnline* machine);
 
 #ifdef __cplusplus
 }

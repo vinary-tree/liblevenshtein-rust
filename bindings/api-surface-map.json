@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 218 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 223 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -716,6 +716,21 @@
         },
         "llev_vector_temporal_distance": {
           "symbol": "llev_vector_temporal_distance"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": "llev_vector_frechet_online_new"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": "llev_vector_frechet_online_observation"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": "llev_vector_frechet_online_advance"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": "llev_vector_frechet_online_scratch_bytes"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": "llev_vector_frechet_online_free"
         }
       }
     },
@@ -1631,6 +1646,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -2546,6 +2581,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -3453,6 +3508,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -4353,6 +4428,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -5252,6 +5347,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -6149,6 +6264,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -7059,6 +7194,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -7966,6 +8121,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -8897,6 +9072,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -9799,6 +9994,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -10702,6 +10917,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -11605,6 +11840,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -12511,6 +12766,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -13417,6 +13692,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -13453,7 +13748,8 @@
         "bindings/julia/Liblevenshtein/src/SourceFilterIndex.jl",
         "bindings/julia/Liblevenshtein/src/TemporalApproxMsm.jl",
         "bindings/julia/Liblevenshtein/src/TemporalAlignment.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalVector.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalVector.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalVectorOnline.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -13470,7 +13766,8 @@
         "bindings/julia/Liblevenshtein/test/source_filter_index.jl",
         "bindings/julia/Liblevenshtein/test/temporal_approx_msm.jl",
         "bindings/julia/Liblevenshtein/test/temporal_alignment.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_vector.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_vector.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_vector_online.jl"
       ],
       "enums": {
         "status": {
@@ -14212,6 +14509,21 @@
         },
         "llev_vector_temporal_distance": {
           "symbol": "vector_temporal_distance"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": "VectorFrechetOnlineAutomaton"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": "observation"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": "advance!"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": "scratch_bytes"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": "close!"
         }
       }
     },
@@ -15052,6 +15364,26 @@
         "llev_vector_temporal_distance": {
           "symbol": null,
           "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_observation": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_advance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_scratch_bytes": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_frechet_online_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-23 online vector Frechet is not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     }

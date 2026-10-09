@@ -67,6 +67,19 @@ for (id, series) in timestamped_pairs
     LL.insert!(timestamped_index, id, series)
 end
 LL.freeze!(timestamped_index)
+vector_metric = LL.FixedChannelMetric([
+    LL.VectorChannel("value", "unit"),
+    LL.VectorChannel("trend", "unit"),
+]; training_fold="benchmark-fold", estimator_revision="scale-v1")
+vector_query_points = Matrix{Float64}(undef, 2, length(query))
+vector_candidate_points = Matrix{Float64}(undef, 2, length(candidate))
+for position in eachindex(query)
+    vector_query_points[:, position] = [query[position], query[position] / 2]
+    vector_candidate_points[:, position] =
+        [candidate[position], candidate[position] / 2]
+end
+vector_query = LL.VectorTemporalSeries(vector_query_points)
+vector_candidate = LL.VectorTemporalSeries(vector_candidate_points)
 
 scan() = collect(LL.query_temporal_range(source, :dtw, query;
     band=2, cutoff=0.5))
@@ -109,6 +122,31 @@ timestamped_knn_scan() = sort([(UInt64(i - 1), id,
         timestamped_query, series).value)
     for (i, (id, series)) in enumerate(timestamped_pairs)];
     by=match -> (match[3], match[1]))[1:3]
+vector_erp() = LL.vector_erp_distance(vector_metric,
+    vector_query, vector_candidate; gap=[0.0, 0.0])
+vector_frechet() = LL.vector_frechet_distance(vector_metric,
+    vector_query, vector_candidate)
+vector_frechet_config = Ref(LL.RawVectorTemporalConfig(5, 0, C_NULL,
+    0.0, 0.0, 0, Inf))
+vector_frechet_limits = Ref(LL.VectorTemporalLimits())
+vector_query_view = Ref(LL.raw_vector_series(vector_query))
+vector_candidate_view = Ref(LL.raw_vector_series(vector_candidate))
+function vector_frechet_native_c()
+    output = Ref(LL.RawTemporalDistanceResult(0.0, 0, 0, 0, 0, 0))
+    status = GC.@preserve vector_metric vector_query vector_candidate ccall(
+        LL.native(:llev_vector_temporal_distance), Cint,
+        (Ptr{Cvoid}, Ref{LL.RawVectorSeriesView},
+            Ref{LL.RawVectorSeriesView}, Ref{LL.RawVectorTemporalConfig},
+            Ref{LL.VectorTemporalLimits},
+            Ref{LL.RawTemporalDistanceResult}),
+        vector_metric.handle, vector_query_view, vector_candidate_view,
+        vector_frechet_config, vector_frechet_limits, output)
+    status == 0 || error("native vector Fréchet control failed")
+    output[].value
+end
+vector_online() = collect(LL.vector_frechet_online_observations(
+    vector_metric, vector_query, eachcol(vector_candidate.samples);
+    cutoff=100.0))
 
 try
     expected = sort([match.id for match in scan()])
@@ -138,6 +176,14 @@ try
     online_result[end].distance_within_cutoff ≈
         LL.erp_distance(query, candidate).value ||
         error("online ERP final score differs from scalar ERP")
+    vector_online_result = vector_online()
+    length(vector_online_result) == size(vector_candidate.samples, 2) ||
+        error("vector online prefix count differs from candidate length")
+    vector_online_result[end].distance_within_cutoff ≈
+        vector_frechet().value ||
+        error("online vector Fréchet differs from its native exact score")
+    vector_frechet_native_c() == vector_frechet().value ||
+        error("Julia vector Fréchet differs from the direct C control")
     println("Julia ", VERSION, "; temporal entries=32 x 16 samples; ",
         "filter terms=32 x 8 bytes; result IDs=", length(actual))
     sample("scalar DTW 16 x 16", () ->
@@ -154,6 +200,10 @@ try
     sample("rolling 16 to width 4", () ->
         collect(LL.rolling_windows(query, 4, 2)))
     sample("online ERP 16 prefixes", online)
+    sample("vector ERP 16 x 16", vector_erp)
+    sample("vector Frechet 16 x 16", vector_frechet)
+    sample("vector Frechet direct C", vector_frechet_native_c)
+    sample("vector online 16 prefixes", vector_online)
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
     sample("32-entry scalar MSM kNN", msm_scan)
@@ -177,4 +227,5 @@ finally
     close(timestamped_index)
     close(ngram_index)
     close(hybrid_index)
+    close(vector_metric)
 end

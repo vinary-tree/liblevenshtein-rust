@@ -3,12 +3,18 @@
 use super::{
     index::{boundary, slice},
     temporal::{reason_code, timestamp_unit, LlevTemporalDistanceResult, LlevTemporalLimits},
+    temporal_index::incomplete_code,
+    temporal_online::{
+        LlevTemporalOnlineLimits, LlevTemporalOnlineObservation, LlevTemporalOnlineStep,
+    },
     LlevStatus,
 };
 use crate::time_series::{
     ChannelIdentity, ExactDecision, FixedChannelMetric, FoldLocalScaleProvenance, MetricChannel,
-    OperationOutcome, ResourceLimits, VectorBandedDtwScorer, VectorErpMetric, VectorFrechetMetric,
-    VectorFrechetPath, VectorMetricError, VectorSample, VectorTimestampedTwedMetric,
+    OnlineAutomatonLimits, OnlineStepOutcome, OperationOutcome, ResourceLimits, ResourceUsage,
+    VectorBandedDtwScorer, VectorErpMetric, VectorFrechetMetric, VectorFrechetOnlineAutomaton,
+    VectorFrechetOnlineObservation, VectorFrechetPath, VectorMetricError, VectorSample,
+    VectorTimestampedTwedMetric,
 };
 
 /// Exact channel/unit identity and fixed fold-local scale/weight.
@@ -435,4 +441,209 @@ pub unsafe extern "C" fn llev_vector_temporal_distance(
         publish(outcome, output);
         Ok(LlevStatus::Ok)
     })
+}
+
+/// Fixed-query online Fréchet automaton over whole vector points.
+pub struct LlevVectorFrechetOnline {
+    machine: VectorFrechetOnlineAutomaton<FixedChannelMetric>,
+    dimension: usize,
+    limits: ResourceLimits,
+}
+
+fn online_observation(value: VectorFrechetOnlineObservation) -> LlevTemporalOnlineObservation {
+    LlevTemporalOnlineObservation {
+        consumed_target_len: value.consumed_target_len,
+        active_positions: value.active_positions,
+        distance_within_cutoff: value.distance_within_cutoff.unwrap_or(0.0),
+        minimum_active_cost: value.minimum_active_cost.unwrap_or(0.0),
+        has_distance: u8::from(value.distance_within_cutoff.is_some()),
+        has_minimum: u8::from(value.minimum_active_cost.is_some()),
+        reserved: [0; 6],
+    }
+}
+
+fn online_step_usage(
+    observation: LlevTemporalOnlineObservation,
+    kind: u32,
+    reason: u32,
+    usage: ResourceUsage,
+) -> LlevTemporalOnlineStep {
+    LlevTemporalOnlineStep {
+        observation,
+        kind,
+        reason,
+        dp_cells: usage.dp_cells,
+        work_units: usage.work_units,
+        scratch_bytes: usage.scratch_bytes,
+        queue_entries: usage.queue_entries,
+    }
+}
+
+/// Copy a typed query and construct a bounded online vector Fréchet machine.
+///
+/// # Safety
+/// The metric and all input buffers must be live for this call; the output
+/// must be writable and disjoint from all inputs.
+#[no_mangle]
+pub unsafe extern "C" fn llev_vector_frechet_online_new(
+    metric: *const LlevVectorMetric,
+    query: *const LlevVectorSeriesView,
+    cutoff: f64,
+    raw_limits: *const LlevTemporalOnlineLimits,
+    out_machine: *mut *mut LlevVectorFrechetOnline,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_machine.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "vector online output is null".into(),
+        ))?;
+        *output = std::ptr::null_mut();
+        let metric = metric
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "vector metric is null".into()))?;
+        let query = *query.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "vector online query is null".into(),
+        ))?;
+        let raw_limits = *raw_limits.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "vector online limits are null".into(),
+        ))?;
+        if !query.timestamps.is_null() || query.timestamp_unit != 0 || query.origin != 0.0 {
+            return Err(invalid(
+                "vector Fréchet online query must have no timestamps",
+            ));
+        }
+        let dimension = metric.metric.channel_layout().dimension();
+        let limits = ResourceLimits {
+            max_series_len: raw_limits.max_query_len,
+            max_dimension: dimension,
+            max_scratch_bytes: raw_limits.max_scratch_bytes,
+            ..ResourceLimits::default()
+        };
+        let query = VectorFrechetPath::try_new(
+            samples(query, dimension, limits, "vector online query")?,
+            limits,
+        )
+        .map_err(vector_error)?;
+        let machine = VectorFrechetOnlineAutomaton::new(
+            query,
+            metric.metric.clone(),
+            cutoff,
+            OnlineAutomatonLimits::from(raw_limits),
+        )
+        .map_err(vector_error)?;
+        *output = Box::into_raw(Box::new(LlevVectorFrechetOnline {
+            machine,
+            dimension,
+            limits,
+        }));
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Observe the last committed target prefix.
+///
+/// # Safety
+/// The machine must be live and exclusively accessed; output must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn llev_vector_frechet_online_observation(
+    machine: *const LlevVectorFrechetOnline,
+    out_observation: *mut LlevTemporalOnlineObservation,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_observation.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "vector online observation output is null".into(),
+        ))?;
+        *output = LlevTemporalOnlineObservation::default();
+        let machine = machine.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "vector online machine is null".into(),
+        ))?;
+        *output = online_observation(machine.machine.observation());
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Consume one vector point transactionally. An incomplete step preserves
+/// the prior observation.
+///
+/// # Safety
+/// The machine must be live and exclusively accessed. The point must contain
+/// exactly the metric dimension and be disjoint from writable output.
+#[no_mangle]
+pub unsafe extern "C" fn llev_vector_frechet_online_advance(
+    machine: *mut LlevVectorFrechetOnline,
+    point: *const f64,
+    point_len: usize,
+    out_step: *mut LlevTemporalOnlineStep,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_step.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "vector online step output is null".into(),
+        ))?;
+        *output = LlevTemporalOnlineStep::default();
+        let machine = machine.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "vector online machine is null".into(),
+        ))?;
+        if point_len != machine.dimension {
+            return Err(invalid("vector online point dimension mismatch"));
+        }
+        let point = VectorSample::try_new(
+            slice(point, point_len, "vector online point")?,
+            machine.limits,
+        )
+        .map_err(vector_error)?;
+        *output = match machine.machine.advance(&point).map_err(vector_error)? {
+            OnlineStepOutcome::Advanced { value, usage } => {
+                online_step_usage(online_observation(value), 0, 0, usage)
+            }
+            OnlineStepOutcome::Incomplete { reason, usage } => online_step_usage(
+                LlevTemporalOnlineObservation::default(),
+                1,
+                incomplete_code(reason),
+                usage,
+            ),
+        };
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Fixed logical storage retained independently of target-prefix length.
+///
+/// # Safety
+/// The machine must be live and exclusively accessed; output must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn llev_vector_frechet_online_scratch_bytes(
+    machine: *const LlevVectorFrechetOnline,
+    out_bytes: *mut usize,
+) -> LlevStatus {
+    boundary(|| {
+        let output = out_bytes.as_mut().ok_or((
+            LlevStatus::NullPointer,
+            "vector online scratch output is null".into(),
+        ))?;
+        *output = 0;
+        let machine = machine.as_ref().ok_or((
+            LlevStatus::NullPointer,
+            "vector online machine is null".into(),
+        ))?;
+        *output = machine.machine.scratch_bytes();
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Release an online vector Fréchet machine.
+///
+/// # Safety
+/// The pointer must be null or a live handle returned by
+/// `llev_vector_frechet_online_new`.
+#[no_mangle]
+pub unsafe extern "C" fn llev_vector_frechet_online_free(machine: *mut LlevVectorFrechetOnline) {
+    if !machine.is_null() {
+        drop(Box::from_raw(machine));
+    }
 }

@@ -32,6 +32,7 @@ end
 mutable struct FixedChannelMetric
     handle::Ptr{Cvoid}
     dimension::Int
+    lock::ReentrantLock
     closed::Bool
 end
 
@@ -59,22 +60,27 @@ function FixedChannelMetric(channels::AbstractVector{VectorChannel};
             length(fold), pointer(revision), length(revision))),
         maximum, output)
     checked(status, :llev_vector_metric_new)
-    metric = FixedChannelMetric(output[], length(channels), false)
+    metric = FixedChannelMetric(output[], length(channels), ReentrantLock(), false)
     finalizer(close!, metric)
     metric
 end
 
 function close!(metric::FixedChannelMetric)
-    metric.closed && return nothing
-    handle = metric.handle
-    metric.handle = C_NULL
-    metric.closed = true
-    handle == C_NULL || ccall(native(:llev_vector_metric_free),
-        Cvoid, (Ptr{Cvoid},), handle)
-    nothing
+    lock(metric.lock) do
+        metric.closed && return nothing
+        handle = metric.handle
+        metric.handle = C_NULL
+        metric.closed = true
+        handle == C_NULL || ccall(native(:llev_vector_metric_free),
+            Cvoid, (Ptr{Cvoid},), handle)
+        nothing
+    end
 end
 Base.close(metric::FixedChannelMetric) = close!(metric)
-Base.isopen(metric::FixedChannelMetric) = !metric.closed
+Base.isopen(metric::FixedChannelMetric) =
+    lock(metric.lock) do
+        !metric.closed
+    end
 
 """Owned points in columns; each row is one named channel.
 
@@ -165,7 +171,6 @@ function vector_temporal_distance(kind::Symbol, metric::FixedChannelMetric,
     gap_or_sentinel::Union{Nothing,AbstractVector{<:Real}}=nothing,
     stiffness::Real=0.0, gap_penalty::Real=0.0, band::Integer=0,
     cutoff::Real=Inf, limits::VectorTemporalLimits=VectorTemporalLimits())
-    metric.closed && throw(ArgumentError("vector metric is closed"))
     kind_code = if kind === :erp
         UInt32(2)
     elseif kind === :dtw
@@ -197,13 +202,16 @@ function vector_temporal_distance(kind::Symbol, metric::FixedChannelMetric,
         isempty(point) ? C_NULL : pointer(point), Float64(stiffness),
         Float64(gap_penalty), checked_threshold(band), Float64(cutoff))
     output = Ref(RawTemporalDistanceResult(0.0, 0, 0, 0, 0, 0))
-    status = GC.@preserve metric left right point ccall(
-        native(:llev_vector_temporal_distance), Cint,
-        (Ptr{Cvoid}, Ref{RawVectorSeriesView}, Ref{RawVectorSeriesView},
-            Ref{RawVectorTemporalConfig}, Ref{VectorTemporalLimits},
-            Ref{RawTemporalDistanceResult}),
-        metric.handle, Ref(raw_vector_series(left)),
-        Ref(raw_vector_series(right)), Ref(config), Ref(limits), output)
+    status = lock(metric.lock) do
+        metric.closed && throw(ArgumentError("vector metric is closed"))
+        GC.@preserve metric left right point ccall(
+            native(:llev_vector_temporal_distance), Cint,
+            (Ptr{Cvoid}, Ref{RawVectorSeriesView}, Ref{RawVectorSeriesView},
+                Ref{RawVectorTemporalConfig}, Ref{VectorTemporalLimits},
+                Ref{RawTemporalDistanceResult}),
+            metric.handle, Ref(raw_vector_series(left)),
+            Ref(raw_vector_series(right)), Ref(config), Ref(limits), output)
+    end
     raw = output[]
     status == Int32(STATUS_OK) ||
         (status == Int32(STATUS_LIMIT_EXCEEDED) && raw.kind == 3) ||

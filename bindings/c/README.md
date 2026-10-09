@@ -282,6 +282,11 @@ variants, protocols, or methods.
 | `llev_universal_online_free` | `llev_universal_online_free` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_new` | `llev_universal_online_new` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_observation` | `llev_universal_online_observation` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_vector_frechet_online_advance` | `llev_vector_frechet_online_advance` | project ABI operation |
+| `llev_vector_frechet_online_free` | `llev_vector_frechet_online_free` | project ABI operation |
+| `llev_vector_frechet_online_new` | `llev_vector_frechet_online_new` | project ABI operation |
+| `llev_vector_frechet_online_observation` | `llev_vector_frechet_online_observation` | project ABI operation |
+| `llev_vector_frechet_online_scratch_bytes` | `llev_vector_frechet_online_scratch_bytes` | project ABI operation |
 | `llev_vector_metric_free` | `llev_vector_metric_free` | project ABI operation |
 | `llev_vector_metric_new` | `llev_vector_metric_new` | project ABI operation |
 | `llev_vector_temporal_distance` | `llev_vector_temporal_distance` | project ABI operation |
