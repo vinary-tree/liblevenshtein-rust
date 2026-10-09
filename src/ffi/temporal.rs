@@ -140,7 +140,7 @@ pub(crate) fn reason_code(reason: IncompleteReason) -> u32 {
     }
 }
 
-fn limits_from_c(raw: LlevTemporalLimits) -> ResourceLimits {
+pub(crate) fn limits_from_c(raw: LlevTemporalLimits) -> ResourceLimits {
     ResourceLimits {
         max_series_len: raw.max_series_len,
         max_dp_cells: raw.max_dp_cells,

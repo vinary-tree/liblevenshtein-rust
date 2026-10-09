@@ -210,6 +210,18 @@ decided. Advisory and incomplete results retain exact distances for emitted
 neighbors without claiming recall. A zero-neighbor advisory result is not
 evidence that no neighbor exists.
 
+### Replayable alignment witnesses
+
+`temporal_alignment` extracts bounded native paths for MSM, ERP, unit-grid
+TWED, banded DTW, and discrete Fréchet; `timestamped_twed_alignment` covers
+physical-time TWED. A finite result owns a closeable witness whose immutable
+operations are copied to Julia in bounded pages. `replay_alignment` validates
+the path and recomputes its score from caller-supplied operands and the
+configuration captured at extraction. Julia endpoints are one-based. A
+resource-incomplete result carries no witness and identifies DP, work,
+scratch, witness-byte, or overflow exhaustion. See the
+[usage guide](../../../README.md#replayable-temporal-alignment-witnesses).
+
 ### Lazy temporal range queries
 
 `TemporalSeriesSource` copies a finite iterable of `(UInt64 ID, finite real

@@ -688,6 +688,24 @@
         },
         "llev_approx_msm_index_free": {
           "symbol": "llev_approx_msm_index_free"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": "llev_temporal_alignment_new"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": "llev_timestamped_twed_alignment_new"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": "llev_temporal_alignment_page"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": "llev_temporal_alignment_replay"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": "llev_timestamped_twed_alignment_replay"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": "llev_temporal_alignment_free"
         }
       }
     },
@@ -1567,6 +1585,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -2446,6 +2488,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -3317,6 +3383,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -4181,6 +4271,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -5044,6 +5158,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -5905,6 +6043,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -6779,6 +6941,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -7650,6 +7836,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -8545,6 +8755,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -9411,6 +9645,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -10278,6 +10536,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -11145,6 +11427,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -12015,6 +12321,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -12885,6 +13215,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -12919,7 +13273,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalTimestamped.jl",
         "bindings/julia/Liblevenshtein/src/TemporalTimestampedIndex.jl",
         "bindings/julia/Liblevenshtein/src/SourceFilterIndex.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalApproxMsm.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalApproxMsm.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalAlignment.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -12934,7 +13289,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_timestamped.jl",
         "bindings/julia/Liblevenshtein/test/temporal_timestamped_index.jl",
         "bindings/julia/Liblevenshtein/test/source_filter_index.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_approx_msm.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_approx_msm.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_alignment.jl"
       ],
       "enums": {
         "status": {
@@ -13648,6 +14004,24 @@
           "symbol": "query_approx_msm_knn"
         },
         "llev_approx_msm_index_free": {
+          "symbol": "close!"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": "temporal_alignment"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": "timestamped_twed_alignment"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": "alignment_page"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": "replay_alignment"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": "replay_alignment"
+        },
+        "llev_temporal_alignment_free": {
           "symbol": "close!"
         }
       }
@@ -14453,6 +14827,30 @@
         "llev_approx_msm_index_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-20 native approximate MSM index is not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_page": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_timestamped_twed_alignment_replay": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_temporal_alignment_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     }

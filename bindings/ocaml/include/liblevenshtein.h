@@ -1530,6 +1530,88 @@ LLEV_API LlevStatus llev_timestamped_twed_distance(
     const LlevTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+/** Bounded witness extraction reuses scalar DP limits and adds a hard peak
+ * witness-storage ceiling. */
+typedef struct LlevTemporalAlignmentLimits {
+    LlevTemporalLimits temporal;
+    size_t max_witness_bytes;
+} LlevTemporalAlignmentLimits;
+
+/** One paged alignment operation. For MSM, operation is 1 move, 2 merge,
+ * or 3 split and the remaining fields are zero. For ERP, TWED, DTW, and
+ * Frechet, operation is 1 align, 2 advance query, or 3 advance candidate;
+ * flags bits 0 and 1 indicate present zero-based endpoints. local_cost_bits
+ * retains the exact IEEE-754 encoding of the native local cost. */
+typedef struct LlevTemporalAlignmentStep {
+    uint32_t operation;
+    uint32_t flags;
+    uint64_t query_endpoint;
+    uint64_t candidate_endpoint;
+    uint64_t local_cost_bits;
+} LlevTemporalAlignmentStep;
+
+/** Kind uses LLEV_TEMPORAL_* tags. A finite outcome transfers one immutable
+ * owning witness handle; other outcomes leave it NULL. Incompletion reason
+ * uses the existing resource reason codes, plus 5 for witness bytes. */
+typedef struct LlevTemporalAlignmentOutcome {
+    uint32_t kind;
+    uint32_t reason;
+    double distance;
+    size_t step_count;
+    size_t dp_cells;
+    size_t work_units;
+    size_t scratch_bytes;
+    size_t witness_bytes;
+} LlevTemporalAlignmentOutcome;
+
+typedef struct LlevTemporalAlignment LlevTemporalAlignment;
+
+/** Extract a deterministic MSM, ERP, unit-grid TWED, banded DTW, or
+ * discrete Frechet witness. Soft-DTW has no alignment witness. Inputs are
+ * borrowed for this call; the returned witness owns its bounded steps. */
+LLEV_API LlevStatus llev_temporal_alignment_new(
+    const double* query, size_t query_len,
+    const double* candidate, size_t candidate_len,
+    const LlevTemporalConfig* config,
+    const LlevTemporalAlignmentLimits* limits,
+    LlevTemporalAlignment** out_alignment,
+    LlevTemporalAlignmentOutcome* out_outcome);
+
+/** Extract a metric physical-time TWED witness over copied, validated
+ * timestamped operands in the same unit and origin. */
+LLEV_API LlevStatus llev_timestamped_twed_alignment_new(
+    const LlevTimestampedSeriesView* query,
+    const LlevTimestampedSeriesView* candidate,
+    double stiffness, double gap_penalty, double cutoff,
+    const LlevTemporalAlignmentLimits* limits,
+    LlevTemporalAlignment** out_alignment,
+    LlevTemporalAlignmentOutcome* out_outcome);
+
+/** Copy at most capacity steps from a stable zero-based offset. A zero
+ * capacity may use NULL for out_steps. The handle remains caller-owned. */
+LLEV_API LlevStatus llev_temporal_alignment_page(
+    const LlevTemporalAlignment* alignment,
+    size_t start, LlevTemporalAlignmentStep* out_steps,
+    size_t capacity, size_t* out_written);
+
+/** Recompute and validate a scalar witness against supplied operands and
+ * the native configuration captured at extraction. */
+LLEV_API LlevStatus llev_temporal_alignment_replay(
+    const LlevTemporalAlignment* alignment,
+    const double* query, size_t query_len,
+    const double* candidate, size_t candidate_len,
+    double* out_distance);
+
+/** Recompute and validate a physical-time TWED witness. */
+LLEV_API LlevStatus llev_timestamped_twed_alignment_replay(
+    const LlevTemporalAlignment* alignment,
+    const LlevTimestampedSeriesView* query,
+    const LlevTimestampedSeriesView* candidate,
+    double* out_distance);
+
+/** Release an alignment witness once. */
+LLEV_API void llev_temporal_alignment_free(LlevTemporalAlignment* alignment);
+
 
 /** Complete Soft-DTW loss and gradients with respect to both nonempty finite
  * operands. gamma must be finite and positive. Output buffers are caller

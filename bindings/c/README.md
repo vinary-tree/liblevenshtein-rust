@@ -226,6 +226,10 @@ variants, protocols, or methods.
 | `llev_string_array_free` | `llev_string_array_free` | legacy owned-string plumbing |
 | `llev_string_dup` | `llev_string_dup` | legacy owned-string plumbing |
 | `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |
+| `llev_temporal_alignment_free` | `llev_temporal_alignment_free` | project ABI operation |
+| `llev_temporal_alignment_new` | `llev_temporal_alignment_new` | project ABI operation |
+| `llev_temporal_alignment_page` | `llev_temporal_alignment_page` | project ABI operation |
+| `llev_temporal_alignment_replay` | `llev_temporal_alignment_replay` | project ABI operation |
 | `llev_temporal_distance` | `llev_temporal_distance` | project ABI operation |
 | `llev_temporal_index_cursor_free` | `llev_temporal_index_cursor_free` | project ABI operation |
 | `llev_temporal_index_cursor_next_batch` | `llev_temporal_index_cursor_next_batch` | project ABI operation |
@@ -240,6 +244,8 @@ variants, protocols, or methods.
 | `llev_temporal_online_new` | `llev_temporal_online_new` | project ABI operation |
 | `llev_temporal_online_observation` | `llev_temporal_online_observation` | project ABI operation |
 | `llev_temporal_online_scratch_bytes` | `llev_temporal_online_scratch_bytes` | project ABI operation |
+| `llev_timestamped_twed_alignment_new` | `llev_timestamped_twed_alignment_new` | project ABI operation |
+| `llev_timestamped_twed_alignment_replay` | `llev_timestamped_twed_alignment_replay` | project ABI operation |
 | `llev_timestamped_twed_cursor_free` | `llev_timestamped_twed_cursor_free` | project ABI operation |
 | `llev_timestamped_twed_cursor_next_batch` | `llev_timestamped_twed_cursor_next_batch` | project ABI operation |
 | `llev_timestamped_twed_distance` | `llev_timestamped_twed_distance` | project ABI operation |

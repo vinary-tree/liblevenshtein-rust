@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 20,
+  "apiRevision": 21,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1210,7 +1210,13 @@
     { "name": "llev_approx_msm_index_insert", "rustModule": "approx_msm" },
     { "name": "llev_approx_msm_index_freeze", "rustModule": "approx_msm" },
     { "name": "llev_approx_msm_index_query_knn", "rustModule": "approx_msm" },
-    { "name": "llev_approx_msm_index_free", "rustModule": "approx_msm" }
+    { "name": "llev_approx_msm_index_free", "rustModule": "approx_msm" },
+    { "name": "llev_temporal_alignment_new", "rustModule": "temporal_alignment" },
+    { "name": "llev_timestamped_twed_alignment_new", "rustModule": "temporal_alignment" },
+    { "name": "llev_temporal_alignment_page", "rustModule": "temporal_alignment" },
+    { "name": "llev_temporal_alignment_replay", "rustModule": "temporal_alignment" },
+    { "name": "llev_timestamped_twed_alignment_replay", "rustModule": "temporal_alignment" },
+    { "name": "llev_temporal_alignment_free", "rustModule": "temporal_alignment" }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",

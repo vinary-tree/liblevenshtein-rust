@@ -351,6 +351,36 @@ budgets use `TemporalSearchLimits`. Results own their neighbor vectors and
 remain usable after the frozen index closes. `reduce_batches!` folds bounded
 batches of that result.
 
+## Replayable temporal alignment witnesses
+
+`temporal_alignment` extracts a deterministic native witness for MSM, ERP,
+unit-grid TWED, banded DTW, or discrete Fréchet. `timestamped_twed_alignment`
+does the same for metric physical-time TWED. Extraction respects DP, work,
+scratch, series-length, and witness-byte ceilings. `:finite` owns a witness;
+`:above_cutoff`, `:no_alignment`, and `:incomplete` do not. Incompletion
+reports the exact stop class, including `:witness_bytes`.
+
+```julia
+result = temporal_alignment(:erp, [1.0, 2.0], [1.0, 2.5];
+    parameter0=0.0, max_witness_bytes=1024)
+@assert result.kind === :finite
+try
+    @assert replay_alignment(result.witness, [1.0, 2.0],
+        [1.0, 2.5]) == result.distance
+    @assert !isempty(alignment_page(result.witness, 1; page_size=2))
+finally
+    close(result.witness)
+end
+```
+
+The native handle owns a bounded snapshot of the operation path and borrows
+no input arrays after extraction. Iteration and `reduce_batches!` copy one
+bounded page at a time. Endpoints in Julia are one-based; MSM operation tags
+are `:move`, `:merge`, and `:split`, while the other kernels use `:align`,
+`:advance_query`, and `:advance_candidate` with exact local-cost bits.
+`replay_alignment` checks the path against the supplied operands and the
+configuration captured at extraction. Close the witness when finished.
+
 ## Temporal lower bounds
 
 `temporal_lower_bound` selects the native ERP gap-mass, Fréchet endpoint,
@@ -523,6 +553,7 @@ variants, protocols, or methods.
 | `abi_version` | `llev_abi_version` | ABI compatibility and feature discovery |
 | `advance!` | `llev_generalized_online_advance`, `llev_universal_online_advance`, `llev_temporal_online_advance` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation; project ABI operation |
 | `AffineGapCosts` | `llev_affine_costs_validate` | project ABI operation |
+| `alignment_page` | `llev_temporal_alignment_page` | project ABI operation |
 | `api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `ApproxMsmIndex` | `llev_approx_msm_index_new`, `llev_approx_msm_index_insert`, `llev_approx_msm_index_freeze` | project ABI operation |
 | `are_phonetically_similar` | `llev_phonetic_feature_relation` | IPA feature classification and relations |
@@ -534,7 +565,7 @@ variants, protocols, or methods.
 | `cancel!` | `llev_wallbreaker_cursor_cancel` | project ABI operation |
 | `characters_with_features` | `llev_phonetic_chars_with_features` | IPA feature classification and relations |
 | `clear!` | `llev_query_cache_clear` | project ABI operation |
-| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_timestamped_twed_index_free`, `llev_timestamped_twed_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_temporal_index_cursor_free`, `llev_temporal_online_free`, `llev_source_filter_index_free`, `llev_approx_msm_index_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_timestamped_twed_index_free`, `llev_timestamped_twed_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_temporal_index_cursor_free`, `llev_temporal_online_free`, `llev_source_filter_index_free`, `llev_approx_msm_index_free`, `llev_temporal_alignment_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `compiled_phonetic_bytes` | `llev_owned_bytes_free`, `llev_phonetic_rules_to_bytes`, `llev_phonetic_pattern_to_bytes` | versioned compiled-byte ownership; versioned compiled phonetic-rule bytes; versioned compiled phonetic-pattern bytes |
 | `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
 | `distance_config` | `llev_phonetic_grep_distance_config` | word-boundary phonetic search and configuration |
@@ -600,6 +631,7 @@ variants, protocols, or methods.
 | `QueryCache` | `llev_query_cache_new` | project ABI operation |
 | `reduce_batches!` | `llev_cost_cursor_reduce`, `llev_specialized_cursor_reduce`, `llev_query_cursor_reduce` | project ABI operation; streaming result traversal and batch leases |
 | `remove!` | `llev_phonetic_dictionary_update` | normalized phonetic dictionary construction, query, and updates |
+| `replay_alignment` | `llev_temporal_alignment_replay`, `llev_timestamped_twed_alignment_replay` | project ABI operation |
 | `reset!` | `llev_phonetic_transducer_reset` | incremental phonetic rewriting and lifecycle |
 | `reset_stats!` | `llev_query_cache_reset_stats` | project ABI operation |
 | `scan` | `llev_phonetic_online_scan`, `llev_phonetic_online_matches_free`, `llev_phonetic_token_scan`, `llev_phonetic_token_matches_free` | character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership |
@@ -612,10 +644,12 @@ variants, protocols, or methods.
 | `streaming` | `llev_phonetic_online_stream_new` | character-level phonetic search and scanner lifecycle |
 | `syllable_boundaries` | `llev_phonetic_syllable_boundaries` | syllable count and boundary heuristics |
 | `syllable_count` | `llev_phonetic_syllable_count` | syllable count and boundary heuristics |
+| `temporal_alignment` | `llev_temporal_alignment_new` | project ABI operation |
 | `temporal_distance` | `llev_temporal_distance` | project ABI operation |
 | `temporal_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
 | `TemporalIndex` | `llev_temporal_index_new` | project ABI operation |
 | `TemporalOnlineAutomaton` | `llev_temporal_online_new` | project ABI operation |
+| `timestamped_twed_alignment` | `llev_timestamped_twed_alignment_new` | project ABI operation |
 | `TimestampedTwedIndex` | `llev_timestamped_twed_index_new` | project ABI operation |
 | `Transducer` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `true_damerau_distance` | `llev_true_damerau_distance`, `llev_true_damerau_distance_threshold`, `llev_true_damerau_distance_bytes`, `llev_true_damerau_distance_bytes_threshold`, `llev_true_damerau_distance_u64`, `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |

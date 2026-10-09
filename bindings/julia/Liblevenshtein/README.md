@@ -199,6 +199,12 @@ coverage counts and exact neighbor distances. Only `proves_recall(result)`
 authorizes an exact top-k or absence claim. See the
 [approximate MSM guide](../../README.md#approximate-msm-nearest-neighbors).
 
+`temporal_alignment` and `timestamped_twed_alignment` return bounded,
+replayable native operation witnesses. A finite witness supports lazy pages,
+iteration, `reduce_batches!`, `replay_alignment`, and `close`. Nonfinite
+outcomes carry no handle. See the
+[alignment witness guide](../../README.md#replayable-temporal-alignment-witnesses).
+
 ## Choose an automaton
 
 | Julia value | Semantics | Metric? |

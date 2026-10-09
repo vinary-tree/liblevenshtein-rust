@@ -212,6 +212,13 @@ export ABI_VERSION,
     freeze!,
     query_index_range,
     temporal_distance,
+    TemporalAlignmentStep,
+    TemporalAlignmentWitness,
+    TemporalAlignmentOutcome,
+    temporal_alignment,
+    timestamped_twed_alignment,
+    alignment_page,
+    replay_alignment,
     msm_distance,
     erp_distance,
     twed_distance,
@@ -1120,6 +1127,7 @@ include("TemporalIndex.jl")
 include("TemporalApproxMsm.jl")
 include("TemporalMetricDomains.jl")
 include("TemporalTimestamped.jl")
+include("TemporalAlignment.jl")
 include("TemporalTimestampedIndex.jl")
 include("TemporalRolling.jl")
 include("TemporalOnline.jl")
