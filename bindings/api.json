@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 21,
+  "apiRevision": 22,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -1216,7 +1216,10 @@
     { "name": "llev_temporal_alignment_page", "rustModule": "temporal_alignment" },
     { "name": "llev_temporal_alignment_replay", "rustModule": "temporal_alignment" },
     { "name": "llev_timestamped_twed_alignment_replay", "rustModule": "temporal_alignment" },
-    { "name": "llev_temporal_alignment_free", "rustModule": "temporal_alignment" }
+    { "name": "llev_temporal_alignment_free", "rustModule": "temporal_alignment" },
+    { "name": "llev_vector_metric_new", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_metric_free", "rustModule": "temporal_vector" },
+    { "name": "llev_vector_temporal_distance", "rustModule": "temporal_vector" }
   ],
   "documentation": {
     "hub": "docs/bindings/README.md",

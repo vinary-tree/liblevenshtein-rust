@@ -381,6 +381,45 @@ are `:move`, `:merge`, and `:split`, while the other kernels use `:align`,
 `replay_alignment` checks the path against the supplied operands and the
 configuration captured at extraction. Close the witness when finished.
 
+## Typed vector temporal metrics
+
+`FixedChannelMetric` retains an ordered channel/unit schema, positive scales
+and weights, and the training-fold identity used to estimate those scales.
+Construct it once and reuse it for many comparisons. A
+`VectorTemporalSeries` stores one vector point per matrix column, with
+channels in rows. Native calls copy bounded points into the existing Rust
+vector kernels; they never flatten a point into unrelated scalar time steps.
+`VectorTemporalSeries` checks sample count, dimension, and input byte limits
+before making its one owned Julia copy.
+
+```julia
+metric = FixedChannelMetric([
+    VectorChannel("x", "metre"; scale=2.0, weight=3.0),
+    VectorChannel("y", "metre"; scale=4.0, weight=5.0),
+]; training_fold="train-1", estimator_revision="scales-v1")
+query = VectorTemporalSeries([0.0 2.0 4.0; 1.0 3.0 1.0])
+candidate = VectorTemporalSeries([0.0 2.0 3.0; 1.0 2.0 1.0])
+try
+    score = vector_erp_distance(metric, query, candidate; gap=[0.0, 0.0])
+    @assert score.kind === :finite
+    @assert score.value >= 0
+finally
+    close(metric)
+end
+```
+
+`vector_erp_distance` removes exact gap points to select a metric quotient
+representative. `vector_frechet_distance` collapses consecutive identical
+points for its path quotient. `vector_dtw_distance` requires a band and is a
+nonmetric diagnostic score. `vector_timestamped_twed_distance` requires
+strictly increasing physical timestamps on both series, a shared unit and
+origin, and a fixed vector sentinel. Vector MSM has no admitted metric
+because its scalar betweenness rule has no proven vector equivalent.
+`VectorTemporalLimits` bounds input copies, dimension, band width, dynamic
+programming cells, work, and scratch storage. The result uses the same
+`:finite`, `:above_cutoff`, `:no_alignment`, and `:incomplete` kinds as
+scalar temporal scores.
+
 ## Temporal lower bounds
 
 `temporal_lower_bound` selects the native ERP gap-mass, Fréchet endpoint,
@@ -565,7 +604,7 @@ variants, protocols, or methods.
 | `cancel!` | `llev_wallbreaker_cursor_cancel` | project ABI operation |
 | `characters_with_features` | `llev_phonetic_chars_with_features` | IPA feature classification and relations |
 | `clear!` | `llev_query_cache_clear` | project ABI operation |
-| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_timestamped_twed_index_free`, `llev_timestamped_twed_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_temporal_index_cursor_free`, `llev_temporal_online_free`, `llev_source_filter_index_free`, `llev_approx_msm_index_free`, `llev_temporal_alignment_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_timestamped_twed_index_free`, `llev_timestamped_twed_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_temporal_index_cursor_free`, `llev_temporal_online_free`, `llev_source_filter_index_free`, `llev_approx_msm_index_free`, `llev_temporal_alignment_free`, `llev_vector_metric_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `compiled_phonetic_bytes` | `llev_owned_bytes_free`, `llev_phonetic_rules_to_bytes`, `llev_phonetic_pattern_to_bytes` | versioned compiled-byte ownership; versioned compiled phonetic-rule bytes; versioned compiled phonetic-pattern bytes |
 | `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
 | `distance_config` | `llev_phonetic_grep_distance_config` | word-boundary phonetic search and configuration |
@@ -577,6 +616,7 @@ variants, protocols, or methods.
 | `feature_set_distance` | `llev_phonetic_feature_set_distance` | IPA feature classification and relations |
 | `feed!` | `llev_phonetic_online_stream_feed`, `llev_phonetic_transducer_feed` | character-level phonetic search and scanner lifecycle; incremental phonetic rewriting and lifecycle |
 | `finish!` | `llev_phonetic_online_stream_finish`, `llev_phonetic_transducer_finish` | character-level phonetic search and scanner lifecycle; incremental phonetic rewriting and lifecycle |
+| `FixedChannelMetric` | `llev_vector_metric_new` | project ABI operation |
 | `frechet_candidate_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
 | `frechet_endpoint_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
 | `frechet_one_sided_hausdorff_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
@@ -656,6 +696,7 @@ variants, protocols, or methods.
 | `twed_length_lower_bound` | `llev_twed_length_lower_bound` | project ABI operation |
 | `unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
 | `UniversalAutomaton` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `vector_temporal_distance` | `llev_vector_temporal_distance` | project ABI operation |
 | `voicing_pair` | `llev_phonetic_voicing_pair` | IPA feature classification and relations |
 | `WallBreakerMatcher` | `llev_wallbreaker_new_utf8` | project ABI operation |
 | `WeightedOperationCosts` | `llev_operation_costs_preset`, `llev_operation_costs_validate` | project ABI operation |

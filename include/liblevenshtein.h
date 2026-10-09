@@ -1503,6 +1503,81 @@ LLEV_API LlevStatus llev_temporal_distance(
     const LlevTemporalLimits* limits,
     LlevTemporalDistanceResult* out_result);
 
+/** Exact channel/unit identity with a positive fold-local scale and weight.
+ * All UTF-8 fields are copied at metric construction. */
+typedef struct LlevVectorChannelView {
+    const uint8_t* channel;
+    size_t channel_len;
+    const uint8_t* unit;
+    size_t unit_len;
+    double scale;
+    double weight;
+} LlevVectorChannelView;
+
+/** Immutable fixed-channel point metric and exact scale provenance. */
+typedef struct LlevVectorMetricView {
+    const LlevVectorChannelView* channels;
+    size_t channel_count;
+    const uint8_t* training_fold;
+    size_t training_fold_len;
+    const uint8_t* estimator_revision;
+    size_t estimator_revision_len;
+} LlevVectorMetricView;
+
+/** Point samples are consecutive columns, each with dimension coordinates.
+ * Timestamp fields are used only for physical-time vector TWED; its unit is
+ * 1 seconds, 2 milliseconds, 3 microseconds, or 4 nanoseconds. */
+typedef struct LlevVectorSeriesView {
+    const double* coordinates;
+    size_t sample_count;
+    size_t dimension;
+    const double* timestamps;
+    uint32_t timestamp_unit;
+    uint32_t reserved;
+    double origin;
+} LlevVectorSeriesView;
+
+/** Algorithm 2 ERP, 4 banded DTW, 5 discrete Frechet, or 7 timestamped TWED.
+ * ERP and TWED require one finite gap_or_sentinel point. Unused fields must
+ * be zero or NULL; cutoff is inclusive or positive infinity. Vector MSM is
+ * unsupported because no canonical vector betweenness is defined. */
+typedef struct LlevVectorTemporalConfig {
+    uint32_t algorithm;
+    uint32_t reserved;
+    const double* gap_or_sentinel;
+    double parameter0;
+    double parameter1;
+    size_t band;
+    double cutoff;
+} LlevVectorTemporalConfig;
+
+/** Hard limits on native input copies, vector width, DP, and work. */
+typedef struct LlevVectorTemporalLimits {
+    LlevTemporalLimits scalar;
+    size_t max_dimension;
+    size_t max_band_width;
+} LlevVectorTemporalLimits;
+
+typedef struct LlevVectorMetric LlevVectorMetric;
+
+/** Copy a fixed typed metric once for reuse by concurrent comparisons.
+ * The caller must keep the handle live throughout each comparison. */
+LLEV_API LlevStatus llev_vector_metric_new(
+    const LlevVectorMetricView* view, size_t max_dimension,
+    LlevVectorMetric** out_metric);
+LLEV_API void llev_vector_metric_free(LlevVectorMetric* metric);
+
+/** Score typed native vector ERP, DTW, Frechet, or physical-time TWED.
+ * Both series are copied under max_scratch_bytes before native kernels run.
+ * The result uses LlevTemporalDistanceResult kinds and reason codes. */
+LLEV_API LlevStatus llev_vector_temporal_distance(
+    const LlevVectorMetric* metric,
+    const LlevVectorSeriesView* left,
+    const LlevVectorSeriesView* right,
+    const LlevVectorTemporalConfig* config,
+    const LlevVectorTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
 /** Borrowed nonempty scalar samples with strictly increasing physical
  * timestamps. Unit is 1 seconds, 2 milliseconds, 3 microseconds, or
  * 4 nanoseconds. Origin is finite and no later than the first timestamp.

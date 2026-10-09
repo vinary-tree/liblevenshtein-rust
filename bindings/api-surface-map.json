@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 209 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 218 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -18,7 +18,8 @@
         "tests/ffi_temporal_online.rs",
         "tests/ffi_timestamped_index.rs",
         "tests/ffi_filter_index.rs",
-        "tests/ffi_approx_msm.rs"
+        "tests/ffi_approx_msm.rs",
+        "tests/ffi_temporal_vector.rs"
       ],
       "enums": {
         "status": {
@@ -706,6 +707,15 @@
         },
         "llev_temporal_alignment_free": {
           "symbol": "llev_temporal_alignment_free"
+        },
+        "llev_vector_metric_new": {
+          "symbol": "llev_vector_metric_new"
+        },
+        "llev_vector_metric_free": {
+          "symbol": "llev_vector_metric_free"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": "llev_vector_temporal_distance"
         }
       }
     },
@@ -1609,6 +1619,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -2512,6 +2534,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -3407,6 +3441,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -4295,6 +4341,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -5182,6 +5240,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -6067,6 +6137,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -6965,6 +7047,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -7860,6 +7954,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -8779,6 +8885,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -9669,6 +9787,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -10560,6 +10690,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -11451,6 +11593,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -12345,6 +12499,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -13239,6 +13405,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     },
@@ -13274,7 +13452,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalTimestampedIndex.jl",
         "bindings/julia/Liblevenshtein/src/SourceFilterIndex.jl",
         "bindings/julia/Liblevenshtein/src/TemporalApproxMsm.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalAlignment.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalAlignment.jl",
+        "bindings/julia/Liblevenshtein/src/TemporalVector.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -13290,7 +13469,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_timestamped_index.jl",
         "bindings/julia/Liblevenshtein/test/source_filter_index.jl",
         "bindings/julia/Liblevenshtein/test/temporal_approx_msm.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_alignment.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_alignment.jl",
+        "bindings/julia/Liblevenshtein/test/temporal_vector.jl"
       ],
       "enums": {
         "status": {
@@ -14023,6 +14203,15 @@
         },
         "llev_temporal_alignment_free": {
           "symbol": "close!"
+        },
+        "llev_vector_metric_new": {
+          "symbol": "FixedChannelMetric"
+        },
+        "llev_vector_metric_free": {
+          "symbol": "close!"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": "vector_temporal_distance"
         }
       }
     },
@@ -14851,6 +15040,18 @@
         "llev_temporal_alignment_free": {
           "symbol": null,
           "_reason": "FINDING: additive revision-21 native temporal alignment witnesses are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_new": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_metric_free": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
+        },
+        "llev_vector_temporal_distance": {
+          "symbol": null,
+          "_reason": "FINDING: additive revision-22 typed vector temporal metrics are not yet projected into this language facade; binding parity is tracked separately"
         }
       }
     }

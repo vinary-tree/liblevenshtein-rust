@@ -212,6 +212,15 @@ export ABI_VERSION,
     freeze!,
     query_index_range,
     temporal_distance,
+    VectorChannel,
+    FixedChannelMetric,
+    VectorTemporalSeries,
+    VectorTemporalLimits,
+    vector_temporal_distance,
+    vector_erp_distance,
+    vector_dtw_distance,
+    vector_frechet_distance,
+    vector_timestamped_twed_distance,
     TemporalAlignmentStep,
     TemporalAlignmentWitness,
     TemporalAlignmentOutcome,
@@ -1127,6 +1136,7 @@ include("TemporalIndex.jl")
 include("TemporalApproxMsm.jl")
 include("TemporalMetricDomains.jl")
 include("TemporalTimestamped.jl")
+include("TemporalVector.jl")
 include("TemporalAlignment.jl")
 include("TemporalTimestampedIndex.jl")
 include("TemporalRolling.jl")
