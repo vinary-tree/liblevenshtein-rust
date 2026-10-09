@@ -177,6 +177,10 @@ export ABI_VERSION,
     TemporalRangeCursor,
     query_temporal_range,
     query_msm_with_safe_bound,
+    MsmPrefilterLimits,
+    MsmPrefilterCandidate,
+    MsmPrefilterCursor,
+    filter_msm_source,
     TemporalIndex,
     TemporalSearchLimits,
     TemporalIndexCursor,
@@ -1158,6 +1162,7 @@ include("TemporalQuantization.jl")
 include("TemporalDeltaEncoding.jl")
 include("TemporalSaxEncoding.jl")
 include("TemporalQueries.jl")
+include("TemporalMsmPrefilter.jl")
 include("TemporalIndex.jl")
 include("TemporalApproxMsm.jl")
 include("TemporalMetricDomains.jl")

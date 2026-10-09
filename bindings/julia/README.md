@@ -505,6 +505,15 @@ query ceilings. `query_temporal_range` also accepts `prefilter=:msm_length`.
 Heuristic prefilters require `allow_false_negatives=true`; they can omit true
 matches and are unsuitable for an exact range query.
 
+`filter_msm_source(source, query; mode=:length, threshold)` exposes the
+filter-only native operation as a one-shot Julia cursor. It evaluates one
+candidate on demand and returns a copied `MsmPrefilterCandidate` containing
+its source ID, samples, and selector score. `MsmPrefilterLimits` bound
+cumulative candidates, emitted results, and native work; `TemporalLimits`
+bound each native score. Use `next_batch!`, `reduce_batches!`, `close`, or
+`cancel!` to control iteration. The three heuristic modes (`:euclidean`,
+`:l1`, `:combined`) require the same explicit false-negative opt-in.
+
 ```julia
 query = [1.0, 2.0, 3.0]
 candidate = [1.0, 4.0, 3.0]
@@ -688,6 +697,7 @@ variants, protocols, or methods.
 | `expand_phonetic_with_costs` | `llev_phonetic_expand_with_costs` | bounded reverse phonetic expansion |
 | `feature_set_distance` | `llev_phonetic_feature_set_distance` | IPA feature classification and relations |
 | `feed!` | `llev_phonetic_online_stream_feed`, `llev_phonetic_transducer_feed` | character-level phonetic search and scanner lifecycle; incremental phonetic rewriting and lifecycle |
+| `filter_msm_source` | `llev_temporal_lower_bound` | project ABI operation |
 | `finish!` | `llev_phonetic_online_stream_finish`, `llev_phonetic_transducer_finish` | character-level phonetic search and scanner lifecycle; incremental phonetic rewriting and lifecycle |
 | `FixedChannelMetric` | `llev_vector_metric_new` | project ABI operation |
 | `frechet_candidate_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |

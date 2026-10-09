@@ -93,6 +93,27 @@ msm_scan() = sort([(UInt(i - 1), id,
     LL.msm_distance(query, samples).value)
     for (i, (id, samples)) in enumerate(pairs)];
     by=match -> (match[3], match[1]))[1:3]
+msm_prefilter() = collect(LL.filter_msm_source(source, query;
+    threshold=1.0))
+function msm_prefilter_native_c()
+    kept = LL.MsmPrefilterCandidate[]
+    limits = Ref(LL.TemporalLimits())
+    for entry in source.entries
+        output = Ref(LL.RawTemporalDistanceResult(0.0, 0, 0, 0, 0, 0))
+        status = GC.@preserve query entry ccall(
+            LL.native(:llev_temporal_lower_bound), Cint,
+            (Ptr{Float64}, Csize_t, Ptr{Float64}, Csize_t,
+                UInt32, Float64, Csize_t, Ref{LL.TemporalLimits},
+                Ref{LL.RawTemporalDistanceResult}),
+            pointer(query), length(query), pointer(entry.samples),
+            length(entry.samples), UInt32(6), 1.0, 0, limits, output)
+        status == 0 || error("native MSM prefilter control failed")
+        output[].kind == 0 && output[].value <= 1.0 &&
+            push!(kept, LL.MsmPrefilterCandidate(entry.id,
+                copy(entry.samples), output[].value))
+    end
+    kept
+end
 online() = collect(LL.online_observations(:erp, query, candidate;
     cutoff=100.0))
 ngram() = collect(LL.query_ngram(terms, "term-007", 1;
@@ -184,6 +205,9 @@ try
         error("online vector Fréchet differs from its native exact score")
     vector_frechet_native_c() == vector_frechet().value ||
         error("Julia vector Fréchet differs from the direct C control")
+    [(entry.id, entry.score) for entry in msm_prefilter()] ==
+        [(entry.id, entry.score) for entry in msm_prefilter_native_c()] ||
+        error("Julia MSM prefilter differs from the direct C control")
     println("Julia ", VERSION, "; temporal entries=32 x 16 samples; ",
         "filter terms=32 x 8 bytes; result IDs=", length(actual))
     sample("scalar DTW 16 x 16", () ->
@@ -207,6 +231,8 @@ try
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
     sample("32-entry scalar MSM kNN", msm_scan)
+    sample("32-entry MSM prefilter", msm_prefilter)
+    sample("32-entry MSM direct C", msm_prefilter_native_c)
     sample("32-entry advisory MSM kNN", approx_advice)
     sample("32-entry exhaustive MSM kNN", approx_full)
     sample("32-entry timestamped scan", timestamped_scan)
