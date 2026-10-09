@@ -197,6 +197,26 @@ function query_metric_range(index::MetricErpIndex,
         page_work_units, page_results)
 end
 
+"""Exact bounded kNN on the ERP gap quotient, ordered by distance and ID."""
+function query_metric_knn(index::MetricErpIndex,
+    query::ErpQuotientSeries, k::Integer; kwargs...)
+    metric_erp_gap_matches(index.config, query)
+    query_index_knn(getfield(index, :_index),
+        getfield(query, :_samples), k; kwargs...)
+end
+
+function query_metric_knn(index::MetricErpIndex,
+    raw::AbstractVector{<:Real}, k::Integer;
+    limits::TemporalSearchLimits=TemporalSearchLimits(),
+    page_results::Integer=DEFAULT_MATCH_BATCH)
+    inner = getfield(index, :_index)
+    inner.closed && throw(ArgumentError("metric ERP index is closed"))
+    inner.frozen || throw(ArgumentError("metric ERP index must be frozen"))
+    query = representative(index.config, raw;
+        max_series_len=limits.max_series_len)
+    query_metric_knn(index, query, k; limits, page_results)
+end
+
 freeze!(index::MetricErpIndex) =
     (freeze!(getfield(index, :_index)); index)
 close!(index::MetricErpIndex) = close!(getfield(index, :_index))
@@ -248,6 +268,24 @@ function query_metric_range(index::MetricFrechetIndex,
         page_work_units, page_results)
 end
 
+"""Exact bounded kNN over nonempty discrete Fréchet stutter classes."""
+query_metric_knn(index::MetricFrechetIndex,
+    query::FrechetStutterClass, k::Integer; kwargs...) =
+    query_index_knn(getfield(index, :_index),
+        getfield(query, :_samples), k; kwargs...)
+
+function query_metric_knn(index::MetricFrechetIndex,
+    raw::AbstractVector{<:Real}, k::Integer;
+    limits::TemporalSearchLimits=TemporalSearchLimits(),
+    page_results::Integer=DEFAULT_MATCH_BATCH)
+    inner = getfield(index, :_index)
+    inner.closed && throw(ArgumentError("metric Fréchet index is closed"))
+    inner.frozen || throw(ArgumentError("metric Fréchet index must be frozen"))
+    query = FrechetStutterClass(raw;
+        max_series_len=limits.max_series_len)
+    query_metric_knn(index, query, k; limits, page_results)
+end
+
 freeze!(index::MetricFrechetIndex) =
     (freeze!(getfield(index, :_index)); index)
 close!(index::MetricFrechetIndex) = close!(getfield(index, :_index))
@@ -282,6 +320,13 @@ function query_metric_range(index::MetricMsmIndex,
     query_index_range(getfield(index, :_index), raw; kwargs...)
 end
 
+"""Exact bounded kNN on the nonempty MSM metric domain."""
+function query_metric_knn(index::MetricMsmIndex,
+    raw::AbstractVector{<:Real}, k::Integer; kwargs...)
+    isempty(raw) && throw(ArgumentError("metric MSM query must be nonempty"))
+    query_index_knn(getfield(index, :_index), raw, k; kwargs...)
+end
+
 freeze!(index::MetricMsmIndex) =
     (freeze!(getfield(index, :_index)); index)
 close!(index::MetricMsmIndex) = close!(getfield(index, :_index))
@@ -312,6 +357,11 @@ end
 query_metric_range(index::MetricTwedIndex,
     raw::AbstractVector{<:Real}; kwargs...) =
     query_index_range(getfield(index, :_index), raw; kwargs...)
+
+"""Exact bounded kNN under the validated unit-grid TWED configuration."""
+query_metric_knn(index::MetricTwedIndex,
+    raw::AbstractVector{<:Real}, k::Integer; kwargs...) =
+    query_index_knn(getfield(index, :_index), raw, k; kwargs...)
 
 freeze!(index::MetricTwedIndex) =
     (freeze!(getfield(index, :_index)); index)

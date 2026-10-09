@@ -48,8 +48,19 @@
         @test all(task -> fetch(task) == UInt64[7, 11], tasks)
         @test_throws ArgumentError LL.query_metric_range(erp_index,
             LL.ErpQuotientSeries([1.0, 2.0], -0.0); cutoff=0.0)
+        nearest = LL.query_metric_knn(erp_index,
+            [1.0, 0.0, 2.0], 2; page_results=1)
+        @test [match.id for match in LL.query_metric_knn(erp_index,
+            right, 1)] == UInt64[7]
+        @test_throws ArgumentError LL.query_metric_knn(erp_index,
+            LL.ErpQuotientSeries([1.0, 2.0], -0.0), 1)
+        @test_throws LL.TemporalQueryIncomplete LL.query_metric_knn(
+            erp_index, right, 1;
+            limits=LL.TemporalSearchLimits(max_candidates=0))
         close(erp_index)
         @test !isopen(erp_index)
+        @test [(match.id, match.distance) for match in nearest] ==
+            [(UInt64(7), 0.0), (UInt64(11), 0.0)]
         @test sort([(match.id, match.distance) for match in cursor]) ==
             [(UInt64(7), 0.0), (UInt64(11), 0.0)]
         @test sort([(match.id, match.distance) for match in second]) ==
@@ -93,6 +104,13 @@
             [(UInt64(7), 0.0), (UInt64(11), 0.0)]
         @test_throws ArgumentError LL.query_metric_range(frechet_index,
             UntouchableLargeVector(4);
+            limits=LL.TemporalSearchLimits(max_series_len=3))
+        @test [match.id for match in LL.query_metric_knn(frechet_index,
+            [1.0, 1.0, 2.0], 2; page_results=1)] == UInt64[7, 11]
+        @test_throws ArgumentError LL.query_metric_knn(frechet_index,
+            Float64[], 1)
+        @test_throws ArgumentError LL.query_metric_knn(frechet_index,
+            UntouchableLargeVector(4), 1;
             limits=LL.TemporalSearchLimits(max_series_len=3))
     finally
         close(frechet_index)
@@ -144,6 +162,10 @@ end
         @test [(match.id, match.distance) for match in
             LL.query_metric_range(msm_index, query; cutoff=0.0)] ==
             [(UInt64(7), 0.0)]
+        @test [match.id for match in LL.query_metric_knn(msm_index,
+            query, 2)] == UInt64[7, 11]
+        @test_throws ArgumentError LL.query_metric_knn(msm_index,
+            Float64[], 1)
     finally
         close(msm_index)
     end
@@ -159,6 +181,8 @@ end
         @test [(match.id, match.distance) for match in
             LL.query_metric_range(twed_index, query; cutoff=0.0)] ==
             [(UInt64(7), 0.0)]
+        @test [match.id for match in LL.query_metric_knn(twed_index,
+            query, 2)] == UInt64[7, 11]
     finally
         close(twed_index)
     end

@@ -169,14 +169,18 @@ and Fréchet series can have zero distance while differing as arrays.
 `metric_erp_distance` and `metric_frechet_distance` retain the native bounded
 score outcome. `MetricErpIndex` and `MetricFrechetIndex` wrap frozen native
 range indexes; `query_metric_range` returns a lazy cursor that can outlive the
-index handle. See the [metric-domain guide](../../README.md#metric-temporal-domains)
+index handle. `query_metric_knn(index, query, k)` returns an exact bounded
+result cursor over the same canonical domain; the full native scan completes
+before results become visible, and the cursor survives closing the index.
+See the [metric-domain guide](../../README.md#metric-temporal-domains)
 for construction and ownership examples.
 
 `MetricMsmConfig` validates a positive split/merge cost and a nonempty MSM
 domain. `MetricTwedConfig` validates positive stiffness and nonnegative gap
 penalty on the unit time grid. Their `metric_msm_distance` and
 `metric_twed_distance` methods, plus `MetricMsmIndex` and `MetricTwedIndex`,
-use the same native bounded distance and frozen range cursor contracts.
+use the same native bounded distance, frozen range cursor, and exact kNN
+cursor contracts.
 
 `TimestampedSeries` owns finite values and strictly increasing physical
 timestamps in a canonical unit and shared origin. `MetricTimestampedTwedConfig`

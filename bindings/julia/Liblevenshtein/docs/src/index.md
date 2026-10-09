@@ -168,13 +168,19 @@ quantization, then use the frozen temporal range cursor. After `freeze!`, a
 `query_metric_range` cursor retains its snapshot even if the index closes.
 The usual page and cumulative limits apply. ERP representatives must use the
 same gap bit pattern, including the sign of zero.
+`query_metric_knn(index, query, k)` accepts the same canonical or raw query
+domains and returns a bounded exact result cursor ordered by distance and ID.
+The native scan finishes before the cursor is returned; exhausting a limit
+raises `TemporalQueryIncomplete` without publishing a partial top-k. Result
+pages remain available after the index closes.
 
 For the other two metric parameter families, `MetricMsmConfig` validates a
 strictly positive split/merge cost and requires nonempty series;
 `MetricTwedConfig` validates positive stiffness and nonnegative gap penalty
 for unit-grid TWED. `metric_msm_distance`, `metric_twed_distance`,
 `MetricMsmIndex`, and `MetricTwedIndex` retain the native bounded score and
-lazy range cursor behavior under those validated configurations.
+lazy range cursor behavior under those validated configurations. Their
+`query_metric_knn` methods use the same exact native scan and result cursor.
 
 ### Physical-time TWED
 
