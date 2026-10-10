@@ -21,6 +21,7 @@ export ABI_VERSION,
     BUILD_FEATURE_CORE,
     BUILD_FEATURE_PHONETIC,
     BUILD_FEATURE_PHONETIC_AOT,
+    BUILD_FEATURE_SERIALIZATION,
     Status,
     Algorithm,
     QueryOrder,
@@ -130,6 +131,10 @@ export ABI_VERSION,
     compiled_phonetic_bytes,
     load_compiled_phonetic_rules,
     load_compiled_phonetic_pattern,
+    BincodeDictionaryLimits,
+    BincodeDictionaryTerms,
+    bincode_dictionary_bytes,
+    bincode_dictionary_terms,
     insert!,
     remove!,
     evaluate,
@@ -1219,6 +1224,7 @@ include("PhoneticExpansion.jl")
 include("PhoneticFeatures.jl")
 include("PhoneticFiles.jl")
 include("PhoneticAot.jl")
+include("DictionaryBincode.jl")
 
 function __init__()
     REDUCER_CALLBACK[] = @cfunction(reducer_callback, Cint,

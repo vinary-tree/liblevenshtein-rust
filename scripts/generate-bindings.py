@@ -229,7 +229,7 @@ def validate(model: dict) -> None:
     }
     if model.get("interop") != expected_interop:
         raise SystemExit("binding model changed the shared interop identity")
-    if model.get("abiVersion") != 1 or model.get("apiRevision") != 31:
+    if model.get("abiVersion") != 1 or model.get("apiRevision") != 32:
         raise SystemExit("unexpected ABI/API revision")
     if model.get("defaultMatchBatch") != 256:
         raise SystemExit("default match batch must remain 256 in ABI v1")
@@ -275,6 +275,7 @@ def render_c(model: dict) -> str:
             "CORE": "Core distance, transducer, cursor, and batch surface.",
             "PHONETIC": "Compiled phonetic patterns and rewrite-rule sets.",
             "PHONETIC_AOT": "Versioned compiled phonetic rule and pattern bytes.",
+            "SERIALIZATION": "Native dictionary bincode serialization and decoding.",
         }[name]
         lines.append(f"/** Build-feature bit: {description} */")
         lines.append(f"#define LLEV_BUILD_FEATURE_{name} UINT64_C({value})")

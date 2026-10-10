@@ -3,7 +3,7 @@
 /// Stable liblevenshtein native ABI version.
 pub const LLEV_ABI_VERSION: u32 = 1;
 /// Additive API revision within this ABI version.
-pub const LLEV_API_REVISION: u32 = 31;
+pub const LLEV_API_REVISION: u32 = 32;
 
 /// Compiled binding feature: core.
 pub const LLEV_BUILD_FEATURE_CORE: u64 = 1;
@@ -11,6 +11,8 @@ pub const LLEV_BUILD_FEATURE_CORE: u64 = 1;
 pub const LLEV_BUILD_FEATURE_PHONETIC: u64 = 2;
 /// Compiled binding feature: phonetic_aot.
 pub const LLEV_BUILD_FEATURE_PHONETIC_AOT: u64 = 4;
+/// Compiled binding feature: serialization.
+pub const LLEV_BUILD_FEATURE_SERIALIZATION: u64 = 8;
 
 /// Result of a fallible native operation.
 #[repr(u32)]

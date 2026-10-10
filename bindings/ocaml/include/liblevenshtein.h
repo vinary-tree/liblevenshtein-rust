@@ -931,6 +931,46 @@ LLEV_API LlevStatus llev_phonetic_pattern_from_bytes(
 /** Release and clear an exact owned AOT byte buffer. NULL is a no-op. */
 LLEV_API void llev_owned_bytes_free(LlevOwnedBytes* value);
 
+/** Borrowed UTF-8 term bytes; an empty term may have a NULL data pointer. */
+typedef struct LlevUtf8Slice {
+    const uint8_t* data;
+    size_t len;
+} LlevUtf8Slice;
+
+/** Caller-selected ceilings for native dictionary bincode input and output. */
+typedef struct LlevDictionaryBincodeLimits {
+    size_t max_terms;
+    size_t max_term_bytes;
+    size_t max_total_term_bytes;
+    size_t max_payload_bytes;
+} LlevDictionaryBincodeLimits;
+
+typedef struct LlevDecodedBincodeTerms LlevDecodedBincodeTerms;
+
+/** Encode byte-dictionary terms with the native fixed-int little-endian
+ * bincode format. format_version must be 1. The input terms are copied for
+ * this call; output must be released with llev_owned_bytes_free. The
+ * serialization feature is required, otherwise UNSUPPORTED is returned. */
+LLEV_API LlevStatus llev_dictionary_bincode_serialize(
+    uint32_t format_version, const LlevUtf8Slice* terms, size_t term_count,
+    const LlevDictionaryBincodeLimits* limits, LlevOwnedBytes* out_bytes);
+
+/** Decode one complete native bincode dictionary payload. A bounded preflight
+ * validates every fixed-width count, UTF-8 term and payload boundary before
+ * the native dictionary decoder allocates. format_version must be 1. */
+LLEV_API LlevStatus llev_dictionary_bincode_deserialize(
+    uint32_t format_version, const uint8_t* data, size_t len,
+    const LlevDictionaryBincodeLimits* limits,
+    LlevDecodedBincodeTerms** out_terms);
+
+/** Inspect an immutable decoded term snapshot. Views remain valid until free. */
+LLEV_API LlevStatus llev_decoded_bincode_terms_len(
+    const LlevDecodedBincodeTerms* terms, size_t* out_len);
+LLEV_API LlevStatus llev_decoded_bincode_term_at(
+    const LlevDecodedBincodeTerms* terms, size_t index,
+    LlevUtf8Slice* out_term);
+LLEV_API void llev_decoded_bincode_terms_free(LlevDecodedBincodeTerms* terms);
+
 /** Dimension costs for native articulatory distance. Every field must be
  * finite and nonnegative. NULL selects Rust's FeatureDistanceWeights::standard.
  * The layout is seven consecutive IEEE-754 binary64 values. */

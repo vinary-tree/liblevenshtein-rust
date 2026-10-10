@@ -584,6 +584,13 @@ scales, and weights for typed vector comparisons.
   For normalized dictionaries, character-level and token-level grep,
   incremental rewriting, expansion, IPA feature queries, trusted file
   loaders, and versioned AOT bytes, see the [phonetic guide](docs/src/phonetic.md).
+- For a binary snapshot of a byte-domain dictionary's accepted terms, use
+  `bincode_dictionary_bytes(terms)` and close the iterator returned by
+  `bincode_dictionary_terms(bytes)`. The native encoder canonicalizes the term
+  language and uses the Rust bincode V1 dictionary format. This format stores
+  terms only; mapping values and in-memory backend layout are not preserved.
+  Each call has explicit term-count, term-size, total-term-byte, and payload-byte
+  ceilings and requires `BUILD_FEATURE_SERIALIZATION` and API revision 32.
 
 ## API reference
 
@@ -641,6 +648,8 @@ General-registry package or a versioned release reference.
 | `similar_phonetic_chars`, `voicing_pair`, `are_phonetically_similar`, `is_free_phonetic_substitution`, `expand_feature_based` | Distinct native IPA relations and expansions. |
 | `load_phonetic_rules`, `load_phonetic_pattern` | Trusted local `.llev` include and `.llre` import resolution. |
 | `compiled_phonetic_bytes`, `load_compiled_phonetic_rules`, `load_compiled_phonetic_pattern` | Optional API-revision-8 binary AOT roundtrip, gated by `BUILD_FEATURE_PHONETIC_AOT`. |
+| `bincode_dictionary_bytes(terms; format_version=1, max_terms=100_000, max_term_bytes=1_048_576, max_total_term_bytes=67_108_864, max_payload_bytes=100_663_296)` | Encode the accepted UTF-8 byte-dictionary term language in native bincode V1 bytes. |
+| `bincode_dictionary_terms(bytes; format_version=1, ...)` | Validate and decode one complete bincode V1 payload into a closeable immutable term snapshot. |
 | `close`, `isopen` | Deterministic lifecycle for every native owner. |
 
 `Match.term` is a `String`, `Vector{UInt8}`, or `Vector{UInt64}` according to

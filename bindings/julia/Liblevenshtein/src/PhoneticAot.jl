@@ -1,5 +1,5 @@
 """An owned native byte buffer; only `llev_owned_bytes_free` releases it."""
-struct RawPhoneticBytes
+struct RawOwnedBytes
     data::Ptr{UInt8}
     len::Csize_t
 end
@@ -16,17 +16,17 @@ function compiled_phonetic_bytes(value::Union{PhoneticRuleSet,PhoneticPattern};
     require_phonetic_aot()
     symbol = value isa PhoneticRuleSet ? :llev_phonetic_rules_to_bytes :
         :llev_phonetic_pattern_to_bytes
-    output = Ref(RawPhoneticBytes(C_NULL, 0))
+    output = Ref(RawOwnedBytes(C_NULL, 0))
     try
         checked(ccall(native(symbol), Cint,
-            (Ptr{Cvoid}, Csize_t, Ref{RawPhoneticBytes}), require_open(value),
+            (Ptr{Cvoid}, Csize_t, Ref{RawOwnedBytes}), require_open(value),
             checked_csize(max_output_bytes, "max_output_bytes"), output), symbol)
         bytes = output[]
         bytes.len == 0 && return UInt8[]
         bytes.data != C_NULL || error("native AOT returned null nonempty bytes")
         copy(unsafe_wrap(Vector{UInt8}, bytes.data, Int(bytes.len); own=false))
     finally
-        ccall(native(:llev_owned_bytes_free), Cvoid, (Ref{RawPhoneticBytes},), output)
+        ccall(native(:llev_owned_bytes_free), Cvoid, (Ref{RawOwnedBytes},), output)
     end
 end
 

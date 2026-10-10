@@ -76,6 +76,7 @@
 mod approx_msm;
 mod automata;
 mod costs;
+mod dictionary_bincode;
 mod distance;
 mod filter;
 mod filter_index;
@@ -108,6 +109,7 @@ mod wallbreaker;
 pub use approx_msm::*;
 pub use automata::*;
 pub use costs::*;
+pub use dictionary_bincode::*;
 pub use distance::*;
 pub use filter::*;
 pub use filter_index::*;

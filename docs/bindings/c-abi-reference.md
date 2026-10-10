@@ -1278,6 +1278,36 @@ provides worked examples while using these same native functions.
 
 ---
 
+## 8B. Bounded dictionary bincode snapshots
+
+API revision 32 adds five dictionary-byte operations behind
+`LLEV_BUILD_FEATURE_SERIALIZATION`. `llev_dictionary_bincode_serialize`
+accepts borrowed `LlevUtf8Slice` terms, constructs the native byte-domain
+dictionary language, and returns a `LlevOwnedBytes` buffer released through
+`llev_owned_bytes_free`. `llev_dictionary_bincode_deserialize` accepts one
+complete binary payload and returns an independent, immutable
+`LlevDecodedBincodeTerms` snapshot. Read its length and borrowed term views
+with `llev_decoded_bincode_terms_len` and
+`llev_decoded_bincode_term_at`; the views expire when
+`llev_decoded_bincode_terms_free` releases the snapshot. The source bytes may
+be released immediately after a successful decode.
+
+The format argument is currently `1`, the native fixed-integer,
+little-endian bincode dictionary term encoding. Other versions return
+`INVALID_ARGUMENT`. This path preserves the accepted UTF-8 term language,
+including an empty term, but not dictionary values or the in-memory backend.
+The resulting bytes match the native `BincodeSerializer` output for the same
+accepted term set. Callers persist the independently owned bytes with their
+usual file or object-store operations.
+
+`LlevDictionaryBincodeLimits` requires ceilings for the term count, each term,
+total term bytes, and payload bytes. The payload ceiling must be at least eight
+bytes. Lengths, UTF-8, and exact end-of-payload are validated before native
+dictionary reconstruction. Malformed payloads return `INVALID_ARGUMENT`;
+exceeded ceilings return `LIMIT_EXCEEDED`. A failed call leaves the output
+buffer empty or the output snapshot pointer null. Without the serialization
+feature, the entry points return `UNSUPPORTED`.
+
 ## 9. A complete C consumer
 
 The program below is the whole § 7 flow in one file: obtain a resource from
