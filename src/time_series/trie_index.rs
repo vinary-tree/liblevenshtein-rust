@@ -39,7 +39,15 @@
 //! - **Hybrid search**: Uses approximate search for candidate generation,
 //!   then verifies with exact MSM distance. Accurate but slower.
 
+use super::bounded::{
+    IncompleteReason, Operand, PageBudget, ResourceKind, ResourceLedger, ResourceLimits,
+    ResourceUsage, TemporalValidationError,
+};
 use super::encoding::QuantizationConfig;
+use crate::distance::{
+    merge_and_split_distance_units_bounded, standard_distance_units_bounded,
+    transposition_distance_units_bounded,
+};
 use crate::transducer::{Algorithm, ValueYieldingQueryIterator};
 use libdictenstein::dynamic_dawg::DynamicDawg;
 use libdictenstein::{Dictionary, DictionaryValue};
@@ -72,6 +80,9 @@ pub struct TimeSeriesIndex<V: DictionaryValue = usize> {
 
     /// Values grouped by quantized byte sequence.
     buckets: Vec<Vec<V>>,
+
+    /// Quantized key parallel to each bucket, for bounded lazy candidate scans.
+    keys: Vec<Vec<u8>>,
 
     /// Current bucket and slot for each indexed value.
     locations: HashMap<V, BucketLocation>,
@@ -141,6 +152,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
         Self {
             dawg: DynamicDawg::new(),
             buckets: Vec::with_capacity(capacity),
+            keys: Vec::with_capacity(capacity),
             locations: HashMap::with_capacity(capacity),
             config,
             originals: if store_originals {
@@ -163,6 +175,35 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
     #[inline]
     pub fn len(&self) -> usize {
         self.count
+    }
+
+    #[cfg(any(feature = "ffi", test))]
+    pub(crate) fn quantized_key_slots(&self) -> usize {
+        self.keys.len()
+    }
+
+    pub(crate) fn encoded_for_value(&self, value: &V) -> Option<&[u8]> {
+        self.locations
+            .get(value)
+            .map(|&(bucket_id, _)| self.keys[bucket_id].as_slice())
+    }
+
+    /// Rebuild a verification index from its live values so replaced or
+    /// removed quantized keys cannot accumulate indefinitely.
+    #[cfg(any(feature = "ffi", test))]
+    pub(crate) fn compact_verification(&mut self) {
+        debug_assert!(self.store_originals);
+        let mut rebuilt = Self::with_verification_capacity(self.config.clone(), self.count);
+        for bucket in &self.buckets {
+            for &value in bucket {
+                let original = self
+                    .originals
+                    .get(&value)
+                    .expect("live verification value has original series");
+                rebuilt.insert(value, original);
+            }
+        }
+        *self = rebuilt;
     }
 
     /// Check if the index is empty.
@@ -223,6 +264,7 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
 
         let bucket_id = self.buckets.len();
         self.buckets.push(Vec::with_capacity(1));
+        self.keys.push(encoded.to_vec());
         let inserted = self.dawg.insert_bytes_with_value(encoded, bucket_id);
         debug_assert!(inserted, "new bucket id must be inserted for a new key");
         bucket_id
@@ -334,6 +376,94 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
         self.search_with_algorithm(query, max_distance, Algorithm::MergeAndSplit)
     }
 
+    /// Open a bounded lazy candidate scan with the same quantized-byte edit
+    /// semantics as `search`, `search_transposition`, or `search_merge_split`.
+    /// Results are advisory: quantization can introduce false positives and
+    /// false negatives relative to full-precision temporal distance.
+    ///
+    /// The cursor borrows this immutable index. Each page charges an upper
+    /// bound on DP cells before computing a key and never retains all matches.
+    pub fn search_quantized_bounded(
+        &self,
+        query: &[f64],
+        max_distance: usize,
+        algorithm: Algorithm,
+        limits: ResourceLimits,
+    ) -> Result<QuantizedCandidateCursor<'_, V>, QuantizedCandidateStartError> {
+        if !matches!(
+            algorithm,
+            Algorithm::Standard | Algorithm::Transposition | Algorithm::MergeAndSplit
+        ) {
+            return Err(TemporalValidationError::InvalidConfiguration(
+                "quantized candidate search supports standard, transposition, or merge/split",
+            )
+            .into());
+        }
+        if query.len() > limits.max_series_len {
+            return Err(TemporalValidationError::SeriesTooLong {
+                operand: Operand::Query,
+                len: query.len(),
+                limit: limits.max_series_len,
+            }
+            .into());
+        }
+        let mut encoded = Vec::new();
+        encoded.try_reserve_exact(query.len()).map_err(|_| {
+            QuantizedCandidateStartError::Resource(IncompleteReason::AllocationFailed {
+                resource: ResourceKind::ContinuationBytes,
+                requested: query.len(),
+            })
+        })?;
+        encoded.extend(query.iter().map(|&value| self.config.quantize_u8(value)));
+        let mut ledger = ResourceLedger::new(limits);
+        let retained = std::mem::size_of::<QuantizedCandidateCursor<'_, V>>()
+            .checked_add(encoded.len())
+            .ok_or(QuantizedCandidateStartError::Resource(
+                IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::ContinuationBytes,
+                },
+            ))?;
+        ledger
+            .observe_peak(ResourceKind::ContinuationBytes, retained)
+            .map_err(QuantizedCandidateStartError::Resource)?;
+        let (next_bucket, pending) = if max_distance == 0 {
+            let edges = encoded.len();
+            let nodes = edges
+                .checked_add(1)
+                .ok_or(QuantizedCandidateStartError::Resource(
+                    IncompleteReason::ArithmeticOverflow {
+                        resource: ResourceKind::TrieNodes,
+                    },
+                ))?;
+            ledger
+                .charge_many(&[
+                    (ResourceKind::WorkUnits, nodes),
+                    (ResourceKind::TrieNodes, nodes),
+                    (ResourceKind::TrieEdges, edges),
+                ])
+                .map_err(QuantizedCandidateStartError::Resource)?;
+            let matching = self
+                .dawg
+                .get_bytes_value(&encoded)
+                .filter(|&bucket_id| !self.buckets[bucket_id].is_empty())
+                .map(|bucket_id| (bucket_id, 0, 0));
+            (self.keys.len(), matching)
+        } else {
+            (0, None)
+        };
+        Ok(QuantizedCandidateCursor {
+            index: self,
+            query: encoded,
+            max_distance,
+            algorithm,
+            next_bucket,
+            pending,
+            ledger,
+            terminal: None,
+            done: false,
+        })
+    }
+
     /// Internal search implementation using the specified algorithm.
     fn search_with_algorithm(
         &self,
@@ -419,6 +549,257 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
             num_bins: self.config.num_bins,
             value_range: (self.config.min_value, self.config.max_value),
         }
+    }
+}
+
+/// Failure to construct a bounded quantized candidate cursor.
+#[derive(Debug, thiserror::Error)]
+pub enum QuantizedCandidateStartError {
+    /// Query or algorithm does not satisfy the typed domain.
+    #[error(transparent)]
+    Validation(#[from] TemporalValidationError),
+    /// Retained query state exceeds a resource ceiling or allocation failed.
+    #[error("quantized candidate construction incomplete: {0:?}")]
+    Resource(IncompleteReason),
+}
+
+/// One bounded page of quantized byte edit-distance candidates.
+pub struct QuantizedCandidatePage<V> {
+    /// Exact matches for the quantized query, advisory for original samples.
+    pub matches: Vec<(V, usize)>,
+    /// True only after all indexed byte keys have been examined.
+    pub done: bool,
+    /// Cumulative logical charges and peak retained storage.
+    pub usage: ResourceUsage,
+}
+
+/// Lazy, immutable candidate scan over a `TimeSeriesIndex` snapshot.
+///
+/// The source borrow prevents mutation between pages. A resource failure
+/// preserves any earlier exact quantized matches but never proves that the
+/// candidate set is complete. Pages retain at most their requested result
+/// count, independently of the total number of matches.
+pub struct QuantizedCandidateCursor<'a, V: DictionaryValue> {
+    index: &'a TimeSeriesIndex<V>,
+    query: Vec<u8>,
+    max_distance: usize,
+    algorithm: Algorithm,
+    next_bucket: usize,
+    pending: Option<(usize, usize, usize)>,
+    ledger: ResourceLedger,
+    terminal: Option<IncompleteReason>,
+    done: bool,
+}
+
+impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> QuantizedCandidateCursor<'_, V> {
+    /// Cumulative charges for this cursor.
+    pub fn usage(&self) -> ResourceUsage {
+        self.ledger.usage()
+    }
+
+    fn fail_or_partial(
+        &mut self,
+        reason: IncompleteReason,
+        matches: Vec<(V, usize)>,
+    ) -> Result<QuantizedCandidatePage<V>, IncompleteReason> {
+        self.terminal = Some(reason);
+        if matches.is_empty() {
+            Err(reason)
+        } else {
+            Ok(QuantizedCandidatePage {
+                matches,
+                done: false,
+                usage: self.ledger.usage(),
+            })
+        }
+    }
+
+    /// Advance at most one page under cumulative limits.
+    ///
+    /// An empty nonterminal page means its work allotment ended before a
+    /// match. The caller must continue; only `done=true` proves the quantized
+    /// candidate set is complete. A page too small for one key fails instead
+    /// of returning an endlessly resumable empty page.
+    pub fn next_page(
+        &mut self,
+        page: PageBudget,
+    ) -> Result<QuantizedCandidatePage<V>, IncompleteReason> {
+        if let Some(reason) = self.terminal {
+            return Err(reason);
+        }
+        if page.max_work_units == 0 || page.max_results == 0 {
+            let resource = if page.max_work_units == 0 {
+                ResourceKind::WorkUnits
+            } else {
+                ResourceKind::Results
+            };
+            return Err(IncompleteReason::BudgetExceeded {
+                resource,
+                limit: 0,
+                requested: 1,
+            });
+        }
+        let mut matches = Vec::new();
+        let mut page_work = 0usize;
+        while matches.len() < page.max_results && !self.done {
+            if let Some((bucket_id, slot, distance)) = self.pending {
+                if slot >= self.index.buckets[bucket_id].len() {
+                    self.pending = None;
+                    continue;
+                }
+                if page_work >= page.max_work_units {
+                    break;
+                }
+                if let Err(reason) = self.ledger.charge_many(&[
+                    (ResourceKind::WorkUnits, 1),
+                    (ResourceKind::Candidates, 1),
+                    (ResourceKind::Results, 1),
+                ]) {
+                    return self.fail_or_partial(reason, matches);
+                }
+                page_work += 1;
+                let output_bytes =
+                    match (matches.len() + 1).checked_mul(std::mem::size_of::<(V, usize)>()) {
+                        Some(bytes) => bytes,
+                        None => {
+                            return self.fail_or_partial(
+                                IncompleteReason::ArithmeticOverflow {
+                                    resource: ResourceKind::ScratchBytes,
+                                },
+                                matches,
+                            );
+                        }
+                    };
+                if let Err(reason) = self
+                    .ledger
+                    .observe_peak(ResourceKind::ScratchBytes, output_bytes)
+                {
+                    return self.fail_or_partial(reason, matches);
+                }
+                if matches.try_reserve(1).is_err() {
+                    return self.fail_or_partial(
+                        IncompleteReason::AllocationFailed {
+                            resource: ResourceKind::Results,
+                            requested: matches.len() + 1,
+                        },
+                        matches,
+                    );
+                }
+                matches.push((self.index.buckets[bucket_id][slot], distance));
+                self.pending = Some((bucket_id, slot + 1, distance));
+                continue;
+            }
+            if self.next_bucket >= self.index.keys.len() {
+                self.done = true;
+                break;
+            }
+            let bucket_id = self.next_bucket;
+            let key = &self.index.keys[bucket_id];
+            let live = !self.index.buckets[bucket_id].is_empty();
+            if live && key.len() > self.ledger.limits().max_series_len {
+                return self.fail_or_partial(
+                    IncompleteReason::BudgetExceeded {
+                        resource: ResourceKind::SeriesLength,
+                        limit: self.ledger.limits().max_series_len,
+                        requested: key.len(),
+                    },
+                    matches,
+                );
+            }
+            let cells = match self
+                .query
+                .len()
+                .checked_mul(if live { key.len() } else { 0 })
+            {
+                Some(cells) => cells,
+                None => {
+                    return self.fail_or_partial(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::DpCells,
+                        },
+                        matches,
+                    );
+                }
+            };
+            let work = match cells.checked_add(1) {
+                Some(work) => work,
+                None => {
+                    return self.fail_or_partial(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::WorkUnits,
+                        },
+                        matches,
+                    );
+                }
+            };
+            if work > page.max_work_units.saturating_sub(page_work) {
+                if page_work == 0 {
+                    return Err(IncompleteReason::BudgetExceeded {
+                        resource: ResourceKind::WorkUnits,
+                        limit: page.max_work_units,
+                        requested: work,
+                    });
+                }
+                break;
+            }
+            if let Err(reason) = self.ledger.charge_many(&[
+                (ResourceKind::WorkUnits, work),
+                (ResourceKind::DpCells, cells),
+            ]) {
+                return self.fail_or_partial(reason, matches);
+            }
+            let row_cells = self.query.len().min(key.len()).saturating_add(1);
+            let scratch = match row_cells
+                .checked_mul(if live { 3 } else { 0 })
+                .and_then(|count| count.checked_mul(std::mem::size_of::<usize>()))
+                .and_then(|bytes| {
+                    matches
+                        .len()
+                        .checked_mul(std::mem::size_of::<(V, usize)>())
+                        .and_then(|output| bytes.checked_add(output))
+                }) {
+                Some(bytes) => bytes,
+                None => {
+                    return self.fail_or_partial(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::ScratchBytes,
+                        },
+                        matches,
+                    );
+                }
+            };
+            if let Err(reason) = self
+                .ledger
+                .observe_peak(ResourceKind::ScratchBytes, scratch)
+            {
+                return self.fail_or_partial(reason, matches);
+            }
+            page_work += work;
+            self.next_bucket += 1;
+            if !live {
+                continue;
+            }
+            let distance = match self.algorithm {
+                Algorithm::Standard => {
+                    standard_distance_units_bounded(&self.query, key, self.max_distance)
+                }
+                Algorithm::Transposition => {
+                    transposition_distance_units_bounded(&self.query, key, self.max_distance)
+                }
+                Algorithm::MergeAndSplit => {
+                    merge_and_split_distance_units_bounded(&self.query, key, self.max_distance)
+                }
+                _ => unreachable!("algorithm validated at cursor construction"),
+            };
+            if let Some(distance) = distance {
+                self.pending = Some((bucket_id, 0, distance));
+            }
+        }
+        Ok(QuantizedCandidatePage {
+            matches,
+            done: self.done,
+            usage: self.ledger.usage(),
+        })
     }
 }
 
@@ -573,6 +954,23 @@ impl Default for TimeSeriesIndexBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compaction_keeps_only_live_verification_keys_and_originals() {
+        let mut index = TimeSeriesIndex::<u64>::new_with_verification(QuantizationConfig::uniform(
+            0.0, 100.0, 100,
+        ));
+        for sample in 0..50 {
+            index.insert(7, &[f64::from(sample)]);
+        }
+        assert_eq!(index.len(), 1);
+        assert_eq!(index.quantized_key_slots(), 50);
+        index.compact_verification();
+        assert_eq!(index.quantized_key_slots(), 1);
+        assert_eq!(index.get_original(&7), Some([49.0].as_slice()));
+        assert_eq!(index.search(&[49.0], 0), vec![(7, 0)]);
+        assert!(index.search(&[1.0], 0).is_empty());
+    }
 
     #[test]
     fn test_index_creation() {

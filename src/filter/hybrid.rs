@@ -140,6 +140,12 @@ impl HybridMatcher {
         self.ngram_index.len()
     }
 
+    /// Return the stable insertion ID of a live term, if present.
+    #[inline]
+    pub fn term_id(&self, term: &str) -> Option<usize> {
+        self.ngram_index.term_id(term)
+    }
+
     /// Check if the matcher is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {

@@ -84,6 +84,11 @@ variants, protocols, or methods.
 | `llev_affine_gap_distance_u64` | `llev_affine_gap_distance_u64` | project ABI operation |
 | `llev_affine_gap_distance_u64_threshold` | `llev_affine_gap_distance_u64_threshold` | project ABI operation |
 | `llev_api_revision` | `llev_api_revision` | ABI compatibility and feature discovery |
+| `llev_approx_msm_index_free` | `llev_approx_msm_index_free` | project ABI operation |
+| `llev_approx_msm_index_freeze` | `llev_approx_msm_index_freeze` | project ABI operation |
+| `llev_approx_msm_index_insert` | `llev_approx_msm_index_insert` | project ABI operation |
+| `llev_approx_msm_index_new` | `llev_approx_msm_index_new` | project ABI operation |
+| `llev_approx_msm_index_query_knn` | `llev_approx_msm_index_query_knn` | project ABI operation |
 | `llev_build_features` | `llev_build_features` | ABI compatibility and feature discovery |
 | `llev_cost_cursor_free` | `llev_cost_cursor_free` | project ABI operation |
 | `llev_cost_cursor_next_batch` | `llev_cost_cursor_next_batch` | project ABI operation |
@@ -114,12 +119,25 @@ variants, protocols, or methods.
 | `llev_hamming_distance_threshold` | `llev_hamming_distance_threshold` | project ABI operation |
 | `llev_hamming_distance_u64` | `llev_hamming_distance_u64` | project ABI operation |
 | `llev_hamming_distance_u64_threshold` | `llev_hamming_distance_u64_threshold` | project ABI operation |
+| `llev_hybrid_cursor_free` | `llev_hybrid_cursor_free` | project ABI operation |
+| `llev_hybrid_cursor_next_batch` | `llev_hybrid_cursor_next_batch` | project ABI operation |
+| `llev_hybrid_index_free` | `llev_hybrid_index_free` | project ABI operation |
+| `llev_hybrid_index_freeze` | `llev_hybrid_index_freeze` | project ABI operation |
+| `llev_hybrid_index_insert` | `llev_hybrid_index_insert` | project ABI operation |
+| `llev_hybrid_index_new` | `llev_hybrid_index_new` | project ABI operation |
+| `llev_hybrid_index_query_knn` | `llev_hybrid_index_query_knn` | project ABI operation |
+| `llev_hybrid_index_query_range` | `llev_hybrid_index_query_range` | project ABI operation |
 | `llev_indel_distance` | `llev_indel_distance` | project ABI operation |
 | `llev_indel_distance_bytes` | `llev_indel_distance_bytes` | project ABI operation |
 | `llev_indel_distance_bytes_threshold` | `llev_indel_distance_bytes_threshold` | project ABI operation |
 | `llev_indel_distance_threshold` | `llev_indel_distance_threshold` | project ABI operation |
 | `llev_indel_distance_u64` | `llev_indel_distance_u64` | project ABI operation |
 | `llev_indel_distance_u64_threshold` | `llev_indel_distance_u64_threshold` | project ABI operation |
+| `llev_jaro_similarity_utf8` | `llev_jaro_similarity_utf8` | project ABI operation |
+| `llev_keogh_plan_bounds_at` | `llev_keogh_plan_bounds_at` | project ABI operation |
+| `llev_keogh_plan_free` | `llev_keogh_plan_free` | project ABI operation |
+| `llev_keogh_plan_new` | `llev_keogh_plan_new` | project ABI operation |
+| `llev_keogh_plan_score` | `llev_keogh_plan_score` | project ABI operation |
 | `llev_last_error_message` | `llev_last_error_message` | typed failure diagnostics |
 | `llev_merge_and_split_distance` | `llev_merge_and_split_distance` | standalone merge-and-split distance |
 | `llev_merge_and_split_distance_bytes` | `llev_merge_and_split_distance_bytes` | standalone merge-and-split distance |
@@ -190,6 +208,14 @@ variants, protocols, or methods.
 | `llev_phonetic_transducer_normalize` | `llev_phonetic_transducer_normalize` | incremental phonetic rewriting and lifecycle |
 | `llev_phonetic_transducer_reset` | `llev_phonetic_transducer_reset` | incremental phonetic rewriting and lifecycle |
 | `llev_phonetic_voicing_pair` | `llev_phonetic_voicing_pair` | IPA feature classification and relations |
+| `llev_quantized_cursor_free` | `llev_quantized_cursor_free` | project ABI operation |
+| `llev_quantized_cursor_next_batch` | `llev_quantized_cursor_next_batch` | project ABI operation |
+| `llev_quantized_cursor_original` | `llev_quantized_cursor_original` | project ABI operation |
+| `llev_quantized_index_free` | `llev_quantized_index_free` | project ABI operation |
+| `llev_quantized_index_freeze` | `llev_quantized_index_freeze` | project ABI operation |
+| `llev_quantized_index_insert` | `llev_quantized_index_insert` | project ABI operation |
+| `llev_quantized_index_new` | `llev_quantized_index_new` | project ABI operation |
+| `llev_quantized_index_query` | `llev_quantized_index_query` | project ABI operation |
 | `llev_query_cache_clear` | `llev_query_cache_clear` | project ABI operation |
 | `llev_query_cache_free` | `llev_query_cache_free` | project ABI operation |
 | `llev_query_cache_new` | `llev_query_cache_new` | project ABI operation |
@@ -202,6 +228,13 @@ variants, protocols, or methods.
 | `llev_query_cursor_next_batch` | `llev_query_cursor_next_batch` | streaming result traversal and batch leases |
 | `llev_query_cursor_reduce` | `llev_query_cursor_reduce` | streaming result traversal and batch leases |
 | `llev_query_cursor_release_batch` | `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `llev_soft_dtw_gradient` | `llev_soft_dtw_gradient` | project ABI operation |
+| `llev_source_filter_index_free` | `llev_source_filter_index_free` | project ABI operation |
+| `llev_source_filter_index_freeze` | `llev_source_filter_index_freeze` | project ABI operation |
+| `llev_source_filter_index_insert` | `llev_source_filter_index_insert` | project ABI operation |
+| `llev_source_filter_index_new` | `llev_source_filter_index_new` | project ABI operation |
+| `llev_source_filter_index_query` | `llev_source_filter_index_query` | project ABI operation |
+| `llev_source_filter_utf8` | `llev_source_filter_utf8` | project ABI operation |
 | `llev_specialized_cursor_free` | `llev_specialized_cursor_free` | project ABI operation |
 | `llev_specialized_cursor_next_batch` | `llev_specialized_cursor_next_batch` | project ABI operation |
 | `llev_specialized_cursor_reduce` | `llev_specialized_cursor_reduce` | project ABI operation |
@@ -209,6 +242,46 @@ variants, protocols, or methods.
 | `llev_string_array_free` | `llev_string_array_free` | legacy owned-string plumbing |
 | `llev_string_dup` | `llev_string_dup` | legacy owned-string plumbing |
 | `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |
+| `llev_temporal_alignment_free` | `llev_temporal_alignment_free` | project ABI operation |
+| `llev_temporal_alignment_new` | `llev_temporal_alignment_new` | project ABI operation |
+| `llev_temporal_alignment_page` | `llev_temporal_alignment_page` | project ABI operation |
+| `llev_temporal_alignment_replay` | `llev_temporal_alignment_replay` | project ABI operation |
+| `llev_temporal_certificate_evidence_at` | `llev_temporal_certificate_evidence_at` | project ABI operation |
+| `llev_temporal_certificate_free` | `llev_temporal_certificate_free` | project ABI operation |
+| `llev_temporal_certificate_info` | `llev_temporal_certificate_info` | project ABI operation |
+| `llev_temporal_certificate_matches` | `llev_temporal_certificate_matches` | project ABI operation |
+| `llev_temporal_certificate_query_bits` | `llev_temporal_certificate_query_bits` | project ABI operation |
+| `llev_temporal_certificate_verify` | `llev_temporal_certificate_verify` | project ABI operation |
+| `llev_temporal_distance` | `llev_temporal_distance` | project ABI operation |
+| `llev_temporal_index_cursor_free` | `llev_temporal_index_cursor_free` | project ABI operation |
+| `llev_temporal_index_cursor_next_batch` | `llev_temporal_index_cursor_next_batch` | project ABI operation |
+| `llev_temporal_index_free` | `llev_temporal_index_free` | project ABI operation |
+| `llev_temporal_index_freeze` | `llev_temporal_index_freeze` | project ABI operation |
+| `llev_temporal_index_insert` | `llev_temporal_index_insert` | project ABI operation |
+| `llev_temporal_index_new` | `llev_temporal_index_new` | project ABI operation |
+| `llev_temporal_index_query_certified` | `llev_temporal_index_query_certified` | project ABI operation |
+| `llev_temporal_index_query_erp_automaton_range` | `llev_temporal_index_query_erp_automaton_range` | project ABI operation |
+| `llev_temporal_index_query_knn` | `llev_temporal_index_query_knn` | project ABI operation |
+| `llev_temporal_index_query_range` | `llev_temporal_index_query_range` | project ABI operation |
+| `llev_temporal_knn_cursor_free` | `llev_temporal_knn_cursor_free` | project ABI operation |
+| `llev_temporal_knn_cursor_next_batch` | `llev_temporal_knn_cursor_next_batch` | project ABI operation |
+| `llev_temporal_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
+| `llev_temporal_online_advance` | `llev_temporal_online_advance` | project ABI operation |
+| `llev_temporal_online_free` | `llev_temporal_online_free` | project ABI operation |
+| `llev_temporal_online_new` | `llev_temporal_online_new` | project ABI operation |
+| `llev_temporal_online_observation` | `llev_temporal_online_observation` | project ABI operation |
+| `llev_temporal_online_scratch_bytes` | `llev_temporal_online_scratch_bytes` | project ABI operation |
+| `llev_timestamped_twed_alignment_new` | `llev_timestamped_twed_alignment_new` | project ABI operation |
+| `llev_timestamped_twed_alignment_replay` | `llev_timestamped_twed_alignment_replay` | project ABI operation |
+| `llev_timestamped_twed_cursor_free` | `llev_timestamped_twed_cursor_free` | project ABI operation |
+| `llev_timestamped_twed_cursor_next_batch` | `llev_timestamped_twed_cursor_next_batch` | project ABI operation |
+| `llev_timestamped_twed_distance` | `llev_timestamped_twed_distance` | project ABI operation |
+| `llev_timestamped_twed_index_free` | `llev_timestamped_twed_index_free` | project ABI operation |
+| `llev_timestamped_twed_index_freeze` | `llev_timestamped_twed_index_freeze` | project ABI operation |
+| `llev_timestamped_twed_index_insert` | `llev_timestamped_twed_index_insert` | project ABI operation |
+| `llev_timestamped_twed_index_new` | `llev_timestamped_twed_index_new` | project ABI operation |
+| `llev_timestamped_twed_index_query_knn` | `llev_timestamped_twed_index_query_knn` | project ABI operation |
+| `llev_timestamped_twed_index_query_range` | `llev_timestamped_twed_index_query_range` | project ABI operation |
 | `llev_transducer_free` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `llev_transducer_query_affine` | `llev_transducer_query_affine` | domain-preserving dictionary query |
@@ -228,6 +301,7 @@ variants, protocols, or methods.
 | `llev_true_damerau_distance_threshold` | `llev_true_damerau_distance_threshold` | standalone true-Damerau distance |
 | `llev_true_damerau_distance_u64` | `llev_true_damerau_distance_u64` | standalone true-Damerau distance |
 | `llev_true_damerau_distance_u64_threshold` | `llev_true_damerau_distance_u64_threshold` | standalone true-Damerau distance |
+| `llev_twed_length_lower_bound` | `llev_twed_length_lower_bound` | project ABI operation |
 | `llev_universal_automaton_evaluate` | `llev_universal_automaton_evaluate` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_automaton_free` | `llev_universal_automaton_free` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_automaton_new` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |
@@ -235,6 +309,20 @@ variants, protocols, or methods.
 | `llev_universal_online_free` | `llev_universal_online_free` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_new` | `llev_universal_online_new` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_observation` | `llev_universal_online_observation` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_vector_box_box_lower_bound` | `llev_vector_box_box_lower_bound` | project ABI operation |
+| `llev_vector_frechet_ground_distance` | `llev_vector_frechet_ground_distance` | project ABI operation |
+| `llev_vector_frechet_ground_online_new` | `llev_vector_frechet_ground_online_new` | project ABI operation |
+| `llev_vector_frechet_online_advance` | `llev_vector_frechet_online_advance` | project ABI operation |
+| `llev_vector_frechet_online_free` | `llev_vector_frechet_online_free` | project ABI operation |
+| `llev_vector_frechet_online_new` | `llev_vector_frechet_online_new` | project ABI operation |
+| `llev_vector_frechet_online_observation` | `llev_vector_frechet_online_observation` | project ABI operation |
+| `llev_vector_frechet_online_scratch_bytes` | `llev_vector_frechet_online_scratch_bytes` | project ABI operation |
+| `llev_vector_metric_free` | `llev_vector_metric_free` | project ABI operation |
+| `llev_vector_metric_new` | `llev_vector_metric_new` | project ABI operation |
+| `llev_vector_point_box_lower_bound` | `llev_vector_point_box_lower_bound` | project ABI operation |
+| `llev_vector_temporal_candidate_lower_bound` | `llev_vector_temporal_candidate_lower_bound` | project ABI operation |
+| `llev_vector_temporal_distance` | `llev_vector_temporal_distance` | project ABI operation |
+| `llev_vector_twed_interval_lower_bound` | `llev_vector_twed_interval_lower_bound` | project ABI operation |
 | `llev_wallbreaker_cursor_cancel` | `llev_wallbreaker_cursor_cancel` | project ABI operation |
 | `llev_wallbreaker_cursor_free` | `llev_wallbreaker_cursor_free` | project ABI operation |
 | `llev_wallbreaker_cursor_next_batch` | `llev_wallbreaker_cursor_next_batch` | project ABI operation |

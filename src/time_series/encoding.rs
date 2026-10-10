@@ -1203,6 +1203,63 @@ mod tests {
     }
 
     #[test]
+    fn test_lossless_float_encoding_bit_patterns() {
+        let patterns32 = [
+            0x0000_0000u32,
+            0x8000_0000,
+            0x3f80_0000,
+            0xbf80_0000,
+            0x7f80_0000,
+            0xff80_0000,
+            0x7fc0_1234,
+        ];
+        for bits in patterns32 {
+            let value = float_encoding::decode_f32(bits);
+            assert_eq!(float_encoding::encode_f32(value), bits);
+            let ordered = float_encoding::encode_f32_total_order(value);
+            assert_eq!(
+                float_encoding::decode_f32_total_order(ordered).to_bits(),
+                bits
+            );
+        }
+
+        let patterns64 = [
+            0x0000_0000_0000_0000u64,
+            0x8000_0000_0000_0000,
+            0x3ff0_0000_0000_0000,
+            0xbff0_0000_0000_0000,
+            0x7ff8_0000_0000_1234,
+        ];
+        let values: Vec<_> = patterns64
+            .into_iter()
+            .map(float_encoding::decode_f64)
+            .collect();
+        let words = float_encoding::encode_f64_series_as_u32_pairs(&values);
+        assert_eq!(
+            words,
+            [
+                0,
+                0,
+                0x8000_0000,
+                0,
+                0x3ff0_0000,
+                0,
+                0xbff0_0000,
+                0,
+                0x7ff8_0000,
+                0x1234,
+            ]
+        );
+        assert_eq!(
+            float_encoding::decode_u32_pairs_to_f64(&words)
+                .into_iter()
+                .map(f64::to_bits)
+                .collect::<Vec<_>>(),
+            patterns64
+        );
+    }
+
+    #[test]
     fn test_f32_series_roundtrip() {
         let series = vec![1.0f32, 2.5, std::f32::consts::PI, -0.001, 1000.0];
         let encoded = float_encoding::encode_f32_series(&series);
@@ -1334,11 +1391,7 @@ mod tests {
         let series = vec![1.0, 2.0, 3.0, 4.0, 5.0, 4.0, 3.0, 2.0];
         let sax_word = sax_encoding::encode(&series, 4, 4);
 
-        assert_eq!(sax_word.len(), 4);
-        // All symbols should be in range [0, 3]
-        for &symbol in &sax_word {
-            assert!(symbol < 4);
-        }
+        assert_eq!(sax_word, vec![0, 2, 3, 1]);
     }
 
     #[test]
@@ -1346,8 +1399,7 @@ mod tests {
         let series = vec![1.0, 2.0, 3.0];
         let sax_word = sax_encoding::encode(&series, 8, 4);
 
-        assert_eq!(sax_word.len(), 8);
-        assert!(sax_word.iter().all(|&symbol| symbol < 4));
+        assert_eq!(sax_word, vec![0, 0, 0, 2, 2, 2, 3, 3]);
     }
 
     #[test]
@@ -1366,6 +1418,13 @@ mod tests {
         assert!(approx_eq(
             sax_encoding::mindist(&word3, &word4, 100, 4),
             0.0
+        ));
+
+        let far_left = [0, 3];
+        let far_right = [3, 0];
+        assert!(approx_eq(
+            sax_encoding::mindist(&far_left, &far_right, 8, 4),
+            2.0 * 2.0f64.sqrt() * 1.34
         ));
     }
 

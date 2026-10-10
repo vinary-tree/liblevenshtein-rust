@@ -5,6 +5,87 @@ import VinaryTreeInterop
 
 const LL = Liblevenshtein
 
+struct UntouchableLargeVector <: AbstractVector{Float64}
+    count::Int
+end
+Base.size(values::UntouchableLargeVector) = (values.count,)
+Base.getindex(::UntouchableLargeVector, ::Int) =
+    error("oversized input was read before its length was checked")
+
+include("temporal.jl")
+include("temporal_bounds.jl")
+include("temporal_encoding.jl")
+include("temporal_quantization.jl")
+include("temporal_delta_encoding.jl")
+include("temporal_sax_encoding.jl")
+include("temporal_queries.jl")
+include("temporal_msm_prefilter.jl")
+include("temporal_index.jl")
+include("quantized_index.jl")
+include("hybrid_index.jl")
+include("temporal_certificate.jl")
+include("temporal_rolling.jl")
+include("temporal_online.jl")
+include("temporal_metric_domains.jl")
+include("temporal_timestamped.jl")
+include("temporal_timestamped_index.jl")
+include("temporal_approx_msm.jl")
+include("temporal_alignment.jl")
+include("temporal_vector.jl")
+include("temporal_vector_bounds.jl")
+include("temporal_vector_online.jl")
+include("filter.jl")
+include("source_filter_queries.jl")
+include("source_filter_index.jl")
+
+@testset "canonical source and indexed temporal examples" begin
+    gradient = LL.soft_dtw_gradient([0.0, 1.0], [0.5, 1.5]; gamma=1.0,
+        limits=LL.TemporalLimits(max_series_len=2, max_dp_cells=4,
+            max_work_units=8, max_scratch_bytes=512))
+    @test gradient.kind === :finite
+    @test length(gradient.left_gradient) == 2
+
+    source = LL.SourceFilterSource(["hello", "help", "world"];
+        max_terms=3, max_term_bytes=16, max_source_bytes=48)
+    @test LL.ngram_candidate("helo", "hello", 1)
+    @test LL.hybrid_candidate("helo", "hello", 1)
+    @test "hello" in collect(LL.query_ngram(source, "helo", 1;
+        page_candidates=2))
+    @test "hello" in collect(LL.query_hybrid(source, "helo", 1;
+        page_candidates=2))
+
+    index = LL.TemporalIndex(:dtw; quant_min=0.0, quant_max=10.0,
+        band=2, max_entries=2, max_total_samples=6, max_series_len=3)
+    try
+        LL.insert!(index, 7, [1.0, 2.0, 3.0])
+        LL.freeze!(index)
+        cursor = LL.query_index_range(index, [1.0, 2.0, 3.0];
+            cutoff=0.0, page_work_units=1_000, page_results=1)
+        @test only(collect(cursor)).id == 7
+    finally
+        close(index)
+    end
+
+    query = [1.0, 2.0, 3.0]
+    candidate = [1.0, 4.0, 3.0]
+    @test LL.temporal_lower_bound(:keogh, query, candidate;
+        band=1).kind === :finite
+    @test LL.erp_gap_mass_lower_bound(query, candidate, 0.0).kind === :finite
+    @test LL.frechet_endpoint_lower_bound(query, candidate).kind === :finite
+    @test LL.frechet_one_sided_hausdorff_lower_bound(
+        query, candidate).kind === :finite
+    @test LL.frechet_candidate_lower_bound(query, candidate).kind === :finite
+    @test LL.twed_length_lower_bound(3, 4, 0.5).value ≈ 0.5
+    plan = LL.keogh_envelopes(query, 1)
+    try
+        @test LL.bounds_at(plan, 2) == (1.0, 3.0)
+        @test LL.lb_keogh(candidate, plan).kind === :finite
+        @test LL.lb_keogh_squared(candidate, plan).kind === :finite
+    finally
+        close(plan)
+    end
+end
+
 @testset "ABI identity and layouts" begin
     @test LL.abi_version() == LL.ABI_VERSION == 1
     @test LL.api_revision() >= LL.API_REVISION
@@ -605,6 +686,20 @@ end
             LL.query_filtered(transducer, "ce", 2,
                 id -> id !== nothing && id >= 3); batch_size=1) ==
             length(expected)
+
+        by_value = collect(LL.query_by_value(transducer, "ce", 2, 3))
+        @test all(m -> m.id == 3, by_value)
+        @test [(m.term, m.distance, m.id) for m in by_value] ==
+            [(m.term, m.distance, m.id) for m in LL.query(transducer, "ce", 2)
+                if m.id == 3]
+        ids = Set([2, 4])
+        set_cursor = LL.query_by_value_set(transducer, "ce", 2, ids)
+        push!(ids, 3)
+        by_set = collect(set_cursor)
+        @test [(m.term, m.distance, m.id) for m in by_set] ==
+            [(m.term, m.distance, m.id) for m in LL.query(transducer, "ce", 2)
+                if m.id in (2, 4)]
+        @test_throws ArgumentError LL.query_by_value(transducer, "ce", 2, -1)
 
         stopped = LL.query_filtered(transducer, "ce", 2, _ -> true)
         @test iterate(stopped) !== nothing

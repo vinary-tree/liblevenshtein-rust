@@ -32,13 +32,21 @@
 //! }
 //! ```
 
+use super::bounded::{
+    IncompleteReason, Operand, PageBudget, ResourceKind, ResourceLedger, ResourceLimits,
+    ResourceUsage, TemporalValidationError,
+};
 use super::encoding::QuantizationConfig;
 use super::lower_bounds::{LowerBoundConfig, LowerBoundStats, LowerBoundType};
 use super::msm::MsmConfig;
 use super::trie_index::TimeSeriesIndex;
+use crate::distance::standard_distance_units_bounded;
 use crate::numeric::nonnegative_ceil_to_usize;
 use libdictenstein::DictionaryValue;
-use std::collections::HashMap;
+use std::{
+    cmp::Ordering,
+    collections::{BinaryHeap, HashMap},
+};
 
 type BucketLocation = (usize, usize);
 
@@ -203,6 +211,30 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
         self.originals.len()
     }
 
+    /// Compact retired quantized keys while preserving all live IDs and
+    /// exact original series. Used by bounded foreign builders on upsert.
+    #[cfg(any(feature = "ffi", test))]
+    pub(crate) fn compact_source(&mut self) {
+        let mut rebuilt =
+            Self::with_capacity(self.quant_config().clone(), self.msm_config, self.len());
+        rebuilt.set_trie_threshold_multiplier(self.trie_threshold_multiplier);
+        rebuilt.set_lower_bound_type(self.lb_config.bounds);
+        rebuilt.set_use_lower_bounds(self.use_lower_bounds);
+        for bucket in &self.buckets {
+            for &value in bucket {
+                let original = &self.originals[&value].series;
+                rebuilt.insert(value, original);
+            }
+        }
+        *self = rebuilt;
+    }
+
+    /// Number of allocated quantized-key slots, including retired keys.
+    #[cfg(any(feature = "ffi", test))]
+    pub(crate) fn quantized_key_slots(&self) -> usize {
+        self.trie_index.quantized_key_slots()
+    }
+
     /// Check if the index is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
@@ -364,6 +396,265 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridSearchIndex<V> {
     #[inline]
     fn result_capacity_hint(&self) -> usize {
         self.originals.len().min(DEFAULT_RESULT_BUFFER_CAPACITY)
+    }
+
+    /// Open a fail-closed, lazy range cursor over the same candidate set and
+    /// MSM verification as `search_exact`. Pages follow stable bucket order
+    /// rather than globally sorting by MSM distance.
+    pub fn search_hybrid_bounded(
+        &self,
+        query: &[f64],
+        msm_threshold: f64,
+        limits: ResourceLimits,
+    ) -> Result<HybridCandidateCursor<'_, V>, HybridStartError> {
+        if Self::is_invalid_threshold(msm_threshold) {
+            return Err(TemporalValidationError::InvalidCutoff.into());
+        }
+        let mut ledger = ResourceLedger::new(limits);
+        ledger.validate_finite_series(Operand::Query, query)?;
+        ledger
+            .charge(ResourceKind::WorkUnits, query.len())
+            .map_err(HybridStartError::Resource)?;
+        let mut owned_query = Vec::new();
+        owned_query.try_reserve_exact(query.len()).map_err(|_| {
+            HybridStartError::Resource(IncompleteReason::AllocationFailed {
+                resource: ResourceKind::ContinuationBytes,
+                requested: query.len(),
+            })
+        })?;
+        owned_query.extend_from_slice(query);
+        let mut encoded = Vec::new();
+        encoded.try_reserve_exact(query.len()).map_err(|_| {
+            HybridStartError::Resource(IncompleteReason::AllocationFailed {
+                resource: ResourceKind::ContinuationBytes,
+                requested: query.len(),
+            })
+        })?;
+        encoded.extend(
+            query
+                .iter()
+                .map(|&value| self.quant_config().quantize_u8(value)),
+        );
+        let retained = std::mem::size_of::<HybridCandidateCursor<'_, V>>()
+            .checked_add(
+                owned_query
+                    .len()
+                    .checked_mul(std::mem::size_of::<f64>())
+                    .ok_or(HybridStartError::Resource(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::ContinuationBytes,
+                        },
+                    ))?,
+            )
+            .and_then(|bytes| bytes.checked_add(encoded.len()))
+            .ok_or(HybridStartError::Resource(
+                IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::ContinuationBytes,
+                },
+            ))?;
+        ledger
+            .observe_peak(ResourceKind::ContinuationBytes, retained)
+            .map_err(HybridStartError::Resource)?;
+        Ok(HybridCandidateCursor {
+            index: self,
+            query: owned_query,
+            encoded_query: encoded,
+            cutoff: msm_threshold,
+            byte_threshold: self.compute_trie_threshold(msm_threshold),
+            next_bucket: 0,
+            pending: None,
+            ledger,
+            terminal: None,
+            done: false,
+        })
+    }
+
+    /// Compute advisory hybrid kNN with the legacy threshold-expansion rule.
+    /// Each expansion scans under remaining cumulative limits and retains only
+    /// the best `k` MSM results. No partial top-k is returned on exhaustion.
+    pub fn search_hybrid_knn_bounded(
+        &self,
+        query: &[f64],
+        k: usize,
+        initial_threshold: f64,
+        limits: ResourceLimits,
+    ) -> Result<HybridKnnResult<V>, HybridStartError> {
+        if k == 0 || self.is_empty() {
+            return Ok(HybridKnnResult {
+                matches: Vec::new(),
+                usage: ResourceUsage::default(),
+            });
+        }
+        let capacity = k.min(self.len());
+        if capacity > limits.max_results {
+            return Err(HybridStartError::Resource(
+                IncompleteReason::BudgetExceeded {
+                    resource: ResourceKind::Results,
+                    limit: limits.max_results,
+                    requested: capacity,
+                },
+            ));
+        }
+        let heap_bytes = capacity
+            .checked_mul(std::mem::size_of::<KnnHeapEntry<V>>())
+            .ok_or(HybridStartError::Resource(
+                IncompleteReason::ArithmeticOverflow {
+                    resource: ResourceKind::ScratchBytes,
+                },
+            ))?;
+        if heap_bytes > limits.max_scratch_bytes {
+            return Err(HybridStartError::Resource(
+                IncompleteReason::BudgetExceeded {
+                    resource: ResourceKind::ScratchBytes,
+                    limit: limits.max_scratch_bytes,
+                    requested: heap_bytes,
+                },
+            ));
+        }
+        let mut ledger = ResourceLedger::new(limits);
+        ledger
+            .observe_peak(ResourceKind::QueueEntries, capacity)
+            .map_err(HybridStartError::Resource)?;
+        let mut threshold = if initial_threshold.is_finite() && initial_threshold > 0.0 {
+            initial_threshold
+        } else {
+            0.0
+        };
+        loop {
+            let used = ledger.usage();
+            let mut phase_limits = limits;
+            phase_limits.max_work_units -= used.work_units;
+            phase_limits.max_dp_cells -= used.dp_cells;
+            phase_limits.max_candidates -= used.candidates;
+            phase_limits.max_results = phase_limits.max_candidates;
+            phase_limits.max_scratch_bytes -= heap_bytes;
+            let mut cursor = self.search_hybrid_bounded(query, threshold, phase_limits)?;
+            let mut best = BinaryHeap::<KnnHeapEntry<V>>::new();
+            best.try_reserve_exact(capacity).map_err(|_| {
+                HybridStartError::Resource(IncompleteReason::AllocationFailed {
+                    resource: ResourceKind::Results,
+                    requested: capacity,
+                })
+            })?;
+            let mut found = 0usize;
+            loop {
+                let page = cursor
+                    .next_page(PageBudget {
+                        max_work_units: phase_limits.max_work_units.max(1),
+                        max_results: 64,
+                    })
+                    .map_err(HybridStartError::Resource)?;
+                for (id, distance) in page.matches {
+                    let sequence = found;
+                    found = found.checked_add(1).ok_or(HybridStartError::Resource(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::Results,
+                        },
+                    ))?;
+                    let entry = KnnHeapEntry {
+                        id,
+                        distance,
+                        sequence,
+                    };
+                    if best.len() < capacity {
+                        best.push(entry);
+                    } else if best.peek().is_some_and(|worst| entry < *worst) {
+                        best.pop();
+                        best.push(entry);
+                    }
+                }
+                if page.done {
+                    break;
+                }
+            }
+            let phase = cursor.usage();
+            ledger
+                .charge_many(&[
+                    (ResourceKind::WorkUnits, phase.work_units),
+                    (ResourceKind::DpCells, phase.dp_cells),
+                    (ResourceKind::Candidates, phase.candidates),
+                ])
+                .map_err(HybridStartError::Resource)?;
+            ledger
+                .observe_peak(
+                    ResourceKind::ScratchBytes,
+                    heap_bytes.checked_add(phase.scratch_bytes).ok_or(
+                        HybridStartError::Resource(IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::ScratchBytes,
+                        }),
+                    )?,
+                )
+                .map_err(HybridStartError::Resource)?;
+            ledger
+                .observe_peak(ResourceKind::ContinuationBytes, phase.continuation_bytes)
+                .map_err(HybridStartError::Resource)?;
+            if found >= k || threshold >= 1e10 {
+                let output_bytes = best
+                    .len()
+                    .checked_mul(std::mem::size_of::<(V, f64)>())
+                    .ok_or(HybridStartError::Resource(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::ScratchBytes,
+                        },
+                    ))?;
+                let transient =
+                    heap_bytes
+                        .checked_add(output_bytes)
+                        .ok_or(HybridStartError::Resource(
+                            IncompleteReason::ArithmeticOverflow {
+                                resource: ResourceKind::ScratchBytes,
+                            },
+                        ))?;
+                ledger
+                    .observe_peak(ResourceKind::ScratchBytes, transient)
+                    .map_err(HybridStartError::Resource)?;
+                let retained = std::mem::size_of::<HybridKnnResult<V>>()
+                    .checked_add(output_bytes)
+                    .ok_or(HybridStartError::Resource(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::ContinuationBytes,
+                        },
+                    ))?;
+                ledger
+                    .observe_peak(ResourceKind::ContinuationBytes, retained)
+                    .map_err(HybridStartError::Resource)?;
+                let sort_height =
+                    (usize::BITS - best.len().saturating_sub(1).leading_zeros()) as usize;
+                let sort_work = best
+                    .len()
+                    .checked_mul(sort_height.saturating_add(1))
+                    .ok_or(HybridStartError::Resource(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::WorkUnits,
+                        },
+                    ))?;
+                ledger
+                    .charge_many(&[
+                        (ResourceKind::Results, best.len()),
+                        (ResourceKind::WorkUnits, sort_work),
+                    ])
+                    .map_err(HybridStartError::Resource)?;
+                let mut entries = best.into_vec();
+                entries.sort_by(|left, right| {
+                    left.distance
+                        .total_cmp(&right.distance)
+                        .then_with(|| left.sequence.cmp(&right.sequence))
+                });
+                let matches: Vec<(V, f64)> = entries
+                    .into_iter()
+                    .map(|entry| (entry.id, entry.distance))
+                    .collect();
+                return Ok(HybridKnnResult {
+                    matches,
+                    usage: ledger.usage(),
+                });
+            }
+            threshold = if threshold > 0.0 {
+                (threshold * 2.0).min(1e10)
+            } else {
+                1.0
+            };
+        }
     }
 
     /// Search for similar series with exact MSM verification.
@@ -694,6 +985,363 @@ impl std::fmt::Display for HybridSearchStats {
             "  False positive rate: {:.1}%",
             self.false_positive_rate * 100.0
         )
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct KnnHeapEntry<V> {
+    id: V,
+    distance: f64,
+    sequence: usize,
+}
+
+impl<V> PartialEq for KnnHeapEntry<V> {
+    fn eq(&self, other: &Self) -> bool {
+        self.distance.to_bits() == other.distance.to_bits() && self.sequence == other.sequence
+    }
+}
+
+impl<V> Eq for KnnHeapEntry<V> {}
+
+impl<V> PartialOrd for KnnHeapEntry<V> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<V> Ord for KnnHeapEntry<V> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.distance
+            .total_cmp(&other.distance)
+            .then_with(|| self.sequence.cmp(&other.sequence))
+    }
+}
+
+/// Complete advisory hybrid kNN result with cumulative resource usage.
+pub struct HybridKnnResult<V> {
+    /// At most `k` exact MSM distances, sorted by distance.
+    pub matches: Vec<(V, f64)>,
+    /// Work charged across every threshold expansion.
+    pub usage: ResourceUsage,
+}
+
+/// Failure to construct a bounded hybrid candidate cursor.
+#[derive(Debug, thiserror::Error)]
+pub enum HybridStartError {
+    /// Invalid query or MSM cutoff.
+    #[error(transparent)]
+    Validation(#[from] TemporalValidationError),
+    /// Retained state exceeds a resource ceiling or allocation failed.
+    #[error("hybrid candidate construction incomplete: {0:?}")]
+    Resource(IncompleteReason),
+}
+
+/// One bounded page of verified MSM matches from an advisory candidate set.
+pub struct HybridCandidatePage<V> {
+    /// Native MSM distance for every emitted ID, in source bucket order.
+    pub matches: Vec<(V, f64)>,
+    /// True only after the configured quantized candidate set is exhausted.
+    pub done: bool,
+    /// Cumulative logical charges and peak retained storage.
+    pub usage: ResourceUsage,
+}
+
+/// Lazy, borrowed scan with quantized-byte candidate filtering followed by
+/// the source index's configured MSM lower bound and exact verification.
+///
+/// Quantization and optional heuristic bounds can omit true MSM neighbors.
+/// A complete page stream proves only completion of this advisory pipeline.
+pub struct HybridCandidateCursor<'a, V: DictionaryValue> {
+    index: &'a HybridSearchIndex<V>,
+    query: Vec<f64>,
+    encoded_query: Vec<u8>,
+    cutoff: f64,
+    byte_threshold: usize,
+    next_bucket: usize,
+    pending: Option<(usize, usize)>,
+    ledger: ResourceLedger,
+    terminal: Option<IncompleteReason>,
+    done: bool,
+}
+
+impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> HybridCandidateCursor<'_, V> {
+    /// Cumulative work and peak storage charged by this cursor.
+    pub fn usage(&self) -> ResourceUsage {
+        self.ledger.usage()
+    }
+
+    fn fail_or_partial(
+        &mut self,
+        reason: IncompleteReason,
+        matches: Vec<(V, f64)>,
+    ) -> Result<HybridCandidatePage<V>, IncompleteReason> {
+        self.terminal = Some(reason);
+        if matches.is_empty() {
+            Err(reason)
+        } else {
+            Ok(HybridCandidatePage {
+                matches,
+                done: false,
+                usage: self.ledger.usage(),
+            })
+        }
+    }
+
+    /// Advance under a page work budget and cumulative resource limits.
+    ///
+    /// Empty nonterminal pages are possible. A page too small for the next
+    /// atomic key or MSM verification fails without consuming the cursor, so
+    /// the caller can retry with a larger page budget.
+    pub fn next_page(
+        &mut self,
+        page: PageBudget,
+    ) -> Result<HybridCandidatePage<V>, IncompleteReason> {
+        if let Some(reason) = self.terminal {
+            return Err(reason);
+        }
+        if page.max_work_units == 0 || page.max_results == 0 {
+            let resource = if page.max_work_units == 0 {
+                ResourceKind::WorkUnits
+            } else {
+                ResourceKind::Results
+            };
+            return Err(IncompleteReason::BudgetExceeded {
+                resource,
+                limit: 0,
+                requested: 1,
+            });
+        }
+        let mut matches = Vec::new();
+        let mut page_work = 0usize;
+        while matches.len() < page.max_results && !self.done {
+            if let Some((bucket_id, slot)) = self.pending {
+                if slot >= self.index.buckets[bucket_id].len() {
+                    self.pending = None;
+                    continue;
+                }
+                let value = self.index.buckets[bucket_id][slot];
+                let original = &self.index.originals[&value].series;
+                if original.len() > self.ledger.limits().max_series_len {
+                    return self.fail_or_partial(
+                        IncompleteReason::BudgetExceeded {
+                            resource: ResourceKind::SeriesLength,
+                            limit: self.ledger.limits().max_series_len,
+                            requested: original.len(),
+                        },
+                        matches,
+                    );
+                }
+                let cells = match self.query.len().checked_mul(original.len()) {
+                    Some(value) => value,
+                    None => {
+                        return self.fail_or_partial(
+                            IncompleteReason::ArithmeticOverflow {
+                                resource: ResourceKind::DpCells,
+                            },
+                            matches,
+                        )
+                    }
+                };
+                let bound_work = if self.index.use_lower_bounds {
+                    self.query.len().min(original.len()).max(1)
+                } else {
+                    0
+                };
+                let work = match cells
+                    .checked_add(original.len())
+                    .and_then(|count| count.checked_add(bound_work))
+                    .and_then(|count| count.checked_add(1))
+                {
+                    Some(value) => value,
+                    None => {
+                        return self.fail_or_partial(
+                            IncompleteReason::ArithmeticOverflow {
+                                resource: ResourceKind::WorkUnits,
+                            },
+                            matches,
+                        )
+                    }
+                };
+                if work > page.max_work_units.saturating_sub(page_work) {
+                    if page_work == 0 {
+                        return Err(IncompleteReason::BudgetExceeded {
+                            resource: ResourceKind::WorkUnits,
+                            limit: page.max_work_units,
+                            requested: work,
+                        });
+                    }
+                    break;
+                }
+                if let Err(reason) = self.ledger.charge_many(&[
+                    (ResourceKind::WorkUnits, work),
+                    (ResourceKind::DpCells, cells),
+                    (ResourceKind::Candidates, 1),
+                ]) {
+                    return self.fail_or_partial(reason, matches);
+                }
+                let scratch = self
+                    .query
+                    .len()
+                    .min(original.len())
+                    .checked_add(1)
+                    .and_then(|rows| rows.checked_mul(2))
+                    .and_then(|rows| rows.checked_mul(std::mem::size_of::<f64>()))
+                    .and_then(|bytes| {
+                        (matches.len() + 1)
+                            .checked_mul(std::mem::size_of::<(V, f64)>())
+                            .and_then(|output| bytes.checked_add(output))
+                    });
+                let Some(scratch) = scratch else {
+                    return self.fail_or_partial(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::ScratchBytes,
+                        },
+                        matches,
+                    );
+                };
+                if let Err(reason) = self
+                    .ledger
+                    .observe_peak(ResourceKind::ScratchBytes, scratch)
+                {
+                    return self.fail_or_partial(reason, matches);
+                }
+                page_work += work;
+                self.pending = Some((bucket_id, slot + 1));
+                if original.iter().any(|sample| !sample.is_finite()) {
+                    return self.fail_or_partial(IncompleteReason::NumericOverflow, matches);
+                }
+                if self.index.use_lower_bounds
+                    && self.index.lb_config.lower_bound(&self.query, original) > self.cutoff
+                {
+                    continue;
+                }
+                if let Some(distance) =
+                    self.index
+                        .msm_config
+                        .distance_with_cutoff(&self.query, original, self.cutoff)
+                {
+                    if !distance.is_finite() {
+                        return self.fail_or_partial(IncompleteReason::NumericOverflow, matches);
+                    }
+                    if let Err(reason) = self.ledger.charge(ResourceKind::Results, 1) {
+                        return self.fail_or_partial(reason, matches);
+                    }
+                    if matches.try_reserve(1).is_err() {
+                        return self.fail_or_partial(
+                            IncompleteReason::AllocationFailed {
+                                resource: ResourceKind::Results,
+                                requested: matches.len() + 1,
+                            },
+                            matches,
+                        );
+                    }
+                    matches.push((value, distance));
+                }
+                continue;
+            }
+            if self.next_bucket >= self.index.buckets.len() {
+                self.done = true;
+                break;
+            }
+            let bucket_id = self.next_bucket;
+            let live = !self.index.buckets[bucket_id].is_empty();
+            let key = if live {
+                self.index
+                    .trie_index
+                    .encoded_for_value(&bucket_id)
+                    .expect("live hybrid bucket retains a quantized key")
+            } else {
+                &[]
+            };
+            if live && key.len() > self.ledger.limits().max_series_len {
+                return self.fail_or_partial(
+                    IncompleteReason::BudgetExceeded {
+                        resource: ResourceKind::SeriesLength,
+                        limit: self.ledger.limits().max_series_len,
+                        requested: key.len(),
+                    },
+                    matches,
+                );
+            }
+            let cells = match self.encoded_query.len().checked_mul(key.len()) {
+                Some(value) => value,
+                None => {
+                    return self.fail_or_partial(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::DpCells,
+                        },
+                        matches,
+                    )
+                }
+            };
+            let work = match cells.checked_add(1) {
+                Some(value) => value,
+                None => {
+                    return self.fail_or_partial(
+                        IncompleteReason::ArithmeticOverflow {
+                            resource: ResourceKind::WorkUnits,
+                        },
+                        matches,
+                    )
+                }
+            };
+            if work > page.max_work_units.saturating_sub(page_work) {
+                if page_work == 0 {
+                    return Err(IncompleteReason::BudgetExceeded {
+                        resource: ResourceKind::WorkUnits,
+                        limit: page.max_work_units,
+                        requested: work,
+                    });
+                }
+                break;
+            }
+            if let Err(reason) = self.ledger.charge_many(&[
+                (ResourceKind::WorkUnits, work),
+                (ResourceKind::DpCells, cells),
+            ]) {
+                return self.fail_or_partial(reason, matches);
+            }
+            let scratch = self
+                .encoded_query
+                .len()
+                .min(key.len())
+                .checked_add(1)
+                .and_then(|rows| rows.checked_mul(if live { 3 } else { 0 }))
+                .and_then(|rows| rows.checked_mul(std::mem::size_of::<usize>()))
+                .and_then(|bytes| {
+                    matches
+                        .len()
+                        .checked_mul(std::mem::size_of::<(V, f64)>())
+                        .and_then(|output| bytes.checked_add(output))
+                });
+            let Some(scratch) = scratch else {
+                return self.fail_or_partial(
+                    IncompleteReason::ArithmeticOverflow {
+                        resource: ResourceKind::ScratchBytes,
+                    },
+                    matches,
+                );
+            };
+            if let Err(reason) = self
+                .ledger
+                .observe_peak(ResourceKind::ScratchBytes, scratch)
+            {
+                return self.fail_or_partial(reason, matches);
+            }
+            page_work += work;
+            self.next_bucket += 1;
+            if live
+                && standard_distance_units_bounded(&self.encoded_query, key, self.byte_threshold)
+                    .is_some()
+            {
+                self.pending = Some((bucket_id, 0));
+            }
+        }
+        Ok(HybridCandidatePage {
+            matches,
+            done: self.done,
+            usage: self.ledger.usage(),
+        })
     }
 }
 

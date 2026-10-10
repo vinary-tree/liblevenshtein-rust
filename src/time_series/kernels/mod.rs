@@ -13,6 +13,8 @@ pub use frechet::{
     frechet_candidate_lower_bound, frechet_endpoint_lower_bound,
     frechet_one_sided_hausdorff_lower_bound, FrechetConfig, FrechetKernel, FrechetTransducer,
 };
+#[cfg(feature = "ffi")]
+pub(crate) use keogh::try_keogh_envelopes;
 pub use keogh::{keogh_envelopes, lb_keogh, lb_keogh_squared, KeoghPlan};
 pub use soft_dtw::{SoftDtwAnalysis, SoftDtwConfig, SoftDtwConfigError, SoftDtwGradientAnalysis};
 pub use twed::{

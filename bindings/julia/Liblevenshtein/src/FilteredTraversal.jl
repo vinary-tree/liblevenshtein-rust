@@ -59,6 +59,34 @@ function query_filtered(transducer::Transducer, input::AbstractString,
     cursor
 end
 
+function filter_id(id)
+    id === nothing && return nothing
+    id isa Integer || throw(ArgumentError("filter IDs must be integers or nothing"))
+    0 <= id <= typemax(UInt64) ||
+        throw(ArgumentError("filter ID must fit UInt64"))
+    UInt64(id)
+end
+
+"""Query by one optional provider ID, rejecting other values before term creation."""
+function query_by_value(transducer::Transducer, input::AbstractString,
+    maximum_distance::Integer, id)
+    wanted = filter_id(id)
+    query_filtered(transducer, input, maximum_distance,
+        observed -> observed === wanted)
+end
+
+"""Query by a copied set of optional provider IDs.
+
+The set is captured when the cursor is created, so callers may mutate their
+original collection without changing an active native query.
+"""
+function query_by_value_set(transducer::Transducer, input::AbstractString,
+    maximum_distance::Integer, ids)
+    wanted = Set{Union{Nothing,UInt64}}(filter_id(id) for id in ids)
+    query_filtered(transducer, input, maximum_distance,
+        observed -> observed in wanted)
+end
+
 function throw_filter_failure!(cursor::FilteredCursor)
     failure = cursor.state.failure
     failure === nothing && return nothing

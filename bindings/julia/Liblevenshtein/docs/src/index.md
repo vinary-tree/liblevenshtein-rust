@@ -32,6 +32,316 @@ The repository's
 explains the shared recurrences, ABI names, threshold sentinels, and generated
 differential tests.
 
+## Native source filtering
+
+`jaro_similarity` uses the native Unicode Jaro scorer. A positive
+`prefix_scale` up to 0.25 selects scaled Jaro-Winkler;
+`jaro_winkler_similarity` uses the conventional 0.1 scale. Each call checks
+`max_input_bytes` for both strings and `max_comparisons` for the worst-case
+scalar pair count before scoring.
+
+`query_jaro` intersects a fuzzy traversal with a minimum Jaro-Winkler score.
+It evaluates each final borrowed source prefix as the native walk reaches it,
+keeps the query-start dictionary snapshot, and streams `SpecializedMatch`
+values. This filter applies to Unicode keys. Close or cancel an unfinished
+cursor to release its native traversal promptly.
+
+`ngram_candidate` and `hybrid_candidate` call native single-source n-gram and
+hybrid filters. `query_ngram` and `query_hybrid` apply the same predicates at
+each final prefix of a fuzzy traversal. N-gram size zero follows the native
+index rule and means unigrams. The hybrid mode applies its native adaptive
+Jaro-Winkler threshold after n-gram admission. The per-input byte cap defaults
+to 4096, and hybrid Jaro work also has a comparison cap. Each source is
+indexed only for its call.
+
+`NativeSourceFilterIndex` copies a Unicode source into a frozen native n-gram
+postings index. Hybrid mode adds the native adaptive Jaro-Winkler stage.
+`query_ngram` and `query_hybrid` on this index compute a complete bounded
+candidate-ID snapshot, then lazily yield terms in source order. The iterator
+retains the copied IDs and terms after the index handle closes. A source
+cardinality, result, or hybrid comparison ceiling raises
+`SourceFilterIncomplete` before any candidate is exposed.
+
+```julia
+cursor = query_jaro(transducer, "martha", 2;
+    minimum_similarity=0.85, max_comparisons=100_000)
+try
+    for match in cursor
+        println(match.term, ": ", match.cost)
+    end
+finally
+    close(cursor)
+end
+```
+
+## Bounded scalar time series
+
+The six scalar temporal functions use the same native kernels as Rust. The
+Julia wrappers take finite real vectors and an explicit `TemporalLimits`
+budget, return `TemporalDistanceOutcome`, and borrow input memory only during
+the call. MSM uses `split_merge_cost`; ERP uses `gap`; unit-grid TWED uses
+`stiffness` and `gap_penalty`; DTW requires a Sakoe–Chiba `band`; discrete
+Fréchet has no parameters; Soft-DTW uses positive finite `gamma` and returns
+a loss rather than a metric distance.
+
+```julia
+limits = TemporalLimits(max_series_len=2048, max_dp_cells=250_000,
+    max_work_units=250_000, max_scratch_bytes=1 << 20)
+outcome = msm_distance([1.0, 2.0], [1.0, 2.5];
+    split_merge_cost=1.0, cutoff=0.5, limits)
+@assert outcome.kind == :finite && outcome.value == 0.5
+```
+
+`:above_cutoff` means an alignment exists but its exact score exceeds the
+inclusive cutoff. `:no_alignment` means the selected kernel has no finite
+path for the operand shapes or DTW band. `:incomplete` carries a checked
+resource or overflow reason and never carries a partial score. The native
+revision-11 symbol is checked before resolution so older libraries continue
+to serve the existing Julia surface. Invalid configuration or nonfinite
+samples raise a copied `NativeError`.
+
+### Soft-DTW gradients
+
+`soft_dtw_gradient` evaluates the full differentiable Soft-DTW loss and
+derivatives with respect to each input sample. Both operands must be nonempty
+and finite, and `gamma` must be positive and finite. A finite
+`SoftDtwGradientOutcome` owns `left_gradient` and `right_gradient` vectors;
+each vector has the length of its corresponding input. An incomplete result
+has no value or gradients and records its exact resource or numeric reason.
+
+```julia
+analysis = soft_dtw_gradient([0.0, 1.0], [0.5, 1.5]; gamma=0.75,
+    limits=TemporalLimits(max_series_len=2, max_dp_cells=4,
+        max_work_units=8, max_scratch_bytes=512))
+@assert analysis.kind === :finite
+@assert length(analysis.left_gradient) == 2
+```
+
+The reverse sweep needs complete forward and adjoint matrices, so scratch
+storage grows with both operand lengths. `soft_dtw_loss` evaluates only the
+loss with two retained rows when gradients are unnecessary. Soft-DTW values
+and gradients are loss quantities; they do not provide metric lower bounds.
+
+### Online temporal prefixes
+
+`TemporalOnlineAutomaton` copies a fixed query and advances over finite
+target samples for MSM, ERP, unit-grid TWED, banded DTW, and discrete
+Fréchet. `observation` reports the empty target before the first advance.
+`advance!` returns an exact prefix observation after a committed sample; a
+resource-incomplete step leaves the prior observation unchanged. Online DTW
+cutoffs and scores are squared, while scalar `dtw_distance` returns root
+distance. Soft-DTW has no online automaton.
+
+```julia
+machine = TemporalOnlineAutomaton(:erp, [1.0, 2.0]; cutoff=5.0)
+try
+    @assert observation(machine).consumed_target_len == 0
+    @assert advance!(machine, 1.0).observation.consumed_target_len == 1
+finally
+    close(machine)
+end
+```
+
+`TemporalOnlineLimits` bounds query length, live frontier positions, work per
+target sample, and scratch storage. `online_observations` presents a one-shot
+lazy stream; `reduce_observations!`, normal exhaustion, cancellation, and
+errors close its native machine.
+
+### Canonical metric temporal domains
+
+ERP identifies any sequence obtained by inserting or deleting its fixed gap
+value. Discrete Fréchet identifies paths that differ only by consecutive
+repetition. `MetricErpConfig` and `representative` remove gap samples;
+`FrechetStutterClass` collapses repetition and requires a nonempty path.
+`canonical_samples` returns a copy, preserving the representative after the
+caller changes its input or returned vector.
+
+```julia
+config = MetricErpConfig(0.0)
+left = representative(config, [1.0, 0.0, 2.0])
+right = representative(config, [1.0, 2.0])
+@assert metric_erp_distance(config, left, right).value == 0.0
+```
+
+`MetricErpIndex` and `MetricFrechetIndex` canonicalize before native
+quantization, then use the frozen temporal range cursor. After `freeze!`, a
+`query_metric_range` cursor retains its snapshot even if the index closes.
+The usual page and cumulative limits apply. ERP representatives must use the
+same gap bit pattern, including the sign of zero.
+`query_metric_knn(index, query, k)` accepts the same canonical or raw query
+domains and returns a bounded exact result cursor ordered by distance and ID.
+The native scan finishes before the cursor is returned; exhausting a limit
+raises `TemporalQueryIncomplete` without publishing a partial top-k. Result
+pages remain available after the index closes.
+For ERP range queries, `query_metric_erp_automaton_range` uses the native
+canonical automaton product. It keeps reachable antichain states, verifies
+full-precision collisions, and returns bounded lazy pages on the captured
+snapshot. The raw ERP index exposes `query_index_erp_automaton_range`.
+
+For the other two metric parameter families, `MetricMsmConfig` validates a
+strictly positive split/merge cost and requires nonempty series;
+`MetricTwedConfig` validates positive stiffness and nonnegative gap penalty
+for unit-grid TWED. `metric_msm_distance`, `metric_twed_distance`,
+`MetricMsmIndex`, and `MetricTwedIndex` retain the native bounded score and
+lazy range cursor behavior under those validated configurations. Their
+`query_metric_knn` methods use the same exact native scan and result cursor.
+
+### Quantized temporal candidates
+
+The frozen `NativeQuantizedIndex` exposes the three legacy byte-edit
+candidate searches. Quantization maps each sample to one of 1–256 bins;
+queries use `:standard`, adjacent `:transposition` (OSA), or `:merge_split`.
+The byte edit score is exact for the quantized words. It is an advisory
+filter for original time series: even a complete candidate scan cannot prove
+full-precision MSM, ERP, TWED, DTW, or Fréchet absence.
+
+```julia
+index = NativeQuantizedIndex(quant_min=0, quant_max=10, quant_bins=16,
+    max_entries=100, max_total_samples=1600, max_series_len=16)
+insert!(index, 7, [1.0, 2.0, 3.0])
+freeze!(index)
+cursor = query_quantized(index, [1.0, 2.0, 3.0], 1;
+    algorithm=:standard, page_results=32)
+try
+    while (batch = next_batch!(cursor, 32)) !== nothing
+        for candidate in batch
+            original = original_samples(cursor, candidate.id)
+            # Verify original against the intended full-precision metric here.
+        end
+    end
+finally
+    close(cursor)
+    close(index)
+end
+```
+
+The native cursor retains the frozen source after `close(index)`. Each call
+copies only one bounded page. An empty page means the work allotment was used;
+continue until `nothing`. A resource limit raises `TemporalQueryIncomplete`
+and never establishes complete candidate enumeration. `original_samples`
+copies one stored series while the cursor is open, including on its final
+nonempty page. Ordinary iteration and `reduce_batches!` close on exhaustion.
+
+### Hybrid MSM candidates
+
+`NativeHybridMsmIndex` wraps the Rust hybrid index, which first selects
+quantized byte-edit candidates, optionally prunes them, and computes exact
+move-split-merge (MSM) scores for the survivors. Its quantized candidate
+threshold scales the MSM cutoff by the configured multiplier and bin width.
+The default multiplier is 2.0. `lower_bound=:length` preserves all candidates
+that reach the MSM check; `:euclidean`, `:l1`, and `:combined` are prefix
+heuristics and can discard a true MSM neighbor. Quantization can also discard
+one. Complete iteration establishes completion of this configured pipeline,
+not full MSM recall or absence.
+
+```julia
+index = NativeHybridMsmIndex(quant_min=0, quant_max=10, quant_bins=16,
+    msm_cost=1.0, lower_bound=:length,
+    max_entries=100, max_total_samples=1600, max_series_len=16)
+insert!(index, 7, [1.0, 2.0, 3.0])
+freeze!(index)
+try
+    range = query_hybrid_msm_range(index, [1.0, 2.0, 3.0]; cutoff=1.0)
+    try
+        for match in range
+            @assert match.distance >= 0.0
+        end
+    finally
+        close(range)
+    end
+    nearest = query_hybrid_msm_knn(index, [1.0, 2.0, 3.0], 1)
+    try
+        @assert length(collect(nearest)) <= 1
+    finally
+        close(nearest)
+    end
+finally
+    close(index)
+end
+```
+
+The range cursor yields bounded pages in source bucket order. Empty pages
+must be resumed. The nearest-neighbor scan completes before returning its
+cursor, retains at most `k` scored results, and sorts those results by MSM
+score. Both cursors keep their frozen source after `close(index)`. Limits
+raise `TemporalQueryIncomplete`; nearest-neighbor exhaustion publishes no
+partial list. Use an exact `TemporalIndex(:msm)` query when a complete MSM
+range or top-k proof is needed.
+
+### Physical-time TWED
+
+`TimestampedSeries` copies each nonempty finite value series and its strictly
+increasing finite physical timestamps. Its unit is one of `:seconds`,
+`:milliseconds`, `:microseconds`, or `:nanoseconds`; its finite origin is no
+later than the first timestamp. Returned value and timestamp arrays are
+copies. `MetricTimestampedTwedConfig` validates strictly positive stiffness
+and nonnegative gap penalty. `metric_timestamped_twed_distance` requires
+matching units and origins and returns a bounded native exact score,
+above-cutoff result, or explicit incomplete reason. This physical-time
+recurrence is distinct from the unit-grid TWED kernel.
+
+`TimestampedTwedIndex` copies full-precision episodes into a typed value/time
+quantized dictionary. Freeze it before search. `insert_episode!` returns a
+stable insertion ID, so repeated caller IDs remain distinguishable.
+`query_metric_range` yields exact native matches lazily from one captured
+revision; its cursor survives closing the index and reports cumulative
+resource exhaustion through `TemporalQueryIncomplete`. The index uses
+quantization for pruning only and verifies every surviving collision against
+the retained physical timestamps.
+`query_metric_knn` computes an exact nearest-neighbor vector over the same
+frozen revision. Its bounded full scan must complete before it returns; any
+resource exhaustion raises `TemporalQueryIncomplete` with no partial list.
+Results use distance then stable episode ID order, including when metadata
+IDs repeat.
+
+`ApproxMsmIndex` uses piecewise aggregate approximation (PAA) to select a
+candidate pool, then computes exact MSM for those candidates. Its strict
+`query_approx_msm_knn` result reports the number indexed, selected, and
+exactly reranked. Only `proves_recall(result)` means all indexed entries were
+decided. Advisory and incomplete results retain exact distances for emitted
+neighbors without claiming recall. A zero-neighbor advisory result is not
+evidence that no neighbor exists.
+
+### Replayable alignment witnesses
+
+`temporal_alignment` extracts bounded native paths for MSM, ERP, unit-grid
+TWED, banded DTW, and discrete Fréchet; `timestamped_twed_alignment` covers
+physical-time TWED. A finite result owns a closeable witness whose immutable
+operations are copied to Julia in bounded pages. `replay_alignment` validates
+the path and recomputes its score from caller-supplied operands and the
+configuration captured at extraction. Julia endpoints are one-based. A
+resource-incomplete result carries no witness and identifies DP, work,
+scratch, witness-byte, or overflow exhaustion. See the
+[usage guide](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/bindings/julia/Liblevenshtein/README.md#replayable-temporal-alignment-witnesses).
+
+### Lazy temporal range queries
+
+`TemporalSeriesSource` copies a finite iterable of `(UInt64 ID, finite real
+vector)` pairs. The constructor enforces entry count, per-series length, and
+total sample-storage limits. A `query_temporal_range` cursor borrows that
+snapshot and runs the chosen native scalar kernel only when the next result
+is requested. Results follow source order and carry exact native scores.
+
+```julia
+source = TemporalSeriesSource([10 => [1.0, 2.5], 20 => [2.0, 3.0]])
+budget = TemporalQueryLimits(max_candidates=100,
+    max_results=20, max_total_dp_cells=10_000)
+cursor = query_temporal_range(source, :dtw, [1.0, 2.0];
+    band=1, cutoff=1.0, query_limits=budget)
+try
+    reduce_batches!((ids, batch) ->
+        append!(ids, (match.id for match in batch)), UInt64[], cursor)
+finally
+    close(cursor)
+end
+```
+
+Per-comparison `TemporalLimits` and cumulative `TemporalQueryLimits` are both
+enforced. A limit or native incomplete outcome raises
+`TemporalQueryIncomplete` and closes the cursor. This is an exact bounded
+scan over a finite source; native trie indexes and online automata have
+different pruning and continuation behavior.
+
 For IPA feature scores, syllable heuristics, compiled rewrite rules, and
 dictionary-free word search, see [Phonetic matching and analysis](phonetic.md).
 
@@ -204,6 +514,10 @@ predicate with each final node's optional `UInt64` ID before the native
 traversal constructs its term. It returns the same `Match` type as `query`, in
 traversal order. This is useful when a scope or tenant ID rejects most fuzzy
 matches, because rejected term strings are never built.
+`query_by_value(transducer, text, distance, id)` applies one ID, while
+`query_by_value_set(transducer, text, distance, ids)` copies the allowed IDs
+when the query starts. Both use the same native filtering path and cursor
+lifecycle as `query_filtered`.
 
 ```julia
 visitor = PrefixVisitor(
@@ -323,9 +637,6 @@ merge-and-split, and unrestricted Damerau-Levenshtein are metrics. The
 optimal-string-alignment transposition variant is intentionally non-metric and
 does not compose repeated edits through the same substring.
 
-## API
+## API reference
 
-```@autodocs
-Modules = [Liblevenshtein]
-Private = false
-```
+The [API reference](reference.md) lists the exported Julia functions and types.

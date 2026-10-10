@@ -17,8 +17,11 @@ makedocs(
     format=Documenter.HTML(
         edit_link=get(ENV, "VINARY_TREE_DOC_SOURCE_REF", "master"),
         repolink="https://github.com/vinary-tree/liblevenshtein-rust",
+        # The generated public API reference is roughly 250 KiB on Julia 1.11.
+        size_threshold=300 * 2^10,
     ),
-    pages=["API and usage" => "index.md", "Phonetic matching" => "phonetic.md"],
+    pages=["Usage" => "index.md", "API reference" => "reference.md",
+        "Phonetic matching" => "phonetic.md"],
     checkdocs=:exports,
     repo="https://github.com/vinary-tree/liblevenshtein-rust/blob/{commit}{path}#{line}",
     warnonly=false,

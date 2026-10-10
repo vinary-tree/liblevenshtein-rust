@@ -288,7 +288,10 @@ pub use encoding::QuantizationConfig;
 pub use encoding::{delta_encoding, float_encoding, sax_encoding};
 
 // Indexing exports
-pub use hybrid_search::{HybridSearchIndex, HybridSearchIndexBuilder, HybridSearchStats};
+pub use hybrid_search::{
+    HybridCandidateCursor, HybridCandidatePage, HybridKnnResult, HybridSearchIndex,
+    HybridSearchIndexBuilder, HybridSearchStats, HybridStartError,
+};
 pub use kernels::{
     erp_gap_mass_lower_bound, frechet_candidate_lower_bound, frechet_endpoint_lower_bound,
     frechet_one_sided_hausdorff_lower_bound, keogh_envelopes, lb_keogh, lb_keogh_squared,
@@ -309,7 +312,10 @@ pub use timestamped_twed_index::{
     TimestampedTwedProductLimits, TimestampedTwedProductStats, TimestampedTwedQuantizer,
     TimestampedTwedRangeContinuation, TimestampedTwedRangeMatch, TimestampedTwedRangeOutcome,
 };
-pub use trie_index::{TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats};
+pub use trie_index::{
+    QuantizedCandidateCursor, QuantizedCandidatePage, QuantizedCandidateStartError,
+    TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats,
+};
 pub use vector::{
     ChannelIdentity, ChannelLayout, ChannelVectorSeries, FixedChannelMetric,
     FoldLocalScaleProvenance, GroundMetric, L1GroundMetric, L2GroundMetric, LinfGroundMetric,

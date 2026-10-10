@@ -1367,6 +1367,983 @@ LLEV_API LlevStatus llev_wallbreaker_split_utf8(
     size_t max_distance, LlevPatternPiece* pieces, size_t capacity,
     size_t* out_required);
 
+/** Compare two UTF-8 strings with native Jaro (prefix_scale=0) or scaled
+ * Jaro-Winkler (0<prefix_scale<=0.25). Input bytes are borrowed only during
+ * the call. The caller chooses a per-input byte ceiling and a worst-case
+ * scalar comparison ceiling; exceeding either returns LIMIT_EXCEEDED before
+ * scoring. out_score is initialized before validation and must be disjoint
+ * from both inputs. A zero-length input may use NULL. */
+LLEV_API LlevStatus llev_jaro_similarity_utf8(
+    const char* left, size_t left_len,
+    const char* right, size_t right_len,
+    double prefix_scale, size_t max_input_bytes,
+    size_t max_comparisons, double* out_score);
+
+/** Check a UTF-8 source against the native n-gram (mode=1) or hybrid
+ * n-gram/Jaro-Winkler (mode=2) filter. The candidate is indexed for this
+ * call; no native handle or source memory is retained. ngram_size=0 uses
+ * unigrams as in the native index. jaro_threshold must be zero for mode=1.
+ * The inputs are borrowed and capped per input by max_input_bytes. Hybrid
+ * Jaro work is additionally capped by max_comparisons. out_accept is set to
+ * zero before validation and must be disjoint from both inputs. */
+LLEV_API LlevStatus llev_source_filter_utf8(
+    const char* query, size_t query_len,
+    const char* candidate, size_t candidate_len,
+    uint32_t mode, size_t ngram_size, size_t max_distance,
+    double jaro_threshold, size_t max_input_bytes,
+    size_t max_comparisons, uint8_t* out_accept);
+
+/** Persistent native source filter. Mode 1 uses an n-gram postings index;
+ * mode 2 additionally applies Jaro-Winkler. ngram_size must be positive,
+ * reserved must be zero, and threshold must be finite in [0,1] (zero for
+ * mode 1). Insertion copies UTF-8 terms and deduplicates them. */
+typedef struct LlevSourceFilterIndexConfig {
+    uint32_t mode;
+    uint32_t reserved;
+    size_t ngram_size;
+    double jaro_threshold;
+    size_t max_terms;
+    size_t max_term_bytes;
+    size_t max_source_bytes;
+    size_t max_query_bytes;
+} LlevSourceFilterIndexConfig;
+
+/** Fail-closed query ceilings. max_candidates bounds source cardinality;
+ * max_results bounds the complete result; max_comparisons bounds a
+ * conservative query-character x source-byte hybrid comparison count. */
+typedef struct LlevSourceFilterIndexLimits {
+    size_t max_candidates;
+    size_t max_results;
+    size_t max_comparisons;
+} LlevSourceFilterIndexLimits;
+
+typedef struct LlevSourceFilterIndex LlevSourceFilterIndex;
+
+/** Freeze is idempotent. Queries require a frozen index and copy zero-based
+ * insertion IDs into caller storage in source order. Duplicate terms retain
+ * their original ID. The query publishes no partial output on failure;
+ * out_reason=1 means source cardinality, 2 means result count, 3 means output
+ * capacity, and 4 means hybrid comparisons. On success out_reason is zero.
+ * The copied IDs remain valid after index free. */
+LLEV_API LlevStatus llev_source_filter_index_new(
+    const LlevSourceFilterIndexConfig* config,
+    LlevSourceFilterIndex** out_index);
+LLEV_API LlevStatus llev_source_filter_index_insert(
+    LlevSourceFilterIndex* index, const char* term, size_t term_len,
+    size_t* out_id);
+LLEV_API LlevStatus llev_source_filter_index_freeze(
+    LlevSourceFilterIndex* index);
+LLEV_API LlevStatus llev_source_filter_index_query(
+    const LlevSourceFilterIndex* index, const char* query, size_t query_len,
+    size_t max_distance, const LlevSourceFilterIndexLimits* limits,
+    size_t* out_ids, size_t capacity, size_t* out_len, uint32_t* out_reason);
+LLEV_API void llev_source_filter_index_free(LlevSourceFilterIndex* index);
+
+/** Scalar temporal kernels. Every value is a stable wire constant. */
+#define LLEV_TEMPORAL_MSM 1u
+#define LLEV_TEMPORAL_ERP 2u
+#define LLEV_TEMPORAL_TWED 3u
+#define LLEV_TEMPORAL_DTW 4u
+#define LLEV_TEMPORAL_FRECHET 5u
+#define LLEV_TEMPORAL_SOFT_DTW 6u
+
+/** Complete temporal result kinds. SOFT_DTW is a loss and can be negative. */
+#define LLEV_TEMPORAL_FINITE 0u
+#define LLEV_TEMPORAL_ABOVE_CUTOFF 1u
+#define LLEV_TEMPORAL_NO_ALIGNMENT 2u
+#define LLEV_TEMPORAL_INCOMPLETE 3u
+
+/** Scalar algorithm and inclusive cutoff. Positive infinity requests the
+ * unthresholded result. parameter0 is MSM cost, ERP gap, TWED stiffness, or
+ * Soft-DTW gamma. parameter1 is TWED gap penalty. band is DTW half-width.
+ * Unused fields and reserved must be zero. */
+typedef struct LlevTemporalConfig {
+    uint32_t algorithm;
+    uint32_t reserved;
+    double parameter0;
+    double parameter1;
+    size_t band;
+    double cutoff;
+} LlevTemporalConfig;
+
+/** Hard caller-chosen ceilings for one temporal comparison. The default
+ * values are 1,000,000 samples per input, 100,000,000 DP cells, 200,000,000
+ * work units, and 512 MiB temporary storage. */
+typedef struct LlevTemporalLimits {
+    size_t max_series_len;
+    size_t max_dp_cells;
+    size_t max_work_units;
+    size_t max_scratch_bytes;
+} LlevTemporalLimits;
+
+/** Finite score or exact non-score disposition. reason is 1 DP cells, 2 work
+ * units, 3 scratch bytes, or 4 arithmetic/numeric overflow when incomplete.
+ * Counters represent reserved whole-operation capacity, not elapsed time. */
+typedef struct LlevTemporalDistanceResult {
+    double value;
+    uint32_t kind;
+    uint32_t reason;
+    size_t dp_cells;
+    size_t work_units;
+    size_t scratch_bytes;
+} LlevTemporalDistanceResult;
+
+/** Evaluate one native temporal scalar kernel after validating both finite
+ * input series and reserving the complete DP/work/scratch budget. Both series
+ * are borrowed only during this call. A zero-length input may use NULL; all
+ * nonempty inputs must be aligned and readable for their declared lengths.
+ * config, limits, and out_result must be valid, with writable output storage
+ * disjoint from all inputs. Output is initialized before validation. Invalid
+ * requests return INVALID_ARGUMENT or NULL_POINTER; budget and numeric
+ * incompletion return LIMIT_EXCEEDED. No partial score is published. */
+LLEV_API LlevStatus llev_temporal_distance(
+    const double* left, size_t left_len,
+    const double* right, size_t right_len,
+    const LlevTemporalConfig* config,
+    const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
+/** Exact channel/unit identity with a positive fold-local scale and weight.
+ * All UTF-8 fields are copied at metric construction. */
+typedef struct LlevVectorChannelView {
+    const uint8_t* channel;
+    size_t channel_len;
+    const uint8_t* unit;
+    size_t unit_len;
+    double scale;
+    double weight;
+} LlevVectorChannelView;
+
+/** Immutable fixed-channel point metric and exact scale provenance. */
+typedef struct LlevVectorMetricView {
+    const LlevVectorChannelView* channels;
+    size_t channel_count;
+    const uint8_t* training_fold;
+    size_t training_fold_len;
+    const uint8_t* estimator_revision;
+    size_t estimator_revision_len;
+} LlevVectorMetricView;
+
+/** Point samples are consecutive columns, each with dimension coordinates.
+ * Timestamp fields are used only for physical-time vector TWED; its unit is
+ * 1 seconds, 2 milliseconds, 3 microseconds, or 4 nanoseconds. */
+typedef struct LlevVectorSeriesView {
+    const double* coordinates;
+    size_t sample_count;
+    size_t dimension;
+    const double* timestamps;
+    uint32_t timestamp_unit;
+    uint32_t reserved;
+    double origin;
+} LlevVectorSeriesView;
+
+/** Algorithm 2 ERP, 4 banded DTW, 5 discrete Frechet, or 7 timestamped TWED.
+ * ERP and TWED require one finite gap_or_sentinel point. Unused fields must
+ * be zero or NULL; cutoff is inclusive or positive infinity. Vector MSM is
+ * unsupported because no canonical vector betweenness is defined. */
+typedef struct LlevVectorTemporalConfig {
+    uint32_t algorithm;
+    uint32_t reserved;
+    const double* gap_or_sentinel;
+    double parameter0;
+    double parameter1;
+    size_t band;
+    double cutoff;
+} LlevVectorTemporalConfig;
+
+/** Hard limits on native input copies, vector width, DP, and work. */
+typedef struct LlevVectorTemporalLimits {
+    LlevTemporalLimits scalar;
+    size_t max_dimension;
+    size_t max_band_width;
+} LlevVectorTemporalLimits;
+
+typedef struct LlevVectorMetric LlevVectorMetric;
+
+/** Copy a fixed typed metric once for reuse by concurrent comparisons.
+ * The caller must keep the handle live throughout each comparison. */
+LLEV_API LlevStatus llev_vector_metric_new(
+    const LlevVectorMetricView* view, size_t max_dimension,
+    LlevVectorMetric** out_metric);
+LLEV_API void llev_vector_metric_free(LlevVectorMetric* metric);
+
+/** Score typed native vector ERP, DTW, Frechet, or physical-time TWED.
+ * Both series are copied under max_scratch_bytes before native kernels run.
+ * The result uses LlevTemporalDistanceResult kinds and reason codes. */
+LLEV_API LlevStatus llev_vector_temporal_distance(
+    const LlevVectorMetric* metric,
+    const LlevVectorSeriesView* left,
+    const LlevVectorSeriesView* right,
+    const LlevVectorTemporalConfig* config,
+    const LlevVectorTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
+/** Exact vector discrete Fréchet using audited untyped point distance:
+ * ground=1 L1, 2 L2, 3 L-infinity. Both equal-dimensional untimestamped
+ * paths are copied within the common vector temporal limits and normalized
+ * modulo consecutive equal points. Result kinds match scalar temporal scores. */
+LLEV_API LlevStatus llev_vector_frechet_ground_distance(
+    uint32_t ground, const LlevVectorSeriesView* left,
+    const LlevVectorSeriesView* right, double cutoff,
+    const LlevVectorTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
+typedef struct LlevVectorFrechetOnline LlevVectorFrechetOnline;
+
+/** Borrowed nonempty scalar samples with strictly increasing physical
+ * timestamps. Unit is 1 seconds, 2 milliseconds, 3 microseconds, or
+ * 4 nanoseconds. Origin is finite and no later than the first timestamp.
+ * Reserved must be zero. The arrays are copied into bounded native series
+ * for this call and never retained afterward. */
+typedef struct LlevTimestampedSeriesView {
+    const double* values;
+    const double* timestamps;
+    size_t len;
+    uint32_t unit;
+    uint32_t reserved;
+    double origin;
+} LlevTimestampedSeriesView;
+
+/** Exact metric TWED over physical timestamps. Both series must use the same
+ * canonical unit and origin; stiffness must be finite and positive, and gap
+ * penalty finite and nonnegative. Cutoff is inclusive and nonnegative, or
+ * positive infinity for the full score. The output uses the scalar temporal
+ * result kinds and resource reason codes; invalid input publishes no score.
+ * All pointers must address valid, mutually disjoint storage. */
+LLEV_API LlevStatus llev_timestamped_twed_distance(
+    const LlevTimestampedSeriesView* left,
+    const LlevTimestampedSeriesView* right,
+    double stiffness, double gap_penalty, double cutoff,
+    const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
+/** Bounded witness extraction reuses scalar DP limits and adds a hard peak
+ * witness-storage ceiling. */
+typedef struct LlevTemporalAlignmentLimits {
+    LlevTemporalLimits temporal;
+    size_t max_witness_bytes;
+} LlevTemporalAlignmentLimits;
+
+/** One paged alignment operation. For MSM, operation is 1 move, 2 merge,
+ * or 3 split and the remaining fields are zero. For ERP, TWED, DTW, and
+ * Frechet, operation is 1 align, 2 advance query, or 3 advance candidate;
+ * flags bits 0 and 1 indicate present zero-based endpoints. local_cost_bits
+ * retains the exact IEEE-754 encoding of the native local cost. */
+typedef struct LlevTemporalAlignmentStep {
+    uint32_t operation;
+    uint32_t flags;
+    uint64_t query_endpoint;
+    uint64_t candidate_endpoint;
+    uint64_t local_cost_bits;
+} LlevTemporalAlignmentStep;
+
+/** Kind uses LLEV_TEMPORAL_* tags. A finite outcome transfers one immutable
+ * owning witness handle; other outcomes leave it NULL. Incompletion reason
+ * uses the existing resource reason codes, plus 5 for witness bytes. */
+typedef struct LlevTemporalAlignmentOutcome {
+    uint32_t kind;
+    uint32_t reason;
+    double distance;
+    size_t step_count;
+    size_t dp_cells;
+    size_t work_units;
+    size_t scratch_bytes;
+    size_t witness_bytes;
+} LlevTemporalAlignmentOutcome;
+
+typedef struct LlevTemporalAlignment LlevTemporalAlignment;
+
+/** Extract a deterministic MSM, ERP, unit-grid TWED, banded DTW, or
+ * discrete Frechet witness. Soft-DTW has no alignment witness. Inputs are
+ * borrowed for this call; the returned witness owns its bounded steps. */
+LLEV_API LlevStatus llev_temporal_alignment_new(
+    const double* query, size_t query_len,
+    const double* candidate, size_t candidate_len,
+    const LlevTemporalConfig* config,
+    const LlevTemporalAlignmentLimits* limits,
+    LlevTemporalAlignment** out_alignment,
+    LlevTemporalAlignmentOutcome* out_outcome);
+
+/** Extract a metric physical-time TWED witness over copied, validated
+ * timestamped operands in the same unit and origin. */
+LLEV_API LlevStatus llev_timestamped_twed_alignment_new(
+    const LlevTimestampedSeriesView* query,
+    const LlevTimestampedSeriesView* candidate,
+    double stiffness, double gap_penalty, double cutoff,
+    const LlevTemporalAlignmentLimits* limits,
+    LlevTemporalAlignment** out_alignment,
+    LlevTemporalAlignmentOutcome* out_outcome);
+
+/** Copy at most capacity steps from a stable zero-based offset. A zero
+ * capacity may use NULL for out_steps. The handle remains caller-owned. */
+LLEV_API LlevStatus llev_temporal_alignment_page(
+    const LlevTemporalAlignment* alignment,
+    size_t start, LlevTemporalAlignmentStep* out_steps,
+    size_t capacity, size_t* out_written);
+
+/** Recompute and validate a scalar witness against supplied operands and
+ * the native configuration captured at extraction. */
+LLEV_API LlevStatus llev_temporal_alignment_replay(
+    const LlevTemporalAlignment* alignment,
+    const double* query, size_t query_len,
+    const double* candidate, size_t candidate_len,
+    double* out_distance);
+
+/** Recompute and validate a physical-time TWED witness. */
+LLEV_API LlevStatus llev_timestamped_twed_alignment_replay(
+    const LlevTemporalAlignment* alignment,
+    const LlevTimestampedSeriesView* query,
+    const LlevTimestampedSeriesView* candidate,
+    double* out_distance);
+
+/** Release an alignment witness once. */
+LLEV_API void llev_temporal_alignment_free(LlevTemporalAlignment* alignment);
+
+
+/** Complete Soft-DTW loss and gradients with respect to both nonempty finite
+ * operands. gamma must be finite and positive. Output buffers are caller
+ * owned and have capacities at least left_len and right_len respectively.
+ * No gradient element is written on invalid input or an incomplete result.
+ * The result uses kind=0 on completion or kind=3 plus a resource/overflow
+ * reason on LIMIT_EXCEEDED. All buffers must be valid and mutually disjoint. */
+LLEV_API LlevStatus llev_soft_dtw_gradient(
+    const double* left, size_t left_len,
+    const double* right, size_t right_len,
+    double gamma, const LlevTemporalLimits* limits,
+    double* left_gradient, size_t left_capacity,
+    double* right_gradient, size_t right_capacity,
+    LlevTemporalDistanceResult* out_result);
+
+/** Native temporal lower-bound selectors. */
+#define LLEV_TEMPORAL_BOUND_ERP_GAP_MASS 1u
+#define LLEV_TEMPORAL_BOUND_FRECHET_ENDPOINTS 2u
+#define LLEV_TEMPORAL_BOUND_FRECHET_HAUSDORFF 3u
+#define LLEV_TEMPORAL_BOUND_FRECHET_CANDIDATE 4u
+#define LLEV_TEMPORAL_BOUND_KEOGH 5u
+#define LLEV_TEMPORAL_BOUND_MSM_LENGTH 6u
+#define LLEV_TEMPORAL_HEURISTIC_MSM_EUCLIDEAN 7u
+#define LLEV_TEMPORAL_HEURISTIC_MSM_L1 8u
+#define LLEV_TEMPORAL_HEURISTIC_MSM_COMBINED 9u
+
+/** Compute a native temporal bound or explicitly selected heuristic under
+ * work and scratch limits. parameter0 is the finite ERP gap or nonnegative
+ * MSM split/merge cost; band applies only to Keogh. Only MSM length is safe
+ * for exact MSM pruning: the three MSM heuristic modes can exceed MSM.
+ * Reuses the scalar temporal finite/no-alignment/incomplete result tags. */
+LLEV_API LlevStatus llev_temporal_lower_bound(
+    const double* left, size_t left_len,
+    const double* right, size_t right_len,
+    uint32_t algorithm, double parameter0, size_t band,
+    const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
+/** Native TWED length-only bound under explicit limits. */
+LLEV_API LlevStatus llev_twed_length_lower_bound(
+    size_t left_len, size_t right_len, double gap_penalty,
+    const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+
+/** Reusable native Keogh envelope; the constructor copies its finite query.
+ * A plan requires a nonempty query and preserves its construction band.
+ * out_has=0 denotes an unreachable target position. */
+typedef struct LlevKeoghPlan LlevKeoghPlan;
+LLEV_API LlevStatus llev_keogh_plan_new(
+    const double* query, size_t query_len, size_t band,
+    const LlevTemporalLimits* limits, LlevKeoghPlan** out_plan);
+LLEV_API LlevStatus llev_keogh_plan_bounds_at(
+    const LlevKeoghPlan* plan, size_t target_index,
+    uint8_t* out_has, double* out_low, double* out_high);
+LLEV_API LlevStatus llev_keogh_plan_score(
+    const LlevKeoghPlan* plan, const double* candidate, size_t candidate_len,
+    uint8_t squared, const LlevTemporalLimits* limits,
+    LlevTemporalDistanceResult* out_result);
+LLEV_API void llev_keogh_plan_free(LlevKeoghPlan* plan);
+
+/** Bounded construction of a native quantized temporal index. The temporal
+ * cutoff must be positive infinity; Soft-DTW is unsupported because it has
+ * no elastic index. All three source limits are explicit. */
+typedef struct LlevTemporalIndexConfig {
+    LlevTemporalConfig temporal;
+    double quant_min;
+    double quant_max;
+    uint32_t quant_bins;
+    uint32_t reserved;
+    size_t max_entries;
+    size_t max_total_samples;
+    size_t max_series_len;
+} LlevTemporalIndexConfig;
+
+/** Cumulative hard ceilings of one indexed range search. */
+typedef struct LlevTemporalSearchLimits {
+    size_t max_series_len;
+    size_t max_dp_cells;
+    size_t max_work_units;
+    size_t max_scratch_bytes;
+    size_t max_trie_nodes;
+    size_t max_trie_edges;
+    size_t max_candidates;
+    size_t max_results;
+    size_t max_queue_entries;
+    size_t max_continuation_bytes;
+} LlevTemporalSearchLimits;
+
+/** Persistent PAA-ranked approximate MSM index. Feature selection is
+ * advisory unless every episode is exactly reranked. All inserted samples
+ * must be finite. The source and feature ceilings bound retained storage. */
+typedef struct LlevApproxMsmIndexConfig {
+    size_t segments;
+    size_t candidate_limit;
+    double split_merge_cost;
+    size_t max_entries;
+    size_t max_total_samples;
+    size_t max_series_len;
+    size_t max_total_features;
+} LlevApproxMsmIndexConfig;
+
+typedef struct LlevApproxMsmNeighbor {
+    uint64_t id;
+    size_t insertion_index;
+    double distance;
+} LlevApproxMsmNeighbor;
+
+/** Kind 1 is exhaustive and proves recall; kind 2 is advisory and makes no
+ * recall or absence claim; kind 3 is incomplete and may contain an exact
+ * partial neighbor list. The reason uses temporal incompletion codes.
+ * Coverage counts only exact MSM decisions, not PAA feature inspections. */
+typedef struct LlevApproxMsmOutcome {
+    uint32_t kind;
+    uint32_t reason;
+    size_t neighbor_count;
+    size_t indexed_entries;
+    size_t candidate_entries;
+    size_t exact_reranked;
+    size_t dp_cells;
+    size_t work_units;
+    size_t scratch_bytes;
+    size_t candidates;
+    size_t results;
+} LlevApproxMsmOutcome;
+
+typedef struct LlevApproxMsmIndex LlevApproxMsmIndex;
+
+/** Mutate before freeze; frozen indexes support independent concurrent
+ * queries. Query output storage is caller owned and must hold min(k, len)
+ * neighbors. Each emitted distance is exact MSM. Incomplete outcomes remain
+ * tagged, even when they contain an exact partial subset. */
+LLEV_API LlevStatus llev_approx_msm_index_new(
+    const LlevApproxMsmIndexConfig* config,
+    LlevApproxMsmIndex** out_index);
+LLEV_API LlevStatus llev_approx_msm_index_insert(
+    LlevApproxMsmIndex* index, uint64_t id,
+    const double* samples, size_t len, size_t* out_position);
+LLEV_API LlevStatus llev_approx_msm_index_freeze(LlevApproxMsmIndex* index);
+LLEV_API LlevStatus llev_approx_msm_index_query_knn(
+    const LlevApproxMsmIndex* index, const double* query,
+    size_t query_len, size_t k, const LlevTemporalSearchLimits* limits,
+    LlevApproxMsmNeighbor* out_neighbors, size_t capacity,
+    LlevApproxMsmOutcome* out_outcome);
+LLEV_API void llev_approx_msm_index_free(LlevApproxMsmIndex* index);
+
+/** Typed physical-time quantization, validated metric configuration, and
+ * explicit bounded ingestion. Value and timestamp domains must be finite,
+ * increasing, and the time minimum must follow the shared origin. Bin counts
+ * are in [1, 2^31]. Quantization only prunes: exact scores use retained full
+ * precision episodes. */
+typedef struct LlevTimestampedTwedIndexConfig {
+    uint32_t unit;
+    uint32_t reserved;
+    double origin;
+    double value_min;
+    double value_max;
+    double time_min;
+    double time_max;
+    uint32_t value_bins;
+    uint32_t time_bins;
+    double stiffness;
+    double gap_penalty;
+    size_t max_entries;
+    size_t max_total_samples;
+    size_t max_series_len;
+} LlevTimestampedTwedIndexConfig;
+
+/** Common cumulative search limits plus bounded product-state arenas. Query
+ * copy bytes are charged against scratch and continuation ceilings before
+ * native search starts. */
+typedef struct LlevTimestampedTwedSearchLimits {
+    LlevTemporalSearchLimits common;
+    size_t max_product_states;
+    size_t max_product_positions;
+    size_t max_transition_cache_entries;
+} LlevTimestampedTwedSearchLimits;
+
+/** Full-precision exact match: caller metadata, stable insertion position,
+ * and physical-time TWED distance. Duplicate metadata IDs remain distinct
+ * episodes. */
+typedef struct LlevTimestampedTwedMatch {
+    uint64_t id;
+    uint64_t episode_id;
+    double distance;
+} LlevTimestampedTwedMatch;
+
+typedef struct LlevTimestampedTwedIndex LlevTimestampedTwedIndex;
+typedef struct LlevTimestampedTwedCursor LlevTimestampedTwedCursor;
+
+/** Build, insert, freeze, and free one native timestamped index. Insertion
+ * copies finite values and timestamps; `out_episode_id` identifies the new
+ * episode even when caller metadata duplicates another episode. Mutation
+ * requires exclusive access. Freezing is idempotent; frozen indexes reject
+ * insertion. Cursors retain the frozen revision after index free. */
+LLEV_API LlevStatus llev_timestamped_twed_index_new(
+    const LlevTimestampedTwedIndexConfig* config,
+    LlevTimestampedTwedIndex** out_index);
+LLEV_API LlevStatus llev_timestamped_twed_index_insert(
+    LlevTimestampedTwedIndex* index, uint64_t id,
+    const LlevTimestampedSeriesView* series, uint64_t* out_episode_id);
+LLEV_API LlevStatus llev_timestamped_twed_index_freeze(
+    LlevTimestampedTwedIndex* index);
+LLEV_API void llev_timestamped_twed_index_free(LlevTimestampedTwedIndex* index);
+
+/** Start a bounded exact range query. The query is copied; its unit and
+ * bitwise origin must match the index. A cursor retains the frozen index
+ * revision and can outlive the index handle. Cutoff is inclusive. */
+LLEV_API LlevStatus llev_timestamped_twed_index_query_range(
+    const LlevTimestampedTwedIndex* index,
+    const LlevTimestampedSeriesView* query, double cutoff,
+    const LlevTimestampedTwedSearchLimits* limits,
+    LlevTimestampedTwedCursor** out_cursor);
+
+/** Exact k-nearest neighbors from a frozen revision, sorted by distance then
+ * stable episode ID. This strict full scan returns no partial results on
+ * LIMIT_EXCEEDED; out_reason uses the temporal index reason codes. The query
+ * copy counts against scratch bytes. Caller storage must hold min(k, len)
+ * matches, or the call fails before scanning. */
+LLEV_API LlevStatus llev_timestamped_twed_index_query_knn(
+    const LlevTimestampedTwedIndex* index,
+    const LlevTimestampedSeriesView* query, size_t k,
+    const LlevTemporalSearchLimits* limits,
+    LlevTimestampedTwedMatch* out_matches, size_t capacity,
+    size_t* out_len, uint32_t* out_reason);
+
+/** Advance at most one bounded page. Zero matches with out_done=0 means
+ * paused. LIMIT_EXCEEDED leaves previous matches an exact incomplete subset;
+ * out_reason uses the temporal index reason codes, including 14 for a page
+ * too small to advance. Output storage is caller owned. */
+LLEV_API LlevStatus llev_timestamped_twed_cursor_next_batch(
+    LlevTimestampedTwedCursor* cursor, LlevTimestampedTwedMatch* out_matches,
+    size_t capacity, size_t page_work_units, size_t page_results,
+    size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
+LLEV_API void llev_timestamped_twed_cursor_free(LlevTimestampedTwedCursor* cursor);
+
+/** One copied exact match; DTW uses root-distance units. */
+typedef struct LlevTemporalIndexMatch {
+    uint64_t id;
+    double distance;
+} LlevTemporalIndexMatch;
+
+typedef struct LlevTemporalIndex LlevTemporalIndex;
+typedef struct LlevTemporalIndexCursor LlevTemporalIndexCursor;
+
+/** Quantized-byte candidate index. This is advisory for original time-series
+ * proximity: quantization and byte edit distance can admit false positives
+ * and miss full-precision temporal neighbors. The three supported algorithms
+ * are Standard, OSA transposition, and merge/split. */
+typedef struct LlevQuantizedIndexConfig {
+    double quant_min;
+    double quant_max;
+    uint32_t quant_bins;
+    uint32_t reserved;
+    size_t max_entries;
+    size_t max_total_samples;
+    size_t max_series_len;
+} LlevQuantizedIndexConfig;
+typedef struct LlevQuantizedMatch {
+    uint64_t id;
+    size_t edit_distance;
+} LlevQuantizedMatch;
+typedef struct LlevQuantizedIndex LlevQuantizedIndex;
+typedef struct LlevQuantizedCursor LlevQuantizedCursor;
+
+/** Insert or replace before freeze. Source limits are transactional. Frozen
+ * cursors retain their immutable snapshot after index free. Nonfinite samples
+ * follow the Rust quantizer's bin mapping, including NaN -> first bin. */
+LLEV_API LlevStatus llev_quantized_index_new(
+    const LlevQuantizedIndexConfig* config, LlevQuantizedIndex** out_index);
+LLEV_API LlevStatus llev_quantized_index_insert(
+    LlevQuantizedIndex* index, uint64_t id,
+    const double* samples, size_t len);
+LLEV_API LlevStatus llev_quantized_index_freeze(LlevQuantizedIndex* index);
+LLEV_API void llev_quantized_index_free(LlevQuantizedIndex* index);
+
+/** Start a lazy bounded quantized candidate query. algorithm uses
+ * LLEV_ALGORITHM_STANDARD, LLEV_ALGORITHM_TRANSPOSITION, or
+ * LLEV_ALGORITHM_MERGE_AND_SPLIT. Query and source are captured before
+ * returning; exhaustion never proves absence. The query array is copied.
+ * On construction LIMIT_EXCEEDED, out_reason uses the temporal reason codes.
+ */
+LLEV_API LlevStatus llev_quantized_index_query(
+    const LlevQuantizedIndex* index, const double* query, size_t query_len,
+    size_t max_distance, uint32_t algorithm,
+    const LlevTemporalSearchLimits* limits,
+    LlevQuantizedCursor** out_cursor, uint32_t* out_reason);
+/** Copy at most one bounded page. Empty with out_done=0 means continue.
+ * Only out_done=1 establishes complete quantized candidate enumeration.
+ * LIMIT_EXCEEDED leaves any earlier candidates exact for their byte query
+ * but cannot establish a complete set. out_reason uses the codes below. */
+LLEV_API LlevStatus llev_quantized_cursor_next_batch(
+    LlevQuantizedCursor* cursor, LlevQuantizedMatch* out_matches,
+    size_t capacity, size_t page_work_units, size_t page_results,
+    size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
+/** Copy original full-precision samples by ID from the retained snapshot.
+ * A null output with zero capacity reports the sample count in out_len. */
+LLEV_API LlevStatus llev_quantized_cursor_original(
+    const LlevQuantizedCursor* cursor, uint64_t id,
+    double* out_samples, size_t capacity, size_t* out_len);
+LLEV_API void llev_quantized_cursor_free(LlevQuantizedCursor* cursor);
+
+typedef struct LlevHybridIndexConfig {
+    LlevQuantizedIndexConfig source;
+    double msm_cost;
+    double trie_threshold_multiplier;
+    uint32_t lower_bound_type;
+    uint32_t use_lower_bounds;
+} LlevHybridIndexConfig;
+typedef struct LlevHybridIndex LlevHybridIndex;
+typedef struct LlevHybridCursor LlevHybridCursor;
+
+/** Frozen hybrid search uses quantized byte-edit candidate filtering,
+ * optional MSM bound/heuristic pruning, then exact MSM verification.
+ * lower_bound_type: 0 safe length, 1 prefix Euclidean, 2 prefix L1,
+ * 3 combined. Types 1-3 can omit true MSM neighbors. Quantization can also
+ * omit them. A complete cursor proves only pipeline completion, not MSM
+ * recall. Invalid multiplier falls back to the Rust default.
+ * Source series and queries must be finite. */
+LLEV_API LlevStatus llev_hybrid_index_new(
+    const LlevHybridIndexConfig* config, LlevHybridIndex** out_index);
+LLEV_API LlevStatus llev_hybrid_index_insert(
+    LlevHybridIndex* index, uint64_t id,
+    const double* samples, size_t len);
+LLEV_API LlevStatus llev_hybrid_index_freeze(LlevHybridIndex* index);
+LLEV_API void llev_hybrid_index_free(LlevHybridIndex* index);
+LLEV_API LlevStatus llev_hybrid_index_query_range(
+    const LlevHybridIndex* index, const double* query, size_t query_len,
+    double cutoff, const LlevTemporalSearchLimits* limits,
+    LlevHybridCursor** out_cursor, uint32_t* out_reason);
+/** Complete the same threshold-expanding hybrid kNN rule as Rust under
+ * cumulative limits. Fail closed: no partial top-k on LIMIT_EXCEEDED. */
+LLEV_API LlevStatus llev_hybrid_index_query_knn(
+    const LlevHybridIndex* index, const double* query, size_t query_len,
+    size_t k, double initial_threshold,
+    const LlevTemporalSearchLimits* limits,
+    LlevHybridCursor** out_cursor, uint32_t* out_reason);
+/** Results carry exact MSM scores. Range pages arrive in source bucket
+ * order; kNN pages arrive in score order. Empty pages with out_done=0 must
+ * be resumed. LIMIT_EXCEEDED does not establish a complete candidate set. */
+LLEV_API LlevStatus llev_hybrid_cursor_next_batch(
+    LlevHybridCursor* cursor, LlevTemporalIndexMatch* out_matches,
+    size_t capacity, size_t page_work_units, size_t page_results,
+    size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
+LLEV_API void llev_hybrid_cursor_free(LlevHybridCursor* cursor);
+
+/** Build, mutate, freeze, and release an index. Mutation requires exclusive
+ * access. A frozen index may start independent concurrent cursors. A cursor
+ * retains its immutable snapshot even after the index handle is freed. */
+LLEV_API LlevStatus llev_temporal_index_new(
+    const LlevTemporalIndexConfig* config, LlevTemporalIndex** out_index);
+LLEV_API LlevStatus llev_temporal_index_insert(
+    LlevTemporalIndex* index, uint64_t id,
+    const double* samples, size_t len);
+LLEV_API LlevStatus llev_temporal_index_freeze(LlevTemporalIndex* index);
+LLEV_API void llev_temporal_index_free(LlevTemporalIndex* index);
+
+/** Start a bounded exact range query. query is copied into cursor state;
+ * a null pointer is allowed only with zero query_len. cutoff is inclusive
+ * and nonnegative. Every limit field is a cumulative ceiling. */
+LLEV_API LlevStatus llev_temporal_index_query_range(
+    const LlevTemporalIndex* index, const double* query, size_t query_len,
+    double cutoff, const LlevTemporalSearchLimits* limits,
+    LlevTemporalIndexCursor** out_cursor);
+
+/** Start the specialized canonical ERP automaton product over a frozen ERP
+ * index. It builds only reachable antichain states and verifies every
+ * full-precision collision before emission. The ordinary range cursor page
+ * and free functions apply. On LIMIT_EXCEEDED during construction no cursor
+ * is returned and out_reason uses the temporal reason codes below. */
+LLEV_API LlevStatus llev_temporal_index_query_erp_automaton_range(
+    const LlevTemporalIndex* index, const double* query, size_t query_len,
+    double cutoff, const LlevTemporalSearchLimits* limits,
+    LlevTemporalIndexCursor** out_cursor, uint32_t* out_reason);
+
+/** Advance at most one native page. Zero output with out_done=0 is a valid
+ * paused page and must be retried. LIMIT_EXCEEDED means the exact subset
+ * produced earlier is incomplete; it never proves absence. Caller owns the
+ * output array and must provide positive capacity and page budgets.
+ * out_reason is zero on success; LIMIT_EXCEEDED uses 1 DP cells, 2 work,
+ * 3 scratch, 4 trie nodes, 5 trie edges, 6 candidates, 7 results, 8 queue,
+ * 9 continuation bytes, 10 overflow/other, 11 invalid stored data,
+ * 12 unsupported, 13 allocation, 14 page too small, 15 cancellation, or
+ * 16 source series length. */
+LLEV_API LlevStatus llev_temporal_index_cursor_next_batch(
+    LlevTemporalIndexCursor* cursor, LlevTemporalIndexMatch* out_matches,
+    size_t capacity, size_t page_work_units, size_t page_results,
+    size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
+LLEV_API void llev_temporal_index_cursor_free(LlevTemporalIndexCursor* cursor);
+
+/** Exact, fail-closed top-k query from a frozen scalar index. Native search
+ * scans every stored candidate under cumulative limits before returning a
+ * cursor over the complete result, ordered by score and stable index order.
+ * DTW matches use public root-distance units. On LIMIT_EXCEEDED no cursor is
+ * returned and out_reason uses the temporal reason codes above. A successful
+ * cursor remains valid after index free. */
+typedef struct LlevTemporalKnnCursor LlevTemporalKnnCursor;
+LLEV_API LlevStatus llev_temporal_index_query_knn(
+    const LlevTemporalIndex* index, const double* query, size_t query_len,
+    size_t k, const LlevTemporalSearchLimits* limits,
+    LlevTemporalKnnCursor** out_cursor, uint32_t* out_reason);
+/** Copy one page of complete top-k results in native order. Capacity must
+ * be positive. out_done=1 means all results were copied. */
+LLEV_API LlevStatus llev_temporal_knn_cursor_next_batch(
+    LlevTemporalKnnCursor* cursor, LlevTemporalIndexMatch* out_matches,
+    size_t capacity, size_t* out_len, uint8_t* out_done);
+LLEV_API void llev_temporal_knn_cursor_free(LlevTemporalKnnCursor* cursor);
+
+/** All ceilings apply to one complete exact range certificate. The search
+ * ceilings include query, traversal, and result resources; witness bytes,
+ * record count, path bytes, and certificate work are cumulative. */
+typedef struct LlevTemporalCertificateLimits {
+    LlevTemporalSearchLimits search;
+    size_t max_witness_bytes;
+    size_t max_records;
+    size_t max_path_bytes;
+    size_t max_work_units;
+} LlevTemporalCertificateLimits;
+
+/** Exact native certificate shape and charged resources. DTW cutoff is in
+ * squared-distance units, even though public matches use root distance. */
+typedef struct LlevTemporalCertificateInfo {
+    size_t query_len;
+    size_t evidence_len;
+    size_t result_len;
+    double cutoff_native;
+    size_t work_units;
+    size_t path_bytes;
+    size_t witness_bytes;
+    uint8_t snapshot_present;
+    uint8_t reserved[7];
+    uint8_t snapshot_identity[32];
+} LlevTemporalCertificateInfo;
+
+/** Ordered K1--K4 evidence. Kinds 1,2,3,4,5 denote prefix, subtree,
+ * terminal, candidate prune, and exact candidate respectively. */
+typedef struct LlevTemporalCertificateEvidenceHeader {
+    uint32_t kind;
+    uint32_t reserved;
+    size_t path_len;
+    uint64_t stable_id;
+    double lower_bound;
+    double exact;
+    uint8_t has_exact;
+    uint8_t survived;
+    uint8_t reserved_tail[6];
+} LlevTemporalCertificateEvidenceHeader;
+
+/** Caller-owned projection for exact replay. Each path is path_len bytes. */
+typedef struct LlevTemporalCertificateEvidenceView {
+    LlevTemporalCertificateEvidenceHeader header;
+    const uint8_t* path;
+} LlevTemporalCertificateEvidenceView;
+
+typedef struct LlevTemporalCertificateView {
+    LlevTemporalCertificateInfo info;
+    const uint64_t* query_bits;
+    const LlevTemporalCertificateEvidenceView* evidence;
+    const LlevTemporalIndexMatch* results;
+} LlevTemporalCertificateView;
+
+typedef struct LlevTemporalRangeCertificate LlevTemporalRangeCertificate;
+
+/** Produce complete exact range evidence from a frozen scalar index. The
+ * certificate owns its snapshot and remains valid after index free. No
+ * certificate is returned on any limit or validation failure. */
+LLEV_API LlevStatus llev_temporal_index_query_certified(
+    const LlevTemporalIndex* index, const double* query, size_t query_len,
+    double cutoff, const LlevTemporalCertificateLimits* limits,
+    LlevTemporalRangeCertificate** out_certificate);
+LLEV_API LlevStatus llev_temporal_certificate_info(
+    const LlevTemporalRangeCertificate* certificate,
+    LlevTemporalCertificateInfo* out_info);
+/** Copy at most capacity elements starting at start; out_written is exact. */
+LLEV_API LlevStatus llev_temporal_certificate_query_bits(
+    const LlevTemporalRangeCertificate* certificate, size_t start,
+    uint64_t* out_words, size_t capacity, size_t* out_written);
+LLEV_API LlevStatus llev_temporal_certificate_matches(
+    const LlevTemporalRangeCertificate* certificate, size_t start,
+    LlevTemporalIndexMatch* out_matches, size_t capacity, size_t* out_written);
+/** Read one decision; null out_path and zero capacity query path_len only.
+ * Short nonzero buffers fail with LIMIT_EXCEEDED. */
+LLEV_API LlevStatus llev_temporal_certificate_evidence_at(
+    const LlevTemporalRangeCertificate* certificate, size_t index,
+    LlevTemporalCertificateEvidenceHeader* out_header, uint8_t* out_path,
+    size_t path_capacity, size_t* out_path_written);
+/** Verify caller-supplied complete evidence and results against the retained
+ * snapshot. An altered well-formed view returns OK with out_valid=0. */
+LLEV_API LlevStatus llev_temporal_certificate_verify(
+    const LlevTemporalRangeCertificate* certificate,
+    const LlevTemporalCertificateView* view, uint8_t* out_valid);
+LLEV_API void llev_temporal_certificate_free(
+    LlevTemporalRangeCertificate* certificate);
+
+/** Fixed-query online temporal automaton. It retains bounded query and
+ * frontier state independent of target stream length. MSM, ERP, unit-grid
+ * TWED, banded DTW, and scalar Fréchet are supported. Soft-DTW is not.
+ * Non-ERP kernels require a finite inclusive cutoff. DTW cutoff and scores
+ * are in squared-distance units, matching the native online kernel. */
+typedef struct LlevTemporalOnlineAutomaton LlevTemporalOnlineAutomaton;
+
+/** Hard query, frontier, per-sample work, and scratch ceilings. Defaults are
+ * 1,000,000; 1,000,001; 100,000,000; and 256 MiB, respectively. */
+typedef struct LlevTemporalOnlineLimits {
+    size_t max_query_len;
+    size_t max_frontier_positions;
+    size_t max_step_work_units;
+    size_t max_scratch_bytes;
+} LlevTemporalOnlineLimits;
+
+/** Exact observation for the committed target prefix. Optional scores are
+ * valid only when their corresponding has_* byte is one. */
+typedef struct LlevTemporalOnlineObservation {
+    size_t consumed_target_len;
+    size_t active_positions;
+    double distance_within_cutoff;
+    double minimum_active_cost;
+    uint8_t has_distance;
+    uint8_t has_minimum;
+    uint8_t reserved[6];
+} LlevTemporalOnlineObservation;
+
+/** kind=0 commits the sample and carries an exact observation. kind=1 is
+ * incomplete: the sample was not consumed and observation is zeroed. reason
+ * uses the indexed temporal codes 1-13 and 15; zero means complete. */
+typedef struct LlevTemporalOnlineStep {
+    LlevTemporalOnlineObservation observation;
+    uint32_t kind;
+    uint32_t reason;
+    size_t dp_cells;
+    size_t work_units;
+    size_t scratch_bytes;
+    size_t queue_entries;
+} LlevTemporalOnlineStep;
+
+/** Construction copies the finite query and preflights all configured
+ * ceilings. Each advance needs exclusive handle access. An incomplete step
+ * leaves the current observation unchanged; callers may read it separately.
+ * A null query pointer is allowed only for zero query_len. */
+LLEV_API LlevStatus llev_temporal_online_new(
+    const double* query, size_t query_len,
+    const LlevTemporalConfig* config,
+    const LlevTemporalOnlineLimits* limits,
+    LlevTemporalOnlineAutomaton** out_machine);
+LLEV_API LlevStatus llev_temporal_online_observation(
+    const LlevTemporalOnlineAutomaton* machine,
+    LlevTemporalOnlineObservation* out_observation);
+LLEV_API LlevStatus llev_temporal_online_advance(
+    LlevTemporalOnlineAutomaton* machine, double sample,
+    LlevTemporalOnlineStep* out_step);
+LLEV_API LlevStatus llev_temporal_online_scratch_bytes(
+    const LlevTemporalOnlineAutomaton* machine, size_t* out_bytes);
+LLEV_API void llev_temporal_online_free(LlevTemporalOnlineAutomaton* machine);
+
+/** Copy a typed, untimestamped query into a bounded online vector Fréchet
+ * machine. The machine owns a metric copy and can outlive its metric handle.
+ * Subsequent operations on one machine require exclusive access. */
+LLEV_API LlevStatus llev_vector_frechet_online_new(
+    const LlevVectorMetric* metric,
+    const LlevVectorSeriesView* query,
+    double cutoff,
+    const LlevTemporalOnlineLimits* limits,
+    LlevVectorFrechetOnline** out_machine);
+
+/** Copy an untimestamped query into an online Fréchet machine using ground
+ * 1 L1, 2 L2, or 3 L-infinity. Use the common observation, advance, scratch,
+ * and free functions below; each machine requires exclusive access. */
+LLEV_API LlevStatus llev_vector_frechet_ground_online_new(
+    uint32_t ground, const LlevVectorSeriesView* query, double cutoff,
+    const LlevTemporalOnlineLimits* limits,
+    LlevVectorFrechetOnline** out_machine);
+
+/** Observe a committed vector-target prefix without advancing. */
+LLEV_API LlevStatus llev_vector_frechet_online_observation(
+    const LlevVectorFrechetOnline* machine,
+    LlevTemporalOnlineObservation* out_observation);
+
+/** Advance by one whole vector point. A resource-incomplete step does not
+ * consume the point; LlevTemporalOnlineStep carries its exact stop reason. */
+LLEV_API LlevStatus llev_vector_frechet_online_advance(
+    LlevVectorFrechetOnline* machine,
+    const double* point, size_t point_len,
+    LlevTemporalOnlineStep* out_step);
+
+/** Query fixed retained logical bytes and release the machine. */
+LLEV_API LlevStatus llev_vector_frechet_online_scratch_bytes(
+    const LlevVectorFrechetOnline* machine, size_t* out_bytes);
+LLEV_API void llev_vector_frechet_online_free(
+    LlevVectorFrechetOnline* machine);
+
+/** Closed coordinate interval in one fixed-channel vector box. */
+typedef struct LlevVectorInterval {
+    double low;
+    double high;
+} LlevVectorInterval;
+
+/** Typed vector box with a physical-time interval. Unit codes match scalar
+ * timestamped TWED: 1 seconds, 2 milliseconds, 3 microseconds, 4 nanoseconds.
+ * Reserved must be zero. */
+typedef struct LlevTimestampedVectorBoxView {
+    const LlevVectorInterval* coordinates;
+    size_t dimension;
+    double time_low;
+    double time_high;
+    uint32_t unit;
+    uint32_t reserved;
+} LlevTimestampedVectorBoxView;
+
+/** Native fixed-channel K1 bounds. Limits cap constructed interval storage. */
+LLEV_API LlevStatus llev_vector_point_box_lower_bound(
+    const LlevVectorMetric* metric,
+    const double* coordinates, size_t dimension,
+    const LlevVectorInterval* intervals, size_t interval_count,
+    const LlevVectorTemporalLimits* limits, double* out_bound);
+LLEV_API LlevStatus llev_vector_box_box_lower_bound(
+    const LlevVectorMetric* metric,
+    const LlevVectorInterval* left, size_t left_len,
+    const LlevVectorInterval* right, size_t right_len,
+    const LlevVectorTemporalLimits* limits, double* out_bound);
+
+/** Native K4 bound for ERP, banded DTW, Fréchet, or timestamped TWED.
+ * Config uses the corresponding vector score algorithm and positive infinity
+ * cutoff. Input copies are bounded by limits. */
+LLEV_API LlevStatus llev_vector_temporal_candidate_lower_bound(
+    const LlevVectorMetric* metric,
+    const LlevVectorSeriesView* left,
+    const LlevVectorSeriesView* right,
+    const LlevVectorTemporalConfig* config,
+    const LlevVectorTemporalLimits* limits,
+    double* out_bound);
+
+/** Native timestamped vector TWED K1 interval bound. Mode 1 deletes two
+ * consecutive candidate boxes and requires null query points and zero query
+ * dimension; mode 2 matches two exact query points to the boxes. Config uses
+ * algorithm 7, positive infinity cutoff, sentinel, stiffness, and gap cost. */
+LLEV_API LlevStatus llev_vector_twed_interval_lower_bound(
+    const LlevVectorMetric* metric, uint32_t mode,
+    const double* query_current, const double* query_previous,
+    size_t query_dimension,
+    double query_current_time, double query_previous_time,
+    const LlevTimestampedVectorBoxView* candidate_current,
+    const LlevTimestampedVectorBoxView* candidate_previous,
+    const LlevVectorTemporalConfig* config,
+    const LlevVectorTemporalLimits* limits,
+    double* out_bound);
+
 #ifdef __cplusplus
 }
 #endif

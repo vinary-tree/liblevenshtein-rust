@@ -73,10 +73,14 @@
 //! }
 //! ```
 
+mod approx_msm;
 mod automata;
 mod costs;
 mod distance;
+mod filter;
+mod filter_index;
 mod generated;
+mod hybrid_index;
 mod index;
 mod phonetic;
 mod phonetic_analysis;
@@ -87,14 +91,28 @@ mod phonetic_features;
 mod phonetic_online;
 mod phonetic_token;
 mod phonetic_transducer;
+mod quantized_index;
 mod specialized;
 mod string;
+mod temporal;
+mod temporal_alignment;
+mod temporal_bounds;
+mod temporal_certificate;
+mod temporal_index;
+mod temporal_online;
+mod temporal_vector;
+mod temporal_vector_bounds;
+mod timestamped_index;
 mod wallbreaker;
 
+pub use approx_msm::*;
 pub use automata::*;
 pub use costs::*;
 pub use distance::*;
+pub use filter::*;
+pub use filter_index::*;
 pub use generated::*;
+pub use hybrid_index::*;
 pub use index::*;
 pub use phonetic::*;
 pub use phonetic_analysis::*;
@@ -105,8 +123,18 @@ pub use phonetic_features::*;
 pub use phonetic_online::*;
 pub use phonetic_token::*;
 pub use phonetic_transducer::*;
+pub use quantized_index::*;
 pub use specialized::*;
 pub use string::*;
+pub use temporal::*;
+pub use temporal_alignment::*;
+pub use temporal_bounds::*;
+pub use temporal_certificate::*;
+pub use temporal_index::*;
+pub use temporal_online::*;
+pub use temporal_vector::*;
+pub use temporal_vector_bounds::*;
+pub use timestamped_index::*;
 pub use wallbreaker::*;
 
 use std::{ffi::c_char, slice, str};

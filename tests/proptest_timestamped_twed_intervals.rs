@@ -9,6 +9,25 @@ fn close(left: f64, right: f64) -> bool {
     (left - right).abs() <= 1.0e-12 * left.abs().max(right.abs()).max(1.0)
 }
 
+#[test]
+fn first_sample_may_share_the_physical_origin_with_its_synthetic_predecessor() {
+    let config = MetricTimestampedTwedConfig::try_new(0.5, 1.0).unwrap();
+    let prior = TimestampedScalarBox::point(0.0, 10.0, TimestampUnit::Milliseconds).unwrap();
+    let current = TimestampedScalarBox::point(1.0, 10.0, TimestampUnit::Milliseconds).unwrap();
+    assert_eq!(
+        config.interval_match_lower_bound(
+            1.0,
+            0.0,
+            10.0,
+            10.0,
+            TimestampUnit::Milliseconds,
+            current,
+            prior,
+        ),
+        Ok(0.0)
+    );
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(512))]
 
