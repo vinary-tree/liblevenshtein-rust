@@ -17,7 +17,7 @@ pub struct LlevSourceFilterIndexConfig {
     pub reserved: u32,
     /// Positive n-gram width in UTF-8 bytes.
     pub ngram_size: usize,
-    /// Finite threshold in [0,1]; zero for n-gram mode.
+    /// Finite threshold between 0 and 1 inclusive; zero for n-gram mode.
     pub jaro_threshold: f64,
     /// Maximum distinct retained terms.
     pub max_terms: usize,

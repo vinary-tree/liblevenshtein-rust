@@ -312,7 +312,7 @@ the path and recomputes its score from caller-supplied operands and the
 configuration captured at extraction. Julia endpoints are one-based. A
 resource-incomplete result carries no witness and identifies DP, work,
 scratch, witness-byte, or overflow exhaustion. See the
-[usage guide](../../../README.md#replayable-temporal-alignment-witnesses).
+[usage guide](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/bindings/julia/Liblevenshtein/README.md#replayable-temporal-alignment-witnesses).
 
 ### Lazy temporal range queries
 
@@ -637,9 +637,6 @@ merge-and-split, and unrestricted Damerau-Levenshtein are metrics. The
 optimal-string-alignment transposition variant is intentionally non-metric and
 does not compose repeated edits through the same substring.
 
-## API
+## API reference
 
-```@autodocs
-Modules = [Liblevenshtein]
-Private = false
-```
+The [API reference](reference.md) lists the exported Julia functions and types.
