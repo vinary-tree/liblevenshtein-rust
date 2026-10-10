@@ -371,6 +371,13 @@ free it with `llev_owned_bytes_free` and close the snapshot with
 `llev_decoded_operation_set_free`. The same C reference documents dictionary
 and suffix binary formats, their version IDs, and feature gates.
 
+Value-bearing Bincode uses `llev_valued_dictionary_serialize` and
+`llev_valued_dictionary_deserialize` with an explicit unit domain, value kind,
+and `LlevValueLimits`. The owned snapshot is read through
+`llev_decoded_value_entries_len` and `llev_decoded_value_entry_at`, then freed
+with `llev_decoded_value_entries_free`. Its value kinds are `u64` and raw bytes;
+the wire records differ from term-only dictionary Bincode.
+
 For the exhaustive native function contract—including exact preconditions,
 returnable statuses, complexity, and thread-safety—use the
 [`llev_*` C ABI reference](../../docs/bindings/c-abi-reference.md). The facade

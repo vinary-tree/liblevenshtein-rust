@@ -57,6 +57,43 @@ with `version=1` or `version=2`, and accept `gzip=true`. The `gzip_bincode_*`
 and `dat_protobuf_dictionary_*` calls select their named formats. These are
 convenience calls over `dictionary_bytes` and `dictionary_terms`.
 
+## Value-preserving Bincode
+
+`valued_dictionary_bytes(pairs; value_kind=:u64)` invokes Rust's
+`BincodeSerializer::serialize_with_values` on a byte-domain dictionary. With
+`unit_domain=:unicode`, it invokes `serialize_with_values_char` on a Unicode
+dictionary. `value_kind=:bytes` selects native `Vec<u8>` values; `:u64`
+selects native `u64` values. The returned wire type is respectively
+`Vec<(String, Vec<u8>)>` or `Vec<(String, u64)>`, distinct from the term-only
+`Vec<String>` format. The native generic serializer also supports other Rust
+value types, but their concrete Serde schema must be supplied by a matching
+typed consumer. The Julia boundary exposes the interoperable `u64` and raw
+byte value domains; UTF-8 text values can be carried as raw bytes.
+
+```julia
+bytes = valued_dictionary_bytes(["cab" => UInt8[0, 255],
+    "café" => UInt8[]]; value_kind=:bytes, unit_domain=:unicode,
+    max_entries=2, max_term_bytes=8, max_total_term_bytes=16,
+    max_value_bytes=2, max_total_value_bytes=2, max_payload_bytes=128)
+entries = valued_dictionary_entries(bytes; value_kind=:bytes,
+    unit_domain=:unicode, max_entries=2, max_term_bytes=8,
+    max_total_term_bytes=16, max_value_bytes=2,
+    max_total_value_bytes=2, max_payload_bytes=128)
+try
+    collect(entries) # ["cab" => UInt8[0, 255], "café" => UInt8[]]
+finally
+    close(entries)
+end
+```
+
+Specify `value_kind` when encoding and decoding. The bytes contain no type or
+unit-domain tag, so retain both choices alongside a persisted file. An empty
+byte vector remains a present value. Input count, each term and value, both
+aggregate byte totals, and payload bytes have caller-selected ceilings.
+Malformed lengths, invalid UTF-8 terms, truncated records, trailing bytes,
+and limit overruns fail before a decoded snapshot is published. Iteration
+copies keys and values into Julia-owned objects under a lock.
+
 ## Suffix-automaton source formats
 
 `suffix_source_bytes(texts; format=:bincode_v1)` preserves the *ordered source

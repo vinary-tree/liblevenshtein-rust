@@ -990,6 +990,53 @@ LLEV_API LlevStatus llev_decoded_dictionary_term_at(
     LlevUtf8Slice* out_term);
 LLEV_API void llev_decoded_dictionary_terms_free(LlevDecodedDictionaryTerms* terms);
 
+/** Value-preserving Bincode uses `Vec<(String, u64)>` or
+ * `Vec<(String, Vec<uint8_t>)>`; retain the value kind with the bytes. */
+#define LLEV_VALUE_PERSIST_U64 UINT32_C(1)
+#define LLEV_VALUE_PERSIST_BYTES UINT32_C(2)
+typedef struct LlevValueEntryInput {
+    const uint8_t* term_data;
+    size_t term_len;
+    const uint8_t* value_data;
+    size_t value_len;
+    uint64_t value_u64;
+} LlevValueEntryInput;
+typedef struct LlevValueLimits {
+    size_t max_entries;
+    size_t max_term_bytes;
+    size_t max_total_term_bytes;
+    size_t max_value_bytes;
+    size_t max_total_value_bytes;
+    size_t max_payload_bytes;
+} LlevValueLimits;
+typedef struct LlevValueEntryView {
+    const uint8_t* term_data;
+    size_t term_len;
+    const uint8_t* value_data;
+    size_t value_len;
+    uint64_t value_u64;
+    uint32_t value_kind;
+    uint32_t reserved;
+} LlevValueEntryView;
+typedef struct LlevDecodedValueEntries LlevDecodedValueEntries;
+/** The unit domain is VT_UNIT_DOMAIN_BYTE or VT_UNIT_DOMAIN_UNICODE_SCALAR.
+ * The value kind is LLEV_VALUE_PERSIST_U64 or LLEV_VALUE_PERSIST_BYTES.
+ * Unsupported or malformed input never publishes an output. */
+LLEV_API LlevStatus llev_valued_dictionary_serialize(
+    uint32_t unit_domain, uint32_t value_kind,
+    const LlevValueEntryInput* entries, size_t entry_count,
+    const LlevValueLimits* limits, LlevOwnedBytes* out_bytes);
+LLEV_API LlevStatus llev_valued_dictionary_deserialize(
+    uint32_t unit_domain, uint32_t value_kind, const uint8_t* data, size_t len,
+    const LlevValueLimits* limits, LlevDecodedValueEntries** out_entries);
+/** Borrowed views expire when the decoded snapshot is freed. */
+LLEV_API LlevStatus llev_decoded_value_entries_len(
+    const LlevDecodedValueEntries* entries, size_t* out_len);
+LLEV_API LlevStatus llev_decoded_value_entry_at(
+    const LlevDecodedValueEntries* entries, size_t index,
+    LlevValueEntryView* out_view);
+LLEV_API void llev_decoded_value_entries_free(LlevDecodedValueEntries* entries);
+
 /** Native generalized-operation persistence formats and caller limits. */
 #define LLEV_OPERATION_SET_FORMAT_BINARY_V1 UINT32_C(1)
 #define LLEV_OPERATION_SET_FORMAT_PROTOBUF_V1 UINT32_C(2)

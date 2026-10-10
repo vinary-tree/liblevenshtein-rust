@@ -1345,6 +1345,21 @@ data, invalid Protobuf, corrupt gzip, and exceeded resource ceilings reject the
 input before a handle is published. Every encoded buffer uses
 `llev_owned_bytes_free`.
 
+The value-preserving Bincode entry points
+`llev_valued_dictionary_serialize` and
+`llev_valued_dictionary_deserialize` bind native
+`BincodeSerializer::serialize_with_values`,
+`serialize_with_values_char`, and `deserialize_with_values`. Unit domains 1
+and 2 select byte or Unicode dictionaries. Value kinds 1 and 2 select `u64`
+or `Vec<u8>` records, which have distinct native wire types and differ from
+term-only Bincode. `LlevValueLimits` bounds count, per-entry and aggregate
+term/value bytes, and the entire payload. A decoded handle owns canonical
+entries; inspect it with `llev_decoded_value_entries_len` and
+`llev_decoded_value_entry_at`, then call
+`llev_decoded_value_entries_free`. Empty raw-byte values remain present.
+Borrowed views expire when the handle is freed. The format carries no value
+kind or unit-domain tag, so persist those alongside the bytes.
+
 ## 9. A complete C consumer
 
 The program below is the whole § 7 flow in one file: obtain a resource from

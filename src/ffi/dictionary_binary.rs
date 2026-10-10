@@ -116,7 +116,7 @@ impl Write for BoundedWriter {
 }
 
 #[cfg(feature = "serialization")]
-fn read_u64(input: &[u8], offset: &mut usize) -> Result<u64, (LlevStatus, String)> {
+pub(super) fn read_u64(input: &[u8], offset: &mut usize) -> Result<u64, (LlevStatus, String)> {
     let end = offset
         .checked_add(8)
         .ok_or_else(|| invalid("bincode offset overflow"))?;

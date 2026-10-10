@@ -153,6 +153,12 @@ export ABI_VERSION,
     DictionaryLimits,
     DictionaryTerms,
     dictionary_bytes,
+    ValuedDictionaryLimits,
+    ValuedDictionaryEntries,
+    VALUE_PERSIST_U64,
+    VALUE_PERSIST_BYTES,
+    valued_dictionary_bytes,
+    valued_dictionary_entries,
     dictionary_terms,
     BincodeDictionaryLimits,
     BincodeDictionaryTerms,
@@ -1259,6 +1265,7 @@ include("PhoneticFeatures.jl")
 include("PhoneticFiles.jl")
 include("PhoneticAot.jl")
 include("DictionarySerialization.jl")
+include("DictionaryValueSerialization.jl")
 include("SuffixSerialization.jl")
 include("OperationSetSerialization.jl")
 
