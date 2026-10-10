@@ -186,6 +186,42 @@ for unit-grid TWED. `metric_msm_distance`, `metric_twed_distance`,
 lazy range cursor behavior under those validated configurations. Their
 `query_metric_knn` methods use the same exact native scan and result cursor.
 
+### Quantized temporal candidates
+
+The frozen `NativeQuantizedIndex` exposes the three legacy byte-edit
+candidate searches. Quantization maps each sample to one of 1–256 bins;
+queries use `:standard`, adjacent `:transposition` (OSA), or `:merge_split`.
+The byte edit score is exact for the quantized words. It is an advisory
+filter for original time series: even a complete candidate scan cannot prove
+full-precision MSM, ERP, TWED, DTW, or Fréchet absence.
+
+```julia
+index = NativeQuantizedIndex(quant_min=0, quant_max=10, quant_bins=16,
+    max_entries=100, max_total_samples=1600, max_series_len=16)
+insert!(index, 7, [1.0, 2.0, 3.0])
+freeze!(index)
+cursor = query_quantized(index, [1.0, 2.0, 3.0], 1;
+    algorithm=:standard, page_results=32)
+try
+    while (batch = next_batch!(cursor, 32)) !== nothing
+        for candidate in batch
+            original = original_samples(cursor, candidate.id)
+            # Verify original against the intended full-precision metric here.
+        end
+    end
+finally
+    close(cursor)
+    close(index)
+end
+```
+
+The native cursor retains the frozen source after `close(index)`. Each call
+copies only one bounded page. An empty page means the work allotment was used;
+continue until `nothing`. A resource limit raises `TemporalQueryIncomplete`
+and never establishes complete candidate enumeration. `original_samples`
+copies one stored series while the cursor is open, including on its final
+nonempty page. Ordinary iteration and `reduce_batches!` close on exhaustion.
+
 ### Physical-time TWED
 
 `TimestampedSeries` copies each nonempty finite value series and its strictly

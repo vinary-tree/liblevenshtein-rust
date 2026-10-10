@@ -199,6 +199,18 @@ order after a bounded complete native scan. It raises
 `TemporalQueryIncomplete` on resource exhaustion without exposing partial
 neighbors.
 
+`NativeQuantizedIndex` exposes the legacy `TimeSeriesIndex` candidate family
+through a frozen native snapshot. `query_quantized` lazily scans quantized
+byte keys with `:standard`, `:transposition` (adjacent OSA), or
+`:merge_split` edit distance. Each `QuantizedMatch` carries the exact byte
+distance and an ID; `original_samples(cursor, id)` copies the full-precision
+series from that snapshot for verification, including after the index closes.
+Quantization can omit genuine full-precision neighbors, so a complete
+candidate cursor proves only that all matching *byte keys* were visited. Its
+work, result, DP-cell, scratch, and continuation ceilings raise
+`TemporalQueryIncomplete` on exhaustion. Use `next_batch!`,
+`reduce_batches!`, or ordinary iteration, and close an abandoned cursor.
+
 `ApproxMsmIndex` copies finite episodes into a frozen PAA-ranked source and
 exactly reranks its bounded candidate pool with MSM. `query_approx_msm_knn`
 returns tagged `:exhaustive`, `:advisory`, or `:incomplete` evidence with
@@ -359,6 +371,7 @@ quantization, ERP canonicalization, SAX, rolling windows, online ERP prefixes,
 a copied temporal scan, the frozen temporal index, physical-time TWED range
 scan and index, exact physical-time nearest-neighbor scan and index,
 scalar, advisory, and exhaustive MSM nearest-neighbor searches,
+quantized byte-edit scalar and native candidate scans,
 source-filter scans, persistent native n-gram and hybrid queries, and their
 construction. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
@@ -390,6 +403,10 @@ were:
 | Online ERP, 16 prefixes | 77,993 |
 | 32-entry temporal scan | 161,913 |
 | 32-entry temporal index | 3,082,520 |
+| 32-entry byte-edit scalar candidate scan, radius 2 | 21,965 |
+| 32-entry bounded native byte-edit candidates, radius 2 | 45,414 |
+| 32-entry byte-edit scalar candidate scan, radius 0 | 21,741 |
+| 32-entry bounded native exact byte lookup, radius 0 | 4,711 |
 | 32-entry scalar MSM kNN | 600,637 |
 | 32-entry advisory MSM kNN | 57,004 |
 | 32-entry exhaustive MSM kNN | 272,512 |
@@ -448,6 +465,9 @@ nanoseconds were:
 
 These figures are diagnostic, not portable speed guarantees; CI evaluates the
 budget against a native control measured on the same runner.
+The 32-entry radius-2 byte-edit workload favors the scalar loop, whereas the
+native exact-key path avoids scanning other keys at radius zero. The native
+path also supplies snapshot ownership, cumulative limits, and bounded pages.
 
 ## Common and intended usage
 
@@ -473,6 +493,10 @@ budget against a native control measured on the same runner.
 - Use `query_index_erp_automaton_range` on a frozen ERP index when the
   canonical automaton product is desired. It retains the same snapshot and
   cumulative limits as `query_index_range`, with bounded lazy result pages.
+- Use `query_quantized` when byte edit distance is a useful advisory candidate
+  filter. Set finite source ceilings at construction, then `freeze!` the index.
+  Fetch full-precision values with `original_samples(cursor, id)` while the
+  cursor is open and verify them with the intended temporal metric.
 - Use `query_index_certified` when an exact indexed range result needs
   replayable K1–K4 evidence. Set `TemporalCertificateLimits` for cumulative
   traversal, witness, path, record, work, and result ceilings. Iterate

@@ -1943,6 +1943,63 @@ typedef struct LlevTemporalIndexMatch {
 typedef struct LlevTemporalIndex LlevTemporalIndex;
 typedef struct LlevTemporalIndexCursor LlevTemporalIndexCursor;
 
+/** Quantized-byte candidate index. This is advisory for original time-series
+ * proximity: quantization and byte edit distance can admit false positives
+ * and miss full-precision temporal neighbors. The three supported algorithms
+ * are Standard, OSA transposition, and merge/split. */
+typedef struct LlevQuantizedIndexConfig {
+    double quant_min;
+    double quant_max;
+    uint32_t quant_bins;
+    uint32_t reserved;
+    size_t max_entries;
+    size_t max_total_samples;
+    size_t max_series_len;
+} LlevQuantizedIndexConfig;
+typedef struct LlevQuantizedMatch {
+    uint64_t id;
+    size_t edit_distance;
+} LlevQuantizedMatch;
+typedef struct LlevQuantizedIndex LlevQuantizedIndex;
+typedef struct LlevQuantizedCursor LlevQuantizedCursor;
+
+/** Insert or replace before freeze. Source limits are transactional. Frozen
+ * cursors retain their immutable snapshot after index free. Nonfinite samples
+ * follow the Rust quantizer's bin mapping, including NaN -> first bin. */
+LLEV_API LlevStatus llev_quantized_index_new(
+    const LlevQuantizedIndexConfig* config, LlevQuantizedIndex** out_index);
+LLEV_API LlevStatus llev_quantized_index_insert(
+    LlevQuantizedIndex* index, uint64_t id,
+    const double* samples, size_t len);
+LLEV_API LlevStatus llev_quantized_index_freeze(LlevQuantizedIndex* index);
+LLEV_API void llev_quantized_index_free(LlevQuantizedIndex* index);
+
+/** Start a lazy bounded quantized candidate query. algorithm uses
+ * LLEV_ALGORITHM_STANDARD, LLEV_ALGORITHM_TRANSPOSITION, or
+ * LLEV_ALGORITHM_MERGE_AND_SPLIT. Query and source are captured before
+ * returning; exhaustion never proves absence. The query array is copied.
+ * On construction LIMIT_EXCEEDED, out_reason uses the temporal reason codes.
+ */
+LLEV_API LlevStatus llev_quantized_index_query(
+    const LlevQuantizedIndex* index, const double* query, size_t query_len,
+    size_t max_distance, uint32_t algorithm,
+    const LlevTemporalSearchLimits* limits,
+    LlevQuantizedCursor** out_cursor, uint32_t* out_reason);
+/** Copy at most one bounded page. Empty with out_done=0 means continue.
+ * Only out_done=1 establishes complete quantized candidate enumeration.
+ * LIMIT_EXCEEDED leaves any earlier candidates exact for their byte query
+ * but cannot establish a complete set. out_reason uses the codes below. */
+LLEV_API LlevStatus llev_quantized_cursor_next_batch(
+    LlevQuantizedCursor* cursor, LlevQuantizedMatch* out_matches,
+    size_t capacity, size_t page_work_units, size_t page_results,
+    size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
+/** Copy original full-precision samples by ID from the retained snapshot.
+ * A null output with zero capacity reports the sample count in out_len. */
+LLEV_API LlevStatus llev_quantized_cursor_original(
+    const LlevQuantizedCursor* cursor, uint64_t id,
+    double* out_samples, size_t capacity, size_t* out_len);
+LLEV_API void llev_quantized_cursor_free(LlevQuantizedCursor* cursor);
+
 /** Build, mutate, freeze, and release an index. Mutation requires exclusive
  * access. A frozen index may start independent concurrent cursors. A cursor
  * retains its immutable snapshot even after the index handle is freed. */
@@ -1979,7 +2036,8 @@ LLEV_API LlevStatus llev_temporal_index_query_erp_automaton_range(
  * out_reason is zero on success; LIMIT_EXCEEDED uses 1 DP cells, 2 work,
  * 3 scratch, 4 trie nodes, 5 trie edges, 6 candidates, 7 results, 8 queue,
  * 9 continuation bytes, 10 overflow/other, 11 invalid stored data,
- * 12 unsupported, 13 allocation, 14 page too small, or 15 cancellation. */
+ * 12 unsupported, 13 allocation, 14 page too small, 15 cancellation, or
+ * 16 source series length. */
 LLEV_API LlevStatus llev_temporal_index_cursor_next_batch(
     LlevTemporalIndexCursor* cursor, LlevTemporalIndexMatch* out_matches,
     size_t capacity, size_t page_work_units, size_t page_results,

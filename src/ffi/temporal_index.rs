@@ -163,6 +163,7 @@ pub(crate) fn incomplete_code(reason: IncompleteReason) -> u32 {
             ResourceKind::Results => 7,
             ResourceKind::QueueEntries => 8,
             ResourceKind::ContinuationBytes => 9,
+            ResourceKind::SeriesLength => 16,
             _ => 10,
         },
         IncompleteReason::NumericOverflow => 10,

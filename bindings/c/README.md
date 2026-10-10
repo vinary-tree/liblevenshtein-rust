@@ -200,6 +200,14 @@ variants, protocols, or methods.
 | `llev_phonetic_transducer_normalize` | `llev_phonetic_transducer_normalize` | incremental phonetic rewriting and lifecycle |
 | `llev_phonetic_transducer_reset` | `llev_phonetic_transducer_reset` | incremental phonetic rewriting and lifecycle |
 | `llev_phonetic_voicing_pair` | `llev_phonetic_voicing_pair` | IPA feature classification and relations |
+| `llev_quantized_cursor_free` | `llev_quantized_cursor_free` | project ABI operation |
+| `llev_quantized_cursor_next_batch` | `llev_quantized_cursor_next_batch` | project ABI operation |
+| `llev_quantized_cursor_original` | `llev_quantized_cursor_original` | project ABI operation |
+| `llev_quantized_index_free` | `llev_quantized_index_free` | project ABI operation |
+| `llev_quantized_index_freeze` | `llev_quantized_index_freeze` | project ABI operation |
+| `llev_quantized_index_insert` | `llev_quantized_index_insert` | project ABI operation |
+| `llev_quantized_index_new` | `llev_quantized_index_new` | project ABI operation |
+| `llev_quantized_index_query` | `llev_quantized_index_query` | project ABI operation |
 | `llev_query_cache_clear` | `llev_query_cache_clear` | project ABI operation |
 | `llev_query_cache_free` | `llev_query_cache_free` | project ABI operation |
 | `llev_query_cache_new` | `llev_query_cache_new` | project ABI operation |

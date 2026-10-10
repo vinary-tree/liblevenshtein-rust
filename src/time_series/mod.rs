@@ -309,7 +309,10 @@ pub use timestamped_twed_index::{
     TimestampedTwedProductLimits, TimestampedTwedProductStats, TimestampedTwedQuantizer,
     TimestampedTwedRangeContinuation, TimestampedTwedRangeMatch, TimestampedTwedRangeOutcome,
 };
-pub use trie_index::{TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats};
+pub use trie_index::{
+    QuantizedCandidateCursor, QuantizedCandidatePage, QuantizedCandidateStartError,
+    TimeSeriesIndex, TimeSeriesIndexBuilder, TimeSeriesIndexStats,
+};
 pub use vector::{
     ChannelIdentity, ChannelLayout, ChannelVectorSeries, FixedChannelMetric,
     FoldLocalScaleProvenance, GroundMetric, L1GroundMetric, L2GroundMetric, LinfGroundMetric,

@@ -21,7 +21,8 @@
         "tests/ffi_approx_msm.rs",
         "tests/ffi_temporal_vector.rs",
         "tests/ffi_temporal_vector_bounds.rs",
-        "tests/ffi_temporal_certificate.rs"
+        "tests/ffi_temporal_certificate.rs",
+        "tests/ffi_quantized_index.rs"
       ],
       "enums": {
         "status": {
@@ -637,6 +638,30 @@
         },
         "llev_temporal_index_query_erp_automaton_range": {
           "symbol": "llev_temporal_index_query_erp_automaton_range"
+        },
+        "llev_quantized_index_new": {
+          "symbol": "llev_quantized_index_new"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": "llev_quantized_index_insert"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": "llev_quantized_index_freeze"
+        },
+        "llev_quantized_index_free": {
+          "symbol": "llev_quantized_index_free"
+        },
+        "llev_quantized_index_query": {
+          "symbol": "llev_quantized_index_query"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": "llev_quantized_cursor_next_batch"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": "llev_quantized_cursor_original"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": "llev_quantized_cursor_free"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": "llev_temporal_index_cursor_next_batch"
@@ -1591,6 +1616,38 @@
         "llev_temporal_index_query_erp_automaton_range": {
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -2595,6 +2652,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -3590,6 +3679,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -4578,6 +4699,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -5565,6 +5718,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -6549,6 +6734,38 @@
         "llev_temporal_index_query_erp_automaton_range": {
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -7548,6 +7765,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -8542,6 +8791,38 @@
         "llev_temporal_index_query_erp_automaton_range": {
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -9562,6 +9843,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -10551,6 +10864,38 @@
         "llev_temporal_index_query_erp_automaton_range": {
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -11543,6 +11888,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -12533,6 +12910,38 @@
         "llev_temporal_index_query_erp_automaton_range": {
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -13528,6 +13937,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -14522,6 +14963,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
         },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -14757,7 +15230,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalVector.jl",
         "bindings/julia/Liblevenshtein/src/TemporalVectorOnline.jl",
         "bindings/julia/Liblevenshtein/src/TemporalVectorBounds.jl",
-        "bindings/julia/Liblevenshtein/src/TemporalCertificate.jl"
+        "bindings/julia/Liblevenshtein/src/TemporalCertificate.jl",
+        "bindings/julia/Liblevenshtein/src/QuantizedIndex.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -14778,7 +15252,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_vector.jl",
         "bindings/julia/Liblevenshtein/test/temporal_vector_online.jl",
         "bindings/julia/Liblevenshtein/test/temporal_vector_bounds.jl",
-        "bindings/julia/Liblevenshtein/test/temporal_certificate.jl"
+        "bindings/julia/Liblevenshtein/test/temporal_certificate.jl",
+        "bindings/julia/Liblevenshtein/test/quantized_index.jl"
       ],
       "enums": {
         "status": {
@@ -15440,6 +15915,30 @@
         },
         "llev_temporal_index_query_erp_automaton_range": {
           "symbol": "query_index_erp_automaton_range"
+        },
+        "llev_quantized_index_new": {
+          "symbol": "NativeQuantizedIndex"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": "insert!"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": "freeze!"
+        },
+        "llev_quantized_index_free": {
+          "symbol": "close!"
+        },
+        "llev_quantized_index_query": {
+          "symbol": "query_quantized"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": "original_samples"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": "close!"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": "next_batch!"
@@ -16324,6 +16823,38 @@
         "llev_temporal_index_query_erp_automaton_range": {
           "symbol": null,
           "_reason": "FINDING: revision-29 native ERP automaton range is not yet projected into this language facade"
+        },
+        "llev_quantized_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_index_query": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_original": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_quantized_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,

@@ -185,6 +185,11 @@ export ABI_VERSION,
     TemporalSearchLimits,
     TemporalIndexCursor,
     TemporalKnnCursor,
+    NativeQuantizedIndex,
+    QuantizedCursor,
+    QuantizedMatch,
+    query_quantized,
+    original_samples,
     TemporalCertificateLimits,
     TemporalCertificateInfo,
     TemporalCertificateEvidence,
@@ -230,7 +235,6 @@ export ABI_VERSION,
     metric_timestamped_twed_distance,
     query_metric_range,
     query_metric_erp_automaton_range,
-    query_metric_knn,
     query_metric_knn,
     freeze!,
     query_index_range,
@@ -1185,6 +1189,7 @@ include("TemporalSaxEncoding.jl")
 include("TemporalQueries.jl")
 include("TemporalMsmPrefilter.jl")
 include("TemporalIndex.jl")
+include("QuantizedIndex.jl")
 include("TemporalCertificate.jl")
 include("TemporalApproxMsm.jl")
 include("TemporalMetricDomains.jl")

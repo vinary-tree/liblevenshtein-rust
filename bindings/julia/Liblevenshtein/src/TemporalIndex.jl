@@ -48,7 +48,8 @@ function native_index_reason(code::UInt32)
     reasons = (:unknown, :dp_cells, :work_units, :scratch_bytes,
         :trie_nodes, :trie_edges, :candidates, :results, :queue_entries,
         :continuation_bytes, :overflow, :invalid_stored_data,
-        :unsupported, :allocation, :page_work_units, :cancelled)
+        :unsupported, :allocation, :page_work_units, :cancelled,
+        :series_length)
     Int(code) + 1 <= length(reasons) ? reasons[Int(code) + 1] : :unknown
 end
 

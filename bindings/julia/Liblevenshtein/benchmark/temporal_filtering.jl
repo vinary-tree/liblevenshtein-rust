@@ -38,6 +38,17 @@ for (id, samples) in pairs
 end
 LL.freeze!(index)
 LL.freeze!(erp_index)
+quantized_index = LL.NativeQuantizedIndex(quant_min=-4, quant_max=4,
+    quant_bins=256, max_entries=32, max_total_samples=512,
+    max_series_len=16)
+for (id, samples) in pairs
+    LL.insert!(quantized_index, id, samples)
+end
+LL.freeze!(quantized_index)
+quantized_config = LL.QuantizationConfig(-4.0, 4.0, 256)
+quantized_query = collect(LL.encode_u8(quantized_config, query))
+quantized_words = [(id, collect(LL.encode_u8(quantized_config, samples)))
+    for (id, samples) in pairs]
 approx_advisory_index = LL.ApproxMsmIndex(pairs;
     segments=4, candidate_limit=4,
     max_entries=32, max_total_samples=512,
@@ -91,6 +102,18 @@ indexed() = collect(LL.query_index_range(index, query;
     cutoff=0.5, page_work_units=100_000, page_results=32))
 erp_indexed() = collect(LL.query_index_range(erp_index, query;
     cutoff=0.5, page_work_units=100_000, page_results=32))
+quantized_candidates() = collect(LL.query_quantized(quantized_index,
+    query, 2; page_work_units=100_000, page_results=32))
+quantized_exact() = collect(LL.query_quantized(quantized_index,
+    query, 0; page_work_units=100_000, page_results=32))
+function quantized_candidate_scan(threshold=2)
+    matches = Tuple{UInt64, Int}[]
+    for (id, word) in quantized_words
+        distance = Int(LL.distance(quantized_query, word))
+        distance <= threshold && push!(matches, (id, distance))
+    end
+    matches
+end
 erp_automaton() = collect(LL.query_index_erp_automaton_range(
     erp_index, query; cutoff=0.5, page_work_units=100_000,
     page_results=32))
@@ -252,6 +275,14 @@ try
         erp_expected || error("ERP automaton differs from scalar scan")
     sort(erp_automaton_native_c()) == erp_expected ||
         error("ERP automaton Julia facade differs from direct C control")
+    sort([(match.id, match.edit_distance)
+        for match in quantized_candidates()]) ==
+        sort(quantized_candidate_scan()) ||
+        error("native quantized candidates differ from scalar byte scan")
+    sort([(match.id, match.edit_distance)
+        for match in quantized_exact()]) ==
+        sort(quantized_candidate_scan(0)) ||
+        error("native exact quantized lookup differs from scalar byte scan")
     [(match.id, match.distance) for match in indexed_knn()] ==
         [(item[2], item[3]) for item in indexed_knn_scan()] ||
         error("indexed exact kNN differs from scalar DTW scan")
@@ -320,6 +351,10 @@ try
     sample("vector L2 online 16 prefixes", vector_l2_online)
     sample("32-entry temporal scan", scan)
     sample("32-entry temporal index", indexed)
+    sample("32-entry byte edit scalar", quantized_candidate_scan)
+    sample("32-entry byte edit native", quantized_candidates)
+    sample("32-entry exact byte scalar", () -> quantized_candidate_scan(0))
+    sample("32-entry exact byte native", quantized_exact)
     sample("32-entry ERP scalar scan", erp_scalar_scan)
     sample("32-entry ERP generic index", erp_indexed)
     sample("32-entry ERP automaton", erp_automaton)
@@ -345,6 +380,7 @@ finally
     close(plan)
     close(index)
     close(erp_index)
+    close(quantized_index)
     close(approx_advisory_index)
     close(approx_exhaustive_index)
     close(timestamped_index)
