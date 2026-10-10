@@ -306,6 +306,7 @@ vinary-tree-interop/docs/security-model.md
 bindings/julia/Liblevenshtein/README.md
 bindings/julia/Liblevenshtein/docs/src/index.md
 bindings/julia/Liblevenshtein/docs/src/phonetic.md
+bindings/julia/Liblevenshtein/docs/src/reference.md
 bindings/julia/README.md
 bindings/raku/README.md
 bindings/raku/benchmark/README.md
